@@ -1,27 +1,6 @@
 """Frozen v1 curated quality defaults (issue #89 item 2).
 
-Versioned manifest of the curated default lint/audit membership and
-default formatter set per policy family, matching the curated baseline
-in `docs/tools/tool-baseline.md#curated-differences`. Omitted workspace
-selections use these defaults; supported alternatives (flake8, pylint,
-ESLint, Prettier-as-alternative) remain explicit opt-ins and never run
-without selection.
-
-Release policy (`docs/tools/tool-baseline.md#default-lifecycle-direction`,
-`docs/quality/quality-testing.md:390-398`):
-- Removing a default, changing the default formatter set, or otherwise
-  breaking consumer workflows requires a major release.
-- Only additions to curated lint/audit membership are eligible for a
-  minor release, and only after compatibility qualification, explicit
-  release notes, and a tested workspace override reproducing the prior
-  lint/audit set.
-- Normal tool-version updates within the pinned set follow the exact-pin
-  currency policy and never authorize membership changes.
-
-The `//tools/ci:release_policy` harness diffs this manifest against the
-frozen baseline below and fails closed on removals, formatter-set
-changes, or additions missing compat evidence. Never shrink a passing
-scope without a recorded major-release decision.
+Contract: `docs/tools/tool-baseline.md#curated-differences`, `docs/tools/tool-baseline.md#default-lifecycle-direction`, `docs/quality/quality-testing.md`.
 """
 
 # Versioned curated-defaults schema (issue #321). Consumers query via
@@ -104,11 +83,7 @@ def curated_families():
     return sorted(CURATED_DEFAULTS.keys())
 
 def curated_tools():
-    """Returns the sorted unique curated tool IDs across families.
-
-    Returns:
-      Sorted list of curated tool IDs.
-    """
+    """Returns the sorted unique curated tool IDs across families."""
     seen = {}
     for family in CURATED_DEFAULTS:
         for capability in CURATED_DEFAULTS[family]:
@@ -131,11 +106,7 @@ def curated_schema_error():
     family edits the manifest data only: version is v1, every family and
     tool spelling is canonical, every family carries exactly the
     audit/format/lint/typecheck capabilities, and the frozen formatter
-    set matches the curated format selection.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    set matches the curated format selection."""
     if CURATED_SCHEMA_VERSION != 1:
         return "curated defaults: unsupported schema v" + str(CURATED_SCHEMA_VERSION) + " (want v1)"
     for family in CURATED_DEFAULTS:

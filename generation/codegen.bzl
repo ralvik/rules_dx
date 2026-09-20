@@ -1,44 +1,6 @@
 """Normalized codegen plan records (M25 WP1, O33).
 
-`DxCodegenPlanInfo` is the in-memory shape behind the binary
-`DxCodegenShard` wire schema (`codegen.proto`): each shard-emitting rule
-carries its direct projection record. `DxCodegenPlanCollectedInfo` is the
-separate aspect-carried merge: Bazel rejects an aspect that re-provides its
-target's own provider ("provided twice"), so the collecting aspect never
-returns `DxCodegenPlanInfo` and contributing rules never return the
-collected provider. Shard emission, the collecting aspect, and the private
-`dx_codegen_plans` output group land in WP1 slice 2 (this file); the
-narrow prost adapter over the frozen slice-1 semantics is here as well.
-
-O33 freeze (slice 1): the only first-release generator/language pair is
-Protocol Buffer schema to Rust through `rust_prost_library` (dogfooded by
-`//quality:result_proto_rs` and `//generation:result_proto_rs`). GraphQL
-and any Python/Node projection have no support-matrix cell and stay
-deferred to later M25 slices under O33; they are not dropped and no
-adapter claims them here.
-
-Conflict rule (from `docs/environments/codegen.md`): multiple producers
-claiming an incompatible language import path fail before selection; no
-traversal-order winner is accepted. Byte-identical duplicate records (the
-same producer, language, path, root, namespace, and exec path) merge
-silently, since transitive collection reaches one record through many
-routes.
-
-Slice 4 adds the optional per-entry `exec_path` BEP-matching suffix
-(field 5 on the wire): empty means a logical-only entry requiring no
-materialized artifact; non-empty must resolve to exactly one BEP-reported
-non-shard artifact (suffix match so output bases differ) and every
-non-shard BEP artifact must be claimed, otherwise collection fails with
-missing/duplicate/unreported before projection planning. The fingerprint
-covers the exec path, so the plan identity binds logical mappings to
-their backing artifacts.
-
-Contract: `docs/environments/codegen.md` (provider contract, filesystem
-projection), `docs/product/scope.md` (automatic workflows).
-
-Slice 2 (this file) adds the shard-emission rule, the collecting
-aspect, and the narrow prost adapter over the frozen slice-1 semantics.
-No new pair, name, or merge semantic lands here.
+Contract: `docs/environments/codegen.md`, `docs/product/scope.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
@@ -51,11 +13,8 @@ DxCodegenPlanInfo = provider(
     },
 )
 
-# Aspect-carried merge over DxCodegenPlanInfo contributors. Kept distinct
-# because Bazel reports "provided twice" when an aspect returns the same
-# provider its target already provides: shard rules carry direct records
-# in DxCodegenPlanInfo, the aspect merges them here, and fixtures prefer
-# this provider with a direct-rule fallback.
+# Aspect-carried merge: Bazel rejects an aspect re-providing its target's
+# provider ("provided twice"). See `docs/environments/codegen.md`.
 DxCodegenPlanCollectedInfo = provider(
     doc = "Aspect-merged codegen plan records from the traversed closure.",
     fields = {
@@ -63,38 +22,23 @@ DxCodegenPlanCollectedInfo = provider(
     },
 )
 
-# Private output group carrying collected shards plus every generated
-# artifact referenced by them. Frozen under O33; the aspect requests it.
+# Private output group for collected shards and referenced artifacts.
+# Frozen under O33; see `docs/environments/codegen.md`.
 DX_CODEGEN_PLAN_OUTPUT_GROUP = "dx_codegen_plans"
 
-# Reserved controlled filename suffix recognizing shards among
-# BEP-reported files. Frozen under O33; the CLI rejects unreported,
-# missing, or duplicate artifacts and never scans `bazel-out`.
+# Reserved shard suffix for BEP-reported files. See `docs/environments/codegen.md`.
 DX_CODEGEN_SHARD_SUFFIX = ".dxcodegen.pb"
 
-# Versioned codegen-pair schema (issue #321). Consumers query via
-# `codegen_admitted_pairs` and `codegen_pair_error` instead of duplicating
-# the admitted list, so adding a generator/language pair edits this one
-# data tuple plus O33 qualification, never a parallel allowlist.
+# Versioned codegen-pair schema (issue #321). Add pairs via this tuple only.
 CODEGEN_SCHEMA_VERSION = 1
 
-# Admitted first-release generator/language pairs, slice 1. Each entry is
-# a (schema kind, generated file class) tuple. Later M25 slices extend
-# this tuple only through the O33 qualification recorded above.
+# Admitted first-release pairs (slice 1). See `docs/environments/codegen.md`.
 DX_CODEGEN_ADMITTED_PAIRS = (
     ("protobuf", "rust"),
 )
 
 def codegen_path_error(path):
-    """Validates one workspace-relative projection path.
-
-    Args:
-      path: candidate logical path or import root.
-
-    Returns:
-      "" when valid, else the failure reason: empty, absolute, a `.` or
-      `..` segment, or a backslash separator.
-    """
+    """Validates one workspace-relative projection path."""
     if path == "":
         return "invalid codegen path '': must be a non-empty workspace-relative path"
     if path.startswith("/"):
@@ -107,20 +51,7 @@ def codegen_path_error(path):
     return ""
 
 def codegen_entry(logical_path, import_root, namespace = "", exec_path = ""):
-    """Builds one normalized projection entry struct.
-
-    Args:
-      logical_path: deterministic workspace-relative generated path.
-      import_root: language import/source root, workspace-relative.
-      namespace: required package/namespace semantics, or "".
-      exec_path: BEP-matching suffix for the backing artifact, or "" for
-        a logical-only entry requiring no materialized artifact.
-
-    Returns:
-      A struct with `logical_path`, `import_root`, `namespace`,
-      `exec_path`, and `read_only` (always True: projections are
-      read-only context).
-    """
+    """Builds one normalized projection entry struct."""
     return struct(
         exec_path = exec_path,
         import_root = import_root,
@@ -130,16 +61,7 @@ def codegen_entry(logical_path, import_root, namespace = "", exec_path = ""):
     )
 
 def codegen_record(producer, language, entries):
-    """Builds one normalized contributor record struct.
-
-    Args:
-      producer: contributing target label in observation rendering.
-      language: generated file class, e.g. "rust".
-      entries: non-empty list of `codegen_entry` structs.
-
-    Returns:
-      A struct with `producer`, `language`, and `entries` (as a tuple).
-    """
+    """Builds one normalized contributor record struct."""
     return struct(
         entries = tuple(entries),
         language = language,
@@ -147,15 +69,7 @@ def codegen_record(producer, language, entries):
     )
 
 def codegen_record_error(record):
-    """Validates one contributor record.
-
-    Args:
-      record: candidate `codegen_record` struct.
-
-    Returns:
-      "" when valid, else the failure reason naming the bad producer,
-      language, entry path, or within-record duplicate logical path.
-    """
+    """Validates one contributor record."""
     if record.producer == "":
         return "invalid codegen record: producer must be a non-empty label"
     if not (record.producer.startswith("//") or record.producer.startswith("@")):
@@ -186,14 +100,7 @@ def codegen_exec_error(path):
     Empty means a logical-only entry requiring no artifact. Non-empty
     follows the same workspace-relative shape rules as logical paths
     and never uses the reserved shard suffix (a shard never backs
-    another shard).
-
-    Args:
-      path: candidate exec-path suffix.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    another shard)."""
     if path == "":
         return ""
     if path.endswith(DX_CODEGEN_SHARD_SUFFIX):
@@ -212,15 +119,7 @@ def codegen_conflict_error(records):
     Byte-identical duplicates (same producer, language, path, root,
     namespace, and exec path) merge silently. Any other second claim on
     one logical path fails, listing every claimant: no traversal-order
-    winner is accepted.
-
-    Args:
-      records: list of `codegen_record` structs.
-
-    Returns:
-      "" when conflict-free, else the failure reason listing every
-      collided logical path with its sorted claimant producers.
-    """
+    winner is accepted."""
     claimants_by_path = {}
     for record in records:
         for entry in record.entries:
@@ -247,14 +146,7 @@ def codegen_merge_records(records):
     import root, namespace, exec path). The rendering is the normalized
     complete-plan form the CLI hashes; repository roots emit no second
     closure manifest, so shared closures serialize once per record, not
-    once per selected root.
-
-    Args:
-      records: list of `codegen_record` structs.
-
-    Returns:
-      The deduplicated record list in normalized order.
-    """
+    once per selected root."""
     entries_by_owner = {}
     for record in records:
         owner = (record.producer, record.language)
@@ -277,15 +169,7 @@ def codegen_merge_schema_error(records, merged):
     edits test data only: owners sorted and unique, entries sorted and unique
     per owner, every input entry present deduped, every merged entry sourced,
     and each merged record valid. Exact owner/entry values stay in snapshot
-    assertions; this proves normalization.
-
-    Args:
-      records: input list of `codegen_record` structs.
-      merged: candidate `codegen_merge_records(records)` output.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    assertions; this proves normalization."""
     if type(merged) != "list":
         return "codegen merge: want a list, got " + type(merged)
     owners = []
@@ -330,17 +214,7 @@ def codegen_merge_schema_error(records, merged):
     return ""
 
 def codegen_plan_fingerprint(records):
-    """Renders the normalized complete-plan hash input.
-
-    Args:
-      records: list of `codegen_record` structs.
-
-    Returns:
-      Deterministic JSON over the merged records: one object per record
-      with producer, language, and entries sorted by (logical path,
-      import root, namespace, exec path), each entry carrying its
-      exec-path suffix so the identity binds mappings to artifacts.
-    """
+    """Renders the normalized complete-plan hash input."""
     merged = codegen_merge_records(records)
     return json.encode([
         {
@@ -367,14 +241,7 @@ def codegen_fingerprint_schema_error(fingerprint):
     test data only: a list of {producer, language, entries} sorted by
     (producer, language) with entries sorted by the full key, each entry
     carrying validated paths plus read-only truth. Exact fingerprint bytes
-    stay in snapshot assertions; this proves the hash-input contract.
-
-    Args:
-      fingerprint: `codegen_plan_fingerprint` output string.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    stay in snapshot assertions; this proves the hash-input contract."""
     decoded = json.decode(fingerprint)
     if type(decoded) != "list" or len(decoded) == 0:
         return "codegen fingerprint: want a non-empty list"
@@ -435,11 +302,7 @@ def codegen_schema_error():
 
     Checks data shape without pinning exact contents, so adding a pair
     edits the admitted data only: version is v1, the list is non-empty
-    with unique canonical (schema_kind, language) tuples.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    with unique canonical (schema_kind, language) tuples."""
     if CODEGEN_SCHEMA_VERSION != 1:
         return "codegen: unsupported schema v" + str(CODEGEN_SCHEMA_VERSION) + " (want v1)"
     if type(DX_CODEGEN_ADMITTED_PAIRS) != "tuple" or len(DX_CODEGEN_ADMITTED_PAIRS) == 0:
@@ -457,15 +320,7 @@ def codegen_schema_error():
     return ""
 
 def codegen_pair_error(schema_kind, language):
-    """Validates one generator/language pair against the O33 freeze.
-
-    Args:
-      schema_kind: schema kind, e.g. "protobuf".
-      language: generated file class, e.g. "rust".
-
-    Returns:
-      "" when the pair is admitted, else the failure reason.
-    """
+    """Validates one generator/language pair against the O33 freeze."""
     if (schema_kind, language) in DX_CODEGEN_ADMITTED_PAIRS:
         return ""
     return (
@@ -478,15 +333,7 @@ def _parse_entry_spec(spec, label_text):
 
     The three-part form declares a logical-only entry (empty exec path,
     requiring no materialized artifact). The four-part form declares the
-    BEP-matching exec-path suffix for the backing artifact.
-
-    Args:
-      spec: raw entry string with two or three "|" separators.
-      label_text: owning label rendering for diagnostics.
-
-    Returns:
-      A `codegen_entry` struct.
-    """
+    BEP-matching exec-path suffix for the backing artifact."""
     parts = spec.split("|")
     if len(parts) == 3:
         return codegen_entry(parts[0], parts[1], parts[2])
@@ -499,17 +346,7 @@ def _parse_entry_spec(spec, label_text):
     )
 
 def _emit_shard(ctx, producer, language, entry_structs):
-    """Validates one record and emits its binary shard via the writer.
-
-    Args:
-      ctx: rule context with executable `_writer`.
-      producer: contributor label in observation rendering.
-      language: generated file class.
-      entry_structs: list of `codegen_entry` structs.
-
-    Returns:
-      The declared shard file.
-    """
+    """Validates one record and emits its binary shard via the writer."""
     record = codegen_record(producer, language, entry_structs)
     record_error = codegen_record_error(record)
     if record_error != "":
@@ -544,16 +381,7 @@ def _exec_matches(file_path, exec_path):
 
     Suffix matching (on "/" boundaries, plus exact equality) lets one
     logical entry resolve under different output bases without scanning
-    `bazel-out`.
-
-    Args:
-      file_path: Bazel `File.path` of a generated artifact.
-      exec_path: non-empty BEP-matching suffix from an entry.
-
-    Returns:
-      True when `file_path` equals `exec_path` or ends with
-      `"/" + exec_path`.
-    """
+    `bazel-out`."""
     return file_path == exec_path or file_path.endswith("/" + exec_path)
 
 def _dx_codegen_shard_impl(ctx):

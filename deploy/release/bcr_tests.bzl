@@ -1,8 +1,4 @@
 """Unit tests for BCR submission tooling (issue #311).
-
-Pins the module/version gate (rules_dx, SemVer, 0.0.0 shape-only) and
-the owner-approval submission gate. Would-submit dispatch is proven by
-the `bcr_verify` sh_tests in BUILD via BCR_DRY_RUN=1.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

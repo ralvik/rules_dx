@@ -1,4 +1,4 @@
-//! Build/test/coverage workflow Bazel planning (issue #236).
+//! Build/test/coverage workflow Bazel planning.
 //!
 //! Split from [`super::quality`]: owns the `build`/`test`/`coverage`/`run`
 //! workflow planning ([`WorkflowVerb`], [`workflow_options`],

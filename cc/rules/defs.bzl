@@ -1,35 +1,6 @@
 """Experimental minimal C/C++ wrappers (M22, O30, ADR 0019).
 
-Thin conventional boundary over the pinned `rules_cc 0.2.22` ruleset
-(which proxies the native `cc_library`/`cc_binary`/`cc_test`). Each
-`cc_*` macro creates one private `<name>_upstream` target with the
-passed attributes and one public `<name>` forwarding target. The library
-forwarder preserves the upstream providers (`CcInfo`, `DefaultInfo`,
-`InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
-normalized from the wrapper's direct `srcs`/`hdrs`. Binaries and tests use
-an executable forwarder whose own symlink action points at the upstream
-executable (Bazel requires executable-providing rules to create the file
-themselves).
-
-Used upstream symbols (`@rules_cc//cc:defs.bzl`): `cc_library`,
-`cc_binary`, `cc_test`. Used provider (`@rules_cc//cc/common:cc_info.bzl`):
-`CcInfo`. No other upstream surface is used; consumers needing more
-(`cc_import`, `cc_shared_library`, `objc_*`) load the upstream module
-directly.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"c": <direct .c/.h>,
-"cpp": <direct .cc/.cpp/.cxx/.hh/.hpp/.hxx>})`. Include paths,
-transitive headers, and toolchain closures stay readable from the
-preserved `CcInfo`; no second provider duplicates them.
-
-Header ownership is per extension, not per including source: `.h` maps to
-`c` and `.hh`/`.hpp`/`.hxx` map to `cpp`. A C++ library with a `.h`
-header therefore reports both classes under the single `cc` family; the
-pipeline groups them by family, so no second owner is created. CUDA
-(`.cu`/`.cuh`), assembly, and `cc_shared_library` scope stay unresolved
-per the support-matrix feasibility review and fail closed here until O30
-qualifies them.
+Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_cc//cc:defs.bzl", _cc_binary = "cc_binary", _cc_library = "cc_library", _cc_test = "cc_test")
@@ -136,16 +107,7 @@ def _cc_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _cc_binary, _cc_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def cc_library(name, srcs = None, hdrs = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `cc_library` (M22).
-
-    Args:
-      name: public library target name (upstream target is name_upstream).
-      srcs: direct C/C++ sources owned by this wrapper.
-      hdrs: direct C/C++ headers owned by this wrapper.
-      visibility: visibility of the public forwarding library target.
-      **kwargs: extra attributes forwarded to the upstream cc_library
-        (deps, includes, copts, defines).
-    """
+    """Experimental minimal wrapper over `cc_library` (M22)."""
     effective_srcs = srcs if srcs != None else []
     effective_hdrs = hdrs if hdrs != None else []
     _cc_wrap_library(name, effective_srcs, effective_hdrs, visibility = visibility, **kwargs)
@@ -154,14 +116,7 @@ def cc_binary(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `cc_binary` (M22).
 
     An ordinary binary owns its `srcs` plus `deps` on a wrapper library.
-    Headers arrive via the library `deps`, never as binary `hdrs`.
-
-    Args:
-      name: public binary target name (upstream target is name_upstream).
-      srcs: direct binary sources owned by this wrapper.
-      visibility: visibility of the public forwarding binary target.
-      **kwargs: extra attributes forwarded to the upstream cc_binary.
-    """
+    Headers arrive via the library `deps`, never as binary `hdrs`."""
     _cc_wrap_binary(name, srcs, visibility = visibility, **kwargs)
 
 def cc_test(name, srcs, visibility = None, **kwargs):
@@ -170,15 +125,7 @@ def cc_test(name, srcs, visibility = None, **kwargs):
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner
     via `deps`; tested sources are never this test's direct sources. Uses
-    Bazel's standard test and coverage protocols.
-
-    Args:
-      name: public test target name (upstream target is name_upstream).
-      srcs: direct test sources owned by this wrapper.
-      visibility: visibility of the public forwarding test target.
-      **kwargs: extra attributes forwarded to the upstream cc_test
-        (deps must name the wrapper library under test).
-    """
+    Bazel's standard test and coverage protocols."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
 

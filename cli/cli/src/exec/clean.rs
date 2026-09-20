@@ -8,7 +8,7 @@ use dx_clean::{
 };
 use dx_output::OutputMode;
 
-/// Runs `dx clean [--dry-run] [--bazel]` (issue #20): collects the
+/// Runs `dx clean [--dry-run] [--bazel]`: collects the
 /// workspace managed-state inventory with the process scan (live shells
 /// or actions holding `.dx` paths pin their hexes as active), plans the
 /// prune set over validated unselected records and generations, and

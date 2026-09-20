@@ -1,8 +1,4 @@
 """Unit tests for SBOM + provenance generation (issue #311).
-
-Pins the selected wire profile (SPDX 2.3, SLSA v1) and the deterministic
-output naming. Content binding (subject digest == artifact sha256) is
-proven by the `sbom_verify` sh_tests in BUILD, not here.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

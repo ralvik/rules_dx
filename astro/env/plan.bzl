@@ -1,17 +1,6 @@
 """Focused Astro environment plan (M20 WP2).
 
-`AstroEnvPlanInfo` is the provider-derived focused-target plan
-contribution: direct sources, transitive first-party sources, and npm-closure
-size read from the analyzed authoritative providers of one `astro_*`
-wrapper target. It never scans the checkout, never invokes pnpm, never
-re-resolves package metadata, and never mutates environment or codegen
-selection.
-
-`astro_env_plan` materializes that plan as a deterministic JSON file
-plus a `DxSubjectInfo` observation surface for `starlark_test` analysis
-mode. Sources come from the wrapper's preserved `JsInfo`; direct sources
-come from `QualitySourcesInfo`. Importer-local `node_modules` facades and
-repository/root/exact-target orchestration remain M25.
+Contract: `docs/environments/environment.md`.
 """
 
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")

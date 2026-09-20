@@ -1,32 +1,4 @@
 """M04 standalone quality-tool acquisition (WP1, O20).
-
-One repository per tool/platform is materialized from the generated
-checked-in metadata in this directory; a hub repository selects the
-execution-platform artifact. Registration never fetches: Bazel downloads a
-tool repository only when an action needs its artifact, and `ctx.download`
-rejects bytes whose digest differs from the checked-in pin.
-
-Metadata schema version 1 is frozen by `metadata_tests.bzl`; only
-linux_x86_64 is recorded (seed host plus Linux arm64 `dx`/CI qualified
-under issue #410 plus static-musl target profiles qualified under issue
-#411 plus macOS arm64 `dx`/CI qualified under issue #412 plus macOS
-x86_64 best-effort `dx`/CI qualified under issue #413 plus Windows
-x86_64 MSVC-compatible `dx`/CI qualified under issue #414; linux_arm64
-plus macos_arm64 plus macos_x86_64 plus windows_x86_64 tool artifacts stay
-owned follow-up gaps
-with the recorded no-artifact diagnostic, never a silent fallback; musl
-target closures run quality tools on the glibc exec platform, so no musl
-tool artifact is recorded; other
-required hosts are unqualified gaps).
-
-Host-tool contract (issue #318): repository fetching uses Bazel-native
-`ctx.download`/`ctx.extract` only. Direct downloads set
-`executable = True` so no host `chmod` runs; tar members already
-carry `0o755` in their upstream tarballs (recorded as `mode`/`is_executable`
-in the metadata), so extraction preserves executability without
-`ctx.execute`. The single gzip member (taplo) carries no mode in the
-gzip header, so its extracted file needs one `chmod +x` (POSIX
-coreutils only, no hasher/archiver probing). No host hasher/archiver runs in repository rules.
 """
 
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")

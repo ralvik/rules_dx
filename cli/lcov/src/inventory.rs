@@ -1,4 +1,4 @@
-//! Repo inventory for the coverage gate (issue #236).
+//! Repo inventory for the coverage gate.
 //!
 //! Split from `super` (`lib.rs`): owns the inventory dispositions
 //! ([`ELIGIBLE`], [`SUPPORT`]) and [`parse_inventory`] (the

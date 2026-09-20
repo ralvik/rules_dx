@@ -1,4 +1,4 @@
-//! Quality command registry (issue #236).
+//! Quality command registry.
 //!
 //! Split from [`super::quality`]: owns the static command registry
 //! ([`CommandSpec`]/[`spec`]). Option/build planning
@@ -168,7 +168,7 @@ pub fn spec(command: Command) -> CommandSpec {
         // selectors plan through the `dx_audit`/`dx_update` libraries,
         // never the quality aspect pipeline. Audit exports SARIF (security
         // findings) and SPDX 2.3 JSON (license inventory) through the
-        // shared report contract (issue #18); update reports per-set
+        // shared report contract; update reports per-set
         // through live output (text plus `notice`/`error` in JSON, issue
         // #19) with no `--report` standard report.
         Command::Audit => CommandSpec {

@@ -1,12 +1,4 @@
 """Unit and analysis tests for the bootstrap environment registry (M11 WP1-WP3).
-
-Unit checks run while this file loads, pinning every `env_name_error`
-branch (empty, dot segments, separators, executable suffixes, reserved
-stems), `env_tool_error` wrapping (bad primary, bad alias), and
-`env_collision_error` (clean composition, same-owner repeats,
-primary/alias cross-tool collisions, case folding, multi-claimant
-listing). The analysis test pins the transitive composition observation
-rendering for the fixture config.
 """
 
 load("//libs/starlark:defs.bzl", "display_label", "expect_equal", "starlark_test")

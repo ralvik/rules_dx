@@ -1,8 +1,4 @@
 """Unit tests for signing selection (issue #311).
-
-Pins the Sigstore keyless + GitHub attestations selection (trust root,
-issuer, identity gate) and bundle naming. Would-run dispatch is proven
-by the `signing_verify` sh_tests in BUILD via RELEASE_SIGN_DRY_RUN=1.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

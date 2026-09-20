@@ -1,4 +1,4 @@
-//! Hermetic hook runner and merged status view (issue #236).
+//! Hermetic hook runner and merged status view.
 //!
 //! Split from `super` (`lib.rs`): owns `HOOK_BUDGET_SECS`,
 //! `hook_git_is_hermetic`, `hook_shim_overwrite_allowed`,

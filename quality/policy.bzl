@@ -1,20 +1,6 @@
 """Workspace quality-policy providers (M03 freeze for O17).
 
-Typed per-family sections plus a thin canonical aggregate, per ADR 0011.
-A `quality_family` selects stable tool IDs per capability for one policy
-family; a `workspace_policy` aggregates family sections into the canonical
-target selected through `@rules_dx//config:workspace`. Empty capability
-lists explicitly disable that capability for the family; an omitted family
-means curated defaults apply (owned by the tool baseline, M04+).
-
-Fail-fast validation at construction: non-string, empty, or duplicate tool
-IDs fail the family; empty or duplicate family IDs fail the aggregate.
-Unknown tool IDs fail later at adapter matching during analysis (see
-`applicability.bzl`), which the tool-integrations contract accepts as
-"during configuration or analysis".
-
-Contract: `docs/quality/tool-integrations.md`. The family taxonomy (which
-families exist) and curated defaults are not frozen here.
+Contract: `docs/quality/tool-integrations.md`, `docs/decisions/0011-configuration-composition.md`.
 """
 
 CAPABILITIES = ["lint", "typecheck", "format", "audit"]

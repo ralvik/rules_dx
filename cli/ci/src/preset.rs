@@ -1,4 +1,4 @@
-//! Consumer `.bazelrc` preset onboarding planning (issue #236, M27 WP6 slice 12).
+//! Consumer `.bazelrc` preset onboarding planning (M27 WP6 slice 12).
 //!
 //! Split from `super` (`lib.rs`): owns [`PRESET_RUNBOOK_STEPS`],
 //! [`PresetLabelError`], [`validate_preset_label`],

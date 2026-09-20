@@ -1,12 +1,4 @@
 """Source fixtures for aspects (M03 synthetic, M04 real).
-
-`quality_source_target` is a minimal custom rule proving custom-rule
-integration solely through `QualitySourcesInfo`: no wrapper, no language
-toolchain, no generic `srcs` fallback. Aspects read only this provider.
-
-`real_source_target` is the M04 counterpart over the initial-adapter
-classes (rust, starlark, toml, markdown) with `aspect_hints` for typed
-native configs. Real aspects read only `QualitySourcesInfo` plus hints.
 """
 
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")

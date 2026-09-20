@@ -1,4 +1,4 @@
-//! Gate CLI for the coverage gate (issue #236).
+//! Gate CLI for the coverage gate.
 //!
 //! Split from `super` (`lib.rs`): owns [`run`] (the `check --report
 //! --inventory --sources [--root]` entry point returning 0 on pass, 1 on

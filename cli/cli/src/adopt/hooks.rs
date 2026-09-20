@@ -1,4 +1,4 @@
-//! Adoption hooks execution (`hooks`, issue #236).
+//! Adoption hooks execution (`hooks`).
 //!
 //! Split from `super` (`adopt.rs`): owns [`execute_hooks`] — install,
 //! uninstall, status, and run. Install/uninstall/run summaries are

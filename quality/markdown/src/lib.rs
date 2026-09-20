@@ -73,7 +73,7 @@ pub struct CheckOutcome {
     pub skipped_remotes: Vec<String>,
 }
 
-/// Markdown checker failure (issue #230).
+/// Markdown checker failure.
 ///
 /// The injected file reader surfaces I/O failures verbatim so CLI
 /// diagnostics stay byte-identical while callers gain a matchable type.
@@ -708,7 +708,7 @@ struct Mapping {
     exec: String,
 }
 
-/// `argv` tokenizer (issue #233; qualified under issue #316: frozen legacy contract). `--source`/`--sibling` append in argument
+/// `argv` tokenizer (qualified under issue #316: frozen legacy contract). `--source`/`--sibling` append in argument
 /// order; every value option consumes the next token unconditionally (even
 /// a `--`-led token), matching the legacy hand loop. Mapping values validate
 /// through [`parse_source_mapping`]/[`parse_sibling_mapping`] at tokenize
@@ -904,13 +904,13 @@ fn parse_mapping(flag: &'static str, raw: &str) -> Result<Mapping, String> {
     }
 }
 
-/// `clap` value parser for `--source` (issue #233): rejections already carry
+/// `clap` value parser for `--source`: rejections already carry
 /// the legacy `malformed --source …` text that [`parse_error`] recovers.
 fn parse_source_mapping(raw: &str) -> Result<Mapping, String> {
     parse_mapping("--source", raw)
 }
 
-/// `clap` value parser for `--sibling` (issue #233): rejections already carry
+/// `clap` value parser for `--sibling`: rejections already carry
 /// the legacy `malformed --sibling …` text that [`parse_error`] recovers.
 fn parse_sibling_mapping(raw: &str) -> Result<Mapping, String> {
     parse_mapping("--sibling", raw)

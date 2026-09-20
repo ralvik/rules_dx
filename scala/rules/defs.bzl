@@ -1,41 +1,6 @@
 """Experimental minimal Scala wrappers (M23, O31, ADR 0019).
 
-Thin conventional boundary over the pinned `rules_scala 7.3.0` ruleset,
-managed route frozen by the M22 O30 decision and delivered here under O31.
-Each `scala_*` macro creates one private `<name>_upstream` target with
-the passed attributes and one public `<name>` forwarding target. The library
-forwarder preserves the upstream providers (`JavaInfo`, `DefaultInfo`,
-`InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
-normalized from the wrapper's direct `srcs`. Binaries and tests use an
-executable forwarder whose own symlink action points at the upstream
-executable (Bazel requires executable-providing rules to create the
-file themselves).
-
-Used upstream symbols (`@rules_scala//scala:scala.bzl`): `scala_library`,
-`scala_binary`, `scala_test`. The preserved provider (`JavaInfo`) is
-Bazel's native Java provider, which `scala_*` rules also provide alongside
-their Scala-internal `ScalaInfo` (kept readable from the private upstream
-target, never duplicated here). No other upstream surface is used;
-consumers needing more (`scala_import`, `scala_junit_test`,
-`scala_specs2_junit_test`, compiler plugins) load the upstream module
-directly.
-
-Normalization is deliberately narrow: direct `.scala` sources map to the
-`scala` class and direct `.java` sources (same-compilation-unit mixed
-sources) map to the `java` class:
-`QualitySourcesInfo(direct_sources = {"scala": <direct .scala>,
-"java": <direct .java>})`. Empty classes are omitted. Classpaths,
-transitive jars, and toolchain closures stay readable from the preserved
-`JavaInfo`; no second provider duplicates them.
-
-`main_class` (binaries) always passes through with no invented default.
-Wrappers accept no toolchain version fields; unknown versions fail in
-upstream toolchain resolution, never here. The default Scala toolchain is
-2.13.18 (pinned in MODULE.bazel via `scala_config.settings`); per-target
-`scala_version` selection stays open under O31. Coursier-fetched toolchains
-share Java's Maven-lock story (`maven_install.json` plus
-`fail_if_repin_required`); Scalafix semantic rules need semanticdb plus
-classpath wiring (open under O31).
+Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_java//java:defs.bzl", "JavaInfo")
@@ -129,15 +94,7 @@ def _scala_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def scala_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `scala_library` (M23).
-
-    Args:
-      name: public library target name (upstream target is name_upstream).
-      srcs: direct Scala/Java sources owned by this wrapper.
-      visibility: visibility of the public forwarding library target.
-      **kwargs: extra attributes forwarded to the upstream scala_library
-        (deps, resources, data).
-    """
+    """Experimental minimal wrapper over `scala_library` (M23)."""
     _scala_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def scala_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
@@ -147,15 +104,7 @@ def scala_binary(name, srcs = None, main_class = None, visibility = None, **kwar
     names its `main_class` explicitly (no inference); a thin entry binary
     carries only `runtime_deps` with no `srcs` and reports no direct
     sources. Both shapes preserve the upstream providers and execution
-    semantics.
-
-    Args:
-      name: public binary target name (upstream target is name_upstream).
-      srcs: direct binary sources; empty for thin entry binaries.
-      main_class: binary entry point, passed through with no default.
-      visibility: visibility of the public forwarding binary target.
-      **kwargs: extra attributes forwarded to the upstream scala_binary.
-    """
+    semantics."""
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:
@@ -169,15 +118,7 @@ def scala_test(name, srcs, visibility = None, **kwargs):
     QualitySourcesInfo. The library under test stays its ordinary owner via
     `deps`; test sources are never the library's sources. Uses Bazel's
     standard test and coverage protocols over the bundled ScalaTest
-    toolchain (no Maven lock members needed for the hello closure).
-
-    Args:
-      name: public test target name (upstream target is name_upstream).
-      srcs: direct test sources.
-      visibility: visibility of the public forwarding test target.
-      **kwargs: extra attributes forwarded to the upstream scala_test
-        (deps must name the wrapper library under test).
-    """
+    toolchain (no Maven lock members needed for the hello closure)."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
 

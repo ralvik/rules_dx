@@ -1,4 +1,4 @@
-//! Build profile vocabulary (issue #236).
+//! Build profile vocabulary.
 //!
 //! Split from `super` (`args.rs`): owns [`Profile`], [`DX_PROFILE_ENV`],
 //! and [`resolve_profile`] (issue #179, ADR 0021). The parser

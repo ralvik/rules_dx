@@ -1,11 +1,6 @@
 """Layer-2 matrix cases (#59, snapshot workflow issue #322): every supported language x capability cell.
 
-Each case runs the real runner binary over provider-less data and asserts
-the decoded result as an inline snapshot (schema-validated shape plus
-byte-identical bytes with UPDATE_EXPECT refresh). Dirty inputs reuse the existing
-`real_dirty.*` aspect files by direct file label (no provider) or use
-`generated` bytes, so no aspect-visible dirty subject is needed. The
-table in `docs/quality/runner-matrix.md` maps every cell to its case.
+Contract: `docs/quality/runner-matrix.md`.
 """
 
 load(":runner_matrix_tests.bzl", "runner_matrix_suite")

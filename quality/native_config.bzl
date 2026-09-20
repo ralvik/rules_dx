@@ -1,23 +1,6 @@
 """Typed native-configuration targets for M04 adapters plus M15 Ruff and M17 Biome/ESLint.
 
-Each initial adapter reads its behavior from exactly one checked-in
-tool-owned config file (the native-configuration authority contract):
-Buildifier `.buildifier.json`, Taplo `taplo.toml` fragment, Vale `.vale.ini`
-plus style/vocab data, rustfmt `rustfmt.toml`, Ruff `ruff.toml` (see
-below for the dedicated-config rule), Biome `biome.json` (see below for
-the config-dir rule), and ESLint `eslint.config.js` flat config (see
-below). Clippy (#47) is upstream-delegated and takes no dx-side
-config: policy rides the `clippy.toml` label flag Bazel itself reads.
-Source targets opt into a config through `aspect_hints`; the consuming
-aspect resolves hints to stages (see `collect_native_configs`). Without a
-hint the adapter runs pinned upstream defaults, except Vale, which has no
-usable default and fails analysis without a config.
-
-Validation split: `native_config_error` is the pure total predicate over
-plain values, exhaustively unit-tested below in spirit (see
-`native_config_tests.bzl`). Rule constructors call it and fail analysis on
-any error. Non-File members, generated outputs, and wrong extensions fail;
-only checked-in source files back a config or its closure.
+Contract: `docs/quality/native-configuration.md`.
 """
 
 DxNativeConfigInfo = provider(
@@ -59,19 +42,7 @@ def native_config_extension(tool_id):
     return _NATIVE_CONFIG_EXTENSIONS[tool_id]
 
 def native_config_error(tool_id, config_path, config_is_source, data):
-    """Returns the validation error for a native config, or "" when valid.
-
-    Args:
-      tool_id: stable built-in tool identifier from REAL_ADAPTERS.
-      config_path: path of the tool-owned config file, "" when absent.
-      config_is_source: whether the config is a checked-in source file.
-      data: list of structs with `.path` and `.is_source` for closure files.
-
-    Returns:
-      The validation error message, or "" when the config is valid.
-      Precedence: unknown tool, missing config, generated config, wrong
-      extension, generated data member.
-    """
+    """Returns the validation error for a native config, or "" when valid."""
     if tool_id not in _NATIVE_CONFIG_EXTENSIONS:
         return ("native_config: unknown tool '" + tool_id + "': want one of " +
                 ", ".join(sorted(_NATIVE_CONFIG_EXTENSIONS.keys())))
@@ -91,19 +62,7 @@ def native_config_error(tool_id, config_path, config_is_source, data):
     return ""
 
 def collect_native_configs(hints, stage_tools, what):
-    """Resolves aspect hints to the configs for a pipeline's stage tools.
-
-    Args:
-      hints: list of `DxNativeConfigInfo` (or duck-typed structs with
-        `.tool_id` in unit tests).
-      stage_tools: ordered tool-ID list for the stages about to run.
-      what: label string of the consuming target, for error messages.
-
-    Returns:
-      Dict of tool ID to hint for the stage tools that have one. A stage
-      tool without a hint is omitted, so the adapter runs pinned upstream
-      defaults; duplicate hints for one tool fail analysis as ambiguous.
-    """
+    """Resolves aspect hints to the configs for a pipeline's stage tools."""
     by_tool = {}
     for hint in hints:
         if hint.tool_id in by_tool:

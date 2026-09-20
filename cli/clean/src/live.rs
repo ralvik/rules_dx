@@ -1,4 +1,4 @@
-//! Live process scan for `dx clean` (issue #236).
+//! Live process scan for `dx clean`.
 //!
 //! Split from `super` (`lib.rs`): owns [`LiveHexes`] (setup-record and
 //! generation hexes observed live), [`scan_live_hexes`] (the `/proc`

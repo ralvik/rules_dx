@@ -1,4 +1,4 @@
-//! Resolver-owned backend operations for `dx update` (issue #19).
+//! Resolver-owned backend operations for `dx update`.
 //!
 //! Pure argv planning over [`crate::sets::SetId`]: every changed file and
 //! invoked operation is attributable to the underlying updater, never to a

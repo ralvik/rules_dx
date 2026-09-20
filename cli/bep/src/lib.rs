@@ -83,7 +83,7 @@ pub struct TargetOutput {
     pub artifacts: Vec<CollectedArtifact>,
 }
 
-/// BEP collection failure (issue #211 slice).
+/// BEP collection failure (slice).
 ///
 /// Every variant renders human-readable via `Display` for CLI
 /// operational diagnostics; binaries render via `to_string()`, never

@@ -1,23 +1,6 @@
 """Quality source-ownership boundary (M03 freeze for O15, ADR 0013).
 
-`QualitySourcesInfo` tells quality aspects which directly owned repository
-source artifacts may be linted, typechecked, formatted, or audited. It
-carries no capabilities, tools, configs, dependencies, generated context,
-transitive sources, or execution metadata.
-
-Contract: `docs/quality/quality-sources.md`. The provider concept and the
-`direct_sources` shape are accepted there; the constructor, load label
-(`//quality:sources.bzl`), field representation, and registry below are
-frozen here. Class IDs are public compatibility surface: renaming,
-removing, merging, or semantically narrowing an ID is breaking; adding a
-class or broadening one requires adapter and policy compatibility tests.
-
-Validation split (per O15 direction): construction validates field shape
-and known IDs only. Direct ownership, admissibility, and single-class
-membership are the consuming aspect's job (M04+), not this file's. The
-class-to-policy-family assignment and admissibility mappings are owned
-in `docs/quality/quality-sources.md` and `quality/adapters.bzl`; they
-are not duplicated here.
+Contract: `docs/quality/quality-sources.md`, `docs/decisions/0013-rust-javascript-typescript-foundations.md`.
 """
 
 QualitySourcesInfo = provider(
@@ -93,14 +76,7 @@ KNOWN_SEMANTIC_FILE_CLASSES = [
 RUST = "rust"
 
 def is_known_semantic_class(class_id):
-    """Reports whether a class ID is in the versioned registry.
-
-    Args:
-      class_id: candidate semantic file-class ID.
-
-    Returns:
-      True when the ID is a known canonical class, else False.
-    """
+    """Reports whether a class ID is in the versioned registry."""
     return class_id in KNOWN_SEMANTIC_FILE_CLASSES
 
 def _is_canonical_id(text):
@@ -118,14 +94,7 @@ def sources_schema_error(classes = None):
     class edits the registry data only and never a parallel allowlist:
     non-empty list, canonical lowercase IDs, no duplicates. Pass an
     explicit list to validate a candidate registry; defaults to the
-    committed `KNOWN_SEMANTIC_FILE_CLASSES`.
-
-    Args:
-      classes: candidate class list, or None for the committed registry.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    committed `KNOWN_SEMANTIC_FILE_CLASSES`."""
     ids = KNOWN_SEMANTIC_FILE_CLASSES if classes == None else classes
     if type(ids) != "list" or len(ids) == 0:
         return "sources registry: want a non-empty class list (schema v1)"
@@ -143,12 +112,7 @@ def check_direct_sources(direct_sources, what):
 
     Fails analysis on: non-dict map, unknown class ID, non-depset value,
     or non-File member. Ownership, admissibility, and single-class
-    membership are validated by the consuming aspect, not here.
-
-    Args:
-      direct_sources: maps class ID to depset of Files under validation.
-      what: subject label rendered in failure messages.
-    """
+    membership are validated by the consuming aspect, not here."""
     if type(direct_sources) != "dict":
         fail("QualitySourcesInfo (" + what + "): direct_sources must be a " +
              "dict of class ID to depset, got " + type(direct_sources))

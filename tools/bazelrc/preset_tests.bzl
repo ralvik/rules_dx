@@ -1,22 +1,10 @@
 """Preset freshness tests.
-
-Pins the version-matched Bazel pin, the per-release dx stamp, and the
-reviewed flag inventory hermetically via file substring checks: a version
-bump without a reviewed regen, a stale generated fragment, or a missing
-`.bazelrc` import fails here. The checked-in generated fragment is
-reproduced by `bazel run //tools/bazelrc:preset.update`; that command with
-`--verify-only` prints the flag diff under review. Consumer refresh runs
-`dx update` (regenerates) and `dx update --check` (fails when stale).
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 def preset_update_tests(name):
-    """Declare the vendored-preset freshness test.
-
-    Args:
-      name: test target name.
-    """
+    """Declare the vendored-preset freshness test."""
     starlark_test(
         name = name,
         mode = "execution",

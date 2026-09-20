@@ -1,28 +1,6 @@
 """Project-owned Starlark testing facade (ADR 0009, M01).
 
-The public entry points are the `starlark_test` macro, the `expect_equal`
-assertion constructor, and the `DxSubjectInfo` provider.
-
-Authoring model: test `.bzl` files call `expect_equal` while they load and
-export a macro that instantiates `starlark_test` with those records. BUILD
-files only instantiate the exported macro with a target name; they never
-encode assertion data. `expect_equal` evaluates during loading, so the
-recorded actual values prove the subject code executed in the loading phase.
-The internal per-mode rule implementations observe subject targets during
-analysis and generate a POSIX shell script that evaluates every check during
-the execution phase. A mismatch fails the test target through the standard
-Bazel test protocol (non-zero exit status, `test.log` diagnostics); it is
-never an analysis error, so failures are observable as `FAILED`, not as
-build breakage. Mode validation errors (wrong evidence for the declared
-mode) fail analysis instead, because they are authoring errors, not subject
-behavior. The generated runner requires the standard Bazel test
-environment (`TEST_SRCDIR`, `TEST_WORKSPACE`) and resolves runfiles as
-`$TEST_SRCDIR/$TEST_WORKSPACE/<short_path>`; `BUILD_WORKSPACE_DIRECTORY`
-is unset under `bazel test` and must not be used.
-
-`expect_equal` values must be JSON-encodable (strings, ints, booleans,
-`None`, lists, dicts). Records serialize with `json.encode`, which orders
-keys alphabetically and renders deterministically.
+Contract: `docs/decisions/0009-starlark-testing.md`.
 """
 
 DxSubjectInfo = provider(
@@ -305,17 +283,7 @@ def starlark_test(name, mode, checks = [], subjects = [], expected_observations 
     One macro call is one addressable Bazel test target with one Bazel
     result; mismatches accumulate and report together in declaration order.
     `size` defaults to `small`; pass `tags = ["manual"]` for negative
-    demonstrations that must fail without breaking `//...` suites.
-
-    Args:
-      name: test target name.
-      mode: one of "analysis", "execution", "load", "unit".
-      checks: equality records from expect_equal, evaluated at execution.
-      subjects: analysis-mode subject targets observed for providers.
-      expected_observations: analysis-mode expected observation rendering.
-      file_checks: maps file targets to required substrings at execution.
-      **kwargs: extra rule attributes (size, tags) forwarded to the rule.
-    """
+    demonstrations that must fail without breaking `//...` suites."""
     if mode not in _MODES:
         fail("starlark_test: unknown mode '" + mode + "': want one of " +
              ", ".join(sorted(_MODES.keys())))

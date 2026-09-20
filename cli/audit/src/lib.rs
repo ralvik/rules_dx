@@ -1,4 +1,4 @@
-//! Pure `dx audit` request planning plus live auditor backends (issue #18).
+//! Pure `dx audit` request planning plus live auditor backends.
 //!
 //! This crate owns the audit command surface: family selection, scope
 //! defaults, and the non-mutating marker, plus live auditor wiring
@@ -35,7 +35,7 @@
 //! auditors, but the clean/findings/incomplete verdict combination and
 //! its exit code are pinned here.
 //!
-//! Live execution (issue #18) adds auditor backend planning in
+//! Live execution  adds auditor backend planning in
 //! [`backend`] (Gitleaks subprocess wiring plus per-set vuln/license
 //! boundaries), advisory snapshot acquisition with 24h cache semantics
 //! in [`advisory`], local vulnerability matching with severity and

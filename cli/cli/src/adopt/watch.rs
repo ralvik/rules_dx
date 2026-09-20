@@ -1,4 +1,4 @@
-//! Adoption watch execution (`watch`, issue #236).
+//! Adoption watch execution (`watch`).
 //!
 //! Split from `super` (`adopt.rs`): owns [`execute_watch`], the thin
 //! wrapper over `dx_adopt::plan_watch` (dry-run plans are summaries,

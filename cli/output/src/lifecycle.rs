@@ -1,4 +1,4 @@
-//! Command lifecycle NDJSON events for the `dx` CLI (issue #236).
+//! Command lifecycle NDJSON events for the `dx` CLI.
 //!
 //! Split from `super` (`lib.rs`): owns the stream schema version,
 //! `schema`, the `command_started` / `operation` / `report` / `selection` /

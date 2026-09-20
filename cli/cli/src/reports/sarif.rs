@@ -1,4 +1,4 @@
-//! SARIF 2.1.0 projection for normalized findings (issue #389).
+//! SARIF 2.1.0 projection for normalized findings.
 //!
 //! [`render_sarif`] projects normalized [`DiagnosticEvent`] findings onto
 //! the SARIF 2.1.0 document consumed through the shared `--report`

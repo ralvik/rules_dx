@@ -1,8 +1,4 @@
 """Tested-stack manifest contract tests (M01 WP7).
-
-Asserts manifest content and cross-checks every pinned version against the
-ground-truth files (`.bazelversion`, `MODULE.bazel`). A stale default in
-the `stack` target fails here.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

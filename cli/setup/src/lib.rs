@@ -416,7 +416,7 @@ pub fn setup_fingerprint(pair: &SetupPair) -> String {
 
 /// BLAKE3-256 over the provisional fingerprint: the setup record identity.
 /// Routed through `dx_digest` so the digest algorithm has one owner
-/// (issue #73).
+///.
 pub fn setup_digest(pair: &SetupPair) -> [u8; 32] {
     digest(setup_fingerprint(pair).as_bytes())
 }
@@ -1029,7 +1029,7 @@ mod tests {
         assert_ne!(first, setup_hex(&pair('1', '3')));
         assert_ne!(first, setup_hex(&pair('3', '2')));
         assert!(setup_fingerprint(&pair('1', '2')).starts_with("dx-setup/v0\n"));
-        // Golden pilot (issue #225): full-fingerprint insta snapshot pins
+        // Golden pilot: full-fingerprint insta snapshot pins
         // the versioned encoding; any encoding change must update this
         // snapshot alongside the managed-state contract.
         insta::assert_snapshot!(setup_fingerprint(&pair('1', '2')), @"dx-setup/v0

@@ -1,30 +1,6 @@
 """Experimental minimal JavaScript wrappers (M16, ADR 0013).
 
-Thin conventional boundary over the pinned `aspect_rules_js 3.4.1`
-ruleset. Each `javascript_*` macro creates one private `<name>_upstream`
-target with the passed attributes and one public `<name>` forwarding
-target. The forwarder preserves the upstream providers (`JsInfo` for
-libraries, `DefaultInfo`, `InstrumentedFilesInfo`) unchanged and adds
-`QualitySourcesInfo` normalized from the wrapper's direct `srcs`.
-Binaries use an executable forwarder whose own symlink action points at
-the upstream executable (Bazel requires executable-providing rules to
-create the file themselves).
-
-Used upstream symbols (`@aspect_rules_js//js:defs.bzl`): `js_library`,
-`js_binary`; (`@aspect_rules_js//js:providers.bzl`): `JsInfo`;
-(`@aspect_rules_jest//jest:defs.bzl`): `jest_test`. No other upstream
-surface is used; consumers needing more load the upstream module
-directly. TypeScript lives under `//typescript/rules`.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"javascript": <direct .js/.jsx/.mjs/.cjs>})`.
-Transitive sources and npm closures stay readable from the preserved
-`JsInfo`; no second provider duplicates them.
-
-Node version selection follows ADR 0012 via the pinned Node toolchain
-(release-default; see MODULE.bazel). Wrappers accept no version fields;
-unknown versions fail in upstream toolchain resolution, never here.
-Source-only local graphs build without package-manager invocation.
+Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
 
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
@@ -116,15 +92,7 @@ def javascript_binary(name, srcs = None, visibility = None, **kwargs):
     `entry_point` plus `data = [":<library>"]` with no `srcs`. The
     library alone owns the source; the thin binary reports no direct
     sources. Both shapes preserve the upstream providers and execution
-    semantics.
-
-    Args:
-      name: public binary target name (upstream target is name_upstream).
-      srcs: direct binary sources for QualitySourcesInfo; empty for thin entries.
-      visibility: visibility of the public forwarding binary target.
-      **kwargs: extra attributes forwarded to the upstream js_binary
-        (entry_point, data, etc.).
-    """
+    semantics."""
     effective_srcs = srcs if srcs != None else []
     _javascript_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
@@ -178,14 +146,7 @@ def javascript_test_rejection(kwargs):
     `javascript_test` always routes through `jest_test` with the standard
     auto-configured reporters (Bazel test logs) and coverage wiring.
     Disabling the standard reporters would substitute a project-specific
-    result protocol, which the JavaScript generation contract forbids.
-
-    Args:
-      kwargs: the extra attributes the caller forwarded to `javascript_test`.
-
-    Returns:
-      The rejection diagnostic string, or `None` when the kwargs are clean.
-    """
+    result protocol, which the JavaScript generation contract forbids."""
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("javascript_test always uses jest with the standard " +
                 "auto-configured reporters (Bazel test logs); " +
@@ -201,14 +162,7 @@ def javascript_test_env(env_inherit):
     is the Bazel test-filtering (`--test_filter`/sharding) channel the
     upstream launcher only receives through `TestEnvironment`. The
     forwarder rebuilds that provider from this exact list, so filtering
-    support is structural, never caller-dependent.
-
-    Args:
-      env_inherit: caller `env_inherit` (or `None`), mirrored, never mutated.
-
-    Returns:
-      The effective env_inherit list including `TESTBRIDGE_TEST_ONLY`.
-    """
+    support is structural, never caller-dependent."""
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
@@ -234,25 +188,7 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
     the upstream data: jest detects ESM by walking up the runfiles tree
     from each test file, so the scope file must be a runtime input of
     every test. Upstream-owned runfiles are unaffected (npm packages
-    carry their own package.json, generated helpers are `.cjs`/`.mjs`).
-
-    Args:
-      name: public test target name (upstream target is name_upstream).
-      srcs: direct test sources owned by this wrapper.
-      node_modules: label of the linked node_modules target (e.g.
-        `//:node_modules`) where `jest-cli` (and `jest-junit` when
-        reporters stay auto-configured) is linked.
-      data: extra runtime deps (files under test, configs); `srcs`
-        are always included.
-      visibility: visibility of the public forwarding test target.
-      tags: extra tags for both targets (issue #406: no `manual`;
-        both the private upstream and the public wrapper run under
-        `bazel test //...`; double-execution is the cost of green suites).
-      env_inherit: extra runtime-inherited env vars, mirrored to both
-        the upstream jest_test and the rebuilt TestEnvironment.
-      **kwargs: extra attributes forwarded to the upstream jest_test
-        (config, snapshots, size, timeout, etc.).
-    """
+    carry their own package.json, generated helpers are `.cjs`/`.mjs`)."""
     upstream_data = list(srcs) + (list(data) if data != None else [])
     effective_env = javascript_test_env(env_inherit)
     rejection = javascript_test_rejection(kwargs)

@@ -29,7 +29,7 @@ struct Cli {
     result: Option<String>,
     /// Threshold policy name (`--fail_on` keeps last-wins repeats).
     /// Values validate through the canonical [`parse_threshold`] surface
-    /// (issue #233): only `info|warning|error` tokenize; anything else maps
+    ///: only `info|warning|error` tokenize; anything else maps
     /// back onto the legacy `unknown fail_on …` text in [`parse_error`].
     #[arg(
         long = "fail_on",
@@ -133,7 +133,7 @@ fn rejected_value(error: &clap::Error) -> Option<String> {
     }
 }
 
-/// `clap` value parser for `--fail_on` (issue #233): the single source is
+/// `clap` value parser for `--fail_on`: the single source is
 /// [`parse_threshold`], so tokenizing accepts exactly `info|warning|error`
 /// and rejections already carry the legacy `unknown fail_on …` text that
 /// [`parse_error`] recovers from the error context.
@@ -149,7 +149,7 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
 }
 
 fn main() {
-    // Structured diagnostics (issue #232): init is idempotent and emits
+    // Structured diagnostics: init is idempotent and emits
     // nothing by default; `RUST_LOG` overrides the warn filter. Failures
     // report via `tracing::error!` with the legacy message text, so action
     // diagnostics keep their content while gaining filter control.

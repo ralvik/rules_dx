@@ -1,4 +1,4 @@
-//! Exact selector syntax and target-to-set resolution for `dx update` (issue #19).
+//! Exact selector syntax and target-to-set resolution for `dx update`.
 //!
 //! V1 syntax (`dx update [selector ...]`):
 //! - `cargo` | `npm` | `maven` | `nuget` | `go`: a dependency set (full update).

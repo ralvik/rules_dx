@@ -1,4 +1,4 @@
-//! `clap` grammar for the `dx` CLI (issue #236).
+//! `clap` grammar for the `dx` CLI.
 //!
 //! Split from [`super::parser`]: owns the `clap` grammar (`Cli`),
 //! the value-option table (`VALUE_OPTIONS`), and the grammar accessor
@@ -18,7 +18,7 @@ use super::command::Command;
 /// before or after the command word, repeated scalars keep the last
 /// occurrence, and slice shapes (`--report`, scopes, Bazel forwards) keep
 /// `argv` order. `--help`/`-h` render from this same grammar definition
-/// (issue #203): one source feeds parsing, help, and completions/man
+///: one source feeds parsing, help, and completions/man
 /// pages, never hand-maintained usage strings.
 #[derive(Parser)]
 #[command(
@@ -37,7 +37,7 @@ pub(crate) struct Cli {
     /// Suppress dx operation summaries (tool diagnostics still print).
     #[arg(long)]
     pub(crate) quiet: bool,
-    /// Enable structured diagnostics on stderr via tracing (issue #222).
+    /// Enable structured diagnostics on stderr via tracing.
     /// Default stays byte-identical; `--verbose` adds info-level logs.
     /// Orthogonal to `--quiet` (summaries vs logs).
     #[arg(long)]
@@ -87,7 +87,7 @@ pub(crate) struct Cli {
     pub(crate) bazel_options: Vec<String>,
 }
 
-/// Grammar accessor for build steps (issue #225): the `dx_man` binary
+/// Grammar accessor for build steps: the `dx_man` binary
 /// renders `man/dx.1` from this command so the manual page tracks the
 /// same grammar as parsing, `--help`, and completions.
 pub fn cli_command() -> clap::Command {

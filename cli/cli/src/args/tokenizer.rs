@@ -1,4 +1,4 @@
-//! Argument tokenizer and `clap`-error mapping (issue #236; qualified under issue #316: frozen legacy contract).
+//! Argument tokenizer and `clap`-error mapping (qualified under issue #316: frozen legacy contract).
 //!
 //! Split from [`super::parser`]: owns the Bazel-verbatim tokenizer
 //! (`split_bazel_verbatim`, `tokenize`, `parse_tokens`) and the
@@ -22,7 +22,7 @@ use super::{help, suggest, ArgsError};
 /// is Bazel-owned regardless of command) or when a value option is
 /// missing its payload (the full parse then reports the missing value).
 ///
-/// Stays hand-rolled (issue #233 fallback): it routes `argv` *before* the
+/// Stays hand-rolled (fallback): it routes `argv` *before* the
 /// grammar runs, deciding which prefix clap parses and which tail forwards
 /// verbatim. A `value_parser` runs inside parsing on one value and cannot
 /// own the tail, and the Bazel tail is foreign syntax by contract.
@@ -106,7 +106,7 @@ fn is_command_positional(token: &str) -> bool {
 /// typo hints, unknown flags (including `=value` on booleans) stay
 /// unknown options, and missing option values stay missing values.
 /// `--help`/`-h` and `--version`/`-V` render from the same grammar
-/// (issue #203) as [`ArgsError::Help`], never as usage errors.
+///  as [`ArgsError::Help`], never as usage errors.
 fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
     use clap::error::ErrorKind;
     match error.kind() {
@@ -139,7 +139,7 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
                 // The command positional is a `ValueEnum`, so unknown
                 // command words fail here, not in `parse`: map them back
                 // onto the unknown-command surface with typo hints
-                // (issue #199). A lone `-` still reads as an unknown
+                //. A lone `-` still reads as an unknown
                 // option, exactly like the pre-`ValueEnum` tokenizer did.
                 let value = invalid_value(error).unwrap_or(token);
                 if value.starts_with('-') {

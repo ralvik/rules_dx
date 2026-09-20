@@ -1,9 +1,4 @@
 """Real aspect evidence tests (M04 WP2).
-
-Pins merged real dx_results presence per fixture: exact capability subsets,
-no generic fallback, no empty actions, tags honored, Vale hinted. Per-stage
-exact source inputs are proven via aquery action inputs; these analysis pins
-prove the capability-level shape resting on the real pipeline unit tests.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

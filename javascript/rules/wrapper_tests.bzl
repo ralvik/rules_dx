@@ -1,13 +1,4 @@
 """Wrapper-contract tests for the JavaScript wrappers (#87 item 2).
-
-Pins the jest-pipeline enforcement: `javascript_test` always routes
-through `jest_test` with the standard auto-configured reporters, so
-disabling them (a project-specific result protocol) is rejected with a
-contract diagnostic. Filtering support is structural: the effective
-runtime environment always carries `TESTBRIDGE_TEST_ONLY` no matter
-what the caller passes. The `fail()` in the `javascript_test` macro is
-load-time, so both behaviors are proven here through the pure
-`javascript_test_rejection` and `javascript_test_env` helpers.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

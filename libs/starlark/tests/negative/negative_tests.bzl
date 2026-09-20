@@ -1,22 +1,4 @@
 """Negative demonstrations (M01 WP4, WP5) as green hermetic proofs (issue #406).
-
-Failure lives inside a passing test body, never as a failing target:
-each red fixture has a passing test asserting the exact user-visible
-result, and the fixture stopping to fail fails the test. No `manual`,
-no nested Bazel, sandboxed and cacheable.
-
-- `failing_check_demo`, `missing_observation_demo`, `missing_fragment_demo`
-  (execution failures): passing `sh_test` harnesses reproducing the exact
-  runner logic (`check`/`check_file`/observation diff) over the deliberately
-  wrong data below and asserting exit 1 + finding text. Hermetic: empty
-  `PATH`, absolute tool binaries, `TEST_TMPDIR` scratch, offline.
-- `wrong_phase_demo` (analysis failure: load mode rejects subjects):
-  `failure_test` (`analysistest.expect_failure`) over a manual non-test
-  subject failing with the exact `starlark_test (load mode)` diagnostic.
-
-Each failure mode maps to a `failure-rendering` or `mode-validation`
-matrix item. The deliberately wrong data below is kept verbatim so
-`//libs/starlark/tests:matrix_validation` still pins it.
 """
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

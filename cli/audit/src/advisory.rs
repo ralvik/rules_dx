@@ -1,4 +1,4 @@
-//! Advisory snapshot acquisition for `dx audit` (issue #18).
+//! Advisory snapshot acquisition for `dx audit`.
 //!
 //! Pure planning over injected snapshot records, per the audit contract
 //! (`docs/cli/commands/audit-update-bazel.md#dx-audit`): dependency audits
@@ -206,7 +206,7 @@ pub fn may_analyze(outcome: &RefreshOutcome) -> bool {
 /// shape plus upstream calendar validation. Kept local so advisory
 /// validation never depends on exception error variants.
 ///
-/// Dependency evaluation (issue #398, keep): stays on `chrono`
+/// Dependency evaluation (keep): stays on `chrono`
 /// (`NaiveDate::parse_from_str`) per the exception-gate `jiff` rejection —
 /// day-granularity retrieval dates need no `tzdb`, same mechanical-churn
 /// cost; re-evaluate on `jiff 1.0`.

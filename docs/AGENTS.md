@@ -1,7 +1,7 @@
 # Documentation Instructions
 
 - Put cross-domain docs in `docs/`. Use the existing domain folders.
-- Edit in place. One doc per fact; link, don't copy.
+- Edit in place. One doc per fact; link, don't copy. Link-don't-copy applies to code comments and docstrings too: `.bzl` headers carry one-line purpose plus owning-contract link, function docs keep only non-obvious invariants, Rust keeps only why-not-obvious notes with owning issue/ADR link.
 - One H1 per file. Short paragraphs, relative links.
 - Label accepted vs provisional vs open clearly.
 - Keep repo facts separate from future plans.

@@ -22,7 +22,7 @@
 //! line directly above it, and the reason text after the colon must be
 //! non-empty.
 //!
-//! Domain split (issue #236): combined-LCOV parsing (`FileHits`,
+//! Domain split: combined-LCOV parsing (`FileHits`,
 //! `parse_lcov`, `validate_lcov_report`) lives in the `parse` module,
 //! source-level exclusion markers (`Ignores`, `is_ignored`, `find_ignores`)
 //! live in the `ignores` module, gate evaluation (`FileVerdict`,
@@ -62,7 +62,7 @@ pub use parse::{parse_lcov, validate_lcov_report, FileHits};
 pub use run::run;
 pub use verdict::{evaluate, is_covered_language, render, FileVerdict, GateVerdict};
 
-/// Typed LCOV gate failure (issue #230).
+/// Typed LCOV gate failure.
 ///
 /// Every variant renders byte-identical to the historical `String` error
 /// it replaces, so CLI operational diagnostics stay stable while callers

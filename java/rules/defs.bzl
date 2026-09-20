@@ -1,33 +1,6 @@
 """Experimental minimal Java wrappers (M23, O31, ADR 0019).
 
-Thin conventional boundary over the pinned `rules_java 9.7.0` ruleset.
-Each `java_*` macro creates one private `<name>_upstream` target with
-the passed attributes and one public `<name>` forwarding target. The library
-forwarder preserves the upstream providers (`JavaInfo`, `DefaultInfo`,
-`InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
-normalized from the wrapper's direct `srcs`. Binaries and tests use an
-executable forwarder whose own symlink action points at the upstream
-executable (Bazel requires executable-providing rules to create the
-file themselves).
-
-Used upstream symbols (`@rules_java//java:defs.bzl`): `java_library`,
-`java_binary`, `java_test`. The used provider (`JavaInfo`) is Bazel's
-native Java provider. No other upstream surface is used; consumers needing
-more (`java_import`, `java_plugin`, `java_package_configuration`) load the
-upstream module directly.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"java": <direct .java>})`. Classpaths,
-transitive jars, and toolchain closures stay readable from the preserved
-`JavaInfo`; no second provider duplicates them.
-
-`main_class` (binaries) and `test_class` (tests) always pass through with
-no invented default. Wrappers accept no toolchain version fields; unknown
-versions fail in upstream toolchain resolution, never here. Only `.java`
-sources are accepted. Per-platform JDK acquisition selection stays open
-under O31: the wrappers build on the default toolchain now, and the
-hermetic `--java_runtime_version` route from the support matrix is
-qualified separately.
+Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_java//java:defs.bzl", _java_binary = "java_binary", _java_library = "java_library", _java_test = "java_test")
@@ -121,15 +94,7 @@ def _java_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def java_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `java_library` (M23).
-
-    Args:
-      name: public library target name (upstream target is name_upstream).
-      srcs: direct Java sources owned by this wrapper.
-      visibility: visibility of the public forwarding library target.
-      **kwargs: extra attributes forwarded to the upstream java_library
-        (deps, resources, data).
-    """
+    """Experimental minimal wrapper over `java_library` (M23)."""
     _java_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def java_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
@@ -139,15 +104,7 @@ def java_binary(name, srcs = None, main_class = None, visibility = None, **kwarg
     names its `main_class` explicitly (no inference); a thin entry binary
     carries only `runtime_deps` with no `srcs` and reports no direct
     sources. Both shapes preserve the upstream providers and execution
-    semantics.
-
-    Args:
-      name: public binary target name (upstream target is name_upstream).
-      srcs: direct binary sources; empty for thin entry binaries.
-      main_class: binary entry point, passed through with no default.
-      visibility: visibility of the public forwarding binary target.
-      **kwargs: extra attributes forwarded to the upstream java_binary.
-    """
+    semantics."""
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:
@@ -160,16 +117,7 @@ def java_test(name, srcs, visibility = None, **kwargs):
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner via
     `deps`; test sources are never the library's sources. Uses Bazel's
-    standard test and coverage protocols.
-
-    Args:
-      name: public test target name (upstream target is name_upstream).
-      srcs: direct test sources.
-      visibility: visibility of the public forwarding test target.
-      **kwargs: extra attributes forwarded to the upstream java_test
-        (deps must name the wrapper library under test; test_class passes
-        through with no default).
-    """
+    standard test and coverage protocols."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
 

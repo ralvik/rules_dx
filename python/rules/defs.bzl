@@ -1,29 +1,6 @@
 """Experimental minimal Python wrappers (M14, ADR 0010).
 
-Thin conventional boundary over the pinned `aspect_rules_py 2.0.0-alpha.6`
-ruleset. Each `python_*` macro creates one private `<name>_upstream`
-target with the passed attributes and one public `<name>` forwarding
-target. The forwarder preserves the upstream providers (`PyInfo`,
-`PyWheelsInfo` for libraries, `DefaultInfo`, `InstrumentedFilesInfo`)
-unchanged and adds `QualitySourcesInfo` normalized from the wrapper's
-direct `srcs`. Binaries use an executable forwarder whose own symlink
-action points at the upstream executable (Bazel requires
-executable-providing rules to create the file themselves).
-
-Used upstream symbols (`@aspect_rules_py//py:defs.bzl`): `py_library`,
-`py_binary`, `py_pytest_test`, `PyInfo`, `PyWheelsInfo`. No other upstream
-surface is used; consumers needing more load the upstream module directly.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"python": <direct .py>,
-"python_stub": <direct .pyi>})`. Import roots, transitive sources, and
-wheel closures stay readable from the preserved `PyInfo`/`PyWheelsInfo`;
-no second provider duplicates them.
-
-Python version selection follows ADR 0012 via the pinned interpreter
-toolchain (`@python_interpreters//:all`, release-default 3.12). Wrappers
-accept no version fields; unknown versions fail in upstream toolchain
-resolution, never here.
+Contract: `docs/decisions/0010-python-foundation.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo", _PyWheelsInfo = "PyWheelsInfo", _py_binary = "py_binary", _py_library = "py_library", _py_pytest_test = "py_pytest_test")
@@ -117,15 +94,7 @@ def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
     `main.py` carries only `main` plus `deps = [":<library>"]` with no
     `srcs`. The library alone owns the source and its source-derived
     dependencies; the thin binary reports no direct sources. Both shapes
-    preserve the upstream providers and execution semantics.
-
-    Args:
-      name: public binary target name (upstream target is name_upstream).
-      srcs: direct binary sources; empty for thin entry binaries.
-      main: entry source for thin binaries; none for ordinary binaries.
-      visibility: visibility of the public forwarding binary target.
-      **kwargs: extra attributes forwarded to the upstream py_binary.
-    """
+    preserve the upstream providers and execution semantics."""
     effective_srcs = srcs if srcs != None else []
     if main != None:
         _python_wrap_binary(name, effective_srcs, visibility = visibility, main = main, **kwargs)
@@ -138,14 +107,7 @@ def python_test_rejection(kwargs):
     `python_test` always runs pytest through `py_pytest_test`, which owns
     the entrypoint wiring. Supplying a generic `main` (or any other
     alternate test driver) is rejected per the Python generation contract;
-    use `py_pytest_main` plus `py_test` directly for a custom main.
-
-    Args:
-      kwargs: the extra attributes the caller forwarded to `python_test`.
-
-    Returns:
-      The rejection diagnostic string, or `None` when the kwargs are clean.
-    """
+    use `py_pytest_main` plus `py_test` directly for a custom main."""
     if "main" in kwargs:
         return ("python_test always runs pytest and provides its own " +
                 "entrypoint; `main` is not supported (generic mains and " +
@@ -160,15 +122,7 @@ def python_test(name, srcs, visibility = None, **kwargs):
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. Imported non-test modules retain their ordinary
     library owners. Uses pytest and Bazel's standard test and coverage
-    protocols per the Python generation contract.
-
-    Args:
-      name: public test target name (upstream target is name_upstream).
-      srcs: direct test sources collected by pytest.
-      visibility: visibility of the public forwarding test target.
-      **kwargs: extra attributes forwarded to the upstream py_pytest_test
-        (deps must include the pytest package, e.g. `@pypi//pytest`).
-    """
+    protocols per the Python generation contract."""
     test_srcs = srcs if srcs != None else []
     rejection = python_test_rejection(kwargs)
     if rejection != None:

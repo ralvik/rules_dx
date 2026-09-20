@@ -1,4 +1,4 @@
-//! Canonical JSON rendering for plan fingerprints (issue #237).
+//! Canonical JSON rendering for plan fingerprints.
 //!
 //! `dx_codegen` and `dx_env_plan` fingerprint the same way: project merged
 //! records onto a `Serialize` view of strings, booleans, and vecs, then
@@ -11,7 +11,7 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-/// Renders a fingerprint view as canonical JSON (issue #237).
+/// Renders a fingerprint view as canonical JSON.
 ///
 /// The view types are strings, booleans, and vecs thereof, which
 /// `serde_json` always serializes; failure is unreachable.

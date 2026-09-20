@@ -1,4 +1,4 @@
-//! Pure `dx update` selection planning (issue #19).
+//! Pure `dx update` selection planning.
 //!
 //! This crate owns the update command surface with live resolver
 //! integration: bare selection means every supported dependency set,

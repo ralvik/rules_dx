@@ -1,8 +1,4 @@
 """Unit and load tests for the arithmetic subject (M01 WP1, WP2).
-
-`expect_equal` calls below run while this file loads or while BUILD calls
-the exported macros, which is the loading phase. The recorded values prove
-the subject code executed there.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

@@ -1,4 +1,4 @@
-//! Event and revision planning for consumer CI (issue #236, M27 WP1 slice 2).
+//! Event and revision planning for consumer CI (M27 WP1 slice 2).
 //!
 //! Split from `super` (`lib.rs`): owns [`Reporting`] (where PR-linked
 //! reporting may write), [`RevisionRequest`] (opaque caller-supplied

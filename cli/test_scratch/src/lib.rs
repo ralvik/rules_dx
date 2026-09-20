@@ -1,4 +1,4 @@
-//! Test-only scratch directories (issue #237).
+//! Test-only scratch directories.
 //!
 //! Prod tempdir creation lives in `dx_cli::plan::create_run_temp_dir`
 //! (nonce plus `dx-run-` prefix discipline). This crate is the same

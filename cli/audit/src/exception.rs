@@ -179,7 +179,7 @@ pub fn check_applies(
 /// fixed-width `YYYY-MM-DD` shape gate stays hand-rolled so only zero-padded
 /// text reaches the parser and no `time`-family second date engine is added.
 ///
-/// Dependency evaluation (issue #398, keep): `jiff 0.2` spike rejected —
+/// Dependency evaluation (keep): `jiff 0.2` spike rejected —
 /// trivial `NaiveDate` parse plus `Datelike::year` needs no `tzdb`/civil-time
 /// arithmetic, `jiff` default pulls the `tzdb` bundle plus `portable-atomic`
 /// tree (~23 locks vs `chrono alloc-only` 4) for mechanical churn

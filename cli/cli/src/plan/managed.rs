@@ -1,4 +1,4 @@
-//! Managed and raw-launcher Bazel planning (issue #236).
+//! Managed and raw-launcher Bazel planning.
 //!
 //! Split from `super` (`plan.rs`): owns [`plan_managed`] (the
 //! `codegen`/`env`/`setup` collection requests) and [`plan_bazel`]

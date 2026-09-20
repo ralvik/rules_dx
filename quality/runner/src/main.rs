@@ -48,7 +48,7 @@ use quality_runner::{
     run_pipeline, FileInput, StageSpec,
 };
 
-/// Pipeline runner failure (issue #230).
+/// Pipeline runner failure.
 ///
 /// Every variant renders the legacy operational message verbatim so
 /// action diagnostics stay byte-identical while callers gain a matchable
@@ -140,7 +140,7 @@ pub enum RunnerError {
 }
 
 fn main() {
-    // Structured diagnostics (issue #232): init is idempotent and emits
+    // Structured diagnostics: init is idempotent and emits
     // nothing by default; `RUST_LOG` overrides the warn filter. Failures
     // report via `tracing::error!` with the legacy message text, so action
     // diagnostics keep their content while gaining filter control.
@@ -157,7 +157,7 @@ fn main() {
 /// consumes the next token unconditionally (even a `--`-led token), matching
 /// the legacy hand loop. Only tokenizing moves to `clap`; all value-shape
 /// validation (`parse_stage`, `parse_tool_*`, mapping splits) is untouched:
-/// it stays post-parse (issue #233 fallback) because it is stateful across
+/// it stays post-parse (fallback) because it is stateful across
 /// values -- duplicate detection, `--tool-config` requiring a preceding
 /// `--tool-binary`, stage ordering -- while `value_parser`s see one value
 /// in isolation and cannot emit the legacy cross-flag errors.

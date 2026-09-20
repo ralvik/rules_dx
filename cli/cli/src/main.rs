@@ -30,7 +30,7 @@ use dx_process::{discover_real, operational_code, pre_exec_code, ChildStatus, Ru
 /// are rare so the fence cost is irrelevant.
 static CHILD_PID: AtomicU32 = AtomicU32::new(0);
 
-/// Signal-forwarding contract (issue #93):
+/// Signal-forwarding contract:
 ///
 /// - Forwards SIGINT and SIGTERM only, to the active child if one is
 ///   registered. Any other signal keeps its default disposition.
@@ -59,7 +59,7 @@ extern "C" fn forward_to_child(signo: libc::c_int) {
     }
 }
 
-/// Keep raw `libc::signal` over `signal-hook` (issue #235 spike):
+/// Keep raw `libc::signal` over `signal-hook` (spike):
 /// `signal-hook` delivers on a spawned thread through a pipe, adding
 /// latency to the forward-to-child kill and re-implementation of the
 /// pid-0 swallow above, while the `kill` itself stays `unsafe libc`
@@ -170,7 +170,7 @@ fn run() -> i32 {
     let invocation = match parse(&args) {
         Ok(invocation) => invocation,
         Err(dx_cli::args::ArgsError::Help { text }) => {
-            // `--help`/`-h` (issue #203): human text on stdout, exit 0,
+            // `--help`/`-h`: human text on stdout, exit 0,
             // deliberately outside machine-output guarantees (no NDJSON).
             let stdout = io::stdout();
             let mut out = stdout.lock();
@@ -180,7 +180,7 @@ fn run() -> i32 {
         }
         Err(error) => return usage_error(&error.to_string()),
     };
-    // Structured diagnostics (issue #222): tracing subscriber init is
+    // Structured diagnostics: tracing subscriber init is
     // idempotent and emits nothing by default, keeping runs byte-identical
     // unless `--verbose` (info) or `RUST_LOG` overrides the filter.
     dx_output::init_diagnostics(invocation.verbose);
@@ -248,7 +248,7 @@ fn run() -> i32 {
             }
         }
     };
-    // Version-skew gate (issue #214): a drifted `.dx/version` pin refuses
+    // Version-skew gate: a drifted `.dx/version` pin refuses
     // mutating/generating commands before any Bazel work starts, with a
     // diagnostic naming the three versions and the repair. Read-only
     // commands warn and proceed; the diagnose/repair path stays usable.
@@ -293,7 +293,7 @@ fn run() -> i32 {
         }
     }
     let pid = std::process::id();
-    // Unique scratch directory per invocation (issue #93): `tempfile`
+    // Unique scratch directory per invocation: `tempfile`
     // mints an exclusive `dx-run-*` directory so recycled PIDs and
     // concurrent runs never share BEP/intended state. The same nonce
     // flows into `Env` so the per-run file names inherit the uniqueness.

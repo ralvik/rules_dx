@@ -1,4 +1,4 @@
-//! Combined-LCOV parsing for the coverage gate (issue #236).
+//! Combined-LCOV parsing for the coverage gate.
 //!
 //! Split from `super` (`lib.rs`): owns [`FileHits`], [`parse_lcov`], and
 //! [`validate_lcov_report`] (the `SF`/`DA` record parser that unions

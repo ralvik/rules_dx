@@ -1,34 +1,6 @@
 """Experimental minimal MDX wrappers (M21, O42).
 
-Thin conventional boundary over the pinned `aspect_rules_js 3.4.1`
-ruleset with the pinned `@mdx-js/mdx 3.1.1` compiler (see root
-package.json). Each `mdx_library` macro creates one private
-`<name>_upstream` `js_library` plus one public forwarding rule. The
-forwarder preserves the upstream providers (`JsInfo`, `DefaultInfo`,
-`InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
-normalized from the wrapper's direct `.mdx` srcs.
-
-Physical/virtual ownership (framework contract): each checked-in
-`.mdx` document has one physical source owner (this wrapper). ESM
-import/export regions and markdown prose (including fenced code and
-JSX expressions) do not become independent physical sources or core
-JS/TS targets. The pinned `@mdx-js/mdx` compiler hands virtual-region
-semantics to build, test, IDE, and quality integrations at execution
-time; generation never compiles a document, never regex-extracts code,
-and never assigns a region to the core JS/TS extensions (`.mdx` is
-inert to them).
-
-Used upstream symbols (`@aspect_rules_js//js:defs.bzl`): `js_library`;
-(`@aspect_rules_js//js:providers.bzl`): `JsInfo`. No other upstream
-surface is used. Consumers needing more load the upstream module
-directly. MDX execution and tests reuse the JavaScript binary/test
-wrappers over compiled outputs; there is no separate
-`mdx_binary`/`mdx_test` wrapper.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"mdx": <direct .mdx>})`.
-Transitive sources and npm closures stay readable from the preserved
-`JsInfo`; no second provider duplicates them.
+Contract: `libs/starlark/wrapper.bzl`.
 """
 
 load("@aspect_rules_js//js:defs.bzl", _js_library = "js_library")

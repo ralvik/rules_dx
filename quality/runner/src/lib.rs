@@ -842,7 +842,7 @@ mod tests {
 
     #[test]
     fn diagnostics_sort_deterministically_under_shuffled_arrival() {
-        // Determinism battery seed (issue #84): randomized report
+        // Determinism battery seed: randomized report
         // arrival must yield identical manifests.
         fn diag(path: &str, start: u64, tool: &str, message: &str) -> Diagnostic {
             Diagnostic {
@@ -873,7 +873,7 @@ mod tests {
 
     #[test]
     fn state_digest_independent_of_insertion_order() {
-        // Determinism battery (issue #84): converged-run identity must
+        // Determinism battery: converged-run identity must
         // not depend on QualitySourcesInfo / checkout arrival order.
         // BTreeMap canonicalizes to sorted-path order, so two maps with
         // identical entries inserted in opposite orders hash equal,
@@ -894,7 +894,7 @@ mod tests {
 
     #[test]
     fn diagnostics_tiebreak_deterministically_across_tool_and_message() {
-        // Determinism battery (issue #84): permutation ranking must be
+        // Determinism battery: permutation ranking must be
         // total — same path/offset from concurrent adapters resolves by
         // (end_byte, tool_id, message) so every arrival permutation
         // converges to one canonical order.
@@ -927,7 +927,7 @@ mod tests {
 
     #[test]
     fn assemble_emits_replacements_only_when_stable() {
-        // Apply-safety battery seed (issue #84): replacements bind the
+        // Apply-safety battery seed: replacements bind the
         // original digest (pre-validation), apply whole-file to the
         // terminal body, vanish when final bytes are identical, and
         // never emit on oscillation.
@@ -993,7 +993,7 @@ mod tests {
 
     #[test]
     fn changing_tenth_round_fails_without_eleventh_invocation() {
-        // Apply-safety battery (issue #84): a pipeline that changes every
+        // Apply-safety battery: a pipeline that changes every
         // round must report IterationLimit at exactly MAX_COMPLETED_ROUNDS
         // (10) with no eleventh apply invocation, and assemble must emit
         // no replacements for that outcome even with differing maps.
@@ -1028,7 +1028,7 @@ mod tests {
 
     #[test]
     fn assemble_replacements_follow_sorted_path_order_for_atomic_apply() {
-        // Determinism + apply-safety battery (issue #84):
+        // Determinism + apply-safety battery:
         // `quality-testing.md` requires deterministic path-order commits —
         // interruption may leave only complete earlier paths in path order,
         // and each file applies atomically after full-envelope validation.
@@ -1084,7 +1084,7 @@ mod tests {
 
     #[test]
     fn assemble_covers_insertion_deletion_and_multibyte_boundaries() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // insertion, deletion, multibyte source boundaries, and a
         // formatter's full-file edit. The runner emits one whole-file edit
         // per stable changed file, so each case must bind
@@ -1151,7 +1151,7 @@ mod tests {
 
     #[test]
     fn source_declaration_reorder_yields_identical_manifests() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // reordered equivalent source declarations to compare equal where
         // semantic order is irrelevant. The synthetic pipeline transforms
         // each file independently, so forward vs reversed `source_paths`
@@ -1184,7 +1184,7 @@ mod tests {
 
     #[test]
     fn stale_source_digest_mismatch_must_reject_write() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // validating source digests before writing and rejecting stale
         // outputs. Whole-file edits mask staleness on splice alone (empty
         // prefix plus replacement always equals the terminal body), so the
@@ -1218,7 +1218,7 @@ mod tests {
 
     #[test]
     fn mutation_outcome_depends_on_bytes_not_git_status() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // mutation fixtures with tracked, modified, staged, and untracked
         // inputs to depend on current bytes and source digests rather than
         // Git status. The runner takes only (path, bytes), so model each
@@ -1255,7 +1255,7 @@ mod tests {
 
     #[test]
     fn identical_final_bytes_across_producer_identities() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // identical final bytes across owner/configuration pipeline
         // results; separate contexts must not merge edits. Different
         // producers over identical inputs must converge to identical
@@ -1287,7 +1287,7 @@ mod tests {
 
     #[test]
     fn check_mode_must_fail_on_replacements_without_diagnostics() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // check mode to fail on any proposed change independently of
         // diagnostic severity. The formatter produces a whole-file
         // replacement with zero diagnostics, so a severity-only gate
@@ -1307,7 +1307,7 @@ mod tests {
 
     #[test]
     fn file_arrival_reorder_yields_identical_manifests() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // reordered equivalent source declarations and randomized
         // QualitySourcesInfo/checkout arrival order to compare equal.
         // `validate_request` canonicalizes the FileInput vec into a
@@ -1333,7 +1333,7 @@ mod tests {
 
     #[test]
     fn env_permutations_do_not_alter_pipeline_outputs() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // locale, timezone, home directory, and PATH to leave check
         // actions unaltered. The runner takes only (producer, capability,
         // stages, path+bytes), so model each env permutation as metadata
@@ -1378,7 +1378,7 @@ mod tests {
 
     #[test]
     fn checkout_paths_do_not_alter_pipeline_outputs() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // running from different absolute checkout paths to compare equal
         // where Bazel permits. The runner takes only workspace-relative
         // (path, bytes), so model each absolute checkout as a prefix
@@ -1417,7 +1417,7 @@ mod tests {
 
     #[test]
     fn mixed_changed_and_unchanged_files_apply_independently() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // each selected file to apply atomically and independently after
         // complete result-envelope validation, with mixed applied and
         // not-applied outcomes together. One stable changed file must emit
@@ -1447,7 +1447,7 @@ mod tests {
 
     #[test]
     fn incomplete_terminal_collection_rejects_before_any_replacement() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // incomplete collection or invalid envelopes to reject before any
         // path mutation begins. A stable run whose terminal map drops one
         // staged path must error instead of emitting a partial
@@ -1479,7 +1479,7 @@ mod tests {
 
     #[test]
     fn adjacent_edits_coalesce_to_single_whole_file_candidate() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // coverage of adjacent edits alongside insertion, deletion, and
         // multibyte boundaries. Two adjacent BAD needles (0..3, 3..6) in
         // one file must converge to a single whole-file candidate bound
@@ -1515,7 +1515,7 @@ mod tests {
 
     #[test]
     fn longer_cycle_repeated_state_reports_oscillation() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // two-stage and longer cycles to report oscillation rather than
         // false stability, and every repeated changed state to be
         // detected. A three-state cycle a->b->c->a must report
@@ -1538,7 +1538,7 @@ mod tests {
 
     #[test]
     fn tool_selection_reorder_yields_identical_manifests() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // reordered user tool-selection lists and randomized result
         // arrival to compare equal where semantic order is irrelevant.
         // `lint-a` fixes BAD needles while `lint-b` only diagnoses FAIL
@@ -1601,7 +1601,7 @@ mod tests {
 
     #[test]
     fn shared_source_across_owners_converges_without_duplication() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // one source declared in multiple owners to converge with every
         // relevant stage seeing the edit and no unrelated duplication.
         // `src/a.rs` is owned by both stages while `src/b.rs` has a
@@ -1645,7 +1645,7 @@ mod tests {
 
     #[test]
     fn iteration_limit_with_mixed_stable_and_growing_files_emits_none() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // the fixed ten-round limit to emit only one original-to-stable
         // candidate, with complete envelope validation before any write.
         // A stable sibling must not leak a partial replacement when the
@@ -1688,7 +1688,7 @@ mod tests {
 
     #[test]
     fn chained_mutating_stages_see_virtual_snapshot() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // each stage's edits to apply against its current virtual snapshot,
         // not the round-start original. `lint-a` fixes BAD needles while
         // `fmt-a` trims trailing whitespace, so one file carrying both
@@ -1733,7 +1733,7 @@ mod tests {
 
     #[test]
     fn per_stage_malformed_edits_rejected_by_validate_gate() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // each stage's byte-range edits to validate against its current
         // virtual snapshot before application, rejecting malformed,
         // overlapping, digest-mismatched, unsorted, or invalid output.
@@ -1861,7 +1861,7 @@ mod tests {
 
     #[test]
     fn diagnostic_envelope_rejected_by_validate_gate() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // complete result-envelope validation before any path mutation.
         // The runner emits well-formed diagnostics, so any diagnostic
         // violating severity, message, tool identity, or byte-range rules
@@ -1895,7 +1895,7 @@ mod tests {
 
     #[test]
     fn unstable_envelope_with_replacements_rejected_by_validate_gate() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // complete-envelope validation so no partial write escapes on
         // non-stable terminals. A stable BAD->GOOD result passes
         // `validate`; the same envelope with IterationLimit or Oscillation
@@ -1922,7 +1922,7 @@ mod tests {
 
     #[test]
     fn newline_variants_yield_distinct_manifests() {
-        // Determinism/apply-safety battery (issue #84):
+        // Determinism/apply-safety battery:
         // `quality-testing.md` requires file modes preserved and newline
         // behavior documented. The runner takes only (path, bytes), so
         // newline bytes must stay load-bearing while modes stay out of
@@ -1963,7 +1963,7 @@ mod tests {
 
     #[test]
     fn quality_originated_file_creates_emit_no_replacements() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // quality-originated file creates to be rejected. The runner emits
         // only whole-file candidates for paths in the original snapshot, so
         // an extra terminal path must yield no replacement while the valid
@@ -2002,7 +2002,7 @@ mod tests {
 
     #[test]
     fn file_modes_do_not_alter_pipeline_outputs() {
-        // Determinism/apply-safety battery (issue #84):
+        // Determinism/apply-safety battery:
         // `quality-testing.md` requires file modes preserved and newline
         // behavior documented. The runner takes only (path, bytes), so
         // model each mode as metadata stripped before the call and
@@ -2036,7 +2036,7 @@ mod tests {
 
     #[test]
     fn invalid_utf8_replacement_rejected_by_validate_gate() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // invalid UTF-8 source and replacement bytes to be rejected. The
         // runner rejects non-UTF-8 sources at request validation, and
         // `validate` rejects non-UTF-8 replacements, so a valid stable
@@ -2059,7 +2059,7 @@ mod tests {
 
     #[test]
     fn permutation_ranking_prefers_stable_fewer_rounds() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // comparing viable permutations for each multi-tool set, rejecting
         // incorrect, divergent, oscillating, and unjustifiably different
         // terminals, and ranking equivalent correct orders by
@@ -2154,7 +2154,7 @@ mod tests {
 
     #[test]
     fn interruption_leaves_no_partially_written_file() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // interruption to leave no partially written file and only complete
         // earlier path commits in deterministic path order. The runner emits
         // one whole-file edit per stable changed file, so every prefix of
@@ -2223,7 +2223,7 @@ mod tests {
 
     #[test]
     fn checkout_and_query_permutations_converge_identically() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // different checkout paths and randomized query/arrival orders to
         // compare equal where Bazel permits. The runner takes only
         // workspace-relative path+bytes, so model each absolute checkout
@@ -2289,7 +2289,7 @@ mod tests {
 
     #[test]
     fn permutation_ranking_uses_process_starts_then_wall_time_tiebreak() {
-        // Determinism battery (issue #84): `quality-testing.md` requires
+        // Determinism battery: `quality-testing.md` requires
         // equivalent correct orders to rank by non-convergence count,
         // rounds, process starts, then measured wall time. The existing
         // ranking test proves the first two keys; this proves the last
@@ -2356,7 +2356,7 @@ mod tests {
 
     #[test]
     fn each_stage_runs_once_per_round_without_hidden_passes() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // native tool-internal passes to count as one stage when proving
         // the fixed ten-round limit. The convergence loop must invoke
         // each stage exactly once per round per staged path: two stages

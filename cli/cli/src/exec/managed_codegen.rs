@@ -1,4 +1,4 @@
-//! Managed codegen collection and staging (issue #236).
+//! Managed codegen collection and staging.
 //!
 //! Split from [`super::managed`]: owns the codegen side of managed
 //! generation ([`collect_managed_codegen`], [`empty_generated_id`],

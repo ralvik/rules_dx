@@ -1,4 +1,4 @@
-//! Help rendering for the `dx` CLI (issue #236).
+//! Help rendering for the `dx` CLI.
 //!
 //! Split from `super` (`args.rs`): owns [`help_command_in`],
 //! [`render_top_help`], [`per_command_flags`], and
@@ -14,7 +14,7 @@ use super::grammar::{Cli, VALUE_OPTIONS};
 /// Bazel-owned). Returns `None` for top-level help when no command
 /// word is present or the first positional is not a command.
 ///
-/// Stays hand-rolled with [`super::split_bazel_verbatim`] (issue #233 fallback):
+/// Stays hand-rolled with [`super::split_bazel_verbatim`] (fallback):
 /// help routing inspects `argv` before the grammar runs, so it cannot
 /// itself be a `value_parser`.
 pub(crate) fn help_command_in(args: &[String]) -> Option<Command> {
@@ -49,7 +49,7 @@ pub(crate) fn help_command_in(args: &[String]) -> Option<Command> {
 pub(crate) fn render_top_help() -> String {
     use clap::{CommandFactory, ValueEnum};
     let mut out = String::new();
-    // Brand line (issue #225): `render_long_help` below shows `long_about`
+    // Brand line: `render_long_help` below shows `long_about`
     // but not `about`, so `--help` would otherwise omit the brand that `-h`
     // shows. Prepend it so both spellings carry the same identity.
     if let Some(about) = Cli::command().get_about() {

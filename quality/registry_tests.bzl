@@ -1,9 +1,4 @@
 """Unit tests for the single-sourced versioned registry (issue #321).
-
-Validates the aggregated registry queries without pinning exact contents:
-versions stay v1, schemas validate, and every query derives from the
-single-sourced maps, so adding a language/tool edits registry data plus
-compat, never a parallel allowlist.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

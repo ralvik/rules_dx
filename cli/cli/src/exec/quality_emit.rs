@@ -1,4 +1,4 @@
-//! Quality finding/change/mutation emission (issue #236): human text,
+//! Quality finding/change/mutation emission: human text,
 //! unified patch, and NDJSON event projection for one quality run.
 //!
 //! Extracted from [`super::quality`] without behavior change: the

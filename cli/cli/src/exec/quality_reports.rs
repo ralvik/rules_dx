@@ -1,4 +1,4 @@
-//! Quality standard-report writing (issue #236): SARIF documents over
+//! Quality standard-report writing: SARIF documents over
 //! current findings with snapshot line regions, written atomically
 //! after validation.
 //!

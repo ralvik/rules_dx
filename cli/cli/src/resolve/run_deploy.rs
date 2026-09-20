@@ -1,5 +1,4 @@
-//! `dx run` / `dx deploy` scope resolution (issue #236 resolve/plan/run/deploy
-//! unscramble, handoff from #237).
+//! `dx run` / `dx deploy` scope resolution.
 //!
 //! Split from `super` (`resolve.rs`): owns [`resolve_run`],
 //! [`resolve_deploy`], [`DeployInfo`], and [`check_deployable`] plus the

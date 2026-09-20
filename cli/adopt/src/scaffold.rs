@@ -1,4 +1,4 @@
-//! `dx init` absent-only scaffolding (issue #236).
+//! `dx init` absent-only scaffolding.
 //!
 //! Split from `super` (`lib.rs`): owns `absent_only_write_allowed`,
 //! `init_must_refuse`, `ScaffoldFile`, `DEVCONTAINER_JSON`,
@@ -39,7 +39,7 @@ pub struct ScaffoldFile {
     pub content: String,
 }
 
-/// `dx init` devcontainer definition (issue #183, snapshot workflow issue #322).
+/// `dx init` devcontainer definition (snapshot workflow issue #322).
 ///
 /// Single source for the scaffolded `.devcontainer/devcontainer.json`:
 /// the repository's own `.devcontainer/devcontainer.json` is a snapshot of
@@ -64,7 +64,7 @@ pub const DEVCONTAINER_JSON: &str = concat!(
     "}\n",
 );
 
-/// `dx init` Renovate definition (closed issue #3 delivered, snapshot workflow issue #322).
+/// `dx init` Renovate definition (delivered, 22).
 ///
 /// Single source for the scaffolded `renovate.json`: the repository's
 /// own `renovate.json` is a snapshot of this string held by
@@ -76,8 +76,8 @@ pub const DEVCONTAINER_JSON: &str = concat!(
 /// off by default (opt-in); when enabled it is update-only under the
 /// automation guardrails (`docs/contributing/automation.md`): green
 /// required checks, patch/minor preferred, no bot push to `main`
-/// outside the merge path, publication gate intact (issue #5).
-/// Renovate proposes pins; `dx update` (issue #19) applies/verifies
+/// outside the merge path, publication gate intact.
+/// Renovate proposes pins; `dx update`  applies/verifies
 /// with resolver-owned continuation/reporting — they complement,
 /// not replace.
 pub const RENOVATE_JSON: &str = concat!(

@@ -1,4 +1,4 @@
-//! V1 dependency-set registry for `dx update` (issue #19).
+//! V1 dependency-set registry for `dx update`.
 //!
 //! Pure registry over the five supported sets named in the issue:
 //! Cargo, npm, Maven, NuGet, and Go. Each set is resolver-owned through

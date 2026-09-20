@@ -1,4 +1,4 @@
-//! LCOV report validation and line-rate computation (issue #236).
+//! LCOV report validation and line-rate computation.
 //!
 //! Split from `super` (`reports.rs`): owns `validate_lcov` and
 //! `coverage_line_rate`. Re-exported through `super` so the public path

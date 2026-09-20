@@ -16,7 +16,7 @@
 //! overwrite (new files get `0644` on unix to match `std::fs::write`
 //! defaults, since `NamedTempFile` creates `0600`).
 //!
-//! Newline contract (issue #84): bytes are preserved byte-for-byte with no
+//! Newline contract: bytes are preserved byte-for-byte with no
 //! normalization. LF, CRLF, and missing-final-newline variants stay
 //! distinct and round-trip exactly; the runner proves this with
 //! `newline_variants_yield_distinct_manifests` and whole-file splice
@@ -74,8 +74,7 @@ pub fn write_atomic(path: &Path, content: &[u8]) -> io::Result<()> {
     {
         use std::os::unix::fs::PermissionsExt as _;
         // Preserve the existing file mode on overwrite so apply never
-        // strips executable bits or widens private modes (issue #84
-        // "Preserve file modes"). New files get `0666 & !umask`
+        // strips executable bits or widens private modes ("Preserve file modes"). New files get `0666 & !umask`
         // (typically 0644) to match `std::fs::write`; `NamedTempFile`
         // creates 0600, so restore the conventional non-executable
         // file mode before persisting.
@@ -194,7 +193,7 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn preserves_existing_mode_on_overwrite() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // file modes preserved. Overwriting an executable must keep the
         // executable bit; overwriting a private mode must keep it
         // private; bytes still round-trip exactly (no newline

@@ -1,20 +1,6 @@
 """Repository-root candidates for `dx codegen`, `dx env`, and `dx setup` (M25 WP4, O34).
 
-The correctness baseline applies the plan-collection aspects to `//...`.
-The candidates are a Bazel-query-produced target-pattern file (read through
-`--target_pattern_file`, so command-line length limits do not apply and no
-central eager `label_list` dependency node is created), one monolithic
-aggregate, and package-local aggregate shards. Every candidate keeps
-identical effective target, aspect, output-group, and configuration
-semantics; the `dx_roots` Rust crate (`//cli/roots:dx_roots`) owns the
-planning, coverage, and benchmark-decision rules plus the composition of
-these plans into Bazel invocations.
-
-The effective roots stay on the `//...` baseline until measured WP4
-benchmark evidence freezes a winner. Aggregates are plain filegroups (see
-`roots_aggregate`): the aspect-provider propagation and output-group
-obligations from `docs/environments/codegen.md` apply at the consuming
-`bazel build`, not in this wiring.
+Contract: `docs/environments/codegen.md`.
 """
 
 REPOSITORY_PATTERN = "//..."
@@ -30,17 +16,7 @@ REPOSITORY_ROOT_STRATEGIES = [
 ]
 
 def repository_roots(strategy, monolith = None, shards = [], pattern_file = None):
-    """Returns the Bazel command-line patterns for `strategy`.
-
-    Args:
-      strategy: root strategy name (one of REPOSITORY_ROOT_STRATEGIES).
-      monolith: monolithic aggregate label for `monolithic-aggregate`.
-      shards: package-shard labels for `package-shards`.
-      pattern_file: query-produced label file for `query-pattern-file`.
-
-    Returns:
-      The Bazel command-line patterns for `strategy`.
-    """
+    """Returns the Bazel command-line patterns for `strategy`."""
     if strategy == "recursive-pattern":
         return [REPOSITORY_PATTERN]
     if strategy == "query-pattern-file":

@@ -1,4 +1,4 @@
-//! Protocol-shape validation for the `dx` CLI (issue #236).
+//! Protocol-shape validation for the `dx` CLI.
 //!
 //! Split from `super` (`lib.rs`): owns [`OutputError`], [`Edit`],
 //! [`check_path`], [`parse_digest`], and [`check_edits`]. Re-exported
@@ -82,7 +82,7 @@ pub fn check_path(path: &str) -> Result<(), OutputError> {
 
 /// Parses exactly 64 lowercase hexadecimal characters encoding a
 /// BLAKE3-256 digest, used for change source digests and selection IDs.
-/// Spelling owned by `dx_digest` (issue #73).
+/// Spelling owned by `dx_digest`.
 pub fn parse_digest(field: &'static str, text: &str) -> Result<[u8; 32], OutputError> {
     dx_digest::parse_hex(text).map_err(|_| OutputError::BadDigest {
         field,

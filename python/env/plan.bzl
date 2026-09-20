@@ -1,18 +1,6 @@
 """Focused Python environment plan (M14 WP3).
 
-`PythonEnvPlanInfo` is the provider-derived focused-target plan contribution:
-direct sources, configured import roots, transitive first-party sources, and
-wheel-closure size read from the analyzed authoritative providers of one
-`python_*` wrapper target. It never scans the checkout, never re-resolves uv
-metadata, and never mutates environment or codegen selection.
-
-`python_env_plan` materializes that plan as a deterministic JSON file plus a
-`DxSubjectInfo` observation surface for `starlark_test` analysis mode.
-Wheel size comes from `dx_python_env_wheels_aspect` (see `aspect.bzl`),
-which merges `PyWheelsInfo` along the existing wrapper/upstream/venv/deps
-edges; imports and sources come from the wrapper's preserved providers.
-Repository/root/exact-target orchestration, collection, atomic selection,
-and `dx env`/`dx setup` remain M25.
+Contract: `docs/environments/environment.md`.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")

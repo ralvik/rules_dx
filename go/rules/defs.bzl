@@ -1,32 +1,6 @@
 """Experimental minimal Go wrappers (M22, O30, ADR 0019).
 
-Thin conventional boundary over the pinned `rules_go 0.63.0` ruleset
-(Go SDK `1.26.6`, see MODULE.bazel). Each `go_*` macro creates one
-private `<name>_upstream` target with the passed attributes and one
-public `<name>` forwarding target. The library forwarder preserves the
-upstream providers (`GoInfo`, `GoArchive`, `DefaultInfo`,
-`InstrumentedFilesInfo`) unchanged and adds `QualitySourcesInfo`
-normalized from the wrapper's direct `srcs`. Binaries and tests use an
-executable forwarder whose own symlink action points at the upstream
-executable (Bazel requires executable-providing rules to create the
-file themselves).
-
-Used upstream symbols (`@rules_go//go:def.bzl`): `go_library`,
-`go_binary` (a macro over the inner executable rule), `go_test`,
-`GoInfo`, `GoArchive`. No other upstream surface is used; consumers
-needing more load the upstream module directly.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"go": <direct .go>})`. Import
-paths, transitive archives, and module closures stay readable from the
-preserved `GoInfo`/`GoArchive`; no second provider duplicates them.
-
-`importpath` is always passed through with no invented default;
-Gazelle owns importpath inference later. Wrappers accept no toolchain
-version fields; unknown versions fail in upstream toolchain resolution,
-never here. Only `.go` sources are accepted: cgo (`.c`/`.h`/assembly)
-scope stays unresolved per the support-matrix feasibility review and
-fails closed here until O30 qualifies it.
+Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_go//go:def.bzl", _GoArchive = "GoArchive", _GoInfo = "GoInfo", _go_binary = "go_binary", _go_library = "go_library", _go_test = "go_test")
@@ -121,16 +95,7 @@ def _go_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def go_library(name, srcs, importpath, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `go_library` (M22).
-
-    Args:
-      name: public library target name (upstream target is name_upstream).
-      srcs: direct Go sources owned by this wrapper.
-      importpath: library import path, passed through with no default.
-      visibility: visibility of the public forwarding library target.
-      **kwargs: extra attributes forwarded to the upstream go_library
-        (deps, embed, data, importmap).
-    """
+    """Experimental minimal wrapper over `go_library` (M22)."""
     _go_wrap_library(name, srcs, visibility = visibility, importpath = importpath, **kwargs)
 
 def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs):
@@ -142,16 +107,7 @@ def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs)
     no `srcs`. The library alone owns the source and its
     source-derived dependencies in the thin shape; the thin binary
     reports no direct sources. Both shapes preserve the upstream
-    providers and execution semantics.
-
-    Args:
-      name: public binary target name (upstream target is name_upstream).
-      srcs: direct binary sources; empty for thin entry binaries.
-      importpath: binary import path; none for thin entry binaries
-        (inferred from the embedded library upstream).
-      visibility: visibility of the public forwarding binary target.
-      **kwargs: extra attributes forwarded to the upstream go_binary.
-    """
+    providers and execution semantics."""
     effective_srcs = srcs if srcs != None else []
     if importpath != None:
         _go_wrap_binary(name, effective_srcs, visibility = visibility, importpath = importpath, **kwargs)
@@ -166,15 +122,7 @@ def go_test(name, srcs, visibility = None, **kwargs):
     owner via `embed` (native package-level test semantics per the
     generation contract Go exception); embedded sources are never this
     test's direct sources. Uses `go test` and Bazel's standard test
-    and coverage protocols.
-
-    Args:
-      name: public test target name (upstream target is name_upstream).
-      srcs: direct test sources (for example `*_test.go` files).
-      visibility: visibility of the public forwarding test target.
-      **kwargs: extra attributes forwarded to the upstream go_test
-        (embed must name the wrapper library under test).
-    """
+    and coverage protocols."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
 

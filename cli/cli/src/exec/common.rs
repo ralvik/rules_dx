@@ -1,7 +1,7 @@
 //! Shared execution plumbing for every `dx` command family: stable error codes, the execution environment, source verification, and mutation helpers.
 //!
 //! BEP results collection and proto mapping live in [`super::results`]
-//! (issue #236); this module keeps the environment, codes, and
+//!; this module keeps the environment, codes, and
 //! apply/status helpers.
 
 use crate::args::Invocation;
@@ -27,7 +27,7 @@ pub const REASON_INVALID_EDITS: &str = "invalid_edits";
 /// Stable per-file reason: incomplete collection prevents all mutation.
 pub const REASON_INCOMPLETE_COLLECTION: &str = "incomplete_collection";
 
-/// Execution helper failure (issue #230).
+/// Execution helper failure.
 ///
 /// Variants render the legacy reason strings verbatim so operational
 /// diagnostics stay byte-identical while callers gain a matchable type.
@@ -83,7 +83,7 @@ pub(crate) const CODE_MANAGED_NO_CAPABILITY: &str = "no_capability";
 /// unexempted findings, incomplete assessment, advisory refresh failure,
 /// or auditor launch failure. Planning (`--dry-run`) succeeds; live runs
 /// execute qualified auditors per family over resolved scopes with
-/// per-family reporting (issue #18).
+/// per-family reporting.
 pub(crate) const CODE_AUDIT_FAILED: &str = "audit_failed";
 /// Stable operational error code for live update per-set failures:
 /// a resolver backend reported failure, was unsupported, failed to launch,
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn change_event_is_deterministic_and_reconstructs_candidate() {
-        // Apply-safety battery (issue #84): `quality-testing.md` requires
+        // Apply-safety battery: `quality-testing.md` requires
         // one deterministic exact change event per valid candidate path,
         // reconstructable from digest plus UTF-8 ranges and replacements
         // with byte-for-byte equality to default mode planned input.

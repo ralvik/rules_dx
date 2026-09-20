@@ -1,5 +1,5 @@
 //! Untrusted-artifact/metadata validation and thread-accounting deltas for
-//! consumer CI (issue #236, M27 WP4 slice 11).
+//! consumer CI (M27 WP4 slice 11).
 //!
 //! Split from `super` (`lib.rs`): owns [`ArtifactError`],
 //! [`validate_artifact_snapshot`], [`MetadataError`],

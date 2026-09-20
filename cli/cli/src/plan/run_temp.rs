@@ -1,4 +1,4 @@
-//! Per-run temporary-directory and nonce helpers (issue #236).
+//! Per-run temporary-directory and nonce helpers.
 //!
 //! Split from `super` (`plan.rs`): owns [`bep_path`], [`intended_path`],
 //! [`run_nonce`], and [`create_run_temp_dir`]. Re-exported through
@@ -33,7 +33,7 @@ pub fn intended_path(temp_dir: &Path, pid: u32, nonce: u64) -> PathBuf {
 /// unique directory.
 static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-/// Fresh nonce for one launcher run (issue #93).
+/// Fresh nonce for one launcher run.
 ///
 /// A process-local monotonic counter: every call in this process yields a
 /// distinct value. Cross-process collisions are harmless — each run owns a

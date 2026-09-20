@@ -1,4 +1,4 @@
-//! Lockfile readers for `dx audit` live execution (issue #18).
+//! Lockfile readers for `dx audit` live execution.
 //!
 //! Pure parsing over injected lockfile text, per the audit contract
 //! (`docs/cli/commands/audit-update-bazel.md#dx-audit`): target-scoped

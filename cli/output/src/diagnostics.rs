@@ -1,4 +1,4 @@
-//! Structured diagnostics and human status emission (issue #236).
+//! Structured diagnostics and human status emission.
 //!
 //! Split from `super` (`lib.rs`): owns `DEFAULT_LOG_FILTER`,
 //! `VERBOSE_LOG_FILTER`, `init_diagnostics`, `colors_allowed`,
@@ -12,7 +12,7 @@ pub const DEFAULT_LOG_FILTER: &str = "warn";
 /// Tracing filter under `--verbose`: info and above.
 pub const VERBOSE_LOG_FILTER: &str = "info";
 
-/// Initialises structured diagnostics via `tracing-subscriber` (issue #222).
+/// Initialises structured diagnostics via `tracing-subscriber`.
 ///
 /// Idempotent (`try_init` errors are ignored so tests and repeated calls do
 /// not panic). Honors `RUST_LOG` when set; otherwise `warn` by default and
@@ -43,7 +43,7 @@ pub fn colors_allowed(no_color_present: bool, tty: bool) -> bool {
     !no_color_present && tty
 }
 
-/// Reports whether styled human output may use color (issue #222).
+/// Reports whether styled human output may use color.
 ///
 /// Returns false when `NO_COLOR` is present (any value, per the spec) or
 /// when stderr is not a TTY (via `console`, which also honors `CLICOLOR`,
@@ -78,7 +78,7 @@ pub fn format_status(status: &str, message: &str) -> String {
 }
 
 /// Emits one human status line to a TTY-aware stderr stream via `anstream`
-/// (issue #222) and mirrors it as a structured `tracing::info!` event for
+///  and mirrors it as a structured `tracing::info!` event for
 /// future JSON-log consumers. `anstream` passes plain text through
 /// unchanged, so default output stays byte-identical.
 pub fn emit_status(status: &str, message: &str) {

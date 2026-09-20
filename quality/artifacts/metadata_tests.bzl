@@ -1,10 +1,4 @@
 """Load tests pinning standalone-artifact metadata (M04 WP1, O20).
-
-The schema key set is frozen: adding, removing, or renaming a field fails
-until reviewed. Upstream versions, URLs, digests, and sizes are pinned per
-tool so a re-pin (update or changed upstream bytes) is an explicit reviewed
-edit. `bazel run //quality/artifacts:update -- --verify-only` reproduces these
-files from the network; this test guards the checked-in content hermetically.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -53,11 +47,7 @@ def _artifact_checks(artifact, tool, version, url, sha256, size, exe, exe_sha256
     ]
 
 def metadata_tests(name):
-    """Declare the standalone-artifact metadata pin test.
-
-    Args:
-      name: test target name.
-    """
+    """Declare the standalone-artifact metadata pin test."""
     checks = []
     checks += _artifact_checks(
         _biome,

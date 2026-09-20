@@ -1,17 +1,6 @@
 """Focused Kotlin environment plan (M23 WP2).
 
-`KotlinEnvPlanInfo` is the provider-derived focused-target plan contribution:
-direct sources, source count, and target identity read from the analyzed
-authoritative providers of one `kotlin_*` wrapper target. It never scans the
-checkout, never re-resolves Maven/Coursier metadata, and never mutates environment
-or codegen selection.
-
-`kotlin_env_plan` materializes that plan as a deterministic JSON file plus a
-`DxSubjectInfo` observation surface for `starlark_test` analysis mode.
-Direct sources come from `QualitySourcesInfo`; the JDK/Kotlin toolchain closure
-stays readable from the preserved `JavaInfo` without duplicating
-it here. Repository/root/exact-target orchestration, collection, atomic
-selection, and `dx env`/`dx setup` remain M25.
+Contract: `docs/environments/environment.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")

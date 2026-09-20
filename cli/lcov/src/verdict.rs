@@ -1,4 +1,4 @@
-//! Gate verdict for the coverage gate (issue #236).
+//! Gate verdict for the coverage gate.
 //!
 //! Split from `super` (`lib.rs`): owns [`FileVerdict`], [`GateVerdict`],
 //! [`is_covered_language`], [`evaluate`], and [`render`] plus the

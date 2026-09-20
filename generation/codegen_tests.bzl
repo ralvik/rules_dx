@@ -1,28 +1,4 @@
 """Unit and analysis tests for the normalized codegen plans (M25 WP1, snapshot workflow issue #322).
-
-Unit checks pin every `codegen_path_error` branch (empty, absolute,
-backslash, dot segments), `codegen_exec_error` (empty logical-only,
-relative suffixes, shard-suffix refusal), `codegen_record_error` (bad
-producer, bad language, empty entries, bad entry paths, bad exec paths,
-within-record duplicates), `codegen_pair_error` (admitted first pair
-versus GraphQL/Python deferrals), `codegen_conflict_error` (clean merge,
-silent identical duplicates, cross-producer collisions, same-producer
-divergent roots, divergent exec paths), plus merge/fingerprint schema
-validation (normalized order without pinning exact contents) alongside
-deterministic snapshots (owner grouping, entry sorting over the full
-(logical, root, namespace, exec) key, duplicate collapse, exec-bound
-identity).
-
-Snapshot workflow: exact merge tuples and fingerprint JSON below are
-snapshots. Schema checks fail first on shape drift; byte drift fails with
-expected/actual rendering. To refresh a snapshot, run the failing test,
-copy the reported actual into the expected block, review, and re-run.
-
-Analysis checks pin the slice-2 collection evidence: the chained leaf
-shards merge transitively through `dx_codegen_plan_aspect`, and the
-prost adapter fixture carries its shard plus the verified upstream
-`rust_generated_srcs` artifact in the private output group, with its
-entry's EXEC_PATH suffix binding the generated artifact.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

@@ -1,4 +1,4 @@
-//! Aggregate exit-status selection for `dx update` (issue #19).
+//! Aggregate exit-status selection for `dx update`.
 //!
 //! Pure mapping from the aggregated per-set [`UpdateReport`] in
 //! [`outcome`] to the process exit code, per the accepted update

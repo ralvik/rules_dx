@@ -12,7 +12,7 @@
 //! JSON objects serialize with `serde_json`'s default key ordering; NDJSON
 //! validity never depends on key order. Consumers parse values, not bytes.
 //!
-//! Domain split (issue #236): structured diagnostics and human status
+//! Domain split: structured diagnostics and human status
 //! emission live in the `diagnostics` module, live output modes and stdout
 //! ownership live in the `modes` module, normalized severity and fail-on
 //! threshold live in the `severity` module, protocol-shape validation

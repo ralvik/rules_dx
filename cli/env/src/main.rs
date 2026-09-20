@@ -40,7 +40,7 @@ const METADATA_CANDIDATES: &[(&str, &str)] = &[
 ];
 
 fn usage_error(message: &str) -> i32 {
-    // Structured diagnostics (issue #232): usage failures report via
+    // Structured diagnostics: usage failures report via
     // `tracing::error!` with the legacy message text.
     tracing::error!("dx env: {message}");
     tracing::error!(
@@ -237,7 +237,7 @@ fn locate_default_tree() -> Option<(PathBuf, PathBuf)> {
 }
 
 fn main() {
-    // Structured diagnostics (issue #232): init is idempotent and emits
+    // Structured diagnostics: init is idempotent and emits
     // nothing by default; `RUST_LOG` overrides the warn filter.
     dx_output::init_diagnostics(false);
     std::process::exit(run());

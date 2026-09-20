@@ -1,4 +1,4 @@
-//! Source-owner to test-target mapping (issue #236).
+//! Source-owner to test-target mapping.
 //!
 //! Split from `super` (`resolve.rs`): owns [`map_owners_to_tests`] and
 //! its `kind(..._test ... rdeps(...))` expression helper. Re-exported

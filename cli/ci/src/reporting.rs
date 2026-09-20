@@ -1,5 +1,4 @@
-//! Reporting and review-thread planning for consumer CI (issue #236,
-//! M27 WP1 slice 5).
+//! Reporting and review-thread planning for consumer CI (M27 WP1 slice 5).
 //!
 //! Split from `super` (`lib.rs`): owns [`Finding`], [`OwnedThread`],
 //! [`ThreadPlan`], [`plan_threads`] (failure-contributing findings win new

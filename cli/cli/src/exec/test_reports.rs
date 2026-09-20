@@ -1,4 +1,4 @@
-//! Test/coverage report collection and rendering (issue #236).
+//! Test/coverage report collection and rendering.
 //!
 //! Split from [`super::workflow`]: owns the `test`/`coverage` report
 //! tail of the workflow pipeline ([`TestReportsRequest`] and

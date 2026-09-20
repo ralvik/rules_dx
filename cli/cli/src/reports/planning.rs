@@ -1,4 +1,4 @@
-//! Standard-report planning (issue #236).
+//! Standard-report planning.
 //!
 //! Split from `super` (`reports.rs`): owns `StandardFormat`,
 //! `Destination`, `PlannedReport`, and `plan_reports` plus the

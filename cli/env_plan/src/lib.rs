@@ -451,7 +451,7 @@ pub fn fingerprint(records: &[EnvRecord]) -> String {
 
 /// BLAKE3-256 over the normalized fingerprint bytes: the complete-plan
 /// identity, with no algorithm negotiation. Routed through `dx_digest` so
-/// the digest algorithm has one owner (issue #73).
+/// the digest algorithm has one owner.
 pub fn plan_digest(fingerprint: &str) -> [u8; 32] {
     digest(fingerprint.as_bytes())
 }

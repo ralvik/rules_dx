@@ -1,4 +1,4 @@
-//! Normalized severity and fail-on threshold (issue #236).
+//! Normalized severity and fail-on threshold.
 //!
 //! Split from `super` (`lib.rs`): owns `Severity`, `Threshold`, and
 //! `meets_threshold`. Re-exported through `super` so the public path stays

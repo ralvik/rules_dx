@@ -1,16 +1,5 @@
 """Single-sourced versioned registry queries (issue #321).
 
-The semantic file-class inventory stays single-sourced: canonical IDs live
-in `quality/sources.bzl:KNOWN_SEMANTIC_FILE_CLASSES`, the owning family map
-in `quality/adapters.bzl:REAL_CLASS_TO_FAMILY`, adapter manifests in
-`REAL_ADAPTERS`, curated defaults in
-`quality/curated_defaults.bzl:CURATED_DEFAULTS`, and deferrals in
-`quality/parity_tests.bzl:PARITY_DEFERRED`. This file owns no duplicate
-inventory: every query below derives from those registries, and
-`registry_schema_error` validates the versioned schemas without pinning
-exact contents, so adding a language/tool edits registry data plus
-adapter/parity compat, never a parallel allowlist.
-
 Contract: `docs/quality/quality-sources.md`.
 """
 
@@ -28,11 +17,7 @@ def registry_classes():
     return sorted(REAL_CLASS_TO_FAMILY.keys())
 
 def registry_families():
-    """Returns the sorted unique owning families via query.
-
-    Returns:
-      Sorted list of owning family names.
-    """
+    """Returns the sorted unique owning families via query."""
     seen = {}
     for class_id in REAL_CLASS_TO_FAMILY:
         seen[REAL_CLASS_TO_FAMILY[class_id]] = True
@@ -68,11 +53,7 @@ def registry_schema_error():
     Combines the per-registry schema checks without pinning exact contents:
     versions are v1, class spellings are canonical, adapter-backed classes
     are classified, curated families/tools stay within the taxonomy, and
-    deferrals carry owner/route. Additions edit registry data only.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    deferrals carry owner/route. Additions edit registry data only."""
     if REGISTRY_SCHEMA_VERSION != 1:
         return "registry: unsupported schema v" + str(REGISTRY_SCHEMA_VERSION) + " (want v1)"
     if SOURCES_REGISTRY_SCHEMA_VERSION != 1:

@@ -1,4 +1,4 @@
-//! Scope entry points for resolution (issue #236).
+//! Scope entry points for resolution.
 //!
 //! Split from `super` (`resolve.rs`): owns [`resolve`] and
 //! [`resolve_for_test`], which compose classification

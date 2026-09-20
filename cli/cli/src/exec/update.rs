@@ -1,5 +1,5 @@
-//! Update command execution: live resolver backends with continuation (issue #19)
-//! plus the vendored preset fragment (issue #332).
+//! Update command execution: live resolver backends with continuation 
+//! plus the vendored preset fragment.
 
 use super::common::*;
 use crate::args::{Command, Invocation};
@@ -10,7 +10,7 @@ use dx_output::{
 };
 use std::collections::BTreeMap;
 
-/// Runs `dx update` (issue #19) with the preset fragment (issue #332):
+/// Runs `dx update`  with the preset fragment:
 /// default mode updates dependency-set/package/target selectors through
 /// `dx_update` (mutating without confirmation) plus the preset fragment
 /// atomically; `--check` is the non-mutating preset stale gate (exit `0`

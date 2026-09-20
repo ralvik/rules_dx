@@ -1,4 +1,4 @@
-//! Source-level exclusion markers for the coverage gate (issue #236).
+//! Source-level exclusion markers for the coverage gate.
 //!
 //! Split from `super` (`lib.rs`): owns [`Ignores`], [`is_ignored`], and
 //! [`find_ignores`] plus the comment-style scanner (`CommentStyle`,

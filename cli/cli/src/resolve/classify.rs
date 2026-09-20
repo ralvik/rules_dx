@@ -1,4 +1,4 @@
-//! Scope classification and file-ownership resolution (issue #236).
+//! Scope classification and file-ownership resolution.
 //!
 //! Split from `super` (`resolve.rs`): owns path normalization, the
 //! query-output helpers ([`first_line`],

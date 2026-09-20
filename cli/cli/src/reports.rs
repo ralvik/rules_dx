@@ -13,7 +13,7 @@
 //! emitters directly; this module owns report planning (which fails
 //! before Bazel execution) and the SARIF/JUnit/LCOV document rendering.
 //!
-//! Domain split (issue #236): report rendering lives in domain
+//! Domain split: report rendering lives in domain
 //! submodules — SARIF in [`sarif`](self::sarif), JUnit facade in
 //! [`junit`](self::junit) (types in `junit_types`, parsing in
 //! `junit_parse`, rendering in `junit_render`), LCOV in

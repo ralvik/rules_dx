@@ -45,7 +45,7 @@ pub struct FilePatch<'a> {
     pub candidate: &'a str,
 }
 
-/// Diff rendering failure (issue #211 slice, #221 follow-up).
+/// Diff rendering failure (slice, #221 follow-up).
 ///
 /// Every variant renders human-readable via `Display` for CLI
 /// operational diagnostics; binaries render via `to_string()`, never

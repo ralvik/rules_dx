@@ -17,7 +17,7 @@
 //! `--dry-run` listing without deleting and `--bazel` additionally
 //! forwarding `bazel clean`.
 //!
-//! Domain split (issue #236): the command vocabulary lives in the
+//! Domain split: the command vocabulary lives in the
 //! `command` module, the `clap` grammar (`Cli`, `VALUE_OPTIONS`,
 //! `cli_command`) in the `grammar` module, shell-completion rendering in
 //! the `completion` module, help rendering in the `help` module, typo

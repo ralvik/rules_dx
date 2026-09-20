@@ -1,9 +1,4 @@
 """Analysis subject exposing the canonical quality settings (M03 WP1).
-
-Reads the `@rules_dx//config` build settings and republishes them as
-`DxSubjectInfo` fields so `starlark_test` analysis mode can pin the frozen
-defaults. The `workspace` value is reported as the canonical label string;
-it names the consumer's aggregate policy target and is not resolved here.
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")

@@ -1,10 +1,4 @@
 """Versioned semantic-class registry tests (M03 freeze for O15, issue #321).
-
-Class IDs are public compatibility surface: removals, renames, merges, or
-narrowings fail via the frozen core pin plus adapter/parity compat. Additions
-edit the registry data only and never this allowlist: the frozen pin is a
-subset check (every frozen ID stays known) plus versioned schema validation,
-queried via `is_known_semantic_class` / `sources_schema_error`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

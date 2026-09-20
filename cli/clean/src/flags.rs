@@ -1,4 +1,4 @@
-//! Flag shapes for `dx clean` (issue #236).
+//! Flag shapes for `dx clean`.
 //!
 //! Split from `super` (`lib.rs`): owns [`DRY_RUN_FLAG`], [`BAZEL_FLAG`],
 //! [`RECOVERY_GUIDANCE`], and [`bazel_forward_argv`] (the frozen

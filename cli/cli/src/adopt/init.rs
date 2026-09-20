@@ -1,4 +1,4 @@
-//! Adoption init execution (`init`, issue #236).
+//! Adoption init execution (`init`).
 //!
 //! Split from `super` (`adopt.rs`): owns [`execute_init`], the
 //! absent-only scaffolding apply (dry-run plans are summaries,

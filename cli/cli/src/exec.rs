@@ -196,7 +196,7 @@ mod tests {
 
     #[test]
     fn deferred_families_fail_closed_without_launch() {
-        // Audit executes live auditors per family (issue #18); update
+        // Audit executes live auditors per family; update
         // executes resolver backends live (see exec/update.rs). Both fail
         // closed with their stable operational codes when workspaces lack
         // lockfiles.

@@ -1,10 +1,4 @@
 """Aspect evidence tests (M03 WP2c).
-
-Pins merged dx_results presence per fixture: exact capability subsets,
-no generic fallback, no empty actions, tags honored. Per-stage exact
-source inputs are proven via aquery action inputs (see completion report);
-these analysis pins prove the capability-level shape that rests on the
-WP2a pure pipeline unit tests.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

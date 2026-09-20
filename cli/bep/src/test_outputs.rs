@@ -47,7 +47,7 @@ pub struct TestOutputFile {
 /// consumed shape is validated, with failures annotated by JSON path
 /// (see [`malformed`]).
 ///
-/// `serde_path_to_error` evaluation (issue #231): rejected. The path
+/// `serde_path_to_error` evaluation: rejected. The path
 /// annotation here needs no new dependency and no manifest/lock churn,
 /// while derived `Deserialize` would still require `default` on every
 /// forward-compatible field and could not express the "absent means 1"
@@ -381,7 +381,7 @@ mod tests {
 
     #[test]
     fn test_output_malformed_reasons_carry_json_paths() {
-        // Malformed-line corpus (issue #231): every `testResult`
+        // Malformed-line corpus: every `testResult`
         // shape failure names the offending field by JSON path while
         // keeping the legacy human-readable wording.
         let cases = [

@@ -1,4 +1,4 @@
-//! Thin inspect forwarding for `owners`/`deps`/`why` (issue #236).
+//! Thin inspect forwarding for `owners`/`deps`/`why`.
 //!
 //! Split from `super` (`lib.rs`): owns `inspect_scope_allowed`,
 //! `InspectPlan`, `plan_inspect`, and `plan_somepath`. Re-exported

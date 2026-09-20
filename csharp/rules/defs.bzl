@@ -1,40 +1,6 @@
 """Experimental minimal C# wrappers (M23, O31, ADR 0019).
 
-Thin conventional boundary over the pinned `rules_dotnet 0.22.1` ruleset
-(one upstream covers both admitted .NET languages; F# wrappers live under
-//fsharp). Each `csharp_*` macro creates one private
-`<name>_upstream` target with the passed attributes and one public
-`<name>` forwarding target. The library forwarder preserves the upstream
-providers (`DotnetAssemblyCompileInfo`, `DotnetAssemblyRuntimeInfo`,
-`DefaultInfo`) unchanged and adds `QualitySourcesInfo` normalized from the
-wrapper's direct `srcs`. Binaries and tests use an executable forwarder
-whose own symlink action points at the upstream executable (Bazel requires
-executable-providing rules to create the file themselves).
-
-Used upstream symbols (`@rules_dotnet//dotnet:defs.bzl`): `csharp_library`,
-`csharp_binary`, `csharp_test`. The used providers
-(`DotnetAssemblyCompileInfo`, `DotnetAssemblyRuntimeInfo`) load from the
-upstream private providers module (`@rules_dotnet//dotnet/private:providers.bzl`):
-no public provider module exists, so this narrow load is the boundary (same
-shape as the `java_*` load of the upstream java-info module). No other
-upstream surface is used; consumers needing more (`csharp_nunit_test`,
-`publish_binary`, `import_library`, `dotnet_tool`) load the upstream module
-directly.
-
-Normalization is deliberately narrow: the only new fact is
-`QualitySourcesInfo(direct_sources = {"csharp": <direct .cs>})`.
-Reference/runtime assemblies and toolchain closures stay readable from the
-preserved `DotnetAssembly*` providers; no second provider duplicates them.
-
-`target_frameworks` defaults to `["net10.0"]` (the pinned SDK 10.0.201
-toolchain in MODULE.bazel) and passes through when set explicitly; no other
-toolchain/TFM selection lives here. Tests are plain `csharp_test`
-executables (exit code is the verdict); the xUnit/NUnit runner selection
-and Paket/NuGet lock wiring stay open under O31 per the provisional
-support-matrix tables. Wrappers accept no SDK version fields; unknown
-frameworks fail in upstream toolchain resolution, never here. Only `.cs`
-sources are accepted. Per-platform SDK acquisition selection stays open
-under O31.
+Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_dotnet//dotnet:defs.bzl", _csharp_binary = "csharp_binary", _csharp_library = "csharp_library", _csharp_test = "csharp_test")
@@ -146,15 +112,7 @@ def _csharp_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def csharp_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `csharp_library` (M23).
-
-    Args:
-      name: public library target name (upstream target is name_upstream).
-      srcs: direct C# sources owned by this wrapper.
-      visibility: visibility of the public forwarding library target.
-      **kwargs: extra attributes forwarded to the upstream csharp_library
-        (deps, data; target_frameworks defaults to ["net10.0"]).
-    """
+    """Experimental minimal wrapper over `csharp_library` (M23)."""
     _csharp_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def csharp_binary(name, srcs = None, visibility = None, **kwargs):
@@ -163,14 +121,7 @@ def csharp_binary(name, srcs = None, visibility = None, **kwargs):
     An ordinary binary owns its `srcs` plus `deps` on a wrapper library;
     the entry point follows the C# `Main` convention (no main_class
     attribute exists upstream). Both shapes preserve the upstream providers
-    and execution semantics.
-
-    Args:
-      name: public binary target name (upstream target is name_upstream).
-      srcs: direct binary sources.
-      visibility: visibility of the public forwarding binary target.
-      **kwargs: extra attributes forwarded to the upstream csharp_binary.
-    """
+    and execution semantics."""
     effective_srcs = srcs if srcs != None else []
     _csharp_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
@@ -182,15 +133,7 @@ def csharp_test(name, srcs, visibility = None, **kwargs):
     `deps`; test sources are never the library's sources. The test is a
     plain executable (exit code is the verdict); the xUnit/NUnit runner
     selection stays open under O31. Uses Bazel's standard test and coverage
-    protocols.
-
-    Args:
-      name: public test target name (upstream target is name_upstream).
-      srcs: direct test sources.
-      visibility: visibility of the public forwarding test target.
-      **kwargs: extra attributes forwarded to the upstream csharp_test
-        (deps must name the wrapper library under test).
-    """
+    protocols."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = _csharp_with_tfm(kwargs)
 

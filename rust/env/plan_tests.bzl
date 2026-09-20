@@ -1,9 +1,4 @@
 """Focused Rust environment-plan tests (M12 WP3).
-
-Pins the provider-derived plan surface for each wrapper shape: library and
-binary plans read authoritative CrateInfo; the test plan reads the same
-crate through TestCrateInfo. Expected observations pin crate identity,
-edition, root, direct sources, and direct dependency counts.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

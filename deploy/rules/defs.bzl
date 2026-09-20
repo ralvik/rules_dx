@@ -1,16 +1,6 @@
 """Deploy boundary for `dx deploy` (issue #178).
 
-`DxDeployInfo` is the narrow public boundary deploy macros target,
-parallel to `QualitySourcesInfo` for quality workflows. It carries only
-the deploy entrypoint's identity (`app`) and its default profile
-(`profile`); it does not carry kind, environment, or veto metadata.
-`dx deploy` dispatches on this provider or on raw executability, so
-user-defined deployers participate without depending on private rules.
-
-Contract: `docs/deploy/authoring.md`. The provider concept and the
-`deploy/rules:defs.bzl` load label are frozen here. Profile vocabulary
-(`debug`, `dev`, `release`) follows ADR 0021; the flag-over-attribute
-precedence and `DX_PROFILE` forwarding belong to issue #179, not here.
+Contract: `docs/deploy/authoring.md`, `docs/decisions/0021-build-profiles.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
@@ -30,15 +20,7 @@ DxDeployInfo = provider(
 VALID_DEPLOY_PROFILES = ["debug", "dev", "release"]
 
 def deploy_profile_error(profile):
-    """Validates one deploy profile value.
-
-    Args:
-      profile: candidate profile string, or None meaning the command
-        default applies (custom rules may omit the default).
-
-    Returns:
-      "" when valid, else the failure reason naming the bad value.
-    """
+    """Validates one deploy profile value."""
     if profile == None:
         return ""
     if type(profile) != "string" or profile not in VALID_DEPLOY_PROFILES:

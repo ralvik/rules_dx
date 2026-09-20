@@ -1,4 +1,4 @@
-//! Adoption inspect execution (`owners`/`deps`/`why`, issue #236).
+//! Adoption inspect execution (`owners`/`deps`/`why`).
 //!
 //! Split from `super` (`adopt.rs`): owns [`execute_inspect`] plus the
 //! `bazel query` forwarding helper and the two-step `why` resolution

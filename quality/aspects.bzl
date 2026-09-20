@@ -1,37 +1,6 @@
 """Target-scoped capability aspects over synthetic adapters (M03 WP2c+WP3).
 
-Each aspect visits targets carrying `QualitySourcesInfo` and registers one
-exact-input pipeline action for its capability when the workspace policy
-selects a nonempty synthetic stage with effective sources. The action runs
-`//quality/runner:quality_runner` over the exact direct-source subset
-and emits one versioned `QualityResult` protobuf in the stable `dx_results`
-output group. No invocation-wide aggregation exists.
-
-WP3 evaluators: with `@rules_dx//config:validate=true`, each aspect
-registers one evaluator action per pipeline result running
-`//quality/evaluator:quality_evaluator` with
-`@rules_dx//config:fail_on`. The evaluator emits a per-result validation
-marker into `dx_results` or fails without rerunning or aggregating
-analyzers. A threshold-only change alters evaluator arguments alone, so
-analyzers stay cache-hit. With `validate=false` (the default, used by
-quality commands) no evaluator action exists and collection never stops.
-
-Contract: `docs/quality/action-model.md`, `docs/quality/tool-integrations.md`,
-`docs/quality/quality-sources.md#adapter-applicability`,
-`docs/quality/quality-result-protocol.md#transport`,
-`docs/quality/quality-result-protocol.md#execution-and-policy`,
-`docs/cli/cli-contract.md`.
-
-Explicit policy attribute: aspects take `//quality:fixture_policy` by
-default. Workspace-flag (`@rules_dx//config:workspace`) resolution to a
-typed aggregate stays pending (the `//dx:config` placeholder must fail
-fast); M04+ binds the canonical policy without changing this exact-subset
-formula.
-
-No generic fallback: only `QualitySourcesInfo.direct_sources` supplies
-subjects. `srcs`, `deps`, `DefaultInfo` outputs, rule names, extensions,
-and tags other than `no-<capability>` never affect applicability. Empty
-stages create no action.
+Contract: `docs/quality/action-model.md`, `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md#adapter-applicability`, `docs/quality/quality-result-protocol.md#transport`, `docs/quality/quality-result-protocol.md#execution-and-policy`, `docs/cli/cli-contract.md`.
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")

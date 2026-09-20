@@ -1,4 +1,4 @@
-//! Shared invocation types (issue #236).
+//! Shared invocation types.
 //!
 //! Split from `super` (`args.rs`): owns [`ReportRequest`] and
 //! [`Invocation`] plus the profile/mode helpers. The parser
@@ -34,7 +34,7 @@ pub struct Invocation {
     pub workspace: Option<String>,
     pub dry_run: bool,
     pub quiet: bool,
-    /// `--verbose` (issue #222): structured `tracing` diagnostics on
+    /// `--verbose`: structured `tracing` diagnostics on
     /// stderr; orthogonal to `--quiet` (which suppresses human summaries).
     /// Default stays byte-identical (warn+error only).
     pub verbose: bool,
@@ -83,7 +83,7 @@ impl Invocation {
 
     /// Effective profile under issue #179 precedence: explicit flag over
     /// the command default. Deploy resolves flag over the target
-    /// `profile` attribute over the release default (issue #180); the
+    /// `profile` attribute over the release default; the
     /// target attribute is read during execution via cquery, so this
     /// returns flag over command default and execution refines it.
     /// Build/run/test have no target attribute.

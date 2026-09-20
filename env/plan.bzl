@@ -1,46 +1,6 @@
 """Normalized environment plan records (M25 WP2).
 
-`DxEnvPlanInfo` is the in-memory shape behind the binary `DxEnvShard`
-wire schema (`plan.proto`): each shard-emitting rule carries its direct
-environment identity record. `DxEnvPlanCollectedInfo` is the separate
-aspect-carried merge: Bazel rejects an aspect that re-provides its
-target's own provider ("provided twice"), so the collecting aspect never
-returns `DxEnvPlanInfo` and contributing rules never return the
-collected provider. Shard emission, the collecting aspect, and the
-language adapters land in the next WP2 slice (not this file).
-
-First-integration freeze (slice 1): the only first-release language
-integration is Rust, the first language-native projection used by the
-repository (`docs/environments/environment.md`). Python's `.venv` is a
-later integration rather than the generic model; Node and future
-integrations stay deferred to later M25 slices. They are not dropped
-and no adapter claims them here.
-
-Conflict rule: multiple producers claiming one identity key with
-different values or exec paths fail before selection; no
-traversal-order winner is accepted. Byte-identical duplicate records
-(the same producer, integration, key, value, and exec path) merge
-silently, since transitive collection reaches one record through many
-routes.
-
-Each entry carries an optional `exec_path` BEP-matching suffix: empty
-means a logical-only identity input requiring no materialized artifact;
-non-empty must resolve to exactly one BEP-reported non-shard artifact
-(suffix match so output bases differ) and every non-shard BEP artifact
-must be claimed, otherwise collection fails before projection planning.
-The fingerprint covers the exec path, so the plan identity binds
-identity inputs to their backing artifacts.
-
-`EnvironmentInfo` remains PATH-tool-only and is not this internal plan
-contract (`docs/environments/environment.md`).
-
-Contract: `docs/environments/environment.md` (plan collection,
-provider-selective aspects, private output group), `docs/environments
-/managed-state.md` (identity, selection, carry-forward).
-
-Slice 2 (below) adds the shard-emission rule, the collecting aspect,
-and the narrow Rust adapter over the frozen slice-1 semantics. No new
-integration, key, or merge semantic lands here.
+Contract: `docs/environments/environment.md`, `docs/environments/managed-state.md`.
 """
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
@@ -54,11 +14,8 @@ DxEnvPlanInfo = provider(
     },
 )
 
-# Aspect-carried merge over DxEnvPlanInfo contributors. Kept distinct
-# because Bazel reports "provided twice" when an aspect returns the same
-# provider its target already provides: shard rules carry direct records
-# in DxEnvPlanInfo, the aspect merges them here, and fixtures prefer
-# this provider with a direct-rule fallback.
+# Aspect-carried merge: Bazel rejects an aspect re-providing its target's
+# provider ("provided twice"). See `docs/environments/environment.md`.
 DxEnvPlanCollectedInfo = provider(
     doc = "Aspect-merged environment plan records from the traversed closure.",
     fields = {
@@ -83,15 +40,7 @@ DX_ENV_ADMITTED_INTEGRATIONS = (
 )
 
 def env_plan_key_error(key):
-    """Validates one identity-dimension key.
-
-    Args:
-      key: candidate identity dimension, e.g. "runtime" or "abi".
-
-    Returns:
-      "" when valid, else the failure reason: empty, a path separator,
-      or the shard-entry "|" separator.
-    """
+    """Validates one identity-dimension key."""
     if key == "":
         return "invalid env plan key '': must be a non-empty single token"
     if "/" in key or "\\" in key:
@@ -101,15 +50,7 @@ def env_plan_key_error(key):
     return ""
 
 def env_plan_value_error(value):
-    """Validates one identity-input value.
-
-    Args:
-      value: candidate normalized identity input value.
-
-    Returns:
-      "" when valid, else the failure reason: empty or carrying the
-      shard-entry "|" separator.
-    """
+    """Validates one identity-input value."""
     if value == "":
         return "invalid env plan value '': must be a non-empty identity input"
     if "|" in value:
@@ -121,14 +62,7 @@ def env_plan_exec_error(path):
 
     Empty means a logical-only identity input requiring no artifact.
     Non-empty must be a workspace-relative path and never uses the
-    reserved shard suffix (a shard never backs another shard).
-
-    Args:
-      path: candidate exec-path suffix.
-
-    Returns:
-      "" when valid, else the failure reason.
-    """
+    reserved shard suffix (a shard never backs another shard)."""
     if path == "":
         return ""
     if path.endswith(DX_ENV_SHARD_SUFFIX):
@@ -143,17 +77,7 @@ def env_plan_exec_error(path):
     return ""
 
 def env_plan_entry(key, value, exec_path = ""):
-    """Builds one normalized environment identity entry struct.
-
-    Args:
-      key: normalized identity dimension, e.g. "runtime".
-      value: normalized identity input value for the key.
-      exec_path: BEP-matching suffix for the backing artifact, or "" for
-        a logical-only identity input requiring no materialized artifact.
-
-    Returns:
-      A struct with `key`, `value`, and `exec_path`.
-    """
+    """Builds one normalized environment identity entry struct."""
     return struct(
         exec_path = exec_path,
         key = key,
@@ -161,16 +85,7 @@ def env_plan_entry(key, value, exec_path = ""):
     )
 
 def env_plan_record(producer, integration, entries):
-    """Builds one normalized contributor record struct.
-
-    Args:
-      producer: contributing target label in observation rendering.
-      integration: language integration class, e.g. "rust".
-      entries: non-empty list of `env_plan_entry` structs.
-
-    Returns:
-      A struct with `producer`, `integration`, and `entries` (as a tuple).
-    """
+    """Builds one normalized contributor record struct."""
     return struct(
         entries = tuple(entries),
         integration = integration,
@@ -178,15 +93,7 @@ def env_plan_record(producer, integration, entries):
     )
 
 def env_plan_record_error(record):
-    """Validates one contributor record.
-
-    Args:
-      record: candidate `env_plan_record` struct.
-
-    Returns:
-      "" when valid, else the failure reason naming the bad producer,
-      integration, entry key/value, or within-record duplicate key.
-    """
+    """Validates one contributor record."""
     if record.producer == "":
         return "invalid env plan record: producer must be a non-empty label"
     if not (record.producer.startswith("//") or record.producer.startswith("@")):
@@ -219,15 +126,7 @@ def env_plan_conflict_error(records):
 
     Byte-identical duplicates (same producer, integration, key, value,
     and exec path) merge silently. Any other second claim on one key
-    fails, listing every claimant: no traversal-order winner is accepted.
-
-    Args:
-      records: list of `env_plan_record` structs.
-
-    Returns:
-      "" when conflict-free, else the failure reason listing every
-      collided key with its sorted claimant producers.
-    """
+    fails, listing every claimant: no traversal-order winner is accepted."""
     claimants_by_key = {}
     for record in records:
         for entry in record.entries:
@@ -252,14 +151,7 @@ def env_plan_merge_records(records):
     Byte-identical duplicate entries collapse; surviving records sort
     by (producer, integration) with entries sorted by (key, value, exec
     path). The rendering is the normalized complete-plan form the CLI
-    hashes.
-
-    Args:
-      records: list of `env_plan_record` structs.
-
-    Returns:
-      The deduplicated record list in normalized order.
-    """
+    hashes."""
     entries_by_owner = {}
     for record in records:
         owner = (record.producer, record.integration)
@@ -276,17 +168,7 @@ def env_plan_merge_records(records):
     return merged
 
 def env_plan_fingerprint(records):
-    """Renders the normalized complete-plan hash input.
-
-    Args:
-      records: list of `env_plan_record` structs.
-
-    Returns:
-      Deterministic JSON over the merged records: one object per record
-      with producer, integration, and entries sorted by (key, value,
-      exec path), each entry carrying its exec-path suffix so the
-      identity binds inputs to artifacts.
-    """
+    """Renders the normalized complete-plan hash input."""
     merged = env_plan_merge_records(records)
     return json.encode([
         {
@@ -305,14 +187,7 @@ def env_plan_fingerprint(records):
     ])
 
 def env_plan_integration_error(integration):
-    """Validates one language integration against the slice-1 freeze.
-
-    Args:
-      integration: language integration class, e.g. "rust".
-
-    Returns:
-      "" when the integration is admitted, else the failure reason.
-    """
+    """Validates one language integration against the slice-1 freeze."""
     if integration in DX_ENV_ADMITTED_INTEGRATIONS:
         return ""
     return (
@@ -325,15 +200,7 @@ def _parse_entry_spec(spec, label_text):
 
     The two-part form declares a logical-only identity input (empty exec
     path, requiring no materialized artifact). The three-part form
-    declares the BEP-matching exec-path suffix for the backing artifact.
-
-    Args:
-      spec: raw entry string with one or two "|" separators.
-      label_text: owning label rendering for diagnostics.
-
-    Returns:
-      An `env_plan_entry` struct.
-    """
+    declares the BEP-matching exec-path suffix for the backing artifact."""
     parts = spec.split("|")
     if len(parts) == 2:
         return env_plan_entry(parts[0], parts[1])
@@ -346,17 +213,7 @@ def _parse_entry_spec(spec, label_text):
     )
 
 def _emit_shard(ctx, producer, integration, entry_structs):
-    """Validates one record and emits its binary shard via the writer.
-
-    Args:
-      ctx: rule context with executable `_writer`.
-      producer: contributor label in observation rendering.
-      integration: language integration class.
-      entry_structs: list of `env_plan_entry` structs.
-
-    Returns:
-      The declared shard file and the validated record struct.
-    """
+    """Validates one record and emits its binary shard via the writer."""
     record = env_plan_record(producer, integration, entry_structs)
     record_error = env_plan_record_error(record)
     if record_error != "":
@@ -391,16 +248,7 @@ def _exec_matches(file_path, exec_path):
 
     Suffix matching (on "/" boundaries, plus exact equality) lets one
     identity input resolve under different output bases without scanning
-    `bazel-out`.
-
-    Args:
-      file_path: Bazel `File.path` of a backing artifact.
-      exec_path: non-empty BEP-matching suffix from an entry.
-
-    Returns:
-      True when `file_path` equals `exec_path` or ends with
-      `"/" + exec_path`.
-    """
+    `bazel-out`."""
     return file_path == exec_path or file_path.endswith("/" + exec_path)
 
 def _dx_env_shard_impl(ctx):

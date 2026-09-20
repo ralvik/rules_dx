@@ -1,4 +1,4 @@
-//! JUnit report facade (issue #236 split).
+//! JUnit report facade (split).
 //!
 //! Split from `super` (`reports.rs`): the normalized case types live in
 //! [`super::junit_types`], XML parsing in [`super::junit_parse`], and
