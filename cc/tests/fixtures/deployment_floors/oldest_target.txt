@@ -1,0 +1,9 @@
+# Oldest-target floor fixture (issue #500).
+# Records the minimum deployment floor, run separately from current-host.
+# SDK version is not deployment floor; unpinned floors rejected.
+
+glibc 2.28 oldest-target symbols with ordinary dynamic glibc linkage
+macOS 14.0 oldest-target deployment, SDK version is not deployment floor
+Windows /MD retail oldest-target CRT with Microsoft STL plus UCRT plus VCRuntime
+oldest-target and current-host fixtures run separately
+oldest-OS execution remains a gate, never inferred from current-host success

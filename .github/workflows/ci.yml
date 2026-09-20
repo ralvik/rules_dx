@@ -1082,6 +1082,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:prebuilt_interop_qualification
       - name: Audit linux corpus qualification (issue #499 SQLite plus OpenSSL plus ring plus bindgen plus CXX pins plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:linux_corpus_qualification
+      - name: Audit deployment floors qualification (issue #500 glibc plus SDK plus CRT floors pins plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:deployment_floors_qualification
       - name: Audit LCOV accounting qualification (issue #501 Rust plus C/C++ plus mixed/DLL LCOV plus missed-line plus tool pairing plus ignores plus denominator, owned gaps)
         run: bazel run --noshow_progress //tools/ci:lcov_accounting_qualification
       - name: Write job summary
