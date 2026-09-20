@@ -120,9 +120,15 @@ func ModuleName(name string) string {
 // IsEntryFile reports whether a directory-relative source path is a
 // recognized executable entry in the narrow slice: exactly `main.ts`,
 // `main.tsx`, `main.mts`, or `main.cts` (non-test, non-declaration).
-// Manifest-declared names win only for exact mappings; other layouts remain
-// out of scope. Thin-binary generation is deferred until the execution
-// wrapper lands; entries currently own only their library.
+// Only the exact `main` basename is recognized, in any directory; other
+// layouts (`index.*`, `app.*`, `cli.*`, `bin/` scripts, `package.json`
+// `main`/`bin` fields, nested conventions) are an explicit wont-fix per
+// issue #585: generation never infers manifest-declared names, guesses a
+// default entry, or drops one. Manifest-declared names win only for exact
+// mappings; other layouts remain out of scope. A recognized entry owns one
+// reusable project library plus one thin `javascript_binary` (execution
+// reuses the JavaScript wrappers over compiled outputs; there is no
+// `typescript_binary`).
 func IsEntryFile(name string) bool {
 	if IsTestFile(name) || IsDeclaration(name) {
 		return false
@@ -134,6 +140,35 @@ func IsEntryFile(name string) bool {
 		}
 	}
 	return false
+}
+
+// EntryBinaryName derives the thin-binary target name for one library
+// owner: `<library>_bin`. Collisions with another library, test, or
+// binary claim fail closed with every claimant; no further affix is
+// invented.
+func EntryBinaryName(lib string) string {
+	return lib + "_bin"
+}
+
+// EntryPointName derives the compiled entry point for one TypeScript entry
+// source: the basename with its TypeScript extension replaced by the
+// emitted JavaScript extension (`.ts`/`.tsx` to `.js`, `.mts` to `.mjs`,
+// `.cts` to `.cjs`). The thin `javascript_binary` executes the compiled
+// output through the library's `JsInfo`; the library alone owns the source.
+func EntryPointName(src string) string {
+	base := path.Base(src)
+	if strings.HasSuffix(base, ".mts") {
+		return strings.TrimSuffix(base, ".mts") + ".mjs"
+	}
+	if strings.HasSuffix(base, ".cts") {
+		return strings.TrimSuffix(base, ".cts") + ".cjs"
+	}
+	for _, ext := range []string{".ts", ".tsx"} {
+		if strings.HasSuffix(base, ext) {
+			return strings.TrimSuffix(base, ext) + ".js"
+		}
+	}
+	return base
 }
 
 // Claimant records one generated or handwritten target competing for a
