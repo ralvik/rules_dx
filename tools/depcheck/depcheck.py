@@ -193,7 +193,7 @@ def parse_rust_manifest(path):
                 optional = bool(val.get("optional", False))
             deps[name.lower()] = {"spec": spec, "category": cat, "optional": optional, "platform": False}
     # target-specific tables: [target.<cfg>.dependencies]
-    for tkey, tval in (data.get("target", {}) or {}).items():
+    for _tkey, tval in (data.get("target", {}) or {}).items():
         if not isinstance(tval, dict):
             continue
         for sub in ("dependencies", "dev-dependencies", "build-dependencies"):
@@ -251,7 +251,7 @@ def parse_python_manifest(path):
         deps[normalize_py(rawname)] = {"spec": spec, "category": "prod",
                                        "optional": False, "platform": marker_platform,
                                        "raw": rawname}
-    for grp, items in (proj.get("optional-dependencies", {}) or {}).items():
+    for _grp, items in (proj.get("optional-dependencies", {}) or {}).items():
         for item in items or []:
             m = re.match(r"^\s*([A-Za-z0-9_.\-]+)", item)
             if not m:
@@ -267,7 +267,7 @@ def parse_python_manifest(path):
             # unused still fails (optional is not proof of usage).
             deps[normalize_py(rawname)] = {"spec": spec, "category": "dev",
                                            "optional": True, "platform": False, "raw": rawname}
-    for grp, items in (data.get("dependency-groups", {}) or {}).items():
+    for _grp, items in (data.get("dependency-groups", {}) or {}).items():
         if not isinstance(items, list):
             continue
         for item in items:
@@ -938,7 +938,7 @@ def cmd_usage(args):
         return 2
     # Normalize exception keys per ecosystem.
     norm_exc = {}
-    for k, v in exc.items():
+    for _k, v in exc.items():
         if args.ecosystem == "python":
             nk = normalize_py(v["raw"])
         elif args.ecosystem == "rust":

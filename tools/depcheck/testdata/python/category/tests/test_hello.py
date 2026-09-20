@@ -1,7 +1,6 @@
 """Prod dep used only here must fail with a category error."""
 
 import pytest
-
 import test_helper
 
 

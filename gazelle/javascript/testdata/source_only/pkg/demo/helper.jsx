@@ -1,5 +1,5 @@
 export function suffix(tag) {
-  return "<" + tag + ">";
+  return `<${tag}>`;
 }
 
 export default suffix;

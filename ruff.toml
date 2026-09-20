@@ -1,11 +1,14 @@
-# Own-tree Ruff policy (issue #12, lane A): single source of truth for
-# Python lint/format in this workspace, shared by editors, language
-# servers, direct tool invocations, and Bazel quality actions.
+# Own-tree Ruff policy (issues #12 lane A, #614 strict): single source
+# of truth for Python lint/format in this workspace, shared by editors,
+# language servers, direct tool invocations, and Bazel quality actions.
 #
-# Pins the default-equivalent lint selection explicitly so hinted runs
-# prove the config closure reaches the tool instead of `--isolated`
-# defaults (same selection as the `quality/testdata` fixture). Pinned
-# upstream defaults stay authoritative for omitted settings; this file
-# owns only the lint selection.
+# Strict selection for this repo (issue #614): default-equivalent
+# E4/E7/E9/F plus W (pycodestyle warnings), I (isort), and B
+# (flake8-bugbear). E501 stays covered by `ruff format` (no E501 pin);
+# UP (pyupgrade percent-format) stays future work: 21 `%`-format sites
+# remain (see `quality/artifacts/update.py`, `tools/bazelrc/preset.py`).
+# Pinned upstream defaults stay authoritative for omitted settings; this
+# file owns only the lint selection (same selection as the
+# `quality/testdata` fixture).
 [lint]
-select = ["E4", "E7", "E9", "F"]
+select = ["E4", "E7", "E9", "F", "W", "I", "B"]

@@ -222,6 +222,8 @@ test_suite(
 # this hint. The style stays narrow (`Dx.Markers` only; issue #589
 # wont-fix, pinned by `corpus_vale.ini` plus `corpus_styles/Dx/Markers.yml`):
 # prose rules are out of scope, native-config owns policy with no hidden preset.
+# Strict per issue #614: the ini carries `[*] BasedOnStyles = Dx` so markers
+# enforce (without it Vale reports {}).
 vale_config(
     name = "corpus_vale_config",
     src = "corpus_vale.ini",

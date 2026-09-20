@@ -2,9 +2,8 @@
 
 import sys
 
-import pytest
-
 import optional_feat
+import pytest
 import win_only
 
 
