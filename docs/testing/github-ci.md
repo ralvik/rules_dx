@@ -84,7 +84,14 @@ infrastructure budget; arm64 jobs use the separate `bazel-arm64-` scope; musl jo
 `bazel-macos-arm64-` scope on `macos-14`, issue #412; macos x86_64 best-effort jobs use the separate
 `bazel-macos-x86_64-` scope on `macos-15-intel`, issue #413; windows x86_64 jobs use the separate
 `bazel-windows-x86_64-` scope on `windows-latest` with shell `bash`, issue #414; host matrix pinned by
-`bazel run //tools/ci:ci_matrix_qualification`, issue #415), pass `--noshow_progress` to Bazel invocations, run the corpus
+`bazel run //tools/ci:ci_matrix_qualification`, issue #415), with cache keys hashing every
+Bazel-affecting lock/config (issue #618: `MODULE.bazel` plus `MODULE.bazel.lock` plus `.bazelrc` plus
+`tools/bazelrc/preset.bazelrc` plus `.bazelversion` plus `.npmrc` plus `cargo-bazel-lock.json` plus
+`Cargo.lock`/`Cargo.toml` plus `pnpm-lock.yaml`/`pnpm-workspace.yaml` plus `maven_install.json` plus
+`go.mod`/`go.sum` plus `paket.dependencies`/`paket.lock` plus `uv.lock`/`pyproject.toml`; `user.bazelrc`
+never hashed because CI checkouts never contain it). Remote cache stays unwired (issue #618 wont-fix):
+local `actions/cache` disk scope only, no `--remote_cache`/`--remote_executor`/`--bes_backend` flags,
+per the free-tier budget plus Apple/MS cache-rights bounds (issues #496/#507). Pass `--noshow_progress` to Bazel invocations, run the corpus
 ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.

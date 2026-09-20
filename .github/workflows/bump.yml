@@ -70,7 +70,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock') }}
+          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
           restore-keys: |
             bazel-seed-
       - name: Plan single widen (dry-run, never batch)
