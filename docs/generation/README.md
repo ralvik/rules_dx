@@ -82,13 +82,19 @@ pinned (`go_test` over `go test` with package-level `embed`, `scala_test` over S
 upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures in
 `java/tests/fixtures/junit/` plus `kotlin/tests/fixtures/junit/` via
 `bazel run //tools/ci:junit_qualification` under issue #476), plain
-`cc_test`/`csharp_test`/`fsharp_test`
-executables) and lock authority (`third_party/jvm/maven_install.json`,
+`cc_test` executables, plain `csharp_test`/`fsharp_test` hello executables)
+and lock authority (`third_party/jvm/maven_install.json`,
 `third_party/dotnet/paket.lock` plus `paket.dependencies`, Go stdlib-only, C/C++ none).
-Upgrades (GoogleTest v1.18.0, xUnit v3 4.0.0, Go
+The xUnit v3 4.0.0 runner mapping is qualified under issue #477 (plain
+`csharp_test`/`fsharp_test` with `[Fact]`/`[Theory]` sources plus checked-in
+MTP entry-point shims over the pinned `@paket.main//xunit.v3` closure, proven by
+`csharp/tests/fixtures/xunit/` and `fsharp/tests/fixtures/xunit/` via
+`bazel run //tools/ci:xunit_qualification`; unpinned runner rejected).
+Upgrades (GoogleTest v1.18.0, Go
 `from_file` when non-stdlib deps land) stay owned under issues #476-#484 (JUnit 6.1.3
 plus 5.14.x fallback qualified seed-only under issue #476 via
-`bazel run //tools/ci:junit_qualification`); no `Supported` claim
+`bazel run //tools/ci:junit_qualification`; xUnit v3 4.0.0 qualified seed-only
+under issue #477 via `bazel run //tools/ci:xunit_qualification`); no `Supported` claim
 until platform plus consumer plus release evidence passes.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.

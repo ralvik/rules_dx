@@ -1,6 +1,9 @@
 # The v1 .NET route per docs/decisions/0019.
 # F# assemblies need the FSharp.Core runtime asset next to the app; plain
-# fsc output alone throws FileNotFoundException at startup. The lock file
+# fsc output alone throws FileNotFoundException at startup. xUnit v3 is the
+# pinned .NET test runner (issue #477): xunit.v3 4.0.0 plus its
+# xunit.analyzers 2.0.0 companion from the 4.0.0 release notes (transitive
+# MTP/Microsoft.Extensions closure pins in paket.lock). The lock file
 # (paket.lock) is the pin; regenerate the hub with:
 #   bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file
 #   $PWD/third_party/dotnet/paket.dependencies --output-folder
@@ -9,3 +12,5 @@ source https://api.nuget.org/v3/index.json
 framework: net10.0
 
 nuget FSharp.Core 10.1.201
+nuget xunit.v3 4.0.0
+nuget xunit.analyzers 2.0.0

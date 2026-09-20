@@ -549,7 +549,8 @@ fi
 
 # #476-#484: admitted test runners stay pinned (go test with package embed,
 # ScalaTest via the managed route, JUnit 4 seed for JVM, plain executables
-# for cc/csharp/fsharp with named upgrades open).
+# for cc plus hello smoke for csharp/fsharp, with the xUnit v3 4.0.0 mapping
+# qualified under #477).
 runner_fail=""
 grep -q -F -e 'go_test' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:kind"
 grep -q -F -e 'embed' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
@@ -575,6 +576,17 @@ grep -q -F -e 'EntryPoint' fsharp/tests/fixtures/hello/HelloTest.fs || runner_fa
 grep -q -F -e 'xUnit v3 4.0.0' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:xunit"
 grep -q -F -e 'xUnit' csharp/rules/defs.bzl || runner_fail="$runner_fail csharp:open"
 grep -q -F -e 'xUnit' fsharp/rules/defs.bzl || runner_fail="$runner_fail fsharp:open"
+grep -q -F -e 'nuget xunit.v3 4.0.0' third_party/dotnet/paket.dependencies || runner_fail="$runner_fail paket:xunit"
+grep -q -F -e 'nuget xunit.analyzers 2.0.0' third_party/dotnet/paket.dependencies || runner_fail="$runner_fail paket:analyzers"
+grep -q -F -e 'xunit.v3 (4.0)' third_party/dotnet/paket.lock || runner_fail="$runner_fail lock:xunit"
+grep -q -F -e 'csharp_test' csharp/tests/fixtures/xunit/BUILD.bazel || runner_fail="$runner_fail csharp-xunit:kind"
+grep -q -F -e '@paket.main//xunit.v3' csharp/tests/fixtures/xunit/BUILD.bazel || runner_fail="$runner_fail csharp-xunit:pin"
+grep -q -F -e '[Fact]' csharp/tests/fixtures/xunit/GreeterTest.cs || runner_fail="$runner_fail csharp-xunit:fact"
+grep -q -F -e 'ConsoleRunner.Run' csharp/tests/fixtures/xunit/XunitEntryPoint.cs || runner_fail="$runner_fail csharp-xunit:entry"
+grep -q -F -e 'fsharp_test' fsharp/tests/fixtures/xunit/BUILD.bazel || runner_fail="$runner_fail fsharp-xunit:kind"
+grep -q -F -e '@paket.main//xunit.v3' fsharp/tests/fixtures/xunit/BUILD.bazel || runner_fail="$runner_fail fsharp-xunit:pin"
+grep -q -F -e '[<Fact>]' fsharp/tests/fixtures/xunit/GreeterTest.fs || runner_fail="$runner_fail fsharp-xunit:fact"
+grep -q -F -e 'ConsoleRunner.Run' fsharp/tests/fixtures/xunit/XunitEntryPoint.fs || runner_fail="$runner_fail fsharp-xunit:entry"
 if [[ -z "$runner_fail" ]]; then
   ok
 else

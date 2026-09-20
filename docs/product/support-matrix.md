@@ -245,19 +245,21 @@ wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extens
 env plans, hello builds, and lock authority (`maven_install.json` plus fail-closed,
 Paket plus `paket.main`, Go stdlib-only, C/C++ none), with test runners (`go test`,
 ScalaTest, JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476,
-plain `cc`/`csharp`/`fsharp` executables) and
+plain `cc` executables, plain `csharp`/`fsharp` hello executables plus the
+qualified xUnit v3 4.0.0 mapping via xunit fixtures under issue #477) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
 declared-dependency usage with category, exception, and obsolete checks) is qualified for
 all admitted languages in `tools/depcheck/` (issue #22; remaining opens under issue #510)
 with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
-(GoogleTest v1.18.0 under issue #479,
-xUnit v3 4.0.0 under issue #477, Go `from_file` when
+(GoogleTest v1.18.0 under issue #479, Go `from_file` when
 non-stdlib deps land under issue #483, quality adapters qualified under issue #307 with
 deferred implementation
 owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
 stay owned under issues #476-#484 plus #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
-qualified seed-only under issue #476 via `bazel run //tools/ci:junit_qualification`).
+qualified seed-only under issue #476 via `bazel run //tools/ci:junit_qualification`;
+xUnit v3 4.0.0 qualified seed-only under issue #477 via
+`bazel run //tools/ci:xunit_qualification`).
 No `Supported` claim until platform plus consumer plus release
 evidence passes.
 
@@ -521,7 +523,9 @@ silent.
 
 Upstream documentation observations; provisional defaults, not
 selections. Exact versions, runner mappings, and
-fixture qualification are open.
+fixture qualification are open, except the JUnit 6.1.3 plus 5.14.x fallback
+mapping qualified under issue #476 and the xUnit v3 4.0.0 mapping
+qualified under issue #477 below.
 
 - Java and Kotlin: JUnit (≈62–79% JVM adoption, Spring Boot default; JUnit 6
   adds native Kotlin `suspend` support). JUnit 6.1.3 primary (JDK 17+ baseline,
@@ -532,10 +536,24 @@ fixture qualification are open.
   shape; JUnit 4.13.2 seed stays via Vintage, deprecated; unpinned runner rejected).
   The provisional pin on the 6.x line is 6.1.3,
   with 5.14.x maintained as the fallback line.
-- C# and F#: xUnit v3 4.0.0 (greenfield default: isolation
-  and parallelism by default; used by the ASP.NET Core team; Microsoft
-  documents xUnit for F#). The `xunit.v3` package pulls `xunit.analyzers`
-  (2.0.0) as a dependency.
+- C# and F#: xUnit v3 4.0.0 qualified (issue #477; greenfield default:
+  isolation and parallelism by default; used by the ASP.NET Core team;
+  Microsoft documents xUnit for F#). The pin is `xunit.v3` 4.0.0 plus
+  `xunit.analyzers` 2.0.0 in `third_party/dotnet/paket.dependencies` with the
+  MTP runner transitive closure pinned in `paket.lock` and per-package sha512
+  in `third_party/dotnet/deps/paket.main.bzl`. The mapping is plain
+  `csharp_test`/`fsharp_test` executables with `[Fact]`/`[Theory]`
+  (`[<Fact>]` in F#) sources plus checked-in MTP entry-point shims
+  (`XunitEntryPoint` plus `SelfRegisteredExtensions`, adapted from
+  `dotnet new xunit3` MSBuild output because rules_dotnet compiles with
+  csc/fsc, not MSBuild), proven by `csharp/tests/fixtures/xunit/` and
+  `fsharp/tests/fixtures/xunit/` under `bazel test` (In-Process Runner
+  v4.0.0 on net10.0; `bazel run //tools/ci:xunit_qualification`). The
+  `xunit.v3` meta-package is empty; strict-deps compilation names the
+  transitive hub labels directly. Unpinned runner rejected. Hello
+  plain-executable fixtures stay as smoke coverage, not the runner mapping.
+  No `Supported` claim until platform plus consumer plus release evidence
+  passes.
 - Go: `go test` through `rules_go` (`go_test`); no alternative exists. The
   runner follows the Go toolchain pin, so no separate version is named here.
 - C/C++: GoogleTest v1.18.0 (industry default with native mocking
