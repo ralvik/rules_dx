@@ -19,6 +19,9 @@ authoritative product, design, delivery, and governance documents.
 - [Environments](environments/README.md): environments and generated-code projections.
 - [Documentation domain](documentation/README.md): planned unified documentation
   IR, site build, and CLI surface.
+- [IR](ir/README.md): versioned schema and codec; design contracts stay
+  in the Documentation domain.
+- [Deploy](deploy/README.md): `dx deploy` dispatch and owner-gated release path.
 - [Native toolchains](native-toolchains.md): provisional C/C++/Rust stack and
   qualification questions.
 

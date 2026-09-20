@@ -36,6 +36,8 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
 - [Build check serve](build-check-serve.md): accepted `bazel build //docs/...`,
   `dx lint --check //docs/...`, and local serve with existing tools only
   (issue #620). Authoritative for build/check/serve facts.
+- [IR schema and codec](../ir/README.md): checked-in `doc_ir.proto` plus
+  `documentation_ir` codec; design facts stay in the contracts above.
 - Command surface removed;
   reintroduction open, tracked under #786 (successor to closed #581, live successor to closed #421)
   (see the [`dx docs` stub](../cli/commands/docs.md)).
