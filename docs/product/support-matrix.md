@@ -616,7 +616,9 @@ Upstream documentation observations; provisional defaults, not
 selections. Exact versions, rule sets, and adapter mappings are tracked in
 open work under issues #485-#489, except the JVM versions plus rule-sets
 qualified seed-only under issue #485 below (digests plus adapter mappings
-stay owned under issue #416).
+stay owned under issue #416) and the Scala + .NET versions plus rule-sets
+qualified seed-only under issue #486 below (digests plus adapter mappings
+stay owned under issue #417).
 
 - Go: gofumpt (strict superset of gofmt) for format; staticcheck plus `govet`
   for lint, since neither subsumes the other. The existing `SA`-only suggestion
@@ -650,12 +652,30 @@ stay owned under issue #416).
   with no hidden preset; detekt `buildUponDefaultConfig` full set not
   `allRules`, ktlint standard; exact digests plus adapter mappings stay owned
   under issue #416).
-- Scala: scalafmt and Scalafix as already named.
+- Scala: scalafmt and Scalafix as already named. Versions plus rule-sets
+  qualified seed-only under issue #486
+  (`bazel run //tools/ci:scala_dotnet_defaults_qualification` with
+  `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream
+  built-in defaults with no hidden preset; no auto-supplied OrganizeImports
+  plus RemoveUnused preset);
+  exact digests plus adapter mappings stay owned under issue #417).
 - C#: CSharpier (faster and more opinionated than `dotnet format`; no MSBuild
   dependency); SDK-built-in Roslyn CA analyzers, on by default for .NET 5+,
   for lint. StyleCop stays a style choice candidate, not the default.
+  Versions plus rule-sets qualified seed-only under issue #486
+  (`bazel run //tools/ci:scala_dotnet_defaults_qualification` with
+  `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream
+  built-in defaults with no hidden preset; Roslyn SDK default analysis mode
+  is the upstream built-in default, StyleCop stays opt-in);
+  exact digests plus adapter mappings stay owned under issue #417).
 - F#: Fantomas for format; FSharpLint for lint (its own formatting rules are
-  deprecated in favor of Fantomas, so the split is clean).
+  deprecated in favor of Fantomas, so the split is clean). Versions plus
+  rule-sets qualified seed-only under issue #486
+  (`bazel run //tools/ci:scala_dotnet_defaults_qualification` with
+  `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream
+  built-in defaults with no hidden preset; FSharpLint default ruleset with
+  formatting rules off, Fantomas owns formatting);
+  exact digests plus adapter mappings stay owned under issue #417).
 
 Typechecking for every admitted language is compiler-owned (javac, kotlinc,
 Roslyn, `go`, clang/gcc, scalac); no separate typechecker is selected, unlike
@@ -687,8 +707,11 @@ Exact JVM versions plus rule-sets qualified seed-only under issue #485
 (`bazel run //tools/ci:jvm_quality_qualification` with
 `java/tests/fixtures/jvm_quality/pins.bzl` over upstream built-in defaults
 with no hidden preset; exact digests plus adapter mappings stay owned under
-issue #416); exact Scala/.NET artifacts,
-versions, rule sets, and adapter mappings are tracked under issue #417; exact
+issue #416); exact Scala + .NET versions plus rule-sets qualified seed-only
+under issue #486 (`bazel run //tools/ci:scala_dotnet_defaults_qualification`
+with `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream
+built-in defaults with no hidden preset;
+exact digests plus adapter mappings stay owned under issue #417); exact
 native artifacts, versions, rule sets, and adapter mappings are tracked under
 issue #418; exact structured (`buf`/Qt) artifacts, versions, rule sets, and
 adapter mappings are tracked under issue #419; exact interpreted/file-family
@@ -719,14 +742,27 @@ qualification inputs open, not approved presets or additions to curated membersh
   ktlint standard rules (both qualified seed-only under issue #485 as pinned upstream
   built-in defaults with no hidden preset).
 - Roslyn: SDK default analysis mode; StyleCop stays optional since its style
-  rules can contradict the built-in IDE rules (both provisional under issue #417).
+  rules can contradict the built-in IDE rules, qualified seed-only under
+  issue #486 as pinned upstream built-in defaults with no hidden preset
+  (`scala/tests/fixtures/scala_dotnet_quality/pins.bzl` via
+  `bazel run //tools/ci:scala_dotnet_defaults_qualification`).
+  Without an applicable checked-in config the pinned tool uses upstream
+  built-in defaults, with a config it interprets natively; adapters add only
+  transport settings.
 - clang-tidy default checks; cppcheck default enablement (both provisional under issue #418).
 - Scalafix recommended built-ins plus OrganizeImports (import organization)
-  and RemoveUnused (dead code): the existing suggestion remains provisional,
-  open under issue #417. It is not an approved hidden preset;
-  native-config and artifact qualification must resolve the conflict before implementation.
+  and RemoveUnused (dead code), qualified seed-only under issue #486 as
+  pinned upstream built-in defaults with no hidden preset
+  (`scala/tests/fixtures/scala_dotnet_quality/pins.bzl` via
+  `bazel run //tools/ci:scala_dotnet_defaults_qualification`).
+  The OrganizeImports plus RemoveUnused suggestion is resolved against the
+  native-config contract (qualified seed-only under issue #486): no
+  auto-supplied preset; without an applicable checked-in `.scalafix.conf`
+  the pinned tool uses upstream built-in defaults, with a config it
+  interprets natively; adapters add only transport settings.
 - FSharpLint default ruleset with formatting rules off (Fantomas owns
-  formatting) (provisional under issue #417).
+  formatting), qualified seed-only under issue #486 as pinned upstream
+  built-in defaults with no hidden preset.
 - `buf` `STANDARD` lint rules; qmlformat/qmllint `.qmlformat.ini`/`.qmllint.ini`
   discovery versus explicit flags (both provisional under issue #419).
 - RuboCop `.rubocop.yml` versus the StandardRB unconfigurable ruleset; PSScriptAnalyzer

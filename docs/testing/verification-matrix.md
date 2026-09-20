@@ -222,7 +222,9 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   via `from_file` pins plus fixture evidence, issue #483), `:cc_hermetic_qualification` (C/C++
   sha256-integrity plus no-system-package pins plus fixture evidence, issue
   #484), `:jvm_quality_qualification` (JVM versions plus rule-sets pins plus
-  fixture evidence, issue #485),
+  fixture evidence, issue #485), `:scala_dotnet_defaults_qualification`
+  (Scala + .NET versions plus rule-sets pins plus fixture evidence, issue
+  #486),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -237,7 +239,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -450,8 +452,20 @@ Remaining reds stay owned gaps, not green claims:
   `buildUponDefaultConfig` not `allRules`, beyond-default switches rejected,
   proven by the java/kotlin hello fixtures with no adapter claim; digests plus
   adapters stay owned under #416
-  (`jvm_quality_qualification` 16/16); platform plus consumer plus release
-  evidence stays owned gap; no Supported claim).
+   (`jvm_quality_qualification` 16/16); platform plus consumer plus release
+   evidence stays owned gap; no Supported claim).
+- Scala + .NET quality defaults with fixture evidence qualified seed-only under #486
+  (`bazel run //tools/ci:scala_dotnet_defaults_qualification`; Scalafmt 3.11.4
+  plus Scalafix 0.14.7 plus CSharpier 1.3.0 plus Fantomas 7.x stable plus
+  FSharpLint 0.27.0 plus SDK-coupled Roslyn pinned in
+  `scala/tests/fixtures/scala_dotnet_quality/pins.bzl` over upstream built-in
+  defaults with no hidden preset, no auto-supplied OrganizeImports plus
+  RemoveUnused preset, Roslyn SDK default analysis mode with StyleCop opt-in,
+  FSharpLint default ruleset with formatting rules off, auto preset rejected,
+  proven by the scala/csharp/fsharp hello fixtures with no adapter claim;
+  digests plus adapters stay owned under #417
+  (`scala_dotnet_defaults_qualification` 17/17); platform plus consumer plus
+  release evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
