@@ -1121,6 +1121,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Docs build check serve harness (issue #620); see docs/documentation/build-check-serve.md.
+sh_binary(
+    name = "docs_build_qualification",
+    srcs = ["docs_build_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

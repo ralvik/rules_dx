@@ -76,6 +76,7 @@ real_source_target(
         "deploy/authoring.md",
         "deploy/release-runbook.md",
         "documentation/README.md",
+        "documentation/build-check-serve.md",
         "documentation/doc-ir.md",
         "documentation/site.md",
         "environments/README.md",

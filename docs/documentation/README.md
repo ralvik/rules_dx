@@ -33,6 +33,9 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
 - [Site build](site.md): Bazel cache-friendly action design, determinism
   rules, laziness, generated-artifact lifecycle, and the decided mdBook renderer.
   Authoritative for build facts.
+- [Build check serve](build-check-serve.md): accepted `bazel build //docs/...`,
+  `dx lint --check //docs/...`, and local serve with existing tools only
+  (issue #620). Authoritative for build/check/serve facts.
 - Command surface removed;
   reintroduction open, tracked under issue #581 (live successor to closed #421)
   (see the [`dx docs` stub](../cli/commands/docs.md)).
