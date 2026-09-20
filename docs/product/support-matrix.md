@@ -725,8 +725,9 @@ this review selects neither a staticcheck rule set nor a Checkstyle/Scalafix pre
 Upstream documentation observations; provisional defaults, not
 selections. Exact files and fail-closed wiring are tracked in
 open work under issues #481-#484, with the Maven lock qualified
-seed-only under issue #481 and the Paket lock wiring qualified seed-only
-under issue #482 below.
+seed-only under issue #481, the Paket lock wiring qualified seed-only
+under issue #482, and the C/C++ hash wiring qualified seed-only under
+issue #484 below.
 
 - Java, Kotlin, Scala: Maven maven_install.json qualified seed-only under issue #481
   (`bazel run //tools/ci:maven_lock_qualification` with `third_party/jvm/pins.bzl`
@@ -749,8 +750,13 @@ under issue #482 below.
 - Go: `go.mod`/`go.sum` via `go_deps.from_file` (`go.work` only for
   multi-module layouts); Gazelle documents `from_file` as preferred over
   hand-written module tags.
-- C/C++: no ecosystem lockfile; every `http_archive` carries `sha256` or
-  `integrity`, and system packages are excluded as non-hermetic.
+- C/C++ hash wiring qualified seed-only under issue #484: no ecosystem
+  lockfile; every `http_archive` carries `sha256` or `integrity`, and system
+  packages are excluded as non-hermetic (`bazel run
+  //tools/ci:cc_hermetic_qualification` with
+  `cc/tests/fixtures/hermetic/pins.bzl` plus the hello seed and the
+  GoogleTest mapping over `@googletest` plus the depcheck `cc_deps.toml` plus
+  `cc_lock.json` sha256 pair; hash-less archives and system packages rejected).
 - Every lockfile is committed; stale locks fail the build and CI
   (fail-closed): `fail_if_repin_required`, locked-mode restore semantics,
   go.sum verification, hash-checked archives. `MODULE.bazel.lock` is

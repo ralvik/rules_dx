@@ -35,6 +35,8 @@ tools lock, `pnpm-lock.yaml` plus tools lock,
 `third_party/jvm/maven_install.json`, `third_party/dotnet/paket.lock` plus
 `paket.dependencies` qualified seed-only under issue #482). Go hello is stdlib-only with no ecosystem lock;
 C/C++ has none (every `http_archive` carries `sha256`/`integrity`).
+C/C++ hash wiring qualified seed-only under issue #484 via
+`bazel run //tools/ci:cc_hermetic_qualification` with `cc/tests/fixtures/hermetic/`.
 Upstream pins live in `MODULE.bazel`.
 Ruby and PowerShell have no generation mapping: deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).
@@ -93,7 +95,9 @@ below, plain `csharp_test`/`fsharp_test` hello executables)
 and lock authority (`third_party/jvm/maven_install.json`,
 `third_party/dotnet/paket.lock` plus `paket.dependencies` qualified seed-only
 under issue #482 via `bazel run //tools/ci:paket_qualification` with
-`csharp/tests/fixtures/paket/pins.bzl`, Go stdlib-only, C/C++ none).
+`csharp/tests/fixtures/paket/pins.bzl`, Go stdlib-only, C/C++ none qualified
+seed-only under issue #484 via `bazel run //tools/ci:cc_hermetic_qualification`
+with `cc/tests/fixtures/hermetic/`).
 The qualified Maven maven_install.json plus fail-closed repin is pinned under issue #481
 (single shared lock via `lock_file` plus `fail_if_repin_required` in `third_party/jvm/pins.bzl`
 over the shared `@maven` hub, proven by the Java/Kotlin Jupiter plus seed fixtures via
@@ -120,7 +124,9 @@ seed-only under issue #480 via `bazel run //tools/ci:scalatest_qualification`;
 Maven `maven_install.json` plus fail-closed repin qualified seed-only under issue #481 via
 `bazel run //tools/ci:maven_lock_qualification`;
 Paket files plus sha512 qualified seed-only under issue #482 via
-`bazel run //tools/ci:paket_qualification`);
+`bazel run //tools/ci:paket_qualification`;
+C/C++ sha256-integrity qualified seed-only under issue #484 via
+`bazel run //tools/ci:cc_hermetic_qualification`);
 no `Supported` claim
 until platform plus consumer plus release evidence passes.
 
