@@ -131,10 +131,12 @@ def csharp_test(name, srcs, visibility = None, **kwargs):
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner via
-    `deps`; test sources are never the library's sources. The test is a
-    plain executable (exit code is the verdict); the xUnit/NUnit runner
-    selection stays open under ADR 0019. Uses Bazel's standard test and coverage
-    protocols."""
+    `deps`; test sources are never the library's sources. Plain-executable
+    tests (exit code is the verdict) stay supported; the xUnit v3 4.0.0
+    mapping is qualified under issue #477 (`csharp/tests/fixtures/xunit/`:
+    `[Fact]`/`[Theory]` sources plus checked-in MTP entry-point shims over
+    the pinned `@paket.main//xunit.v3` closure; unpinned runner rejected).
+    Uses Bazel's standard test and coverage protocols."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = _csharp_with_tfm(kwargs)
 

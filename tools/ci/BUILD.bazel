@@ -725,6 +725,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# xUnit v3 runner harness (issue #477); see docs/product/support-matrix.md#provisional-default-test-runners.
+sh_binary(
+    name = "xunit_qualification",
+    srcs = ["xunit_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),

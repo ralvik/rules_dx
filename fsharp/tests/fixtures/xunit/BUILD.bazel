@@ -1,0 +1,55 @@
+"""Seed F# xUnit fixture (issue #477): fsharp_test over pinned xunit.v3 4.0.0."""
+
+load("//fsharp/rules:defs.bzl", "fsharp_library", "fsharp_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+fsharp_library(
+    name = "greeter_lib",
+    srcs = ["Greeter.fs"],
+    deps = ["@paket.main//fsharp.core"],
+)
+
+# xUnit v3 4.0.0 mapping: plain fsharp_test executable with [<Fact>] sources
+# plus the checked-in MTP entry-point shims (XunitEntryPoint plus
+# SelfRegisteredExtensions, adapted from `dotnet new xunit3 --language F#`
+# MSBuild output because rules_dotnet compiles with fsc). F# compile order
+# matters: the entry point sorts last. Deps name the pinned Paket hub labels
+# directly: xunit.v3 4.0.0 plus xunit.analyzers 2.0.0 with the MTP runner
+# closure. Unpinned runner: rejected per #477.
+fsharp_test(
+    name = "greeter_test",
+    srcs = [
+        "GreeterTest.fs",
+        "SelfRegisteredExtensions.fs",
+        "XunitEntryPoint.fs",
+    ],
+    deps = [
+        ":greeter_lib",
+        "@paket.main//fsharp.core",
+        "@paket.main//microsoft.testing.extensions.telemetry",
+        "@paket.main//microsoft.testing.extensions.trxreport.abstractions",
+        "@paket.main//microsoft.testing.platform",
+        "@paket.main//microsoft.testing.platform.msbuild",
+        "@paket.main//xunit.analyzers",
+        "@paket.main//xunit.v3",
+        "@paket.main//xunit.v3.assert",
+        "@paket.main//xunit.v3.common",
+        "@paket.main//xunit.v3.core.mtp-v2",
+        "@paket.main//xunit.v3.extensibility.core",
+        "@paket.main//xunit.v3.mtp-v2",
+        "@paket.main//xunit.v3.runner.common",
+        "@paket.main//xunit.v3.runner.inproc.console",
+    ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
