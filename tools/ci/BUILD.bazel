@@ -671,6 +671,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# CC opt-out linker harness (issue #471); see docs/testing/verification-matrix.md.
+sh_binary(
+    name = "cc_optout_qualification",
+    srcs = ["cc_optout_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 # Shell-env default vs annotation extension harness (issue #472); see docs/generation/rust.md#build-scripts.
 sh_binary(
     name = "shell_env_qualification",

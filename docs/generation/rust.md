@@ -173,6 +173,23 @@ The first three settings may differ only through an explicit kept override; othe
 generation restores the stated value. `emit_warnings` forwards `cargo::warning` through upstream
 Bazel behavior, subject to the upstream global setting, and creates no private warning stream.
 
+CC opt-out linker path is qualified seed-only (issue #471): on the as-built
+stock `rules_rust` 0.74.0 stack the kept opt-out executes successfully for
+pure-Rust scripts. Opt-out concerns the script execution action, not removal
+of the linker needed to build the script executable (that binary still
+compiles through the normal Rust toolchain). With `use_cc_toolchain = False`
+the execution action carries no C++ toolchain inputs — `CC`/`CXX`/`AR` point
+at the upstream `no_cc`/`no_cxx`/`no_ar` stubs with empty
+`CFLAGS`/`CXXFLAGS`/`LDFLAGS` — while `LD` falls back to the sysroot
+`rust-lld`. The historical rules_rs no-linker report does not reproduce here;
+a script that actually needs CC still fails clearly when opted out. Proven by
+`rust/tests/fixtures/cc_optout/` (`cc_optout_build_script` with kept opt-out
+plus `cc_optout` lib plus `cc_optout_test` under `bazel test //...`,
+`bazel run //tools/ci:cc_optout_qualification`); silent kept opt-out stays
+rejected. Scope is pure-Rust scripts on the seed host; other platforms and
+bindgen/CXX/exact-target stay owned under issues #410-#414 and #473-#475
+with no `Supported` claim.
+
 Third-party shell-env contract (decided under issue #472; ambiguous default
 rejected): `crate_universe`-generated `cargo_build_script` targets render
 without an explicit `use_default_shell_env` and defer to the global

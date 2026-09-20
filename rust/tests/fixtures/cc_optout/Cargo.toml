@@ -1,0 +1,9 @@
+[package]
+name = "cc_optout"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[lib]
+name = "cc_optout"
+path = "src/lib.rs"

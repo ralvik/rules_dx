@@ -237,13 +237,19 @@ Prefer already-declared Bazel native libraries where integration exists, while r
 Cargo build scripts for authoritative manifests. CMake, Perl, NASM, pkg-config, headers, libraries,
 and binding tools do not appear automatically because compiler exposure is enabled.
 
-Two source-level blockers need narrow upstream remediation:
+One source-level blocker still needs narrow upstream remediation
+(the CC opt-out path above is qualified seed-only under issue #471):
 
 - The pinned [build-script runner rule](https://github.com/hermeticbuild/rules_rust/blob/e9dd49f22cfa43c75ba30cd9d9bb7d8bdc459dde/cargo/private/cargo_build_script.bzl)
   still requests linker arguments after opting out of the C++ toolchain. The
   [generated Rust toolchain](https://github.com/hermeticbuild/rules_rs/blob/v0.0.109/rs/toolchains/declare_rustc_toolchains.bzl)
   supplies no standalone linker for ordinary desktop targets, producing a source-derived
-  no-linker failure path. Reproduce and fix opt-out without disabling the contract. Opt-out concerns
+  no-linker failure path. On the as-built stock `rules_rust` 0.74.0 stack this
+  path is closed seed-only (issue #471): the kept opt-out executes
+  successfully for pure-Rust scripts, with `LD` falling back to the sysroot
+  `rust-lld` and `CC`/`CXX`/`AR` at the upstream `no_cc`/`no_cxx`/`no_ar`
+  stubs, proven by `rust/tests/fixtures/cc_optout/` (`bazel run
+  //tools/ci:cc_optout_qualification`). The contract stays enabled. Opt-out concerns
   the script execution action, not removal of the linker needed to build the script executable.
 - Third-party shell environment is decided hermetic under issue #472
   (ambiguous default rejected): `crate_universe`-generated scripts render
@@ -366,16 +372,19 @@ See the [pinned discovery source](https://github.com/hermeticbuild/rules_rust/bl
 These are engineering and legal-evidence tasks, not compiler-preference questions for the user.
 Open items are tracked in the linked issues. No item is resolved by this research alone.
 
-Required-core native gaps stay owned under issues #471, #472, #473, #474, #475: kept CC
-opt-out linker failure path (issue #471),
-global shell-env False versus annotation extension (decided hermetic under
-issue #472: global `False` in `.bazelrc` with narrow per-crate opt-in, zero
-opt-ins), bindgen LLVM-22-vs-23 compatibility,
-CXX graph identity, and exact-target discovery. Build-script hermetic defaults are
+Required-core kept CC opt-out linker failure path is qualified seed-only
+(issue #471): the kept opt-out executes successfully for pure-Rust scripts on
+the as-built stock `rules_rust` 0.74.0 stack (sysroot `rust-lld` fallback plus
+`no_cc` stubs, proven by `rust/tests/fixtures/cc_optout/` via `bazel run
+//tools/ci:cc_optout_qualification`). Third-party shell-env is decided hermetic
+under issue #472 (global `False` in `.bazelrc` with narrow per-crate opt-in,
+zero opt-ins). Remaining native gaps stay owned under issues #472, #473, #474,
+#475: global shell-env annotation extension, bindgen LLVM-22-vs-23
+compatibility, CXX graph identity, and exact-target discovery. Build-script hermetic defaults are
 implemented (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
 in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
 `bazel run //tools/ci:foundation_maps`; third-party shell-env is pinned by
-`bazel run //tools/ci:shell_env_qualification`; the five gaps above remain open with no `Supported`
+`bazel run //tools/ci:shell_env_qualification`; no `Supported`
 claim.
 
 Admitted C/C++ foundation stays owned under issues #476-#484: MSVC interop plus SDK licensing
@@ -391,7 +400,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | open work under issue #494 |
 | Can Windows acquisition be immutable and lazy? | Reproduce clean re-resolution; qualify upstream fixed-manifest/package inputs and observed downloads, including missing acceptance and unrelated workflows. Windows x86_64 qualified (issue #414) on the as-built pinned upstream toolchains with the toolchains_msvc backend provisional plus immutable lazy fetch; merely adding the module requires no acceptance and fetches no restricted payloads. | open work under issue #495 |
 | Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work under issue #496 |
-| Can the kept CC opt-out execute successfully? | Reproduce no-linker analysis path; narrow upstream runner fix; distinguish script compilation inputs from execution inputs. | issue #471 |
+| Can the kept CC opt-out execute successfully? | Qualified seed-only under issue #471: kept opt-out succeeds for pure-Rust scripts on stock `rules_rust` 0.74.0 (sysroot `rust-lld` fallback plus `no_cc` stubs, `rust/tests/fixtures/cc_optout/` via `bazel run //tools/ci:cc_optout_qualification`); script compilation inputs stay distinct from execution inputs. | issue #471 |
 | Can third-party scripts retain a declared hermetic closure? | Decided hermetic under issue #472: global shell-env False in `.bazelrc` with narrow per-crate annotation opt-in (zero opt-ins); hostile PATH, tool discovery and additional declared tools pinned by `bazel run //tools/ci:shell_env_qualification` plus [Rust Generation](generation/rust.md#build-scripts). | issue #472 |
 | Does Windows native transport preserve all inputs and ABI selection? | Fix ABI constraints and path rebasing upstream; test batch wrappers, response files, cc-rs assembly/discovery, SDK libraries and proc-macro DLLs. Windows x86_64 qualified (issue #414) with declared-input fixtures without host Visual Studio state; remaining upstream fixes stay owned under issue #497. | open work under issue #497 |
 | Which prebuilt native libraries interoperate? | Independent MSVC fixtures and Linux libstdc++ comparison; verify STL/CRT modes, unwinding, ownership and runtime deployment. Windows x86_64 qualified (issue #414) with representative prebuilt-MSVC fixtures incl mixed Rust/C/C++ qualifying host-to-target plus target execution separately; Linux libstdc++ fixtures stay owned here without double-claiming issue #414. | open work under issue #498 |
@@ -417,7 +426,8 @@ per-candidate mappings stay pending
 open work under issues #416-#420. Ownership: the sole repository
 maintainer owns every row until maintenance is explicitly delegated.
 
-The fixture corpus starts with pure-Rust scripts/default and opt-out, cc-rs C/C++, SQLite, OpenSSL
+The fixture corpus starts with pure-Rust scripts/default and opt-out
+(`rust/tests/fixtures/cc_optout/` pinned under issue #471), cc-rs C/C++, SQLite, OpenSSL
 with declared tools/libraries, ring-style C/assembly, bindgen, CXX, native proc-macro dependencies,
 Rust staticlib/cdylib consumers, and independently built Microsoft-STL libraries. Use application-locked
 crate versions and feature sets; crate names alone do not define tested workflows.
