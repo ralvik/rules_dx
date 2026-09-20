@@ -174,7 +174,8 @@ Ty provenance plus `ty` typecheck adapter mapping (`quality/artifacts/ty.linux_x
 (`biome`/`eslint`/`prettier`/`tsc` in `quality/adapters.bzl` plus their parsers), and
 framework composition (`examples/mixed/hello/` plus `gazelle/mixed/`). Remaining native gaps
 (kept CC opt-out linker failure path under issue #471, global shell-env False versus
-annotation extension under issue #472, bindgen LLVM-22-vs-23 compatibility under issue
+annotation extension decided hermetic under issue #472 with global `False`
+in `.bazelrc` and narrow per-crate opt-in at zero opt-ins, bindgen LLVM-22-vs-23 compatibility under issue
 #473, CXX graph identity under issue #474, exact-target discovery under issue #475) stay
 owned under issues #471, #472, #473, #474, #475 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 No `Supported` claim until platform plus consumer plus release evidence passes.

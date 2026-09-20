@@ -1024,6 +1024,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:closeout_battery_qualification
       - name: Audit Rust library extraction (issue #469 internal-only plus binaries-only boundary, owned gaps)
         run: bazel run --noshow_progress //tools/ci:rust_library_qualification
+      - name: Audit shell-env qualification (issue #472 global False plus annotation opt-in plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:shell_env_qualification
       - name: Write job summary
         if: always()
         run: |

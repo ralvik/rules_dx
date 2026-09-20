@@ -55,7 +55,9 @@ native-config goldens and focused tests; hello plus `Cargo.lock` plus
 
 Required-core Rust build-script hermetic defaults are implemented
 (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
-in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`); remaining native gaps
+in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`, with the
+third-party half pinned global `False` in `.bazelrc` and zero per-crate
+opt-ins under issue #472); remaining native gaps
 (kept CC opt-out linker, shell-env default, bindgen LLVM-22-vs-23, CXX graph identity,
 exact-target discovery) stay owned under issues #471, #472, #473, #474, #475 per the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery).
