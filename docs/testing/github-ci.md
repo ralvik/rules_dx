@@ -283,6 +283,9 @@ failure-first check/file/line/rule ordering, no rotation, bot-only frees with re
 outside the open count, full reports with summary-distinguished truncation, no overwrite;
 CI-only, no Supported claim).
 Consumer CI, devcontainer, and perf honesty
-stays open under issue #325 (self-call all-enabled per #408,
-devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable
-each path or keep the limitation explicit).
+is delivered for the self-call path with owned gaps elsewhere: self-call all-enabled
+per #408 (verbatim `//...`, qualified seed-only under #509 via
+`bazel run //tools/ci:consumer_ci_qualification`; build-only self-call forever
+rejected); devcontainer parity plus definition shape delivered with boot
+staying open gap under #460; perf report-not-gate rejected per ADR 0022
+(no standing benchmarking). Closed #325 carries no open scope.
