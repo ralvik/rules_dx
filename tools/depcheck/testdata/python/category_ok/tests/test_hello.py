@@ -1,7 +1,6 @@
 """Correctly categorized dev use plus multi-category prod use."""
 
 import pytest
-
 import test_helper
 from hello import greet
 

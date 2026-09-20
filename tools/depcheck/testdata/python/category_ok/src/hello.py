@@ -1,7 +1,6 @@
 """Multi-category: pytest used in src and tests."""
 
 import pytest
-
 import test_helper
 
 

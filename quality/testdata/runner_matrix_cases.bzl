@@ -249,14 +249,14 @@ stage ruff classes=python sources=quality/testdata/real_dirty.py
 completed_rounds 2
 convergence STABLE
 initial 3
-initial ERROR ruff F401 quality/testdata/real_dirty.py 53 55 fixable=true "`os` imported but unused"
-initial ERROR pydoclint DOC103 quality/testdata/real_dirty.py 58 58 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
-initial ERROR pydoclint DOC101 quality/testdata/real_dirty.py 58 58 fixable=false "Function `add`: Docstring contains fewer arguments than in function signature."
+initial ERROR ruff F401 quality/testdata/real_dirty.py 49 51 fixable=true "`os` imported but unused"
+initial ERROR pydoclint DOC103 quality/testdata/real_dirty.py 54 54 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
+initial ERROR pydoclint DOC101 quality/testdata/real_dirty.py 54 54 fixable=false "Function `add`: Docstring contains fewer arguments than in function signature."
 terminal 2
-terminal ERROR pydoclint DOC103 quality/testdata/real_dirty.py 48 48 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
-terminal ERROR pydoclint DOC101 quality/testdata/real_dirty.py 48 48 fixable=false "Function `add`: Docstring contains fewer arguments than in function signature."
+terminal ERROR pydoclint DOC103 quality/testdata/real_dirty.py 44 44 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
+terminal ERROR pydoclint DOC101 quality/testdata/real_dirty.py 44 44 fixable=false "Function `add`: Docstring contains fewer arguments than in function signature."
 replacements 1
-replacement quality/testdata/real_dirty.py 0 304 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL:int=add(1, \\"two\\")\\n"
+replacement quality/testdata/real_dirty.py 0 300 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL:int=add(1, \\"two\\")\\n"
 """,
     },
     {
@@ -291,10 +291,10 @@ stage ruff classes=python sources=quality/testdata/real_dirty.py
 completed_rounds 2
 convergence STABLE
 initial 1
-initial ERROR ruff unformatted quality/testdata/real_dirty.py 286 290 fixable=true "File would be reformatted"
+initial ERROR ruff unformatted quality/testdata/real_dirty.py 282 286 fixable=true "File would be reformatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.py 0 304 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\nimport os\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL: int = add(1, \\"two\\")\\n"
+replacement quality/testdata/real_dirty.py 0 300 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\nimport os\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL: int = add(1, \\"two\\")\\n"
 """,
     },
     {
@@ -329,9 +329,9 @@ stage ty classes=python sources=quality/testdata/real_dirty.py
 completed_rounds 1
 convergence STABLE
 initial 1
-initial ERROR ty invalid-argument-type quality/testdata/real_dirty.py 297 297 fixable=false "Argument to function `add` is incorrect: Expected `int`, found `Literal[\\"two\\"]`"
+initial ERROR ty invalid-argument-type quality/testdata/real_dirty.py 293 293 fixable=false "Argument to function `add` is incorrect: Expected `int`, found `Literal[\\"two\\"]`"
 terminal 1
-terminal ERROR ty invalid-argument-type quality/testdata/real_dirty.py 297 297 fixable=false "Argument to function `add` is incorrect: Expected `int`, found `Literal[\\"two\\"]`"
+terminal ERROR ty invalid-argument-type quality/testdata/real_dirty.py 293 293 fixable=false "Argument to function `add` is incorrect: Expected `int`, found `Literal[\\"two\\"]`"
 replacements 0
 """,
     },
@@ -524,13 +524,13 @@ stage flake8 classes=python sources=quality/testdata/real_dirty.py
 completed_rounds 1
 convergence STABLE
 initial 3
-initial ERROR flake8 F401 quality/testdata/real_dirty.py 46 46 fixable=false "'os' imported but unused"
-initial ERROR flake8 E231 quality/testdata/real_dirty.py 285 285 fixable=false "missing whitespace after ':'"
-initial ERROR flake8 E225 quality/testdata/real_dirty.py 289 289 fixable=false "missing whitespace around operator"
+initial ERROR flake8 F401 quality/testdata/real_dirty.py 42 42 fixable=false "'os' imported but unused"
+initial ERROR flake8 E231 quality/testdata/real_dirty.py 281 281 fixable=false "missing whitespace after ':'"
+initial ERROR flake8 E225 quality/testdata/real_dirty.py 285 285 fixable=false "missing whitespace around operator"
 terminal 3
-terminal ERROR flake8 F401 quality/testdata/real_dirty.py 46 46 fixable=false "'os' imported but unused"
-terminal ERROR flake8 E231 quality/testdata/real_dirty.py 285 285 fixable=false "missing whitespace after ':'"
-terminal ERROR flake8 E225 quality/testdata/real_dirty.py 289 289 fixable=false "missing whitespace around operator"
+terminal ERROR flake8 F401 quality/testdata/real_dirty.py 42 42 fixable=false "'os' imported but unused"
+terminal ERROR flake8 E231 quality/testdata/real_dirty.py 281 281 fixable=false "missing whitespace after ':'"
+terminal ERROR flake8 E225 quality/testdata/real_dirty.py 285 285 fixable=false "missing whitespace around operator"
 replacements 0
 """,
     },
@@ -566,9 +566,9 @@ stage pylint classes=python sources=quality/testdata/real_dirty.py
 completed_rounds 1
 convergence STABLE
 initial 1
-initial WARNING pylint W0611 quality/testdata/real_dirty.py 46 55 fixable=false "Unused import os"
+initial WARNING pylint W0611 quality/testdata/real_dirty.py 42 51 fixable=false "Unused import os"
 terminal 1
-terminal WARNING pylint W0611 quality/testdata/real_dirty.py 46 55 fixable=false "Unused import os"
+terminal WARNING pylint W0611 quality/testdata/real_dirty.py 42 51 fixable=false "Unused import os"
 replacements 0
 """,
     },
@@ -1217,8 +1217,10 @@ replacement matrix/toml_dirty.toml 0 4 "a = 1\\n"
 ]
 
 # Markdown cells: fixture-policy lint defaults (markdown_check link/structure
-# plus vale prose) with the vale_test.ini closure, over the real clean file,
-# generated broken-link bytes, and the sibling link-resolution pair.
+# plus strict Dx.Markers Vale per issue #614) with the vale_test.ini closure,
+# over the real clean file, generated broken-link bytes, and the sibling
+# link-resolution pair. Clean files carry no TODO markers so Vale stays
+# clean; the dirty link case fails via markdown_check only.
 _MARKDOWN_CASES = [
     {
         "name": "matrix_markdown_lint_pass",
@@ -1233,7 +1235,7 @@ _MARKDOWN_CASES = [
         "config_tools": ["vale"],
         "config_files": [":vale_test.ini"],
         "toolfile_tools": ["vale", "vale"],
-        "toolfile_srcs": [":vale_test.ini", "styles/.keep"],
+        "toolfile_srcs": [":vale_test.ini", "styles/Dx/Markers.yml"],
         "expected": """producer //quality/testdata:matrix_markdown_lint_pass
 capability LINT
 stages 2
@@ -1261,7 +1263,7 @@ replacements 0
         "config_tools": ["vale"],
         "config_files": [":vale_test.ini"],
         "toolfile_tools": ["vale", "vale"],
-        "toolfile_srcs": [":vale_test.ini", "styles/.keep"],
+        "toolfile_srcs": [":vale_test.ini", "styles/Dx/Markers.yml"],
         "expected": """producer //quality/testdata:matrix_markdown_lint_fail
 capability LINT
 stages 2
@@ -1290,7 +1292,7 @@ replacements 0
         "config_tools": ["vale"],
         "config_files": [":vale_test.ini"],
         "toolfile_tools": ["vale", "vale"],
-        "toolfile_srcs": [":vale_test.ini", "styles/.keep"],
+        "toolfile_srcs": [":vale_test.ini", "styles/Dx/Markers.yml"],
         "expected": """producer //quality/testdata:matrix_markdown_sibling_pass
 capability LINT
 stages 2

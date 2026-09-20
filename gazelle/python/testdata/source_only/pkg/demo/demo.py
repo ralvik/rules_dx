@@ -1,7 +1,8 @@
 """Demo library with a local edge, a stdlib import, and a paired stub."""
 
-import helper
 import os
+
+import helper
 
 
 def greet(name):

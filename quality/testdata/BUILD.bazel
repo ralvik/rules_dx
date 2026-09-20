@@ -87,10 +87,12 @@ aspect_fixture_tests(
     ],
 )
 
+# Hinted Vale policy for the real-pipeline fixture (strict per issue
+# #614): Dx.Markers enforced, same style as the workspace corpus.
 vale_config(
     name = "vale_cfg",
     src = "vale_test.ini",
-    data = ["styles/.keep"],
+    data = ["styles/Dx/Markers.yml"],
 )
 
 rustfmt_config(
@@ -103,12 +105,13 @@ ruff_config(
     src = "ruff.toml",
 )
 
-# Hinted Biome policy for the real-pipeline fixture. Empty
-# object selects pinned upstream defaults explicitly, so the hinted run
-# proves the config closure reaches the tool as --config-path instead of
-# the materialized defaults directory. The config lives in its own
-# subdirectory because Biome rejects a --config-path directory that also
-# contains linted sources.
+# Hinted Biome policy for the real-pipeline fixture (strict per issue
+# #614, same selection as the workspace `biome.json`): `recommended`
+# plus `style/useTemplate` as error with tab formatting, so the hinted
+# run proves the config closure reaches the tool as --config-path
+# instead of the materialized defaults directory. The config lives in
+# its own subdirectory because Biome rejects a --config-path directory
+# that also contains linted sources.
 biome_config(
     name = "biome_cfg",
     src = "biome_cfg/biome.json",
