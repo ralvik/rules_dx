@@ -308,13 +308,19 @@ identities remain open tracks. Track unresolved work in
 [roadmap](roadmap.md) and open work under issue #509 and prove the contract
 through the [consumer CI test matrix](testing/github-ci.md). The open qualification
 track stays owned under issue #509. Reusable-workflow contract plus caller
-plus gate/aggregate fixture evidence qualified seed-only under #509
-(`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
-platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
-permissions, per-cell coverage with fork-safe comments, all-enabled self-call
-(issue #408, verbatim `//...`),
+plus gate/aggregate plus per-gap decisions with fixture evidence qualified
+seed-only under #509 (`bazel run //tools/ci:consumer_ci_qualification`;
+nine checks, explicit platforms, fail-closed sequential, stable aggregate,
+hygiene, concurrency, permissions, per-cell coverage with fork-safe comments,
+all-enabled self-call (issue #408, verbatim `//...`),
 native bump loop (sole updater, issue #461), migrate syntax plus manifest
 selection (delivered CLI with fail-closed execution, issue #462) plus run
-multirun (issue #463 delivered), tag hygiene as-built, with platform, merge,
-thread, fork, sequential, tag/release, native-bot, and migrate-manifest gaps
-owned under #509).
+multirun (issue #463 delivered), tag hygiene as-built, with platform, runner,
+isolation, cache, ordering, merge, diff, queue, cancellation, aggregate
+binding, thread identity, ordering, limits, fork, untrusted, sensitive,
+retries, Code-Scanning, sequential, tag/release, native-bot, and
+migrate-manifest decisions pinned in
+`tools/ci/tests/fixtures/consumer_ci/pins.bzl` plus `platforms.expected`
+plus `revisions.expected` plus `reporting.expected`; build-only self-call
+forever rejected per #408; platform plus release evidence stays owned gap;
+no Supported claim).

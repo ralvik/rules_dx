@@ -259,18 +259,17 @@ routes and does not install an all-open-PR rerun bot or modify repository settin
 Qualification requirements are retained with the cases above. See the
 [GitHub CI contract](../github-ci.md) and open decisions
 for unresolved qualification work. Consumer CI qualification plus automation policy
-stays open under issue #509 (platform, runner, isolation, cache, ordering evidence;
-merge, diff, queue, cancellation, aggregate binding; thread identity, ordering, limits;
-fork, untrusted, sensitive, retries, Code-Scanning qualification; sequential mode
-fail-closed pending qualification; tag hygiene plus release-input gaps;
-native-bot follow-ups (native-only updater, issue #461)). Reusable-workflow contract plus caller
-plus gate/aggregate fixture evidence qualified seed-only under #509
+qualified seed-only under issue #509 with fixture evidence
+(`tools/ci/tests/fixtures/consumer_ci/pins.bzl` plus `platforms.expected` plus `revisions.expected` plus `reporting.expected`, qualified by `bazel run //tools/ci:consumer_ci_qualification`; platform, runner, isolation, cache, ordering evidence; merge, diff, queue, cancellation, aggregate binding; thread identity, ordering, limits; fork, untrusted, sensitive, retries, Code-Scanning qualification; sequential mode fail-closed pending qualification (fail-closed as-built, ordering unqualified); tag hygiene plus release-input gaps; native-bot follow-ups (native-only updater, issue #461)). Reusable-workflow contract plus caller
+plus gate/aggregate plus per-gap decisions fixture evidence qualified seed-only under #509
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
 permissions, per-cell coverage with fork-safe comments, all-enabled self-call
 (issue #408, verbatim `//...`), native bump loop (sole updater, issue #461), migrate syntax plus
 manifest selection (delivered CLI with fail-closed execution, issue #462) plus run multirun
-(issue #463 delivered), tag hygiene as-built, with the open gaps above owned under #509).
+(issue #463 delivered), tag hygiene as-built, with the per-gap decisions above pinned in
+`tools/ci/tests/fixtures/consumer_ci/pins.bzl`; build-only self-call forever
+rejected per #408; platform plus release evidence stays owned gap; no Supported claim).
 Consumer CI, devcontainer, and perf honesty
 stays open under issue #325 (self-call all-enabled per #408,
 devcontainer parity-checked but never booted, perf report-not-gate; qualify and enable
