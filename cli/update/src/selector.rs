@@ -799,6 +799,39 @@ mod tests {
     }
 
     #[test]
+    fn maven_selective_parses_group_artifact_and_stays_selective() {
+        // Issue #634: per-artifact identities parse (seed plus Jupiter)
+        // and resolve to `Packages`; the backend owns the wont-fix
+        // `unsupported` call, never a silent full substitution. Bare
+        // group-only shapes stay parse errors.
+        assert_eq!(
+            parse_selector("maven:org.junit.jupiter:junit-jupiter-api"),
+            Ok(Selector::Package(
+                SetId::Maven,
+                "org.junit.jupiter:junit-jupiter-api".to_owned()
+            ))
+        );
+        let resolved = resolve(&strings(&[
+            "maven:junit:junit",
+            "maven:org.junit.jupiter:junit-jupiter-api",
+        ]))
+        .expect("maven packages");
+        assert_eq!(
+            resolved.get(&SetId::Maven),
+            Some(&SetRequest::Packages(vec![
+                "junit:junit".to_owned(),
+                "org.junit.jupiter:junit-jupiter-api".to_owned()
+            ]))
+        );
+        let resolved = resolve(&strings(&[
+            "maven",
+            "maven:org.junit.jupiter:junit-jupiter-api",
+        ]))
+        .expect("maven full wins");
+        assert_eq!(resolved.get(&SetId::Maven), Some(&SetRequest::Full));
+    }
+
+    #[test]
     fn targets_expand_to_owning_sets_full() {
         let resolved = resolve(&strings(&["//go/tests/fixtures/hello:hello"])).expect("target");
         assert_eq!(resolved.get(&SetId::Go), Some(&SetRequest::Full));

@@ -436,6 +436,12 @@ parses the id then fails closed as `unsupported` with the
 `dx update nuget` hint and never silently substitutes a full update;
 private `paket.lock` surgery stays rejected as a private resolver.
 
+Maven per-artifact (`maven:group:artifact`, e.g. `maven:junit:junit` and
+`maven:org.junit.jupiter:junit-jupiter-api`) parses but fails closed as wont-fix
+(issue #634, fixtures in `cli/update/tests/fixtures/selective_maven/`):
+`rules_jvm_external` offers no per-artifact pin target, so the whole-lock
+`REPIN=1 bazel run @maven//:pin` stays the only approved updater.
+
 `dx update` updates selected dependencies to the newest versions permitted by the project's
 declared requirements and authoritative ecosystem resolver, through approved Bazel integration.
 It refreshes standard locks or equivalent resolved dependency files without widening or replacing
@@ -494,7 +500,10 @@ Supported ecosystem mappings are the five sets in `dx_update::sets` (Cargo, npm,
 with manifests/locks pinned there); selective-update syntax is `set:package` in
 `dx_update::selector` (supported for npm, reported `unsupported` for Cargo/Maven/NuGet/Go rather than
 silently widened, decided in [ADR 0024](../../decisions/0024-selective-update.md) with fixtures in
-`cli/update/tests/fixtures/selective_update/`); non-registry handling is upstream-owned (Git branches may advance, tags/commit
+`cli/update/tests/fixtures/selective_update/` plus per-set evidence in
+`cli/update/tests/fixtures/selective_cargo/` under issue #633 plus
+`cli/update/tests/fixtures/selective_nuget/` under issue #635 plus
+`cli/update/tests/fixtures/selective_maven/` under issue #634); non-registry handling is upstream-owned (Git branches may advance, tags/commit
 pins stay, path dependencies are upstream no-ops); upstream operation/report mappings are pinned
 in `dx_update::backend` and unit-tested.
 

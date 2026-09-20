@@ -1135,6 +1135,8 @@ jobs:
         run: bazel run --noshow_progress //tools/ci:selective_cargo_qualification
       - name: Audit selective NuGet qualification (issue #635 per-package wont-fix plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:selective_nuget_qualification
+      - name: Audit selective Maven qualification (issue #634 per-artifact wont-fix plus fixture evidence, owned gaps)
+        run: bazel run --noshow_progress //tools/ci:selective_maven_qualification
       - name: Audit update events qualification (issue #586 mutation wont-fix plus completeness plus fixture evidence, owned gaps)
         run: bazel run --noshow_progress //tools/ci:update_events_qualification
       - name: Audit Starlark futures qualification (issue #588 filtering plus subjects plus BEP wont-fix/deferred plus fixture evidence, owned gaps)

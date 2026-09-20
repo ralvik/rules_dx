@@ -285,6 +285,34 @@ mod tests {
     }
 
     #[test]
+    fn maven_selective_reports_unsupported_with_set_hint() {
+        // Issue #634: per-artifact selective is wont-fix in V1. Both the
+        // seed (`junit:junit`) and the Jupiter (`org.junit.jupiter:...`)
+        // identities fail closed with the full-set hint, never a silent
+        // full substitution.
+        for artifact in [
+            "junit:junit".to_owned(),
+            "org.junit.jupiter:junit-jupiter-api".to_owned(),
+        ] {
+            let error = plan(
+                SetId::Maven,
+                &SetRequest::Packages(vec![artifact.clone()]),
+            )
+            .expect_err("maven selective unsupported");
+            let message = error.to_string();
+            assert!(
+                matches!(error, BackendError::Unsupported { .. }),
+                "{artifact}"
+            );
+            assert!(message.contains("maven"), "{artifact}: {message}");
+            assert!(
+                message.contains("use `dx update maven` for the set"),
+                "{artifact}: {message}"
+            );
+        }
+    }
+
+    #[test]
     fn argv_never_names_a_dx_lockfile() {
         for set in SetId::ALL {
             if let Ok(BackendPlan::Run { argv, .. }) = plan(set, &SetRequest::Full) {
