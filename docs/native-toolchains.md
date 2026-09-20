@@ -130,8 +130,11 @@ compatibility/maintenance evidence; neither compiler removes the acquisition and
 Use the exact current stable Bazel and Rust compilers when qualification begins under
 [dependency currency](decisions/0008-dependency-currency.md). Bazel 9 is a provisional
 initial coverage baseline because the inspected hermetic-llvm coverage fixture requires
-it, not a release pin: the release default follows ADR 0008 and the exact seed pin is tracked
-in open work under issue #494. Do not silently inherit rules_rs's
+it, not a release pin: the release default follows ADR 0008 and the exact seed pin is frozen
+in `rust/tests/fixtures/stable_stack/pins.bzl` (Bazel 9.2.0 plus rules_rust 0.74.0 plus
+rules_cc 0.2.22 plus Rust 1.98.0, qualified seed-only under issue #494 via
+`bazel run //tools/ci:stable_stack_qualification`; ad-hoc compose rejected).
+Do not silently inherit rules_rs's
 older compiler default or turn a research version into a release pin.
 
 ### Inspected Identities
@@ -428,7 +431,11 @@ is decided single-graph under issue #474
 //tools/ci:cxx_identity_qualification`). Exact-target discovery is qualified seed-only under issue #475
 (resolver-owned exact labels to upstream `TARGETS`, `Path`/`Buildfile` widening rejected, project-owned graph plus
 `RustAnalyzerInfo` rejected; pinned in `rust/tests/fixtures/discovery/pins.bzl` with the hello exact-isolation pair via
-`bazel run //tools/ci:exact_target_qualification`). The remaining native gap
+`bazel run //tools/ci:exact_target_qualification`). Exact current stable-stack compose is frozen
+seed-only under issue #494 (as-built Bzlmod identities plus LLVM baseline-vs-target comparison
+with checksums plus source patches plus compiler/profile compatibility, pinned in
+`rust/tests/fixtures/stable_stack/pins.bzl` via `bazel run //tools/ci:stable_stack_qualification`;
+ad-hoc compose rejected). The remaining native gap
 stays owned under issue #472: global shell-env annotation
 extension. Build-script hermetic defaults are
 implemented (`use_cc_toolchain = True`, `use_default_shell_env = False`, `emit_warnings = True`
@@ -437,7 +444,8 @@ in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`) and pinned by
 `bazel run //tools/ci:shell_env_qualification`; bindgen compat is pinned by
 `bazel run //tools/ci:bindgen_qualification`; CXX identity is pinned by
 `bazel run //tools/ci:cxx_identity_qualification`; exact-target discovery is pinned by
-`bazel run //tools/ci:exact_target_qualification`; no `Supported`
+`bazel run //tools/ci:exact_target_qualification`; stable-stack compose is pinned by
+`bazel run //tools/ci:stable_stack_qualification`; no `Supported`
 claim.
 claim.
 
@@ -451,7 +459,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 
 | Question to close | Preferred next evidence or remedy | Tracking |
 | --- | --- | --- |
-| Does the exact current stable stack compose? | Freeze resolved Bzlmod identities; compare rules_rs's LLVM reference with the newer candidate; record checksums, source patches and compiler/profile compatibility. | open work under issue #494 |
+<| Does the exact current stable stack compose? | Frozen seed-only under issue #494: as-built Bzlmod identities (Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus Rust 1.98.0) with `MODULE.bazel.lock` integrity, rules_rs LLVM `0.8.18`/LLVM `22.1.8` baseline vs hermetic-llvm `0.8.19`/LLVM `23.1.0` candidate comparison, checksums plus source patches plus compiler/profile compatibility, ad-hoc compose rejected; pinned in `rust/tests/fixtures/stable_stack/pins.bzl` via `bazel run //tools/ci:stable_stack_qualification` (qualified seed-only under issue #494). | issue #494 |
 | Can Windows acquisition be immutable and lazy? | Qualified seed-only under issue #495: fixed-manifest plus package-index inputs pinned with the toolchains_msvc head plus windows_support `v0.4.1` package identities (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`); mutable fetch rejected; laziness proven (adding the module requires no acceptance and fetches no restricted payloads, unrelated workflows stay green without acceptance, deferred failure never proves laziness). Backend stays provisional; rights plus transport plus interop plus corpus plus floors plus coverage stay owned under issues #496/#497/#498/#499/#500/#501. | issue #495 |
 | Are Apple/Microsoft acquisition and cache rights adequate? | Review actual package terms, deliberate acceptance, extraction, mirrors, redistribution, internal caches and remote workers. Official download availability is not permission. Windows x86_64 qualified (issue #414) with explicit EULA never automatic plus usage vs redistribution reviewed separately (see issue #496). | open work under issue #496 |
 | Can the kept CC opt-out execute successfully? | Qualified seed-only under issue #471: kept opt-out succeeds for pure-Rust scripts on stock `rules_rust` 0.74.0 (sysroot `rust-lld` fallback plus `no_cc` stubs, `rust/tests/fixtures/cc_optout/` via `bazel run //tools/ci:cc_optout_qualification`); script compilation inputs stay distinct from execution inputs. | issue #471 |

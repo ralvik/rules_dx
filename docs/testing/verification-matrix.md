@@ -236,6 +236,8 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   fixture evidence, issue #492),
   `:fsharplint_qualification` (FSharpLint console vs library-API binding
   pins plus fixture evidence, issue #493),
+  `:stable_stack_qualification` (stable-stack compose pins plus
+  fixture evidence, issue #494),
   `:windows_acquisition_qualification` (Windows immutable lazy fetch pins
   plus fixture evidence, issue #495),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
@@ -252,7 +254,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -569,6 +571,18 @@ Remaining reds stay owned gaps, not green claims:
   plus coverage stay owned under issues #496/#497/#498/#499/#500/#501;
   platform plus consumer plus release evidence stays owned gap; no Supported
   claim (`windows_acquisition_qualification` 14/14)).
+- Stable-stack compose with fixture evidence qualified seed-only under issue #494
+  (`bazel run //tools/ci:stable_stack_qualification`; as-built Bzlmod
+  identities Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus
+  Rust 1.98.0 with `MODULE.bazel.lock` integrity, rules_rs LLVM `0.8.18`/
+  LLVM `22.1.8` baseline vs hermetic-llvm `0.8.19`/LLVM `23.1.0` candidate
+  comparison, checksums plus source patches plus compiler/profile
+  compatibility, ad-hoc compose rejected, pinned in
+  `rust/tests/fixtures/stable_stack/pins.bzl`, proven by the Rust plus C++
+  hello fixtures with no adapter claim; candidate backend plus corpus wiring
+  stays owned under #499
+  (`stable_stack_qualification` 16/16); platform plus consumer plus release
+  evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,
