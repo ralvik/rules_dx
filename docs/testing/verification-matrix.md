@@ -221,11 +221,13 @@ plus consumer plus release evidence stays owned gap; no Supported claim).
   fixture evidence, issue #482), `:godeps_qualification` (Go `go.mod`/`go.sum`
   via `from_file` pins plus fixture evidence, issue #483), `:cc_hermetic_qualification` (C/C++
   sha256-integrity plus no-system-package pins plus fixture evidence, issue
-  #484), `:jvm_quality_qualification` (JVM versions plus rule-sets pins plus
+  #484),   `:jvm_quality_qualification` (JVM versions plus rule-sets pins plus
   fixture evidence, issue #485), `:scala_dotnet_defaults_qualification`
   (Scala + .NET versions plus rule-sets pins plus fixture evidence, issue
   #486), `:native_quality_qualification` (native versions plus
   rule-sets pins plus fixture evidence, issue #487),
+  `:structured_defaults_qualification` (structured versions plus
+  rule-sets pins plus fixture evidence, issue #488),
   `:musl_qualification`, `:macos_qualification` (arm64 plus x86_64
   best-effort), `:windows_qualification`, `:ci_matrix_qualification`
   (host matrix, issue #415), and `:closeout_battery_qualification`
@@ -240,7 +242,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `env_codegen_qualification` 23/23, `docs_pipeline_qualification` 33/33,
 `consumer_ci_qualification` 30/30, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
-`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `musl_qualification` 12/12, `macos_qualification` 12/12,
+`hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `musl_qualification` 12/12, `macos_qualification` 12/12,
 `windows_qualification` 13/13, `ci_matrix_qualification` 14/14, `closeout_battery_qualification` 24/24.
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
@@ -479,6 +481,19 @@ Remaining reds stay owned gaps, not green claims:
   adapter claim; digests plus adapters stay owned under #418
   (`native_quality_qualification` 17/17); platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
+- Structured quality defaults with fixture evidence qualified seed-only under #488
+  (`bazel run //tools/ci:structured_defaults_qualification`; buf 1.72.0
+  plus qmlformat/qmllint following the qualified Qt distribution pin (Qt
+  6.11.2 plus 6.11.1 observed) pinned in
+  `quality/tests/fixtures/structured_quality/pins.bzl` over upstream
+  built-in defaults with no hidden preset, `buf` `STANDARD` as the upstream
+  built-in default lint set with native ini interpretation for qml, no
+  auto-supplied buf.yaml or ini preset, beyond-default `COMMENTS` plus
+  `UNARY_RPC` opt-in maxima rejected, proven by the fixture pair with no
+  adapter claim; digests (including Qt distribution identity, licensing,
+  and platform artifacts) plus adapters stay owned under #419
+  (`structured_defaults_qualification` 17/17); platform plus consumer plus
+  release evidence stays owned gap; no Supported claim).
 - Non-dogfed execution plan delivered (see issue #508 for remaining gaps; hermetic
   CLI-contract pins under issue #407)
   (`bazel run //tools/ci:non_dogfed_paths`; hermetic CLI-contract pins,

@@ -294,11 +294,15 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   here, not silently dropped; `buf format --diff --exit-code` unified diff plus `--write`
   is whole-file rewrite with check/diff mode while `buf lint` is check-only with the
   provisional sandbox-apply-and-diff fix flow; qmlformat writes stdout plus `-i` inplace
-  with `.qmlformat.ini` upward settings and `--ignore-settings` (including `--sort-imports`
-  and semicolon-rule behavior as open work under issue #419); qmllint verifies syntax plus anti-patterns
-  with `--json <file>` (`-` for stdout) JSON carrying messages plus file/line/severity
-   plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work under issue #419. Versions are
-   observations, not pins; recheck latest stable at implementation (see the Structured rows in
+   with `.qmlformat.ini` upward settings and `--ignore-settings` (including `--sort-imports`
+   and semicolon-rule behavior as open work under issue #419); qmllint verifies syntax plus anti-patterns
+   with `--json <file>` (`-` for stdout) JSON carrying messages plus file/line/severity
+    plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work under issue #419. Versions
+    qualified seed-only under issue #488
+   (`quality/tests/fixtures/structured_quality/pins.bzl` via `bazel run //tools/ci:structured_defaults_qualification`
+   over upstream built-in defaults with no hidden preset); digests stay
+   observations, not pins, recheck latest stable at implementation; adapters stay owned under issue #419
+   (see the Structured rows in
    [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Interpreted/file-family cohort (issue #420, provisional — no adapter claims `ruby`,
   `powershell`, `cue`, `jsonnet`, `pkl`, `css`, `html_template`, `gherkin`, `sql`, `xml`,

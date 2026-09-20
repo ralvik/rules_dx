@@ -10,20 +10,21 @@
 #   decided authoritative-toolchain route for qmlformat/qmllint from the Qt
 #   distribution (Qt-last ordering decided; exact Qt distribution identity,
 #   licensing, and platform artifact qualification remain pending), initial
-#   artifact research rows as observations not pins (buf v1.72.0, qmlformat
-#   Qt 6.11.2, qmllint Qt 6.11.1), provisional adapter-input notes (buf
+#   artifact research rows as observations for digests (versions qualified
+#   seed-only under issue #488), adapter-input notes (buf
 #   `--error-format=json` JSONL as the faithful shape with no SARIF in
 #   1.71.0, `STANDARD` rule selection plus module-root-sensitive
 #   `PACKAGE_DIRECTORY_MATCH` plus `--path` scoping; qmlformat stdout plus
 #   `-i` with `.qmlformat.ini` upward settings; qmllint `--json` with
 #   `.qmllint.ini` plus `//qmllint enable/disable`; whole-file rewrite versus
 #   check-only fix modes with the provisional sandbox-apply-and-diff flow,
-#   never silently dropped), provisional native-config inputs (`buf`
-#   `STANDARD` rules, qmlformat/qmllint ini discovery) explicitly not
-#   approved presets, parity-deferred protobuf/qml with owner plus frozen
+#   never silently dropped), native-config defaults qualified seed-only
+#   under issue #488 (`buf` `STANDARD` as the upstream built-in default lint
+#   set, qmlformat/qmllint ini discovery as native interpretation, no
+#   auto-supplied preset), parity-deferred protobuf/qml with owner plus frozen
 #   route, classification-only taxonomy with no curated defaults and no
 #   native-config binding;
-# - open under #419 with honest records: exact artifact versions/digests
+# - open under #419 with honest records: exact artifact digests
 #   plus Qt distribution qualification, parser plus runner-matrix pass/fail
 #   plus fix/format evidence per adapter-backed class, native-config
 #   qualification against the native-config contract, platform plus
@@ -173,12 +174,12 @@ else
   bad "tool-acquisition lost a structured research row or its observations-not-pins honesty:$cohort_research"
 fi
 
-# Tool integrations keep the provisional structured adapter-input notes:
+# Tool integrations keep the structured adapter-input notes:
 # buf JSONL as the faithful shape (no SARIF) with STANDARD plus
 # module-root-sensitive scoping recorded not silent, qmlformat stdout plus
 # `-i` with ini settings, qmllint `--json` with ini plus comment scoping,
 # whole-file rewrite versus check-only fix modes, Qt-last ordering,
-# versions as observations not pins, no adapter claim.
+# versions qualified under #488 with digests as observations, no adapter claim.
 if grep -q -F -e '**Structured cohort (issue #419' "$integrations" &&
   grep -q -F -e 'no adapter claims `protobuf` or `qml` yet' "$integrations" &&
   grep -q -F -e 'no SARIF in 1.71.0' "$integrations" &&
@@ -186,19 +187,22 @@ if grep -q -F -e '**Structured cohort (issue #419' "$integrations" &&
   grep -q -F -e 'not silently dropped' "$integrations" &&
   grep -q -F -e '.qmlformat.ini' "$integrations" &&
   grep -q -F -e '--json <file>' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #488' "$integrations" &&
   grep -q -F -e 'observations, not pins' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its provisional structured adapter-input notes or open-work honesty"
+  bad "tool-integrations lost its structured adapter-input notes or #488 versions honesty"
 fi
 
-# Support matrix keeps the structured routes plus provisional native-config
-# inputs plus adapter-input notes plus cohort tracking, all citing #419
-# without approving hidden presets or claiming support.
+# Support matrix keeps the structured routes plus qualified native-config
+# defaults (issue #488) plus adapter-input notes plus cohort tracking, all
+# citing #419 for adapters/digests without approving hidden presets or
+# claiming support.
 if grep -q -F -e 'checksummed native/self-contained artifact route (issue #419' "$support" &&
   grep -q -F -e 'authoritative-toolchain route from the Qt distribution (issue #419' "$support" &&
-  grep -q -F -e 'tracked under issue #419' "$support" &&
-  grep -q -F -e '(both provisional under issue #419)' "$support" &&
+  grep -q -F -e 'qualified seed-only under issue #488' "$support" &&
+  grep -q -F -e 'STANDARD' "$support" &&
+  grep -q -F -e 'upstream built-in default' "$support" &&
   grep -q -F -e 'owned by' "$support" &&
   grep -q -F -e 'issue #419' "$support" &&
   grep -q -F -e 'itemized under issue #419' "$support" &&
@@ -207,7 +211,7 @@ if grep -q -F -e 'checksummed native/self-contained artifact route (issue #419' 
   grep -q -F -e 'to issue #419.' "$support"; then
   ok
 else
-  bad "support-matrix lost its structured routes, provisional inputs, adapter notes, or #419 cohort tracking"
+  bad "support-matrix lost its structured routes, qualified defaults, adapter notes, or #419 cohort tracking"
 fi
 
 # Tool baseline keeps the Protocol Buffer/QML coverage rows (integration inventory,
