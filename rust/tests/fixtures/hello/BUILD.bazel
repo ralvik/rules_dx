@@ -123,6 +123,24 @@ rust_clippy_test(
     ],
 )
 
+# Crate-edition fixture (issue #468): 2015-only syntax over the
+# 2021 rustfmt config proves the per-crate `--edition` flag wins.
+rust_library(
+    name = "edition_2015_lib",
+    testonly = True,
+    srcs = ["edition_2015.rs"],
+    aspect_hints = ["//:rustfmt_config"],
+    crate_name = "edition_2015",
+    crate_root = "edition_2015.rs",
+    edition = "2015",
+)
+
+rustfmt_test(
+    name = "edition_fmt_test",
+    size = "small",
+    targets = [":edition_2015_lib"],
+)
+
 exports_files([
     "Cargo.toml",
     "Cargo.lock",

@@ -23,7 +23,9 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   per-adapter pass plus fail samples with `parser_sample_qualification`),
   E2E via
   e2e suite, close-out battery + docs delivered (issue #467,
-  battery commands plus docs gate with `closeout_battery_qualification`), rustfmt with crate edition.
+  battery commands plus docs gate with `closeout_battery_qualification`),
+  rustfmt with crate edition delivered (issue #468, crate edition flows to
+  rustfmt with fixtures plus `rustfmt_edition_qualification`).
 * Robustness and hygiene: CI hygiene,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
   release path (signing-first, issue #458), signing stack + distribution

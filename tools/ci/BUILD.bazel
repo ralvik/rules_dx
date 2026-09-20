@@ -653,6 +653,15 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Rustfmt crate-edition harness (issue #468); see docs/testing/verification-matrix.md.
+sh_binary(
+    name = "rustfmt_edition_qualification",
+    srcs = ["rustfmt_edition_qualification.sh"],
+    data = ["//tools/sh:lib"],
+    # Bash-only harness is Linux-only (issue #299 shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "warnings_as_errors_testdata",
     srcs = glob(["testdata/warnings/**"]),
