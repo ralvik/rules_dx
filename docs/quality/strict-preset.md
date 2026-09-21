@@ -90,7 +90,7 @@ TypeScript strict (`tsconfig.json`) is `"strict": true`:
 
 Vale strict stays markers-only (`Dx.Markers` with `MinAlertLevel =
 suggestion`, same as the repository corpus). Prose rules stay wont-fix
-per issue #589: native configuration owns policy with no hidden preset,
+per issues #589 and #665: native configuration owns policy with no hidden preset,
 so there is no prose strict preset to opt into.
 
 ## Compatibility

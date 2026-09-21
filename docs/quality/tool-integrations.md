@@ -185,7 +185,7 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
    dictionaries, templates, scripts, and filters form the closure; `sync` downloads packages and must
    never run in consumer actions. The repository corpus binds `Dx.Markers` only (accepted,
    pinned by `quality/corpus_vale.ini` plus `corpus_styles/Dx/Markers.yml`): prose rules stay
-   wont-fix (issue #589, native-config owns policy with no hidden preset). Own-tree strict
+   wont-fix (issues #589 and #665, native-config owns policy with no hidden preset). Own-tree strict
    (issue #614) adds the required `[*] BasedOnStyles = Dx` binding so markers enforce
    (without it Vale reports `{}`); the `quality/testdata` fixture mirrors the corpus
    style via `styles/Dx/Markers.yml`.
