@@ -5,7 +5,7 @@
 #
 # The publish dry-run stays `workflow_dispatch`-only with a
 # default-closed approve gate (proven by //tools/ci:release_hygiene),
-# and every `github_release` site stays draft-only by construction:
+# and every `github_deploy` site stays draft-only by construction:
 # `draft` defaults to True and any `draft = False` fails analysis in
 # `deploy/rules/github.bzl`, tags validate against the launcher-safe
 # charset with the `v0.0.0-dryrun` placeholder default, and the deploy
@@ -75,11 +75,11 @@ else
   ok
 fi
 
-# No github_release site opts out of the draft gate: draft defaults to
+# No github_deploy site opts out of the draft gate: draft defaults to
 # True and any explicit False fails analysis, so the tree must carry
 # no `draft = False` at all.
 if grep -rn -F -e 'draft = False' --include='BUILD.bazel' . | head -n 5 | grep -q .; then
-  bad "a github_release site sets draft = False (draft-only per #5)"
+  bad "a github_deploy site sets draft = False (draft-only per #5)"
 else
   ok
 fi
@@ -92,11 +92,11 @@ else
   bad "deploy/rules/github.bzl no longer fails analysis on tag/draft violations"
 fi
 
-# Every github_release site uses the default placeholder tag: no
+# Every github_deploy site uses the default placeholder tag: no
 # explicit `tag =` override may point a checked-in target at a real
 # release tag.
-if grep -rn -A8 -F -e 'github_release(' --include='BUILD.bazel' . | grep -F -e 'tag =' | head -n 5 | grep -q .; then
-  bad "a github_release site overrides the v0.0.0-dryrun placeholder tag"
+if grep -rn -A8 -F -e 'github_deploy(' --include='BUILD.bazel' . | grep -F -e 'tag =' | head -n 5 | grep -q .; then
+  bad "a github_deploy site overrides the v0.0.0-dryrun placeholder tag"
 else
   ok
 fi

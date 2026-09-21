@@ -1,8 +1,8 @@
 """Quality command planning and scope resolution for the `dx` CLI."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
-load("//deploy/rules:archive.bzl", "archive_release")
-load("//deploy/rules:github.bzl", "github_release")
+load("//deploy/rules:archive.bzl", "archive_deploy")
+load("//deploy/rules:github.bzl", "github_deploy")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 
@@ -195,7 +195,7 @@ rust_binary(
 # logic. Draft-only with the dry-run placeholder tag: publishing a real
 # draft needs the tag pushed beforehand and explicit owner approval
 #
-github_release(
+github_deploy(
     name = "github_draft",
     artifacts = [":dx"],
 )
@@ -208,7 +208,7 @@ github_release(
 # release bytes is `//deploy/install:dx_verify` (Sigstore bundle +
 # identity/issuer, no checksum-only fallback); the bundle itself arrives
 # with the owner-approved release via the human-run signing workflow.
-archive_release(
+archive_deploy(
     name = "dx_standalone",
     app = ":dx",
 )

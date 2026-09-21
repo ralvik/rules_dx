@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifies one `github_release` deploy program.
+# Verifies one `github_deploy` deploy program.
 #
 # `$1` is the program rootpath, `$2` the expected tag, `$3...` the
 # expected asset basenames. Runs the program with `GH_RELEASE_DRY_RUN=1`

@@ -22,13 +22,13 @@ def github_unit_tests(name):
             expect_equal(
                 "github_tag_error rejects an empty tag",
                 github_tag_error(""),
-                "github_release: invalid tag '': want a non-empty tag " +
+                "github_deploy: invalid tag '': want a non-empty tag " +
                 "(for example 'v0.0.0-dryrun')",
             ),
             expect_equal(
                 "github_tag_error rejects shell-unsafe tag characters",
                 github_tag_error("v1.0;curl evil"),
-                "github_release: invalid tag 'v1.0;curl evil': want only " +
+                "github_deploy: invalid tag 'v1.0;curl evil': want only " +
                 "[A-Za-z0-9._-] so the tag embeds safely in the deploy launcher",
             ),
             expect_equal(
@@ -39,7 +39,7 @@ def github_unit_tests(name):
             expect_equal(
                 "github_draft_error rejects publishing without approval",
                 github_draft_error(False),
-                "github_release: draft=False requires explicit owner " +
+                "github_deploy: draft=False requires explicit owner " +
                 "approval per issue #5; keep the draft gate and publish " +
                 "the release on GitHub after approval",
             ),

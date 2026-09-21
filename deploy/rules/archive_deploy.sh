@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy program for `archive_release`.
+# Deploy program for `archive_deploy`.
 #
 # Invoked via `bazel run :<name>` or `dx deploy :<name>`. The generated
 # launcher resolves the staged app, tarball, and checksum from its
