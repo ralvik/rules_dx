@@ -105,6 +105,12 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
         Command::Migrate => {
             "Per-command flags: --from <version> --to <version> (migrate only; both Cargo semver, upgrade-only gate)."
         }
+        Command::New => {
+            "Per-command flags: none (<language> [name]; rust|python|javascript|typescript|go|java|kotlin|scala|csharp|fsharp|c|cc|cpp; absent-only, no --force)."
+        }
+        Command::Upgrade => {
+            "Per-command flags: --from <version> --to <version> (upgrade only; pin+migrate+setup composition with recovery pointer)."
+        }
         Command::Audit => {
             "Per-command flags: --fail-on info|warning|error, --report sarif|spdx (audit only; --check and `-- --bazel-options` do not apply; --output diff has no patch)."
         }
@@ -165,6 +171,10 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Migrate => {
             "Usage: dx [global-options] migrate --from <version> --to <version> [scope ...]"
         }
+        Command::New => "Usage: dx [global-options] new <language> [name]",
+        Command::Upgrade => {
+            "Usage: dx [global-options] upgrade --from <version> --to <version>"
+        }
         Command::Lint | Command::Typecheck | Command::Format | Command::Generate => {
             "Usage: dx [global-options] lint|typecheck|format|generate [--here] [scope ...] [-- bazel-options ...]"
         }
@@ -204,6 +214,8 @@ pub(crate) fn render_command_help(command: Command) -> String {
         | Command::Fix => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied. Pass --here (--cwd alias) for the current directory tree instead (//path/...; //... at the root); --here cannot be combined with explicit scopes and never changes the no-flag default.",
         Command::Codegen | Command::Env | Command::Setup => "Scopes: none for repository-wide canonical selection, or exactly one exact // or @ label; patterns, paths, and multiple labels are usage failures (see docs/cli/commands/environment-codegen-setup.md).",
         Command::Init => "Scopes: optional single module name (defaults to my_project when absent); Bazel labels/patterns are not scopes; extra positionals are usage failures.",
+        Command::New => "Scopes: <language> plus optional project name (defaults to my_project); unknown languages fail with the supported list; extra positionals are usage failures.",
+        Command::Upgrade => "Scopes: none (repository-wide pin+migrate+setup composition; --from/--to required, positional scopes rejected).",
         Command::Hooks => "Scopes: verb install|uninstall|status|run (run requires pre-commit|pre-push); no Bazel scopes; `-- --bazel-options` does not apply.",
         Command::Status => "Scopes: none (status takes no scopes).",
         Command::Watch => "Scopes: wrapped command plus its scopes, re-resolved each iteration (local only, refuses CI=true; only build|test|run|lint|typecheck|format|check|fix are watchable).",

@@ -57,10 +57,11 @@ pub struct Invocation {
     /// Inspect wrappers use `cquery` instead of `query` (Owners, Deps,
     /// Why only).
     pub configured: bool,
-    /// `dx migrate --from <version>`: source version (Migrate only).
+    /// `dx migrate/upgrade --from <version>`: source version (Migrate
+    /// plus Upgrade only).
     pub from: Option<String>,
-    /// `dx migrate --to <version>`: target version
-    /// (Migrate only).
+    /// `dx migrate/upgrade --to <version>`: target version
+    /// (Migrate plus Upgrade only).
     pub to: Option<String>,
     /// `dx <command> --here` (`--cwd` alias): select the current directory
     /// tree instead of `//...` (cwd-scope commands only; never implicit).

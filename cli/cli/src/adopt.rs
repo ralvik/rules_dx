@@ -9,15 +9,18 @@
 //!
 //! Domain split: each execution domain lives in its own
 //! module — [`inspect`] (`owners`/`deps`/`why`), [`status`], [`version`],
-//! [`watch`], [`completion`], [`init`], [`hooks`]; this facade keeps
-//! dispatch plus shared helpers. The public path stays
+//! [`watch`], [`completion`], [`init`], [`new`], [`upgrade`], [`hooks`];
+//! this facade keeps dispatch plus shared helpers. The public path stays
 //! `crate::adopt::{execute_adoption, AdoptEnv}`.
+//! See: `docs/cli/commands/new-upgrade.md`.
 
 mod completion;
 mod hooks;
 mod init;
 mod inspect;
+mod new;
 mod status;
+mod upgrade;
 mod version;
 mod watch;
 
@@ -52,11 +55,12 @@ fn operational(out: &mut dyn Write, err: &mut dyn Write, message: &str) -> i32 {
 /// lifecycle summaries but never result documents: `status` / `version`
 /// (except dry-run plans, which are summaries) / inspect labels
 /// / completion scripts / `hooks status` views always print because they
-/// are the answer, not a summary. Summary owners (`init`,
-/// `hooks install` / `uninstall` / `run`, `watch`, dry-run plans including
-/// `status`, `version`, `hooks status`, `completion`, `owners` / `deps` /
-/// `why`) check this; result owners do not, and that non-suppression is
-/// documented in the output protocol rather than a silent ignore.
+/// are the answer, not a summary. Summary owners (`init`, `new`,
+/// `upgrade` dry-run plans, `hooks install` / `uninstall` / `run`,
+/// `watch`, dry-run plans including `status`, `version`, `hooks status`,
+/// `completion`, `owners` / `deps` / `why`) check this; result owners do
+/// not, and that non-suppression is documented in the output protocol
+/// rather than a silent ignore.
 fn summaries_suppressed(invocation: &Invocation) -> bool {
     invocation.quiet || matches!(invocation.output, OutputMode::Text { quiet: true })
 }
@@ -72,6 +76,8 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
     } = env;
     match invocation.command {
         Command::Init => init::execute_init(invocation, workspace, out, err),
+        Command::New => new::execute_new(invocation, workspace, out, err),
+        Command::Upgrade => upgrade::execute_upgrade(invocation, workspace, out, err),
         Command::Hooks => hooks::execute_hooks(invocation, workspace, out, err),
         Command::Status => status::execute_status(invocation, workspace, out, err),
         Command::Version => version::execute_version(invocation, workspace, out, err),

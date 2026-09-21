@@ -95,6 +95,9 @@ pub enum AdoptError {
     /// `dx migrate` needs an upgrade (`to` exceeds `from` semver).
     #[error("migrate is upgrade-only: {from} -> {to}")]
     MigrateNotUpgrade { from: String, to: String },
+    /// `dx new` needs a supported language template.
+    #[error("unknown language for dx new: {language} (want one of rust, python, javascript, typescript, go, java, kotlin, scala, csharp, fsharp, c, cc, cpp)")]
+    NewUnknownLanguage { language: String },
 }
 
 #[cfg(test)]

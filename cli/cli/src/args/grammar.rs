@@ -76,10 +76,12 @@ pub(crate) struct Cli {
     /// Use cquery instead of query (owners/deps/why only).
     #[arg(long)]
     pub(crate) configured: bool,
-    /// Source version for `dx migrate` (migrate only).
+    /// Source version for `dx migrate` plus `dx upgrade` (migrate plus upgrade only).
+    /// See: `docs/cli/commands/new-upgrade.md`.
     #[arg(long, allow_negative_numbers = true, overrides_with = "from")]
     pub(crate) from: Option<String>,
-    /// Target version for `dx migrate` (migrate only).
+    /// Target version for `dx migrate` plus `dx upgrade` (migrate plus upgrade only).
+    /// See: `docs/cli/commands/new-upgrade.md`.
     #[arg(long, allow_negative_numbers = true, overrides_with = "to")]
     pub(crate) to: Option<String>,
     /// Select the current directory tree instead of `//...`

@@ -36,6 +36,8 @@ pub const ALL_COMMANDS: &[&str] = &[
     "env",
     "setup",
     "init",
+    "new",
+    "upgrade",
     "hooks",
     "status",
     "version",
@@ -89,9 +91,10 @@ mod tests {
     #[test]
     fn completion_vocabulary_is_the_final_registry() {
         // The frozen vocabulary reference
-        // pins the final CLI registry exactly (29 commands including
-        // `deploy` plus `bump` plus `migrate`; `doctor` plus
-        // `configure` stay rejected as unknown).
+        // pins the final CLI registry exactly (31 commands including
+        // `deploy` plus `bump` plus `migrate` plus `new` plus `upgrade`;
+        // `doctor` plus `configure` stay rejected as unknown).
+        // See: `docs/cli/commands/new-upgrade.md`.
         let mut got = ALL_COMMANDS.to_vec();
         got.sort_unstable();
         let mut want = vec![
@@ -114,6 +117,7 @@ mod tests {
             "init",
             "lint",
             "migrate",
+            "new",
             "owners",
             "run",
             "setup",
@@ -121,17 +125,18 @@ mod tests {
             "test",
             "typecheck",
             "update",
+            "upgrade",
             "version",
             "watch",
             "why",
         ];
         want.sort_unstable();
         assert_eq!(got, want, "ALL_COMMANDS drifted from the final registry");
-        assert_eq!(ALL_COMMANDS.len(), 29, "final registry holds 29 commands");
+        assert_eq!(ALL_COMMANDS.len(), 31, "final registry holds 31 commands");
         let mut dedup = got.clone();
         dedup.dedup();
         assert_eq!(got.len(), dedup.len(), "registry spellings must be unique");
-        for excluded in ["doctor", "configure", "docs", "new"] {
+        for excluded in ["doctor", "configure", "docs"] {
             assert!(
                 !ALL_COMMANDS.contains(&excluded),
                 "{excluded} must stay outside the final registry"

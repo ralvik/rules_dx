@@ -49,6 +49,12 @@ pub struct ScaffoldFile {
 /// definition we ship is the one we boot. `postCreateCommand` runs the user-path bootstrap
 /// (`bazel run //dx:env`, then `dx setup`) instead of a full build, so
 /// container create pays only the managed-environment setup.
+///
+/// Extensions cover the Rust automatic driver plus the admitted-language
+/// editors (see [`editor_disposition`]): C++ via managed clangd snapshot,
+/// JVM/.NET/Scala via manual setup-projection wiring. The parity test pins
+/// `rust-lang.rust-analyzer` presence, never exclusivity.
+/// See: `docs/environments/environment.md#ownership-and-refresh`.
 pub const DEVCONTAINER_JSON: &str = concat!(
     "{\n",
     "  \"name\": \"rules_dx\",\n",
@@ -58,12 +64,72 @@ pub const DEVCONTAINER_JSON: &str = concat!(
     "  },\n",
     "  \"customizations\": {\n",
     "    \"vscode\": {\n",
-    "      \"extensions\": [\"rust-lang.rust-analyzer\"]\n",
+    "      \"extensions\": [\"rust-lang.rust-analyzer\",\"golang.go\",\"llvm-vs-code-extensions.vscode-clangd\",\"redhat.java\",\"fwcd.kotlin\",\"scalameta.metals\",\"ms-dotnettools.csharp\",\"ionide.ionide-fsharp\"]\n",
     "    }\n",
     "  },\n",
     "  \"postCreateCommand\": \"bazel run //dx:env && bazel run //cli/cli:dx -- setup\"\n",
     "}\n",
 );
+
+/// Editor disposition per language, following the automatic-first policy.
+///
+/// Automatic Bazel-backed drivers stay preferred where the upstream
+/// supports them without a custom watcher/resolver engine: Rust
+/// (`rust-analyzer` discovery plus `flycheck`) and Go (upstream
+/// `GOPACKAGESDRIVER`) are automatic; C++ is an action-derived snapshot
+/// read by managed clangd with manual `dx setup` refresh; JVM (Java,
+/// Kotlin), Scala (Metals), and .NET (C#, F#) are manual setup-projection
+/// wiring with no automatic Bazel-backed driver yet; Python/JS/TS are
+/// setup projections (`.venv`, `node_modules`, `tsdk`).
+/// See: `docs/environments/environment.md#ownership-and-refresh`.
+pub fn editor_disposition(language: &str) -> &'static str {
+    match language {
+        "rust" => "automatic: rust-analyzer discovery plus flycheck (Bazel-backed, separate IDE output base)",
+        "go" => "automatic: upstream GOPACKAGESDRIVER (Bazel-backed, pure-Go boundary, cgo out of scope)",
+        "cpp" | "c" | "cc" => {
+            "snapshot: action-derived compile commands via aquery plus managed clangd, manual dx setup refresh"
+        }
+        "python" => "projection: .venv interpreter plus imports via dx setup",
+        "javascript" => "projection: node_modules via dx setup",
+        "typescript" => "projection: node_modules plus tsdk via dx setup",
+        "java" | "kotlin" => {
+            "manual: setup projection plus checked-in native config, no automatic Bazel-backed driver yet"
+        }
+        "scala" => {
+            "manual: setup projection plus semanticdb/classpath wiring via dx setup, no automatic Bazel-backed driver yet"
+        }
+        "csharp" | "c#" | "fsharp" | "f#" => {
+            "manual: setup projection plus Paket lock wiring via dx setup, no automatic Bazel-backed driver yet"
+        }
+        _ => "unknown language",
+    }
+}
+
+/// Whether `language` has a scaffolded editor entry (settings or bootstrap).
+///
+/// Covers the core plus admitted foundations: Rust/Python/JS/TS plus
+/// Go plus C/C++ plus Java/Kotlin/Scala/C#/F#. Unknown spellings stay
+/// rejected by `dx new` instead of silently scaffolding a bare tree.
+pub fn editor_language_supported(language: &str) -> bool {
+    matches!(
+        language,
+        "rust"
+            | "python"
+            | "javascript"
+            | "typescript"
+            | "go"
+            | "java"
+            | "kotlin"
+            | "scala"
+            | "csharp"
+            | "c#"
+            | "fsharp"
+            | "f#"
+            | "c"
+            | "cc"
+            | "cpp"
+    )
+}
 
 /// Plan the `dx init` scaffold for a module name.
 ///
@@ -97,12 +163,12 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
         },
         ScaffoldFile {
             path: ".vscode/settings.json".to_owned(),
-            content: "{\"rust-analyzer.check.command\":\"bazel\",\"python.defaultInterpreterPath\":\".dx/setups/current/.venv/bin/python\",\"typescript.tsdk\":\".dx/setups/current/node_modules/typescript/lib\",\"go.toolsManagement.checkForUpdates\":\"off\"}\n"
+            content: "{\"rust-analyzer.check.command\":\"bazel\",\"python.defaultInterpreterPath\":\".dx/setups/current/.venv/bin/python\",\"typescript.tsdk\":\".dx/setups/current/node_modules/typescript/lib\",\"go.toolsManagement.checkForUpdates\":\"off\",\"clangd.path\":\".dx/bin/clangd\",\"clangd.arguments\":[\"--compile-commands-dir=.dx/setups/current\"],\"java.configuration.updateBuildConfiguration\":\"manual\",\"kotlin.languageServer.enabled\":true}\n"
                 .to_owned(),
         },
         ScaffoldFile {
             path: ".vscode/extensions.json".to_owned(),
-            content: "{\"recommendations\":[\"rust-lang.rust-analyzer\",\"ms-python.python\",\"bradlc.vscode-tailwindcss\"]}\n"
+            content: "{\"recommendations\":[\"rust-lang.rust-analyzer\",\"ms-python.python\",\"bradlc.vscode-tailwindcss\",\"golang.go\",\"llvm-vs-code-extensions.vscode-clangd\",\"redhat.java\",\"fwcd.kotlin\",\"scalameta.metals\",\"ms-dotnettools.csharp\",\"ionide.ionide-fsharp\"]}\n"
                 .to_owned(),
         },
         ScaffoldFile {
@@ -156,7 +222,8 @@ pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, AdoptEr
 #[cfg(test)]
 mod tests {
     use super::super::{
-        absent_only_write_allowed, apply_init, init_must_refuse, plan_init_files, DEVCONTAINER_JSON,
+        absent_only_write_allowed, apply_init, editor_disposition, editor_language_supported,
+        init_must_refuse, plan_init_files, DEVCONTAINER_JSON,
     };
     use super::DEVCONTAINER_JSON as LOCAL_DEVCONTAINER;
 
@@ -220,6 +287,86 @@ mod tests {
             "no full build on create: {post_create}"
         );
         assert!(super::super::devcontainer_is_admissible(true, true, false));
+    }
+
+    #[test]
+    fn init_scaffold_covers_admitted_editors() {
+        // See: `docs/environments/environment.md#ownership-and-refresh`.
+        let files = plan_init_files("demo");
+        let settings = files
+            .iter()
+            .find(|f| f.path == ".vscode/settings.json")
+            .expect("settings scaffold");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&settings.content).expect("valid JSON");
+        assert_eq!(
+            parsed["clangd.path"],
+            serde_json::Value::from(".dx/bin/clangd")
+        );
+        assert_eq!(
+            parsed["java.configuration.updateBuildConfiguration"],
+            serde_json::Value::from("manual")
+        );
+        assert!(settings.content.contains("rust-analyzer"));
+        assert!(settings.content.contains("go.toolsManagement"));
+        let extensions = files
+            .iter()
+            .find(|f| f.path == ".vscode/extensions.json")
+            .expect("extensions scaffold");
+        for id in [
+            "golang.go",
+            "llvm-vs-code-extensions.vscode-clangd",
+            "redhat.java",
+            "fwcd.kotlin",
+            "scalameta.metals",
+            "ms-dotnettools.csharp",
+            "ionide.ionide-fsharp",
+        ] {
+            assert!(extensions.content.contains(id), "missing {id}");
+        }
+        let devcontainer = files
+            .iter()
+            .find(|f| f.path == ".devcontainer/devcontainer.json")
+            .expect("devcontainer scaffold");
+        assert!(devcontainer.content.contains("rust-lang.rust-analyzer"));
+        assert!(devcontainer
+            .content
+            .contains("llvm-vs-code-extensions.vscode-clangd"));
+    }
+
+    #[test]
+    fn editor_disposition_names_driver_or_snapshot_per_lang() {
+        // See: `docs/environments/environment.md#ownership-and-refresh`.
+        assert!(editor_disposition("rust").starts_with("automatic:"));
+        assert!(editor_disposition("go").starts_with("automatic:"));
+        assert!(editor_disposition("cpp").starts_with("snapshot:"));
+        assert!(editor_disposition("c").starts_with("snapshot:"));
+        assert!(editor_disposition("python").starts_with("projection:"));
+        assert!(editor_disposition("java").starts_with("manual:"));
+        assert!(editor_disposition("kotlin").starts_with("manual:"));
+        assert!(editor_disposition("scala").starts_with("manual:"));
+        assert!(editor_disposition("csharp").starts_with("manual:"));
+        assert!(editor_disposition("fsharp").starts_with("manual:"));
+        for lang in [
+            "rust",
+            "python",
+            "javascript",
+            "typescript",
+            "go",
+            "java",
+            "kotlin",
+            "scala",
+            "csharp",
+            "fsharp",
+            "c",
+            "cc",
+            "cpp",
+        ] {
+            assert!(editor_language_supported(lang), "{lang}");
+        }
+        assert!(!editor_language_supported("ruby"));
+        assert!(!editor_language_supported("swift"));
+        assert_eq!(editor_disposition("ruby"), "unknown language");
     }
 
     #[test]

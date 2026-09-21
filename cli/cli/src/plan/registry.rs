@@ -161,7 +161,12 @@ pub fn spec(command: Command) -> CommandSpec {
         },
         // Delivered adoption/inspect surfaces: local helpers or
         // thin query forwarding, never the quality aspect pipeline.
+        // `new` scaffolds a minimal qualified project per language;
+        // `upgrade` composes pin plus migrate plus setup with a recovery
+        // pointer (see `docs/cli/commands/new-upgrade.md`).
         Command::Init
+        | Command::New
+        | Command::Upgrade
         | Command::Hooks
         | Command::Status
         | Command::Version

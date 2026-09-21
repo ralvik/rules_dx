@@ -444,9 +444,13 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             }
         }
     }
-    // `--from`/`--to` belong to `migrate` only: every other command
-    // fails fast instead of silently ignoring the versions.
-    if command != Command::Migrate && (from.is_some() || to.is_some()) {
+    // `--from`/`--to` belong to `migrate` plus `upgrade` only: every
+    // other command fails fast instead of silently ignoring the versions.
+    // See: `docs/cli/commands/new-upgrade.md`.
+    if command != Command::Migrate
+        && command != Command::Upgrade
+        && (from.is_some() || to.is_some())
+    {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
             option: if from.is_some() {
@@ -455,6 +459,60 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 "--to".to_owned()
             },
         });
+    }
+    if command == Command::Upgrade {
+        // Upgrade composes pin plus migrate plus setup: `dx upgrade
+        // --from <version> --to <version>` with no positional scopes
+        // (repository-wide composition). Both Cargo-flavor semver with
+        // the migrate upgrade-only gate; live execution fails closed
+        // until the first manifest lands.
+        if check {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--check".to_owned(),
+            });
+        }
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        if output_name == "diff" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--output=diff".to_owned(),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+        if from.is_none() || to.is_none() {
+            return Err(ArgsError::MissingValue {
+                option: "--from <version> --to <version>".to_owned(),
+            });
+        }
+        if let Some(scope) = targets.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: scope.clone(),
+            });
+        }
     }
     if command.is_workflow() {
         // Workflow commands run Bazel verbs directly with Bazel-owned
@@ -579,6 +637,24 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     option: targets[1].clone(),
                 });
             }
+            // `dx new` takes `<language> [name]` (name defaults to
+            // `my_project` when absent); unknown languages fail at
+            // execution with the supported list, extra positionals fail
+            // here. See: `docs/cli/commands/new-upgrade.md`.
+            Command::New if targets.is_empty() || targets.len() > 2 => {
+                return Err(ArgsError::MissingValue {
+                    option: "<language> [name]".to_owned(),
+                });
+            }
+            // `dx upgrade` takes no positional scopes (repository-wide
+            // pin plus migrate plus setup composition); `--from`/`--to`
+            // ownership is enforced above.
+            Command::Upgrade if !targets.is_empty() => {
+                return Err(ArgsError::UnsupportedOption {
+                    command: command.name(),
+                    option: targets[0].clone(),
+                });
+            }
             _ => {}
         }
     }
@@ -660,11 +736,12 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     // `supports_diff` gate so no command silently ignores a machine-output
     // request. Commands with their own output arm above (clean, managed,
     // update, `bazel`, `run`/`deploy`) already returned the same error;
-    // this gate owns adoption/inspect (only `status` supports JSON, none
-    // supports diff), `audit` diff, and workflow `build`/`test`/`coverage`
-    // diff. Quality, generate, umbrellas, `audit`/`update`/`bump`/`migrate`
-    // JSON, workflow `build`/`test`/`coverage`/`run` JSON, managed/clean
-    // JSON, and `status` JSON pass through to streaming NDJSON execution.
+    // this gate owns adoption/inspect (only `status` plus `upgrade`
+    // support JSON, none supports diff), `audit` diff, and workflow
+    // `build`/`test`/`coverage` diff. Quality, generate, umbrellas,
+    // `audit`/`update`/`bump`/`migrate`/`upgrade` JSON, workflow
+    // `build`/`test`/`coverage`/`run` JSON, managed/clean JSON, and
+    // `status` JSON pass through to streaming NDJSON execution.
     if output_name == "json" && !command.supports_json() {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),

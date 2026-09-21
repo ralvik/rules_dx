@@ -9,8 +9,9 @@ issue #671 per [ADR 0025](../../decisions/0025-migrate-upgrade-scope.md).
 
 ## Direction
 
-V1 ships `init` plus `generate` plus `migrate`; no `dx new` app or
-service templates in v1.
+Project scaffolding lives in [`dx new`](new-upgrade.md#dx-new) and the
+one-shot composition in [`dx upgrade`](new-upgrade.md#dx-upgrade);
+this page owns the migrate rewrite contract.
 
 ## Syntax
 

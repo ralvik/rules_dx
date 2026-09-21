@@ -208,7 +208,7 @@ impl Runner for BinaryRunner {
 fn usage_error(message: &str) -> i32 {
     let _ = writeln!(
         io::stderr(),
-        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|codegen|env|setup|init|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; default never touches Bazel outputs; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test|deploy --debug|--release; version --check|--pin|--rollback. fix applies without rerun (run `dx check` to validate). see `dx <command> --help`."
+        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|bazel> [--check] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; default never touches Bazel outputs; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test|deploy --debug|--release; version --check|--pin|--rollback. fix applies without rerun (run `dx check` to validate). see `dx <command> --help`."
     );
     pre_exec_code()
 }

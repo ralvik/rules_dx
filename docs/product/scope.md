@@ -266,6 +266,8 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx fix` | retain, mutating by default | Same sequence in default mutating mode with per-file atomic apply; no post-apply rerun (run `check` again); see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
 | `dx clean` | retain, mutating managed state only | Prune validated unselected `.dx` generations only (never Bazel outputs unless `--bazel`); see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
 | `dx init` | retain, mutating by default | Absent-only scaffolding into a foreign tree; see [dx init](../cli/commands/hooks.md#dx-init) |
+| `dx new` | retain, mutating by default | Absent-only per-language scaffolding; see [dx new](../cli/commands/new-upgrade.md#dx-new) |
+| `dx upgrade` | retain, mutating by default | One-shot pin plus migrate plus setup composition with recovery pointer; see [dx upgrade](../cli/commands/new-upgrade.md#dx-upgrade) |
 | `dx hooks` | retain, mutating by default | Hermetic git-hook runner install/uninstall/status/run; see [dx hooks](../cli/commands/hooks.md#dx-hooks) |
 | `dx status` | retain | Consolidated diagnostics surface (toolchain/platform/tools/pin); see [dx status](../cli/commands/status-version.md#dx-status) |
 | `dx version` | retain | Single-version pin/launcher with rollback and startup skew gate; see [dx version](../cli/commands/status-version.md#dx-version) |
