@@ -1,6 +1,6 @@
 """Deploy rule fixtures and boundary tests."""
 
-load("@rules_python//python:defs.bzl", "py_binary")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -10,6 +10,8 @@ load(":defs.bzl", "dx_deployment")
 load(":deploy_tests.bzl", "deploy_analysis_tests", "deploy_app_analysis_tests", "deploy_debug_analysis_tests", "deploy_unit_tests")
 load(":github.bzl", "github_deploy")
 load(":github_tests.bzl", "github_analysis_tests", "github_debug_analysis_tests", "github_unit_tests")
+load(":pypi.bzl", "pypi_deploy")
+load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -25,6 +27,8 @@ exports_files([
     "github_tests.bzl",
     "github_verify.sh",
     "launcher.bzl",
+    "pypi.bzl",
+    "pypi_tests.bzl",
 ])
 
 # Hermetic build tools for `archive_deploy`: deterministic
@@ -41,6 +45,14 @@ py_binary(
     name = "hasher",
     srcs = ["hasher.py"],
     main = "hasher.py",
+)
+
+# Shared wheelhouse logic for `pypi_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "pypi_deploy_lib",
+    srcs = ["pypi_deploy.py"],
+    imports = ["."],
 )
 
 sh_binary(
@@ -158,6 +170,10 @@ test_suite(
         ":github_debug_analysis",
         ":github_demo_verify",
         ":github_unit",
+        ":pypi_analysis",
+        ":pypi_debug_analysis",
+        ":pypi_deploy_test",
+        ":pypi_unit",
         ":release_demo_debug_verify",
         ":release_demo_verify",
     ],
@@ -207,6 +223,51 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Third deploy macro: local-first PyPI publisher over deterministic
+# dummy distributions. The debug variant pins profile passthrough. The
+# `py_test` below exercises the local wheelhouse build with no network.
+genrule(
+    name = "pypi_demo_wheel",
+    outs = ["pypi_demo-0.0.0-py3-none-any.whl"],
+    cmd = "printf 'pypi-demo-wheel-bytes-v1' > $@",
+)
+
+genrule(
+    name = "pypi_demo_sdist",
+    outs = ["pypi_demo-0.0.0.tar.gz"],
+    cmd = "printf 'pypi-demo-sdist-bytes-v1' > $@",
+)
+
+pypi_deploy(
+    name = "pypi_demo",
+    sdist = ":pypi_demo_sdist",
+    wheel = ":pypi_demo_wheel",
+)
+
+pypi_deploy(
+    name = "pypi_demo_debug",
+    profile = "debug",
+    sdist = ":pypi_demo_sdist",
+    wheel = ":pypi_demo_wheel",
+)
+
+pypi_unit_tests(name = "pypi_unit")
+
+pypi_analysis_tests(name = "pypi_analysis")
+
+pypi_debug_analysis_tests(name = "pypi_debug_analysis")
+
+# Local wheelhouse output per demo distribution
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "pypi_deploy_test",
+    srcs = ["pypi_deploy_test.py"],
+    imports = ["."],
+    main = "pypi_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":pypi_deploy_lib"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
@@ -218,6 +279,8 @@ real_source_target(
         "github.bzl",
         "github_tests.bzl",
         "launcher.bzl",
+        "pypi.bzl",
+        "pypi_tests.bzl",
     ],
     tags = ["corpus"],
 )
