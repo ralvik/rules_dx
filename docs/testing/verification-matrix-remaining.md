@@ -11,8 +11,8 @@ Remaining reds stay owned gaps, not green claims:
    remote evidence). First-party PR reporting is
    adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
    the arm64 plus musl plus macos plus macos-x86_64 plus windows cells report to their job summaries; the macos x86_64 best-effort cell reports without blocking required-host release). All required plus best-effort cells are qualified; out-of-v1 hosts stay platform-gated under closed #298.
-- Docs pipeline and environment/codegen stay open under #779-#785 and #787 (see
-   [Documentation](../documentation/README.md#contracts); successors to closed #581 and #506). Environment/codegen
+- Docs pipeline and environment/codegen stay open under #779 plus #781-#785 and #787 (see
+   [Documentation](../documentation/README.md#contracts); successors to closed #581 and #506; renderer/site execution delivered seed-only under #780). Environment/codegen
    deferred records plus fixture evidence are qualified seed-only under closed #506
   (`bazel run //tools/ci:env_codegen_qualification` with
   `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected`
@@ -22,12 +22,15 @@ Remaining reds stay owned gaps, not green claims:
   cold-warm qualified with WP shard plus root plus collector evidence;
   platform plus consumer plus release evidence stays owned gap under #808; no Supported
   claim). Docs-pipeline IR plus
-  planning records with fixture evidence are qualified seed-only under closed #581
+  planning plus site-execution records with fixture evidence are qualified seed-only under closed #581
+  plus #780
   (live successor to closed #421)
   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR, codec,
-  planning, frozen contracts, removed stub; adapter runs, renderer/site
-  execution, rebuild proof, link completeness, guide-step wiring, timing proof,
-  and pin-bump/drift stay owned gaps under #779-#785; no working site claimed).
+  planning, frozen contracts, removed stub, plus Bazel-cached extract to render with
+  mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel
+  outputs only; adapter runs,
+  rebuild proof, link completeness, guide-step wiring, timing proof,
+  and pin-bump/drift stay owned gaps under #779 plus #781-#785; no working site claimed).
 - Consumer-CI contract plus caller plus gate/aggregate plus per-gap decisions
   with fixture evidence qualified seed-only under #509
   (`tools/ci/tests/fixtures/consumer_ci/pins.bzl` plus `platforms.expected`

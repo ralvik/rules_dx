@@ -1,0 +1,2 @@
+AccountService.create|Creates a new account.
+AccountService.get|Fetches an account by ID.

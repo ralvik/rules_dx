@@ -1,0 +1,91 @@
+"""Fixture-scale docs site execution (extract to render).
+
+Runs the Bazel-cached extract to aggregate to render chain over miniature
+inputs, producing mdBook-compatible prose plus generated API pages plus one
+search index. Generated IR stays in Bazel outputs, never beside sources.
+"""
+
+load("//quality:fixtures.bzl", "real_source_target")
+load(":site.bzl", "docs_aggregate", "docs_extract", "docs_render", "docs_site")
+load(":site_tests.bzl", "site_file_tests", "site_unit_tests")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "site.bzl",
+    "site_tests.bzl",
+])
+
+exports_files(
+    [
+        "demo/demo.symbols.txt",
+        "demo/demo_prose.md",
+        "demo/book.toml",
+    ],
+    visibility = ["//visibility:private"],
+)
+
+docs_extract(
+    name = "demo_extract",
+    language = "python",
+    package = "demo",
+    srcs = ["demo/demo.symbols.txt"],
+)
+
+docs_aggregate(
+    name = "demo_aggregate",
+    book_toml = "demo/book.toml",
+    prose = ["demo/demo_prose.md"],
+    shards = [":demo_extract"],
+)
+
+docs_render(
+    name = "demo_render",
+    api = ":demo_aggregate_api.md",
+    book_toml = "demo/book.toml",
+    records = ":demo_aggregate_search_records.json",
+    summary = ":demo_aggregate_SUMMARY.md",
+)
+
+docs_site(
+    name = "demo_site",
+    book_toml = "demo/book.toml",
+    language = "python",
+    package = "demo",
+    prose = ["demo/demo_prose.md"],
+    srcs = ["demo/demo.symbols.txt"],
+)
+
+site_unit_tests(name = "site_unit")
+
+site_file_tests(
+    name = "site_files",
+    api = ":demo_aggregate_api.md",
+    html = ":demo_render_index.html",
+    index = ":demo_render_searchindex.json",
+    records = ":demo_aggregate_search_records.json",
+    shard = ":demo_extract.ir.textproto",
+    summary = ":demo_aggregate_SUMMARY.md",
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "site.bzl",
+        "site_tests.bzl",
+    ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_markdown",
+    markdown_srcs = ["demo/demo_prose.md"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["demo/book.toml"],
+)

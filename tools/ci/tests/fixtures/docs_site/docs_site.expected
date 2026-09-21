@@ -1,0 +1,9 @@
+Docs site execution (renderer plus site execution, mdBook) (issue #780)
+Bazel-cached extract to aggregate to render over miniature python/demo inputs
+mdBook-compatible prose plus generated API pages plus one search index
+Pinned mdBook 0.4.43 fixture render with no planned replacement
+Generated IR stays in Bazel outputs, never beside sources or in Git
+Deterministic sorted rebuilds with no timestamps and no absolute paths
+Check selects extract plus aggregate without render; build renders
+Qualified seed-only, no Supported claim
+Byte-identical rebuild plus link completeness plus guide-step wiring plus timing plus drift stay owned gaps

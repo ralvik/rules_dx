@@ -1,7 +1,8 @@
 # Documentation
 
-Accepted v1 direction; execution open (see Contracts). No `Supported`
-claim; site build is planned and no site is published yet.
+Accepted v1 direction; renderer/site execution delivered seed-only under #780,
+remaining execution open (see Contracts). No `Supported`
+claim; fixture-scale site execution is qualified and no site is published yet.
 
 Accepted design: native language tooling extracts API semantics; thin per-language adapters
 normalize into one versioned [documentation IR](doc-ir.md); one [site
@@ -43,17 +44,19 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
   (see the [`dx docs` stub](../cli/commands/docs.md)).
   [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
   validation-only check; exact mappings are tracked under
-  #786. Docs pipeline gaps stay open under #779-#785 (successors to closed #581; per-language adapter runs
-  with pins and mappings, renderer and site execution, byte-identical rebuild proof,
+  #786. Docs pipeline gaps stay open under #779 plus #781-#785 (successors to closed #581; per-language adapter runs
+  with pins and mappings, byte-identical rebuild proof,
   link and reference completeness, guide-step CI wiring, first-hour timing proof, and
-  per-release pin-bump plus drift process; site build is planned and no site is published yet).
+  per-release pin-bump plus drift process; renderer and site execution delivered seed-only
+  under #780 and no site is published yet).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
 Accepted scope covers thirteen adapter scopes. Per-language input pins,
-mappings, adapter runs, renderer/site-build execution, and every other
-#779-#785 item above remain open; no adapter execution exists today.
+mappings, adapter runs, and every other
+#779 plus #781-#785 item above remain open; renderer/site-build execution is delivered
+seed-only under #780 and no adapter execution exists today.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779-#785. Reintroduction: #786. Build workflow: #620.
+Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779-#785 (site execution delivered under #780). Reintroduction: #786. Build workflow: #620.
