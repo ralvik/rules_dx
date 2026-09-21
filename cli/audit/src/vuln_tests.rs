@@ -137,6 +137,58 @@ fn go_scopes_normalize_v_prefix() {
         "v0.0.0-20250930140053-2eb4fccefb52"
     ));
     assert!(go_in_scope(">=v1.0.0, <v3.0.0", "v2.0.0+incompatible"));
+    // Issue #679: pseudo-versions match bare ranges by ordering (no
+    // Cargo prerelease gate). Cargo still excludes the same prerelease
+    // from a bare range; Go covers it as a regular release.
+    assert!(!version_in_scope(
+        ">=1.0.0, <2.0.0",
+        "1.2.4-0.20240101120000-abcdef123456"
+    ));
+    assert!(go_in_scope(
+        ">=v1.0.0, <v2.0.0",
+        "v1.2.4-0.20240101120000-abcdef123456"
+    ));
+    assert!(version_affected(
+        "go",
+        ">=v1.0.0, <v2.0.0",
+        "v1.2.4-0.20240101120000-abcdef123456"
+    ));
+    // Pseudo before its release is inside `<release` and outside
+    // `>=release`: ordering, not the gate, decides.
+    assert!(go_in_scope(
+        ">=v1.0.0, <v1.2.4",
+        "v1.2.4-0.20240101120000-abcdef123456"
+    ));
+    assert!(!go_in_scope(
+        ">=v1.2.4, <v2.0.0",
+        "v1.2.4-0.20240101120000-abcdef123456"
+    ));
+    // Star, caret, and tilde cover pseudos they contain by ordering.
+    assert!(go_in_scope("*", "v1.2.4-0.20240101120000-abcdef123456"));
+    assert!(go_in_scope(
+        "^v1.2.0",
+        "v1.9.0-0.20240101120000-abcdef123456"
+    ));
+    assert!(go_in_scope(
+        "~v1.2.3",
+        "v1.2.9-0.20240101120000-abcdef123456"
+    ));
+    assert!(!go_in_scope(
+        "~v1.2.3",
+        "v1.3.0-0.20240101120000-abcdef123456"
+    ));
+    // Exact stays exact: a pseudo is below its release, never equal.
+    assert!(!go_in_scope(
+        "=v1.2.4",
+        "v1.2.4-0.20240101120000-abcdef123456"
+    ));
+    // `+incompatible` rides build metadata ignored for precedence;
+    // pseudo plus `+incompatible` still matches bare ranges.
+    assert!(go_in_scope("=v2.0.0", "v2.0.0+incompatible"));
+    assert!(go_in_scope(
+        ">=v1.0.0, <v3.0.0",
+        "v2.0.0-0.20240101120000-abcdef123456+incompatible"
+    ));
     // Words containing `v` never mangle; garbage fails closed.
     assert_eq!(strip_go_v("very"), "very");
     assert_eq!(strip_go_v(">=v1.0.0, <v2.0.0"), ">=1.0.0, <2.0.0");
@@ -248,6 +300,51 @@ fn npm_exceptions_narrow_with_npm_semantics() {
         set: "npm".to_owned(),
         versions: ">=18.3.0 <19.0.0".to_owned(),
         reason: "Wrong range.".to_owned(),
+        expires: "2027-03-01".to_owned(),
+    };
+    let (unexempted, problems) = apply_exceptions(&findings, &[missing], "2026-09-18");
+    assert!(problems.is_empty());
+    assert_eq!(unexempted.len(), 1);
+}
+
+#[test]
+fn go_exceptions_narrow_with_go_semantics() {
+    // Both audit matching and exception scoping share `go_in_scope`
+    // (issue #679): pseudo-versions stay in scope for covering ranges.
+    let packages = vec![LockedPackage {
+        name: "example.com/mod".to_owned(),
+        version: "v1.2.4-0.20240101120000-abcdef123456".to_owned(),
+        set: "go".to_owned(),
+        is_git: false,
+        is_private: false,
+    }];
+    let advisories = vec![Advisory {
+        id: "GHSA-go-exception".to_owned(),
+        package: "example.com/mod".to_owned(),
+        versions: ">=v1.0.0, <v2.0.0".to_owned(),
+        severity: "medium".to_owned(),
+        fixed: vec![],
+        set: "go".to_owned(),
+    }];
+    let (findings, _) = match_packages(&packages, &advisories);
+    assert_eq!(findings.len(), 1);
+    let covering = RiskException {
+        advisory: "GHSA-go-exception".to_owned(),
+        package: "example.com/mod".to_owned(),
+        set: "go".to_owned(),
+        versions: ">=v1.0.0, <v2.0.0".to_owned(),
+        reason: "Accepted for this release.".to_owned(),
+        expires: "2027-03-01".to_owned(),
+    };
+    let (unexempted, problems) = apply_exceptions(&findings, &[covering], "2026-09-18");
+    assert!(problems.is_empty());
+    assert!(unexempted.is_empty());
+    let missing = RiskException {
+        advisory: "GHSA-go-exception".to_owned(),
+        package: "example.com/mod".to_owned(),
+        set: "go".to_owned(),
+        versions: ">=v1.2.4, <v2.0.0".to_owned(),
+        reason: "Wrong range: pseudo is below v1.2.4.".to_owned(),
         expires: "2027-03-01".to_owned(),
     };
     let (unexempted, problems) = apply_exceptions(&findings, &[missing], "2026-09-18");
