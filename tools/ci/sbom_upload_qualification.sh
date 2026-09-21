@@ -5,7 +5,7 @@
 # evidence pinned in `tools/ci/tests/fixtures/sbom_upload/pins.bzl` (plus
 # `sbom_upload.expected`), without claiming unqualified support:
 # - delivered as-built: SPDX-2.3 plus SLSA v1 via //deploy/release:sbom_demo
-#   with subject digest equal to artifact sha256, managed Python toolchain
+#   with subject digest equal to artifact sha256, hermetic Rust toolchain
 #   only, //deploy/rules:release_demo_archive as subject fixture, verified
 #   via bazel test //deploy/release:sbom_demo_verify;
 # - CI upload: ci.yml sbom job builds plus verifies on every push/PR (seed
@@ -45,10 +45,10 @@ fixture_build="tools/ci/tests/fixtures/sbom_upload/BUILD.bazel"
 build="tools/ci/BUILD.bazel"
 verify_matrix="docs/testing/verification-matrix.md"
 
-# SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the managed toolchain.
+# SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' "$sbom" &&
   grep -q -F -e 'https://slsa.dev/provenance/v1' "$sbom" &&
-  grep -q -F -e 'managed Python' "$sbom"; then
+  grep -q -F -e 'via Rust' "$sbom"; then
   ok
 else
   bad "sbom.bzl lost its SPDX-2.3 plus SLSA-v1 plus hermetic-toolchain pins (#612)"

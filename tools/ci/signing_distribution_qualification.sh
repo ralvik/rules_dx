@@ -136,10 +136,10 @@ else
   bad "dx_verify lost its fail-before-install plus SBOM record (#459)"
 fi
 
-# SBOM plus provenance stay pinned: SPDX-2.3 plus SLSA v1 via the managed toolchain.
+# SBOM plus provenance stay pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' deploy/release/sbom.bzl &&
   grep -q -F -e 'https://slsa.dev/provenance/v1' deploy/release/sbom.bzl &&
-  grep -q -F -e 'managed Python' deploy/release/sbom.bzl; then
+  grep -q -F -e 'via Rust' deploy/release/sbom.bzl; then
   ok
 else
   bad "sbom.bzl lost its SPDX-2.3 plus SLSA-v1 plus hermetic-toolchain pins (#459)"

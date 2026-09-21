@@ -27,8 +27,8 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
     Creates `<name>.spdx.json` (SPDX 2.3 document describing the artifact
     bytes + sha256) and `<name>.provenance.json` (in-toto Statement v1
     with the SLSA v1 predicate, subject digest = artifact sha256). Both
-    are deterministic given the artifact bytes: the hermetic generator
-    records the sha256 at build time with the managed Python toolchain."""
+    are deterministic given the artifact bytes: the hermetic Rust generator
+    records the sha256 at build time with no host toolchain."""
     spdx_err = sbom_spdx_error("SPDX-2.3")
     if spdx_err != "":
         fail(spdx_err + " (in " + native.package_name() + ":" + name + ")")
@@ -38,8 +38,8 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
     (spdx, provenance) = sbom_filenames(name)
     src_target = artifact
 
-    # SPDX: hermetic digest + deterministic JSON via the managed Python
-    # toolchain (no host sha256sum/shasum/python3, no network, no Syft
+    # SPDX: hermetic digest + deterministic JSON via Rust
+    # (no host sha256sum/shasum/python3, no network, no Syft
     # dependency; Syft/CycloneDX output remains compatible input to the
     # same verify path when owners adopt it per the runbook).
     native.genrule(

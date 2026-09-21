@@ -115,7 +115,7 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     # BCR source template: archive `source.json` shape (URL + integrity
     # filled at release time by the human-run path; strip_url_prefix
     # follows the BCR publish layout). Deterministic, no network, no
-    # host tools (managed Python toolchain via declared `tools`).
+    # host tools (Rust via declared `tools`).
     native.genrule(
         name = name + "_source",
         outs = [name + ".source.json"],

@@ -1,9 +1,10 @@
 """Full release path: matrix, SBOM/provenance, signing, BCR, human-run signing-first (live successor to closed for the human-run path), signing stack + distribution qualified (live successor to closed // for signing + distribution)."""
 
-load("@rules_python//python:defs.bzl", "py_binary")
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 load(":bcr.bzl", "bcr_check")
 load(":bcr_tests.bzl", "bcr_unit_tests")
 load(":matrix_tests.bzl", "matrix_unit_tests")
@@ -33,25 +34,131 @@ exports_files([
 ])
 
 # Hermetic build tools for SBOM/provenance + BCR source:
-# digest + JSON via the managed Python 3.12 toolchain, no host
+# digest + JSON via Rust, no host
 # `sha256sum`/`shasum`/`python3`. Declared as genrule `tools`.
-py_binary(
+rust_library(
+    name = "dx_release_tools",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_release_tools",
+        normal = True,
+    ),
+    crate_name = "dx_release_tools",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "hex",
+            "serde_json",
+            "sha2",
+        ],
+        package_name = "deploy/dx_release_tools",
+    ),
+)
+
+rust_binary(
     name = "sbom_spdx_gen",
-    srcs = ["sbom_spdx_gen.py"],
-    main = "sbom_spdx_gen.py",
+    srcs = ["src/bin_sbom_spdx_gen.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_release_tools",
+        normal = True,
+    ),
+    crate_name = "sbom_spdx_gen",
+    crate_root = "src/bin_sbom_spdx_gen.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "hex",
+            "serde_json",
+            "sha2",
+        ],
+        package_name = "deploy/dx_release_tools",
+    ) + [":dx_release_tools"],
 )
 
-py_binary(
+rust_binary(
     name = "sbom_prov_gen",
-    srcs = ["sbom_prov_gen.py"],
-    main = "sbom_prov_gen.py",
+    srcs = ["src/bin_sbom_prov_gen.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_release_tools",
+        normal = True,
+    ),
+    crate_name = "sbom_prov_gen",
+    crate_root = "src/bin_sbom_prov_gen.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "hex",
+            "serde_json",
+            "sha2",
+        ],
+        package_name = "deploy/dx_release_tools",
+    ) + [":dx_release_tools"],
 )
 
-py_binary(
+rust_binary(
     name = "bcr_source_gen",
-    srcs = ["bcr_source_gen.py"],
-    main = "bcr_source_gen.py",
+    srcs = ["src/bin_bcr_source_gen.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_release_tools",
+        normal = True,
+    ),
+    crate_name = "bcr_source_gen",
+    crate_root = "src/bin_bcr_source_gen.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "hex",
+            "serde_json",
+            "sha2",
+        ],
+        package_name = "deploy/dx_release_tools",
+    ) + [":dx_release_tools"],
 )
+
+rust_test(
+    name = "dx_release_tools_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "deploy/dx_release_tools",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_release_tools",
+    deps = crate_deps(
+        [
+            "hex",
+            "serde_json",
+            "sha2",
+            "tempfile",
+        ],
+        package_name = "deploy/dx_release_tools",
+    ),
+)
+
+rustfmt_test(
+    name = "dx_release_tools_fmt_test",
+    size = "small",
+    targets = [
+        ":dx_release_tools",
+        ":sbom_spdx_gen",
+        ":sbom_prov_gen",
+        ":bcr_source_gen",
+    ],
+)
+
+rust_clippy_test(
+    name = "dx_release_tools_clippy_test",
+    size = "small",
+    targets = [
+        ":dx_release_tools",
+        ":sbom_spdx_gen",
+        ":sbom_prov_gen",
+        ":bcr_source_gen",
+    ],
+)
+
+exports_files(["Cargo.toml"])
 
 # Seed fixture: reuse the portable POSIX deploy program as the SBOM
 # subject (no new binary needed; SBOM binds exact artifact bytes).
@@ -173,4 +280,10 @@ real_source_target(
         "signing_tests.bzl",
     ],
     tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )
