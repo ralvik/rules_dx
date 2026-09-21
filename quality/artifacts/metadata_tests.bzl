@@ -12,6 +12,11 @@ load(":buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
 load(":buildifier.macos_arm64.bzl", _buildifier_macos_arm64 = "ARTIFACT")
 load(":buildifier.macos_x86_64.bzl", _buildifier_macos_x86_64 = "ARTIFACT")
 load(":buildifier.windows_x86_64.bzl", _buildifier_windows_x86_64 = "ARTIFACT")
+load(":gitleaks.linux_arm64.bzl", _gitleaks_linux_arm64 = "ARTIFACT")
+load(":gitleaks.linux_x86_64.bzl", _gitleaks_linux_x86_64 = "ARTIFACT")
+load(":gitleaks.macos_arm64.bzl", _gitleaks_macos_arm64 = "ARTIFACT")
+load(":gitleaks.macos_x86_64.bzl", _gitleaks_macos_x86_64 = "ARTIFACT")
+load(":gitleaks.windows_x86_64.bzl", _gitleaks_windows_x86_64 = "ARTIFACT")
 load(":ruff.linux_arm64.bzl", _ruff_linux_arm64 = "ARTIFACT")
 load(":ruff.linux_x86_64.bzl", _ruff_linux_x86_64 = "ARTIFACT")
 load(":ruff.macos_arm64.bzl", _ruff_macos_arm64 = "ARTIFACT")
@@ -182,6 +187,61 @@ def metadata_tests(name):
         7861760,
         "buildifier-windows-amd64.exe",
         "f4ecb9c73de2bc38b845d4ee27668f6248c4813a6647db4b4931a7556052e4e1",
+    )
+    checks += _artifact_checks(
+        _gitleaks_linux_arm64,
+        "gitleaks",
+        "linux_arm64",
+        "8.30.1",
+        "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz",
+        "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080",
+        7601421,
+        "gitleaks",
+        "00e91bbe655bd7c47753e8cfe61cb76ea1a5d7e7702fe161ee40102b46b3823b",
+    )
+    checks += _artifact_checks(
+        _gitleaks_linux_x86_64,
+        "gitleaks",
+        "linux_x86_64",
+        "8.30.1",
+        "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
+        "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+        8230402,
+        "gitleaks",
+        "88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509",
+    )
+    checks += _artifact_checks(
+        _gitleaks_macos_arm64,
+        "gitleaks",
+        "macos_arm64",
+        "8.30.1",
+        "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_arm64.tar.gz",
+        "b40ab0ae55c505963e365f271a8d3846efbc170aa17f2607f13df610a9aeb6a5",
+        7897593,
+        "gitleaks",
+        "ba52fb1bfabbcde42f032afad3d6e0b19dff8ed105229a16e7caa338bbc0e84f",
+    )
+    checks += _artifact_checks(
+        _gitleaks_macos_x86_64,
+        "gitleaks",
+        "macos_x86_64",
+        "8.30.1",
+        "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_x64.tar.gz",
+        "dfe101a4db2255fc85120ac7f3d25e4342c3c20cf749f2c20a18081af1952709",
+        8359235,
+        "gitleaks",
+        "cee01fea7173f1b779dff188e1c26ecbcb4027d394acc573b23aaf0be260e291",
+    )
+    checks += _artifact_checks(
+        _gitleaks_windows_x86_64,
+        "gitleaks",
+        "windows_x86_64",
+        "8.30.1",
+        "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_windows_x64.zip",
+        "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
+        8438883,
+        "gitleaks.exe",
+        "17157e2ee8b76fc8b1d8bee607a250e34b8a8023c8bc81822d4b5ee4d78fcb7c",
     )
     checks += _artifact_checks(
         _ruff_linux_arm64,

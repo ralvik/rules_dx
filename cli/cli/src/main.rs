@@ -86,6 +86,69 @@ struct BinaryRunner {
 }
 
 impl Runner for BinaryRunner {
+    fn run_hermetic(
+        &self,
+        argv: &[String],
+        cwd: &Path,
+        env: &[(&str, &str)],
+    ) -> io::Result<ChildStatus> {
+        // Secrets path clears ambient configuration before spawning:
+        // only the explicit hermetic env reaches Gitleaks.
+        let (binary, args) = argv.split_first().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
+        })?;
+        let mut command = Command::new(binary);
+        command
+            .args(args)
+            .env_clear()
+            .envs(env.iter().copied())
+            .current_dir(cwd)
+            .stderr(Stdio::inherit());
+        if self.inherit_stdout {
+            command.stdout(Stdio::inherit());
+        } else {
+            command.stdout(Stdio::piped());
+        }
+        let mut child = command.spawn()?;
+        CHILD_PID.store(child.id(), Ordering::SeqCst);
+        let pump = if self.inherit_stdout {
+            None
+        } else {
+            let stdout = child.stdout.take();
+            Some(std::thread::spawn(move || {
+                if let Some(mut stdout) = stdout {
+                    let mut stderr = io::stderr();
+                    let _ = io::copy(&mut stdout, &mut stderr);
+                }
+            }))
+        };
+        let status = child.wait();
+        CHILD_PID.store(0, Ordering::SeqCst);
+        if let Some(pump) = pump {
+            let _ = pump.join();
+        }
+        let status = status?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            if let Some(signo) = status.signal() {
+                unsafe {
+                    libc::signal(signo, libc::SIG_DFL);
+                    libc::raise(signo);
+                }
+            }
+        }
+        Ok(ChildStatus {
+            code: status.code(),
+        })
+    }
+
+    fn gitleaks_tool(&self) -> Option<std::path::PathBuf> {
+        std::env::var_os("DX_GITLEAKS_BIN")
+            .map(std::path::PathBuf::from)
+            .filter(|path| path.is_absolute())
+    }
+
     fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus> {
         let (binary, args) = argv.split_first().ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")

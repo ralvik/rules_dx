@@ -53,6 +53,96 @@ pub const TRUFFLEHOG_V1: &str = "wont-fix";
 /// the latest stable and re-pin exact bytes at implementation.
 pub const OBSERVED_VERSION: &str = "8.30.1";
 
+/// Pinned upstream version for the hermetic per-host artifacts below.
+/// Latest stable at implementation (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+pub const GITLEAKS_VERSION: &str = "8.30.1";
+
+/// Environment variable carrying the hermetic auditor binary path.
+/// Production resolves this to the pinned `@dx_tools//:gitleaks`
+/// artifact; absent or relative values fail closed, never falling back
+/// to ambient `PATH` (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+pub const TOOL_ENV_VAR: &str = "DX_GITLEAKS_BIN";
+
+/// Bazel label of the hermetic per-host auditor hub.
+/// Registration fetches nothing; each platform repository downloads only
+/// when its action needs the artifact (See: `docs/tools/tool-acquisition.md#consumer-contract`).
+pub const TOOL_LABEL: &str = "@dx_tools//:gitleaks";
+
+/// One pinned per-host standalone artifact. Field shapes mirror the
+/// checked-in quality-artifact metadata (`quality/artifacts/*.bzl`) so
+/// pins cannot drift from the acquisition contract; digests are the
+/// upstream published checksums verified by the generator.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HostArtifact {
+    /// Execution platform (`os_cpu`, one of the five required hosts).
+    pub platform: &'static str,
+    /// Immutable download URL for the exact artifact.
+    pub url: &'static str,
+    /// Lowercase hex SHA-256 of the exact artifact bytes.
+    pub sha256: &'static str,
+    /// Artifact size in bytes.
+    pub size: u64,
+    /// Archive member executed as the auditor.
+    pub executable: &'static str,
+}
+
+/// Hermetic per-host pins for the five required hosts. Linux binaries
+/// are static Go executables (no interpreter, no shared libraries);
+/// macOS/Windows record the dynamic delivery-class bound with no host
+/// SDK dependency (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+pub const HOST_ARTIFACTS: &[HostArtifact] = &[
+    HostArtifact {
+        platform: "linux_x86_64",
+        url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz",
+        sha256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+        size: 8230402,
+        executable: "gitleaks",
+    },
+    HostArtifact {
+        platform: "linux_arm64",
+        url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz",
+        sha256: "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080",
+        size: 7601421,
+        executable: "gitleaks",
+    },
+    HostArtifact {
+        platform: "macos_arm64",
+        url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_arm64.tar.gz",
+        sha256: "b40ab0ae55c505963e365f271a8d3846efbc170aa17f2607f13df610a9aeb6a5",
+        size: 7897593,
+        executable: "gitleaks",
+    },
+    HostArtifact {
+        platform: "macos_x86_64",
+        url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_x64.tar.gz",
+        sha256: "dfe101a4db2255fc85120ac7f3d25e4342c3c20cf749f2c20a18081af1952709",
+        size: 8359235,
+        executable: "gitleaks",
+    },
+    HostArtifact {
+        platform: "windows_x86_64",
+        url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_windows_x64.zip",
+        sha256: "d29144deff3a68aa93ced33dddf84b7fdc26070add4aa0f4513094c8332afc4e",
+        size: 8438883,
+        executable: "gitleaks.exe",
+    },
+];
+
+/// Builds the sanitized child environment for the secrets invocation:
+/// exactly one `TMPDIR` (the per-run temp directory owning Go runtime
+/// temp files). `PATH` is never set so the absolute tool path cannot
+/// fall back to ambient lookup; `GITLEAKS_CONFIG`/`GITLEAKS_CONFIG_TOML`
+/// plus every other parent variable are never inherited, so ambient
+/// configuration cannot inject rules and proxy/secret-carrying vars
+/// cannot influence the offline scan (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+/// Configuration reaches Gitleaks only through the explicit `--config`
+/// flag, the committed `.gitleaks.toml`, or built-in defaults, in that
+/// precedence order. Callers spawn with a cleared environment; extras
+/// are rejected here so the allowlist stays auditable.
+pub fn hermetic_env(temp_dir: &std::path::Path) -> Vec<(String, String)> {
+    vec![("TMPDIR".to_owned(), temp_dir.to_string_lossy().into_owned())]
+}
+
 /// Frozen report format for the secrets family: SARIF 2.1.0 via the
 /// shared `--report` contract.
 pub const SARIF_FORMAT: &str = "sarif";
@@ -609,5 +699,65 @@ mod tests {
                 "built-in defaults",
             ]
         );
+    }
+
+    #[test]
+    fn hermetic_hosts_pin_five_platforms() {
+        // Multi-platform acquisition: one checksummed pin per required
+        // host, matching `quality/artifacts/gitleaks.*.bzl` plus the
+        // upstream checksums file. Execution is proven on the seed host
+        // via byte fetch plus triage fixtures; remaining hosts resolve
+        // via Bazel execution-platform selection with no host execution
+        // claimed here.
+        assert_eq!(GITLEAKS_VERSION, "8.30.1");
+        assert_eq!(TOOL_ENV_VAR, "DX_GITLEAKS_BIN");
+        assert_eq!(TOOL_LABEL, "@dx_tools//:gitleaks");
+        let platforms: Vec<&str> = HOST_ARTIFACTS.iter().map(|host| host.platform).collect();
+        assert_eq!(
+            platforms,
+            vec![
+                "linux_x86_64",
+                "linux_arm64",
+                "macos_arm64",
+                "macos_x86_64",
+                "windows_x86_64",
+            ]
+        );
+        for host in HOST_ARTIFACTS {
+            let pin = ArtifactPin {
+                tool: GITLEAKS_TOOL.to_owned(),
+                upstream_version: GITLEAKS_VERSION.to_owned(),
+                url: host.url.to_owned(),
+                sha256: host.sha256.to_owned(),
+                size: host.size,
+            };
+            validate_pin(&pin).expect("host pin qualifies");
+            assert!(host
+                .url
+                .starts_with("https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/"));
+            assert_eq!(host.sha256.len(), 64);
+            assert!(host.size > 7_000_000);
+        }
+        assert_eq!(
+            HOST_ARTIFACTS
+                .iter()
+                .find(|host| host.platform == "windows_x86_64")
+                .expect("windows pin")
+                .executable,
+            "gitleaks.exe"
+        );
+    }
+
+    #[test]
+    fn hermetic_env_carries_only_tmpdir() {
+        // Sanitized invocation environment: exactly `TMPDIR`, never
+        // `PATH` and never ambient `GITLEAKS_*`, so configuration flows
+        // only through explicit `--config`, committed `.gitleaks.toml`,
+        // or built-in defaults.
+        let env = hermetic_env(std::path::Path::new("/tmp/dx-audit"));
+        assert_eq!(env, vec![("TMPDIR".to_owned(), "/tmp/dx-audit".to_owned())]);
+        assert!(!env.iter().any(|(key, _)| key == "PATH"));
+        assert!(!env.iter().any(|(key, _)| key == "GITLEAKS_CONFIG"));
+        assert!(!env.iter().any(|(key, _)| key == "GITLEAKS_CONFIG_TOML"));
     }
 }

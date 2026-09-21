@@ -13,6 +13,7 @@ use std::rc::Rc;
 
 pub(super) struct AuditRunner {
     pub(super) calls: Rc<RefCell<Vec<Vec<String>>>>,
+    pub(super) envs: Rc<RefCell<Vec<Vec<(String, String)>>>>,
     pub(super) code: Option<i32>,
     pub(super) sarif: Option<String>,
 }
@@ -21,6 +22,7 @@ impl AuditRunner {
     pub(super) fn clean() -> Self {
         AuditRunner {
             calls: Rc::new(RefCell::new(Vec::new())),
+            envs: Rc::new(RefCell::new(Vec::new())),
             code: Some(0),
             sarif: None,
         }
@@ -29,6 +31,7 @@ impl AuditRunner {
     pub(super) fn with_sarif(code: Option<i32>, sarif: &str) -> Self {
         AuditRunner {
             calls: Rc::new(RefCell::new(Vec::new())),
+            envs: Rc::new(RefCell::new(Vec::new())),
             code,
             sarif: Some(sarif.to_owned()),
         }
@@ -36,8 +39,13 @@ impl AuditRunner {
 }
 
 impl Runner for AuditRunner {
-    fn run(&self, argv: &[String], _cwd: &Path, _env: &[(&str, &str)]) -> io::Result<ChildStatus> {
+    fn run(&self, argv: &[String], _cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus> {
         self.calls.borrow_mut().push(argv.to_vec());
+        self.envs.borrow_mut().push(
+            env.iter()
+                .map(|(key, value)| ((*key).to_owned(), (*value).to_owned()))
+                .collect(),
+        );
         if let Some(sarif) = &self.sarif {
             for (index, arg) in argv.iter().enumerate() {
                 if arg == "--report-path" {
@@ -48,6 +56,19 @@ impl Runner for AuditRunner {
             }
         }
         Ok(ChildStatus { code: self.code })
+    }
+
+    fn run_hermetic(
+        &self,
+        argv: &[String],
+        cwd: &Path,
+        env: &[(&str, &str)],
+    ) -> io::Result<ChildStatus> {
+        self.run(argv, cwd, env)
+    }
+
+    fn gitleaks_tool(&self) -> Option<std::path::PathBuf> {
+        Some(std::path::PathBuf::from("/hermetic/gitleaks"))
     }
 }
 
@@ -207,8 +228,17 @@ pub(super) fn audit_live_clean_runs_gitleaks_and_exits_zero() {
     assert!(out.contains("audit security: clean"), "{out}");
     assert_eq!(err, "", "{err}");
     assert_eq!(runner.calls.borrow().len(), 1);
-    assert!(runner.calls.borrow()[0].contains(&"gitleaks".to_owned()));
+    assert_eq!(runner.calls.borrow()[0][0], "/hermetic/gitleaks");
     assert!(runner.calls.borrow()[0].contains(&"--redact".to_owned()));
+    // Hermetic invocation: absolute tool path plus sanitized `TMPDIR`-only
+    // env, never ambient `PATH` or `GITLEAKS_*`.
+    assert_eq!(runner.envs.borrow().len(), 1);
+    assert_eq!(runner.envs.borrow()[0].len(), 1);
+    assert_eq!(runner.envs.borrow()[0][0].0, "TMPDIR");
+    assert!(!runner.envs.borrow()[0].iter().any(|(key, _)| key == "PATH"));
+    assert!(!runner.envs.borrow()[0]
+        .iter()
+        .any(|(key, _)| key == "GITLEAKS_CONFIG"));
 }
 
 #[test]
@@ -248,6 +278,77 @@ pub(super) fn audit_live_secrets_findings_fail_with_redacted_summary() {
     }
     // The invocation still pins redaction on the auditor argv.
     assert!(runner.calls.borrow()[0].contains(&"--redact".to_owned()));
+}
+
+#[test]
+pub(super) fn audit_live_without_hermetic_tool_fails_closed() {
+    // No ambient `PATH` fallback: without the declared artifact the
+    // security family reports incomplete with an actionable diagnostic.
+    struct NoToolRunner {
+        calls: Rc<RefCell<Vec<Vec<String>>>>,
+    }
+    impl Runner for NoToolRunner {
+        fn run(
+            &self,
+            argv: &[String],
+            _cwd: &Path,
+            _env: &[(&str, &str)],
+        ) -> io::Result<ChildStatus> {
+            self.calls.borrow_mut().push(argv.to_vec());
+            Ok(ChildStatus { code: Some(0) })
+        }
+    }
+    let runner = NoToolRunner {
+        calls: Rc::new(RefCell::new(Vec::new())),
+    };
+    assert!(runner.gitleaks_tool().is_none());
+    let (code, _out, err) = {
+        use crate::args::parse;
+        use crate::exec::{execute, Env};
+        let words: Vec<String> = ["audit", "security"]
+            .iter()
+            .map(ToString::to_string)
+            .collect();
+        let invocation = parse(&words).expect("parse");
+        let harness = Harness::new("audit-no-tool");
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+        harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+        harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+        harness.write_source(
+            "third_party/dotnet/paket.lock",
+            "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+        );
+        write_go_mod(&harness);
+        write_all_empty_advisories(&harness);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &invocation,
+            Env {
+                workspace: &harness.workspace,
+                runner: &runner,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        (
+            code,
+            String::from_utf8(out).expect("stdout"),
+            String::from_utf8(err).expect("stderr"),
+        )
+    };
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(err.contains("DX_GITLEAKS_BIN"), "{err}");
+    assert!(runner.calls.borrow().is_empty(), "no ambient launch");
 }
 
 #[test]

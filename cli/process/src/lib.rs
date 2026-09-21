@@ -539,6 +539,30 @@ pub trait Runner {
     /// `env` carries extra variables (for example per-command dispatch
     /// into the child); the parent environment is always inherited.
     fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus>;
+
+    /// Spawns `argv[0]` with a cleared environment: only `env` is set,
+    /// the parent environment is never inherited and `PATH` is never
+    /// set. Secrets auditing uses this so ambient `GITLEAKS_CONFIG`
+    /// values cannot inject configuration (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+    /// The default forwards to [`Runner::run`] so existing fakes keep
+    /// working; production runners clear.
+    fn run_hermetic(
+        &self,
+        argv: &[String],
+        cwd: &Path,
+        env: &[(&str, &str)],
+    ) -> io::Result<ChildStatus> {
+        self.run(argv, cwd, env)
+    }
+
+    /// Hermetic secrets-auditor binary path, when the runner environment
+    /// supplies one. Production resolves `DX_GITLEAKS_BIN` to the pinned
+    /// `@dx_tools//:gitleaks` artifact; the default is absent so callers
+    /// fail closed instead of searching ambient `PATH` (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+    /// Test fakes return an absolute hermetic placeholder.
+    fn gitleaks_tool(&self) -> Option<PathBuf> {
+        None
+    }
 }
 
 /// Real runner that spawns the process directly. Argument vectors are
@@ -558,6 +582,32 @@ impl Runner for SystemRunner {
         Ok(ChildStatus {
             code: output.status.code(),
         })
+    }
+
+    fn run_hermetic(
+        &self,
+        argv: &[String],
+        cwd: &Path,
+        env: &[(&str, &str)],
+    ) -> io::Result<ChildStatus> {
+        let (binary, args) = argv.split_first().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
+        })?;
+        let output = Command::new(OsStr::new(binary))
+            .args(args)
+            .env_clear()
+            .envs(env.iter().copied())
+            .current_dir(cwd)
+            .output()?;
+        Ok(ChildStatus {
+            code: output.status.code(),
+        })
+    }
+
+    fn gitleaks_tool(&self) -> Option<PathBuf> {
+        std::env::var_os("DX_GITLEAKS_BIN")
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
     }
 }
 
