@@ -170,7 +170,12 @@ generation and setup links, generated mirror leaves, `.venv`, and root or import
 projection mode. Windows requires permission to create symlinks, normally through Developer Mode;
 missing capability fails before mutation with actionable setup guidance. Windows CI hosts must
 grant this capability; hosts that cannot grant it are unsupported rather than receiving
-a fallback mode.
+a fallback mode. Accepted fit (2026-09-21, #959): this symlink privilege is a bootstrap prerequisite
+per [Product Scope](../product/scope.md), not a host-SDK exception under
+[ADR 0014](../decisions/0014-tested-platform-release-stack.md#decision). The ephemeral
+quality-adapter scratch copy fallback is a different domain (read-only tool inputs in a temp
+tree) and does not apply to persistent managed state, where fallback would break atomic
+replacement and ownership validation.
 
 Initial installation or repair refuses an unmanaged `.dx/bin`, setup pointer, setup record,
 generation directory, `.venv`, `node_modules`, importer facade, or other native facade. A directory

@@ -43,8 +43,13 @@ build-only or quality-only support claim. Rust-first dogfooding remains the deli
 The out-of-the-box contract is one `rules_dx` dependency with tested defaults and no language enable
 lists or separately installed language runtimes and quality tools. Bazel acquires declared pinned
 dependencies; application manifests and locks remain authoritative. `dx generate` creates supported
-targets and `dx setup` prepares matching development environments. Unused foundations remain lazy.
+targets and `dx setup` prepares matching development environments. Unused foundations remain lazy
+per [Activation And Laziness](../architecture/README.md#activation-and-laziness): the consumer
+surface is one dependency while the internal module graph and `MODULE.bazel.lock` size are
+version-resolution cost, not payload.
 This does not eliminate the documented Bazel/bootstrap prerequisites or invent application policy.
+Symlink creation privilege (Developer Mode on Windows) is such a prerequisite, not a host-SDK
+exception: see [Managed State](../environments/managed-state.md#installation-and-ownership).
 
 Windows native toolchains retain hermetic acquisition and MSVC compatibility under
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#decision). No separately installed
