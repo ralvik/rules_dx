@@ -15,8 +15,13 @@ compose a small number of Bazel invocations, and report diagnostics. It must not
 own source or dependency graph semantics.
 
 Bazel remains authoritative for dependencies, source ownership, actions, tests,
-non-mutating CI checks, type checking, coverage, caching, sandboxing, and remote
-execution.
+non-mutating CI checks, type checking, coverage, caching, sandboxing, and local
+execution. Remote execution and remote cache remain unqualified: pipeline plus
+evaluator actions are local-only until remote is qualified (see
+[Remote Tests](../testing/README.md#remote-tests) and the
+[remote boundary](../quality/action-model.md#outputs-remote-cache-and-execution)).
+Determinism claimed here is local per-cell determinism only, with no cross-cell
+union and no remote claim.
 
 Lint, typecheck, format, and source-audit integrations are implemented by project-
 owned aspects and Rust runners. The project does not depend
@@ -133,8 +138,11 @@ domain contracts and work packages are accepted. General permission for these ma
 does not prove any candidate feasible or authorize an unbounded fork.
 
 The project also requires first-party implementation coverage per [testing](../testing/README.md#coverage):
-the pinned `dx coverage --min-coverage 97` rate gate over `//...` in every required cell
-plus the exact-gate cell inventories with zero uncovered lines.
+the single exact per-cell gate with zero uncovered lines over the versioned cell
+inventories (one gate per required cell, no cross-cell union; the pinned
+`dx coverage --min-coverage 97` flag over `//...` is the user-facing configurable
+threshold surfaced by the CLI, informational only for the repo verdict, never a
+second repo gate).
 That gate is separate from consumer language-coverage support and feature-matrix completeness.
 
 ## Unused Dependencies

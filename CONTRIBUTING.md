@@ -38,9 +38,10 @@ ADR or domain contract.
   [support matrix](docs/product/support-matrix.md). If implementation requires an architecture
   or product change, stop the affected work and propose the documentation update
   with evidence, alternatives, compatibility impact, and blocked work first.
-- Coverage follows the [testing strategy](docs/testing/README.md#coverage): the pinned `dx coverage --min-coverage 97`
-  rate gate over `//...` in every required cell plus the exact-gate cell inventories
-  (zero uncovered lines), source-level ignores with nearby reasons validated in CI. Bring-up
+- Coverage follows the [testing strategy](docs/testing/README.md#coverage): the single exact per-cell gate
+  with zero uncovered lines over the versioned cell inventories (one gate per cell, no cross-cell
+  union; the pinned `dx coverage --min-coverage 97` flag is the user-facing configurable threshold,
+  informational only), source-level ignores with short `policy:` reasons plus reviewer approval validated in CI. Bring-up
   is Linux-first local-only; record unavailable required hosts as gaps.
 
 ## Pull Requests

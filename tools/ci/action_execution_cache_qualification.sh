@@ -175,7 +175,8 @@ fi
 # Action model owns the remote boundary: what is safe vs local-only.
 if grep -q -F -e 'no-remote-exec' "$action_model" &&
   grep -q -F -e 'local-only' "$action_model" &&
-  grep -q -F -e 'remote' "$action_model"; then
+  grep -q -F -e 'remote' "$action_model" &&
+  grep -q -F -e 'local per-cell determinism' "$action_model"; then
   ok
 else
   bad "action-model lost its local-only remote-boundary record with the no-remote-exec marker"
@@ -183,6 +184,8 @@ fi
 
 # Testing README plus matrix own the exact-key plus local-only record.
 if grep -q -F -e 'locally sandbox-tested but remote behavior remains unverified' "$testing_readme" &&
+  grep -q -F -e 'local' "$testing_readme" &&
+  grep -q -F -e 'per-cell determinism' "$testing_readme" &&
   grep -q -F -e 'exact' "$test_matrix" &&
   grep -q -F -e 'no `--remote_cache`' "$test_matrix"; then
   ok

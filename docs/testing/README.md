@@ -54,9 +54,11 @@ graphs.
 
 ### Coverage
 
-**Accepted requirement.** Project-wide first-party implementation must meet the
-pinned `dx coverage --min-coverage` percent over non-ignored executable lines,
-not a changed-lines-only gate. Additional
+**Accepted requirement (single exact gate).** Project-wide first-party implementation must pass the
+exact per-cell gate with zero uncovered non-ignored executable lines in each required
+cell's versioned inventory, not a changed-lines-only gate. The pinned
+`dx coverage --min-coverage` flag is the user-facing configurable threshold, not a second
+repo gate; the informational rate never decides. Additional
 implementation languages, such as Go used by first-party Gazelle extensions, also
 require Bazel-owned instrumentation and reporting. Starlark follows the investigation
 and conditional fallback below. No mandatory branch-coverage percentage applies;
@@ -64,8 +66,10 @@ branch coverage may be reported separately for information. Do not round a line-
 shortfall up to a pass.
 
 Use each coverage tool's native source-level ignore directives for code that cannot
-reasonably be covered. Each ignore requires a nearby explanatory comment, validated
-in CI; no separate exception registry or individual approval process is required.
+reasonably be covered. Each ignore requires a nearby short `policy:` reason, validated
+in CI, plus reviewer approval in the owning PR that the line cannot be covered by test
+or deleted; new denominator-shrinking excludes without fault-injection or deletion
+evidence are rejected.
 Valid ignores exclude their executable lines from the denominator. Custom Starlark instrumentation uses the same markers.
 Ignore syntax is `LCOV_EXCL_LINE` for one line and `LCOV_EXCL_START` / `LCOV_EXCL_STOP` for a range, each with a `reason:` comment on the same or previous line. CI validates the marker and the nearby reason; missing reasons and malformed directives fail the gate. Markers live in line comments outside string literals only: block comments and raw strings stay wont-fix out of scope (issue #589, pinned by `dx_lcov::ignores` unit tests; no eligible source uses those shapes).
 
@@ -94,7 +98,7 @@ Loaded-file counts and test counts are not source coverage. Record the investiga
 routes, reproducible feasibility evidence, and limitations in the work report before using the
 fallback. Mutation tests may supplement, but not replace, the required evidence.
 
-**Resolved measurement mechanics (standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Go uses the pinned Bazel go integration; Python and JavaScript/TypeScript participate through the repo's pytest/jest wrappers (`.py`; `.js`/`.jsx`/`.mjs`/`.cjs` plus `.ts`/`.tsx`/`.mts`/`.cts`); C/C++ uses the pinned Bazel LLVM source coverage (rules_cc plus LLVM tools, qualified seed-only under issue #501 via `bazel run //tools/ci:lcov_accounting_qualification`); JVM languages use Bazel JaCoCo collection through the `java_*`/`kotlin_*`/`scala_*` wrappers merged to LCOV (`.java`/`.kt`/`.scala`); .NET languages use Bazel Coverlet collection through the `csharp_*`/`fsharp_*` wrappers merged to LCOV (`.cs`/`.fs`/`.fsi`); Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Remaining extensions (including `.pyi` stubs, `.d.ts` declarations, `.svelte`/`.vue`/`.astro`/`.mdx` components) stay uncovered-as-other and count nowhere (issue #663). Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the collected LCOV `DA` records for first-party implementation sources plus generated-source provenance; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to meet the pinned `--min-coverage` percent with exact covered/eligible counts and uncovered locations; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran against the pinned Bazel.
+**Resolved measurement mechanics (standard-practice rules).** Canonical report format is LCOV from `bazel coverage`, merged per required configuration/platform cell. Rust uses the pinned `rules_rust` llvm-cov integration; Go uses the pinned Bazel go integration; Python and JavaScript/TypeScript participate through the repo's pytest/jest wrappers (`.py`; `.js`/`.jsx`/`.mjs`/`.cjs` plus `.ts`/`.tsx`/`.mts`/`.cts`); C/C++ uses the pinned Bazel LLVM source coverage (rules_cc plus LLVM tools, qualified seed-only under issue #501 via `bazel run //tools/ci:lcov_accounting_qualification`); JVM languages use Bazel JaCoCo collection through the `java_*`/`kotlin_*`/`scala_*` wrappers merged to LCOV (`.java`/`.kt`/`.scala`); .NET languages use Bazel Coverlet collection through the `csharp_*`/`fsharp_*` wrappers merged to LCOV (`.cs`/`.fs`/`.fsi`); Starlark uses custom instrumentation emitting LCOV `DA` records with identical line semantics. Remaining extensions (including `.pyi` stubs, `.d.ts` declarations, `.svelte`/`.vue`/`.astro`/`.mdx` components) stay uncovered-as-other and count nowhere (issue #663). Executable lines are `DA` records; blank and comment-only lines are not executable; compiler-generated regions are explicitly listed, not silently dropped; a target with no executable lines is listed as no-code, never an implicit pass. Eligible sources are the collected LCOV `DA` records for first-party implementation sources plus generated-source provenance; test/fixture-only code, schemas, upstream code, and generated boilerplate are classified separately, and authored logic emitted through generation stays eligible. Aggregation deduplicates by authored source and metric identity within each cell, unions hits across that cell's tests, retains zero-hit eligible sources, and requires every required cell to pass the single exact gate (zero uncovered non-ignored lines) with exact covered/eligible counts and uncovered locations; the pinned `--min-coverage` threshold is user-configurable and informational only for the repo verdict; languages and metrics stay separate, with no cross-platform union, no averaged percentages, and no rounding up. Missing reports, incomplete instrumentation, and absent eligible sources fail the gate. Negative fixtures cover valid ignores and denominator effects, missing reasons, malformed directives, missing reports, and uncovered lines. Empirical Starlark feasibility evidence ran against the pinned Bazel.
 The gate is enforced by `dx coverage --min-coverage` in the `coverage`
 (seed) plus `coverage-arm64` (arm64 native, issue #410) plus
 `coverage-musl-x86_64` plus `coverage-musl-arm64` (static musl, issue
@@ -242,7 +246,10 @@ lock/config keys (exact hits only, a bust starts cold with no prefix
 fallback) and no `--remote_cache`/`--remote_executor`/`--bes_backend`
 flags). Dx pipeline plus evaluator actions carry `no-remote-exec`
 (local-only until remote is qualified; `bazel run
-//tools/ci:action_execution_cache_qualification`). First-party PR
+//tools/ci:action_execution_cache_qualification`). Determinism claimed here is local
+per-cell determinism only, with no cross-cell union and no remote claim: per-host
+binaries with no qualified remote platform, local execution-log hit/miss as the delivered
+cache evidence (a warm local no-op alone is not a cache test). First-party PR
 reporting itself is adopted under #254; Codecov stays opt-in only.
 
 Snapshot goldens use schema validation plus byte snapshots with an

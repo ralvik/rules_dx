@@ -433,6 +433,17 @@ else
   bad "testing README, github-ci, or build-test-coverage lost its #507 pins fixture record"
 fi
 
+# Single exact gate plus approval: the repo verdict is one exact per-cell gate,
+# the rate flag is user-facing only, and excludes need reviewer approval (issue #964).
+if grep -q -F -e 'single exact gate' "$testing_readme" &&
+  grep -q -F -e 'informational only' "$testing_readme" &&
+  grep -q -F -e 'reviewer approval' "$testing_readme" &&
+  grep -q -F -e 'single exact per-cell gate' docs/product/scope.md; then
+  ok
+else
+  bad "testing README or scope lost its single exact gate plus reviewer-approval record (issue #964)"
+fi
+
 # Live proof: the fixture package builds green on the seed host.
 if bazel build //tools/coverage/tests/fixtures/per_cell/... --noshow_progress >/dev/null 2>&1; then
   ok

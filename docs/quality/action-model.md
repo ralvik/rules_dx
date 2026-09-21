@@ -112,6 +112,10 @@ Hermetic actions are cacheable and local-only until remote is qualified:
 every Dx pipeline plus evaluator action carries `no-remote-exec`, so Bazel
 never schedules them on a remote executor (wrong-platform remote exec is
 rejected by construction) while local disk-cache reuse still applies.
+Determinism claimed here is local per-cell determinism only, with no cross-cell
+union and no remote claim: per-host pinned binaries with no qualified remote
+platform; paid remote services stay unapproved per the testing README
+infrastructure budget and Apple/MS cache rights stay license-bounded.
 Platform-specific binaries produce platform-specific action keys. Rules must
 not drop the marker merely for convenience. If Ty lacks a supported hermetic
 route on a required platform, the first-release parity gate remains blocked
@@ -121,7 +125,9 @@ Remote boundary: pipeline plus evaluator actions are safe to cache locally
 (deterministic inputs plus versioned result messages) but not safe to
 execute remotely today — tool artifacts are per-host pinned binaries with no
 matching remote execution platform qualified, and no remote cache or executor
-is wired. Only the final Rust apply step updates the local
+is wired. Local execution-log hit/miss is the delivered cache evidence; a warm
+local no-op alone is not a cache test, and controlled remote-cache proof stays
+unverified. Only the final Rust apply step updates the local
 working tree. It validates complete result envelopes, groups edits by path, and atomically
 applies each valid file independently. Its design is covered by
 [ADR 0005](../decisions/0005-mutating-operations.md).
@@ -182,7 +188,7 @@ workspace. `dx format` atomically applies each file after checking its recorded 
 `dx format --check` emits those same normalized replacements as exact proposed changes and never
 writes files. This intentionally differs from `aspect_rules_lint`, whose mutating formatter can walk
 the working tree and format files unknown to Bazel. Requiring ownership keeps Bazel authoritative and
-preserves target-scoped caching and remote execution.
+preserves target-scoped caching and local execution (remote remains unqualified).
 
 ## Required Measurements
 
