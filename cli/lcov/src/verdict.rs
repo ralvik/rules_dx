@@ -41,18 +41,38 @@ pub struct GateVerdict {
 /// use the pinned Bazel llvm-cov/go integrations; C/C++ uses the pinned
 /// Bazel LLVM source coverage (rules_cc plus LLVM tools,);
 /// Python and JavaScript/TypeScript participate in `bazel coverage`
-/// through the repo's pytest/jest wrappers (see
-/// `docs/testing/generation.md`). Any other extension lands in
+/// through the repo's pytest/jest wrappers (`.py`; `.js`/`.jsx`/`.mjs`/`.cjs`
+/// plus `.ts`/`.tsx`/`.mts`/`.cts`; see
+/// `docs/testing/generation.md`). JVM languages participate through the
+/// repo's `java_*`/`kotlin_*`/`scala_*` wrappers via Bazel JaCoCo collection
+/// merged to LCOV (`.java`/`.kt`/`.scala`); .NET languages participate
+/// through the `csharp_*`/`fsharp_*` wrappers via Bazel Coverlet collection
+/// merged to LCOV (`.cs`/`.fs`/`.fsi`). Any other extension (including
+/// `.pyi` stubs, `.d.ts` declarations, `.svelte`/`.vue`/`.astro`/`.mdx`
+/// components) lands in
 /// `other_sources` and counts nowhere; Starlark line data stays a hard
 /// error until the measurement route exists.
 pub fn is_covered_language(path: &str) -> bool {
+    if path.ends_with(".d.ts") || path.ends_with(".d.mts") || path.ends_with(".d.cts") {
+        return false;
+    }
     path.ends_with(".rs")
         || path.ends_with(".go")
         || path.ends_with(".py")
         || path.ends_with(".js")
         || path.ends_with(".jsx")
+        || path.ends_with(".mjs")
+        || path.ends_with(".cjs")
         || path.ends_with(".ts")
         || path.ends_with(".tsx")
+        || path.ends_with(".mts")
+        || path.ends_with(".cts")
+        || path.ends_with(".java")
+        || path.ends_with(".kt")
+        || path.ends_with(".scala")
+        || path.ends_with(".cs")
+        || path.ends_with(".fs")
+        || path.ends_with(".fsi")
         || path.ends_with(".c")
         || path.ends_with(".cc")
         || path.ends_with(".cpp")
@@ -122,7 +142,7 @@ fn check_file(
 /// Evaluate the gate.
 ///
 /// `inventory` maps repo-owned paths to [`ELIGIBLE`] or [`SUPPORT`];
-/// `bazel_sources` lists the repo-owned `*.rs`/`*.bzl` files declared by
+/// `bazel_sources` lists the repo-owned sources declared by
 /// Bazel; `report` is the parsed combined LCOV; `load_source` reads workspace
 /// sources. Support files with hits are skipped silently; report entries
 /// outside the covered languages are listed separately and never merged
@@ -762,5 +782,200 @@ mod tests {
             verdict.errors.iter().any(|e| e.contains("without START")),
             "{verdict:?}"
         );
+    }
+
+    #[test]
+    fn covered_languages_include_wrapped_langs() {
+        for path in [
+            "elf.rs",
+            "elf.go",
+            "elf.py",
+            "elf.js",
+            "elf.jsx",
+            "elf.mjs",
+            "elf.cjs",
+            "elf.ts",
+            "elf.tsx",
+            "elf.mts",
+            "elf.cts",
+            "elf.java",
+            "elf.kt",
+            "elf.scala",
+            "elf.cs",
+            "elf.fs",
+            "elf.fsi",
+            "elf.c",
+            "elf.cc",
+            "elf.cpp",
+            "elf.cxx",
+            "elf.h",
+            "elf.hh",
+            "elf.hpp",
+            "elf.hxx",
+        ] {
+            assert!(is_covered_language(path), "{path}");
+        }
+        for path in [
+            "elf.pyi",
+            "elf.bzl",
+            "elf.sh",
+            "elf.md",
+            "notes.txt",
+            "elf.svelte",
+            "elf.vue",
+            "elf.d.ts",
+        ] {
+            assert!(!is_covered_language(path), "{path}");
+        }
+    }
+
+    #[test]
+    fn java_routes_to_files_with_slash_markers() {
+        let source = file_lines(&[
+            "public class Elf {".to_string(),
+            format!(
+                "  int f() {{ return 0; }} // {} - reason: fixture defensive branch.",
+                marker("_LINE")
+            ),
+            "}".to_string(),
+        ]);
+        let files = BTreeMap::from([("elf.java", source)]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.java"]),
+            &["elf.java".to_string()],
+            &report_of("elf.java", &[(1, 1), (2, 0), (3, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.covered, 2);
+        assert_eq!(verdict.eligible, 2);
+        assert_eq!(verdict.files[0].ignored, 1);
+    }
+
+    #[test]
+    fn kotlin_routes_to_files() {
+        let files = BTreeMap::from([("elf.kt", "fun f(): Int { return 1; }\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.kt"]),
+            &["elf.kt".to_string()],
+            &report_of("elf.kt", &[(1, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.files.len(), 1);
+    }
+
+    #[test]
+    fn scala_routes_to_files() {
+        let files = BTreeMap::from([("elf.scala", "object Elf { def f = 1 }\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.scala"]),
+            &["elf.scala".to_string()],
+            &report_of("elf.scala", &[(1, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.files.len(), 1);
+    }
+
+    #[test]
+    fn csharp_routes_to_files_with_slash_markers() {
+        let source = file_lines(&[
+            "public static class Elf {".to_string(),
+            format!(
+                "  public static int F() => 0; // {} - reason: fixture defensive branch.",
+                marker("_LINE")
+            ),
+            "}".to_string(),
+        ]);
+        let files = BTreeMap::from([("elf.cs", source)]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.cs"]),
+            &["elf.cs".to_string()],
+            &report_of("elf.cs", &[(1, 1), (2, 0), (3, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.files[0].ignored, 1);
+    }
+
+    #[test]
+    fn fsharp_routes_to_files() {
+        let files = BTreeMap::from([("elf.fs", "module Elf\nlet f = 1\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.fs"]),
+            &["elf.fs".to_string()],
+            &report_of("elf.fs", &[(1, 1), (2, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+        assert_eq!(verdict.files.len(), 1);
+    }
+
+    #[test]
+    fn fsharp_signature_routes_to_files() {
+        let files = BTreeMap::from([("elf.fsi", "module Elf\nval f : int\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.fsi"]),
+            &["elf.fsi".to_string()],
+            &report_of("elf.fsi", &[(1, 1), (2, 1)]),
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert!(verdict.other_sources.is_empty());
+    }
+
+    #[test]
+    fn modern_js_ts_extensions_route_to_files() {
+        for path in ["elf.mjs", "elf.cjs", "elf.mts", "elf.cts"] {
+            let files = BTreeMap::from([(path, "x = 1\n".to_string())]);
+            let owned = path.to_string();
+            let verdict = evaluate(
+                &eligible_inventory(&[path]),
+                &[owned.clone()],
+                &report_of(path, &[(1, 1)]),
+                &loader(files),
+            );
+            assert!(verdict.passed, "{path}: {verdict:?}");
+            assert!(verdict.other_sources.is_empty(), "{path}");
+        }
+    }
+
+    #[test]
+    fn java_uncovered_line_fails_with_location() {
+        let files = BTreeMap::from([("elf.java", "class Elf {}\nint x;\n".to_string())]);
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.java"]),
+            &["elf.java".to_string()],
+            &report_of("elf.java", &[(1, 1), (2, 0)]),
+            &loader(files),
+        );
+        assert!(!verdict.passed);
+        assert_eq!(verdict.files[0].uncovered, vec![2]);
+        let text = render(&verdict);
+        assert!(
+            text.contains("FAIL") && text.contains("elf.java:2"),
+            "{text}"
+        );
+    }
+
+    #[test]
+    fn python_stub_stays_other_sources() {
+        let files = BTreeMap::from([("elf.rs", "fn f() {}\n".to_string())]);
+        let mut report = report_of("elf.rs", &[(1, 1)]);
+        report.insert("elf.pyi".to_string(), hits(&[(1, 1)]));
+        let verdict = evaluate(
+            &eligible_inventory(&["elf.rs"]),
+            &["elf.rs".to_string()],
+            &report,
+            &loader(files),
+        );
+        assert!(verdict.passed, "{verdict:?}");
+        assert_eq!(verdict.other_sources, vec!["elf.pyi".to_string()]);
     }
 }

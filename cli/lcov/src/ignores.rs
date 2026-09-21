@@ -75,9 +75,10 @@ fn nearby_reason(
 /// Comment style for marker extraction, selected by source extension.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum CommentStyle {
-    /// `//` line comments (Rust, Go, C-family, Java, JavaScript, TypeScript).
+    /// `//` line comments (Rust, Go, C-family, Java/Kotlin/Scala, C#/F#,
+    /// JavaScript/TypeScript including `.mjs`/`.cjs`/`.mts`/`.cts`).
     SlashSlash,
-    /// `#` line comments (Python, Starlark, TOML, shell, YAML).
+    /// `#` line comments (Python including `.pyi` stubs, Starlark, TOML, shell, YAML).
     Hash,
     /// `<!-- ... -->` segments (Markdown, HTML).
     Html,
@@ -87,6 +88,7 @@ enum CommentStyle {
 /// keep the historical `//` behavior.
 fn comment_style(path: &str) -> CommentStyle {
     if path.ends_with(".py")
+        || path.ends_with(".pyi")
         || path.ends_with(".bzl")
         || path.ends_with(".toml")
         || path.ends_with(".sh")
@@ -759,5 +761,30 @@ mod tests {
         let ignores = find_ignores("t.rs", &source).unwrap();
         assert!(ignores.singles.is_empty());
         assert!(ignores.ranges.is_empty());
+    }
+
+    #[test]
+    fn hash_comment_markers_are_honored_for_pyi_stubs() {
+        let source = file_lines(&[
+            "def f() -> int: ...".to_string(),
+            format!(
+                "    pass  # {} - reason: fixture stub line.",
+                marker("_LINE")
+            ),
+        ]);
+        let ignores = find_ignores("t.pyi", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+    }
+
+    #[test]
+    fn slash_markers_are_honored_for_wrapped_langs() {
+        for path in [
+            "t.java", "t.kt", "t.scala", "t.cs", "t.fs", "t.fsi", "t.mjs", "t.cjs", "t.mts",
+            "t.cts",
+        ] {
+            let source = file_lines(&[format!("// {} - reason: fixture.", marker("_LINE"))]);
+            let ignores = find_ignores(path, &source).unwrap();
+            assert!(ignores.singles.contains_key(&1), "{path}");
+        }
     }
 }

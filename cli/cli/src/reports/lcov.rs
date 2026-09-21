@@ -36,7 +36,8 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 /// Returns `(covered, eligible)` executable-line counts. Documents union
 /// per `SF` path with maximum hits winning; source-level exclusion markers
 /// are honored for the covered languages (`.rs`, `.go`, `.py`, `.js`,
-/// `.jsx`, `.ts`, `.tsx`, plus C/C++ `.c`/`.cc`/`.cpp`/`.cxx`/`.h`/`.hh`/`.hpp`/`.hxx`
+/// `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`, JVM
+/// `.java`/`.kt`/`.scala`, .NET `.cs`/`.fs`/`.fsi`, plus C/C++ `.c`/`.cc`/`.cpp`/`.cxx`/`.h`/`.hh`/`.hpp`/`.hxx`
 ///) through the shared `dx_lcov` scanner (a
 /// `reason:` comment stays required exactly as under the retired gate;
 /// see the marker syntax in `docs/testing/README.md`). Sources that fail to load count raw: Bazel may
@@ -164,5 +165,39 @@ mod tests {
     fn coverage_rate_rejects_malformed_lcov() {
         let documents = ["DA:1,1\nend_of_record\n"];
         assert!(rate(&documents, &[]).is_err());
+    }
+
+    #[test]
+    fn coverage_rate_counts_wrapped_jvm_dotnet_sources() {
+        for (path, source) in [
+            ("src/A.java", "public class A {}\n"),
+            ("src/A.kt", "fun f() = 1\n"),
+            ("src/A.scala", "object A\n"),
+            ("src/A.cs", "public static class A {}\n"),
+            ("src/A.fs", "module A\n"),
+            ("src/A.fsi", "module A\n"),
+        ] {
+            let document = format!("SF:{path}\nDA:1,1\nDA:2,0\nend_of_record\n");
+            assert_eq!(
+                rate(&[document.as_str()], &[(path, source)]),
+                Ok((1, 2)),
+                "{path}"
+            );
+        }
+    }
+
+    #[test]
+    fn coverage_rate_honors_wrapped_lang_markers() {
+        let documents = ["SF:src/A.java\nDA:1,1\nDA:2,0\nDA:3,0\nend_of_record\n"];
+        let source = "public class A {\n// LCOV_EXCL_LINE - reason: generated.\n}\n";
+        assert_eq!(rate(&documents, &[("src/A.java", source)]), Ok((1, 2)));
+    }
+
+    #[test]
+    fn coverage_rate_counts_modern_js_ts_extensions() {
+        for path in ["src/a.mjs", "src/a.cjs", "src/a.mts", "src/a.cts"] {
+            let document = format!("SF:{path}\nDA:1,1\nDA:2,0\nend_of_record\n");
+            assert_eq!(rate(&[document.as_str()], &[]), Ok((1, 2)), "{path}");
+        }
     }
 }
