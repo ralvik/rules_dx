@@ -20,7 +20,59 @@ def expect_equal(name, actual, expected):
     return json.encode({
         "actual": actual,
         "expected": expected,
+        "kind": "equal",
         "name": name,
+    })
+
+def expect_true(name, actual):
+    """Builds one boolean-true record. See: `docs/testing/starlark.md#authoring`."""
+    return json.encode({
+        "actual": actual,
+        "kind": "true",
+        "name": name,
+        "passed": actual == True,
+    })
+
+def expect_false(name, actual):
+    """Builds one boolean-false record. See: `docs/testing/starlark.md#authoring`."""
+    return json.encode({
+        "actual": actual,
+        "kind": "false",
+        "name": name,
+        "passed": actual == False,
+    })
+
+def expect_contains(name, haystack, needle):
+    """Builds one membership record (string substring, list/tuple element, dict key). See: `docs/testing/starlark.md#authoring`."""
+    haystack_type = type(haystack)
+    if haystack_type == "string":
+        if type(needle) != "string":
+            fail("expect_contains: needle must be string when haystack is string, got " + type(needle))
+        passed = needle in haystack
+    elif haystack_type == "list" or haystack_type == "tuple":
+        passed = needle in haystack
+    elif haystack_type == "dict":
+        passed = needle in haystack
+    else:
+        fail("expect_contains: haystack must be string, list, tuple, or dict, got " + haystack_type)
+    return json.encode({
+        "haystack": haystack,
+        "kind": "contains",
+        "name": name,
+        "needle": needle,
+        "passed": passed,
+    })
+
+def expect_match(name, value, want):
+    """Builds one stringified-substring record. See: `docs/testing/starlark.md#authoring`."""
+    if type(want) != "string":
+        fail("expect_match: want must be string, got " + type(want))
+    return json.encode({
+        "kind": "match",
+        "name": name,
+        "passed": want in str(value),
+        "value": value,
+        "want": want,
     })
 
 def _display_label(label):
@@ -49,23 +101,83 @@ def _shell_quote(s):
 
 def _parse_check(raw):
     record = json.decode(raw)
-    for key in ("name", "expected", "actual"):
-        if key not in record:
-            fail("starlark_test: check record is missing key '" + key + "': " + raw)
-    return struct(
-        name = str(record["name"]),
-        expected = str(record["expected"]),
-        actual = str(record["actual"]),
-    )
+    kind = record["kind"] if "kind" in record else "equal"
+    if kind == "equal":
+        for key in ("name", "expected", "actual"):
+            if key not in record:
+                fail("starlark_test: check record is missing key '" + key + "': " + raw)
+        return struct(
+            kind = "equal",
+            name = str(record["name"]),
+            expected = str(record["expected"]),
+            actual = str(record["actual"]),
+        )
+    elif kind == "true" or kind == "false":
+        for key in ("name", "actual", "passed"):
+            if key not in record:
+                fail("starlark_test: check record is missing key '" + key + "': " + raw)
+        return struct(
+            kind = kind,
+            name = str(record["name"]),
+            actual = str(record["actual"]),
+            passed = str(record["passed"]),
+        )
+    elif kind == "contains":
+        for key in ("name", "haystack", "needle", "passed"):
+            if key not in record:
+                fail("starlark_test: check record is missing key '" + key + "': " + raw)
+        return struct(
+            kind = "contains",
+            name = str(record["name"]),
+            haystack = str(record["haystack"]),
+            needle = str(record["needle"]),
+            passed = str(record["passed"]),
+        )
+    elif kind == "match":
+        for key in ("name", "value", "want", "passed"):
+            if key not in record:
+                fail("starlark_test: check record is missing key '" + key + "': " + raw)
+        return struct(
+            kind = "match",
+            name = str(record["name"]),
+            value = str(record["value"]),
+            want = str(record["want"]),
+            passed = str(record["passed"]),
+        )
+    else:
+        fail("starlark_test: unknown check kind '" + kind + "': " + raw)
 
 def _check_lines(checks):
     lines = []
     for raw in checks:
         check = _parse_check(raw)
-        lines.append(
-            "check " + _shell_quote(check.name) + " " +
-            _shell_quote(check.expected) + " " + _shell_quote(check.actual),
-        )
+        if check.kind == "equal":
+            lines.append(
+                "check " + _shell_quote(check.name) + " " +
+                _shell_quote(check.expected) + " " + _shell_quote(check.actual),
+            )
+        elif check.kind == "true":
+            lines.append(
+                "check_true " + _shell_quote(check.name) + " " +
+                _shell_quote(check.actual) + " " + _shell_quote(check.passed),
+            )
+        elif check.kind == "false":
+            lines.append(
+                "check_false " + _shell_quote(check.name) + " " +
+                _shell_quote(check.actual) + " " + _shell_quote(check.passed),
+            )
+        elif check.kind == "contains":
+            lines.append(
+                "check_contains " + _shell_quote(check.name) + " " +
+                _shell_quote(check.haystack) + " " + _shell_quote(check.needle) + " " +
+                _shell_quote(check.passed),
+            )
+        else:
+            lines.append(
+                "check_match " + _shell_quote(check.name) + " " +
+                _shell_quote(check.value) + " " + _shell_quote(check.want) + " " +
+                _shell_quote(check.passed),
+            )
     return lines
 
 def _file_check_lines(file_checks):
@@ -105,6 +217,58 @@ _RUNNER_PRELUDE = [
     '        echo "FAIL: $name"',
     '        echo "  expected: $expected"',
     '        echo "  actual:   $actual"',
+    "        fail=1",
+    "        fail_count=$((fail_count + 1))",
+    "    fi",
+    "}",
+    "check_true() {",
+    '    name="$1"; actual="$2"; passed="$3"',
+    '    if [ "$passed" = "True" ]; then',
+    '        echo "PASS: $name"',
+    "        pass_count=$((pass_count + 1))",
+    "    else",
+    '        echo "FAIL: $name"',
+    '        echo "  expected: True"',
+    '        echo "  actual:   $actual"',
+    "        fail=1",
+    "        fail_count=$((fail_count + 1))",
+    "    fi",
+    "}",
+    "check_false() {",
+    '    name="$1"; actual="$2"; passed="$3"',
+    '    if [ "$passed" = "True" ]; then',
+    '        echo "PASS: $name"',
+    "        pass_count=$((pass_count + 1))",
+    "    else",
+    '        echo "FAIL: $name"',
+    '        echo "  expected: False"',
+    '        echo "  actual:   $actual"',
+    "        fail=1",
+    "        fail_count=$((fail_count + 1))",
+    "    fi",
+    "}",
+    "check_contains() {",
+    '    name="$1"; haystack="$2"; needle="$3"; passed="$4"',
+    '    if [ "$passed" = "True" ]; then',
+    '        echo "PASS: $name"',
+    "        pass_count=$((pass_count + 1))",
+    "    else",
+    '        echo "FAIL: $name"',
+    '        echo "  haystack: $haystack"',
+    '        echo "  missing:  $needle"',
+    "        fail=1",
+    "        fail_count=$((fail_count + 1))",
+    "    fi",
+    "}",
+    "check_match() {",
+    '    name="$1"; value="$2"; want="$3"; passed="$4"',
+    '    if [ "$passed" = "True" ]; then',
+    '        echo "PASS: $name"',
+    "        pass_count=$((pass_count + 1))",
+    "    else",
+    '        echo "FAIL: $name"',
+    '        echo "  value: $value"',
+    '        echo "  missing substring: $want"',
     "        fail=1",
     "        fail_count=$((fail_count + 1))",
     "    fi",
@@ -230,7 +394,7 @@ def _execution_test_impl(ctx):
 
 _common_attrs = {
     "checks": attr.string_list(
-        doc = "Equality records from expect_equal, evaluated at execution.",
+        doc = "Assertion records from expect_equal, expect_true, expect_false, expect_contains, expect_match, evaluated at execution.",
     ),
     "expected_observations": attr.string(
         default = "",

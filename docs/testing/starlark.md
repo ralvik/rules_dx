@@ -6,7 +6,8 @@ pinned Bazel version, implemented per
 [testing strategy](README.md) indexes it alongside the CLI, CI, generation,
 environment, tool, and quality matrices.
 
-Public API: `starlark_test` macro, `expect_equal` assertion constructor,
+Public API: `starlark_test` macro, `expect_equal`, `expect_true`,
+`expect_false`, `expect_contains`, `expect_match` assertion constructors,
 and `DxSubjectInfo` provider, all loadable from
 `//libs/starlark:defs.bzl`. One macro call is one addressable Bazel test
 target with one Bazel result.
@@ -35,11 +36,27 @@ silently. Evidence-free tests are rejected the same way.
 
 ## Authoring
 
-Test `.bzl` files call `expect_equal(name, actual, expected)` while they
+Test `.bzl` files call `expect_equal(name, actual, expected)`,
+`expect_true(name, actual)`, `expect_false(name, actual)`,
+`expect_contains(name, haystack, needle)`, or
+`expect_match(name, value, want)` while they
 load and export a macro that instantiates `starlark_test` with those
 records. BUILD files only instantiate the exported macro with a target
 name; they never encode assertion data. Values must be JSON-encodable;
 records serialize deterministically via `json.encode`.
+
+`expect_true`/`expect_false` assert booleans without pinning full
+equality rendering. `expect_contains` is type-aware membership: string
+substring, list/tuple element, or dict-key presence. `expect_match`
+asserts the stringified rendering contains a substring, so a fingerprint
+or rendered list can mention a fragment without pinning full bytes
+(where `expect_contains` on a list would demand an exact element).
+Absence uses `expect_true` with `not in`. Predicates compute while test
+files load; mismatches still report at execution like equality. The
+concrete use case lives in
+`../../libs/starlark/tests/fixtures/starlark_futures/matchers.bzl`
+(greet plus pair-error plus admitted-list plus subject-fields plus
+fingerprint), proven by `//libs/starlark/tests:matcher_unit`.
 
 Mismatches accumulate within one target and report together in declaration
 order through the standard Bazel test protocol: non-zero exit status and
@@ -95,12 +112,14 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Decided under closed #588 per [ADR 0009](../decisions/0009-starlark-testing.md)
-(provisional pending concrete use cases), pinned by fixtures in
+Decided under closed #588 plus #790 per [ADR 0009](../decisions/0009-starlark-testing.md)
+(remaining subjects provisional pending concrete use cases), pinned by fixtures in
 `../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
-`starlark_futures.expected`) and qualified by
+`starlark_futures.expected` plus `matchers.bzl`) and qualified by
 `bazel run //tools/ci:starlark_futures_qualification`. Test framework only;
-seed only, no Supported claim.
+seed only, no Supported claim. Richer matchers graduated under #790 and
+are accepted above; no larger matcher library beyond the five
+constructors is committed.
 
 - Per-check filtering stays wont-fix: target granularity is contract. One
   macro call is one addressable Bazel test target with one Bazel result;
@@ -109,10 +128,6 @@ seed only, no Supported claim.
   `--test_filter` parsing is rejected; split checks into separate
   `starlark_test` targets for finer filtering, caching, retries, and
   diagnostics.
-- Richer matchers stay deferred (#790): `expect_equal` only, pending a concrete
-  use case plus fixtures plus successor issue. Equality over
-  JSON-encodable values plus `file_checks` plus `expected_observations`
-  covers current internals; no larger matcher library is committed.
 - Aspect subjects stay deferred (#791), pending a concrete use case plus fixtures
   plus successor issue. Analysis observes `DxSubjectInfo` fields plus
   `DefaultInfo` output basenames only; applying aspects to subjects is not

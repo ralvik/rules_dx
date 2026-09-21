@@ -7,7 +7,7 @@ def fixture_execution_tests(name):
         name = name,
         mode = "execution",
         checks = [
-            expect_equal("record encoding is deterministic", expect_equal("x", 1, 2), "{\"actual\":1,\"expected\":2,\"name\":\"x\"}"),
+            expect_equal("record encoding is deterministic", expect_equal("x", 1, 2), "{\"actual\":1,\"expected\":2,\"kind\":\"equal\",\"name\":\"x\"}"),
         ],
         file_checks = {
             ":answer_fixture.txt": "answer=42",

@@ -32,6 +32,34 @@ Proven by `arithmetic_unit` (five behavior assertions over three subject
 functions) and by the record-encoding pin in `fixture_execution`.
 matrix-item: expect_equal
 
+## item: expect-true-false
+
+Public `expect_true` and `expect_false` constructors in
+`libs/starlark/defs.bzl`. Assert booleans without pinning full equality
+rendering; predicates compute at loading, mismatches report at execution
+with `True`/`False` diagnostics. Proven by `matcher_unit` over the
+futures `matchers.bzl` use case (even plus odd plus empty-error).
+matrix-item: expect-true-false
+
+## item: expect-contains
+
+Public `expect_contains` constructor in `libs/starlark/defs.bzl`.
+Type-aware membership (string substring, list/tuple element, dict-key
+presence) computed at loading with authoring errors for mistyped
+haystacks; mismatches report haystack plus missing needle at execution.
+Proven by `matcher_unit` (greeting substring, admitted-list element,
+pair-error substring, subject-fields key).
+matrix-item: expect-contains
+
+## item: expect-match
+
+Public `expect_match` constructor in `libs/starlark/defs.bzl`. Asserts the
+stringified rendering contains a substring, so fingerprints and rendered
+collections can mention a fragment without pinning full bytes (where
+`expect_contains` on a list would demand an exact element). Proven by
+`matcher_unit` (fingerprint producer plus rendered-list substring).
+matrix-item: expect-match
+
 ## item: starlark_test-facade
 
 Public `starlark_test` macro in `libs/starlark/defs.bzl`: one call is one

@@ -46,11 +46,13 @@ tags, visibility, and other common test attributes. BUILD files do not encode
 assertion data: attribute payloads are serialized records produced by the
 test `.bzl` file, not hand-written assertion manifests.
 
-The qualified `expect` surface is one constructor, `expect_equal`, plus the
+The qualified `expect` surface is five constructors, `expect_equal`,
+`expect_true`, `expect_false`, `expect_contains`, `expect_match`, plus the
 `DxSubjectInfo` provider for analysis observations. Broader subjects
-(targets, actions, files, depsets, runfiles) and matchers remain provisional
+(targets, actions, files, depsets, runfiles) remain provisional
 pending concrete use cases; do not treat them as available API through this
-record.
+record. The matcher set graduated under #790; no larger matcher library
+is claimed.
 
 Expected-failure tests identify the required failure phase (`load`, `unit`,
 `analysis`, or `execution`) and one or more diagnostic substrings. The
@@ -131,8 +133,8 @@ support, feasibility evidence, and measurement mechanics follow the resolved
   test targets instead of becoming declarative assertion manifests.
 - Per-function targets provide precise Bazel filtering, caching, retries, and
   diagnostics at the cost of additional analysis targets.
-- The initial assertion API can test `rules_dx` internals without committing to a
-  large general-purpose matcher library.
+- The small assertion API can test `rules_dx` internals without committing to a
+  large general-purpose matcher library beyond the five qualified constructors.
 - Expected-failure tests prove the relevant error without coupling every test to
   complete Bazel diagnostic text.
 - Collecting mismatches reduces repeated test cycles while preserving one Bazel
