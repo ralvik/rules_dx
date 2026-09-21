@@ -234,6 +234,20 @@ shared `tools/sh/lib.sh`, shellcheck plus shfmt, portable realpath, hashing,
 sed, cp, and timing with no per-file copies. `//tools/ci:shell_contract`
 machine-checks this contract.
 
+Shell-harness elimination stays wont-fix under issue #667 (CI/harness only,
+no product behavior; affirms decided #299, not a reversal). Inventory at
+decision time is about 176 `*.sh` (about 172 bash) with about 131 in
+`tools/ci` (about 86 `*_qualification.sh`) plus shared `tools/sh/lib.sh`,
+`snapshot.sh`, `guards.sh`, `bootstrap.sh`; four POSIX `#!/bin/sh` fixtures
+plus the deploy hermetic Python runtime stay as-is. Wholesale Rust-ify would
+rewrite static clean-tree guards as `rust_test` with no product gain while
+re-opening #323/#450/#653/#654; POSIX-only still forks with fewer helpers;
+per-OS shells double the harness. Incremental per-tool Rust-ify stays allowed
+where a product CLI already owns the behavior, never a harness-wide
+migration. `.shellcheckrc` stays `shell=bash`, the support-matrix plus
+verification-matrix shell rows and the ci.yml prove `shell contract` step
+stay as-is; `//tools/ci:shell_contract` owns this rule.
+
 Guard maintenance owns shared helpers plus snapshot versus grep policy under
 issue #450, extended with the table-driven guard rows under issue #653:
 shared shell logic lives once in `tools/sh/lib.sh`
