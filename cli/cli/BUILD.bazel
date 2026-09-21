@@ -38,6 +38,7 @@ rust_library(
         "src/args/parser_tests_a.rs",
         "src/args/parser_tests_b.rs",
         "src/args/profile.rs",
+        "src/args/strict_tests.rs",
         "src/args/suggest.rs",
         "src/args/tokenizer.rs",
         "src/args/values.rs",

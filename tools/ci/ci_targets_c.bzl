@@ -338,6 +338,16 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # CLI strict parsing plus help-goldens harness; see docs/cli/cli-contract.md.
+    sh_binary(
+        name = "cli_strict_qualification",
+        srcs = ["cli_strict_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Layer-4 loss restore-or-wont-fix harness; see docs/testing/verification-matrix.md#layers.
     sh_binary(
         name = "layer4_loss_qualification",

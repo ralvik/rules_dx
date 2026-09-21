@@ -1,0 +1,31 @@
+"""Help-output goldens fixture."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+exports_files(
+    [
+        "pins.bzl",
+        "help_goldens.expected",
+        "top_help.golden",
+        "lint_help.golden",
+        "build_help.golden",
+        "clean_help.golden",
+        "bazel_help.golden",
+        "docs_help.golden",
+    ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)

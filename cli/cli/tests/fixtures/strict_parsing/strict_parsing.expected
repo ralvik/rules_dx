@@ -1,0 +1,16 @@
+Strict clap parsing (issue #810)
+unknown options rejected with whole-token echo (no silent ignore)
+missing values rejected naming the bare flag
+hyphen-led tokens never consumed as option values
+bad output/fail-on/report/min-coverage rejected with contract shapes
+typo suggestions come from the same grammar
+known flags on wrong commands rejected as unsupported
+dx bazel tails forward verbatim with prefix options rejected
+no help verb with help flag-only
+generated help from the same grammar for all 32 commands
+prefix inference rejected
+help verb rejected
+hyphen-value consumption rejected
+silent ignore rejected
+qualified seed-only under issue #810
+no Supported claim

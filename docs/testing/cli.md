@@ -318,6 +318,18 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   parallel, caching, scheduling, or daemon behavior. Pinned by
   `bazel run //tools/ci:cli_execution_gaps_qualification` plus
   `dx_update::aggregate` fixtures under issue #590.
+- Verify strict argument parsing plus generated help for the `dx` CLI surface:
+  exact `--long` names only with no `help` verb (help is flag-only via auto
+  `--help`/`-h`), unknown/missing/bad shapes fail fast with whole-token echo
+  plus bare-flag naming plus grammar-owned suggestions, hyphen-values never
+  consumed, known flags on wrong commands fail as unsupported, `dx bazel`
+  tails forward verbatim, and `--help` renders from the same grammar that
+  parses (top plus all 32 per-command helps pin usage plus scopes plus exits
+  plus output). Pinned by
+  `bazel run //tools/ci:cli_strict_qualification` plus
+  `cli/cli/tests/fixtures/strict_parsing/` plus
+  `cli/cli/tests/fixtures/help_goldens/` plus `dx_cli::strict_tests`
+  fixtures under issue #810.
 - Verify path queries receive supported query options only, final workflows retain
   unrelated configuration options, and unsupported mirroring neither alters query
   argv nor rejects path scope.

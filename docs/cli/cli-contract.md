@@ -307,6 +307,20 @@ consumption, attached `=value` whole-token echo, and value-parser rejections;
 migrate to strict clap parsing with auto help stays owned gap for any future
 migration).
 
+Strict clap parsing with auto help for the `dx` CLI surface (qualified seed-only under issue #810)
+(`bazel run //tools/ci:cli_strict_qualification`; fixtures in
+`cli/cli/tests/fixtures/strict_parsing/` plus help-output goldens in
+`cli/cli/tests/fixtures/help_goldens/` plus `cli/cli/src/args/strict_tests.rs`
+plus `cli/cli/src/args/help.rs`; exact `--long` names only with
+`disable_help_subcommand` (no `help` verb, help is flag-only via auto
+`--help`/`-h`), unknown/missing/bad shapes fail fast with whole-token echo
+plus bare-flag naming plus grammar-owned suggestions, hyphen-values never
+consumed, known flags on wrong commands fail as unsupported, `dx bazel`
+tails forward verbatim, and `--help` renders from the same `Cli` grammar
+that parses, plus completions plus man pages; thin-shim frozen legacy under
+#316 unchanged; CLI-only, no Bazel semantics change; seed only, no
+Supported claim).
+
 Final command registry plus mutating-vs-check semantics pinned under issues
 #457/#462 plus #776 plus #786 (`bazel run //tools/ci:cli_contract_qualification`; final registry
 holds exactly the 32 parsed commands including `deploy` plus `bump` plus

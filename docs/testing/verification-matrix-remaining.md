@@ -95,8 +95,10 @@ Remaining reds stay owned gaps, not green claims:
   contract with snapshots across env, codegen shard, env shard, evaluator,
   runner, markdown, plus dx CLI tokenizer via disable_help_flag plus
   allow_hyphen_values plus invalid_token/parse_error mapping for unknown,
-   missing, malformed, hyphen-value, and attached-echo shapes; strict clap
-   parsing with auto help stays owned gap under #810).
+   missing, malformed, hyphen-value, and attached-echo shapes; dx CLI strict
+   clap parsing with auto help delivered seed-only under #810 via
+   `bazel run //tools/ci:cli_strict_qualification` with strict fixtures plus
+   help goldens, thin shims stay frozen legacy).
 - Hello smoke as test with fixture evidence qualified seed-only under #464
   (`bazel run //tools/ci:hello_smoke_qualification`; 11 binary hellos with
   `hello_output_test` under `bazel test //...`, no-coverage Linux-only runfiles
