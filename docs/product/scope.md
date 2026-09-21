@@ -227,7 +227,11 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx test` | retain | Thin mapping to Bazel-owned tests |
 | `dx format` | retain, mutating by default | Format selected sources; `--check` is non-mutating and separate from lint |
 | `dx build` | retain | Thin mapping to `bazel build` |
+| `dx run` | retain | Build and run runnable targets sequentially (explicit labels/patterns multirun; file/dir scopes require exactly one runnable); see [dx run](../cli/commands/build-test-coverage.md#dx-run) |
+| `dx deploy` | retain | Build and run a single deployable target; see [dx deploy](../cli/commands/build-test-coverage.md#dx-deploy) |
 | `dx update` | retain | Update dependencies through their authoritative resolvers and Bazel integration |
+| `dx bump` | retain, mutating without confirmation | Widen exactly one declared requirement explicitly, then chain the resolver-owned refresh; see [dx bump](../cli/commands/audit-update-bazel.md#dx-bump) |
+| `dx migrate` | retain, mutating by default | Upgrade-only breaking-change rewrites over the generation edit-manifest pattern (`--from`/`--to`); live execution fails closed until the first manifest lands; see [dx migrate](../cli/commands/migrate.md) |
 | `dx generate` | retain, mutating by default | Default repository-wide Gazelle discovery with explicit v1 path/label/pattern scope; supported sources can create initial targets without manifests or prior targets, and `--check` validates freshness without writes |
 | `dx codegen` | retain, mutating | Build and select repository-wide or exact-target generated-source projections for LSPs |
 | `dx env` | retain, mutating | Prepare repository defaults or exact per-language projections for one target from Bazel providers |
@@ -236,6 +240,15 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx check` | retain, non-mutating | Sequential `format`, `lint`, `typecheck`, then `generate` freshness in `--check` mode; see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
 | `dx fix` | retain, mutating by default | Same sequence in default mutating mode with per-file atomic apply; no post-apply rerun (run `check` again); see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
 | `dx clean` | retain, mutating managed state only | Prune validated unselected `.dx` generations only (never Bazel outputs unless `--bazel`); see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
+| `dx init` | retain, mutating by default | Absent-only scaffolding into a foreign tree; see [dx init](../cli/commands/hooks.md#dx-init) |
+| `dx hooks` | retain, mutating by default | Hermetic git-hook runner install/uninstall/status/run; see [dx hooks](../cli/commands/hooks.md#dx-hooks) |
+| `dx status` | retain | Consolidated diagnostics surface (toolchain/platform/tools/pin); see [dx status](../cli/commands/status-version.md#dx-status) |
+| `dx version` | retain | Single-version pin/launcher with rollback and startup skew gate; see [dx version](../cli/commands/status-version.md#dx-version) |
+| `dx watch` | retain, local-only | Thin local-only loop over `build/test/run/lint/typecheck/format/check/fix`; see [dx watch](../cli/commands/watch.md) and [ADR 0017](../decisions/0017-dx-watch.md) |
+| `dx owners` | retain | Thin `bazel query`/`cquery` wrapper reusing target resolution; see [inspect wrappers](../cli/commands/inspect.md) |
+| `dx deps` | retain | Thin `bazel query`/`cquery` wrapper reusing target resolution; see [inspect wrappers](../cli/commands/inspect.md) |
+| `dx why` | retain | Explain one dependency path via `somepath`; see [inspect wrappers](../cli/commands/inspect.md) |
+| `dx completion` | retain | Generated static shell scripts from the single command-definition source; see [dx completion](../cli/commands/completion.md) |
 | `dx bazel` | retain | Exact-forwarding escape hatch through the selected repository launcher |
 | `dx docs` | removed; reintroduction with real extraction/validation open under #786 (successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site; `--check` is non-mutating |
 
