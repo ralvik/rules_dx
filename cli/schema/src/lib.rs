@@ -3,12 +3,17 @@
 //! Contract: `docs/architecture/README.md`.
 //!
 //! `quality/result`, `generation/result`, `docs/ir`, and `cli/output`
-//! all version their wire form with `schema_major = 1` / `schema_minor = 0`.
+//! all version their wire form with `schema_major = 1` / `schema_minor = 1`.
 //! Major bumps are breaking (decode must fail); minor bumps are
 //! forward-compatible (newer minors decode when their bytes satisfy the
 //! current rules). [`SchemaVersion`] carries a decoded `(major, minor)` pair;
 //! [`check_major`] enforces the breaking axis only, so callers keep their own
 //! `UnsupportedMajor`-style payloads and messages.
+//!
+//! Minor 1.1 adds the optional NDJSON `correlation` grouping field plus the
+//! backend committed-change manifest for update reporting.
+//! See: `docs/cli/output-protocol.md#ndjson-envelope`.
+//! Owning contract: `docs/cli/output-protocol.md`.
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -17,8 +22,10 @@
 /// Frozen schema major accepted by every versioned shard protocol.
 pub const SCHEMA_MAJOR: u32 = 1;
 /// Schema minor the crates were written against. Newer minors decode when
-/// their bytes satisfy the current rules.
-pub const SCHEMA_MINOR: u32 = 0;
+/// their bytes satisfy the current rules. Minor 1 carries the `correlation`
+/// grouping field and the update committed-change manifest.
+/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
+pub const SCHEMA_MINOR: u32 = 1;
 
 /// One decoded `(schema_major, schema_minor)` pair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,7 +37,7 @@ pub struct SchemaVersion {
 }
 
 impl SchemaVersion {
-    /// The current `(1, 0)` version every shard is written against.
+    /// The current `(1, 1)` version every shard is written against.
     pub const CURRENT: Self = Self {
         major: SCHEMA_MAJOR,
         minor: SCHEMA_MINOR,
@@ -69,7 +76,7 @@ mod tests {
     fn current_matches_frozen_constants() {
         assert_eq!(SchemaVersion::CURRENT.major, SCHEMA_MAJOR);
         assert_eq!(SchemaVersion::CURRENT.minor, SCHEMA_MINOR);
-        assert_eq!(SchemaVersion::CURRENT, SchemaVersion::new(1, 0));
+        assert_eq!(SchemaVersion::CURRENT, SchemaVersion::new(1, 1));
     }
 
     #[test]

@@ -542,12 +542,18 @@ per-set report, never a per-set code. Backend operation boundaries are pinned in
 `bazel run @pnpm//:pnpm -- update`, Maven `REPIN=1 bazel run @maven//:pin`, NuGet
 `paket2bazel` regeneration, Go pinned no-op) and per-set success/failure/blocked reporting rides
 text plus JSON `notice`/`error` events with `command_finished`. Continued updates do not imply
-parallel execution or a new mutation-event API. Update emits no v1 `change` or `mutation` events
-and no `changes`/`mutations`/`diagnostics` counts in any mode (wont-fix, issue #586,
+parallel execution. The v1.0 absence of file events was wont-fix (issue #586,
 resolver-owned by `dx_update::backend`, pinned by fixtures in
-`cli/update/tests/fixtures/update_events/` plus `cli/cli/src/exec/update.rs`): backends provide
-no committed-change manifest and Git scan/BUILD parse/rerun inference is rejected, so per-set
-`notice`/`error` plus `command_finished` is the complete event contract with sorted per-set order,
+`cli/update/tests/fixtures/update_events/` plus `cli/cli/src/exec/update.rs`); minor 1.1
+adds the backend committed-change manifest (`dx_update::manifest`, validated against
+`dx_update::sets::SetId::locks`, pinned by fixtures in
+`cli/update/tests/fixtures/correlation_manifest/` plus `cli/cli/src/exec/update.rs`,
+issue #811): validated file changes project to paired `change` plus `applied` `mutation`
+events grouped under `update:<set>` before that set's terminal report, empty or absent
+manifests emit no file events preserving the v1.0 contract, and Git scan/BUILD parse/rerun
+inference stays rejected, so per-set
+`notice`/`error` plus `command_finished` stays the complete event contract when no manifest
+supplies deltas, with sorted per-set order,
 `results_complete=true` on live terminal reports, an `update_recovery` notice plus
 `dx: update_recovery:` text hint on failure carrying the idempotent retry (`dx update`
 with the failed/blocked sets) and the manual restore (`git checkout --` with the kept

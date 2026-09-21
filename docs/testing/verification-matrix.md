@@ -381,6 +381,8 @@ CI only, no Supported claim).
   non-Linux/arm64 wont-fix pins plus fixture evidence, issue #648),
   `:update_events_qualification` (update mutation wont-fix plus completeness pins plus
   fixture evidence, issue #586),
+  `:correlation_manifest_qualification` (correlation plus committed-change manifest pins plus
+  fixture evidence, issue #811),
   `:update_rollback_qualification` (update per-set commit plus manual recovery pins plus
   fixture evidence, issue #772),
     `:starlark_futures_qualification` (Starlark filtering plus subjects plus BEP wont-fix/deferred/supported pins plus

@@ -222,15 +222,16 @@ fn default_outcome(workspace: &Path, path: &str, intended: &[u8]) -> (i32, Strin
 pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, FinalizeError> {
     let payload: IntendedPayload = serde_json::from_slice(input.intended_json)
         .map_err(|err| FinalizeError::Malformed(format!("invalid intended JSON: {err}")))?;
-    if payload.schema_major != generation_result::SCHEMA_MAJOR
-        || payload.schema_minor != generation_result::SCHEMA_MINOR
-    {
+    // Minor is forward-compatible within one major: 1.0 witnesses decode
+    // under 1.1 when their bytes satisfy the current rules, and newer
+    // minors decode the same way. Only the breaking major is enforced here.
+    // See: `docs/cli/output-protocol.md#ndjson-envelope`.
+    if payload.schema_major != generation_result::SCHEMA_MAJOR {
         return Err(FinalizeError::Malformed(format!(
-            "unsupported schema {}.{}; want {}.{}",
+            "unsupported schema {}.{}; want major {}",
             payload.schema_major,
             payload.schema_minor,
             generation_result::SCHEMA_MAJOR,
-            generation_result::SCHEMA_MINOR,
         )));
     }
     let want_mode = if input.check { "check" } else { "default" };

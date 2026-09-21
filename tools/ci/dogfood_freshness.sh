@@ -71,6 +71,7 @@ bazel run --noshow_progress //tools/ci:bump_chain_qualification
 bazel run --noshow_progress //tools/ci:bump_discovery_qualification
 bazel run --noshow_progress //tools/ci:bump_gha_qualification
 bazel run --noshow_progress //tools/ci:update_events_qualification
+bazel run --noshow_progress //tools/ci:correlation_manifest_qualification
 bazel run --noshow_progress //tools/ci:update_rollback_qualification
 bazel run --noshow_progress //tools/ci:starlark_futures_qualification
 bazel run --noshow_progress //tools/ci:cli_execution_gaps_qualification

@@ -267,6 +267,60 @@ pub(super) fn live_json_emits_per_set_notices_and_finished() {
     // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`).
     assert!(out.contains("\"code\":\"update_recovery\""), "{out}");
     assert!(err.contains("update_recovery"), "{err}");
+    // Minor-1.1 correlation groups each per-set report under
+    // `update:<set>`; line order stays authoritative.
+    // See: `docs/cli/output-protocol.md#ndjson-envelope`.
+    for event in &events {
+        let code = event
+            .get("code")
+            .and_then(|code| code.as_str())
+            .unwrap_or("");
+        if code == "update_set_success"
+            || code == "update_set_blocked"
+            || event.get("code").is_none() && event["event"] == serde_json::json!("error")
+        {
+            let correlation = event["correlation"].as_str().expect("correlation");
+            assert!(correlation.starts_with("update:"), "{event}");
+        }
+    }
+    assert!(out.contains("\"correlation\":\"update:cargo\""), "{out}");
+    assert!(out.contains("\"correlation\":\"update:npm\""), "{out}");
+}
+
+#[test]
+pub(super) fn manifest_projects_to_correlated_change_and_mutation() {
+    // See: `docs/cli/output-protocol.md#mutation`.
+    const DIGEST: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let manifest = dx_update::manifest::CommittedManifest {
+        set: "npm".to_owned(),
+        changes: vec![dx_update::manifest::CommittedChange {
+            path: "pnpm-lock.yaml".to_owned(),
+            kind: dx_update::manifest::CommittedKind::Modify,
+            source_digest: Some(DIGEST.to_owned()),
+            old_len: 3,
+            new_content: "new\n".to_owned(),
+        }],
+    };
+    let events = super::project_manifest_events(&manifest).expect("project");
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0]["event"], serde_json::json!("change"));
+    assert_eq!(events[0]["path"], serde_json::json!("pnpm-lock.yaml"));
+    assert_eq!(events[0]["correlation"], serde_json::json!("update:npm"));
+    assert_eq!(
+        events[0]["edits"],
+        serde_json::json!([{"start_byte": 0, "end_byte": 3, "replacement": "new\n"}])
+    );
+    assert_eq!(events[1]["event"], serde_json::json!("mutation"));
+    assert_eq!(events[1]["outcome"], serde_json::json!("applied"));
+    assert_eq!(events[1]["correlation"], serde_json::json!("update:npm"));
+    // Empty Go no-op projects to no file events, preserving v1.0.
+    let empty = dx_update::manifest::CommittedManifest {
+        set: "go".to_owned(),
+        changes: Vec::new(),
+    };
+    assert!(super::project_manifest_events(&empty)
+        .expect("empty")
+        .is_empty());
 }
 
 #[test]

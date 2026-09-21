@@ -308,6 +308,16 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Correlation plus committed-change manifest harness (issue #811; See: docs/cli/output-protocol.md#mutation).
+    sh_binary(
+        name = "correlation_manifest_qualification",
+        srcs = ["correlation_manifest_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Atomic update rollback-plan harness (issue #772); see docs/cli/commands/audit-update-bazel.md#dx-update.
     sh_binary(
         name = "update_rollback_qualification",

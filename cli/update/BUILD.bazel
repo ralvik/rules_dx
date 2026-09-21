@@ -17,6 +17,7 @@ dx_rust_crate(
     srcs = [
         "src/backend.rs",
         "src/lib.rs",
+        "src/manifest.rs",
         "src/outcome.rs",
         "src/recovery.rs",
         "src/report.rs",

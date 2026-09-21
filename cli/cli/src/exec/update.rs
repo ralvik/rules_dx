@@ -5,7 +5,8 @@ use super::common::*;
 use crate::args::{Command, Invocation};
 use crate::reports::plan_reports;
 use dx_output::{
-    command_finished, command_started, error_event, notice_event, write_event, FinishedCounts,
+    change_event, command_finished, command_started, error_event, mutation_event, notice_event,
+    with_correlation, write_event, ChangeEvent, ChangeKind, Edit, FinishedCounts, MutationOutcome,
     NoticeEvent, OutputMode,
 };
 use std::collections::BTreeMap;
@@ -258,8 +259,13 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
     };
     let exit = dx_update::report::exit_code(&report);
     if invocation.output == OutputMode::Json {
+        // Minor-1.1 `correlation` groups each per-set terminal report plus
+        // its file events under `update:<set>`; line order stays
+        // authoritative and v1.0 consumers ignore the field.
+        // See: `docs/cli/output-protocol.md#ndjson-envelope`.
         for outcome in &report.outcomes {
             let set_name = outcome.set.as_str();
+            let correlation = format!("update:{set_name}");
             match outcome.status {
                 dx_update::outcome::ReportedStatus::Success => {
                     let message = details
@@ -279,6 +285,24 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
                         language: None,
                         import: None,
                     }) {
+                        let event = with_correlation(event.clone(), &correlation).unwrap_or(event);
+                        // Validated backend manifests project to
+                        // `change`/`mutation` pairs grouped under the same
+                        // correlation before the per-set terminal report.
+                        // Live backends currently supply manifest bytes only
+                        // for the Go no-op (empty, so no events); other sets
+                        // supply none yet because Git scan/BUILD parse/rerun
+                        // inference stays rejected. Synthetic manifests are
+                        // pinned by unit fixtures plus
+                        // `cli/update/tests/fixtures/correlation_manifest/`.
+                        // See: `docs/cli/output-protocol.md#mutation`.
+                        if let Some(manifest) = live_success_manifest(set_name) {
+                            if let Ok(file_events) = project_manifest_events(&manifest) {
+                                for file_event in &file_events {
+                                    let _ = write_event(out, file_event);
+                                }
+                            }
+                        }
                         let _ = write_event(out, &event);
                     }
                 }
@@ -293,6 +317,7 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
                     if let Ok(event) =
                         error_event(CODE_UPDATE_FAILED, &message, None, None, Some("execute"))
                     {
+                        let event = with_correlation(event.clone(), &correlation).unwrap_or(event);
                         let _ = write_event(out, &event);
                     }
                     let _ = writeln!(err, "dx: {CODE_UPDATE_FAILED}: {message}");
@@ -309,6 +334,7 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
                         language: None,
                         import: None,
                     }) {
+                        let event = with_correlation(event.clone(), &correlation).unwrap_or(event);
                         let _ = write_event(out, &event);
                     }
                     if verbose {
@@ -414,6 +440,77 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
 enum SetDetail {
     Success { message: String },
     Failed { message: String },
+}
+
+/// Live manifest bytes for one successful set: the Go pinned no-op owns
+/// an empty manifest (no file delta, so no events); other backends own
+/// no CLI-readable manifest yet because the protocol forbids Git scan,
+/// BUILD parse, and rerun inference. Returns `None` when no manifest is
+/// available so the CLI emits no forged `change`/`mutation` events.
+/// See: `docs/cli/output-protocol.md#mutation`.
+fn live_success_manifest(set_name: &str) -> Option<dx_update::manifest::CommittedManifest> {
+    if set_name == "go" {
+        Some(dx_update::manifest::CommittedManifest {
+            set: "go".to_owned(),
+            changes: Vec::new(),
+        })
+    } else {
+        None
+    }
+}
+
+/// Projects one validated backend manifest to its NDJSON `change` plus
+/// terminal `applied` `mutation` pairs, grouped under `update:<set>`.
+/// Each file emits its `change` first, then its `applied` mutation, in
+/// normalized path order; empty manifests emit nothing, preserving v1.0.
+/// Returns the ordered event values (callers stream them before the
+/// per-set terminal report). Fails closed on any manifest shape violation.
+/// See: `docs/cli/output-protocol.md#mutation`.
+pub(crate) fn project_manifest_events(
+    manifest: &dx_update::manifest::CommittedManifest,
+) -> Result<Vec<serde_json::Value>, dx_update::manifest::ManifestError> {
+    let projected = dx_update::manifest::project(manifest)?;
+    let correlation = format!("update:{}", manifest.set);
+    let mut events = Vec::with_capacity(projected.len() * 2);
+    for file in &projected {
+        let kind = match file.kind {
+            dx_update::manifest::CommittedKind::Modify => ChangeKind::Modify,
+            dx_update::manifest::CommittedKind::Create => ChangeKind::Create,
+        };
+        let change = ChangeEvent {
+            path: file.path.clone(),
+            kind,
+            source_digest: file.source_digest.clone(),
+            edits: vec![Edit {
+                start: file.start_byte,
+                end: file.end_byte,
+                replacement: file.replacement.clone(),
+            }],
+        };
+        let change =
+            change_event(&change).map_err(|_| dx_update::manifest::ManifestError::BadContent {
+                path: file.path.clone(),
+            })?;
+        let change = with_correlation(change, &correlation).map_err(|_| {
+            dx_update::manifest::ManifestError::BadContent {
+                path: file.path.clone(),
+            }
+        })?;
+        events.push(change);
+        let mutation =
+            mutation_event(&file.path, kind, MutationOutcome::Applied, None).map_err(|_| {
+                dx_update::manifest::ManifestError::BadContent {
+                    path: file.path.clone(),
+                }
+            })?;
+        let mutation = with_correlation(mutation, &correlation).map_err(|_| {
+            dx_update::manifest::ManifestError::BadContent {
+                path: file.path.clone(),
+            }
+        })?;
+        events.push(mutation);
+    }
+    Ok(events)
 }
 
 fn parse_set(name: &str) -> dx_update::sets::SetId {
