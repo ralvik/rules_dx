@@ -94,6 +94,7 @@ rust_library(
         "src/reports/sarif.rs",
         "src/resolve.rs",
         "src/resolve/classify.rs",
+        "src/resolve/codegen_expand.rs",
         "src/resolve/entry.rs",
         "src/resolve/packages.rs",
         "src/resolve/query.rs",

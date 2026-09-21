@@ -56,24 +56,28 @@ aspect derives generated source artifacts and language import/source roots from 
 configured target's transitive closure. It builds and selects only that exact
 projection; no generated sibling target is required for the selected consumer.
 
-Accepted: `dx codegen <target>` selects only that configured target's
-transitive closure. No reverse-dependency expansion runs: `plan_managed`
-passes the single label to one Bazel build with the codegen aspect, and an
-empty shard set selects an empty exact projection.
+Accepted: `dx codegen <target>` selects that configured target's
+transitive closure plus its reverse-dependent expansion: `plan_managed`
+passes the single label for `env`, and for `codegen`/`setup` it first runs
+one unconfigured `bazel query`
+`kind('.*codegen_shard rule', rdeps(//..., set(<target>)))` and builds the
+codegen aspect over the sorted deduplicated union of the target plus every
+returned registered projection. An aspect cannot traverse reverse
+dependencies, so this query feeds back to analysis. An empty projection set
+keeps the single label, and an empty shard set selects an empty exact
+projection.
 
-Open: bare-schema expansion (#751) to every registered generated-language
-projection consuming that schema. An aspect cannot traverse reverse
-dependencies, so this needs a Bazel query for registered projection reverse
-dependents passed back to analysis. Not implemented; no query step exists
-today. Rust does not infer wrappers or
-language semantics. Missing wrappers are absent BUILD graph facts, not stale-metadata
-errors; users run `dx generate` when they want Gazelle to create them.
+Accepted: bare-schema expansion to every registered generated-language
+projection consuming that schema via the query above. Rust does not infer
+wrappers or language semantics. Missing wrappers are absent BUILD graph
+facts, not stale-metadata errors; users run `dx generate` when they want
+Gazelle to create them.
 
 Accepted: `dx setup <target>` with a capability-absent side carries the
 selected generation forward, or the managed empty generation on first run
 (see [Managed Environment State](managed-state.md#selection-and-carry-forward)).
-A bare schema therefore carries the environment forward today; all-projection
-expansion waits on the open query above.
+A bare schema therefore expands its codegen side to all registered
+projections while carrying the environment forward.
 
 Paths, directories, target patterns, multiple labels, profiles, and language selectors
 are rejected. A compatible target whose closure has no generated sources successfully
@@ -232,9 +236,11 @@ Codegen tests must cover:
   closure selection with equivalent effective roots and outputs.
 - Inclusion of production, test, example, and development projections in repository-
   wide mode without performance-motivated omission.
-- Bare-schema exact-closure selection today; all-projection reverse-dependent
-  expansion stays open with no query step. Consumer-target
-  closure selection requires no reverse-dependency inference.
+- Bare-schema expansion to all registered projections via one
+  `kind('.*codegen_shard rule', rdeps(//..., set(<target>)))` query whose
+  union with the target feeds analysis; empty projection sets keep the
+  single label. Consumer-target closure selection requires no
+  reverse-dependency inference beyond this shared expansion.
 - Empty exact projections and transitions between root, exact, and empty selections.
 - Gazelle-created wrappers and current BUILD-graph query selection for every supported
   generator/language pair.

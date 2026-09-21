@@ -20,6 +20,7 @@
 //! note in `plan.rs` for the planning carve.
 
 pub mod classify;
+pub mod codegen_expand;
 pub mod entry;
 pub mod packages;
 pub mod query;
@@ -28,6 +29,7 @@ pub mod test_map;
 pub mod types;
 
 pub(crate) use classify::{classify_scopes, first_line, parse_owners, resolve_file_owners};
+pub use codegen_expand::expand_codegen_roots;
 pub use entry::{resolve, resolve_for_test};
 pub(crate) use packages::PackageCache;
 pub(crate) use query::{ownership_set_expression, quote_set, run_label_query};

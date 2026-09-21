@@ -46,6 +46,13 @@ pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
 /// scope validation ([`dx_setup::resolve_scope`]); `command` must be
 /// managed (`codegen`, `env`, `setup`) and any other command fails with
 /// [`ForwardError::UnsupportedCommand`] instead of panicking.
+///
+/// Exact `codegen`/`setup` scopes with a bare schema expand through the
+/// reverse-dependent query before planning (see
+/// [`crate::resolve::expand_codegen_roots`]); that path plans through
+/// [`plan_managed_with_roots`] with the expanded roots so the summary
+/// lists every analyzed root. This entry keeps the single-label plan for
+/// repository scopes, `env`, and unexpanded callers.
 pub fn plan_managed(
     command: Command,
     scope: &dx_setup::SetupScope,
@@ -58,7 +65,7 @@ pub fn plan_managed(
     if !command.is_managed() {
         return Err(unsupported());
     }
-    let (roots, aspects, output_groups) = match command {
+    let roots = match command {
         Command::Codegen => {
             let scope = match scope {
                 dx_setup::SetupScope::Repository => dx_codegen::CodegenScope::Repository,
@@ -66,27 +73,85 @@ pub fn plan_managed(
                     dx_codegen::CodegenScope::Exact(label.clone())
                 }
             };
-            (
-                dx_codegen::scope_targets(&scope),
-                vec![dx_codegen::CODEGEN_ASPECT.to_owned()],
-                vec![dx_codegen::OUTPUT_GROUP.to_owned()],
-            )
+            dx_codegen::scope_targets(&scope)
         }
         Command::Env => {
             let scope = match scope {
                 dx_setup::SetupScope::Repository => dx_env_plan::EnvScope::Repository,
                 dx_setup::SetupScope::Exact(label) => dx_env_plan::EnvScope::Exact(label.clone()),
             };
-            (
-                dx_env_plan::scope_targets(&scope),
-                vec![dx_env_plan::ENV_ASPECT.to_owned()],
-                vec![dx_env_plan::OUTPUT_GROUP.to_owned()],
-            )
+            dx_env_plan::scope_targets(&scope)
         }
-        Command::Setup => {
-            let request = dx_setup::plan_request(scope);
-            (request.roots, request.aspects, request.output_groups)
-        }
+        Command::Setup => dx_setup::plan_request(scope).roots,
+        _ => return Err(unsupported()),
+    };
+    let argv = managed_argv(command, &roots, bazel_options, bep_path)?;
+    let display = match scope {
+        dx_setup::SetupScope::Repository => "//...",
+        dx_setup::SetupScope::Exact(label) => label,
+    };
+    let summary = format!("Running {} for {}", command.name(), display);
+    Ok(BuildPlan { argv, summary })
+}
+
+/// Builds the exact `bazel build` argv for a managed selection over
+/// explicit Bazel roots: the same collecting aspects, output groups,
+/// workspace policy, and BEP stream as [`plan_managed`], but with the
+/// caller-supplied `roots` (the bare-schema expansion output for exact
+/// `codegen`/`setup`). `roots` must be non-empty and deterministically
+/// ordered (see [`dx_codegen::expand_roots`]); the summary joins every
+/// root so dry-run shows the full analyzed set. Fails with
+/// [`ForwardError::UnsupportedCommand`] for non-managed commands and
+/// with conflicting-option/startup errors for bad user options, exactly
+/// like [`plan_managed`].
+/// See: `docs/environments/codegen.md` (bare-schema expansion).
+pub fn plan_managed_with_roots(
+    command: Command,
+    roots: &[String],
+    bazel_options: &[String],
+    bep_path: &str,
+) -> Result<BuildPlan, ForwardError> {
+    let argv = managed_argv(command, roots, bazel_options, bep_path)?;
+    let summary = format!("Running {} for {}", command.name(), roots.join(" "));
+    Ok(BuildPlan { argv, summary })
+}
+
+/// Shared argv assembly behind [`plan_managed`] and
+/// [`plan_managed_with_roots`]: `build` plus the caller-supplied roots,
+/// the command's collecting aspects and output groups, the canonical
+/// workspace policy, and the BEP stream path. User options forward after
+/// the required policy with the same protected-flag checks.
+fn managed_argv(
+    command: Command,
+    roots: &[String],
+    bazel_options: &[String],
+    bep_path: &str,
+) -> Result<Vec<String>, ForwardError> {
+    let unsupported = || ForwardError::UnsupportedCommand {
+        command: command.name().to_owned(),
+    };
+    if !command.is_managed() {
+        return Err(unsupported());
+    }
+    let (aspects, output_groups) = match command {
+        Command::Codegen => (
+            vec![dx_codegen::CODEGEN_ASPECT.to_owned()],
+            vec![dx_codegen::OUTPUT_GROUP.to_owned()],
+        ),
+        Command::Env => (
+            vec![dx_env_plan::ENV_ASPECT.to_owned()],
+            vec![dx_env_plan::OUTPUT_GROUP.to_owned()],
+        ),
+        Command::Setup => (
+            vec![
+                dx_setup::CODEGEN_ASPECT.to_owned(),
+                dx_setup::ENV_ASPECT.to_owned(),
+            ],
+            vec![
+                dx_setup::CODEGEN_OUTPUT_GROUP.to_owned(),
+                dx_setup::ENV_OUTPUT_GROUP.to_owned(),
+            ],
+        ),
         _ => return Err(unsupported()),
     };
     let mut required = Vec::with_capacity(aspects.len() + output_groups.len() + 2);
@@ -116,13 +181,7 @@ pub fn plan_managed(
             required: None,
         },
     ];
-    let argv = build_workflow_argv("build", bazel_options, &required, &protected, &roots)?;
-    let display = match scope {
-        dx_setup::SetupScope::Repository => "//...",
-        dx_setup::SetupScope::Exact(label) => label,
-    };
-    let summary = format!("Running {} for {}", command.name(), display);
-    Ok(BuildPlan { argv, summary })
+    build_workflow_argv("build", bazel_options, &required, &protected, roots)
 }
 
 #[cfg(test)]
@@ -211,6 +270,53 @@ mod tests {
             assert_eq!(
                 plan.summary,
                 format!("Running {} for //a:one", command.name())
+            );
+        }
+    }
+
+    #[test]
+    fn managed_expanded_roots_join_every_root_in_argv_and_summary() {
+        // Bare-schema expansion output plans through the expanded roots
+        // so one Bazel build analyzes the schema plus every registered
+        // projection; the summary lists the full analyzed set.
+        // See: `docs/environments/codegen.md` (bare-schema expansion).
+        let roots = options(&[
+            "//generation:codegen_prost_fixture",
+            "//generation:result_proto",
+        ]);
+        let plan =
+            plan_managed_with_roots(Command::Codegen, &roots, &[], "/tmp/bep.json").expect("plan");
+        assert_eq!(
+            plan.argv.last(),
+            Some(&"//generation:result_proto".to_owned())
+        );
+        assert!(plan
+            .argv
+            .contains(&"//generation:codegen_prost_fixture".to_owned()));
+        assert_eq!(
+            plan.summary,
+            "Running codegen for //generation:codegen_prost_fixture //generation:result_proto"
+        );
+        let plan =
+            plan_managed_with_roots(Command::Setup, &roots, &[], "/tmp/bep.json").expect("plan");
+        assert_eq!(
+            plan.argv
+                .iter()
+                .filter(|arg| arg.starts_with("--aspects="))
+                .count(),
+            2,
+            "expanded setup still requests both aspects: {plan:?}"
+        );
+        assert_eq!(
+            plan.summary,
+            "Running setup for //generation:codegen_prost_fixture //generation:result_proto"
+        );
+        for command in [Command::Build, Command::Lint] {
+            let err = plan_managed_with_roots(command, &roots, &[], "/tmp/bep.json")
+                .expect_err("unmanaged must fail");
+            assert!(
+                matches!(err, ForwardError::UnsupportedCommand { .. }),
+                "{command:?} produced {err:?}"
             );
         }
     }

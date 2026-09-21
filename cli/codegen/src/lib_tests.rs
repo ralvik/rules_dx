@@ -99,6 +99,59 @@ fn frozen_identities_match_starlark() {
         "//generation:codegen.bzl%dx_codegen_plan_aspect"
     );
     assert_eq!(REPOSITORY_TARGET, "//dx:codegen");
+    assert_eq!(EXPANSION_KIND_FILTER, ".*codegen_shard rule");
+}
+
+#[test]
+fn expansion_expression_queries_shard_rdeps() {
+    assert_eq!(
+        expansion_expression("//generation:result_proto"),
+        "kind('.*codegen_shard rule', rdeps(//..., set(\"//generation:result_proto\")))"
+    );
+    assert_eq!(
+        expansion_expression("@repo//pkg:schema"),
+        "kind('.*codegen_shard rule', rdeps(//..., set(\"@repo//pkg:schema\")))"
+    );
+    // Labels quote backslashes and quotes so the expression stays stable.
+    assert_eq!(
+        expansion_expression("//pkg:a\"b\\c"),
+        "kind('.*codegen_shard rule', rdeps(//..., set(\"//pkg:a\\\"b\\\\c\")))"
+    );
+}
+
+#[test]
+fn expand_roots_unions_schema_with_projections() {
+    // Empty projections keep the single label (bare schema with no
+    // consumers selects its own empty closure, never a failure).
+    assert_eq!(
+        expand_roots("//generation:result_proto", &[]),
+        vec!["//generation:result_proto".to_owned()]
+    );
+    // Projections union with the schema, sorted and deduplicated.
+    assert_eq!(
+        expand_roots(
+            "//generation:result_proto",
+            &[
+                "//generation:codegen_prost_fixture".to_owned(),
+                "//generation:codegen_shard_beta".to_owned(),
+                "//generation:codegen_prost_fixture".to_owned(),
+            ]
+        ),
+        vec![
+            "//generation:codegen_prost_fixture".to_owned(),
+            "//generation:codegen_shard_beta".to_owned(),
+            "//generation:result_proto".to_owned(),
+        ]
+    );
+    // A shard keeps itself plus downstream shards (deduped, so the
+    // merged plan is unchanged).
+    assert_eq!(
+        expand_roots(
+            "//generation:codegen_shard_beta",
+            &["//generation:codegen_shard_beta".to_owned()]
+        ),
+        vec!["//generation:codegen_shard_beta".to_owned()]
+    );
 }
 
 #[test]

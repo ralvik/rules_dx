@@ -10,14 +10,18 @@
 
 use super::common::*;
 use super::managed_prepare::{map_commit_error, prepare_managed_sides};
-use crate::args::Invocation;
-use crate::plan::{bep_path, plan_managed};
+use crate::args::{Command, Invocation};
+use crate::plan::{bep_path, plan_managed, plan_managed_with_roots};
+use crate::resolve::expand_codegen_roots;
 use dx_output::OutputMode;
 use dx_process::ForwardError;
 
 /// Runs `dx codegen`, `dx env`, and `dx setup`:
 /// validates the label-only scope through the shared setup scope rules,
-/// plans the Bazel collection request with [`plan_managed`], and either
+/// expands exact `codegen`/`setup` targets through the bare-schema
+/// reverse-dependent query (see [`expand_codegen_roots`]), plans the
+/// Bazel collection request with [`plan_managed`] (repository/`env`) or
+/// [`plan_managed_with_roots`] (expanded exact `codegen`/`setup`), and either
 /// renders the `--dry-run` summary (planning nothing else, launching
 /// nothing) or runs the live Bazel build, collects and validates the
 /// plan shards, stages the immutable generations, and commits the
@@ -43,6 +47,7 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,
         runner,
+        query_runner,
         temp_dir,
         pid,
         nonce,
@@ -73,12 +78,38 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
             "temporary event path is not UTF-8",
         );
     };
-    let plan = match plan_managed(
-        invocation.command,
-        &scope,
-        &invocation.bazel_options,
-        bep_text,
-    ) {
+    // Bare-schema expansion: exact `codegen`/`setup` targets expand to
+    // their registered `*_codegen_shard` reverse dependents via one
+    // unconfigured `bazel query` before analysis (an aspect cannot
+    // traverse reverse deps). Repository scopes already cover every
+    // projection; `env` needs no codegen expansion. An empty projection
+    // set keeps the single label so a bare schema with no consumers
+    // still selects its own empty closure. Query failures are pre-exec.
+    // See: `docs/environments/codegen.md` (bare-schema expansion).
+    let expanded: Option<Vec<String>> = match (invocation.command, &scope) {
+        (Command::Codegen | Command::Setup, dx_setup::SetupScope::Exact(label)) => {
+            match expand_codegen_roots(label, workspace, query_runner) {
+                Ok(roots) => Some(roots),
+                Err(error) => return pre_exec(err, &error.to_string()),
+            }
+        }
+        _ => None,
+    };
+    let plan = match expanded {
+        Some(ref roots) => plan_managed_with_roots(
+            invocation.command,
+            roots,
+            &invocation.bazel_options,
+            bep_text,
+        ),
+        None => plan_managed(
+            invocation.command,
+            &scope,
+            &invocation.bazel_options,
+            bep_text,
+        ),
+    };
+    let plan = match plan {
         Ok(plan) => plan,
         Err(error) => return pre_exec(err, &format!("{error}")),
     };
@@ -265,6 +296,11 @@ mod tests {
         for command in ["codegen", "env"] {
             let name = format!("managed-exact-{command}");
             let harness = Harness::new(&name);
+            if command == "codegen" {
+                // Bare-schema expansion with no registered projections
+                // keeps the single label (empty exact closure).
+                harness.query.script_owners("\n");
+            }
             let (code, out, err) = harness.run(&[command, "//a:one"]);
             assert_eq!(code, 0, "{out}{err}");
             assert!(out.contains("selected setup "), "{out}");
@@ -279,6 +315,7 @@ mod tests {
     #[test]
     fn managed_live_exact_setup_without_capability_fails_closed() {
         let harness = Harness::new("managed-setup-nocap");
+        harness.query.script_owners("\n");
         let (code, out, err) = harness.run(&["setup", "//a:one"]);
         assert_eq!(code, 1, "{out}{err}");
         assert!(err.contains("dx: no_capability:"), "{err}");
@@ -287,6 +324,89 @@ mod tests {
             read_current_pair(&harness.workspace).expect("read current"),
             None,
             "capability failure commits nothing"
+        );
+    }
+
+    #[test]
+    fn managed_exact_codegen_expands_bare_schema_to_projections() {
+        // Bare-schema expansion: the query returns the registered
+        // projections consuming the schema, the plan analyzes the union,
+        // and dry-run shows the full analyzed set without launching a
+        // build. Live runs with the same expansion still commit.
+        // See: `docs/environments/codegen.md` (bare-schema expansion).
+        let harness = Harness::new("managed-expand-dryrun");
+        harness
+            .query
+            .script_owners("//generation:codegen_prost_fixture\n");
+        let (code, out, err) = harness.run(&["codegen", "//generation:result_proto", "--dry-run"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(
+            out.contains(
+                "Running codegen for //generation:codegen_prost_fixture //generation:result_proto"
+            ),
+            "{out}"
+        );
+        assert_eq!(err, "", "{err}");
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "dry-run launches no build"
+        );
+        assert_eq!(
+            harness.query.calls.borrow().len(),
+            1,
+            "dry-run still runs the expansion query"
+        );
+        assert!(
+            harness.query.calls.borrow()[0].last().expect("expression")
+                == "kind('.*codegen_shard rule', rdeps(//..., set(\"//generation:result_proto\")))",
+            "expansion queries shard rdeps: {:?}",
+            harness.query.calls.borrow()[0]
+        );
+
+        let harness = Harness::new("managed-expand-live");
+        harness
+            .query
+            .script_owners("//generation:codegen_prost_fixture\n");
+        let (code, out, err) = harness.run(&["codegen", "//generation:result_proto"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(
+            out.contains(
+                "Running codegen for //generation:codegen_prost_fixture //generation:result_proto"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("selected setup "), "{out}");
+
+        let harness = Harness::new("managed-expand-setup");
+        harness
+            .query
+            .script_owners("//generation:codegen_prost_fixture\n");
+        let (code, out, err) = harness.run(&["setup", "//generation:result_proto", "--dry-run"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(
+            out.contains(
+                "Running setup for //generation:codegen_prost_fixture //generation:result_proto"
+            ),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn managed_exact_codegen_expansion_failure_is_pre_exec() {
+        use crate::resolve::QueryResult;
+
+        let harness = Harness::new("managed-expand-fail");
+        harness.query.outputs.borrow_mut().push(QueryResult {
+            code: Some(2),
+            stdout: Vec::new(),
+            stderr: b"query failed: blah".to_vec(),
+        });
+        let (code, _, err) = harness.run(&["codegen", "//generation:result_proto"]);
+        assert_eq!(code, 2, "{err}");
+        assert!(err.contains("query failed: blah"), "{err}");
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "expansion failure launches nothing"
         );
     }
 

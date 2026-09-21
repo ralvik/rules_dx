@@ -63,6 +63,64 @@ pub const CODEGEN_ASPECT: &str = "//generation:codegen.bzl%dx_codegen_plan_aspec
 /// owns the selection identity.
 pub const REPOSITORY_TARGET: &str = "//dx:codegen";
 
+/// Kind filter for the bare-schema reverse-dependent expansion query:
+/// every registered generated-language projection is a `*_codegen_shard`
+/// rule (`dx_codegen_shard`, `prost_codegen_shard`). Matches the
+/// `kind('... rule', ...)` vocabulary the scope resolvers use for
+/// `_test`/`_binary` mapping.
+/// See: `docs/environments/codegen.md` (bare-schema expansion).
+pub const EXPANSION_KIND_FILTER: &str = ".*codegen_shard rule";
+
+/// Builds the unconfigured `bazel query` expression expanding one exact
+/// target to its registered projection reverse dependents: every
+/// `*_codegen_shard` rule transitively depending on `schema` in `//...`.
+/// Transitive (no depth bound) so a bare `proto_library` reaches its
+/// shards through intermediate `rust_prost_library` edges; an aspect
+/// cannot traverse reverse deps, so this query feeds back to analysis.
+/// See: `docs/environments/codegen.md` (bare-schema expansion).
+pub fn expansion_expression(schema: &str) -> String {
+    format!(
+        "kind('{EXPANSION_KIND_FILTER}', rdeps(//..., set({})))",
+        quote_label(schema)
+    )
+}
+
+/// Quotes one label as a double-quoted query string literal, escaping
+/// backslashes and quotes. Mirrors the resolver quoting so expansion
+/// expressions stay stable and inspectable.
+/// See: `cli/cli/src/resolve/query.rs` (`quote_label`).
+fn quote_label(label: &str) -> String {
+    let mut quoted = String::with_capacity(label.len() + 2);
+    quoted.push('"');
+    for ch in label.chars() {
+        match ch {
+            '\\' => quoted.push_str("\\\\"),
+            '"' => quoted.push_str("\\\""),
+            _ => quoted.push(ch),
+        }
+    }
+    quoted.push('"');
+    quoted
+}
+
+/// Merges one exact target with its queried projections into the
+/// deterministic Bazel roots to analyze: the sorted deduplicated union
+/// of `schema` plus `projections`. An empty projection set keeps the
+/// single label so a bare schema with no consumers still selects its
+/// own (empty) exact closure instead of failing; a consumer or shard
+/// keeps its own closure plus any downstream shards (deduped, so the
+/// merged plan is unchanged). Callers pass the `run_label_query` output
+/// for [`expansion_expression`].
+/// See: `docs/environments/codegen.md` (bare-schema expansion).
+pub fn expand_roots(schema: &str, projections: &[String]) -> Vec<String> {
+    let mut roots: Vec<String> = Vec::with_capacity(1 + projections.len());
+    roots.push(schema.to_owned());
+    roots.extend(projections.iter().cloned());
+    roots.sort();
+    roots.dedup();
+    roots
+}
+
 /// Selected codegen scope: the whole repository or one exact target.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CodegenScope {
