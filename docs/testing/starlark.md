@@ -8,9 +8,9 @@ environment, tool, and quality matrices.
 
 Public API: `starlark_test` macro, `expect_equal`, `expect_true`,
 `expect_false`, `expect_contains`, `expect_match` assertion constructors,
-`DxSubjectInfo` plus `DxAspectInfo` providers plus `dx_aspect_note`
-aspect, all loadable from `//libs/starlark:defs.bzl`. One macro call is
-one addressable Bazel test target with one Bazel result.
+`DxSubjectInfo` plus `DxAspectInfo` plus `DxConfigInfo` providers plus
+`dx_aspect_note` aspect, all loadable from `//libs/starlark:defs.bzl`. One
+macro call is one addressable Bazel test target with one Bazel result.
 
 ## Modes
 
@@ -23,16 +23,24 @@ one addressable Bazel test target with one Bazel result.
 - `unit` asserts pure Starlark function results with no I/O. Requires
   non-empty `checks`, rejects `subjects`.
 - `analysis` observes subject targets (provider fields, output basenames,
-  aspect notes), renders deterministic observations, and compares them
-  against `expected_observations`. Requires non-empty `subjects`. Every
-  subject carries the `dx_aspect_note` observation aspect, which derives
-  `aspect_seen` plus `subject_label` plus `has_subject` plus
-  `field_count` plus transitive `deps` notes without subject cooperation;
-  observations render sorted `aspect_field` lines. The concrete use case
-  lives in
+  aspect notes, configuration notes), renders deterministic observations,
+  and compares them against `expected_observations`. Requires non-empty
+  `subjects`. Every subject carries the `dx_aspect_note` observation
+  aspect, which derives `aspect_seen` plus `subject_label` plus
+  `has_subject` plus `field_count` plus transitive `deps` notes without
+  subject cooperation; observations render sorted `aspect_field` lines.
+  Configuration subjects expose `DxConfigInfo` (`config_value` plus
+  `select`-resolved `note` plus `platform`-fragment presence plus
+  `transition` role, including the transitioned dep value); observations
+  render sorted `config_field` lines. The aspect use case lives in
   `../../libs/starlark/tests/fixtures/starlark_futures/aspect_subjects.bzl`
   (leaf plus group with deps, direct plus transitive notes), proven by
-  `//libs/starlark/tests:aspect_subject_analysis`.
+  `//libs/starlark/tests:aspect_subject_analysis`. The configuration use
+  case lives in
+  `../../libs/starlark/tests/fixtures/starlark_futures/config_subjects.bzl`
+  (leaf plus group with configurable `select` plus `platform` fragment plus
+  outgoing flip transition), proven by
+  `//libs/starlark/tests:config_subject_analysis`.
 - `execution` greps runfiles fixtures (`file_checks`, AND semantics over
   newline-separated substrings, one result line per substring). Requires
   non-empty `file_checks`, rejects `subjects`.
@@ -120,10 +128,10 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Decided under closed #588 plus #790 plus #791 plus #792 plus #794 per [ADR 0009](../decisions/0009-starlark-testing.md)
+Decided under closed #588 plus #790 plus #791 plus #792 plus #793 plus #794 per [ADR 0009](../decisions/0009-starlark-testing.md)
 (remaining subjects provisional pending concrete use cases), pinned by fixtures in
 `../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
-`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus `output_group_subjects.bzl`)
+`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus `output_group_subjects.bzl` plus `config_subjects.bzl`)
 and qualified by
 `bazel run //tools/ci:starlark_futures_qualification`. Test framework only;
 seed only, no Supported claim. Richer matchers graduated under #790 and
@@ -135,8 +143,8 @@ toolchain mapping plus resolved-report use case pinned under #792 (via
 output-group subjects stay deferred with the group-to-files mapping plus
 resolved-report use case pinned under #794 (via
 `output_group_subjects.bzl`, proven by
-`//libs/starlark/tests:output_group_unit`); configuration plus action
-subjects stay deferred.
+`//libs/starlark/tests:output_group_unit`); configuration subjects graduated
+under #793 and are accepted above; action subjects stay deferred.
 
 - Per-check filtering stays wont-fix: target granularity is contract. One
   macro call is one addressable Bazel test target with one Bazel result;
@@ -151,9 +159,12 @@ subjects stay deferred.
   needs platform and toolchain context beyond provider-field observation;
   direct toolchain observation stays deferred and consumers expose resolved
   state via `DxSubjectInfo` when observation is needed.
-- Configuration subjects stay deferred (#793), including transitions, pending a
-  concrete use case plus fixtures plus successor issue. Configurable
-  attributes, fragments, and transitions are not observed.
+- Configuration subjects graduated under #793 and are accepted above;
+  configurable `select` attributes plus `platform`-fragment presence plus
+  outgoing `config_flip_transition` are observed as `config_field` lines
+  via `DxConfigInfo`, with the leaf plus group use case in
+  `config_subjects.bzl` proven by
+  `//libs/starlark/tests:config_subject_analysis`.
 - Output-group subjects stay deferred (#794) with the group-to-files
   mapping plus resolved-report use case pinned via
   `output_group_subjects.bzl` (proven by

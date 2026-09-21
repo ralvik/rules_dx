@@ -119,6 +119,19 @@ Proven by `aspect_subject_analysis` over the futures
 transitive notes).
 matrix-item: aspect-subjects
 
+## item: configuration-subjects
+
+`DxConfigInfo` provider in `libs/starlark/defs.bzl`: subject rules expose
+`config_value` plus `select`-resolved `note` plus `platform`-fragment
+presence plus `transition` role, and analysis renders sorted `config_field`
+lines alongside provider fields plus outputs plus aspect notes. The outgoing
+`config_flip_transition` flips the futures `config_value` setting for deps,
+so the group observes its own `plain` config with a `flipped` dep
+(`dep_config` plus `dep_note` re-resolved under the transition). Proven by
+`config_subject_analysis` over the futures `config_subjects.bzl` use case
+(leaf plus group with select plus fragment plus transition).
+matrix-item: configuration-subjects
+
 ## item: failure-rendering
 
 Mismatch diagnostics render `FAIL` with expected and actual values in
