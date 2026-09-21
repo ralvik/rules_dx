@@ -69,8 +69,11 @@ fn load_advisories(
     // and never a stale fallback. Snapshots refresh automatically via
     // supported upstream database-download tooling (per-set OSV GCS zips
     // fetched by HTTPS GET with no inventory in the request); the derived
-    // bytes plus identity are the audited inputs. Live CLI performs no
-    // network fetch and no lockfile upload.
+    // bytes plus identity are the audited inputs. Airgapped workspaces
+    // populate the same inputs by copying the vendored advisory mirror
+    // (See: `docs/deploy/offline-bootstrap.md#vendored-advisory-mirror`);
+    // mirror snapshots keep the same sha256 plus same-day freshness gates.
+    // Live CLI performs no network fetch and no lockfile upload.
     let code = dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED;
     let source = dx_audit::advisory::advisory_source(set.name()).ok_or_else(|| {
         format!(
@@ -82,7 +85,7 @@ fn load_advisories(
     let full = workspace.join(&rel);
     if !full.is_file() {
         return Err(format!(
-            "{code}: could not obtain current advisory data for {}: missing {rel} (refresh via {source})",
+            "{code}: could not obtain current advisory data for {}: missing {rel} (refresh via {source}, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)",
             set.name()
         ));
     }
@@ -138,7 +141,7 @@ fn load_advisories(
     }
     if dx_audit::advisory::freshness(&snapshot, today) != dx_audit::advisory::Freshness::Fresh {
         return Err(format!(
-            "{code}: could not obtain current advisory data for {}: stale snapshot {} (want {today})",
+            "{code}: could not obtain current advisory data for {}: stale snapshot {} (want {today}; refresh via {source}, or re-copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)",
             set.name(),
             snapshot.retrieved_at
         ));

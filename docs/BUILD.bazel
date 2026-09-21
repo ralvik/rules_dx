@@ -80,6 +80,7 @@ real_source_target(
         "decisions/README.md",
         "deploy/README.md",
         "deploy/authoring.md",
+        "deploy/offline-bootstrap.md",
         "deploy/release-runbook.md",
         "documentation/README.md",
         "documentation/build-check-serve.md",

@@ -76,6 +76,12 @@ Before `dx` is installed, `bazel run //dx:env` remains the minimal bootstrap tha
 exposes the matching CLI and configured tools. The normal first complete developer
 initialization is then `dx setup`.
 
+Airgapped hosts run the same workflows from the vendored bundle (see
+[Offline Bootstrap](../../deploy/offline-bootstrap.md#offline-setup-env-and-codegen)):
+selection, validation, and atomic-commit semantics are unchanged, and with
+unchanged inputs Bazel reuses already-fetched modules and toolchains with no
+new fetch. First fetch still needs network once.
+
 If no setup selection exists, running only `dx env` or `dx codegen` creates a managed
 empty generation for the unrequested side. The command does not execute that side, and
 `.dx/setups/current/environment` and `.dx/setups/current/generated` remain valid paths.

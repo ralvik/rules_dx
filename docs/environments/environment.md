@@ -272,13 +272,15 @@ The Bazel-first installation path is `bazel run //dx:env`, which exposes the `dx
 version matching the consumer's pinned module. Standalone installation requires neither
 a local Rust toolchain nor Bazel. Seed-host standalone packaging is
 `//cli/cli:dx_standalone` with install-time publisher-identity verification in
-`//deploy/install:dx_verify`; until releases are cut with owner approval the Bazel-first path
+  `//deploy/install:dx_verify`; until releases are cut with owner approval the Bazel-first path
 above is the supported installation. There is no checksum-only fallback or optional
 verification step: a checksum delivered alongside a binary is not by itself proof of
 publisher identity. Signing technology, trust-root and verifier bootstrap, identity
 binding, and verification inputs are implemented in `//deploy/install:dx_verify`
 (Sigstore keyless bundle plus identity/issuer on the TUF trust root, no checksum-only
-fallback, failure before install or exec).
+fallback, failure before install or exec). Airgapped hosts install the same
+artifacts from the vendored bundle; see
+[Offline Bootstrap](../deploy/offline-bootstrap.md).
 
 The approved v1 destinations are the Bazel Central Registry for the `rules_dx` module
 and GitHub Releases for standalone `dx` binaries. Publication mechanics are

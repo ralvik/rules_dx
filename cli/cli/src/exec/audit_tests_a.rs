@@ -431,6 +431,37 @@ pub(super) fn audit_live_npm_pnpm_git_resolution_is_incomplete() {
 }
 
 #[test]
+pub(super) fn audit_live_vendored_mirror_analyzes_offline_like_upstream() {
+    // Vendored advisory mirrors (See: `docs/deploy/offline-bootstrap.md`):
+    // a `file://` identity copied from the offline bundle analyzes
+    // offline under the same sha256 plus same-day freshness gates, so a
+    // mirrored finding still fails instead of passing clean.
+    let runner = AuditRunner::clean();
+    let (code, _out, err) = run_with(
+        &["audit", "security", "//go/tests/fixtures/hello:hello"],
+        &runner,
+        &|harness| {
+            write_go_mod(harness);
+            let json = r#"[{"id":"GHSA-go-test-0001","package":"github.com/google/go-cmp","versions":">=v0.5.0, <v0.7.0","severity":"high","fixed":["v0.7.0"],"set":"go"}]"#;
+            let today = super::today_utc();
+            let sha = dx_digest::sha256_hex(json.as_bytes());
+            harness.write_source(".dx/advisory/go.json", json);
+            let meta = serde_json::json!({
+                "set": "go",
+                "url": "file:///opt/dx-offline/advisory/go.json",
+                "sha256": sha,
+                "retrieved_at": today,
+                "path": ".dx/advisory/go.json",
+            });
+            harness.write_source(".dx/advisory/go.meta.json", &meta.to_string());
+        },
+    );
+    assert_eq!(code, 1, "{err}");
+    assert!(err.contains("audit_failed"), "{err}");
+    assert!(err.contains("1 vulnerability findings"), "{err}");
+}
+
+#[test]
 pub(super) fn audit_live_go_advisory_findings_fail_instead_of_empty_clean() {
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
