@@ -40,7 +40,9 @@ existing hooks rather than replacing them; there is no `--force` flag to overrid
 Hook destination/identity mechanics and handling of existing ignore configuration
 are implemented as specified here: managed shims only, unmanaged refusal; this is not permission to overwrite existing files.
 `dx hooks uninstall` removes only shims it installed. `dx hooks status` prints the
-effective merged configuration and last-run timings per check. Native launcher shims
+effective merged configuration and measured last-run timings per check
+(persisted in gitignored `.dx/hooks-timings.toml`, updated on each successful
+run; absent means no runs yet, never hardcoded estimates). Native launcher shims
 cover hosts where shell hooks do not execute.
 
 `--dry-run` plans without mutating or reading config: `install` prints
@@ -55,9 +57,9 @@ shims exist locally. Forcing hook installation in CI is rejected.
 
 Hook management and staged-file selection are the only exceptions to the common
 prohibition on product Git inspection. All product Git operations for hooks, including
-installation and staged selection, use hermetic managed Git, never ambient Git or a
-PATH fallback. Prefer existing upstream Git rules when they satisfy the workflow.
-This does not authorize general Git
+installation and staged selection, use hermetic managed Git resolved from the
+absolute `DX_GIT_BIN` path, never ambient Git or a PATH fallback. Prefer existing
+upstream Git rules when they satisfy the workflow. This does not authorize general Git
 status checks or clean-worktree gates, including during init.
 
 The approved bootstrap/hook exception narrows the earlier blanket discovery/Git rules so init can
@@ -90,10 +92,11 @@ The personal overlay is the gitignored root file `dx.local.toml`: general
 local-only overrides with a `[hooks]` table, readable without Bazel analysis so hook
 shims can merge it before and around Bazel execution. TOML is used (not JSON)
 because it supports comments and matches `ruff.toml`/`Cargo.toml` conventions;
-the implementation is planned to reuse TOML parsing with the committed
+both layers parse through the shared `toml` implementation with the committed
 [`licenses.toml`](audit-update-bazel.md#license-family-dx-audit-license). The overlay uses the same schema as the
 baseline and may add checks (for example, enabling affected tests) or locally relax
-them. Local relaxation affects only that machine; it cannot weaken the shared gate.
+them; a present overlay field replaces the baseline field, absent fields inherit.
+Local relaxation affects only that machine; it cannot weaken the shared gate.
 `dx hooks status` always shows the effective merged result, so what runs is never a
 mystery. One overlay file absorbs future local-only settings; no per-feature local
 files are added.

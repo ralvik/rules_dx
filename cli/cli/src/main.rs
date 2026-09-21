@@ -149,6 +149,12 @@ impl Runner for BinaryRunner {
             .filter(|path| path.is_absolute())
     }
 
+    fn git_tool(&self) -> Option<std::path::PathBuf> {
+        std::env::var_os("DX_GIT_BIN")
+            .map(std::path::PathBuf::from)
+            .filter(|path| path.is_absolute())
+    }
+
     fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus> {
         let (binary, args) = argv.split_first().ok_or_else(|| {
             io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")

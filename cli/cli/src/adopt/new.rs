@@ -95,6 +95,19 @@ mod tests {
         }
     }
 
+    struct NullRunner;
+
+    impl dx_process::Runner for NullRunner {
+        fn run(
+            &self,
+            _argv: &[String],
+            _cwd: &std::path::Path,
+            _env: &[(&str, &str)],
+        ) -> io::Result<dx_process::ChildStatus> {
+            Ok(dx_process::ChildStatus { code: Some(0) })
+        }
+    }
+
     #[test]
     fn new_dry_run_lists_without_writing() {
         let inv = invocation(&["new", "rust", "demo", "--dry-run"]);
@@ -107,6 +120,7 @@ mod tests {
             AdoptEnv {
                 workspace: &root,
                 query_runner: &NullQuery,
+                runner: &NullRunner,
                 out: &mut out,
                 err: &mut err,
             },
@@ -130,6 +144,7 @@ mod tests {
             AdoptEnv {
                 workspace: &root,
                 query_runner: &NullQuery,
+                runner: &NullRunner,
                 out: &mut out,
                 err: &mut err,
             },
@@ -151,6 +166,7 @@ mod tests {
             AdoptEnv {
                 workspace: &root,
                 query_runner: &NullQuery,
+                runner: &NullRunner,
                 out: &mut out,
                 err: &mut err,
             },

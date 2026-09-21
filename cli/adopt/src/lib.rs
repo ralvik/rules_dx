@@ -35,9 +35,13 @@ pub mod watch;
 pub use completion::{completion_source_is_single, ALL_COMMANDS, SUPPORTED_SHELLS};
 pub use error::AdoptError;
 pub use hooks::{
-    hook_git_is_hermetic, hook_shim_overwrite_allowed, hook_status_shows_merged, install_hooks,
-    render_hook_shim, render_hooks_status, render_local_overlay, uninstall_hooks, HOOK_BUDGET_SECS,
-    HOOK_MANAGED_MARKER, LOCAL_OVERLAY_COMMENT,
+    checks_for_trigger, default_hooks_config, hook_check_timed_out, hook_git_is_hermetic,
+    hook_git_path_is_hermetic, hook_shim_overwrite_allowed, hook_status_shows_merged,
+    install_hooks, is_hook_trigger, load_hook_timings, load_hooks_config, render_hook_shim,
+    render_hook_timings, render_hooks_status, render_hooks_status_merged, render_local_overlay,
+    uninstall_hooks, HookTimings, HooksConfig, HOOK_BASELINE_REL, HOOK_BUDGET_SECS,
+    HOOK_GIT_ENV_VAR, HOOK_MANAGED_MARKER, HOOK_OVERLAY_REL, HOOK_TIMINGS_REL,
+    LOCAL_OVERLAY_COMMENT,
 };
 pub use inspect::{inspect_scope_allowed, plan_inspect, plan_somepath, InspectPlan};
 pub use migrate::{
