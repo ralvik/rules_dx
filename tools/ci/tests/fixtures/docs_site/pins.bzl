@@ -1,4 +1,4 @@
-"""Docs site execution plus rebuild plus link-completeness pins (renderer plus site execution, mdBook).
+"""Docs site execution plus rebuild plus link-completeness plus timing pins (renderer plus site execution, mdBook).
 
 Contract: `docs/documentation/site.md`.
 Fixture: `tools/ci/tests/fixtures/docs_site/` via
@@ -7,7 +7,9 @@ Execution: `//docs/site:demo_site` extract to aggregate to render over
 miniature inputs; generated IR stays in Bazel outputs, never beside
 sources; rebuild proof hashes two builds and diffs them; link/reference
 completeness proves prose plus API pages resolve all internal links with
-no dangling targets at the pre-render boundary; seed-only,
+no dangling targets at the pre-render boundary; first-hour timing proves
+the built site/docs journey completes in the first hour as one-shot
+evidence per ADR 0022, never a standing benchmark; seed-only,
 no Supported claim.
 """
 
@@ -75,10 +77,23 @@ REJECTED_HTML_PARSED_INDEX = "search index parsing rendered HTML is rejected"
 REJECTED_WATCHER = "custom watcher or refresh engine is rejected; Bazel incrementality only"
 REJECTED_MDBOOK_TEST = "mdbook test wrapper is rejected"
 REJECTED_DANGLING_SILENT = "silent dangling link pass is rejected"
+REJECTED_TIMING_GATE = "CI timing budget enforcement is rejected per ADR 0022"
+REJECTED_STANDING_BENCHMARK = "standing benchmark with baseline or comparison machinery is rejected per ADR 0022"
+
+# First-hour timing proof at the built site/docs flow: the fresh-checkout
+# journey completes in the first hour. Delivered seed-only under issue #784
+# as one-shot evidence proof per ADR 0022, never a standing benchmark with
+# no CI timing budget enforced.
+FIRST_HOUR_JOURNEY = "demo_site cold plus warm plus docs corpus plus site tests"
+TIMING_STEPS = ["demo_site", "docs corpus", "site tests"]
+TIMING_ONE_SHOT = "one-shot evidence proof per ADR 0022, not a standing benchmark"
+TIMING_NO_GATE = "no CI timing budget enforced"
+TIMING_METHOD = "wall plus Elapsed plus actions on seed host, historical reference only"
+TIMING_SEED_ONLY = "first-hour timing proof qualified seed-only under issue #784"
 
 COMPAT_SEED_ONLY = "Compatibility: seed Linux x86_64 only"
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issues #780 plus #781 plus #782"
+SEED_ONLY = "qualified seed-only under issues #780 plus #781 plus #782 plus #784"
 REBUILD_SEED_ONLY = "rebuild proof qualified seed-only under issue #781"
 LINK_SEED_ONLY_QUAL = "link completeness qualified seed-only under issue #782"
-OWNED_GAP = "guide-step wiring plus timing proof plus pin-bump/drift stay owned gaps under #783-#785"
+OWNED_GAP = "guide-step wiring plus pin-bump/drift stay owned gaps under #783 plus #785"
