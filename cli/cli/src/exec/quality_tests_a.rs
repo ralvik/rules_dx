@@ -333,6 +333,34 @@ fn directory_scope_plans_pattern_without_query() {
 }
 
 #[test]
+fn here_flag_selects_cwd_tree_without_query() {
+    // Issue #699: `--here` (`--cwd` alias) selects the current directory
+    // tree through the same directory-scope path (`//path/...`; `//...`
+    // at the root), never implicitly, and never with explicit scopes.
+    let mut harness = Harness::new("here-scope");
+    harness.write_source("src/a.py", "x = 1\n");
+    harness.cwd = harness.workspace.join("src");
+    let (code, out, _) = harness.run(&["lint", "--dry-run", "--here"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("Running lint analysis for //src/..."), "{out}");
+    assert!(harness.query.calls.borrow().is_empty());
+
+    let mut alias = Harness::new("here-alias");
+    alias.write_source("src/a.py", "x = 1\n");
+    alias.cwd = alias.workspace.join("src");
+    let (code, out, _) = alias.run(&["lint", "--dry-run", "--cwd"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("Running lint analysis for //src/..."), "{out}");
+
+    // Workspace root stays repository-wide.
+    let root = Harness::new("here-root");
+    root.write_source("src/a.py", "x = 1\n");
+    let (code, out, _) = root.run(&["lint", "--dry-run", "--here"]);
+    assert_eq!(code, 0);
+    assert!(out.contains("Running lint analysis for //..."), "{out}");
+}
+
+#[test]
 fn missing_path_scope_fails_pre_execution() {
     let harness = Harness::new("missing-scope");
     let (code, _, err) = harness.run(&["lint", "nope.py"]);

@@ -24,7 +24,7 @@ use super::command::Command;
 #[command(
     name = "dx",
     about = "Transparent UI over Bazel: quality, workflow, and environment commands",
-    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults).\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
+    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults). --here selects the current directory tree instead (//path/...; //... at the root) and cannot be combined with explicit scopes.\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
     version
 )]
 pub(crate) struct Cli {
@@ -82,6 +82,12 @@ pub(crate) struct Cli {
     /// Target version for `dx migrate` (migrate only).
     #[arg(long, allow_negative_numbers = true, overrides_with = "to")]
     pub(crate) to: Option<String>,
+    /// Select the current directory tree instead of `//...`
+    /// (audit/lint/typecheck/format/generate/build/test/coverage/check/fix
+    /// only; `//path/...`, `//...` at the root; cannot be combined with
+    /// explicit scopes).
+    #[arg(long, visible_alias = "cwd")]
+    pub(crate) here: bool,
     /// First positional: the command word (a [`Command`] value so the
     /// same grammar feeds parsing, `--help`, and shell completions).
     #[arg(value_enum)]

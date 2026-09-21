@@ -158,7 +158,7 @@ fn main() {
 
 fn run() -> i32 {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let invocation = match parse(&args) {
+    let mut invocation = match parse(&args) {
         Ok(invocation) => invocation,
         Err(dx_cli::args::ArgsError::Help { text }) => {
             // `--help`/`-h`: human text on stdout, exit 0,
@@ -244,6 +244,19 @@ fn run() -> i32 {
     // diagnostic naming the three versions and the repair. Read-only
     // commands warn and proceed; the diagnose/repair path stays usable.
     // One small file read, no subprocesses.
+    // `--here` (`--cwd` alias, issue #699): explicit cwd scope only.
+    // Consumed here into a directory scope (`//path/...`; `//...` at the
+    // root) so downstream resolution reuses the existing path verbatim.
+    // The no-flag default stays `//...`; explicit scopes never combine.
+    if invocation.here {
+        match dx_cli::args::apply_here(&invocation, &workspace, &cwd) {
+            Ok(resolved) => invocation = resolved,
+            Err(detail) => {
+                let _ = writeln!(io::stderr(), "dx: {detail}");
+                return pre_exec_code();
+            }
+        }
+    }
     let pin = dx_cli::skew::read_pin(&workspace);
     match dx_cli::skew::disposition(
         invocation.command,

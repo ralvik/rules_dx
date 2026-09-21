@@ -21,7 +21,8 @@ verbatim:
 3. `typecheck` (`--check` under `check`, default under `fix`)
 4. `generate --check` freshness validation under `check`; mutating `generate` under `fix`
 
-With no scope, the umbrella selects `//...`. File, directory, label, and
+With no scope, the umbrella selects `//...`. Pass `--here` (`--cwd` alias) for
+the current directory tree instead. File, directory, label, and
 pattern scopes map exactly as the wrapped commands map them. The first
 required phase failure stops the umbrella; no dependent phase or mutation
 starts after failure, and `dx` returns that phase's exit code. `fix` does

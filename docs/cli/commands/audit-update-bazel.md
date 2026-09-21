@@ -16,7 +16,7 @@ a dx-owned option before the command word is rejected rather than forwarded.
 ## `dx audit`
 
 ```text
-dx audit [security|license] [scope ...] [--report <format>=<destination> ...]
+dx audit [--here] [security|license] [scope ...] [--report <format>=<destination> ...]
 ```
 
 Implementation status: the audit/update policy below is accepted. Command dispatch
@@ -31,7 +31,8 @@ and per-set reporting as specified in `dx update` below.
 Bare `dx audit` runs both families. `dx audit security` runs secrets plus
 dependency-vulnerability analysis only; `dx audit license` runs license-policy
 analysis only. Family selection composes with the normal scope resolution below;
-it does not change scope defaults.
+it does not change scope defaults. Pass `--here` (`--cwd` alias, optionally
+after the family) for the current directory tree instead of `//...`.
 
 `dx audit` applies the non-mutating audit aspect and any approved ecosystem dependency-
 audit integrations to the selected Bazel scope. It has two families, `security`

@@ -50,6 +50,7 @@ Global options:
 | `--output text\|diff\|json` | Select concise text, complete unified patches, or versioned machine-readable events (per-command support in [Output Protocol](output-protocol.md); unsupported modes fail fast, never silently ignored) |
 | `--report <format>=<destination>` | Write a supported standard report to a file or `-` for stdout; repeatable |
 | `--fail-on info\|warning\|error` | Lowest diagnostic severity that makes a quality command fail |
+| `--here` (`--cwd` alias) | Select the current directory tree instead of `//...` (cwd-scope commands only: audit/lint/typecheck/format/generate/build/test/coverage/check/fix; `//path/...`, `//...` at the root; cannot be combined with explicit scopes; never implicit) |
 
 These option names are accepted. Only `dx bazel` promises arbitrary unchanged
 forwarding. For workflow commands, arguments after `--` are Bazel command options

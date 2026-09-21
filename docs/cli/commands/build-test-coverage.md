@@ -9,7 +9,9 @@ paths resolve owners, then select every test in
 guidance to pass an explicit test label or pattern. Paths otherwise follow
 [Target Resolution](../target-resolution.md). No-scope build runs
 `bazel build //...`, and no-scope test runs `bazel test //...`; users who need a
-smaller invocation provide a path, label, or target pattern explicitly.
+smaller invocation provide a path, label, or target pattern explicitly, or pass
+`--here` (`--cwd` alias) for the current directory tree (`//path/...`; `//...`
+at the root).
 
 `dx test` supports JUnit XML reports through the shared `--report` contract. Bazel test
 results remain authoritative; `dx` normalizes their reported result artifacts into one

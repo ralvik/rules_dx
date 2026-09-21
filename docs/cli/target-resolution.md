@@ -24,6 +24,10 @@ constructs source lists.
 No-scope lint, typecheck, format, and audit commands use the explicit target pattern
 `//...`. This is independent of the current directory and does not authorize
 filesystem source discovery; aspects and providers determine applicable work.
+Pass `--here` (`--cwd` alias) for the current directory tree instead on the
+cwd-scope commands (audit/lint/typecheck/format/generate/build/test/coverage/check/fix):
+it maps through the same directory rule below (`//path/...`; `//...` at the root)
+and never combines with explicit scopes.
 
 ## File Ownership
 

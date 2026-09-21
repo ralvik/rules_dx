@@ -56,6 +56,13 @@ pub use common::Env;
 /// on stdout, and a stdout report owns stdout while human text moves
 /// to stderr.
 pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
+    // `--here` must be consumed into explicit targets before dispatch
+    // (`main.rs` plus test `Harness` via `apply_here`); fail closed
+    // rather than silently ignoring an unresolved cwd scope.
+    if invocation.here {
+        let Env { err, .. } = env;
+        return common::pre_exec(err, "option \"--here/--cwd\" needs cwd resolution");
+    }
     if invocation.command.is_adoption() {
         let Env {
             workspace,
