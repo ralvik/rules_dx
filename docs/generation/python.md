@@ -16,7 +16,7 @@ test does not move or duplicate that module.
 A same-directory, same-basename `.pyi` attaches to its `.py` owner as type metadata through the
 stable upstream shape. It creates no target, runtime dependency owner, test, binary, entry point, or
 name collision. Stub imports participate only in the supported type-analysis path. An orphan `.pyi`
-is inert until a separately accepted stub-only ownership model exists.
+is inert (wont-fix, issue #756): no stub-only ownership model is planned.
 
 Executable modules use the common single-library-owner and thin-binary shape. The recognized
 executable entry is exactly `main.py` (non-test): the library owns the source and its

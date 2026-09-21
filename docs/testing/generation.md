@@ -152,7 +152,7 @@ also prove that lint and test do not duplicate `tsc` actions.
   pinned upstream type-metadata shape. The paired stub creates no additional target, test, binary,
   entry point, runtime dependency edge, or normalized-name collision. Stub imports affect only the
   supported type-analysis path. Cover add/remove/rename stale merge, a `_test.pyi` paired with
-  `_test.py`, and orphan `.pyi` files that remain fully inert without diagnostics or status changes.
+  `_test.py`, and orphan `.pyi` files that remain fully inert without diagnostics or status changes (wont-fix, issue #756).
 - Verify source-only Rust crate roots with nested local modules and standard-library references
   generate, build, and test without `Cargo.toml` or `Cargo.lock` using tested ruleset defaults and a
   deterministic fallback Bazel name. With Cargo metadata, verify declared package/target names,

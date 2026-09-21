@@ -198,7 +198,7 @@ Quality selection starts from Bazel targets, not filesystem paths: the CLI
 normalizes input to target requests, analysis determines ownership and
 configuration, and aspects attach work to applicable source-owning targets. Only
 direct, main-workspace, non-generated sources are mutation subjects. Action
-granularity stays provisional under
+granularity is accepted under
 [ADR 0003](../decisions/0003-action-granularity.md). See
 [Target Resolution](../cli/target-resolution.md) and [Quality](../quality/).
 

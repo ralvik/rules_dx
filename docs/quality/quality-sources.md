@@ -104,7 +104,7 @@ The frozen first-release registry contains these IDs:
 The framework IDs classify each authoritative physical container source for quality applicability;
 they do not predetermine the still-open transport for exact embedded regions. A paired `python_stub`
 artifact belongs to its `.py` target's provider, while an orphan `.pyi` emits no provider and remains
-inert.
+inert (wont-fix, issue #756; no stub-only model).
 
 `text` is for directly owned text that has no more specific registered class. It is not a
 fallback assigned by generic aspects. A broad adapter such as keep-sorted may explicitly support
@@ -282,11 +282,11 @@ never mutation candidates merely because a tool consumes them.
 
 ## Pipeline Construction
 
-Under the initial [ADR 0003](../decisions/0003-action-granularity.md) granularity, lint, typecheck, and format use one convergence pipeline
+Under the accepted [ADR 0003](../decisions/0003-action-granularity.md) granularity, lint, typecheck, and format use one convergence pipeline
 per applicable target and capability. Semantic file classes never subdivide the chosen Bazel
 action boundary. Each selected adapter appears at most once in the pipeline and receives the
-union of all effective sources authorized by selecting policy-family configs. Future evidence-based target batching may change which targets
-share an action, but not this class-subset model.
+union of all effective sources authorized by selecting policy-family configs. Cross-target batching is rejected
+(wont-fix, issue #756 per [ADR 0022](../decisions/0022-no-benchmarking.md)); the class-subset model is final.
 
 For a target exposing JavaScript, TypeScript, JSON, and CSS, a format pipeline might contain:
 

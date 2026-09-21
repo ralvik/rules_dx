@@ -10,7 +10,7 @@ validation and are not stable commitments.
 | --- | --- | --- | --- |
 | [0001: Bazel Owns Execution](0001-bazel-owns-execution.md) | Accepted | — | Execution and CI |
 | [0002: Targets, Not Files](0002-targets-not-files.md) | Accepted | — | Target model |
-| [0003: Initial Action Granularity](0003-action-granularity.md) | Provisional | — | Quality actions |
+| [0003: Initial Action Granularity](0003-action-granularity.md) | Accepted | — | Quality actions |
 | [0004: Naming](0004-naming.md) | Accepted | — | Public naming |
 | [0005: Explicit Command Mutation Semantics](0005-mutating-operations.md) | Accepted | — | CLI mutation |
 | [0006: CLI Command Surface](0006-cli-command-surface.md) | Superseded (check/fix/clean surface by 0018; docs surface by 0020) | 2026-09-09 | CLI surface |

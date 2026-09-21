@@ -22,7 +22,8 @@ This model is exercised through the repository corpus (`real_source_target(name 
 per content type per package, issue #15, e.g. `dx/BUILD.bazel`) via the corpus dogfood in
 [local workflows](../contributing/local-workflows.md#corpus-dogfood). Remote execution
 remains unverified. [ADR 0003](../decisions/0003-action-granularity.md)
-therefore remains provisional.
+is accepted (issue #756 per [ADR 0022](../decisions/0022-no-benchmarking.md));
+cross-target batching stays rejected.
 
 ## Why Target-Level Actions
 
@@ -35,8 +36,8 @@ therefore remains provisional.
 
 The cost is each nonempty selected stage startup, and potentially multiple convergence rounds, per
 applicable target on a cold execution. A large
-graph with many tiny targets may favor batching, but batching should be introduced
-only from measurements and must remain Bazel-defined.
+graph with many tiny targets pays per-target startup; cross-target batching is rejected
+by fiat per [ADR 0022](../decisions/0022-no-benchmarking.md) (wont-fix, issue #756).
 
 ## Ty Boundary
 
@@ -174,21 +175,23 @@ preserves target-scoped caching and remote execution.
 
 ## Required Measurements
 
-The granularity hypothesis is accepted only after measuring fixtures with many
-small and several large targets:
+The granularity rule is accepted by reasoning and fiat per
+[ADR 0022](../decisions/0022-no-benchmarking.md) and
+[ADR 0003](../decisions/0003-action-granularity.md); fixtures below prove
+correctness, convergence, and cache shape, not wall-time benchmarks:
 
-- Clean local execution wall time and checker startup share.
+- Clean local execution action count and checker startup share.
 - Warm local no-change execution and action count.
 - One-source edit: executed versus cache-hit actions.
 - Shared-config edit: expected fan-out.
-- Cross-tool convergence passes, action duration, and pipeline-key invalidation when one
+- Cross-tool convergence passes, rounds and process starts, and pipeline-key invalidation when one
   selected tool or config changes.
 - Mixed-class targets with disjoint and overlapping stage subsets, including omission of empty
   stages and invalidation when class membership changes.
 - Permutation comparisons for each supported multi-tool set: convergence outcome, terminal
-  bytes/findings, rounds, process starts, and local/remote wall time.
+  bytes/findings, rounds, and process starts; wall time is not measured per ADR 0022.
 - Remote cache upload/download behavior across clean output bases.
-- Remote execution scheduling overhead where infrastructure exists.
+- Remote execution scheduling shape where infrastructure exists; wall time is not measured.
 - Diagnostics and failure isolation with multiple failing targets.
 
 Tests must inspect `aquery` action inputs and use execution logs or a controlled

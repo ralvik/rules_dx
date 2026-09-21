@@ -6,8 +6,12 @@ debounce, `bazel-*`/`.dx`/`dx.local.toml` ignores, per-iteration re-resolution,
 and local-only enforcement (refuses `CI=true`). Owning decision:
 [ADR 0017](../../decisions/0017-dx-watch.md), extended to `check` and `fix` by
 [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md).
-Platform evidence beyond Linux x86_64 remains a gap; no working multi-platform
-support is claimed until qualified execution lands.
+Platform scope inherits the [support matrix](../../product/support-matrix.md)
+qualified hosts: the loop is portable Rust over `notify` 8.x plus
+`notify-debouncer-mini` with no platform-specific execution path,
+seed-host-delivered on Linux x86_64; unqualified hosts refuse with
+`unsupported_platform` before any iteration. No separate per-platform watch
+execution is claimed (wont-fix, issue #756).
 
 ```text
 dx watch [--clear] <build|test|run|lint|typecheck|format|check|fix> [scope ...] [-- bazel-options ...]
