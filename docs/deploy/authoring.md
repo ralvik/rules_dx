@@ -258,7 +258,7 @@ tooling in `deploy/release/` with policy tests `bazel test
   qualified-built-here, four follow-ups unqualified per ADR 0014 until
   host plus toolchain evidence lands.
 - SBOM/provenance (`sbom.bzl`): SPDX 2.3 JSON plus SLSA v1 in-toto
-  Statement v1 from the managed Python toolchain only (digest + JSON
+  Statement v1 from hermetic Rust tools only (digest + JSON
   via declared genrule `tools`), subject digest equals artifact
   sha256; verifies via `//deploy/install:dx_verify --sbom`. On every
   push/PR the `sbom` job in `.github/workflows/ci.yml` (issue #612) builds

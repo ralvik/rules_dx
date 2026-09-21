@@ -290,9 +290,9 @@ plus `rlocation` usage; shell drivers load it via `tools/sh/bootstrap.sh`
 `dx_process::workspace_start` and use standard `runfiles` `rlocation`,
 never `TEST_SRCDIR` in prod).
 
-Host-tool actions are hermetic under issue #318 (archive genrules
-run toolchain-provided Rust archiver/hasher plus SBOM/BCR Python
-generators as declared `tools` with deterministic bytes and no host
+Host-tool actions are hermetic under issue #318 (archive plus SBOM/BCR
+genrules run toolchain-provided Rust archiver/hasher/generators as
+declared `tools` with deterministic bytes and no host
 `tar`/`sha256sum`/`shasum`/`python3` probing; `extension.bzl` uses
 Bazel-native `ctx.download(executable=True)` plus archive-carried modes,
 with one `chmod +x` for the gzip single-file member (taplo, no mode in

@@ -46,17 +46,18 @@ dx_guards_contains docs/testing/tools.md "tool matrix lost the product boundary 
   'ADR 0026' \
   'product_runtime_guards'
 
-# Direct product py_binary allowlist stays exact (8 targets): hermetic
-# npm_packer plus SBOM/BCR gens plus preset/update plus the two must-stay
-# linter shims (archiver/hasher delivered Rust under #760). A new
+# Direct product py_binary allowlist stays exact (4 targets): hermetic
+# npm_packer plus update plus the two must-stay
+# linter shims (archiver/hasher delivered Rust under #760, preset
+# delivered Rust under #761, SBOM/BCR gens delivered Rust under #763). A new
 # product py_binary fails here until its accepted successor updates both
 # this row and ADR 0026. Depcheck stays a filegroup run via sh_test, not
 # a py_binary, and migrates as its own phase.
 py_names="$(grep -h -A1 -e '^[[:space:]]*py_binary(' deploy/rules/BUILD.bazel deploy/release/BUILD.bazel tools/bazelrc/BUILD.bazel quality/artifacts/BUILD.bazel quality/tools/python/BUILD.bazel 2>/dev/null | grep -e 'name = ' | sed -e 's/.*name = //' -e 's/[",]//g' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$py_names" == "bcr_source_gen flake8 npm_packer preset.update pylint sbom_prov_gen sbom_spdx_gen update" ]]; then
+if [[ "$py_names" == "flake8 npm_packer pylint update" ]]; then
   ok
 else
-  bad "product py_binary allowlist drifted (want npm_packer plus sbom/bcr gens plus preset.update/update plus flake8/pylint shims with archiver/hasher Rust, got: $py_names)"
+  bad "product py_binary allowlist drifted (want npm_packer plus update plus flake8/pylint shims with archiver/hasher plus preset plus sbom/bcr Rust, got: $py_names)"
 fi
 
 # Archiver/hasher stay Rust (delivered Phase 1): no return to Python.
@@ -70,14 +71,36 @@ else
   bad "archiver/hasher Rust delivery regressed (want no archiver.py/hasher.py with rust_binary archiver/hasher)"
 fi
 
-# No product py_binary outside the five allowlisted BUILD files. New
-# product code must reuse the pinned tools, not add a sixth file, until
-# its accepted successor updates this row and ADR 0026.
-py_files="$(grep -rl -e '^[[:space:]]*py_binary(' --include='BUILD.bazel' deploy tools quality env 2>/dev/null | sed -e 's|^\./||' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$py_files" == "deploy/release/BUILD.bazel deploy/rules/BUILD.bazel quality/artifacts/BUILD.bazel quality/tools/python/BUILD.bazel tools/bazelrc/BUILD.bazel" ]]; then
+# Preset stays Rust (delivered Phase 2): no return to Python.
+if [[ ! -f "tools/bazelrc/preset.py" ]] &&
+  grep -q -F -e 'name = "preset.update"' tools/bazelrc/BUILD.bazel &&
+  grep -q -F -e 'rust_binary(' tools/bazelrc/BUILD.bazel; then
   ok
 else
-  bad "product py_binary file set drifted (want exactly the five allowlisted BUILD files, got: $py_files)"
+  bad "preset Rust delivery regressed (want no preset.py with rust_binary preset.update)"
+fi
+
+# SBOM/BCR gens stay Rust (delivered Phase 4): no return to Python.
+if [[ ! -f "deploy/release/sbom_spdx_gen.py" ]] &&
+  [[ ! -f "deploy/release/sbom_prov_gen.py" ]] &&
+  [[ ! -f "deploy/release/bcr_source_gen.py" ]] &&
+  grep -q -F -e 'name = "sbom_spdx_gen"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'name = "sbom_prov_gen"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'name = "bcr_source_gen"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'rust_binary(' deploy/release/BUILD.bazel; then
+  ok
+else
+  bad "sbom/bcr Rust delivery regressed (want no sbom_spdx_gen.py/sbom_prov_gen.py/bcr_source_gen.py with rust_binary sbom/bcr gens)"
+fi
+
+# No product py_binary outside the three allowlisted BUILD files. New
+# product code must reuse the pinned tools, not add a fourth file, until
+# its accepted successor updates this row and ADR 0026.
+py_files="$(grep -rl -e '^[[:space:]]*py_binary(' --include='BUILD.bazel' deploy tools quality env 2>/dev/null | sed -e 's|^\./||' | sort | tr '\n' ' ' | sed -e 's/ $//')"
+if [[ "$py_files" == "deploy/rules/BUILD.bazel quality/artifacts/BUILD.bazel quality/tools/python/BUILD.bazel" ]]; then
+  ok
+else
+  bad "product py_binary file set drifted (want exactly the three allowlisted BUILD files, got: $py_files)"
 fi
 
 # Deploy-macro launcher kinds stay py_binary (nine files): each phase

@@ -3,8 +3,9 @@
 ## Status
 
 Accepted. The boundary below plus the `//tools/ci:product_runtime_guards`
-fail-closed gate are decided constraints. Archiver/hasher is delivered Rust;
-the five remaining migration slices stay provisional phase indexes, each
+fail-closed gate are decided constraints. Archiver/hasher plus SBOM/BCR
+generators are delivered Rust;
+the four remaining migration slices stay provisional phase indexes, each
 needing its own accepted successor record before its rule-kind change lands.
 
 ## Context
@@ -18,7 +19,8 @@ everywhere while bash harnesses stay Linux-only with Windows `shell: bash`
 The as-built product inventory is the hermetic tools
 (`deploy/rules:archiver`/`hasher` as Rust `rust_binary` plus
 `npm_packer` as `py_binary`,
-`deploy/release:sbom_spdx_gen`/`sbom_prov_gen`/`bcr_source_gen`,
+`deploy/release:sbom_spdx_gen`/`sbom_prov_gen`/`bcr_source_gen` as Rust
+`rust_binary`,
 `tools/bazelrc:preset.update`, `tools/depcheck` checker,
 `quality/artifacts:update`), the per-instance deploy launcher `py_binary`
 programs expanded by `archive`/`github`/`pypi`/`crates`/`npm`/`nuget`/`maven`/`oci`/`octopus`
@@ -58,8 +60,9 @@ Concretely:
   accepted successor) is updated. `rust_binary` remains the migration
   direction; the gate allows it and only pins the Python/shell ceiling.
 - The phase index is: archiver/hasher tools (delivered Rust under #760),
-  plus provisional `preset.py`,
-  depcheck checker, SBOM/BCR generators, deploy launcher programs, and the
+  preset (delivered Rust under #761),
+  SBOM/BCR generators (delivered Rust under #763),
+  plus provisional depcheck checker, deploy launcher programs, and the
   deferred CI-drivers plus `quality/artifacts/update.py` stance (defers to
   #667; no harness-wide Rust-ify). Each phase links its owning contract
   (`deploy/rules` plus [Deploy Authoring](../deploy/authoring.md),
