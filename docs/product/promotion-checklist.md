@@ -88,7 +88,10 @@ A cell promotes only with its required-host evidence landed:
   `sbom-provenance-linux_arm64_musl` via the `sbom-musl-arm64` job
   (`ubuntu-24.04-arm`, `bazel-musl-arm64-` cache) for the two Linux static-musl
   profiles (static native closure only, dynamic musl explicitly out of scope,
-  issue #804).
+  issue #804), plus per-host `sbom-provenance-macos_arm64` via the
+  `sbom-macos-arm64` job (`macos-14`, `bazel-macos-arm64-` cache) for macOS
+  arm64 native (pinned acquired SDK, hermetic-llvm Apple-SDK backend
+  provisional with no host-installed SDK fallback, issue #805).
 - NOTICE bundling: aggregated NOTICE from the audited license inventory via
   `//deploy/release:notice_demo` (hermetic bundling with byte-identical
   rebuilds, `missing-notice-text` fails closed), verified via

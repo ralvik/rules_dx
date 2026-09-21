@@ -10,8 +10,9 @@
 #   macos-14 (arm64) plus macos-15-intel (x86_64 Intel, `macos-13` retired
 #   December 2025, `macos-15-intel` until August 2027) runners with
 #   per-host cache scopes under the portable-shell contract, consumer plus
-#   release evidence per the support-matrix lifecycle (release evidence
-#   open), docs in support-matrix plus ADR 0014 plus native-toolchains;
+#   arm64 release evidence (sbom-provenance delivered under #805) with
+#   x86_64 release open per the support-matrix lifecycle, docs in
+#   support-matrix plus ADR 0014 plus native-toolchains;
 # - Apple-SDK handling: pinned acquired SDK identity plus deployment floor
 # stay owned per ADR 0014 (SDK version is not the deployment
 #   floor); hermetic-llvm Apple-SDK backend stays provisional with
@@ -20,7 +21,8 @@
 # - open with honest records: full hermetic-llvm backend, Apple
 #   acquisition/cache rights review, remaining native-plan corpus gaps,
 #   dx_tools macos_arm64 plus macos_x86_64 artifacts (quality tools run on
-#   the Linux exec platform), release evidence (SBOM/provenance/signing/BCR).
+#   the Linux exec platform), remaining release evidence (x86_64
+#   SBOM/provenance plus signing/BCR plus tag cut).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:macos_qualification`,
 # following //tools/ci:musl_qualification.
@@ -72,17 +74,18 @@ else
 fi
 
 # Support matrix keeps macOS arm64 (required) plus x86_64 best-effort
-# Platform-qualified; Windows x86_64 flips qualified.
+# Platform-qualified; arm64 release delivered under #805, x86_64 release
+# stays open; Windows x86_64 flips qualified.
 if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#412' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved' &&
-  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: macos_arm64 sbom-provenance delivered (#805' &&
   grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#413' &&
   grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Best-effort' &&
   grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved' &&
   grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open'; then
   ok
 else
-  bad "support-matrix lost the macOS arm64 plus x86_64 best-effort Platform-qualified records (issues #412/#413, windows stays unqualified)"
+  bad "support-matrix lost the macOS arm64 plus x86_64 best-effort Platform-qualified records (issues #412/#413 plus #805 arm64 release delivered, x86_64 release open, windows stays unqualified)"
 fi
 
 # ADR 0014 keeps macOS arm64 required plus x86_64 best-effort and records
@@ -173,7 +176,8 @@ else
   bad "a host-installed SDK fallback claim appeared (stays never approved, issues #412/#413)"
 fi
 
-# No Supported claim for macOS: Platform-qualified only, release open.
+# No Supported claim for macOS: Platform-qualified only, arm64 per-host
+# release delivered with x86_64 release open.
 # The x86_64 row stays Best-effort Platform-qualified, never Supported and
 # never blocking required-host release.
 if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified' &&

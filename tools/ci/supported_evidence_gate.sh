@@ -91,14 +91,15 @@ else
 fi
 
 # macOS arm64 native is Platform-qualified, never Supported
-# without release evidence and never back to unqualified refusal.
+# without a release cut and never back to unqualified refusal.
 # Host-installed SDK fallback stays never approved.
+# Per-host release evidence landed under #805 (macos arm64 sbom-provenance).
 if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#412' &&
-  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: macos_arm64 sbom-provenance delivered (#805' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved'; then
   ok
 else
-  bad "support-matrix lost the macOS arm64 Platform-qualified record (issue #412, release evidence open, no host fallback)"
+  bad "support-matrix lost the macOS arm64 Platform-qualified record (issue #412 plus #805 release evidence delivered, no host fallback)"
 fi
 
 # macOS x86_64 best-effort native is Platform-qualified,
