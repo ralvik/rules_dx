@@ -170,8 +170,10 @@ Every event contains these common fields plus its event-specific fields:
 | `schema.major` | unsigned integer | Breaking semantic version |
 | `schema.minor` | unsigned integer | Additive feature version |
 | `event` | string | Event kind defined below |
+| `correlation` | no (1.0) / optional string (1.1) | Advisory grouping identifier for interleaved operations |
 
-The initial version is `{"major":1,"minor":0}`. One invocation never mixes schema
+The current version is `{"major":1,"minor":1}`; the initial version was
+`{"major":1,"minor":0}`. One invocation never mixes schema
 versions. Within a major version, producers may add fields and event kinds. Consumers
 must ignore unknown fields and event kinds. Removing a field, making an optional field
 required, or changing existing semantics requires a new major version.
@@ -190,8 +192,15 @@ every field gates a mutation or a policy decision.
 NDJSON line order is authoritative. The initial schema has no run ID, sequence number,
 timestamp, or operation ID. Concurrent subprocesses within one invocation are contained
 work for safe cleanup under the [CLI contract](cli-contract.md#exit-status) and do not
-create interleaved operations needing correlation. A future correlation field may be added as a minor-compatible
-change only when stable interleaved operations create a concrete need.
+create parallel interleaving. Minor 1.1 adds the optional `correlation` grouping
+identifier for stable sequential operations that benefit from attribution when
+streamed: `run:<target>` on each `run` `execute` `operation`, `update:<set>` on
+each per-set terminal report plus its file events. Producers omit it for v1.0
+behavior; consumers must tolerate its absence and ignore unknown values. It is
+1-128 ASCII chars from `[A-Za-z0-9/_:.-]` (validated by `dx_output::check_correlation`,
+attached by `dx_output::with_correlation`); line order stays authoritative and
+correlation never replaces it. Umbrella `check`/`fix` phases may adopt
+`check/<phase>` grouping as a later minor without breaking 1.1 consumers.
 
 The initial event kinds are:
 
@@ -262,7 +271,7 @@ operations include scope (bare-schema `codegen`/`setup` expansion lists the full
 analyzed roots); no-argument env/codegen/setup, generate, update, and bazel omit
 it. `clean` `collect` operations omit scope (clean takes no scope). `run` emits one
 `execute` operation per target in sequential execution order, each with its
-single-label scope. Canonical workflow implementation roots such as `//dx:env` are not emitted unless the
+single-label scope plus the 1.1 `correlation` `run:<target>` grouping. Canonical workflow implementation roots such as `//dx:env` are not emitted unless the
 user supplied that label as scope.
 
 ## Diagnostic
@@ -472,24 +481,38 @@ writes nothing.
 `dx` does not invoke Git, scan the workspace, parse BUILD files, rerun Gazelle, or compare
 before/after trees to infer generation changes.
 
-Update emits no v1 `change` or `mutation` events and its `command_finished` carries no
-`changes`, `mutations`, or `diagnostics` counts (wont-fix, issue #586, resolver-owned by
-`dx_update::backend`, pinned by fixtures in `cli/update/tests/fixtures/update_events/` plus
-`cli/cli/src/exec/update.rs`): the five authoritative backends (crate_universe repin,
-Bazel-pinned pnpm, rules_jvm_external pin, paket2bazel regen, Go no-op) provide no
-committed-change manifest equivalent to the Gazelle result manifest, and inferring changes via
-Git scan, BUILD parse, or rerun is rejected because the protocol already forbids it. Per-set
-`notice`/`error` events plus an optional `update_recovery` notice plus `command_finished`
-are the complete update event contract: exactly one terminal per-set event for every selected set (`update_set_success` notice, `update_failed`
+Update emits per-set `notice`/`error` events plus an optional `update_recovery` notice plus `command_finished`
+as its complete v1.0 event contract: exactly one terminal per-set event for every selected set (`update_set_success` notice, `update_failed`
 error, or `update_set_blocked` notice for unattempted dependents) in sorted set order, then
 an `update_recovery` warning notice on failure carrying the idempotent retry plus manual
 restore (planned in `dx_update::recovery`, pinned by fixtures in
 `cli/update/tests/fixtures/update_rollback/`), then
 exactly one `command_finished`. Live execution carries `results_complete=true` when every
 selected set reached such a terminal report, including runs with failures; dry-run, `--check`,
-and initialization failure omit it. No event claims which lockfile entries or workspace files a
-backend committed. Atomicity is per set, never repository-wide: each success commits its
-set immediately with no automatic rollback.
+and initialization failure omit it. Atomicity is per set, never repository-wide: each success commits its
+set immediately with no automatic rollback. The v1.0 absence of file events was wont-fix
+(issue #586, resolver-owned by `dx_update::backend`, pinned by fixtures in
+`cli/update/tests/fixtures/update_events/` plus `cli/cli/src/exec/update.rs`): the five
+authoritative backends provided no committed-change manifest and inferring changes via
+Git scan, BUILD parse, or rerun was rejected because the protocol already forbids it.
+
+Minor 1.1 adds the backend committed-change manifest (`dx_update::manifest`, validated
+against `dx_update::sets::SetId::locks`, pinned by fixtures in
+`cli/update/tests/fixtures/correlation_manifest/` plus `bazel run
+//tools/ci:correlation_manifest_qualification`, issue #811): each validated file
+change projects to one `change` (single full-file spanning edit: `0..old_len`
+replacement for `modify` with its pre-commit digest, `0..0` insertion for `create`)
+followed by its terminal `applied` `mutation`, grouped under the same
+`update:<set>` correlation and streamed before that set's terminal per-set report,
+in normalized path order. Empty or absent manifests project to no file events,
+preserving the v1.0 per-set contract; the Go pinned no-op owns an empty manifest
+today while other backends own no CLI-readable manifest yet, so live update still
+emits per-set reports only and its `command_finished` still omits file counts.
+When a manifest does supply file deltas, the CLI emits the paired events and
+`command_finished` carries the matching `changes`/`mutations` counts; `diagnostics`
+stay absent for update in every mode. Directory hubs (such as
+`third_party/dotnet/deps`) never appear as file changes; their owning lock
+(`paket.lock`) carries the report. No event claims repository-wide atomicity.
 
 Interrupted-run completeness follows the same contract. An interruption (signal, `SIGKILL`, or
 loss of stdout) after some sets completed leaves their preceding per-set events true with
@@ -733,9 +756,11 @@ and audit, including zero values for a successful empty quality selection. `chan
 present exactly for executed JSON-mode lint, typecheck, format, and generate in both check and
 default modes, including zero values when no changes are calculated.
 `mutations` is present exactly for non-dry-run default-mode lint, typecheck, format, and generate,
-including when active producers return no candidate changes. Update never carries `diagnostics`,
-`changes`, or `mutations` in any mode (issue #586 wont-fix); its `command_finished` carries only
-`results_complete` on live execution. Status never carries `results_complete`, `diagnostics`,
+including when active producers return no candidate changes. Update never carries `diagnostics`
+in any mode; its `command_finished` carries only
+`results_complete` on live execution when no manifest supplies file deltas, and additionally
+carries `changes`/`mutations` when a non-empty manifest projects paired events (issue #811).
+Status never carries `results_complete`, `diagnostics`,
 `changes`, or `mutations` in any mode; its `command_finished` carries only `exit_code`.
 A validated empty quality
 selection has no mutation events or mutation count because no apply set was attempted.
@@ -812,15 +837,18 @@ running independent work may settle only for safe cleanup, and its later outcome
 replace the selected failure or reorder durable output.
 The [update exception](commands/audit-update-bazel.md#dx-update) permits later independent
 selected dependency sets to run after a set failure, preserving successes and reporting
-blocked dependents. Update JSON order is `command_started`, then exactly one terminal per-set
-event per selected set in sorted set order (`update_set_success` notice, `update_failed` error,
+blocked dependents. Update JSON order is `command_started`, then per successful set with
+a non-empty manifest its paired `change`/`mutation` events in path order followed by
+exactly one terminal per-set event per selected set in sorted set order
+(`update_set_success` notice, `update_failed` error,
 or `update_set_blocked` notice), then an optional `update_recovery` warning notice carrying
-the idempotent retry plus manual restore on failure, then exactly one `command_finished`; it emits no `change`,
-`mutation`, `diagnostic`, or `operation` events. Operation boundaries, per-set reporting, recovery planning
+the idempotent retry plus manual restore on failure, then exactly one `command_finished`; it emits no
+`diagnostic` or `operation` events. Operation boundaries, per-set reporting, recovery planning
 (`dx_update::recovery`), and aggregate
 exit selection are specified in the [update contract](commands/audit-update-bazel.md#dx-update); live resolver-backend
-execution runs `dx_update::backend` per set with `notice`/`error` per-set events. This does not
-authorize new event fields or update `change`/`mutation` events (issue #586 wont-fix), nor parallel execution.
+execution runs `dx_update::backend` per set with `notice`/`error` per-set events plus
+validated `dx_update::manifest` file pairs when present (issue #811). This does not
+authorize parallel execution.
 Interrupted update runs keep preceding per-set events true with no automatic rollback and emit nothing for
 sets not yet attempted; signal termination promises no `command_finished`. Text failures always
 carry a `dx: update_recovery:` line with the same retry plus restore.
@@ -880,16 +908,26 @@ value requires a new major version.
 Protocol fixtures must verify:
 
 - Update continuation, per-set success/failure/blocked reporting, and overall
-  failure without automatic rollback of successful independent changes. Update emits no v1 `change` or
-  `mutation` events and no `changes`/`mutations`/`diagnostics` counts in any mode (wont-fix,
-  issue #586, pinned by fixtures in `cli/update/tests/fixtures/update_events/` plus
-  `cli/cli/src/exec/update.rs`): per-set `notice`/`error` plus optional `update_recovery`
-  plus `command_finished` is the complete
-  contract, with sorted per-set order, `results_complete=true` on live terminal reports, no Git
+  failure without automatic rollback of successful independent changes. The v1.0
+  absence of file events was wont-fix
+  (issue #586, pinned by fixtures in `cli/update/tests/fixtures/update_events/` plus
+  `cli/cli/src/exec/update.rs`); minor 1.1 adds the backend committed-change manifest
+  (issue #811, pinned by fixtures in `cli/update/tests/fixtures/correlation_manifest/` plus
+  `bazel run //tools/ci:correlation_manifest_qualification` plus
+  `cli/cli/src/exec/update.rs` plus `dx_update::manifest`): per-set `notice`/`error` plus optional `update_recovery`
+  plus `command_finished` stays the complete
+  contract when manifests are absent or empty, with sorted per-set order, `results_complete=true` on live terminal reports, no Git
   scan/BUILD parse/rerun inference, atomicity per set with manual restore plus idempotent
   retry (pinned by fixtures in `cli/update/tests/fixtures/update_rollback/` plus
   `dx_update::recovery`), and interrupted runs keeping preceding per-set events true
   with nothing emitted for sets not yet attempted.
+- Minor-1.1 correlation plus manifest version compat (issue #811, pinned by fixtures in
+  `cli/update/tests/fixtures/correlation_manifest/` plus
+  `bazel run //tools/ci:correlation_manifest_qualification`): `run` operations carry
+  `run:<target>`, per-set reports carry `update:<set>`, file pairs share their set's
+  correlation, line order stays authoritative, v1.0 consumers ignore the field, omitted
+  correlation preserves v1.0 wire shape, `1.0` witnesses decode under `1.1` by major-only
+  enforcement, and empty or absent manifests emit no file events.
 - Exclusive stdout ownership and arbitrary subprocess output on stderr.
 - Complete deterministic unified patches in diff mode, including new files, multiple files,
   context, missing-final-newline markers, empty output, and rejected unrepresentable paths.

@@ -51,6 +51,9 @@ pub enum OutputError {
     NotAnEvent,
     #[error("I/O error: {0}")]
     Io(String),
+    /// Invalid `correlation` grouping identifier for interleaved operations.
+    #[error("invalid correlation {value:?}: want 1-128 chars of [A-Za-z0-9/_:.-]")]
+    BadCorrelation { value: String },
 }
 
 /// Validates a normalized workspace-relative source path: valid UTF-8,
@@ -88,6 +91,27 @@ pub fn parse_digest(field: &'static str, text: &str) -> Result<[u8; 32], OutputE
         field,
         value: text.to_owned(),
     })
+}
+
+/// Validates an optional NDJSON `correlation` grouping identifier for
+/// interleaved operations: 1-128 ASCII chars from `[A-Za-z0-9/_:.-]`.
+/// Empty and oversized values fail; consumers tolerate absence.
+/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
+pub fn check_correlation(value: &str) -> Result<(), OutputError> {
+    if value.is_empty() || value.len() > 128 {
+        return Err(OutputError::BadCorrelation {
+            value: value.to_owned(),
+        });
+    }
+    let ok = value.bytes().all(|b| {
+        b.is_ascii_alphanumeric() || b == b'/' || b == b'_' || b == b':' || b == b'.' || b == b'-'
+    });
+    if !ok {
+        return Err(OutputError::BadCorrelation {
+            value: value.to_owned(),
+        });
+    }
+    Ok(())
 }
 
 /// One exact replacement edit: a half-open UTF-8 byte range in the
@@ -224,6 +248,23 @@ mod tests {
         assert_eq!(
             OutputError::MissingResolution.to_string(),
             "missing resolution: default-mode diagnostics require a resolution"
+        );
+    }
+
+    #[test]
+    fn correlation_shape_validated() {
+        // See: `docs/cli/output-protocol.md#ndjson-envelope`.
+        check_correlation("update:cargo").expect("namespaced");
+        check_correlation("run//app:bin").expect("target scope");
+        check_correlation("check/format").expect("umbrella phase");
+        assert!(check_correlation("").is_err());
+        assert!(check_correlation("has space").is_err());
+        assert!(check_correlation(&"x".repeat(129)).is_err());
+        assert_eq!(
+            check_correlation("bad!").expect_err("punctuation"),
+            OutputError::BadCorrelation {
+                value: "bad!".to_owned()
+            }
         );
     }
 }

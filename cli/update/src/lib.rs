@@ -31,6 +31,7 @@
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod backend;
+pub mod manifest;
 pub mod outcome;
 pub mod recovery;
 pub mod report;

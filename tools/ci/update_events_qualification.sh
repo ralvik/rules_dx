@@ -46,27 +46,27 @@ targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
-# Protocol owns the wont-fix under with resolver-owned backends.
-if grep -q -F -e 'wont-fix, issue #586' "$protocol" &&
+# Protocol owns the v1.0 wont-fix history with resolver-owned backends.
+if grep -q -F -e 'absence of file events was wont-fix' "$protocol" &&
   grep -q -F -e 'resolver-owned by' "$protocol" &&
   grep -q -F -e '`dx_update::backend`' "$protocol"; then
   ok
 else
-  bad "output-protocol.md lost its #586 wont-fix with resolver-owned backend record"
+  bad "output-protocol.md lost its #586 wont-fix history with resolver-owned backend record"
 fi
 
-# Protocol says update emits no change/mutation events and no file counts.
-if grep -q -F -e 'Update emits no v1 `change` or `mutation` events' "$protocol" &&
-  grep -q -F -e 'carries no' "$protocol" &&
-  grep -q -F -e '`changes`, `mutations`, or `diagnostics` counts' "$protocol"; then
+# Protocol says v1.0 per-set reports are complete when manifests are absent.
+if grep -q -F -e 'stays the complete' "$protocol" &&
+  grep -q -F -e 'when no manifest' "$protocol" &&
+  grep -q -F -e 'when manifests are absent or empty' "$protocol"; then
   ok
 else
-  bad "output-protocol.md lost its no-change-no-mutation-no-counts wont-fix"
+  bad "output-protocol.md lost its v1.0 per-set completeness when manifests absent"
 fi
 
 # Protocol names the completeness contract (per-set plus finished).
-if grep -q -F -e 'Per-set' "$protocol" &&
-  grep -q -F -e 'are the complete update event contract' "$protocol" &&
+if grep -q -F -e 'per-set' "$protocol" &&
+  grep -q -F -e 'stays the complete' "$protocol" &&
   grep -q -F -e 'one terminal per-set event' "$protocol" &&
   grep -q -F -e 'update_set_success' "$protocol" &&
   grep -q -F -e 'update_set_blocked' "$protocol"; then
@@ -84,7 +84,7 @@ else
 fi
 
 # Protocol rejects Git scan, BUILD parse, and rerun inference.
-if grep -q -F -e 'Git scan, BUILD parse, or rerun is rejected' "$protocol" &&
+if grep -q -F -e 'Git scan, BUILD parse, or rerun was rejected' "$protocol" &&
   grep -q -F -e 'the protocol already forbids it' "$protocol"; then
   ok
 else
@@ -111,14 +111,15 @@ else
   bad "output-protocol.md Compatibility Tests lost the update_events fixture requirement under #586"
 fi
 
-# Command docs carry the wont-fix cross-link with the fixture paths.
-if grep -q -F -e 'wont-fix, issue #586' "$command_doc" &&
+# Command docs carry the v1.0 history plus 1.1 manifest cross-link with fixture paths.
+if grep -q -F -e 'absence of file events was wont-fix' "$command_doc" &&
   grep -q -F -e 'cli/update/tests/fixtures/update_events/' "$command_doc" &&
+  grep -q -F -e 'cli/update/tests/fixtures/correlation_manifest/' "$command_doc" &&
   grep -q -F -e 'cli/cli/src/exec/update.rs' "$command_doc" &&
   grep -q -F -e '[Output Protocol](../output-protocol.md#mutation)' "$command_doc"; then
   ok
 else
-  bad "audit-update-bazel.md lost its #586 wont-fix cross-link with fixtures"
+  bad "audit-update-bazel.md lost its v1.0 history plus 1.1 manifest cross-link with fixtures"
 fi
 
 # Fixture pins stay present with wont-fix plus contract plus rejected plus honesty.
@@ -170,12 +171,14 @@ else
   bad "exec/update_tests_b.rs lost its three #586 wont-fix JSON fixtures"
 fi
 
-# Execution never builds change/mutation events on the update path.
-if ! grep -q -F -e 'change_event' "$exec_update" &&
-  ! grep -q -F -e 'mutation_event' "$exec_update"; then
+# Execution builds change/mutation events only through validated manifests.
+if grep -q -F -e 'project_manifest_events' "$exec_update" &&
+  grep -q -F -e 'live_success_manifest' "$exec_update" &&
+  grep -q -F -e 'change_event' "$exec_update" &&
+  grep -q -F -e 'mutation_event' "$exec_update"; then
   ok
 else
-  bad "exec/update.rs must not build change/mutation events on the update path under #586"
+  bad "exec/update.rs lost its manifest-gated change/mutation projection under #811"
 fi
 
 # Live execution keeps results_complete with no file counts on finished.

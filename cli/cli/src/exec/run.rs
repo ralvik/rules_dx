@@ -83,11 +83,17 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
 
 /// Emits one `execute` `operation` per target with its single-label scope.
 /// Scope is always present (run never runs repository-wide); line order is
-/// the sequential execution order.
+/// the sequential execution order. Each operation carries the minor-1.1
+/// `correlation` grouping identifier `run:<target>` so multirun targets stay
+/// attributable when operations interleave.
+/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
 fn emit_run_operations(out: &mut dyn Write, command: &str, targets: &[String]) {
+    use dx_output::with_correlation;
     for target in targets {
         let scope = [target.clone()];
         if let Ok(event) = operation_event(command, "execute", Some(&scope)) {
+            let correlation = format!("run:{target}");
+            let event = with_correlation(event.clone(), &correlation).unwrap_or(event);
             let _ = write_event(out, &event);
         }
     }
@@ -428,6 +434,9 @@ mod tests {
             .expect("operation");
         assert_eq!(op["phase"], serde_json::json!("execute"));
         assert_eq!(op["scope"], serde_json::json!(["//app:bin"]));
+        // Minor-1.1 correlation groups the operation under its target.
+        // See: `docs/cli/output-protocol.md#ndjson-envelope`.
+        assert_eq!(op["correlation"], serde_json::json!("run://app:bin"));
         assert_eq!(
             events.last().expect("finished")["exit_code"],
             serde_json::json!(0)

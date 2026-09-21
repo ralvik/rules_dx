@@ -8,7 +8,7 @@
 //! facade). Re-exported through `super` so the public path stays
 //! `dx_output::{...}`.
 
-use crate::validation::{check_path, parse_digest, OutputError};
+use crate::validation::{check_correlation, check_path, parse_digest, OutputError};
 use serde_json::{json, Value};
 
 /// Breaking semantic version of the NDJSON stream. One invocation never
@@ -36,6 +36,31 @@ pub(crate) fn base(event: &str) -> serde_json::Map<String, Value> {
     map.insert("schema".to_owned(), schema());
     map.insert("event".to_owned(), Value::String(event.to_owned()));
     map
+}
+
+/// Attaches the optional minor-1.1 `correlation` grouping identifier to any
+/// already-constructed NDJSON event. Producers omit it for v1.0 behavior;
+/// consumers must tolerate its absence and ignore unknown values.
+/// Line order stays authoritative; correlation is advisory grouping for
+/// interleaved operations (run multirun targets, update per-set
+/// continuation, umbrella phases).
+/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
+/// Owning contract: `docs/cli/output-protocol.md`.
+pub fn with_correlation(event: Value, correlation: &str) -> Result<Value, OutputError> {
+    check_correlation(correlation)?;
+    match event {
+        Value::Object(mut map) => {
+            if !map.contains_key("schema") || !matches!(map.get("event"), Some(Value::String(_))) {
+                return Err(OutputError::NotAnEvent);
+            }
+            map.insert(
+                "correlation".to_owned(),
+                Value::String(correlation.to_owned()),
+            );
+            Ok(Value::Object(map))
+        }
+        _ => Err(OutputError::NotAnEvent),
+    }
 }
 
 /// First event of every successfully initialized JSON stream.
@@ -405,5 +430,58 @@ mod tests {
         let mut buf = Vec::new();
         write_event(&mut buf, &event).expect("write");
         assert!(buf.ends_with(b"\n"));
+    }
+
+    #[test]
+    fn correlation_attaches_and_validates() {
+        // See: `docs/cli/output-protocol.md#ndjson-envelope`.
+        let operation =
+            operation_event("run", "execute", Some(&["//app:bin".to_owned()])).expect("operation");
+        assert!(operation.get("correlation").is_none());
+        let correlated = with_correlation(operation, "run://app:bin").expect("correlation");
+        assert_eq!(
+            correlated["correlation"],
+            Value::String("run://app:bin".to_owned())
+        );
+        assert_eq!(correlated["schema"], schema());
+        let mut buf = Vec::new();
+        write_event(&mut buf, &correlated).expect("write correlated");
+        let parsed: Value = serde_json::from_slice(&buf).expect("parse");
+        assert_eq!(
+            parsed["correlation"],
+            Value::String("run://app:bin".to_owned())
+        );
+        let operation = operation_event("update", "execute", None).expect("op");
+        assert!(with_correlation(operation.clone(), "").is_err());
+        assert!(with_correlation(operation, "has space").is_err());
+        let prose = Value::String("Running lint".to_owned());
+        assert!(with_correlation(prose, "update:cargo").is_err());
+    }
+
+    #[test]
+    fn schema_is_minor_one_with_forward_compat() {
+        assert_eq!(SCHEMA_MAJOR, 1);
+        assert_eq!(SCHEMA_MINOR, 1);
+        assert_eq!(schema(), serde_json::json!({"major": 1, "minor": 1}));
+        // Minor-1.0 consumers ignore the 1.1 `correlation` field: unknown
+        // fields never break parsing within one major version.
+        let correlated = with_correlation(
+            operation_event("run", "execute", None).expect("op"),
+            "run://a:bin",
+        )
+        .expect("correlation");
+        let reparsed: serde_json::Map<String, Value> =
+            serde_json::from_value(correlated).expect("map");
+        assert_eq!(
+            reparsed.get("command"),
+            Some(&Value::String("run".to_owned()))
+        );
+        assert_eq!(
+            reparsed.get("correlation"),
+            Some(&Value::String("run://a:bin".to_owned()))
+        );
+        // Omitting correlation preserves v1.0 wire shape.
+        let bare = operation_event("run", "execute", None).expect("bare");
+        assert!(bare.get("correlation").is_none());
     }
 }
