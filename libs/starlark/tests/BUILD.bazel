@@ -4,6 +4,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 load(":analysis_tests.bzl", "subject_analysis_tests")
 load(":arithmetic_tests.bzl", "arithmetic_load_tests", "arithmetic_unit_tests")
 load(":aspect_tests.bzl", "aspect_subject_tests")
+load(":config_tests.bzl", "config_subject_tests")
 load(":execution_tests.bzl", "fixture_execution_tests")
 load(":matcher_tests.bzl", "matcher_unit_tests")
 load(":matrix_tests.bzl", "matrix_validation_tests")
@@ -11,6 +12,7 @@ load(":output_group_tests.bzl", "output_group_unit_tests")
 load(":subject.bzl", "example_subject")
 load(":toolchain_tests.bzl", "toolchain_unit_tests")
 load("//libs/starlark/tests/fixtures/starlark_futures:aspect_subjects.bzl", "aspect_group", "aspect_leaf")
+load("//libs/starlark/tests/fixtures/starlark_futures:config_subjects.bzl", "config_group", "config_leaf")
 
 example_subject(
     name = "subject_under_test",
@@ -33,6 +35,25 @@ aspect_group(
     note = "group-note",
 )
 
+config_leaf(
+    name = "config_leaf_under_test",
+    testonly = True,
+    note = select({
+        "//libs/starlark/tests/fixtures/starlark_futures:is_flipped": "flipped-note",
+        "//conditions:default": "plain-note",
+    }),
+)
+
+config_group(
+    name = "config_group_under_test",
+    testonly = True,
+    deps = [":config_leaf_under_test"],
+    note = select({
+        "//libs/starlark/tests/fixtures/starlark_futures:is_flipped": "flipped-note",
+        "//conditions:default": "plain-note",
+    }),
+)
+
 arithmetic_unit_tests(name = "arithmetic_unit")
 
 arithmetic_load_tests(name = "arithmetic_load")
@@ -40,6 +61,8 @@ arithmetic_load_tests(name = "arithmetic_load")
 subject_analysis_tests(name = "subject_analysis")
 
 aspect_subject_tests(name = "aspect_subject_analysis")
+
+config_subject_tests(name = "config_subject_analysis")
 
 fixture_execution_tests(name = "fixture_execution")
 
@@ -57,6 +80,7 @@ test_suite(
         ":arithmetic_load",
         ":arithmetic_unit",
         ":aspect_subject_analysis",
+        ":config_subject_analysis",
         ":fixture_execution",
         ":matcher_unit",
         ":matrix_validation",
@@ -75,6 +99,7 @@ real_source_target(
         "arithmetic.bzl",
         "arithmetic_tests.bzl",
         "aspect_tests.bzl",
+        "config_tests.bzl",
         "execution_tests.bzl",
         "matcher_tests.bzl",
         "matrix_tests.bzl",

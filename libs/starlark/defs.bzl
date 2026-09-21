@@ -17,6 +17,13 @@ DxAspectInfo = provider(
     },
 )
 
+DxConfigInfo = provider(
+    doc = "Configuration observations a subject rule exposes to starlark_test.",
+    fields = {
+        "fields": "String-keyed, string-valued configuration observations.",
+    },
+)
+
 def _dx_aspect_note_impl(target, ctx):
     """Derives one aspect note without subject cooperation. See: `docs/testing/starlark.md#modes`."""
     fields = {
@@ -397,6 +404,10 @@ def _observe_subjects(subjects):
             aspect_fields = target[DxAspectInfo].fields
             for key in sorted(aspect_fields.keys()):
                 lines.append("aspect_field " + key + "=" + aspect_fields[key])
+        if DxConfigInfo in target:
+            config_fields = target[DxConfigInfo].fields
+            for key in sorted(config_fields.keys()):
+                lines.append("config_field " + key + "=" + config_fields[key])
     return lines
 
 def _analysis_test_impl(ctx):

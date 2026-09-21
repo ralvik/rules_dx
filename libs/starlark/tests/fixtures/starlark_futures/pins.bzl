@@ -7,13 +7,13 @@ Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
 """
 
 # Per-future dispositions (two wont-fix filtering/targets, one wont-fix
-# orchestration, two supported matchers/aspect under #790/#791, four deferred
-# subjects).
+# orchestration, three supported matchers/aspect/configuration under
+# #790/#791/#793, three deferred subjects).
 PER_CHECK_FILTERING = "wont-fix"
 RICHER_MATCHERS = "supported"
 ASPECT_SUBJECTS = "supported"
 TOOLCHAIN_SUBJECTS = "deferred"
-CONFIGURATION_SUBJECTS = "deferred"
+CONFIGURATION_SUBJECTS = "supported"
 OUTPUT_GROUP_SUBJECTS = "deferred"
 ACTION_SUBJECTS = "deferred"
 PER_FUNCTION_TARGETS = "wont-fix"
@@ -50,12 +50,22 @@ OUTPUT_GROUP_SUBJECTS_USE_CASE = "group-to-files mapping plus resolved report vi
 OUTPUT_GROUP_SUBJECTS_SURFACE = "DxSubjectInfo fields plus DefaultInfo basenames only, no OutputGroupInfo"
 OUTPUT_GROUP_SUBJECTS_ISSUE = "use case pinned under issue #794, stays deferred"
 
+# Configuration subjects use case (issue #793): leaf plus group with
+# configurable select plus platform fragment plus flip transition via
+# config_subjects.bzl, proven by //libs/starlark/tests:config_subject_analysis.
+CONFIGURATION_SUBJECTS_USE_CASE = "leaf plus group with select plus fragment plus transition via config_subjects.bzl"
+CONFIGURATION_SUBJECTS_SURFACE = "DxConfigInfo plus config_value plus select plus fragment plus transition plus config_field observations"
+CONFIGURATION_SUBJECTS_ISSUE = "qualified under issue #793"
+
 # ADR 0009 provisional coverage: configuration includes transitions,
 # action includes registered-action, broader subjects (targets, actions,
 # files, depsets, runfiles) stay provisional with the same deferred
 # dispositions above; do not treat them as available API. Matchers left
 # provisional under #588 and are now supported under #790; aspects left
-# provisional under #588 and are now supported under #791.
+# provisional under #588 and are now supported under #791; toolchain use case
+# pinned under #792 but stays deferred; output-group use case pinned under
+# #794 but stays deferred; configuration left provisional under #588 and is
+# now supported under #793.
 PROVISIONAL_RULE = "provisional pending concrete use cases"
 SUCCESSOR_REQUIREMENT = "concrete use case plus fixtures plus successor issue"
 

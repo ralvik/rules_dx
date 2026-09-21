@@ -6,7 +6,7 @@
 #
 # Mirrors `libs/starlark/defs.bzl` analysis-mode observation rendering:
 # "subject <label>", "file <basename>", "field <key>=<value>",
-# "aspect_field <key>=<value>" lines.
+# "aspect_field <key>=<value>", "config_field <key>=<value>" lines.
 # Hermetic: sandbox-only, TEST_TMPDIR scratch, offline, no nested Bazel.
 set -euo pipefail
 

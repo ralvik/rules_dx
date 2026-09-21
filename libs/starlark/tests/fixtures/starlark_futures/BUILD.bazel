@@ -1,5 +1,6 @@
 """Starlark testing futures fixture."""
 
+load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
@@ -9,6 +10,7 @@ package(
 
 exports_files([
     "aspect_subjects.bzl",
+    "config_subjects.bzl",
     "matchers.bzl",
     "output_group_subjects.bzl",
     "pins.bzl",
@@ -16,12 +18,27 @@ exports_files([
     "toolchain_subjects.bzl",
 ])
 
+string_flag(
+    name = "config_value",
+    build_setting_default = "plain",
+    values = [
+        "flipped",
+        "plain",
+    ],
+)
+
+config_setting(
+    name = "is_flipped",
+    flag_values = {":config_value": "flipped"},
+)
+
 real_source_target(
     name = "corpus_starlark",
     testonly = True,
     starlark_srcs = [
         "BUILD.bazel",
         "aspect_subjects.bzl",
+        "config_subjects.bzl",
         "matchers.bzl",
         "output_group_subjects.bzl",
         "pins.bzl",
