@@ -127,6 +127,29 @@ def add_a():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Ignore-list parity; see tools/ci/ignore_parity.sh.
+    sh_test(
+        name = "ignore_parity_test",
+        srcs = ["ignore_parity.sh"],
+        args = [
+            "$(rootpath //:.gitignore)",
+            "$(rootpath //:.bazelignore)",
+            "$(rootpath //:.bazelrc)",
+            "$(rootpath //docs:contributing/local-workflows.md)",
+        ],
+        data = [
+            "//:.bazelignore",
+            "//:.bazelrc",
+            "//:.gitignore",
+            "//docs:contributing/local-workflows.md",
+            "//tools/sh:bootstrap",
+            "//tools/sh:guards",
+            "//tools/sh:lib",
+        ],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Seed-cell coverage gate harness (item 1); see tools/ci/coverage_cell.sh.
     sh_binary(
         name = "coverage_cell",

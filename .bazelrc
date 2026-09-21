@@ -52,4 +52,6 @@ build --java_runtime_version=remotejdk_21
 build --@rules_rust//cargo/settings:use_default_shell_env=False
 
 # Carry over per-person local flags when present (never committed).
+# user.bazelrc is resolution-only: per-person registry/flag overrides.
+# Canonical lockfile URLs stay bcr.bazel.build (see docs/contributing/local-workflows.md).
 try-import %workspace%/user.bazelrc
