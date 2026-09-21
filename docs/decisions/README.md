@@ -34,3 +34,4 @@ validation and are not stable commitments.
 | [0024: Selective `dx update` Per-Set Support](0024-selective-update.md) | Accepted | — | Dependency currency |
 | [0025: `dx migrate` Upgrade Scope](0025-migrate-upgrade-scope.md) | Accepted | — | CLI surface |
 | [0026: Rust Product Code Boundary And Migration Umbrella](0026-rust-product-code.md) | Accepted | — | Product runtime |
+| [0027: Depcheck Checker Rust Delivery](0027-depcheck-rust.md) | Accepted | — | Product runtime |

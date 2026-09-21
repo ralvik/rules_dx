@@ -208,7 +208,7 @@ fi
 # the verification matrix.
 # Depcheck Delivered for required core: contract plus fixtures plus targets.
 if [[ -f "tools/ci/depcheck_contract.sh" ]] &&
-  [[ -f "tools/depcheck/depcheck.py" ]] &&
+  [[ -f "tools/depcheck/src/lib.rs" ]] &&
   [[ -f "tools/depcheck/BUILD.bazel" ]]; then
   ok
 else

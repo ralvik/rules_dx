@@ -39,9 +39,14 @@ hello_build="cc/tests/fixtures/hello/BUILD.bazel"
 gtest_build="cc/tests/fixtures/googletest/BUILD.bazel"
 module="MODULE.bazel"
 lock="MODULE.bazel.lock"
-checker="tools/depcheck/depcheck.py"
+checker="tools/depcheck/src/lib.rs"
 cc_ok_man="tools/depcheck/testdata/cc/ok_used/cc_deps.toml"
 cc_ok_lock="tools/depcheck/testdata/cc/ok_used/cc_lock.json"
+if bazel build --noshow_progress //tools/depcheck:depcheck >/dev/null 2>&1; then
+  depcheck_bin="bazel-bin/tools/depcheck/depcheck"
+else
+  depcheck_bin="bazel run --noshow_progress //tools/depcheck:depcheck --"
+fi
 matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/README.md"
 build="tools/ci/BUILD.bazel"
@@ -137,7 +142,7 @@ else
 fi
 
 # Depcheck consistency passes on the hash-pinned ok_used pair.
-if python3 "$checker" consistency --ecosystem cc --manifest "$cc_ok_man" --lock "$cc_ok_lock" >/dev/null 2>&1; then
+if $depcheck_bin consistency --ecosystem cc --manifest "$cc_ok_man" --lock "$cc_ok_lock" >/dev/null 2>&1; then
   ok
 else
   bad "depcheck cc consistency failed on ok_used (want hash-pinned pair green)"
@@ -154,7 +159,7 @@ t = open(p).read()
 t = t.replace('sha256 = "fixture-sha256-greet-1.0.0"', 'sha256 = ""', 1)
 open(p, "w").write(t)
 PY
-if python3 "$checker" consistency --ecosystem cc --manifest "$scratch/cc_deps.toml" --lock "$scratch/cc_lock.json" >/dev/null 2>&1; then
+if $depcheck_bin consistency --ecosystem cc --manifest "$scratch/cc_deps.toml" --lock "$scratch/cc_lock.json" >/dev/null 2>&1; then
   rm -rf "$scratch"
   bad "depcheck cc accepted a hash-less entry (want missing sha256 to fail)"
 else

@@ -1,37 +1,115 @@
-"""Cross-language dependency checks (; remaining opens).
+"""Cross-language dependency checks.
 
-Hermetic lockfile-consistency and declared-dependency usage fixtures
-for the required core (Rust/Cargo, Python/uv, JavaScript+TypeScript/pnpm)
-plus admitted foundations (Go/go.mod+go.sum, Java/Kotlin/Scala
-jvm_deps.toml+maven_install.json, C#/F# paket.dependencies+paket.lock,
-C/C++ cc_deps.toml+cc_lock.json).
-No network, no registry queries, non-mutating, normal test targets in
-`bazel test //...` and bare `dx test` (no `manual`), independently
-runnable by label. Unrelated foundations stay inactive (only
-python3+bash, no ecosystem toolchains).
+Contract: `docs/quality/quality-testing.md` (dependency-check truth table).
 """
 
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 
 package(default_visibility = ["//:__subpackages__"])
 
-filegroup(
-    name = "checker_main",
-    srcs = ["depcheck.py"],
+rust_library(
+    name = "depcheck_lib",
+    srcs = [
+        "src/lib.rs",
+        "src/tests.rs",
+    ],
+    aliases = aliases(
+        package_name = "tools/dx_depcheck",
+        normal = True,
+    ),
+    crate_name = "dx_depcheck",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "clap",
+            "regex",
+            "serde",
+            "serde_json",
+            "toml",
+        ],
+        package_name = "tools/dx_depcheck",
+    ),
 )
 
-filegroup(
-    name = "checker",
-    srcs = [
-        "depcheck.py",
-        "depcheck_base.py",
-        "depcheck_commands.py",
-        "depcheck_parsers_core.py",
-        "depcheck_parsers_extra.py",
-        "depcheck_usages.py",
+rust_binary(
+    name = "depcheck",
+    srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "tools/dx_depcheck",
+        normal = True,
+    ),
+    crate_name = "depcheck",
+    crate_root = "src/main.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "clap",
+            "regex",
+            "serde",
+            "serde_json",
+            "toml",
+        ],
+        package_name = "tools/dx_depcheck",
+    ) + [":depcheck_lib"],
+)
+
+rust_test(
+    name = "depcheck_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "tools/dx_depcheck",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":depcheck_lib",
+    data = [
+        ":cc_testdata",
+        ":csharp_testdata",
+        ":fsharp_testdata",
+        ":go_testdata",
+        ":java_testdata",
+        ":js_testdata",
+        ":kotlin_testdata",
+        ":python_testdata",
+        ":rust_testdata",
+        ":scala_testdata",
+        ":ts_testdata",
+    ],
+    deps = crate_deps(
+        [
+            "clap",
+            "regex",
+            "serde",
+            "serde_json",
+            "tempfile",
+            "toml",
+        ],
+        package_name = "tools/dx_depcheck",
+    ),
+)
+
+rustfmt_test(
+    name = "depcheck_fmt_test",
+    size = "small",
+    targets = [
+        ":depcheck_lib",
+        ":depcheck",
     ],
 )
+
+rust_clippy_test(
+    name = "depcheck_clippy_test",
+    size = "small",
+    targets = [
+        ":depcheck_lib",
+        ":depcheck",
+    ],
+)
+
+exports_files(["Cargo.toml"])
 
 filegroup(
     name = "rust_testdata",
@@ -88,424 +166,6 @@ filegroup(
     srcs = glob(["testdata/cc/**"]),
 )
 
-sh_test(
-    name = "rust_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "rust",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/rust",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":rust_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "rust_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "rust",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/rust",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":rust_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "python_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "python",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/python",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":python_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "python_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "python",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/python",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":python_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "js_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "js",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/js",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":js_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "js_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "js",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/js",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":js_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "ts_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "ts",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/ts",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":ts_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "ts_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "ts",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/ts",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":ts_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "go_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "go",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/go",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":go_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "go_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "go",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/go",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":go_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "java_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "java",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/java",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":java_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "java_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "java",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/java",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":java_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "kotlin_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "kotlin",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/kotlin",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":kotlin_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "kotlin_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "kotlin",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/kotlin",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":kotlin_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "scala_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "scala",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/scala",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":scala_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "scala_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "scala",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/scala",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":scala_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "csharp_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "csharp",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/csharp",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":csharp_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "csharp_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "csharp",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/csharp",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":csharp_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "fsharp_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "fsharp",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/fsharp",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":fsharp_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "fsharp_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "fsharp",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/fsharp",
-    ],
-    data = [
-        ":checker",
-        ":checker_main",
-        ":fsharp_testdata",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "cc_consistency_test",
-    srcs = ["consistency_test.sh"],
-    args = [
-        "cc",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/cc",
-    ],
-    data = [
-        ":cc_testdata",
-        ":checker",
-        ":checker_main",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
-sh_test(
-    name = "cc_usage_test",
-    srcs = ["usage_test.sh"],
-    args = [
-        "cc",
-        "$(rootpath :checker_main)",
-        "tools/depcheck/testdata/cc",
-    ],
-    data = [
-        ":cc_testdata",
-        ":checker",
-        ":checker_main",
-        "//tools/sh:bootstrap",
-        "//tools/sh:lib",
-    ],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
-)
-
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
@@ -516,6 +176,7 @@ real_source_target(
     name = "corpus_toml",
     tags = ["corpus"],
     toml_srcs = [
+        "Cargo.toml",
         "testdata/cc/category/cc_deps.toml",
         "testdata/cc/category_ok/cc_deps.toml",
         "testdata/cc/exception/cc_deps.toml",

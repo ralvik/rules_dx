@@ -37,8 +37,9 @@ dx_guards_contains docs/decisions/0026-rust-product-code.md "product boundary re
   'deploy launcher' \
   'CI-drivers'
 
-# Decision log indexes the new record.
+# Decision log indexes the boundary plus depcheck successor.
 dx_guard_contains docs/decisions/README.md '0026-rust-product-code.md' "decision log lost ADR 0026 (want 0026-rust-product-code.md)"
+dx_guard_contains docs/decisions/README.md '0027-depcheck-rust.md' "decision log lost ADR 0027 (want 0027-depcheck-rust.md)"
 
 # Tool matrix links the boundary instead of restating it.
 dx_guards_contains docs/testing/tools.md "tool matrix lost the product boundary link (want ADR 0026 plus product_runtime_guards)" \
@@ -145,12 +146,19 @@ dx_guards_contains MODULE.bazel "python toolchain drifted (want aspect_rules_py 
   'aspect_rules_py' \
   'rules_python'
 
-# Depcheck checker stays a filegroup (no py_binary target) until its phase.
-if grep -q -F -e 'name = "checker"' tools/depcheck/BUILD.bazel &&
-  ! grep -q -e '^[[:space:]]*py_binary(' tools/depcheck/BUILD.bazel; then
+# Depcheck checker is Rust (delivered Phase 3 per ADR 0027): no Python
+# sources, rust_binary present, no sh_test harness.
+if [[ ! -f "tools/depcheck/depcheck.py" ]] &&
+  [[ ! -f "tools/depcheck/consistency_test.sh" ]] &&
+  [[ ! -f "tools/depcheck/usage_test.sh" ]] &&
+  grep -q -F -e 'name = "depcheck_lib"' tools/depcheck/BUILD.bazel &&
+  grep -q -F -e 'name = "depcheck"' tools/depcheck/BUILD.bazel &&
+  grep -q -F -e 'rust_binary(' tools/depcheck/BUILD.bazel &&
+  ! grep -q -e '^[[:space:]]*py_binary(' tools/depcheck/BUILD.bazel &&
+  ! grep -q -e '^[[:space:]]*sh_test(' tools/depcheck/BUILD.bazel; then
   ok
 else
-  bad "depcheck target shape drifted (want checker filegroup with no py_binary until its phase)"
+  bad "depcheck Rust delivery regressed (want depcheck_lib plus rust_binary depcheck with no .py/sh harness per ADR 0027)"
 fi
 
 # update.py deferral stays py_binary until #667 decides otherwise.

@@ -30,7 +30,8 @@ dx_cd_workspace
 dx_test_init
 
 contract="docs/quality/quality-testing.md"
-checker="tools/depcheck/depcheck.py"
+checker="tools/depcheck/src/lib.rs"
+binary="tools/depcheck/src/main.rs"
 build="tools/depcheck/BUILD.bazel"
 
 if [[ -f "$contract" ]]; then
@@ -100,13 +101,13 @@ else
   bad "contract lost the obsolete-exception clause"
 fi
 
-# Checker exists, hermetic (no network imports), non-mutating (reads only).
-if [[ -f "$checker" ]] &&
-  ! grep -rn -E -e 'import urllib|import socket|import http|import requests|from urllib|from socket' "$checker" >/dev/null 2>&1 &&
-  ! grep -rn -E -e 'subprocess|os\.system|os\.exec' "$checker" >/dev/null 2>&1; then
+# Checker exists as Rust, hermetic (no network/process deps), non-mutating.
+if [[ -f "$checker" ]] && [[ -f "$binary" ]] &&
+  ! grep -rn -E -e 'reqwest|hyper|tokio::net|std::net::Tcp' "$checker" "$binary" >/dev/null 2>&1 &&
+  ! grep -rn -E -e 'std::process::Command|tokio::process' "$checker" >/dev/null 2>&1; then
   ok
 else
-  bad "checker missing or not hermetic: $checker"
+  bad "checker missing or not hermetic: $checker plus $binary"
 fi
 
 # Per-language fixtures exist (truth table + edge cases for each core+admitted lang).
@@ -124,24 +125,17 @@ else
   bad "per-language depcheck fixtures missing under tools/depcheck/testdata/"
 fi
 
-# Twenty-two normal test targets exist, independently runnable, no manual,
-# Linux-only per the shell contract.
-targets_ok=1
-for t in rust_consistency_test rust_usage_test python_consistency_test python_usage_test js_consistency_test js_usage_test ts_consistency_test ts_usage_test go_consistency_test go_usage_test java_consistency_test java_usage_test kotlin_consistency_test kotlin_usage_test scala_consistency_test scala_usage_test csharp_consistency_test csharp_usage_test fsharp_consistency_test fsharp_usage_test cc_consistency_test cc_usage_test; do
-  if ! grep -q -F -e "name = \"$t\"" "$build"; then
-    targets_ok=0
-  fi
-done
-if [[ "$targets_ok" == "1" ]] &&
-  ! grep -A8 -e 'depcheck' "$build" | grep -q -F -e '"manual"'; then
+# Portable rust_test targets exist, independently runnable, no manual,
+# no Linux-only pins (Rust runs on all platforms).
+if grep -q -F -e 'name = "depcheck_test"' "$build" &&
+  grep -q -F -e 'name = "depcheck"' "$build" &&
+  grep -q -F -e 'rust_binary(' "$build" &&
+  grep -q -F -e 'rust_test(' "$build" &&
+  ! grep -q -F -e '"manual"' "$build" &&
+  ! grep -q -F -e 'target_compatible_with' "$build"; then
   ok
 else
-  bad "depcheck test targets missing or carry manual exclusion"
-fi
-if [[ "$(grep -c -F -e 'target_compatible_with = ["@platforms//os:linux"]' "$build")" -ge 22 ]]; then
-  ok
-else
-  bad "depcheck sh_tests missing Linux-only labels"
+  bad "depcheck Rust targets missing, manual, or carry Linux-only pins"
 fi
 
 # Docs describe only what runs: required-core plus admitted accepted for
