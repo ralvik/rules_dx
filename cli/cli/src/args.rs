@@ -20,7 +20,8 @@
 //! Domain split: the command vocabulary lives in the
 //! `command` module, the `clap` grammar (`Cli`, `VALUE_OPTIONS`,
 //! `cli_command`) in the `grammar` module, shell-completion rendering in
-//! the `completion` module, help rendering in the `help` module, typo
+//! the `completion` module, completion-time dynamic candidates in the
+//! `complete` module, help rendering in the `help` module, typo
 //! suggestions in the `suggest` module, build-profile vocabulary in the
 //! `profile` module, shared invocation types in the `invocation` module,
 //! error vocabulary in the `error` module, and invocation parsing in the
@@ -31,11 +32,13 @@
 //! and `clap`-error mapping in the `tokenizer` module. This facade keeps the re-exports;
 //! the public paths stay `crate::args::Command`,
 //! `crate::args::{COMPLETION_SHELLS, render_completion}`,
+//! `crate::args::{COMPLETE_SUBCOMMAND, run_complete}`,
 //! `crate::args::{Invocation, ReportRequest}`,
 //! `crate::args::ArgsError`, and
 //! `crate::args::{parse, cli_command}` via the re-exports below.
 
 pub mod command;
+pub mod complete;
 pub mod completion;
 pub mod error;
 pub mod grammar;
@@ -48,6 +51,7 @@ pub mod tokenizer;
 pub mod values;
 
 pub use command::Command;
+pub use complete::{completes_labels, run_complete, COMPLETE_SUBCOMMAND};
 pub use completion::{render_completion, COMPLETION_SHELLS};
 pub use error::ArgsError;
 pub use grammar::cli_command;

@@ -190,6 +190,75 @@ mod tests {
     }
 
     #[test]
+    fn completion_embeds_dynamic_callback_without_drift() {
+        use clap::ValueEnum;
+        // Every shell carries the completion-time callback into the
+        // binary (`dx __complete`) from the same tables as parsing, so
+        // dynamic label/task candidates cannot drift from the command
+        // table. Fish task payloads stay pinned verbatim here; the
+        // `args::complete` unit fixtures pin the tables themselves to
+        // their single sources (See:
+        // docs/cli/commands/completion.md).
+        for &shell in crate::args::COMPLETION_SHELLS {
+            let text = crate::args::render_completion(shell).expect("render");
+            assert!(
+                text.contains(crate::args::COMPLETE_SUBCOMMAND),
+                "shell {shell} misses the __complete callback"
+            );
+            assert!(
+                text.contains("dx dynamic candidates"),
+                "shell {shell} misses the dynamic marker"
+            );
+        }
+        let bash = crate::args::render_completion("bash").expect("render");
+        assert!(
+            bash.contains("dx __complete"),
+            "bash must call back into the binary"
+        );
+        let zsh = crate::args::render_completion("zsh").expect("render");
+        assert!(
+            zsh.contains("_dx_dynamic_targets"),
+            "zsh must route targets through the callback"
+        );
+        assert!(
+            zsh.contains("dx __complete"),
+            "zsh must call back into the binary"
+        );
+        let powershell = crate::args::render_completion("powershell").expect("render");
+        assert!(
+            powershell.contains("dx __complete"),
+            "powershell must call back into the binary"
+        );
+        let fish = crate::args::render_completion("fish").expect("render");
+        for line in [
+            "__fish_seen_subcommand_from watch' -a 'build check fix format lint run test typecheck'",
+            "__fish_seen_subcommand_from hooks; and not __fish_seen_subcommand_from install uninstall status run' -a 'install run status uninstall'",
+            "__fish_seen_subcommand_from hooks; and __fish_seen_subcommand_from run' -a 'pre-commit pre-push'",
+            "__fish_seen_subcommand_from new' -a 'c cc cpp csharp fsharp go java javascript kotlin python rust scala typescript'",
+            "__fish_seen_subcommand_from audit; and not __fish_seen_subcommand_from license security' -a 'license security'",
+            "__fish_seen_subcommand_from completion' -a 'bash fish powershell zsh'",
+            "__fish_seen_subcommand_from update bump' -a 'cargo go maven npm nuget'",
+            "(commandline -opc)",
+        ] {
+            assert!(
+                fish.contains(line),
+                "fish misses dynamic line {line:?}"
+            );
+        }
+        // The fish label condition derives from the command table: every
+        // label-taking command stays covered.
+        for cmd in crate::args::Command::value_variants() {
+            if crate::args::completes_labels(*cmd) {
+                assert!(
+                    fish.contains(cmd.name()),
+                    "fish label condition misses {}",
+                    cmd.name()
+                );
+            }
+        }
+    }
+
+    #[test]
     fn completion_dry_run_plans_without_rendering() {
         let inv = invocation(&["completion", "bash", "--dry-run"]);
         let scratch = dx_test_scratch::scratch("dx-adopt-completion-dry-");
