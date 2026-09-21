@@ -2,12 +2,16 @@
 /bazel-*
 user.bazelrc
 **/user.bazelrc
+# user.bazelrc is a gitignored local-only overlay (try-imported from .bazelrc);
+# it carries only per-person resolution flags. Canonical registry/lockfile URLs
+# stay bcr.bazel.build (see docs/contributing/local-workflows.md).
 
 # Local agent instructions
 AGENTS.local.md
 
-# Ralph Loop local state (machine-managed)
-.opencode/ralph-loop.local.md
+# Agent-local tool state (machine-managed, never commit; whole-dir scope mirrors
+# .bazelignore so Bazel never watches it and git never tracks it).
+.opencode/
 
 # Release outputs (never commit; rebuilt locally on demand)
 # No tags, GitHub releases, or registry submissions without explicit owner approval.
@@ -24,6 +28,12 @@ AGENTS.local.md
 .tmp/
 __pycache__/
 *.pyc
+# JS dependency closures (git matches at any depth; .bazelignore lists the root
+# plus known nested path explicitly because it is root-relative).
+node_modules/
+# Ruff cache (matches at any depth; mirrors .bazelignore .ruff_cache).
+.ruff_cache/
+# Local-only opencode config (untracked personal overlay, never commit).
 opencode.json
 
 # Coverage artifacts (llvm-cov profraw/profdata spill to the checkout

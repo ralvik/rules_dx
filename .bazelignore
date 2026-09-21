@@ -10,3 +10,8 @@ quality/tools/javascript/node_modules
 __pycache__
 dist
 release
+.ruff_cache
+bazel-*
+# Parity notes (mirrors .gitignore): .ruff_cache is the Ruff cache dir;
+# bazel-* covers output symlinks (git: /bazel-*); .opencode/ is agent-local
+# whole-dir state (git: .opencode/).

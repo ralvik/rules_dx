@@ -68,8 +68,10 @@ js_library(
 npm_link_all_packages(name = "node_modules")
 
 exports_files([
+    ".bazelignore",
     ".bazelrc",
     ".bazelversion",
+    ".gitignore",
     "MODULE.bazel",
     # Workspace ESM scope marker. javascript_test adds it to every
     # test's runfiles so jest's ESM detection resolves first-party .js
