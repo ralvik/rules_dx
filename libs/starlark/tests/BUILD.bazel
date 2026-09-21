@@ -7,6 +7,7 @@ load(":aspect_tests.bzl", "aspect_subject_tests")
 load(":execution_tests.bzl", "fixture_execution_tests")
 load(":matcher_tests.bzl", "matcher_unit_tests")
 load(":matrix_tests.bzl", "matrix_validation_tests")
+load(":output_group_tests.bzl", "output_group_unit_tests")
 load(":subject.bzl", "example_subject")
 load(":toolchain_tests.bzl", "toolchain_unit_tests")
 load("//libs/starlark/tests/fixtures/starlark_futures:aspect_subjects.bzl", "aspect_group", "aspect_leaf")
@@ -46,6 +47,8 @@ matcher_unit_tests(name = "matcher_unit")
 
 toolchain_unit_tests(name = "toolchain_unit")
 
+output_group_unit_tests(name = "output_group_unit")
+
 matrix_validation_tests(name = "matrix_validation")
 
 test_suite(
@@ -57,6 +60,7 @@ test_suite(
         ":fixture_execution",
         ":matcher_unit",
         ":matrix_validation",
+        ":output_group_unit",
         ":subject_analysis",
         ":toolchain_unit",
     ],
@@ -74,6 +78,7 @@ real_source_target(
         "execution_tests.bzl",
         "matcher_tests.bzl",
         "matrix_tests.bzl",
+        "output_group_tests.bzl",
         "subject.bzl",
         "toolchain_tests.bzl",
     ],

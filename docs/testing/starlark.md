@@ -120,10 +120,10 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Decided under closed #588 plus #790 plus #791 plus #792 per [ADR 0009](../decisions/0009-starlark-testing.md)
+Decided under closed #588 plus #790 plus #791 plus #792 plus #794 per [ADR 0009](../decisions/0009-starlark-testing.md)
 (remaining subjects provisional pending concrete use cases), pinned by fixtures in
 `../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
-`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl`)
+`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus `output_group_subjects.bzl`)
 and qualified by
 `bazel run //tools/ci:starlark_futures_qualification`. Test framework only;
 seed only, no Supported claim. Richer matchers graduated under #790 and
@@ -132,7 +132,11 @@ constructors is committed. Aspect subjects graduated under #791 and are
 accepted above; toolchain subjects stay deferred with the platform plus
 toolchain mapping plus resolved-report use case pinned under #792 (via
 `toolchain_subjects.bzl`, proven by `//libs/starlark/tests:toolchain_unit`);
-configuration plus output-group plus action subjects stay deferred.
+output-group subjects stay deferred with the group-to-files mapping plus
+resolved-report use case pinned under #794 (via
+`output_group_subjects.bzl`, proven by
+`//libs/starlark/tests:output_group_unit`); configuration plus action
+subjects stay deferred.
 
 - Per-check filtering stays wont-fix: target granularity is contract. One
   macro call is one addressable Bazel test target with one Bazel result;
@@ -150,10 +154,12 @@ configuration plus output-group plus action subjects stay deferred.
 - Configuration subjects stay deferred (#793), including transitions, pending a
   concrete use case plus fixtures plus successor issue. Configurable
   attributes, fragments, and transitions are not observed.
-- Output-group subjects stay deferred (#794), pending a concrete use case plus
-  fixtures plus successor issue. Observation renders `DefaultInfo` files
-  only, not `OutputGroupInfo`; wrapper forwarding of output groups does
-  not imply observation.
+- Output-group subjects stay deferred (#794) with the group-to-files
+  mapping plus resolved-report use case pinned via
+  `output_group_subjects.bzl` (proven by
+  `//libs/starlark/tests:output_group_unit`). Observation renders
+  `DefaultInfo` files only, not `OutputGroupInfo`; wrapper forwarding of
+  output groups does not imply observation.
 - Action subjects stay deferred (#795), including registered-action, pending a
   concrete use case plus fixtures plus successor issue. Actions are proven
   via execution-mode `file_checks` or `aquery` evidence, not analysis

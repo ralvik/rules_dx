@@ -4,7 +4,8 @@
 # Qualifies the nine per-future decisions under ADR 0009
 # (remaining subjects provisional pending concrete use cases;
 # richer matchers graduated under #790, aspect subjects under #791,
-# toolchain use case pinned under #792 staying deferred):
+# toolchain use case pinned under #792 staying deferred,
+# output-group use case pinned under #794 staying deferred):
 # - wont-fix: per-check filtering (target granularity is contract),
 #   per-function targets (explicit macro instantiation is contract),
 #   Rust orchestration with BEP (single invocation, no nested Bazel);
@@ -16,15 +17,18 @@
 #   qualified under #791 with the leaf plus group use case);
 # - deferred with use case: toolchain (platform plus toolchain mapping plus
 #   resolved report via toolchain_subjects.bzl proven by toolchain_unit,
-#   pinned under #792, stays deferred) plus configuration (including
-#   transitions) plus output-group plus action (including registered-action)
-#   subjects, each pending a concrete use case plus fixtures plus successor
-#   issue;
+#   pinned under #792, stays deferred) plus output-group (group-to-files
+#   mapping plus resolved report via output_group_subjects.bzl proven by
+#   output_group_unit, pinned under #794, stays deferred) plus
+#   configuration (including transitions) plus action (including
+#   registered-action) subjects, each pending a concrete use case plus
+#   fixtures plus successor issue;
 # - rejected: second Starlark interpreter, per-check --test_filter
 #   parsing, nested Bazel invocation, behavioral matrix as line coverage;
 # - fixtures: `libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl`
 #   plus `starlark_futures.expected` plus `matchers.bzl` plus
-#   `aspect_subjects.bzl` plus `toolchain_subjects.bzl`) pins dispositions
+#   `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus
+#   `output_group_subjects.bzl`) pins dispositions
 #   plus rejected routes plus honesty;
 # - scope: test framework only, no Bazel semantics change.
 #   Seed only: no Supported claim.
@@ -51,9 +55,11 @@ expected="libs/starlark/tests/fixtures/starlark_futures/starlark_futures.expecte
 matchers="libs/starlark/tests/fixtures/starlark_futures/matchers.bzl"
 aspects="libs/starlark/tests/fixtures/starlark_futures/aspect_subjects.bzl"
 toolchains="libs/starlark/tests/fixtures/starlark_futures/toolchain_subjects.bzl"
+output_groups="libs/starlark/tests/fixtures/starlark_futures/output_group_subjects.bzl"
 matcher_tests="libs/starlark/tests/matcher_tests.bzl"
 aspect_tests="libs/starlark/tests/aspect_tests.bzl"
 toolchain_tests="libs/starlark/tests/toolchain_tests.bzl"
+output_group_tests="libs/starlark/tests/output_group_tests.bzl"
 analysis_tests="libs/starlark/tests/analysis_tests.bzl"
 tests_build="libs/starlark/tests/BUILD.bazel"
 matrix_tests="libs/starlark/tests/matrix_tests.bzl"
@@ -63,7 +69,7 @@ dogfood="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
 # Docs decide the nine futures under with ADR plus fixtures plus qualification.
-if grep -q -F -e 'Decided under closed #588 plus #790 plus #791 plus #792' "$doc" &&
+if grep -q -F -e 'Decided under closed #588 plus #790 plus #791 plus #792 plus #794' "$doc" &&
   grep -q -F -e 'remaining subjects provisional pending concrete use cases' "$doc" &&
   grep -q -F -e 'libs/starlark/tests/fixtures/starlark_futures/' "$doc" &&
   grep -q -F -e 'bazel run //tools/ci:starlark_futures_qualification' "$doc" &&
@@ -71,7 +77,7 @@ if grep -q -F -e 'Decided under closed #588 plus #790 plus #791 plus #792' "$doc
   grep -q -F -e 'line coverage is rejected' "$doc"; then
   ok
 else
-  bad "starlark.md lost its #588 plus #790 plus #791 plus #792 decided header with ADR plus fixtures plus qualification plus rejected routes"
+  bad "starlark.md lost its #588 plus #790 plus #791 plus #792 plus #794 decided header with ADR plus fixtures plus qualification plus rejected routes"
 fi
 
 # Docs keep per-check filtering wont-fix on target granularity.
@@ -127,7 +133,7 @@ if grep -q -F -e 'Toolchain subjects stay deferred' "$doc" &&
   ! grep -q -F -e 'Aspect subjects stay deferred' "$doc"; then
   ok
 else
-  bad "starlark.md lost its four subject-family deferred record under #588 plus #790 plus #791 plus #792"
+  bad "starlark.md lost its four subject-family deferred record under #588 plus #790 plus #791 plus #792 plus #794"
 fi
 
 # Docs pin the toolchain use case under #792 while staying deferred.
@@ -137,6 +143,15 @@ if grep -q -F -e 'toolchain_subjects.bzl' "$doc" &&
   ok
 else
   bad "starlark.md lost its toolchain use-case pin under #792 with stays deferred"
+fi
+
+# Docs pin the output-group use case under #794 while staying deferred.
+if grep -q -F -e 'output_group_subjects.bzl' "$doc" &&
+  grep -q -F -e '//libs/starlark/tests:output_group_unit' "$doc" &&
+  grep -q -F -e 'Output-group subjects stay deferred' "$doc"; then
+  ok
+else
+  bad "starlark.md lost its output-group use-case pin under #794 with stays deferred"
 fi
 
 # Docs keep per-function targets wont-fix on explicit macro instantiation.
@@ -207,7 +222,7 @@ if ! grep -q -F -e 'test_filter' "$defs" &&
   ! grep -q -F -e 'TEST_FILTER' "$defs"; then
   ok
 else
-  bad "defs.bzl must not handle test_filter per check under #588 plus #790 plus #791 plus #792"
+  bad "defs.bzl must not handle test_filter per check under #588 plus #790 plus #791 plus #792 plus #794"
 fi
 
 # Code observes DefaultInfo plus DxSubjectInfo plus DxAspectInfo with no broader subject plumbing.
@@ -220,7 +235,7 @@ if grep -q -F -e 'DxSubjectInfo' "$defs" &&
   ! grep -q -F -e 'Toolchain' "$defs"; then
   ok
 else
-  bad "defs.bzl lost its DefaultInfo plus DxSubjectInfo plus DxAspectInfo observation under #588 plus #790 plus #791 plus #792"
+  bad "defs.bzl lost its DefaultInfo plus DxSubjectInfo plus DxAspectInfo observation under #588 plus #790 plus #791 plus #792 plus #794"
 fi
 
 # Code keeps one-call-one-target dispatch with no nested Bazel.
@@ -230,11 +245,11 @@ if grep -q -F -e '_MODES' "$defs" &&
   ! grep -q -F -e 'bazel run' "$defs"; then
   ok
 else
-  bad "defs.bzl lost its one-call-one-target dispatch with no nested Bazel under #588 plus #790 plus #791 plus #792"
+  bad "defs.bzl lost its one-call-one-target dispatch with no nested Bazel under #588 plus #790 plus #791 plus #792 plus #794"
 fi
 
-# Fixture pins stay present with nine dispositions plus matcher plus aspect plus toolchain use cases plus #790 plus #791 plus #792.
-if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" && -f "$matchers" && -f "$aspects" && -f "$toolchains" ]] &&
+# Fixture pins stay present with nine dispositions plus matcher plus aspect plus toolchain plus output-group use cases plus #790 plus #791 plus #792 plus #794.
+if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" && -f "$matchers" && -f "$aspects" && -f "$toolchains" && -f "$output_groups" ]] &&
   grep -q -F -e 'PER_CHECK_FILTERING = "wont-fix"' "$pins" &&
   grep -q -F -e 'RICHER_MATCHERS = "supported"' "$pins" &&
   grep -q -F -e 'RICHER_MATCHERS_USE_CASE' "$pins" &&
@@ -247,6 +262,9 @@ if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" && -f "$matchers" && -
   grep -q -F -e 'TOOLCHAIN_SUBJECTS_USE_CASE' "$pins" &&
   grep -q -F -e 'TOOLCHAIN_SUBJECTS_SURFACE' "$pins" &&
   grep -q -F -e 'use case pinned under issue #792' "$pins" &&
+  grep -q -F -e 'OUTPUT_GROUP_SUBJECTS_USE_CASE' "$pins" &&
+  grep -q -F -e 'OUTPUT_GROUP_SUBJECTS_SURFACE' "$pins" &&
+  grep -q -F -e 'use case pinned under issue #794' "$pins" &&
   grep -q -F -e 'TOOLCHAIN_SUBJECTS = "deferred"' "$pins" &&
   grep -q -F -e 'CONFIGURATION_SUBJECTS = "deferred"' "$pins" &&
   grep -q -F -e 'OUTPUT_GROUP_SUBJECTS = "deferred"' "$pins" &&
@@ -257,7 +275,7 @@ if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" && -f "$matchers" && -
   grep -q -F -e 'REJECTED_NESTED_BAZEL' "$pins"; then
   ok
 else
-  bad "starlark_futures pins fixture lost its nine dispositions plus matcher plus aspect plus toolchain use cases under #790 plus #791 plus #792"
+  bad "starlark_futures pins fixture lost its nine dispositions plus matcher plus aspect plus toolchain plus output-group use cases under #790 plus #791 plus #792 plus #794"
 fi
 
 # Fixture matchers.bzl carries the concrete use case.
@@ -298,7 +316,22 @@ else
   bad "starlark_futures toolchain_subjects.bzl lost its #792 platform plus toolchain use case"
 fi
 
-# Expected fixture pins richer matchers plus aspect subjects supported plus toolchain deferred with use case plus remaining futures.
+# Fixture output_group_subjects.bzl carries the concrete use case pinned under #794 staying deferred.
+if grep -q -F -e 'def admitted_output_groups' "$output_groups" &&
+  grep -q -F -e 'def admitted_output_files' "$output_groups" &&
+  grep -q -F -e 'def resolve_output_group' "$output_groups" &&
+  grep -q -F -e 'def output_group_report' "$output_groups" &&
+  grep -q -F -e 'def output_group_subject_fields' "$output_groups" &&
+  grep -q -F -e 'def output_group_fingerprint_like' "$output_groups" &&
+  grep -q -F -e 'def is_supported_output_group' "$output_groups" &&
+  grep -q -F -e 'issue #794' "$output_groups" &&
+  grep -q -F -e 'stays deferred' "$output_groups"; then
+  ok
+else
+  bad "starlark_futures output_group_subjects.bzl lost its #794 group-to-files use case"
+fi
+
+# Expected fixture pins richer matchers plus aspect subjects supported plus toolchain plus output-group deferred with use cases plus remaining futures.
 if grep -q -F -e 'per-check filtering wont-fix' "$expected" &&
   grep -q -F -e 'richer matchers supported' "$expected" &&
   grep -q -F -e 'qualified under #790' "$expected" &&
@@ -310,6 +343,9 @@ if grep -q -F -e 'per-check filtering wont-fix' "$expected" &&
   grep -q -F -e '//libs/starlark/tests:toolchain_unit' "$expected" &&
   grep -q -F -e 'configuration subjects deferred' "$expected" &&
   grep -q -F -e 'output-group subjects deferred' "$expected" &&
+  grep -q -F -e 'pinned under #794' "$expected" &&
+  grep -q -F -e 'output_group_subjects.bzl' "$expected" &&
+  grep -q -F -e '//libs/starlark/tests:output_group_unit' "$expected" &&
   grep -q -F -e 'action subjects deferred' "$expected" &&
   grep -q -F -e 'per-function targets wont-fix' "$expected" &&
   grep -q -F -e 'Rust orchestration with BEP wont-fix' "$expected" &&
@@ -317,19 +353,20 @@ if grep -q -F -e 'per-check filtering wont-fix' "$expected" &&
   grep -q -F -e 'no Supported claim' "$expected"; then
   ok
 else
-  bad "starlark_futures.expected lost its supported-matchers plus supported-aspect plus toolchain-pinned plus remaining futures under #790 plus #791 plus #792"
+  bad "starlark_futures.expected lost its supported-matchers plus supported-aspect plus toolchain-pinned plus output-group-pinned plus remaining futures under #790 plus #791 plus #792 plus #794"
 fi
 
-# Fixture BUILD exports pins plus expected plus matchers plus aspect plus toolchain subjects with corpus coverage.
+# Fixture BUILD exports pins plus expected plus matchers plus aspect plus toolchain plus output-group subjects with corpus coverage.
 if grep -q -F -e 'pins.bzl' "$fixture_build" &&
   grep -q -F -e 'starlark_futures.expected' "$fixture_build" &&
   grep -q -F -e 'matchers.bzl' "$fixture_build" &&
   grep -q -F -e 'aspect_subjects.bzl' "$fixture_build" &&
   grep -q -F -e 'toolchain_subjects.bzl' "$fixture_build" &&
+  grep -q -F -e 'output_group_subjects.bzl' "$fixture_build" &&
   grep -q -F -e 'corpus_starlark' "$fixture_build"; then
   ok
 else
-  bad "starlark_futures BUILD.bazel lost its pins plus expected plus matchers plus aspect plus toolchain exports with corpus under #790 plus #791 plus #792"
+  bad "starlark_futures BUILD.bazel lost its pins plus expected plus matchers plus aspect plus toolchain plus output-group exports with corpus under #790 plus #791 plus #792 plus #794"
 fi
 
 # Tests prove the matchers through matcher_unit in the suite.
@@ -396,6 +433,21 @@ else
   bad "libs/starlark/tests lost its toolchain_unit proof under #792"
 fi
 
+# Tests prove the output-group use case through output_group_unit in the suite.
+if grep -q -F -e 'def output_group_unit_tests' "$output_group_tests" &&
+  grep -q -F -e 'expect_equal' "$output_group_tests" &&
+  grep -q -F -e 'expect_true' "$output_group_tests" &&
+  grep -q -F -e 'expect_false' "$output_group_tests" &&
+  grep -q -F -e 'expect_contains' "$output_group_tests" &&
+  grep -q -F -e 'expect_match' "$output_group_tests" &&
+  grep -q -F -e 'resolve_output_group' "$output_group_tests" &&
+  grep -q -F -e 'output_group_unit' "$tests_build" &&
+  grep -q -F -e '":output_group_unit"' "$tests_build"; then
+  ok
+else
+  bad "libs/starlark/tests lost its output_group_unit proof under #794"
+fi
+
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "starlark_futures_qualification"' "$build" &&
   grep -q -F -e 'starlark_futures_qualification.sh' "$build" &&
@@ -410,10 +462,11 @@ if grep -q -F -e ':starlark_futures_qualification' "$verify" &&
   grep -q -F -e 'closed #588' "$verify" &&
   grep -q -F -e '#790' "$verify" &&
   grep -q -F -e '#791' "$verify" &&
-  grep -q -F -e '#792' "$verify"; then
+  grep -q -F -e '#792' "$verify" &&
+  grep -q -F -e '#794' "$verify"; then
   ok
 else
-  bad "verification-matrix.md lost its starlark_futures_qualification entry under #588 plus #790 plus #791 plus #792"
+  bad "verification-matrix.md lost its starlark_futures_qualification entry under #588 plus #790 plus #791 plus #792 plus #794"
 fi
 
 dx_test_summary "starlark futures qualification harness"
