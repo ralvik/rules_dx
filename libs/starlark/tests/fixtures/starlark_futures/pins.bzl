@@ -7,10 +7,11 @@ Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
 """
 
 # Per-future dispositions (two wont-fix filtering/targets, one wont-fix
-# orchestration, one supported matchers under #790, five deferred subjects).
+# orchestration, two supported matchers/aspect under #790/#791, four deferred
+# subjects).
 PER_CHECK_FILTERING = "wont-fix"
 RICHER_MATCHERS = "supported"
-ASPECT_SUBJECTS = "deferred"
+ASPECT_SUBJECTS = "supported"
 TOOLCHAIN_SUBJECTS = "deferred"
 CONFIGURATION_SUBJECTS = "deferred"
 OUTPUT_GROUP_SUBJECTS = "deferred"
@@ -25,11 +26,18 @@ RICHER_MATCHERS_USE_CASE = "greet plus pair-error plus admitted-list plus subjec
 RICHER_MATCHERS_SURFACE = "expect_equal plus expect_true plus expect_false plus expect_contains plus expect_match"
 RICHER_MATCHERS_ISSUE = "qualified under issue #790"
 
+# Aspect subjects use case (issue #791): leaf plus group with deps via
+# aspect_subjects.bzl, proven by //libs/starlark/tests:aspect_subject_analysis.
+ASPECT_SUBJECTS_USE_CASE = "leaf plus group with deps via aspect_subjects.bzl"
+ASPECT_SUBJECTS_SURFACE = "DxAspectInfo plus dx_aspect_note plus aspect_field observations"
+ASPECT_SUBJECTS_ISSUE = "qualified under issue #791"
+
 # ADR 0009 provisional coverage: configuration includes transitions,
 # action includes registered-action, broader subjects (targets, actions,
 # files, depsets, runfiles) stay provisional with the same deferred
 # dispositions above; do not treat them as available API. Matchers left
-# provisional under #588 and are now supported under #790.
+# provisional under #588 and are now supported under #790; aspects left
+# provisional under #588 and are now supported under #791.
 PROVISIONAL_RULE = "provisional pending concrete use cases"
 SUCCESSOR_REQUIREMENT = "concrete use case plus fixtures plus successor issue"
 

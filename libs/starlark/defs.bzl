@@ -10,6 +10,42 @@ DxSubjectInfo = provider(
     },
 )
 
+DxAspectInfo = provider(
+    doc = "Aspect observations derived without subject cooperation.",
+    fields = {
+        "fields": "String-keyed, string-valued observations the aspect saw.",
+    },
+)
+
+def _dx_aspect_note_impl(target, ctx):
+    """Derives one aspect note without subject cooperation. See: `docs/testing/starlark.md#modes`."""
+    fields = {
+        "aspect_seen": "True",
+        "subject_label": _display_label(target.label),
+    }
+    if DxSubjectInfo in target:
+        fields["field_count"] = str(len(target[DxSubjectInfo].fields.keys()))
+        fields["has_subject"] = "True"
+    else:
+        fields["field_count"] = "0"
+        fields["has_subject"] = "False"
+    seen = []
+    for dep in getattr(ctx.rule.attr, "deps", []):
+        if DxAspectInfo in dep:
+            label = dep[DxAspectInfo].fields.get("subject_label", "")
+            if label != "":
+                seen.append(label)
+    if len(seen) > 0:
+        fields["transitive"] = ",".join(sorted(seen))
+    fields["transitive_count"] = str(len(seen))
+    return [DxAspectInfo(fields = fields)]
+
+dx_aspect_note = aspect(
+    implementation = _dx_aspect_note_impl,
+    attr_aspects = ["deps"],
+    doc = "Observation aspect applied to every analysis subject.",
+)
+
 def expect_equal(name, actual, expected):
     """Builds one equality-check record as a JSON string.
 
@@ -357,6 +393,10 @@ def _observe_subjects(subjects):
             fields = target[DxSubjectInfo].fields
             for key in sorted(fields.keys()):
                 lines.append("field " + key + "=" + fields[key])
+        if DxAspectInfo in target:
+            aspect_fields = target[DxAspectInfo].fields
+            for key in sorted(aspect_fields.keys()):
+                lines.append("aspect_field " + key + "=" + aspect_fields[key])
     return lines
 
 def _analysis_test_impl(ctx):
@@ -406,7 +446,8 @@ _common_attrs = {
               "every line must be present in the file at execution time.",
     ),
     "subjects": attr.label_list(
-        doc = "Analysis-mode subject targets observed for providers and outputs.",
+        aspects = [dx_aspect_note],
+        doc = "Analysis-mode subject targets observed for providers, outputs, and aspect notes.",
     ),
 }
 

@@ -107,6 +107,18 @@ rules. Proven by `subject_analysis`, which asserts all three fields plus
 the output basename.
 matrix-item: dx-subject-info
 
+## item: aspect-subjects
+
+`DxAspectInfo` provider plus `dx_aspect_note` observation aspect in
+`libs/starlark/defs.bzl`: the aspect runs on every analysis subject
+(`subjects` carries it), derives `aspect_seen` plus `subject_label` plus
+`has_subject` plus `field_count` plus transitive `deps` notes without
+subject cooperation, and analysis renders sorted `aspect_field` lines.
+Proven by `aspect_subject_analysis` over the futures
+`aspect_subjects.bzl` use case (leaf plus group with deps, direct plus
+transitive notes).
+matrix-item: aspect-subjects
+
 ## item: failure-rendering
 
 Mismatch diagnostics render `FAIL` with expected and actual values in
