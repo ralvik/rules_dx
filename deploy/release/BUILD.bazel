@@ -250,6 +250,23 @@ signed_release(
     identity = "https://github.com/ralvik/rules_dx/.github/workflows/release.yml@refs/tags/v0.0.0-dryrun",
 )
 
+# Seed releasable unit for artifact-into-releases packaging (See: `docs/deploy/release-runbook.md#packaging`).
+# Aggregates the validated audit curator bytes (`//:audit_curator` over
+# `licenses.toml`) with the seed binary plus man page plus NOTICE bundle
+# plus SBOM/provenance pair so one `bazel build` proves the publishing
+# set travels together; `signing_demo` already binds the SBOM pair plus
+# the NOTICE, and `github_draft` ships the binary plus man page.
+filegroup(
+    name = "release_artifacts",
+    srcs = [
+        "//:audit_curator",
+        "//cli/cli:dx",
+        "//cli/cli:man_pages",
+        ":notice_demo",
+        ":sbom_demo",
+    ],
+)
+
 # BCR demo at the unpublishable shape: proves the would-submit PR prints
 # without submitting. Verified by the portable `dx_release_tools_test`
 # BCR unit.

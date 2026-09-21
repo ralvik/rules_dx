@@ -328,10 +328,10 @@ pub fn render_release_dry_run(tag: &str, approve: &str) -> String {
         "    1. bazel build //cli/cli:dx //cli/cli:dx_standalone //cli/cli:man_pages (seed matrix cell dx-linux-x86_64)\n",
     );
     out.push_str(
-        "    2. bazel build //deploy/release:all (SBOM + provenance for seed artifacts)\n",
+        "    2. bazel build //deploy/release:release_artifacts (packaged releasable unit: audit curator plus binary plus man page plus NOTICE plus SBOM/provenance)\n",
     );
     out.push_str(
-        "    3. bazel build //deploy/release:notice_demo (aggregated NOTICE from the audited inventory)\n",
+        "    3. bazel build //deploy/release:sbom_demo //deploy/release:notice_demo (SPDX-2.3 plus SLSA v1 with subject digest equal to artifact sha256; aggregated NOTICE from the audited inventory, signed alongside the SBOM pair)\n",
     );
     out.push_str(
         "    4. RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo (would-sign cosign + attestation)\n",
@@ -871,9 +871,15 @@ mod tests {
         assert!(out.contains("publishing nothing"));
         assert!(out.contains("dx_verify"));
         assert!(out.contains("notice_demo"));
+        // See: `docs/deploy/release-runbook.md#packaging` (artifact-into-releases packaging).
+        assert!(out.contains("release_artifacts"));
+        assert!(out.contains("subject digest equal to artifact sha256"));
+        assert!(out.contains("signed alongside the SBOM pair"));
+        let package = out.find("release_artifacts").expect("packaging step");
         let notice = out.find("notice_demo").expect("notice step");
         let sign = out.find("signing_demo").expect("sign step");
         let draft = out.find("github_draft").expect("draft step");
+        assert!(package < notice);
         assert!(notice < sign);
         assert!(sign < draft);
         let ok = release_run("v0.0.0-dryrun", "0", true, false, false).expect("dry");

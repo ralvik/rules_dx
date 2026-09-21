@@ -27,12 +27,37 @@ x86_64 qualified-built-here; Linux arm64, macOS arm64, macOS x86_64,
 Windows x86_64 unqualified until their hosts qualify per
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms)).
 Build each qualified cell with `bazel build //cli/cli:dx
-//cli/cli:dx_standalone //cli/cli:man_pages`, then `bazel build //deploy/release:all` for
-SBOM and provenance. Unqualified cells fail closed; never claim them. What
+//cli/cli:dx_standalone //cli/cli:man_pages`, then `bazel build
+//deploy/release:release_artifacts` for the packaged releasable unit
+(curator plus binary plus man page plus NOTICE plus SBOM/provenance).
+Unqualified cells fail closed; never claim them. What
 evidence promotes a cell to `Supported` (tag hygiene, versioning, platform
 plus consumer plus release evidence) is owned by the
 [promotion checklist](../product/promotion-checklist.md), qualified seed-only
 under issue #611.
+
+## Packaging
+
+Artifact-into-releases packaging (issue #813): validated audit inputs ride
+the release as declared Bazel inputs, not untracked workspace reads. The
+committed `licenses.toml` bytes ride `//:audit_curator` (per
+[audit-update-bazel](../cli/commands/audit-update-bazel.md#dx-audit)), and the
+per-package `[[inventory]]` words feed hermetic `notice_bundle` in
+`deploy/release/notice.bzl` (deterministic bytes, byte-identical rebuilds,
+`missing-notice-text` fails). SBOM plus provenance ride
+`//deploy/release:sbom_demo` (SPDX 2.3 JSON plus SLSA v1 in-toto Statement
+v1, subject digest equals artifact sha256). Signing via
+`//deploy/release:signing_demo` binds the SBOM pair plus the NOTICE bundle
+together (signed alongside the SBOM pair, Sigstore keyless plus attestation),
+so nothing ships unsigned and
+nothing ships without its evidence. One target proves the set travels
+together: `bazel build //deploy/release:release_artifacts` (curator plus
+`//cli/cli:dx` plus `//cli/cli:man_pages` plus `:notice_demo` plus
+`:sbom_demo`). The publish dry-run workflow stages plus verifies this unit
+(SPDX plus SLSA subject linkage, NOTICE header, signing log covers SBOM pair
+plus NOTICE) and publishes nothing. Pinned by `bazel test
+//deploy/release:all` plus `bazel run
+//tools/ci:release_packaging_qualification`.
 
 ## Steps
 
@@ -54,13 +79,16 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
 `ghcr.yml` route. Pinned by `bazel test //deploy/release:all` plus
 `bazel run //tools/ci:signing_distribution_qualification`.
 
-1. Dry-run everything first: `RELEASE_DRY_RUN=1 bazel run
-   //deploy/release:release_driver -- <tag>` plus `GH_RELEASE_DRY_RUN=1
-   bazel run //cli/cli:github_draft`, `RELEASE_SIGN_DRY_RUN=1 bazel run
-   //deploy/release:signing_demo`, and `BCR_DRY_RUN=1 bazel run
-   //deploy/release:bcr_demo`.
+ 1. Dry-run everything first: `RELEASE_DRY_RUN=1 bazel run
+    //deploy/release:release_driver -- <tag>` plus `GH_RELEASE_DRY_RUN=1
+    bazel run //cli/cli:github_draft`, `RELEASE_SIGN_DRY_RUN=1 bazel run
+    //deploy/release:signing_demo`, and `BCR_DRY_RUN=1 bazel run
+    //deploy/release:bcr_demo`.
  2. Archive plus checksum: `bazel run //cli/cli:dx_standalone -- <outdir>`
     (hermetic Rust archiver plus hasher, verified before copy).
+ 2b. Packaging: `bazel build //deploy/release:release_artifacts` (see
+     [Packaging](#packaging): curator plus binary plus man page plus NOTICE
+     plus SBOM/provenance as one releasable unit, publishes nothing).
  3. SBOM plus provenance: `bazel build //deploy/release:sbom_demo`
     (SPDX 2.3 JSON plus SLSA v1 in-toto Statement v1, subject digest
     equals artifact sha256; Syft/CycloneDX output verifies through the
