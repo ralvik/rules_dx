@@ -8,8 +8,8 @@
 #   plus windows arm64 staying refused, per-cell coverage for the windows
 #   x86_64 cell with no union, Windows CI jobs natively on windows-latest
 #   runners with shell bash plus a per-host cache scope under the
-#   portable-shell contract, consumer plus release evidence per the
-#   support-matrix lifecycle (release evidence open), docs in
+#   portable-shell contract, consumer plus per-host release evidence
+#   (sbom-provenance delivered under #807), docs in
 #   support-matrix plus ADR 0014 plus native-toolchains;
 # - MSVC/EULA handling: toolchains_msvc clang-cl/Microsoft-STL backend
 #   stays provisional with immutable lazy fetch; explicit EULA acceptance
@@ -28,7 +28,7 @@
 # - open with honest records: full toolchains_msvc backend, Microsoft
 #   acquisition/cache rights review, remaining native-plan corpus gaps,
 #   dx_tools windows_x86_64 artifacts (quality tools run on the Linux exec
-#   platform), release evidence (SBOM/provenance/signing/BCR).
+#   platform), remaining release evidence (signing/BCR plus tag cut).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:windows_qualification`,
 # following //tools/ci:macos_qualification.
@@ -74,14 +74,15 @@ fi
 
 # Support matrix flips Windows x86_64 only; macOS x86_64 plus Windows
 # arm64 stay unqualified with clean refusal.
+# Per-host release evidence delivered under #807.
 if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#414' &&
   grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'never automatic' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: windows_x86_64 sbom-provenance delivered (#807' &&
   grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'installed Build Tools fallback never approved' &&
   grep -E -e '^\| Windows arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Unqualified: clean'; then
   ok
 else
-  bad "support-matrix lost the Windows x86_64 Platform-qualified record (issue #414, windows arm64 stays unqualified)"
+  bad "support-matrix lost the Windows x86_64 Platform-qualified record (issue #414 plus #807 release evidence delivered, windows arm64 stays unqualified)"
 fi
 
 # ADR 0014 keeps Windows x86_64 required and records the qualification.
@@ -173,7 +174,7 @@ else
   bad "reusable-consumer lost the windows_x86_64 to windows-latest runner mapping (issue #414)"
 fi
 
-# No Supported claim for Windows: Platform-qualified only, release open.
+# No Supported claim for Windows: Platform-qualified only, per-host release delivered.
 if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified' &&
   ! grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Supported'; then
   ok

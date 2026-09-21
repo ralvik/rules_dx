@@ -398,6 +398,8 @@ CI only, no Supported claim).
    fixture evidence, issue #804; `release_musl_qualification` 22/22),
    `:release_macos_arm64_qualification` (macOS arm64 per-host release evidence pins plus
    fixture evidence, issue #805; `release_macos_arm64_qualification` 20/20),
+   `:release_windows_qualification` (Windows x86_64 per-host release evidence pins plus
+   fixture evidence, issue #807; `release_windows_qualification` 21/21),
    `:offline_airgap_qualification` (offline bootstrap plus vendored
    advisory mirror pins plus fixture evidence, issue #774; seed-only, no
    Supported claim; platform plus consumer plus release evidence stays

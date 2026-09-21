@@ -91,7 +91,12 @@ A cell promotes only with its required-host evidence landed:
   issue #804), plus per-host `sbom-provenance-macos_arm64` via the
   `sbom-macos-arm64` job (`macos-14`, `bazel-macos-arm64-` cache) for macOS
   arm64 native (pinned acquired SDK, hermetic-llvm Apple-SDK backend
-  provisional with no host-installed SDK fallback, issue #805).
+  provisional with no host-installed SDK fallback, issue #805), plus per-host
+  `sbom-provenance-windows_x86_64` via the `sbom-windows-x86_64` job
+  (`windows-latest` with shell bash, `bazel-windows-x86_64-` cache) for
+  Windows x86_64 MSVC-compatible (hermetic acquisition plus MSVC compatibility
+  gates unchanged, explicit EULA acceptance never automatic with no installed
+  Build Tools fallback, issue #807).
 - NOTICE bundling: aggregated NOTICE from the audited license inventory via
   `//deploy/release:notice_demo` (hermetic bundling with byte-identical
   rebuilds, `missing-notice-text` fails closed), verified via
