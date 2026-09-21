@@ -9,12 +9,18 @@
 //! This crate is the single owner of the digest algorithm surface:
 //!
 //! * [`DIGEST_LEN`] — 32-byte digest length shared by both algorithms.
+//! * [`SHA1_LEN`] — 20-byte Git SHA-1 commit length for pin/commit shapes.
 //! * [`Digest`] — `[u8; 32]` wrapper with hex/parse helpers.
 //! * [`blake3`] — canonical content identity (snapshots, setup, env).
 //! * [`sha256_hex`] / [`is_sha256_hex`] — compat shim for the frozen
 //!   `dx_apply` envelope contract (`original_sha256` stays SHA-256 hex).
 //! * [`to_hex`] / [`parse_hex`] — lowercase-hex spelling shared by CLI,
 //!   output, and clean/setup record names.
+//! * [`is_lower_hex`] / [`is_hex_any_case`] — length-parameterized hex
+//!   spelling checks owning the `hex::decode` + length (+ lowercase
+//!   re-encode) policy so Git SHA call sites never hand-roll digit loops.
+//! * [`is_commit_sha`] — 40/64-char Git commit shape (either case, per Git).
+//! * [`is_pin_sha`] — 40-char lowercase pin shape (`[0-9a-f]{40}`).
 //!
 //! Canonical algorithm is BLAKE3-256. The SHA-256 envelope bytes are a
 //! frozen contract and are kept byte-identical through this shim; see the
@@ -35,6 +41,9 @@ use sha2::{Digest as _, Sha256};
 
 /// Digest length in bytes (BLAKE3-256 and SHA-256 are both 32 bytes).
 pub const DIGEST_LEN: usize = 32;
+
+/// Git SHA-1 commit length in bytes (40 lowercase hex digits as a pin).
+pub const SHA1_LEN: usize = 20;
 
 /// Raw 32-byte digest.
 pub type RawDigest = [u8; DIGEST_LEN];
@@ -119,10 +128,54 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 /// uppercase), so the re-encode comparison is what pins the lowercase-only,
 /// 32-byte form instead of re-implementing the digit loop.
 pub fn is_hex(text: &str) -> bool {
+    is_lower_hex(text, DIGEST_LEN)
+}
+
+/// True for `byte_len` bytes encoded as exactly `2 * byte_len` lowercase
+/// hex digits.
+///
+/// Single owner of the lowercase-hex policy: `hex::decode` plus the length
+/// and lowercase re-encode check, no manual digit loop. Generalizes
+/// [`is_hex`] for Git SHA shapes ([`is_pin_sha`]) without duplicating the
+/// policy per call site.
+pub fn is_lower_hex(text: &str, byte_len: usize) -> bool {
     match hex::decode(text) {
-        Ok(bytes) => bytes.len() == DIGEST_LEN && hex::encode(&bytes) == text,
+        Ok(bytes) => bytes.len() == byte_len && hex::encode(&bytes) == text,
         Err(_) => false,
     }
+}
+
+/// True for `byte_len` bytes encoded as hex in either case.
+///
+/// Same `hex::decode` + length check as [`is_lower_hex`] without the
+/// lowercase re-encode gate: Git commit SHAs accept both cases (per Git),
+/// while digests stay lowercase-only via [`is_hex`]/[`is_lower_hex`].
+/// Backs [`is_commit_sha`] for the 40/64 bump shape.
+pub fn is_hex_any_case(text: &str, byte_len: usize) -> bool {
+    match hex::decode(text) {
+        Ok(bytes) => bytes.len() == byte_len,
+        Err(_) => false,
+    }
+}
+
+/// True for a Git commit SHA: 40- (SHA-1) or 64- (SHA-256) char hex in
+/// either case.
+///
+/// Single owner of the bump commit shape (`cli/bump`): Git accepts both
+/// cases, so unlike digests there is no lowercase re-encode gate. Case
+/// policy is pinned by tests in both `dx_digest` and `dx_bump`.
+pub fn is_commit_sha(text: &str) -> bool {
+    is_hex_any_case(text, SHA1_LEN) || is_hex_any_case(text, DIGEST_LEN)
+}
+
+/// True for a full-length lowercase pin SHA (`[0-9a-f]{40}`).
+///
+/// Single owner of the CI pin shape (`cli/ci`): same lowercase re-encode
+/// policy as [`is_hex`] but over [`SHA1_LEN`] bytes, matching the shell
+/// pin harnesses. Uppercase stays rejected; pinned by tests here and in
+/// `dx_ci`.
+pub fn is_pin_sha(text: &str) -> bool {
+    is_lower_hex(text, SHA1_LEN)
 }
 
 /// Compat alias for the envelope spelling check.
@@ -269,5 +322,46 @@ mod tests {
             }
         );
         assert!(rendered.contains("64-character lowercase hex"));
+    }
+
+    #[test]
+    fn commit_sha_accepts_40_and_64_in_either_case() {
+        // Git SHAs accept both cases: 40-char (SHA-1) and 64-char (SHA-256).
+        let sha40 = "3d3c42e5aac5ba805825da76410c181273ba90b1";
+        let sha64 = to_hex(&blake3(b"commit"));
+        assert!(is_commit_sha(sha40));
+        assert!(is_commit_sha(&sha40.to_uppercase()));
+        assert!(is_commit_sha(&sha64));
+        assert!(is_commit_sha(&sha64.to_uppercase()));
+        // Length gate stays: short SHAs, tags, and overlong strings fail.
+        assert!(!is_commit_sha("3d3c42e5"));
+        assert!(!is_commit_sha("v4"));
+        assert!(!is_commit_sha(""));
+        assert!(!is_commit_sha(&format!("{sha40}00")));
+        assert!(!is_commit_sha(&"zz".repeat(20)));
+        // Generic any-case helper agrees on the byte lengths.
+        assert!(is_hex_any_case(sha40, SHA1_LEN));
+        assert!(is_hex_any_case(&sha40.to_uppercase(), SHA1_LEN));
+        assert!(!is_hex_any_case(sha40, DIGEST_LEN));
+        assert!(is_hex_any_case(&sha64, DIGEST_LEN));
+    }
+
+    #[test]
+    fn pin_sha_stays_40_lowercase_only() {
+        // CI pins are `[0-9a-f]{40}`: lowercase-only over 20 bytes.
+        let pin = "3d3c42e5aac5ba805825da76410c181273ba90b1";
+        assert!(is_pin_sha(pin));
+        assert!(is_lower_hex(pin, SHA1_LEN));
+        assert!(!is_pin_sha(&pin.to_uppercase()));
+        assert!(!is_lower_hex(&pin.to_uppercase(), SHA1_LEN));
+        // 64-char digests are not pins; short SHAs and tags fail closed.
+        assert!(!is_pin_sha(&to_hex(&blake3(b"pin"))));
+        assert!(!is_pin_sha("3d3c42e5"));
+        assert!(!is_pin_sha("v7"));
+        assert!(!is_pin_sha(""));
+        // `is_hex` (64-char digest) still agrees with the generic helper.
+        let digest_hex = to_hex(&blake3(b"x"));
+        assert!(is_lower_hex(&digest_hex, DIGEST_LEN));
+        assert_eq!(is_hex(&digest_hex), is_lower_hex(&digest_hex, DIGEST_LEN));
     }
 }

@@ -29,6 +29,7 @@ dx_rust_crate(
         "src/triggers.rs",
         "src/untrusted.rs",
     ],
+    extra_deps = ["//cli/digest:dx_digest"],
     deps = ["thiserror"],
 )
 

@@ -183,7 +183,11 @@ fn parse_git(set: &'static str, text: &str) -> Result<WidenVersion, VersionError
 }
 
 fn is_commit_sha(text: &str) -> bool {
-    (text.len() == 40 || text.len() == 64) && text.chars().all(|c| c.is_ascii_hexdigit())
+    // Commit-SHA spelling owned by `dx_digest` (`hex::decode` + 20/32-byte
+    // length check, no manual digit loop). Git accepts both cases, so
+    // unlike digests there is no lowercase gate: preserved and pinned
+    // by tests below.
+    dx_digest::is_commit_sha(text)
 }
 
 #[cfg(test)]
@@ -270,6 +274,42 @@ mod tests {
             parse(BumpSet::GithubActions, "owner/repo"),
             Err(VersionError::InvalidGit { .. })
         ));
+    }
+
+    #[test]
+    fn github_actions_commit_sha_keeps_40_64_and_either_case() {
+        // Commit-SHA spelling owned by `dx_digest::is_commit_sha`: 40/64
+        // hex in either case (Git accepts both; digests stay
+        // lowercase-only elsewhere). Uppercase must keep parsing as a
+        // commit, never fall through to a tag.
+        let lower40 = "3d3c42e5aac5ba805825da76410c181273ba90b1";
+        let upper40 = "3D3C42E5AAC5BA805825DA76410C181273BA90B1";
+        for sha in [lower40, upper40] {
+            assert_eq!(
+                parse(BumpSet::GithubActions, sha).expect("40-char sha"),
+                WidenVersion::GitCommit(sha.to_owned()),
+                "40-char sha {sha:?} must stay a commit",
+            );
+        }
+        let lower64 = "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+        let upper64 = "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08";
+        for sha in [lower64, upper64] {
+            assert_eq!(
+                parse(BumpSet::GithubActions, sha).expect("64-char sha"),
+                WidenVersion::GitCommit(sha.to_owned()),
+                "64-char sha {sha:?} must stay a commit",
+            );
+        }
+        // Non-hex 40/64-length strings stay tags-or-errors, never commits.
+        for bad in ["v4", "3d3c42e5", &"z".repeat(40), &"z".repeat(64)] {
+            let parsed = parse(BumpSet::GithubActions, bad).expect("non-sha shape");
+            assert!(
+                matches!(parsed, WidenVersion::GitTag(_)),
+                "{bad:?} must not parse as a commit"
+            );
+        }
+        assert!(is_commit_sha(lower40));
+        assert!(is_commit_sha(upper40));
     }
 
     #[test]

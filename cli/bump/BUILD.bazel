@@ -25,6 +25,7 @@ dx_rust_crate(
         "src/sets.rs",
         "src/version.rs",
     ],
+    extra_deps = ["//cli/digest:dx_digest"],
     deps = [
         "regex",
         "semver",
