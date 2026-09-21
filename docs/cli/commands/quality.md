@@ -4,7 +4,10 @@ Explicit scope positionals accept Bazel labels and patterns (`//pkg:target`,
 `//pkg/...`); they resolve through Bazel unchanged. Workspace-relative file
 paths resolve to every direct source owner through Bazel query, and
 directories become recursive patterns, per
-[Target Resolution](../target-resolution.md).
+[Target Resolution](../target-resolution.md). Pass `--here` (`--cwd` alias)
+for the current directory tree instead (`//path/...`; `//...` at the root);
+it cannot be combined with explicit scopes and never changes the no-flag
+`//...` default.
 
 ## `dx lint`
 

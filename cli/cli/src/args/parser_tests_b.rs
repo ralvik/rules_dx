@@ -511,3 +511,94 @@ fn init_and_hooks_have_no_force_flag() {
         );
     }
 }
+
+#[test]
+fn here_selects_cwd_scope_only_via_explicit_flag() {
+    // Issue #699: `--here` (`--cwd` alias) selects the current directory
+    // tree on cwd-scope commands only, never implicitly, and never with
+    // explicit scopes. The no-flag default stays `//...`.
+    for command in [
+        "audit",
+        "lint",
+        "typecheck",
+        "format",
+        "generate",
+        "build",
+        "test",
+        "coverage",
+        "check",
+        "fix",
+    ] {
+        let got = parse(&args(&[command, "--here"])).expect("here parses");
+        assert!(got.here, "command: {command}");
+        assert!(got.targets.is_empty(), "command: {command}");
+        assert!(got.command.supports_here(), "command: {command}");
+        let alias = parse(&args(&[command, "--cwd"])).expect("cwd alias parses");
+        assert!(alias.here, "command: {command}");
+        // Flags may appear before or after the command word.
+        let before = parse(&args(&["--here", command])).expect("before parses");
+        assert!(before.here, "command: {command}");
+        // Bare default stays repository-wide without the flag.
+        let bare = parse(&args(&[command])).expect("bare parses");
+        assert!(!bare.here, "command: {command}");
+        assert!(bare.targets.is_empty(), "command: {command}");
+    }
+    // Audit allows one family selector plus `--here`.
+    let family = parse(&args(&["audit", "security", "--here"])).expect("family plus here");
+    assert!(family.here);
+    assert_eq!(family.targets, vec!["security".to_owned()]);
+    let family_alias = parse(&args(&["audit", "--cwd", "license"])).expect("family plus cwd");
+    assert!(family_alias.here);
+    // Explicit scopes never combine with `--here`.
+    for words in [
+        vec!["build", "--here", "//a:one"],
+        vec!["lint", "src/a.py", "--here"],
+        vec!["test", "--cwd", "//..."],
+        vec!["audit", "--here", "//a:one"],
+        vec!["audit", "security", "//a:one", "--here"],
+        vec!["audit", "bogus", "--here"],
+    ] {
+        assert_eq!(
+            parse(&args(&words)),
+            Err(ArgsError::ConflictingHere),
+            "words: {words:?}"
+        );
+    }
+    // Every other command rejects `--here` instead of silently ignoring it.
+    for words in [
+        vec!["clean", "--here"],
+        vec!["update", "--here"],
+        vec!["bump", "cargo:anyhow", "1.2.3", "--here"],
+        vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--here"],
+        vec!["codegen", "--here"],
+        vec!["env", "--here"],
+        vec!["setup", "--here"],
+        vec!["run", "//app:bin", "--here"],
+        vec!["deploy", "//app:bin", "--here"],
+        vec!["status", "--here"],
+        vec!["version", "--here"],
+        vec!["owners", "//a:one", "--here"],
+        vec!["completion", "bash", "--here"],
+    ] {
+        assert_eq!(
+            parse(&args(&words)),
+            Err(ArgsError::UnsupportedOption {
+                command: words[0],
+                option: "--here".to_owned(),
+            }),
+            "words: {words:?}"
+        );
+    }
+    // `dx bazel` owns its tail verbatim: `--here` after it forwards to
+    // Bazel, while dx-owned `--here` before it is rejected.
+    let verbatim = parse(&args(&["bazel", "build", "--here"])).expect("verbatim");
+    assert_eq!(verbatim.command, Command::Bazel);
+    assert!(!verbatim.here);
+    assert_eq!(
+        parse(&args(&["--here", "bazel", "version"])),
+        Err(ArgsError::UnsupportedOption {
+            command: "bazel",
+            option: "--here".to_owned(),
+        })
+    );
+}

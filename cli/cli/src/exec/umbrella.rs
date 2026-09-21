@@ -142,6 +142,9 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             configured: false,
             from: None,
             to: None,
+            // Parent `--here` is consumed into explicit targets before
+            // dispatch (see `apply_here`); phases always run explicit.
+            here: false,
         };
         let mut phase_out = Vec::new();
         let mut phase_err = Vec::new();

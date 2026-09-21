@@ -60,6 +60,8 @@ pub enum ArgsError {
     UnknownShell { shell: String },
     #[error("options --debug and --release are mutually exclusive")]
     ConflictingProfiles,
+    #[error("option \"--here/--cwd\" cannot be combined with explicit scopes")]
+    ConflictingHere,
     #[error(
         "empty scope: pass no scope for repository-wide //... or a //, @, file, or directory scope"
     )]

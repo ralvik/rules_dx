@@ -51,6 +51,6 @@ pub use command::Command;
 pub use completion::{render_completion, COMPLETION_SHELLS};
 pub use error::ArgsError;
 pub use grammar::cli_command;
-pub use invocation::{Invocation, ReportRequest};
+pub use invocation::{apply_here, here_scope, Invocation, ReportRequest};
 pub use parser::parse;
 pub use profile::{resolve_profile, Profile, DX_PROFILE_ENV};

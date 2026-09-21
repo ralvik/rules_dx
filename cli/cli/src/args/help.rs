@@ -130,10 +130,10 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Run => "Usage: dx [global-options] run [--debug|--release] <target> [-- app-args ...]",
         Command::Deploy => "Usage: dx [global-options] deploy [--debug|--release] <label> [-- app-args ...]",
         Command::Build | Command::Test => {
-            "Usage: dx [global-options] build|test [--debug|--release] [scope ...] [-- bazel-options ...]"
+            "Usage: dx [global-options] build|test [--here] [--debug|--release] [scope ...] [-- bazel-options ...]"
         }
         Command::Coverage => {
-            "Usage: dx [global-options] coverage [--min-coverage 0-100] [scope ...] [-- bazel-options ...]"
+            "Usage: dx [global-options] coverage [--here] [--min-coverage 0-100] [scope ...] [-- bazel-options ...]"
         }
         Command::Owners => "Usage: dx [global-options] owners [--configured] <scope> ...",
         Command::Deps => "Usage: dx [global-options] deps [--configured] <scope> ...",
@@ -143,9 +143,15 @@ pub(crate) fn render_command_help(command: Command) -> String {
         }
         Command::Update => "Usage: dx [global-options] update [selector ...]",
         Command::Bump => "Usage: dx [global-options] bump <set:package> <version>",
-        Command::Audit => "Usage: dx [global-options] audit [security|license] [scope ...]",
+        Command::Audit => "Usage: dx [global-options] audit [--here] [security|license] [scope ...]",
         Command::Migrate => {
             "Usage: dx [global-options] migrate --from <version> --to <version> [scope ...]"
+        }
+        Command::Lint | Command::Typecheck | Command::Format | Command::Generate => {
+            "Usage: dx [global-options] <command> [--here] [scope ...] [-- bazel-options ...]"
+        }
+        Command::Check | Command::Fix => {
+            "Usage: dx [global-options] check|fix [--here] [scope ...] [-- bazel-options ...]"
         }
         _ => "Usage: dx [global-options] <command> [scope ...] [-- bazel-options ...]",
     };
@@ -156,8 +162,17 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Run => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Requires a scope (empty scope is a usage error); file/dir scopes need exactly one runnable.",
         Command::Update => "Scopes: dependency-set/package/target selectors (cargo|npm|maven|nuget|go, set:package, labels/paths); bare run updates all sets.",
         Command::Bump => "Scopes: exactly one `set:package` plus one new version (bazel|cargo|github-actions|go|maven|npm|nuget); never batch.",
-        Command::Audit => "Scopes: optional `security|license` family plus dependency-set/package/target selectors; bare run audits //... (both families, security first).",
+        Command::Audit => "Scopes: optional `security|license` family plus dependency-set/package/target selectors; bare run audits //... (both families, security first). Pass --here (--cwd alias) for the current directory tree instead (optionally after the family); --here cannot be combined with explicit scopes and never changes the no-flag default.",
         Command::Migrate => "Scopes: explicit Bazel labels/patterns or workspace-relative files/dirs reusing generation scope resolution; external scopes rejected. No scope selects //....",
+        Command::Lint
+        | Command::Typecheck
+        | Command::Format
+        | Command::Generate
+        | Command::Build
+        | Command::Test
+        | Command::Coverage
+        | Command::Check
+        | Command::Fix => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied. Pass --here (--cwd alias) for the current directory tree instead (//path/...; //... at the root); --here cannot be combined with explicit scopes and never changes the no-flag default.",
         _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults).",
     };
     let mut out = String::new();

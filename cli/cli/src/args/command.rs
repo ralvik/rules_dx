@@ -200,6 +200,29 @@ impl Command {
         )
     }
 
+    /// True when `--here` (`--cwd` alias) selects the current directory
+    /// tree instead of `//...` (issue #699): the graph-scope commands whose
+    /// empty scope means repository-wide `//...` via directory-scope
+    /// resolution (`//path/...`; `//...` at the root). Every other command
+    /// rejects `--here` pre-exec instead of silently ignoring it; `--here`
+    /// never changes the no-flag default and never combines with explicit
+    /// scopes.
+    pub fn supports_here(self) -> bool {
+        matches!(
+            self,
+            Command::Audit
+                | Command::Lint
+                | Command::Typecheck
+                | Command::Format
+                | Command::Generate
+                | Command::Build
+                | Command::Test
+                | Command::Coverage
+                | Command::Check
+                | Command::Fix
+        )
+    }
+
     /// True for commands that mutate by default (extended by
     /// for `migrate`).
     ///

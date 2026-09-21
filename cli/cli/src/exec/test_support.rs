@@ -35,6 +35,10 @@ pub(crate) fn temp_dir(prefix: &str) -> tempfile::TempDir {
 pub(crate) struct Harness {
     pub(crate) workspace: PathBuf,
     pub(crate) temp: PathBuf,
+    /// Simulated process cwd for `--here` tests; defaults to the workspace
+    /// root (so bare `--here` means `//...`), tests set it to a subdir to
+    /// prove `//path/...` selection.
+    pub(crate) cwd: PathBuf,
     /// Retains the workspace `TempDir` so `workspace` auto-cleans on drop.
     pub(crate) _workspace_guard: tempfile::TempDir,
     /// Retains the scratch `TempDir` so `temp` auto-cleans on drop.
@@ -87,9 +91,11 @@ impl Harness {
         let temp_guard = temp_dir(&format!("{name}-tmp"));
         let workspace = workspace_guard.path().to_path_buf();
         let temp = temp_guard.path().to_path_buf();
+        let cwd = workspace.clone();
         Harness {
             workspace,
             temp,
+            cwd,
             _workspace_guard: workspace_guard,
             _temp_guard: temp_guard,
             results: HashMap::new(),
@@ -275,6 +281,13 @@ impl Harness {
     /// environment (parallel tests share one process).
     pub(crate) fn run_with_ci(&self, words: &[&str], ci: bool) -> (i32, String, String) {
         let inv = invocation(words);
+        // Mirror `main.rs`: consume `--here` into an explicit directory
+        // scope before dispatch so tests prove the same `//path/...`
+        // selection the binary runs. Unresolvable cwd fails pre-exec.
+        let inv = match crate::args::apply_here(&inv, &self.workspace, &self.cwd) {
+            Ok(resolved) => resolved,
+            Err(detail) => return (2, String::new(), format!("dx: {detail}\n")),
+        };
         let runner = self.runner();
         let mut out = Vec::new();
         let mut err = Vec::new();

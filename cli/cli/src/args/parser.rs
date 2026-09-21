@@ -56,6 +56,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         configured,
         from,
         to,
+        here,
         command: command_name,
         targets,
         ..
@@ -91,6 +92,28 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         min_coverage = Some(parse_min_coverage(value)?);
     }
     let command = command_name.ok_or(ArgsError::MissingCommand)?;
+    // `--here` (`--cwd` alias, issue #699): explicit cwd scope only.
+    // Supported graph-scope commands select `//path/...` (`//...` at the
+    // root) via directory-scope resolution; every other command rejects
+    // it, and it never combines with explicit scopes (audit allows one
+    // family selector plus `--here`). The no-flag default stays `//...`.
+    if here && !command.supports_here() {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--here".to_owned(),
+        });
+    }
+    if here {
+        if command == Command::Audit {
+            let family_only = targets.is_empty()
+                || (targets.len() == 1 && (targets[0] == "security" || targets[0] == "license"));
+            if !family_only {
+                return Err(ArgsError::ConflictingHere);
+            }
+        } else if !targets.is_empty() {
+            return Err(ArgsError::ConflictingHere);
+        }
+    }
     // `dx bazel` tails never reach this check: the verbatim forwarding
     // above owns every token after the command word.
     if command != Command::Bazel {
@@ -696,6 +719,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         configured,
         from,
         to,
+        here,
     })
 }
 
