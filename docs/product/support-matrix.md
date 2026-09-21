@@ -164,7 +164,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | Pins, hosts, floors qualified seed-only under closed #410-#414 and closed #500; release evidence open under #803-#807 (process #808) |
 | Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | Enforced by CI |
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
-| Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | Codegen pairs open under #787 and #788 (successors to closed #506); audit/update delivered; closed #512 stays taxonomy-only |
+| Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs | Codegen pairs open under #787 and #788 (successors to closed #506); audit/update delivered |
 
 File-family quality defaults are qualified seed-only under #489 with modfmt plus gherkin/xml
 resolved seed-only under #582 (`bazel run //tools/ci:file_family_defaults_qualification` with
