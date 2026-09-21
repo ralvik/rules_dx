@@ -331,7 +331,21 @@ fn run_secrets(
     } else {
         None
     };
-    let plan = match dx_audit::backend::plan_secrets(&report_arg, config) {
+    let tool_path = match runner.gitleaks_tool() {
+        Some(path) => path.to_string_lossy().into_owned(),
+        None => {
+            return (
+                Vec::new(),
+                Some(
+                    "secrets auditor unavailable: set DX_GITLEAKS_BIN to the pinned @dx_tools//:gitleaks artifact; ambient PATH lookup is rejected"
+                        .to_owned(),
+                ),
+                Vec::new(),
+            );
+        }
+    };
+    let temp_arg = temp_dir.to_string_lossy().into_owned();
+    let plan = match dx_audit::backend::plan_secrets(&tool_path, &report_arg, config, &temp_arg) {
         Ok(dx_audit::backend::BackendPlan::Run { argv, env }) => (argv, env),
         Ok(dx_audit::backend::BackendPlan::Noop) => (Vec::new(), Vec::new()),
         Err(error) => {
@@ -350,7 +364,7 @@ fn run_secrets(
         .iter()
         .map(|(key, value)| (key.as_str(), value.as_str()))
         .collect();
-    let status = match runner.run(&argv, workspace, &env_refs) {
+    let status = match runner.run_hermetic(&argv, workspace, &env_refs) {
         Err(error) => {
             return (
                 Vec::new(),

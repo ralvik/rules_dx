@@ -11,6 +11,11 @@ load("//quality/artifacts:buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64
 load("//quality/artifacts:buildifier.macos_arm64.bzl", _buildifier_macos_arm64 = "ARTIFACT")
 load("//quality/artifacts:buildifier.macos_x86_64.bzl", _buildifier_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:buildifier.windows_x86_64.bzl", _buildifier_windows_x86_64 = "ARTIFACT")
+load("//quality/artifacts:gitleaks.linux_arm64.bzl", _gitleaks_linux_arm64 = "ARTIFACT")
+load("//quality/artifacts:gitleaks.linux_x86_64.bzl", _gitleaks_linux_x86_64 = "ARTIFACT")
+load("//quality/artifacts:gitleaks.macos_arm64.bzl", _gitleaks_macos_arm64 = "ARTIFACT")
+load("//quality/artifacts:gitleaks.macos_x86_64.bzl", _gitleaks_macos_x86_64 = "ARTIFACT")
+load("//quality/artifacts:gitleaks.windows_x86_64.bzl", _gitleaks_windows_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ruff.linux_arm64.bzl", _ruff_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:ruff.linux_x86_64.bzl", _ruff_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ruff.macos_arm64.bzl", _ruff_macos_arm64 = "ARTIFACT")
@@ -43,6 +48,11 @@ _ARTIFACTS = [
     _buildifier_macos_arm64,
     _buildifier_macos_x86_64,
     _buildifier_windows_x86_64,
+    _gitleaks_linux_x86_64,
+    _gitleaks_linux_arm64,
+    _gitleaks_macos_arm64,
+    _gitleaks_macos_x86_64,
+    _gitleaks_windows_x86_64,
     _ruff_linux_x86_64,
     _ruff_linux_arm64,
     _ruff_macos_arm64,

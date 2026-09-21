@@ -57,9 +57,11 @@ use crate::secrets::{
     CONFIG_FLAG, EXIT_CODE_FLAG, REDACT_FLAG, REPORT_FORMAT_FLAG, REPORT_PATH_FLAG, SARIF_FORMAT,
 };
 
-/// Qualified secrets tool binary: the checksummed standalone artifact
-/// validated in [`crate::secrets::validate_pin`], never an ambient PATH
-/// lookup beyond the pinned artifact resolution the CLI owns.
+/// Qualified secrets tool identity: the checksummed standalone artifact
+/// validated in [`crate::secrets::validate_pin`] and pinned per host in
+/// [`crate::secrets::HOST_ARTIFACTS`], never an ambient `PATH` lookup.
+/// Planned `argv[0]` is always the absolute declared artifact path the
+/// CLI resolves (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
 pub const SECRETS_BINARY: &str = "gitleaks";
 
 /// Secrets subcommand: repository detection over the workspace source.
@@ -80,11 +82,11 @@ pub const SECRETS_ERROR_EXIT: &str = "2";
 /// Planned backend operation for one audit unit.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BackendPlan {
-    /// Invoke the auditor (`argv[0]` is the binary).
+    /// Invoke the auditor (`argv[0]` is the absolute hermetic binary).
     Run {
         /// Argument vector passed directly to the runner.
         argv: Vec<String>,
-        /// Extra environment (parent environment is always inherited).
+        /// Sanitized environment (spawned cleared; parent never inherited).
         env: Vec<(String, String)>,
     },
     /// No-op success for subprocess-planned units with nothing to do.
@@ -100,20 +102,48 @@ pub enum BackendError {
     /// Empty report destination for a subprocess-planned unit.
     #[error("audit backend needs an explicit report destination")]
     MissingReportPath,
+    /// Empty auditor tool path: callers resolve the pinned artifact.
+    #[error("audit backend needs an explicit hermetic gitleaks binary path")]
+    MissingTool,
+    /// Bare or relative tool name: `argv[0]` must be absolute so no
+    /// ambient `PATH` lookup can substitute an unpinned binary.
+    #[error("audit backend needs an absolute gitleaks binary path, got {tool:?}")]
+    NonAbsoluteTool { tool: String },
+    /// Empty temp directory for the sanitized `TMPDIR` entry.
+    #[error("audit backend needs an explicit temp directory for the hermetic environment")]
+    MissingTempDir,
 }
 
 /// Plans one secrets-audit subprocess invocation: Gitleaks detection
 /// over the workspace with SARIF output, redaction, and the exit-code
 /// override. Flag order is fixed so action keys stay deterministic.
-/// `report_path` is the temp SARIF destination the caller parses for
-/// findings-versus-error triage; `config` pins `--config` explicitly
-/// instead of relying on discovery order.
-pub fn plan_secrets(report_path: &str, config: Option<&str>) -> Result<BackendPlan, BackendError> {
+/// `tool` is the absolute declared artifact path (See: [`crate::secrets::HOST_ARTIFACTS`]);
+/// bare names fail closed. `report_path` is the temp SARIF destination
+/// the caller parses for findings-versus-error triage; `config` pins
+/// `--config` explicitly instead of relying on discovery order.
+/// `temp_dir` becomes the sole `TMPDIR` entry (See: [`crate::secrets::hermetic_env`]).
+pub fn plan_secrets(
+    tool: &str,
+    report_path: &str,
+    config: Option<&str>,
+    temp_dir: &str,
+) -> Result<BackendPlan, BackendError> {
+    if tool.trim().is_empty() {
+        return Err(BackendError::MissingTool);
+    }
+    if !std::path::Path::new(tool).is_absolute() {
+        return Err(BackendError::NonAbsoluteTool {
+            tool: tool.to_owned(),
+        });
+    }
     if report_path.trim().is_empty() {
         return Err(BackendError::MissingReportPath);
     }
+    if temp_dir.trim().is_empty() {
+        return Err(BackendError::MissingTempDir);
+    }
     let mut argv = vec![
-        SECRETS_BINARY.to_owned(),
+        tool.to_owned(),
         SECRETS_SUBCOMMAND.to_owned(),
         SOURCE_FLAG.to_owned(),
         WORKSPACE_SOURCE.to_owned(),
@@ -131,7 +161,10 @@ pub fn plan_secrets(report_path: &str, config: Option<&str>) -> Result<BackendPl
             argv.push(config.to_owned());
         }
     }
-    Ok(BackendPlan::Run { argv, env: vec![] })
+    Ok(BackendPlan::Run {
+        argv,
+        env: vec![("TMPDIR".to_owned(), temp_dir.to_owned())],
+    })
 }
 
 /// Workspace-relative lockfiles audited per dependency set for V1
@@ -165,10 +198,11 @@ mod tests {
 
     #[test]
     fn secrets_plan_pins_gitleaks_sarif_redact_and_exit_split() {
-        let plan = plan_secrets("out/gitleaks.sarif", None).expect("plans");
+        let plan = plan_secrets("/hermetic/gitleaks", "out/gitleaks.sarif", None, "/tmp/dx")
+            .expect("plans");
         match plan {
             BackendPlan::Run { argv, env } => {
-                assert_eq!(argv[0], "gitleaks");
+                assert_eq!(argv[0], "/hermetic/gitleaks");
                 assert!(argv.contains(&"detect".to_owned()));
                 assert!(argv.contains(&"--source".to_owned()));
                 assert!(argv.contains(&".".to_owned()));
@@ -180,7 +214,7 @@ mod tests {
                 assert!(argv.contains(&"--exit-code".to_owned()));
                 assert!(argv.contains(&"2".to_owned()));
                 assert!(!argv.contains(&"--config".to_owned()));
-                assert!(env.is_empty());
+                assert_eq!(env, vec![("TMPDIR".to_owned(), "/tmp/dx".to_owned())]);
             }
             BackendPlan::Noop => panic!("secrets runs gitleaks"),
         }
@@ -188,7 +222,13 @@ mod tests {
 
     #[test]
     fn secrets_plan_carries_explicit_config() {
-        let plan = plan_secrets("out.sarif", Some(".gitleaks.toml")).expect("plans");
+        let plan = plan_secrets(
+            "/hermetic/gitleaks",
+            "out.sarif",
+            Some(".gitleaks.toml"),
+            "/tmp/dx",
+        )
+        .expect("plans");
         match plan {
             BackendPlan::Run { argv, .. } => {
                 assert!(argv.contains(&"--config".to_owned()));
@@ -201,9 +241,50 @@ mod tests {
     #[test]
     fn secrets_plan_rejects_empty_report_path() {
         assert_eq!(
-            plan_secrets("  ", None),
+            plan_secrets("/hermetic/gitleaks", "  ", None, "/tmp/dx"),
             Err(BackendError::MissingReportPath)
         );
+    }
+
+    #[test]
+    fn secrets_plan_rejects_bare_and_relative_tools() {
+        // Hermetic acquisition: `argv[0]` is always the absolute declared
+        // artifact path, never an ambient `PATH` lookup.
+        assert_eq!(
+            plan_secrets("", "out.sarif", None, "/tmp/dx"),
+            Err(BackendError::MissingTool)
+        );
+        assert_eq!(
+            plan_secrets("gitleaks", "out.sarif", None, "/tmp/dx"),
+            Err(BackendError::NonAbsoluteTool {
+                tool: "gitleaks".to_owned()
+            })
+        );
+        assert_eq!(
+            plan_secrets("tools/gitleaks", "out.sarif", None, "/tmp/dx"),
+            Err(BackendError::NonAbsoluteTool {
+                tool: "tools/gitleaks".to_owned()
+            })
+        );
+        assert_eq!(
+            plan_secrets("/hermetic/gitleaks", "out.sarif", None, "  "),
+            Err(BackendError::MissingTempDir)
+        );
+    }
+
+    #[test]
+    fn secrets_plan_env_is_sanitized_tmpdir_only() {
+        // Sanitized invocation: exactly `TMPDIR`, never `PATH` and never
+        // ambient `GITLEAKS_*`.
+        let plan =
+            plan_secrets("/hermetic/gitleaks", "out.sarif", None, "/tmp/dx-run").expect("plans");
+        match plan {
+            BackendPlan::Run { env, .. } => {
+                assert_eq!(env, vec![("TMPDIR".to_owned(), "/tmp/dx-run".to_owned())]);
+                assert!(!env.iter().any(|(key, _)| key == "PATH"));
+            }
+            BackendPlan::Noop => panic!("secrets runs"),
+        }
     }
 
     #[test]

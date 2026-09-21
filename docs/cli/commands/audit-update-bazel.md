@@ -40,9 +40,25 @@ audit integrations to the selected Bazel scope. It has two families, `security`
 license-policy analysis); it is not an umbrella
 for lint, formatting, tests, or builds. Gitleaks is the V1 secrets integration
 (Trufflehog wont-fix, issue #629: one pinned tool, silent swap rejected),
-run as `gitleaks detect --source . --report-format sarif --report-path <temp>`
+run as `<hermetic-gitleaks> detect --source . --report-format sarif --report-path <temp>`
 with `--redact` and `--exit-code 2`, using built-in defaults unless
-`.gitleaks.toml` is committed (explicit `--config` then pins it). SARIF output
+`.gitleaks.toml` is committed (explicit `--config` then pins it). The binary
+is the pinned `@dx_tools//:gitleaks` standalone artifact (v8.30.1 on all five
+required hosts, checksums in `quality/artifacts/gitleaks.*.bzl`): `argv[0]` is
+always the absolute declared path resolved from `DX_GITLEAKS_BIN`, never a bare
+`gitleaks` ambient `PATH` lookup, and a missing or relative tool fails closed
+with an actionable diagnostic. The child spawns cleared: exactly `TMPDIR` (the
+per-run temp directory) reaches Gitleaks, `PATH` is never set, and
+`GITLEAKS_CONFIG`/`GITLEAKS_CONFIG_TOML` plus every other parent variable are
+never inherited, so configuration flows only through explicit `--config`, the
+committed `.gitleaks.toml`, or built-in defaults and ambient values cannot
+inject rules. Detection flags are unchanged. Platform evidence: SARIF
+pass/fail triage is host-independent and pinned by fixtures in
+`dx_audit::secrets` plus `dx_cli::exec::audit`; per-host bytes are pinned by
+checksums plus archive members in `quality/artifacts/gitleaks.*.bzl`
+(regenerated from upstream, seed-host bytes fetched and verified), with
+execution-platform selection supplying the matching host artifact and no
+ambient fallback. SARIF output
 is triaged for findings-versus-error: exit `0` with empty results is clean,
 exit `1` with results is findings, exit `1` with no results or malformed SARIF
 is incomplete, and any other exit or launch failure is incomplete. Summaries

@@ -697,3 +697,53 @@ fn system_runner_rejects_bad_invocations() {
         .run(&["/nonexistent-dx-tool".to_owned()], Path::new("/"), &[])
         .is_err());
 }
+
+#[test]
+fn hermetic_runner_clears_parent_environment() {
+    // Secrets auditing never inherits ambient configuration: only the
+    // explicit env reaches the child, so `GITLEAKS_CONFIG` cannot inject
+    // rules (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+    let runner = SystemRunner;
+    std::env::set_var("DX_HERMETIC_PROBE_PARENT", "parent");
+    let cleared = runner
+        .run_hermetic(
+            &[
+                "/bin/sh".to_owned(),
+                "-c".to_owned(),
+                "test -z \"$DX_HERMETIC_PROBE_PARENT\" && test \"$DX_HERMETIC_PROBE\" = kept"
+                    .to_owned(),
+            ],
+            Path::new("/"),
+            &[("DX_HERMETIC_PROBE", "kept")],
+        )
+        .expect("hermetic probe");
+    std::env::remove_var("DX_HERMETIC_PROBE_PARENT");
+    assert_eq!(cleared.code, Some(0));
+}
+
+#[test]
+fn hermetic_runner_sets_no_path() {
+    // Hermetic children cannot observe ambient lookup: the spawner sets
+    // no `PATH`, so `printenv PATH` fails inside the cleared
+    // environment (a shell would install its own default, which proves
+    // nothing about the spawner).
+    let runner = SystemRunner;
+    let no_path = runner
+        .run_hermetic(
+            &["/usr/bin/printenv".to_owned(), "PATH".to_owned()],
+            Path::new("/"),
+            &[],
+        )
+        .expect("no PATH");
+    assert_eq!(no_path.code, Some(1));
+}
+
+#[test]
+fn gitleaks_tool_defaults_to_absent() {
+    // No ambient `PATH` search: the default seam reports no tool so
+    // callers fail closed instead of launching an unpinned binary.
+    let runner = FakeRunner {
+        status: ChildStatus { code: Some(0) },
+    };
+    assert!(runner.gitleaks_tool().is_none());
+}
