@@ -16,6 +16,7 @@ bazel run --noshow_progress //tools/ci:examples_laziness_runtime
 bazel run --noshow_progress //tools/ci:quality_cache_aquery
 bazel run --noshow_progress //tools/ci:depcheck_contract
 bazel run --noshow_progress //tools/ci:audit_update_guards
+bazel run --noshow_progress //tools/ci:product_runtime_guards
 bazel run --noshow_progress //tools/ci:wrapper_sources
 bazel run --noshow_progress //tools/ci:foundation_maps
 bazel run --noshow_progress //tools/ci:registry_singularity

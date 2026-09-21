@@ -250,7 +250,7 @@ CI only, no Supported claim).
   `:non_dogfed_qualification` (e2e plus negatives pins plus fixture evidence, issue #508),
   examples READMEs and
   laziness proofs, quality-cache aquery, depcheck contract, audit/update
-  guards, wrapper sources, foundation maps, registry singularity, backlog
+  guards, product runtime guards (`:product_runtime_guards`), wrapper sources, foundation maps, registry singularity, backlog
   contracts, GHCR hygiene and publish guards,
   widen-update loop, quality/distribution/backlog guards,
   `:supported_evidence_gate`, `:quality_adapters_parity`,
@@ -360,7 +360,7 @@ CI only, no Supported claim).
   #408 plus Phase 1 #607 coverage superset, verbatim `//...`).
 
 Green here (static guards on a clean tree, no full rebuild):
-`non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`,
+`non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`, `product_runtime_guards` 21/21,
 `env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 33/33 (planning-only green: IR plus planning records only; adapter runs, renderer/site execution, rebuild proof, link completeness, guide-step wiring, timing proof, and pin-bump/drift stay open under #779-#785 with no working site claimed),
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,

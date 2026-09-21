@@ -200,7 +200,11 @@ portable forms only); Windows shell stays bash-only with no `.ps1`/`.bat`
 plus no `rules_powershell` per
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms);
 product runtime is Rust and shell-free except
-generated deploy launchers plus the managed doctor shim.
+generated deploy launchers plus the managed doctor shim. The Python/shell
+product boundary plus the migration umbrella lives in
+[ADR 0026](../decisions/0026-rust-product-code.md);
+`//tools/ci:product_runtime_guards` pins the allowlist and rejects new
+product `py_binary`/`sh_binary` without a decision.
 PowerShell port stays wont-fix under issue #750 (same bash-only reason:
 Windows quals run via `shell: bash` with portable forms, per-OS shells
 would double the harness for no product gain).
