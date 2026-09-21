@@ -119,6 +119,29 @@ pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, LcovError>
     Ok(files)
 }
 
+/// Merges several combined-LCOV documents into one `SF` path to
+/// [`FileHits`] map with maximum hits winning per line. Single owner for
+/// cross-document union; per-document union already lives in
+/// [`parse_lcov`], so coverage-rate callers delegate here instead of
+/// re-implementing the max-wins loop.
+/// See: `docs/testing/README.md#coverage`.
+pub fn merge_lcov_reports(documents: &[String]) -> Result<BTreeMap<String, FileHits>, LcovError> {
+    let mut merged: BTreeMap<String, FileHits> = BTreeMap::new();
+    for document in documents {
+        let parsed = parse_lcov(document)?;
+        for (path, hits) in parsed {
+            let slot = merged.entry(path).or_default();
+            for (line, count) in hits.lines {
+                let cell = slot.lines.entry(line).or_insert(0);
+                if count > *cell {
+                    *cell = count;
+                }
+            }
+        }
+    }
+    Ok(merged)
+}
+
 /// Strict structural validation for combined LCOV tracefiles.
 ///
 /// Implemented on `lcov` records for the `dx coverage`
@@ -288,5 +311,19 @@ mod tests {
         assert!(validate_lcov_report("SF:/a.rs\nSF:/b.rs\n").is_err());
         assert!(validate_lcov_report("end_of_record\n").is_err());
         assert!(validate_lcov_report("DA:1,1\nend_of_record\n").is_err());
+    }
+
+    #[test]
+    fn merges_documents_with_max_hits_winning() {
+        let docs = [
+            "SF:a.rs\nDA:1,0\nDA:2,1\nend_of_record\n".to_owned(),
+            "SF:a.rs\nDA:1,3\nDA:3,0\nend_of_record\n".to_owned(),
+        ];
+        let merged = merge_lcov_reports(&docs).unwrap();
+        assert_eq!(merged["a.rs"].lines[&1], 3);
+        assert_eq!(merged["a.rs"].lines[&2], 1);
+        assert_eq!(merged["a.rs"].lines[&3], 0);
+        assert!(merge_lcov_reports(&[]).unwrap().is_empty());
+        assert!(merge_lcov_reports(&["DA:1,1\n".to_owned()]).is_err());
     }
 }

@@ -4,13 +4,12 @@
 //! `coverage_line_rate`. Re-exported through `super` so the public path
 //! stays `crate::reports::{validate_lcov, coverage_line_rate}`. Both are
 //! thin projections over `dx_lcov`: validation delegates to
-//! `dx_lcov::validate_lcov_report` and rate computation merges via
-//! `dx_lcov::parse_lcov`, so the `lcov`-crate `SF`/`DA`/`end_of_record`
-//! acceptance lives once in `//cli/lcov`.
+//! `dx_lcov::validate_lcov_report`, rate computation merges via
+//! `dx_lcov::merge_lcov_reports`, so the `lcov`-crate `SF`/`DA` union
+//! lives once in `//cli/lcov`.
+//! See: `docs/testing/README.md#coverage`.
 
-use std::collections::BTreeMap;
-
-use dx_lcov::{find_ignores, is_covered_language, is_ignored, parse_lcov};
+use dx_lcov::{find_ignores, is_covered_language, is_ignored, merge_lcov_reports};
 
 use super::ReportError;
 
@@ -51,19 +50,7 @@ pub fn coverage_line_rate(
     let invalid = |e: dx_lcov::LcovError| ReportError::InvalidLcov {
         detail: e.to_string(),
     };
-    let mut merged: BTreeMap<String, dx_lcov::FileHits> = BTreeMap::new();
-    for document in documents {
-        let parsed = parse_lcov(document).map_err(&invalid)?;
-        for (path, hits) in parsed {
-            let slot = merged.entry(path).or_default();
-            for (line, count) in hits.lines {
-                let cell = slot.lines.entry(line).or_insert(0);
-                if count > *cell {
-                    *cell = count;
-                }
-            }
-        }
-    }
+    let merged = merge_lcov_reports(documents).map_err(&invalid)?;
     let mut covered = 0u64;
     let mut eligible = 0u64;
     for (path, hits) in &merged {

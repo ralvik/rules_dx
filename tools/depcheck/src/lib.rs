@@ -3,6 +3,11 @@
 //! Owning contract: `docs/quality/quality-testing.md` (dependency-check truth
 //! table, offline, non-mutating, exception/category/obsolete clauses).
 //!
+//! Fixture truth only (minimal hermetic compatibility, no registry query):
+//! live advisory matching with upstream crates lives in `cli/audit`,
+//! never duplicated here.
+//! See: `cli/audit/src/locks.rs` (live audit).
+//!
 //! Why a direct port: the checker must keep CLI args, exit codes, and
 //! diagnostic sentences stable for CI callers while running on all platforms
 //! as a single native binary with no interpreter startup.
@@ -1080,6 +1085,8 @@ fn normalize_exception_key(eco: Ecosystem, raw: &str) -> String {
 }
 
 fn collect_sources(root: &Path) -> Vec<PathBuf> {
+    // Action-local walk over the declared owning scope only.
+    // See: `docs/product/scope.md` (Bazel owns sources).
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
