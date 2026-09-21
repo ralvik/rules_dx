@@ -38,6 +38,7 @@ dx_rust_crate(
         "serde",
         "serde_json",
         "thiserror",
+        "toml",
     ],
 )
 

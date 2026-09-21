@@ -14,6 +14,11 @@ semver = "1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 thiserror = "2"
+toml = { version = "1", default-features = false, features = [
+  "parse",
+  "serde",
+  "display",
+] }
 
 [dev-dependencies]
 # Golden pilot: status JSON golden as an insta snapshot.

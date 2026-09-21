@@ -44,6 +44,9 @@ pub enum AdoptError {
     /// Failed to write the `dx.local.toml` overlay.
     #[error("write overlay: {detail}")]
     WriteOverlay { detail: String },
+    /// Failed to render the `dx.local.toml` overlay via the TOML crate.
+    #[error("render overlay: {detail}")]
+    RenderOverlay { detail: String },
     /// Existing unmanaged hook refuses uninstall.
     #[error("unmanaged hook refuses uninstall: {trigger}")]
     UnmanagedUninstall { trigger: String },

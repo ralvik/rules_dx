@@ -3,11 +3,13 @@
 //! Split from `super` (`lib.rs`): owns `HOOK_BUDGET_SECS`,
 //! `hook_git_is_hermetic`, `hook_shim_overwrite_allowed`,
 //! `hook_status_shows_merged`, `HOOK_MANAGED_MARKER`,
-//! `render_hook_shim`, `install_hooks`, `uninstall_hooks`, and
+//! `LOCAL_OVERLAY_COMMENT`, `render_hook_shim`, `render_local_overlay`,
+//! `install_hooks`, `uninstall_hooks`, and
 //! `render_hooks_status`. Re-exported through `super` so the public
 //! path stays `dx_adopt::{HOOK_BUDGET_SECS, hook_git_is_hermetic,
 //! hook_shim_overwrite_allowed, hook_status_shows_merged,
-//! HOOK_MANAGED_MARKER, render_hook_shim, install_hooks,
+//! HOOK_MANAGED_MARKER, LOCAL_OVERLAY_COMMENT, render_hook_shim,
+//! render_local_overlay, install_hooks,
 //! uninstall_hooks, render_hooks_status}`.
 
 use std::path::Path;
@@ -49,6 +51,24 @@ pub fn hook_status_shows_merged(
 
 /// Managed hook-shim marker.
 pub const HOOK_MANAGED_MARKER: &str = "# managed by dx hooks";
+
+/// `dx.local.toml` overlay comment header (gitignored, local-only).
+pub const LOCAL_OVERLAY_COMMENT: &str = "# Local-only overrides (gitignored).";
+
+/// Render the gitignored `dx.local.toml` overlay via the `toml` crate.
+///
+/// Serializes the empty `[hooks]` table through `toml` so the writer and
+/// parser share one TOML implementation, then prepends the stable comment
+/// header. Output stays byte-identical to the historical literal
+/// (`# Local-only overrides (gitignored).\n[hooks]\n`).
+pub fn render_local_overlay() -> Result<String, AdoptError> {
+    let mut root = toml::Table::new();
+    root.insert("hooks".to_owned(), toml::Value::Table(toml::Table::new()));
+    let body = toml::to_string(&root).map_err(|e| AdoptError::RenderOverlay {
+        detail: e.to_string(),
+    })?;
+    Ok(format!("{LOCAL_OVERLAY_COMMENT}\n{body}"))
+}
 
 /// Render one hook shim for `trigger`.
 pub fn render_hook_shim(trigger: &str) -> String {
@@ -108,10 +128,12 @@ pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     }
     let overlay = root.join("dx.local.toml");
     if !overlay.exists() {
-        dx_atomic_fs::write_atomic(&overlay, b"# Local-only overrides (gitignored).\n[hooks]\n")
-            .map_err(|e| AdoptError::WriteOverlay {
+        let content = render_local_overlay()?;
+        dx_atomic_fs::write_atomic(&overlay, content.as_bytes()).map_err(|e| {
+            AdoptError::WriteOverlay {
                 detail: e.to_string(),
-            })?;
+            }
+        })?;
         installed.push("dx.local.toml".to_owned());
     }
     Ok(installed)
@@ -152,7 +174,8 @@ pub fn render_hooks_status(baseline: &str, overlay: &str, timings: &str) -> Stri
 mod tests {
     use super::super::{
         hook_git_is_hermetic, hook_shim_overwrite_allowed, hook_status_shows_merged, install_hooks,
-        uninstall_hooks, HOOK_BUDGET_SECS, HOOK_MANAGED_MARKER,
+        render_local_overlay, uninstall_hooks, HOOK_BUDGET_SECS, HOOK_MANAGED_MARKER,
+        LOCAL_OVERLAY_COMMENT,
     };
     use super::{render_hook_shim, render_hooks_status};
 
@@ -160,6 +183,7 @@ mod tests {
     fn hooks_reexports_match_local_definitions() {
         assert_eq!(super::HOOK_BUDGET_SECS, HOOK_BUDGET_SECS);
         assert_eq!(super::HOOK_MANAGED_MARKER, HOOK_MANAGED_MARKER);
+        assert_eq!(super::LOCAL_OVERLAY_COMMENT, LOCAL_OVERLAY_COMMENT);
         assert!(render_hook_shim("pre-commit").contains(HOOK_MANAGED_MARKER));
         assert!(render_hooks_status("b", "o", "t").contains("baseline:\nb"));
     }
@@ -221,6 +245,39 @@ mod tests {
         std::fs::write(root.join(".git/hooks/pre-commit"), "# custom hook\n").expect("unmanaged");
         assert!(uninstall_hooks(&root).is_err());
         assert!(root.join(".git/hooks/pre-commit").exists());
+        scratch.close().expect("cleanup");
+    }
+
+    #[test]
+    fn local_overlay_stays_byte_identical() {
+        assert_eq!(
+            render_local_overlay().expect("overlay"),
+            "# Local-only overrides (gitignored).\n[hooks]\n"
+        );
+    }
+
+    #[test]
+    fn local_overlay_round_trips_through_toml() {
+        let emitted = render_local_overlay().expect("overlay");
+        let parsed: toml::Table = emitted.parse().expect("valid TOML");
+        assert!(parsed.contains_key("hooks"));
+        let hooks = parsed["hooks"].as_table().expect("hooks table");
+        assert!(hooks.is_empty());
+    }
+
+    #[test]
+    fn hooks_install_writes_toml_backed_overlay() {
+        let scratch = dx_test_scratch::scratch("dx-adopt-hook-overlay-");
+        let root = scratch.path().to_path_buf();
+        std::fs::create_dir_all(root.join(".git/hooks")).expect("tmp");
+        let installed = install_hooks(&root).expect("install");
+        assert!(installed.iter().any(|p| p == "dx.local.toml"));
+        let written = std::fs::read_to_string(root.join("dx.local.toml")).expect("read overlay");
+        assert_eq!(written, render_local_overlay().expect("overlay"));
+        // Writer and parser share the `toml` implementation: the installed
+        // overlay must parse back to an empty `[hooks]` table.
+        let parsed: toml::Table = written.parse().expect("valid TOML");
+        assert!(parsed.contains_key("hooks"));
         scratch.close().expect("cleanup");
     }
 }
