@@ -23,6 +23,12 @@
 #
 # Versioned here, run by CI via `bazel run //tools/ci:env_codegen_qualification`,
 # following //tools/ci:quality_adapters_parity.
+# Seed-host delivery qualified under closed #506; platform plus consumer plus
+# release evidence promoting the layer beyond seed-host-delivered qualified
+# under issue #787 (per-required-host plus adopt-consumer plus release
+# checklist linkage, still seed-executed with static per-host pins).
+# Bare-schema expansion (#751), collision replacement contract (#752), and
+# concurrency/NFS/relock (#753) stay out of scope and open.
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
@@ -53,7 +59,7 @@ else
 fi
 
 # Third-party language-integration plugins stay deferred past v1.
-if grep -q -F -e 'third-party language-integration plugins are deferred' "$env_doc" &&
+if grep -q -F -e 'third-party language-integration plugins' "$env_doc" &&
   grep -q -F -e 'not third-party environment plugins' "$env_doc"; then
   ok
 else
@@ -245,8 +251,8 @@ else
 fi
 
 # Owned gaps stay listed under with no premature COMPLETED.
-if grep -q -F -e 'under issue #506' "$env_doc" &&
-  grep -q -F -e 'public env contribution protocol' "$env_doc" &&
+if grep -q -F -e 'successors to closed #506' "$env_doc" &&
+  grep -q -F -e 'admitted-pairs evolution' "$env_doc" &&
   grep -q -F -e 'root-candidate tests' "$env_doc"; then
   ok
 else
@@ -337,10 +343,10 @@ fi
 
 # Docs own the qualified seed-only record with the fixture proof.
 if grep -q -F -e 'env/tests/fixtures/env_codegen/pins.bzl' "$env_doc" &&
-  grep -q -F -e 'qualified seed-only under issue #506' "$env_doc" &&
+  grep -q -F -e 'qualified seed-only under closed #506' "$env_doc" &&
   grep -q -F -e 'env_codegen_qualification' "$env_doc" &&
   grep -q -F -e 'env/tests/fixtures/env_codegen/pins.bzl' "$codegen_doc" &&
-  grep -q -F -e 'qualified seed-only under issue #506' "$codegen_doc"; then
+  grep -q -F -e 'qualified seed-only under closed #506' "$codegen_doc"; then
   ok
 else
   bad "environment.md or codegen.md lost its qualified seed-only plus pins fixture record under issue #506"
@@ -353,14 +359,149 @@ else
   bad "env codegen fixture plus WP shard plus roots fixture build failed (want green on the seed host, issue #506)"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'env_codegen_qualification' "$matrix" &&
-  grep -q -F -e 'qualified seed-only under #506' "$matrix" &&
-  grep -q -F -e 'bazel run //tools/ci:env_codegen_qualification' "$matrix" &&
-  grep -q -F -e '`env_codegen_qualification` 32/32' "$matrix"; then
+# Pins record platform plus consumer evidence (issue #787).
+if grep -q -F -e 'PLATFORM_HOSTS = ("linux_x86_64", "linux_arm64"' "$pins" &&
+  grep -q -F -e 'PLATFORM_SYMLINK_ONLY = "symlink-only on every required host"' "$pins" &&
+  grep -q -F -e 'PLATFORM_REFUSAL = "unsupported_platform"' "$pins" &&
+  grep -q -F -e 'PLATFORM_WINDOWS_CAPABILITY = "Developer Mode or grant SeBackupPrivilege"' "$pins" &&
+  grep -q -F -e 'PLATFORM_NO_FALLBACK = "no junction or copy fallback"' "$pins" &&
+  grep -q -F -e 'CONSUMER_ADOPT_RUST = "examples/adopt-rust"' "$pins" &&
+  grep -q -F -e 'CONSUMER_WORKFLOW = ".github/workflows/reusable-consumer.yml"' "$pins" &&
+  grep -q -F -e 'CONSUMER_TOOL_API = "environment_tool(name, executable, bin_name)"' "$pins"; then
   ok
 else
-  bad "verification-matrix lost its #506 env codegen qualified record with 32/32"
+  bad "pins.bzl lost its platform plus consumer pins under issue #787"
+fi
+
+# Pins record release plus out-of-scope evidence (issue #787).
+if grep -q -F -e 'RELEASE_SBOM_DEMO = "//deploy/release:sbom_demo"' "$pins" &&
+  grep -q -F -e 'RELEASE_SIGNING_DEMO = "//deploy/release:signing_demo"' "$pins" &&
+  grep -q -F -e 'RELEASE_BCR_DEMO = "//deploy/release:bcr_demo"' "$pins" &&
+  grep -q -F -e 'RELEASE_DRIVER = "//deploy/release:release_driver"' "$pins" &&
+  grep -q -F -e 'RELEASE_GATE = "bazel run //tools/ci:supported_evidence_gate"' "$pins" &&
+  grep -q -F -e 'OUT_OF_SCOPE_BARE_SCHEMA' "$pins" &&
+  grep -q -F -e 'OUT_OF_SCOPE_COLLISION' "$pins" &&
+  grep -q -F -e 'OUT_OF_SCOPE_CONCURRENCY' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its release plus out-of-scope pins under issue #787"
+fi
+
+# Platform hosts: symlink-only on every required host with clean refusal.
+if grep -q -F -e 'on every host' "$managed" &&
+  grep -q -F -e 'unsupported_platform' cli/cli/src/platform.rs &&
+  grep -q -F -e 'qualified seed-linux_x86_64' tools/coverage/cells.txt &&
+  grep -q -F -e 'qualified windows_x86_64' tools/coverage/cells.txt; then
+  ok
+else
+  bad "platform hosts lost symlink-only plus refusal plus coverage-cell pins (issue #787)"
+fi
+
+# Windows host specifics stay pinned in code plus managed state.
+if grep -q -F -e 'Developer Mode or grant SeBackupPrivilege' cli/env/src/lib.rs &&
+  grep -q -F -e '".exe"' cli/env/src/lib.rs &&
+  grep -q -F -e 'to_lowercase' cli/env/src/lib.rs &&
+  grep -q -F -e 'There is no launcher, junction, copy' "$managed" &&
+  grep -q -F -e 'shell: bash' .github/workflows/ci.yml; then
+  ok
+else
+  bad "Windows host lost its capability plus suffix plus casefold plus shell pins (issue #787)"
+fi
+
+# Per-host CI plus coverage cells with no union.
+if grep -q -F -e 'build-arm64' .github/workflows/ci.yml &&
+  grep -q -F -e 'build-musl-x86_64' .github/workflows/ci.yml &&
+  grep -q -F -e 'build-macos-arm64' .github/workflows/ci.yml &&
+  grep -q -F -e 'build-windows-x86_64' .github/workflows/ci.yml &&
+  grep -q -F -e 'no cross-cell union' docs/testing/README.md; then
+  ok
+else
+  bad "per-host CI plus coverage no-union linkage lost (issue #787)"
+fi
+
+# Platform floors plus routes plus skip budget stay linked.
+if [[ -f "tools/ci/deployment_floors_qualification.sh" ]] &&
+  [[ -f "tools/ci/cross_routes_qualification.sh" ]] &&
+  [[ -f "tools/ci/skip_budget_qualification.sh" ]] &&
+  [[ -f "tools/ci/coverage_qualification.sh" ]] &&
+  grep -q -F -e 'deployment_floors_qualification' docs/product/promotion-checklist.md &&
+  grep -q -F -e 'cross_routes_qualification' docs/product/promotion-checklist.md; then
+  ok
+else
+  bad "platform floors plus routes plus skip plus coverage linkage lost (issue #787)"
+fi
+
+# Provisional backends stay provisional, never a qualified claim.
+if grep -q -F -e 'provisional-backend exception' docs/product/support-matrix.md &&
+  grep -q -F -e 'backends stay provisional' "$expected" &&
+  grep -q -F -e 'provisional' cli/cli/src/platform.rs; then
+  ok
+else
+  bad "provisional backends lost their never-qualified record (issue #787)"
+fi
+
+# Consumer proof: adopt workspaces plus reusable workflow.
+if [[ -d "examples/adopt-rust" ]] &&
+  [[ -d "examples/adopt-python" ]] &&
+  [[ -d "examples/adopt-js-ts" ]] &&
+  [[ -f ".github/workflows/reusable-consumer.yml" ]] &&
+  grep -q -F -e 'adopt-rust' "$matrix"; then
+  ok
+else
+  bad "adopt plus reusable-consumer proof lost (issue #787)"
+fi
+
+# Consumer workflow plus caller stay pinned with no implicit default.
+if grep -q -F -e 'no implicit default' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'rules_dx_version: "0.0.0"' examples/consumer-ci/caller.yml &&
+  grep -q -F -e 'environment plans stay present' tools/ci/foundation_maps.sh &&
+  grep -q -F -e 'environment_tool' env/defs.bzl; then
+  ok
+else
+  bad "consumer workflow plus caller plus tool-parity linkage lost (issue #787)"
+fi
+
+# Release artifacts stay implemented owner-gated with CI upload.
+if grep -q -F -e 'name = "sbom_demo"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'name = "signing_demo"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'name = "bcr_demo"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'name = "release_driver"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'sbom-provenance' .github/workflows/ci.yml; then
+  ok
+else
+  bad "release sbom plus signing plus bcr plus driver linkage lost (issue #787)"
+fi
+
+# Release hygiene plus gate stay linked with no Supported claim.
+if grep -q -F -e 'version = "0.0.0"' MODULE.bazel &&
+  [[ -z "$(git tag --list 'v*' || true)" ]] &&
+  grep -q -F -e 'bazel run //tools/ci:supported_evidence_gate' docs/product/promotion-checklist.md &&
+  [[ -f "tools/ci/supported_evidence_gate.sh" ]] &&
+  ! grep -E -e '^\|.*\| *`?Supported`? *\|' docs/product/support-matrix.md | grep -q .; then
+  ok
+else
+  bad "release hygiene plus supported-gate linkage lost (issue #787)"
+fi
+
+# Out-of-scope slices stay open under #751 plus #752 plus #753.
+if grep -q -F -e '#751' "$codegen_doc" &&
+  grep -q -F -e '#752' "$codegen_doc" &&
+  grep -q -F -e '#753' "$codegen_doc" &&
+  grep -q -F -e 'Out of scope for #787' "$expected" &&
+  grep -q -F -e 'OUT_OF_SCOPE_BARE_SCHEMA' "$pins"; then
+  ok
+else
+  bad "out-of-scope #751 plus #752 plus #753 record lost (issue #787)"
+fi
+
+# Verification matrix owns the qualified seed-only record under.
+if grep -q -F -e 'env_codegen_qualification' "$matrix" &&
+  grep -q -F -e 'qualified seed-only under closed #506' "$matrix" &&
+  grep -q -F -e 'bazel run //tools/ci:env_codegen_qualification' "$matrix" &&
+  grep -q -F -e '`env_codegen_qualification` 44/44' "$matrix"; then
+  ok
+else
+  bad "verification-matrix lost its #506 plus #787 env codegen qualified record with 44/44"
 fi
 
 dx_test_summary "env/codegen qualification harness"

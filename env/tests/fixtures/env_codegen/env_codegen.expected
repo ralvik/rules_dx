@@ -53,3 +53,37 @@ timing claim rejected.
 
 Owned gaps: platform plus consumer plus release evidence stays owned
 gap; no Supported claim. Backends stay provisional.
+
+Platform evidence per required host (issue #787, beyond
+seed-host-delivered): symlink-only on every required host with
+unsupported_platform refusal on unqualified hosts; Windows keeps
+Developer Mode or grant SeBackupPrivilege capability with .exe plus
+.bat plus .cmd plus .com suffix mapping plus case-insensitive
+comparison plus shell bash and no junction or copy fallback;
+static native closure with dynamic musl explicitly out of scope;
+host-installed SDK fallback never approved on macOS with explicit
+EULA acceptance never automatic on Windows; per-cell coverage via
+tools/coverage/cells.txt with no cross-cell union plus
+skip_budget_qualification plus deployment_floors_qualification plus
+cross_routes_qualification; backends stay provisional.
+
+Consumer evidence (issue #787): examples/adopt-rust plus
+examples/adopt-python plus examples/adopt-js-ts as external-consumer
+proof with .github/workflows/reusable-consumer.yml plus
+examples/consumer-ci/caller.yml at rules_dx_version: "0.0.0" with no
+implicit default plus environment_tool(name, executable, bin_name)
+parity plus environment plans stay present plus self-call
+test-disabled.
+
+Release evidence per cell (issue #787):
+//deploy/release:sbom_demo plus sbom-provenance plus
+//deploy/release:notice_demo plus //deploy/release:signing_demo plus
+//deploy/release:bcr_demo plus //deploy/release:release_driver plus
+//deploy/install:dx_verify with docs/product/promotion-checklist.md
+plus bazel run //tools/ci:supported_evidence_gate plus version =
+"0.0.0" plus no v* tags; release evidence open (#803-#807, process
+#808); no Supported claim.
+
+Out of scope for #787: bare-schema expansion stays open under #751
+plus collision replacement contract stays open under #752 plus
+concurrency plus NFS plus relock stays open under #753.

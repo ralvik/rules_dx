@@ -404,7 +404,9 @@ Env plus codegen deferred records with fixture evidence qualified seed-only unde
 public protocol, Windows fallback, standalone, signing/trust, plus
 bootstrap/fidelity/spaces/stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with
 WP1-WP5 shard plus root plus clean plus plan evidence and `env_codegen.expected` plus
-`roots_bep.txt`; platform plus consumer plus release evidence stays owned gap under #808; no Supported
+`roots_bep.txt`; platform plus consumer plus release evidence qualified under #787 with
+per-required-host symlink-only plus refusal, adopt-consumer, and release checklist linkage;
+#751 plus #752 plus #753 stay open and out of scope for #787; no Supported
 claim; backends stay provisional).
 
 Go cgo exception boundary with fixture evidence qualified seed-only

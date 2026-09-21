@@ -20,7 +20,10 @@ Remaining reds stay owned gaps, not green claims:
   fallback, no third-party plugin claim; bootstrap, fidelity, spaces,
   stale-clean, IDE, atomic-commit, BEP, projection, root-candidate, and
   cold-warm qualified with WP shard plus root plus collector evidence;
-  platform plus consumer plus release evidence stays owned gap under #808; no Supported
+  platform plus consumer plus release evidence qualified under #787 with
+  per-required-host symlink-only plus refusal, adopt-consumer, and release
+  checklist linkage; #751 plus #752 plus #753 stay open and out of scope
+  for #787; no Supported
   claim). Docs-pipeline IR plus
   planning plus adapter runs plus site-execution plus rebuild plus link plus guide plus timing plus drift records with fixture evidence are qualified seed-only under #779
   plus #780 plus #781 plus #782 plus #783 plus #784 plus #785

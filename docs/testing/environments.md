@@ -122,6 +122,8 @@ without wall-time measurement per [ADR 0022](../decisions/0022-no-benchmarking.m
 Environment configuration and public API conformance requirements are maintained in
 [Developer Environments](../environments/environment.md). Deferred records
 (Windows fallback, standalone, signing/trust; no third-party plugin model) plus
-fixture evidence with owned gaps for the unproven required tests are
+fixture evidence with platform plus consumer plus release evidence qualified under
+#787 (per-required-host symlink-only plus refusal, adopt-consumer, release checklist
+linkage; #751 plus #752 plus #753 stay open and out of scope for #787) are
 qualified seed-only by `bazel run //tools/ci:env_codegen_qualification`
 (closed #506; successors #787, #788).

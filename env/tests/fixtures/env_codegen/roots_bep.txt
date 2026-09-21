@@ -17,3 +17,20 @@ design.
 Provenance: cli/roots roots_pattern_fixture plus roots_monolith_fixture
 with repository_roots_file plus roots_aggregate wiring; generation plus
 env shard-emission fixtures with transitive aspect collection.
+
+Platform plus consumer plus release linkage (issue #787, beyond
+seed-host-delivered): platform hosts linux_x86_64 plus linux_arm64
+plus linux_x86_64_musl plus linux_arm64_musl plus macos_arm64 plus
+macos_x86_64 plus windows_x86_64 with symlink-only on every required
+host plus unsupported_platform refusal plus per-cell coverage with no
+cross-cell union; consumer via examples/adopt-rust plus
+examples/adopt-python plus examples/adopt-js-ts plus
+.github/workflows/reusable-consumer.yml plus
+examples/consumer-ci/caller.yml; release via //deploy/release:sbom_demo
+plus //deploy/release:signing_demo plus //deploy/release:bcr_demo plus
+//deploy/release:release_driver plus //deploy/install:dx_verify plus
+docs/product/promotion-checklist.md plus
+bazel run //tools/ci:supported_evidence_gate; bare-schema expansion
+stays open under #751 plus collision replacement contract stays open
+under #752 plus concurrency plus NFS plus relock stays open under #753;
+no Supported claim.
