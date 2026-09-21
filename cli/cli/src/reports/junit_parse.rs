@@ -113,9 +113,9 @@ fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
     // Jest (and other emitters) write `timestamp="2026-09-19T21:10:02"`
     // without a timezone; quick-junit 0.8 validates timestamps as RFC3339
     // and rejects those artifacts. Timestamps are unused (caller groups by
-    // Bazel label), so strip the attribute from suite start tags before
-    // deserializing. Restricted to `<testsuite*` start tags so failure
-    // text containing `timestamp="..."` is preserved.
+    // Bazel label), so strip the attribute from start/empty tags before
+    // deserializing. Typed `quick-xml` events keep failure text, CDATA,
+    // and comments containing `timestamp="..."` byte-identical.
     let without_ts = strip_timestamp_attrs(text);
     // Bazel emitters occasionally write negative testcase durations
     // (e.g. `time="-2"` from clock skew); quick-junit rejects negatives as
@@ -171,63 +171,208 @@ fn strip_leading_decl(text: &str) -> &str {
 }
 
 fn strip_timestamp_attrs(text: &str) -> String {
-    fn remove_one(tag: &mut String) -> bool {
-        let mut search_from = 0;
-        while let Some(rel) = tag[search_from..].find("timestamp") {
-            let pos = search_from + rel;
-            if pos > 0 && !tag.as_bytes()[pos - 1].is_ascii_whitespace() {
-                search_from = pos + 1;
-                continue;
-            }
-            let mut j = pos + "timestamp".len();
-            while j < tag.len() && tag.as_bytes()[j].is_ascii_whitespace() {
-                j += 1;
-            }
-            if j >= tag.len() || tag.as_bytes()[j] != b'=' {
-                search_from = pos + 1;
-                continue;
-            }
-            j += 1;
-            while j < tag.len() && tag.as_bytes()[j].is_ascii_whitespace() {
-                j += 1;
-            }
-            if j >= tag.len() || (tag.as_bytes()[j] != b'"' && tag.as_bytes()[j] != b'\'') {
-                search_from = pos + 1;
-                continue;
-            }
-            let quote = tag.as_bytes()[j];
-            j += 1;
-            while j < tag.len() && tag.as_bytes()[j] != quote {
-                j += 1;
-            }
-            if j >= tag.len() {
-                return false;
-            }
-            j += 1;
-            tag.replace_range(pos..j, "");
-            return true;
-        }
-        false
+    use quick_xml::events::{BytesStart, Event};
+    use quick_xml::reader::Reader;
+    use quick_xml::writer::Writer;
+    use std::io::Cursor;
+
+    // Fast path: without the substring there is no attribute to drop.
+    if !text.contains("timestamp") {
+        return text.to_owned();
     }
 
-    let mut out = String::with_capacity(text.len());
-    let mut rest = text;
-    while let Some(tag_start) = rest.find("<testsuite") {
-        out.push_str(&rest[..tag_start]);
-        let tag_rest = &rest[tag_start..];
-        let Some(tag_end_rel) = tag_rest.find('>') else {
-            out.push_str(tag_rest);
-            rest = "";
-            break;
-        };
-        let tag_end = tag_end_rel + 1;
-        let mut tag = tag_rest[..tag_end].to_owned();
-        while remove_one(&mut tag) {}
-        out.push_str(&tag);
-        rest = &rest[tag_start + tag_end..];
+    let mut reader = Reader::from_str(text);
+    reader.config_mut().trim_text_start = false;
+    reader.config_mut().trim_text_end = false;
+    reader.config_mut().expand_empty_elements = false;
+
+    let mut writer = Writer::new(Cursor::new(Vec::with_capacity(text.len())));
+    let mut stripped_any = false;
+
+    loop {
+        match reader.read_event() {
+            Ok(Event::Start(e)) => {
+                let content: &[u8] = &e;
+                let name_len = e.name().as_ref().len();
+                if let Some(filtered) = remove_timestamp_from_tag(content, name_len) {
+                    stripped_any = true;
+                    match String::from_utf8(filtered) {
+                        Ok(s) => {
+                            let elem = BytesStart::from_content(s, name_len);
+                            if writer.write_event(Event::Start(elem)).is_err() {
+                                return text.to_owned();
+                            }
+                        }
+                        Err(_) => {
+                            if writer.write_event(Event::Start(e)).is_err() {
+                                return text.to_owned();
+                            }
+                        }
+                    }
+                } else if writer.write_event(Event::Start(e)).is_err() {
+                    return text.to_owned();
+                }
+            }
+            Ok(Event::Empty(e)) => {
+                let content: &[u8] = &e;
+                let name_len = e.name().as_ref().len();
+                if let Some(filtered) = remove_timestamp_from_tag(content, name_len) {
+                    stripped_any = true;
+                    match String::from_utf8(filtered) {
+                        Ok(s) => {
+                            let elem = BytesStart::from_content(s, name_len);
+                            if writer.write_event(Event::Empty(elem)).is_err() {
+                                return text.to_owned();
+                            }
+                        }
+                        Err(_) => {
+                            if writer.write_event(Event::Empty(e)).is_err() {
+                                return text.to_owned();
+                            }
+                        }
+                    }
+                } else if writer.write_event(Event::Empty(e)).is_err() {
+                    return text.to_owned();
+                }
+            }
+            Ok(Event::Eof) => break,
+            Ok(event) => {
+                if writer.write_event(event).is_err() {
+                    return text.to_owned();
+                }
+            }
+            Err(_) => {
+                // Malformed XML during the strip pass: fall back to the
+                // original so the caller still fails closed via `junit_error`.
+                return text.to_owned();
+            }
+        }
     }
-    out.push_str(rest);
-    out
+
+    if !stripped_any {
+        return text.to_owned();
+    }
+    let bytes = writer.into_inner().into_inner();
+    String::from_utf8(bytes).unwrap_or_else(|_| text.to_owned())
+}
+
+fn is_xml_whitespace(byte: u8) -> bool {
+    matches!(byte, b' ' | b'\r' | b'\n' | b'\t')
+}
+
+/// Removes `timestamp="..."` attributes from one start/empty tag's raw
+/// content (`name` + attributes, without `<`, `>`, `/>`).
+///
+/// Returns `None` when the tag carries no `timestamp` attribute so the
+/// caller can pass the original event through untouched. Parsing respects
+/// single/double quotes, so `timestamp`-like text inside other attribute
+/// values is preserved. Only the exact attribute name `timestamp` is
+/// dropped; surrounding whitespace is collapsed by removing the whitespace
+/// run preceding the attribute.
+fn remove_timestamp_from_tag(content: &[u8], name_len: usize) -> Option<Vec<u8>> {
+    if name_len > content.len() {
+        return None;
+    }
+    // Quick pre-check to avoid scanning tags that cannot match.
+    let mut has_candidate = false;
+    if content.len() >= b"timestamp".len() {
+        for window in content.windows(b"timestamp".len()) {
+            if window == b"timestamp" {
+                has_candidate = true;
+                break;
+            }
+        }
+    }
+    if !has_candidate {
+        return None;
+    }
+
+    let mut remove_ranges: Vec<(usize, usize)> = Vec::new();
+    let mut pos = name_len;
+    while pos < content.len() {
+        let ws_start = pos;
+        while pos < content.len() && is_xml_whitespace(content[pos]) {
+            pos += 1;
+        }
+        if pos >= content.len() {
+            break;
+        }
+        if content[pos] == b'/' || content[pos] == b'>' || content[pos] == b'?' {
+            break;
+        }
+        let key_start = pos;
+        while pos < content.len()
+            && content[pos] != b'='
+            && !is_xml_whitespace(content[pos])
+            && content[pos] != b'/'
+            && content[pos] != b'>'
+        {
+            pos += 1;
+        }
+        let key_end = pos;
+        if key_start == key_end {
+            pos += 1;
+            continue;
+        }
+        let key = &content[key_start..key_end];
+        while pos < content.len() && is_xml_whitespace(content[pos]) {
+            pos += 1;
+        }
+        if pos >= content.len() || content[pos] != b'=' {
+            continue;
+        }
+        pos += 1;
+        while pos < content.len() && is_xml_whitespace(content[pos]) {
+            pos += 1;
+        }
+        if pos >= content.len() {
+            break;
+        }
+        let quote = content[pos];
+        if quote != b'"' && quote != b'\'' {
+            while pos < content.len()
+                && !is_xml_whitespace(content[pos])
+                && content[pos] != b'>'
+                && content[pos] != b'/'
+            {
+                pos += 1;
+            }
+            continue;
+        }
+        pos += 1;
+        let mut closed = false;
+        while pos < content.len() {
+            if content[pos] == quote {
+                closed = true;
+                break;
+            }
+            pos += 1;
+        }
+        if !closed {
+            return None;
+        }
+        pos += 1;
+        let attr_end = pos;
+        if key == b"timestamp" {
+            remove_ranges.push((ws_start, attr_end));
+        }
+    }
+
+    if remove_ranges.is_empty() {
+        return None;
+    }
+    let mut out = Vec::with_capacity(content.len());
+    let mut cursor = 0;
+    for (start, end) in remove_ranges {
+        if start > cursor {
+            out.extend_from_slice(&content[cursor..start]);
+        }
+        cursor = end;
+    }
+    if cursor < content.len() {
+        out.extend_from_slice(&content[cursor..]);
+    }
+    Some(out)
 }
 
 /// Replaces negative `time="..."` values with `time="0"` in
@@ -518,5 +663,58 @@ mod tests {
             .expect("failure")
             .text
             .contains("kept"));
+    }
+
+    #[test]
+    fn junit_strip_timestamp_uses_typed_events() {
+        // Single quotes and whitespace around `=` are real attributes.
+        let single = r#"<testsuite name="a" timestamp = '2026-09-19T21:10:02'><testcase name="a"/></testsuite>"#;
+        let stripped = strip_timestamp_attrs(single);
+        assert!(!stripped.contains("2026-09-19T21:10:02"));
+        assert!(stripped.contains(r#"name="a""#));
+        assert!(parse_test_xml(single.as_bytes(), 0, 0).is_ok());
+
+        // `>` inside another attribute value must not truncate the tag scan.
+        let gt = r#"<testsuite name="a>b" timestamp="2026-09-19T21:10:02"><testcase name="a"/></testsuite>"#;
+        let stripped = strip_timestamp_attrs(gt);
+        assert!(!stripped.contains("2026-09-19T21:10:02"));
+        assert!(stripped.contains(r#"name="a>b""#));
+        assert!(parse_test_xml(gt.as_bytes(), 0, 0).is_ok());
+
+        // `timestamp`-like text inside another attribute value is preserved.
+        let value_lookalike = r#"<testsuite name='a timestamp="kept" b' timestamp="2026-09-19T21:10:02"><testcase name="a"/></testsuite>"#;
+        let stripped = strip_timestamp_attrs(value_lookalike);
+        assert!(!stripped.contains("2026-09-19T21:10:02"));
+        assert!(stripped.contains(r#"timestamp="kept""#));
+        assert!(parse_test_xml(value_lookalike.as_bytes(), 0, 0).is_ok());
+
+        // CDATA containing a testsuite-like tag passes through byte-identical.
+        let cdata_inner = r#"<testsuite timestamp="2026-09-19T21:10:02">"#;
+        let cdata = r#"<testsuite name="a" timestamp="2026-09-19T21:10:02"><testcase name="a"><failure><![CDATA[<testsuite timestamp="2026-09-19T21:10:02">]]></failure></testcase></testsuite>"#;
+        let stripped = strip_timestamp_attrs(cdata);
+        assert!(stripped.contains(cdata_inner));
+        let cases = parse_test_xml(cdata.as_bytes(), 0, 0).expect("cdata");
+        assert!(cases[0]
+            .failure
+            .as_ref()
+            .expect("failure")
+            .text
+            .contains("testsuite"));
+
+        // Comments containing a testsuite-like tag are preserved.
+        let comment = r#"<!-- <testsuite timestamp="2026-09-19T21:10:02"> -->"#;
+        let with_comment = format!(
+            r#"<testsuite name="a" timestamp="2026-09-19T21:10:02">{comment}<testcase name="a"/></testsuite>"#
+        );
+        let stripped = strip_timestamp_attrs(&with_comment);
+        assert!(stripped.contains(comment));
+        assert!(parse_test_xml(with_comment.as_bytes(), 0, 0).is_ok());
+
+        // Timestamps on the testsuites root and testcase tags are also dropped.
+        let roots = r#"<testsuites timestamp="2026-09-19T21:10:02"><testsuite><testcase name="a"/></testsuite></testsuites>"#;
+        assert!(parse_test_xml(roots.as_bytes(), 0, 0).is_ok());
+        let case_ts =
+            r#"<testsuite><testcase name="a" timestamp="2026-09-19T21:10:02"/></testsuite>"#;
+        assert!(parse_test_xml(case_ts.as_bytes(), 0, 0).is_ok());
     }
 }
