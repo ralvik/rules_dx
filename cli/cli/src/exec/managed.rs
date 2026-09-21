@@ -13,7 +13,10 @@ use super::managed_prepare::{map_commit_error, prepare_managed_sides};
 use crate::args::{Command, Invocation};
 use crate::plan::{bep_path, plan_managed, plan_managed_with_roots};
 use crate::resolve::expand_codegen_roots;
-use dx_output::OutputMode;
+use dx_output::{
+    command_finished, command_started, error_event, operation_event, selection_event, write_event,
+    FinishedCounts, OutputMode,
+};
 use dx_process::ForwardError;
 
 /// Runs `dx codegen`, `dx env`, and `dx setup`:
@@ -113,18 +116,41 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         Ok(plan) => plan,
         Err(error) => return pre_exec(err, &format!("{error}")),
     };
-    // Human prose is the only output on this path: the planned
-    // operation prints unless `--quiet` suppresses it, in both
-    // `--dry-run` and live modes.
+    // JSON streams `command_started`, one `collect` `operation` (explicit
+    // scope included, repository scope omitted), `selection`, and
+    // `command_finished`; text prints the planned operation unless
+    // `--quiet` suppresses it, in both `--dry-run` and live modes.
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
+    let json = invocation.output == OutputMode::Json;
+    // Compact effective scope for the `operation` event: repository scopes
+    // omit it (like generate/update), exact scopes include the analyzed
+    // roots (expanded bare-schema union when present).
+    let op_scope: Option<Vec<String>> = match (&scope, &expanded) {
+        (_, Some(roots)) => Some(roots.clone()),
+        (dx_setup::SetupScope::Exact(label), None) => Some(vec![label.clone()]),
+        (dx_setup::SetupScope::Repository, None) => None,
+    };
+    if json {
+        if let Ok(event) = command_started(invocation.command.name(), invocation.dry_run, "default")
+        {
+            let _ = write_event(out, &event);
+        }
+        if let Ok(event) =
+            operation_event(invocation.command.name(), "collect", op_scope.as_deref())
+        {
+            let _ = write_event(out, &event);
+        }
+    }
     if invocation.dry_run {
-        if verbose {
+        if json {
+            let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+        } else if verbose {
             let _ = writeln!(out, "{}", plan.summary);
         }
         return 0;
     }
-    if verbose {
+    if !json && verbose {
         let _ = writeln!(out, "{}", plan.summary);
     }
     let status = match runner.run(&plan.argv, workspace, &[]) {
@@ -151,6 +177,30 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
     };
     if bazel_code != 0 {
         let _ = std::fs::remove_file(&bep);
+        if json {
+            // Failure explainer without argv/secrets: which collection
+            // failed plus the stderr pointer; Bazel diagnostics stay on stderr.
+            // See: `docs/cli/output-protocol.md#operational-error`.
+            let scope_text = op_scope
+                .as_deref()
+                .map(|scope| scope.join(" "))
+                .unwrap_or_else(|| "//...".to_owned());
+            if let Ok(event) = error_event(
+                "bazel_failed",
+                &format!(
+                    "Bazel collection build failed with exit {bazel_code} for {scope_text} (see stderr diagnostics)"
+                ),
+                None,
+                None,
+                Some("collect"),
+            ) {
+                let _ = write_event(out, &event);
+            }
+            let _ = write_event(
+                out,
+                &command_finished(bazel_code, &FinishedCounts::default()),
+            );
+        }
         return bazel_code;
     }
     let repository = matches!(scope, dx_setup::SetupScope::Repository);
@@ -170,6 +220,18 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     };
     let _ = std::fs::remove_file(&bep);
+    if json {
+        let setup_id = dx_setup::setup_hex(&pair);
+        if let Ok(event) = selection_event(
+            &setup_id,
+            pair.environment.as_str(),
+            pair.generated.as_str(),
+        ) {
+            let _ = write_event(out, &event);
+        }
+        let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+        return 0;
+    }
     if verbose {
         let setup = dx_setup::setup_hex(&pair);
         if outcome == dx_setup::CommitOutcome::AlreadyCurrent {
@@ -534,5 +596,97 @@ mod tests {
             harness.seen_env.borrow().is_empty(),
             "policy conflict launches nothing"
         );
+    }
+
+    #[test]
+    fn managed_dry_run_json_streams_planning_events() {
+        for command in ["codegen", "env", "setup"] {
+            let name = format!("managed-dry-json-{command}");
+            let harness = Harness::new(&name);
+            let (code, out, err) = harness.run(&[command, "--dry-run", "--output=json"]);
+            assert_eq!(code, 0, "{out}{err}");
+            let events = json_events(&out);
+            let kinds: Vec<&str> = events
+                .iter()
+                .map(|event| event["event"].as_str().expect("event"))
+                .collect();
+            assert_eq!(
+                kinds,
+                vec!["command_started", "operation", "command_finished"]
+            );
+            let op = event(&events, "operation");
+            assert_eq!(op["command"], serde_json::json!(command));
+            assert_eq!(op["phase"], serde_json::json!("collect"));
+            assert!(op.get("scope").is_none(), "{op}");
+            assert_eq!(
+                events.last().expect("finished")["exit_code"],
+                serde_json::json!(0)
+            );
+            assert_eq!(err, "", "{err}");
+        }
+    }
+
+    #[test]
+    fn managed_dry_run_json_exact_scope_includes_scope() {
+        let harness = Harness::new("managed-dry-json-exact");
+        let (code, out, err) = harness.run(&["env", "//a:one", "--dry-run", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let events = json_events(&out);
+        let op = event(&events, "operation");
+        assert_eq!(op["scope"], serde_json::json!(["//a:one"]));
+        assert_eq!(err, "", "{err}");
+    }
+
+    #[test]
+    fn managed_live_json_streams_selection() {
+        for command in ["codegen", "env", "setup"] {
+            let name = format!("managed-live-json-{command}");
+            let harness = Harness::new(&name);
+            let (code, out, err) = harness.run(&[command, "--output=json"]);
+            assert_eq!(code, 0, "{out}{err}");
+            let events = json_events(&out);
+            let kinds: Vec<&str> = events
+                .iter()
+                .map(|event| event["event"].as_str().expect("event"))
+                .collect();
+            assert_eq!(
+                kinds,
+                vec![
+                    "command_started",
+                    "operation",
+                    "selection",
+                    "command_finished"
+                ]
+            );
+            let selection = event(&events, "selection");
+            for field in ["setup_id", "environment_id", "codegen_id"] {
+                let value = selection[field].as_str().expect("hex");
+                assert_eq!(value.len(), 64, "{selection}");
+                assert!(value
+                    .chars()
+                    .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+            }
+            assert_eq!(
+                events.last().expect("finished")["exit_code"],
+                serde_json::json!(0)
+            );
+            assert_eq!(err, "", "{err}");
+            for line in out.lines() {
+                serde_json::from_str::<serde_json::Value>(line).expect("NDJSON line");
+            }
+        }
+    }
+
+    #[test]
+    fn managed_live_json_bazel_failure_emits_explainer() {
+        let harness = Harness {
+            bazel_code: 3,
+            ..Harness::new("managed-json-bazel-fail")
+        };
+        let (code, out, _) = harness.run(&["setup", "--output=json"]);
+        assert_eq!(code, 3, "{out}");
+        assert!(out.contains("bazel_failed"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+        assert!(out.contains("\"exit_code\":3"), "{out}");
     }
 }

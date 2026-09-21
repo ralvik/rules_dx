@@ -6,7 +6,10 @@ use dx_clean::{
     apply_plan, bazel_forward_argv, collect_inventory_with_scan, measure_prune_bytes,
     render_dry_run, RECOVERY_GUIDANCE,
 };
-use dx_output::OutputMode;
+use dx_output::{
+    command_finished, command_started, error_event, notice_event, operation_event, write_event,
+    FinishedCounts, NoticeEvent, OutputMode,
+};
 
 /// Runs `dx clean [--dry-run] [--bazel]`: collects the
 /// workspace managed-state inventory with the process scan (live shells
@@ -23,6 +26,12 @@ use dx_output::OutputMode;
 /// Exits `0` on success (including an empty prune set), `1` on
 /// inventory, lock, or prune failures, and propagates the Bazel exit
 /// code for the explicit forward.
+///
+/// JSON mode streams `command_started`, one `collect` `operation`, per-entry
+/// `clean_planned` (dry-run) or `clean_pruned` (live) `notice` events, and
+/// `command_finished` (see `docs/cli/output-protocol.md`). Text prose stays
+/// on stdout only in text mode; Bazel output remains on stderr in every mode
+/// so stdout stays machine-owned under `--output=json`.
 pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,
@@ -31,6 +40,16 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         err,
         ..
     } = env;
+    let json = invocation.output == OutputMode::Json;
+    if json {
+        if let Ok(event) = command_started(invocation.command.name(), invocation.dry_run, "default")
+        {
+            let _ = write_event(out, &event);
+        }
+        if let Ok(event) = operation_event(invocation.command.name(), "collect", None) {
+            let _ = write_event(out, &event);
+        }
+    }
     let inventory = match collect_inventory_with_scan(workspace) {
         Ok(inventory) => inventory,
         Err(error) => {
@@ -52,6 +71,11 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
+        if json {
+            emit_clean_notices(out, &plan, &bytes, true);
+            let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+            return 0;
+        }
         if verbose {
             let _ = writeln!(out, "{}", render_dry_run(&plan, &bytes));
             if invocation.bazel_clean {
@@ -66,7 +90,9 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
             return operational(invocation, out, err, CODE_CLEAN_FAILED, &error.to_string());
         }
     };
-    if verbose {
+    if json {
+        emit_clean_pruned(out, &outcome, &bytes);
+    } else if verbose {
         if outcome.removed_setup_records.is_empty() && outcome.removed_generations.is_empty() {
             let _ = writeln!(out, "dx clean: nothing to prune");
         } else {
@@ -80,6 +106,9 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     }
     if !invocation.bazel_clean {
+        if json {
+            let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+        }
         return 0;
     }
     // The explicit forward is exactly `bazel clean` (never any other
@@ -107,10 +136,151 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
             "Bazel terminated by signal",
         );
     };
+    if json {
+        if bazel_code != 0 {
+            // Failure explainer without argv/secrets: which phase failed plus
+            // the stderr pointer; Bazel diagnostics stay on stderr.
+            // See: `docs/cli/output-protocol.md#operational-error`.
+            if let Ok(event) = error_event(
+                "bazel_failed",
+                &format!(
+                    "Bazel clean forward failed with exit {bazel_code} (see stderr diagnostics)"
+                ),
+                None,
+                None,
+                Some("execute"),
+            ) {
+                let _ = write_event(out, &event);
+            }
+        }
+        let _ = write_event(
+            out,
+            &command_finished(bazel_code, &FinishedCounts::default()),
+        );
+        return bazel_code;
+    }
     if verbose {
         let _ = writeln!(out, "{}", RECOVERY_GUIDANCE);
     }
     bazel_code
+}
+
+/// Emits one `clean_planned` notice per prune entry for dry-run JSON.
+/// Messages carry workspace-relative paths plus measured bytes only;
+/// no argv, env values, or absolute paths (see output-protocol redaction).
+fn emit_clean_notices(
+    out: &mut dyn std::io::Write,
+    plan: &dx_clean::CleanPlan,
+    bytes: &dx_clean::PruneBytes,
+    planned: bool,
+) {
+    let code = if planned {
+        "clean_planned"
+    } else {
+        "clean_pruned"
+    };
+    for hex in &plan.prune_setup_records {
+        let size = bytes
+            .setup_record_bytes
+            .iter()
+            .find(|(entry, _)| entry == hex)
+            .map(|(_, size)| *size)
+            .unwrap_or(0);
+        let path = format!(".dx/setups/{hex}");
+        let message = if planned {
+            format!("would prune setup record {path} ({size} bytes)")
+        } else {
+            format!("pruned setup record {path} ({size} bytes)")
+        };
+        if let Ok(event) = notice_event(&NoticeEvent {
+            level: "info".to_owned(),
+            code: code.to_owned(),
+            message,
+            related_command: Some("clean".to_owned()),
+            scope: None,
+            path: Some(path),
+            language: None,
+            import: None,
+        }) {
+            let _ = write_event(out, &event);
+        }
+    }
+    for generation in &plan.prune_generations {
+        let size = bytes
+            .generation_bytes
+            .iter()
+            .find(|(entry, _)| entry == generation)
+            .map(|(_, size)| *size)
+            .unwrap_or(0);
+        let path = format!(".dx/{}/{}", generation.kind.dir_name(), generation.hex);
+        let message = if planned {
+            format!("would prune generation {path} ({size} bytes)")
+        } else {
+            format!("pruned generation {path} ({size} bytes)")
+        };
+        if let Ok(event) = notice_event(&NoticeEvent {
+            level: "info".to_owned(),
+            code: code.to_owned(),
+            message,
+            related_command: Some("clean".to_owned()),
+            scope: None,
+            path: Some(path),
+            language: None,
+            import: None,
+        }) {
+            let _ = write_event(out, &event);
+        }
+    }
+}
+
+/// Emits one `clean_pruned` notice per removed entry for live JSON.
+fn emit_clean_pruned(
+    out: &mut dyn std::io::Write,
+    outcome: &dx_clean::CleanOutcome,
+    bytes: &dx_clean::PruneBytes,
+) {
+    for hex in &outcome.removed_setup_records {
+        let size = bytes
+            .setup_record_bytes
+            .iter()
+            .find(|(entry, _)| entry == hex)
+            .map(|(_, size)| *size)
+            .unwrap_or(0);
+        let path = format!(".dx/setups/{hex}");
+        if let Ok(event) = notice_event(&NoticeEvent {
+            level: "info".to_owned(),
+            code: "clean_pruned".to_owned(),
+            message: format!("pruned setup record {path} ({size} bytes)"),
+            related_command: Some("clean".to_owned()),
+            scope: None,
+            path: Some(path),
+            language: None,
+            import: None,
+        }) {
+            let _ = write_event(out, &event);
+        }
+    }
+    for generation in &outcome.removed_generations {
+        let size = bytes
+            .generation_bytes
+            .iter()
+            .find(|(entry, _)| entry == generation)
+            .map(|(_, size)| *size)
+            .unwrap_or(0);
+        let path = format!(".dx/{}/{}", generation.kind.dir_name(), generation.hex);
+        if let Ok(event) = notice_event(&NoticeEvent {
+            level: "info".to_owned(),
+            code: "clean_pruned".to_owned(),
+            message: format!("pruned generation {path} ({size} bytes)"),
+            related_command: Some("clean".to_owned()),
+            scope: None,
+            path: Some(path),
+            language: None,
+            import: None,
+        }) {
+            let _ = write_event(out, &event);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -293,5 +463,83 @@ mod tests {
         assert!(out.contains("nothing to prune"), "{out}");
         assert!(setups.join("notes").exists(), "unmanaged paths survive");
         assert!(environments.join("README").exists());
+    }
+
+    #[test]
+    fn clean_dry_run_json_streams_planning_events() {
+        let harness = Harness::new("clean-dry-json");
+        let stale = commit_clean_pair(&harness, '3', '4');
+        let _current = commit_clean_pair(&harness, '1', '2');
+        let (code, out, err) = harness.run(&["clean", "--dry-run", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let events = json_events(&out);
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds[0], "command_started");
+        assert!(kinds.contains(&"operation"), "{kinds:?}");
+        assert!(kinds.contains(&"notice"), "{kinds:?}");
+        assert_eq!(kinds[kinds.len() - 1], "command_finished");
+        let op = event(&events, "operation");
+        assert_eq!(op["phase"], serde_json::json!("collect"));
+        let notice = events
+            .iter()
+            .find(|event| event["event"] == serde_json::json!("notice"))
+            .expect("notice");
+        assert_eq!(notice["code"], serde_json::json!("clean_planned"));
+        assert!(notice["message"]
+            .as_str()
+            .expect("message")
+            .contains(&stale));
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+        assert_eq!(err, "", "{err}");
+        for line in out.lines() {
+            serde_json::from_str::<serde_json::Value>(line).expect("NDJSON line");
+        }
+    }
+
+    #[test]
+    fn clean_live_json_streams_pruned_notices() {
+        let harness = Harness::new("clean-live-json");
+        let stale = commit_clean_pair(&harness, '3', '4');
+        let _current = commit_clean_pair(&harness, '1', '2');
+        let (code, out, err) = harness.run(&["clean", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let events = json_events(&out);
+        assert!(
+            events
+                .iter()
+                .any(|event| event["event"] == serde_json::json!("notice")
+                    && event["code"] == serde_json::json!("clean_pruned")),
+            "{out}"
+        );
+        assert!(out.contains(&stale), "{out}");
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+        assert_eq!(err, "", "{err}");
+    }
+
+    #[test]
+    fn clean_json_failure_emits_error_and_finished() {
+        let harness = Harness::new("clean-json-fail");
+        let stale = commit_clean_pair(&harness, '3', '4');
+        let pointer = harness.workspace.join(".dx/setups/current");
+        std::fs::remove_file(&pointer).expect("remove pointer");
+        std::fs::write(&pointer, "not a symlink").expect("file pointer");
+        let (code, out, err) = harness.run(&["clean", "--output=json"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(out.contains("clean_failed"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+        assert!(err.contains("clean_failed"), "{err}");
+        assert!(
+            harness.workspace.join(".dx/setups").join(&stale).exists(),
+            "failure prunes nothing"
+        );
     }
 }

@@ -5,7 +5,10 @@ use crate::args::Invocation;
 use crate::plan::plan_run;
 use crate::reports::plan_reports;
 use crate::resolve::{resolve_run, ResolveError};
-use dx_output::{command_finished, command_started, write_event, FinishedCounts, OutputMode};
+use dx_output::{
+    command_finished, command_started, error_event, operation_event, write_event, FinishedCounts,
+    OutputMode,
+};
 use std::io::Write;
 use std::path::Path;
 
@@ -78,8 +81,24 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
     execute_run_multi(invocation, workspace, runner, out, err, &targets)
 }
 
+/// Emits one `execute` `operation` per target with its single-label scope.
+/// Scope is always present (run never runs repository-wide); line order is
+/// the sequential execution order.
+fn emit_run_operations(out: &mut dyn Write, command: &str, targets: &[String]) {
+    for target in targets {
+        let scope = [target.clone()];
+        if let Ok(event) = operation_event(command, "execute", Some(&scope)) {
+            let _ = write_event(out, &event);
+        }
+    }
+}
+
 /// Single-target `bazel run`: plan, optional dry-run, launch with
 /// verbatim exit-code preservation.
+///
+/// JSON mode streams `command_started`, one `execute` `operation` with the
+/// single-label scope, and `command_finished`; child stdout/stderr stay on
+/// stderr via `BinaryRunner` so stdout stays machine-owned.
 fn execute_run_single(
     invocation: &Invocation,
     workspace: &Path,
@@ -94,11 +113,60 @@ fn execute_run_single(
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
                 let _ = write_event(out, &event);
             }
+            emit_run_operations(out, invocation.command.name(), &[target.to_owned()]);
             let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
         } else if !invocation.quiet {
             let _ = writeln!(err, "{}", plan.summary);
         }
         return 0;
+    }
+    if invocation.output == OutputMode::Json {
+        if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+            let _ = write_event(out, &event);
+        }
+        emit_run_operations(out, invocation.command.name(), &[target.to_owned()]);
+        // Launch/signal failures go through `operational` (which emits
+        // `error` + `finished`); application nonzero emits a sanitized
+        // `bazel_failed` explainer plus `finished` with the verbatim code.
+        // Direct `runner.run` keeps the two paths distinguishable even when
+        // the application exits 1 (the operational code).
+        let status = match runner.run(&plan.argv, workspace, &[]) {
+            Ok(status) => status,
+            Err(error) => {
+                return operational(
+                    invocation,
+                    out,
+                    err,
+                    CODE_LAUNCH_FAILED,
+                    &format!("failed to launch Bazel: {error}"),
+                );
+            }
+        };
+        let Some(code) = status.code else {
+            return operational(
+                invocation,
+                out,
+                err,
+                CODE_BAZEL_SIGNALLED,
+                "Bazel terminated by signal",
+            );
+        };
+        if code != 0 {
+            // Failure explainer without argv/secrets: which target failed
+            // plus the stderr pointer; application output stays on stderr.
+            // See: `docs/cli/output-protocol.md#operational-error`.
+            if let Ok(event) = error_event(
+                "bazel_failed",
+                &format!("application {target} failed with exit {code} (see stderr diagnostics)"),
+                None,
+                None,
+                Some("execute"),
+            ) {
+                let _ = write_event(out, &event);
+            }
+        }
+        let _ = write_event(out, &command_finished(code, &FinishedCounts::default()));
+        return code;
     }
     if !invocation.quiet {
         let _ = writeln!(err, "{}", plan.summary);
@@ -113,6 +181,10 @@ fn execute_run_single(
 /// terminal. Stops on the first required failure and returns that
 /// code verbatim; launch/signal failures map to the same operational
 /// codes as single-run.
+///
+/// JSON mode streams `command_started`, one `execute` `operation` per
+/// target in execution order, an `error` for the failed target when the
+/// sequence stops early, and `command_finished`.
 fn execute_run_multi(
     invocation: &Invocation,
     workspace: &Path,
@@ -126,6 +198,7 @@ fn execute_run_multi(
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
                 let _ = write_event(out, &event);
             }
+            emit_run_operations(out, invocation.command.name(), targets);
             let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
         } else if !invocation.quiet {
             for target in targets {
@@ -133,6 +206,53 @@ fn execute_run_multi(
                 let _ = writeln!(err, "{}", plan.summary);
             }
         }
+        return 0;
+    }
+    if invocation.output == OutputMode::Json {
+        if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+            let _ = write_event(out, &event);
+        }
+        emit_run_operations(out, invocation.command.name(), targets);
+        for target in targets {
+            let plan = plan_run(target, &invocation.bazel_options, invocation.profile());
+            let status = match runner.run(&plan.argv, workspace, &[]) {
+                Ok(status) => status,
+                Err(error) => {
+                    return operational(
+                        invocation,
+                        out,
+                        err,
+                        CODE_LAUNCH_FAILED,
+                        &format!("failed to launch Bazel: {error}"),
+                    );
+                }
+            };
+            let Some(code) = status.code else {
+                return operational(
+                    invocation,
+                    out,
+                    err,
+                    CODE_BAZEL_SIGNALLED,
+                    "Bazel terminated by signal",
+                );
+            };
+            if code != 0 {
+                if let Ok(event) = error_event(
+                    "bazel_failed",
+                    &format!(
+                        "application {target} failed with exit {code} (see stderr diagnostics)"
+                    ),
+                    None,
+                    None,
+                    Some("execute"),
+                ) {
+                    let _ = write_event(out, &event);
+                }
+                let _ = write_event(out, &command_finished(code, &FinishedCounts::default()));
+                return code;
+            }
+        }
+        let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
         return 0;
     }
     for target in targets {
@@ -273,18 +393,63 @@ mod tests {
 
     #[test]
     fn run_dry_run_json_and_text() {
-        // `parse` owns `--output=json` rejection for `run`; the text dry-run
-        // exercises `execute_run` planning.
-        let args: Vec<String> = ["run", "//app:bin", "--dry-run", "--output=json"]
-            .iter()
-            .map(ToString::to_string)
-            .collect();
-        let err = parse(&args).expect_err("run json must fail parse");
-        assert!(err.to_string().contains("--output"), "{err:?}");
+        // `run` supports `--output=json` (planning + per-target events);
+        // text dry-run exercises planning on stderr.
+        let harness = Harness::new("run-dry-json");
+        let (code, out, err) = harness.run(&["run", "//app:bin", "--dry-run", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("command_started"), "{out}");
+        assert!(out.contains("\"phase\":\"execute\""), "{out}");
+        assert!(out.contains("//app:bin"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+        assert_eq!(err, "", "{err}");
         let harness = Harness::new("run-dry-text");
         let (code, _, err) = harness.run(&["run", "//app:bin", "--dry-run"]);
         assert_eq!(code, 0, "{err}");
         assert!(err.contains("Running run"), "{err}");
+    }
+
+    #[test]
+    fn run_live_json_streams_operations_and_finished() {
+        let harness = Harness::new("run-live-json");
+        let (code, out, err) = harness.run(&["run", "//app:bin", "--output=json"]);
+        assert_eq!(code, 0, "{out}{err}");
+        let events = json_events(&out);
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds[0], "command_started");
+        assert!(kinds.contains(&"operation"), "{kinds:?}");
+        assert_eq!(kinds[kinds.len() - 1], "command_finished");
+        let op = events
+            .iter()
+            .find(|event| event["event"] == serde_json::json!("operation"))
+            .expect("operation");
+        assert_eq!(op["phase"], serde_json::json!("execute"));
+        assert_eq!(op["scope"], serde_json::json!(["//app:bin"]));
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+        // Child output stays off stdout; stdout is NDJSON only.
+        for line in out.lines() {
+            serde_json::from_str::<serde_json::Value>(line).expect("NDJSON line");
+        }
+        assert_eq!(err, "", "{err}");
+    }
+
+    #[test]
+    fn run_live_json_failure_emits_explainer() {
+        let harness = Harness {
+            bazel_code: 7,
+            ..Harness::new("run-live-json-fail")
+        };
+        let (code, out, _) = harness.run(&["run", "//app:bin", "--output=json"]);
+        assert_eq!(code, 7, "{out}");
+        assert!(out.contains("bazel_failed"), "{out}");
+        assert!(out.contains("command_finished"), "{out}");
+        assert!(out.contains("\"exit_code\":7"), "{out}");
     }
 
     #[test]
@@ -496,7 +661,7 @@ mod tests {
 
     #[test]
     fn run_manual_invocations_cover_defense_branches() {
-        // `parse` rejects `--report` and JSON output for `run`; construct the
+        // `parse` rejects `--report` for `run`; construct the
         // invocation directly to cover `execute_run` defense branches.
         let harness = Harness::new("run-manual-report");
         let inv = run_invocation(

@@ -46,8 +46,12 @@ failures stay pre-exec (exit 2). Each application inherits stdio with
 SIGINT/SIGTERM forwarding to the active child (sequential mode never
 has more than one live child, so no supervisor table); arguments after
 `--` forward verbatim.
-`dx run` accepts only `--output=text` (json/diff rejected pre-exec),
-emits one prose lifecycle line per target on stderr, takes no `--report`, and refuses when
+`dx run` accepts `--output=text|json` (`--output=diff` has no patch to emit and is
+rejected pre-exec). Text emits one prose lifecycle line per target on stderr; JSON
+streams `command_started`, one `execute` `operation` per target with its single-label
+scope in execution order, an optional sanitized `bazel_failed` `error` naming the failed
+target, and `command_finished` on stdout with child output routed to stderr so stdout
+stays machine-owned. It takes no `--report`, and refuses when
 env `CI=true` (local-only).
 
 ## `dx deploy`
