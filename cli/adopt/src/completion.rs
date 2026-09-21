@@ -6,7 +6,7 @@
 //! `dx_adopt::{ALL_COMMANDS, SUPPORTED_SHELLS, completion_source_is_single}`.
 //!
 //! Production `dx completion` renders from the `Cli` grammar via
-//! `clap_complete` (`cli/cli/src/args.rs::render_completion`),
+//! `clap_complete` (`cli/cli/src/args/completion.rs::render_completion`),
 //! so the grammar feeding parsing and `--help` is the single completion
 //! source. The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables here
 //! remain as the frozen vocabulary reference only; they render nothing.

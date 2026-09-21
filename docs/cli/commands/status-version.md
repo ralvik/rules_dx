@@ -53,8 +53,8 @@ diagnostic names the three versions (binary, pin, module) and the repair:
 dx: version skew: binary 0.0.0 pin 9.9.9 module 0.0.0; fix with `dx version --pin 0.0.0` or `dx version --rollback`
 ```
 
-Fail vs warn follows command class (decided in
-open work under issue #457):
+Fail vs warn follows command class (decided under closed issue #457,
+implemented in `cli/cli/src/skew.rs`):
 
 - Proceed silently: `version`, `status` (the diagnose/repair path),
   `completion` (no version semantics).
