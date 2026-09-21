@@ -49,9 +49,9 @@ Bazel semantics change; seed only, no Supported claim):
   `format`, `check`, and `fix` (8 commands). Every other registry command
   stays not watchable with fail-closed `not watchable` errors: `audit`,
   `bazel`, `bump`, `clean`, `codegen`, `completion`, `coverage`, `deps`,
-  `deploy`, `env`, `generate`, `hooks`, `init`, `migrate`, `owners`,
+  `deploy`, `docs`, `env`, `generate`, `hooks`, `init`, `migrate`, `owners`,
   `setup`, `status`, `update`, `version`, `watch` (no nesting), and `why`
-  (21 commands). Silent substitution across commands stays rejected.
+  (22 commands). Silent substitution across commands stays rejected.
 - Managed-state selection (`env`, `codegen`, `setup`, `clean`), lockfile
   mutation (`update`, `bump`, `migrate`), audit collection, BUILD-graph
   mutation (`generate`), one-shot adoption helpers (`init`, `hooks`,

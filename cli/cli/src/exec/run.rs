@@ -631,6 +631,8 @@ mod tests {
             from: None,
             to: None,
             here: false,
+            serve: false,
+            port: None,
         }
     }
 

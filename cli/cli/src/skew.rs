@@ -170,6 +170,7 @@ mod tests {
             Command::Init,
             Command::Hooks,
             Command::Watch,
+            Command::Docs,
             Command::Bazel,
         ] {
             assert_eq!(

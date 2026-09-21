@@ -50,6 +50,7 @@ rust_library(
         "src/exec/clean.rs",
         "src/exec/common.rs",
         "src/exec/deploy.rs",
+        "src/exec/docs.rs",
         "src/exec/generate.rs",
         "src/exec/managed.rs",
         "src/exec/managed_codegen.rs",

@@ -66,6 +66,10 @@ pub struct Invocation {
     /// `dx <command> --here` (`--cwd` alias): select the current directory
     /// tree instead of `//...` (cwd-scope commands only; never implicit).
     pub here: bool,
+    /// `dx docs --serve`: preview the last build outputs locally.
+    pub serve: bool,
+    /// `dx docs --serve --port <port>`: preview port (docs only).
+    pub port: Option<u16>,
 }
 
 impl Invocation {
@@ -213,6 +217,8 @@ mod tests {
             from: None,
             to: None,
             here: true,
+            serve: false,
+            port: None,
         }
     }
 

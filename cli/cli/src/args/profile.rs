@@ -173,6 +173,8 @@ mod tests {
             vec!["generate", "--debug"],
             vec!["codegen", "--release"],
             vec!["status", "--debug"],
+            vec!["docs", "--debug"],
+            vec!["docs", "--release"],
         ] {
             assert!(
                 matches!(

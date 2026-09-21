@@ -20,7 +20,7 @@ WATCHABLE_COMMANDS = [
 ]
 WATCHABLE_COUNT = 8
 
-# Watch: the remaining 21 registry commands stay not watchable.
+# Watch: the remaining 22 registry commands stay not watchable.
 NOT_WATCHABLE_COMMANDS = [
     "audit",
     "bazel",
@@ -31,6 +31,7 @@ NOT_WATCHABLE_COMMANDS = [
     "coverage",
     "deps",
     "deploy",
+    "docs",
     "env",
     "generate",
     "hooks",
@@ -44,7 +45,7 @@ NOT_WATCHABLE_COMMANDS = [
     "watch",
     "why",
 ]
-NOT_WATCHABLE_COUNT = 21
+NOT_WATCHABLE_COUNT = 22
 
 # Watch locality: CI use stays refused, debounce stays 200ms.
 WATCH_REFUSES_CI = True
@@ -88,6 +89,7 @@ REPORT_NONE = [
     "build",
     "run",
     "deploy",
+    "docs",
     "format",
     "generate",
     "clean",

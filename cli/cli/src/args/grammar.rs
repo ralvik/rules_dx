@@ -85,11 +85,19 @@ pub(crate) struct Cli {
     #[arg(long, allow_negative_numbers = true, overrides_with = "to")]
     pub(crate) to: Option<String>,
     /// Select the current directory tree instead of `//...`
-    /// (audit/lint/typecheck/format/generate/build/test/coverage/check/fix
+    /// (audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs
     /// only; `//path/...`, `//...` at the root; cannot be combined with
     /// explicit scopes).
     #[arg(long, visible_alias = "cwd")]
     pub(crate) here: bool,
+    /// Preview the last docs build outputs locally (docs only).
+    /// See: `docs/cli/commands/docs.md`.
+    #[arg(long)]
+    pub(crate) serve: bool,
+    /// Preview port for `dx docs --serve` (docs only; requires `--serve`).
+    /// See: `docs/cli/commands/docs.md`.
+    #[arg(long, allow_negative_numbers = true, overrides_with = "port")]
+    pub(crate) port: Option<String>,
     /// First positional: the command word (a [`Command`] value so the
     /// same grammar feeds parsing, `--help`, and shell completions).
     #[arg(value_enum)]
@@ -121,4 +129,5 @@ pub(crate) const VALUE_OPTIONS: &[&str] = &[
     "--pin",
     "--from",
     "--to",
+    "--port",
 ];

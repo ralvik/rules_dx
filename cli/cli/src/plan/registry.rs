@@ -223,6 +223,17 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
+        // Docs site build over the Bazel-cached extract to aggregate to
+        // render chain: no aspects, no standard reports; planned at
+        // execution as `bazel build` over the resolved docs targets.
+        // See: `docs/cli/commands/docs.md`.
+        Command::Docs => CommandSpec {
+            command,
+            capability: "docs",
+            aspects: &[],
+            reports: &[],
+            settings: &[],
+        },
         // Raw launcher passthrough (WP4 helper surface): no
         // aspects, no reports, no scope resolution; planned at
         // execution as launcher plus forwarded arguments.

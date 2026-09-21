@@ -4,8 +4,8 @@ Implementation status: accepted v1 direction with adapter runs plus site executi
 rebuild proof plus link/reference completeness plus guide-step wiring plus first-hour timing proof plus
 per-release pin-bump plus drift process delivered; no execution gaps remain (successor to closed #581,
 live successor to closed #421). Accepted: the `dx_docs` planning library
-(command dispatch removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md);
-reintroduction tracked under #786) —
+(command dispatch delivered under #786; placeholder removal stays recorded
+per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md)) —
 `--check` validates without rendering, normal build validates then renders.
 Accepted: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 (`dx.documentation.v1`, `schema_major: 1`) and the
@@ -283,4 +283,4 @@ Per-release pin-bump plus drift process delivered seed-only under #785
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction delivered under #786.

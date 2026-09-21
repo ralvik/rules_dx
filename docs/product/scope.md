@@ -290,15 +290,15 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx why` | retain | Explain one dependency path via `somepath`; see [inspect wrappers](../cli/commands/inspect.md) |
 | `dx completion` | retain | Generated static shell scripts from the single command-definition source; see [dx completion](../cli/commands/completion.md) |
 | `dx bazel` | retain | Exact-forwarding escape hatch through the selected repository launcher |
-| `dx docs` | removed; reintroduction with real extraction/validation open under #786 (successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site; `--check` is non-mutating |
+| `dx docs` | retain, non-mutating (delivered under #786, successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site over the Bazel-cached extract to aggregate to render chain; `--check` validates without rendering, `--serve` previews the last build locally; see [`dx docs`](../cli/commands/docs.md) |
 
-`dx doctor`, `dx configure`, and `dx docs` are not commands. Help stays
+`dx doctor` and `dx configure` are not commands. Help stays
 flag-only (`dx --help`, `dx <cmd> --help`) with no `help` verb.
 `dx check` and `dx fix` are thin sequential umbrellas, not a general CI
 scheduler. `generate` is preferred to `configure` because Gazelle generates
 repository metadata rather than configuring developer preferences.
 
-Thin fit (2026-09-21): the 31-verb surface stays thin because each verb
+Thin fit (2026-09-21): the 32-verb surface stays thin because each verb
 names one explicit behavior with fail-closed misuse handling. `dx fix`
 applies once in phase order with no post-apply rerun (run `dx check`
 again); `dx clean` prunes only validated unselected `.dx` state by default

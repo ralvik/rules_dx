@@ -26,12 +26,13 @@
 #   plus per-release pin-bump plus drift process (pins bump per release with
 #   drift testing over codec roundtrip/parity/ordering/compat plus adapter
 #   version-mismatch plus same-producer byte-identical proof, no IR snapshot
-#   update, seed-only under #785), frozen design contracts (IR + site),
-#   removed dx docs stub behind ADR 0020, no Supported claim;
-# - no owned gaps remain: dx docs reintroduction per ADR 0006
-#   build-vs-validation split stays open under #786, reusable-docs plus
-#   caller staying product surface.
-#   (open under #786), reusable-docs plus caller staying product surface.
+#   update, seed-only under #785),
+#   plus `dx docs` reintroduction with real extraction/validation over the
+#   shared graph per ADR 0006 (`--check` validation-only, build validates
+#   and renders, `--serve` previews, delivered under #786),
+#   frozen design contracts (IR + site),
+#   placeholder removal staying recorded behind ADR 0020, no Supported claim;
+# - no owned gaps remain: reusable-docs plus caller staying product surface.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:docs_pipeline_qualification`,
 # following //tools/ci:env_codegen_qualification.
@@ -270,12 +271,13 @@ else
 fi
 
 # Laziness and freshness keep no-committed-IR plus no-source-write honesty
-# with delivered fixture execution under #780.
+# with delivered fixture execution under #780 plus delivered `dx docs`
+# dispatch under #786.
 if grep -q -F -e 'IR shards, render inputs, and rendered HTML are ordinary generated Bazel artifacts' "$site" &&
   grep -q -F -e 'not committed files or source-adjacent snapshots' "$site" &&
   grep -q -F -e 'never write generated IR beside source' "$site" &&
   grep -q -F -e 'Delivered (seed-only fixture execution under #779 plus #780)' "$site" &&
-  grep -q -F -e 'The planned [`dx docs --check`]' "$site"; then
+  grep -q -F -e '[`dx docs --check`](../cli/commands/docs.md)' "$site"; then
   ok
 else
   bad "site lost its laziness/freshness no-committed-IR record (#780)"
@@ -334,26 +336,32 @@ else
   bad "validation fixtures lost their delivered inventory/stability/comparison gates under #779"
 fi
 
-# dx docs stub stays removed behind ADR 0020 with reintroduction open
-# under #786 (successor to closed #581).
-if grep -q -F -e 'Removed. The `dx docs` command was deleted per' "$stub" &&
-  grep -q -F -e 'open under #786 (successor to closed #581' "$stub" &&
+# dx docs command is delivered with real extraction/validation behind the
+# invocation under #786 (successor to closed #581); placeholder removal
+# stays recorded behind ADR 0020.
+if grep -q -F -e 'Implementation status: delivered.' "$stub" &&
+  grep -q -F -e 'dx docs [--check] [--serve [--port <n>]]' "$stub" &&
+  grep -q -F -e 'Delivered under #786 (successor to closed #581' "$stub" &&
   grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" &&
   grep -q -F -e 'Reintroducing the command alongside real extraction/validation' "$adr20" &&
-  grep -q -F -e 'removed; reintroduction with real extraction/validation open under #786 (successor to closed #581' "$scope"; then
+  grep -q -F -e 'delivered under #786, successor to closed #581, live successor to closed #421' "$scope"; then
   ok
 else
-  bad "dx docs stub lost its removed-plus-ADR-0020-plus-#786 record"
+  bad "dx docs lost its delivered-plus-ADR-0020-plus-#786 record"
 fi
 
-# CLI registry carries no Docs command: unknown-command surface never
-# lists docs and no Command::Docs implementation exists.
-if ! grep -q -F -e 'docs' "$cli_errors" &&
-  ! grep -rn -F -e 'Command::Docs' cli/cli/src/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e 'execute_docs' cli/ 2>/dev/null | grep -q .; then
+# CLI registry carries the Docs command with real extraction/validation:
+# the unknown-command surface lists docs and Command::Docs plus
+# execute_docs exist with the shared-graph mapping.
+if grep -q -F -e 'completion|docs|bazel' "$cli_errors" &&
+  grep -rn -F -e 'Command::Docs' cli/cli/src/ 2>/dev/null | grep -q . &&
+  grep -rn -F -e 'execute_docs' cli/ 2>/dev/null | grep -q . &&
+  grep -q -F -e 'pub fn plan_docs_mode' "$planning" &&
+  grep -q -F -e 'pub fn plan_mode_actions' "$planning" &&
+  grep -q -F -e 'Command::Docs => "docs"' cli/cli/src/args/command.rs; then
   ok
 else
-  bad "CLI gained a Docs command or docs in the unknown-command surface"
+  bad "CLI lost its Docs command with real extraction/validation (#786)"
 fi
 
 # Adapter runs delivered: implementation directory plus Bazel target plus
@@ -479,15 +487,17 @@ else
   bad "rebuild proof lost its codec-delivered plus site-level-delivered split (#781)"
 fi
 
-# ADR 0006 build-vs-validation split stays pinned for dx docs
-# reintroduction
-# --check non-mutating; exact mappings live in the issue, not the stub).
+# ADR 0006 build-vs-validation split stays pinned for the delivered dx docs
+# command under #786
+# --check non-mutating; exact mappings implemented per the split).
 if grep -q -F -e 'records build versus' "$readme" &&
   grep -q -F -e 'validation-only check' "$readme" &&
-  grep -q -F -e 'The planned [`dx docs --check`]' "$site" &&
+  grep -q -F -e '[`dx docs --check`](../cli/commands/docs.md)' "$site" &&
   grep -q -F -e 'selects extraction and shared validation but not' "$site" &&
   grep -q -F -e 'normal build validates and renders' "$site" &&
-  grep -q -F -e 'previews the built output locally and is not a build action' "$site"; then
+  grep -q -F -e 'previews the built output locally and is not a build action' "$site" &&
+  grep -q -F -e '`--check` performs extraction and validation without rendering' "$stub" &&
+  grep -q -F -e '`--serve` builds once and previews the output locally' "$stub"; then
   ok
 else
   bad "dx docs lost its ADR 0006 build-vs-validation split record"
@@ -1209,6 +1219,67 @@ if grep -q -F -e 'Ordinary' "$readme" &&
   ok
 else
   bad "no-IR-snapshot rule lost its no-committed-shards plus no-refresh record under #785"
+fi
+
+# Docs command surface delivered under #786: grammar, scope, serve/port,
+# JSON, and shared-graph dispatch with real Bazel extraction/validation.
+if grep -q -F -e 'Command::Docs' cli/cli/src/args/command.rs &&
+  grep -q -F -e 'Command::Docs => "docs"' cli/cli/src/args/command.rs &&
+  grep -q -F -e 'build, check, and serve the unified documentation site' cli/cli/src/args/command.rs &&
+  grep -q -F -e 'pub(crate) serve: bool' cli/cli/src/args/grammar.rs &&
+  grep -q -F -e 'pub(crate) port: Option<String>' cli/cli/src/args/grammar.rs &&
+  grep -q -F -e '"--port"' cli/cli/src/args/grammar.rs &&
+  grep -q -F -e 'pub serve: bool' cli/cli/src/args/invocation.rs &&
+  grep -q -F -e 'pub port: Option<u16>' cli/cli/src/args/invocation.rs &&
+  grep -q -F -e 'port_without_serve' cli/docgen/src/lib.rs &&
+  grep -q -F -e 'docs_scope_reuses_workflow_resolution' cli/docgen/src/lib.rs &&
+  grep -q -F -e 'DOCS_CHECK_TARGET' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'DOCS_BUILD_TARGET' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'DOCS_DEFAULT_PORT' cli/cli/src/exec/docs.rs; then
+  ok
+else
+  bad "dx docs lost its delivered command-surface wiring under #786"
+fi
+
+# Docs invocation mappings delivered under #786 per ADR 0006: check
+# validation-only without render, build validates and renders, serve
+# previews without caching, port requires serve, scope reuses workflow
+# resolution with bare repository selection.
+if grep -q -F -e 'if command == Command::Docs' cli/cli/src/args/parser.rs &&
+  grep -q -F -e 'port.is_some() && !serve' cli/cli/src/args/parser.rs &&
+  grep -q -F -e 'Per-command flags: --check/--serve/--port (docs only' cli/cli/src/args/help.rs &&
+  grep -q -F -e 'Usage: dx [global-options] docs [--check] [--serve [--port <n>]]' cli/cli/src/args/help.rs &&
+  grep -q -F -e 'Bare scope selects the repository docs site' cli/cli/src/args/help.rs &&
+  grep -q -F -e 'check_flag_selects_validation_only' cli/docgen/src/lib.rs &&
+  grep -q -F -e 'serve_previews_without_caching_and_port_requires_serve' cli/docgen/src/lib.rs &&
+  grep -q -F -e 'docs_check_serve_port_parse' cli/cli/src/args/parser_tests_b.rs; then
+  ok
+else
+  bad "dx docs lost its delivered invocation mappings under #786"
+fi
+
+# Docs execution proves the shared extraction/validation graph: check
+# builds the aggregate without render, build renders, failures name the
+# unit plus the pinned input, JSON streams started plus operations plus
+# finished, dry-run launches nothing.
+if grep -q -F -e 'Running docs check for' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'Running docs build for' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'docs/site:demo' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'pinned mdBook 0.4.43' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'docs_check_builds_aggregate_without_render' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'docs_build_validates_and_renders' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'docs_json_streams_started_operation_finished' cli/cli/src/exec/docs.rs &&
+  grep -q -F -e 'docs_bazel_failure_names_unit_and_pin' cli/cli/src/exec/docs.rs; then
+  ok
+else
+  bad "dx docs lost its delivered execution proof under #786"
+fi
+
+# Live proof: the delivered docs units stay green on the seed host.
+if bazel test //cli/cli:dx_cli_test --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "dx_cli_test failed (want docs check/build/serve units green under #786)"
 fi
 
 dx_test_summary "docs pipeline qualification harness"

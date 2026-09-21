@@ -14,9 +14,9 @@ extraction runs under #779 (`//docs/adapters:docs_adapters` over pinned inputs) 
 execution in [`docs/site/`](../../docs/site/site.bzl) (`docs_extract` per unit,
 `docs_aggregate` with shared validation, `docs_render` with the pinned mdBook
 artifact) producing mdBook-compatible prose plus generated API pages plus one search
-index, with generated IR in Bazel outputs only. Command dispatch was
-removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md); reintroduction
-is open under #786. mdBook is the decided
+index, with generated IR in Bazel outputs only. Command dispatch is
+delivered under #786 (see [`dx docs`](../cli/commands/docs.md); placeholder
+removal stays recorded per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md)). mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are delivered seed-only for the fixture-scale site (rebuild proof under #781);
 link/reference completeness delivered seed-only under #782; guide-step CI wiring
@@ -78,13 +78,13 @@ cache. Bazel input tracking determines when rebuilding is needed; a cache miss c
 normal execution, not a freshness failure. No snapshot refresh/apply step or separate
 documentation cache is introduced.
 
-The planned [`dx docs --check`](../cli/commands/docs.md) selects extraction and shared validation but not
+[`dx docs --check`](../cli/commands/docs.md) selects extraction and shared validation but not
 rendering; normal build validates and renders. Link/reference completeness at the pre-render boundary is delivered seed-only under #782
 (successor to closed #581): prose plus generated API pages resolve all internal links/references with no dangling targets;
 remote targets are skipped, never fetched; dangling targets fail the aggregate action with no partial outputs.
 Neither mode compares against committed IR. Build and check
 may write Bazel outputs and cache entries but never write generated IR beside source
-files. The planned `--serve` previews the built output locally and is not a build action.
+files. `--serve` previews the built output locally and is not a build action.
 
 Delivered (seed-only fixture execution under #779 plus #780) fixtures prove a clean build without checked-in IR,
 deterministic sorted outputs, and no source-tree writes; the demo chain
@@ -135,4 +135,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; no execution gaps remain. Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; no execution gaps remain. Reintroduction delivered under #786.
