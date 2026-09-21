@@ -223,8 +223,7 @@ mod tests {
             parse_buf_format(DIFF.as_bytes(), Some(1), &["proto/hello.proto"]).expect("parsed");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].finding.message, "file is not formatted");
-        let clean =
-            parse_buf_format(b"", Some(0), &["proto/hello.proto"]).expect("parsed");
+        let clean = parse_buf_format(b"", Some(0), &["proto/hello.proto"]).expect("parsed");
         assert!(clean.is_empty());
         assert!(parse_buf_format(b"", Some(1), &["proto/hello.proto"]).is_err());
         assert!(parse_buf_format(DIFF.as_bytes(), Some(1), &["other.proto"]).is_err());

@@ -7,10 +7,12 @@
 #   pass (clean) plus fail (dirty) samples exercised as unit tests
 #   (`quality/adapter/src/parsers/*.rs`: biome lint plus format, buf lint plus format,
 #   buildifier, clang_format, clang_tidy, clippy plus rustc via the shared rust diagnostics,
-#   cppcheck, csharpier, errcheck, eslint,
-#   fantomas, flake8, fsharplint, gofumpt, govet, markdown_check, prettier, pydoclint, pylint,
-#   qmlformat, qmllint, roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt, staticcheck, taplo lint
-#   plus format, tsc, ty, vale);
+#   cppcheck, csharpier, cue, djlint lint plus format, errcheck, eslint,
+#   fantomas, flake8, fsharplint, gofumpt, govet, jsonnetfmt, keep_sorted,
+#   markdown_check, modfmt, pkl, prettier, psscriptanalyzer, pydoclint, pylint,
+#   qmlformat, qmllint, roslyn, rubocop, ruff lint plus format, rustfmt, scalafix, scalafmt,
+#   shellcheck, shfmt, standardrb, staticcheck, stylelint, taplo lint
+#   plus format, terraform, tsc, ty, vale, yamlfmt, yamllint);
 # - wiring: recorded Clippy/rustc diagnostics stay byte-identical between
 #   the parser unit samples and the Layer-2 matrix injected upstream
 #   (`quality/testdata/runner_matrix_cases.bzl`); tsc keeps its adapter
@@ -70,7 +72,7 @@ else
 fi
 
 # Verification matrix Green lists the harness count.
-if grep -q -F -e '`parser_sample_qualification` 46/46' "$verify"; then
+if grep -q -F -e '`parser_sample_qualification` 61/61' "$verify"; then
   ok
 else
   bad "verification-matrix Green lost parser_sample_qualification 23/23"
@@ -461,6 +463,138 @@ if [[ -f "quality/adapter/src/parsers/qmllint.rs" ]] &&
   ok
 else
   bad "qmllint lost its JSON parser with diagnostics plus clean"
+fi
+
+
+# cue keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/cue.rs" ]] &&
+  grep -q -F -e 'pub fn parse_cue' quality/adapter/src/parsers/cue.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/cue.rs; then
+  ok
+else
+  bad "cue lost its diff parser with dirty plus clean samples"
+fi
+
+# jsonnetfmt keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/jsonnetfmt.rs" ]] &&
+  grep -q -F -e 'pub fn parse_jsonnetfmt' quality/adapter/src/parsers/jsonnetfmt.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/jsonnetfmt.rs; then
+  ok
+else
+  bad "jsonnetfmt lost its diff parser with dirty plus clean samples"
+fi
+
+# pkl keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/pkl.rs" ]] &&
+  grep -q -F -e 'pub fn parse_pkl' quality/adapter/src/parsers/pkl.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/pkl.rs; then
+  ok
+else
+  bad "pkl lost its diff parser with dirty plus clean samples"
+fi
+
+# modfmt keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/modfmt.rs" ]] &&
+  grep -q -F -e 'pub fn parse_modfmt' quality/adapter/src/parsers/modfmt.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/modfmt.rs; then
+  ok
+else
+  bad "modfmt lost its diff parser with dirty plus clean samples"
+fi
+
+# terraform keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/terraform.rs" ]] &&
+  grep -q -F -e 'pub fn parse_terraform' quality/adapter/src/parsers/terraform.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/terraform.rs; then
+  ok
+else
+  bad "terraform lost its diff parser with dirty plus clean samples"
+fi
+
+# yamlfmt keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/yamlfmt.rs" ]] &&
+  grep -q -F -e 'pub fn parse_yamlfmt' quality/adapter/src/parsers/yamlfmt.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/yamlfmt.rs; then
+  ok
+else
+  bad "yamlfmt lost its diff parser with dirty plus clean samples"
+fi
+
+# shfmt keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/shfmt.rs" ]] &&
+  grep -q -F -e 'pub fn parse_shfmt' quality/adapter/src/parsers/shfmt.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/shfmt.rs; then
+  ok
+else
+  bad "shfmt lost its diff parser with dirty plus clean samples"
+fi
+
+# standardrb keeps its diff parser with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/standardrb.rs" ]] &&
+  grep -q -F -e 'pub fn parse_standardrb' quality/adapter/src/parsers/standardrb.rs &&
+  grep -q -F -e '--- ' quality/adapter/src/parsers/standardrb.rs; then
+  ok
+else
+  bad "standardrb lost its diff parser with dirty plus clean samples"
+fi
+
+# djlint keeps its lint plus format parsers with dirty plus clean samples (issue #800).
+if [[ -f "quality/adapter/src/parsers/djlint.rs" ]] &&
+  grep -q -F -e 'pub fn parse_djlint' quality/adapter/src/parsers/djlint.rs &&
+  grep -q -F -e 'pub fn parse_djlint_format' quality/adapter/src/parsers/djlint.rs; then
+  ok
+else
+  bad "djlint lost its lint plus format parsers with dirty plus clean samples"
+fi
+
+# stylelint keeps its JSON parser with warnings plus clean (issue #800).
+if [[ -f "quality/adapter/src/parsers/stylelint.rs" ]] &&
+  grep -q -F -e 'pub fn parse_stylelint' quality/adapter/src/parsers/stylelint.rs &&
+  grep -q -F -e 'color-no-invalid-hex' quality/adapter/src/parsers/stylelint.rs; then
+  ok
+else
+  bad "stylelint lost its JSON parser with warnings plus clean"
+fi
+
+# rubocop keeps its JSON parser with offenses plus clean (issue #800).
+if [[ -f "quality/adapter/src/parsers/rubocop.rs" ]] &&
+  grep -q -F -e 'pub fn parse_rubocop' quality/adapter/src/parsers/rubocop.rs &&
+  grep -q -F -e 'Style/StringLiterals' quality/adapter/src/parsers/rubocop.rs; then
+  ok
+else
+  bad "rubocop lost its JSON parser with offenses plus clean"
+fi
+
+# psscriptanalyzer keeps its text parser with diagnostics plus clean (issue #800).
+if [[ -f "quality/adapter/src/parsers/psscriptanalyzer.rs" ]] &&
+  grep -q -F -e 'pub fn parse_psscriptanalyzer' quality/adapter/src/parsers/psscriptanalyzer.rs; then
+  ok
+else
+  bad "psscriptanalyzer lost its text parser with diagnostics plus clean"
+fi
+
+# yamllint keeps its text parser with diagnostics plus clean (issue #800).
+if [[ -f "quality/adapter/src/parsers/yamllint.rs" ]] &&
+  grep -q -F -e 'pub fn parse_yamllint' quality/adapter/src/parsers/yamllint.rs; then
+  ok
+else
+  bad "yamllint lost its text parser with diagnostics plus clean"
+fi
+
+# shellcheck keeps its gcc parser with diagnostics plus clean (issue #800).
+if [[ -f "quality/adapter/src/parsers/shellcheck.rs" ]] &&
+  grep -q -F -e 'pub fn parse_shellcheck' quality/adapter/src/parsers/shellcheck.rs; then
+  ok
+else
+  bad "shellcheck lost its gcc parser with diagnostics plus clean"
+fi
+
+# keep_sorted keeps its text parser with diagnostics plus clean (issue #800).
+if [[ -f "quality/adapter/src/parsers/keep_sorted.rs" ]] &&
+  grep -q -F -e 'pub fn parse_keep_sorted' quality/adapter/src/parsers/keep_sorted.rs; then
+  ok
+else
+  bad "keep_sorted lost its text parser with diagnostics plus clean"
 fi
 
 # Runner-matrix doc owns the parser-sample backfill record.

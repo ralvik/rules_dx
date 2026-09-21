@@ -340,33 +340,51 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
    `quality/adapter/src/parsers/` plus `quality/testdata` matrix cells)
    (see the Structured rows in
    [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
-- **Interpreted/file-family cohort (#800, successor to closed #420, provisional — no adapter claims `ruby`,
-  `powershell`, `cue`, `jsonnet`, `pkl`, `css`, `html_template`, `gherkin`, `sql`, `xml`,
-  `go_module`, `terraform`, `yaml`, or `text` yet):** release-assembled Ruby closure route
-  for RuboCop and StandardRB (the exceptional bundle within the approved packaging-effort
-  boundary; consumer path is download-verify-extract-execute only; bundle-vs-adapter
-  qualification split recorded here, not silent) plus exact-module plus portable-`pwsh`-runtime
-  route for PSScriptAnalyzer (explicit-path module import; console-parse versus library-API
-  binding stays open) plus frozen delivery-class routes for the file-family remainder
-  (cue, jsonnetfmt, pkl, modfmt, terraform fmt, yamlfmt, keep-sorted as checksummed
-  standalone artifacts; djlint and yamllint as private wheel-only Python graph members;
-  Stylelint plus prettier-plugin-gherkin/sql/xml as private pure-JavaScript graph members;
-  `protobuf`/`qml` stay owned by #799 (successor to closed #419) and are cross-linked here, never double-claimed).
-  Research notes (unproven mappings): RuboCop `--format json` versus text-parse plus
-  `standardrb --fix` whole-file rewrite; PSScriptAnalyzer `Invoke-ScriptAnalyzer` console
-  text versus binding the `System.Management.Automation` language-parser/library API per
-  the adapter-input notes; cue `fmt`, jsonnetfmt, pkl, modfmt, `terraform fmt -check -diff`,
-  yamlfmt `-lint`, and keep-sorted as whole-file rewrite with check/diff mode; djlint
-  `--lint`/`--reformat`, Stylelint `--formatter json`, Prettier `--plugin` closures, and
-  yamllint text diagnostics as check-only with the provisional sandbox-apply-and-diff fix
-  flow; Buildifier/Taplo/Vale probes stay provisional (promotion only with fixture
-  evidence). File-family versions plus rule-sets qualified seed-only under issue #489
-  (`quality/tests/fixtures/file_family_quality/pins.bzl` via `bazel run //tools/ci:file_family_defaults_qualification`
-  over upstream built-in defaults with no hidden preset; suffix inference rejected,
-  registry owns applicability) with modfmt plus gherkin/xml resolved seed-only under issue #582
-  (modfmt v0.4.0 from github.com/joshdk/modfmt plus prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2,
-  rechecked latest stable at implementation); digests stay observations, not pins, recheck latest
-  stable at implementation; adapters stay owned under #800 (successor to closed #420)
+- **Interpreted/file-family cohort (#800, successor to closed #420, delivered):**
+  adapters `cue` (format `cue`), `jsonnetfmt` (format `jsonnet`),
+  `pkl` (format `pkl`), `modfmt` (format `go_module`),
+  `terraform` (format `terraform`), `djlint` (format plus lint
+  `html_template`), `stylelint` (lint `css`, `less`, `scss`),
+  `yamlfmt` (format `yaml`), `yamllint` (lint `yaml`),
+  `keep_sorted` (lint `text`), `shfmt` (format `shell`),
+  `shellcheck` (lint `shell`), `rubocop` (lint `ruby`),
+  `standardrb` (format `ruby`), `psscriptanalyzer` (lint
+  `powershell`) plus `prettier` format extension to `css`, `less`,
+  `scss`, `gherkin`, `sql`, `xml` over the decided routes: split
+  standalone plus managed-graph plus closure routes for cue/jsonnetfmt/
+  pkl/modfmt/terraform/yamlfmt/keep-sorted/shfmt/shellcheck as
+  checksummed standalone artifacts, djlint/yamllint as private
+  wheel-only Python graph members, stylelint/prettier plugins as private
+  pure-JavaScript graph members, RuboCop/StandardRB via the
+  release-assembled Ruby closure (exceptional bundle, consumer
+  download-verify-extract-execute only), PSScriptAnalyzer via
+  exact-module plus portable `pwsh` runtime (console-parse binding,
+  library-API stays open). `protobuf`/`qml` stay owned by #799
+  (successor to closed #419) and are cross-linked here, never
+  double-claimed.
+  Research notes (unproven mappings): RuboCop `--format json` with
+  `standardrb --check` diff plus `--fix` whole-file rewrite;
+  PSScriptAnalyzer console text with bracketed rule IDs;
+  cue `fmt --check --diff`, jsonnetfmt `--test`, pkl `--check`,
+  modfmt `-d`, `terraform fmt -check -diff`, yamlfmt `-lint`,
+  shfmt `-d` as whole-file rewrite with check/diff mode; djlint
+  `--lint` text plus `--reformat --check` diff, Stylelint
+  `--formatter json`, Prettier `--check` warn lines with `--write`,
+  yamllint parsable text, shellcheck `--format=gcc`,
+  keep-sorted line points as check-only with the provisional
+  sandbox-apply-and-diff fix flow; Buildifier/Taplo/Vale probes stay
+  provisional. Formatters are whole-file rewrite with check/diff mode;
+  lint tools are check-only. Versions plus rule-sets qualified
+  seed-only under issue #489
+  (`quality/tests/fixtures/file_family_quality/pins.bzl` via
+  `bazel run //tools/ci:file_family_defaults_qualification` over
+  upstream built-in defaults with no hidden preset; suffix inference
+  rejected) with modfmt plus gherkin/xml resolved seed-only under
+  issue #582; digests stay observations, not pins, recheck latest
+  stable at implementation; adapters qualified seed-only under #800
+  (`bazel run //tools/ci:file_family_adapters_qualification` with
+  per-tool fixtures plus `quality/adapter/src/parsers/` plus
+  `quality/testdata` matrix cells)
   (see the Interpreted/file-family rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Python source-audit selection (#801, successor to closed #613):** adapter `ruff` audit

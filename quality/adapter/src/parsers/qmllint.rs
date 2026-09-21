@@ -136,8 +136,7 @@ mod tests {
 
     #[test]
     fn qmllint_reports_json_diagnostics() {
-        let findings =
-            parse_qmllint(DIRTY.as_bytes(), Some(1), &["qml/Main.qml"]).expect("parsed");
+        let findings = parse_qmllint(DIRTY.as_bytes(), Some(1), &["qml/Main.qml"]).expect("parsed");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].finding.rule_id, "unqualified");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);

@@ -1,5 +1,5 @@
 //! Exact tool invocations for the initial adapters plus Python plus Scala/.NET
-//! plus the native cohort (C/C++/Go) plus Structured.
+//! plus the native cohort (C/C++/Go) plus Structured plus interpreted/file-family.
 //!
 //! Every flag here was probed against the pinned binaries; probing notes
 //! live in the completion evidence (Python probes in the
@@ -1133,6 +1133,182 @@ pub fn qmlformat_fix(binary: &Path, files: &[&Path]) -> Invocation {
 /// never passes a fix flag.
 pub fn qmllint_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--json", "-"], files, "")
+}
+
+/// Interpreted/file-family cohort invocations (seed-only wiring proof
+/// with fake doubles plus delegated records; real-tool behavior stays
+/// proven by per-tool fixtures).
+///
+/// Formatters are whole-file rewrite with check/diff plus in-place fix;
+/// lint tools are check-only with sandbox-apply-and-diff. All take the
+/// whole stage file list with scratch-root cwd and no ambient discovery.
+///
+/// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+/// Cue check: `fmt --check --diff` (diff on stdout when dirty).
+pub fn cue_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["fmt", "--check", "--diff"], files, "")
+}
+
+/// Cue fix: `fmt --write` (in-place).
+pub fn cue_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["fmt", "--write"], files, "")
+}
+
+/// Jsonnetfmt check: `--test` (diff on stdout when dirty).
+pub fn jsonnetfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--test"], files, "")
+}
+
+/// Jsonnetfmt fix: `-i` (in-place).
+pub fn jsonnetfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-i"], files, "")
+}
+
+/// Pkl check: `--check` (diff on stdout when dirty).
+pub fn pkl_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--check"], files, "")
+}
+
+/// Pkl fix: `--write` (in-place).
+pub fn pkl_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--write"], files, "")
+}
+
+/// Modfmt check: `-d` (diff on stdout when dirty, exit 0 either way).
+pub fn modfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-d"], files, "")
+}
+
+/// Modfmt fix: `-w` (in-place).
+pub fn modfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-w"], files, "")
+}
+
+/// Terraform check: `fmt -check -diff` (diff on stdout when dirty).
+pub fn terraform_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["fmt", "-check", "-diff"], files, "")
+}
+
+/// Terraform fix: `fmt -write` (in-place).
+pub fn terraform_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["fmt", "-write"], files, "")
+}
+
+/// Yamlfmt check: `-lint` (diff on stdout when dirty).
+pub fn yamlfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-lint"], files, "")
+}
+
+/// Yamlfmt fix: `-write` (in-place).
+pub fn yamlfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-write"], files, "")
+}
+
+/// Shfmt check: `-d` (diff on stdout when dirty).
+pub fn shfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-d"], files, "")
+}
+
+/// Shfmt fix: `-w` (in-place).
+pub fn shfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-w"], files, "")
+}
+
+/// StandardRB check: `--check` (diff on stdout when dirty).
+pub fn standardrb_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--check"], files, "")
+}
+
+/// StandardRB fix: `--fix` (in-place).
+pub fn standardrb_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--fix"], files, "")
+}
+
+/// Djlint format check: `--reformat --check` (diff on stdout).
+pub fn djlint_format_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--reformat", "--check"], files, "")
+}
+
+/// Djlint format fix: `--reformat` (in-place).
+pub fn djlint_format_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--reformat"], files, "")
+}
+
+/// Djlint lint check: `--lint` (text diagnostics on stdout).
+/// Check-only: the runner never rewrites.
+pub fn djlint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--lint")];
+    if let Some(path) = config {
+        argv.push(OsString::from("--configuration"));
+        argv.push(path.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Stylelint check: `--formatter json` (JSON on stdout).
+/// Check-only: the runner never rewrites.
+pub fn stylelint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("--formatter"),
+        OsString::from("json"),
+    ];
+    if let Some(path) = config {
+        argv.push(OsString::from("--config"));
+        argv.push(path.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// RuboCop check: `--format json` (JSON on stdout).
+/// Check-only over the release-assembled Ruby closure.
+pub fn rubocop_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--format", "json"], files, "")
+}
+
+/// PSScriptAnalyzer check: console text on stdout.
+/// Check-only over the exact module plus portable runtime.
+pub fn psscriptanalyzer_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &[], files, "")
+}
+
+/// Yamllint check: text diagnostics on stdout.
+/// Check-only over upstream built-in defaults.
+pub fn yamllint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("-f"),
+        OsString::from("parsable"),
+    ];
+    if let Some(path) = config {
+        argv.push(OsString::from("-c"));
+        argv.push(path.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// ShellCheck check: `--format=gcc` (gcc lines on stdout).
+/// Check-only: the runner never rewrites.
+pub fn shellcheck_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--format=gcc"], files, "")
+}
+
+/// Keep-sorted check: text diagnostics on stdout.
+/// Check-only with sandbox-apply-and-diff.
+pub fn keep_sorted_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &[], files, "")
 }
 
 #[path = "commands_tests.rs"]

@@ -210,11 +210,10 @@ pub fn parse_sarif(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
-    let log: SarifLog =
-        serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
-            tool,
-            detail: err.to_string(),
-        })?;
+    let log: SarifLog = serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
+        tool,
+        detail: err.to_string(),
+    })?;
     let mut findings = Vec::new();
     for run in &log.runs {
         for result in &run.results {
@@ -331,8 +330,7 @@ mod tests {
         let stdout = log(
             r#"{"ruleId":"R1","level":"error","message":{"text":"boom"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"file:/s/a.java"},"region":{"startLine":2,"startColumn":8}}}]},{"ruleId":"R2","level":"warning","message":{"text":"warn"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"/s/a.java"},"region":{"startLine":3,"startColumn":1,"endLine":3,"endColumn":5}}}]}"#,
         );
-        let findings =
-            parse_sarif(TOOL, &stdout, Some(1), &["/s/a.java"]).expect("parsed");
+        let findings = parse_sarif(TOOL, &stdout, Some(1), &["/s/a.java"]).expect("parsed");
         assert_eq!(findings.len(), 2);
         assert_eq!(findings[0].finding.rule_id, "R1");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
@@ -349,8 +347,7 @@ mod tests {
     #[test]
     fn sarif_resolves_base_id_joins() {
         let stdout = br#"{"version":"2.1.0","runs":[{"originalUriBaseIds":{"%SRCROOT%":{"uri":"file:///home/u/"}},"tool":{"driver":{"name":"k"}},"results":[{"ruleId":"R","level":"error","message":{"text":"m"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"../../tmp/x/Dirty.kt","uriBaseId":"%SRCROOT%"},"region":{"startLine":1,"startColumn":1}}}]}]}]}"#;
-        let findings =
-            parse_sarif(TOOL, stdout, Some(1), &["/tmp/x/Dirty.kt"]).expect("base join");
+        let findings = parse_sarif(TOOL, stdout, Some(1), &["/tmp/x/Dirty.kt"]).expect("base join");
         assert_eq!(findings[0].file, "/tmp/x/Dirty.kt");
         let unknown_base = br#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"k"}},"results":[{"ruleId":"R","message":{"text":"m"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"a.java","uriBaseId":"%MISSING%"},"region":{"startLine":1}}}]}]}]}"#;
         assert!(parse_sarif(TOOL, unknown_base, Some(1), &["/tmp/x/Dirty.kt"]).is_err());
@@ -365,12 +362,17 @@ mod tests {
             .expect("relative resolves");
         assert_eq!(findings[0].file, "/scratch/src/a.java");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
-        assert_eq!((findings[0].finding.start.line, findings[0].finding.start.column), (1, 1));
+        assert_eq!(
+            (
+                findings[0].finding.start.line,
+                findings[0].finding.start.column
+            ),
+            (1, 1)
+        );
         let note = log(
             r#"{"ruleId":"R","level":"note","message":{"text":"m"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"/s/a.java"},"region":{"startLine":1,"startColumn":1}}}]}"#,
         );
-        let findings =
-            parse_sarif(TOOL, &note, Some(1), &["/s/a.java"]).expect("note");
+        let findings = parse_sarif(TOOL, &note, Some(1), &["/s/a.java"]).expect("note");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Info);
         let bad_level = log(
             r#"{"ruleId":"R","level":"fatal","message":{"text":"m"},"locations":[{"physicalLocation":{"artifactLocation":{"uri":"/s/a.java"},"region":{"startLine":1,"startColumn":1}}}]}"#,

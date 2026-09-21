@@ -70,12 +70,8 @@ mod tests {
     #[test]
     fn qmlformat_reports_unformatted_paths() {
         let stdout = "qml/Main.qml\n";
-        let findings = parse_qmlformat(
-            stdout.as_bytes(),
-            Some(1),
-            &["qml/Main.qml"],
-        )
-        .expect("parsed");
+        let findings =
+            parse_qmlformat(stdout.as_bytes(), Some(1), &["qml/Main.qml"]).expect("parsed");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].file, "qml/Main.qml");
         let clean = parse_qmlformat(b"", Some(0), &["qml/Main.qml"]).expect("parsed");

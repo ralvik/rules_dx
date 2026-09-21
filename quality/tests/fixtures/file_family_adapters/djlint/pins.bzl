@@ -1,0 +1,12 @@
+"""djlint check plus fix wiring.
+
+Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
+`docs/tools/tool-acquisition.md#initial-artifact-research`.
+"""
+
+DJLINT_VERSION = "v1.45.0"
+DJLINT_ARTIFACT = "private wheel-only Python graph member"
+DJLINT_CHECK = "djlint --lint plus --reformat --check"
+DJLINT_FIX = "djlint --reformat"
+FILE_FAMILY_PROOF = "bazel build //quality/tests/fixtures/file_family_adapters/djlint:corpus_starlark"
+DJLINT_REJECTED = "ambient discovery rejected; auto-supplied preset rejected"

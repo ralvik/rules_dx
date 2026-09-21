@@ -1,0 +1,12 @@
+"""standardrb check plus fix wiring.
+
+Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
+`docs/tools/tool-acquisition.md#initial-artifact-research`.
+"""
+
+STANDARDRB_VERSION = "1.56.0"
+STANDARDRB_ARTIFACT = "release-assembled Ruby closure member"
+STANDARDRB_CHECK = "standardrb --check"
+STANDARDRB_FIX = "standardrb --fix"
+FILE_FAMILY_PROOF = "bazel build //quality/tests/fixtures/file_family_adapters/standardrb:corpus_starlark"
+STANDARDRB_REJECTED = "ambient discovery rejected; auto-supplied preset rejected"

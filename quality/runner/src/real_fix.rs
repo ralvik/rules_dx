@@ -44,10 +44,18 @@ impl super::RealBackend {
             "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint"
             | "clippy" | "scalafix" | "roslyn" | "fsharplint" | "checkstyle" | "pmd"
             | "spotbugs" | "qmllint" | "clang_tidy" | "cppcheck" | "staticcheck" | "govet"
-            | "errcheck" => Ok(text.to_owned()),
+            | "errcheck" | "stylelint" | "rubocop" | "psscriptanalyzer" | "yamllint"
+            | "shellcheck" | "keep_sorted" => Ok(text.to_owned()),
             "buf" => {
                 if capability == "format" {
                     self.run_buf_format_fix(tool, path, text)
+                } else {
+                    Ok(text.to_owned())
+                }
+            }
+            "djlint" => {
+                if capability == "format" {
+                    self.run_djlint_format_fix(tool, path, text)
                 } else {
                     Ok(text.to_owned())
                 }
@@ -74,6 +82,14 @@ impl super::RealBackend {
             "qmlformat" => self.run_qmlformat_fix(tool, path, text),
             "eslint" => self.run_eslint_fix(tool, path, text),
             "ktlint" => self.run_ktlint_fix(tool, path, text),
+            "cue" => self.run_cue_fix(tool, path, text),
+            "jsonnetfmt" => self.run_jsonnetfmt_fix(tool, path, text),
+            "pkl" => self.run_pkl_fix(tool, path, text),
+            "modfmt" => self.run_modfmt_fix(tool, path, text),
+            "terraform" => self.run_terraform_fix(tool, path, text),
+            "yamlfmt" => self.run_yamlfmt_fix(tool, path, text),
+            "shfmt" => self.run_shfmt_fix(tool, path, text),
+            "standardrb" => self.run_standardrb_fix(tool, path, text),
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
@@ -415,6 +431,160 @@ impl super::RealBackend {
         let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
         let refs = [absolute.as_path()];
         let invocation = commands::qmlformat_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// File-family format fix rounds: in-place rewrite, re-read on
+    /// exit 0 only. See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+    fn run_cue_fix(&self, tool: &RealTool, path: &str, text: &str) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "cue";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::cue_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_jsonnetfmt_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "jsonnetfmt";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::jsonnetfmt_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_pkl_fix(&self, tool: &RealTool, path: &str, text: &str) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "pkl";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::pkl_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_modfmt_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "modfmt";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::modfmt_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_terraform_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "terraform";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::terraform_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_yamlfmt_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "yamlfmt";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::yamlfmt_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_shfmt_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "shfmt";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::shfmt_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_standardrb_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "standardrb";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::standardrb_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    fn run_djlint_format_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "djlint";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::djlint_format_fix(&tool.binary, &refs);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) {
             return cleaned(TOOL_ID, scratch, text.to_owned());

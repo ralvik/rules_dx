@@ -790,7 +790,12 @@ fn structured_checks_encode_pinned_shapes() {
     let lint = buf_lint_check(Path::new(BIN), &[proto]);
     assert_eq!(
         argv_strings(&lint),
-        vec![BIN, "lint", "--error-format=json", "/scratch/proto/hello.proto"]
+        vec![
+            BIN,
+            "lint",
+            "--error-format=json",
+            "/scratch/proto/hello.proto"
+        ]
     );
     assert_eq!(lint.cwd_rel, "");
     let check = buf_format_check(Path::new(BIN), &[proto]);
@@ -821,5 +826,84 @@ fn structured_checks_encode_pinned_shapes() {
     assert_eq!(
         argv_strings(&lint),
         vec![BIN, "--json", "-", "/scratch/qml/Main.qml"]
+    );
+}
+
+// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+#[test]
+fn file_family_format_checks_are_diff_and_fixes_are_write() {
+    let cue_file = Path::new("/scratch/Sample.cue");
+    assert_eq!(
+        argv_strings(&cue_check(Path::new(BIN), &[cue_file])),
+        vec![BIN, "fmt", "--check", "--diff", "/scratch/Sample.cue"]
+    );
+    assert_eq!(
+        argv_strings(&cue_fix(Path::new(BIN), &[cue_file])),
+        vec![BIN, "fmt", "--write", "/scratch/Sample.cue"]
+    );
+    let mod_file = Path::new("/scratch/go.mod");
+    assert_eq!(
+        argv_strings(&modfmt_check(Path::new(BIN), &[mod_file])),
+        vec![BIN, "-d", "/scratch/go.mod"]
+    );
+    assert_eq!(
+        argv_strings(&modfmt_fix(Path::new(BIN), &[mod_file])),
+        vec![BIN, "-w", "/scratch/go.mod"]
+    );
+    let tf = Path::new("/scratch/main.tf");
+    assert_eq!(
+        argv_strings(&terraform_check(Path::new(BIN), &[tf])),
+        vec![BIN, "fmt", "-check", "-diff", "/scratch/main.tf"]
+    );
+    let sh = Path::new("/scratch/run.sh");
+    assert_eq!(
+        argv_strings(&shfmt_check(Path::new(BIN), &[sh])),
+        vec![BIN, "-d", "/scratch/run.sh"]
+    );
+    assert_eq!(
+        argv_strings(&shfmt_fix(Path::new(BIN), &[sh])),
+        vec![BIN, "-w", "/scratch/run.sh"]
+    );
+    let rb = Path::new("/scratch/Sample.rb");
+    assert_eq!(
+        argv_strings(&standardrb_check(Path::new(BIN), &[rb])),
+        vec![BIN, "--check", "/scratch/Sample.rb"]
+    );
+}
+
+// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+#[test]
+fn file_family_lint_checks_are_check_only() {
+    let css = Path::new("/scratch/style.css");
+    let bare = stylelint_check(Path::new(BIN), &[css], None);
+    assert_eq!(
+        argv_strings(&bare),
+        vec![BIN, "--formatter", "json", "/scratch/style.css"]
+    );
+    let hinted = stylelint_check(
+        Path::new(BIN),
+        &[css],
+        Some(Path::new("/scratch/.stylelintrc.json")),
+    );
+    assert!(argv_strings(&hinted).contains(&"--config".to_owned()));
+    let rb = Path::new("/scratch/Sample.rb");
+    assert_eq!(
+        argv_strings(&rubocop_check(Path::new(BIN), &[rb])),
+        vec![BIN, "--format", "json", "/scratch/Sample.rb"]
+    );
+    let ps = Path::new("/scratch/Sample.ps1");
+    assert_eq!(
+        argv_strings(&psscriptanalyzer_check(Path::new(BIN), &[ps])),
+        vec![BIN, "/scratch/Sample.ps1"]
+    );
+    let sh = Path::new("/scratch/run.sh");
+    assert_eq!(
+        argv_strings(&shellcheck_check(Path::new(BIN), &[sh])),
+        vec![BIN, "--format=gcc", "/scratch/run.sh"]
+    );
+    let txt = Path::new("/scratch/notes.txt");
+    assert_eq!(
+        argv_strings(&keep_sorted_check(Path::new(BIN), &[txt])),
+        vec![BIN, "/scratch/notes.txt"]
     );
 }

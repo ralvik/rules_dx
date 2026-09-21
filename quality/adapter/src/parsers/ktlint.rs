@@ -28,11 +28,11 @@ mod tests {
 
     #[test]
     fn ktlint_reports_sarif_ranges() {
-        let findings =
-            parse_ktlint(SARIF.as_bytes(), Some(1), &["/s/Dirty.kt"]).expect("parsed");
+        let findings = parse_ktlint(SARIF.as_bytes(), Some(1), &["/s/Dirty.kt"]).expect("parsed");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].finding.rule_id, "no-unused-imports");
-        let clean = r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"ktlint"}},"results":[]}]}"#;
+        let clean =
+            r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"ktlint"}},"results":[]}]}"#;
         let clean = parse_ktlint(clean.as_bytes(), Some(0), &["/s/Dirty.kt"]).expect("clean");
         assert!(clean.is_empty());
         assert!(parse_ktlint(b"not json", Some(1), &["/s/Dirty.kt"]).is_err());

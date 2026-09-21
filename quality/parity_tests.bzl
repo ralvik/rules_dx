@@ -22,31 +22,14 @@ PARITY_SCHEMA_VERSION = 1
 # under the owning decision.
 PARITY_DEFERRED = {
     "astro": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "css": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "cuda": ["ADR 0019", "authoritative toolchain (clang-format); CUDA scope fails closed until qualified"],
-    "cue": ["ADR 0019", "checksummed standalone artifact (cue fmt) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "gherkin": ["ADR 0019", "private Node graph (Prettier prettier-plugin-gherkin closure) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "go_module": ["ADR 0019", "checksummed standalone artifact (modfmt) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "graphql": ["ADR 0019", "private Node graph (Prettier GraphQL parser)"],
     "html": ["ADR 0019", "private Node graph (Prettier HTML parser)"],
-    "html_template": ["ADR 0019", "checksummed standalone artifact (djlint); shared managed Python runtime -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "json5": ["ADR 0019", "private Node graph (Prettier JSON5 parser); Biome adapter claim pending"],
     "jsonc": ["ADR 0019", "private Node graph (Prettier JSONC parser); Biome adapter claim pending"],
-    "jsonnet": ["ADR 0019", "checksummed standalone artifact (jsonnetfmt) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "less": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint)"],
     "mdx": ["ADR 0019", "framework adapter region; prose-is-not-dependency boundary per composition"],
-    "pkl": ["ADR 0019", "checksummed standalone artifact (pkl) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "powershell": ["ADR 0019", "exact module plus portable PowerShell runtime (PSScriptAnalyzer); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "ruby": ["ADR 0019", "release-assembled Ruby closure (RuboCop, StandardRB); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "scss": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint)"],
-    "shell": ["ADR 0019", "checksummed standalone artifacts (shfmt, ShellCheck)"],
-    "sql": ["ADR 0019", "private Node graph (Prettier prettier-plugin-sql closure) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "svelte": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "terraform": ["ADR 0019", "checksummed standalone artifact (terraform fmt) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "text": ["ADR 0019", "checksummed standalone artifact (keep-sorted) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "vue": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "xml": ["ADR 0019", "private Node graph (Prettier prettier-plugin-xml closure) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "yaml": ["ADR 0019", "checksummed standalone artifacts (yamlfmt, yamllint); shared managed Python runtime for yamllint -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
 }
 
 def _adapter_backed_classes():
