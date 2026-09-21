@@ -24,7 +24,7 @@ use super::command::Command;
 #[command(
     name = "dx",
     about = "Transparent UI over Bazel: quality, workflow, and environment commands",
-    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. No scope selects //....\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
+    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults).\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
     version
 )]
 pub(crate) struct Cli {
