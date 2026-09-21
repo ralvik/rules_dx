@@ -243,7 +243,9 @@ request can run only while its managed executable remains usable; a dangling sym
 itself. Ordinary entries do not gain a self-repair wrapper or automatic setup-selection refresh.
 Recovery for missing tools and facades remains `dx env` or bootstrap `bazel run //dx:env`.
 Other automatic refresh routes require evidence and corresponding domain-contract updates, not a
-blanket prohibition or permission to add custom background machinery.
+blanket prohibition or permission to add custom background machinery. Full
+per-language editor dispositions (automatic, snapshot, projection, manual)
+are defined in [`dx new` and `dx upgrade`](../cli/commands/new-upgrade.md#editor-coverage).
 
 ## Direnv Integration
 

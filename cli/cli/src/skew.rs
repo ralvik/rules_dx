@@ -161,6 +161,8 @@ mod tests {
             Command::Update,
             Command::Bump,
             Command::Migrate,
+            Command::New,
+            Command::Upgrade,
             Command::Codegen,
             Command::Env,
             Command::Setup,

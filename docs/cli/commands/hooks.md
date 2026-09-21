@@ -16,10 +16,12 @@ CI caller template, hermetic hook installation, devcontainer, the single-version
 pin (the `dx` version equals the pinned `rules_dx` module version), the committed direnv `.envrc` defined in
 [Direnv Integration](../../environments/environment.md#direnv-integration), and generated
 VSCode configuration. The VSCode output is
-generated settings only (`.vscode/settings.json` pointing rust-analyzer, `gopls`,
-Python, and TypeScript integrations at `.dx/setups/current` projections, checked-in
-native configs, and managed `.dx/bin` tools, plus `.vscode/extensions.json`
-recommendations); no custom editor extension is installed. As a narrow exception to
+generated settings only (`.vscode/settings.json` pointing editor
+integrations at `.dx/setups/current` projections, checked-in native
+configs, and managed `.dx/bin` tools, plus `.vscode/extensions.json`
+recommendations covering the core plus admitted foundations; see
+[new-upgrade](new-upgrade.md#editor-coverage)); no custom editor
+extension is installed. As a narrow exception to
 [workspace discovery](../cli-contract.md#workspace-discovery), init may bootstrap a new
 repository without an existing `MODULE.bazel`; ordinary commands still require it.
 Bootstrap writes are absent-only and do not inspect Git to classify files as tracked

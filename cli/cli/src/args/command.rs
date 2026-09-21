@@ -33,6 +33,8 @@ pub enum Command {
     Env,
     Setup,
     Init,
+    New,
+    Upgrade,
     Hooks,
     Status,
     Version,
@@ -68,6 +70,8 @@ impl Command {
             Command::Env => "env",
             Command::Setup => "setup",
             Command::Init => "init",
+            Command::New => "new",
+            Command::Upgrade => "upgrade",
             Command::Hooks => "hooks",
             Command::Status => "status",
             Command::Version => "version",
@@ -125,17 +129,20 @@ impl Command {
         matches!(self, Command::Codegen | Command::Env | Command::Setup)
     }
 
-    /// True for the delivered adoption/inspect surfaces (`init`, `hooks`,
-    /// `status`, `version`, `watch`, `owners`, `deps`, `why`,
-    /// `completion`): they run local adoption helpers or thin Bazel-query
-    /// forwarding instead of the quality aspect pipeline. `bazel` is not
-    /// adoption: it forwards raw arguments to the Bazel launcher.
-    /// Managed commands (`codegen`, `env`, `setup`) are not adoption
-    /// either: they plan a Bazel collection request of their own.
+    /// True for the delivered adoption/inspect surfaces (`init`, `new`,
+    /// `upgrade`, `hooks`, `status`, `version`, `watch`, `owners`, `deps`,
+    /// `why`, `completion`): they run local adoption helpers or thin
+    /// Bazel-query forwarding instead of the quality aspect pipeline.
+    /// `bazel` is not adoption: it forwards raw arguments to the Bazel
+    /// launcher. Managed commands (`codegen`, `env`, `setup`) are not
+    /// adoption either: they plan a Bazel collection request of their own.
+    /// See: `docs/cli/commands/new-upgrade.md`.
     pub fn is_adoption(self) -> bool {
         matches!(
             self,
             Command::Init
+                | Command::New
+                | Command::Upgrade
                 | Command::Hooks
                 | Command::Status
                 | Command::Version
@@ -152,8 +159,8 @@ impl Command {
     /// (never buffer-then-dump). Text-only commands reject `--output=json`
     /// pre-exec with `UnsupportedOption` instead of silently ignoring it:
     /// `bazel`/`deploy` own the terminal for passthrough applications,
-    /// and adoption helpers (except `status`) print local-helper prose
-    /// or thin query lines.
+    /// and adoption helpers (except `status` plus `upgrade`) print
+    /// local-helper prose or thin query lines.
     /// `update` supports JSON: dry-run planning emits
     /// `command_started`/`command_finished`, while live execution adds
     /// per-set `notice`/`error` events with the same frame.
@@ -161,7 +168,10 @@ impl Command {
     /// widen summary, live execution adds the widen `notice`/`error`
     ///. `migrate` supports JSON the same way: dry-run
     /// planning emits the manifest plan, live execution fails closed
-    /// with `migrate_failed` (no manifests yet). Managed
+    /// with `migrate_failed` (no manifests yet). `upgrade` supports JSON
+    /// the same way: dry-run planning emits the composition plan, live
+    /// execution fails closed with `upgrade_failed` plus the recovery
+    /// pointer (see `docs/cli/commands/new-upgrade.md`). Managed
     /// (`codegen`/`env`/`setup`) support JSON with `command_started`,
     /// one `operation` (`collect`, explicit scope included), `selection`,
     /// and `command_finished`; `clean` supports JSON with
@@ -185,6 +195,7 @@ impl Command {
                 | Command::Update
                 | Command::Bump
                 | Command::Migrate
+                | Command::Upgrade
                 | Command::Check
                 | Command::Fix
                 | Command::Clean
@@ -237,16 +248,17 @@ impl Command {
     }
 
     /// True for commands that mutate by default (extended by
-    /// for `migrate`).
+    /// for `migrate` plus `new` plus `upgrade`).
     ///
     /// Mirrors `docs/testing/cli.md#command-registry-and-behavior` plus
     /// `docs/decisions/0005-mutating-operations.md`: lint,
-    /// typecheck, format, update, bump, migrate, generate, codegen, env, setup,
-    /// init, fix, and hooks apply workspace or managed-state writes
-    /// unless a non-mutating mode (`--check`, `--dry-run`) is selected.
-    /// `check` stays non-mutating, `clean` mutates managed state only
-    /// under its own contract, and workflow/audit/inspect/version
-    /// surfaces never mutate workspace sources by default.
+    /// typecheck, format, update, bump, migrate, new, upgrade, generate,
+    /// codegen, env, setup, init, fix, and hooks apply workspace or
+    /// managed-state writes unless a non-mutating mode (`--check`,
+    /// `--dry-run`) is selected. `check` stays non-mutating, `clean`
+    /// mutates managed state only under its own contract, and
+    /// workflow/audit/inspect/version surfaces never mutate workspace
+    /// sources by default.
     pub fn is_mutating_by_default(self) -> bool {
         matches!(
             self,
@@ -256,6 +268,8 @@ impl Command {
                 | Command::Update
                 | Command::Bump
                 | Command::Migrate
+                | Command::New
+                | Command::Upgrade
                 | Command::Generate
                 | Command::Codegen
                 | Command::Env
@@ -293,6 +307,8 @@ impl Command {
             Command::Env => "collect the managed development environment (mutating managed state)",
             Command::Setup => "collect setup outputs with atomic commit (mutating managed state)",
             Command::Init => "scaffold dx into a foreign tree (absent-only; mutating by default)",
+            Command::New => "scaffold a minimal qualified project for one language (absent-only; mutating by default)",
+            Command::Upgrade => "one-shot pin+migrate+setup composition with recovery pointer (mutating by default; --dry-run plans without writes)",
             Command::Hooks => "manage Git hooks via hermetic Git (mutating by default)",
             Command::Status => "report workspace and target status",
             Command::Version => "report version and pin drift",
@@ -316,6 +332,8 @@ mod tests {
         assert_eq!(Command::Update.name(), "update");
         assert_eq!(Command::Bump.name(), "bump");
         assert_eq!(Command::Migrate.name(), "migrate");
+        assert_eq!(Command::New.name(), "new");
+        assert_eq!(Command::Upgrade.name(), "upgrade");
         assert!(Command::Bump.is_audit_update());
         assert!(Command::Update.is_audit_update());
         assert!(!Command::Migrate.is_audit_update());
@@ -326,6 +344,14 @@ mod tests {
         assert!(Command::Migrate.is_mutating_by_default());
         assert!(Command::Migrate.supports_json());
         assert!(!Command::Migrate.supports_diff());
+        assert!(Command::New.is_adoption());
+        assert!(Command::Upgrade.is_adoption());
+        assert!(Command::New.is_mutating_by_default());
+        assert!(Command::Upgrade.is_mutating_by_default());
+        assert!(!Command::New.supports_json());
+        assert!(Command::Upgrade.supports_json());
+        assert!(!Command::New.supports_diff());
+        assert!(!Command::Upgrade.supports_diff());
         assert_eq!(Command::Lint.name(), "lint");
         assert_eq!(Command::Typecheck.name(), "typecheck");
         assert_eq!(Command::Format.name(), "format");
@@ -381,6 +407,8 @@ mod tests {
             Command::Env,
             Command::Setup,
             Command::Init,
+            Command::New,
+            Command::Upgrade,
             Command::Hooks,
             Command::Status,
             Command::Version,
@@ -407,9 +435,10 @@ mod tests {
     #[test]
     fn final_registry_is_exact_and_rejects_excluded_commands() {
         // The final CLI registry holds
-        // exactly the 29 implemented commands (including `deploy` plus
-        // `bump` plus `migrate`). `doctor`, `configure`, `docs`, and
-        // `new` stay rejected as unknown.
+        // exactly the 31 implemented commands (including `deploy` plus
+        // `bump` plus `migrate` plus `new` plus `upgrade`). `doctor`,
+        // `configure`, and `docs` stay rejected as unknown.
+        // See: `docs/cli/commands/new-upgrade.md`.
         use clap::ValueEnum;
         let mut got: Vec<&str> = Command::value_variants()
             .iter()
@@ -436,6 +465,7 @@ mod tests {
             "init",
             "lint",
             "migrate",
+            "new",
             "owners",
             "run",
             "setup",
@@ -443,14 +473,15 @@ mod tests {
             "test",
             "typecheck",
             "update",
+            "upgrade",
             "version",
             "watch",
             "why",
         ];
         want.sort_unstable();
-        assert_eq!(got, want, "Command registry drifted from the final 29");
-        assert_eq!(Command::value_variants().len(), 29);
-        for excluded in ["doctor", "configure", "docs", "new", "bogus"] {
+        assert_eq!(got, want, "Command registry drifted from the final 31");
+        assert_eq!(Command::value_variants().len(), 31);
+        for excluded in ["doctor", "configure", "docs", "bogus"] {
             assert_eq!(
                 Command::parse(excluded),
                 None,
@@ -472,6 +503,8 @@ mod tests {
             Command::Update,
             Command::Bump,
             Command::Migrate,
+            Command::New,
+            Command::Upgrade,
             Command::Generate,
             Command::Codegen,
             Command::Env,

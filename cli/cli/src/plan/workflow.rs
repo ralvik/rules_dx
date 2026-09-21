@@ -54,6 +54,8 @@ impl WorkflowVerb {
             // plus forwarded arguments), never a fixed workflow verb.
             Command::Bazel => None,
             Command::Init
+            | Command::New
+            | Command::Upgrade
             | Command::Hooks
             | Command::Status
             | Command::Version

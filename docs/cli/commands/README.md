@@ -59,6 +59,9 @@ tests from inactive configurable branches.
   manifest lands under issue #462 with upgrade scope under issue #671,
   inside the parsed final
   registry pinned under issues #457/#462).
+- [`dx new` and `dx upgrade`](new-upgrade.md): absent-only per-language
+  scaffolding plus the one-shot pin plus migrate plus setup composition
+  with dry-run and recovery pointer.
 
 ## Excluded Commands
 
@@ -66,4 +69,3 @@ There is no `dx doctor` or `dx configure`. Their intended
 behavior is covered by explicit commands or is outside the accepted surface
 (failure debugging uses `dx status` plus JSON `bazel_failed` errors, see
 [status/version](status-version.md#failure-explainer)).
-There are no `dx new` app or service templates in v1.

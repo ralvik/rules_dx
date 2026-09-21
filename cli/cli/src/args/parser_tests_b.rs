@@ -175,7 +175,13 @@ fn migrate_needs_from_and_to_versions() {
             option: "--".to_owned(),
         })
     );
-    // `--from`/`--to` belong to migrate only.
+    // `--from`/`--to` belong to migrate plus upgrade only.
+    // See: `docs/cli/commands/new-upgrade.md`.
+    let upgrade_ok =
+        parse(&args(&["upgrade", "--from=1.2.3", "--to=2.0.0"])).expect("upgrade parses");
+    assert_eq!(upgrade_ok.command, Command::Upgrade);
+    assert_eq!(upgrade_ok.from, Some("1.2.3".to_owned()));
+    assert_eq!(upgrade_ok.to, Some("2.0.0".to_owned()));
     assert_eq!(
         parse(&args(&["lint", "--from=1.0.0"])),
         Err(ArgsError::UnsupportedOption {
@@ -190,6 +196,81 @@ fn migrate_needs_from_and_to_versions() {
             option: "--to".to_owned(),
         })
     );
+}
+
+#[test]
+fn new_takes_language_plus_optional_name() {
+    // See: `docs/cli/commands/new-upgrade.md`.
+    let got = parse(&args(&["new", "rust", "demo"])).expect("parse new");
+    assert_eq!(got.command, Command::New);
+    assert!(got.command.is_adoption());
+    assert!(got.command.is_mutating_by_default());
+    assert!(!got.command.supports_json());
+    assert_eq!(got.targets, vec!["rust".to_owned(), "demo".to_owned()]);
+    let bare_lang = parse(&args(&["new", "go"])).expect("language only");
+    assert_eq!(bare_lang.targets, vec!["go".to_owned()]);
+    assert_eq!(
+        parse(&args(&["new"])),
+        Err(ArgsError::MissingValue {
+            option: "<language> [name]".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["new", "rust", "a", "b"])),
+        Err(ArgsError::MissingValue {
+            option: "<language> [name]".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["new", "rust", "--output=json"])),
+        Err(ArgsError::UnsupportedOption {
+            command: "new",
+            option: "--output=json".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn upgrade_needs_from_and_to_with_no_scopes() {
+    // See: `docs/cli/commands/new-upgrade.md`.
+    let got = parse(&args(&["upgrade", "--from=1.2.3", "--to=2.0.0"])).expect("parse upgrade");
+    assert_eq!(got.command, Command::Upgrade);
+    assert!(got.command.is_adoption());
+    assert!(got.command.is_mutating_by_default());
+    assert!(got.command.supports_json());
+    assert_eq!(
+        parse(&args(&["upgrade", "--from=1.2.3"])),
+        Err(ArgsError::MissingValue {
+            option: "--from <version> --to <version>".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["upgrade", "--from=1.2.3", "--to=2.0.0", "//a:one"])),
+        Err(ArgsError::UnsupportedOption {
+            command: "upgrade",
+            option: "//a:one".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&[
+            "upgrade",
+            "--from=1.2.3",
+            "--to=2.0.0",
+            "--output=diff"
+        ])),
+        Err(ArgsError::UnsupportedOption {
+            command: "upgrade",
+            option: "--output=diff".to_owned(),
+        })
+    );
+    let json = parse(&args(&[
+        "upgrade",
+        "--from=1.2.3",
+        "--to=2.0.0",
+        "--output=json",
+    ]))
+    .expect("upgrade json");
+    assert_eq!(json.output, OutputMode::Json);
 }
 
 #[test]
@@ -254,8 +335,8 @@ fn output_contract_has_no_silent_ignore() {
     let got = parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--output=json"])).expect("bump json");
     assert_eq!(got.output, OutputMode::Json);
     assert!(got.command.supports_json());
-    // Migrate is JSON-capable with its required versions
-    // (`dx migrate --from/--to` never runs bare).
+    // Migrate plus upgrade are JSON-capable with their required versions
+    // (`dx migrate/upgrade --from/--to` never run bare).
     let got = parse(&args(&[
         "migrate",
         "--from=1.2.3",
@@ -263,6 +344,15 @@ fn output_contract_has_no_silent_ignore() {
         "--output=json",
     ]))
     .expect("migrate json");
+    assert_eq!(got.output, OutputMode::Json);
+    assert!(got.command.supports_json());
+    let got = parse(&args(&[
+        "upgrade",
+        "--from=1.2.3",
+        "--to=2.0.0",
+        "--output=json",
+    ]))
+    .expect("upgrade json");
     assert_eq!(got.output, OutputMode::Json);
     assert!(got.command.supports_json());
     let got = parse(&args(&["status", "--output=json"])).expect("status json");
@@ -288,6 +378,8 @@ fn output_contract_has_no_silent_ignore() {
         vec!["--output=json", "bazel", "version"],
         vec!["init", "--output=json"],
         vec!["init", "proj", "--output=diff"],
+        vec!["new", "rust", "--output=json"],
+        vec!["new", "rust", "demo", "--output=diff"],
         vec!["hooks", "status", "--output=json"],
         vec!["version", "--output=json"],
         vec!["watch", "test", "--output=json"],
@@ -320,6 +412,7 @@ fn output_contract_has_no_silent_ignore() {
         vec!["setup", "--output=diff"],
         vec!["bump", "cargo:anyhow", "1.2.3", "--output=diff"],
         vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--output=diff"],
+        vec!["upgrade", "--from=1.2.3", "--to=2.0.0", "--output=diff"],
     ] {
         assert_eq!(
             parse(&args(&words)),

@@ -174,6 +174,8 @@ mod tests {
             (Command::Env, "managed"),
             (Command::Setup, "managed"),
             (Command::Init, "adoption"),
+            (Command::New, "adoption"),
+            (Command::Upgrade, "adoption"),
             (Command::Hooks, "adoption"),
             (Command::Status, "adoption"),
             (Command::Version, "adoption"),
@@ -184,7 +186,7 @@ mod tests {
             (Command::Completion, "adoption"),
             (Command::Bazel, "bazel"),
         ];
-        assert_eq!(cases.len(), 29, "every Command variant pinned");
+        assert_eq!(cases.len(), 31, "every Command variant pinned");
         for (command, want) in cases {
             assert_eq!(family(command), want, "family for {}", command.name());
         }
