@@ -20,6 +20,8 @@ load(":nuget.bzl", "nuget_deploy")
 load(":nuget_tests.bzl", "nuget_analysis_tests", "nuget_debug_analysis_tests", "nuget_unit_tests")
 load(":oci.bzl", "oci_deploy")
 load(":oci_tests.bzl", "oci_analysis_tests", "oci_debug_analysis_tests", "oci_unit_tests")
+load(":octopus.bzl", "octopus_deploy")
+load(":octopus_tests.bzl", "octopus_analysis_tests", "octopus_debug_analysis_tests", "octopus_unit_tests")
 load(":pypi.bzl", "pypi_deploy")
 load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 
@@ -47,6 +49,8 @@ exports_files([
     "nuget_tests.bzl",
     "oci.bzl",
     "oci_tests.bzl",
+    "octopus.bzl",
+    "octopus_tests.bzl",
     "pypi.bzl",
     "pypi_tests.bzl",
 ])
@@ -104,6 +108,14 @@ py_library(
 py_library(
     name = "oci_deploy_lib",
     srcs = ["oci_deploy.py"],
+    imports = ["."],
+)
+
+# Shared package-drop logic for `octopus_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "octopus_deploy_lib",
+    srcs = ["octopus_deploy.py"],
     imports = ["."],
 )
 
@@ -274,6 +286,10 @@ test_suite(
         ":oci_debug_analysis",
         ":oci_deploy_test",
         ":oci_unit",
+        ":octopus_analysis",
+        ":octopus_debug_analysis",
+        ":octopus_deploy_test",
+        ":octopus_unit",
         ":pypi_analysis",
         ":pypi_debug_analysis",
         ":pypi_deploy_test",
@@ -574,6 +590,48 @@ py_test(
     deps = [":oci_deploy_lib"],
 )
 
+# Ninth deploy macro: local-first Octopus Deploy automation over the
+# archive fixture, proving macro composition (an archive_deploy tarball
+# becomes the Octopus package). The debug variant pins profile
+# passthrough. The `py_test` below exercises the local package-drop
+# build with no network. Octopus is deploy automation (push plus
+# create-release), not a language registry.
+octopus_deploy(
+    name = "octopus_demo",
+    channel = "Default",
+    deploy_to = ["Production"],
+    package = ":release_demo_archive",
+    project = "octopus_demo",
+    version = "0.0.0",
+)
+
+octopus_deploy(
+    name = "octopus_demo_debug",
+    channel = "Default",
+    deploy_to = ["Production"],
+    package = ":release_demo_archive",
+    profile = "debug",
+    project = "octopus_demo",
+    version = "0.0.0",
+)
+
+octopus_unit_tests(name = "octopus_unit")
+
+octopus_analysis_tests(name = "octopus_analysis")
+
+octopus_debug_analysis_tests(name = "octopus_debug_analysis")
+
+# Local package-drop output per demo package
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "octopus_deploy_test",
+    srcs = ["octopus_deploy_test.py"],
+    imports = ["."],
+    main = "octopus_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":octopus_deploy_lib"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
@@ -595,6 +653,8 @@ real_source_target(
         "nuget_tests.bzl",
         "oci.bzl",
         "oci_tests.bzl",
+        "octopus.bzl",
+        "octopus_tests.bzl",
         "pypi.bzl",
         "pypi_tests.bzl",
     ],
