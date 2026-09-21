@@ -77,11 +77,12 @@ pub struct LockedPackage {
     pub is_private: bool,
 }
 
-/// One OSV-format advisory record from the identified snapshot. Field
-/// shapes are the minimal V1 subset: upstream advisory identity,
-/// affected package and version scope, severity text, and remediation.
-/// Full OSV schema coverage stays open; unknown fields are ignored so
-/// snapshot evolution never breaks matching.
+/// One OSV-format advisory record from the identified snapshot. This is
+/// the matching shape projected from typed OSV via the upstream `osv`
+/// crate (`schema` feature only, offline; issue #676): upstream advisory
+/// identity, affected package and version scope, severity text, and
+/// remediation. Legacy V1 minimal snapshots still parse; unknown fields
+/// ignore so snapshot evolution never breaks matching.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Advisory {
     /// Upstream advisory identity (e.g. `GHSA-aaaa-bbbb-cccc`, `RUSTSEC-...`).
@@ -794,11 +795,305 @@ pub fn apply_exceptions(
     (unexempted, problems)
 }
 
-/// Parse one OSV-format advisory snapshot document (JSON array of
-/// [`Advisory`]) into records. Unknown fields ignore; malformed JSON
-/// fails closed with the document error.
+/// Parse one OSV-format advisory snapshot document (JSON array) into
+/// records. Typed OSV parsing via the upstream `osv` crate (`schema`
+/// feature only, offline local matching, no inventory upload; issue
+/// #676) projects `osv::schema::Vulnerability` onto [`Advisory`] with no
+/// matching-semantics change: withdrawn entries skip, unsupported
+/// ecosystems skip, `affected[].ranges[].events`
+/// (`introduced`/`fixed`/`last_affected`/`limit`) become per-interval
+/// `versions` scopes in the set's upstream syntax so [`version_affected`]
+/// applies unchanged, explicit `versions` lists become one scope per
+/// version, `fixed` events preserve, severity keeps known
+/// `critical|high|medium|low` words else empty (unknown, fails by
+/// default). Unknown fields ignore. Legacy V1 minimal `Vec<Advisory>`
+/// snapshots still parse (no format break); malformed JSON fails closed
+/// with the document error.
 pub fn parse_snapshot(text: &str) -> Result<Vec<Advisory>, String> {
+    if let Ok(vulns) = serde_json::from_str::<Vec<osv::schema::Vulnerability>>(text) {
+        return Ok(project_osv_snapshot(&vulns));
+    }
     serde_json::from_str(text).map_err(|error| format!("invalid advisory snapshot: {error}"))
+}
+
+/// Map one OSV ecosystem to the owning V1 dependency set. Only the five
+/// audited sets project; other ecosystems skip (never match, never clean
+/// by themselves).
+fn ecosystem_to_set(ecosystem: &osv::schema::Ecosystem) -> Option<&'static str> {
+    match ecosystem {
+        osv::schema::Ecosystem::CratesIO => Some("cargo"),
+        osv::schema::Ecosystem::Npm => Some("npm"),
+        osv::schema::Ecosystem::Go => Some("go"),
+        osv::schema::Ecosystem::Maven(_) => Some("maven"),
+        osv::schema::Ecosystem::NuGet => Some("nuget"),
+        _ => None,
+    }
+}
+
+/// One known severity word, else `None` (caller maps to empty/unknown).
+/// Only `critical|high|medium|low|moderate` project; CVSS vectors and
+/// other texts stay unknown and fail by default via [`normalize_level`].
+fn known_severity_word(text: &str) -> Option<String> {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    match trimmed.to_ascii_lowercase().as_str() {
+        "critical" | "high" | "medium" | "low" | "moderate" => Some(trimmed.to_owned()),
+        _ => None,
+    }
+}
+
+/// Severity text for one OSV `affected` entry: first known word in
+/// affected `severity`, then top-level `severity`, then `severity` string
+/// fields in affected/top `database_specific`/`ecosystem_specific`
+/// objects (e.g. GHSA `{"severity":"high"}`); else empty (unknown).
+fn osv_severity_text(
+    vuln: &osv::schema::Vulnerability,
+    affected: &osv::schema::Affected,
+) -> String {
+    if let Some(list) = affected.severity.as_ref() {
+        for entry in list {
+            if let Some(word) = known_severity_word(&entry.score) {
+                return word;
+            }
+        }
+    }
+    if let Some(list) = vuln.severity.as_ref() {
+        for entry in list {
+            if let Some(word) = known_severity_word(&entry.score) {
+                return word;
+            }
+        }
+    }
+    for value in [
+        affected.database_specific.as_ref(),
+        affected.ecosystem_specific.as_ref(),
+        vuln.database_specific.as_ref(),
+    ] {
+        if let Some(serde_json::Value::Object(map)) = value {
+            if let Some(serde_json::Value::String(score)) = map.get("severity") {
+                if let Some(word) = known_severity_word(score) {
+                    return word;
+                }
+            }
+        }
+    }
+    String::new()
+}
+
+/// One OSV range timeline to affected intervals: `(lower, upper,
+/// upper_inclusive)` where `None` is unbounded. `Introduced("0")` means
+/// unbounded lower. A `fixed`/`last_affected`/`limit` without a preceding
+/// `introduced` means unbounded lower. A trailing open `introduced`
+/// means unbounded upper. Malformed timelines emit the conservative
+/// intervals (extra findings, never missed vulns).
+fn range_events_to_intervals(
+    events: &[osv::schema::Event],
+) -> Vec<(Option<String>, Option<String>, bool)> {
+    let mut out: Vec<(Option<String>, Option<String>, bool)> = Vec::new();
+    let mut open: Option<Option<String>> = None;
+    for event in events {
+        match event {
+            osv::schema::Event::Introduced(version) => {
+                if let Some(prev) = open.take() {
+                    out.push((prev, None, false));
+                }
+                let trimmed = version.trim();
+                if trimmed == "0" || trimmed.is_empty() {
+                    open = Some(None);
+                } else {
+                    open = Some(Some(trimmed.to_owned()));
+                }
+            }
+            osv::schema::Event::Fixed(version) => {
+                let upper = version.trim().to_owned();
+                if let Some(lower) = open.take() {
+                    out.push((lower, Some(upper), false));
+                } else {
+                    out.push((None, Some(upper), false));
+                }
+            }
+            osv::schema::Event::LastAffected(version) => {
+                let upper = version.trim().to_owned();
+                if let Some(lower) = open.take() {
+                    out.push((lower, Some(upper), true));
+                } else {
+                    out.push((None, Some(upper), true));
+                }
+            }
+            osv::schema::Event::Limit(version) => {
+                let upper = version.trim().to_owned();
+                if let Some(lower) = open.take() {
+                    out.push((lower, Some(upper), false));
+                } else {
+                    out.push((None, Some(upper), false));
+                }
+            }
+            _ => {}
+        }
+    }
+    if let Some(lower) = open.take() {
+        out.push((lower, None, false));
+    }
+    out
+}
+
+/// One affected interval to the set's upstream `versions` scope syntax so
+/// [`version_affected`] applies unchanged: semver comparators for
+/// cargo/npm/go (`*`, `<x`, `<=x`, `>=x`, `>=a, <b`, `>=a, <=b`), bracketed
+/// intervals for maven/nuget (`[0,)`, `(,x)`, `(,x]`, `[x,)`,
+/// `[a,b)`, `[a,b]`). Empty bounds are unbounded. Returns `None` for
+/// unknown sets or empty scopes (caller skips).
+fn interval_to_scope(
+    set: &str,
+    lower: &Option<String>,
+    upper: &Option<String>,
+    upper_inclusive: bool,
+) -> Option<String> {
+    let lower = lower
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty());
+    let upper = upper
+        .as_ref()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty());
+    match set {
+        "cargo" | "npm" | "go" => match (lower, upper) {
+            (None, None) => Some("*".to_owned()),
+            (None, Some(upper)) => {
+                if upper_inclusive {
+                    Some(format!("<={upper}"))
+                } else {
+                    Some(format!("<{upper}"))
+                }
+            }
+            (Some(lower), None) => Some(format!(">={lower}")),
+            (Some(lower), Some(upper)) => {
+                if upper_inclusive {
+                    Some(format!(">={lower}, <={upper}"))
+                } else {
+                    Some(format!(">={lower}, <{upper}"))
+                }
+            }
+        },
+        "maven" | "nuget" => match (lower, upper) {
+            (None, None) => Some("[0,)".to_owned()),
+            (None, Some(upper)) => {
+                if upper_inclusive {
+                    Some(format!("(,{upper}]"))
+                } else {
+                    Some(format!("(,{upper})"))
+                }
+            }
+            (Some(lower), None) => Some(format!("[{lower},)")),
+            (Some(lower), Some(upper)) => {
+                if upper_inclusive {
+                    Some(format!("[{lower},{upper}]"))
+                } else {
+                    Some(format!("[{lower},{upper})"))
+                }
+            }
+        },
+        _ => None,
+    }
+}
+
+/// Project one OSV vulnerability's affected entries onto [`Advisory`]:
+/// one advisory per explicit version plus one per range interval, with
+/// shared id/package/set/severity/fixed. Withdrawn, empty ids, missing
+/// packages, empty names, unsupported ecosystems, and empty scopes skip
+/// (never match, never fail the snapshot).
+fn project_osv_affected(
+    vuln: &osv::schema::Vulnerability,
+    affected: &osv::schema::Affected,
+) -> Vec<Advisory> {
+    let id = vuln.id.trim();
+    if id.is_empty() {
+        return Vec::new();
+    }
+    let package = match affected.package.as_ref() {
+        Some(package) => package,
+        None => return Vec::new(),
+    };
+    let name = package.name.trim();
+    if name.is_empty() {
+        return Vec::new();
+    }
+    let set = match ecosystem_to_set(&package.ecosystem) {
+        Some(set) => set,
+        None => return Vec::new(),
+    };
+    let severity = osv_severity_text(vuln, affected);
+    let mut fixed: Vec<String> = Vec::new();
+    if let Some(ranges) = affected.ranges.as_ref() {
+        for range in ranges {
+            if matches!(&range.range_type, osv::schema::RangeType::Git) {
+                continue;
+            }
+            for event in &range.events {
+                if let osv::schema::Event::Fixed(version) = event {
+                    let trimmed = version.trim();
+                    if !trimmed.is_empty() && !fixed.iter().any(|seen| seen == trimmed) {
+                        fixed.push(trimmed.to_owned());
+                    }
+                }
+            }
+        }
+    }
+    let mut scopes: Vec<String> = Vec::new();
+    if let Some(versions) = affected.versions.as_ref() {
+        for version in versions {
+            let trimmed = version.trim();
+            if !trimmed.is_empty() && !scopes.iter().any(|seen| seen == trimmed) {
+                scopes.push(trimmed.to_owned());
+            }
+        }
+    }
+    if let Some(ranges) = affected.ranges.as_ref() {
+        for range in ranges {
+            if matches!(&range.range_type, osv::schema::RangeType::Git) {
+                continue;
+            }
+            for (lower, upper, inclusive) in range_events_to_intervals(&range.events) {
+                if let Some(scope) = interval_to_scope(set, &lower, &upper, inclusive) {
+                    if !scope.trim().is_empty() && !scopes.iter().any(|seen| seen == &scope) {
+                        scopes.push(scope);
+                    }
+                }
+            }
+        }
+    }
+    scopes
+        .into_iter()
+        .map(|versions| Advisory {
+            id: id.to_owned(),
+            package: name.to_owned(),
+            versions,
+            severity: severity.clone(),
+            fixed: fixed.clone(),
+            set: set.to_owned(),
+        })
+        .collect()
+}
+
+/// Project a typed OSV snapshot onto [`Advisory`]. Withdrawn
+/// vulnerabilities skip entirely; vulnerabilities without affected
+/// entries yield zero advisories (never an error).
+fn project_osv_snapshot(vulns: &[osv::schema::Vulnerability]) -> Vec<Advisory> {
+    let mut out = Vec::new();
+    for vuln in vulns {
+        if vuln.withdrawn.is_some() {
+            continue;
+        }
+        if let Some(entries) = vuln.affected.as_ref() {
+            for affected in entries {
+                out.extend(project_osv_affected(vuln, affected));
+            }
+        }
+    }
+    out
 }
 
 #[path = "vuln_nuget.rs"]
