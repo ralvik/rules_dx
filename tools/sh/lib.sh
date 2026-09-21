@@ -264,13 +264,15 @@ dx_cd_workspace() {
 # Usage (no command substitution so the EXIT trap lands in the caller):
 #   dx_mkscratch scratch
 #   dx_mkscratch scratch "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX"
-_DX_SCRATCHES=""
+_DX_SCRATCHES=()
 _DX_SCRATCH_TRAP_INSTALLED=0
 
 _dx_cleanup_scratches() {
   local d
-  # shellcheck disable=SC2086
-  for d in $_DX_SCRATCHES; do
+  if ((${#_DX_SCRATCHES[@]} == 0)); then
+    return 0
+  fi
+  for d in "${_DX_SCRATCHES[@]}"; do
     if [[ -n "$d" && -d "$d" ]]; then
       rm -rf "$d"
     fi
@@ -284,7 +286,7 @@ dx_mkscratch() {
   else
     dir="$(mktemp -d)"
   fi
-  _DX_SCRATCHES="$_DX_SCRATCHES $dir"
+  _DX_SCRATCHES+=("$dir")
   if [[ "$_DX_SCRATCH_TRAP_INSTALLED" == "0" ]]; then
     trap '_dx_cleanup_scratches' EXIT
     _DX_SCRATCH_TRAP_INSTALLED=1
@@ -331,16 +333,16 @@ dx_sha256_stdin() {
   fi
 }
 
-# Deterministic tree digest: sorted find plus sha pipeline,
+# Deterministic tree digest: NUL-delimited sorted find plus sha pipeline,
 # matching the historical `find | sort | xargs sha256sum | sha256sum`
 # bytes on Linux with a macOS `shasum` fallback and a python3 fallback
 # that reproduces the same line format.
 dx_tree_sha256() {
   local dir="$1"
   if command -v sha256sum >/dev/null 2>&1; then
-    (cd "$dir" && find . -type f | LC_ALL=C sort | xargs sha256sum | sha256sum | cut -d' ' -f1)
+    (cd "$dir" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -d' ' -f1)
   elif command -v shasum >/dev/null 2>&1; then
-    (cd "$dir" && find . -type f | LC_ALL=C sort | xargs shasum -a 256 | shasum -a 256 | cut -d' ' -f1)
+    (cd "$dir" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 shasum -a 256 | shasum -a 256 | cut -d' ' -f1)
   else
     python3 -c '
 import hashlib, os, sys
