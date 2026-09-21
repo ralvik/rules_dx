@@ -136,8 +136,12 @@ BCR module shape via `//deploy/release:bcr_demo` without submitting,
 and proves the install verifier refuses checksum-only inputs,
 so workflow and macro stay consistent instead of duplicating logic.
 The full matrix is frozen in `deploy/release/matrix.bzl` (seed Linux
-x86_64 qualified; four follow-ups unqualified until their hosts
-qualify). Draft-only ceiling enforced, owner approval required.
+x86_64 qualified-built-here; Linux arm64 plus macOS arm64 plus macOS
+x86_64 best-effort plus Windows x86_64 qualified with per-host evidence
+under issue #815: Platform-qualified per the [support matrix](../product/support-matrix.md)
+plus per-host `sbom-provenance` release evidence per the
+[promotion checklist](../product/promotion-checklist.md), best-effort
+macOS x86_64 exempt non-blocking). Draft-only ceiling enforced, owner approval required.
 
 ## Path E: `pypi_deploy` (accepted)
 
@@ -244,8 +248,8 @@ passed as `--sbom`. Aggregated NOTICE bundles verify against the audited
 inventory manifest when passed as `--notice --notice-manifest`
 (`missing-notice-text` fails closed before install). BCR needs no signing (archive `source.json` +
 integrity hash + `presubmit.yml` + PR review). Seed-host standalone
-packaging is `//cli/cli:dx_standalone`; the wider matrix stays
-unqualified per the [distribution policy](../environments/environment.md#distribution).
+packaging is `//cli/cli:dx_standalone`; the wider matrix is qualified
+with per-host evidence under issue #815 per the [distribution policy](../environments/environment.md#distribution).
 Distribution verification qualified under issue #459. Policy tests are
 `bazel test //deploy/install:all` plus `bazel run
 //tools/ci:signing_distribution_qualification`.
@@ -261,8 +265,11 @@ tooling in `deploy/release/` with policy tests `bazel test
 //tools/ci:signing_distribution_qualification`:
 
 - Matrix (`matrix.bzl`): five cells, seed `dx-linux-x86_64`
-  qualified-built-here, four follow-ups unqualified per ADR 0014 until
-  host plus toolchain evidence lands.
+  qualified-built-here, Linux arm64 plus macOS arm64 plus macOS x86_64
+  best-effort plus Windows x86_64 qualified with per-host evidence under
+  issue #815 (Platform-qualified per ADR 0014 plus per-host
+  `sbom-provenance` release evidence, best-effort macOS x86_64 exempt
+  non-blocking).
 - SBOM/provenance (`sbom.bzl`): SPDX 2.3 JSON plus SLSA v1 in-toto
   Statement v1 from hermetic Rust tools only (digest + JSON
   via declared genrule `tools`), subject digest equals artifact

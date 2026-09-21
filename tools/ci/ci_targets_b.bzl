@@ -293,6 +293,16 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Release-matrix harness; see docs/deploy/release-runbook.md.
+    sh_binary(
+        name = "release_matrix_qualification",
+        srcs = ["release_matrix_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Hermetic CLI-contract coverage; see docs/testing/verification-matrix.md.
 
     # Coverage-spill containment harness; see tools/ci/coverage_spill.sh.

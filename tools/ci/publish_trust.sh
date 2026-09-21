@@ -29,7 +29,7 @@
 # path (standalone wired, draft dry-run with GH_RELEASE_DRY_RUN=1 still
 # publishing nothing, BCR shape checked-not-submitted, verifier refusal
 # proved in the workflow) plus the full release path (matrix
-# frozen with seed qualified, SBOM SPDX-2.3 + SLSA v1 wired, signing
+# frozen with all five qualified with per-host evidence, SBOM SPDX-2.3 + SLSA v1 wired, signing
 # Sigstore keyless + attestation selected with dry-run gate, BCR
 # owner-gated with dry-run gate, human-run driver with tag ceiling,
 # workflow exercises release tests + signing/bcr/human-run dry-runs
@@ -146,8 +146,9 @@ else
 fi
 
 # Seed-host standalone packaging stays wired; the wider matrix is frozen
-# in deploy/release/matrix.bzl with seed qualified (no platform claimed
-# qualified beyond the seed without host evidence).
+# in deploy/release/matrix.bzl with all cells qualified with per-host
+# evidence (seed plus four follow-ups, no platform claimed
+# qualified without host evidence).
 if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel; then
   ok
 else
@@ -181,15 +182,15 @@ else
   bad "publish dry run lost the verifier-refusal exercised record (issue #78)"
 fi
 
-# Full matrix frozen per: five cells, seed qualified, four
-# follow-ups unqualified with owner-approval qualification.
+# Full matrix frozen per #815: five cells, seed plus four follow-ups
+# qualified with per-host evidence and owner-approval qualification.
 if [[ -f "deploy/release/matrix.bzl" ]] &&
   grep -q -F -e 'dx-linux-x86_64' deploy/release/matrix.bzl &&
-  grep -q -F -e 'unqualified-per-issue-311' deploy/release/matrix.bzl &&
-  grep -q -F -e 'unqualified-per-issue-311' .github/workflows/publish-dry-run.yml; then
+  grep -q -F -e 'qualified-host-evidence' deploy/release/matrix.bzl &&
+  grep -q -F -e 'qualified-host-evidence' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "release matrix missing frozen five-cell shape (deploy/release/matrix.bzl + workflow, #311)"
+  bad "release matrix missing frozen five-cell qualified shape (deploy/release/matrix.bzl + workflow, #815)"
 fi
 
 # SBOM/provenance selected per: SPDX-2.3 + SLSA v1 wired in the

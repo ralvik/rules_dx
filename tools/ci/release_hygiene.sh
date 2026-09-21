@@ -15,8 +15,8 @@
 # tags, SECURITY.md reporting link + enabled record, publish dry-run
 # dispatch-only with a default-closed approve gate, no-secrets minimal
 # permissions plus no secrets usage, RUNNER_TEMP staging plus a
-# clean-checkout proof, explicit release matrix (seed qualified, rest
-# unqualified per), SBOM/BCR deferrals to tooling, signing-first +
+# clean-checkout proof, explicit release matrix (all five qualified with
+# per-host evidence under issue #815), SBOM/BCR deferrals to tooling, signing-first +
 # GHCR-separate notes, checkout SHA pin, typed approve plus
 # non-cancelling concurrency, least-privilege no-packages-write,
 # no-secrets usage, and sole-tracker deletion plus reporting-enabled
@@ -100,15 +100,15 @@ dx_guards_contains "$dryrun" "publish-dry-run.yml lost RUNNER_TEMP staging or th
 # deletion of the gate this harness enforces).
 dx_guard_contains CONTRIBUTING.md 'No tags, GitHub releases' "CONTRIBUTING.md lost the no-tags/no-releases policy"
 
-# The dry-run report names the full release matrix explicitly (issues
-# /): seed linux-x86_64 qualified-built-here, the other four
-# (linux-arm64, macos-x86_64/arm64, windows-x86_64) unqualified per
-# (frozen in deploy/release/matrix.bzl).
+# The dry-run report names the full release matrix explicitly (issue
+# #815): seed linux-x86_64 qualified-built-here, the other four
+# (linux-arm64, macos-x86_64/arm64, windows-x86_64) qualified with per-host
+# evidence (frozen in deploy/release/matrix.bzl).
 dx_guards_contains "$dryrun" "publish-dry-run.yml lost the explicit release-matrix qualification table" \
   'dx-linux-arm64' \
   'dx-macos-arm64' \
   'dx-windows-x86_64' \
-  'unqualified-per-issue-311'
+  'qualified-host-evidence'
 
 # SBOM/provenance and BCR submission run owner-gated dry-run-first per
 # the dry run exercises //deploy/release:sbom_demo and
@@ -215,7 +215,7 @@ dx_guard_contains "$dryrun" 'sha256' "byte-identity fail-closed record lost (dry
 # Seed standalone packaging stays exercised (seed-qualified):
 # the dry run builds //cli/cli:dx_standalone and stages the tarball plus
 # checksum under RUNNER_TEMP, never committed; the wider matrix is frozen
-# in deploy/release/matrix.bzl, unqualified per.
+# in deploy/release/matrix.bzl, qualified per-host under issue #815.
 dx_guards_contains "$dryrun" "publish-dry-run.yml lost the seed standalone exercise (dx_standalone + tarball + checksum, issue #78)" \
   '//cli/cli:dx_standalone' \
   'dx-standalone.tar.gz' \

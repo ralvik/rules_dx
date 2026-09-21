@@ -215,7 +215,7 @@ github_deploy(
 # sha256 of the `dx` binary proving standalone packaging without Bazel
 # or Rust at install time. Seed Linux x86_64 is qualified-built-here;
 # the wider matrix (Linux arm64, macOS x86_64/arm64, Windows x86_64)
-# stays unqualified per. Publisher-identity verification of the
+# is qualified with per-host evidence. Publisher-identity verification of the
 # release bytes is `//deploy/install:dx_verify` (Sigstore bundle +
 # identity/issuer, no checksum-only fallback); the bundle itself arrives
 # with the owner-approved release via the human-run signing workflow.

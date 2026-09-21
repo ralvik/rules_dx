@@ -12,7 +12,7 @@
 #
 # This harness machine-checks the frozen half verifiable on a clean tree
 # today (39 checks): hygiene policy, exact 0.0.0 module pin + consumer
-# pin + reviewed-commit workflow pin + unqualified-matrix record,
+# pin + reviewed-commit workflow pin + qualified-matrix record,
 # workflow separation + triggers + default-closed approve gates +
 # never-publishes + dry-run report + clean-checkout record + seed
 # exercised path (standalone + draft dry-run + BCR shape + verifier
@@ -253,17 +253,17 @@ else
   bad "Dockerfile.prebuilt lost its scaffold/quota record (#460)"
 fi
 
-# unqualified-matrix record stays explicit: non-seed release matrix
-# entries remain unqualified per the frozen matrix (no platform
-# claimed qualified beyond the seed host without host evidence).
-if grep -q -F -e 'unqualified-per-issue-311' .github/workflows/publish-dry-run.yml; then
+# qualified-matrix record stays explicit: all release matrix
+# entries are qualified with per-host evidence in the frozen matrix (no
+# platform claimed qualified without host evidence).
+if grep -q -F -e 'qualified-host-evidence' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "publish dry run lost its unqualified-matrix record (#311)"
+  bad "publish dry run lost its qualified-matrix record (#815)"
 fi
 
 # release-matrix record stays owned: the dry-run report carries the
-# seed-qualified plus follow-up matrix shape (frozen in
+# all-qualified matrix shape with per-host evidence (frozen in
 # deploy/release/matrix.bzl).
 if grep -q -F -e 'release_matrix' .github/workflows/publish-dry-run.yml; then
   ok

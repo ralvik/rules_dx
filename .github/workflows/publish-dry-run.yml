@@ -18,8 +18,8 @@
 # via //deploy/release:bcr_demo without submitting, and proves the install
 # verifier refuses checksum-only inputs on the Sigstore TUF trust root.
 # Emits a dry-run report to the step summary and logs. The full release
-# matrix is frozen in deploy/release/matrix.bzl (seed qualified, four
-# follow-ups unqualified per issue #311 as hosts qualify); SBOM,
+# matrix is frozen in deploy/release/matrix.bzl (seed plus four
+# follow-ups qualified with per-host evidence under issue #815); SBOM,
 # signing/attestation, and BCR run owner-gated dry-run-first per the
 # human-run release path (docs/deploy/release-runbook.md, issue #458); GHCR images
 # stay in the separate ghcr.yml workflow per owner decision. Nothing here
@@ -154,15 +154,15 @@ jobs:
                   {
                       "name": "dx-standalone.tar.gz",
                       "sha256": standalone_digest,
-                      "note": "seed-host standalone archive via //cli/cli:dx_standalone; wider matrix unqualified per issue #311",
+                      "note": "seed-host standalone archive via //cli/cli:dx_standalone; wider matrix qualified per-host under issue #815 (human-run only, not built here)",
                   },
               ],
               "release_matrix": [
                   {"name": "dx-linux-x86_64", "status": "qualified-seed-built-here"},
-                  {"name": "dx-linux-arm64", "status": "unqualified-per-issue-311"},
-                  {"name": "dx-macos-x86_64", "status": "unqualified-per-issue-311"},
-                  {"name": "dx-macos-arm64", "status": "unqualified-per-issue-311"},
-                  {"name": "dx-windows-x86_64", "status": "unqualified-per-issue-311"},
+                  {"name": "dx-linux-arm64", "status": "qualified-host-evidence"},
+                  {"name": "dx-macos-x86_64", "status": "qualified-host-evidence"},
+                  {"name": "dx-macos-arm64", "status": "qualified-host-evidence"},
+                  {"name": "dx-windows-x86_64", "status": "qualified-host-evidence"},
               ],
               "exercised": [
                   "seed binary build //cli/cli:dx with sha256 staged under RUNNER_TEMP",
@@ -236,7 +236,7 @@ jobs:
                   "SBOM/provenance publishing (generated owner-gated via //deploy/release:sbom_demo)",
                   "Signing/attestation publishing (Sigstore keyless + GitHub attestations on the trust root, signing-first; GHCR images sign separately via cosign <digest>)",
                   "GHCR prebuilt images (separate workflow .github/workflows/ghcr.yml per owner decision)",
-                  "Non-seed release matrix builds (platforms unqualified)",
+                  "Non-seed release matrix builds (qualified per-host under issue #815, human-run only, not built in dry-run)",
                   "BCR submission (owner-gated via //deploy/release:bcr_demo)",
                   "Any tag, registry submission, or release creation",
               ],

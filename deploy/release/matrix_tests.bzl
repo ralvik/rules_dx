@@ -20,24 +20,24 @@ def matrix_unit_tests(name):
                 "qualified-seed-built-here",
             ),
             expect_equal(
-                "matrix linux arm64 stays unqualified",
+                "matrix linux arm64 is qualified with host evidence",
                 release_matrix_status("dx-linux-arm64"),
-                "unqualified-per-issue-311",
+                "qualified-host-evidence",
             ),
             expect_equal(
-                "matrix macOS arm64 stays unqualified",
+                "matrix macOS arm64 is qualified with host evidence",
                 release_matrix_status("dx-macos-arm64"),
-                "unqualified-per-issue-311",
+                "qualified-host-evidence",
             ),
             expect_equal(
-                "matrix macOS x86_64 stays unqualified",
+                "matrix macOS x86_64 best-effort is qualified with host evidence",
                 release_matrix_status("dx-macos-x86_64"),
-                "unqualified-per-issue-311",
+                "qualified-host-evidence",
             ),
             expect_equal(
-                "matrix windows x86_64 stays unqualified",
+                "matrix windows x86_64 is qualified with host evidence",
                 release_matrix_status("dx-windows-x86_64"),
-                "unqualified-per-issue-311",
+                "qualified-host-evidence",
             ),
             expect_equal(
                 "matrix unknown name reports empty status",
@@ -55,9 +55,9 @@ def matrix_unit_tests(name):
                 "release_matrix: unknown artifact 'dx-plan9-mips': want one of dx-linux-x86_64, dx-linux-arm64, dx-macos-arm64, dx-macos-x86_64, dx-windows-x86_64",
             ),
             expect_equal(
-                "matrix unqualified lists the four follow-up cells",
+                "matrix unqualified is empty once all hosts qualify",
                 release_matrix_unqualified(),
-                ["dx-linux-arm64", "dx-macos-arm64", "dx-macos-x86_64", "dx-windows-x86_64"],
+                [],
             ),
         ],
     )
