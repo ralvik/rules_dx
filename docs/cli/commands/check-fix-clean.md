@@ -28,6 +28,13 @@ starts after failure, and `dx` returns that phase's exit code. `fix` does
 not rerun Bazel after applying edits; run `check` again to validate the
 resulting workspace.
 
+> First-hour surprise: `dx fix` does not promise a clean tree. Fixes apply
+> once in phase order with no post-apply rerun by design (see
+> [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md));
+> a later phase can still fail after an earlier fix. Run `dx check` again
+> to validate the resulting workspace. `dx fix --help` names this same
+> no-rerun contract.
+
 `--check`, `--output`, `--report`, `--fail-on`, `--quiet`, and `--dry-run`
 pass through to each phase. `build`, `test`, `coverage`, `audit`, `update`,
 `env`, `codegen`, `setup`, `docs`, `init`, `hooks`, and `bazel` are not
@@ -69,6 +76,12 @@ unselected and unused `.dx` generations and setup records as defined by
 It never deletes `.dx/setups/current`, its selected generations, tracked
 sources, BUILD files, Bazel outputs, shell profiles, or global PATH entries,
 and it refuses unmanaged or digest-spoofed paths.
+
+> First-hour surprise: `dx clean` alone never touches Bazel outputs. It
+> prunes only validated unselected `.dx` generations by design (see
+> [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md));
+> pass `dx clean --bazel` to additionally forward `bazel clean`.
+> `dx clean --help` names this same default.
 
 `dx clean --bazel` additionally forwards `bazel clean` and prints
 dangling-link recovery guidance (`dx setup`, `dx env`, or `dx codegen`).

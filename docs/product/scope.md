@@ -233,9 +233,9 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx env` | retain, mutating | Prepare repository defaults or exact per-language projections for one target from Bazel providers |
 | `dx setup` | retain, mutating | Atomically prepare and select matching codegen and environment projections without running Gazelle |
 | `dx coverage` | retain | Run Bazel coverage and expose its outputs |
-| `dx check` | retain, non-mutating | Sequential `format`, `lint`, `typecheck`, then `generate` freshness in `--check` mode; see [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
-| `dx fix` | retain, mutating by default | Same sequence in default mutating mode with per-file atomic apply; no post-apply rerun |
-| `dx clean` | retain, mutating managed state only | Prune validated unselected `.dx` generations; explicit `--bazel` also forwards `bazel clean` |
+| `dx check` | retain, non-mutating | Sequential `format`, `lint`, `typecheck`, then `generate` freshness in `--check` mode; see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
+| `dx fix` | retain, mutating by default | Same sequence in default mutating mode with per-file atomic apply; no post-apply rerun (run `check` again); see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
+| `dx clean` | retain, mutating managed state only | Prune validated unselected `.dx` generations only (never Bazel outputs unless `--bazel`); see [check/fix/clean](../cli/commands/check-fix-clean.md) and [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) |
 | `dx bazel` | retain | Exact-forwarding escape hatch through the selected repository launcher |
 | `dx docs` | removed; reintroduction with real extraction/validation open under #786 (successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site; `--check` is non-mutating |
 
