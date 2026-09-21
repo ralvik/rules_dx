@@ -116,10 +116,13 @@ snapshot_diff() {
 # Canonical-JSON snapshot assert: both files must parse as JSON; comparison
 # uses sorted keys and 2-space indent so key order and trailing-newline noise
 # do not fail the test. UPDATE_EXPECT refreshes with the canonical form.
+# Scratch discipline (issue #750): function-scoped tmp owns a RETURN trap
+# (not the EXIT-scoped dx_mkscratch in tools/sh/lib.sh, which would leak
+# across calls); mktemp honors TMPDIR with an explicit runner-temp fallback.
 snapshot_canonical_json_diff() {
   local expected="$1" actual="$2" workspace_rel="${3:-}"
   local tmp
-  tmp="$(mktemp -d)"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/snapshot.XXXXXX")"
   # LCOV_EXCL_START - reason: hermetic harness failure path; covered by negative manual runs, not line coverage.
   trap 'rm -rf "$tmp"' RETURN
   # LCOV_EXCL_STOP

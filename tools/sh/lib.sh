@@ -257,6 +257,10 @@ dx_cd_workspace() {
 
 # Portable scratch dirs with EXIT auto-cleanup: replaces the
 # per-file `scratch="$(mktemp -d)"; trap 'rm -rf "$scratch"' EXIT` copies.
+# Single scratch policy (issues #323, #750): bare mktemp honors TMPDIR
+# (Bazel TEST_TMPDIR plus runner RUNNER_TEMP flow through it); pass an
+# explicit "${TEST_TMPDIR:-/tmp}/..." or "${TMPDIR:-/tmp}/..." template
+# when the prefix must be pinned.
 # Usage (no command substitution so the EXIT trap lands in the caller):
 #   dx_mkscratch scratch
 #   dx_mkscratch scratch "${TEST_TMPDIR:-/tmp}/depcheck.XXXXXX"

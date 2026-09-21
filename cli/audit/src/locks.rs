@@ -55,6 +55,14 @@
 //! ride per-package `text_present` from the same inventory (absent means
 //! no words, fail closed); `missing-notice-text` evaluation lives in
 //! [`crate::license_notice`] and is wired into live audit.
+//!
+//! Dependency evaluation (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
+//! standard crates own each machine format (`cargo-lock` for Cargo.lock,
+//! `serde_json` for `package-lock.json`/`maven_install.json`, `yaml_serde`
+//! for `pnpm-lock.yaml`, `toml` for Cargo manifests, `semver` for Cargo/Go
+//! ordering, `regex` for declarative pnpm/paket splits); yarn v1,
+//! paket, and `go.mod` text shapes have no stable crate and stay line
+//! parsers with fail-closed git/first-party gates.
 
 use std::sync::OnceLock;
 

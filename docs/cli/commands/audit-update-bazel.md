@@ -183,7 +183,14 @@ Maven scopes accept bare versions
 (NuGet equality, so `1.0` matches `1.0.0` but not `1.5.0`; `[1.0,)` spells the `>=` minimum)
 and bracketed intervals (`[1.0,2.0)`, `(,1.0]`, `[1.5,)`, `[1.0]`), with inclusive `[`/`]`
 versus exclusive `(`/`)` bounds; floating `*`, unions, and `(1.0)` single-exclusive stay
-invalid and malformed scopes fail closed to no-match. Vulnerability exceptions use
+invalid and malformed scopes fail closed to no-match. Crate reuse beyond
+`cargo-lock`, `osv`, `semver`, `serde_json`, `yaml_serde`, `toml`, `url`,
+`hex`, and `procfs` stays as evaluated under issue #750: Maven/NuGet
+ordering plus intervals, npm partial/hyphen/`||` narrowing, Go
+`v`-prefix plus pseudo-version ordering, and yarn/pnpm/`package-lock`/
+paket/`go.mod` text shapes keep their hand-rolled parsers with per-site
+reason comments in `dx_audit` (no stable upstream crate for those exact
+fail-closed semantics). Vulnerability exceptions use
 the same per-set narrowing. License exceptions narrow the same way
 (issue #631, pinned in `dx_audit::license_policy`): package plus owning
 set plus license identity with the finding version inside the exception

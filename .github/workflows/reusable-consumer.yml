@@ -298,9 +298,9 @@ jobs:
           # threshold stays one flag plus one value. Input travels via env and
           # is numeric-validated above, never interpolated into the script.
           # shellcheck disable=SC2086
-          bazel run @rules_dx//cli/cli:dx -- coverage $extra //... 2>&1 | tee /tmp/dx_coverage.log
+          bazel run @rules_dx//cli/cli:dx -- coverage $extra //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage.log
           rc=${PIPESTATUS[0]}
-          echo "$rc" > /tmp/dx_coverage.rc
+          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage.rc
           exit $rc
       - name: Render first-party coverage summary (per-cell, no union)
         # First-party PR reporting (issue #254): same comment contract as
@@ -312,8 +312,8 @@ jobs:
         run: |
           set -euo pipefail
           cell="coverage ${{ matrix.platform }}"
-          dx_rc="$(cat /tmp/dx_coverage.rc 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' /tmp/dx_coverage.log 2>/dev/null | head -n 1 || true)"
+          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage.rc 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' ${RUNNER_TEMP:-/tmp}/dx_coverage.log 2>/dev/null | head -n 1 || true)"
           if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
           {
             echo "<!-- dx-coverage-summary: $cell -->"
@@ -329,8 +329,8 @@ jobs:
             echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
             echo ""
             echo "Findings outside the diff stay in counts only; no invented review locations."
-          } > /tmp/coverage_comment.md
-          cat /tmp/coverage_comment.md >> "$GITHUB_STEP_SUMMARY"
+          } > ${RUNNER_TEMP:-/tmp}/coverage_comment.md
+          cat ${RUNNER_TEMP:-/tmp}/coverage_comment.md >> "$GITHUB_STEP_SUMMARY"
       - name: Publish PR summary comment (dedup marker, fork-safe)
         # One updated comment per PR per cell marker; human comments never
         # touched; stale runs never overwrite current (concurrency cancels
@@ -352,10 +352,10 @@ jobs:
           pr="${{ github.event.pull_request.number }}"
           existing="$(gh api "repos/$base_repo/issues/$pr/comments?per_page=100" --jq "[.[] | select(.body | contains(\"$marker\")) | .id] | last // empty" || true)"
           if [[ -n "$existing" ]]; then
-            jq -Rs '{body: .}' /tmp/coverage_comment.md > /tmp/coverage_payload.json
-            gh api -X PATCH "repos/$base_repo/issues/comments/$existing" --input /tmp/coverage_payload.json --jq .id
+            jq -Rs '{body: .}' ${RUNNER_TEMP:-/tmp}/coverage_comment.md > ${RUNNER_TEMP:-/tmp}/coverage_payload.json
+            gh api -X PATCH "repos/$base_repo/issues/comments/$existing" --input ${RUNNER_TEMP:-/tmp}/coverage_payload.json --jq .id
           else
-            gh pr comment "$pr" --body-file /tmp/coverage_comment.md
+            gh pr comment "$pr" --body-file ${RUNNER_TEMP:-/tmp}/coverage_comment.md
           fi
 
   dx-ci:

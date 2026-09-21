@@ -49,6 +49,8 @@ pub(super) fn rustfmt_tool() -> RealTool {
 /// same-name tests sharing a directory, and the guard removes the
 /// file on scope exit (including panics). Callers keep their
 /// explicit removal as success-path failure surfacing.
+/// Scratch discipline (See: `docs/testing/README.md`, issue #750): a file
+/// fixture stays on `tempfile::NamedTempFile`; `dx_test_scratch` owns dirs only.
 pub(super) fn upstream_file(name: &str, body: &str) -> tempfile::NamedTempFile {
     let mut file = tempfile::Builder::new()
         .prefix(format!("dx-delegated-{name}-").as_str())

@@ -1,4 +1,10 @@
 //! NuGet version comparison (split from `vuln.rs`). No behavior change.
+//!
+//! Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
+//! no stable Rust crate matches `NuGetVersion` four-part ordering plus
+//! case-insensitive prerelease plus fail-closed bracket intervals for the
+//! audited subset, so the hand-rolled comparator stays; `semver` covers
+//! Cargo/Go only.
 
 /// Numeric comparison without overflow: stripped (no leading zeros
 /// unless `"0"`), longer digit runs are greater, ties break

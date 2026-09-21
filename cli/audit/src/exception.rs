@@ -160,6 +160,11 @@ pub fn version_in_scope(scope: &str, version: &str) -> bool {
 /// crate's narrow upstream rule (a prerelease matches only beside a
 /// same-tuple prerelease comparator). Unparseable scopes or versions,
 /// empty inputs, and overlong inputs fail closed to `false`.
+///
+/// Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
+/// the `node-semver` crate would add a second semver engine for the same
+/// fail-closed partial/hyphen/`||` bounds plus length caps already owned
+/// here, so the `semver`-normalized hand parser stays (no new dep per ADR 0008).
 pub fn npm_in_scope(scope: &str, version: &str) -> bool {
     let scope_trimmed = scope.trim();
     let version_trimmed = version.trim();

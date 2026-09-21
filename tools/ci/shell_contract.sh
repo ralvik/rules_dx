@@ -11,7 +11,8 @@
 # `sh`; floor is bash 3.2+ with Linux execution). Windows x86_64
 # MSVC-compatible is qualified for native `dx`/CI execution under issue
 # via `windows-latest` runners with shell `bash` plus portable forms
-# only (no `.ps1`/`.bat`, no `rules_powershell`); product runtime is Rust
+# only (no `.ps1`/`.bat`, no `rules_powershell`, PowerShell port wont-fix
+# under issue #750); product runtime is Rust
 # and shell-free except generated deploy launchers plus the doctor shim.
 # Guard maintenance owns shared helpers plus snapshot versus grep policy
 # (snapshot for golden bytes, `dx_expect_*`/`dx_guard_*` table rows for
@@ -166,7 +167,8 @@ fi
 
 # Dedup: scratch dirs live once in tools/sh/lib.sh (dx_mkscratch
 # with EXIT cleanup); drivers use it, no per-file mktemp+trap copies
-# (tools/sh/snapshot.sh owns its RETURN-scoped tmp, deploy stays standalone).
+# (tools/sh/snapshot.sh owns its RETURN-scoped tmp, deploy stays standalone;
+# both TMPDIR-aware under issue #750).
 if [[ "$(grep -rln -F -e 'scratch="$(mktemp -d)"' --include='*.sh' --exclude-dir='bazel-*' --exclude-dir='.git' . | grep -v -F -e 'deploy/install/dx_verify_test.sh' | grep -v -F -e 'tools/sh/snapshot.sh' | grep -v -F -e 'tools/sh/lib.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | grep -v -F -e 'tools/ci/coverage_spill.sh' | wc -l)" == "0" ]] &&
   grep -q -F -e 'dx_mkscratch' tools/ci/coverage_cell.sh &&
   grep -q -F -e 'dx_mkscratch' tools/ci/non_dogfed_paths.sh; then
@@ -427,5 +429,10 @@ dx_guards_contains tools/ci/quality_adapters_parity.sh "quality_adapters_parity 
 # verification-matrix shell row stays pinned here.
 dx_expect_contains docs/testing/tools.md 'issue #667' 'stays wont-fix' 'Wholesale Rust-ify' 'POSIX-only' 'harness-wide' 'shell=bash' '//tools/ci:shell_contract'
 dx_expect_contains docs/testing/verification-matrix.md 'issue #667' 'elimination wont-fix'
+
+# Crate-reuse plus scratch/tmp discipline stays delivered under issue #750:
+# PowerShell port wont-fix, workflows under RUNNER_TEMP, shell scratch via
+# dx_mkscratch (snapshot RETURN plus deploy standalone TMPDIR-aware).
+dx_expect_contains docs/testing/tools.md 'issue #750' 'PowerShell port stays wont-fix' 'RUNNER_TEMP' 'dx_mkscratch'
 
 dx_test_summary "shell contract harness"

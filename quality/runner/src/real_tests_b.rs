@@ -680,6 +680,8 @@ pub(super) fn clippy_delegated_fix_is_check_only() {
 pub(super) fn clippy_delegated_missing_file_fails_the_action() {
     // Guaranteed-absent without pid tricks: a fresh OS-random
     // scratch dir always exists, so `absent` inside it never does.
+    // Scratch discipline (See: `docs/testing/README.md`, issue #750):
+    // same prefix plus auto-clean discipline as `dx_test_scratch`.
     let scratch = tempfile::Builder::new()
         .prefix("dx-delegated-clippy-")
         .tempdir_in(std::env::temp_dir())
@@ -753,6 +755,8 @@ pub(super) fn rustc_delegated_fix_is_check_only() {
 pub(super) fn rustc_delegated_missing_file_fails_the_action() {
     // Guaranteed-absent without pid tricks: a fresh OS-random
     // scratch dir always exists, so `absent` inside it never does.
+    // Scratch discipline (See: `docs/testing/README.md`, issue #750):
+    // same prefix plus auto-clean discipline as `dx_test_scratch`.
     let scratch = tempfile::Builder::new()
         .prefix("dx-delegated-rustc-")
         .tempdir_in(std::env::temp_dir())

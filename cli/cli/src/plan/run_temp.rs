@@ -55,6 +55,10 @@ pub fn run_nonce() -> u64 {
 /// `create_dir` loops used to cover. The returned [`tempfile::TempDir`]
 /// auto-cleans on drop; callers that need a removal warning should call
 /// [`tempfile::TempDir::close`] explicitly.
+///
+/// Scratch discipline (See: `docs/testing/README.md`, issue #750): the
+/// explicit `base` parent (Bazel `TEST_TMPDIR`/runner `TMPDIR`) keeps this
+/// separate from `dx_test_scratch`, which is test-only.
 pub fn create_run_temp_dir(base: &Path) -> std::io::Result<(tempfile::TempDir, u64)> {
     let dir = tempfile::Builder::new()
         .prefix("dx-run-")

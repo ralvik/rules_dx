@@ -25,7 +25,10 @@ py_realpath() {
 
 verifier="$(py_realpath "$1")"
 
-scratch="$(mktemp -d)"
+# Scratch discipline (issue #750): standalone deploy hermetic scope keeps
+# its own mktemp plus EXIT trap (no tools/sh/lib.sh bootstrap per the
+# host-tool contract above); TMPDIR-aware with a /tmp fallback.
+scratch="$(mktemp -d "${TMPDIR:-/tmp}/dx-verify.XXXXXX")"
 trap 'rm -rf "$scratch"' EXIT
 
 pass=0
