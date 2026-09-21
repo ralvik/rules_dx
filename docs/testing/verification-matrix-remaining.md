@@ -767,13 +767,16 @@ Remaining reds stay owned gaps, not green claims:
    plus replacement graph plus ambient fallback plus generic parity plus cgo completion claim
    rejected; env only, no PATH-tool collision rule change; platform plus consumer plus release
    evidence stays owned gap under #808; no Supported claim).
-- Starlark testing futures with fixture evidence qualified seed-only under closed #588
+- Starlark testing futures with fixture evidence qualified seed-only under closed #588 plus #790
   (`bazel run //tools/ci:starlark_futures_qualification` with
   `libs/starlark/tests/fixtures/starlark_futures/pins.bzl` plus
-  `starlark_futures.expected`; `starlark_futures_qualification` 16/16;
+  `starlark_futures.expected` plus `matchers.bzl`; `starlark_futures_qualification` 21/21;
   per-check filtering plus per-function targets plus Rust orchestration with BEP
   wont-fix on target granularity plus explicit macro instantiation plus single
-   invocation with no nested Bazel, richer matchers (#790) plus aspect (#791) plus toolchain
+   invocation with no nested Bazel, richer matchers supported under #790
+   (expect_equal plus expect_true/false plus expect_contains plus expect_match
+   with greet plus pair-error plus admitted-list plus subject-fields plus
+   fingerprint use case via `//libs/starlark/tests:matcher_unit`), aspect (#791) plus toolchain
    (#792) plus configuration including transitions (#793) plus output-group (#794) plus action
    including registered-action (#795) subjects deferred pending a concrete use case
    plus fixtures plus successor issue, second Starlark interpreter plus per-check

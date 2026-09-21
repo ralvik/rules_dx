@@ -1,6 +1,6 @@
-Starlark testing futures qualified seed-only under issue #588
+Starlark testing futures qualified seed-only under issue #588 plus issue #790
 per-check filtering wont-fix (target granularity is contract)
-richer matchers deferred (expect_equal only, needs concrete use case)
+richer matchers supported (expect_equal plus expect_true/false plus expect_contains plus expect_match, qualified under #790)
 aspect subjects deferred (needs concrete use case plus successor issue)
 toolchain subjects deferred (needs concrete use case plus successor issue)
 configuration subjects deferred (including transitions, needs concrete use case)

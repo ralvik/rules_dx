@@ -8,6 +8,7 @@ package(
 )
 
 exports_files([
+    "matchers.bzl",
     "pins.bzl",
     "starlark_futures.expected",
 ])
@@ -17,6 +18,7 @@ real_source_target(
     testonly = True,
     starlark_srcs = [
         "BUILD.bazel",
+        "matchers.bzl",
         "pins.bzl",
     ],
     tags = ["corpus"],
