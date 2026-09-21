@@ -107,9 +107,12 @@ profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
 x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
  native (issue #414). `Delivered` here is verification-layer evidence only, not
 support-matrix promotion: it never promotes a support-matrix `Planned` cell to
-`Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under #787, #788 and #796-#802
- (successors to closed #506-#512) with no implementation
-claimed here. `Planning only` means planning is implemented with live
+`Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under its owning tracker with no
+implementation claimed here. Owning trackers for table `Open` cells: Docs under #779-#785 (successors to closed #581,
+live successor to closed #421); Env/codegen under #787 plus onboarding #788 (successors to closed #506); Layer-2
+adapter-less plus regions plus framework-composition Depcheck under #796-#800 (successors to closed #416-#420, delivery
+qualified seed-only under closed #510) with taxonomy promotion under #802 (successor to closed #512) and Python future
+selection under #801 (successor to closed #613). `Planning only` means planning is implemented with live
 execution deferred. No report-only status remains per ADR 0022 (no standing benchmarking).
 
 | Language | Corpus dogfood | Layer-2 matrix | Generation | Examples | E2E | Depcheck | Audit/update | Docs | Env/codegen |
