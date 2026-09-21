@@ -116,16 +116,17 @@ else
   bad "support-matrix lost the macOS x86_64 best-effort Platform-qualified record (issue #413, release evidence open, no host fallback, non-blocking)"
 fi
 
-# Windows x86_64 MSVC-compatible native is Platform-qualified,
-# never Supported without release evidence and never back to unqualified
-# refusal. Installed Build Tools fallback stays never approved; explicit
-# EULA acceptance stays never automatic.
+# Windows x86_64 MSVC-compatible native is Platform-qualified, never
+# Supported without a release cut and never back to unqualified refusal.
+# Installed Build Tools fallback stays never approved; explicit EULA
+# acceptance stays never automatic.
+# Per-host release evidence landed under #807 (windows sbom-provenance).
 if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#414' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: windows_x86_64 sbom-provenance delivered (#807' &&
   grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'never automatic'; then
   ok
 else
-  bad "support-matrix lost the Windows x86_64 Platform-qualified record (issue #414, release evidence open, explicit EULA never automatic)"
+  bad "support-matrix lost the Windows x86_64 Platform-qualified record (issue #414 plus #807 release evidence delivered, explicit EULA never automatic)"
 fi
 
 # No Supported status cell in support-matrix tables (promotion gate core).
