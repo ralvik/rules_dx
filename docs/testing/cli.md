@@ -52,10 +52,10 @@ fully verified by CI.
 Verify staged-path selection uses the hermetically acquired Git executable over worktree
 content, never an ambient Git fallback. Exercise a missing or hostile `git` on PATH, managed
 Git acquisition failure, and the qualified offline hook setup. Installation must refuse
-unmanaged hooks even when force is requested; uninstall removes only owned shims.
+unmanaged hooks (there is no `--force` flag to override this); uninstall removes only owned shims.
 Verify `init` can bootstrap without `MODULE.bazel`, writes absent files only, and preserves
-all existing content without inspecting Git status. Do not assert an exact force API
-for destination selection or managed-file force behavior.
+all existing content without inspecting Git status. There is no overwrite flag
+for destination selection or managed files.
 
 ## GitHub Reporting
 

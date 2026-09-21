@@ -30,10 +30,9 @@ pub fn hook_git_is_hermetic(uses_hermetic_git: bool, uses_ambient_git: bool) -> 
 
 /// Whether installing a managed hook shim may overwrite the existing file.
 ///
-/// Unmanaged hooks cannot be overwritten even with force; only a managed
-/// shim may be refreshed. The force flag never authorizes overwriting an
-/// unmanaged hook.
-pub fn hook_shim_overwrite_allowed(existing_managed: bool, _force: bool) -> bool {
+/// Only a managed shim may be refreshed; unmanaged hooks are never
+/// overwritten (there is no `--force` flag to override this).
+pub fn hook_shim_overwrite_allowed(existing_managed: bool) -> bool {
     existing_managed
 }
 
@@ -79,7 +78,7 @@ pub fn render_hook_shim(trigger: &str) -> String {
 
 /// Install `pre-commit` + `pre-push` shims under `root/.git/hooks`.
 ///
-/// Refuses unmanaged existing hooks even with force. Bootstraps the
+/// Refuses unmanaged existing hooks (no overwrite flag). Bootstraps the
 /// gitignored `dx.local.toml` overlay absent-only. Returns installed paths.
 pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     let hooks_dir = root.join(".git/hooks");
@@ -197,11 +196,9 @@ mod tests {
     }
 
     #[test]
-    fn unmanaged_hooks_survive_force() {
-        assert!(hook_shim_overwrite_allowed(true, false));
-        assert!(hook_shim_overwrite_allowed(true, true));
-        assert!(!hook_shim_overwrite_allowed(false, false));
-        assert!(!hook_shim_overwrite_allowed(false, true));
+    fn unmanaged_hooks_are_never_overwritten() {
+        assert!(hook_shim_overwrite_allowed(true));
+        assert!(!hook_shim_overwrite_allowed(false));
     }
 
     #[test]
