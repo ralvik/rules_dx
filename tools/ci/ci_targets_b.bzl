@@ -64,6 +64,19 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Product Python/shell to Rust boundary guards; see tools/ci/product_runtime_guards.sh.
+    sh_binary(
+        name = "product_runtime_guards",
+        srcs = ["product_runtime_guards.sh"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:guards",
+            "//tools/sh:lib",
+        ],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Wrapper sources harness; see tools/ci/wrapper_sources.sh.
     sh_binary(
         name = "wrapper_sources",
