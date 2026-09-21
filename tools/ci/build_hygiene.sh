@@ -74,7 +74,7 @@ dx_guard_contains quality/artifacts/update.py 'Regenerate with: bazel run //qual
 dx_guard_absent quality/artifacts/update.py 'Release: %s' "quality/artifacts generator lost minimal shape (want no Release line, issue #427)"
 
 # Vendored preset header stays minimal: GENERATED plus one
-# regenerate command (version and consumer provenance lives in preset.py
+# regenerate command (version and consumer provenance lives in src/lib.rs
 # pins plus preset_tests.bzl file_checks).
 dx_guards_contains tools/bazelrc/preset.bazelrc "preset.bazelrc lost minimal GENERATED header (want GENERATED plus regenerate only, issue #427)" \
   'GENERATED, do not edit' \
@@ -84,7 +84,7 @@ dx_guards_absent tools/bazelrc/preset.bazelrc "preset.bazelrc lost minimal GENER
   'Version-matched to Bazel' \
   'Consumer refresh:' \
   'Upstream-derived flags'
-dx_guard_contains tools/bazelrc/preset.py 'PRESET_BAZEL_VERSION' "preset.py lost its version pin (want PRESET_BAZEL_VERSION, issue #427)"
+dx_guard_contains tools/bazelrc/src/lib.rs 'PRESET_BAZEL_VERSION' "preset src lost its version pin (want PRESET_BAZEL_VERSION, issue #427)"
 
 # Gazelle boundary stays hand-free: no hand prose mixed into
 # regen stanzas; bare # keep only where the generator requires it.

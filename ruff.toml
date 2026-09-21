@@ -6,7 +6,7 @@
 # E4/E7/E9/F plus W (pycodestyle warnings), I (isort), and B
 # (flake8-bugbear). E501 stays covered by `ruff format` (no E501 pin);
 # UP (pyupgrade percent-format) stays future work: 21 `%`-format sites
-# remain (see `quality/artifacts/update.py`, `tools/bazelrc/preset.py`).
+# remain (see `quality/artifacts/update.py`, `tools/bazelrc/src/lib.rs`).
 # Pinned upstream defaults stay authoritative for omitted settings; this
 # file owns only the lint selection (same selection as the
 # `quality/testdata` fixture).

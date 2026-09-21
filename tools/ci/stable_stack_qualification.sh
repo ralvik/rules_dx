@@ -52,7 +52,7 @@ fixture_build="rust/tests/fixtures/stable_stack/BUILD.bazel"
 module="MODULE.bazel"
 lock="MODULE.bazel.lock"
 bazelversion=".bazelversion"
-preset="tools/bazelrc/preset.py"
+preset="tools/bazelrc/src/lib.rs"
 stack="libs/testing/tested_stack.bzl"
 native="docs/native-toolchains.md"
 build="tools/ci/BUILD.bazel"
@@ -133,12 +133,13 @@ fi
 
 # Canonical Bazel agreement: .bazelversion plus preset plus tested_stack all track 9.2.0.
 if [[ "$(tr -d '[:space:]' <"$bazelversion")" == "9.2.0" ]] &&
-  grep -q -F -e 'PRESET_BAZEL_VERSION = "9.2.0"' "$preset" &&
+  grep -q -F -e 'PRESET_BAZEL_VERSION' "$preset" &&
+  grep -q -F -e '"9.2.0"' "$preset" &&
   grep -q -F -e 'default = "9.2.0"' "$stack" &&
   grep -q -F -e 'Must match .bazelversion' "$stack"; then
   ok
 else
-  bad "canonical Bazel pin drifted (want .bazelversion plus preset.py plus tested_stack.bzl at 9.2.0)"
+  bad "canonical Bazel pin drifted (want .bazelversion plus preset src plus tested_stack.bzl at 9.2.0)"
 fi
 
 # Committed BCR lock carries integrity for the frozen as-built modules.

@@ -85,12 +85,12 @@ sh_test(
     args = [
         "$(rootpath //tools/bazelrc:preset.bazelrc)",
         "$(rootpath //cli/cli:dx)",
-        "$(rootpath //tools/bazelrc:preset.py)",
+        "$(rootpath //tools/bazelrc:src/lib.rs)",
     ],
     data = [
         "//cli/cli:dx",
         "//tools/bazelrc:preset.bazelrc",
-        "//tools/bazelrc:preset.py",
+        "//tools/bazelrc:src/lib.rs",
         "//tools/sh:bootstrap",
         "//tools/sh:guards",
         "//tools/sh:lib",

@@ -106,7 +106,7 @@ def add_a():
         args = [
             "$(rootpath //:.bazelversion)",
             "$(rootpath //:MODULE.bazel)",
-            "$(rootpath //tools/bazelrc:preset.py)",
+            "$(rootpath //tools/bazelrc:src/lib.rs)",
             "$(rootpath //.devcontainer:Dockerfile.prebuilt)",
             "$(rootpath //libs/testing:tested_stack.bzl)",
             "$(rootpath //.github/actions/setup-bazelisk:action.yml)",
@@ -119,7 +119,7 @@ def add_a():
             "//.github/actions/setup-bazelisk:action.yml",
             "//docs:contributing/local-workflows.md",
             "//libs/testing:tested_stack.bzl",
-            "//tools/bazelrc:preset.py",
+            "//tools/bazelrc:src/lib.rs",
             "//tools/sh:bootstrap",
             "//tools/sh:lib",
         ],

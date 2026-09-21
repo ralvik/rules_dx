@@ -3,26 +3,21 @@
 //! Single source for the vendored execution preset consumed via
 //! `dx update` (regenerate) and `dx update --check` (stale gate).
 //! The rendered bytes must stay byte-identical to
-//! `tools/bazelrc/preset.py::_render_fragment` (the repository's own
+//! `tools/bazelrc/src/lib.rs::render_fragment` (the repository's own
 //! `tools/bazelrc/preset.bazelrc` is the snapshot proving parity via
 //! `//:preset_parity_test`); a drift in either inventory fails the
 //! parity test, not silently.
 //!
-//! The fragment is version-matched to the Bazel pin
-//! (`PRESET_BAZEL_VERSION` equals `.bazelversion`) and stamped with the
-//! per-release `dx`/`rules_dx` single version (`DX_VERSION` equals
-//! `MODULE.bazel`; no new pin file, reuse `dx version --check`, the
-//! startup skew gate, and `version_pin_matches_module`). Preset-affecting
-//! changes ship only in minor/major with a release note (see
-//! `dx_ci::preset_*`).
+//! Version and consumer provenance live in the pin constants plus
+//! `preset_tests.bzl` file checks, not in the fragment header (minimal
+//! `GENERATED` plus regenerate command only).
+//! See: `tools/bazelrc/preset_tests.bzl`.
 
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use super::version::DX_VERSION;
-
 /// Bazel pin tracked by the preset (`PRESET_BAZEL_VERSION` in
-/// `tools/bazelrc/preset.py`; must equal `.bazelversion`).
+/// `tools/bazelrc/src/lib.rs`; must equal `.bazelversion`).
 pub const PRESET_BAZEL_VERSION: &str = "9.2.0";
 
 /// Reviewed upstream-derived execution flags (mirrors `UPSTREAM_FLAGS`).
@@ -48,18 +43,11 @@ const BUILD_PROFILES: [&str; 3] = [
     "build:dx_release --compilation_mode=opt",
 ];
 
-/// Renders the preset fragment byte-identical to `preset.py`.
+/// Renders the preset fragment byte-identical to `tools/bazelrc/src/lib.rs`.
 pub fn render_preset_fragment() -> String {
     let mut lines = vec![
         "# Vendored Bazel execution preset -- GENERATED, do not edit.".to_owned(),
-        format!(
-            "# Version-matched to Bazel {} (`.bazelversion`) and dx {} (`MODULE.bazel`); reviewed inventory in `tools/bazelrc/preset.py`.",
-            PRESET_BAZEL_VERSION, DX_VERSION
-        ),
         "# Regenerate: `bazel run //tools/bazelrc:preset.update`.".to_owned(),
-        "# Consumer refresh: `dx update` regenerates the fragment, `dx update --check` fails when stale."
-            .to_owned(),
-        "# Upstream-derived flags (reviewed):".to_owned(),
     ];
     lines.extend(UPSTREAM_FLAGS.iter().map(|s| (*s).to_owned()));
     lines.push("# Owned extra_presets group: coverage.".to_owned());
@@ -176,7 +164,7 @@ pub fn check_preset(workspace: &Path) -> Result<(), PresetError> {
     let (root_path, fragment_path) = preset_paths(workspace);
     let rendered = render_preset_fragment();
     let rendered_lines = rendered_flag_lines(&rendered);
-    // Collision gate first (mirrors `preset.py` ordering).
+    // Collision gate first (mirrors `tools/bazelrc/src/lib.rs` ordering).
     if let Ok(root_content) = std::fs::read_to_string(&root_path) {
         let mut collisions = Vec::new();
         for raw in root_content.lines() {
@@ -267,14 +255,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn fragment_matches_python_inventory() {
+    fn fragment_matches_preset_inventory() {
         let rendered = render_preset_fragment();
-        // Header pins both versions.
         assert!(rendered.contains("GENERATED, do not edit"));
-        assert!(rendered.contains(&format!("Version-matched to Bazel {PRESET_BAZEL_VERSION}")));
-        assert!(rendered.contains(&format!("and dx {DX_VERSION}")));
-        assert!(rendered.contains("Consumer refresh: `dx update`"));
-        // Exact inventory counts (mirrors preset.py len pins).
+        assert!(rendered.contains("# Regenerate: `bazel run //tools/bazelrc:preset.update`."));
+        assert!(!rendered.contains("Version-matched to Bazel"));
+        assert!(!rendered.contains("Consumer refresh:"));
+        assert!(!rendered.contains("Upstream-derived flags"));
+        // Exact inventory counts (mirrors `tools/bazelrc/src/lib.rs` len pins).
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
         assert_eq!(COVERAGE_FLAGS.len(), 5);
         assert_eq!(BUILD_PROFILES.len(), 3);
@@ -294,10 +282,8 @@ mod tests {
     #[test]
     fn dx_stamp_tracks_single_version() {
         // No new pin file: the stamp must equal the delivered version.
-        assert_eq!(DX_VERSION, "0.0.0");
+        assert_eq!(crate::version::DX_VERSION, "0.0.0");
         assert_eq!(PRESET_BAZEL_VERSION, "9.2.0");
-        let rendered = render_preset_fragment();
-        assert!(rendered.contains("dx 0.0.0"));
     }
 
     #[test]

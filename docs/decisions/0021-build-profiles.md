@@ -24,7 +24,7 @@ Tracked as open work under issues #457-#458.
 ## Decision
 
 Three additive Bazel configs live in the vendored preset
-(`tools/bazelrc/preset.bazelrc`, reviewed via `tools/bazelrc/preset.py`):
+(`tools/bazelrc/preset.bazelrc`, reviewed via `tools/bazelrc/src/lib.rs`):
 
 - `dx_debug` maps to `dbg`.
 - `dx_dev` maps to `fastbuild`.
