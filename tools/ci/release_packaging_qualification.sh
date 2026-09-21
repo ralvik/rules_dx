@@ -24,8 +24,8 @@
 # - runbook update: `docs/deploy/release-runbook.md#packaging` documents
 #   the artifact-into-releases packaging with the curator plus SBOM plus
 #   NOTICE plus signing linkage.
-# Seed only: no Supported claim; wider matrix plus tag cut stays owned gap
-# under process #808.
+# Seed only: no Supported claim; tag cut stays owned gap
+# under process #808 (wider release matrix qualified per-host under issue #815).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:release_packaging_qualification`,
 # following //tools/ci:release_windows_qualification.

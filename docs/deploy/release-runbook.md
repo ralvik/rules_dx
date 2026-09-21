@@ -23,14 +23,17 @@ publishes nothing either way; GHCR images ship from the separate
 ## Matrix
 
 The full matrix is frozen in `deploy/release/matrix.bzl` (seed Linux
-x86_64 qualified-built-here; Linux arm64, macOS arm64, macOS x86_64,
-Windows x86_64 unqualified until their hosts qualify per
-[ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms)).
+x86_64 qualified-built-here; Linux arm64, macOS arm64, macOS x86_64
+best-effort, Windows x86_64 qualified with per-host evidence under issue
+#815 per
+[ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms):
+Platform-qualified plus per-host `sbom-provenance` release evidence, best-effort
+macOS x86_64 exempt non-blocking).
 Build each qualified cell with `bazel build //cli/cli:dx
 //cli/cli:dx_standalone //cli/cli:man_pages`, then `bazel build
 //deploy/release:release_artifacts` for the packaged releasable unit
 (curator plus binary plus man page plus NOTICE plus SBOM/provenance).
-Unqualified cells fail closed; never claim them. What
+No cell is `Supported` yet; what
 evidence promotes a cell to `Supported` (tag hygiene, versioning, platform
 plus consumer plus release evidence) is owned by the
 [promotion checklist](../product/promotion-checklist.md), qualified seed-only
