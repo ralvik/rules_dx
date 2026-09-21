@@ -114,11 +114,23 @@ fn observe_process(dir: &Path, dx_dir: &Path, live: &mut LiveHexes) {
 ///
 /// Only numeric process directories are inspected; anything else under
 /// `proc_root` is ignored, so a missing `/proc` (non-Linux hosts)
-/// scans empty rather than failing
-/// open to over-retention, never abort the sweep). Over-retention is the only failure
+/// scans empty rather than failing (fail open to over-retention, never
+/// abort the sweep). Over-retention is the only failure
 /// direction: a hex observed anywhere under the managed roots is
 /// preserved, whether or not it is still referenced. Deterministic:
 /// outputs sort ascending with duplicates removed.
+///
+/// Keep the manual `/proc` sweep over `procfs` (spike):
+/// `all_processes_with_root`/`new_with_root` keeps the fake-`proc_root`
+/// fixtures testable, but `cwd` still appends `" (deleted)"` and `fd()`
+/// still fails per process, so both hand-owned edges stay; PID-reuse
+/// safety costs a held fd per `Process` (exhaustion risk the sweep
+/// avoids by holding none); default features pull `chrono`/`flate2`
+/// plus `procfs-core`/`rustix` for PID/cwd/fd reads only; and the
+/// Linux-only crate needs cfg-gated deps plus `select()` to keep the
+/// portable build running everywhere — new dep, lockfile churn, and
+/// supply-chain review for zero prune-decision change (over-retention
+/// is already the safe direction; typed diagnostics stay unsurfaced).
 pub fn scan_live_hexes(proc_root: &Path, dx_dir: &Path) -> LiveHexes {
     let mut live = LiveHexes::default();
     let entries = match fs::read_dir(proc_root) {
