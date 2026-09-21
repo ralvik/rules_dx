@@ -385,9 +385,9 @@ choices are owned by the [native qualification plan](../native-toolchains.md). B
   module dependencies, and generation. The approved narrow Go exception preserves package-level
   tests and declared platform/build constraints under the
   [generation contract](../generation/common.md#ownership-and-naming); exact mappings remain open
-  (open work under #754, successor to closed #510).
+  (open work under #798, successor to closed #510).
   Source-only module identity, strict dependency resolution, and cgo/race scope remain unresolved;
-  remains open under #754 and #789.
+  remains open under #798 and #789.
 - The documented [Go editor driver](https://github.com/bazel-contrib/rules_go/blob/v0.63.0/docs/editors.md)
   invokes Bazel. That automatic integration is approved under
   [environment refresh](../environments/environment.md#ownership-and-refresh), following the
@@ -410,8 +410,10 @@ choices are owned by the [native qualification plan](../native-toolchains.md). B
   resolution plus C++ module and PCH disposition qualified seed-only under #503
   (`cc/tests/fixtures/strict_generation/pins.bzl` via
   `bazel run //tools/ci:strict_generation_qualification`, loose generation rejected);
-  managed clangd/toolchain projections and selected-target context
-  remain work to assess under the existing contracts.
+  C++ exact-target snapshot with managed clangd/toolchain projections and selected-target context
+  qualified seed-only under #754 (`cc/tests/fixtures/cpp_snapshot/pins.bzl` via
+  `bazel run //tools/ci:cpp_snapshot_qualification`, infer compile commands from `CcInfo` plus
+  unrestricted query-driver plus workspace-writing refresh rejected).
 
 The [approved Windows baseline](../decisions/0014-tested-platform-release-stack.md#decision)
 requires MSVC compatibility and complete hermetic acquisition. The

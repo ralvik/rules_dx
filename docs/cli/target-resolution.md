@@ -142,8 +142,9 @@ plain inspectable query string.
 
 ## Exact-Target Discovery
 
-Qualified seed-only under issue #475 (`bazel run //tools/ci:exact_target_qualification`;
-resolution only, no `Supported` claim). Resolver-owned exact labels are the
+Qualified seed-only under issue #475 for Rust (`bazel run //tools/ci:exact_target_qualification`)
+plus qualified seed-only under issue #754 for C++ (`bazel run //tools/ci:cpp_snapshot_qualification`;
+resolution plus snapshot only, no `Supported` claim). Resolver-owned exact labels are the
 discovery input to IDE tooling, preserving exact context end to end.
 
 Files resolve to all direct owners through the unconfigured query above, with
@@ -168,7 +169,11 @@ substitute. Identities plus rejected forms are pinned in
 `rust/tests/fixtures/discovery/pins.bzl`; resolver shape is pinned by the
 `FakeQuery` fixtures in `cli/cli/src/resolve/`; focused `rust_env_plan`
 fixtures stay provider-derived plans, not exact-target proof. C++ snapshot
-derivation stays open proof and is not claimed here.
+derivation is qualified seed-only under issue #754 (`bazel run //tools/ci:cpp_snapshot_qualification`;
+`cc/tests/fixtures/cpp_snapshot/pins.bzl`): action-derived `CppCompile` via `aquery`,
+never infer compile commands from CcInfo; generated-output materialization through
+exact mappings; multiple header contexts kept apart; managed host-native clangd, never
+unrestricted query-driver; Bazel-9 compatibility on Bazel 9.2.0 plus rules_cc 0.2.22.
 
 ## Acceptance Cases
 

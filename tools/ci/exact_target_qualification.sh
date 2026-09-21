@@ -25,8 +25,10 @@
 #   resolver FakeQuery fixtures pin the query shape; `rust/env` plans
 #   stay provider-derived focused-target plans, not exact-target proof.
 # - open owned gaps: platform plus consumer plus release evidence, no
-#   `Supported` claim. C++ action-derived snapshot stays open proof,
-#   not claimed here. Compatibility is resolution only.
+#   `Supported` claim. C++ action-derived snapshot is qualified seed-only
+#   under issue #754 (`cc/tests/fixtures/cpp_snapshot/pins.bzl` via
+#   `bazel run //tools/ci:cpp_snapshot_qualification`), not claimed here.
+#   Compatibility is resolution only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:exact_target_qualification`,
 # following //tools/ci:bindgen_qualification.

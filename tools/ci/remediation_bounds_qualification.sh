@@ -112,7 +112,7 @@ if grep -q -F -e 'Windows acquisition fixed-manifest plus package-index inputs' 
   grep -q -F -e 'Generation strictness with gazelle_cc resolve plus module index plus test grouping plus generated headers plus assembly plus modules plus PCH' "$pins" &&
   grep -q -F -e 'cc/tests/fixtures/strict_generation/pins.bzl via strict_generation_qualification under issue #503' "$pins" &&
   grep -q -F -e 'IDE snapshot adaptation with action-derived commands plus managed clangd plus generated-output materialization plus multi-context headers' "$pins" &&
-  grep -q -F -e 'exact-target discovery qualified seed-only under issue #475 with C++ snapshot staying open proof' "$pins"; then
+  grep -q -F -e 'C++ snapshot qualified seed-only under issue #754 via cpp_snapshot_qualification' "$pins"; then
   ok
 else
   bad "pins.bzl lost its acquisition plus coverage plus generation plus IDE defects with evidence under issue #505"

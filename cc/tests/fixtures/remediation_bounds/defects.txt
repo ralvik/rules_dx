@@ -24,7 +24,7 @@ language/cc/resolve.go quoted plus angle plus ambiguity plus warn-and-omit
 cc/tests/fixtures/strict_generation/pins.bzl via strict_generation_qualification under issue #503
 IDE snapshot adaptation with action-derived commands plus managed clangd plus generated-output materialization plus multi-context headers
 refresh.template.py Bazel plus preprocessors plus workspace writes plus continued-after-failures
-exact-target discovery qualified seed-only under issue #475 with C++ snapshot staying open proof
+exact-target discovery qualified seed-only under issue #475 plus C++ snapshot qualified seed-only under issue #754 via cpp_snapshot_qualification
 PIE plus ELF-dependency plus glibc-symbol uses existing upstream constraints
 PIE qualification uses existing upstream constraints
 glibc 2.28 symbol floor plus musl 1.2.6 static closure plus deployment 14.0 qualified seed-only under issue #500
