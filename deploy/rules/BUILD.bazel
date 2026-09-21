@@ -14,6 +14,8 @@ load(":crates.bzl", "crates_deploy")
 load(":crates_tests.bzl", "crates_analysis_tests", "crates_debug_analysis_tests", "crates_unit_tests")
 load(":npm.bzl", "npm_deploy")
 load(":npm_tests.bzl", "npm_analysis_tests", "npm_debug_analysis_tests", "npm_unit_tests")
+load(":nuget.bzl", "nuget_deploy")
+load(":nuget_tests.bzl", "nuget_analysis_tests", "nuget_debug_analysis_tests", "nuget_unit_tests")
 load(":pypi.bzl", "pypi_deploy")
 load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 
@@ -35,6 +37,8 @@ exports_files([
     "launcher.bzl",
     "npm.bzl",
     "npm_tests.bzl",
+    "nuget.bzl",
+    "nuget_tests.bzl",
     "pypi.bzl",
     "pypi_tests.bzl",
 ])
@@ -68,6 +72,14 @@ py_library(
 py_library(
     name = "pypi_deploy_lib",
     srcs = ["pypi_deploy.py"],
+    imports = ["."],
+)
+
+# Shared folder-feed logic for `nuget_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "nuget_deploy_lib",
+    srcs = ["nuget_deploy.py"],
     imports = ["."],
 )
 
@@ -226,6 +238,10 @@ test_suite(
         ":npm_debug_analysis",
         ":npm_deploy_test",
         ":npm_unit",
+        ":nuget_analysis",
+        ":nuget_debug_analysis",
+        ":nuget_deploy_test",
+        ":nuget_unit",
         ":pypi_analysis",
         ":pypi_debug_analysis",
         ":pypi_deploy_test",
@@ -399,6 +415,43 @@ npm_analysis_tests(name = "npm_analysis")
 
 npm_debug_analysis_tests(name = "npm_debug_analysis")
 
+# Sixth deploy macro: local-first NuGet folder feed over a deterministic
+# dummy nupkg. The debug variant pins profile passthrough. The `py_test`
+# below exercises the local feed build with no network.
+genrule(
+    name = "nuget_demo_nupkg",
+    outs = ["nuget_demo.0.0.0.nupkg"],
+    cmd = "printf 'nuget-demo-nupkg-bytes-v1' > $@",
+)
+
+nuget_deploy(
+    name = "nuget_demo",
+    nupkg = ":nuget_demo_nupkg",
+)
+
+nuget_deploy(
+    name = "nuget_demo_debug",
+    nupkg = ":nuget_demo_nupkg",
+    profile = "debug",
+)
+
+nuget_unit_tests(name = "nuget_unit")
+
+nuget_analysis_tests(name = "nuget_analysis")
+
+nuget_debug_analysis_tests(name = "nuget_debug_analysis")
+
+# Local folder-feed output per demo package
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "nuget_deploy_test",
+    srcs = ["nuget_deploy_test.py"],
+    imports = ["."],
+    main = "nuget_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":nuget_deploy_lib"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
@@ -414,6 +467,8 @@ real_source_target(
         "launcher.bzl",
         "npm.bzl",
         "npm_tests.bzl",
+        "nuget.bzl",
+        "nuget_tests.bzl",
         "pypi.bzl",
         "pypi_tests.bzl",
     ],

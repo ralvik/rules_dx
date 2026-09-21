@@ -261,6 +261,34 @@ explicit owner approval, never by default; `NPM_PUBLISH_DRY_RUN=1`
 prints the would-publish command and publishes nothing. Deploy targets
 live next to the package they release.
 
+## Path J: `nuget_deploy` (accepted)
+
+The sixth deploy macro (`deploy/rules/nuget.bzl`) publishes one nupkg to
+a local NuGet folder feed with a local-first Python publisher, no shell,
+no `sh_binary`:
+
+```starlark
+load("@rules_dx//deploy/rules:nuget.bzl", "nuget_deploy")
+
+nuget_deploy(
+    name = "nuget_demo",
+    nupkg = ":nuget_demo.0.0.0.nupkg",
+)
+```
+
+`bazel run //deploy/rules:nuget_demo` (or `dx deploy
+//deploy/rules:nuget_demo`) builds a local folder feed directory
+(`<id>-feed/` holding the pinned `.nupkg`, usable as a `dotnet` source)
+and verifies bytes via sha256, publishing nothing. Pass an output
+directory after `--` to choose where the feed lands (default:
+`$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The deploy program is a
+`py_binary` on the managed Python 3.12 toolchain only, with pinned `data`
+plus the Python runfiles library. Live `dotnet nuget push --source
+--api-key --skip-duplicate` runs only with `NUGET_PUBLISH_LIVE=1`,
+`NUGET_API_KEY`, and `NUGET_PUBLISH_APPROVED=1` after explicit owner
+approval, never by default. Deploy targets live next to the package they
+publish.
+
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an
