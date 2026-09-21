@@ -39,7 +39,7 @@ checker_build="quality/markdown/BUILD.bazel"
 # Build-check-serve doc exists with the accepted workflow.
 if [[ -f "$doc" ]] &&
   grep -q -F -e '# Documentation Build Check Serve' "$doc" &&
-  grep -q -F -e 'Accepted workflow (issue #620)' "$doc"; then
+  grep -q -F -e 'Accepted workflow (#620)' "$doc"; then
   ok
 else
   bad "build-check-serve doc missing its H1 or issue #620 accepted record"
@@ -87,7 +87,7 @@ else
 fi
 
 # Rendered mdBook site stays owned, never claimed here.
-if grep -q -F -e 'issue #581' "$doc" &&
+if grep -q -F -e '#581' "$doc" &&
   grep -q -F -e 'No rendered mdBook site is claimed here' "$doc"; then
   ok
 else
@@ -104,7 +104,7 @@ fi
 
 # Documentation README links the new contract.
 if grep -q -F -e '[Build check serve](build-check-serve.md)' "$readme" &&
-  grep -q -F -e 'issue #620' "$readme"; then
+  grep -q -F -e '#620' "$readme"; then
   ok
 else
   bad "documentation README lost its build-check-serve contract link (issue #620)"

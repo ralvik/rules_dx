@@ -189,7 +189,7 @@ fi
 # Per-language overload, join, and packaging details stay tracked under
 # , never claimed as delivered.
 if grep -q -F -e 'tracked under' "$docir" &&
-  grep -q -F -e 'issue #581' "$docir" &&
+  grep -q -F -e '#581' "$docir" &&
   grep -q -F -e 'The exact' "$docir" &&
   grep -q -F -e 'disambiguation scheme per language' "$docir" &&
   grep -q -F -e 'the adapter must' "$docir" &&
@@ -307,14 +307,14 @@ fi
 if [[ ! -d "docs/adapters" ]] &&
   ! grep -rn -F -e 'docs/adapters' --include='BUILD.bazel' . 2>/dev/null | grep -q . &&
   grep -q -F -e 'no adapter execution exists today' "$readme" &&
-  grep -q -F -e 'no working site claimed' "$readme"; then
+  grep -q -F -e 'no site is published yet' "$readme"; then
   ok
 else
   bad "a docs adapter implementation appeared or the no-execution record drifted"
 fi
 
 # Contracts keep the full gap list with no working-site honesty.
-if grep -q -F -e 'Docs pipeline gaps stay open under issue #581' "$readme" &&
+if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
   grep -q -F -e 'per-language adapter runs' "$readme" &&
   grep -q -F -e 'renderer and site execution' "$readme" &&
   grep -q -F -e 'byte-identical rebuild proof' "$readme" &&

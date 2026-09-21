@@ -11,3 +11,4 @@
 - No milestone system: do not create `Mxx` specs or an `Oxx` register. Planned work is listed in `roadmap.md`; docs describe as-built behavior only.
 - Prototypes stay as marked scratch outside product paths.
 - After edits, report changed files, design changes, and open items.
+- User-prose style: no `issue #` numbers or closed-issue genealogy in user-facing prose (`README.md`, `docs/README.md`, landing pages, `examples/README.md`); link the roadmap once instead. The [support matrix](product/support-matrix.md) is the single status source; other docs link to it instead of copying lifecycle claims.

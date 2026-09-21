@@ -187,7 +187,7 @@ tests remain required.
 The two-test requirement and explained usage exceptions are accepted, with required-core
 (Rust, Python, JavaScript, TypeScript) plus admitted (Go, Java, Kotlin, Scala, C#, F#, C/C++)
 lock/usage scopes, non-import recognition, native exception/reason-validation mappings, and focused
-failing/passing fixtures qualified in `tools/depcheck/` (issue #22; remaining opens under
+failing/passing fixtures qualified in `tools/depcheck/` (#22; remaining opens under
 #796-#800, successors to closed #510). Remaining admitted
 quality-adapter mappings stay open under #796-#800 (successors to closed #307 and closed #416-#420); foundation mappings qualified seed-only under closed #476-#484.
 Existing strict generation alone is not proof of lockfile consistency or declared-dependency
@@ -273,3 +273,7 @@ Repository-managed dependencies use exact latest-stable pins under
 
 History: greenfield risks and the fixture-first validation approach that
 retired them live only in git history.
+
+## Related issues
+
+Tracking lives in the [roadmap](../roadmap.md). Depcheck: #22. Codegen: #787, #788. Adapters: #796-#800. Docs reintroduction: #786.

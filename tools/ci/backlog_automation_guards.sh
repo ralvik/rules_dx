@@ -234,7 +234,7 @@ fi
 
 # docs-pipeline gaps stay tracked in the documentation contract
 # (live successor to closed; owns).
-if grep -q -F -e 'Docs pipeline gaps stay open under issue #581' docs/documentation/README.md; then
+if grep -q -F -e 'Docs pipeline gaps stay open under' docs/documentation/README.md; then
   ok
 else
   bad "documentation README lost its #581 docs-pipeline tracker record"

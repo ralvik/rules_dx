@@ -1,7 +1,7 @@
 # Documentation
 
 Accepted v1 direction; execution open (see Contracts). No `Supported`
-claim; no working site claimed.
+claim; site build is planned and no site is published yet.
 
 Accepted design: native language tooling extracts API semantics; thin per-language adapters
 normalize into one versioned [documentation IR](doc-ir.md); one [site
@@ -35,7 +35,7 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
   Authoritative for build facts.
 - [Build check serve](build-check-serve.md): accepted `bazel build //docs/...`,
   `dx lint --check //docs/...`, and local serve with existing tools only
-  (issue #620). Authoritative for build/check/serve facts.
+  (#620). Authoritative for build/check/serve facts.
 - [IR schema and codec](../ir/README.md): checked-in `doc_ir.proto` plus
   `documentation_ir` codec; design facts stay in the contracts above.
 - Command surface removed;
@@ -46,10 +46,14 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
   #786. Docs pipeline gaps stay open under #779-#785 (successors to closed #581; per-language adapter runs
   with pins and mappings, renderer and site execution, byte-identical rebuild proof,
   link and reference completeness, guide-step CI wiring, first-hour timing proof, and
-  per-release pin-bump plus drift process; no working site claimed).
+  per-release pin-bump plus drift process; site build is planned and no site is published yet).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
 Accepted scope covers thirteen adapter scopes. Per-language input pins,
 mappings, adapter runs, renderer/site-build execution, and every other
 #779-#785 item above remain open; no adapter execution exists today.
+
+## Related issues
+
+Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779-#785. Reintroduction: #786. Build workflow: #620.

@@ -70,7 +70,7 @@ fi
 
 # Linux arm64 native is Platform-qualified, never Supported
 # without release evidence and never back to unqualified refusal.
-if grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #410' &&
+if grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#410' &&
   grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open'; then
   ok
 else
@@ -80,7 +80,7 @@ fi
 # Linux static-musl profiles are Platform-qualified, never
 # Supported without release evidence and never back to unqualified
 # refusal. Dynamic musl stays explicitly out of scope.
-if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #411' &&
+if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#411' &&
   grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
   grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'dynamic musl explicitly out of scope'; then
   ok
@@ -91,7 +91,7 @@ fi
 # macOS arm64 native is Platform-qualified, never Supported
 # without release evidence and never back to unqualified refusal.
 # Host-installed SDK fallback stays never approved.
-if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #412' &&
+if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#412' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
   grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved'; then
   ok
@@ -104,7 +104,7 @@ fi
 # refusal. Best-effort by ADR 0014 definition: gaps recorded without
 # blocking required-host release. Host-installed SDK fallback stays never
 # approved.
-if grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #413' &&
+if grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#413' &&
   grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Best-effort' &&
   grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
   grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved'; then
@@ -117,7 +117,7 @@ fi
 # never Supported without release evidence and never back to unqualified
 # refusal. Installed Build Tools fallback stays never approved; explicit
 # EULA acceptance stays never automatic.
-if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (issue #414' &&
+if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#414' &&
   grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
   grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'never automatic'; then
   ok

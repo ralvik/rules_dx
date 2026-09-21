@@ -69,7 +69,7 @@ symbols {
 Symbol IDs are stable across rebuilds: `language:package:qualified_name`,
 with overloads disambiguated by normalized parameter-type list. The exact
 disambiguation scheme per language is tracked under
-issue #581. Source paths are
+#581. Source paths are
 workspace-relative. Only public API enters the IR; visibility filtering
 follows each language's native semantics, not a universal heuristic.
 
@@ -85,7 +85,7 @@ Extension payloads live under `extensions` and are never silently dropped.
 Accepted scope covers thirteen adapter scopes below, including the pinned
 nightly rustdoc route and the Scala proof spike. No adapter execution exists today.
 Exact inputs, pins, and adapter mappings are tracked under
-issue #581.
+#581.
 
 | Family | Provisional input | Note |
 | --- | --- | --- |
@@ -106,7 +106,7 @@ issue #581.
 XML or JSON comment dumps alone do not satisfy an adapter where the
 language separates comments from symbols (notably C#/F#): the adapter must
 join metadata with documentation; that join is tracked under
-issue #581.
+#581.
 
 ### Extractor Research
 
@@ -196,7 +196,7 @@ machine-input inventory above. No language is removed, dummy prose adapter added
 Each extraction-family row maps to one adapter scope; one adapter may cover
 two API identities where the input pipeline is shared. Adapter packaging
 (one crate/binary per scope or grouped) is implementation detail tracked under
-issue #581, not mandated here.
+#581, not mandated here.
 
 | Adapter scope | Machine-input row(s) | API identities |
 | --- | --- | --- |
@@ -248,4 +248,8 @@ toolchain change can therefore turn rules_dx CI red during release
 preparation, but never a user's build — users stay on pinned, checksummed
 inputs and receive working adapters with the release. The exact per-release
 pin-bump and drift-test process is tracked under
-issue #581.
+#581.
+
+## Related issues
+
+Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #581, #779-#785. Reintroduction: #786.

@@ -1,6 +1,6 @@
 # Architecture
 
-Status: implemented (seed-host-delivered per the [support-matrix lifecycle](../product/support-matrix.md#status-lifecycle)) for the quality-core plus Rust, Python, JavaScript, and TypeScript foundations on their delivered verification layers only, excluding Docs and Env/codegen which stay `Open` for every language. [Docs pipeline and Env/codegen stay open](../testing/verification-matrix.md#layers), and platform qualification beyond the qualified hosts stays open per the [support matrix](../product/support-matrix.md#unqualified-platforms). This document summarizes the as-built system shape within those bounds; it claims no Env/codegen delivery.
+Status: implemented for the quality-core plus Rust, Python, JavaScript, and TypeScript foundations on their delivered verification layers only, excluding Docs and Env/codegen which stay `Open` for every language. See the [support matrix](../product/support-matrix.md#unqualified-platforms) for qualified hosts and the [verification matrix](../testing/verification-matrix.md#layers) for layer status.
 Implementation lives in `cli/cli/src/main.rs`, `quality/result.proto`,
 `generation/result.proto`, and `dx/BUILD.bazel:24-33`; shipped surfaces are
 tracked in [support matrix](../product/support-matrix.md).
