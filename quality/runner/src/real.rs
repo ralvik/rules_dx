@@ -44,7 +44,11 @@
 //! Roslyn, FSharpLint, Buf lint, qmllint, and Biome lint are check-only
 //! and never rewrite. google-java-format, ktfmt, Scalafmt, CSharpier,
 //! Fantomas, Buf format, and qmlformat rewrite in place like the other
-//! format tools.
+//! format tools. The native lint cohort and the file-family lint cohort
+//! (stylelint, rubocop, psscriptanalyzer, yamllint, shellcheck,
+//! keep_sorted, djlint lint) are check-only with sandbox-apply-and-diff;
+//! the file-family format cohort (cue, jsonnetfmt, pkl, modfmt, terraform,
+//! yamlfmt, shfmt, standardrb, djlint format) rewrites in place.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -74,8 +78,12 @@ use quality_result::proto::Diagnostic;
 /// via library API), the native cohort (clang-format format,
 /// gofumpt format, clang-tidy/cppcheck/staticcheck/govet/errcheck
 /// lint check-only via delegated recorded diagnostics like
-/// Clippy/rustc), and the Structured cohort (Buf format plus lint
-/// via native JSONL/diff, qmlformat format, qmllint lint via JSON).
+/// Clippy/rustc), the Structured cohort (Buf format plus lint
+/// via native JSONL/diff, qmlformat format, qmllint lint via JSON),
+/// and the interpreted/file-family cohort (cue, jsonnetfmt, pkl, modfmt,
+/// terraform, yamlfmt, shfmt, standardrb, djlint format plus
+/// stylelint/rubocop/psscriptanalyzer/yamllint/shellcheck/keep_sorted
+/// lint check-only via delegated records).
 /// Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
@@ -92,6 +100,8 @@ pub const REAL_TOOLS: &[&str] = &[
     "clippy",
     "cppcheck",
     "csharpier",
+    "cue",
+    "djlint",
     "errcheck",
     "eslint",
     "fantomas",
@@ -100,26 +110,39 @@ pub const REAL_TOOLS: &[&str] = &[
     "gofumpt",
     "google_java_format",
     "govet",
+    "jsonnetfmt",
+    "keep_sorted",
     "ktfmt",
     "ktlint",
     "markdown_check",
+    "modfmt",
+    "pkl",
     "pmd",
     "prettier",
+    "psscriptanalyzer",
     "pydoclint",
     "pylint",
     "qmlformat",
     "qmllint",
     "roslyn",
+    "rubocop",
     "ruff",
     "rustc",
     "rustfmt",
     "scalafix",
     "scalafmt",
+    "shellcheck",
+    "shfmt",
     "spotbugs",
+    "standardrb",
     "staticcheck",
+    "stylelint",
     "taplo",
+    "terraform",
     "ty",
     "vale",
+    "yamlfmt",
+    "yamllint",
 ];
 
 /// Scratch-relative home for the materialized rustfmt defaults: without
@@ -859,6 +882,48 @@ impl RealBackend {
         Ok(findings)
     }
 
+    /// File-family lint via recorded diagnostics: parses the authoritative
+    /// upstream diagnostics files without spawning, re-addressing workspace
+    /// paths onto staged scratch-absolute paths like Clippy/Roslyn.
+    /// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+    fn check_file_family_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            let report = match tool_id {
+                "stylelint" => parsers::parse_stylelint(&bytes, Some(0), &workspaces),
+                "rubocop" => parsers::parse_rubocop(&bytes, Some(0), &workspaces),
+                "psscriptanalyzer" => parsers::parse_psscriptanalyzer(&bytes, Some(0), &workspaces),
+                "yamllint" => parsers::parse_yamllint(&bytes, Some(0), &workspaces),
+                "shellcheck" => parsers::parse_shellcheck(&bytes, Some(0), &workspaces),
+                "keep_sorted" => parsers::parse_keep_sorted(&bytes, Some(0), &workspaces),
+                "djlint" => parsers::parse_djlint(&bytes, Some(0), &workspaces),
+                _ => {
+                    return Err(execution(
+                        tool_id,
+                        format!("unsupported file-family delegated tool: {tool_id}"),
+                    ))
+                }
+            };
+            findings.extend(parsed(tool_id, report)?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
     /// Runs one check over the staged files and returns the parsed
     /// findings still addressed by absolute scratch path. Sibling pairs
     /// reach only the Markdown checker as `--sibling` mappings; every
@@ -1390,6 +1455,105 @@ impl RealBackend {
                         found.file = absolute.to_string_lossy().into_owned();
                     }
                     Ok(findings)
+                }
+            }
+            "cue" => {
+                let invocation = commands::cue_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_cue(&out.stdout, out.code, &strs))
+            }
+            "jsonnetfmt" => {
+                let invocation = commands::jsonnetfmt_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_jsonnetfmt(&out.stdout, out.code, &strs),
+                )
+            }
+            "pkl" => {
+                let invocation = commands::pkl_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_pkl(&out.stdout, out.code, &strs))
+            }
+            "modfmt" => {
+                let invocation = commands::modfmt_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_modfmt(&out.stdout, out.code, &strs))
+            }
+            "terraform" => {
+                let invocation = commands::terraform_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_terraform(&out.stdout, out.code, &strs),
+                )
+            }
+            "yamlfmt" => {
+                let invocation = commands::yamlfmt_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_yamlfmt(&out.stdout, out.code, &strs),
+                )
+            }
+            "shfmt" => {
+                let invocation = commands::shfmt_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_shfmt(&out.stdout, out.code, &strs))
+            }
+            "standardrb" => {
+                let invocation = commands::standardrb_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_standardrb(&out.stdout, out.code, &strs),
+                )
+            }
+            "djlint" => {
+                if capability == "format" {
+                    let invocation = commands::djlint_format_check(&tool.binary, &refs);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_djlint_format(&out.stdout, out.code, &strs),
+                    )
+                } else if !tool.upstream_diagnostics.is_empty() {
+                    self.check_file_family_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation = commands::djlint_check(&tool.binary, &refs, config.as_deref());
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(tool_id, parsers::parse_djlint(&out.stdout, out.code, &strs))
+                }
+            }
+            "stylelint" | "rubocop" | "psscriptanalyzer" | "yamllint" | "shellcheck"
+            | "keep_sorted" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_file_family_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation = match tool_id {
+                        "stylelint" => {
+                            commands::stylelint_check(&tool.binary, &refs, config.as_deref())
+                        }
+                        "rubocop" => commands::rubocop_check(&tool.binary, &refs),
+                        "psscriptanalyzer" => commands::psscriptanalyzer_check(&tool.binary, &refs),
+                        "yamllint" => {
+                            commands::yamllint_check(&tool.binary, &refs, config.as_deref())
+                        }
+                        "shellcheck" => commands::shellcheck_check(&tool.binary, &refs),
+                        _ => commands::keep_sorted_check(&tool.binary, &refs),
+                    };
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    let report = match tool_id {
+                        "stylelint" => parsers::parse_stylelint(&out.stdout, out.code, &strs),
+                        "rubocop" => parsers::parse_rubocop(&out.stdout, out.code, &strs),
+                        "psscriptanalyzer" => {
+                            parsers::parse_psscriptanalyzer(&out.stdout, out.code, &strs)
+                        }
+                        "yamllint" => parsers::parse_yamllint(&out.stdout, out.code, &strs),
+                        "shellcheck" => parsers::parse_shellcheck(&out.stdout, out.code, &strs),
+                        _ => parsers::parse_keep_sorted(&out.stdout, out.code, &strs),
+                    };
+                    parsed(tool_id, report)
                 }
             }
             _ => Err(execution(

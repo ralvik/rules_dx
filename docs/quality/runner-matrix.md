@@ -20,8 +20,10 @@ matrix cell. Scala plus C# plus F# cells below are opt-in adapters
 delivered under #797 (successor to closed #417), Java plus Kotlin cells
 are opt-in adapters delivered under #796 (successor to closed #416),
 C plus C++ plus Go cells are opt-in adapters delivered under #798
-(successor to closed #418), and Protobuf plus QML cells below are
-opt-in adapters delivered under #799 (successor to closed #419).
+(successor to closed #418), Protobuf plus QML cells below are
+opt-in adapters delivered under #799 (successor to closed #419), and
+Interpreted/file-family cells below are opt-in adapters delivered
+under #800 (successor to closed #420).
 
 Crate edition (issue #468): the two `edition_*` cells above pin the
 `--tool-edition` flow over the real toolchain rustfmt. The 2015 cell stays
@@ -175,6 +177,35 @@ so a single-edition rustfmt stays rejected.
 | `matrix_qml_format_pass` / `matrix_qml_format_fail` | format (qmlformat) | generated `matrix/qmlformat_clean.qml` / `matrix/qmlformat_dirty.qml` |
 | `matrix_qml_lint_pass` / `matrix_qml_lint_fail` | lint (qmllint) | generated `matrix/qmllint_clean.qml` / recorded qmllint JSON |
 
+## Interpreted/file-family (`cue`, `jsonnet`, `pkl`, `go_module`, `terraform`, `html_template`, `css`/`less`/`scss`, `gherkin`, `sql`, `xml`, `yaml`, `text`, `shell`, `ruby`, `powershell`: opt-in adapters delivered under #800, successor to closed #420)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_cue_format_pass` / `matrix_cue_format_fail` | format (cue) | generated `matrix/cue_clean.cue` / `matrix/cue_dirty.cue` |
+| `matrix_jsonnet_format_pass` / `matrix_jsonnet_format_fail` | format (jsonnetfmt) | generated `matrix/jsonnet_clean.jsonnet` / `matrix/jsonnet_dirty.jsonnet` |
+| `matrix_pkl_format_pass` / `matrix_pkl_format_fail` | format (pkl) | generated `matrix/pkl_clean.pkl` / `matrix/pkl_dirty.pkl` |
+| `matrix_go_module_format_pass` / `matrix_go_module_format_fail` | format (modfmt) | generated `matrix/modfmt_clean.mod` / `matrix/modfmt_dirty.mod` |
+| `matrix_terraform_format_pass` / `matrix_terraform_format_fail` | format (terraform) | generated `matrix/terraform_clean.tf` / `matrix/terraform_dirty.tf` |
+| `matrix_yaml_format_pass` / `matrix_yaml_format_fail` | format (yamlfmt) | generated `matrix/yamlfmt_clean.yaml` / `matrix/yamlfmt_dirty.yaml` |
+| `matrix_shell_format_pass` / `matrix_shell_format_fail` | format (shfmt) | generated `matrix/shfmt_clean.sh` / `matrix/shfmt_dirty.sh` |
+| `matrix_ruby_format_pass` / `matrix_ruby_format_fail` | format (standardrb) | generated `matrix/standardrb_clean.rb` / `matrix/standardrb_dirty.rb` |
+| `matrix_html_template_format_pass` / `matrix_html_template_format_fail` | format (djlint) | generated `matrix/djlint_format_clean.html` / `matrix/djlint_format_dirty.html` |
+| `matrix_css_format_pass` / `matrix_css_format_fail` | format (prettier) | generated `matrix/prettier_css_clean.css` / `matrix/prettier_css_dirty.css` |
+| `matrix_less_format_pass` / `matrix_less_format_fail` | format (prettier) | generated `matrix/prettier_less_clean.less` / `matrix/prettier_less_dirty.less` |
+| `matrix_scss_format_pass` / `matrix_scss_format_fail` | format (prettier) | generated `matrix/prettier_scss_clean.scss` / `matrix/prettier_scss_dirty.scss` |
+| `matrix_gherkin_format_pass` / `matrix_gherkin_format_fail` | format (prettier) | generated `matrix/prettier_gherkin_clean.feature` / `matrix/prettier_gherkin_dirty.feature` |
+| `matrix_sql_format_pass` / `matrix_sql_format_fail` | format (prettier) | generated `matrix/prettier_sql_clean.sql` / `matrix/prettier_sql_dirty.sql` |
+| `matrix_xml_format_pass` / `matrix_xml_format_fail` | format (prettier) | generated `matrix/prettier_xml_clean.xml` / `matrix/prettier_xml_dirty.xml` |
+| `matrix_html_template_lint_pass` / `matrix_html_template_lint_fail` | lint (djlint) | generated `matrix/djlint_clean.html` / recorded text diagnostics |
+| `matrix_css_lint_pass` / `matrix_css_lint_fail` | lint (stylelint) | generated `matrix/stylelint_clean.css` / recorded JSON diagnostics |
+| `matrix_less_lint_pass` / `matrix_less_lint_fail` | lint (stylelint) | generated `matrix/stylelint_clean.less` / recorded JSON diagnostics |
+| `matrix_scss_lint_pass` / `matrix_scss_lint_fail` | lint (stylelint) | generated `matrix/stylelint_clean.scss` / recorded JSON diagnostics |
+| `matrix_ruby_lint_pass` / `matrix_ruby_lint_fail` | lint (rubocop) | generated `matrix/rubocop_clean.rb` / recorded JSON diagnostics |
+| `matrix_powershell_lint_pass` / `matrix_powershell_lint_fail` | lint (psscriptanalyzer) | generated `matrix/psscriptanalyzer_clean.ps1` / recorded text diagnostics |
+| `matrix_yaml_lint_pass` / `matrix_yaml_lint_fail` | lint (yamllint) | generated `matrix/yamllint_clean.yaml` / recorded text diagnostics |
+| `matrix_shell_lint_pass` / `matrix_shell_lint_fail` | lint (shellcheck) | generated `matrix/shellcheck_clean.sh` / recorded gcc diagnostics |
+| `matrix_text_lint_pass` / `matrix_text_lint_fail` | lint (keep_sorted) | generated `matrix/keep_sorted_clean.txt` / recorded text diagnostics |
+
 ## Parser samples (issue #465)
 
 Every adapter-backed tool keeps a parser with pass (clean) plus fail (dirty)
@@ -182,12 +213,13 @@ samples exercised as unit tests under `quality/adapter/src/parsers/` and pinned 
 `bazel run //tools/ci:parser_sample_qualification`: biome lint plus format,
 buf lint plus format, buildifier, checkstyle, clang_format, clang_tidy,
 clippy plus rustc via the shared rust diagnostics, cppcheck, csharpier,
-errcheck, eslint, fantomas, flake8, fsharplint, gofumpt, google-java-format,
-govet, ktfmt, ktlint, markdown_check, pmd, prettier, pydoclint, pylint,
-qmlformat, qmllint, roslyn,
+cue, djlint lint plus format, errcheck, eslint, fantomas, flake8, fsharplint,
+gofumpt, google-java-format, govet, jsonnetfmt, keep_sorted, ktfmt, ktlint,
+markdown_check, modfmt, pkl, pmd, prettier, psscriptanalyzer, pydoclint, pylint,
+qmlformat, qmllint, roslyn, rubocop,
 ruff lint plus format, rustfmt, scalafix, scalafmt, shared SARIF for the
-JVM lint cohort plus spotbugs, staticcheck,
-taplo lint plus format, tsc, ty, vale. Recorded Clippy/rustc diagnostics stay
+JVM lint cohort plus spotbugs, shellcheck, shfmt, standardrb, staticcheck, stylelint,
+taplo lint plus format, terraform, tsc, ty, vale, yamlfmt, yamllint. Recorded Clippy/rustc diagnostics stay
 byte-identical to the parser unit samples (`quality/adapter/src/parsers/rust.rs`);
 `tsc` keeps its adapter parser with pass plus fail samples but stays
 pipeline-only by design (target-coupled, no runner dispatch, no matrix cell).

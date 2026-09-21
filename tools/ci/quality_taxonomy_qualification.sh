@@ -13,10 +13,10 @@
 #   pydoclint+ruff+ty, rust clippy+rustfmt+rustc, starlark buildifier,
 #   toml taplo, typescript biome+tsc); audit stays empty with explicit
 #   disablement, Bandit excluded, secrets via Gitleaks separate.
-# - backed: 19 adapter-backed classes ride 32 real adapters with
+# - backed: 36 adapter-backed classes ride 47 real adapters with
 #   runner-matrix pass plus fail plus parser plus native-config plus
 #   aspect plus policy execution.
-# - deferred: 28 classes with ADR 0019 owner plus frozen route, no
+# - deferred: 11 classes with ADR 0019 owner plus frozen route, no
 #   double-claim, no undispositioned.
 # - applicability: provider intersect adapter intersect policy, suffix
 #   rejected, cross-family union into one stage, lazy with no fetch,
@@ -95,15 +95,15 @@ if grep -q -F -e '8 curated families: javascript plus json plus markdown plus py
   grep -q -F -e 'markdown family lint markdown_check plus vale' "$pins" &&
   grep -q -F -e 'python family lint pydoclint plus ruff plus format ruff plus typecheck ty' "$pins" &&
   grep -q -F -e 'rust family lint clippy plus format rustfmt plus typecheck rustc' "$pins" &&
-  grep -q -F -e '19 adapter-backed classes:' "$pins" &&
-  grep -q -F -e '32 real adapters:' "$pins"; then
+  grep -q -F -e '36 adapter-backed classes:' "$pins" &&
+  grep -q -F -e '47 real adapters:' "$pins"; then
   ok
 else
   bad "pins.bzl lost its curated plus backed execution under issue #512"
 fi
 
 # Pins record the deferred plus audit plus rejected plus owned gaps.
-if grep -q -F -e '28 deferred classes with owner plus frozen route' "$pins" &&
+if grep -q -F -e '11 deferred classes with owner plus frozen route' "$pins" &&
   grep -q -F -e 'every deferral names ADR 0019 plus frozen delivery route' "$pins" &&
   grep -q -F -e 'no class is both adapter-backed and deferred' "$pins" &&
   grep -q -F -e 'curated audit stays empty with explicit disablement' "$pins" &&
@@ -162,13 +162,13 @@ fi
 
 # Parity deferrals stay owned with fail-closed gate shape.
 # Scala/.NET delivered under #797 plus JVM delivered under #796 plus native
-# delivered under #798 plus Structured delivered under #799, so csharp plus
-# java plus kotlin plus c plus cpp plus go plus protobuf plus qml are no
-# longer deferred.
+# delivered under #798 plus Structured delivered under #799 plus
+# interpreted/file-family delivered under #800, so the remaining deferred
+# are framework regions plus cuda plus json5/jsonc.
 if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
-  grep -q -F -e '"shell": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"text": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"yaml": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"astro": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"cuda": ["ADR 0019"' "$parity" &&
+  grep -q -F -e '"graphql": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'no adapter class is unclassified' "$parity" &&
   grep -q -F -e 'no classified class lacks a disposition' "$parity" &&
   grep -q -F -e 'no class is both adapter-backed and deferred' "$parity"; then
@@ -227,9 +227,12 @@ if grep -q -F -e 'matrix_rust_format_pass' quality/testdata/runner_matrix_rust.b
   grep -q -F -e 'matrix_go_format_pass' quality/testdata/runner_matrix_native.bzl &&
   grep -q -F -e 'matrix_protobuf_format_pass' quality/testdata/runner_matrix_structured.bzl &&
   grep -q -F -e 'matrix_qml_format_pass' quality/testdata/runner_matrix_structured.bzl &&
+  grep -q -F -e 'matrix_cue_format_pass' quality/testdata/runner_matrix_file_family.bzl &&
+  grep -q -F -e 'matrix_shell_lint_pass' quality/testdata/runner_matrix_file_family.bzl &&
   grep -q -F -e 'NATIVE_CASES' "$matrix" &&
   grep -q -F -e 'SCALA_DOTNET_CASES' "$matrix" &&
   grep -q -F -e 'STRUCTURED_CASES' "$matrix" &&
+  grep -q -F -e 'FILE_FAMILY_CASES' "$matrix" &&
   grep -q -F -e '_fail' quality/testdata/runner_matrix_native.bzl &&
   grep -q -F -e '_pass' quality/testdata/runner_matrix_native.bzl &&
   grep -q -F -e 'replacement ' quality/testdata/runner_matrix_native.bzl; then
@@ -307,12 +310,12 @@ fi
 if grep -q -F -e 'qualified seed-only under issue #512' "$expected" &&
   grep -q -F -e 'taxonomy doc only' "$expected" &&
   grep -q -F -e '47 classes' "$expected" &&
-  grep -q -F -e '28 deferred' "$expected" &&
+  grep -q -F -e '11 deferred' "$expected" &&
   grep -q -F -e 'Bandit excluded' "$expected" &&
   grep -q -F -e 'owned gap' "$expected"; then
   ok
 else
-  bad "quality_taxonomy.expected lost taxonomy coverage (want qualified plus doc-only plus 47 plus 28 plus Bandit plus owned gap, issue #512)"
+  bad "quality_taxonomy.expected lost taxonomy coverage (want qualified plus doc-only plus 47 plus 11 plus Bandit plus owned gap, issue #512)"
 fi
 
 # Live proof: quality suites plus the fixture build stay green.

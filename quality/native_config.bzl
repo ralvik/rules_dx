@@ -1,4 +1,4 @@
-"""Typed native-configuration targets for adapters plus Ruff, Biome/ESLint, Checkstyle, Scala/.NET, Native, and Structured.
+"""Typed native-configuration targets for adapters plus Ruff, Biome/ESLint, Checkstyle, Scala/.NET, Native, Structured, and file-family cohort.
 
 Contract: `docs/quality/native-configuration.md`.
 """
@@ -41,7 +41,14 @@ DxNativeConfigInfo = provider(
 # directory. gofumpt, govet, and errcheck take no native config file:
 # gofumpt has no rule selection, govet runs default analyzers only, and
 # errcheck stays complementary with flags only, so no typed rule exists
-# for them by design.
+# for them by design. The file-family cohort adds stylelint (`.json`),
+# djlint (`.toml`), and yamllint (`.yaml`): each runs upstream built-in
+# defaults unhinted and interprets the hinted config natively; the
+# remaining cohort tools (cue, jsonnetfmt, pkl, modfmt, terraform,
+# yamlfmt, keep_sorted, shfmt, shellcheck, rubocop, standardrb,
+# psscriptanalyzer) take no typed config by design (whole-file rewrite
+# or check-only with upstream defaults, no hidden preset).
+# See `docs/quality/tool-integrations.md`.
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buf": ".yaml",
@@ -51,6 +58,7 @@ _NATIVE_CONFIG_EXTENSIONS = {
     "clang_tidy": ".clang-tidy",
     "cppcheck": ".txt",
     "csharpier": ".yaml",
+    "djlint": ".toml",
     "eslint": ".js",
     "fsharplint": ".json",
     "qmlformat": ".ini",
@@ -60,8 +68,10 @@ _NATIVE_CONFIG_EXTENSIONS = {
     "scalafix": ".conf",
     "scalafmt": ".conf",
     "staticcheck": ".conf",
+    "stylelint": ".json",
     "taplo": ".toml",
     "vale": ".ini",
+    "yamllint": ".yaml",
 }
 
 def native_config_extension(tool_id):
@@ -232,4 +242,19 @@ qmlformat_config = _make_native_config_rule(
 qmllint_config = _make_native_config_rule(
     "qmllint",
     "Checked-in qmllint INI config (.qmllint.ini) for QML lint.",
+)
+
+stylelint_config = _make_native_config_rule(
+    "stylelint",
+    "Checked-in Stylelint JSON config for CSS lint. The adapter passes it as -c; upstream defaults apply unhinted.",
+)
+
+djlint_config = _make_native_config_rule(
+    "djlint",
+    "Checked-in djlint TOML config for HTML-template lint/format.",
+)
+
+yamllint_config = _make_native_config_rule(
+    "yamllint",
+    "Checked-in yamllint YAML config for YAML lint.",
 )

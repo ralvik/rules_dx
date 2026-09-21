@@ -1,0 +1,5 @@
+--- a/main.tf
++++ b/main.tf
+@@ -1 +1 @@
+-BADFMT
++fixed

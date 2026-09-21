@@ -1,0 +1,5 @@
+--- a/go.mod
++++ b/go.mod
+@@ -1 +1 @@
+-BADFMT
++fixed

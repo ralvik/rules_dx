@@ -1,0 +1,5 @@
+--- a/run.sh
++++ b/run.sh
+@@ -1 +1 @@
+-BADFMT
++fixed

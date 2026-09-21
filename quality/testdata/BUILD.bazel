@@ -542,6 +542,59 @@ sh_binary(
     srcs = ["fake_qmlformat.sh"],
 )
 
+# Fake format doubles for the interpreted/file-family cohort matrix cells
+# (issue #800, seed-only wiring proof without Ruby/pwsh/standalone
+# toolchains; real-tool behavior stays proven by the per-tool fixtures).
+sh_binary(
+    name = "fake_cue",
+    srcs = ["fake_cue.sh"],
+)
+
+sh_binary(
+    name = "fake_jsonnetfmt",
+    srcs = ["fake_jsonnetfmt.sh"],
+)
+
+sh_binary(
+    name = "fake_pkl",
+    srcs = ["fake_pkl.sh"],
+)
+
+sh_binary(
+    name = "fake_modfmt",
+    srcs = ["fake_modfmt.sh"],
+)
+
+sh_binary(
+    name = "fake_terraform",
+    srcs = ["fake_terraform.sh"],
+)
+
+sh_binary(
+    name = "fake_yamlfmt",
+    srcs = ["fake_yamlfmt.sh"],
+)
+
+sh_binary(
+    name = "fake_shfmt",
+    srcs = ["fake_shfmt.sh"],
+)
+
+sh_binary(
+    name = "fake_standardrb",
+    srcs = ["fake_standardrb.sh"],
+)
+
+sh_binary(
+    name = "fake_djlint_format",
+    srcs = ["fake_djlint_format.sh"],
+)
+
+sh_binary(
+    name = "fake_prettier_file_family",
+    srcs = ["fake_prettier_file_family.sh"],
+)
+
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",

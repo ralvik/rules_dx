@@ -195,15 +195,27 @@
 //! * errcheck text diagnostics on stdout: one `<path>:<line>:<col>:
 //!   <message>` line per finding; every diagnostic is a warning. Exit 0
 //!   clean, exit 1 dirty, check-only.
+//! * Interpreted/file-family cohort: diff formatters (`cue`, `jsonnetfmt`,
+//!   `pkl`, `modfmt`, `terraform -check -diff`, `yamlfmt -lint`, `shfmt
+//!   -d`, `standardrb --check`, `djlint --reformat --check`) emit unified
+//!   diff with `--- a/<path>` headers (one `1:1` finding per header);
+//!   lint tools parse text (`djlint --lint`, `psscriptanalyzer`,
+//!   `yamllint`, `shellcheck --format=gcc`, `keep-sorted`) or JSON
+//!   (`stylelint --formatter json`, `rubocop --format json`); all
+//!   check-only except formatters whole-file rewrite.
+//!
+//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
 pub mod biome;
-pub mod buildifier;
 pub mod buf;
+pub mod buildifier;
 pub mod checkstyle;
 pub mod clang_format;
 pub mod clang_tidy;
 pub mod cppcheck;
 pub mod csharpier;
+pub mod cue;
+pub mod djlint;
 pub mod errcheck;
 pub mod error_prone;
 pub mod eslint;
@@ -213,37 +225,52 @@ pub mod fsharplint;
 pub mod gofumpt;
 pub mod google_java_format;
 pub mod govet;
+pub mod jsonnetfmt;
+pub mod keep_sorted;
 pub mod ktfmt;
 pub mod ktlint;
 pub mod markdown;
+pub mod modfmt;
+pub mod pkl;
 pub mod pmd;
 pub mod prettier;
+pub mod psscriptanalyzer;
 pub mod pydoclint;
 pub mod pylint;
 pub mod qmlformat;
 pub mod qmllint;
 pub mod roslyn;
+pub mod rubocop;
 pub mod ruff;
 pub mod rust;
 pub mod rustfmt;
 pub mod sarif;
 pub mod scalafix;
 pub mod scalafmt;
+pub mod shellcheck;
+pub mod shfmt;
 pub mod spotbugs;
+pub mod standardrb;
 pub mod staticcheck;
+pub mod stylelint;
 pub mod taplo;
+pub mod terraform;
 pub mod tsc;
 pub mod ty;
 pub mod vale;
+pub mod yamlfmt;
+pub mod yamllint;
 
 pub use biome::{parse_biome_format, parse_biome_lint};
-pub use buildifier::parse_buildifier;
 pub use buf::{parse_buf_format, parse_buf_lint};
+pub use buildifier::parse_buildifier;
 pub use checkstyle::parse_checkstyle;
 pub use clang_format::parse_clang_format;
 pub use clang_tidy::parse_clang_tidy;
 pub use cppcheck::parse_cppcheck;
 pub use csharpier::parse_csharpier;
+pub use cue::parse_cue;
+pub use djlint::{parse_djlint, parse_djlint_format};
 pub use errcheck::parse_errcheck;
 pub use error_prone::parse_error_prone;
 pub use eslint::parse_eslint;
@@ -253,27 +280,40 @@ pub use fsharplint::parse_fsharplint;
 pub use gofumpt::parse_gofumpt;
 pub use google_java_format::parse_google_java_format;
 pub use govet::parse_govet;
+pub use jsonnetfmt::parse_jsonnetfmt;
+pub use keep_sorted::parse_keep_sorted;
 pub use ktfmt::parse_ktfmt;
 pub use ktlint::parse_ktlint;
 pub use markdown::parse_markdown_findings;
+pub use modfmt::parse_modfmt;
+pub use pkl::parse_pkl;
 pub use pmd::parse_pmd;
 pub use prettier::parse_prettier_check;
+pub use psscriptanalyzer::parse_psscriptanalyzer;
 pub use pydoclint::parse_pydoclint;
 pub use pylint::parse_pylint;
 pub use qmlformat::parse_qmlformat;
 pub use qmllint::parse_qmllint;
 pub use roslyn::parse_roslyn;
+pub use rubocop::parse_rubocop;
 pub use ruff::{parse_ruff, parse_ruff_format};
 pub use rust::{parse_clippy, parse_rustc};
 pub use rustfmt::parse_rustfmt;
 pub use scalafix::parse_scalafix;
 pub use scalafmt::parse_scalafmt;
+pub use shellcheck::parse_shellcheck;
+pub use shfmt::parse_shfmt;
 pub use spotbugs::parse_spotbugs;
+pub use standardrb::parse_standardrb;
 pub use staticcheck::parse_staticcheck;
+pub use stylelint::parse_stylelint;
 pub use taplo::{parse_taplo_format_check, parse_taplo_lint};
+pub use terraform::parse_terraform;
 pub use tsc::parse_tsc;
 pub use ty::parse_ty;
 pub use vale::parse_vale;
+pub use yamlfmt::parse_yamlfmt;
+pub use yamllint::parse_yamllint;
 
 use crate::{Finding, TextPosition};
 

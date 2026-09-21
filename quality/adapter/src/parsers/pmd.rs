@@ -26,13 +26,13 @@ mod tests {
 
     #[test]
     fn pmd_reports_sarif_ranges() {
-        let findings =
-            parse_pmd(SARIF.as_bytes(), Some(1), &["/s/Dirty.java"]).expect("parsed");
+        let findings = parse_pmd(SARIF.as_bytes(), Some(1), &["/s/Dirty.java"]).expect("parsed");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].finding.rule_id, "UnusedLocalVariable");
         let end = findings[0].finding.end.expect("extent");
         assert_eq!((end.line, end.column), (4, 12));
-        let clean = r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"PMD"}},"results":[]}]}"#;
+        let clean =
+            r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"PMD"}},"results":[]}]}"#;
         let clean = parse_pmd(clean.as_bytes(), Some(0), &["/s/Dirty.java"]).expect("clean");
         assert!(clean.is_empty());
         assert!(parse_pmd(b"not json", Some(1), &["/s/Dirty.java"]).is_err());

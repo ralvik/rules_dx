@@ -33,9 +33,9 @@ mod tests {
             parse_spotbugs(SARIF.as_bytes(), Some(1), &["/s/Dirty.java"]).expect("parsed");
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].finding.rule_id, "NP_NULL_ON_SOME_PATH");
-        let clean = r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"SpotBugs"}},"results":[]}]}"#;
         let clean =
-            parse_spotbugs(clean.as_bytes(), Some(0), &["/s/Dirty.java"]).expect("clean");
+            r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"SpotBugs"}},"results":[]}]}"#;
+        let clean = parse_spotbugs(clean.as_bytes(), Some(0), &["/s/Dirty.java"]).expect("clean");
         assert!(clean.is_empty());
         assert!(parse_spotbugs(b"not json", Some(1), &["/s/Dirty.java"]).is_err());
     }

@@ -76,6 +76,15 @@ def native_config_unit_tests(name):
                 [".yaml", ".ini", ".ini"],
             ),
             expect_equal(
+                "native_config_extension pins file-family transports (See: docs/quality/tool-integrations.md)",
+                [
+                    native_config_extension("stylelint"),
+                    native_config_extension("djlint"),
+                    native_config_extension("yamllint"),
+                ],
+                [".json", ".toml", ".yaml"],
+            ),
+            expect_equal(
                 "native_config_error rejects biome.jsonc",
                 native_config_error(
                     "biome",
@@ -109,7 +118,7 @@ def native_config_unit_tests(name):
                 "native_config_error rejects an unknown tool",
                 native_config_error("prettier", "x.json", True, []),
                 "native_config: unknown tool 'prettier': want one of " +
-                "biome, buf, buildifier, checkstyle, clang_format, clang_tidy, cppcheck, csharpier, eslint, fsharplint, qmlformat, qmllint, ruff, rustfmt, scalafix, scalafmt, staticcheck, taplo, vale",
+                "biome, buf, buildifier, checkstyle, clang_format, clang_tidy, cppcheck, csharpier, djlint, eslint, fsharplint, qmlformat, qmllint, ruff, rustfmt, scalafix, scalafmt, staticcheck, stylelint, taplo, vale, yamllint",
             ),
             expect_equal(
                 "native_config_error requires a config",

@@ -174,8 +174,8 @@ cue v0.17.1 plus jsonnetfmt v0.22.0 plus pkl 0.32.1 plus terraform v1.16.1 plus 
 @prettier/plugin-xml 3.4.2 plus modfmt v0.4.0 from github.com/joshdk/modfmt plus yamlfmt v0.21.0 plus yamllint
 1.38.0 plus keep-sorted v0.10.0; whole-file rewrite versus check-only per tool with no auto-supplied preset,
 suffix inference rejected with registry-owned applicability, beyond-default switches rejected;
-digests plus adapter mappings stay owned under #800 (successor to closed #420); `protobuf`/`qml` adapters delivered under #799 (successor to closed #419),
-never double-claimed; no adapter claims `cue` yet; platform plus consumer plus release evidence stays owned gap; no Supported claim).
+file-family adapters delivered under #800 (successor to closed #420); `protobuf`/`qml` adapters delivered under #799 (successor to closed #419),
+never double-claimed; platform plus consumer plus release evidence stays owned gap; no Supported claim).
 
 Structured quality defaults are qualified seed-only under issue #488 (`bazel run //tools/ci:structured_defaults_qualification` with
 `quality/tests/fixtures/structured_quality/pins.bzl` over upstream built-in defaults with no hidden preset;

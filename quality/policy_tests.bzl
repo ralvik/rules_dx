@@ -71,7 +71,12 @@ field family.python.typecheck=
 field family.rust.audit=
 field family.rust.format=fmt-a
 field family.rust.lint=lint-a,lint-b
-field family.rust.typecheck="""
+field family.rust.typecheck=
+aspect_field aspect_seen=True
+aspect_field field_count=8
+aspect_field has_subject=True
+aspect_field subject_label=//quality:policy_under_test
+aspect_field transitive_count=0"""
 
 def policy_analysis_tests(name):
     starlark_test(

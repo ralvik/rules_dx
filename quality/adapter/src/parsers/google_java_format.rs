@@ -66,13 +66,10 @@ mod tests {
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].file, "/s/Dirty.java");
         assert_eq!(findings[0].finding.message, "file is not formatted");
-        let clean =
-            parse_google_java_format(b"", Some(0), &["/s/Dirty.java"]).expect("clean");
+        let clean = parse_google_java_format(b"", Some(0), &["/s/Dirty.java"]).expect("clean");
         assert!(clean.is_empty());
         assert!(parse_google_java_format(b"", Some(1), &["/s/Dirty.java"]).is_err());
-        assert!(
-            parse_google_java_format(b"/s/other.java\n", Some(1), &["/s/Dirty.java"]).is_err()
-        );
+        assert!(parse_google_java_format(b"/s/other.java\n", Some(1), &["/s/Dirty.java"]).is_err());
         assert!(parse_google_java_format(&[0xff], Some(1), &["/s/Dirty.java"]).is_err());
     }
 }

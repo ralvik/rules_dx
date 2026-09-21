@@ -1,0 +1,5 @@
+--- a/cue/Sample.cue
++++ b/cue/Sample.cue
+@@ -1 +1 @@
+-BADFMT
++fixed

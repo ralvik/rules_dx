@@ -48,7 +48,9 @@ def adapter_supported_classes(tool_id, capability):
 # recorded-diagnostics/delegated-record check-only in the matrix
 # (spawned in production), ruff audit is check-only over the S ruleset
 # via the same hermetic `check` JSON path as lint (native-config sole
-# policy, no hidden preset), and lint-only adapters stay check-only by
+# policy, no hidden preset), and the interpreted/file-family cohort rides
+# fake doubles plus delegated records seed-only (formatters whole-file rewrite,
+# lint check-only via sandbox-apply-and-diff). Lint-only adapters stay check-only by
 # design (ktlint lint fixes via `--format` like ESLint `--fix`).
 # See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
@@ -67,6 +69,8 @@ REAL_ADAPTERS = {
     "clippy": {"lint": ["rust"]},
     "cppcheck": {"lint": ["c", "cpp"]},
     "csharpier": {"format": ["csharp"]},
+    "cue": {"format": ["cue"]},
+    "djlint": {"format": ["html_template"], "lint": ["html_template"]},
     "errcheck": {"lint": ["go"]},
     "eslint": {"lint": ["javascript", "jsx"]},
     "fantomas": {"format": ["fsharp"]},
@@ -75,11 +79,17 @@ REAL_ADAPTERS = {
     "gofumpt": {"format": ["go"]},
     "google_java_format": {"format": ["java"]},
     "govet": {"lint": ["go"]},
+    "jsonnetfmt": {"format": ["jsonnet"]},
+    "keep_sorted": {"lint": ["text"]},
     "ktfmt": {"format": ["kotlin"]},
     "ktlint": {"lint": ["kotlin"]},
     "markdown_check": {"lint": ["markdown"]},
+    "modfmt": {"format": ["go_module"]},
+    "pkl": {"format": ["pkl"]},
     "pmd": {"lint": ["java"]},
-    "prettier": {"format": ["javascript", "json", "jsx", "typescript", "tsx"]},
+    "prettier": {"format": ["css", "gherkin", "javascript", "json", "jsx", "less", "scss", "sql", "tsx", "typescript", "xml"]},
+    "psscriptanalyzer": {"lint": ["powershell"]},
+    "rubocop": {"lint": ["ruby"]},
     "pydoclint": {"lint": ["python", "python_stub"]},
     "pylint": {"lint": ["python", "python_stub"]},
     "qmlformat": {"format": ["qml"]},
@@ -90,12 +100,19 @@ REAL_ADAPTERS = {
     "rustfmt": {"format": ["rust"]},
     "scalafix": {"lint": ["scala"]},
     "scalafmt": {"format": ["scala"]},
+    "shellcheck": {"lint": ["shell"]},
+    "shfmt": {"format": ["shell"]},
     "spotbugs": {"lint": ["java"]},
+    "standardrb": {"format": ["ruby"]},
     "staticcheck": {"lint": ["go"]},
+    "stylelint": {"lint": ["css", "less", "scss"]},
     "taplo": {"format": ["toml"], "lint": ["toml"]},
+    "terraform": {"format": ["terraform"]},
     "tsc": {"typecheck": ["typescript", "tsx"]},
     "ty": {"typecheck": ["python", "python_stub"]},
     "vale": {"lint": ["markdown"]},
+    "yamlfmt": {"format": ["yaml"]},
+    "yamllint": {"lint": ["yaml"]},
 }
 
 # Frozen taxonomy: one owning family per class (single-sourced here).

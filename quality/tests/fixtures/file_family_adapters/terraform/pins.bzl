@@ -1,0 +1,12 @@
+"""terraform check plus fix wiring.
+
+Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
+`docs/tools/tool-acquisition.md#initial-artifact-research`.
+"""
+
+TERRAFORM_VERSION = "v1.16.1"
+TERRAFORM_ARTIFACT = "standalone checksummed release artifact; terraform fmt"
+TERRAFORM_CHECK = "terraform fmt -check -diff"
+TERRAFORM_FIX = "terraform fmt -write"
+FILE_FAMILY_PROOF = "bazel build //quality/tests/fixtures/file_family_adapters/terraform:corpus_starlark"
+TERRAFORM_REJECTED = "ambient discovery rejected; auto-supplied preset rejected"

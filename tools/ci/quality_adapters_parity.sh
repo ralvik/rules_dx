@@ -47,41 +47,45 @@ update="quality/artifacts/update.py"
 qual="cli/qualification/src/lib.rs"
 integrations="docs/quality/tool-integrations.md"
 
-# No false adapter claim for the two missing families: none of their
-# tool IDs appear in REAL_ADAPTERS. Classification exists in
+# No false adapter claim: all cohorts delivered, no missing tool IDs remain
+# among those cohorts. Classification exists in
 # REAL_CLASS_TO_FAMILY; adapter claim does not. Scala/.NET (scalafmt,
 # scalafix, csharpier, fantomas, roslyn, fsharplint) delivered under #797
 # plus JVM (google-java-format, checkstyle, pmd, spotbugs, ktfmt, ktlint)
 # delivered under #796 plus native (clang_format, clang_tidy, cppcheck,
 # gofumpt, staticcheck, govet, errcheck) delivered under #798 plus
-# Structured (buf, qmlformat, qmllint) delivered under #799.
-dx_guards_absent "$adapters" "false adapter claim for missing families (want no adapter claim)" \
-  '"psscriptanalyzer":' \
-  '"rubocop":' \
-  '"standardrb":'
+# Structured (buf, qmlformat, qmllint) delivered under #799 plus
+# interpreted/file-family (cue, djlint, stylelint, rubocop, standardrb,
+# psscriptanalyzer and eleven more) delivered under #800.
+# All cohort tool IDs are now claimed; no absent check remains for those
+# cohorts (remaining deferred framework regions have no tool IDs).
 
-# Parity deferrals name owner plus route for the two plus the wider
-# deferred set (mirrors parity_tests.bzl unit gate so CI fails here too).
+# Parity deferrals name owner plus route for the remaining deferred set
+# (mirrors parity_tests.bzl unit gate so CI fails here too).
 # Scala/.NET classes delivered under #797 plus JVM classes under #796 plus
-# native classes under #798 plus Structured classes delivered under #799.
+# native classes under #798 plus Structured classes delivered under #799 plus
+# file-family classes delivered under #800.
 dx_guards_contains "$parity" "parity deferrals drifted (want class plus ADR 0019 owner plus shape)" \
-  '"powershell":' \
-  '"ruby":' \
-  '"powershell": ["ADR 0019"' \
-  '"ruby": ["ADR 0019"' \
+  '"astro":' \
+  '"cuda":' \
+  '"astro": ["ADR 0019"' \
+  '"cuda": ["ADR 0019"' \
   'PARITY_DEFERRED = {'
 dx_guards_contains "$adapters" "parity deferrals drifted (want adapter plus taxonomy shape)" \
   'REAL_ADAPTERS = {' \
   'REAL_CLASS_TO_FAMILY = {'
 
 # Every adapter-backed class has real subjects plus matrix evidence.
-# The twenty-one backed classes: c, cpp, csharp, fsharp, go, java, javascript,
-# json, jsx, kotlin, markdown, protobuf, python, python_stub, qml, rust, scala, starlark,
-# toml, tsx, typescript. python_stub rides generated .pyi matrix cases;
+# The thirty-eight backed classes: c, cpp, csharp, css, cue, fsharp, gherkin,
+# go, go_module, java, javascript, json, jsonnet, jsx, kotlin, less,
+# markdown, pkl, powershell, protobuf, python, python_stub, qml, ruby, rust,
+# scala, scss, shell, sql, starlark, terraform, text, toml, tsx, typescript,
+# xml, yaml, html_template. python_stub rides generated .pyi matrix cases;
 # scala/csharp/fsharp ride generated plus delegated matrix cases (issue #797);
 # java/kotlin ride real_source_target subjects plus JVM matrix cells (issue
 # #796); c/cpp/go ride generated plus delegated matrix cases (issue #798);
 # protobuf/qml ride generated plus delegated matrix cells (issue #799);
+# file-family rides generated plus delegated matrix cases (issue #800);
 # the rest ride real_source_target subjects.
 dx_guards_contains "$subjects" "adapter-backed class evidence drifted (want subjects)" \
   'javascript' \
@@ -98,7 +102,8 @@ dx_guards_contains "$matrix" "adapter-backed class evidence drifted (want matrix
   'SCALA_DOTNET_CASES' \
   'JVM_CASES' \
   'NATIVE_CASES' \
-  'STRUCTURED_CASES'
+  'STRUCTURED_CASES' \
+  'FILE_FAMILY_CASES'
 dx_guards_tree_contains "runner_matrix_*.bzl" "adapter-backed class evidence drifted (want matrix cases)" \
   'python_stub' \
   'matrix_rust_format_pass' \
@@ -110,11 +115,14 @@ dx_guards_tree_contains "runner_matrix_*.bzl" "adapter-backed class evidence dri
   'matrix_toml_lint_pass'
 
 # Every adapter-backed tool has parser plus matrix pass/fail evidence.
-# Thirty-eight tools: biome, buf, buildifier, checkstyle, clang_format, clang_tidy,
-# clippy, cppcheck, csharpier, errcheck, eslint, fantomas, flake8, fsharplint,
-# gofumpt, google_java_format, govet, ktfmt, ktlint, markdown_check, pmd,
-# prettier, pydoclint, pylint, qmlformat, qmllint, roslyn, ruff, rustc, rustfmt, scalafix, scalafmt,
-# spotbugs, staticcheck, taplo, tsc, ty, vale.
+# Fifty-three tools: biome, buf, buildifier, checkstyle, clang_format, clang_tidy,
+# clippy, cppcheck, csharpier, cue, djlint, errcheck, eslint, fantomas,
+# flake8, fsharplint, gofumpt, google_java_format, govet, jsonnetfmt,
+# keep_sorted, ktfmt, ktlint, markdown_check, modfmt, pkl, pmd,
+# prettier, psscriptanalyzer, pydoclint, pylint, qmlformat, qmllint, roslyn,
+# rubocop, ruff, rustc, rustfmt, scalafix, scalafmt, shellcheck, shfmt, spotbugs,
+# standardrb, staticcheck, stylelint, taplo, terraform, tsc, ty, vale,
+# yamlfmt, yamllint.
 # tsc is target-coupled (needs TsConfigInfo) so its evidence lives in
 # quality/tools/typescript/BUILD.bazel plus the tsc parser, not the
 # provider-less runner matrix. Roslyn/scalafix/fsharplint run delegated
@@ -160,6 +168,21 @@ dx_guard_file quality/adapter/src/parsers/taplo.rs "adapter-backed tool evidence
 dx_guard_file quality/adapter/src/parsers/tsc.rs "adapter-backed tool evidence drifted (want tsc parser)"
 dx_guard_file quality/adapter/src/parsers/ty.rs "adapter-backed tool evidence drifted (want ty parser)"
 dx_guard_file quality/adapter/src/parsers/vale.rs "adapter-backed tool evidence drifted (want vale parser)"
+dx_guard_file quality/adapter/src/parsers/cue.rs "adapter-backed tool evidence drifted (want cue parser)"
+dx_guard_file quality/adapter/src/parsers/djlint.rs "adapter-backed tool evidence drifted (want djlint parser)"
+dx_guard_file quality/adapter/src/parsers/stylelint.rs "adapter-backed tool evidence drifted (want stylelint parser)"
+dx_guard_file quality/adapter/src/parsers/rubocop.rs "adapter-backed tool evidence drifted (want rubocop parser)"
+dx_guard_file quality/adapter/src/parsers/psscriptanalyzer.rs "adapter-backed tool evidence drifted (want psscriptanalyzer parser)"
+dx_guard_file quality/adapter/src/parsers/yamllint.rs "adapter-backed tool evidence drifted (want yamllint parser)"
+dx_guard_file quality/adapter/src/parsers/shellcheck.rs "adapter-backed tool evidence drifted (want shellcheck parser)"
+dx_guard_file quality/adapter/src/parsers/keep_sorted.rs "adapter-backed tool evidence drifted (want keep_sorted parser)"
+dx_guard_file quality/adapter/src/parsers/jsonnetfmt.rs "adapter-backed tool evidence drifted (want jsonnetfmt parser)"
+dx_guard_file quality/adapter/src/parsers/modfmt.rs "adapter-backed tool evidence drifted (want modfmt parser)"
+dx_guard_file quality/adapter/src/parsers/pkl.rs "adapter-backed tool evidence drifted (want pkl parser)"
+dx_guard_file quality/adapter/src/parsers/shfmt.rs "adapter-backed tool evidence drifted (want shfmt parser)"
+dx_guard_file quality/adapter/src/parsers/standardrb.rs "adapter-backed tool evidence drifted (want standardrb parser)"
+dx_guard_file quality/adapter/src/parsers/terraform.rs "adapter-backed tool evidence drifted (want terraform parser)"
+dx_guard_file quality/adapter/src/parsers/yamlfmt.rs "adapter-backed tool evidence drifted (want yamlfmt parser)"
 # clippy/rustc parse through rust.rs delegated diagnostics, not separate files.
 dx_guards_contains quality/adapter/src/parsers/rust.rs "adapter-backed tool evidence drifted (want clippy/rustc delegated parse)" \
   'parse_clippy' \
@@ -212,6 +235,16 @@ dx_guards_contains quality/testdata/runner_matrix_structured.bzl "adapter-backed
   'buf' \
   'qmlformat' \
   'qmllint'
+# Interpreted/file-family cohort matrix evidence lives in the split file (issue #800).
+dx_guards_contains quality/testdata/runner_matrix_file_family.bzl "adapter-backed tool evidence drifted (want file-family matrix entries)" \
+  'cue' \
+  'djlint' \
+  'stylelint' \
+  'rubocop' \
+  'psscriptanalyzer' \
+  'yamllint' \
+  'shellcheck' \
+  'keep_sorted'
 # tsc target-coupled evidence: authoritative mapping plus parser plus
 # aspect coupling note, never a bare-file matrix case. The coupling-note
 # match is case-neutral (`coupled tsc`) so sentence-case comments
@@ -224,17 +257,18 @@ dx_guard_tree_contains "runner_matrix_*.bzl" '_pass' "adapter-backed tool eviden
 # Fix/format replacements exist where applicable (formatters emit replacements).
 dx_guard_tree_contains "runner_matrix_*.bzl" 'replacement ' "adapter-backed tool evidence drifted (want matrix replacements)"
 
-# Native-config bindings exist for the nineteen tools that take native policy;
-# the other nineteen are explicitly config-free, upstream-delegated,
+# Native-config bindings exist for the twenty-two tools that take native policy;
+# the rest are explicitly config-free, upstream-delegated,
 # target-coupled, or check-only by design (no native-config rule expected).
 # Scala/.NET adds scalafmt, scalafix, csharpier, fsharplint (issue #797);
 # JVM adds checkstyle (issue #796); native adds clang_format, clang_tidy,
 # cppcheck, staticcheck (issue #798); Structured adds buf, qmlformat, qmllint
-# (issue #799); roslyn is SDK-coupled and fantomas
+# (issue #799); file-family adds stylelint, djlint, yamllint (issue #800);
+# roslyn is SDK-coupled and fantomas
 # takes .editorconfig (no typed rule); gofumpt, govet, and errcheck take no
 # native config file by design.
 config_fail=""
-for tool in biome buf buildifier checkstyle clang_format clang_tidy cppcheck csharpier eslint fsharplint qmlformat qmllint ruff rustfmt scalafix scalafmt staticcheck taplo vale; do
+for tool in biome buf buildifier checkstyle clang_format clang_tidy cppcheck csharpier djlint eslint fsharplint qmlformat qmllint ruff rustfmt scalafix scalafmt staticcheck stylelint taplo vale yamllint; do
   grep -q -F -e "\"$tool\":" "$native" || grep -q -F -e "_NATIVE_CONFIG_EXTENSIONS" "$native" || config_fail="$config_fail $tool:extension"
 done
 if [[ -z "$config_fail" ]]; then
@@ -251,6 +285,7 @@ dx_guards_contains "$native" "native-config bindings drifted (want per-tool rule
   'clang_tidy_config' \
   'cppcheck_config' \
   'csharpier_config' \
+  'djlint_config' \
   'eslint_config' \
   'fsharplint_config' \
   'qmlformat_config' \
@@ -260,8 +295,10 @@ dx_guards_contains "$native" "native-config bindings drifted (want per-tool rule
   'scalafix_config' \
   'scalafmt_config' \
   'staticcheck_config' \
+  'stylelint_config' \
   'taplo_config' \
-  'vale_config'
+  'vale_config' \
+  'yamllint_config'
 # Config-free/delegated status is documented in code, not silently missing.
 dx_guard_contains "$adapters" 'check-only' "native-config bindings drifted (want adapters check-only note)"
 dx_guard_re_contains "$aspects" 'upstream-delegated|Delegated' "native-config bindings drifted (want aspects delegated note)"
