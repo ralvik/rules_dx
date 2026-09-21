@@ -35,6 +35,13 @@ Checks:
 - Delete: none beyond shrinking; `main.rs` header already 3 lines with
   `Contract:`; `validation.rs`/`lifecycle.rs`/`diagnostics.rs`/`modes.rs`
   from proposal no longer exist (refactored).
+- Crate roots: every `cli/*/src/lib.rs` links its owning contract once
+  (`audit` to `audit-update-bazel.md#dx-audit`, `bump` to `#dx-bump`,
+  `update` to `#dx-update`, `ci` to `github-ci.md#check-selection`,
+  `docgen` to `documentation/README.md`, `path`/`schema` to
+  `architecture/README.md`, `qualification` to
+  `product/promotion-checklist.md`, `env` normalized to singular
+  `Contract:`; remainder landed earlier).
 
 ### `quality/*.bzl`
 

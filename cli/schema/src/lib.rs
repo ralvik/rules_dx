@@ -1,5 +1,7 @@
 //! Shared schema-version helpers for versioned shard protocols.
 //!
+//! Contract: `docs/architecture/README.md`.
+//!
 //! `quality/result`, `generation/result`, `docs/ir`, and `cli/output`
 //! all version their wire form with `schema_major = 1` / `schema_minor = 0`.
 //! Major bumps are breaking (decode must fail); minor bumps are

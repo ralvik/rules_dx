@@ -1,6 +1,8 @@
 //! Pure consumer-CI check-selection planning (WP1 slices 1-7, WP2 slices 8-9,
 //! WP4 slices 10-11, WP6 slice 12).
 //!
+//! Contract: `docs/github-ci.md#check-selection`.
+//!
 //! This crate owns the check-selection surface before any reusable
 //! workflow, caller template, or reporter lands: the nine accepted CI
 //! checks, starter defaults, explicit opt-outs, the explicit

@@ -1,5 +1,7 @@
 //! Pure `dx bump` widen-one-requirement planning.
 //!
+//! Contract: `docs/cli/commands/audit-update-bazel.md#dx-bump`.
+//!
 //! This crate owns the explicit widen operation, separate from `dx
 //! update`: `dx bump <selector> <version>` rewrites exactly one declared
 //! requirement in the working copy. `dx update` keeps its never-rewrites

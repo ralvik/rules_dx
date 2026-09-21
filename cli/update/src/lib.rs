@@ -1,5 +1,7 @@
 //! Pure `dx update` selection planning.
 //!
+//! Contract: `docs/cli/commands/audit-update-bazel.md#dx-update`.
+//!
 //! This crate owns the update command surface with live resolver
 //! integration: bare selection means every supported dependency set,
 //! explicit selectors narrow to sets/packages/targets, and the command is
