@@ -120,7 +120,14 @@ local-only), staged under `RUNNER_TEMP/sbom-musl-x86_64` plus
 `RUNNER_TEMP/sbom-musl-arm64` and uploaded as the
 `sbom-provenance-linux_x86_64_musl` plus `sbom-provenance-linux_arm64_musl`
 artifacts (SPDX-2.3 plus SLSA v1, static native closure only with dynamic musl
-explicitly out of scope, publishes nothing). Attestation stays owner-gated human-run via
+explicitly out of scope, publishes nothing). Per-host release evidence for macOS arm64 native
+lands via the `sbom-macos-arm64` job in `.github/workflows/ci.yml` (issue #805): the same
+`sbom_demo` build plus `dx_release_tools_test` verify on the macos arm64 native
+runner (`macos-14`, `bazel-macos-arm64-` cache, `needs: [build-macos-arm64]`,
+local-only), staged under `RUNNER_TEMP/sbom-macos-arm64` and uploaded as the
+`sbom-provenance-macos_arm64` artifact (SPDX-2.3 plus SLSA v1, pinned acquired SDK
+with hermetic-llvm Apple-SDK backend provisional and no host-installed SDK fallback never approved,
+publishes nothing). Attestation stays owner-gated human-run via
 `//deploy/release:signing_demo` (Sigstore keyless plus GitHub attestations);
 CI never signs PR code. Pinned by `bazel run
 //tools/ci:sbom_upload_qualification` with fixture evidence in
@@ -128,7 +135,9 @@ CI never signs PR code. Pinned by `bazel run
 //tools/ci:release_arm64_qualification` with fixture evidence in
 `tools/ci/tests/fixtures/release_arm64/` plus `bazel run
 //tools/ci:release_musl_qualification` with fixture evidence in
-`tools/ci/tests/fixtures/release_musl/`.
+`tools/ci/tests/fixtures/release_musl/` plus `bazel run
+//tools/ci:release_macos_arm64_qualification` with fixture evidence in
+`tools/ci/tests/fixtures/release_macos_arm64/`.
 
 All release outputs stay under `RUNNER_TEMP` or the chosen outdir until
 published; `dist/` and `release/` stay git-ignored and the checkout is
