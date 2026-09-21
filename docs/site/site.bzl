@@ -65,6 +65,58 @@ def site_prose_error(path):
         return ""
     return "docs_site: prose inputs must be Markdown, got '" + path + "'"
 
+def site_is_external_link(target):
+    """Returns True when a Markdown link target is remote and never fetched.
+
+    Remote targets contain `://` or use `mailto:`; they are recorded but
+    never fetched. All other targets are internal and must resolve to
+    prose or generated API pages with no dangling targets.
+    """
+    if "://" in target:
+        return True
+    if target.startswith("mailto:"):
+        return True
+    return False
+
+def site_link_target_error(target, known_pages, known_api_paths):
+    """Validates one internal link target, returning "" when valid.
+
+    `known_pages` lists the render-input basenames valid at the pre-render
+    boundary (`api.md`, `prose.md`, `SUMMARY.md` plus declared prose
+    basenames). `known_api_paths` lists per-symbol `api/...` pages derived
+    from shard IDs via `site_api_path`. Remote targets are skipped (never
+    fetched). Anchor-only targets need a non-empty fragment. Other targets
+    strip any `#fragment` and require the base in `known_pages` or
+    `known_api_paths`. Empty or unknown bases fail closed with no silent
+    dangling pass.
+
+    Args:
+      target: raw Markdown link target (inside `](...)` or definition).
+      known_pages: valid render-input basenames at the pre-render boundary.
+      known_api_paths: valid per-symbol `api/...` pages from shard IDs.
+    """
+    if target == "":
+        return "docs_site: empty link target"
+    if site_is_external_link(target):
+        return ""
+    if target.startswith("#"):
+        if len(target) > 1:
+            return ""
+        return "docs_site: empty link target"
+    parts = target.split("#")
+    base = parts[0]
+    if base == "":
+        return "docs_site: empty link target"
+    if base in known_pages:
+        return ""
+    if base in known_api_paths:
+        return ""
+    if base.startswith("api/"):
+        return "docs_site: dangling API link '" + target + "'"
+    if base.endswith(".md"):
+        return "docs_site: dangling prose link '" + target + "'"
+    return "docs_site: unknown link target '" + target + "'"
+
 def site_search_record(url, title, body):
     """Returns one search-index record with sorted keys.
 
@@ -112,7 +164,12 @@ def docs_aggregate(name, shards, prose, book_toml):
     API pages) plus search-index records. The search records are built
     directly from prose plus IR; they never parse rendered HTML. All
     outputs are deterministic: sorted symbol order, sorted JSON keys,
-    LF bytes, no timestamps, workspace-relative paths only.
+    LF bytes, no timestamps, workspace-relative paths only. Shared
+    validation includes link/reference completeness at the pre-render
+    boundary (#782): prose inline plus reference-definition targets must
+    resolve to prose or generated API pages with no dangling targets with
+    dangling targets fail the aggregate action; remote targets are skipped,
+    never fetched with no partial outputs.
 
     Args:
       name: instance name; owns SUMMARY, API, and records outputs.
@@ -143,7 +200,14 @@ def docs_aggregate(name, shards, prose, book_toml):
               "LC_ALL=C grep -h '^  id: ' " + shard_locs + " | LC_ALL=C sort -u | sed 's/^  id: \"//;s/\"$$//' | awk '{url=$$0; gsub(/:/, \"/\", url); printf \"  {\\\"body\\\": \\\"API docs for %s\\\", \\\"title\\\": \\\"%s\\\", \\\"url\\\": \\\"api/%s\\\"},\\n\", $$0, $$0, url}' | LC_ALL=C sort -u | sed '$$s/,$$//' >> \"$$records\"; " +
               "printf ']\\n' >> \"$$records\"; " +
               "grep -q '^title' " + book_loc + "; " +
-              "grep -q '^# ' " + prose_locs + "",
+              "grep -q '^# ' " + prose_locs + "; " +
+              "for _sid in $$(LC_ALL=C grep -h '^  id: ' " + shard_locs + " | sed 's/^  id: \"//;s/\"$$//' | LC_ALL=C sort -u); do LC_ALL=C grep -qF \"$$_sid\" \"$$api\" || { echo \"docs_site: missing API page for $$_sid\" >&2; exit 1; }; done; " +
+              "if LC_ALL=C grep -q '\\[[^]]*\\]()' " + prose_locs + "; then echo 'docs_site: empty link target' >&2; exit 1; fi; " +
+              "anchors=$$( (LC_ALL=C grep -h '^#' " + prose_locs + " 2>/dev/null || true; LC_ALL=C grep -h '^## ' \"$$api\" 2>/dev/null || true) | sed 's/^#* *//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 -]//g; s/^ *//; s/ *$$//; s/ /-/g; s/--*/-/g' | LC_ALL=C sort -u); " +
+              "api_paths=$$(LC_ALL=C grep -h '^  id: ' " + shard_locs + " | sed 's/^  id: \"//;s/\"$$//' | sed 's/:/\\//g;s/^/api\\//;s/$$/.md/' | LC_ALL=C sort -u); " +
+              "prose_bases=$$(for _f in " + prose_locs + "; do basename \"$$_f\"; done | LC_ALL=C sort -u); " +
+              "targets=$$( (LC_ALL=C grep -h -o '\\[[^]]*\\]([^)]*)' " + prose_locs + " 2>/dev/null | sed -n 's/.*(\\([^)]*\\)).*/\\1/p' | sed 's/^ *//;s/ *$$//;s/^<//;s/>$$//;s/^\".*//;s/\".*$$//;s/^ *//;s/ *$$//' | cut -d' ' -f1 | LC_ALL=C sort -u || true; LC_ALL=C grep -h '^[ ]*\\[[^]]*\\]:' " + prose_locs + " 2>/dev/null | sed 's/^[^:]*:[[:space:]]*//;s/[[:space:]\".*].*//' | cut -d' ' -f1 | LC_ALL=C sort -u || true) | LC_ALL=C sort -u); " +
+              "for _t in $$targets; do case \"$$_t\" in *\\://*|mailto:*) continue;; \\#*) _frag=$$(printf '%s' \"$$_t\" | cut -c2-); printf '%s\\n' \"$$anchors\" | LC_ALL=C grep -qxF \"$$_frag\" || { echo \"docs_site: dangling anchor '$$_t'\" >&2; exit 1; };; *) _base=$$(printf '%s' \"$$_t\" | cut -d'#' -f1); _frag=$$(printf '%s' \"$$_t\" | cut -s -d'#' -f2- || true); _found=0; for _p in api.md prose.md SUMMARY.md $$prose_bases $$api_paths; do if [ \"$$_base\" = \"$$_p\" ]; then _found=1; break; fi; done; if [ \"$$_found\" = \"0\" ]; then echo \"docs_site: dangling link '$$_t'\" >&2; exit 1; fi; if [ -n \"$$_frag\" ]; then _norm=$$(printf '%s' \"$$_frag\" | tr '[:upper:]' '[:lower:]'); printf '%s\\n' \"$$anchors\" | LC_ALL=C grep -qxF \"$$_norm\" || { echo \"docs_site: dangling fragment '$$_t'\" >&2; exit 1; }; fi;; esac; done",
     )
     native.filegroup(
         name = name,

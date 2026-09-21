@@ -3,7 +3,8 @@
 Implementation status: accepted v1 direction with adapter runs delivered under #779 plus
 renderer/site execution delivered seed-only under #780 (successors to closed #581,
 live successor to closed #421); site-level byte-identical rebuild proof delivered
-seed-only under #781; remaining execution open (#782-#785).
+seed-only under #781; link/reference completeness delivered seed-only under #782;
+remaining execution open (#783-#785).
 Accepted: the `dx_docs` site-build action planning over the
 Bazel-cached extract→aggregate→render graph (no committed IR). Delivered: per-language
 extraction runs under #779 (`//docs/adapters:docs_adapters` over pinned inputs) plus fixture-scale
@@ -15,12 +16,12 @@ removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md); reintro
 is open under #786. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are delivered seed-only for the fixture-scale site (rebuild proof under #781);
-remaining timing and invalidation verification follows
-[Testing](../testing/) before any support statement. Open under #782-#785
+link/reference completeness delivered seed-only under #782; remaining timing
+and invalidation verification follows
+[Testing](../testing/) before any support statement. Open under #783-#785
 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
-link/reference completeness,
 cache reuse and invalidation fixtures, guide-step CI wiring, and first-hour timing proof.
-Fixture-scale site execution plus byte-identical rebuild proof are qualified seed-only; no published site is claimed.
+Fixture-scale site execution plus byte-identical rebuild proof plus link completeness are qualified seed-only; no published site is claimed.
 
 ## Action Graph
 
@@ -74,8 +75,10 @@ normal execution, not a freshness failure. No snapshot refresh/apply step or sep
 documentation cache is introduced.
 
 The planned [`dx docs --check`](../cli/commands/docs.md) selects extraction and shared validation but not
-rendering; normal build validates and renders. Completeness of required link/reference checks
-at the pre-render boundary remains a gap (#782, successor to closed #581). Neither mode compares against committed IR. Build and check
+rendering; normal build validates and renders. Link/reference completeness at the pre-render boundary is delivered seed-only under #782
+(successor to closed #581): prose plus generated API pages resolve all internal links/references with no dangling targets;
+remote targets are skipped, never fetched; dangling targets fail the aggregate action with no partial outputs.
+Neither mode compares against committed IR. Build and check
 may write Bazel outputs and cache entries but never write generated IR beside source
 files. The planned `--serve` previews the built output locally and is not a build action.
 
@@ -86,6 +89,10 @@ plus the rendered entry plus the single search index as Bazel-cached outputs.
 Delivered (seed-only rebuild proof under #781) fixtures prove identical inputs rebuild to
 byte-identical site outputs: two builds are hashed and diffed, outputs stay sorted with
 no timestamps and no absolute paths.
+Delivered (seed-only link completeness under #782) fixtures prove prose plus generated API pages
+resolve all internal links with no dangling targets: the demo prose links `api.md` plus `#getting-started`
+plus a skipped remote URL, every shard ID appears as an API heading, and dangling prose, API, anchor, or
+unknown targets fail the aggregate action with no partial outputs.
 Cache reuse and rebuilds must produce equivalent validated artifacts;
 remote-cache claims additionally require the central [testing evidence](../testing/README.md#remote-tests).
 Cache reuse timing and appropriate invalidation after source/extractor/configuration changes
@@ -107,4 +114,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781; remaining: #782-#785. Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782; remaining: #783-#785. Reintroduction: #786.

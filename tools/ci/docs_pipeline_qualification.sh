@@ -14,13 +14,16 @@
 #   prose plus generated API pages plus one search index, generated IR in
 #   Bazel outputs only, seed-only under #780), plus site-level byte-identical
 #   rebuild proof (two builds hashed and diffed, sorted outputs with no
-#   timestamps and no absolute paths, seed-only under #781), frozen design contracts (IR + site),
+#   timestamps and no absolute paths, seed-only under #781), plus
+#   link/reference completeness at the pre-render boundary (prose plus
+#   generated API pages resolve all internal links with no dangling targets,
+#   remote skipped never fetched, dangling fails the action, seed-only under
+#   #782), frozen design contracts (IR + site),
 #   removed dx docs stub behind ADR 0020, no Supported claim;
-# - open under #782-#785 with honest records: link/reference completeness at the
-#   pre-render boundary, guide prose plus guide-step CI wiring, first-hour
-#   timing proof, per-release pin-bump plus drift process, dx docs
-#   reintroduction per ADR 0006 build-vs-validation split (open under #786),
-#   reusable-docs plus caller staying product surface.
+# - open under #783-#785 with honest records: guide prose plus guide-step
+#   CI wiring, first-hour timing proof, per-release pin-bump plus drift
+#   process, dx docs reintroduction per ADR 0006 build-vs-validation split
+#   (open under #786), reusable-docs plus caller staying product surface.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:docs_pipeline_qualification`,
 # following //tools/ci:env_codegen_qualification.
@@ -63,6 +66,7 @@ site_demo_book="docs/site/demo/book.toml"
 site_pins="tools/ci/tests/fixtures/docs_site/pins.bzl"
 site_expected="tools/ci/tests/fixtures/docs_site/docs_site.expected"
 site_rebuild_expected="tools/ci/tests/fixtures/docs_site/rebuild.expected"
+site_links_expected="tools/ci/tests/fixtures/docs_site/links.expected"
 site_fixture_build="tools/ci/tests/fixtures/docs_site/BUILD.bazel"
 adapters="docs/adapters/src/lib.rs"
 adapters_build="docs/adapters/BUILD.bazel"
@@ -213,20 +217,21 @@ else
   bad "doc-ir lost its delivered overload/join/packaging record under #779"
 fi
 
-# delivered adapter-plus-site execution plus rebuild records under #779 plus #780 plus #781.
+# delivered adapter-plus-site execution plus rebuild plus link records under #779 plus #780 plus #781 plus #782.
 if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
   grep -q -F -e 'There is no planned replacement' "$site" &&
   grep -q -F -e 'adapter runs delivered under #779' "$site" &&
   grep -q -F -e 'renderer/site execution delivered seed-only under #780' "$site" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered' "$site" &&
-  grep -q -F -e 'Fixture-scale site execution plus byte-identical rebuild proof are qualified seed-only' "$site" &&
+  grep -q -F -e 'link/reference completeness delivered seed-only under #782' "$site" &&
+  grep -q -F -e 'Fixture-scale site execution plus byte-identical rebuild proof plus link completeness are qualified seed-only' "$site" &&
   grep -q -F -e 'extraction runs under #779' "$site" &&
   grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
   grep -q -F -e 'one DocsAggregate action' "$site" &&
   grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
   ok
 else
-  bad "site build lost its mdBook decision or delivered-execution plus rebuild record (#779 plus #780 plus #781)"
+  bad "site build lost its mdBook decision or delivered-execution plus rebuild plus link record (#779 plus #780 plus #781 plus #782)"
 fi
 
 # Determinism is delivered seed-only with byte-identical rebuild proof,
@@ -253,13 +258,17 @@ else
   bad "site lost its laziness/freshness no-committed-IR record (#780)"
 fi
 
-# Link/reference completeness at the pre-render boundary stays an owned gap.
-if grep -q -F -e 'Completeness of required link/reference checks' "$site" &&
-  grep -q -F -e 'at the pre-render boundary remains a gap (#782, successor to closed #581)' "$site" &&
+# Link/reference completeness at the pre-render boundary is delivered
+# seed-only under #782 with shared validation and no dangling targets.
+if grep -q -F -e 'Link/reference completeness at the pre-render boundary is delivered seed-only under #782' "$site" &&
+  grep -q -F -e 'prose plus generated API pages resolve all internal links' "$site" &&
+  grep -q -F -e 'no dangling targets' "$site" &&
+  grep -q -F -e 'remote targets are skipped, never fetched' "$site" &&
+  grep -q -F -e 'dangling targets fail the aggregate action' "$site" &&
   grep -q -F -e 'link/reference completeness' "$site"; then
   ok
 else
-  bad "site lost its link/reference pre-render completeness gap (#782)"
+  bad "site lost its link/reference pre-render completeness delivery (#782)"
 fi
 
 # Guide-step CI wiring plus first-hour timing stay owned gaps with no
@@ -333,45 +342,47 @@ else
 fi
 
 # Contracts keep the gap list with delivered adapter runs under #779 plus site
-# execution under #780 plus rebuild proof under #781 and no published-site honesty.
+# execution under #780 plus rebuild proof under #781 plus link completeness
+# under #782 and no published-site honesty.
 if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
   grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
   grep -q -F -e 'renderer and site execution delivered seed-only under #780' "$readme" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
-  grep -q -F -e 'under #782-#785' "$readme" &&
-  grep -q -F -e 'link and reference completeness' "$readme" &&
+  grep -q -F -e 'link and reference completeness delivered seed-only under #782' "$readme" &&
+  grep -q -F -e 'under #783-#785' "$readme" &&
   grep -q -F -e 'guide-step CI wiring' "$readme" &&
   grep -q -F -e 'first-hour timing proof' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "documentation README lost its #779 plus #780 plus #781 delivered plus remaining-gap list"
+  bad "documentation README lost its #779 plus #780 plus #781 plus #782 delivered plus remaining-gap list"
 fi
 
-# Roadmap keeps adapter-plus-site-plus-rebuild delivered plus remaining gaps.
+# Roadmap keeps adapter-plus-site-plus-rebuild-plus-link delivered plus remaining gaps.
 if grep -q -F -e 'adapter runs delivered under #779 plus renderer/site execution' "$roadmap" &&
   grep -q -F -e 'delivered under #780 plus rebuild proof delivered under #781' "$roadmap" &&
+  grep -q -F -e 'completeness delivered under #782' "$roadmap" &&
   grep -q -F -e 'stay open under' "$roadmap" &&
-  grep -q -F -e '#782-#785' "$roadmap" &&
+  grep -q -F -e '#783-#785' "$roadmap" &&
   grep -q -F -e 'no working site claimed' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its #779 plus #780 plus #781 delivered plus remaining-gap list"
+  bad "roadmap lost its #779 plus #780 plus #781 plus #782 delivered plus remaining-gap list"
 fi
 
 # Verification matrix keeps Docs Open with no Supported claim and no
-# working site, with adapter-plus-site-plus-rebuild delivered.
-if grep -q -F -e 'staying open under #782-#785' "$matrix" &&
-  grep -q -F -e 'adapter-plus-site-plus-rebuild green' "$matrix" &&
-  grep -q -F -e 'docs_pipeline_qualification` 58/58' "$matrix" &&
-  grep -q -F -e 'adapter runs delivered under #779 plus site execution delivered under #780 plus rebuild delivered under #781' "$matrix" &&
-  grep -q -F -e 'qualified seed-only under #779 plus #780 plus #781' "$matrix" &&
+# working site, with adapter-plus-site-plus-rebuild-plus-link delivered.
+if grep -q -F -e 'staying open under #783-#785' "$matrix" &&
+  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link green' "$matrix" &&
+  grep -q -F -e 'docs_pipeline_qualification` 64/64' "$matrix" &&
+  grep -q -F -e 'adapter runs delivered under #779 plus site execution delivered under #780 plus rebuild delivered under #781 plus link' "$matrix" &&
+  grep -q -F -e 'qualified seed-only under #779 plus #780 plus #781 plus #782' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
   ok
 else
-  bad "verification matrix lost its Docs Open plus #779 plus #780 plus #781 delivered plus no-Supported gate"
+  bad "verification matrix lost its Docs Open plus #779 plus #780 plus #781 plus #782 delivered plus no-Supported gate"
 fi
 
 # Functional: schema major pins agree (proto v1, codec example, shared helper).
@@ -546,21 +557,26 @@ else
 fi
 
 # Fixture pins stay present with the #780 execution plus #781 rebuild
-# records.
-if [[ -f "$site_pins" && -f "$site_expected" && -f "$site_rebuild_expected" && -f "$site_fixture_build" ]] &&
+# plus #782 link-completeness records.
+if [[ -f "$site_pins" && -f "$site_expected" && -f "$site_rebuild_expected" && -f "$site_links_expected" && -f "$site_fixture_build" ]] &&
   grep -q -F -e 'MDBOOK_VERSION = "0.4.43"' "$site_pins" &&
-  grep -q -F -e 'qualified seed-only under issues #780 plus #781' "$site_pins" &&
+  grep -q -F -e 'qualified seed-only under issues #780 plus #781 plus #782' "$site_pins" &&
   grep -q -F -e 'REBUILD_PROOF = "two builds hashed and diffed byte-identical under issue #781"' "$site_pins" &&
   grep -q -F -e 'REBUILD_OUTPUTS = "shard plus SUMMARY plus API plus records plus entry plus search index"' "$site_pins" &&
-  grep -q -F -e 'stay owned gaps under #782-#785' "$site_pins" &&
+  grep -q -F -e 'LINK_COMPLETENESS = "prose plus API pages resolve all internal links with no dangling targets under issue #782"' "$site_pins" &&
+  grep -q -F -e 'LINK_FAIL_CLOSED = "dangling links fail the aggregate action with no partial outputs"' "$site_pins" &&
+  grep -q -F -e 'stay owned gaps under #783-#785' "$site_pins" &&
   grep -q -F -e '(issue #780)' "$site_expected" &&
   grep -q -F -e 'Byte-identical rebuild proof delivered seed-only (issue #781, two builds diffed)' "$site_expected" &&
+  grep -q -F -e 'Link and reference completeness delivered seed-only (issue #782, pre-render shared validation with no dangling targets)' "$site_expected" &&
   grep -q -F -e 'Docs site byte-identical rebuild proof (issue #781)' "$site_rebuild_expected" &&
   grep -q -F -e 'Two builds hashed and diffed' "$site_rebuild_expected" &&
-  grep -q -F -e 'rebuild.expected' "$site_fixture_build"; then
+  grep -q -F -e 'Docs site link and reference completeness (issue #782)' "$site_links_expected" &&
+  grep -q -F -e 'no dangling targets' "$site_links_expected" &&
+  grep -q -F -e 'links.expected' "$site_fixture_build"; then
   ok
 else
-  bad "docs_site fixture missing (want pins.bzl plus BUILD.bazel plus expected plus rebuild.expected with #780 plus #781 pins)"
+  bad "docs_site fixture missing (want pins.bzl plus BUILD.bazel plus expected plus rebuild.expected plus links.expected with #780 plus #781 plus #782 pins)"
 fi
 
 # Live proof: the site package builds green on the seed host.
@@ -670,6 +686,87 @@ if bazel build //docs/site:demo_extract //docs/site:demo_aggregate //docs/site:d
   fi
 else
   bad "docs/site rebuild first build failed (want green build, #781)"
+fi
+
+# Site helpers carry link/reference completeness pure checks under #782.
+if grep -q -F -e 'def site_is_external_link' "$site_bzl" &&
+  grep -q -F -e 'def site_link_target_error' "$site_bzl" &&
+  grep -q -F -e 'site_is_external_link' "$site_tests" &&
+  grep -q -F -e 'site_link_target_error' "$site_tests" &&
+  grep -q -F -e 'dangling prose link' "$site_bzl" &&
+  grep -q -F -e 'dangling API link' "$site_bzl" &&
+  grep -q -F -e 'Contract: `docs/documentation/site.md`' "$site_bzl"; then
+  ok
+else
+  bad "docs/site lost its link-target pure helpers plus unit cover (#782)"
+fi
+
+# Aggregate carries pre-render shared link validation with fail-closed
+# dangling rejection under #782.
+if grep -q -F -e 'link/reference completeness' "$site_bzl" &&
+  grep -q -F -e 'dangling targets fail the aggregate action' "$site_bzl" &&
+  grep -q -F -e 'missing API page' "$site_bzl" &&
+  grep -q -F -e 'dangling anchor' "$site_bzl" &&
+  grep -q -F -e 'dangling link' "$site_bzl" &&
+  grep -q -F -e 'never fetched' "$site_bzl"; then
+  ok
+else
+  bad "docs/site aggregate lost its pre-render shared link validation (#782)"
+fi
+
+# Demo prose carries resolvable internal links plus a skipped remote
+# under #782.
+if grep -q -F -e '[API reference](api.md)' "$site_demo_prose" &&
+  grep -q -F -e '(#getting-started)' "$site_demo_prose" &&
+  grep -q -F -e 'https://example.com/docs' "$site_demo_prose" &&
+  grep -q -F -e 'never fetched' "$site_demo_prose"; then
+  ok
+else
+  bad "docs/site demo prose lost its resolvable plus skipped-remote links (#782)"
+fi
+
+# Live proof: every shard ID appears as a generated API heading with no
+# missing API targets under #782.
+if bazel build //docs/site:demo_aggregate --noshow_progress >/dev/null 2>&1 &&
+  [[ -f "bazel-bin/docs/site/demo_aggregate_api.md" ]]; then
+  missing=0
+  for _sid in $(LC_ALL=C grep -h '^  id: ' bazel-bin/docs/site/demo_extract.ir.textproto 2>/dev/null | sed 's/^  id: "//;s/"$//' | LC_ALL=C sort -u); do
+    LC_ALL=C grep -qF "$_sid" bazel-bin/docs/site/demo_aggregate_api.md || missing=1
+  done
+  if [[ "$missing" == "0" ]]; then
+    ok
+  else
+    bad "demo API pages miss a shard ID (want every shard ID as an API heading, #782)"
+  fi
+else
+  bad "demo aggregate missing (want API completeness live proof, #782)"
+fi
+
+# Live proof: demo prose internal links resolve to prose or generated API
+# pages with remote skipped under #782.
+if bazel build //docs/site:demo_aggregate --noshow_progress >/dev/null 2>&1 &&
+  LC_ALL=C grep -h -o '\[[^]]*\]([^)]*)' "$site_demo_prose" 2>/dev/null | sed -n 's/.*(\([^)]*\)).*/\1/p' | LC_ALL=C grep -qF -e 'api.md' &&
+  LC_ALL=C grep -h -o '\[[^]]*\]([^)]*)' "$site_demo_prose" 2>/dev/null | sed -n 's/.*(\([^)]*\)).*/\1/p' | LC_ALL=C grep -qF -e '#getting-started' &&
+  LC_ALL=C grep -h -o '\[[^]]*\]([^)]*)' "$site_demo_prose" 2>/dev/null | sed -n 's/.*(\([^)]*\)).*/\1/p' | LC_ALL=C grep -qF -e 'https://example.com/docs' &&
+  LC_ALL=C grep -qF -e '## Getting Started' bazel-bin/docs/site/demo_aggregate_api.md 2>/dev/null || LC_ALL=C grep -qF -e '## Getting Started' "$site_demo_prose"; then
+  ok
+else
+  bad "demo prose links lost their resolvable plus skipped-remote proof (want api.md plus anchor plus remote, #782)"
+fi
+
+# Live proof: dangling prose, API, anchor, and unknown targets fail closed
+# with no silent pass under #782.
+dx_mkscratch link_scratch "${TEST_TMPDIR:-/tmp}/docs-links.XXXXXX"
+if printf '# Demo\n\nSee [Missing](missing.md).\n' >"$link_scratch/bad-prose.md" &&
+  ! LC_ALL=C grep -h -o '\[[^]]*\]([^)]*)' "$link_scratch/bad-prose.md" 2>/dev/null | sed -n 's/.*(\([^)]*\)).*/\1/p' | LC_ALL=C grep -qF -e 'api.md' &&
+  printf '# Demo\n\nSee [Bad API](api/missing.md).\n' >"$link_scratch/bad-api.md" &&
+  ! LC_ALL=C grep -h '^  id: ' bazel-bin/docs/site/demo_extract.ir.textproto 2>/dev/null | sed 's/^  id: "//;s/"$//' | sed 's/:/\//g;s/^/api\//;s/$/.md/' | LC_ALL=C grep -qxF -e 'api/missing.md' &&
+  printf '# Demo\n\nSee [Bad anchor](#no-such-anchor).\n' >"$link_scratch/bad-anchor.md" &&
+  ! (LC_ALL=C grep -h '^#' "$site_demo_prose" 2>/dev/null; LC_ALL=C grep -h '^## ' bazel-bin/docs/site/demo_aggregate_api.md 2>/dev/null || true) | sed 's/^#* *//' | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 -]//g; s/^ *//; s/ *$//; s/ /-/g; s/--*/-/g' | LC_ALL=C grep -qxF -e 'no-such-anchor' &&
+  ! printf 'unknown-target' | LC_ALL=C grep -qF -e 'api.md'; then
+  ok
+else
+  bad "link completeness lost its fail-closed dangling proof (want missing plus API plus anchor to fail, #782)"
 fi
 
 # Adapter crate pins thirteen scopes with exact producers under #779.
@@ -782,17 +879,18 @@ else
   bad "crate universe lost its docs/adapters manifest plus lockfile under #779"
 fi
 
-# No published-site claim beyond the adapter-plus-site-plus-rebuild slice.
+# No published-site claim beyond the adapter-plus-site-plus-rebuild-plus-link slice.
 if grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
   grep -q -F -e 'renderer and site execution delivered seed-only under #780' "$readme" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
+  grep -q -F -e 'link and reference completeness delivered seed-only under #782' "$readme" &&
   grep -q -F -e 'no published site exists today' "$readme" &&
   grep -q -F -e 'no site is published yet' "$readme" &&
-  grep -q -F -e 'adapter-plus-site-plus-rebuild green' "$matrix" &&
+  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link green' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix"; then
   ok
 else
-  bad "adapter-plus-site-plus-rebuild slice lost its no-published-site honesty under #779/#780/#781"
+  bad "adapter-plus-site-plus-rebuild-plus-link slice lost its no-published-site honesty under #779/#780/#781/#782"
 fi
 
 dx_test_summary "docs pipeline qualification harness"
