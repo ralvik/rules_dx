@@ -21,6 +21,8 @@ exports_files(
         "demo/demo.symbols.txt",
         "demo/demo_prose.md",
         "demo/book.toml",
+        "demo/guide.md",
+        "demo/guide_steps.txt",
     ],
     visibility = ["//visibility:private"],
 )
@@ -80,7 +82,10 @@ real_source_target(
 
 real_source_target(
     name = "corpus_markdown",
-    markdown_srcs = ["demo/demo_prose.md"],
+    markdown_srcs = [
+        "demo/demo_prose.md",
+        "demo/guide.md",
+    ],
     tags = ["corpus"],
 )
 

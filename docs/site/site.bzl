@@ -125,6 +125,28 @@ def site_search_record(url, title, body):
     """
     return "{\"body\": \"" + body + "\", \"title\": \"" + title + "\", \"url\": \"" + url + "\"}"
 
+def site_is_known_guide(name):
+    """Returns True for the three frozen release-blocking guides.
+
+    Only `quickstart`, `tutorial`, and `migration` are known; no extra
+    guide is claimed and no implicit default is substituted.
+    """
+    return name in ["quickstart", "tutorial", "migration"]
+
+def site_guide_step_error(step):
+    """Validates one guide-step line, returning "" when executable.
+
+    Blank lines and `#` comments are skipped (not steps). Lines carrying
+    `TODO`, `FIXME`, `UNEXECUTED`, `TBD`, or `SKIP` markers fail closed:
+    guide steps are never allowed to go unexecuted. Every other line is
+    an executable shell step run by CI.
+    """
+    if step == "" or step.startswith("#"):
+        return ""
+    if "TODO" in step or "FIXME" in step or "UNEXECUTED" in step or "TBD" in step or "SKIP" in step:
+        return "docs_site: unexecuted guide step '" + step + "'"
+    return ""
+
 def docs_extract(name, language, package, srcs):
     """Runs one DocsExtract action emitting one cached IR shard.
 

@@ -11,8 +11,8 @@ Remaining reds stay owned gaps, not green claims:
    remote evidence). First-party PR reporting is
    adopted under #254 (Codecov opt-in only; the seed cell owns the PR comment,
    the arm64 plus musl plus macos plus macos-x86_64 plus windows cells report to their job summaries; the macos x86_64 best-effort cell reports without blocking required-host release). All required plus best-effort cells are qualified; out-of-v1 hosts stay platform-gated under closed #298.
-- Docs pipeline and environment/codegen stay open under #783 and #787 (see
-   [Documentation](../documentation/README.md#contracts); successors to closed #581 and #506; adapter runs delivered under #779, renderer/site execution delivered seed-only under #780, rebuild proof delivered seed-only under #781, link/reference completeness delivered seed-only under #782, first-hour timing proof delivered seed-only under #784, per-release pin-bump plus drift process delivered seed-only under #785). Environment/codegen
+- Docs pipeline delivered seed-only plus environment/codegen stays open under #787 (see
+   [Documentation](../documentation/README.md#contracts); successors to closed #581 and #506; adapter runs delivered under #779, renderer/site execution delivered seed-only under #780, rebuild proof delivered seed-only under #781, link/reference completeness delivered seed-only under #782, guide-step wiring delivered seed-only under #783, first-hour timing proof delivered seed-only under #784, per-release pin-bump plus drift process delivered seed-only under #785). Environment/codegen
    deferred records plus fixture evidence are qualified seed-only under closed #506
   (`bazel run //tools/ci:env_codegen_qualification` with
   `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected`
@@ -22,15 +22,14 @@ Remaining reds stay owned gaps, not green claims:
   cold-warm qualified with WP shard plus root plus collector evidence;
   platform plus consumer plus release evidence stays owned gap under #808; no Supported
   claim). Docs-pipeline IR plus
-  planning plus adapter runs plus site-execution plus rebuild plus link plus timing plus drift records with fixture evidence are qualified seed-only under #779
-  plus #780 plus #781 plus #782 plus #784 plus #785
+  planning plus adapter runs plus site-execution plus rebuild plus link plus guide plus timing plus drift records with fixture evidence are qualified seed-only under #779
+  plus #780 plus #781 plus #782 plus #783 plus #784 plus #785
   (live successor to closed #421)
   (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR, codec,
   planning, frozen contracts, removed stub, per-language adapter runs with pins
   plus golden fixtures plus Bazel-cached extract to render with
   mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel
-  outputs only plus byte-identical rebuild proof plus link/reference completeness with no dangling targets plus first-hour timing proof one-shot per ADR 0022 with no CI timing budget plus per-release pin-bump plus drift process with no IR snapshot update; guide-step wiring
-  stays owned gap under #783; no working site claimed).
+  outputs only plus byte-identical rebuild proof plus link/reference completeness with no dangling targets plus guide-step CI wiring with every step executed and no unexecuted steps plus first-hour timing proof one-shot per ADR 0022 with no CI timing budget plus per-release pin-bump plus drift process with no IR snapshot update; no owned gaps remain; no working site claimed).
 - Consumer-CI contract plus caller plus gate/aggregate plus per-gap decisions
   with fixture evidence qualified seed-only under #509
   (`tools/ci/tests/fixtures/consumer_ci/pins.bzl` plus `platforms.expected`

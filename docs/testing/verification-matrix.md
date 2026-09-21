@@ -64,23 +64,22 @@ class by design — never silently under the standard dogfood gates.
   per-language source audit in the [support matrix](../product/support-matrix.md#application-foundations).
 - **Docs pipeline**: per-language adapter runs delivered under #779 plus renderer/site
    execution delivered under #780 plus rebuild proof delivered under #781 plus link/reference
-   completeness delivered under #782 plus first-hour timing proof delivered seed-only
-   under #784 as one-shot evidence per ADR 0022 plus per-release pin-bump plus drift
-   process delivered seed-only under #785 with guide prose with guide-step verification
-   staying open under #783
+   completeness delivered under #782 plus guide prose with guide-step CI wiring delivered seed-only under #783
+   plus first-hour timing proof delivered seed-only under #784 as one-shot evidence per ADR 0022
+   plus per-release pin-bump plus drift process delivered seed-only under #785
+   with no execution gaps remaining
    (successor to closed #581, live successor to closed #421)
    (see [Documentation](../documentation/README.md#contracts)); no working site claimed.
-   IR plus planning plus adapter runs plus site-execution plus rebuild plus link plus timing plus drift records with fixture evidence
-   qualified seed-only under #779 plus #780 plus #781 plus #782 plus #784 plus #785
+   IR plus planning plus adapter runs plus site-execution plus rebuild plus link plus guide plus timing plus drift records with fixture evidence
+   qualified seed-only under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785
    (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR schema,
    codec roundtrip/parity/ordering/compat, dx_docs planning units, frozen
    contracts, removed stub behind ADR 0020, per-language adapter runs with pins
    plus golden fixtures plus Bazel-cached extract to aggregate to render
    with mdBook-compatible prose plus generated API pages plus one search index and generated IR
-   in Bazel outputs only plus byte-identical rebuild proof plus link/reference completeness with no dangling targets plus first-hour timing proof as one-shot evidence with no CI timing budget plus per-release pin-bump plus drift process with no IR snapshot update, with
-   guide-step wiring
-   as owned gap under #783). That qualification is
-   adapter-plus-site-plus-rebuild-plus-link-plus-timing-plus-drift green, not full-pipeline green.
+   in Bazel outputs only plus byte-identical rebuild proof plus link/reference completeness with no dangling targets plus guide-step CI wiring with every step executed and no unexecuted steps plus first-hour timing proof as one-shot evidence with no CI timing budget plus per-release pin-bump plus drift process with no IR snapshot update, with
+   no owned gaps remaining). That qualification is
+   adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift green, not full-pipeline green.
 - **Environment/codegen**: deferred/unsupported records plus fixture
    evidence qualified seed-only under closed #506
   (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
@@ -115,8 +114,8 @@ x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
  native (issue #414). `Delivered` here is verification-layer evidence only, not
 support-matrix promotion: it never promotes a support-matrix `Planned` cell to
 `Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under its owning tracker with no
-implementation claimed here. Owning trackers for table `Open` cells: Docs under #783 (successor to closed #581,
-live successor to closed #421; adapter runs delivered under #779 plus site execution delivered under #780 plus rebuild delivered under #781 plus link completeness delivered under #782 plus timing delivered under #784 plus drift delivered under #785); Env/codegen under #787 plus onboarding #788 (successors to closed #506); Layer-2
+implementation claimed here. Owning trackers for table `Open` cells: Docs under no open implementation tracker (successor to closed #581,
+live successor to closed #421; full pipeline delivered seed-only under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; platform plus consumer plus release evidence stays owned gap under #808; no Supported claim); Env/codegen under #787 plus onboarding #788 (successors to closed #506); Layer-2
 adapter-less plus regions plus framework-composition Depcheck under #796-#800 (successors to closed #416-#420, delivery
 qualified seed-only under closed #510) with taxonomy promotion under #802 (successor to closed #512) and Python future
 selection under #801 (successor to closed #613). `Planning only` means planning is implemented with live
@@ -380,7 +379,7 @@ CI only, no Supported claim).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`, `product_runtime_guards` 26/26,
-`env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 78/78 (adapter-plus-site-plus-rebuild-plus-link-plus-timing-plus-drift green: IR plus planning plus per-language adapter runs with pins plus goldens under #779 plus Bazel-cached extract to render with mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel outputs only under #780 plus byte-identical rebuild proof under #781 plus link/reference completeness with no dangling targets under #782 plus first-hour timing proof one-shot per ADR 0022 with no CI timing budget under #784 plus per-release pin-bump plus drift process with no IR snapshot update under #785; guide-step wiring stays open under #783 with no working site claimed),
+`env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 84/84 (adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift green: IR plus planning plus per-language adapter runs with pins plus goldens under #779 plus Bazel-cached extract to render with mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel outputs only under #780 plus byte-identical rebuild proof under #781 plus link/reference completeness with no dangling targets under #782 plus guide prose with guide-step CI wiring with every step executed and no unexecuted steps under #783 plus first-hour timing proof one-shot per ADR 0022 with no CI timing budget under #784 plus per-release pin-bump plus drift process with no IR snapshot update under #785; no owned gaps remain with no working site claimed),
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `cpp_snapshot_qualification` 17/17, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,

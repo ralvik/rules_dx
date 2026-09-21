@@ -1,4 +1,4 @@
-"""Docs site execution plus rebuild plus link-completeness plus timing plus drift pins (renderer plus site execution, mdBook).
+"""Docs site execution plus rebuild plus link-completeness plus guide plus timing plus drift pins (renderer plus site execution, mdBook).
 
 Contract: `docs/documentation/site.md`.
 Fixture: `tools/ci/tests/fixtures/docs_site/` via
@@ -7,9 +7,12 @@ Execution: `//docs/site:demo_site` extract to aggregate to render over
 miniature inputs; generated IR stays in Bazel outputs, never beside
 sources; rebuild proof hashes two builds and diffs them; link/reference
 completeness proves prose plus API pages resolve all internal links with
-no dangling targets at the pre-render boundary; first-hour timing proves
-the built site/docs journey completes in the first hour as one-shot
-evidence per ADR 0022, never a standing benchmark; seed-only,
+no dangling targets at the pre-render boundary; guide prose wires every
+guide step to CI execution with no unexecuted steps allowed; first-hour
+timing proves the built site/docs journey completes in the first hour as
+one-shot evidence per ADR 0022, never a standing benchmark; per-release
+pin-bump plus drift process keeps every pinned native input green plus
+reviewed with no IR snapshot update; seed-only,
 no Supported claim.
 """
 
@@ -56,6 +59,18 @@ LINK_FAIL_CLOSED = "dangling links fail the aggregate action with no partial out
 LINK_DEMO = "demo prose links api.md plus #getting-started plus remote skip"
 LINK_SEED_ONLY = "link completeness qualified seed-only under issue #782"
 
+# Guide prose with guide-step CI wiring: user guide prose where every step
+# is verified by CI (steps actually execute). Delivered seed-only under
+# issue #783 via the fixture-scale quickstart guide plus its executable
+# steps file, run by docs_pipeline_qualification in CI with no unexecuted
+# steps allowed and prose kept in sync with the steps file.
+GUIDE_KNOWN = ["quickstart", "tutorial", "migration"]
+GUIDE_PROSE = "docs/site/demo/guide.md with executable quickstart steps"
+GUIDE_STEPS = "docs/site/demo/guide_steps.txt with one executable step per line"
+GUIDE_CI = "every guide step CI-executed via docs_pipeline_qualification with no unexecuted steps"
+GUIDE_FRESHNESS = "fresh only when every step ran and examples stayed green"
+GUIDE_SEED_ONLY = "guide-step wiring qualified seed-only under issue #783"
+
 # Determinism: sorted symbol order, sorted JSON keys, workspace-relative
 # paths only, no timestamps, no absolute paths, locale-independent sort.
 # Delivered seed-only under issue #781 via two-builds-diffed live proof.
@@ -79,6 +94,7 @@ REJECTED_HTML_PARSED_INDEX = "search index parsing rendered HTML is rejected"
 REJECTED_WATCHER = "custom watcher or refresh engine is rejected; Bazel incrementality only"
 REJECTED_MDBOOK_TEST = "mdbook test wrapper is rejected"
 REJECTED_DANGLING_SILENT = "silent dangling link pass is rejected"
+REJECTED_UNEXECUTED = "unexecuted guide steps are rejected"
 REJECTED_TIMING_GATE = "CI timing budget enforcement is rejected per ADR 0022"
 REJECTED_STANDING_BENCHMARK = "standing benchmark with baseline or comparison machinery is rejected per ADR 0022"
 
@@ -110,7 +126,7 @@ DRIFT_SEED_ONLY = "pin-bump plus drift qualified seed-only under issue #785"
 
 COMPAT_SEED_ONLY = "Compatibility: seed Linux x86_64 only"
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issues #780 plus #781 plus #782 plus #784 plus #785"
+SEED_ONLY = "qualified seed-only under issues #780 plus #781 plus #782 plus #783 plus #784 plus #785"
 REBUILD_SEED_ONLY = "rebuild proof qualified seed-only under issue #781"
 LINK_SEED_ONLY_QUAL = "link completeness qualified seed-only under issue #782"
-OWNED_GAP = "guide-step wiring stays owned gap under #783"
+OWNED_GAP = "no owned gaps remain; full pipeline delivered seed-only under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785"
