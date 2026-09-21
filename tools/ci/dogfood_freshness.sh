@@ -34,6 +34,7 @@ bazel run --noshow_progress //tools/ci:backlog_automation_guards
 bazel run --noshow_progress //tools/ci:supported_evidence_gate
 bazel run --noshow_progress //tools/ci:promotion_checklist_qualification
 bazel run --noshow_progress //tools/ci:sbom_upload_qualification
+bazel run --noshow_progress //tools/ci:release_arm64_qualification
 bazel run --noshow_progress //tools/ci:quality_adapters_parity
 bazel run --noshow_progress //tools/ci:env_codegen_qualification
 bazel run --noshow_progress //tools/ci:env_plugins_cgo_qualification
