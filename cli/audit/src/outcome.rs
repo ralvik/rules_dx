@@ -18,7 +18,7 @@
 //! [`crate::backend`], advisory acquisition in [`crate::advisory`],
 //! SARIF triage in [`crate::secrets`], matching in [`crate::vuln`],
 //! license evaluation in [`crate::license_expr`], SARIF/SPDX mapping
-//! pinned under issue #632); this module aggregates over injected
+//! pinned under issue #632 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`); this module aggregates over injected
 //! family outcomes only, so the selection stays deterministic and
 //! unit-testable without any auditor.
 

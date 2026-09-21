@@ -1,5 +1,7 @@
 //! Test-only scratch directories: the single test scratch policy.
 //!
+//! Contract: `docs/testing/README.md`.
+//!
 //! Single scratch policy for the repo (`#651`):
 //! * Prod hermetic mirrors stay in `quality_adapter::exec::Scratch`
 //!   (scratch-relative resolve/materialize/close with symlink-prefix

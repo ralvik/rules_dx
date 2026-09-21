@@ -37,7 +37,7 @@ pub fn migrate_is_major_bump(from: &str, to: &str) -> bool {
 /// edit-manifest pattern for any upgrading pair: both versions parse
 /// as Cargo-flavor semver and the target exceeds the source semver
 /// (`to > from`). Minor/patch upgrades qualify alongside major hops
-/// (see issue #671); downgrades, equal versions, and non-semver text
+/// (See: `docs/cli/commands/migrate.md`, issue #671); downgrades, equal versions, and non-semver text
 /// never qualify.
 pub fn migrate_is_upgrade(from: &str, to: &str) -> bool {
     let from_v = match semver::Version::parse(from) {
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn migrate_upgrade_gate_accepts_any_upgrade() {
-        // (issue #671, ADR 0025): upgrade-only gate. Major, minor,
+        // (issue #671, ADR 0025; See: `docs/cli/commands/migrate.md`): upgrade-only gate. Major, minor,
         // and patch upgrades qualify; downgrades, equal versions,
         // and non-semver never qualify.
         assert!(migrate_is_upgrade("1.2.3", "2.0.0"));

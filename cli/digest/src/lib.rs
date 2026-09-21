@@ -1,5 +1,7 @@
 //! Unified digest identities for `rules_dx`.
 //!
+//! Contract: `docs/architecture/README.md`.
+//!
 //! Split history: `quality/result` + `generation/result` + `cli/env`
 //! (`identity_digest`) + `cli/setup` hashed with BLAKE3-256 while
 //! `dx_apply::envelope` hashed with SHA-256, plus hand `hex_digest` /

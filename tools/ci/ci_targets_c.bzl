@@ -238,7 +238,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Selective Maven per-artifact wont-fix harness (issue #634); see docs/decisions/0024-selective-update.md.
+    # Selective Maven per-artifact wont-fix harness (issue #634; See: docs/decisions/0024-selective-update.md).
     sh_binary(
         name = "selective_maven_qualification",
         srcs = ["selective_maven_qualification.sh"],
@@ -258,7 +258,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Bump then update chaining harness (issue #638); see docs/cli/commands/audit-update-bazel.md#dx-bump.
+    # Bump then update chaining harness (issue #638; See: docs/cli/commands/audit-update-bazel.md#dx-bump).
     sh_binary(
         name = "bump_chain_qualification",
         srcs = ["bump_chain_qualification.sh"],
@@ -268,7 +268,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Bump discovery outdated enumeration harness (issue #639); see docs/cli/commands/audit-update-bazel.md#dx-bump.
+    # Bump discovery outdated enumeration harness (issue #639; See: docs/cli/commands/audit-update-bazel.md#dx-bump).
     sh_binary(
         name = "bump_discovery_qualification",
         srcs = ["bump_discovery_qualification.sh"],
@@ -278,7 +278,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Bump GHA tag-to-SHA auto resolution harness (issue #640); see docs/cli/commands/audit-update-bazel.md#dx-bump.
+    # Bump GHA tag-to-SHA auto resolution harness (issue #640; See: docs/cli/commands/audit-update-bazel.md#dx-bump).
     sh_binary(
         name = "bump_gha_qualification",
         srcs = ["bump_gha_qualification.sh"],

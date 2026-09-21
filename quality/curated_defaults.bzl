@@ -100,7 +100,7 @@ def _is_canonical_token(text):
     return True
 
 def curated_schema_error():
-    """Validates the versioned curated-defaults schema (issue #321).
+    """Validates the versioned curated-defaults schema (See: `docs/tools/tool-baseline.md#curated-differences`, issue #321).
 
     Checks data shape without pinning exact contents, so adding a curated
     family edits the manifest data only: version is v1, every family and

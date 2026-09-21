@@ -16,7 +16,7 @@
 //! inputs in [`crate::license_notice`]; this module projects their
 //! assessed outputs into the shared `--report` document.
 //!
-//! Shape pinned under issue #632: exactly one document per invocation
+//! Shape pinned under issue #632 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): exactly one document per invocation
 //! (`SPDX-2.3`, `CC0-1.0`, `SPDXRef-DOCUMENT`, name `dx-audit-license`),
 //! packages sorted by ID with `licenseConcluded`/`licenseDeclared`,
 //! `NOASSERTION` copyright, single purl `externalRefs`, plus
@@ -463,7 +463,7 @@ mod tests {
 
     #[test]
     fn spdx_golden_pins_full_document_shape() {
-        // Issue #632: one document per invocation with the frozen
+        // Issue #632 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): one document per invocation with the frozen
         // envelope, per-package purl identities, and ordered
         // DESCRIBES-then-CONTAINS relations. V1 live emission carries
         // no CONTAINS edges (no lock-graph projection yet); the golden

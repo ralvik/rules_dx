@@ -216,7 +216,7 @@ mod tests {
 
     #[test]
     fn cargo_selective_reports_unsupported_never_full() {
-        // Issue #633: per-crate `cargo:<crate>` parses in the selector
+        // Issue #633 (See: `docs/decisions/0024-selective-update.md`): per-crate `cargo:<crate>` parses in the selector
         // but the approved `crate_universe` repin has no per-crate flag,
         // so execution fails closed with the full-set hint and never
         // substitutes a full update; private `cargo update -p` stays
@@ -238,7 +238,7 @@ mod tests {
 
     #[test]
     fn nuget_selective_reports_unsupported_never_full() {
-        // Issue #635: per-package `nuget:<id>` parses in the selector
+        // Issue #635 (See: `docs/decisions/0024-selective-update.md`): per-package `nuget:<id>` parses in the selector
         // but the approved `paket2bazel` regen has no per-id flag, so
         // execution fails closed with the full-set hint and never
         // substitutes a full update; private `paket.lock` surgery stays
@@ -260,7 +260,7 @@ mod tests {
 
     #[test]
     fn go_selective_reports_unsupported_never_full() {
-        // Issue #636: per-module `go:<module-path>` parses in the
+        // Issue #636 (See: `docs/decisions/0024-selective-update.md`): per-module `go:<module-path>` parses in the
         // selector but the pinned `go_deps.from_file` module lock
         // (`third_party/go/go.mod` plus `go.sum` tracking Gazelle) has
         // no per-module update flag, so execution fails closed with the
@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn go_full_is_pinned_noop_success() {
-        // Issue #636: the main workspace has no `go.mod` by design; the
+        // Issue #636 (See: `docs/decisions/0024-selective-update.md`): the main workspace has no `go.mod` by design; the
         // single-module `go_deps.from_file` lock tracks Gazelle, so the
         // full update is an intentional no-op success with no launch.
         // Real `go get -u` wiring stays rejected (would diverge the
@@ -321,7 +321,7 @@ mod tests {
 
     #[test]
     fn maven_selective_reports_unsupported_with_set_hint() {
-        // Issue #634: per-artifact selective is wont-fix in V1. Both the
+        // Issue #634 (See: `docs/decisions/0024-selective-update.md`): per-artifact selective is wont-fix in V1. Both the
         // seed (`junit:junit`) and the Jupiter (`org.junit.jupiter:...`)
         // identities fail closed with the full-set hint, never a silent
         // full substitution.
@@ -329,11 +329,8 @@ mod tests {
             "junit:junit".to_owned(),
             "org.junit.jupiter:junit-jupiter-api".to_owned(),
         ] {
-            let error = plan(
-                SetId::Maven,
-                &SetRequest::Packages(vec![artifact.clone()]),
-            )
-            .expect_err("maven selective unsupported");
+            let error = plan(SetId::Maven, &SetRequest::Packages(vec![artifact.clone()]))
+                .expect_err("maven selective unsupported");
             let message = error.to_string();
             assert!(
                 matches!(error, BackendError::Unsupported { .. }),

@@ -31,13 +31,13 @@
 //! execution and as cache files in CLI execution, both pinned by
 //! fixtures.
 //!
-//! Supported upstream database-download sources (issue #628, no
+//! Supported upstream database-download sources (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #628, no
 //! inventory upload): per-set OSV GCS bucket zips fetched by HTTPS GET
 //! with no query parameters, request body, or telemetry carrying package
 //! names or versions. The OSV API query route (`https://api.osv.dev/v1/query`
 //! with package/version in the body) discloses the inventory and never
 //! satisfies this contract. V1 snapshots (typed OSV records projected
-//! via the `osv` crate `schema` feature, offline; issue #676, plus legacy
+//! via the `osv` crate `schema` feature, offline; See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #676, plus legacy
 //! [`crate::vuln::Advisory`] minimal still accepted) are derived from these
 //! databases via upstream tooling (such as `osv-scanner --offline` with a
 //! local DB, which sends no project information); the derived bytes plus
@@ -123,7 +123,7 @@ pub const CODE_ADVISORY_REFRESH_FAILED: &str = "advisory_refresh_failed";
 pub const CACHE_DAYS: u32 = 0;
 
 /// Supported upstream database-download source per dependency set
-/// (issue #628): OSV GCS bucket zips fetched by HTTPS GET with no
+/// (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #628): OSV GCS bucket zips fetched by HTTPS GET with no
 /// inventory in the request. The URL carries no package names, versions,
 /// query parameters, or body; matching runs offline after download, so
 /// no lockfile or inventory ever leaves the workspace. The OSV query API

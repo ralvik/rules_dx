@@ -76,7 +76,7 @@ pub fn refusal(os: &str, arch: &str) -> Option<String> {
         return None;
     }
     Some(format!(
-        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) plus macOS arm64 (issue #412; host-installed SDK fallback never approved) plus macOS x86_64 best-effort (issue #413; macos-15-intel, host-installed SDK fallback never approved, gaps never block required-host release) plus Windows x86_64 MSVC-compatible (issue #414; toolchains_msvc clang-cl/Microsoft-STL provisional, explicit EULA acceptance never automatic) only (see docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411/#412/#413/#414)"
+        "unsupported_platform: {os}/{arch} has no qualified platform evidence; dx is delivered on Linux x86_64 and Linux arm64 (glibc plus static musl, issue #411; dynamic musl explicitly out of scope) plus macOS arm64 (issue #412; host-installed SDK fallback never approved) plus macOS x86_64 best-effort (issue #413; macos-15-intel, host-installed SDK fallback never approved, gaps never block required-host release) plus Windows x86_64 MSVC-compatible (issue #414; toolchains_msvc clang-cl/Microsoft-STL provisional, explicit EULA acceptance never automatic) only (See: docs/product/support-matrix.md and ADR 0014, tracked in issue #298 with per-host successors such as issues #410/#411/#412/#413/#414)"
     ))
 }
 
@@ -90,11 +90,11 @@ pub fn musl_profile_refusal(profile: &str) -> Option<String> {
     }
     if profile.contains("musl") {
         return Some(format!(
-            "unsupported_platform: {profile} has no qualified static-musl evidence; only linux_x86_64_static_musl and linux_arm64_static_musl are qualified (issue #411; dynamic musl explicitly out of scope, see docs/product/support-matrix.md and ADR 0014)"
+            "unsupported_platform: {profile} has no qualified static-musl evidence; only linux_x86_64_static_musl and linux_arm64_static_musl are qualified (issue #411; dynamic musl explicitly out of scope, See: docs/product/support-matrix.md and ADR 0014)"
         ));
     }
     Some(format!(
-        "unsupported_platform: {profile} is not a qualified static-musl profile; only linux_x86_64_static_musl and linux_arm64_static_musl are qualified (issue #411)"
+        "unsupported_platform: {profile} is not a qualified static-musl profile; only linux_x86_64_static_musl and linux_arm64_static_musl are qualified (issue #411; See: docs/product/support-matrix.md)"
     ))
 }
 

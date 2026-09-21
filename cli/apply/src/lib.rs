@@ -1,6 +1,8 @@
 // LCOV_EXCL_START - reason: module root holds only mod declarations and re-exports with no executable statements; every item is covered in its own module.
 //! `dx_apply`: validated, consensus-gated file mutations for the `dx` CLI.
 //!
+//! Contract: `docs/architecture/README.md`.
+//!
 //! Agents propose mutations as JSON [`envelope`]s; two agents must reach
 //! [`consensus`] before anything applies; every operation passes
 //! [`validators`] and is written atomically by the [`applier`].

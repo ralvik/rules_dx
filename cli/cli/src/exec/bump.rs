@@ -142,7 +142,7 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
             ),
         );
     }
-    // Automatic chaining (issue #638): the widen is committed, then the
+    // Automatic chaining (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638): the widen is committed, then the
     // resolver-owned refresh runs without a manual second step. File-only
     // sets (Bazel, GitHub Actions) have no refresh launch; Cargo/npm/Go
     // refresh through the approved `dx_update::backend` operations.
@@ -456,7 +456,7 @@ mod tests {
 
     #[test]
     fn live_widens_one_cargo_requirement_atomically() {
-        // Issue #638: widen chains the full repin automatically (no manual
+        // Issue #638 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): widen chains the full repin automatically (no manual
         // second step); the fake runner succeeds so the chain exits 0.
         let harness = Harness::new("bump-live-cargo");
         harness.write_source(
@@ -488,7 +488,7 @@ mod tests {
 
     #[test]
     fn live_npm_chains_selective_refresh_automatically() {
-        // Issue #638: npm widens then refreshes only the widened package
+        // Issue #638 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): npm widens then refreshes only the widened package
         // (`dx update npm:<pkg>` selective, never a silent full).
         let harness = Harness::new("bump-live-npm-chain");
         harness.write_source(
@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn live_go_chains_noop_without_launch() {
-        // Issue #638: Go widens then refreshes as the pinned no-op success
+        // Issue #638 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): Go widens then refreshes as the pinned no-op success
         // with no launch (module lock tracks Gazelle).
         let harness = Harness::new("bump-live-go-chain");
         harness.write_source(
@@ -543,7 +543,7 @@ mod tests {
 
     #[test]
     fn live_maven_chains_full_refresh_automatically() {
-        // Issue #638 (plus #637 widen): Maven widens one artifact then
+        // Issue #638 (plus #637 widen; See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): Maven widens one artifact then
         // chains the whole-lock pin automatically.
         let harness = Harness::new("bump-live-maven-chain");
         harness.write_source(
@@ -570,7 +570,7 @@ mod tests {
 
     #[test]
     fn live_nuget_chains_full_refresh_automatically() {
-        // Issue #638 (plus #637 widen): NuGet widens one id then chains the
+        // Issue #638 (plus #637 widen; See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): NuGet widens one id then chains the
         // whole-folder regen automatically.
         let harness = Harness::new("bump-live-nuget-chain");
         harness.write_source(

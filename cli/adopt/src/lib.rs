@@ -3,6 +3,8 @@
 //! `dx version` with rollback, local watch loop, thin inspect forwarding,
 //! and single-source completion generation).
 //!
+//! Contract: `docs/cli/README.md`.
+//!
 //! Planning predicates below own the adoption shape; the I/O helpers after
 //! them deliver it: absent-only scaffolding, unmanaged refusal, pin files
 //! that equal the `rules_dx` module version, hermetic-only hook Git,

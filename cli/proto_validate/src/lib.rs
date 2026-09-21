@@ -1,5 +1,7 @@
 //! Shared validated-codec helpers for proto shards.
 //!
+//! Contract: `docs/architecture/README.md`.
+//!
 //! Five crates repeat the same three patterns: validate-then-encode,
 //! decode-then-validate, and sorted-unique key checks over a `BTreeSet` or a
 //! `previous` cursor. The per-crate `Error` types stay local; this crate only

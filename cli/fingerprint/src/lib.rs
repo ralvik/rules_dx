@@ -1,5 +1,7 @@
 //! Canonical JSON rendering for plan fingerprints.
 //!
+//! Contract: `docs/environments/codegen.md`.
+//!
 //! `dx_codegen` and `dx_env_plan` fingerprint the same way: project merged
 //! records onto a `Serialize` view of strings, booleans, and vecs, then
 //! render it as JSON. That shape cannot fail to serialize (no maps with

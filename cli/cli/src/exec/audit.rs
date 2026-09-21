@@ -64,7 +64,7 @@ fn load_advisories(
     set: dx_update::sets::SetId,
     today: &str,
 ) -> Result<Vec<dx_audit::vuln::Advisory>, String> {
-    // Issue #628: never empty clean. A missing, empty, invalid, or stale
+    // Issue #628 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): never empty clean. A missing, empty, invalid, or stale
     // snapshot fails with `advisory_refresh_failed`, never a clean result
     // and never a stale fallback. Snapshots refresh automatically via
     // supported upstream database-download tooling (per-set OSV GCS zips

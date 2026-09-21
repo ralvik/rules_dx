@@ -1,5 +1,7 @@
 //! Implementation-coverage gate.
 //!
+//! Contract: `docs/testing/README.md#coverage`.
+//!
 //! Bazel-owned enforcement for the resolved coverage policy over the
 //! eligible scope. The gate parses the combined LCOV report from
 //! `bazel coverage --combined_report=lcov`, validates source-level exclusion

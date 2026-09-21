@@ -181,7 +181,7 @@ mod tests {
             parse(&args(&["migrate", "--from=1.2.3", "--dry-run"])),
             Err(crate::args::ArgsError::MissingValue { .. })
         ));
-        // Minor/patch upgrades plan like major hops (issue #671):
+        // Minor/patch upgrades plan like major hops (issue #671; See: `docs/cli/commands/migrate.md`):
         // dry-run succeeds with the full-version manifest.
         let harness = Harness::new("migrate-minor");
         let (code, out, err) = harness.run(&["migrate", "--from=1.2.3", "--to=1.3.0", "--dry-run"]);
