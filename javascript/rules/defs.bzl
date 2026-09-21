@@ -66,11 +66,23 @@ _javascript_binary_forward = dx_executable_forward_rule(
 def _javascript_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _javascript_library_forward, srcs, visibility = visibility, **kwargs)
 
+def javascript_binary_upstream_data(srcs, data):
+    """Computes the upstream `data` inputs for one `javascript_binary`.
+
+    Upstream `js_binary` has no `srcs` attribute; wrapper `srcs` ride
+    upstream as `data` so the `QualitySourcesInfo` owner matches the
+    upstream inputs. See: `docs/quality/quality-sources.md`."""
+    return list(srcs or []) + list(data or [])
+
 def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
+    upstream_kwargs = dict(kwargs)
+    upstream_kwargs.pop("aspect_hints", None)
+    if len(srcs) > 0:
+        upstream_kwargs["data"] = javascript_binary_upstream_data(srcs, upstream_kwargs.get("data"))
     _js_binary(
         name = name + "_upstream",
         visibility = ["//visibility:private"],
-        **kwargs
+        **upstream_kwargs
     )
     _javascript_binary_forward(
         name = name,
@@ -91,8 +103,9 @@ def javascript_binary(name, srcs = None, visibility = None, **kwargs):
     binary generated for a recognized entry source carries only
     `entry_point` plus `data = [":<library>"]` with no `srcs`. The
     library alone owns the source; the thin binary reports no direct
-    sources. Both shapes preserve the upstream providers and execution
-    semantics."""
+    sources. Wrapper `srcs` ride upstream as `data` (upstream has no
+    `srcs`). Both shapes preserve the upstream providers and execution
+    semantics. See: `docs/quality/quality-sources.md`."""
     effective_srcs = srcs if srcs != None else []
     _javascript_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
