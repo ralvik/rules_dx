@@ -327,7 +327,14 @@ The initial stable codes are `selection_scope_mismatch`, emitted when independen
 environment and codegen scopes differ, and `ignored_import`, emitted once per distinct source path,
 language, and exact literal dependency reference accepted by `# gazelle:dx_ignore_import`. The latter omits
 `scope` and `related_command`; repeated occurrences of the same import in one source file produce
-one notice. Ignored-import notices sort by path, language, and import bytes. Notices do not affect
+one notice. Ignored-import notices sort by path, language, and import bytes. Lifecycle notices are
+`bump_planned` (dry-run bump plan), `bump_widened` (committed bump widen, see
+[dx bump](commands/audit-update-bazel.md#dx-bump)), `migrate_planned` (dry-run migrate plan, see
+[dx migrate](commands/migrate.md)), `update_set_success` (per-set update success) and
+`update_set_blocked` (unattempted dependent blocked by a failed update, see
+[dx update](commands/audit-update-bazel.md#dx-update)), and `audit_<family>_clean`
+(`audit_security_clean`, `audit_license_clean` for per-family clean, see
+[dx audit](commands/audit-update-bazel.md#dx-audit)). Notices do not affect
 `--fail-on`, diagnostic counts, SARIF, or exit status.
 
 ```json
@@ -530,7 +537,7 @@ CLI, orchestration, protocol, and infrastructure failures use `error`, not `diag
 
 | Field | Required | Type | Meaning |
 | --- | --- | --- | --- |
-| `code` | yes | string | Stable lowercase snake-case machine code |
+| `code` | yes | string | Stable lowercase machine code (`unknown-shell` keeps its hyphen) |
 | `message` | yes | string | Human-readable explanation without secret values |
 | `path` | no | string | Relevant normalized workspace-relative path |
 | `flag` | no | string | Relevant option name without its value |
@@ -542,9 +549,17 @@ Bazel/tool diagnostics remain on stderr. `code` is stable machine data; `message
 people and is not a stable value for matching or control flow.
 
 The documented list is derived from the code (single source):
-`../../cli/cli/src/exec/common.rs` (`CODE_*`), `../../cli/cli/src/exec/run.rs`
-(`resolve_code`), and `../../cli/cli/src/exec/workflow.rs` (`incomplete_results`).
-New `operational()` call sites must reuse an existing `CODE_*` constant or add the new
+`../../cli/cli/src/exec/common.rs` (`CODE_*` including `bump_failed` and `migrate_failed`),
+`../../cli/cli/src/exec/run.rs` (`resolve_code` including `scope_error`),
+`../../cli/cli/src/exec/test_reports.rs` (`incomplete_results`),
+`../../cli/cli/src/resolve/types.rs` (`not_deployable`), `../../cli/cli/src/main.rs` with
+`../../cli/cli/src/skew.rs` and `../../cli/cli/src/platform.rs` (`version_skew`,
+`unsupported_platform`), `../../cli/cli/src/args/error.rs` with
+`../../cli/cli/src/args/completion.rs` (`unknown-shell`), and
+`../../cli/audit/src/advisory.rs` (`advisory_refresh_failed` detail inside `audit_failed`).
+Notices such as `migrate_planned` and `update_set_blocked` are [Notice](#notice) codes, not
+error codes.
+New `operational()` or `error_event()` call sites must reuse an existing code or add the new
 code here in the same change.
 
 Stable codes are:
@@ -552,13 +567,16 @@ Stable codes are:
 | Code | Meaning |
 | --- | --- |
 | `invalid_usage` | Invalid command syntax or incompatible options |
+| `unknown-shell` | Unknown `dx completion` shell (want bash, zsh, fish, or powershell, see [dx completion](commands/completion.md)) |
 | `workspace_not_found` | No supported Bazel module root was found |
 | `unsupported_workspace` | Workspace markers or configuration are unsupported |
 | `invalid_scope` | Scope syntax or kind is unsupported for the command |
+| `scope_error` | Scope resolution failure for `dx run` without a narrower code (see `resolve_code` in `../../cli/cli/src/exec/run.rs`) |
 | `no_owner` | A file has no declared Bazel owner |
 | `no_tests` | File owners map to no tests for test or coverage |
 | `no_runnable` | File owners map to no runnable for run |
 | `ambiguous_runnable` | File owners map to multiple runnables for run |
+| `not_deployable` | Deploy target provides no `DxDeployInfo` and is not executable (see [build/test/coverage](commands/build-test-coverage.md)) |
 | `conflicting_option` | A forwarded option conflicts with required workflow policy |
 | `bazel_unavailable` | The required Bazelisk-compatible launcher cannot run |
 | `bazel_failed` | A required Bazel subprocess failed |
@@ -583,8 +601,12 @@ Stable codes are:
 | `no_capability` | Exact setup scope provides neither environment nor codegen capability |
 | `coverage_below_minimum` | Coverage is below the configured minimum |
 | `audit_failed` | Live audit per-family failure (unexempted findings, incomplete assessment, advisory refresh failure, or auditor launch failure) |
+| `advisory_refresh_failed` | Advisory snapshot could not be obtained or refreshed (missing, empty, invalid, stale, or unsupported set; detail prefix inside `audit_failed`, see [dx audit](commands/audit-update-bazel.md#dx-audit)) |
 | `update_failed` | Live update per-set failure (resolver reported failure, unsupported selection, launch failure, or signal) |
+| `bump_failed` | Live bump widen failure (missing, ambiguous, or unsupported manifest shape, or unreadable/unwritable manifest, see [dx bump](commands/audit-update-bazel.md#dx-bump)) |
+| `migrate_failed` | Live migrate failure (no migrate manifest exists yet, see [dx migrate](commands/migrate.md)) |
 | `unsupported_platform` | The selected workflow has no hermetic platform support |
+| `version_skew` | Drifted `.dx/version` pin refuses mutating or generating commands (see [status/version](commands/status-version.md)) |
 | `symlink_unavailable` | Required host symlink capability is unavailable |
 | `internal_error` | An invariant failed without a narrower stable classification |
 
