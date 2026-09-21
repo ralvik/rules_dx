@@ -1,5 +1,10 @@
+# Private wheel-only Python tool graph (pydoclint + flake8 + pylint).
+# Managed 3.12 interpreter floor (`requires-python`); dependencies carry
+# lower bounds, exact pins live in `uv.lock`. Update flow: bump the bound
+# here, then regenerate with `uv lock` in this directory (see
+# `docs/tools/tool-acquisition.md`).
 [project]
 name = "dx-python-tools"
 version = "0.0.0"
 requires-python = ">=3.12"
-dependencies = ["pydoclint", "flake8", "pylint"]
+dependencies = ["pydoclint>=0.9.1", "flake8>=7.3.0", "pylint>=4.0.8"]

@@ -23,6 +23,10 @@ pub const PRESET_BAZEL_VERSION: &str = "9.2.0";
 pub const PRESET_DX_VERSION: &str = "0.0.0";
 
 /// Reviewed upstream-derived execution flags (mirrors old `UPSTREAM_FLAGS`).
+/// Why `enable_bzlmod` stays explicit: Bzlmod is default since Bazel 7,
+/// so the flag is a no-op on the canonical 9.2.0 (see `.bazelversion`);
+/// it is retained so the Bzlmod selection stays visible instead of
+/// relying on an implicit default (issue #912).
 const UPSTREAM_FLAGS: [&str; 3] = [
     "common --enable_bzlmod",
     "build --verbose_failures",

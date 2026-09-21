@@ -1,6 +1,10 @@
 # Hinted Ruff policy for the real-pipeline fixture (WP2, strict per
-# . Pins the strict lint selection explicitly so the hinted
-# run proves the config closure reaches the tool instead of `--isolated`
-# defaults (same selection as the workspace `ruff.toml`).
+# . Pins the strict lint selection plus the Python floor explicitly so
+# the hinted run proves the config closure reaches the tool instead of
+# `--isolated` defaults (same selection and floor as the workspace
+# `ruff.toml`; see `//tools/ci:config_consistency_test`).
+requires-python = ">=3.12"
+target-version = "py312"
+
 [lint]
 select = ["E4", "E7", "E9", "F", "W", "I", "B"]

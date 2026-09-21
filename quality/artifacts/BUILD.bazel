@@ -53,6 +53,17 @@ exports_files([
     "vale.windows_x86_64.bzl",
 ])
 
+# Canonical tool versions for //tools/ci:config_consistency_test
+# (issue #912): `TOOLS[biome]` owns the Biome `$schema` version.
+exports_files(
+    ["update.py"],
+    visibility = [
+        "//quality:__pkg__",
+        "//quality:__subpackages__",
+        "//tools/ci:__pkg__",
+    ],
+)
+
 metadata_tests(name = "metadata")
 
 test_suite(
