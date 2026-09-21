@@ -6,8 +6,8 @@ Build, check, and serve use existing tools only. A custom docs
 linter is rejected; link and reference checks reuse the existing
 [repository-owned Markdown checker](../quality/tool-integrations.md)
 plus Vale markers. No rendered mdBook site is claimed here; renderer
-and site execution stay open under #780 (successor to closed #581; see
-[Documentation](README.md#contracts)).
+and site execution are delivered seed-only under #780 (successor to closed #581; see
+[Documentation](README.md#contracts)) and execute under `//docs/site`, not here.
 
 ## Build
 

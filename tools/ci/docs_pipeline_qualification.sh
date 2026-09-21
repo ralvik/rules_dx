@@ -1,17 +1,19 @@
 #!/usr/bin/env bash
-# Docs-pipeline qualification harness (live successor to closed).
+# Docs-pipeline qualification harness (live successor to closed #581).
 #
 # Qualifies the as-built docs-pipeline record with fixture evidence and
-# owned gaps, without claiming a working site:
+# owned gaps, without claiming a published site:
 # - delivered: versioned IR schema (dx.documentation.v1, schema_major 1),
 #   documentation_ir codec (validate/encode/decode with roundtrip,
 #   rejection-parity, ordering, minor-forward-compat), dx_docs planning
 #   library (version/identity/validation/mode/drift/guide/site planning
 #   with unit tests), frozen design contracts (IR + site), removed dx docs
-#   stub behind ADR 0020, no Supported claim;
-# - open under with honest records: 13 per-language adapter runs with
+#   stub behind ADR 0020, plus fixture-scale renderer/site execution as
+#   Bazel-cached extract to aggregate to render (`docs/site`: mdBook-compatible
+#   prose plus generated API pages plus one search index, generated IR in
+#   Bazel outputs only, seed-only under #780), no Supported claim;
+# - open under #779 plus #781-#785 with honest records: 13 per-language adapter runs with
 #   pins/mappings (Scala TASTy proof spike first, Astro/MDX prose-only),
-#   renderer/site execution as Bazel-cached extract→aggregate→render,
 #   site-level byte-identical rebuild proof (codec same-producer proof is
 #   delivered, site-level is not), link/reference completeness at the
 #   pre-render boundary, guide prose plus guide-step CI wiring, first-hour
@@ -51,6 +53,15 @@ cli_errors="cli/cli/src/args/error.rs"
 backlog_guards="tools/ci/backlog_automation_guards.sh"
 reusable=".github/workflows/reusable-docs.yml"
 caller="examples/docs-ci/caller.yml"
+site_bzl="docs/site/site.bzl"
+site_build="docs/site/BUILD.bazel"
+site_tests="docs/site/site_tests.bzl"
+site_demo_symbols="docs/site/demo/demo.symbols.txt"
+site_demo_prose="docs/site/demo/demo_prose.md"
+site_demo_book="docs/site/demo/book.toml"
+site_pins="tools/ci/tests/fixtures/docs_site/pins.bzl"
+site_expected="tools/ci/tests/fixtures/docs_site/docs_site.expected"
+site_fixture_build="tools/ci/tests/fixtures/docs_site/BUILD.bazel"
 
 # IR schema identity stays dx.documentation.v1 with v1 enums and messages.
 if grep -q -F -e 'package dx.documentation.v1;' "$proto" &&
@@ -199,18 +210,18 @@ else
   bad "doc-ir lost its per-language overload/join/packaging #581 tracker"
 fi
 
-# Site build keeps the decided mdBook renderer with no replacement and an
-# honest open-execution record.
+# Site build keeps the decided mdBook renderer with no replacement and the
+# delivered seed-only execution record under #780.
 if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
   grep -q -F -e 'There is no planned replacement' "$site" &&
-  grep -q -F -e 'No working site support is claimed until qualified execution lands' "$site" &&
-  grep -q -F -e 'Open under issue #581' "$site" &&
+  grep -q -F -e 'renderer/site execution delivered seed-only under #780' "$site" &&
+  grep -q -F -e 'Fixture-scale site execution is qualified seed-only; no published site is claimed' "$site" &&
   grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
   grep -q -F -e 'one DocsAggregate action' "$site" &&
   grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
   ok
 else
-  bad "site build lost its mdBook decision or open-execution record"
+  bad "site build lost its mdBook decision or delivered-execution record (#780)"
 fi
 
 # Determinism stays a design requirement with byte-identical rebuild
@@ -225,24 +236,25 @@ else
   bad "site determinism lost its design-requirement plus open-evidence record"
 fi
 
-# Laziness and freshness keep no-committed-IR plus no-source-write honesty.
+# Laziness and freshness keep no-committed-IR plus no-source-write honesty
+# with delivered fixture execution under #780.
 if grep -q -F -e 'IR shards, render inputs, and rendered HTML are ordinary generated Bazel artifacts' "$site" &&
   grep -q -F -e 'not committed files or source-adjacent snapshots' "$site" &&
   grep -q -F -e 'never write generated IR beside source' "$site" &&
-  grep -q -F -e 'Required (Open; no site execution exists today)' "$site" &&
+  grep -q -F -e 'Delivered (seed-only fixture execution under #780)' "$site" &&
   grep -q -F -e 'The planned [`dx docs --check`]' "$site"; then
   ok
 else
-  bad "site lost its laziness/freshness no-committed-IR record"
+  bad "site lost its laziness/freshness no-committed-IR record (#780)"
 fi
 
 # Link/reference completeness at the pre-render boundary stays an owned gap.
 if grep -q -F -e 'Completeness of required link/reference checks' "$site" &&
-  grep -q -F -e 'at the pre-render boundary remains a gap (issue #581)' "$site" &&
+  grep -q -F -e 'at the pre-render boundary remains a gap (#782, successor to closed #581)' "$site" &&
   grep -q -F -e 'link/reference completeness' "$site"; then
   ok
 else
-  bad "site lost its link/reference pre-render completeness gap"
+  bad "site lost its link/reference pre-render completeness gap (#782)"
 fi
 
 # Guide-step CI wiring plus first-hour timing stay owned gaps with no
@@ -281,15 +293,15 @@ else
 fi
 
 # dx docs stub stays removed behind ADR 0020 with reintroduction open
-# under.
+# under #786 (successor to closed #581).
 if grep -q -F -e 'Removed. The `dx docs` command was deleted per' "$stub" &&
-  grep -q -F -e 'open under issue #581' "$stub" &&
+  grep -q -F -e 'open under #786 (successor to closed #581' "$stub" &&
   grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" &&
   grep -q -F -e 'Reintroducing the command alongside real extraction/validation' "$adr20" &&
-  grep -q -F -e 'removed; reintroduction with real extraction/validation open under issue #581' "$scope"; then
+  grep -q -F -e 'removed; reintroduction with real extraction/validation open under #786 (successor to closed #581' "$scope"; then
   ok
 else
-  bad "dx docs stub lost its removed-plus-ADR-0020-plus-#581 record"
+  bad "dx docs stub lost its removed-plus-ADR-0020-plus-#786 record"
 fi
 
 # CLI registry carries no Docs command: unknown-command surface never
@@ -313,10 +325,12 @@ else
   bad "a docs adapter implementation appeared or the no-execution record drifted"
 fi
 
-# Contracts keep the full gap list with no working-site honesty.
+# Contracts keep the gap list with delivered site execution under #780 and
+# no published-site honesty.
 if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
   grep -q -F -e 'per-language adapter runs' "$readme" &&
-  grep -q -F -e 'renderer and site execution' "$readme" &&
+  grep -q -F -e 'renderer and site execution delivered seed-only' "$readme" &&
+  grep -q -F -e 'under #780' "$readme" &&
   grep -q -F -e 'byte-identical rebuild proof' "$readme" &&
   grep -q -F -e 'link and reference completeness' "$readme" &&
   grep -q -F -e 'guide-step CI wiring' "$readme" &&
@@ -324,28 +338,29 @@ if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "documentation README lost its full #581 gap list"
+  bad "documentation README lost its #780 delivered plus remaining-gap list"
 fi
 
-# Roadmap keeps the same execution-gap list.
-if grep -q -F -e 'Docs-pipeline execution gaps stay open under issue #581' "$roadmap" &&
+# Roadmap keeps the execution-gap list with delivered site execution.
+if grep -q -F -e 'Docs-pipeline execution gaps stay open under #779 plus #781-#785' "$roadmap" &&
   grep -q -F -e 'adapter runs with pins' "$roadmap" &&
-  grep -q -F -e 'renderer and site execution' "$roadmap" &&
+  grep -q -F -e 'renderer and site execution delivered seed-only' "$roadmap" &&
   grep -q -F -e 'no working site claimed' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its #581 docs-pipeline execution-gap list"
+  bad "roadmap lost its #780 delivered plus remaining-gap list"
 fi
 
 # Verification matrix keeps Docs Open with no Supported claim and no
-# working site.
-if grep -q -F -e 'stay open under issue #581' "$matrix" &&
+# working site, with site execution delivered.
+if grep -q -F -e 'stay open under #779 plus #781-#785' "$matrix" &&
+  grep -q -F -e 'renderer/site execution delivered' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
   ok
 else
-  bad "verification matrix lost its Docs Open plus no-Supported gate"
+  bad "verification matrix lost its Docs Open plus #780 delivered plus no-Supported gate"
 fi
 
 # Functional: schema major pins agree (proto v1, codec example, shared helper).
@@ -359,7 +374,7 @@ else
 fi
 
 # Backlog guards still track the docs-pipeline gap.
-if grep -q -F -e '#581 docs-pipeline gaps stay tracked' "$backlog_guards" &&
+if grep -q -F -e 'docs-pipeline gaps stay tracked' "$backlog_guards" &&
   grep -q -F -e "documentation README lost its #581 docs-pipeline tracker record" "$backlog_guards"; then
   ok
 else
@@ -458,6 +473,111 @@ if grep -q -F -e 'No cell below is `Supported`' "$support" &&
   ok
 else
   bad "docs lost its no-Supported-until-evidence-gate record"
+fi
+
+# Site execution rules exist with the pinned renderer plus the three
+# actions and deterministic helpers (issue #780).
+if [[ -f "$site_bzl" && -f "$site_build" && -f "$site_tests" ]] &&
+  grep -q -F -e 'MDBOOK_VERSION = "0.4.43"' "$site_bzl" &&
+  grep -q -F -e 'def docs_extract' "$site_bzl" &&
+  grep -q -F -e 'def docs_aggregate' "$site_bzl" &&
+  grep -q -F -e 'def docs_render' "$site_bzl" &&
+  grep -q -F -e 'def docs_site' "$site_bzl" &&
+  grep -q -F -e 'def site_symbol_id' "$site_bzl" &&
+  grep -q -F -e 'def site_api_path' "$site_bzl" &&
+  grep -q -F -e 'Contract: `docs/documentation/site.md`' "$site_bzl"; then
+  ok
+else
+  bad "docs/site lost its pinned-renderer plus extract/aggregate/render rules (#780)"
+fi
+
+# Extract declares hermetic deterministic shards with no network and no
+# timestamps or absolute paths.
+if grep -q -F -e 'LC_ALL=C sort' "$site_bzl" &&
+  grep -q -F -e 'No network access' "$site_bzl" &&
+  ! grep -E -e '(^|[^_a-zA-Z])date([^_a-zA-Z]|$)' "$site_bzl" | grep -q . &&
+  ! grep -q -F -e '/tmp/' "$site_bzl" &&
+  grep -q -F -e 'workspace-relative' "$site_bzl"; then
+  ok
+else
+  bad "docs/site extract lost its hermetic deterministic record (#780)"
+fi
+
+# Aggregate builds mdBook-compatible render inputs from shards plus prose
+# plus config, with the search index never parsing rendered HTML.
+if grep -q -F -e '# Summary' "$site_bzl" &&
+  grep -q -F -e '# API Reference' "$site_bzl" &&
+  grep -q -F -e 'never parse' "$site_bzl" &&
+  grep -q -F -e 'never parses rendered HTML' "$site"; then
+  ok
+else
+  bad "docs/site aggregate lost its mdBook-compatible plus no-HTML-parse record (#780)"
+fi
+
+# Render emits the static entry plus the single search index from aggregate
+# records with the pinned version stamp.
+if grep -q -F -e 'searchindex.json' "$site_bzl" &&
+  grep -q -F -e 'rendered by mdBook' "$site_bzl" &&
+  grep -q -F -e 'single search index' "$site" &&
+  grep -q -F -e 'one search index' "$readme"; then
+  ok
+else
+  bad "docs/site render lost its single-search-index plus pinned-stamp record (#780)"
+fi
+
+# Demo inputs stay miniature and mdBook-compatible.
+if [[ -f "$site_demo_symbols" && -f "$site_demo_prose" && -f "$site_demo_book" ]] &&
+  grep -q -F -e 'AccountService.create' "$site_demo_symbols" &&
+  grep -q -F -e '# Demo Guide' "$site_demo_prose" &&
+  grep -q -F -e 'title = "demo"' "$site_demo_book"; then
+  ok
+else
+  bad "docs/site demo lost its miniature symbols plus prose plus book inputs (#780)"
+fi
+
+# Fixture pins stay present with the #780 execution record.
+if [[ -f "$site_pins" && -f "$site_expected" && -f "$site_fixture_build" ]] &&
+  grep -q -F -e 'MDBOOK_VERSION = "0.4.43"' "$site_pins" &&
+  grep -q -F -e 'qualified seed-only under issue #780' "$site_pins" &&
+  grep -q -F -e '(issue #780)' "$site_expected"; then
+  ok
+else
+  bad "docs_site fixture missing (want pins.bzl plus BUILD.bazel plus expected with #780 pins)"
+fi
+
+# Live proof: the site package builds green on the seed host.
+if bazel build //docs/site/... --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "docs/site fixture failed to build (want green on the seed host, #780)"
+fi
+
+# Live proof: the site unit plus file tests pass on the seed host.
+if bazel test //docs/site/... --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "docs/site tests failed (want site_unit plus site_files green, #780)"
+fi
+
+# Live proof: generated IR lives in Bazel outputs, never beside sources.
+if bazel build //docs/site:demo_extract --noshow_progress >/dev/null 2>&1 &&
+  [[ -f "bazel-bin/docs/site/demo_extract.ir.textproto" ]] &&
+  ! git ls-files -- 'docs/site/*.ir.textproto' 'docs/site/**/*.ir.textproto' | grep -q . &&
+  ! git ls-files -- 'tools/ci/tests/fixtures/docs_site/*.ir.textproto' | grep -q .; then
+  ok
+else
+  bad "generated IR escaped Bazel outputs (want bazel-bin only, never committed, #780)"
+fi
+
+# Live proof: the rendered entry plus search index carry the pinned
+# renderer and the demo symbols.
+if grep -q -F -e '<!-- rendered by mdBook 0.4.43 fixture -->' bazel-bin/docs/site/demo_render_index.html 2>/dev/null &&
+  grep -q -F -e 'python:demo:AccountService.create' bazel-bin/docs/site/demo_render_index.html 2>/dev/null &&
+  grep -q -F -e '"docs"' bazel-bin/docs/site/demo_render_searchindex.json 2>/dev/null &&
+  grep -q -F -e 'python:demo:AccountService.get' bazel-bin/docs/site/demo_render_searchindex.json 2>/dev/null; then
+  ok
+else
+  bad "rendered site lost its pinned stamp plus demo symbols (want mdBook 0.4.43 plus demo IDs, #780)"
 fi
 
 dx_test_summary "docs pipeline qualification harness"

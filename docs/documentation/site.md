@@ -1,17 +1,23 @@
 # Documentation Site Build
 
 Implementation status: accepted v1 direction with provisional inputs;
-execution open (#779-#785, successors to closed #581, live successor to closed #421). Accepted: the `dx_docs` site-build action planning over the
-Bazel-cached extract→aggregate→render graph (no committed IR). Command dispatch was
+renderer/site execution delivered seed-only under #780 (successor to closed #581,
+live successor to closed #421); remaining execution open (#779, #781-#785).
+Accepted: the `dx_docs` site-build action planning over the
+Bazel-cached extract→aggregate→render graph (no committed IR). Delivered: fixture-scale
+execution in [`docs/site/`](../../docs/site/site.bzl) (`docs_extract` per unit,
+`docs_aggregate` with shared validation, `docs_render` with the pinned mdBook
+artifact) producing mdBook-compatible prose plus generated API pages plus one search
+index, with generated IR in Bazel outputs only. Command dispatch was
 removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md); reintroduction
 is open under #786. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are design requirements, not verified claims; verification follows
-[Testing](../testing/) before any support statement. Open under #779-#785
+[Testing](../testing/) before any support statement. Open under #779, #781-#785
 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
-renderer/site execution, byte-identical rebuild proof, link/reference completeness,
+adapter runs, byte-identical rebuild proof, link/reference completeness,
 cache reuse and invalidation fixtures, guide-step CI wiring, and first-hour timing proof.
-No working site support is claimed until qualified execution lands.
+Fixture-scale site execution is qualified seed-only; no published site is claimed.
 
 ## Action Graph
 
@@ -70,11 +76,15 @@ at the pre-render boundary remains a gap (#782, successor to closed #581). Neith
 may write Bazel outputs and cache entries but never write generated IR beside source
 files. The planned `--serve` previews the built output locally and is not a build action.
 
-Required (Open; no site execution exists today) fixtures must prove a clean build without checked-in IR, cache reuse for unchanged
-inputs, appropriate invalidation after source/extractor/configuration changes, and no
-source-tree writes. Cache reuse and rebuilds must produce equivalent validated artifacts;
+Delivered (seed-only fixture execution under #780) fixtures prove a clean build without checked-in IR,
+deterministic sorted outputs, and no source-tree writes; the demo chain
+(`//docs/site:demo_site`) emits IR shards plus SUMMARY plus API pages plus search records
+plus the rendered entry plus the single search index as Bazel-cached outputs.
+Cache reuse and rebuilds must produce equivalent validated artifacts;
 remote-cache claims additionally require the central [testing evidence](../testing/README.md#remote-tests).
-Action-graph fixtures must prove check mode selects no rendering action, both modes reject the same
+Cache reuse timing, appropriate invalidation after source/extractor/configuration changes,
+and site-level byte-identical rebuild evidence stay open under #781. Action-graph planning
+proves check mode selects no rendering action, both modes reject the same
 invalid IR and references, and a full build still exercises renderer failures. This is not a wrapper
 around [`mdbook test`](https://rust-lang.github.io/mdBook/cli/test.html), which tests Rust examples.
 
@@ -91,4 +101,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution: #779-#785. Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #780; remaining: #779, #781-#785. Reintroduction: #786.
