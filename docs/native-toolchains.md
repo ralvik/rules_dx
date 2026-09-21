@@ -474,6 +474,11 @@ is qualified seed-only under issue #501 (`cc/tests/fixtures/lcov_accounting/pins
 mixed/DLL LCOV with missed-line tests, coverage-tool version pairing, native ignores and
 denominator validation. No ignored collection failures (unaccounted lines rejected).
 The accepted [coverage policy](testing/README.md#coverage) is not weakened to match missing collectors.
+The vendored preset pins no ambient `COVERAGE_GCOV_PATH`: `GENERATE_LLVM_LCOV=1`
+selects the LLVM LCOV path where the toolchain emits profraw, while
+`COVERAGE_GCOV_PATH`/`LLVM_COV`/`LLVM_PROFDATA` resolve per-host from
+`cc_toolchain` (a GCC-gcov-only path with no toolchain gcov fails closed,
+never silently).
 
 [gazelle_cc resolution](https://github.com/EngFlow/gazelle_cc/blob/v0.6.0/language/cc/resolve.go)
 does not meet strict generation by configuration alone: unresolved-dependency errors cover quoted
