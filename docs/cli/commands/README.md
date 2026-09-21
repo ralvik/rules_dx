@@ -3,13 +3,13 @@
 ## Scope Defaults
 
 Commands that accept graph scope use `//...` when no scope is supplied: build,
-test, lint, typecheck, format, audit, coverage, check, and fix. This default is independent of
+test, lint, typecheck, format, audit, coverage, check, fix, and migrate. This default is independent of
 the current working directory and never selects the directory implicitly. Pass `--here`
 (`--cwd` alias) for the current directory tree instead (`//path/to/dir/...`;
 `//...` at the root) on those commands plus `generate`; `--here` cannot be
 combined with explicit scopes. [Generate](generate.md#invocation-and-scope) defaults to
 repository-wide operation with explicit scoped generation as defined there.
-Codegen and environment accept no argument for
+Codegen, environment, and setup accept no argument for
 their generated repository roots or one exact target label; see
 [Generated Code](../../environments/codegen.md) and
 [Developer Environments](../../environments/environment.md).
