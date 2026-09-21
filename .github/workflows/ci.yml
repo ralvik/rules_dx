@@ -217,9 +217,9 @@ jobs:
       - name: Enforce seed coverage cell
         run: |
           set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage.log
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage.log"
           rc=${PIPESTATUS[0]}
-          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage.rc
+          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage.rc"
           exit $rc
       - name: Render first-party coverage summary (seed cell, same LCOV)
         # First-party PR reporting (issue #254): Bazel-owned gate stays the
@@ -238,26 +238,26 @@ jobs:
           bazel query 'kind("source file", deps(//cli/lcov/... + //tools/coverage/...))' 2>/dev/null \
             | grep -E '^//(cli/lcov|tools/coverage)[:/].*\.rs$' \
             | sed -e 's|^//||' -e 's|:|/|' \
-            | LC_ALL=C sort -u > ${RUNNER_TEMP:-/tmp}/seed_sources.txt
+            | LC_ALL=C sort -u > "${RUNNER_TEMP:-/tmp}/seed_sources.txt"
           set +e
           bazel-bin/tools/coverage/coverage_bin --report bazel-out/_coverage/_coverage_report.dat \
-            --inventory tools/coverage/seed-inventory.txt --sources ${RUNNER_TEMP:-/tmp}/seed_sources.txt --root . > ${RUNNER_TEMP:-/tmp}/seed_verdict.txt 2>&1
-          echo "$?" > ${RUNNER_TEMP:-/tmp}/seed_gate.rc
+            --inventory tools/coverage/seed-inventory.txt --sources "${RUNNER_TEMP:-/tmp}/seed_sources.txt" --root . > "${RUNNER_TEMP:-/tmp}/seed_verdict.txt" 2>&1
+          echo "$?" > "${RUNNER_TEMP:-/tmp}/seed_gate.rc"
           set -e
-          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage.rc 2>/dev/null || echo unknown)"
-          cp ${RUNNER_TEMP:-/tmp}/dx_coverage.log ${RUNNER_TEMP:-/tmp}/dx_coverage_out.txt 2>/dev/null || true
+          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage.rc" 2>/dev/null || echo unknown)"
+          cp "${RUNNER_TEMP:-/tmp}/dx_coverage.log" "${RUNNER_TEMP:-/tmp}/dx_coverage_out.txt" 2>/dev/null || true
           bazel run --noshow_progress //tools/coverage:coverage_comment -- \
             --cell "seed linux_x86_64" \
             --revision "${GITHUB_SHA}" \
             --run "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
-            --out ${RUNNER_TEMP:-/tmp}/coverage_comment.md \
-            --gate-output ${RUNNER_TEMP:-/tmp}/seed_verdict.txt \
-            --gate-exit "$(cat ${RUNNER_TEMP:-/tmp}/seed_gate.rc)" \
+            --out "${RUNNER_TEMP:-/tmp}/coverage_comment.md" \
+            --gate-output "${RUNNER_TEMP:-/tmp}/seed_verdict.txt" \
+            --gate-exit "$(cat "${RUNNER_TEMP:-/tmp}/seed_gate.rc")" \
             --lcov bazel-out/_coverage/_coverage_report.dat \
-            --dx-output ${RUNNER_TEMP:-/tmp}/dx_coverage_out.txt \
+            --dx-output "${RUNNER_TEMP:-/tmp}/dx_coverage_out.txt" \
             --dx-exit "$dx_rc"
           echo "### coverage summary (seed linux_x86_64, first-party, issue #254)" >> "$GITHUB_STEP_SUMMARY"
-          cat ${RUNNER_TEMP:-/tmp}/coverage_comment.md >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP:-/tmp}/coverage_comment.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Publish PR summary comment (dedup marker, fork-safe)
         # One integration-owned updated comment per PR (docs/github-ci.md).
         # Dedup by marker; human comments never touched; concurrency group
@@ -280,11 +280,11 @@ jobs:
           pr="${{ github.event.pull_request.number }}"
           existing="$(gh api "repos/$base_repo/issues/$pr/comments?per_page=100" --jq "[.[] | select(.body | contains(\"$marker\")) | .id] | last // empty" || true)"
           if [[ -n "$existing" ]]; then
-            jq -Rs '{body: .}' ${RUNNER_TEMP:-/tmp}/coverage_comment.md > ${RUNNER_TEMP:-/tmp}/coverage_payload.json
-            gh api -X PATCH "repos/$base_repo/issues/comments/$existing" --input ${RUNNER_TEMP:-/tmp}/coverage_payload.json --jq .id
+            jq -Rs '{body: .}' "${RUNNER_TEMP:-/tmp}/coverage_comment.md" > "${RUNNER_TEMP:-/tmp}/coverage_payload.json"
+            gh api -X PATCH "repos/$base_repo/issues/comments/$existing" --input "${RUNNER_TEMP:-/tmp}/coverage_payload.json" --jq .id
             echo "Updated coverage summary comment $existing on PR #$pr." >> "$GITHUB_STEP_SUMMARY"
           else
-            gh pr comment "$pr" --body-file ${RUNNER_TEMP:-/tmp}/coverage_comment.md
+            gh pr comment "$pr" --body-file "${RUNNER_TEMP:-/tmp}/coverage_comment.md"
             echo "Created coverage summary comment on PR #$pr." >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Prove coverage report contract (gate-owned LCOV, first-party comment)
@@ -367,9 +367,9 @@ jobs:
       - name: Enforce arm64 coverage cell
         run: |
           set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log"
           rc=${PIPESTATUS[0]}
-          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.rc
+          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.rc"
           exit $rc
       - name: Render arm64 per-cell summary (same scope, no union)
         # Per-cell evidence without a cross-cell union (issue #410): the
@@ -379,8 +379,8 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.rc 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' ${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log 2>/dev/null | head -n 1 || true)"
+          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.rc" 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log" 2>/dev/null | head -n 1 || true)"
           if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
           {
             echo "<!-- dx-coverage-summary: arm64 linux_arm64 -->"
@@ -393,7 +393,7 @@ jobs:
             echo ""
             echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
           } >> "$GITHUB_STEP_SUMMARY"
-          cat ${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log" >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -468,9 +468,9 @@ jobs:
       - name: Enforce musl x86_64 coverage cell
         run: |
           set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log"
           rc=${PIPESTATUS[0]}
-          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc
+          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc"
           exit $rc
       - name: Render musl x86_64 per-cell summary (same scope, no union)
         # Per-cell evidence without a cross-cell union (issue #411): the
@@ -481,8 +481,8 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log 2>/dev/null | head -n 1 || true)"
+          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc" 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log" 2>/dev/null | head -n 1 || true)"
           if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
           {
             echo "<!-- dx-coverage-summary: musl-x86_64 linux_x86_64_musl -->"
@@ -495,7 +495,7 @@ jobs:
             echo ""
             echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
           } >> "$GITHUB_STEP_SUMMARY"
-          cat ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log" >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -522,9 +522,9 @@ jobs:
       - name: Enforce musl arm64 coverage cell
         run: |
           set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log"
           rc=${PIPESTATUS[0]}
-          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc
+          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc"
           exit $rc
       - name: Render musl arm64 per-cell summary (same scope, no union)
         # Per-cell evidence without a cross-cell union (issue #411): the
@@ -535,8 +535,8 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log 2>/dev/null | head -n 1 || true)"
+          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc" 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log" 2>/dev/null | head -n 1 || true)"
           if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
           {
             echo "<!-- dx-coverage-summary: musl-arm64 linux_arm64_musl -->"
@@ -549,7 +549,7 @@ jobs:
             echo ""
             echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
           } >> "$GITHUB_STEP_SUMMARY"
-          cat ${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log" >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -628,9 +628,9 @@ jobs:
       - name: Enforce macos arm64 coverage cell
         run: |
           set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log"
           rc=${PIPESTATUS[0]}
-          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.rc
+          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.rc"
           exit $rc
       - name: Render macos arm64 per-cell summary (same scope, no union)
         # Per-cell evidence without a cross-cell union (issue #412): the
@@ -641,8 +641,8 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.rc 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log 2>/dev/null | head -n 1 || true)"
+          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.rc" 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log" 2>/dev/null | head -n 1 || true)"
           if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
           {
             echo "<!-- dx-coverage-summary: macos-arm64 macos_arm64 -->"
@@ -655,7 +655,7 @@ jobs:
             echo ""
             echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
           } >> "$GITHUB_STEP_SUMMARY"
-          cat ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log" >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -734,9 +734,9 @@ jobs:
       - name: Enforce macos x86_64 coverage cell
         run: |
           set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log"
           rc=${PIPESTATUS[0]}
-          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.rc
+          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.rc"
           exit $rc
       - name: Render macos x86_64 per-cell summary (same scope, no union)
         # Per-cell evidence without a cross-cell union (issue #413
@@ -748,8 +748,8 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.rc 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log 2>/dev/null | head -n 1 || true)"
+          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.rc" 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log" 2>/dev/null | head -n 1 || true)"
           if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
           {
             echo "<!-- dx-coverage-summary: macos-x86_64 macos_x86_64 -->"
@@ -762,7 +762,7 @@ jobs:
             echo ""
             echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
           } >> "$GITHUB_STEP_SUMMARY"
-          cat ${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log" >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -850,9 +850,9 @@ jobs:
       - name: Enforce windows x86_64 coverage cell
         run: |
           set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log
+          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log"
           rc=${PIPESTATUS[0]}
-          echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.rc
+          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.rc"
           exit $rc
       - name: Render windows x86_64 per-cell summary (same scope, no union)
         # Per-cell evidence without a cross-cell union (issue #414): the
@@ -864,8 +864,8 @@ jobs:
         if: always()
         run: |
           set -euo pipefail
-          dx_rc="$(cat ${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.rc 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' ${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log 2>/dev/null | head -n 1 || true)"
+          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.rc" 2>/dev/null || echo unknown)"
+          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log" 2>/dev/null | head -n 1 || true)"
           if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
           {
             echo "<!-- dx-coverage-summary: windows-x86_64 windows_x86_64 -->"
@@ -878,7 +878,7 @@ jobs:
             echo ""
             echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
           } >> "$GITHUB_STEP_SUMMARY"
-          cat ${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log >> "$GITHUB_STEP_SUMMARY"
+          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log" >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
