@@ -119,7 +119,34 @@ The full matrix is frozen in `deploy/release/matrix.bzl` (seed Linux
 x86_64 qualified; four follow-ups unqualified until their hosts
 qualify). Draft-only ceiling enforced, owner approval required.
 
-## Path E: standalone `dx` install verification (accepted)
+## Path E: `pypi_deploy` (accepted)
+
+The third deploy macro publishes one wheel plus an optional sdist with a
+local-first Python publisher, no shell, no `sh_binary`:
+
+```starlark
+load("@rules_dx//deploy/rules:pypi.bzl", "pypi_deploy")
+
+pypi_deploy(
+    name = "pypi",
+    wheel = ":dist-0.0.0-py3-none-any.whl",
+    sdist = ":dist-0.0.0.tar.gz",
+)
+```
+
+`bazel run //python/tests/fixtures/hello:pypi` (or `dx deploy
+//python/tests/fixtures/hello:pypi`) builds a local wheelhouse directory
+(`<name>-wheelhouse/` with `simple-index/` plus the pinned `.whl`) and
+verifies bytes via sha256, publishing nothing. Pass an output directory
+after `--` to choose where the wheelhouse lands (default:
+`$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The deploy program is a
+`py_binary` on the managed Python 3.12 toolchain only, with pinned `data`
+plus the Python runfiles library. Live `twine upload --non-interactive
+--repository-url` runs only with `PYPI_PUBLISH_LIVE=1`, `PYPI_API_TOKEN`,
+and `PYPI_PUBLISH_APPROVED=1` after explicit owner approval, never by
+default. Deploy targets live next to the distribution they publish.
+
+## Path F: standalone `dx` install verification (accepted)
 
 Standalone `dx` binaries verify publisher identity at install time via
 `//deploy/install:dx_verify` (`deploy/install/dx_verify.sh`). The verifier
@@ -140,7 +167,7 @@ Distribution verification qualified under issue #459. Policy tests are
 `bazel test //deploy/install:all` plus `bazel run
 //tools/ci:signing_distribution_qualification`.
 
-## Path F: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
+## Path G: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
 
 The full release path (issue #311; human-run driver owned under issue
 #458, live successor to closed #311 for the human-run path; signing stack
