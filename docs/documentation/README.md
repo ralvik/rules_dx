@@ -1,8 +1,9 @@
 # Documentation
 
 Accepted v1 direction; renderer/site execution delivered seed-only under #780,
+site-level byte-identical rebuild proof delivered seed-only under #781,
 remaining execution open (see Contracts). No `Supported`
-claim; fixture-scale site execution is qualified and no site is published yet.
+claim; fixture-scale site execution plus rebuild proof are qualified and no site is published yet.
 
 Accepted design: native language tooling extracts API semantics; thin per-language adapters
 normalize into one versioned [documentation IR](doc-ir.md); one [site
@@ -32,7 +33,8 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
 - [Documentation IR](doc-ir.md): common symbol model, language extensions,
   validation, fixtures, and drift policy. Authoritative for IR facts.
 - [Site build](site.md): Bazel cache-friendly action design, determinism
-  rules, laziness, generated-artifact lifecycle, and the decided mdBook renderer.
+  rules plus delivered byte-identical rebuild proof, laziness, generated-artifact lifecycle,
+  and the decided mdBook renderer.
   Authoritative for build facts.
 - [Build check serve](build-check-serve.md): accepted `bazel build //docs/...`,
   `dx lint --check //docs/...`, and local serve with existing tools only
@@ -44,19 +46,21 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
   (see the [`dx docs` stub](../cli/commands/docs.md)).
   [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
   validation-only check; exact mappings are tracked under
-  #786. Docs pipeline gaps stay open under #779 plus #781-#785 (successors to closed #581; per-language adapter runs
-  with pins and mappings, byte-identical rebuild proof,
+  #786. Docs pipeline gaps stay open under #779 plus #782-#785 (successors to closed #581; per-language adapter runs
+  with pins and mappings,
   link and reference completeness, guide-step CI wiring, first-hour timing proof, and
   per-release pin-bump plus drift process; renderer and site execution delivered seed-only
-  under #780 and no site is published yet).
+  under #780, site-level byte-identical rebuild proof delivered seed-only under #781,
+  and no site is published yet).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
 Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
 Accepted scope covers thirteen adapter scopes. Per-language input pins,
 mappings, adapter runs, and every other
-#779 plus #781-#785 item above remain open; renderer/site-build execution is delivered
-seed-only under #780 and no adapter execution exists today.
+#779 plus #782-#785 item above remain open; renderer/site-build execution is delivered
+seed-only under #780, rebuild proof is delivered seed-only under #781,
+and no adapter execution exists today.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779-#785 (site execution delivered under #780). Reintroduction: #786. Build workflow: #620.
+Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779-#785 (site execution delivered under #780, rebuild proof delivered under #781). Reintroduction: #786. Build workflow: #620.

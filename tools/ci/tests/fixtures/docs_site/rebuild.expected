@@ -1,0 +1,5 @@
+Docs site byte-identical rebuild proof (issue #781)
+Identical inputs rebuild to byte-identical site output under Bazel caching
+Two builds hashed and diffed: shard plus SUMMARY plus API plus records plus entry plus search index
+Sorted symbol order plus sorted JSON keys plus LF bytes with no timestamps and no absolute paths
+Qualified seed-only, no Supported claim

@@ -4,6 +4,7 @@ mdBook-compatible prose plus generated API pages plus one search index
 Pinned mdBook 0.4.43 fixture render with no planned replacement
 Generated IR stays in Bazel outputs, never beside sources or in Git
 Deterministic sorted rebuilds with no timestamps and no absolute paths
+Byte-identical rebuild proof delivered seed-only (issue #781, two builds diffed)
 Check selects extract plus aggregate without render; build renders
 Qualified seed-only, no Supported claim
-Byte-identical rebuild plus link completeness plus guide-step wiring plus timing plus drift stay owned gaps
+Link completeness plus guide-step wiring plus timing plus drift stay owned gaps

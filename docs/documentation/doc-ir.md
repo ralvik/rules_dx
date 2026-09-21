@@ -10,10 +10,11 @@ Accepted: the checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto)
 [`documentation_ir` codec crate](../ir/ir/src/lib.rs)
 (`//docs/ir/ir:documentation_ir`: validate/encode/decode with
 roundtrip, rejection-parity, extension- and symbol-ordering, and minor-forward-compat tests).
-Open under #779, #781 and #785 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
+Open under #779 and #785 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
 per-language adapter runs with pins and mappings, symbol-count inventory and
-native-output comparison fixtures, same-producer byte-identical rebuild proof,
-and per-release pin-bump plus drift process. No working docs support is claimed until
+native-output comparison fixtures,
+and per-release pin-bump plus drift process. Same-producer byte-identical rebuild proof
+for the fixture-scale site is delivered seed-only under #781. No working docs support is claimed until
 qualified execution lands.
 
 ## Versioning
