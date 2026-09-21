@@ -42,11 +42,12 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
 * Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (#787, #788; successors to closed #506), coverage plus consumer plus quality (#802; successor to closed #512).
 * Docs-pipeline adapter runs delivered under #779 plus renderer/site execution
   delivered under #780 plus rebuild proof delivered under #781 plus link/reference
-  completeness delivered under #782 (successors to closed #581,
+  completeness delivered under #782 plus first-hour timing proof delivered
+  seed-only under #784 (successors to closed #581,
   live successor to closed #421; per-language runs with pins plus goldens via `//docs/adapters:docs_adapters`,
   fixture-scale site via `docs/site/`). Remaining execution gaps stay open under
-  #783-#785 (successors to closed #581; guide prose with
-  guide-step CI wiring, first-hour timing proof, and per-release pin-bump plus drift
+  #783 plus #785 (successors to closed #581; guide prose with
+  guide-step CI wiring and per-release pin-bump plus drift
   process; no working site claimed).
 * Robustness and hygiene: CI hygiene,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run

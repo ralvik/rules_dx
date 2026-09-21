@@ -12,6 +12,7 @@ exports_files([
     "docs_site.expected",
     "rebuild.expected",
     "links.expected",
+    "timing.expected",
 ])
 
 real_source_target(

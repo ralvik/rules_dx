@@ -1,7 +1,7 @@
 # Documentation IR
 
 Implementation status: accepted v1 direction with adapter runs plus site execution plus
-rebuild proof plus link/reference completeness delivered; remaining execution open (#783-#785, successors to closed #581,
+rebuild proof plus link/reference completeness plus first-hour timing proof delivered; remaining execution open (#783 plus #785, successors to closed #581,
 live successor to closed #421). Accepted: the `dx_docs` planning library
 (command dispatch removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md);
 reintroduction tracked under #786) —
@@ -15,7 +15,7 @@ Delivered under #779 (successor to closed #581; see [Documentation](README.md#co
 per-language adapter runs with pins and mappings (`//docs/adapters:docs_adapters`
 over pinned native inputs with golden fixtures per scope). Same-producer byte-identical rebuild proof
 for the fixture-scale site is delivered seed-only under #781. Link/reference completeness at the
-pre-render boundary is delivered seed-only under #782. Open under #785 plus #783-#784
+pre-render boundary is delivered seed-only under #782. Open under #785 plus #783
 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
 symbol-count inventory and native-output comparison fixtures (delivered under #779),
 and per-release pin-bump plus drift process. No working docs support is claimed until
@@ -261,4 +261,4 @@ pin-bump and drift-test process stays open under
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783-#785 (successors to closed #581). Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #784 (timing delivered) plus #783 plus #785 (successors to closed #581). Reintroduction: #786.

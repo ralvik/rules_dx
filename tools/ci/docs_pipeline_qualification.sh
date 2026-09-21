@@ -6,7 +6,7 @@
 # - delivered: versioned IR schema (dx.documentation.v1, schema_major 1),
 #   documentation_ir codec (validate/encode/decode with roundtrip,
 #   rejection-parity, ordering, minor-forward-compat), dx_docs planning
-#   library (version/identity/validation/mode/drift/guide/site planning
+#   library (version/identity/validation/mode/drift/guide/site/timing planning
 #   with unit tests), per-language adapter runs with pins plus mappings plus
 #   golden fixtures under #779 (twelve extraction plus prose-only via
 #   //docs/adapters:docs_adapters), fixture-scale renderer/site execution as
@@ -18,10 +18,12 @@
 #   link/reference completeness at the pre-render boundary (prose plus
 #   generated API pages resolve all internal links with no dangling targets,
 #   remote skipped never fetched, dangling fails the action, seed-only under
-#   #782), frozen design contracts (IR + site),
+#   #782), plus first-hour timing proof as one-shot evidence per ADR 0022
+#   (built site/docs journey completes in the first hour, no CI timing budget,
+#   seed-only under #784), frozen design contracts (IR + site),
 #   removed dx docs stub behind ADR 0020, no Supported claim;
-# - open under #783-#785 with honest records: guide prose plus guide-step
-#   CI wiring, first-hour timing proof, per-release pin-bump plus drift
+# - open under #783 plus #785 with honest records: guide prose plus guide-step
+#   CI wiring, per-release pin-bump plus drift
 #   process, dx docs reintroduction per ADR 0006 build-vs-validation split
 #   (open under #786), reusable-docs plus caller staying product surface.
 #
@@ -67,6 +69,7 @@ site_pins="tools/ci/tests/fixtures/docs_site/pins.bzl"
 site_expected="tools/ci/tests/fixtures/docs_site/docs_site.expected"
 site_rebuild_expected="tools/ci/tests/fixtures/docs_site/rebuild.expected"
 site_links_expected="tools/ci/tests/fixtures/docs_site/links.expected"
+site_timing_expected="tools/ci/tests/fixtures/docs_site/timing.expected"
 site_fixture_build="tools/ci/tests/fixtures/docs_site/BUILD.bazel"
 adapters="docs/adapters/src/lib.rs"
 adapters_build="docs/adapters/BUILD.bazel"
@@ -129,7 +132,7 @@ else
 fi
 
 # Planning library delivers version, identity, validation, mode, drift,
-# guide, and site planning entry points.
+# guide, site, and timing planning entry points.
 if grep -q -F -e 'pub fn plan_version_compat' "$planning" &&
   grep -q -F -e 'pub fn plan_symbol_id' "$planning" &&
   grep -q -F -e 'pub fn plan_overload_id' "$planning" &&
@@ -141,10 +144,13 @@ if grep -q -F -e 'pub fn plan_version_compat' "$planning" &&
   grep -q -F -e 'pub fn plan_guide_freshness' "$planning" &&
   grep -q -F -e 'pub fn is_known_guide' "$planning" &&
   grep -q -F -e 'pub fn same_producer_requires_byte_equality' "$planning" &&
-  grep -q -F -e 'pub fn plan_cache_miss' "$planning"; then
+  grep -q -F -e 'pub fn plan_cache_miss' "$planning" &&
+  grep -q -F -e 'pub fn first_hour_journey_steps' "$planning" &&
+  grep -q -F -e 'pub fn timing_proof_is_one_shot' "$planning" &&
+  grep -q -F -e 'pub fn timing_proof_enforces_budget' "$planning"; then
   ok
 else
-  bad "dx_docs planning lost its version/identity/validation/mode/drift/guide/site entry points"
+  bad "dx_docs planning lost its version/identity/validation/mode/drift/guide/site/timing entry points"
 fi
 
 # Planning hermeticity and lifecycle invariants stay pinned.
@@ -161,7 +167,7 @@ else
 fi
 
 # Planning unit tests cover compat, identity, validation, mode, drift,
-# guide, site, byte-equality, cache, scope, and serve.
+# guide, site, timing, byte-equality, cache, scope, and serve.
 if grep -q -F -e 'same_major_is_compatible_in_either_minor_direction' "$planning" &&
   grep -q -F -e 'major_skew_requires_the_recorded_migration' "$planning" &&
   grep -q -F -e 'zero_major_fails_closed' "$planning" &&
@@ -171,10 +177,11 @@ if grep -q -F -e 'same_major_is_compatible_in_either_minor_direction' "$planning
   grep -q -F -e 'guide_freshness_requires_every_step_executed_and_green_examples' "$planning" &&
   grep -q -F -e 'site_actions_are_hermetic_and_deterministic_by_construction' "$planning" &&
   grep -q -F -e 'byte_equality_holds_only_for_the_same_pinned_producer' "$planning" &&
+  grep -q -F -e 'first_hour_timing_is_one_shot_without_budget' "$planning" &&
   grep -q -F -e 'cache_miss_re_executes_never_fails_freshness' "$planning"; then
   ok
 else
-  bad "dx_docs planning lost its compat/validation/mode/drift/guide/site unit tests"
+  bad "dx_docs planning lost its compat/validation/mode/drift/guide/site/timing unit tests"
 fi
 
 # Planning crate keeps its BUILD wiring.
@@ -217,21 +224,22 @@ else
   bad "doc-ir lost its delivered overload/join/packaging record under #779"
 fi
 
-# delivered adapter-plus-site execution plus rebuild plus link records under #779 plus #780 plus #781 plus #782.
+# delivered adapter-plus-site execution plus rebuild plus link plus timing records under #779 plus #780 plus #781 plus #782 plus #784.
 if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
   grep -q -F -e 'There is no planned replacement' "$site" &&
   grep -q -F -e 'adapter runs delivered under #779' "$site" &&
   grep -q -F -e 'renderer/site execution delivered seed-only under #780' "$site" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered' "$site" &&
   grep -q -F -e 'link/reference completeness delivered seed-only under #782' "$site" &&
-  grep -q -F -e 'Fixture-scale site execution plus byte-identical rebuild proof plus link completeness are qualified seed-only' "$site" &&
+  grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$site" &&
+  grep -q -F -e 'Fixture-scale site execution plus byte-identical rebuild proof plus link completeness plus first-hour timing are qualified seed-only' "$site" &&
   grep -q -F -e 'extraction runs under #779' "$site" &&
   grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
   grep -q -F -e 'one DocsAggregate action' "$site" &&
   grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
   ok
 else
-  bad "site build lost its mdBook decision or delivered-execution plus rebuild plus link record (#779 plus #780 plus #781 plus #782)"
+  bad "site build lost its mdBook decision or delivered-execution plus rebuild plus link plus timing record (#779 plus #780 plus #781 plus #782 plus #784)"
 fi
 
 # Determinism is delivered seed-only with byte-identical rebuild proof,
@@ -271,16 +279,16 @@ else
   bad "site lost its link/reference pre-render completeness delivery (#782)"
 fi
 
-# Guide-step CI wiring plus first-hour timing stay owned gaps with no
-# working-site claim.
+# Guide-step CI wiring stays an owned gap while first-hour timing is
+# delivered one-shot with no working-site claim.
 if grep -q -F -e 'guide-step CI wiring' "$site" &&
-  grep -q -F -e 'first-hour timing proof' "$site" &&
+  grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$site" &&
   grep -q -F -e 'guide-step verification' "$matrix" &&
-  grep -q -F -e 'first-hour timing proof' "$matrix" &&
+  grep -q -F -e 'first-hour timing proof delivered' "$matrix" &&
   grep -q -F -e 'guide prose with' "$roadmap"; then
   ok
 else
-  bad "guide-step CI wiring or first-hour timing gap lost its owner"
+  bad "guide-step CI wiring gap or delivered first-hour timing record lost its owner"
 fi
 
 # Drift policy stays accepted with adapter pins delivered and drift process open.
@@ -343,46 +351,48 @@ fi
 
 # Contracts keep the gap list with delivered adapter runs under #779 plus site
 # execution under #780 plus rebuild proof under #781 plus link completeness
-# under #782 and no published-site honesty.
+# under #782 plus timing proof under #784 and no published-site honesty.
 if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
   grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
   grep -q -F -e 'renderer and site execution delivered seed-only under #780' "$readme" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
   grep -q -F -e 'link and reference completeness delivered seed-only under #782' "$readme" &&
-  grep -q -F -e 'under #783-#785' "$readme" &&
+  grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$readme" &&
+  grep -q -F -e 'under #783 plus #785' "$readme" &&
   grep -q -F -e 'guide-step CI wiring' "$readme" &&
   grep -q -F -e 'first-hour timing proof' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "documentation README lost its #779 plus #780 plus #781 plus #782 delivered plus remaining-gap list"
+  bad "documentation README lost its #779 plus #780 plus #781 plus #782 plus #784 delivered plus remaining-gap list"
 fi
 
-# Roadmap keeps adapter-plus-site-plus-rebuild-plus-link delivered plus remaining gaps.
+# Roadmap keeps adapter-plus-site-plus-rebuild-plus-link-plus-timing delivered plus remaining gaps.
 if grep -q -F -e 'adapter runs delivered under #779 plus renderer/site execution' "$roadmap" &&
   grep -q -F -e 'delivered under #780 plus rebuild proof delivered under #781' "$roadmap" &&
   grep -q -F -e 'completeness delivered under #782' "$roadmap" &&
+  grep -q -F -e 'timing proof delivered' "$roadmap" &&
   grep -q -F -e 'stay open under' "$roadmap" &&
-  grep -q -F -e '#783-#785' "$roadmap" &&
+  grep -q -F -e '#783 plus #785' "$roadmap" &&
   grep -q -F -e 'no working site claimed' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its #779 plus #780 plus #781 plus #782 delivered plus remaining-gap list"
+  bad "roadmap lost its #779 plus #780 plus #781 plus #782 plus #784 delivered plus remaining-gap list"
 fi
 
 # Verification matrix keeps Docs Open with no Supported claim and no
-# working site, with adapter-plus-site-plus-rebuild-plus-link delivered.
-if grep -q -F -e 'staying open under #783-#785' "$matrix" &&
-  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link green' "$matrix" &&
-  grep -q -F -e 'docs_pipeline_qualification` 64/64' "$matrix" &&
+# working site, with adapter-plus-site-plus-rebuild-plus-link-plus-timing delivered.
+if grep -q -F -e 'staying open under #783 plus #785' "$matrix" &&
+  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link-plus-timing green' "$matrix" &&
+  grep -q -F -e 'docs_pipeline_qualification` 70/70' "$matrix" &&
   grep -q -F -e 'adapter runs delivered under #779 plus site execution delivered under #780 plus rebuild delivered under #781 plus link' "$matrix" &&
-  grep -q -F -e 'qualified seed-only under #779 plus #780 plus #781 plus #782' "$matrix" &&
+  grep -q -F -e 'qualified seed-only under #779 plus #780 plus #781 plus #782 plus #784' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
   ok
 else
-  bad "verification matrix lost its Docs Open plus #779 plus #780 plus #781 plus #782 delivered plus no-Supported gate"
+  bad "verification matrix lost its Docs Open plus #779 plus #780 plus #781 plus #782 plus #784 delivered plus no-Supported gate"
 fi
 
 # Functional: schema major pins agree (proto v1, codec example, shared helper).
@@ -557,26 +567,31 @@ else
 fi
 
 # Fixture pins stay present with the #780 execution plus #781 rebuild
-# plus #782 link-completeness records.
-if [[ -f "$site_pins" && -f "$site_expected" && -f "$site_rebuild_expected" && -f "$site_links_expected" && -f "$site_fixture_build" ]] &&
+# plus #782 link-completeness plus #784 timing records.
+if [[ -f "$site_pins" && -f "$site_expected" && -f "$site_rebuild_expected" && -f "$site_links_expected" && -f "$site_timing_expected" && -f "$site_fixture_build" ]] &&
   grep -q -F -e 'MDBOOK_VERSION = "0.4.43"' "$site_pins" &&
-  grep -q -F -e 'qualified seed-only under issues #780 plus #781 plus #782' "$site_pins" &&
+  grep -q -F -e 'qualified seed-only under issues #780 plus #781 plus #782 plus #784' "$site_pins" &&
   grep -q -F -e 'REBUILD_PROOF = "two builds hashed and diffed byte-identical under issue #781"' "$site_pins" &&
   grep -q -F -e 'REBUILD_OUTPUTS = "shard plus SUMMARY plus API plus records plus entry plus search index"' "$site_pins" &&
   grep -q -F -e 'LINK_COMPLETENESS = "prose plus API pages resolve all internal links with no dangling targets under issue #782"' "$site_pins" &&
   grep -q -F -e 'LINK_FAIL_CLOSED = "dangling links fail the aggregate action with no partial outputs"' "$site_pins" &&
-  grep -q -F -e 'stay owned gaps under #783-#785' "$site_pins" &&
+  grep -q -F -e 'TIMING_ONE_SHOT = "one-shot evidence proof per ADR 0022, not a standing benchmark"' "$site_pins" &&
+  grep -q -F -e 'TIMING_NO_GATE = "no CI timing budget enforced"' "$site_pins" &&
+  grep -q -F -e 'stay owned gaps under #783 plus #785' "$site_pins" &&
   grep -q -F -e '(issue #780)' "$site_expected" &&
   grep -q -F -e 'Byte-identical rebuild proof delivered seed-only (issue #781, two builds diffed)' "$site_expected" &&
   grep -q -F -e 'Link and reference completeness delivered seed-only (issue #782, pre-render shared validation with no dangling targets)' "$site_expected" &&
+  grep -q -F -e 'First-hour timing proof delivered seed-only (issue #784' "$site_expected" &&
   grep -q -F -e 'Docs site byte-identical rebuild proof (issue #781)' "$site_rebuild_expected" &&
   grep -q -F -e 'Two builds hashed and diffed' "$site_rebuild_expected" &&
   grep -q -F -e 'Docs site link and reference completeness (issue #782)' "$site_links_expected" &&
   grep -q -F -e 'no dangling targets' "$site_links_expected" &&
-  grep -q -F -e 'links.expected' "$site_fixture_build"; then
+  grep -q -F -e 'Docs site first-hour timing proof (issue #784)' "$site_timing_expected" &&
+  grep -q -F -e 'One-shot evidence proof per ADR 0022, not a standing benchmark' "$site_timing_expected" &&
+  grep -q -F -e 'timing.expected' "$site_fixture_build"; then
   ok
 else
-  bad "docs_site fixture missing (want pins.bzl plus BUILD.bazel plus expected plus rebuild.expected plus links.expected with #780 plus #781 plus #782 pins)"
+  bad "docs_site fixture missing (want pins.bzl plus BUILD.bazel plus expected plus rebuild.expected plus links.expected plus timing.expected with #780 plus #781 plus #782 plus #784 pins)"
 fi
 
 # Live proof: the site package builds green on the seed host.
@@ -879,18 +894,90 @@ else
   bad "crate universe lost its docs/adapters manifest plus lockfile under #779"
 fi
 
-# No published-site claim beyond the adapter-plus-site-plus-rebuild-plus-link slice.
+# No published-site claim beyond the adapter-plus-site-plus-rebuild-plus-link-plus-timing slice.
 if grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
   grep -q -F -e 'renderer and site execution delivered seed-only under #780' "$readme" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
   grep -q -F -e 'link and reference completeness delivered seed-only under #782' "$readme" &&
+  grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$readme" &&
   grep -q -F -e 'no published site exists today' "$readme" &&
   grep -q -F -e 'no site is published yet' "$readme" &&
-  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link green' "$matrix" &&
+  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link-plus-timing green' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix"; then
   ok
 else
-  bad "adapter-plus-site-plus-rebuild-plus-link slice lost its no-published-site honesty under #779/#780/#781/#782"
+  bad "adapter-plus-site-plus-rebuild-plus-link-plus-timing slice lost its no-published-site honesty under #779/#780/#781/#782/#784"
+fi
+
+# First-hour timing proof is delivered one-shot under #784 with no standing
+# benchmark per ADR 0022.
+if grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$site" &&
+  grep -q -F -e 'one-shot' "$site" &&
+  grep -q -F -e 'not a standing benchmark' "$site" &&
+  grep -q -F -e 'no CI timing budget enforced' "$site" &&
+  grep -q -F -e 'ADR 0022' "$site" &&
+  grep -q -F -e 'timing.expected' "$site"; then
+  ok
+else
+  bad "site lost its first-hour timing one-shot proof record with no standing benchmark (#784)"
+fi
+
+# Timing fixture pins carry the journey plus one-shot plus no-gate plus
+# rejected substitutes under #784.
+if grep -q -F -e 'FIRST_HOUR_JOURNEY = "demo_site cold plus warm plus docs corpus plus site tests"' "$site_pins" &&
+  grep -q -F -e 'TIMING_ONE_SHOT = "one-shot evidence proof per ADR 0022, not a standing benchmark"' "$site_pins" &&
+  grep -q -F -e 'TIMING_NO_GATE = "no CI timing budget enforced"' "$site_pins" &&
+  grep -q -F -e 'TIMING_METHOD = "wall plus Elapsed plus actions on seed host, historical reference only"' "$site_pins" &&
+  grep -q -F -e 'TIMING_SEED_ONLY = "first-hour timing proof qualified seed-only under issue #784"' "$site_pins" &&
+  grep -q -F -e 'REJECTED_TIMING_GATE = "CI timing budget enforcement is rejected per ADR 0022"' "$site_pins" &&
+  grep -q -F -e 'REJECTED_STANDING_BENCHMARK = "standing benchmark with baseline or comparison machinery is rejected per ADR 0022"' "$site_pins"; then
+  ok
+else
+  bad "docs_site pins lost their first-hour journey plus one-shot plus no-gate record under #784"
+fi
+
+# Timing expected carries measured walls plus methodology plus one-shot plus
+# seed-only under #784.
+if grep -q -F -e 'Docs site first-hour timing proof (issue #784)' "$site_timing_expected" &&
+  grep -q -F -e 'ms wall' "$site_timing_expected" &&
+  grep -q -F -e 'Methodology one-shot' "$site_timing_expected" &&
+  grep -q -F -e 'One-shot evidence proof per ADR 0022, not a standing benchmark' "$site_timing_expected" &&
+  grep -q -F -e 'no CI timing budget' "$site_timing_expected" &&
+  grep -q -F -e 'Qualified seed-only, no Supported claim' "$site_timing_expected"; then
+  ok
+else
+  bad "timing.expected lost its measured walls plus methodology plus one-shot record under #784"
+fi
+
+# Timing planning pins the journey steps plus one-shot without budget
+# under #784.
+if grep -q -F -e 'pub fn first_hour_journey_steps' "$planning" &&
+  grep -q -F -e '"demo_site", "docs corpus", "site tests"' "$planning" &&
+  grep -q -F -e 'pub fn timing_proof_is_one_shot' "$planning" &&
+  grep -q -F -e 'pub fn timing_proof_enforces_budget' "$planning" &&
+  grep -q -F -e 'first_hour_timing_is_one_shot_without_budget' "$planning"; then
+  ok
+else
+  bad "dx_docs planning lost its first-hour journey plus one-shot-without-budget record under #784"
+fi
+
+# Docs site expected keeps the timing delivery plus remaining gaps under
+# #783 plus #785.
+if grep -q -F -e 'First-hour timing proof delivered seed-only (issue #784' "$site_expected" &&
+  grep -q -F -e 'Guide-step wiring plus drift stay owned gaps' "$site_expected" &&
+  ! grep -q -F -e 'Guide-step wiring plus timing plus drift stay owned gaps' "$site_expected"; then
+  ok
+else
+  bad "docs_site.expected lost its #784 delivered plus #783-plus-#785 remaining-gap record"
+fi
+
+# Live proof: the first-hour journey completes green with no budget gate
+# under #784 (completion only, never a timing assertion per ADR 0022).
+if bazel build //docs/site:demo_site --noshow_progress >/dev/null 2>&1 &&
+  bazel test //docs/site/... --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "first-hour journey failed to complete green (want demo_site plus site tests green with no budget gate, #784)"
 fi
 
 dx_test_summary "docs pipeline qualification harness"

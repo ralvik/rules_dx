@@ -4,7 +4,8 @@ Implementation status: accepted v1 direction with adapter runs delivered under #
 renderer/site execution delivered seed-only under #780 (successors to closed #581,
 live successor to closed #421); site-level byte-identical rebuild proof delivered
 seed-only under #781; link/reference completeness delivered seed-only under #782;
-remaining execution open (#783-#785).
+first-hour timing proof delivered seed-only under #784; remaining execution open
+(#783 plus #785).
 Accepted: the `dx_docs` site-build action planning over the
 Bazel-cached extract→aggregate→render graph (no committed IR). Delivered: per-language
 extraction runs under #779 (`//docs/adapters:docs_adapters` over pinned inputs) plus fixture-scale
@@ -16,12 +17,13 @@ removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md); reintro
 is open under #786. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are delivered seed-only for the fixture-scale site (rebuild proof under #781);
-link/reference completeness delivered seed-only under #782; remaining timing
+link/reference completeness delivered seed-only under #782; first-hour timing
+proof delivered seed-only under #784; remaining guide-step
 and invalidation verification follows
-[Testing](../testing/) before any support statement. Open under #783-#785
+[Testing](../testing/) before any support statement. Open under #783 plus #785
 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
-cache reuse and invalidation fixtures, guide-step CI wiring, and first-hour timing proof.
-Fixture-scale site execution plus byte-identical rebuild proof plus link completeness are qualified seed-only; no published site is claimed.
+cache reuse and invalidation fixtures and guide-step CI wiring.
+Fixture-scale site execution plus byte-identical rebuild proof plus link completeness plus first-hour timing are qualified seed-only; no published site is claimed.
 
 ## Action Graph
 
@@ -93,6 +95,12 @@ Delivered (seed-only link completeness under #782) fixtures prove prose plus gen
 resolve all internal links with no dangling targets: the demo prose links `api.md` plus `#getting-started`
 plus a skipped remote URL, every shard ID appears as an API heading, and dangling prose, API, anchor, or
 unknown targets fail the aggregate action with no partial outputs.
+Delivered (seed-only first-hour timing proof under #784) fixtures prove the built
+site/docs journey completes in the first hour: `//docs/site:demo_site` cold-server
+plus warm-server plus `//docs/...` plus `//docs/site/...` tests, recorded one-shot
+2026-09-21 on Linux x86_64 under Bazel 9.2.0 with warm disk cache (see
+`tools/ci/tests/fixtures/docs_site/timing.expected`); this is one-shot evidence
+per [ADR 0022](../decisions/0022-no-benchmarking.md), not a standing benchmark, with no CI timing budget enforced.
 Cache reuse and rebuilds must produce equivalent validated artifacts;
 remote-cache claims additionally require the central [testing evidence](../testing/README.md#remote-tests).
 Cache reuse timing and appropriate invalidation after source/extractor/configuration changes
@@ -114,4 +122,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782; remaining: #783-#785. Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #784; remaining: #783 plus #785. Reintroduction: #786.

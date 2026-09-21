@@ -448,6 +448,21 @@ pub fn drift_failure_names_pinned_input() -> bool {
     true
 }
 
+/// First-hour journey steps for the built site/docs flow. See `docs/documentation/site.md`.
+pub fn first_hour_journey_steps() -> &'static [&'static str] {
+    &["demo_site", "docs corpus", "site tests"]
+}
+
+/// Timing proof is one-shot evidence, never a standing benchmark. See ADR 0022.
+pub fn timing_proof_is_one_shot() -> bool {
+    true
+}
+
+/// No CI timing budget is enforced for the first-hour proof. See ADR 0022.
+pub fn timing_proof_enforces_budget() -> bool {
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -722,5 +737,15 @@ mod tests {
     fn failures_name_the_unit_and_the_drifted_pin() {
         assert!(failure_names_unit());
         assert!(drift_failure_names_pinned_input());
+    }
+
+    #[test]
+    fn first_hour_timing_is_one_shot_without_budget() {
+        assert_eq!(
+            first_hour_journey_steps(),
+            &["demo_site", "docs corpus", "site tests"]
+        );
+        assert!(timing_proof_is_one_shot());
+        assert!(!timing_proof_enforces_budget());
     }
 }
