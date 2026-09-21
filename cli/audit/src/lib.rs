@@ -36,7 +36,10 @@
 //! Dx-level family aggregation and aggregate exit-status selection live
 //! in [`outcome`]: family-result production stays with the future
 //! auditors, but the clean/findings/incomplete verdict combination and
-//! its exit code are pinned here.
+//! its exit code are pinned here. Curator data as declared Bazel inputs
+//! lives in [`curator`]: the committed `licenses.toml` label plus
+//! advisory snapshot rels with unchanged per-package inventory shape, so
+//! Bazel-owned analysis and CLI execution agree on one identity.
 //!
 //! Live execution  adds auditor backend planning in
 //! [`backend`] (Gitleaks-only subprocess wiring plus per-set vuln/license
@@ -53,6 +56,7 @@
 
 pub mod advisory;
 pub mod backend;
+pub mod curator;
 pub mod exception;
 pub mod license_expr;
 pub mod license_notice;

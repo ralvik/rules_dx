@@ -78,7 +78,27 @@ exports_files([
     # Release notes: link-resolution sibling for //docs:corpus, never a
     # checked source of this package.
     "CHANGELOG.md",
+    # Audit curator data as a declared Bazel input (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
+    # `dx audit license` keeps reading the committed `licenses.toml` bytes;
+    # exposing the same file as a target lets Bazel-owned analysis declare
+    # it as an input so results and cache identity reflect the data
+    # actually analyzed.
+    "licenses.toml",
 ])
+
+# Audit curator data as declared Bazel inputs (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #812).
+# The `licenses.toml` policy plus `[[inventory]]` per-package shape is
+# unchanged; exposing it here lets Bazel-owned analysis (NOTICE
+# aggregation in `deploy/release/notice.bzl`, future audit actions)
+# declare the same bytes as inputs so results stay hermetic and cached.
+# Advisory snapshots (`.dx/advisory/<set>.json` plus identity
+# `.dx/advisory/<set>.meta.json`) ride the same contract via
+# `dx_audit::advisory::snapshot_rel` plus `identity_rel`; they are
+# acquired, not committed, so no filegroup lists them here.
+filegroup(
+    name = "audit_curator",
+    srcs = ["licenses.toml"],
+)
 
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 # Preset parity fixture; see preset_parity_test.sh.

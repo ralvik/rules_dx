@@ -348,6 +348,16 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Audit curator declared-inputs harness; see docs/cli/commands/audit-update-bazel.md.
+    sh_binary(
+        name = "audit_declared_inputs_qualification",
+        srcs = ["audit_declared_inputs_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Layer-4 loss restore-or-wont-fix harness; see docs/testing/verification-matrix.md#layers.
     sh_binary(
         name = "layer4_loss_qualification",
