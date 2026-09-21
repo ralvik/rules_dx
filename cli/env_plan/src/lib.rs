@@ -269,13 +269,6 @@ fn backing_artifact_paths(outputs: &[TargetOutput]) -> Vec<String> {
     dx_bep::non_shard_artifact_paths(outputs, SHARD_SUFFIX)
 }
 
-/// Reports whether a BEP-reported artifact path satisfies an entry's
-/// exec suffix: exact equality or a "/"-boundary suffix match.
-/// Shared index plumbing. See: `cli/bep/src/lib.rs` (`dx_bep::suffix_matches`).
-fn suffix_matches(artifact: &str, exec_path: &str) -> bool {
-    dx_bep::suffix_matches(artifact, exec_path)
-}
-
 /// Validates the artifact index and resolves every exec-bound entry to
 /// its backing artifact: each non-empty entry exec suffix must resolve
 /// to exactly one non-shard BEP artifact, and every non-shard BEP
@@ -299,7 +292,7 @@ fn index_artifacts<'a>(
     for (record, entry) in &bound {
         let matches: Vec<&String> = backing_paths
             .iter()
-            .filter(|path| suffix_matches(path, &entry.exec_path))
+            .filter(|path| dx_bep::suffix_matches(path, &entry.exec_path))
             .collect();
         if matches.is_empty() {
             return Err(CollectError::MissingArtifact {
@@ -322,7 +315,7 @@ fn index_artifacts<'a>(
     for path in backing_paths {
         if !bound
             .iter()
-            .any(|(_, entry)| suffix_matches(path, &entry.exec_path))
+            .any(|(_, entry)| dx_bep::suffix_matches(path, &entry.exec_path))
         {
             return Err(CollectError::UnreportedArtifact { path: path.clone() });
         }

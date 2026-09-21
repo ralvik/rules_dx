@@ -36,21 +36,12 @@ pub(crate) fn ownership_set_expression(labels: &[String]) -> String {
     format!("kind('rule', rdeps(//..., set({}), 1))", quote_set(labels))
 }
 
-/// Quotes a label as a double-quoted query string literal, escaping
-/// backslashes and quotes. Rejects control characters, which cannot
-/// round-trip through line-oriented query output.
+/// Quotes a label as a double-quoted query string literal.
+/// Single owner is `dx_codegen::quote_label`; this delegates so ownership
+/// and expansion expressions share one escaping rule.
+/// See: `docs/cli/target-resolution.md` (query safety).
 pub(crate) fn quote_label(label: &str) -> String {
-    let mut quoted = String::with_capacity(label.len() + 2);
-    quoted.push('"');
-    for ch in label.chars() {
-        match ch {
-            '\\' => quoted.push_str("\\\\"),
-            '"' => quoted.push_str("\\\""),
-            _ => quoted.push(ch),
-        }
-    }
-    quoted.push('"');
-    quoted
+    dx_codegen::quote_label(label)
 }
 
 /// Exact query argv for an arbitrary unconfigured query expression.

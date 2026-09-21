@@ -56,13 +56,16 @@
 //! no words, fail closed); `missing-notice-text` evaluation lives in
 //! [`crate::license_notice`] and is wired into live audit.
 //!
-//! Dependency evaluation (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
+//! Dependency evaluation (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`):
 //! standard crates own each machine format (`cargo-lock` for Cargo.lock,
 //! `serde_json` for `package-lock.json`/`maven_install.json`, `yaml_serde`
 //! for `pnpm-lock.yaml`, `toml` for Cargo manifests, `semver` for Cargo/Go
 //! ordering, `regex` for declarative pnpm/paket splits); yarn v1,
 //! paket, and `go.mod` text shapes have no stable crate and stay line
-//! parsers with fail-closed git/first-party gates.
+//! parsers with fail-closed git/first-party gates. Live advisory matching
+//! only: fixture truth (minimal hermetic compatibility, no registry) lives
+//! in `tools/depcheck`, never duplicated here.
+//! See: `tools/depcheck/src/lib.rs` (fixture checker).
 
 use std::sync::OnceLock;
 

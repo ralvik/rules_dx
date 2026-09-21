@@ -1,13 +1,9 @@
 //! Memoized Bazel package-marker probes.
 //!
-//! Split from [`super::classify`] (`classify.rs`): owns the
-//! memoized [`PackageCache`] plus its [`PACKAGE_FILES`] marker table.
-//! Re-exported through `super` so the public path stays
-//! `crate::resolve::PackageCache` via the re-exports below. Shares
-//! [`super::ResolveError`] with the classification
-//! ([`super::classify`]), entry ([`super::entry`]), and run/deploy
-//! ([`super::run_deploy`]) domains; classification calls back in via
-//! [`PackageCache::file_label`] and every resolver call owns one cache.
+//! Thin label synthesis for Bazel query input only: probes marker
+//! existence to build file labels, never reads BUILD contents, never
+//! infers dependencies. Ownership comes from the bounded `rdeps` query.
+//! See: `docs/cli/target-resolution.md` (file ownership).
 
 use std::path::Path;
 
@@ -15,6 +11,7 @@ use super::ResolveError;
 
 /// Package markers: a directory is a Bazel package when it holds one.
 /// Only existence is probed; contents are never read.
+/// See: `docs/cli/target-resolution.md` (file ownership).
 const PACKAGE_FILES: [&str; 2] = ["BUILD.bazel", "BUILD"];
 
 /// Memoized package-marker probes for one resolver call. Only ancestor
@@ -153,5 +150,27 @@ mod tests {
             cache.file_label(&workspace, "pkg/a.py", "pkg/a.py"),
             Err(ResolveError::NotAPackage { .. })
         ));
+    }
+
+    #[test]
+    fn file_label_ignores_build_contents() {
+        // Existence-only probe: invalid BUILD syntax still yields a label
+        // because contents are never read; ownership comes from Bazel query.
+        // See: `docs/cli/target-resolution.md` (file ownership).
+        let scratch = dx_test_scratch::scratch("dx-resolve-packages-contents-");
+        let workspace = scratch.path().to_path_buf();
+        write(
+            &workspace,
+            "pkg/BUILD.bazel",
+            "this is not valid starlark ((((",
+        );
+        write(&workspace, "pkg/a.py", "x = 1\n");
+        let mut cache = PackageCache::default();
+        assert_eq!(
+            cache
+                .file_label(&workspace, "pkg/a.py", "pkg/a.py")
+                .expect("label"),
+            "//pkg:a.py",
+        );
     }
 }

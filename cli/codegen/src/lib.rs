@@ -87,10 +87,11 @@ pub fn expansion_expression(schema: &str) -> String {
 }
 
 /// Quotes one label as a double-quoted query string literal, escaping
-/// backslashes and quotes. Mirrors the resolver quoting so expansion
+/// backslashes and quotes. Single owner for Bazel query string literals;
+/// the scope resolver delegates here so expansion and ownership
 /// expressions stay stable and inspectable.
-/// See: `cli/cli/src/resolve/query.rs` (`quote_label`).
-fn quote_label(label: &str) -> String {
+/// See: `docs/cli/target-resolution.md` (query safety).
+pub fn quote_label(label: &str) -> String {
     let mut quoted = String::with_capacity(label.len() + 2);
     quoted.push('"');
     for ch in label.chars() {
@@ -338,13 +339,6 @@ fn generated_artifact_paths(outputs: &[TargetOutput]) -> Vec<String> {
     dx_bep::non_shard_artifact_paths(outputs, SHARD_SUFFIX)
 }
 
-/// Reports whether a BEP-reported artifact path satisfies an entry's
-/// exec suffix: exact equality or a "/"-boundary suffix match.
-/// Shared index plumbing. See: `cli/bep/src/lib.rs` (`dx_bep::suffix_matches`).
-fn suffix_matches(artifact: &str, exec_path: &str) -> bool {
-    dx_bep::suffix_matches(artifact, exec_path)
-}
-
 /// Validates the artifact index and resolves every backed entry to its
 /// backing artifact: each non-empty entry exec suffix must resolve to
 /// exactly one non-shard BEP artifact, and every non-shard BEP artifact
@@ -365,7 +359,7 @@ fn index_artifacts<'a>(
     for (record, entry) in &claimed {
         let matches: Vec<&String> = generated_paths
             .iter()
-            .filter(|path| suffix_matches(path, &entry.exec_path))
+            .filter(|path| dx_bep::suffix_matches(path, &entry.exec_path))
             .collect();
         if matches.is_empty() {
             return Err(CollectError::MissingArtifact {
@@ -388,7 +382,7 @@ fn index_artifacts<'a>(
     for path in generated_paths {
         let claimants: Vec<(&CodegenRecord, &CodegenEntry)> = claimed
             .iter()
-            .filter(|(_, entry)| suffix_matches(path, &entry.exec_path))
+            .filter(|(_, entry)| dx_bep::suffix_matches(path, &entry.exec_path))
             .map(|(record, entry)| (*record, *entry))
             .collect();
         if claimants.is_empty() {
