@@ -754,15 +754,16 @@ Remaining reds stay owned gaps, not green claims:
   silent partial success, interrupted runs keep preceding per-set events true
   with defined retry for unattempted sets; update-only, no resolver change;
   platform plus consumer plus release evidence stays owned gap; no Supported claim).
-- Third-party env plugin-model (not planned) plus Go cgo exception boundary with fixture evidence
-   qualified seed-only under closed #587
+- Third-party env plugin-model (not planned) plus Go cgo scope with fixture evidence
+   qualified seed-only under closed #587 plus issue #789
    (`bazel run //tools/ci:env_plugins_cgo_qualification` with
    `env/tests/fixtures/env_plugins_cgo/pins.bzl` plus
-   `env_plugins_cgo.expected`; `env_plugins_cgo_qualification` 16/16;
+   `env_plugins_cgo.expected`; `env_plugins_cgo_qualification` 24/24;
    no third-party plugin model and no private path (`EnvironmentInfo` repurpose
    wont-fix), pure-Go `GOPACKAGESDRIVER` boundary on rules_go
-   0.63.0 with explicit cgo out-of-scope exception and upstream non-guarantee (cgo
-   completion #789), static snapshot
+   0.63.0 with explicit cgo out-of-scope exception and upstream non-guarantee plus
+   cgo scope source-only plus strict plus handwritten cgo/race resolved seed-only
+   under #789 with `go/tests/fixtures/cgo/` (cgo completion #789), static snapshot
    plus replacement graph plus ambient fallback plus generic parity plus cgo completion claim
    rejected; env only, no PATH-tool collision rule change; platform plus consumer plus release
    evidence stays owned gap under #808; no Supported claim).

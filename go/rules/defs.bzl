@@ -96,7 +96,10 @@ def _go_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def go_library(name, srcs, importpath, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `go_library`."""
+    """Experimental minimal wrapper over `go_library`.
+
+    Handwritten wrappers may set upstream cgo scope attrs (`cgo`, `pure`,
+    `race`, `gotags`, `cdeps`); generated rules never do (pure-Go scope)."""
     _go_wrap_library(name, srcs, visibility = visibility, importpath = importpath, **kwargs)
 
 def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs):
@@ -123,7 +126,8 @@ def go_test(name, srcs, visibility = None, **kwargs):
     owner via `embed` (native package-level test semantics per the
     generation contract Go exception); embedded sources are never this
     test's direct sources. Uses `go test` and Bazel's standard test
-    and coverage protocols."""
+    and coverage protocols. Handwritten tests may set upstream race
+    scope (`race`, `pure`); generated tests never do."""
     test_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
 

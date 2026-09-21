@@ -625,3 +625,43 @@ func TestResolveAmbiguousFails(t *testing.T) {
 		t.Errorf("ambiguous errors = %v", l.errors)
 	}
 }
+
+func TestGenerateCgoStaysHandwritten(t *testing.T) {
+	regular := []string{"cgo.go", "helper.go"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/cgo.go":    "package demo\n\nimport \"C\"\n",
+		"pkg/demo/helper.go": "package demo\n",
+	}, regular)
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules for cgo sources, want 0 with a recorded failure", len(result.Gen))
+	}
+}
+
+func TestGenerateCgoTestStaysHandwritten(t *testing.T) {
+	regular := []string{"demo.go", "cgo_test.go"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.go":     "package demo\n",
+		"pkg/demo/cgo_test.go": "package demo_test\n\nimport \"C\"\n",
+	}, regular)
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules for cgo test sources, want 0 with a recorded failure", len(result.Gen))
+	}
+}
+
+func TestGeneratePureGoScopeHasNoCgoRaceAttrs(t *testing.T) {
+	regular := []string{"demo.go", "demo_test.go"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/demo.go":      "package demo\n",
+		"pkg/demo/demo_test.go": "package demo_test\n\nimport \"testing\"\n",
+	}, regular)
+	if len(result.Gen) != 2 {
+		t.Fatalf("generated %d rules, want 2", len(result.Gen))
+	}
+	for _, r := range result.Gen {
+		for _, attr := range []string{"cgo", "pure", "race", "msan", "static", "goos", "goarch", "gotags", "cdeps", "copts", "cxxopts", "clinkopts", "cppopts"} {
+			if r.Attr(attr) != nil {
+				t.Errorf("%s(%s) carries %q, want pure-Go scope without cgo/race attrs", r.Kind(), r.Name(), attr)
+			}
+		}
+	}
+}

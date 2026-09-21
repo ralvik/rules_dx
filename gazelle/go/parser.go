@@ -76,10 +76,15 @@ func ParsePackage(content []byte) (string, error) {
 // normalizeImport maps one literal import path to its resolution root:
 // full literal for third-party module paths, final segment for local
 // paths, unchanged for standard library (filtered by callers).
+// The cgo pseudo-import "C" is never normalized to an edge: callers
+// detect it via IsCgoImport and fail generation closed.
 func normalizeImport(spec string) string {
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
 		return ""
+	}
+	if IsCgoImport(spec) {
+		return spec
 	}
 	first := spec
 	if i := strings.IndexByte(spec, '/'); i >= 0 {
@@ -92,4 +97,12 @@ func normalizeImport(spec string) string {
 		return spec
 	}
 	return path.Base(spec)
+}
+
+// IsCgoImport reports whether a literal import path is the cgo
+// pseudo-import "C". Exact match only; subpaths never match. Cgo
+// sources stay handwritten: generation fails closed instead of
+// emitting a dependency edge or a cgo scope attribute.
+func IsCgoImport(path string) bool {
+	return strings.TrimSpace(path) == "C"
 }
