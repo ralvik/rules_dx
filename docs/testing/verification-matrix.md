@@ -97,7 +97,7 @@ class by design — never silently under the standard dogfood gates.
   shell sources with no quality class by design (`shell` known but no
   `shell_srcs` owner, corpus/code-ownership filters exclude `.sh`, every
   `.sh` in `deps(//...)`, execution via `bazel test //...`, portability via
-  `shell_contract`).
+  `shell_contract`; elimination wont-fix under issue #667).
 
 ## Status
 

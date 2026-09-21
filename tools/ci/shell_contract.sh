@@ -43,8 +43,8 @@ fi
 
 # Every bash sh target carries the Linux-only label
 # the 6 nested-E2E label sites; POSIX fixtures stay portable). Count
-# labels vs bash sh targets.
-labels="$(grep -r -F -e 'target_compatible_with = ["@platforms//os:linux"]' --include='BUILD.bazel' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)"
+# labels vs bash sh targets (BUILD.bazel plus ci_targets split under #652).
+labels="$(grep -r -F -e 'target_compatible_with = ["@platforms//os:linux"]' --include='BUILD.bazel' --include='*.bzl' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)"
 # Bash sh_* plus devcontainer parity stay Linux-only; threshold keeps the
 # contract fail-closed after the E2E deletion.
 if [[ "$labels" -ge 69 ]]; then
@@ -420,5 +420,12 @@ dx_guards_contains tools/ci/quality_adapters_parity.sh "quality_adapters_parity 
   'tools/sh/guards.sh' \
   'dx_guards_contains' \
   'dx_guard_file'
+
+# Shell-harness elimination stays wont-fix under issue #667 (CI/harness
+# only, no product behavior; affirms decided #299): docs record the
+# inventory plus keep rationale with no wholesale migration, and the
+# verification-matrix shell row stays pinned here.
+dx_expect_contains docs/testing/tools.md 'issue #667' 'stays wont-fix' 'Wholesale Rust-ify' 'POSIX-only' 'harness-wide' 'shell=bash' '//tools/ci:shell_contract'
+dx_expect_contains docs/testing/verification-matrix.md 'issue #667' 'elimination wont-fix'
 
 dx_test_summary "shell contract harness"
