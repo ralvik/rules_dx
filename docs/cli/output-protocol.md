@@ -52,13 +52,14 @@ bytes to stdout; Bazel and tool stdout and stderr remain visible on stderr. JSON
 stream per event (`write_event`), never buffer-then-dump, so there is no measurable
 overhead vs text mode on large result sets.
 JSON-capable commands (accepted): lint, typecheck, format, generate, build, test,
-coverage, check, fix, audit, update, status. `update` JSON covers dry-run planning
+coverage, check, fix, audit, update, bump, migrate, status. `update` JSON covers dry-run planning
 (`command_started` / `command_finished`) and live execution per-set `notice`/`error`
-events plus `command_finished`; `audit` JSON covers dry-run planning plus live per-family
+events plus `command_finished`; `bump` and `migrate` follow the same dry-run plus live
+`notice`/`error` frame; `audit` JSON covers dry-run planning plus live per-family
 `notice`/`error` events plus `command_finished`.
 Text-only commands (reject `--output=json` pre-exec, exit 2): clean, codegen, env, setup
-(prose collection lifecycle); `bazel`, `run` (each sequential child owns the terminal in turn,
-see [dx run](commands/build-test-coverage.md#dx-run)); init, hooks,
+(prose collection lifecycle); `bazel`, `run`, `deploy` (each sequential child owns the terminal in turn,
+see [dx run](commands/build-test-coverage.md#dx-run) and [dx deploy](commands/build-test-coverage.md#dx-deploy)); init, hooks,
 version, watch, owners, deps, why, completion (local helpers, thin query lines, or shell
 scripts — automation uses `generate --check`, Bazel query, or `status --output=json`).
 Silent ignore is never allowed: unsupported modes fail fast with `UnsupportedOption`.
