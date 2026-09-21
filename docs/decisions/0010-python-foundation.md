@@ -62,7 +62,8 @@ resource, import, uv-scope, and paired-stub contract is
 
 The durable ownership model is one reusable library owner per supported non-test runtime source,
 with tests and executable entries represented without duplicating that source. A paired stub is type
-metadata on its runtime owner; a stub-only ownership model requires a separate accepted decision.
+metadata on its runtime owner; a stub-only ownership model is rejected (wont-fix, issue #756)
+and orphan stubs stay inert.
 This ownership model prevents importer count, tests, or executability from moving or multiplying
 production source ownership.
 

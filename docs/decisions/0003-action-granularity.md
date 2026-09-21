@@ -2,7 +2,7 @@
 
 ## Status
 
-Provisional.
+Accepted.
 
 ## Context
 
@@ -14,7 +14,7 @@ tradeoffs.
 
 ## Decision
 
-Begin validation with one pipeline action per applicable source-owning target and mutating
+Use one pipeline action per applicable source-owning target and mutating
 quality capability: lint, typecheck, or format. Each action receives that target's complete
 set of nonempty selected adapter stages for that capability and converges them over action-local
 writable copies. Each stage receives only the target's direct sources in the semantic file
@@ -39,7 +39,7 @@ leave the action; no intermediate state writes the workspace.
 Per [ADR 0022](./0022-no-benchmarking.md) there are no standing benchmarks:
 this decision is validated by correctness and convergence fixtures plus
 cache-behavior tests in [Testing Strategy](../testing/), not by measured
-alternatives. Promotion to Accepted is by reasoning and fiat.
+alternatives. Accepted by reasoning and fiat per ADR 0022 (issue #756).
 
 ## Consequences
 
@@ -47,7 +47,7 @@ alternatives. Promotion to Accepted is by reasoning and fiat.
   source and every typecheck pipeline whose declared Ty closure contains it.
 - Shared configuration edits intentionally fan out to all consuming actions.
 - Cold runs may incur multiple tool startups and convergence rounds per target.
-- Ty's per-target model may duplicate analysis and may need coarser roots.
+- Ty's per-target model may duplicate analysis; coarser roots stay rejected.
 - A pipeline has coarser cache invalidation than target/tool actions because every selected
   tool, per-stage source subset, supported-class manifest, runtime, config, ordering rule, and
   runner version contributes to its action key.
@@ -59,7 +59,7 @@ alternatives. Promotion to Accepted is by reasoning and fiat.
   validated candidates.
 - Multiple formatters are supported only when they reach a common no-change state; oscillation
   or an iteration limit rejects the affected pipeline result.
-- Batching changes require evidence and must remain Bazel-owned.
+- Cross-target batching stays rejected (wont-fix, issue #756 per ADR 0022).
 - A mixed-class target still has one action per mutating capability; disjoint and overlapping
   adapter subsets coexist in that pipeline.
 
