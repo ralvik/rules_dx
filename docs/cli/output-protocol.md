@@ -577,13 +577,17 @@ A `status` event reports one consolidated `dx status` check.
 | `hint` | yes | string | Actionable hint |
 
 Live `dx status --output=json` streams `command_started`, then one `status`
-event per check in check order, then `command_finished`. Dry-run emits only
+event per check in check order, then an optional `status_pin_mismatch`
+`error` when any check reports `error` or the pin cannot be read (missing
+or unreadable pins emit no `status` events), then `command_finished`.
+Dry-run emits only
 `command_started` (`dry_run=true`) plus `command_finished` with no `status`
 events. `command_finished` carries only `exit_code` (no `results_complete`,
 `diagnostics`, `changes`, or `mutations`); exit `1` means a check reported
 `error` (today pin mismatch, with a stderr hint pointing at
 `dx version --pin`) or the pin was missing/unreadable (lifecycle-only
-envelope plus a stderr read error, no forged `ok`).
+envelope plus `status_pin_mismatch` `error` and a stderr read error, no
+forged `ok`).
 
 `dx status` is the failure explainer entry point (there is no `dx doctor`;
 see [status/version](commands/status-version.md)): workflow `bazel_failed`
@@ -629,7 +633,8 @@ The documented list is derived from the code (single source):
 `../../cli/cli/src/exec/test_reports.rs` (`incomplete_results`),
 `../../cli/cli/src/resolve/types.rs` (`not_deployable`), `../../cli/cli/src/main.rs` with
 `../../cli/cli/src/skew.rs` and `../../cli/cli/src/platform.rs` (`version_skew`,
-`unsupported_platform`), `../../cli/cli/src/args/error.rs` with
+`unsupported_platform`), `../../cli/cli/src/adopt/status.rs` (`status_pin_mismatch`),
+`../../cli/cli/src/args/error.rs` with
 `../../cli/cli/src/args/completion.rs` (`unknown-shell`), and
 `../../cli/audit/src/advisory.rs` (`advisory_refresh_failed` detail inside `audit_failed`).
 Notices such as `migrate_planned` and `update_set_blocked` are [Notice](#notice) codes, not
@@ -681,6 +686,7 @@ Stable codes are:
 | `bump_failed` | Live bump widen failure (missing, ambiguous, or unsupported manifest shape, or unreadable/unwritable manifest, see [dx bump](commands/audit-update-bazel.md#dx-bump)) |
 | `migrate_failed` | Live migrate failure (no migrate manifest exists yet, see [dx migrate](commands/migrate.md)) |
 | `unsupported_platform` | The selected workflow has no hermetic platform support |
+| `status_pin_mismatch` | `dx status` pin failure (check reported `error` — today pin mismatch — or the pin was missing/unreadable, see [status/version](commands/status-version.md)) |
 | `version_skew` | Drifted `.dx/version` pin refuses mutating or generating commands (see [status/version](commands/status-version.md)) |
 | `symlink_unavailable` | Required host symlink capability is unavailable |
 | `internal_error` | An invariant failed without a narrower stable classification |
@@ -785,8 +791,10 @@ an optional `bazel_failed` `error` for the failed target, then exactly one
 Bazel nonzero, then `command_finished` (test/coverage also emit their
 `incomplete_results`/`report` events per the collection rules).
 Status JSON order is `command_started`, then one `status` event per check in check
-order, then exactly one `command_finished`; it emits no `change`, `mutation`,
-`diagnostic`, `operation`, `notice`, `report`, or `selection` events.
+order, then an optional `status_pin_mismatch` `error` when any check reports
+`error` or the pin cannot be read (missing or unreadable pins emit no
+`status` events), then exactly one `command_finished`; it emits no `change`,
+`mutation`, `diagnostic`, `operation`, `notice`, `report`, or `selection` events.
 
 An operational `error` is emitted after all durable output derived safely from the failed phase and
 before `command_finished`. For partial quality collection, validated diagnostics with truthful

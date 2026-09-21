@@ -20,7 +20,8 @@ Text mode prints one line per check:
 ```
 
 JSON mode streams the NDJSON envelope on stdout: `command_started`, then one
-`status` event per check (`name`, `status`, `detail`, `hint`), then
+`status` event per check (`name`, `status`, `detail`, `hint`), then an optional
+`status_pin_mismatch` `error` when any check reports `error`, then
 `command_finished` (see the [output protocol](../output-protocol.md#status)).
 The check set is `toolchain`, `platform`, `tools`, `pin`; see the
 contributing page for vocabulary and platform-evidence limits.
@@ -32,9 +33,11 @@ suppressed under `--quiet`; live status output always prints.
 
 Exit `0` when every check passes; exit `1` (operational) when any check is
 `error` — today that is pin mismatch, with a stderr hint pointing at
-`dx version --pin`. A missing or unreadable `.dx/version` pin fails closed
-(exit `1`) instead of reporting `ok`; JSON still closes the envelope with
-`command_finished` exit `1`. Usage errors exit `2`.
+`dx version --pin` and a `status_pin_mismatch` `error` event before
+`command_finished` in JSON mode. A missing or unreadable `.dx/version` pin
+fails closed (exit `1`) instead of reporting `ok`; JSON emits the same
+`status_pin_mismatch` `error` before `command_finished` exit `1`. Usage
+errors exit `2`.
 
 ## Failure explainer
 
