@@ -451,6 +451,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "docs_adapters"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "documentation_ir"
 version = "0.0.0"
 

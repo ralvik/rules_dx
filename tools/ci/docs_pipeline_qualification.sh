@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Docs-pipeline qualification harness (live successor to closed #581).
+# Docs-pipeline qualification harness (successors to closed #581, live successor to closed #421).
 #
 # Qualifies the as-built docs-pipeline record with fixture evidence and
 # owned gaps, without claiming a published site:
@@ -7,20 +7,20 @@
 #   documentation_ir codec (validate/encode/decode with roundtrip,
 #   rejection-parity, ordering, minor-forward-compat), dx_docs planning
 #   library (version/identity/validation/mode/drift/guide/site planning
-#   with unit tests), frozen design contracts (IR + site), removed dx docs
-#   stub behind ADR 0020, plus fixture-scale renderer/site execution as
+#   with unit tests), per-language adapter runs with pins plus mappings plus
+#   golden fixtures under #779 (twelve extraction plus prose-only via
+#   //docs/adapters:docs_adapters), fixture-scale renderer/site execution as
 #   Bazel-cached extract to aggregate to render (`docs/site`: mdBook-compatible
 #   prose plus generated API pages plus one search index, generated IR in
 #   Bazel outputs only, seed-only under #780), plus site-level byte-identical
 #   rebuild proof (two builds hashed and diffed, sorted outputs with no
-#   timestamps and no absolute paths, seed-only under #781), no Supported claim;
-# - open under #779 plus #782-#785 with honest records: 13 per-language adapter runs with
-#   pins/mappings (Scala TASTy proof spike first, Astro/MDX prose-only),
-#   link/reference completeness at the
+#   timestamps and no absolute paths, seed-only under #781), frozen design contracts (IR + site),
+#   removed dx docs stub behind ADR 0020, no Supported claim;
+# - open under #782-#785 with honest records: link/reference completeness at the
 #   pre-render boundary, guide prose plus guide-step CI wiring, first-hour
 #   timing proof, per-release pin-bump plus drift process, dx docs
-#   reintroduction per ADR 0006 build-vs-validation split, reusable-docs
-#   plus caller staying product surface.
+#   reintroduction per ADR 0006 build-vs-validation split (open under #786),
+#   reusable-docs plus caller staying product surface.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:docs_pipeline_qualification`,
 # following //tools/ci:env_codegen_qualification.
@@ -64,6 +64,10 @@ site_pins="tools/ci/tests/fixtures/docs_site/pins.bzl"
 site_expected="tools/ci/tests/fixtures/docs_site/docs_site.expected"
 site_rebuild_expected="tools/ci/tests/fixtures/docs_site/rebuild.expected"
 site_fixture_build="tools/ci/tests/fixtures/docs_site/BUILD.bazel"
+adapters="docs/adapters/src/lib.rs"
+adapters_build="docs/adapters/BUILD.bazel"
+adapters_pins="docs/adapters/pins.bzl"
+adapters_cargo="docs/adapters/Cargo.toml"
 
 # IR schema identity stays dx.documentation.v1 with v1 enums and messages.
 if grep -q -F -e 'package dx.documentation.v1;' "$proto" &&
@@ -177,54 +181,52 @@ else
   bad "cli/docgen BUILD lost its dx_docs crate wiring"
 fi
 
-# Thirteen adapter scopes stay documented with provisional inputs and no
-# execution claim.
-if grep -q -F -e '| Rust | Pinned nightly' "$docir" &&
-  grep -q -F -e '| Python | Griffe model' "$docir" &&
-  grep -q -F -e '| TypeScript/JavaScript | TypeDoc JSON' "$docir" &&
-  grep -q -F -e '| Java | Custom Javadoc Doclet' "$docir" &&
-  grep -q -F -e '| Kotlin | Dokka model' "$docir" &&
-  grep -q -F -e '| Go | `go/packages`' "$docir" &&
-  grep -q -F -e '| C/C++ | Doxygen XML' "$docir" &&
-  grep -q -F -e '| C# | Assembly metadata' "$docir" &&
-  grep -q -F -e '| F# | Compiler-service metadata' "$docir" &&
-  grep -q -F -e '| Vue | `vue-docgen-api` JSON' "$docir" &&
-  grep -q -F -e '| Svelte | `sveld` JSON' "$docir" &&
-  grep -q -F -e '| Scala | Scala 3 TASTy Inspector' "$docir" &&
+# Thirteen adapter scopes stay documented with delivered pins under #779.
+if grep -q -F -e '| Rust | nightly-2026-09-01' "$docir" &&
+  grep -q -F -e '| Python | Griffe 2.2.0' "$docir" &&
+  grep -q -F -e '| TypeScript/JavaScript | TypeDoc 0.28.20' "$docir" &&
+  grep -q -F -e '| Java | JDK 25' "$docir" &&
+  grep -q -F -e '| Kotlin | Kotlin 2.2.20' "$docir" &&
+  grep -q -F -e '| Go | Go 1.26.6' "$docir" &&
+  grep -q -F -e '| C/C++ | Doxygen 1.18.0' "$docir" &&
+  grep -q -F -e '| C# | .NET 10.0.201' "$docir" &&
+  grep -q -F -e '| F# | .NET 10.0.201' "$docir" &&
+  grep -q -F -e '| Vue | `vue-docgen-api` 4.79.2' "$docir" &&
+  grep -q -F -e '| Svelte | `sveld` 0.37.3' "$docir" &&
+  grep -q -F -e '| Scala | Scala 3.3.6' "$docir" &&
   grep -q -F -e '| Astro/MDX | None; prose-only' "$docir" &&
   grep -q -F -e 'Accepted scope covers thirteen adapter scopes' "$docir" &&
-  grep -q -F -e 'No adapter execution exists today' "$docir"; then
+  grep -q -F -e 'Adapter runs delivered' "$docir"; then
   ok
 else
-  bad "doc-ir lost its thirteen adapter scopes or no-execution honesty"
+  bad "doc-ir lost its thirteen delivered adapter scopes under #779"
 fi
 
-# Per-language overload, join, and packaging details stay tracked under
-# , never claimed as delivered.
-if grep -q -F -e 'tracked under' "$docir" &&
-  grep -q -F -e '#581' "$docir" &&
-  grep -q -F -e 'The exact' "$docir" &&
-  grep -q -F -e 'disambiguation scheme per language' "$docir" &&
-  grep -q -F -e 'the adapter must' "$docir" &&
-  grep -q -F -e 'join metadata with documentation' "$docir"; then
+# Per-language overload, join, and packaging run in the delivered adapter.
+if grep -q -F -e '//docs/adapters:docs_adapters' "$docir" &&
+  grep -q -F -e 'Delivered under #779' "$docir" &&
+  grep -q -F -e 'disambiguation runs in' "$docir" &&
+  grep -q -F -e 'joins' "$docir" &&
+  grep -q -F -e 'metadata with documentation' "$docir"; then
   ok
 else
-  bad "doc-ir lost its per-language overload/join/packaging #581 tracker"
+  bad "doc-ir lost its delivered overload/join/packaging record under #779"
 fi
 
-# Site build keeps the decided mdBook renderer with no replacement and the
-# delivered seed-only execution plus rebuild records under #780 plus #781.
+# delivered adapter-plus-site execution plus rebuild records under #779 plus #780 plus #781.
 if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
   grep -q -F -e 'There is no planned replacement' "$site" &&
+  grep -q -F -e 'adapter runs delivered under #779' "$site" &&
   grep -q -F -e 'renderer/site execution delivered seed-only under #780' "$site" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered' "$site" &&
   grep -q -F -e 'Fixture-scale site execution plus byte-identical rebuild proof are qualified seed-only' "$site" &&
+  grep -q -F -e 'extraction runs under #779' "$site" &&
   grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
   grep -q -F -e 'one DocsAggregate action' "$site" &&
   grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
   ok
 else
-  bad "site build lost its mdBook decision or delivered-execution plus rebuild record (#780 plus #781)"
+  bad "site build lost its mdBook decision or delivered-execution plus rebuild record (#779 plus #780 plus #781)"
 fi
 
 # Determinism is delivered seed-only with byte-identical rebuild proof,
@@ -244,7 +246,7 @@ fi
 if grep -q -F -e 'IR shards, render inputs, and rendered HTML are ordinary generated Bazel artifacts' "$site" &&
   grep -q -F -e 'not committed files or source-adjacent snapshots' "$site" &&
   grep -q -F -e 'never write generated IR beside source' "$site" &&
-  grep -q -F -e 'Delivered (seed-only fixture execution under #780)' "$site" &&
+  grep -q -F -e 'Delivered (seed-only fixture execution under #779 plus #780)' "$site" &&
   grep -q -F -e 'The planned [`dx docs --check`]' "$site"; then
   ok
 else
@@ -272,19 +274,20 @@ else
   bad "guide-step CI wiring or first-hour timing gap lost its owner"
 fi
 
-# Drift policy stays accepted with execution open and zero adapters pinned.
-if grep -q -F -e 'Accepted policy; execution open (zero adapters pinned today)' "$docir" &&
+# Drift policy stays accepted with adapter pins delivered and drift process open.
+if grep -q -F -e 'Accepted policy; adapter pins delivered under #779' "$docir" &&
   grep -q -F -e 'The exact per-release' "$docir" &&
-  grep -q -F -e 'pin-bump and drift-test process is tracked under' "$docir" &&
+  grep -q -F -e 'pin-bump and drift-test process stays open under' "$docir" &&
+  grep -q -F -e '#785' "$docir" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "drift policy lost its accepted-but-open plus zero-pinned record"
+  bad "drift policy lost its delivered-pins plus open-drift record under #779/#785"
 fi
 
-# Validation fixtures stay required-open with symbol-count, stability,
+# Validation fixtures delivered with symbol-count, stability,
 # native-comparison, upgrade, and same-producer byte-identical gates.
-if grep -q -F -e 'Required (Open; no adapter execution exists today)' "$docir" &&
+if grep -q -F -e 'Delivered under #779' "$docir" &&
   grep -q -F -e 'A symbol-count inventory test detects silent public-API omissions' "$docir" &&
   grep -q -F -e 'Symbol IDs and cross-links are stable across fixture reruns' "$docir" &&
   grep -q -F -e 'Selected generated pages are compared against native-tool output' "$docir" &&
@@ -292,7 +295,7 @@ if grep -q -F -e 'Required (Open; no adapter execution exists today)' "$docir" &
   grep -q -F -e 'Same-producer rebuilds are byte-identical' "$docir"; then
   ok
 else
-  bad "validation fixtures lost their required-open inventory/stability/comparison gates"
+  bad "validation fixtures lost their delivered inventory/stability/comparison gates under #779"
 fi
 
 # dx docs stub stays removed behind ADR 0020 with reintroduction open
@@ -317,56 +320,58 @@ else
   bad "CLI gained a Docs command or docs in the unknown-command surface"
 fi
 
-# No false adapter execution: no adapter implementation directory or
-# Bazel target, docs keep the no-execution record.
-if [[ ! -d "docs/adapters" ]] &&
-  ! grep -rn -F -e 'docs/adapters' --include='BUILD.bazel' . 2>/dev/null | grep -q . &&
-  grep -q -F -e 'no adapter execution exists today' "$readme" &&
-  grep -q -F -e 'no site is published yet' "$readme"; then
+# Adapter runs delivered: implementation directory plus Bazel target plus
+# docs keep the delivered record with no published site.
+if [[ -d "docs/adapters" ]] &&
+  grep -q -F -e 'docs_adapters' "$adapters_build" &&
+  grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
+  grep -q -F -e 'no site is published yet' "$readme" &&
+  grep -q -F -e 'no published site exists today' "$readme"; then
   ok
 else
-  bad "a docs adapter implementation appeared or the no-execution record drifted"
+  bad "docs adapter delivery lost its implementation plus delivered-record under #779"
 fi
 
-# Contracts keep the gap list with delivered site execution under #780 plus
-# delivered rebuild proof under #781 and no published-site honesty.
+# Contracts keep the gap list with delivered adapter runs under #779 plus site
+# execution under #780 plus rebuild proof under #781 and no published-site honesty.
 if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
-  grep -q -F -e 'per-language adapter runs' "$readme" &&
-  grep -q -F -e 'renderer and site execution delivered seed-only' "$readme" &&
-  grep -q -F -e 'under #780' "$readme" &&
+  grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
+  grep -q -F -e 'renderer and site execution delivered seed-only under #780' "$readme" &&
   grep -q -F -e 'site-level byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
+  grep -q -F -e 'under #782-#785' "$readme" &&
   grep -q -F -e 'link and reference completeness' "$readme" &&
   grep -q -F -e 'guide-step CI wiring' "$readme" &&
   grep -q -F -e 'first-hour timing proof' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "documentation README lost its #780 plus #781 delivered plus remaining-gap list"
+  bad "documentation README lost its #779 plus #780 plus #781 delivered plus remaining-gap list"
 fi
 
-# Roadmap keeps the execution-gap list with delivered site execution plus
-# delivered rebuild proof.
-if grep -q -F -e 'Docs-pipeline execution gaps stay open under #779 plus #782-#785' "$roadmap" &&
-  grep -q -F -e 'adapter runs with pins' "$roadmap" &&
-  grep -q -F -e 'renderer and site execution delivered seed-only' "$roadmap" &&
-  grep -q -F -e 'rebuild proof delivered seed-only under #781' "$roadmap" &&
+# Roadmap keeps adapter-plus-site-plus-rebuild delivered plus remaining gaps.
+if grep -q -F -e 'adapter runs delivered under #779 plus renderer/site execution' "$roadmap" &&
+  grep -q -F -e 'delivered under #780 plus rebuild proof delivered under #781' "$roadmap" &&
+  grep -q -F -e 'stay open under' "$roadmap" &&
+  grep -q -F -e '#782-#785' "$roadmap" &&
   grep -q -F -e 'no working site claimed' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its #780 plus #781 delivered plus remaining-gap list"
+  bad "roadmap lost its #779 plus #780 plus #781 delivered plus remaining-gap list"
 fi
 
 # Verification matrix keeps Docs Open with no Supported claim and no
-# working site, with site execution plus rebuild proof delivered.
-if grep -q -F -e 'stay open under #779 plus #782-#785' "$matrix" &&
-  grep -q -F -e 'renderer/site execution delivered' "$matrix" &&
-  grep -q -F -e 'rebuild proof delivered seed-only under #781' "$matrix" &&
+# working site, with adapter-plus-site-plus-rebuild delivered.
+if grep -q -F -e 'staying open under #782-#785' "$matrix" &&
+  grep -q -F -e 'adapter-plus-site-plus-rebuild green' "$matrix" &&
+  grep -q -F -e 'docs_pipeline_qualification` 58/58' "$matrix" &&
+  grep -q -F -e 'adapter runs delivered under #779 plus site execution delivered under #780 plus rebuild delivered under #781' "$matrix" &&
+  grep -q -F -e 'qualified seed-only under #779 plus #780 plus #781' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
   ok
 else
-  bad "verification matrix lost its Docs Open plus #780 plus #781 delivered plus no-Supported gate"
+  bad "verification matrix lost its Docs Open plus #779 plus #780 plus #781 delivered plus no-Supported gate"
 fi
 
 # Functional: schema major pins agree (proto v1, codec example, shared helper).
@@ -401,19 +406,17 @@ else
   bad "docs pipeline tracker lost its #581 live-successor-to-closed-#421 lineage"
 fi
 
-# Scala spike plus Astro/MDX prose-only stay explicit with no execution
-# claim
-# missing; Astro/MDX prose-only confirmation).
-if grep -q -F -e 'Scala 3 TASTy Inspector' "$docir" &&
-  grep -q -F -e 'proof spike required' "$docir" &&
-  grep -q -F -e 'Missing or' "$docir" &&
+# Scala spike plus Astro/MDX prose-only delivered under #779.
+if grep -q -F -e 'Scala 3.3.6' "$docir" &&
+  grep -q -F -e 'Proof spike delivered' "$docir" &&
+  grep -q -F -e 'fails closed' "$docir" &&
   grep -q -F -e 'incompatible TASTy' "$docir" &&
   grep -q -F -e '| Astro/MDX | None; prose-only' "$docir" &&
-  grep -q -F -e 'Astro/MDX are prose-only' "$readme" &&
-  grep -q -F -e 'Scaladoc/TASTy proof spike' "$readme"; then
+  grep -q -F -e 'prose-only confirmed' "$readme" &&
+  grep -q -F -e 'TASTy spike' "$readme"; then
   ok
 else
-  bad "doc-ir/README lost its Scala-spike plus Astro/MDX prose-only record"
+  bad "doc-ir/README lost its delivered Scala-spike plus Astro/MDX prose-only record under #779"
 fi
 
 # Site-level rebuild is delivered alongside the codec same-producer proof
@@ -667,6 +670,129 @@ if bazel build //docs/site:demo_extract //docs/site:demo_aggregate //docs/site:d
   fi
 else
   bad "docs/site rebuild first build failed (want green build, #781)"
+fi
+
+# Adapter crate pins thirteen scopes with exact producers under #779.
+if grep -q -F -e 'RUST_RUSTDOC_PIN' "$adapters" &&
+  grep -q -F -e 'nightly-2026-09-01' "$adapters" &&
+  grep -q -F -e 'PYTHON_GRIFFE_PIN' "$adapters" &&
+  grep -q -F -e '"2.2.0"' "$adapters" &&
+  grep -q -F -e 'TYPESCRIPT_TYPEDOC_PIN' "$adapters" &&
+  grep -q -F -e '"0.28.20"' "$adapters" &&
+  grep -q -F -e 'ADAPTER_SCOPES' "$adapters" &&
+  grep -q -F -e '"astromdx"' "$adapters"; then
+  ok
+else
+  bad "docs adapters lost their thirteen-scope pin constants under #779"
+fi
+
+# Adapter crate delivers twelve normalize runs plus prose-only confirmation.
+if grep -q -F -e 'pub fn normalize_rust' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_python' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_typescript' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_java' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_kotlin' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_go' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_cpp' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_csharp' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_fsharp' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_vue' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_svelte' "$adapters" &&
+  grep -q -F -e 'pub fn normalize_scala' "$adapters" &&
+  grep -q -F -e 'pub fn confirm_prose_only' "$adapters"; then
+  ok
+else
+  bad "docs adapters lost their twelve-plus-prose normalize entry points under #779"
+fi
+
+# Adapter pins record exact inputs plus rejected substitutes plus honesty.
+if grep -q -F -e 'RUST_RUSTDOC' "$adapters_pins" &&
+  grep -q -F -e 'PYTHON_GRIFFE' "$adapters_pins" &&
+  grep -q -F -e 'TYPESCRIPT_TYPEDOC' "$adapters_pins" &&
+  grep -q -F -e 'SCALA_TASTY' "$adapters_pins" &&
+  grep -q -F -e 'ASTROMDX_PROSE' "$adapters_pins" &&
+  grep -q -F -e 'REJECTED_STABLE_RUSTDOC' "$adapters_pins" &&
+  grep -q -F -e 'qualified seed-only under issue #779' "$adapters_pins" &&
+  grep -q -F -e 'no Supported claim' "$adapters_pins"; then
+  ok
+else
+  bad "docs adapters pins.bzl lost its exact pins plus honesty under #779"
+fi
+
+# Adapter golden fixtures exist per scope with pinned native inputs.
+if [[ -f "docs/adapters/testdata/rust/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/python/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/typescript/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/java/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/kotlin/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/go/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/cpp/input.xml" ]] &&
+  [[ -f "docs/adapters/testdata/csharp/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/fsharp/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/vue/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/svelte/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/scala/input.json" ]] &&
+  [[ -f "docs/adapters/testdata/astromdx/input.json" ]]; then
+  ok
+else
+  bad "docs adapters lost their per-scope golden fixtures under #779"
+fi
+
+# Adapter BUILD keeps library plus unit, fmt, and clippy tests.
+if grep -q -F -e 'name = "docs_adapters"' "$adapters_build" &&
+  grep -q -F -e 'name = "docs_adapters_test"' "$adapters_build" &&
+  grep -q -F -e 'name = "docs_adapters_fmt_test"' "$adapters_build" &&
+  grep -q -F -e 'name = "docs_adapters_clippy_test"' "$adapters_build" &&
+  grep -q -F -e 'package_name = "docs/docs_adapters"' "$adapters_build"; then
+  ok
+else
+  bad "docs/adapters BUILD lost its library/test/fmt/clippy wiring under #779"
+fi
+
+# Adapter normalization validates via the versioned codec with no partial shards.
+if grep -q -F -e 'documentation_ir::validate_shard' "$adapters" &&
+  grep -q -F -e 'documentation_ir::encode_shard' "$adapters" &&
+  grep -q -F -e 'Partial shards are never emitted' "$adapters" &&
+  grep -q -F -e 'MissingTasty' "$adapters"; then
+  ok
+else
+  bad "docs adapters lost their codec validation plus fail-closed record under #779"
+fi
+
+# Live proof: adapter unit tests stay green on the seed host.
+if bazel test //docs/adapters:docs_adapters_test --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "docs_adapters_test failed (want green per-language runs under #779)"
+fi
+
+# Live proof: adapter fmt plus clippy stay green.
+if bazel test //docs/adapters:docs_adapters_fmt_test //docs/adapters:docs_adapters_clippy_test --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "docs adapters fmt/clippy failed (want green under #779)"
+fi
+
+# Crate universe owns the adapter manifest plus lockfile.
+if grep -q -F -e '//docs/adapters:Cargo.toml' MODULE.bazel &&
+  grep -q -F -e 'docs_adapters 0.0.0' cargo-bazel-lock.json &&
+  grep -q -F -e 'name = "docs_adapters"' "$adapters_cargo"; then
+  ok
+else
+  bad "crate universe lost its docs/adapters manifest plus lockfile under #779"
+fi
+
+# No published-site claim beyond the adapter-plus-site-plus-rebuild slice.
+if grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
+  grep -q -F -e 'renderer and site execution delivered seed-only under #780' "$readme" &&
+  grep -q -F -e 'site-level byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
+  grep -q -F -e 'no published site exists today' "$readme" &&
+  grep -q -F -e 'no site is published yet' "$readme" &&
+  grep -q -F -e 'adapter-plus-site-plus-rebuild green' "$matrix" &&
+  grep -q -F -e 'no working site claimed' "$matrix"; then
+  ok
+else
+  bad "adapter-plus-site-plus-rebuild slice lost its no-published-site honesty under #779/#780/#781"
 fi
 
 dx_test_summary "docs pipeline qualification harness"

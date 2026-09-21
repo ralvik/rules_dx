@@ -1,9 +1,9 @@
 # Documentation
 
-Accepted v1 direction; renderer/site execution delivered seed-only under #780,
-site-level byte-identical rebuild proof delivered seed-only under #781,
-remaining execution open (see Contracts). No `Supported`
-claim; fixture-scale site execution plus rebuild proof are qualified and no site is published yet.
+Accepted v1 direction; adapter runs plus renderer/site execution plus rebuild
+proof delivered seed-only (see Contracts). No `Supported`
+claim; fixture-scale adapter plus site execution plus rebuild proof are qualified
+and no site is published yet.
 
 Accepted design: native language tooling extracts API semantics; thin per-language adapters
 normalize into one versioned [documentation IR](doc-ir.md); one [site
@@ -25,8 +25,9 @@ mdBook-compatible prose + generated API pages + one search index
 ```
 
 Generated IR stays in Bazel outputs, not beside source files or in Git. The `.proto`
-schema and `documentation_ir` codec tests are checked in; adapter golden
-fixtures remain open. Ordinary API changes require no IR snapshot update.
+schema and `documentation_ir` codec tests are checked in; per-language adapter runs
+with golden fixtures delivered under #779 (successor to closed #581). Ordinary
+API changes require no IR snapshot update.
 
 ## Contracts
 
@@ -46,21 +47,22 @@ fixtures remain open. Ordinary API changes require no IR snapshot update.
   (see the [`dx docs` stub](../cli/commands/docs.md)).
   [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
   validation-only check; exact mappings are tracked under
-  #786. Docs pipeline gaps stay open under #779 plus #782-#785 (successors to closed #581; per-language adapter runs
-  with pins and mappings,
-  link and reference completeness, guide-step CI wiring, first-hour timing proof, and
-  per-release pin-bump plus drift process; renderer and site execution delivered seed-only
-  under #780, site-level byte-identical rebuild proof delivered seed-only under #781,
-  and no site is published yet).
+  #786. Adapter runs with pins and mappings delivered under #779 (successor
+  to closed #581); renderer and site execution delivered seed-only under #780;
+  site-level byte-identical rebuild proof delivered seed-only under #781.
+  Docs pipeline gaps stay open under #782-#785 (successors
+  to closed #581; link and reference completeness, guide-step CI wiring,
+  first-hour timing proof, and per-release pin-bump plus drift process;
+  fixture-scale execution qualified and no site is published yet).
 
-Rust uses pinned nightly `rustdoc --output-format json`; Scala needs a
-Scaladoc/TASTy proof spike; Astro/MDX are prose-only with no API surface.
+Rust uses pinned nightly `rustdoc --output-format json`; Scala TASTy spike
+delivered; Astro/MDX prose-only confirmed.
 Accepted scope covers thirteen adapter scopes. Per-language input pins,
-mappings, adapter runs, and every other
-#779 plus #782-#785 item above remain open; renderer/site-build execution is delivered
-seed-only under #780, rebuild proof is delivered seed-only under #781,
-and no adapter execution exists today.
+mappings, and adapter runs delivered under #779 with golden fixtures;
+renderer/site-build execution delivered seed-only under #780; rebuild proof
+delivered seed-only under #781; remaining #782-#785 items above stay open;
+no published site exists today.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779-#785 (site execution delivered under #780, rebuild proof delivered under #781). Reintroduction: #786. Build workflow: #620.
+Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782-#785. Reintroduction: #786. Build workflow: #620.
