@@ -17,7 +17,7 @@ sbom-provenance-linux_arm64_musl, no regression. Promotion cells: Platform-quali
 Windows x86_64 MSVC-compatible native under issue #414 plus dogfood consumer self-call
 covers windows_x86_64 with test disabled under issue #408 plus windows x86_64 coverage
 cell with no union plus explicit EULA acceptance required never automatic with installed
-Build Tools fallback never approved plus prebuilt-MSVC interop fixtures with explicit
+Build Tools fallback never approved plus EULA acknowledgement UX qualified seed-only under issue #818 plus prebuilt-MSVC interop fixtures with explicit
 STL/CRT/linker/library combos incl mixed Rust/C/C++ plus linux corpus qualified seed-only
 under issue #499 plus module 0.0.0 with no v* tags plus --verify-tag everywhere plus
 windows_x86_64 sbom-provenance delivered under issue #807. Attestation stays owner-gated

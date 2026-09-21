@@ -325,14 +325,21 @@ The following source facts prevent describing it as a drop-in hermetic stack:
   No cross-host Windows route is established.
 - The [actual extension](https://github.com/Dragnalith/toolchains_msvc/blob/8e2aa4624bbb5a53a94f135e90995f307875d1ad/extensions.bzl)
   reads `BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1` through repository
-  environment. Its README advertises a different variable. Preserve deliberate upstream acceptance;
-  this observed API is not yet a promised `rules_dx` setup command. Deferred acceptance failure does
+  environment. Its README advertises a different variable. Consumer acknowledgement stays deliberate:
+  export the variable plus pass `--repo_env=BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1`
+  after reviewing the applicable Microsoft terms, never automatic via `.bazelrc` or wrapper defaults and
+  never bypassing upstream controls. Missing acknowledgement fails with an actionable error before
+  restricted MSVC payload download; unrelated workflows require no acknowledgement and stay green.
+  Deferred acceptance failure does
   not prove laziness: extension evaluation already fetches manifests. Accepted fit (2026-09-21,
   #959):
   manifest reads are version-resolution cost while restricted MSVC payload download requires
   explicit acceptance and never happens for unrelated workflows, per
   [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
-  [Activation And Laziness](architecture/README.md#activation-and-laziness).
+  [Activation And Laziness](architecture/README.md#activation-and-laziness). Acknowledgement UX is
+  qualified seed-only under issue #818 (`cc/tests/fixtures/windows_eula/pins.bzl` via
+  `bazel run //tools/ci:windows_eula_qualification`, missing-ack fails before fetch with an
+  actionable error, unrelated-workflows-green).
 - [Toolchain registration](https://github.com/Dragnalith/toolchains_msvc/blob/8e2aa4624bbb5a53a94f135e90995f307875d1ad/private/msvc_toolchains_repo.bzl)
   constrains Windows/CPU but not the LLVM MSVC ABI constraint used by rules_rs. Qualify an explicit
   constraint fix so it cannot accidentally satisfy GNU/GNULVM targets.
@@ -372,6 +379,23 @@ under issue #498 below; the SQLite plus OpenSSL plus ring plus
 bindgen plus CXX corpus is qualified seed-only under issue #499 below;
 floors are qualified seed-only under issue #500 below;
 no `Supported` claim.
+
+Windows EULA acknowledgement UX is qualified seed-only under issue #818
+(`cc/tests/fixtures/windows_eula/pins.bzl` via `bazel run
+//tools/ci:windows_eula_qualification`): acknowledgement is
+`BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1`
+via repository-env for the toolchains_msvc head plus windows_support
+`v0.4.1` package identities above, deliberate export plus `--repo_env`
+after reviewing terms with README mismatch recorded, never automatic and
+never bypassing upstream controls; fail-closed with an actionable error
+before restricted MSVC payload download (manifest reads stay
+version-resolution cost); unrelated-green proven (adding the module
+requires no acceptance and fetches no restricted payloads, unrelated seed
+workflows stay green without acceptance, deferred failure never proves
+laziness); rights review itself plus redistribution permission plus the
+hermetic-llvm SDK EULA variable stay out of scope under issue #496;
+per-host release evidence stays owned under issue #807. The backend stays
+provisional; no `Supported` claim.
 
 Apple plus Microsoft acquisition and cache rights are qualified seed-only under issue #496
 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run
@@ -588,6 +612,7 @@ acquisition, interoperability, coverage, and release evidence passes.
 | Does the exact current stable stack compose? | Frozen seed-only under issue #494: as-built Bzlmod identities (Bazel 9.2.0 plus rules_rust 0.74.0 plus rules_cc 0.2.22 plus Rust 1.98.0) with `MODULE.bazel.lock` integrity, rules_rs LLVM `0.8.18`/LLVM `22.1.8` baseline vs hermetic-llvm `0.8.19`/LLVM `23.1.0` candidate comparison, checksums plus source patches plus compiler/profile compatibility, ad-hoc compose rejected; pinned in `rust/tests/fixtures/stable_stack/pins.bzl` via `bazel run //tools/ci:stable_stack_qualification` (qualified seed-only under issue #494). | issue #494 |
 | Can Windows acquisition be immutable and lazy? | Qualified seed-only under issue #495: fixed-manifest plus package-index inputs pinned with the toolchains_msvc head plus windows_support `v0.4.1` package identities (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`); mutable fetch rejected; laziness proven (adding the module requires no acceptance and fetches no restricted payloads, unrelated workflows stay green without acceptance, deferred failure never proves laziness). Backend stays provisional; acquisition rights qualified seed-only under issue #496, windows transport qualified seed-only under issue #497, prebuilt interop qualified seed-only under issue #498, linux corpus qualified seed-only under issue #499, floors qualified seed-only under issue #500, coverage qualified seed-only under issue #501. | issue #495 |
 | Are Apple/Microsoft acquisition and cache rights adequate? | Qualified seed-only under issue #496: hermetic-llvm `v0.8.19` MacOSX26.5 extraction vs [Apple SDK agreement](https://www.apple.com/legal/sla/docs/xcode.pdf) with hosted execution not authorizing separate extraction or unrestricted caching, toolchains_msvc plus windows_support `v0.4.1` identities with deliberate EULA repository-env never automatic plus SDK EULA gap reviewed not inferred, usage vs redistribution reviewed separately (acceptance is not redistribution permission), mirrors plus redistribution plus internal caches plus remote workers as license-approved boundaries separately from download success, official download not permission, assume rights rejected; pinned in `cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run //tools/ci:acquisition_rights_qualification`. Backend stays provisional; windows transport qualified seed-only under issue #497, prebuilt interop qualified seed-only under issue #498, linux corpus qualified seed-only under issue #499, floors qualified seed-only under issue #500, coverage qualified seed-only under issue #501. | issue #496 |
+| How is Windows EULA acknowledgement required and fail-closed? | Qualified seed-only under issue #818: `BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1` via repository-env for the toolchains_msvc head plus windows_support `v0.4.1` identities, deliberate export plus `--repo_env` after reviewing terms with README mismatch recorded, never automatic and never bypassing upstream controls; missing acknowledgement fails with an actionable error before restricted MSVC payload download, unrelated seed workflows stay green without acceptance with deferred failure never proving laziness; pinned in `cc/tests/fixtures/windows_eula/pins.bzl` via `bazel run //tools/ci:windows_eula_qualification`. Rights plus redistribution plus hermetic-llvm SDK EULA variable stay out of scope under issue #496; per-host release evidence stays owned under issue #807. Backend stays provisional. | issue #818 |
 | Can the kept CC opt-out execute successfully? | Qualified seed-only under issue #471: kept opt-out succeeds for pure-Rust scripts on stock `rules_rust` 0.74.0 (sysroot `rust-lld` fallback plus `no_cc` stubs, `rust/tests/fixtures/cc_optout/` via `bazel run //tools/ci:cc_optout_qualification`); script compilation inputs stay distinct from execution inputs. | issue #471 |
 | Can third-party scripts retain a declared hermetic closure? | Decided hermetic under issue #472: global shell-env False in `.bazelrc` with narrow per-crate annotation opt-in (zero opt-ins); hostile PATH, tool discovery and additional declared tools pinned by `bazel run //tools/ci:shell_env_qualification` plus [Rust Generation](generation/rust.md#build-scripts). | issue #472 |
 | Does Windows native transport preserve all inputs and ABI selection? | Qualified seed-only under issue #497: explicit ABI constraint fix (toolchains_msvc registration plus rules_rs LLVM MSVC ABI identity, GNU/GNULVM rejected) plus `/external:I` vs `/imsvc` plus `.lib`/`.obj` bare-path handling (patched rules_rust rebasing baseline) with batch wrappers plus response files plus spaces plus SDK libraries plus cc-rs discovery/assembly plus proc-macro DLLs on declared-input fixtures without host Visual Studio state (`cc/tests/fixtures/windows_transport/pins.bzl` via `bazel run //tools/ci:windows_transport_qualification`); compiler-target availability alone is not proof. Backend stays provisional; rights plus interop qualified seed-only under issues #496/#498, linux corpus qualified seed-only under issue #499, floors qualified seed-only under issue #500, coverage qualified seed-only under issue #501. | issue #497 |

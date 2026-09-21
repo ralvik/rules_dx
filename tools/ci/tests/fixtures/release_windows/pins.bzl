@@ -28,7 +28,7 @@ CI_MUSL_KEPT = "musl sbom-musl jobs kept with sbom-provenance-linux_x86_64_musl 
 CELL_PLATFORM = "Platform-qualified Windows x86_64 MSVC-compatible native under issue #414"
 CELL_CONSUMER = "dogfood consumer self-call covers windows_x86_64 with test disabled under issue #408"
 CELL_COVERAGE = "windows x86_64 coverage cell with no union"
-CELL_EULA = "explicit EULA acceptance required never automatic, installed Build Tools fallback never approved"
+CELL_EULA = "explicit EULA acceptance required never automatic, installed Build Tools fallback never approved; EULA acknowledgement UX qualified seed-only under issue #818 (cc/tests/fixtures/windows_eula/pins.bzl via bazel run //tools/ci:windows_eula_qualification)"
 CELL_INTEROP = "prebuilt-MSVC interop fixtures with explicit STL/CRT/linker/library combos incl mixed Rust/C/C++"
 CELL_CORPUS = "linux corpus qualified seed-only under issue #499"
 CELL_TAG = 'module version = "0.0.0" with no v* tags, callers pin reviewed commits'

@@ -295,6 +295,16 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Windows EULA acknowledgement UX harness; see docs/native-toolchains.md#windows-acquisition-and-compatibility.
+    sh_binary(
+        name = "windows_eula_qualification",
+        srcs = ["windows_eula_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Windows transport plus ABI harness; see docs/native-toolchains.md#windows-acquisition-and-compatibility.
     sh_binary(
         name = "windows_transport_qualification",
