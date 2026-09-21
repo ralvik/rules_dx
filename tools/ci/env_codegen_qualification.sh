@@ -116,16 +116,16 @@ else
 fi
 
 # Install-time verification refuses checksum-only inputs.
-if grep -q -F -e 'checksum-only' deploy/install/dx_verify.sh &&
-  grep -q -F -e '--sha256' deploy/install/dx_verify.sh &&
-  [[ -f "deploy/install/dx_verify_test.sh" ]]; then
+if grep -q -F -e 'checksum-only' deploy/install/src/lib.rs &&
+  grep -q -F -e '--sha256' deploy/install/src/lib.rs &&
+  grep -q -F -e 'dx_install_tools_test' deploy/install/BUILD.bazel; then
   ok
 else
   bad "dx_verify lost its checksum-only refusal plus test"
 fi
 
 # Functional: dx_verify refuses checksum-only without network.
-if bash deploy/install/dx_verify.sh --sha256 deadbeef 2>/tmp/dxv309.err; then
+if bazel run //deploy/install:dx_verify -- --sha256 deadbeef 2>/tmp/dxv309.err; then
   bad "dx_verify accepted --sha256 (must refuse checksum-only)"
 else
   if grep -q -F -e 'checksum-only' /tmp/dxv309.err; then
@@ -136,9 +136,9 @@ else
 fi
 
 # Signing trust root stays Sigstore keyless on the TUF root.
-if grep -q -F -e 'https://tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'cosign verify-blob' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'no checksum-only' deploy/install/dx_verify.sh; then
+if grep -q -F -e 'https://tuf-repo-cdn.sigstore.dev' deploy/install/src/lib.rs &&
+  grep -q -F -e 'cosign verify-blob' deploy/install/src/lib.rs &&
+  grep -q -F -e 'no checksum-only' deploy/install/src/lib.rs; then
   ok
 else
   bad "dx_verify lost its Sigstore TUF plus cosign trust record"

@@ -38,7 +38,7 @@ under issue #611.
 
 Signing-first: step 4 signs plus attests before step 5 opens the draft
 release, so nothing is drafted or published unsigned. Pinned by
-`bazel test //deploy/release:release_driver_verify`.
+`bazel test //deploy/release:all`.
 
 Signing stack + distribution qualified under issue #459 (live successor
 to closed #311/#26/#78 for signing + distribution; decision: keep
@@ -54,9 +54,9 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
 `ghcr.yml` route. Pinned by `bazel test //deploy/release:all` plus
 `bazel run //tools/ci:signing_distribution_qualification`.
 
-1. Dry-run everything first: `RELEASE_DRY_RUN=1
-   deploy/release/release.sh <tag>` plus `GH_RELEASE_DRY_RUN=1 bazel
-   run //cli/cli:github_draft`, `RELEASE_SIGN_DRY_RUN=1 bazel run
+1. Dry-run everything first: `RELEASE_DRY_RUN=1 bazel run
+   //deploy/release:release_driver -- <tag>` plus `GH_RELEASE_DRY_RUN=1
+   bazel run //cli/cli:github_draft`, `RELEASE_SIGN_DRY_RUN=1 bazel run
    //deploy/release:signing_demo`, and `BCR_DRY_RUN=1 bazel run
    //deploy/release:bcr_demo`.
 2. Archive plus checksum: `bazel run //cli/cli:dx_standalone -- <outdir>`
@@ -81,8 +81,8 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
    Cosign plus TUF rebuild and rotation follows the manual on-demand
    [GHCR rebuild plus signing rotation](../contributing/devcontainer.md#ghcr-rebuild-plus-signing-rotation)
    contract (issue #647).
-8. Verify before install: `deploy/install/dx_verify.sh --binary <dx>
-   --bundle <bundle> --identity <workflow-id> --issuer
+8. Verify before install: `bazel run //deploy/install:dx_verify --
+   --binary <dx> --bundle <bundle> --identity <workflow-id> --issuer
    https://token.actions.githubusercontent.com [--sbom <sbom>
    --sbom-bundle <sbom-bundle>]`; checksum-only is rejected and failure
    happens before install or exec.
@@ -92,7 +92,7 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
 CI builds plus verifies SBOM plus provenance on every push/PR via the
 `sbom` job in `.github/workflows/ci.yml` (issue #612): `bazel build
 //deploy/release:sbom_demo` plus `bazel test
-//deploy/release:sbom_demo_verify`, staged under `RUNNER_TEMP/sbom` and
+//deploy/release:dx_release_tools_test`, staged under `RUNNER_TEMP/sbom` and
 uploaded as the `sbom-provenance` artifact (SPDX-2.3 plus SLSA v1, publishes
 nothing). Attestation stays owner-gated human-run via
 `//deploy/release:signing_demo` (Sigstore keyless plus GitHub attestations);

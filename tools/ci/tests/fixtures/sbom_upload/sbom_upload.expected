@@ -3,9 +3,9 @@ Wire profile: SPDX-2.3 via //deploy/release:sbom_demo plus
 https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo with
 https://in-toto.io/Statement/v1 subject digest equal to artifact sha256,
 managed Python toolchain only, //deploy/rules:release_demo_archive as the
-SBOM subject fixture, bazel test //deploy/release:sbom_demo_verify binds
+SBOM subject fixture, bazel test //deploy/release:dx_release_tools_test binds
 SPDX plus in-toto plus SLSA. CI: ci.yml sbom job builds
-//deploy/release:sbom_demo plus verifies //deploy/release:sbom_demo_verify,
+//deploy/release:sbom_demo plus verifies //deploy/release:dx_release_tools_test,
 stages SPDX-2.3 plus SLSA v1 under RUNNER_TEMP/sbom, uploads sbom-provenance
 via actions/upload-artifact pinned SHA plus tag, contents: read only with
 persist-credentials false, publishes nothing, sbom summary with build plus

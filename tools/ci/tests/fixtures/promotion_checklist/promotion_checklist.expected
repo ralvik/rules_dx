@@ -15,7 +15,7 @@ nine checks with explicit platforms plus the all-enabled self-call in ci.yml
 consumer_ci_qualification, sole updater native-only. Release evidence: sbom_demo
 with subject digest equal to artifact sha256, signing_demo first with nothing
 drafted unsigned, bcr_demo checked-not-submitted, GHCR separate route, human-run
-release.sh dry-run by default, dx_verify refuses checksum-only, dry-run-first
+release_driver dry-run by default, dx_verify refuses checksum-only, dry-run-first
 dispatch-only default-closed gate. Ad-hoc release without this checklist is
 rejected; Compatibility: Release only. A missing cell remains an explicit gap
 and blocks that support claim via supported_evidence_gate. Qualified seed-only

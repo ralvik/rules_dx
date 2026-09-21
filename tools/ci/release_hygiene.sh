@@ -241,7 +241,7 @@ dx_guards_contains "$dryrun" "publish-dry-run.yml lost the BCR owner-gated recor
 # the dry run proves //deploy/install:dx_verify refuses checksum-only
 # inputs on the TUF trust root and installs nothing, without network.
 dx_guards_contains "$dryrun" "publish-dry-run.yml lost the verifier-refusal exercise (dx_verify checksum-only refused, issue #78)" \
-  'dx_verify.sh --help' \
+  'bazel run //deploy/install:dx_verify' \
   'verify-refusal.log' \
   'checksum-only verification is not publisher-identity proof'
 
@@ -260,10 +260,10 @@ dx_guards_contains "$dryrun" "publish-dry-run.yml lost the signing dry-run exerc
 
 # Human-run driver stays exercised (live successor to closed
 # for the human-run path): the dry run runs
-# deploy/release/release.sh in dry-run mode, proving the tag ceiling
+# //deploy/release:release_driver in dry-run mode, proving the tag ceiling
 # plus owner-approval gate with nothing published.
-dx_guards_contains "$dryrun" "publish-dry-run.yml lost the human-run driver exercise (release.sh dry run, issue #458)" \
-  'deploy/release/release.sh' \
+dx_guards_contains "$dryrun" "publish-dry-run.yml lost the human-run driver exercise (release_driver dry run, issue #458)" \
+  'bazel run //deploy/release:release_driver' \
   'human-run-dry-run.log'
 
 # Release runbook stays owned (live successor to closed

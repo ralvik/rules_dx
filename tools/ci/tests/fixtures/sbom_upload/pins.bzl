@@ -11,10 +11,10 @@ SBOM_PREDICATE = "https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo"
 SBOM_STATEMENT = "https://in-toto.io/Statement/v1 with subject digest equal to artifact sha256"
 SBOM_HERMETIC = "managed Python toolchain only, no host sha256sum/shasum/python3"
 SBOM_FIXTURE = "//deploy/rules:release_demo_archive as the SBOM subject fixture"
-SBOM_VERIFY = "bazel test //deploy/release:sbom_demo_verify binds SPDX plus in-toto plus SLSA"
+SBOM_VERIFY = "bazel test //deploy/release:dx_release_tools_test binds SPDX plus in-toto plus SLSA"
 
 # CI upload: seed-host sbom job builds plus verifies plus stages plus uploads.
-CI_JOB = "ci.yml sbom job builds //deploy/release:sbom_demo plus verifies //deploy/release:sbom_demo_verify"
+CI_JOB = "ci.yml sbom job builds //deploy/release:sbom_demo plus verifies //deploy/release:dx_release_tools_test"
 CI_STAGE = "stages SPDX-2.3 plus SLSA v1 under RUNNER_TEMP/sbom"
 CI_UPLOAD = "uploads sbom-provenance via actions/upload-artifact pinned SHA plus tag"
 CI_PERMISSIONS = "contents: read only, no id-token, persist-credentials false, publishes nothing"

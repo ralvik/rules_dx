@@ -291,17 +291,17 @@ fi
 # verifier requires a Sigstore bundle plus identity/issuer, refuses
 # checksum-only, reports the TUF trust root, and fails before
 # install/exec; seed-host standalone packaging stays wired.
-if [[ -f "deploy/install/dx_verify.sh" ]] &&
-  grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'cosign verify-blob' deploy/install/dx_verify.sh; then
+if [[ -f "deploy/install/src/lib.rs" ]] &&
+  grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/src/lib.rs &&
+  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/src/lib.rs &&
+  grep -q -F -e 'cosign verify-blob' deploy/install/src/lib.rs; then
   ok
 else
   bad "install verifier lost its bundle-required / no-checksum-fallback / trust-root record (#26)"
 fi
 
-if grep -q -F -e 'never executed' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'before any install' deploy/install/dx_verify.sh; then
+if grep -q -F -e 'never executed' deploy/install/src/lib.rs &&
+  grep -q -F -e 'before install' deploy/install/src/lib.rs; then
   ok
 else
   bad "install verifier lost its fail-before-install/exec record (#26)"
@@ -372,7 +372,7 @@ if [[ -f "deploy/release/matrix.bzl" ]] &&
   [[ -f "deploy/release/sbom.bzl" ]] &&
   [[ -f "deploy/release/signing.bzl" ]] &&
   [[ -f "deploy/release/bcr.bzl" ]] &&
-  [[ -f "deploy/release/release.sh" ]] &&
+  [[ -f "deploy/release/src/bin_release_driver.rs" ]] &&
   [[ -f "docs/deploy/release-runbook.md" ]]; then
   ok
 else

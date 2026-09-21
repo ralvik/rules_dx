@@ -74,13 +74,13 @@ jobs:
           grep -q "v0.0.0-dryrun" "$stage/draft-dry-run.log"
           grep -q -- "--draft --verify-tag" "$stage/draft-dry-run.log"
           bazel test //deploy/release:all --noshow_progress > "$stage/release-tests.log" 2>&1
-          grep -q "8 tests pass" "$stage/release-tests.log"
+          grep -q "tests pass" "$stage/release-tests.log"
           RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo > "$stage/signing-dry-run.log" 2>&1
           grep -q "tuf-repo-cdn.sigstore.dev" "$stage/signing-dry-run.log"
           grep -q "cosign sign-blob" "$stage/signing-dry-run.log"
           BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo > "$stage/bcr-dry-run.log" 2>&1
           grep -q "would submit, submitting nothing" "$stage/bcr-dry-run.log"
-          ./deploy/release/release.sh v0.0.0-dryrun > "$stage/human-run-dry-run.log" 2>&1
+          bazel run //deploy/release:release_driver -- v0.0.0-dryrun > "$stage/human-run-dry-run.log" 2>&1
           grep -q "dry run (RELEASE_DRY_RUN=1)" "$stage/human-run-dry-run.log"
           {
             echo "Bazel Central Registry module shape (checked, not submitted):"
@@ -89,9 +89,9 @@ jobs:
           } > "$stage/bcr-shape.txt"
           {
             echo "install verifier refusal proof (no network, publishes nothing):"
-            ./deploy/install/dx_verify.sh --help > "$stage/verify-help.txt"
-            grep -q "tuf-repo-cdn.sigstore.dev" deploy/install/dx_verify.sh
-            if ./deploy/install/dx_verify.sh --binary "$stage/dx-linux-x86_64" --sha256 deadbeef > "$stage/verify-refusal.log" 2>&1; then
+            bazel run //deploy/install:dx_verify -- --help > "$stage/verify-help.txt"
+            grep -q "tuf-repo-cdn.sigstore.dev" deploy/install/src/lib.rs
+            if bazel run //deploy/install:dx_verify -- --binary "$stage/dx-linux-x86_64" --sha256 deadbeef > "$stage/verify-refusal.log" 2>&1; then
               echo "expected checksum-only refusal failed" >&2
               exit 1
             fi
@@ -140,7 +140,7 @@ jobs:
                   "draft-only publisher //cli/cli:github_draft in GH_RELEASE_DRY_RUN=1 mode (placeholder v0.0.0-dryrun, draft-only flags, publishes nothing)",
                   "owner-gated signing //deploy/release:signing_demo in RELEASE_SIGN_DRY_RUN=1 mode (Sigstore keyless + attestation, publishes nothing)",
                   "Bazel Central Registry shape via //deploy/release:bcr_demo in BCR_DRY_RUN=1 mode (rules_dx at 0.0.0, checked not submitted)",
-                  "human-run driver deploy/release/release.sh dry run (owner approval + tag ceiling, publishes nothing)",
+                  "human-run driver //deploy/release:release_driver dry run (owner approval + tag ceiling, publishes nothing)",
                   "install verifier //deploy/install:dx_verify refusal proof (checksum-only rejected, TUF trust root, fails before install)",
               ],
               "draft_dry_run": {

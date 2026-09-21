@@ -19,6 +19,10 @@ path = "src/bin_sbom_prov_gen.rs"
 name = "bcr_source_gen"
 path = "src/bin_bcr_source_gen.rs"
 
+[[bin]]
+name = "release_driver"
+path = "src/bin_release_driver.rs"
+
 [dependencies]
 hex = "0.4"
 serde_json = "1"

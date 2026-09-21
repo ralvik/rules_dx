@@ -1,8 +1,8 @@
 """Standalone `dx` install-time publisher-identity verification."""
 
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 
 package(default_visibility = ["//:__subpackages__"])
 
@@ -11,35 +11,101 @@ package(default_visibility = ["//:__subpackages__"])
 # root is Sigstore TUF (tuf-repo-cdn.sigstore.dev); verifiers are
 # `cosign verify-blob` / `gh attestation verify` / `slsa-verifier`
 # (documented, not self-hosted). Fails before install/exec; never
-# executes the binary under verification.
-sh_binary(
+# executes the binary under verification. Portable Rust, no Linux pin.
+rust_library(
+    name = "dx_install_tools",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_install_tools",
+        normal = True,
+    ),
+    crate_name = "dx_install_tools",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "hex",
+            "sha2",
+        ],
+        package_name = "deploy/dx_install_tools",
+    ),
+)
+
+rust_binary(
     name = "dx_verify",
-    srcs = ["dx_verify.sh"],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
+    srcs = ["src/main.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_install_tools",
+        normal = True,
+    ),
+    crate_name = "dx_verify",
+    crate_root = "src/main.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "hex",
+            "sha2",
+        ],
+        package_name = "deploy/dx_install_tools",
+    ) + [":dx_install_tools"],
 )
 
 # Policy tests: valid accepted; tampered/replaced/unapproved-signer/
 # missing-inputs rejected before install; checksum-only refused; SBOM
-# binding proven. No network: stub cosign/gh via env overrides.
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
-sh_test(
-    name = "dx_verify_test",
-    srcs = ["dx_verify_test.sh"],
-    args = ["$(rootpath :dx_verify)"],
-    data = [":dx_verify"],
-    tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
-    target_compatible_with = ["@platforms//os:linux"],
+# binding proven. Portable `rust_test` with a fake verifier seam, no
+# network, no stub executables, no Linux pin.
+rust_test(
+    name = "dx_install_tools_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "deploy/dx_install_tools",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_install_tools",
+    deps = crate_deps(
+        [
+            "hex",
+            "sha2",
+            "tempfile",
+        ],
+        package_name = "deploy/dx_install_tools",
+    ),
 )
+
+rustfmt_test(
+    name = "dx_install_tools_fmt_test",
+    size = "small",
+    targets = [
+        ":dx_install_tools",
+        ":dx_verify",
+    ],
+)
+
+rust_clippy_test(
+    name = "dx_install_tools_clippy_test",
+    size = "small",
+    targets = [
+        ":dx_install_tools",
+        ":dx_verify",
+    ],
+)
+
+exports_files(["Cargo.toml"])
 
 test_suite(
     name = "all",
-    tests = [":dx_verify_test"],
+    tests = [":dx_install_tools_test"],
 )
 
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

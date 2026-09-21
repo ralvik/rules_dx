@@ -74,63 +74,63 @@ else
 fi
 
 # Signing program keeps the selected stack: sign-blob --bundle plus attestation.
-if grep -q -F -e 'cosign sign-blob --bundle' deploy/release/sign_deploy.sh &&
-  grep -q -F -e 'gh attestation create' deploy/release/sign_deploy.sh; then
+if grep -q -F -e 'cosign sign-blob --bundle' deploy/release/src/lib.rs &&
+  grep -q -F -e 'gh attestation create' deploy/release/src/lib.rs; then
   ok
 else
-  bad "sign_deploy.sh lost its selected sign-blob plus attestation stack (#459)"
+  bad "signing Rust launch lost its selected sign-blob plus attestation stack (#459)"
 fi
 
 # Signing dry-run records the pins: cosign version plus bundle media plus trust root.
-if grep -q -F -e 'v2.4.1' deploy/release/sign_deploy.sh &&
-  grep -q -F -e 'application/vnd.dev.sigstore.bundle.v0.3+json' deploy/release/sign_deploy.sh &&
-  grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1' deploy/release/sign_deploy.sh; then
+if grep -q -F -e 'v2.4.1' deploy/release/src/lib.rs &&
+  grep -q -F -e 'application/vnd.dev.sigstore.bundle.v0.3+json' deploy/release/src/lib.rs &&
+  grep -q -F -e 'RELEASE_SIGN_DRY_RUN=1' deploy/release/src/lib.rs; then
   ok
 else
-  bad "sign_deploy.sh dry run lost its cosign-version plus bundle-media pins (#459)"
+  bad "signing Rust launch dry run lost its cosign-version plus bundle-media pins (#459)"
 fi
 
 # Signing fails closed without cosign plus needs identity plus host tools at run time.
-if grep -q -F -e "'cosign' CLI not found" deploy/release/sign_deploy.sh &&
-  grep -q -F -e 'missing SIGNING_IDENTITY' deploy/release/sign_deploy.sh &&
-  grep -q -F -e 'no new module dependencies' deploy/release/sign_deploy.sh; then
+if grep -q -F -e "'cosign' CLI not found" deploy/release/src/lib.rs &&
+  grep -q -F -e 'missing SIGNING_IDENTITY' deploy/release/src/lib.rs &&
+  grep -q -F -e 'no new module dependencies' deploy/release/src/lib.rs; then
   ok
 else
-  bad "sign_deploy.sh lost its fail-closed plus no-new-module-deps record (#459)"
+  bad "signing Rust launch lost its fail-closed plus no-new-module-deps record (#459)"
 fi
 
 # Signing verifier checks the pins: version plus media plus trust root plus attestation.
-if grep -q -F -e 'v2.4.1' deploy/release/signing_verify.sh &&
-  grep -q -F -e 'application/vnd.dev.sigstore.bundle.v0.3+json' deploy/release/signing_verify.sh &&
-  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/release/signing_verify.sh &&
-  grep -q -F -e 'gh attestation create' deploy/release/signing_verify.sh; then
+if grep -q -F -e 'v2.4.1' deploy/release/src/lib.rs &&
+  grep -q -F -e 'application/vnd.dev.sigstore.bundle.v0.3+json' deploy/release/src/lib.rs &&
+  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/release/src/lib.rs &&
+  grep -q -F -e 'gh attestation create' deploy/release/src/lib.rs; then
   ok
 else
-  bad "signing_verify.sh lost its version plus media plus trust-root plus attestation checks (#459)"
+  bad "signing Rust launch lost its version plus media plus trust-root plus attestation checks (#459)"
 fi
 
 # Cosign pin stays single-sourced: signing.bzl plus GHCR fetch plus dry-run agree on v2.4.1.
 if grep -q -F -e 'COSIGN_VERSION="v2.4.1"' .github/workflows/ghcr.yml &&
   grep -q -F -e 'SIGNING_COSIGN_VERSION = "v2.4.1"' deploy/release/signing.bzl &&
-  grep -q -F -e 'v2.4.1' deploy/release/sign_deploy.sh; then
+  grep -q -F -e 'v2.4.1' deploy/release/src/lib.rs; then
   ok
 else
-  bad "cosign v2.4.1 pin drifted across signing.bzl plus ghcr.yml plus sign_deploy.sh (#459)"
+  bad "cosign v2.4.1 pin drifted across signing.bzl plus ghcr.yml plus Rust launch (#459)"
 fi
 
 # Install verifier keeps distribution verification: bundle-required plus no checksum fallback.
-if grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'cosign verify-blob' deploy/install/dx_verify.sh; then
+if grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/src/lib.rs &&
+  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/src/lib.rs &&
+  grep -q -F -e 'cosign verify-blob' deploy/install/src/lib.rs; then
   ok
 else
   bad "dx_verify lost its bundle-required plus trust-root plus verify-blob record (#459)"
 fi
 
 # Install verifier fails before install or exec plus SBOM binds through the same cosign path.
-if grep -q -F -e 'before any install' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'never executed' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'SBOM' deploy/install/dx_verify.sh; then
+if grep -q -F -e 'before install' deploy/install/src/lib.rs &&
+  grep -q -F -e 'never executed' deploy/install/src/lib.rs &&
+  grep -q -F -e 'SBOM' deploy/install/src/lib.rs; then
   ok
 else
   bad "dx_verify lost its fail-before-install plus SBOM record (#459)"
@@ -146,12 +146,12 @@ else
 fi
 
 # Provenance binds exact bytes: subject digest equals artifact sha256 plus in-toto v1.
-if grep -q -F -e '"_type": "https://in-toto.io/Statement/v1"' deploy/release/sbom_verify.sh &&
-  grep -q -F -e '"predicateType": "https://slsa.dev/provenance/v1"' deploy/release/sbom_verify.sh &&
-  grep -q -F -e '"spdxVersion": "SPDX-2.3"' deploy/release/sbom_verify.sh; then
+if grep -q -F -e '"_type": "https://in-toto.io/Statement/v1"' deploy/release/src/lib.rs &&
+  grep -q -F -e '"predicateType": "https://slsa.dev/provenance/v1"' deploy/release/src/lib.rs &&
+  grep -q -F -e 'SPDX-2.3' deploy/release/src/lib.rs; then
   ok
 else
-  bad "sbom_verify.sh lost its SPDX plus in-toto plus SLSA subject-binding checks (#459)"
+  bad "Rust launch lost its SPDX plus in-toto plus SLSA subject-binding checks (#459)"
 fi
 
 # Release matrix stays frozen: five cells with the seed qualified.

@@ -3,10 +3,9 @@
 Contract: `docs/deploy/release-runbook.md`.
 """
 
-load("@bazel_skylib//lib:shell.bzl", "shell")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//deploy/rules:defs.bzl", "dx_deployment")
-load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
+load("//deploy/rules:launcher.bzl", "rlocation_path")
+load("//rust/rules:defs.bzl", "rust_binary")
 
 def bcr_source_error(module_name, version):
     """Validates the BCR module name + version pair."""
@@ -37,15 +36,13 @@ def bcr_submit_error(version, approve):
     return ""
 
 def _bcr_launcher_impl(ctx):
-    """Writes the owner-gated BCR deploy launcher script.
+    """Writes the owner-gated BCR deploy launcher Rust source.
 
     Resolves the source.json template + integrity file from runfiles via
-    the standard `runfiles.bash` `rlocation` and execs `bcr_deploy.sh`
-    with module/version. Extra user args are rejected: a submission is
-    exactly the pinned inputs. All interpolations use `shell.quote`;
-    wrapped as `sh_binary` (see `bcr_check`).
+    the Rust `runfiles` library with module/version baked as constants.
+    Extra user args are rejected: a submission is exactly the pinned
+    inputs. Wrapped as `rust_binary` (see `bcr_check`).
     """
-    files = []
     rlocs = []
     for target in ctx.attr.inputs:
         info = target[DefaultInfo]
@@ -55,31 +52,65 @@ def _bcr_launcher_impl(ctx):
                  str(target.label) + " provides " + str(len(fl)) +
                  " files, want exactly one")
         f = fl[0]
-        files.append(f)
-        rlocs.append(rlocation_path(ctx, f))
-    deploy_file = ctx.file.deploy_sh
-    deploy_rloc = rlocation_path(ctx, deploy_file)
-    input_lines = "".join(["  \"$(rlocation " + shell.quote(r) + ")\"\n" for r in rlocs])
-    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
+        rloc = rlocation_path(ctx, f)
+        for banned in ["\"", "\\", "\n"]:
+            if banned in rloc:
+                fail("bcr_check " + str(ctx.label) + ": rlocation '" + rloc +
+                     "' is not launcher-safe (quotes, backslashes, newlines)")
+        rlocs.append(rloc)
+    for value in [ctx.attr.module_name, ctx.attr.version]:
+        for banned in ["\"", "\\", "\n"]:
+            if banned in value:
+                fail("bcr_check " + str(ctx.label) + ": value '" + value +
+                     "' is not launcher-safe")
+    rloc_list = ", ".join(["\"" + r + "\"" for r in rlocs])
+    launcher = ctx.actions.declare_file(ctx.label.name + ".rs")
     ctx.actions.write(
         output = launcher,
-        content = """#!/usr/bin/env bash
-# Deploy launcher for `bcr_check`. Generated. Do not edit.
-# Resolves inputs via the standard `runfiles.bash` `rlocation`; wrapped
-# as `sh_binary` (see `bcr_check`).
-set -euo pipefail
-""" + RUNFILES_BASH_INIT + """if [[ "$#" -gt 0 ]]; then
-  echo "bcr: this deploy target takes no extra args; the submission is exactly the pinned inputs" >&2
-  exit 1
-fi
-DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
-MODULE=""" + shell.quote(ctx.attr.module_name) + """
-VERSION=""" + shell.quote(ctx.attr.version) + """
-INPUTS=(
-""" + input_lines + """)
-exec "${DEPLOY}" "${MODULE}" "${VERSION}" "${INPUTS[@]}"
+        content = """// Deploy launcher for `bcr_check`. Generated. Do not edit.
+// See: `docs/deploy/release-runbook.md` (BCR release path).
+fn run() -> i32 {
+    const MODULE: &str = \"""" + ctx.attr.module_name + """\";
+    const VERSION: &str = \"""" + ctx.attr.version + """\";
+    const INPUT_RLOCS: &[&str] = &[""" + rloc_list + """];
+    if std::env::args_os().len() > 1 {
+        eprintln!("bcr: this deploy target takes no extra args; the submission is exactly the pinned inputs");
+        return 1;
+    }
+    let dry = std::env::var("BCR_DRY_RUN").unwrap_or_default() == "1";
+    let approved = std::env::var("BCR_APPROVE").unwrap_or_default() == "1";
+    let runfiles = match runfiles::Runfiles::create() {
+        Ok(runfiles) => runfiles,
+        Err(error) => {
+            eprintln!("bcr: cannot load runfiles: {error}");
+            return 1;
+        }
+    };
+    let mut inputs = Vec::with_capacity(INPUT_RLOCS.len());
+    for rloc in INPUT_RLOCS {
+        match runfiles.rlocation(rloc) {
+            Some(path) => inputs.push(path.to_string_lossy().into_owned()),
+            None => {
+                eprintln!("bcr: runfile not found for '{rloc}'");
+                return 1;
+            }
+        }
+    }
+    match dx_release_tools::bcr_run(MODULE, VERSION, &inputs, dry, approved) {
+        Ok(text) => {
+            print!("{text}");
+            0
+        }
+        Err(diagnostic) => {
+            eprintln!("{diagnostic}");
+            1
+        }
+    }
+}
+fn main() {
+    std::process::exit(run());
+}
 """,
-        is_executable = True,
     )
     return [DefaultInfo(files = depset([launcher]))]
 
@@ -89,10 +120,6 @@ _bcr_launcher = rule(
         "inputs": attr.label_list(mandatory = True),
         "module_name": attr.string(mandatory = True),
         "version": attr.string(mandatory = True),
-        "deploy_sh": attr.label(
-            allow_single_file = True,
-            default = "//deploy/release:bcr_deploy.sh",
-        ),
     },
 )
 
@@ -100,14 +127,14 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     """Creates an owner-gated BCR shape-check deploy target.
 
     Creates `<name>_source.json` (BCR source template for the version),
-    `<name>_launcher` (generated launcher script via `runfiles.bash`
-    `rlocation` with `shell.quote`), `<name>_program` (`sh_binary`
-    wrapping the launcher with pinned `data` plus the runfiles library),
-    and `<name>` (the `dx_deployment`). Run with `BCR_DRY_RUN=1 bazel run
-    :<name>` to print the would-submit PR (what CI exercises, submits
-    nothing). A real submission needs an owner-approved SemVer version
-    plus explicit approval per the runbook; `0.0.0` fails submission by
-    construction."""
+    `<name>_launcher` (generated Rust launcher resolving inputs via the
+    Rust `runfiles` library), `<name>_program` (`rust_binary` wrapping
+    the launcher with pinned `data` plus the runfiles library), and
+    `<name>` (the `dx_deployment` with `profile`). Run with
+    `BCR_DRY_RUN=1 bazel run :<name>` to print the would-submit PR (what
+    CI exercises, submits nothing). A real submission needs an
+    owner-approved SemVer version plus explicit approval per the runbook;
+    `0.0.0` fails submission by construction."""
     src_err = bcr_source_error(module_name, version)
     if src_err != "":
         fail(src_err + " (in " + native.package_name() + ":" + name + ")")
@@ -133,11 +160,16 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
         version = version,
     )
 
-    sh_binary(
+    rust_binary(
         name = program_target,
         srcs = [":" + launcher_target],
-        data = all_inputs + ["//deploy/release:bcr_deploy.sh"],
-        deps = ["@rules_shell//shell/runfiles"],
+        crate_name = program_target.replace("-", "_"),
+        data = all_inputs,
+        edition = "2021",
+        deps = [
+            "//deploy/release:dx_release_tools",
+            "@rules_rust//rust/runfiles",
+        ],
     )
 
     dx_deployment(

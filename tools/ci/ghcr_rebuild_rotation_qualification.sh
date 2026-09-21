@@ -52,7 +52,7 @@ dockerfile=".devcontainer/Dockerfile.prebuilt"
 action=".github/actions/setup-bazelisk/action.yml"
 ghcr=".github/workflows/ghcr.yml"
 signing="deploy/release/signing.bzl"
-sign_deploy="deploy/release/sign_deploy.sh"
+sign_deploy="deploy/release/src/lib.rs"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" ]]; then
@@ -82,7 +82,7 @@ fi
 
 # Pins record the Cosign single source plus TUF trust root.
 if grep -q -F -e 'v2.4.1 checksum-verified fetch' "$pins" &&
-  grep -q -F -e 'single-sourced SIGNING_COSIGN_VERSION plus ghcr.yml plus sign_deploy.sh' "$pins" &&
+  grep -q -F -e 'single-sourced SIGNING_COSIGN_VERSION plus ghcr.yml plus Rust launch' "$pins" &&
   grep -q -F -e 'https://tuf-repo-cdn.sigstore.dev' "$pins" &&
   grep -q -F -e 'https://token.actions.githubusercontent.com' "$pins" &&
   grep -q -F -e 'application/vnd.dev.sigstore.bundle.v0.3+json' "$pins"; then
