@@ -646,7 +646,7 @@ Admission records a light inventory entry — minimal required core/framework in
 dispositions only, with effort evidence recorded as each tracked item lands. Remaining
 per-candidate mappings stay pending
 [additional-foundation qualification](product/support-matrix.md#additional-v1-foundations) as
-open work under issues #416-#420. Ownership: the sole repository
+delivered work under closed #416-#420 (successors closed #796-#800). Ownership: the sole repository
 maintainer owns every row until maintenance is explicitly delegated.
 
 The fixture corpus starts with pure-Rust scripts/default and opt-out

@@ -5,8 +5,8 @@
 The frozen `aspect_rules_lint` v2.8.0 tool list is the minimum first-release quality baseline,
 not a scope ceiling. Curated quality-tool expansion across languages is mandatory where upstream
 implementations or Bazel rules permit hermetic thin integration under
-[First-Release Admission](../product/scope.md#first-release-admission) (candidate review tracked
-in open work under issues #416-#420). This does not authorize building replacement
+[First-Release Admission](../product/scope.md#first-release-admission) (candidate review
+qualified seed-only under closed #416-#420; adapter delivery under closed #796-#800). This does not authorize building replacement
 language, toolchain, package-management, or framework stacks.
 
 Equivalent tool coverage is required for the first release, subject to explicit feasibility
@@ -76,7 +76,7 @@ Strict lint is an opt-in checked-in native config, not a default or hidden prese
 
 The planned initial curated Python defaults are Ruff, Ty, and pydoclint. Ruff
 and pydoclint run under lint and Ty runs under typecheck; Python source-audit selection is
-Ruff S (flake8-bandit) via the pinned Ruff 0.16.7 standalone artifact with S opt-in under issue #801
+Ruff S (flake8-bandit) via the pinned Ruff 0.16.7 standalone artifact with S opt-in under closed #801
 (successor to closed #613; Bandit excluded from v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md), curated audit stays empty with
 explicit disablement, with fixture evidence in
@@ -97,7 +97,7 @@ diagnostic-only.
 
 Framework-container quality integrations remain gated by the applicable
 [framework adapter contract](../generation/framework-adapters.md)
-(see open work under issue #510). A tool's presence in the frozen list or curated
+(see closed #510; adapter delivery closed #796-#800). A tool's presence in the frozen list or curated
 scope does not settle an exact framework parser, provider, region, or typecheck integration.
 
 Adapter architecture, result normalization, mutation behavior, acquisition, and

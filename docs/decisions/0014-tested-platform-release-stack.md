@@ -22,7 +22,7 @@ dependency cannot force one global graph on its consumers.
 
 This table is the single source for the v1 required-host set. All other
 documents link here instead of restating it. Exact pins, hosts, floors, SDK/CRT
-identities, and qualified routes remain owned by issues #410-#414 and issues #410-#414;
+identities, and qualified routes remain owned by closed #410-#414 (release evidence closed #803-#807, process closed #808);
 nothing below pins a version.
 
 | Platform | V1 status | Notes |

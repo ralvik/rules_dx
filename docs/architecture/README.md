@@ -155,7 +155,7 @@ hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
 | --- | --- | --- |
 | `//dx:generate` / `//dx:generate_check` | Same Rust-only Gazelle wiring (`//gazelle/rust:gazelle`, `mode=diff` only on the check twin, `dx/BUILD.bazel`); other languages via per-language `//gazelle/<lang>:gazelle` until canonical composition. See [`dx generate`](../cli/commands/generate.md). | Accepted (Rust-only provisional; repo-wide promise in [scope](../product/scope.md) stays durable) |
 | `//dx:env` | Alias to `//cli/env:env` installer binary (`dx/BUILD.bazel`) | Accepted |
-| `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is the `dx_codegen_plan_aspect` plus `dx_codegen_plans` output group (frozen), effective roots on the frozen `//...` baseline (issue #506) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
+| `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is the `dx_codegen_plan_aspect` plus `dx_codegen_plans` output group (frozen), effective roots on the frozen `//...` baseline (closed #506; successors closed #787 and #788) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
 | `//dx:config` | Empty filegroup default for the `//config:workspace` label flag, failing fast until a consumer binds its typed workspace policy; typed per-family sections frozen in `//quality:policy.bzl` (the issue tracker) and `//quality:sources.bzl` (the issue tracker) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
 | `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
 | `real_source_target(name="corpus_*")` splits | Per content type per package, Gazelle-owned via `dx generate`, shared `tags = ["corpus"]` (issue #15) | Accepted |
@@ -246,7 +246,7 @@ implementations demonstrate real reuse. This sequence preserves the accepted fou
 while avoiding speculative cross-language APIs.
 
 The delivery order is tracked in [roadmap](../roadmap.md) and
-open work under issues #470-#505. Foundation constraints are recorded in
+delivered work under closed #470-#505. Foundation constraints are recorded in
 [ADR 0010](../decisions/0010-python-foundation.md),
 [ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md), and
 [ADR 0015](../decisions/0015-first-party-gazelle-extensions.md).
@@ -258,4 +258,4 @@ Bazel selection, declared actions, normalized results, and optional mutation,
 without exposing unstable subprocess command lines as API. CI checks run
 directly through Bazel; ownership is inspectable through query interfaces.
 Command, output, and report behavior is authoritative under [CLI](../cli/);
-quality evidence under [Quality](../quality/). Open work lives in [roadmap](../roadmap.md) and open work under issues #470-#512.
+quality evidence under [Quality](../quality/). Open work lives in [roadmap](../roadmap.md) and delivered work under closed #470-#512.

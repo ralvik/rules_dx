@@ -46,7 +46,7 @@ per-host successor. The CI host matrix across these hosts is pinned by
 
 Per-required-host qualification state (V1 status from ADR 0014; evidence
 dimensions per closed #298; exact pins, hosts, floors, and SDK/CRT identities
-remain owned by issues #410-#414 and are not pinned here):
+remain owned by closed #410-#414 (release evidence closed #803-#807, process closed #808) and are not pinned here):
 
 | Host | V1 status | Qualification evidence | Current state |
 | --- | --- | --- | --- |
@@ -85,7 +85,7 @@ external-consumer, or trusted-builder release evidence; see
 under [first-release admission](scope.md#first-release-admission):
 admit qualifying capabilities, or record an approved disposition. Additional foundations may be
 deferred when completion needs substantial infrastructure; required quality tools are independent.
-Remaining upstream mappings are tracked in open work under #796-#800 (successors to closed #416-#420) with foundation mappings qualified seed-only under closed #476-#489.
+Remaining upstream mappings are tracked in delivered work under closed #796-#800 (successors to closed #416-#420) with foundation mappings qualified seed-only under closed #476-#489.
 `Not planned` records an existing capability gap reassessed during delivery, not permission to defer a
 qualifying integration. `Deferred beyond v1` records an evidence-backed deferral of an additional
 foundation under [first-release admission](scope.md#first-release-admission); the row's quality-tool
@@ -101,8 +101,8 @@ live execution (ecosystem resolvers, advisory matching, secrets wiring). A sourc
 cell of `Not planned` or `Planned: audit tools (open work)` is consistent with a `Delivered`
 ecosystem `Audit/update` cell: Rust, JavaScript, TypeScript, Vue, Svelte, Astro, and MDX
 source audit is `Not planned` while ecosystem audit/update is delivered repo-wide, and Python
-source-audit tooling is qualified seed-only under issue #801 (successor to closed #613; Ruff S selected, Bandit excluded) while ecosystem audit/update wiring is delivered.
-Python source-audit tooling is tracked under issue #801 with fixture evidence in
+source-audit tooling is qualified seed-only under closed #801 (successor to closed #613; Ruff S selected, Bandit excluded) while ecosystem audit/update wiring is delivered.
+Python source-audit tooling is tracked under closed #801 with fixture evidence in
 `python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`;
 closed #512 stays taxonomy-only and owns no Python audit tool.
 Ecosystem dependency-vulnerability audit
@@ -116,7 +116,7 @@ They are not eligible for the additional-foundation deferral policy.
 | Language | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Format | Lint | Typecheck | Audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Rust | Planned | Planned | Planned: Cargo lock | Planned | Planned: native tools | Planned: rust-analyzer/flycheck | Planned | Planned: rustfmt | Planned: Clippy | Planned: compiler diagnostics | Not planned |
-| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under issue #801 with Ruff S selected via `python/tests/fixtures/python_audit/pins.bzl` with `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification`; Ruff S via pinned Ruff 0.16.7 standalone artifact with S opt-in, curated audit stays empty with explicit disablement, Bandit excluded; platform plus consumer plus release #808 owned gap) |
+| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under closed #801 with Ruff S selected via `python/tests/fixtures/python_audit/pins.bzl` with `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification`; Ruff S via pinned Ruff 0.16.7 standalone artifact with S opt-in, curated audit stays empty with explicit disablement, Bandit excluded; platform plus consumer plus release #808 owned gap) |
 | JavaScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: Node/modules | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | N/A | Not planned |
 | TypeScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: TypeScript/Node | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | Planned: `tsc` | Not planned |
 | Vue | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Not planned |
@@ -129,7 +129,7 @@ IDE, coverage, platform, and external-consumer evidence passes. Quality is indep
 and lazy before foundation completion, but `Supported` promotion occurs only during release
 qualification. Generic framework cells intentionally do not select exact tools,
 providers, or region mappings; those choices are tracked in
-open work under #796-#800 (successors to closed #510 and closed #416-#420).
+delivered work under closed #796-#800 (successors to closed #510 and closed #416-#420).
 
 ## Minimal Required Core
 
@@ -160,11 +160,11 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
 | Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings qualified seed-only under #511 | Qualified (`bazel run //tools/ci:result_contract_qualification`, `quality/tests/fixtures/result_contract/pins.bzl` with `result_contract.expected`, bare contract rejected) |
-| Quality family taxonomy | Frozen class-to-family taxonomy plus curated execution | Taxonomy execution qualified seed-only under closed #512 with promotion gaps linked under #802 | Qualified (`bazel run //tools/ci:quality_taxonomy_qualification`, `quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected`, taxonomy doc only rejected; deferred delivery under #796 plus #797 plus #798 plus #799 plus #800 with remaining owned under ADR 0019, digest policy plus platform plus consumer plus release linkage under #802, promotion gaps linked under #802) |
+| Quality family taxonomy | Frozen class-to-family taxonomy plus curated execution | Taxonomy execution qualified seed-only under closed #512 with promotion gaps linked under closed #802 | Qualified (`bazel run //tools/ci:quality_taxonomy_qualification`, `quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected`, taxonomy doc only rejected; deferred delivery under #796 plus #797 plus #798 plus #799 plus #800 with remaining owned under ADR 0019, digest policy plus platform plus consumer plus release linkage under #802, promotion gaps linked under #802) |
 | Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | Pins, hosts, floors qualified seed-only under closed #410-#414 and closed #500; release evidence landed for every required host under closed #803 plus #804 plus #805 plus #807 with best-effort macOS x86_64 exempt under closed #806 moot (process #808) |
 | Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | Enforced by CI |
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
-| Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs plus platform plus consumer plus release | Codegen platform plus consumer plus release evidence qualified under #787 (`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`; per-required-host symlink-only plus refusal, adopt-consumer, release checklist linkage; #751 plus #752 plus #753 stay open and out of scope for #787 plus #788); pairs evolution onboarding qualified under #788 with checklist plus per-pair fixtures plus qualification coverage (successors to closed #506); audit/update delivered |
+| Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs plus platform plus consumer plus release | Codegen platform plus consumer plus release evidence qualified under closed #787 (`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`; per-required-host symlink-only plus refusal, adopt-consumer, release checklist linkage; closed #751 plus closed #752 plus closed #753 delivered and out of scope for closed #787 plus closed #788); pairs evolution onboarding qualified under closed #788 with checklist plus per-pair fixtures plus qualification coverage (successors to closed #506); audit/update delivered |
 
 File-family quality defaults are qualified seed-only under #489 with modfmt plus gherkin/xml
 resolved seed-only under #582 (`bazel run //tools/ci:file_family_defaults_qualification` with
@@ -174,7 +174,7 @@ cue v0.17.1 plus jsonnetfmt v0.22.0 plus pkl 0.32.1 plus terraform v1.16.1 plus 
 @prettier/plugin-xml 3.4.2 plus modfmt v0.4.0 from github.com/joshdk/modfmt plus yamlfmt v0.21.0 plus yamllint
 1.38.0 plus keep-sorted v0.10.0; whole-file rewrite versus check-only per tool with no auto-supplied preset,
 suffix inference rejected with registry-owned applicability, beyond-default switches rejected;
-file-family adapters delivered under #800 (successor to closed #420); `protobuf`/`qml` adapters delivered under #799 (successor to closed #419),
+file-family adapters delivered under closed #800 (successor to closed #420); `protobuf`/`qml` adapters delivered under closed #799 (successor to closed #419),
 never double-claimed; platform plus consumer plus release evidence stays owned gap; no Supported claim).
 
 Structured quality defaults are qualified seed-only under issue #488 (`bazel run //tools/ci:structured_defaults_qualification` with
@@ -188,7 +188,7 @@ qualified seed-only (#473); CXX graph identity is pinned
 seed-only (#474); exact-target discovery is qualified seed-only
 (#475); the one remaining native
 gap below stays owned under #472; Vue/Svelte/Astro/MDX
-adapter mappings plus composition evidence stay open under #796-#800 (successors to closed #510) with fixture evidence
+adapter mappings plus composition evidence are delivered under closed #796-#800 (successors to closed #510) with fixture evidence
 qualified seed-only under closed #510
 (`quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`
 via `bazel run //tools/ci:layer2_opens_qualification`, adapter-less as pass
@@ -240,7 +240,7 @@ No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
 delivery of this inventory. Admitted additional foundations are tracked in
-open work under #796-#800 (successors to closed #416-#420) with foundation mappings
+delivered work under closed #796-#800 (successors to closed #416-#420) with foundation mappings
 qualified seed-only under closed #476-#489;
 remaining feasibility detail stays in the
 [feasibility review](#initial-feasibility-review) for qualification.
@@ -274,13 +274,13 @@ an active Bzlmod-published upstream ruleset with a concrete dependency-lock
 and toolchain story. Their quality integration is v1 scope with the defaults in
 the [disposition table](#deferred-beyond-v1);
 exact versions, rule sets, and adapter mappings are tracked in
-qualified seed-only under closed #485-#489 with adapter delivery open under #796-#800 (successors to closed #416-#420). The managed Scala
+qualified seed-only under closed #485-#489 with adapter delivery delivered under closed #796-#800 (successors to closed #416-#420). The managed Scala
 route decision was recorded 2026-09-13.
 Unresolved cells block qualification; moving an admitted foundation out later
 requires a new evidence-backed decision.
 
-Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) stay open
-under #796-#800 (successors to closed #416-#420) with foundation mappings qualified
+Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) are delivered
+under closed #796-#800 (successors to closed #416-#420) with foundation mappings qualified
 seed-only under closed #476-#484 plus closed #485-#488: per-foundation exact upstream versions, rulesets,
 adapter mappings, lock wiring, test runners, and quality tools remain qualification work. Qualified mappings
 are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification in
@@ -298,13 +298,13 @@ qualified seed-only under #479, ScalaTest qualified seed-only under issue
 #480, plain `cc` executables, plain `csharp`/`fsharp` hello executables) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
 declared-dependency usage with category, exception, and obsolete checks) is qualified for
-all admitted languages in `tools/depcheck/` (#22; remaining opens under #796-#800, successors to closed #510)
+all admitted languages in `tools/depcheck/` (closed #22; remaining composition plus Layer-2 cells delivered under closed #796-#800, successors to closed #510)
 with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
 (quality adapters qualified under closed #307 with
 deferred implementation
 owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
-stay owned under issues #476-#484 plus #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
+stay owned under closed #476-#484 plus closed #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
 qualified seed-only under #476 via `bazel run //tools/ci:junit_qualification`;
 xUnit v3 4.0.0 qualified seed-only under #477 via
 `bazel run //tools/ci:xunit_qualification`;
@@ -386,7 +386,7 @@ Every cell in the table above stays `Planned` (or `Deferred beyond v1` / `Not pl
 where marked); none is `Seed-host-delivered` or higher, even where the verification
 matrix shows `Delivered` for the capability: verification `Delivered` is seed-host
 layer evidence, not support-matrix promotion. Admitted `Format`/`Lint` cells map to `Layer-2 matrix Open (adapter-less)` (no adapter
-claims them yet; JVM delivered under #796, Native Layer-2 delivered under #798, and Scala + .NET delivered under #797), `Environment`/`IDE` dimensions map to `Env/codegen Open`,
+claims them yet; JVM delivered under closed #796, Native Layer-2 delivered under closed #798, and Scala + .NET delivered under closed #797), `Environment`/`IDE` dimensions map to `Env/codegen Open`,
 and per-language source audit lumped in the third column is distinct from ecosystem
 `Audit/update Delivered`.
 
@@ -405,9 +405,9 @@ choices are owned by the [native qualification plan](../native-toolchains.md). B
   module dependencies, and generation. The approved narrow Go exception preserves package-level
   tests and declared platform/build constraints under the
   [generation contract](../generation/common.md#ownership-and-naming); exact mappings remain open
-  (open work under #798, successor to closed #510).
+  (delivered under closed #798, successor to closed #510).
   Source-only module identity, strict dependency resolution, and cgo/race scope are resolved
-  seed-only under #789 (`go/tests/fixtures/cgo/` plus `env/tests/fixtures/env_plugins_cgo/`
+  seed-only under closed #789 (`go/tests/fixtures/cgo/` plus `env/tests/fixtures/env_plugins_cgo/`
   via `bazel run //tools/ci:env_plugins_cgo_qualification`); exact mappings remain open
   under #798.
 - The documented [Go editor driver](https://github.com/bazel-contrib/rules_go/blob/v0.63.0/docs/editors.md)
@@ -418,7 +418,7 @@ choices are owned by the [native qualification plan](../native-toolchains.md). B
    qualification; upstream explicitly does not guarantee cgo completion (pure-Go boundary plus
    explicit cgo exception pinned by `env/tests/fixtures/env_plugins_cgo/` via
    `bazel run //tools/ci:env_plugins_cgo_qualification`, closed #587; cgo scope resolved
-   seed-only under #789 with `go/tests/fixtures/cgo/`).
+   seed-only under closed #789 with `go/tests/fixtures/cgo/`).
 - [rules_cc](https://github.com/bazelbuild/rules_cc) supplies build rules, not a hermetic compiler
   distribution. [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/tree/v0.8.19)
   is the inspected release of the preferred Linux/macOS backend. Its released Windows route uses
@@ -496,4 +496,4 @@ The following are source/documentation observations; no builds were executed:
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Platform hosts: #410, #411, #412, #413, #414. Release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot, process #808. Foundation mappings: #470-#489, #796-#800. See the roadmap for the full list.
+Tracking lives in the [roadmap](../roadmap.md). Platform hosts: closed #410, closed #411, closed #412, closed #413, closed #414. Release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot, process closed #808. Foundation mappings: closed #470-#489, closed #796-#800. See the roadmap for the full list.

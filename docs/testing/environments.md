@@ -125,9 +125,9 @@ Environment configuration and public API conformance requirements are maintained
 [Developer Environments](../environments/environment.md). Deferred records
 (Windows fallback, standalone, signing/trust; no third-party plugin model) plus
 fixture evidence with platform plus consumer plus release evidence qualified under
-#787 (per-required-host symlink-only plus refusal, adopt-consumer, release checklist
-linkage) plus admitted-pairs evolution onboarding qualified under #788 (checklist
+closed #787 (per-required-host symlink-only plus refusal, adopt-consumer, release checklist
+linkage) plus admitted-pairs evolution onboarding qualified under closed #788 (checklist
 plus per-pair fixtures plus qualification coverage for each admitted pair;
-#751 plus #752 plus #753 stay open and out of scope for #787 plus #788) are
+closed #751 plus closed #752 plus closed #753 delivered and out of scope for closed #787 plus closed #788) are
 qualified seed-only by `bazel run //tools/ci:env_codegen_qualification`
 (closed #506; successors #787, #788).

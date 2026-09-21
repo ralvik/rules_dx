@@ -228,9 +228,9 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   adapter only: it never runs as a bare file invocation and requires the authoritative
   `typescript_project` context (`TsConfigInfo`). Bare-file use would lose tsconfig and declaration
   context. Upstream mapping evidence is the `typescript_project` typecheck test target.
-- **JVM cohort (#796, successor to closed #416, delivered):**
+- **JVM cohort (closed #796, successor to closed #416, delivered):**
   complete-upstream-artifact plus shared-JDK route for google-java-format, Checkstyle, PMD,
-  SpotBugs, ktfmt, ktlint, with detekt pending and Error Prone as itemized open work under #796 (successor to closed #416).
+  SpotBugs, ktfmt, ktlint, with detekt plus Error Prone itemized under closed #796 (successor to closed #416).
   Research notes (unproven mappings): PMD and Checkstyle emit SARIF via `-f sarif`, SpotBugs
   via `-sarif`, ktlint via `--reporter=sarif`, detekt via its SARIF report; Checkstyle XML
    (`-f xml`) plus ktlint/detekt Checkstyle XML stay fallback shapes; Error Prone has no
@@ -359,7 +359,7 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   release-assembled Ruby closure (exceptional bundle, consumer
   download-verify-extract-execute only), PSScriptAnalyzer via
   exact-module plus portable `pwsh` runtime (console-parse binding,
-  library-API stays open). `protobuf`/`qml` stay owned by #799
+  library-API stays tracked). `protobuf`/`qml` stay owned by closed #799
   (successor to closed #419) and are cross-linked here, never
   double-claimed.
   Research notes (unproven mappings): RuboCop `--format json` with
@@ -410,7 +410,7 @@ path is check-only. There is no dx-side Clippy config: policy rides the
 `--@rules_rust//rust/settings:clippy.toml=<label>` through to select it. The
 dogfood proof is `dx lint --check //cli/qualification:dx_qual`, whose result carries
 `clippy::too_many_arguments` where `//rust/tests/fixtures/hello:hello_lib` stays silent.
-Dependency context (`--extern`) stays open under issue #470.
+Dependency context (`--extern`) stays tracked under closed #470.
 
 Rust typechecking is upstream-delegated: `dx typecheck` stages the
 `real_rust_typecheck_aspect`, which reads the authoritative `.rustc-output`
@@ -518,7 +518,7 @@ the common contract or needs a new public API.
 
 ## Qualification
 
-Family taxonomy execution with fixture evidence qualified seed-only under issue #512
+Family taxonomy execution with fixture evidence qualified seed-only under closed #512
 (`quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected` via
 `bazel run //tools/ci:quality_taxonomy_qualification`, taxonomy doc only rejected;
 deferred delivery linked under #796 plus #797 plus #798 plus #799 plus #800 with promotion

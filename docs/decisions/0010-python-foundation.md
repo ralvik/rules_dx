@@ -106,7 +106,7 @@ The curated Python quality direction is Ruff for formatting and lint, pydoclint 
 lint, and Ty for type checking. Ruff is the sole default Python
 formatter. Bandit was excluded from v1 by
 [ADR 0019](0019-first-release-additional-foundations.md); Python
-source-audit selection is Ruff S via the pinned Ruff standalone artifact with S opt-in, owned by issue #801
+source-audit selection is Ruff S via the pinned Ruff standalone artifact with S opt-in, owned by closed #801
 (successor to closed #613) with fixture evidence in
 `python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`.
 Capability ownership, source selection, action behavior, fix semantics, and default or

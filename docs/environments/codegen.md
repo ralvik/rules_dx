@@ -44,9 +44,9 @@ The physical root-selection mechanism is frozen to the `//...` baseline
 [ADR 0022](../decisions/0022-no-benchmarking.md). The admitted
 generator/language pairs stay frozen under closed #506
 (`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`; evolution onboarding
-qualified under #788, see
+qualified under closed #788, see
 [Admitted-Pairs Evolution and New Generator Onboarding](#admitted-pairs-evolution-and-new-generator-onboarding)). Concurrency,
-interruption, remote materialization, and reuse certification are scoped under #753 as
+interruption, remote materialization, and reuse certification are scoped under closed #753 as
 seed-host-only with documented non-goals (see Scaling Model below).
 
 Repository-wide selection includes every registered production, test, example, and
@@ -364,7 +364,7 @@ Codegen deferred records with fixture evidence qualified seed-only under closed 
 (`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`;
 admitted pairs, collector contracts, BEP output groups, projection, roots, and cold-warm with
 `env_codegen.expected` plus `roots_bep.txt`; platform plus consumer plus release evidence qualified
-under #787 with per-required-host symlink-only plus refusal, adopt-consumer, and release checklist
-linkage; admitted-pairs evolution onboarding qualified under #788 with checklist plus per-pair
-fixtures plus qualification coverage for each admitted pair; #751 plus #752 plus #753 stay open
-and out of scope for #787 plus #788; no Supported claim).
+under closed #787 with per-required-host symlink-only plus refusal, adopt-consumer, and release checklist
+linkage; admitted-pairs evolution onboarding qualified under closed #788 with checklist plus per-pair
+fixtures plus qualification coverage for each admitted pair; closed #751 plus closed #752 plus closed #753 delivered
+and out of scope for closed #787 plus closed #788; no Supported claim).

@@ -114,7 +114,7 @@ directory after `--` to choose where the staging lands (default:
 `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The deploy program is a
 `py_binary` on the managed Python 3.12 toolchain only, with pinned `data`
 plus the Python runfiles library. Draft-only by construction
-(open work under issue #458): `draft`
+(closed #458): `draft`
 must stay `True`, `--verify-tag` means the program never creates or
 pushes tags itself, and the default tag is the `v0.0.0-dryrun`
 placeholder. `GH_RELEASE_DRY_RUN=1` prints the dry-run header plus the

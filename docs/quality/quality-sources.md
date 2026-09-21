@@ -323,7 +323,7 @@ other systems.
 
 ## Qualification
 
-Family taxonomy execution with fixture evidence qualified seed-only under issue #512
+Family taxonomy execution with fixture evidence qualified seed-only under closed #512
 (`quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected` via
 `bazel run //tools/ci:quality_taxonomy_qualification`, taxonomy doc only rejected;
 deferred delivery linked under #796 plus #797 plus #798 plus #799 plus #800 with promotion

@@ -56,7 +56,7 @@ class by design — never silently under the standard dogfood gates.
   nested-Bazel plus non-customer harness rejected; no Supported claim).
 - **Dependency checks**: required-core plus admitted lockfile-consistency and
   declared-dependency usage fixtures delivered in `tools/depcheck/`
-   (issue #22; remaining opens under #796-#800, successors to closed
+   (closed #22; remaining composition plus Layer-2 cells delivered under closed #796-#800, successors to closed
    #510); framework-composition depcheck stays with the JS/TS pnpm route.
 - **Audit/update live execution**: `dx update` resolver backends per set with independent-set
   continuation and per-set reporting delivered (issue #19); `dx audit` auditor wiring, advisory
@@ -88,11 +88,11 @@ class by design — never silently under the standard dogfood gates.
   stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with WP1-WP5 plus
   `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected`
   plus `roots_bep.txt`; platform plus consumer plus release evidence qualified
-  under #787 with per-required-host symlink-only plus refusal, adopt-consumer,
+  under closed #787 with per-required-host symlink-only plus refusal, adopt-consumer,
   and release checklist linkage; admitted-pairs evolution onboarding qualified
-  under #788 with checklist plus per-pair fixtures plus qualification coverage
-  for each admitted pair; #751 plus #752 plus #753 stay open and out of
-  scope for #787 plus #788; no Supported claim).
+  under closed #788 with checklist plus per-pair fixtures plus qualification coverage
+  for each admitted pair; closed #751 plus closed #752 plus closed #753 delivered and out of
+  scope for closed #787 plus closed #788; no Supported claim).
 - **Non-dogfed execution plan**: the cohorts that never run under the
   standard dogfood gates each have an explicit path, qualified seed-only
   under #508 (`bazel run //tools/ci:non_dogfed_qualification` with
