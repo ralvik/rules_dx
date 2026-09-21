@@ -136,7 +136,12 @@ pub fn check_markdown(
                 }) => {
                     // Email autolinks are wont-fix out of scope:
                     // structure only, so ignored, never findings or remotes.
+                    // Their span is still recorded so the relative-autolink
+                    // fallback skips them via overlap (it no longer filters
+                    // on `@`, so `@` in relative paths still resolves
+                    // fail-closed).
                     if link_type == LinkType::Email {
+                        link_spans.push(range);
                         continue;
                     }
                     let at = line_of(&starts, range.start);

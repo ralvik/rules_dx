@@ -191,6 +191,22 @@ fn email_autolink_is_out_of_scope() {
 }
 
 #[test]
+fn relative_autolink_with_at_in_path_fails_closed_when_missing() {
+    // `@` with a `/` after it cannot be an email autolink (domain never
+    // holds `/`): undeclared stays a finding.
+    let text = "# T\n\nSee <./dir@name/file.md>.\n";
+    let outcome = check_markdown("a.md", text, &siblings(&[]));
+    assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingFileTarget)]);
+}
+
+#[test]
+fn relative_autolink_with_at_in_path_resolves_when_declared() {
+    let text = "# T\n\nSee <./dir@name/file.md>.\n";
+    let outcome = check_markdown("a.md", text, &siblings(&[("dir@name/file.md", "# O\n")]));
+    assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
+}
+
+#[test]
 fn links_inside_fences_and_code_spans_are_ignored() {
     let text = "# T\n\n```text\n[gone](gone.md)\n```\n\n`[gone](gone.md)`\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
