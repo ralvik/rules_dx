@@ -108,7 +108,6 @@ fi
 # class names an owner + route (mirrors the parity_tests.bzl unit gate
 # so CI fails here too if the manifest rots).
 if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
-  grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'REAL_CLASS_TO_FAMILY = {' "$adapters" &&
   grep -q -F -e 'REAL_ADAPTERS = {' "$adapters"; then
   ok
@@ -122,12 +121,16 @@ fi
 # classes with real subjects are java, javascript, json, jsx, kotlin,
 # markdown, python, python_stub, rust, starlark, toml, tsx, typescript;
 # python_stub rides generated .pyi matrix cases; scala/csharp/fsharp ride
-# generated plus delegated matrix cases (issues #796/#797). The twelve
-# native-config tools are biome, buildifier, checkstyle, csharpier, eslint,
-# fsharplint, ruff, rustfmt, scalafix, scalafmt, taplo, vale; the other
-# sixteen are explicitly config-free, upstream-delegated, target-coupled, or
-# check-only (see //tools/ci:quality_adapters_parity for the full
-# twenty-eight-tool parser/matrix plus artifact plus packaging evidence).
+# generated plus delegated matrix cases (issue #797); java/kotlin ride JVM
+# matrix cells (issue #796); c/cpp/go ride native matrix cells (issue #798)
+# with generated plus delegated evidence (see quality_adapters_parity). The
+# sixteen native-config tools are
+# biome, buildifier, checkstyle, clang_format, clang_tidy, cppcheck,
+# csharpier, eslint, fsharplint, ruff, rustfmt, scalafix, scalafmt,
+# staticcheck, taplo, vale; the other nineteen are explicitly config-free,
+# upstream-delegated, target-coupled, or check-only (see
+# //tools/ci:quality_adapters_parity for the full thirty-five-tool
+# parser/matrix plus artifact plus packaging evidence).
 dx_mkscratch scratch
 evidence_ok=1
 for class in rust python markdown starlark toml javascript typescript json jsx tsx java kotlin; do
@@ -140,7 +143,7 @@ if ! grep -rq -F -e "python_stub" quality/testdata/runner_matrix_cases.bzl quali
   echo "FAIL: no matrix evidence for adapter-backed class python_stub" >&2
   evidence_ok=0
 fi
-for tool in ruff biome rustfmt buildifier taplo vale eslint checkstyle scalafmt scalafix csharpier fsharplint; do
+for tool in ruff biome rustfmt buildifier taplo vale eslint checkstyle scalafmt scalafix csharpier fsharplint clang_format clang_tidy cppcheck staticcheck; do
   if ! grep -rq -F -e "$tool" quality/native_config.bzl quality/native_config_tests.bzl quality/testdata/BUILD.bazel; then
     echo "FAIL: no native-config binding for adapter-backed tool $tool" >&2
     evidence_ok=0

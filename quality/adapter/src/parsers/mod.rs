@@ -160,17 +160,49 @@
 //!   with single schema plus version; single-SARIF and merged-run rejected.
 //! * FSharpLint library NDJSON: one JSON record per line with rule plus
 //!   full range; console-parse rejected, exit 0 only, check-only.
+//! * clang-format check: stdout unified diff with `--- a/<path>` headers;
+//!   exit 0 clean, exit 1 dirty with one `1:1` finding per header.
+//! * `gofumpt -d`: stdout unified diff with `--- a/<path>` headers;
+//!   exit 0 with empty output clean, exit 0 with diff dirty with one
+//!   `1:1` finding per header (like `gofmt -d`); any other exit is a
+//!   grammar mismatch.
+//! * clang-tidy text diagnostics on stderr: one
+//!   `<path>:<line>:<col>: <warning|error>: <message> [<check>]` line
+//!   per finding; the trailing `[check]` names the rule. Exit 0 clean,
+//!   exit 1 dirty, check-only.
+//! * cppcheck `--xml --xml-version=2` on stderr: `<error id severity
+//!   msg>` elements with a first `<location file line column>` each;
+//!   severity `error` maps onto error, `warning`/`style`/`performance`/
+//!   `portability` onto warning, `information` onto info. Exit 0 with no
+//!   `<error ` elements clean, exit 1 dirty, check-only.
+//! * staticcheck `-f json`: stdout JSON array, one object per finding
+//!   (`code`, `severity`, `location:{file,line,column}`, optional `end`,
+//!   `message`). A missing `end` is a point range. Clean is `[]` on
+//!   exit 0; findings exit 1, check-only.
+//! * `go vet` text diagnostics on stderr: one `<path>:<line>:<col>:
+//!   <message>` line per finding (split from the left because messages
+//!   contain colons); every diagnostic is a warning. Exit 0 clean,
+//!   exit 1 dirty, check-only.
+//! * errcheck text diagnostics on stdout: one `<path>:<line>:<col>:
+//!   <message>` line per finding; every diagnostic is a warning. Exit 0
+//!   clean, exit 1 dirty, check-only.
 
 pub mod biome;
 pub mod buildifier;
 pub mod checkstyle;
+pub mod clang_format;
+pub mod clang_tidy;
+pub mod cppcheck;
 pub mod csharpier;
+pub mod errcheck;
 pub mod error_prone;
 pub mod eslint;
 pub mod fantomas;
 pub mod flake8;
 pub mod fsharplint;
+pub mod gofumpt;
 pub mod google_java_format;
+pub mod govet;
 pub mod ktfmt;
 pub mod ktlint;
 pub mod markdown;
@@ -186,6 +218,7 @@ pub mod sarif;
 pub mod scalafix;
 pub mod scalafmt;
 pub mod spotbugs;
+pub mod staticcheck;
 pub mod taplo;
 pub mod tsc;
 pub mod ty;
@@ -194,13 +227,19 @@ pub mod vale;
 pub use biome::{parse_biome_format, parse_biome_lint};
 pub use buildifier::parse_buildifier;
 pub use checkstyle::parse_checkstyle;
+pub use clang_format::parse_clang_format;
+pub use clang_tidy::parse_clang_tidy;
+pub use cppcheck::parse_cppcheck;
 pub use csharpier::parse_csharpier;
+pub use errcheck::parse_errcheck;
 pub use error_prone::parse_error_prone;
 pub use eslint::parse_eslint;
 pub use fantomas::parse_fantomas;
 pub use flake8::parse_flake8;
 pub use fsharplint::parse_fsharplint;
+pub use gofumpt::parse_gofumpt;
 pub use google_java_format::parse_google_java_format;
+pub use govet::parse_govet;
 pub use ktfmt::parse_ktfmt;
 pub use ktlint::parse_ktlint;
 pub use markdown::parse_markdown_findings;
@@ -215,6 +254,7 @@ pub use rustfmt::parse_rustfmt;
 pub use scalafix::parse_scalafix;
 pub use scalafmt::parse_scalafmt;
 pub use spotbugs::parse_spotbugs;
+pub use staticcheck::parse_staticcheck;
 pub use taplo::{parse_taplo_format_check, parse_taplo_lint};
 pub use tsc::parse_tsc;
 pub use ty::parse_ty;

@@ -16,10 +16,11 @@ Out of scope by design: `tsc` typechecks `typescript`/`tsx` but is
 target-coupled and never runs as a bare backend invocation, so it has no
 matrix cell; `spotbugs` lints `java` but is target-coupled (needs
 `JavaInfo` classes, dropped for provider-less fixtures), so it has no
-matrix cell; adapter-less classes (`cc`, `go`, …) have
-no backing tool and no cells. Scala plus C# plus F# cells below are
-opt-in adapters delivered under #797 (successor to closed #417), and
-Java plus Kotlin cells are delivered under #796 (successor to closed #416).
+matrix cell. Scala plus C# plus F# cells below are opt-in adapters
+delivered under #797 (successor to closed #417), Java plus Kotlin cells
+are opt-in adapters delivered under #796 (successor to closed #416), and
+C plus C++ plus Go cells are opt-in adapters delivered under #798
+(successor to closed #418).
 
 Crate edition (issue #468): the two `edition_*` cells above pin the
 `--tool-edition` flow over the real toolchain rustfmt. The 2015 cell stays
@@ -136,16 +137,39 @@ so a single-edition rustfmt stays rejected.
 | `matrix_fsharp_format_pass` / `matrix_fsharp_format_fail` | format (fantomas) | generated `matrix/fantomas_clean.fs` / `matrix/fantomas_dirty.fs` |
 | `matrix_fsharp_lint_pass` / `matrix_fsharp_lint_fail` | lint (fsharplint) | generated `matrix/fsharplint_clean.fs` / recorded library NDJSON |
 
+## C (`c`: clang-format format, clang-tidy lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_c_format_pass` / `matrix_c_format_fail` | format (clang-format) | generated `matrix/clang_format_clean.c` / `matrix/clang_format_dirty.c` |
+| `matrix_c_lint_pass` / `matrix_c_lint_fail` | lint (clang-tidy) | generated `matrix/clang_tidy_clean.c` / recorded text diagnostics |
+
+## C++ (`cpp`: clang-format format, cppcheck lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_cpp_format_pass` / `matrix_cpp_format_fail` | format (clang-format) | generated `matrix/clang_format_clean.cpp` / `matrix/clang_format_dirty.cpp` |
+| `matrix_cpp_lint_pass` / `matrix_cpp_lint_fail` | lint (cppcheck) | generated `matrix/cppcheck_clean.c` / recorded XML diagnostics |
+
+## Go (`go`: gofumpt format, staticcheck/govet/errcheck lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_go_format_pass` / `matrix_go_format_fail` | format (gofumpt) | generated `matrix/gofumpt_clean.go` / `matrix/gofumpt_dirty.go` |
+| `matrix_go_staticcheck_pass` / `matrix_go_staticcheck_fail` | lint (staticcheck) | generated `matrix/staticcheck_clean.go` / recorded JSON diagnostics |
+| `matrix_go_govet_pass` / `matrix_go_govet_fail` | lint (govet) | generated `matrix/govet_clean.go` / recorded text diagnostics |
+| `matrix_go_errcheck_pass` / `matrix_go_errcheck_fail` | lint (errcheck) | generated `matrix/errcheck_clean.go` / recorded text diagnostics |
+
 ## Parser samples (issue #465)
 
 Every adapter-backed tool keeps a parser with pass (clean) plus fail (dirty)
 samples exercised as unit tests under `quality/adapter/src/parsers/` and pinned by
 `bazel run //tools/ci:parser_sample_qualification`: biome lint plus format,
-buildifier, checkstyle, clippy plus rustc via the shared rust diagnostics, csharpier,
-eslint, fantomas, flake8, fsharplint, google-java-format, ktfmt, ktlint,
+buildifier, checkstyle, clang_format, clang_tidy, clippy plus rustc via the shared rust diagnostics, cppcheck,
+csharpier, errcheck, eslint, fantomas, flake8, fsharplint, gofumpt, google-java-format, govet, ktfmt, ktlint,
 markdown_check, pmd, prettier, pydoclint, pylint, roslyn,
 ruff lint plus format, rustfmt, scalafix, scalafmt, shared SARIF for the
-JVM lint cohort plus spotbugs,
+JVM lint cohort plus spotbugs, staticcheck,
 taplo lint plus format, tsc, ty, vale. Recorded Clippy/rustc diagnostics stay
 byte-identical to the parser unit samples (`quality/adapter/src/parsers/rust.rs`);
 `tsc` keeps its adapter parser with pass plus fail samples but stays

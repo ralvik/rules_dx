@@ -22,7 +22,10 @@ impl super::RealBackend {
     /// never rewrite); Biome lint is
     /// check-only and converges on format; Clippy, Vale, the Markdown
     /// checker, rustc typecheck, Ty, pydoclint, flake8, and pylint return
-    /// their input.
+    /// their input. The native lint cohort (clang-tidy, cppcheck,
+    /// staticcheck, govet, errcheck) is check-only with the provisional
+    /// sandbox-apply-and-diff fix flow and returns its input; the
+    /// native formatters (clang-format, gofumpt) rewrite in place.
     pub fn apply_fix(
         &self,
         tool_id: &str,
@@ -38,7 +41,9 @@ impl super::RealBackend {
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
             "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint"
             | "clippy" | "scalafix" | "roslyn" | "fsharplint" | "checkstyle" | "pmd"
-            | "spotbugs" => Ok(text.to_owned()),
+            | "spotbugs" | "clang_tidy" | "cppcheck" | "staticcheck" | "govet" | "errcheck" => {
+                Ok(text.to_owned())
+            }
             "biome" => {
                 if capability == "format" {
                     self.run_biome_format_fix(tool, path, text)
@@ -56,6 +61,8 @@ impl super::RealBackend {
             "scalafmt" => self.run_scalafmt_fix(tool, path, text),
             "csharpier" => self.run_csharpier_fix(tool, path, text),
             "fantomas" => self.run_fantomas_fix(tool, path, text),
+            "clang_format" => self.run_clang_format_fix(tool, path, text),
+            "gofumpt" => self.run_gofumpt_fix(tool, path, text),
             "eslint" => self.run_eslint_fix(tool, path, text),
             "ktlint" => self.run_ktlint_fix(tool, path, text),
             _ => Err(execution(
@@ -320,6 +327,47 @@ impl super::RealBackend {
         let invocation = commands::ktlint_fix(&tool.binary, &refs);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) && out.code != Some(1) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// Runs one clang-format fix round: `-i` (in-place).
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_clang_format_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "clang_format";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let config = self.config_abs(TOOL_ID, tool, &scratch)?;
+        let invocation = commands::clang_format_fix(&tool.binary, &refs, config.as_deref());
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// Runs one gofumpt fix round: `-w` (in-place).
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_gofumpt_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "gofumpt";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::gofumpt_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
             return cleaned(TOOL_ID, scratch, text.to_owned());
         }
         let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;

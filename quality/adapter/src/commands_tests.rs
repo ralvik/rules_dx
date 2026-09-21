@@ -580,7 +580,12 @@ fn jvm_format_checks_list_paths_and_fixes_rewrite() {
     let check = google_java_format_check(Path::new(BIN), &[java]);
     assert_eq!(
         argv_strings(&check),
-        vec![BIN, "--dry-run", "--set-exit-if-changed", "/scratch/src/Hello.java"]
+        vec![
+            BIN,
+            "--dry-run",
+            "--set-exit-if-changed",
+            "/scratch/src/Hello.java"
+        ]
     );
     assert_eq!(check.cwd_rel, "");
     let fix = google_java_format_fix(Path::new(BIN), &[java]);
@@ -593,7 +598,13 @@ fn jvm_format_checks_list_paths_and_fixes_rewrite() {
     let check = ktfmt_check(Path::new(BIN), &[kt]);
     assert_eq!(
         argv_strings(&check),
-        vec![BIN, "--google-style", "--dry-run", "--set-exit-if-changed", "/scratch/src/Hello.kt"]
+        vec![
+            BIN,
+            "--google-style",
+            "--dry-run",
+            "--set-exit-if-changed",
+            "/scratch/src/Hello.kt"
+        ]
     );
     assert_eq!(check.cwd_rel, "");
     let fix = ktfmt_fix(Path::new(BIN), &[kt]);
@@ -611,7 +622,14 @@ fn jvm_lint_checks_use_sarif_with_explicit_config() {
     let check = checkstyle_check(Path::new(BIN), &[java], cfg);
     assert_eq!(
         argv_strings(&check),
-        vec![BIN, "-c", "/scratch/checkstyle.xml", "-f", "sarif", "/scratch/src/Hello.java"]
+        vec![
+            BIN,
+            "-c",
+            "/scratch/checkstyle.xml",
+            "-f",
+            "sarif",
+            "/scratch/src/Hello.java"
+        ]
     );
     assert_eq!(check.cwd_rel, "");
     let bare = pmd_check(Path::new(BIN), &[java], None);
@@ -633,17 +651,135 @@ fn jvm_lint_checks_use_sarif_with_explicit_config() {
     let spot = spotbugs_check(Path::new(BIN), &[java]);
     assert_eq!(
         argv_strings(&spot),
-        vec![BIN, "-textui", "-effort:default", "-sarif", "/scratch/src/Hello.java"]
+        vec![
+            BIN,
+            "-textui",
+            "-effort:default",
+            "-sarif",
+            "/scratch/src/Hello.java"
+        ]
     );
     let kt = Path::new("/scratch/src/Hello.kt");
     let check = ktlint_check(Path::new(BIN), &[kt]);
     assert_eq!(
         argv_strings(&check),
-        vec![BIN, "--relative", "--log-level=none", "--reporter=sarif", "/scratch/src/Hello.kt"]
+        vec![
+            BIN,
+            "--relative",
+            "--log-level=none",
+            "--reporter=sarif",
+            "/scratch/src/Hello.kt"
+        ]
     );
     let fix = ktlint_fix(Path::new(BIN), &[kt]);
     assert_eq!(
         argv_strings(&fix),
         vec![BIN, "--relative", "--format", "/scratch/src/Hello.kt"]
     );
+}
+
+#[test]
+fn clang_format_check_and_fix_share_style() {
+    let file = Path::new("/scratch/Sample.c");
+    let check = clang_format_check(Path::new(BIN), &[file], None);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "--dry-run", "--Werror", "/scratch/Sample.c"]
+    );
+    assert_eq!(check.cwd_rel, "");
+    let hinted = clang_format_check(
+        Path::new(BIN),
+        &[file],
+        Some(Path::new("/scratch/.clang-format")),
+    );
+    assert!(
+        argv_strings(&hinted)
+            .iter()
+            .any(|arg| arg.starts_with("--style=file:")),
+        "hinted config rides --style=file:"
+    );
+    let fix = clang_format_fix(Path::new(BIN), &[file], None);
+    assert_eq!(argv_strings(&fix), vec![BIN, "-i", "/scratch/Sample.c"]);
+}
+
+#[test]
+fn gofumpt_check_is_diff_and_fix_is_write() {
+    let file = Path::new("/scratch/Sample.go");
+    let check = gofumpt_check(Path::new(BIN), &[file]);
+    assert_eq!(argv_strings(&check), vec![BIN, "-d", "/scratch/Sample.go"]);
+    assert_eq!(check.cwd_rel, "");
+    let fix = gofumpt_fix(Path::new(BIN), &[file]);
+    assert_eq!(argv_strings(&fix), vec![BIN, "-w", "/scratch/Sample.go"]);
+}
+
+#[test]
+fn clang_tidy_check_carries_config_and_compile_commands() {
+    let file = Path::new("/scratch/Sample.c");
+    let bare = clang_tidy_check(Path::new(BIN), &[file], None, None);
+    assert_eq!(
+        argv_strings(&bare),
+        vec![BIN, "--quiet", "/scratch/Sample.c"]
+    );
+    let wired = clang_tidy_check(
+        Path::new(BIN),
+        &[file],
+        Some(Path::new("/scratch/.clang-tidy")),
+        Some(Path::new("/scratch/compile-commands")),
+    );
+    let argv = argv_strings(&wired);
+    assert!(argv.contains(&"--config-file".to_owned()));
+    assert!(argv.contains(&"-p".to_owned()));
+    assert!(!argv.iter().any(|arg| arg.contains("--fix")));
+    assert!(!argv.iter().any(|arg| arg.contains("--export-fixes")));
+}
+
+#[test]
+fn cppcheck_check_is_xml_with_optional_suppressions() {
+    let file = Path::new("/scratch/Sample.c");
+    let bare = cppcheck_check(Path::new(BIN), &[file], None);
+    assert_eq!(
+        argv_strings(&bare),
+        vec![BIN, "--xml", "--xml-version=2", "/scratch/Sample.c"]
+    );
+    assert_eq!(bare.cwd_rel, "");
+    let hinted = cppcheck_check(
+        Path::new(BIN),
+        &[file],
+        Some(Path::new("/scratch/suppressions.txt")),
+    );
+    assert!(
+        argv_strings(&hinted)
+            .iter()
+            .any(|arg| arg.starts_with("--suppressions-list=")),
+        "hinted suppressions ride --suppressions-list="
+    );
+    assert!(!argv_strings(&hinted).contains(&"--enable=all".to_owned()));
+}
+
+#[test]
+fn staticcheck_check_is_json_with_config_dir_cwd() {
+    let file = Path::new("/scratch/Sample.go");
+    let bare = staticcheck_check(Path::new(BIN), &[file], None);
+    assert_eq!(
+        argv_strings(&bare),
+        vec![BIN, "-f", "json", "/scratch/Sample.go"]
+    );
+    assert_eq!(bare.cwd_rel, "");
+    let hinted = staticcheck_check(Path::new(BIN), &[file], Some("cfg"));
+    assert_eq!(
+        argv_strings(&hinted),
+        vec![BIN, "-f", "json", "/scratch/Sample.go"]
+    );
+    assert_eq!(hinted.cwd_rel, "cfg");
+}
+
+#[test]
+fn govet_and_errcheck_take_plain_file_lists() {
+    let file = Path::new("/scratch/Sample.go");
+    let govet = govet_check(Path::new(BIN), &[file]);
+    assert_eq!(argv_strings(&govet), vec![BIN, "/scratch/Sample.go"]);
+    assert_eq!(govet.cwd_rel, "");
+    let errcheck = errcheck_check(Path::new(BIN), &[file]);
+    assert_eq!(argv_strings(&errcheck), vec![BIN, "/scratch/Sample.go"]);
+    assert_eq!(errcheck.cwd_rel, "");
 }

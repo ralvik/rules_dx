@@ -67,10 +67,13 @@ use quality_result::proto::Diagnostic;
 /// (Biome, ESLint, Prettier; target-coupled tsc stays pipeline-only and
 /// never runs as a bare backend invocation), the JVM cohort
 /// (google-java-format format, Checkstyle/PMD/SpotBugs lint, ktfmt
-/// format, ktlint lint; SpotBugs target-coupled), and the Scala/.NET cohort
+/// format, ktlint lint; SpotBugs target-coupled), the Scala/.NET cohort
 /// (Scalafmt format, Scalafix lint via callback, CSharpier format,
 /// Fantomas format, Roslyn lint via delegated SARIF, FSharpLint lint
-/// via library API).
+/// via library API), and the native cohort (clang-format format,
+/// gofumpt format, clang-tidy/cppcheck/staticcheck/govet/errcheck
+/// lint check-only via delegated recorded diagnostics like
+/// Clippy/rustc).
 /// Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
@@ -81,13 +84,19 @@ pub const REAL_TOOLS: &[&str] = &[
     "biome",
     "buildifier",
     "checkstyle",
+    "clang_format",
+    "clang_tidy",
     "clippy",
+    "cppcheck",
     "csharpier",
+    "errcheck",
     "eslint",
     "fantomas",
     "flake8",
     "fsharplint",
+    "gofumpt",
     "google_java_format",
+    "govet",
     "ktfmt",
     "ktlint",
     "markdown_check",
@@ -102,6 +111,7 @@ pub const REAL_TOOLS: &[&str] = &[
     "scalafix",
     "scalafmt",
     "spotbugs",
+    "staticcheck",
     "taplo",
     "ty",
     "vale",
@@ -450,10 +460,11 @@ impl RealBackend {
     /// Scratch working directory for check commands: Buildifier and
     /// Vale discover native config upward from the working directory,
     /// so with a hint the command runs from the mirrored config
-    /// directory; every other tool runs from the scratch root.
+    /// directory; staticcheck discovers `staticcheck.conf` upward the
+    /// same way. Every other tool runs from the scratch root.
     fn cwd_rel(tool_id: &str, config_rel: Option<&str>) -> String {
         match tool_id {
-            "buildifier" | "vale" => config_rel.map(parent_rel).unwrap_or_default(),
+            "buildifier" | "vale" | "staticcheck" => config_rel.map(parent_rel).unwrap_or_default(),
             _ => String::new(),
         }
     }
@@ -603,6 +614,164 @@ impl RealBackend {
             findings.extend(parsed(
                 tool_id,
                 parsers::parse_fsharplint(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// Clang-tidy check via recorded text diagnostics: parses the
+    /// authoritative upstream diagnostics files the aspect declared as
+    /// action inputs (one `file:line:col: severity: message [check]`
+    /// line per finding). Records address workspace paths, so findings
+    /// are re-addressed to staged scratch-absolute paths like
+    /// Clippy/Roslyn. Nothing spawns.
+    fn check_clang_tidy_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_clang_tidy(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// Cppcheck check via recorded XML diagnostics: parses the
+    /// authoritative upstream diagnostics files the aspect declared as
+    /// action inputs (`--xml --xml-version=2` on stderr). Records
+    /// address workspace paths, so findings are re-addressed to staged
+    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
+    fn check_cppcheck_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_cppcheck(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// Staticcheck check via recorded JSON diagnostics: parses the
+    /// authoritative upstream diagnostics files the aspect declared as
+    /// action inputs (`-f json` array on stdout). Records address
+    /// workspace paths, so findings are re-addressed to staged
+    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
+    fn check_staticcheck_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_staticcheck(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// Govet check via recorded text diagnostics: parses the
+    /// authoritative upstream diagnostics files the aspect declared as
+    /// action inputs (one `file:line:col: message` line per finding).
+    /// Records address workspace paths, so findings are re-addressed
+    /// to staged scratch-absolute paths like Clippy/Roslyn. Nothing
+    /// spawns.
+    fn check_govet_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_govet(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// Errcheck check via recorded text diagnostics: parses the
+    /// authoritative upstream diagnostics files the aspect declared as
+    /// action inputs (one `file:line:col: message` line per finding).
+    /// Records address workspace paths, so findings are re-addressed
+    /// to staged scratch-absolute paths like Clippy/Roslyn. Nothing
+    /// spawns.
+    fn check_errcheck_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_errcheck(&bytes, Some(0), &workspaces),
             )?);
         }
         for found in &mut findings {
@@ -1007,6 +1176,86 @@ impl RealBackend {
                 let invocation = commands::ktlint_check(&tool.binary, &refs);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
                 parsed(tool_id, parsers::parse_ktlint(&out.stdout, out.code, &strs))
+            }
+            "clang_format" => {
+                let invocation =
+                    commands::clang_format_check(&tool.binary, &refs, config.as_deref());
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_clang_format(&out.stdout, out.code, &strs),
+                )
+            }
+            "gofumpt" => {
+                let invocation = commands::gofumpt_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_gofumpt(&out.stdout, out.code, &strs),
+                )
+            }
+            "clang_tidy" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_clang_tidy_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation =
+                        commands::clang_tidy_check(&tool.binary, &refs, config.as_deref(), None);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_clang_tidy(&out.stderr, out.code, &strs),
+                    )
+                }
+            }
+            "cppcheck" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_cppcheck_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation =
+                        commands::cppcheck_check(&tool.binary, &refs, config.as_deref());
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_cppcheck(&out.stderr, out.code, &strs),
+                    )
+                }
+            }
+            "staticcheck" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_staticcheck_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation = commands::staticcheck_check(
+                        &tool.binary,
+                        &refs,
+                        hint_dir(tool.config_rel.as_deref(), &cwd_rel),
+                    );
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_staticcheck(&out.stdout, out.code, &strs),
+                    )
+                }
+            }
+            "govet" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_govet_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation = commands::govet_check(&tool.binary, &refs);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(tool_id, parsers::parse_govet(&out.stderr, out.code, &strs))
+                }
+            }
+            "errcheck" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_errcheck_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation = commands::errcheck_check(&tool.binary, &refs);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_errcheck(&out.stdout, out.code, &strs),
+                    )
+                }
             }
             _ => Err(execution(
                 tool_id,

@@ -1,4 +1,5 @@
-//! Exact tool invocations for the initial adapters plus Python plus Scala/.NET.
+//! Exact tool invocations for the initial adapters plus Python plus Scala/.NET
+//! plus the native cohort (C/C++/Go).
 //!
 //! Every flag here was probed against the pinned binaries; probing notes
 //! live in the completion evidence (Python probes in the
@@ -759,6 +760,147 @@ pub fn fsharplint_check(
     }
 }
 
+/// Clang-format check invocation: `--dry-run --Werror` over the whole
+/// stage file list plus `--style=file:<hint>` when hinted. Exit 0
+/// clean, exit 1 with unified diff markers on stdout when dirty.
+/// Scratch-root cwd blocks ambient `.clang-format` discovery; the
+/// hinted config is passed explicitly, never discovered.
+pub fn clang_format_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("--dry-run"),
+        OsString::from("--Werror"),
+    ];
+    if let Some(path) = config {
+        argv.push(OsString::from(format!(
+            "--style=file:{}",
+            path.to_string_lossy()
+        )));
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Clang-format fix invocation: `-i` (in-place). The caller re-reads
+/// on exit 0 and returns its input otherwise.
+pub fn clang_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("-i")];
+    if let Some(path) = config {
+        argv.push(OsString::from(format!(
+            "--style=file:{}",
+            path.to_string_lossy()
+        )));
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Gofumpt check invocation: `-d` over the whole stage file list.
+/// Unified diff markers on stdout when dirty, empty stdout when clean;
+/// exit 0 either way (like `gofmt -d`). No config file exists upstream,
+/// so no config flag and scratch-root cwd.
+pub fn gofumpt_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-d"], files, "")
+}
+
+/// Gofumpt fix invocation: `-w` (in-place). The caller re-reads on
+/// exit 0 and returns its input otherwise.
+pub fn gofumpt_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-w"], files, "")
+}
+
+/// Clang-tidy check invocation: `--quiet` over the whole stage file
+/// list plus `--config-file <hint>` when hinted and `-p
+/// <compile-commands-dir>` when the authoritative target supplies
+/// compile commands. Text `file:line:col: warning|error: message
+/// [check]` diagnostics on stderr; exit 0 clean, exit 1 with
+/// findings. Check-only: no `--fix` and no `--export-fixes`; the
+/// runner never rewrites.
+pub fn clang_tidy_check(
+    binary: &Path,
+    files: &[&Path],
+    config: Option<&Path>,
+    compile_commands_dir: Option<&Path>,
+) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--quiet")];
+    if let Some(cfg) = config {
+        argv.push(OsString::from("--config-file"));
+        argv.push(cfg.as_os_str().to_owned());
+    }
+    if let Some(dir) = compile_commands_dir {
+        argv.push(OsString::from("-p"));
+        argv.push(dir.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Cppcheck check invocation: `--xml --xml-version=2` over the whole
+/// stage file list plus `--suppressions-list <hint>` when hinted.
+/// Diagnostics XML on stderr; exit 0 with no `<error ` elements clean,
+/// exit 1 dirty. Default enablement only, never `--enable=all`.
+/// Check-only: the runner never rewrites.
+pub fn cppcheck_check(binary: &Path, files: &[&Path], suppressions: Option<&Path>) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("--xml"),
+        OsString::from("--xml-version=2"),
+    ];
+    if let Some(path) = suppressions {
+        argv.push(OsString::from(format!(
+            "--suppressions-list={}",
+            path.to_string_lossy()
+        )));
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Staticcheck check invocation: `-f json` over the whole stage file
+/// list. `cwd_rel` is the mirrored config directory when hinted so
+/// upward `staticcheck.conf` discovery finds exactly the hinted
+/// config, else the scratch root. JSON array on stdout; exit 0 clean,
+/// exit 1 dirty. Default checks only, never `-all`. Check-only: the
+/// runner never rewrites.
+pub fn staticcheck_check(
+    binary: &Path,
+    files: &[&Path],
+    config_dir_rel: Option<&str>,
+) -> Invocation {
+    match config_dir_rel {
+        Some(dir) => invocation(binary, &["-f", "json"], files, dir),
+        None => invocation(binary, &["-f", "json"], files, ""),
+    }
+}
+
+/// Govet check invocation over the whole stage file list. Text
+/// `file:line:col: message` diagnostics on stderr; exit 0 clean,
+/// exit 1 dirty. Default analyzers only, never all-analyzer or
+/// vettool maxima. Check-only: the runner never rewrites.
+pub fn govet_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &[], files, "")
+}
+
+/// Errcheck check invocation over the whole stage file list. Text
+/// `file:line:col: message` diagnostics on stdout; exit 0 clean,
+/// exit 1 dirty. Check-only and complementary to govet: the runner
+/// never rewrites.
+pub fn errcheck_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &[], files, "")
+}
+
 /// Declared Error Prone patch-file name: the patch invocation writes
 /// exactly this file into the declared output directory as a unified
 /// diff relative to the source root.
@@ -778,12 +920,7 @@ pub fn error_prone_check(javac: &Path, files: &[&Path]) -> Invocation {
 /// would change, one per line (clean prints nothing); exit 1 with listed
 /// paths is findings, exit 0 is clean.
 pub fn google_java_format_check(binary: &Path, files: &[&Path]) -> Invocation {
-    invocation(
-        binary,
-        &["--dry-run", "--set-exit-if-changed"],
-        files,
-        "",
-    )
+    invocation(binary, &["--dry-run", "--set-exit-if-changed"], files, "")
 }
 
 /// google-java-format fix invocation: `--replace` (in-place). The
@@ -844,10 +981,7 @@ pub fn checkstyle_check(binary: &Path, files: &[&Path], config: &Path) -> Invoca
 /// SARIF goes to stdout; exit 1 with a non-empty results log is
 /// findings, exit 0 is clean. Check-only: the runner never passes a fix flag.
 pub fn pmd_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
-    let mut argv = vec![
-        binary.as_os_str().to_owned(),
-        OsString::from("check"),
-    ];
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("check")];
     for file in files {
         argv.push(OsString::from("--dir"));
         argv.push(file.as_os_str().to_owned());

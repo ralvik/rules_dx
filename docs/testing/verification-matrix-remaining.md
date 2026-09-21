@@ -519,9 +519,10 @@ Remaining reds stay owned gaps, not green claims:
 - Layer-2 adapter-less plus composition plus depcheck with fixture evidence
    qualified seed-only under closed #510
    (`bazel run //tools/ci:layer2_opens_qualification`;
-  Go plus Java plus Kotlin plus Scala plus C# plus F# plus C++ Layer-2
+  Java plus Kotlin Layer-2
   Open adapter-less with no adapter claim plus no runner-matrix cells plus
-  parity deferred, Vue plus Svelte plus Astro plus MDX regions
+  parity deferred (Scala plus C# plus F# Layer-2 delivered under #797,
+  C plus C++ plus Go Layer-2 delivered under #798), Vue plus Svelte plus Astro plus MDX regions
   classification-only with no adapter claim plus no matrix cells plus no
   curated defaults, composition evidence in `examples/mixed/hello/` plus
   `gazelle/mixed/` with one wrapper per container plus shared helper plus

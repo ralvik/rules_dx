@@ -13,10 +13,10 @@
 #   pydoclint+ruff+ty, rust clippy+rustfmt+rustc, starlark buildifier,
 #   toml taplo, typescript biome+tsc); audit stays empty with explicit
 #   disablement, Bandit excluded, secrets via Gitleaks separate.
-# - backed: 14 adapter-backed classes ride 22 real adapters with
+# - backed: 17 adapter-backed classes ride 29 real adapters with
 #   runner-matrix pass plus fail plus parser plus native-config plus
 #   aspect plus policy execution.
-# - deferred: 33 classes with ADR 0019 owner plus frozen route, no
+# - deferred: 30 classes with ADR 0019 owner plus frozen route, no
 #   double-claim, no undispositioned.
 # - applicability: provider intersect adapter intersect policy, suffix
 #   rejected, cross-family union into one stage, lazy with no fetch,
@@ -62,7 +62,8 @@ testing_doc="docs/quality/quality-testing.md"
 action_doc="docs/quality/action-model.md"
 support="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
-ci=".github/workflows/ci.yml"
+targets="tools/ci/ci_targets_d.bzl"
+dogfood="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
@@ -94,15 +95,15 @@ if grep -q -F -e '8 curated families: javascript plus json plus markdown plus py
   grep -q -F -e 'markdown family lint markdown_check plus vale' "$pins" &&
   grep -q -F -e 'python family lint pydoclint plus ruff plus format ruff plus typecheck ty' "$pins" &&
   grep -q -F -e 'rust family lint clippy plus format rustfmt plus typecheck rustc' "$pins" &&
-  grep -q -F -e '14 adapter-backed classes:' "$pins" &&
-  grep -q -F -e '22 real adapters:' "$pins"; then
+  grep -q -F -e '17 adapter-backed classes:' "$pins" &&
+  grep -q -F -e '29 real adapters:' "$pins"; then
   ok
 else
   bad "pins.bzl lost its curated plus backed execution under issue #512"
 fi
 
 # Pins record the deferred plus audit plus rejected plus owned gaps.
-if grep -q -F -e '33 deferred classes with owner plus frozen route' "$pins" &&
+if grep -q -F -e '30 deferred classes with owner plus frozen route' "$pins" &&
   grep -q -F -e 'every deferral names ADR 0019 plus frozen delivery route' "$pins" &&
   grep -q -F -e 'no class is both adapter-backed and deferred' "$pins" &&
   grep -q -F -e 'curated audit stays empty with explicit disablement' "$pins" &&
@@ -160,12 +161,10 @@ else
 fi
 
 # Parity deferrals stay owned with fail-closed gate shape.
-# Scala/.NET delivered under #797 plus JVM delivered under #796, so csharp
-# plus java no longer deferred.
+# Scala/.NET delivered under #797 plus JVM delivered under #796 plus native
+# delivered under #798, so csharp plus java plus kotlin plus c plus cpp plus
+# go are no longer deferred.
 if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
-  grep -q -F -e '"c": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"cpp": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"shell": ["ADR 0019"' "$parity" &&
@@ -214,17 +213,24 @@ else
 fi
 
 # Runner matrix executes the backed classes with pass plus fail.
-if grep -q -F -e 'matrix_rust_format_pass' "$matrix" &&
-  grep -q -F -e 'matrix_python_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_javascript_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_typescript_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_json_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_starlark_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_toml_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_markdown_lint_pass' "$matrix" &&
-  grep -q -F -e '_fail' "$matrix" &&
-  grep -q -F -e '_pass' "$matrix" &&
-  grep -q -F -e 'replacement ' "$matrix"; then
+# Per-cohort cells live in their split files; the aggregator carries the
+# case-list symbols.
+if grep -q -F -e 'matrix_rust_format_pass' quality/testdata/runner_matrix_rust.bzl &&
+  grep -q -F -e 'matrix_python_lint_pass' quality/testdata/runner_matrix_python.bzl &&
+  grep -q -F -e 'matrix_javascript_lint_pass' quality/testdata/runner_matrix_js.bzl &&
+  grep -q -F -e 'matrix_typescript_lint_pass' quality/testdata/runner_matrix_ts.bzl &&
+  grep -q -F -e 'matrix_json_lint_pass' quality/testdata/runner_matrix_json.bzl &&
+  grep -q -F -e 'matrix_starlark_lint_pass' quality/testdata/runner_matrix_data.bzl &&
+  grep -q -F -e 'matrix_toml_lint_pass' quality/testdata/runner_matrix_data.bzl &&
+  grep -q -F -e 'matrix_markdown_lint_pass' quality/testdata/runner_matrix_markdown.bzl &&
+  grep -q -F -e 'matrix_scala_format_pass' quality/testdata/runner_matrix_scala_dotnet.bzl &&
+  grep -q -F -e 'matrix_c_format_pass' quality/testdata/runner_matrix_native.bzl &&
+  grep -q -F -e 'matrix_go_format_pass' quality/testdata/runner_matrix_native.bzl &&
+  grep -q -F -e 'NATIVE_CASES' "$matrix" &&
+  grep -q -F -e 'SCALA_DOTNET_CASES' "$matrix" &&
+  grep -q -F -e '_fail' quality/testdata/runner_matrix_native.bzl &&
+  grep -q -F -e '_pass' quality/testdata/runner_matrix_native.bzl &&
+  grep -q -F -e 'replacement ' quality/testdata/runner_matrix_native.bzl; then
   ok
 else
   bad "runner matrix lost its backed-class pass plus fail execution"
@@ -253,14 +259,14 @@ else
 fi
 
 # Support matrix owns the qualified taxonomy record with honest gaps.
-if grep -q -F -e 'qualified seed-only under issue #512' "$support" &&
+if grep -q -F -e 'qualified seed-only under closed #512' "$support" &&
   grep -q -F -e 'quality_taxonomy_qualification' "$support" &&
   grep -q -F -e 'quality/tests/fixtures/quality_taxonomy/pins.bzl' "$support" &&
   grep -q -F -e 'taxonomy doc only rejected' "$support" &&
   ! grep -q -E -e '^\| .* \| Supported' "$support"; then
   ok
 else
-  bad "docs/product/support-matrix.md lost its qualified taxonomy record with doc-only rejection under issue #512"
+  bad "docs/product/support-matrix.md lost its qualified taxonomy record with doc-only rejection under closed #512"
 fi
 
 # Quality docs own the qualified record; audit stays explicit.
@@ -278,7 +284,7 @@ fi
 
 # Verification matrix owns the qualified seed-only record.
 if grep -q -F -e 'quality_taxonomy_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #512' "$verify" &&
+  grep -q -F -e 'qualified seed-only under closed #512' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:quality_taxonomy_qualification' "$verify" &&
   grep -q -F -e '`quality_taxonomy_qualification` 17/17' "$verify" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q .; then
@@ -287,24 +293,24 @@ else
   bad "verification-matrix lost its #512 qualified taxonomy record or gained Supported"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "quality_taxonomy_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:quality_taxonomy_qualification' "$ci"; then
+# Targets own the harness plus dogfood wires it.
+if grep -q -F -e 'name = "quality_taxonomy_qualification"' "$targets" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:quality_taxonomy_qualification' "$dogfood"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the quality_taxonomy_qualification wiring (want target plus dogfood-freshness)"
+  bad "ci_targets or dogfood lost the quality_taxonomy_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Fixture expected covers the taxonomy with owned gaps.
 if grep -q -F -e 'qualified seed-only under issue #512' "$expected" &&
   grep -q -F -e 'taxonomy doc only' "$expected" &&
   grep -q -F -e '47 classes' "$expected" &&
-  grep -q -F -e '33 deferred' "$expected" &&
+  grep -q -F -e '30 deferred' "$expected" &&
   grep -q -F -e 'Bandit excluded' "$expected" &&
   grep -q -F -e 'owned gap' "$expected"; then
   ok
 else
-  bad "quality_taxonomy.expected lost taxonomy coverage (want qualified plus doc-only plus 47 plus 36 plus Bandit plus owned gap, issue #512)"
+  bad "quality_taxonomy.expected lost taxonomy coverage (want qualified plus doc-only plus 47 plus 30 plus Bandit plus owned gap, issue #512)"
 fi
 
 # Live proof: quality suites plus the fixture build stay green.

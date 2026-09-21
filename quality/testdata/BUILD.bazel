@@ -516,6 +516,19 @@ sh_binary(
     srcs = ["fake_fantomas.sh"],
 )
 
+# Fake format doubles for the native cohort matrix cells (issue #798,
+# seed-only wiring proof without an LLVM/Go toolchain; real-tool behavior
+# stays proven by the per-tool fixtures).
+sh_binary(
+    name = "fake_clang_format",
+    srcs = ["fake_clang_format.sh"],
+)
+
+sh_binary(
+    name = "fake_gofumpt",
+    srcs = ["fake_gofumpt.sh"],
+)
+
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",

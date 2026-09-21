@@ -7,16 +7,12 @@ Fixture: `quality/tests/fixtures/layer2_opens/` via
 """
 
 # Adapter-less inventory (verification-matrix Layer-2 Open adapter-less).
-# Three admitted languages keep provider wrappers plus Gazelle plus hello
-# plus locks plus test runners (qualified under -) with defaults
-# qualified (under -) but no quality adapter claim and no
-# runner-matrix cells. Scala plus C# plus F# delivered under #797 (successor
-# to closed #417) plus Java plus Kotlin delivered under #796 (successor
-# to closed #416). Closed only for required core; adapters
-# partially under -420 with digests plus adapters staying owned.
-ADAPTER_LESS_GO = "go"
-ADAPTER_LESS_C = "c"
-ADAPTER_LESS_CPP = "cpp"
+# No admitted language stays adapter-less: provider wrappers plus Gazelle
+# plus hello plus locks plus test runners stay qualified with defaults
+# qualified, but every admitted quality class now rides an adapter
+# (Scala plus C# plus F# delivered under #797, Java plus Kotlin under
+# #796, C plus C++ plus Go under #798). Closed only for required core;
+# adapters partially under -420 with digests plus adapters staying owned.
 
 # Framework inventory (verification-matrix Layer-2 Open regions plus
 # Examples Open composition plus Depcheck Open).
@@ -67,7 +63,7 @@ DEPCHECK_LANGUAGES = [
 # Owning qualifications (cross-linked, never double-claimed here).
 OWNING_JVM_COHORT = "adapters delivered under #796 (successor to closed #416); digests stay owned"
 OWNING_SCALA_DOTNET_COHORT = "adapters delivered under #797 (successor to closed #417); digests stay owned"
-OWNING_NATIVE_COHORT = "digests plus adapters stay owned under #418"
+OWNING_NATIVE_COHORT = "adapters delivered under #798 (successor to closed #418); digests stay owned"
 OWNING_STRUCTURED_COHORT = "digests plus adapters stay owned under #419"
 OWNING_FILE_COHORT = "digests plus adapters stay owned under #420"
 OWNING_DEFAULTS_485 = "versions plus rule-sets qualified under #485"
