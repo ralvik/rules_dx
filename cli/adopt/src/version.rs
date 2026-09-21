@@ -13,8 +13,11 @@ use std::path::Path;
 use super::AdoptError;
 
 /// Delivered `dx` / `rules_dx` single version (frozen).
+/// See: `MODULE.bazel` (`version = "0.0.0"`); the const mirrors the module
+/// version at build time so the startup skew gate stays subprocess-free.
 pub const DX_VERSION: &str = "0.0.0";
 /// Pinned `rules_dx` module version; `dx version` must equal this.
+/// See: `MODULE.bazel` plus `docs/contributing/diagnostics-versioning.md`.
 pub const MODULE_VERSION: &str = "0.0.0";
 /// Previous release for rollback demonstration.
 pub const PREVIOUS_VERSION: &str = "0.0.0";

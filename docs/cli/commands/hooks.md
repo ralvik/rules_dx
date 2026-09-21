@@ -109,3 +109,8 @@ selection cannot punch a hole in hermeticity.
 A check that exceeds its configured budget blocks the commit or push. There is no
 warn-and-pass mode. Git's native `--no-verify` remains the escape hatch; bypassed
 pushes are still fully verified by CI.
+
+Accepted fit (2026-09-21, #963): the 120s default is CLI-owned timeout
+policy (`HOOK_BUDGET_SECS`), not Bazel graph semantics. Either hooks layer
+may override `budget_secs`; measured last-run timings are the only timing
+source and hardcoded estimates are rejected.

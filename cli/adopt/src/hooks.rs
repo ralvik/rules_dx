@@ -18,6 +18,11 @@ use std::path::Path;
 use super::AdoptError;
 
 /// Hook per-check budget seconds (frozen: blocking timeout).
+/// See: `docs/cli/commands/hooks.md#timeout-policy`.
+///
+/// Authority: CLI-owned timeout policy over hermetic checks, not Bazel graph
+/// semantics; the configured `budget_secs` in either hooks layer overrides
+/// this default.
 pub const HOOK_BUDGET_SECS: u64 = 120;
 
 /// Hermetic Git env var (absolute path only, never PATH fallback).

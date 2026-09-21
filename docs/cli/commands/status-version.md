@@ -26,6 +26,12 @@ JSON mode streams the NDJSON envelope on stdout: `command_started`, then one
 The check set is `toolchain`, `platform`, `tools`, `pin`; see the
 contributing page for vocabulary and platform-evidence limits.
 
+Accepted fit (2026-09-21, #963): the toolchain/tools details name their
+`MODULE.bazel` and `//quality/artifacts` sources and the pin hint tracks
+the module version from one const. The checks report statically with no
+Bazel subprocess so startup and `--dry-run` stay cheap; live
+`query`/`cquery` resolution stays open and is never claimed here.
+
 `dx status --dry-run` plans without reading the pin or computing checks:
 text prints `would report status`, JSON emits only `command_started`
 (`dry_run=true`) plus `command_finished`. Dry-run plans are summaries,

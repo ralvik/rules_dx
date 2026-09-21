@@ -10,7 +10,7 @@
 
 use std::path::Path;
 
-use super::{AdoptError, DX_VERSION};
+use super::{AdoptError, DX_VERSION, HOOK_BUDGET_SECS};
 
 /// Whether `dx init` may write one scaffolded file.
 ///
@@ -154,8 +154,9 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
         },
         ScaffoldFile {
             path: "dx.hooks.toml".to_owned(),
-            content: "[hooks]\npre_commit = [\"format --check\", \"lint --check\"]\npre_push = [\"typecheck --check\", \"generate --check\"]\nbudget_secs = 120\n"
-                .to_owned(),
+            content: format!(
+                "[hooks]\npre_commit = [\"format --check\", \"lint --check\"]\npre_push = [\"typecheck --check\", \"generate --check\"]\nbudget_secs = {HOOK_BUDGET_SECS}\n"
+            ),
         },
         ScaffoldFile {
             path: ".devcontainer/devcontainer.json".to_owned(),
@@ -385,5 +386,24 @@ mod tests {
             "custom\n"
         );
         scratch.close().expect("cleanup");
+    }
+
+    #[test]
+    fn hooks_scaffold_budget_tracks_hook_budget_const() {
+        // Single source: the scaffolded `dx.hooks.toml` budget must equal
+        // `HOOK_BUDGET_SECS`, not a duplicated literal.
+        // See: `docs/cli/commands/hooks.md#timeout-policy`.
+        let files = plan_init_files("demo");
+        let hooks = files
+            .iter()
+            .find(|f| f.path == "dx.hooks.toml")
+            .expect("hooks scaffold");
+        assert!(
+            hooks
+                .content
+                .contains(&format!("budget_secs = {}", super::super::HOOK_BUDGET_SECS)),
+            "{}",
+            hooks.content
+        );
     }
 }

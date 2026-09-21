@@ -24,3 +24,16 @@ on read-only ones; see the
 bumps from verified release artifacts only and `dx version --rollback` re-pins the
 previous release. See
 [distribution](../environments/environment.md#distribution).
+
+## Authority Boundary
+
+Accepted fit (2026-09-21, #963): the `DX_VERSION`/`MODULE_VERSION`
+consts mirror `MODULE.bazel` at build time and the `.dx/version` pin is the
+Bazelisk-style launcher pin, not Bazel graph semantics. The startup skew gate
+stays one file read with no subprocesses by design. `dx status`
+toolchain/platform/tools details report their `MODULE.bazel` and
+`//quality/artifacts` sources statically with platform-evidence limits;
+live Bazel resolution stays open and is never claimed here. The hook
+per-check budget is CLI-owned timeout policy (see the
+[hooks contract](../cli/commands/hooks.md#timeout-policy)), not Bazel
+configuration.
