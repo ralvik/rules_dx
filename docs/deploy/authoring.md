@@ -48,8 +48,8 @@ delivered under closed #178/#179/#180.
 
 The first deploy macro
 (distribution artifact qualified under issue #459) packages
-one executable as a tarball + sha256 checksum with the managed Python
-3.12 toolchain only (deterministic `archiver` tar.gz plus `hasher`
+one executable as a tarball + sha256 checksum with hermetic Rust
+tools only (deterministic `archiver` tar.gz plus `hasher`
 sha256 as declared genrule `tools` in `deploy/rules/`), no host
 `tar`/`sha256sum`/`shasum`, no new module dependencies, no
 registry, no credentials:
@@ -73,7 +73,7 @@ always wins, same as Path B.
 verifies the checksum and copies `release.tar.gz` +
 `release.tar.gz.sha256` to the output directory (first arg after `--`,
 else `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Build actions are
-hermetic (toolchain archiver/hasher, deterministic bytes); the deploy
+hermetic (Rust archiver/hasher, deterministic bytes); the deploy
 program is a `py_binary` on the managed Python 3.12 toolchain only,
 with pinned `data` plus the Python runfiles library — no shell, no
 `sh_binary`, no host `tar`/`sha256sum`. Deploy targets live

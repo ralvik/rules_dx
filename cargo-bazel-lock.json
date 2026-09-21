@@ -1,5 +1,5 @@
 {
-  "checksum": "88ce1d10e5938030cf460966fac24619a12ac4c5ed0f32d8e964b5c49d465f88",
+  "checksum": "8f74bf4dc88d5c1c993eea326b210fb1bac06f8a506286f6cc51ad2a7a9809df",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -1949,6 +1949,51 @@
       ],
       "version": "0.3.1"
     },
+    "crc32fast 1.5.2": {
+      "build_script_attrs": {},
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "cfg-if 1.0.4",
+            "target": "cfg_if"
+          }
+        ],
+        "edition": "2021",
+        "extra_deps": [
+          ":build_script_build"
+        ]
+      },
+      "library_target_name": "crc32fast",
+      "license": "MIT OR Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "crc32fast",
+      "package_url": "https://github.com/srijs/rust-crc32fast",
+      "repository": {
+        "Http": {
+          "sha256": "01a7799fd6b852db0e61728dde9a204c423b44d689dbd432522543614b490e78",
+          "url": "https://static.crates.io/crates/crc32fast/1.5.2/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "crc32fast",
+            "crate_root": "src/lib.rs"
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs"
+          }
+        }
+      ],
+      "version": "1.5.2"
+    },
     "crossbeam-deque 0.8.8": {
       "build_script_attrs": {},
       "common_attrs": {
@@ -2746,6 +2791,43 @@
       ],
       "version": "0.0.0"
     },
+    "dx_deploy_tools 0.0.0": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "flate2 1.1.10",
+            "target": "flate2"
+          },
+          {
+            "id": "hex 0.4.3",
+            "target": "hex"
+          },
+          {
+            "id": "sha2 0.10.9",
+            "target": "sha2"
+          }
+        ],
+        "deps_dev": [
+          {
+            "id": "tempfile 3.27.0",
+            "target": "tempfile"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "dx_deploy_tools",
+      "name": "dx_deploy_tools",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "dx_deploy_tools",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.0.0"
+    },
     "dx_diff 0.0.0": {
       "common_attrs": {
         "deps": [
@@ -3412,6 +3494,52 @@
         }
       ],
       "version": "0.1.12"
+    },
+    "flate2 1.1.10": {
+      "common_attrs": {
+        "crate_features": [
+          "any_c_zlib",
+          "any_impl",
+          "any_zlib",
+          "libz-sys",
+          "zlib"
+        ],
+        "deps": [
+          {
+            "id": "crc32fast 1.5.2",
+            "target": "crc32fast"
+          },
+          {
+            "id": "libz-sys 1.1.29",
+            "target": "libz_sys"
+          }
+        ],
+        "edition": "2018"
+      },
+      "library_target_name": "flate2",
+      "license": "MIT OR Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "flate2",
+      "package_url": "https://github.com/rust-lang/flate2-rs",
+      "repository": {
+        "Http": {
+          "sha256": "6e634e2e0ebac1ee034020da1ca582e17ffe4e0f5e985823721e168928136dcb",
+          "url": "https://static.crates.io/crates/flate2/1.1.10/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "flate2",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "1.1.10"
     },
     "float-cmp 0.10.0": {
       "common_attrs": {
@@ -5376,6 +5504,61 @@
       ],
       "version": "0.3.0"
     },
+    "libz-sys 1.1.29": {
+      "build_script_attrs": {
+        "deps": [
+          {
+            "id": "cc 1.4.5",
+            "target": "cc"
+          },
+          {
+            "id": "pkg-config 0.3.34",
+            "target": "pkg_config"
+          },
+          {
+            "id": "vcpkg 0.2.15",
+            "target": "vcpkg"
+          }
+        ],
+        "links": "z"
+      },
+      "common_attrs": {
+        "edition": "2018",
+        "extra_deps": [
+          ":build_script_build"
+        ]
+      },
+      "library_target_name": "libz_sys",
+      "license": "MIT OR Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "libz-sys",
+      "package_url": "https://github.com/rust-lang/libz-sys",
+      "repository": {
+        "Http": {
+          "sha256": "85bc9657773828b90eeb625adff10eeac83cc21bbfd8e23a03eaa8a33c9e28d9",
+          "url": "https://static.crates.io/crates/libz-sys/1.1.29/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "libz_sys",
+            "crate_root": "src/lib.rs"
+          }
+        },
+        {
+          "BuildScript": {
+            "crate_name": "build_script_build",
+            "crate_root": "build.rs"
+          }
+        }
+      ],
+      "version": "1.1.29"
+    },
     "line-index 0.1.2": {
       "common_attrs": {
         "deps": [
@@ -6278,6 +6461,35 @@
         }
       ],
       "version": "0.2.17"
+    },
+    "pkg-config 0.3.34": {
+      "common_attrs": {
+        "edition": "2021"
+      },
+      "library_target_name": "pkg_config",
+      "license": "MIT OR Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "pkg-config",
+      "package_url": "https://github.com/rust-lang/pkg-config-rs",
+      "repository": {
+        "Http": {
+          "sha256": "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548",
+          "url": "https://static.crates.io/crates/pkg-config/0.3.34/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "pkg_config",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.3.34"
     },
     "potential_utf 0.1.6": {
       "common_attrs": {
@@ -10275,6 +10487,35 @@
       ],
       "version": "0.1.1"
     },
+    "vcpkg 0.2.15": {
+      "common_attrs": {
+        "edition": "2015"
+      },
+      "library_target_name": "vcpkg",
+      "license": "MIT/Apache-2.0",
+      "license_file": "LICENSE-APACHE",
+      "license_ids": [
+        "Apache-2.0",
+        "MIT"
+      ],
+      "name": "vcpkg",
+      "package_url": "https://github.com/mcgoo/vcpkg-rs",
+      "repository": {
+        "Http": {
+          "sha256": "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426",
+          "url": "https://static.crates.io/crates/vcpkg/0.2.15/download"
+        }
+      },
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "vcpkg",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.2.15"
+    },
     "version_check 0.9.5": {
       "common_attrs": {
         "edition": "2015"
@@ -12539,6 +12780,7 @@
     "clap_mangen 0.2.33",
     "console 0.15.11",
     "deunicode 1.6.2",
+    "flate2 1.1.10",
     "globset 0.4.20",
     "hex 0.4.3",
     "ignore 0.4.33",
@@ -12592,6 +12834,7 @@
     "dx_clean 0.0.0": "cli/dx_clean",
     "dx_cli 0.0.0": "cli/dx_cli",
     "dx_codegen 0.0.0": "cli/dx_codegen",
+    "dx_deploy_tools 0.0.0": "deploy/dx_deploy_tools",
     "dx_diff 0.0.0": "cli/dx_diff",
     "dx_digest 0.0.0": "cli/dx_digest",
     "dx_docs 0.0.0": "cli/dx_docs",

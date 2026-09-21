@@ -223,15 +223,15 @@ else
   bad "windows-latest jobs must run shell bash with portable forms (issue #414 resolves the #323 Windows gap)"
 fi
 
-# Portable route: release archives are hermetic Python
-# (archiver.py tarfile dereferences like tar -h, no host tar). No host
+# Portable route: release archives are hermetic Rust
+# (archiver dereferences like tar -h, no host tar). No host
 # `tar` invocation may appear in deploy runtime or rules.
 if ! grep -rn -E -e '(^|[^a-z_])tar( |$| -)' --include='*.sh' deploy/rules/ | grep -v -F -e 'tarfile' | grep -v -e '^[^:]*:[0-9]*: *#' | grep -q . &&
-  grep -q -F -e 'No host `tar`' deploy/rules/archiver.py &&
+  grep -q -F -e 'like `tar -h`' deploy/rules/src/lib.rs &&
   grep -q -F -e 'no host `tar`' deploy/rules/archive.bzl; then
   ok
 else
-  bad "deploy archive must stay hermetic Python with no host tar (issue #320)"
+  bad "deploy archive must stay hermetic Rust with no host tar (issue #320)"
 fi
 
 # Stays closed with the contract guard owned:
