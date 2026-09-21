@@ -46,10 +46,11 @@
 //! auditor binary. Version-range narrowing uses upstream semantics:
 //! Cargo-flavor semver through [`crate::exception::version_in_scope`]
 //! for Cargo, Go via [`go_in_scope`] which normalizes `go.mod` `v`
-//! prefixes first, npm-native ranges through
-//! [`crate::exception::npm_in_scope`] for npm, Maven-native ordering
-//! plus interval matching for Maven, and NuGet-native ordering plus
-//! interval matching for NuGet, exactly like the exception lifecycle
+//! prefixes, pseudo-versions, and `+incompatible` suffixes with
+//! Cargo-flavor ordering but no prerelease gate, npm-native ranges
+//! through [`crate::exception::npm_in_scope`] for npm, Maven-native
+//! ordering plus interval matching for Maven, and NuGet-native ordering
+//! plus interval matching for NuGet, exactly like the exception lifecycle
 //! deferral in [`crate::exception`].
 
 use serde::{Deserialize, Serialize};
@@ -91,7 +92,8 @@ pub struct Advisory {
     pub package: String,
     /// Affected version scope, upstream version semantics
     /// (`>=1.2.0, <2.0.0` for Cargo semver sets, Go same plus `v`-prefix
-    /// normalization; npm ranges such as `>=1.2.7 <1.3.0`,
+    /// normalization with pseudo-versions matching bare ranges and
+    /// `+incompatible` as build metadata; npm ranges such as `>=1.2.7 <1.3.0`,
     /// `1.2.7 || >=1.2.9 <2.0.0`, or `1.2.3 - 2.3.4`; Maven intervals
     /// such as `[1.0,2.0)` or exact versions; NuGet intervals such as
     /// `[1.0,2.0)` or exact versions).
@@ -181,13 +183,14 @@ pub fn canonical_severity(severity: &str) -> String {
 
 /// Whether one locked package version falls in one advisory's affected
 /// scope. Cargo uses upstream Cargo-flavor semver via
-/// [`version_in_scope`]; Go uses the same semantics via [`go_in_scope`]
-/// (which normalizes `go.mod` `v` prefixes first); npm uses npm-native
-/// ranges via [`npm_in_scope`]; Maven uses Maven-native ordering plus
-/// interval matching via [`maven_in_scope`]; NuGet uses NuGet-native
-/// ordering plus interval matching via [`nuget_in_scope`]. Unparseable
-/// scopes or versions fail closed to `false` for semver, npm, Maven,
-/// and NuGet sets, and to exact-match only for other sets.
+/// [`version_in_scope`]; Go uses Cargo-flavor ordering via [`go_in_scope`]
+/// (`v`-prefix normalization plus pseudo-versions matching bare ranges,
+/// `+incompatible` as build metadata); npm uses npm-native ranges via
+/// [`npm_in_scope`]; Maven uses Maven-native ordering plus interval
+/// matching via [`maven_in_scope`]; NuGet uses NuGet-native ordering plus
+/// interval matching via [`nuget_in_scope`]. Unparseable scopes or
+/// versions fail closed to `false` for semver, npm, Maven, and NuGet
+/// sets, and to exact-match only for other sets.
 pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
     match set {
         "cargo" => version_in_scope(scope, version),
@@ -203,8 +206,8 @@ pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
 /// start or after a comparator, separator, or opening boundary, and only
 /// before a digit, so words containing `v` never mangle. Both advisory
 /// scopes (`>=v1.0.0, <v2.0.0`) and locked versions (`v0.6.0`,
-/// pseudo-versions, `+incompatible` suffixes) normalize to the bare
-/// Cargo-flavor semver the shared matcher owns.
+/// pseudo-versions, `+incompatible` suffixes) normalize to bare semver
+/// for the Go matcher below.
 fn strip_go_v(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
@@ -228,11 +231,170 @@ fn strip_go_v(text: &str) -> String {
 }
 
 /// Go affected-scope matching: [`strip_go_v`] normalization on both the
-/// advisory scope and the locked version, then upstream Cargo-flavor
-/// semver via [`version_in_scope`]. Unparseable inputs fail closed to
-/// `false`, never a false positive.
+/// advisory scope and the locked version, then Cargo-flavor ordering
+/// without the Cargo prerelease gate (issue #679).
+///
+/// Spike result: `v`-strip preprocessing suffices, no Go-aware crate.
+/// `semver` ordering already matches Go precedence (pseudo-versions sort
+/// as prereleases below their release, above the prior tag; `+incompatible`
+/// rides build metadata ignored for precedence), so only the match gate
+/// differs. Cargo's `VersionReq::matches` excludes prereleases from bare
+/// ranges (a same-tuple prerelease comparator is required), which would
+/// hide every pseudo-version behind a false negative. Go evaluates each
+/// comparator by ordering alone ([`go_matches_impl`]), so
+/// `>=v1.0.0, <v2.0.0` covers `v1.2.4-0.20240101120000-abcdef123456`
+/// while `>=v1.2.4` still excludes it and `=v1.2.4` stays exact.
+/// Unparseable inputs fail closed to `false`, never a false positive.
 pub fn go_in_scope(scope: &str, version: &str) -> bool {
-    version_in_scope(&strip_go_v(scope), &strip_go_v(version))
+    let scope_norm = strip_go_v(scope);
+    let version_norm = strip_go_v(version);
+    let requirements = match semver::VersionReq::parse(&scope_norm) {
+        Ok(requirements) => requirements,
+        Err(_) => return false,
+    };
+    let version = match semver::Version::parse(&version_norm) {
+        Ok(version) => version,
+        Err(_) => return false,
+    };
+    // `*` parses to zero comparators (`VersionReq::STAR`): `all` on empty
+    // is true, so star covers pseudo-versions (unlike Cargo's gate).
+    requirements
+        .comparators
+        .iter()
+        .all(|comparator| go_matches_impl(comparator, &version))
+}
+
+/// One Go comparator by ordering alone, mirroring upstream `semver`
+/// `matches_impl` without the `pre_is_compatible` gate. Exact and
+/// wildcard keep prerelease equality (so `=1.2.3` never covers
+/// `1.2.3-0.20240101-abcdef`); ranges, carets, and tildes compare by
+/// precedence, so pseudo-versions match bare ranges they fall inside.
+/// Future unknown operators fail closed.
+fn go_matches_impl(comparator: &semver::Comparator, version: &semver::Version) -> bool {
+    match comparator.op {
+        semver::Op::Exact | semver::Op::Wildcard => go_matches_exact(comparator, version),
+        semver::Op::Greater => go_matches_greater(comparator, version),
+        semver::Op::GreaterEq => {
+            go_matches_exact(comparator, version) || go_matches_greater(comparator, version)
+        }
+        semver::Op::Less => go_matches_less(comparator, version),
+        semver::Op::LessEq => {
+            go_matches_exact(comparator, version) || go_matches_less(comparator, version)
+        }
+        semver::Op::Tilde => go_matches_tilde(comparator, version),
+        semver::Op::Caret => go_matches_caret(comparator, version),
+        _ => false,
+    }
+}
+
+/// Exact core match with prerelease equality (mirrors upstream).
+fn go_matches_exact(comparator: &semver::Comparator, version: &semver::Version) -> bool {
+    if version.major != comparator.major {
+        return false;
+    }
+    if let Some(minor) = comparator.minor {
+        if version.minor != minor {
+            return false;
+        }
+    }
+    if let Some(patch) = comparator.patch {
+        if version.patch != patch {
+            return false;
+        }
+    }
+    version.pre == comparator.pre
+}
+
+/// Greater ordering (mirrors upstream).
+fn go_matches_greater(comparator: &semver::Comparator, version: &semver::Version) -> bool {
+    if version.major != comparator.major {
+        return version.major > comparator.major;
+    }
+    let Some(minor) = comparator.minor else {
+        return false;
+    };
+    if version.minor != minor {
+        return version.minor > minor;
+    }
+    let Some(patch) = comparator.patch else {
+        return false;
+    };
+    if version.patch != patch {
+        return version.patch > patch;
+    }
+    version.pre > comparator.pre
+}
+
+/// Less ordering (mirrors upstream).
+fn go_matches_less(comparator: &semver::Comparator, version: &semver::Version) -> bool {
+    if version.major != comparator.major {
+        return version.major < comparator.major;
+    }
+    let Some(minor) = comparator.minor else {
+        return false;
+    };
+    if version.minor != minor {
+        return version.minor < minor;
+    }
+    let Some(patch) = comparator.patch else {
+        return false;
+    };
+    if version.patch != patch {
+        return version.patch < patch;
+    }
+    version.pre < comparator.pre
+}
+
+/// Tilde ordering (mirrors upstream).
+fn go_matches_tilde(comparator: &semver::Comparator, version: &semver::Version) -> bool {
+    if version.major != comparator.major {
+        return false;
+    }
+    if let Some(minor) = comparator.minor {
+        if version.minor != minor {
+            return false;
+        }
+    }
+    if let Some(patch) = comparator.patch {
+        if version.patch != patch {
+            return version.patch > patch;
+        }
+    }
+    version.pre >= comparator.pre
+}
+
+/// Caret ordering (mirrors upstream).
+fn go_matches_caret(comparator: &semver::Comparator, version: &semver::Version) -> bool {
+    if version.major != comparator.major {
+        return false;
+    }
+    let Some(minor) = comparator.minor else {
+        return true;
+    };
+    let Some(patch) = comparator.patch else {
+        if comparator.major > 0 {
+            return version.minor >= minor;
+        }
+        return version.minor == minor;
+    };
+    if comparator.major > 0 {
+        if version.minor != minor {
+            return version.minor > minor;
+        }
+        if version.patch != patch {
+            return version.patch > patch;
+        }
+    } else if minor > 0 {
+        if version.minor != minor {
+            return false;
+        }
+        if version.patch != patch {
+            return version.patch > patch;
+        }
+    } else if version.minor != minor || version.patch != patch {
+        return false;
+    }
+    version.pre >= comparator.pre
 }
 
 /// Maven version token after normalization: numeric tokens compare
@@ -671,7 +833,8 @@ fn interval_matches(
 
 /// Set-aware exception version narrowing: Cargo uses
 /// [`version_in_scope`], Go uses [`go_in_scope`] (`v`-prefix
-/// normalization, same semver), npm uses [`npm_in_scope`], Maven uses
+/// normalization, pseudo-versions match bare ranges, `+incompatible` as
+/// build metadata), npm uses [`npm_in_scope`], Maven uses
 /// [`maven_in_scope`], NuGet uses [`nuget_in_scope`], and remaining
 /// sets stay exact-match.
 fn exception_version_in_scope(set: &str, scope: &str, version: &str) -> bool {

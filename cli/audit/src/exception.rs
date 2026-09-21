@@ -116,11 +116,22 @@ pub fn check_expiry(expires: &str, today: &str) -> Result<(), ExceptionProblem> 
 /// version scope, using upstream Cargo-flavor semver semantics via the
 /// `semver` crate (ranges like `>=1.2.0, <2.0.0`, carets, tildes,
 /// wildcards). This is the Cargo matcher; npm scopes evaluate with
-/// [`npm_in_scope`]. Unparseable scopes or versions fail closed to
-/// `false`: an exception never covers a version the matcher cannot
-/// attribute. Pre-releases match only the narrow upstream rule (a
-/// requirement with a pre-release on the same version); a bare range
-/// never covers a pre-release.
+/// [`npm_in_scope`], Go scopes with `crate::vuln::go_in_scope`.
+/// Unparseable scopes or versions fail closed to `false`: an exception
+/// never covers a version the matcher cannot attribute. Pre-releases
+/// match only the narrow upstream rule (a requirement with a pre-release
+/// on the same version); a bare range never covers a pre-release.
+///
+/// Go normalization rule (issue #679): `go.mod` versions carry a leading
+/// `v` (`v1.2.3`), pseudo-versions (`v0.0.0-20240101-abcdef`,
+/// `v1.2.4-0.20240101-abcdef`), and `+incompatible` suffixes
+/// (`v2.0.0+incompatible`). `crate::vuln::go_in_scope` strips one leading
+/// `v` per version token, then applies Cargo-flavor ordering without the
+/// prerelease gate so pseudo-versions match bare ranges they fall inside
+/// (`>=v1.0.0, <v2.0.0` covers `v1.2.4-0.20240101-abcdef`); `+incompatible`
+/// rides build metadata ignored for precedence. No Go-aware crate:
+/// `semver` ordering already matches Go precedence, so preprocessing plus
+/// the gate bypass suffices (no new dep per ADR 0008).
 ///
 /// Shared by the vulnerability risk-acceptance lifecycle above and the
 /// license-family exceptions. The identity gates ([`is_obsolete`]) stay
