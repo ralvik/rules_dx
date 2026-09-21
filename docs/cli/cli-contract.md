@@ -308,12 +308,13 @@ migrate to strict clap parsing with auto help stays owned gap for any future
 migration).
 
 Final command registry plus mutating-vs-check semantics pinned under issues
-#457/#462 plus #776 (`bazel run //tools/ci:cli_contract_qualification`; final registry
-holds exactly the 31 parsed commands including `deploy` plus `bump` plus
-`migrate` plus `new` plus `upgrade` (`--from`/`--to` with upgrade-only gate plus manifest
+#457/#462 plus #776 plus #786 (`bazel run //tools/ci:cli_contract_qualification`; final registry
+holds exactly the 32 parsed commands including `deploy` plus `bump` plus
+`migrate` plus `new` plus `upgrade` plus `docs` (`--from`/`--to` with upgrade-only gate plus manifest
 selection, issue #462 with upgrade scope under issue #671; absent-only `new` plus
-one-shot `upgrade` composition, see [new/upgrade](commands/new-upgrade.md)), with `doctor` plus
-`configure` plus `docs` rejected as unknown;
+one-shot `upgrade` composition, see [new/upgrade](commands/new-upgrade.md); docs
+build/check/serve over the Bazel-cached site, see [dx docs](commands/docs.md)), with `doctor` plus
+`configure` rejected as unknown;
 help plus `Command::is_mutating_by_default` identify the mutating default,
 `--output=diff` stays exactly the six patch producers, and the `check`/`fix`
 umbrella stays the sequential `format` then `lint` then `typecheck` then
@@ -328,7 +329,7 @@ plus `dx_process::build_workflow_argv` plus `dx_cli::plan_reports` plus
 Supported claim; silent substitution across commands stays rejected):
 
 - Watch stays 8 watchable (`build`, `test`, `run`, `lint`, `typecheck`,
-  `format`, `check`, `fix`) with 21 fail-closed not watchable plus CI
+  `format`, `check`, `fix`) with 22 fail-closed not watchable plus CI
   refusal (see [dx watch](commands/watch.md#execution-gaps)).
 - Arg-forwarding stays wont-fix: Bazel startup options (`bazelrc`,
   `home_rc`/`nohome_rc`, `system_rc`/`nosystem_rc`, `output_base`,

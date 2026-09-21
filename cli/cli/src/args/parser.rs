@@ -57,6 +57,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         from,
         to,
         here,
+        serve,
+        port: port_name,
         command: command_name,
         targets,
         ..
@@ -90,6 +92,22 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     let mut min_coverage: Option<u32> = None;
     if let Some(value) = &min_coverage_name {
         min_coverage = Some(parse_min_coverage(value)?);
+    }
+    let mut port: Option<u16> = None;
+    if let Some(value) = &port_name {
+        if value.is_empty() {
+            return Err(ArgsError::MissingValue {
+                option: "--port".to_owned(),
+            });
+        }
+        match value.parse::<u16>() {
+            Ok(port_value) => port = Some(port_value),
+            Err(_) => {
+                return Err(ArgsError::MissingValue {
+                    option: "--port".to_owned(),
+                });
+            }
+        }
     }
     let command = command_name.ok_or(ArgsError::MissingCommand)?;
     // `--here` (`--cwd` alias, See: `docs/cli/target-resolution.md`, issue #699): explicit cwd scope only.
@@ -514,6 +532,69 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
             });
         }
     }
+    if command == Command::Docs {
+        // Docs builds the Bazel-cached site over the shared
+        // extraction/aggregation graph: `--check` selects extraction plus
+        // shared validation without rendering, the default build validates
+        // and renders, `--serve` previews the last build locally.
+        // See: `docs/cli/commands/docs.md`.
+        if fail_on_name != "warning" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--fail-on".to_owned(),
+            });
+        }
+        if output_name == "diff" {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--output=diff".to_owned(),
+            });
+        }
+        if let Some(request) = reports.first() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: format!("--report={}={}", request.format, request.destination),
+            });
+        }
+        if pin.is_some() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--pin".to_owned(),
+            });
+        }
+        if !bazel_options.is_empty() {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--".to_owned(),
+            });
+        }
+        if port.is_some() && !serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--port".to_owned(),
+            });
+        }
+        for scope in &targets {
+            if scope.is_empty() || scope.starts_with(':') {
+                return Err(scope_error(scope));
+            }
+        }
+    }
+    // `--serve`/`--port` belong to `docs` only: every other command fails
+    // fast instead of silently ignoring the preview request.
+    // See: `docs/cli/commands/docs.md`.
+    if command != Command::Docs && serve {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--serve".to_owned(),
+        });
+    }
+    if command != Command::Docs && port.is_some() {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--port".to_owned(),
+        });
+    }
     if command.is_workflow() {
         // Workflow commands run Bazel verbs directly with Bazel-owned
         // status: finding thresholds and check-mode mutation previews do
@@ -820,6 +901,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         from,
         to,
         here,
+        serve,
+        port,
     })
 }
 

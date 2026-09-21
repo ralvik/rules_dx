@@ -66,18 +66,20 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
 
 - Verify the final registry contains exactly `audit`, `lint`, `typecheck`, `test`,
   `format`, `build`, `run`, `deploy`, `watch`, `check`, `fix`, `clean`, `update`, `bump`, `migrate`, `generate`, `codegen`, `env`, `setup`, `coverage`,
-  `init`, `new`, `upgrade`, `hooks`, `status`, `version`, `completion`, and `bazel`, plus implemented
-  `owners`, `deps`, and `why` inspect commands (31 total). `status` and `version`
+  `init`, `new`, `upgrade`, `hooks`, `status`, `version`, `completion`, `docs`, and `bazel`, plus implemented
+  `owners`, `deps`, and `why` inspect commands (32 total). `status` and `version`
   are the implemented diagnostics/version surface; `completion` is the
   implemented generated-script surface. `migrate` is the implemented
   upgrade rewrite surface (`--from`/`--to` plus manifest selection,
   fail-closed until the first manifest lands under issue #462 with upgrade scope under issue #671). `new` is absent-only
   per-language scaffolding and `upgrade` is the one-shot pin plus migrate plus setup composition
-  (see [new/upgrade](../cli/commands/new-upgrade.md)). Compare the final registry
+  (see [new/upgrade](../cli/commands/new-upgrade.md)). `docs` is the implemented
+  docs site surface (`--check` validation-only, `--serve`/`--port` preview,
+  see [dx docs](../cli/commands/docs.md)). Compare the final registry
   with the qualified [command reference](../cli/commands/README.md), not an earlier partial CLI.
   Pinned by `bazel run //tools/ci:cli_contract_qualification` plus
-  `dx_adopt::ALL_COMMANDS` plus `dx_cli::Command` fixtures under issue #457 plus issue #462 plus #776.
-- Verify `doctor`, `configure`, and `docs` are rejected as unknown; help stays flag-only (`dx --help`, `dx <cmd> --help`) with no `help` verb.
+  `dx_adopt::ALL_COMMANDS` plus `dx_cli::Command` fixtures under issue #457 plus issue #462 plus #776 plus #786.
+- Verify `doctor` and `configure` are rejected as unknown; help stays flag-only (`dx --help`, `dx <cmd> --help`) with no `help` verb.
 - Verify help and machine-readable metadata identify `lint`, `typecheck`, `format`,
   `update`, `bump`, `migrate`, `new`, `upgrade`, `generate`, `codegen`, `env`, `setup`, `init`, `fix`, and `hooks` as mutating by default
   (`Command::is_mutating_by_default` plus `Command::describe`, pinned under issue #457 plus issue #462 plus #776).
@@ -132,13 +134,15 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   no internal/external implementation labels enter structured output.
 - Verify workflow commands reject user-supplied external-repository scopes while
   `dx bazel` continues to forward them unchanged.
-- Verify `--check` for `lint`, `typecheck`, `format`, `generate`, `check`, and `fix`.
+- Verify `--check` for `lint`, `typecheck`, `format`, `generate`, `check`, `fix`, and `docs`.
 - Verify docs build and qualified check modes consume generated, Bazel-cached IR without
   requiring committed snapshots or writing IR beside sources. A cold cache triggers normal
   Bazel execution, not a freshness failure; cached IR is not a source change or mutation event.
 - Verify docs check selects extraction and shared validation without rendering, while normal
   build validates then renders. Both reject invalid IR, unresolved links, and missing API references;
   renderer failures are covered by full-build fixtures, not claimed as check-mode coverage.
+  Verify `dx docs --serve` previews the last build locally with `--port` requiring
+  `--serve` (default 8000), and bare scope selects the repository docs site.
 - Verify `--output diff` is supported by exactly those six commands, reserves stdout for a
   complete unified patch, suppresses `dx` summaries and normalized diagnostics, leaves raw
   child output and operational errors on stderr, and does not alter check, mutation, or exit
@@ -275,7 +279,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   active child. Qualify debounce, ignore set, restart, framing, and local-only
   semantics before asserting them. Pinned by
   `bazel run //tools/ci:cli_execution_gaps_qualification` plus
-  `dx_adopt::plan_watch` fixtures under issue #590 (8 watchable, 21 not
+  `dx_adopt::plan_watch` fixtures under issue #590 (8 watchable, 22 not
   watchable, CI refusal, 200ms debounce, no parallel iterations).
 - Verify dry-run may execute required read-only query/cquery resolution but never
   executes final workflows, actions, or mutations.

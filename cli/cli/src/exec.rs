@@ -11,7 +11,7 @@
 //! managed_codegen/managed_env (generation sides) plus
 //! managed_staging (shared staging primitives) plus managed_prepare
 //! (side preparation and commit-error mapping), audit, update, bump,
-//! migrate, and the check/fix umbrella. Shared plumbing (error codes,
+//! migrate, docs, and the check/fix umbrella. Shared plumbing (error codes,
 //! environment, source verification, mutation helpers) lives in
 //! [`common`]; BEP results collection and proto mapping live in
 //! [`results`]; unit-test fakes live in `test_support`.
@@ -25,6 +25,7 @@ mod bump;
 mod clean;
 mod common;
 mod deploy;
+mod docs;
 mod generate;
 mod managed;
 mod managed_codegen;
@@ -113,6 +114,9 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command == Command::Migrate {
         return migrate::execute_migrate(invocation, env);
     }
+    if invocation.command == Command::Docs {
+        return docs::execute_docs(invocation, env);
+    }
     quality::execute_quality(invocation, env)
 }
 
@@ -148,6 +152,8 @@ mod tests {
             "bump"
         } else if command == Command::Migrate {
             "migrate"
+        } else if command == Command::Docs {
+            "docs"
         } else {
             "quality"
         }
@@ -186,9 +192,10 @@ mod tests {
             (Command::Deps, "adoption"),
             (Command::Why, "adoption"),
             (Command::Completion, "adoption"),
+            (Command::Docs, "docs"),
             (Command::Bazel, "bazel"),
         ];
-        assert_eq!(cases.len(), 31, "every Command variant pinned");
+        assert_eq!(cases.len(), 32, "every Command variant pinned");
         for (command, want) in cases {
             assert_eq!(family(command), want, "family for {}", command.name());
         }

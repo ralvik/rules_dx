@@ -44,12 +44,11 @@ API changes require no IR snapshot update.
   (#620). Authoritative for build/check/serve facts.
 - [IR schema and codec](../ir/README.md): checked-in `doc_ir.proto` plus
   `documentation_ir` codec; design facts stay in the contracts above.
-- Command surface removed;
-  reintroduction open, tracked under #786 (successor to closed #581, live successor to closed #421)
-  (see the [`dx docs` stub](../cli/commands/docs.md)).
+- Command surface delivered under #786 (successor to closed #581,
+  live successor to closed #421; see [`dx docs`](../cli/commands/docs.md)).
   [ADR 0006](../decisions/0006-cli-command-surface.md) records build versus
-  validation-only check; exact mappings are tracked under
-  #786. Adapter runs with pins and mappings delivered under #779 (successor
+  validation-only check; exact mappings are implemented per that split.
+  Adapter runs with pins and mappings delivered under #779 (successor
   to closed #581); renderer and site execution delivered seed-only under #780;
   site-level byte-identical rebuild proof delivered seed-only under #781;
   link and reference completeness delivered seed-only under #782;
@@ -76,4 +75,4 @@ no published site exists today.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction: #786. Build workflow: #620.
+Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction: #786 (delivered). Build workflow: #620.

@@ -43,6 +43,7 @@ pub enum Command {
     Deps,
     Why,
     Completion,
+    Docs,
     Bazel,
 }
 
@@ -80,6 +81,7 @@ impl Command {
             Command::Deps => "deps",
             Command::Why => "why",
             Command::Completion => "completion",
+            Command::Docs => "docs",
             Command::Bazel => "bazel",
         }
     }
@@ -136,6 +138,7 @@ impl Command {
     /// `bazel` is not adoption: it forwards raw arguments to the Bazel
     /// launcher. Managed commands (`codegen`, `env`, `setup`) are not
     /// adoption either: they plan a Bazel collection request of their own.
+    /// `docs` is not adoption either: it builds the Bazel-cached docs site.
     /// See: `docs/cli/commands/new-upgrade.md`.
     pub fn is_adoption(self) -> bool {
         matches!(
@@ -178,8 +181,10 @@ impl Command {
     /// `command_started`, one `operation` (`collect`), per-entry
     /// `notice` events, and `command_finished`; `run` supports JSON with
     /// `command_started`, one `operation` per target (`execute` with
-    /// single-label scope), and `command_finished` (see
-    /// `docs/cli/output-protocol.md`).
+    /// single-label scope), and `command_finished`; `docs` supports JSON
+    /// with `command_started`, one `operation` (`extract`/`aggregate` in
+    /// check mode, plus `render` in build mode), and `command_finished`
+    /// (see `docs/cli/output-protocol.md`).
     pub fn supports_json(self) -> bool {
         matches!(
             self,
@@ -203,6 +208,7 @@ impl Command {
                 | Command::Env
                 | Command::Setup
                 | Command::Status
+                | Command::Docs
         )
     }
 
@@ -244,6 +250,7 @@ impl Command {
                 | Command::Coverage
                 | Command::Check
                 | Command::Fix
+                | Command::Docs
         )
     }
 
@@ -317,6 +324,7 @@ impl Command {
             Command::Deps => "query dependencies of targets",
             Command::Why => "explain why a target depends on another",
             Command::Completion => "emit shell completions from the CLI grammar",
+            Command::Docs => "build, check, and serve the unified documentation site (non-mutating; --check validates without rendering)",
             Command::Bazel => "forward raw arguments to the Bazel launcher",
         }
     }
@@ -372,6 +380,16 @@ mod tests {
         assert_eq!(Command::Bazel.name(), "bazel");
         assert!(!Command::Bazel.is_workflow());
         assert!(!Command::Bazel.is_adoption());
+        assert_eq!(Command::Docs.name(), "docs");
+        assert!(!Command::Docs.is_workflow());
+        assert!(!Command::Docs.is_adoption());
+        assert!(!Command::Docs.is_managed());
+        assert!(!Command::Docs.is_umbrella());
+        assert!(!Command::Docs.is_audit_update());
+        assert!(!Command::Docs.is_mutating_by_default());
+        assert!(Command::Docs.supports_json());
+        assert!(!Command::Docs.supports_diff());
+        assert!(Command::Docs.supports_here());
         assert!(!Command::Lint.is_workflow());
         assert!(!Command::Typecheck.is_workflow());
         assert!(!Command::Format.is_workflow());
@@ -417,6 +435,7 @@ mod tests {
             Command::Deps,
             Command::Why,
             Command::Completion,
+            Command::Docs,
             Command::Bazel,
         ];
         assert_eq!(commands.len(), Command::value_variants().len());
@@ -435,10 +454,11 @@ mod tests {
     #[test]
     fn final_registry_is_exact_and_rejects_excluded_commands() {
         // The final CLI registry holds
-        // exactly the 31 implemented commands (including `deploy` plus
-        // `bump` plus `migrate` plus `new` plus `upgrade`). `doctor`,
-        // `configure`, and `docs` stay rejected as unknown.
-        // See: `docs/cli/commands/new-upgrade.md`.
+        // exactly the 32 implemented commands (including `deploy` plus
+        // `bump` plus `migrate` plus `new` plus `upgrade` plus `docs`).
+        // `doctor` and `configure` stay rejected as unknown.
+        // See: `docs/cli/commands/new-upgrade.md` plus
+        // `docs/cli/commands/docs.md`.
         use clap::ValueEnum;
         let mut got: Vec<&str> = Command::value_variants()
             .iter()
@@ -457,6 +477,7 @@ mod tests {
             "coverage",
             "deps",
             "deploy",
+            "docs",
             "env",
             "fix",
             "format",
@@ -479,9 +500,9 @@ mod tests {
             "why",
         ];
         want.sort_unstable();
-        assert_eq!(got, want, "Command registry drifted from the final 31");
-        assert_eq!(Command::value_variants().len(), 31);
-        for excluded in ["doctor", "configure", "docs", "bogus"] {
+        assert_eq!(got, want, "Command registry drifted from the final 32");
+        assert_eq!(Command::value_variants().len(), 32);
+        for excluded in ["doctor", "configure", "bogus"] {
             assert_eq!(
                 Command::parse(excluded),
                 None,
@@ -539,6 +560,7 @@ mod tests {
             Command::Deps,
             Command::Why,
             Command::Completion,
+            Command::Docs,
             Command::Bazel,
         ] {
             assert!(

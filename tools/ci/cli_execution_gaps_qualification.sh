@@ -3,7 +3,7 @@
 #
 # Qualifies the four wont-fix contract matrices with fixture evidence:
 # - watch: exactly 8 watchable (build/test/run/lint/typecheck/format/
-#   check/fix) with 21 fail-closed not watchable plus CI refusal plus
+#   check/fix) with 22 fail-closed not watchable plus CI refusal plus
 #   200ms debounce plus verbatim per-iteration reuse plus one iteration
 #   at a time;
 # - arg-forwarding: Bazel startup options plus test-binary args rejected
@@ -73,16 +73,16 @@ else
   bad "cli-contract.md lost its #590 four-matrix wont-fix pins"
 fi
 
-# Watch doc owns the execution-gaps section with 8 plus 21 plus CI plus sequential.
+# Watch doc owns the execution-gaps section with 8 plus 22 plus CI plus sequential.
 if grep -q -F -e '## Execution Gaps' "$watch_doc" &&
   grep -q -F -e 'Decided under issue #590' "$watch_doc" &&
   grep -q -F -e 'Watchable stays exactly' "$watch_doc" &&
-  grep -q -F -e '21 commands' "$watch_doc" &&
+  grep -q -F -e '22 commands' "$watch_doc" &&
   grep -q -F -e 'CI refusal stays wont-fix' "$watch_doc" &&
   grep -q -F -e 'one iteration at a time' "$watch_doc"; then
   ok
 else
-  bad "watch.md lost its #590 execution-gaps section with 8 plus 21 plus CI plus sequential"
+  bad "watch.md lost its #590 execution-gaps section with 8 plus 22 plus CI plus sequential"
 fi
 
 # Protocol owns the compatibility bullet with matrix plus sequential ordering.
@@ -147,14 +147,15 @@ else
   bad "cli_execution_gaps BUILD.bazel lost its pins plus expected exports with corpus under #590"
 fi
 
-# Adopt watch keeps the full 8 plus 21 matrix with CI refusal under.
+# Adopt watch keeps the full 8 plus 22 matrix with CI refusal under.
 if grep -q -F -e 'watch_execution_gaps_matrix_is_wont_fix' "$adopt_watch" &&
   grep -q -F -e 'Issue #590' "$adopt_watch" &&
   grep -q -F -e 'WATCHABLE_COMMANDS.len(), 8' "$adopt_watch" &&
-  grep -q -F -e 'WATCH_DEBOUNCE_MS, 200' "$adopt_watch"; then
+  grep -q -F -e 'WATCH_DEBOUNCE_MS, 200' "$adopt_watch" &&
+  grep -q -F -e '"docs",' "$adopt_watch"; then
   ok
 else
-  bad "adopt/watch.rs lost its #590 8-plus-21 watch matrix fixture"
+  bad "adopt/watch.rs lost its #590 8-plus-22 watch matrix fixture"
 fi
 
 # Process keeps the startup plus test-binary forwarding matrix under.

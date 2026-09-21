@@ -128,7 +128,7 @@ mod tests {
     #[test]
     fn watch_execution_gaps_matrix_is_wont_fix() {
         // The 8 thin-loop commands stay watchable; the
-        // remaining 21 registry commands stay fail-closed not watchable
+        // remaining 22 registry commands stay fail-closed not watchable
         // and CI stays refused. Pinned with fixtures in
         // `cli/cli/tests/fixtures/cli_execution_gaps/`.
         for watchable in [
@@ -160,6 +160,7 @@ mod tests {
             "coverage",
             "deps",
             "deploy",
+            "docs",
             "env",
             "generate",
             "hooks",

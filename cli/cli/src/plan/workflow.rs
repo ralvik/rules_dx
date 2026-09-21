@@ -63,7 +63,8 @@ impl WorkflowVerb {
             | Command::Owners
             | Command::Deps
             | Command::Why
-            | Command::Completion => None,
+            | Command::Completion
+            | Command::Docs => None,
         }
     }
 

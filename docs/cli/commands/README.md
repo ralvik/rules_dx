@@ -3,7 +3,7 @@
 ## Scope Defaults
 
 Commands that accept graph scope use `//...` when no scope is supplied: build,
-test, lint, typecheck, format, audit, coverage, check, fix, and migrate. This default is independent of
+test, lint, typecheck, format, audit, coverage, check, fix, migrate, and docs. This default is independent of
 the current working directory and never selects the directory implicitly. Pass `--here`
 (`--cwd` alias) for the current directory tree instead (`//path/to/dir/...`;
 `//...` at the root) on those commands plus `generate`; `--here` cannot be
@@ -45,6 +45,7 @@ tests from inactive configurable branches.
   [generation contracts](../../generation/README.md)
 - [Environment, codegen, and setup commands](environment-codegen-setup.md)
 - [`dx audit`, `dx update`, `dx bump`, and `dx bazel`](audit-update-bazel.md): audit/update policy plus the widen-one-requirement edit plus unchanged forwarding
+- [`dx docs`](docs.md): build, check, and serve the unified documentation site
 - [`dx init` and `dx hooks`](hooks.md): scaffolding and the custom hermetic git-hook runner
 - [`dx status` and `dx version`](status-version.md): the consolidated diagnostics surface and single-version
   pin/launcher with rollback
@@ -65,9 +66,8 @@ tests from inactive configurable branches.
 
 ## Excluded Commands
 
-There is no `dx doctor`, `dx configure`, or `dx docs`. Their intended
+There is no `dx doctor` or `dx configure`. Their intended
 behavior is covered by explicit commands or is outside the accepted surface
 (failure debugging uses `dx status` plus JSON `bazel_failed` errors, see
-[status/version](status-version.md#failure-explainer); docs reintroduction
-is open per [dx docs](docs.md)). Help stays flag-only
+[status/version](status-version.md#failure-explainer)). Help stays flag-only
 (`dx --help`, `dx <cmd> --help`); there is no `dx help` verb.

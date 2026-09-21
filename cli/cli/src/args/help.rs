@@ -144,6 +144,9 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
         Command::Completion => {
             "Per-command flags: none (exactly one <shell> bash|zsh|fish|powershell; unknown shells fail with unknown-shell; --output json|diff and `-- --bazel-options` do not apply)."
         }
+        Command::Docs => {
+            "Per-command flags: --check/--serve/--port (docs only; --check validates without rendering, --serve previews the last build locally, --port requires --serve; --output text|json only, diff has no patch)."
+        }
     }
 }
 
@@ -193,6 +196,9 @@ pub(crate) fn render_command_help(command: Command) -> String {
             "Usage: dx [global-options] watch <build|test|run|lint|typecheck|format|check|fix> [scope ...] [-- bazel-options ...]"
         }
         Command::Completion => "Usage: dx [global-options] completion <shell>",
+        Command::Docs => {
+            "Usage: dx [global-options] docs [--check] [--serve [--port <n>]] [--here] [scope ...]"
+        }
     };
     let scopes = match command {
         Command::Clean => "Scopes: none (clean takes no scopes).",
@@ -213,6 +219,7 @@ pub(crate) fn render_command_help(command: Command) -> String {
         | Command::Check
         | Command::Fix => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied. Pass --here (--cwd alias) for the current directory tree instead (//path/...; //... at the root); --here cannot be combined with explicit scopes and never changes the no-flag default.",
         Command::Codegen | Command::Env | Command::Setup => "Scopes: none for repository-wide canonical selection, or exactly one exact // or @ label; patterns, paths, and multiple labels are usage failures (see docs/cli/commands/environment-codegen-setup.md).",
+        Command::Docs => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Bare scope selects the repository docs site (//docs/site:demo_site, //docs/site:demo_aggregate in --check). Pass --here (--cwd alias) for the current directory tree instead (//path/...; //... at the root); --here cannot be combined with explicit scopes and never changes the no-flag default.",
         Command::Init => "Scopes: optional single module name (defaults to my_project when absent); Bazel labels/patterns are not scopes; extra positionals are usage failures.",
         Command::New => "Scopes: <language> plus optional project name (defaults to my_project); unknown languages fail with the supported list; extra positionals are usage failures.",
         Command::Upgrade => "Scopes: none (repository-wide pin+migrate+setup composition; --from/--to required, positional scopes rejected).",

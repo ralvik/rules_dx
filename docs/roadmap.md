@@ -60,4 +60,4 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   `dx run` multirun delivered (issue #463, sequential local-only multirun for explicit
   labels/patterns). No post-v1 bucket.
 * Rust library extraction decided internal-only under issue #469 (see ADR 0023; 34 internal crates, binaries-only boundary, no consumer migration).
-* CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (#814; successor to closed #457-#458); `dx docs` reintroduction with real extraction/validation (see ADR 0020; open under #786, successor to closed #581, live successor to closed #421).
+* CLI and deploy follow-ups: `--debug`/`--release` flags plus `DX_PROFILE` forwarding plus deploy provider/CLI (#814; successor to closed #457-#458); `dx docs` reintroduction with real extraction/validation delivered under #786 (successor to closed #581, live successor to closed #421; see ADR 0020 for the removed placeholder).

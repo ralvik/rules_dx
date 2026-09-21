@@ -307,7 +307,7 @@ fn output_contract_has_no_silent_ignore() {
     // the flag, print text anyway) is never allowed.
     //
     // JSON-capable: quality, generate, workflow build/test/coverage/run,
-    // umbrellas, audit, update, managed, clean, status.
+    // umbrellas, audit, update, managed, clean, status, docs.
     for command in [
         "lint",
         "typecheck",
@@ -325,6 +325,7 @@ fn output_contract_has_no_silent_ignore() {
         "codegen",
         "env",
         "setup",
+        "docs",
     ] {
         let got = parse(&args(&[command, "--output=json"])).expect("json capable");
         assert_eq!(got.output, OutputMode::Json, "command: {command}");
@@ -410,6 +411,7 @@ fn output_contract_has_no_silent_ignore() {
         vec!["codegen", "--output=diff"],
         vec!["env", "--output=diff"],
         vec!["setup", "--output=diff"],
+        vec!["docs", "--output=diff"],
         vec!["bump", "cargo:anyhow", "1.2.3", "--output=diff"],
         vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--output=diff"],
         vec!["upgrade", "--from=1.2.3", "--to=2.0.0", "--output=diff"],
@@ -502,6 +504,52 @@ fn version_rollback_check_and_configured_parse() {
             matches!(
                 parse(&args(&words)),
                 Err(ArgsError::UnsupportedOption { .. })
+            ),
+            "words: {words:?}"
+        );
+    }
+}
+
+#[test]
+fn docs_check_serve_port_parse() {
+    // See: `docs/cli/commands/docs.md`.
+    let got = parse(&args(&["docs"])).expect("bare docs parses");
+    assert_eq!(got.command, Command::Docs);
+    assert!(!got.check);
+    assert!(!got.serve);
+    assert_eq!(got.port, None);
+    let got = parse(&args(&["docs", "--check"])).expect("check parses");
+    assert!(got.check);
+    let got = parse(&args(&["docs", "--serve"])).expect("serve parses");
+    assert!(got.serve);
+    assert_eq!(got.port, None);
+    let got = parse(&args(&["docs", "--serve", "--port=8080"])).expect("port parses");
+    assert!(got.serve);
+    assert_eq!(got.port, Some(8080));
+    let got = parse(&args(&["docs", "--check", "--serve", "--port", "9000"])).expect("split port");
+    assert!(got.check);
+    assert!(got.serve);
+    assert_eq!(got.port, Some(9000));
+    for words in [
+        vec!["docs", "--port=8080"],
+        vec!["docs", "--port"],
+        vec!["docs", "--port=notanumber"],
+        vec!["docs", "--port="],
+        vec!["build", "--serve"],
+        vec!["lint", "--serve"],
+        vec!["build", "--port=8080"],
+        vec!["docs", "--fail-on=error"],
+        vec!["docs", "--report=sarif=out.sarif"],
+        vec!["docs", "--pin=0.1.0"],
+        vec!["docs", "--output=diff"],
+        vec!["docs", "--", "--jobs=4"],
+    ] {
+        assert!(
+            matches!(
+                parse(&args(&words)),
+                Err(ArgsError::UnsupportedOption { .. })
+                    | Err(ArgsError::MissingValue { .. })
+                    | Err(ArgsError::UnknownOption { .. })
             ),
             "words: {words:?}"
         );
@@ -632,6 +680,7 @@ fn here_selects_cwd_scope_only_via_explicit_flag() {
         "coverage",
         "check",
         "fix",
+        "docs",
     ] {
         let got = parse(&args(&[command, "--here"])).expect("here parses");
         assert!(got.here, "command: {command}");
