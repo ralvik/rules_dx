@@ -248,7 +248,9 @@ each tracked item lands; no person-hour figures are frozen here.
 Admit/defer/exclude outcomes are decided by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md), with Ruby
 reconsideration decided by
-[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md), and
+[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md), with PowerShell
+reconsideration decided by
+[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md), and
 summarized in [Admitted To V1](#admitted-to-v1) and
 [Deferred Beyond V1](#deferred-beyond-v1).
 The review below records upstream evidence only. Include complete low-cost
@@ -328,14 +330,19 @@ hermetic integration bar. Ruby reconsideration under issue #777 keeps the
 deferral per [ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md):
 consolidated `rules_ruby` 0.28.0 plus portable-Ruby Linux/macOS-only plus
 Windows RubyInstaller fallback plus open git-gem and checksum gaps plus missing
-Gazelle/env/IDE/lock stories still exceed the bar. Deferred foundations'
+Gazelle/env/IDE/lock stories still exceed the bar. PowerShell reconsideration
+under issue #778 keeps the deferral per
+[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md):
+single young execution-only `rules_powershell` 0.2.0 plus missing
+Gazelle/dependency/env/IDE/lock stories still exceed the bar. Deferred foundations'
 quality-tool cells (RuboCop, StandardRB, PSScriptAnalyzer) stay in force; a foundation
 deferral removes no baseline tool. Reconsideration after v1 requires a new
 scope decision. The deferred/excluded record is decided by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md) plus
-[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) for Ruby (Ruby plus
+[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) for Ruby plus
+[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md) for PowerShell (Ruby plus
 PowerShell deferred, Swift plus Bandit excluded, host-toolchain fallback never approved;
-Ruby reconsidered under #777 still deferred, PowerShell reconsideration tracked under #778).
+Ruby reconsidered under #777 still deferred, PowerShell reconsidered under #778 still deferred).
 Qualified record is pinned by `bazel run //tools/ci:foundation_maps` with owning
 qualification in [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification),
@@ -350,8 +357,9 @@ runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback 
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
 library-API binding, and per-tool adapter mappings qualified under closed #420 with deferred
 implementation owned by ADR 0019; Ruby reconsideration decided under #777 by ADR 0030 still
-deferred, PowerShell reconsideration tracked under #778,
-adapter execution under #800) stay decided by ADR 0019 plus ADR 0030 for Ruby. No `Supported` claim until platform plus
+deferred, PowerShell reconsideration decided under #778 by ADR 0031 still
+deferred,
+adapter execution under #800) stay decided by ADR 0019 plus ADR 0030 for Ruby plus ADR 0031 for PowerShell. No `Supported` claim until platform plus
 consumer plus release evidence passes.
 
 | Language | Application foundation | Format | Lint, typecheck, or audit |
@@ -364,7 +372,7 @@ consumer plus release evidence passes.
 | C# | Planned | Planned: CSharpier | Planned: Roslyn CA analyzers (SDK) |
 | F# | Planned | Planned: Fantomas | Planned: FSharpLint |
 | Ruby | Deferred beyond v1 (reconsidered under #777 still deferred per ADR 0030) | Planned: feasibility | Planned: RuboCop, StandardRB |
-| PowerShell | Deferred beyond v1 | Planned: feasibility | Planned: PSScriptAnalyzer |
+| PowerShell | Deferred beyond v1 (reconsidered under #778 still deferred per ADR 0031) | Planned: feasibility | Planned: PSScriptAnalyzer |
 | Swift | Not planned | Not planned | Not planned |
 
 `Planned` in the table above means scope admitted to v1 by ADR 0019 with no delivery
