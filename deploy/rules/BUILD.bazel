@@ -18,6 +18,8 @@ load(":npm.bzl", "npm_deploy")
 load(":npm_tests.bzl", "npm_analysis_tests", "npm_debug_analysis_tests", "npm_unit_tests")
 load(":nuget.bzl", "nuget_deploy")
 load(":nuget_tests.bzl", "nuget_analysis_tests", "nuget_debug_analysis_tests", "nuget_unit_tests")
+load(":oci.bzl", "oci_deploy")
+load(":oci_tests.bzl", "oci_analysis_tests", "oci_debug_analysis_tests", "oci_unit_tests")
 load(":pypi.bzl", "pypi_deploy")
 load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 
@@ -43,6 +45,8 @@ exports_files([
     "npm_tests.bzl",
     "nuget.bzl",
     "nuget_tests.bzl",
+    "oci.bzl",
+    "oci_tests.bzl",
     "pypi.bzl",
     "pypi_tests.bzl",
 ])
@@ -92,6 +96,14 @@ py_library(
 py_library(
     name = "nuget_deploy_lib",
     srcs = ["nuget_deploy.py"],
+    imports = ["."],
+)
+
+# Shared layout logic for `oci_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "oci_deploy_lib",
+    srcs = ["oci_deploy.py"],
     imports = ["."],
 )
 
@@ -258,6 +270,10 @@ test_suite(
         ":nuget_debug_analysis",
         ":nuget_deploy_test",
         ":nuget_unit",
+        ":oci_analysis",
+        ":oci_debug_analysis",
+        ":oci_deploy_test",
+        ":oci_unit",
         ":pypi_analysis",
         ":pypi_debug_analysis",
         ":pypi_deploy_test",
@@ -520,6 +536,44 @@ py_test(
     deps = [":maven_deploy_lib"],
 )
 
+# Eighth deploy macro: local-first OCI image layout over a deterministic
+# dummy image tar. The debug variant pins profile passthrough. The
+# `py_test` below exercises the local layout build with no daemon and
+# no network.
+genrule(
+    name = "oci_demo_tar",
+    outs = ["oci_demo.tar"],
+    cmd = "printf 'oci-demo-image-bytes-v1' > $@",
+)
+
+oci_deploy(
+    name = "oci_demo",
+    image_tar = ":oci_demo_tar",
+)
+
+oci_deploy(
+    name = "oci_demo_debug",
+    image_tar = ":oci_demo_tar",
+    profile = "debug",
+)
+
+oci_unit_tests(name = "oci_unit")
+
+oci_analysis_tests(name = "oci_analysis")
+
+oci_debug_analysis_tests(name = "oci_debug_analysis")
+
+# Local OCI layout output per demo image
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "oci_deploy_test",
+    srcs = ["oci_deploy_test.py"],
+    imports = ["."],
+    main = "oci_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":oci_deploy_lib"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
@@ -539,6 +593,8 @@ real_source_target(
         "npm_tests.bzl",
         "nuget.bzl",
         "nuget_tests.bzl",
+        "oci.bzl",
+        "oci_tests.bzl",
         "pypi.bzl",
         "pypi_tests.bzl",
     ],
