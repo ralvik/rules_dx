@@ -174,7 +174,40 @@ only, with pinned `data` plus the Python runfiles library. Live
 owner approval, never by default, and never passes `--allow-dirty`.
 Deploy targets live next to the crate sources they publish.
 
-## Path G: standalone `dx` install verification (accepted)
+## Path G: `maven_deploy` (accepted)
+
+The fifth deploy macro publishes one jar plus its pom with a
+local-first Python publisher, no shell, no `sh_binary`:
+
+```starlark
+load("@rules_dx//deploy/rules:maven.bzl", "maven_deploy")
+
+maven_deploy(
+    name = "maven",
+    jar = ":dist-0.0.0.jar",
+    pom = ":dist-0.0.0.pom",
+    group = "com.example",
+    artifact = "dist",
+    version = "0.0.0",
+)
+```
+
+`bazel run //deploy/rules:maven_demo` (or `dx deploy
+//deploy/rules:maven_demo`) builds a local file repo
+(`<artifact>-repo/` with `<group-path>/<artifact>/<version>/` holding
+the canonical `<artifact>-<version>.jar` plus `<artifact>-<version>.pom`
+with `.sha256` sidecars and `maven-metadata.xml`) and verifies bytes
+via sha256, publishing nothing. Pass an output directory after `--` to
+choose where the repo lands (default: `$BUILD_WORKSPACE_DIRECTORY`,
+else the cwd). The deploy program is a `py_binary` on the managed
+Python 3.12 toolchain only, with pinned `data` plus the Python runfiles
+library. Live `mvn deploy:deploy-file` staging with GPG signing runs
+only with `MAVEN_PUBLISH_LIVE=1`, `MAVEN_USERNAME`,
+`MAVEN_PASSWORD`, and `MAVEN_PUBLISH_APPROVED=1` after explicit owner
+approval, never by default. Deploy targets live next to the jar and pom
+they publish.
+
+## Path H: standalone `dx` install verification (accepted)
 
 Standalone `dx` binaries verify publisher identity at install time via
 `//deploy/install:dx_verify` (`deploy/install/dx_verify.sh`). The verifier
@@ -195,7 +228,7 @@ Distribution verification qualified under issue #459. Policy tests are
 `bazel test //deploy/install:all` plus `bazel run
 //tools/ci:signing_distribution_qualification`.
 
-## Path H: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
+## Path I: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
 
 The full release path (issue #311; human-run driver owned under issue
 #458, live successor to closed #311 for the human-run path; signing stack
@@ -231,9 +264,9 @@ tooling in `deploy/release/` with policy tests `bazel test
   image lifecycle per-scaffold-change); push plus `cosign sign <digest>`
   stay owner-gated with dry-run first.
 
-## Path I: `npm_deploy` (accepted)
+## Path J: `npm_deploy` (accepted)
 
-The fifth deploy macro (`deploy/rules/npm.bzl`) publishes packed files
+The sixth deploy macro (`deploy/rules/npm.bzl`) publishes packed files
 to a local npm folder feed with the managed Python 3.12 toolchain only
 (deterministic `npm_packer` tgz plus feed JSON as declared genrule
 `tools`), no host `tar`/`npm`, no new shell, no `sh_binary`, no
@@ -261,9 +294,9 @@ explicit owner approval, never by default; `NPM_PUBLISH_DRY_RUN=1`
 prints the would-publish command and publishes nothing. Deploy targets
 live next to the package they release.
 
-## Path J: `nuget_deploy` (accepted)
+## Path K: `nuget_deploy` (accepted)
 
-The sixth deploy macro (`deploy/rules/nuget.bzl`) publishes one nupkg to
+The seventh deploy macro (`deploy/rules/nuget.bzl`) publishes one nupkg to
 a local NuGet folder feed with a local-first Python publisher, no shell,
 no `sh_binary`:
 

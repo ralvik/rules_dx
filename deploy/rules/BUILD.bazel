@@ -12,6 +12,8 @@ load(":github.bzl", "github_deploy")
 load(":github_tests.bzl", "github_analysis_tests", "github_debug_analysis_tests", "github_unit_tests")
 load(":crates.bzl", "crates_deploy")
 load(":crates_tests.bzl", "crates_analysis_tests", "crates_debug_analysis_tests", "crates_unit_tests")
+load(":maven.bzl", "maven_deploy")
+load(":maven_tests.bzl", "maven_analysis_tests", "maven_debug_analysis_tests", "maven_unit_tests")
 load(":npm.bzl", "npm_deploy")
 load(":npm_tests.bzl", "npm_analysis_tests", "npm_debug_analysis_tests", "npm_unit_tests")
 load(":nuget.bzl", "nuget_deploy")
@@ -35,6 +37,8 @@ exports_files([
     "crates.bzl",
     "crates_tests.bzl",
     "launcher.bzl",
+    "maven.bzl",
+    "maven_tests.bzl",
     "npm.bzl",
     "npm_tests.bzl",
     "nuget.bzl",
@@ -64,6 +68,14 @@ py_binary(
 py_library(
     name = "crates_deploy_lib",
     srcs = ["crates_deploy.py"],
+    imports = ["."],
+)
+
+# Shared file-repo logic for `maven_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "maven_deploy_lib",
+    srcs = ["maven_deploy.py"],
     imports = ["."],
 )
 
@@ -234,6 +246,10 @@ test_suite(
         ":github_debug_analysis",
         ":github_demo_verify",
         ":github_unit",
+        ":maven_analysis",
+        ":maven_debug_analysis",
+        ":maven_deploy_test",
+        ":maven_unit",
         ":npm_analysis",
         ":npm_debug_analysis",
         ":npm_deploy_test",
@@ -452,6 +468,58 @@ py_test(
     deps = [":nuget_deploy_lib"],
 )
 
+# Seventh deploy macro: local-first Maven Central publisher over
+# deterministic dummy jar plus pom. The debug variant pins profile
+# passthrough. The `py_test` below exercises the local file-repo build
+# with no network.
+genrule(
+    name = "maven_demo_jar",
+    outs = ["maven_demo-0.0.0.jar"],
+    cmd = "printf 'maven-demo-jar-bytes-v1' > $@",
+)
+
+genrule(
+    name = "maven_demo_pom",
+    outs = ["maven_demo-0.0.0.pom"],
+    cmd = "printf '<project>maven-demo-pom-v1</project>' > $@",
+)
+
+maven_deploy(
+    name = "maven_demo",
+    artifact = "maven_demo",
+    group = "com.example",
+    jar = ":maven_demo_jar",
+    pom = ":maven_demo_pom",
+    version = "0.0.0",
+)
+
+maven_deploy(
+    name = "maven_demo_debug",
+    artifact = "maven_demo",
+    group = "com.example",
+    jar = ":maven_demo_jar",
+    pom = ":maven_demo_pom",
+    profile = "debug",
+    version = "0.0.0",
+)
+
+maven_unit_tests(name = "maven_unit")
+
+maven_analysis_tests(name = "maven_analysis")
+
+maven_debug_analysis_tests(name = "maven_debug_analysis")
+
+# Local file-repo output per demo coordinates
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "maven_deploy_test",
+    srcs = ["maven_deploy_test.py"],
+    imports = ["."],
+    main = "maven_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":maven_deploy_lib"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
@@ -465,6 +533,8 @@ real_source_target(
         "github.bzl",
         "github_tests.bzl",
         "launcher.bzl",
+        "maven.bzl",
+        "maven_tests.bzl",
         "npm.bzl",
         "npm_tests.bzl",
         "nuget.bzl",
