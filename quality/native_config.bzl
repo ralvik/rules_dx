@@ -1,4 +1,4 @@
-"""Typed native-configuration targets for adapters plus Ruff, Biome/ESLint, Checkstyle, and Scala/.NET.
+"""Typed native-configuration targets for adapters plus Ruff, Biome/ESLint, Checkstyle, Scala/.NET, Native, and Structured.
 
 Contract: `docs/quality/native-configuration.md`.
 """
@@ -27,7 +27,12 @@ DxNativeConfigInfo = provider(
 # the XML configuration (`checkstyle.xml`): the adapter passes it as
 # `-c`, so the `.xml` extension pins the XML transport (Checkstyle has
 # no usable upstream default; applicable stages fail without a hinted
-# config, mirroring ESLint/Vale). clang-format takes
+# config, mirroring ESLint/Vale). Buf takes `buf.yaml` (or `buf.yml`
+# via the same `.yaml` transport here, pinned to `.yaml`): the adapter
+# passes no config flag (buf discovers `buf.yaml` upward), so the
+# binding only records the closure. qmlformat/qmllint take
+# `.qmlformat.ini`/`.qmllint.ini` (`.ini` transport, Vale precedent).
+# clang-format takes
 # the extensionless `.clang-format` dotfile via `--style=file:<path>` and
 # clang-tidy the extensionless `.clang-tidy` dotfile via `--config-file`,
 # so the required suffix is the whole dotfile name. cppcheck takes a
@@ -39,6 +44,7 @@ DxNativeConfigInfo = provider(
 # for them by design.
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
+    "buf": ".yaml",
     "buildifier": ".json",
     "checkstyle": ".xml",
     "clang_format": ".clang-format",
@@ -47,6 +53,8 @@ _NATIVE_CONFIG_EXTENSIONS = {
     "csharpier": ".yaml",
     "eslint": ".js",
     "fsharplint": ".json",
+    "qmlformat": ".ini",
+    "qmllint": ".ini",
     "ruff": ".toml",
     "rustfmt": ".toml",
     "scalafix": ".conf",
@@ -209,4 +217,19 @@ fsharplint_config = _make_native_config_rule(
 checkstyle_config = _make_native_config_rule(
     "checkstyle",
     "Checked-in Checkstyle XML config for Java lint. The adapter passes it as -c; no usable upstream default exists.",
+)
+
+buf_config = _make_native_config_rule(
+    "buf",
+    "Checked-in Buf YAML config (buf.yaml) for Protobuf format/lint.",
+)
+
+qmlformat_config = _make_native_config_rule(
+    "qmlformat",
+    "Checked-in qmlformat INI config (.qmlformat.ini) for QML format.",
+)
+
+qmllint_config = _make_native_config_rule(
+    "qmllint",
+    "Checked-in qmllint INI config (.qmllint.ini) for QML lint.",
 )

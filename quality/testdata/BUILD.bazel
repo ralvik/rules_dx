@@ -529,6 +529,19 @@ sh_binary(
     srcs = ["fake_gofumpt.sh"],
 )
 
+# Fake format doubles for the Structured cohort matrix cells (issue #799,
+# seed-only wiring proof without buf/Qt binaries; real-tool behavior stays
+# proven by the per-tool fixtures).
+sh_binary(
+    name = "fake_buf_format",
+    srcs = ["fake_buf_format.sh"],
+)
+
+sh_binary(
+    name = "fake_qmlformat",
+    srcs = ["fake_qmlformat.sh"],
+)
+
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",

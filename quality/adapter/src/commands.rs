@@ -1,5 +1,5 @@
 //! Exact tool invocations for the initial adapters plus Python plus Scala/.NET
-//! plus the native cohort (C/C++/Go).
+//! plus the native cohort (C/C++/Go) plus Structured.
 //!
 //! Every flag here was probed against the pinned binaries; probing notes
 //! live in the completion evidence (Python probes in the
@@ -118,6 +118,22 @@
 //!   contract. The `IN_PLACE` location is rejected: it mutates inputs in
 //!   place, breaking sandbox immutability, action caching, and remote
 //!   execution (and is experimental upstream).
+//! * Buf lint takes the whole stage file list as `lint
+//!   --error-format=json <files>` (JSONL on stdout, one object per line
+//!   with `path,start_line,start_column,end_line,end_column,type,
+//!   message`; no SARIF). Exit 1 with records is findings; exit 0 is
+//!   clean. Check-only: the runner never passes a fix flag.
+//! * Buf format takes the whole stage file list as `format --diff
+//!   --exit-code <files>` (check; unified diff on stdout); fix is
+//!   `format --write <files>` (in-place, re-read on exit 0).
+//! * qmlformat takes the whole stage file list as `--check <files>`
+//!   (check; stdout lists unformatted paths, one per line); fix is `-i
+//!   <files>` (in-place, re-read on exit 0). `.qmlformat.ini` applies
+//!   natively; `--ignore-settings` stays transport-only.
+//! * qmllint takes the whole stage file list as `--json - <files>`
+//!   (check; JSON `{diagnostics:[]}` on stdout). Exit 1 with
+//!   diagnostics is findings; exit 0 is clean. Check-only with the
+//!   provisional sandbox-apply-and-diff fix flow.
 
 use std::ffi::OsString;
 use std::path::Path;
@@ -1074,6 +1090,49 @@ pub fn error_prone_patch(
         argv,
         cwd_rel: String::new(),
     }
+}
+
+/// Buf lint check invocation: `lint --error-format=json` over the whole
+/// stage file list. JSONL goes to stdout; exit 1 with records is
+/// findings, exit 0 is clean. Check-only: the runner never passes a fix
+/// flag. Whole-file rewrite versus check-only per the tool-integrations
+/// fix flow.
+pub fn buf_lint_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["lint", "--error-format=json"], files, "")
+}
+
+/// Buf format check invocation: `format --diff --exit-code` over the
+/// whole stage file list. Unified diff goes to stdout; exit 1 with diff
+/// is findings, exit 0 is clean.
+pub fn buf_format_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["format", "--diff", "--exit-code"], files, "")
+}
+
+/// Buf format fix invocation: `format --write` (in-place). The caller
+/// re-reads on exit 0 and returns its input otherwise.
+pub fn buf_format_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["format", "--write"], files, "")
+}
+
+/// qmlformat check invocation: `--check` over the whole stage file
+/// list. Stdout lists unformatted paths, one per line; exit 1 with
+/// listed paths is findings, exit 0 is clean.
+pub fn qmlformat_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--check"], files, "")
+}
+
+/// qmlformat fix invocation: `-i` (in-place). The caller re-reads on
+/// exit 0 and returns its input otherwise.
+pub fn qmlformat_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["-i"], files, "")
+}
+
+/// qmllint lint check invocation: `--json -` over the whole stage file
+/// list. JSON `{diagnostics:[]}` goes to stdout; exit 1 with
+/// diagnostics is findings, exit 0 is clean. Check-only: the runner
+/// never passes a fix flag.
+pub fn qmllint_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--json", "-"], files, "")
 }
 
 #[path = "commands_tests.rs"]

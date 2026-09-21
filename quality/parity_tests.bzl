@@ -37,8 +37,6 @@ PARITY_DEFERRED = {
     "mdx": ["ADR 0019", "framework adapter region; prose-is-not-dependency boundary per composition"],
     "pkl": ["ADR 0019", "checksummed standalone artifact (pkl) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "powershell": ["ADR 0019", "exact module plus portable PowerShell runtime (PSScriptAnalyzer); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "protobuf": ["ADR 0019", "checksummed standalone artifact (buf format+lint) -- Structured cohort owned by issue #419; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "qml": ["ADR 0019", "authoritative Qt distribution toolchain (qmlformat, qmllint) -- Structured cohort owned by issue #419; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "ruby": ["ADR 0019", "release-assembled Ruby closure (RuboCop, StandardRB); foundation deferred by ADR 0019 -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "scss": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint)"],
     "shell": ["ADR 0019", "checksummed standalone artifacts (shfmt, ShellCheck)"],

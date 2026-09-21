@@ -140,14 +140,14 @@ else
   bad "native-config carries a hidden file-family preset:$family_config"
 fi
 
-# No false adapter claim for the file-family cohort: none of the cohort
+# No false adapter claim for the remaining file-family cohort: none of the cohort
 # tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (owned; protobuf/qml owned under).
+# does not (buf/qmlformat/qmllint delivered under #799, no longer guarded here).
 # The `"tool": {` shape matches adapter entries only: class==tool taxonomy
 # rows like `"cue": "cue"` carry a family string, never a capability map,
 # so they cannot match here.
 family_claim=""
-for tool in cue jsonnetfmt pkl djlint stylelint modfmt terraform yamlfmt yamllint keep-sorted keep_sorted buf qmlformat qmllint; do
+for tool in cue jsonnetfmt pkl djlint stylelint modfmt terraform yamlfmt yamllint keep-sorted keep_sorted; do
   if grep -q -F -e "\"$tool\": {" "$adapters"; then
     family_claim="$family_claim $tool:claimed"
   fi

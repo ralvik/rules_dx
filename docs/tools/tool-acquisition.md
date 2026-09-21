@@ -324,10 +324,10 @@ execution-platform lazy; exact versions plus rule-sets qualified seed-only under
 (`bazel run //tools/ci:structured_defaults_qualification` with
 `quality/tests/fixtures/structured_quality/pins.bzl` over upstream built-in
 defaults with no hidden preset; `STANDARD` is the upstream built-in
-default lint set); digests plus adapter mappings stay owned under #799 (successor to closed #419)
-(live successor to closed #307 for the
-`protobuf` class) and no adapter claims `protobuf` yet
-(open under #799, successor to closed #419).
+default lint set); digests stay observations, not pins, recheck latest
+stable at implementation, with `protobuf` claimed via `buf` format plus
+lint (delivered under #799, successor to closed #419; live successor to
+closed #307 for the `protobuf` class).
 
 Decided route (Qt last): clang-format and
 clang-tidy take the authoritative-toolchain route from the qualified
@@ -338,10 +338,10 @@ distribution, with exact versions plus rule-sets qualified seed-only under issue
 `quality/tests/fixtures/structured_quality/pins.bzl` over upstream built-in
 defaults with no hidden preset; qmlformat/qmllint follow the qualified Qt
 distribution pin with native ini interpretation); exact Qt distribution
-identity, licensing, and platform artifact qualification plus digests plus
-adapter mappings stay owned under #799 (successor to closed #419; live successor
-to closed #307 for the `qml` class) and no adapter claiming `qml` yet
-(open under #799, successor to closed #419).
+identity, licensing, and platform artifact qualification plus digests stay
+observations, not pins, with `qml` claimed via `qmlformat` format plus
+`qmllint` lint (delivered under #799, successor to closed #419; live
+successor to closed #307 for the `qml` class).
 Qt closed that order (clang-format/clang-tidy, Buf, Scalafix routed to
 the managed-JVM route, Qt last).
 

@@ -2,34 +2,22 @@
 # Structured-cohort qualification harness.
 #
 # Qualifies the as-built structured quality-cohort record with fixture
-# evidence and owned gaps, without claiming Supported and without a false
-# adapter claim:
-# - delivered: decided checksummed native/self-contained artifact route for
-#   `buf` (self-contained per-platform binaries with published checksums, no
-#   target compiler context unlike clang-tidy, execution-platform lazy) plus
-#   decided authoritative-toolchain route for qmlformat/qmllint from the Qt
-#   distribution (Qt-last ordering decided; exact Qt distribution identity,
-#   licensing, and platform artifact qualification remain pending), initial
-#   artifact research rows as observations for digests (versions qualified
-# seed-only), adapter-input notes (buf
-#   `--error-format=json` JSONL as the faithful shape with no SARIF in
-#   1.71.0, `STANDARD` rule selection plus module-root-sensitive
-#   `PACKAGE_DIRECTORY_MATCH` plus `--path` scoping; qmlformat stdout plus
-#   `-i` with `.qmlformat.ini` upward settings; qmllint `--json` with
-#   `.qmllint.ini` plus `//qmllint enable/disable`; whole-file rewrite versus
-#   check-only fix modes with the provisional sandbox-apply-and-diff flow,
-#   never silently dropped), native-config defaults qualified seed-only
-# (`buf` `STANDARD` as the upstream built-in default lint
-#   set, qmlformat/qmllint ini discovery as native interpretation, no
-#   auto-supplied preset), parity-deferred protobuf/qml with owner plus frozen
-#   route, classification-only taxonomy with no curated defaults and no
-#   native-config binding;
-# - open under with honest records: exact artifact digests
-#   plus Qt distribution qualification, parser plus runner-matrix pass/fail
-#   plus fix/format evidence per adapter-backed class, native-config
-#   qualification against the native-config contract, platform plus
-#   consumer plus release evidence. REAL_ADAPTERS claims protobuf/qml only
-#   when green.
+# evidence and owned gaps, without claiming Supported:
+# - delivered under #799 (successor to closed #419): decided
+#   checksummed native/self-contained artifact route for `buf`
+#   (self-contained per-platform binaries with published checksums, no
+#   target compiler context unlike clang-tidy, execution-platform lazy)
+#   plus decided authoritative-toolchain route for qmlformat/qmllint
+#   from the Qt distribution (Qt-last ordering decided; exact Qt
+#   distribution identity, licensing, and platform artifact qualification
+#   remain pending), REAL_ADAPTERS claims protobuf/qml via buf,
+#   qmlformat, qmllint, JSONL plus diff plus path-listing plus JSON
+#   parsers with runner-matrix pass/fail plus fix/format evidence per
+#   adapter-backed class, native-config bindings against the
+#   native-config contract;
+# - open under #799 with honest records: exact artifact digests plus Qt
+#   distribution qualification, platform plus consumer plus release
+#   evidence.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:structured_cohort_qualification`,
 # following //tools/ci:native_cohort_qualification.
@@ -57,31 +45,25 @@ matrix="quality/testdata/runner_matrix_cases.bzl"
 subjects="quality/testdata/BUILD.bazel"
 aspects="quality/real_aspects.bzl"
 
-# No false adapter claim for the structured cohort: none of the cohort tool
-# IDs appear in REAL_ADAPTERS. Classification exists in
-# REAL_CLASS_TO_FAMILY; adapter claim does not.
+# Delivered adapter claims for the structured cohort: the three cohort
+# tool IDs appear in REAL_ADAPTERS with protobuf/qml classes.
 cohort_claim=""
 for tool in buf qmlformat qmllint; do
-  if grep -q -F -e "\"$tool\":" "$adapters"; then
-    cohort_claim="$cohort_claim $tool:claimed"
-  fi
+  grep -q -F -e "\"$tool\":" "$adapters" || cohort_claim="$cohort_claim $tool:missing"
 done
 if [[ -z "$cohort_claim" ]]; then
   ok
 else
-  bad "false adapter claim for structured cohort:$cohort_claim"
+  bad "structured adapter delivery missing:$cohort_claim (want all three under #799)"
 fi
 
-# Parity deferrals own protobuf/qml with owner plus frozen route plus the
-# live-successor record (closed owns nothing here).
-if grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&
-  grep -q -F -e 'checksummed standalone artifact (buf format+lint)' "$parity" &&
-  grep -q -F -e 'authoritative Qt distribution toolchain (qmlformat, qmllint)' "$parity" &&
-  grep -q -F -e 'issue #419' "$parity"; then
+# Parity no longer defers the delivered protobuf/qml classes (closed #419
+# owns nothing here; delivery under #799).
+if ! grep -q -F -e '"protobuf":' "$parity" &&
+  ! grep -q -F -e '"qml":' "$parity"; then
   ok
 else
-  bad "parity deferrals lost the structured protobuf/qml owner plus frozen route plus #419 record"
+  bad "parity still defers delivered protobuf/qml (want none under #799)"
 fi
 
 # Every cohort class stays classified in the frozen taxonomy, one family each.
@@ -106,113 +88,104 @@ else
   bad "curated defaults claim a structured family before adapters land:$cohort_curated"
 fi
 
-# No hidden structured native-config preset: no cohort binding exists in the
-# typed native-config rules (adapters run pinned upstream defaults until
-# qualifies checked-in policy against the native-config contract; the
-# provisional buf STANDARD plus qmlformat/qmllint ini suggestions stay review
-# inputs, never supplied configs).
+# Delivered native-config bindings: buf plus qmlformat plus qmllint carry
+# the typed bindings (no hidden preset).
 cohort_config=""
-for tool in buf qmlformat qmllint qml; do
-  if grep -q -F -e "${tool}_config" "$native"; then
-    cohort_config="$cohort_config $tool:preset"
-  fi
+for tool in buf qmlformat qmllint; do
+  grep -q -F -e "${tool}_config" "$native" || cohort_config="$cohort_config $tool:missing"
 done
 if [[ -z "$cohort_config" ]]; then
   ok
 else
-  bad "native-config carries a hidden structured preset:$cohort_config"
+  bad "native-config lost structured bindings:$cohort_config (want all three under #799)"
 fi
 
-# No false green claim: the runner matrix carries no structured cells yet, so
-# REAL_ADAPTERS cannot claim protobuf/qml (claims land only with green
-# pass/fail plus fix/format evidence per adapter-backed class).
-if ! grep -q -F -e 'matrix_protobuf_' "$matrix" &&
-  ! grep -q -F -e 'matrix_qml_' "$matrix"; then
+# Delivered green claim: the runner matrix carries structured cells with
+# pass/fail plus fix/format evidence per adapter-backed class. Cells live
+# in runner_matrix_structured.bzl (split from the cases file).
+structured_matrix="quality/testdata/runner_matrix_structured.bzl"
+if grep -q -F -e 'matrix_protobuf_format_pass' "$structured_matrix" &&
+  grep -q -F -e 'matrix_protobuf_format_fail' "$structured_matrix" &&
+  grep -q -F -e 'matrix_protobuf_lint_pass' "$structured_matrix" &&
+  grep -q -F -e 'matrix_protobuf_lint_fail' "$structured_matrix" &&
+  grep -q -F -e 'matrix_qml_format_pass' "$structured_matrix" &&
+  grep -q -F -e 'matrix_qml_format_fail' "$structured_matrix" &&
+  grep -q -F -e 'matrix_qml_lint_pass' "$structured_matrix" &&
+  grep -q -F -e 'matrix_qml_lint_fail' "$structured_matrix"; then
   ok
 else
-  bad "runner matrix claims a structured cell without adapter qualification"
+  bad "runner matrix lost delivered structured cells under #799"
 fi
 
 # Tool acquisition keeps the decided checksummed buf route with no
-# target-compiler context plus execution-platform laziness and no false
-# claim, owned by (live successor to closed for the protobuf class).
+# target-compiler context plus execution-platform laziness, delivered
+# under #799 (live successor to closed #419 for the protobuf class).
 if grep -q -F -e 'Decided route: `buf` takes the checksummed' "$acquisition" &&
   grep -q -F -e 'needs no target compiler context' "$acquisition" &&
   grep -q -F -e 'execution-platform lazy' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `protobuf` yet' "$acquisition" &&
-  grep -q -F -e '(open under issue #419)' "$acquisition"; then
+  grep -q -F -e 'with `protobuf` claimed via `buf`' "$acquisition" &&
+  grep -q -F -e '(delivered under #799' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided buf route, no-compiler-context plus laziness honesty, or #419 ownership or no-claim honesty"
+  bad "tool-acquisition lost its delivered buf route under #799"
 fi
 
 # Tool acquisition keeps the decided Qt-last authoritative-toolchain route for
 # qmlformat/qmllint with distribution identity plus licensing plus platform
-# artifacts pending and no false claim, owned by.
+# artifacts pending, delivered under #799.
 if grep -q -F -e 'Decided route (Qt last)' "$acquisition" &&
   grep -q -F -e 'qmlformat and qmllint take the authoritative-toolchain route' "$acquisition" &&
-  grep -q -F -e 'exact Qt distribution identity, licensing, and platform' "$acquisition" &&
-  grep -q -F -e 'no adapter claiming `qml` yet' "$acquisition" &&
-  grep -q -F -e '(open under issue #419)' "$acquisition" &&
+  grep -q -F -e 'exact Qt distribution' "$acquisition" &&
+  grep -q -F -e 'with `qml` claimed via' "$acquisition" &&
+  grep -q -F -e '(delivered under #799' "$acquisition" &&
   grep -q -F -e 'Qt closed that order' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided Qt route, distribution-identity honesty, Qt-last ordering, or #419 ownership or no-claim honesty"
+  bad "tool-acquisition lost its delivered Qt route under #799"
 fi
 
-# Tool acquisition keeps initial artifact research rows for the cohort as
-# observations, not pins, with byte-identity risk explicit.
+# Tool acquisition keeps initial artifact research rows for the cohort
+# with byte-identity risk explicit (digests stay observations, not pins).
 cohort_research=""
 for tool in '| buf |' '| qmlformat |' '| qmllint |'; do
   grep -q -F -e "$tool" "$acquisition" || cohort_research="$cohort_research $tool:missing"
 done
 if [[ -z "$cohort_research" ]] &&
-  grep -q -F -e 'owned by issue #419' "$acquisition" &&
-  grep -q -F -e 'observations, not pins' "$acquisition" &&
   grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost a structured research row or its observations-not-pins honesty:$cohort_research"
+  bad "tool-acquisition lost a structured research row:$cohort_research"
 fi
 
-# Tool integrations keep the structured adapter-input notes:
+# Tool integrations keep the delivered structured adapter notes:
 # buf JSONL as the faithful shape (no SARIF) with STANDARD plus
-# module-root-sensitive scoping recorded not silent, qmlformat stdout plus
-# `-i` with ini settings, qmllint `--json` with ini plus comment scoping,
+# module-root-sensitive scoping, qmlformat check plus `-i` with ini
+# settings, qmllint `--json -` with ini plus comment scoping,
 # whole-file rewrite versus check-only fix modes, Qt-last ordering,
-# versions qualified under with digests as observations, no adapter claim.
-if grep -q -F -e '**Structured cohort (issue #419' "$integrations" &&
-  grep -q -F -e 'no adapter claims `protobuf` or `qml` yet' "$integrations" &&
+# versions qualified under #488 with digests as observations, adapters
+# qualified under #799.
+if grep -q -F -e '**Structured cohort (#799' "$integrations" &&
+  grep -q -F -e 'adapters `buf` (format plus lint `protobuf`)' "$integrations" &&
   grep -q -F -e 'no SARIF in 1.71.0' "$integrations" &&
   grep -q -F -e 'PACKAGE_DIRECTORY_MATCH' "$integrations" &&
-  grep -q -F -e 'not silently dropped' "$integrations" &&
+  grep -q -F -e 'itemized here, not silently dropped' "$integrations" &&
   grep -q -F -e '.qmlformat.ini' "$integrations" &&
-  grep -q -F -e '--json <file>' "$integrations" &&
+  grep -q -F -e '--json -' "$integrations" &&
   grep -q -F -e 'qualified seed-only under issue #488' "$integrations" &&
-  grep -q -F -e 'observations, not pins' "$integrations"; then
+  grep -q -F -e 'adapters qualified seed-only under #799' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its structured adapter-input notes or #488 versions honesty"
+  bad "tool-integrations lost its delivered structured notes under #799"
 fi
 
-# Support matrix keeps the structured routes plus qualified native-config
-# defaults plus adapter-input notes plus cohort tracking, all
-# citing for adapters/digests without approving hidden presets or
-# claiming support.
-if grep -q -F -e 'checksummed native/self-contained artifact route (issue #419' "$support" &&
-  grep -q -F -e 'authoritative-toolchain route from the Qt distribution (issue #419' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #488' "$support" &&
-  grep -q -F -e 'STANDARD' "$support" &&
-  grep -q -F -e 'upstream built-in default' "$support" &&
-  grep -q -F -e 'owned by' "$support" &&
-  grep -q -F -e 'issue #419' "$support" &&
-  grep -q -F -e 'itemized under issue #419' "$support" &&
-  grep -q -F -e 'stay open' "$support" &&
-  grep -q -F -e '(issue #419)' "$support" &&
-  grep -q -F -e 'to issue #419.' "$support"; then
+# Support matrix keeps the file-family record with protobuf/qml delivered
+# under #799, never double-claimed.
+if grep -q -F -e '`protobuf`/`qml` adapters delivered under #799' "$support" &&
+  grep -q -F -e 'never double-claimed' "$support" &&
+  grep -q -F -e 'file_family_defaults_qualification' "$support"; then
   ok
 else
-  bad "support-matrix lost its structured routes, qualified defaults, adapter notes, or #419 cohort tracking"
+  bad "support-matrix lost its structured protobuf/qml delivered record under #799"
 fi
 
 # Tool baseline keeps the Protocol Buffer/QML coverage rows (integration inventory,

@@ -43,14 +43,20 @@ def adapter_supported_classes(tool_id, capability):
 # Real adapters: stable tool IDs users select in policy families.
 # Stages order by sorted tool ID; rustc and roslyn are upstream-delegated,
 # tsc and spotbugs are target-coupled, scalafix/fsharplint are
-# callback/library-wired check-only, clang-tidy/cppcheck/staticcheck/govet/errcheck are
-# delegated-record check-only, and lint-only adapters stay check-only by
+# callback/library-wired check-only, buf lint plus qmllint plus
+# clang-tidy/cppcheck/staticcheck/govet/errcheck are
+# recorded-diagnostics/delegated-record check-only in the matrix
+# (spawned in production), and lint-only adapters stay check-only by
 # design (ktlint lint fixes via `--format` like ESLint `--fix`).
 # See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
     "biome": {
         "format": ["javascript", "json", "jsx", "typescript", "tsx"],
         "lint": ["javascript", "json", "jsx", "typescript", "tsx"],
+    },
+    "buf": {
+        "format": ["protobuf"],
+        "lint": ["protobuf"],
     },
     "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
     "checkstyle": {"lint": ["java"]},
@@ -74,6 +80,8 @@ REAL_ADAPTERS = {
     "prettier": {"format": ["javascript", "json", "jsx", "typescript", "tsx"]},
     "pydoclint": {"lint": ["python", "python_stub"]},
     "pylint": {"lint": ["python", "python_stub"]},
+    "qmlformat": {"format": ["qml"]},
+    "qmllint": {"lint": ["qml"]},
     "roslyn": {"lint": ["csharp"]},
     "ruff": {"format": ["python", "python_stub"], "lint": ["python", "python_stub"]},
     "rustc": {"typecheck": ["rust"]},

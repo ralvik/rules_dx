@@ -6,7 +6,9 @@
 //! `--format` (re-read on exit 0 or 1 like ESLint); Checkstyle, PMD,
 //! and SpotBugs are check-only and return their input. Scala/.NET
 //! notes: Scalafmt, CSharpier, and Fantomas rewrite in place;
-//! Scalafix, Roslyn, and FSharpLint are check-only.
+//! Scalafix, Roslyn, and FSharpLint are check-only. Structured notes:
+//! Buf format plus qmlformat rewrite in place; Buf lint plus qmllint
+//! are check-only with the provisional sandbox-apply-and-diff fix flow.
 
 use super::*;
 
@@ -41,8 +43,14 @@ impl super::RealBackend {
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
             "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint"
             | "clippy" | "scalafix" | "roslyn" | "fsharplint" | "checkstyle" | "pmd"
-            | "spotbugs" | "clang_tidy" | "cppcheck" | "staticcheck" | "govet" | "errcheck" => {
-                Ok(text.to_owned())
+            | "spotbugs" | "qmllint" | "clang_tidy" | "cppcheck" | "staticcheck" | "govet"
+            | "errcheck" => Ok(text.to_owned()),
+            "buf" => {
+                if capability == "format" {
+                    self.run_buf_format_fix(tool, path, text)
+                } else {
+                    Ok(text.to_owned())
+                }
             }
             "biome" => {
                 if capability == "format" {
@@ -63,6 +71,7 @@ impl super::RealBackend {
             "fantomas" => self.run_fantomas_fix(tool, path, text),
             "clang_format" => self.run_clang_format_fix(tool, path, text),
             "gofumpt" => self.run_gofumpt_fix(tool, path, text),
+            "qmlformat" => self.run_qmlformat_fix(tool, path, text),
             "eslint" => self.run_eslint_fix(tool, path, text),
             "ktlint" => self.run_ktlint_fix(tool, path, text),
             _ => Err(execution(
@@ -333,6 +342,26 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
+    /// Runs one Buf format fix round: `format --write` (in-place).
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_buf_format_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "buf";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::buf_format_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
     /// Runs one clang-format fix round: `-i` (in-place).
     /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_clang_format_fix(
@@ -366,6 +395,26 @@ impl super::RealBackend {
         let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
         let refs = [absolute.as_path()];
         let invocation = commands::gofumpt_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// Runs one qmlformat fix round: `-i` (in-place).
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_qmlformat_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "qmlformat";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::qmlformat_fix(&tool.binary, &refs);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) {
             return cleaned(TOOL_ID, scratch, text.to_owned());

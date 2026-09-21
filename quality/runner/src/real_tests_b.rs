@@ -162,6 +162,7 @@ pub(super) fn real_tools_pin_the_dispatched_set() {
         REAL_TOOLS,
         &[
             "biome",
+            "buf",
             "buildifier",
             "checkstyle",
             "clang_format",
@@ -184,6 +185,8 @@ pub(super) fn real_tools_pin_the_dispatched_set() {
             "prettier",
             "pydoclint",
             "pylint",
+            "qmlformat",
+            "qmllint",
             "roslyn",
             "ruff",
             "rustc",

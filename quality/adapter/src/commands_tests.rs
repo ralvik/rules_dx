@@ -783,3 +783,43 @@ fn govet_and_errcheck_take_plain_file_lists() {
     assert_eq!(argv_strings(&errcheck), vec![BIN, "/scratch/Sample.go"]);
     assert_eq!(errcheck.cwd_rel, "");
 }
+
+#[test]
+fn structured_checks_encode_pinned_shapes() {
+    let proto = Path::new("/scratch/proto/hello.proto");
+    let lint = buf_lint_check(Path::new(BIN), &[proto]);
+    assert_eq!(
+        argv_strings(&lint),
+        vec![BIN, "lint", "--error-format=json", "/scratch/proto/hello.proto"]
+    );
+    assert_eq!(lint.cwd_rel, "");
+    let check = buf_format_check(Path::new(BIN), &[proto]);
+    assert_eq!(
+        argv_strings(&check),
+        vec![
+            BIN,
+            "format",
+            "--diff",
+            "--exit-code",
+            "/scratch/proto/hello.proto"
+        ]
+    );
+    let fix = buf_format_fix(Path::new(BIN), &[proto]);
+    assert_eq!(
+        argv_strings(&fix),
+        vec![BIN, "format", "--write", "/scratch/proto/hello.proto"]
+    );
+    let qml = Path::new("/scratch/qml/Main.qml");
+    let check = qmlformat_check(Path::new(BIN), &[qml]);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "--check", "/scratch/qml/Main.qml"]
+    );
+    let fix = qmlformat_fix(Path::new(BIN), &[qml]);
+    assert_eq!(argv_strings(&fix), vec![BIN, "-i", "/scratch/qml/Main.qml"]);
+    let lint = qmllint_check(Path::new(BIN), &[qml]);
+    assert_eq!(
+        argv_strings(&lint),
+        vec![BIN, "--json", "-", "/scratch/qml/Main.qml"]
+    );
+}
