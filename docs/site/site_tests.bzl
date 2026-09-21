@@ -1,7 +1,7 @@
 """Unit plus execution tests for docs site execution."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":site.bzl", "MDBOOK_VERSION", "site_api_path", "site_html_name", "site_index_name", "site_prose_error", "site_records_name", "site_search_record", "site_shard_name", "site_summary_name", "site_api_name", "site_symbol_id", "site_symbol_id_error", "site_url_for_symbol")
+load(":site.bzl", "MDBOOK_VERSION", "site_api_path", "site_html_name", "site_index_name", "site_is_external_link", "site_link_target_error", "site_prose_error", "site_records_name", "site_search_record", "site_shard_name", "site_summary_name", "site_api_name", "site_symbol_id", "site_symbol_id_error", "site_url_for_symbol")
 
 def site_unit_tests(name):
     starlark_test(
@@ -67,6 +67,46 @@ def site_unit_tests(name):
                 "search records keep sorted keys",
                 site_search_record("api/python/demo/AccountService.create.html", "AccountService.create", "Creates a new account."),
                 "{\"body\": \"Creates a new account.\", \"title\": \"AccountService.create\", \"url\": \"api/python/demo/AccountService.create.html\"}",
+            ),
+            expect_equal(
+                "remote link targets are skipped never fetched",
+                [
+                    site_is_external_link("https://example.com/docs"),
+                    site_is_external_link("http://example.com/x"),
+                    site_is_external_link("mailto:docs@example.com"),
+                    site_is_external_link("api.md"),
+                    site_is_external_link("#getting-started"),
+                    site_is_external_link("prose.md"),
+                ],
+                [True, True, True, False, False, False],
+            ),
+            expect_equal(
+                "internal link targets resolve to prose or API pages",
+                [
+                    site_link_target_error("api.md", ["api.md", "prose.md", "SUMMARY.md"], ["api/python/demo/AccountService.create.md"]),
+                    site_link_target_error("prose.md", ["api.md", "prose.md", "SUMMARY.md"], []),
+                    site_link_target_error("#getting-started", ["api.md", "prose.md"], []),
+                    site_link_target_error("api/python/demo/AccountService.create.md", ["api.md"], ["api/python/demo/AccountService.create.md"]),
+                    site_link_target_error("https://example.com/docs", ["api.md"], []),
+                ],
+                ["", "", "", "", ""],
+            ),
+            expect_equal(
+                "dangling link targets fail closed with no silent pass",
+                [
+                    site_link_target_error("", ["api.md"], []),
+                    site_link_target_error("#", ["api.md"], []),
+                    site_link_target_error("missing.md", ["api.md", "prose.md"], []),
+                    site_link_target_error("api/missing.md", ["api.md"], ["api/python/demo/AccountService.create.md"]),
+                    site_link_target_error("unknown-target", ["api.md"], []),
+                ],
+                [
+                    "docs_site: empty link target",
+                    "docs_site: empty link target",
+                    "docs_site: dangling prose link 'missing.md'",
+                    "docs_site: dangling API link 'api/missing.md'",
+                    "docs_site: unknown link target 'unknown-target'",
+                ],
             ),
         ],
     )

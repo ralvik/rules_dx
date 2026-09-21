@@ -1,11 +1,13 @@
-"""Docs site execution plus rebuild pins (renderer plus site execution, mdBook).
+"""Docs site execution plus rebuild plus link-completeness pins (renderer plus site execution, mdBook).
 
 Contract: `docs/documentation/site.md`.
 Fixture: `tools/ci/tests/fixtures/docs_site/` via
 `bazel run //tools/ci:docs_pipeline_qualification`.
 Execution: `//docs/site:demo_site` extract to aggregate to render over
 miniature inputs; generated IR stays in Bazel outputs, never beside
-sources; rebuild proof hashes two builds and diffs them; seed-only,
+sources; rebuild proof hashes two builds and diffs them; link/reference
+completeness proves prose plus API pages resolve all internal links with
+no dangling targets at the pre-render boundary; seed-only,
 no Supported claim.
 """
 
@@ -39,6 +41,19 @@ PROSE_MARKER = "# Demo Guide"
 SEARCH_INDEX = "searchindex.json"
 SEARCH_RECORD_KEYS = ["body", "title", "url"]
 
+# Link/reference completeness at the pre-render boundary: prose plus
+# generated API pages resolve all internal links/references with no
+# dangling targets. Delivered seed-only under issue #782 via shared
+# validation in DocsAggregate (inline plus reference-definition targets
+# checked, remote URLs skipped never fetched, dangling fails the action
+# with no partial outputs).
+LINK_COMPLETENESS = "prose plus API pages resolve all internal links with no dangling targets under issue #782"
+LINK_BOUNDARY = "pre-render boundary shared validation in DocsAggregate"
+LINK_REMOTE = "remote URLs skipped never fetched"
+LINK_FAIL_CLOSED = "dangling links fail the aggregate action with no partial outputs"
+LINK_DEMO = "demo prose links api.md plus #getting-started plus remote skip"
+LINK_SEED_ONLY = "link completeness qualified seed-only under issue #782"
+
 # Determinism: sorted symbol order, sorted JSON keys, workspace-relative
 # paths only, no timestamps, no absolute paths, locale-independent sort.
 # Delivered seed-only under issue #781 via two-builds-diffed live proof.
@@ -59,9 +74,11 @@ REJECTED_COMMITTED_IR = "committed IR snapshots are rejected"
 REJECTED_HTML_PARSED_INDEX = "search index parsing rendered HTML is rejected"
 REJECTED_WATCHER = "custom watcher or refresh engine is rejected; Bazel incrementality only"
 REJECTED_MDBOOK_TEST = "mdbook test wrapper is rejected"
+REJECTED_DANGLING_SILENT = "silent dangling link pass is rejected"
 
 COMPAT_SEED_ONLY = "Compatibility: seed Linux x86_64 only"
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issues #780 plus #781"
+SEED_ONLY = "qualified seed-only under issues #780 plus #781 plus #782"
 REBUILD_SEED_ONLY = "rebuild proof qualified seed-only under issue #781"
-OWNED_GAP = "link completeness plus guide-step wiring plus timing proof plus pin-bump/drift stay owned gaps under #782-#785"
+LINK_SEED_ONLY_QUAL = "link completeness qualified seed-only under issue #782"
+OWNED_GAP = "guide-step wiring plus timing proof plus pin-bump/drift stay owned gaps under #783-#785"

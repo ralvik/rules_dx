@@ -1,0 +1,5 @@
+Docs site link and reference completeness (issue #782)
+Prose plus generated API pages resolve all internal links with no dangling targets
+Pre-render shared validation in DocsAggregate: inline plus reference-definition targets checked
+Remote URLs skipped never fetched; dangling links fail the aggregate action with no partial outputs
+Qualified seed-only, no Supported claim
