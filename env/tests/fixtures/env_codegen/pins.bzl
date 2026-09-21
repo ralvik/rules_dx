@@ -183,3 +183,19 @@ RELEASE_PER_HOST_OPEN = "release evidence open (#803-#807, process #808)"
 OUT_OF_SCOPE_BARE_SCHEMA = "bare-schema expansion stays open under #751"
 OUT_OF_SCOPE_COLLISION = "collision replacement contract stays open under #752"
 OUT_OF_SCOPE_CONCURRENCY = "concurrency plus NFS plus relock stays open under #753"
+
+# Admitted-pairs evolution plus new generator onboarding (issue #788):
+# the frozen registry plus the per-pair fixture plus checklist linkage that
+# each newly admitted pair must satisfy.
+ONBOARDING_DOC = "docs/environments/codegen.md#admitted-pairs-evolution-and-new-generator-onboarding"
+ONBOARDING_CHECKLIST = "admitted-pairs evolution checklist"
+ONBOARDING_PROVIDER = "narrow ruleset-specific adapter"
+ONBOARDING_BEP_GROUP = "dx_codegen_plans"
+ONBOARDING_SHARD_SUFFIX = ".dxcodegen.pb"
+ONBOARDING_PROJECTION = "symlink-only read-only mirror"
+ONBOARDING_ROOTS = "FROZEN_STRATEGY"
+ONBOARDING_COLD_WARM = "cold_ms + WARM_WEIGHT"
+ONBOARDING_PAIR_PROTOBUF_RUST = "protobuf/rust via //generation:codegen_prost_fixture"
+ONBOARDING_CHAIN_FIXTURES = "//generation:codegen_shard_alpha plus //generation:codegen_shard_beta"
+ONBOARDING_SUBJECTS = "//generation:codegen_plan_chain_subject plus //generation:codegen_plan_prost_subject"
+ONBOARDING_QUALIFICATION = "bazel run //tools/ci:env_codegen_qualification"

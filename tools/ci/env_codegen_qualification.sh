@@ -27,6 +27,8 @@
 # release evidence promoting the layer beyond seed-host-delivered qualified
 # under issue #787 (per-required-host plus adopt-consumer plus release
 # checklist linkage, still seed-executed with static per-host pins).
+# Admitted-pairs evolution onboarding qualified under issue #788 (checklist
+# plus per-pair fixtures plus qualification coverage for each admitted pair).
 # Bare-schema expansion (#751), collision replacement contract (#752), and
 # concurrency/NFS/relock (#753) stay out of scope and open.
 set -euo pipefail
@@ -494,14 +496,102 @@ else
   bad "out-of-scope #751 plus #752 plus #753 record lost (issue #787)"
 fi
 
+# Admitted-pairs evolution onboarding doc owns the checklist (issue #788).
+if grep -q -F -e 'Admitted-Pairs Evolution and New Generator Onboarding' "$codegen_doc" &&
+  grep -q -F -e 'admitted-pairs evolution checklist' "$codegen_doc" &&
+  grep -q -F -e 'DX_CODEGEN_ADMITTED_PAIRS' "$codegen_doc" &&
+  grep -q -F -e 'Per-pair fixtures' "$codegen_doc"; then
+  ok
+else
+  bad "codegen.md lost its admitted-pairs evolution onboarding checklist (issue #788)"
+fi
+
+# Onboarding covers the five evidence slices beyond the frozen set (issue #788).
+if grep -q -F -e 'narrow ruleset-specific adapter' "$codegen_doc" &&
+  grep -q -F -e 'dx_codegen_plans' "$codegen_doc" &&
+  grep -q -F -e '.dxcodegen.pb' "$codegen_doc" &&
+  grep -q -F -e 'symlink-only read-only mirror' "$codegen_doc" &&
+  grep -q -F -e 'FROZEN_STRATEGY' "$codegen_doc" &&
+  grep -q -F -e 'cold_ms + WARM_WEIGHT' "$codegen_doc"; then
+  ok
+else
+  bad "codegen.md lost its onboarding provider plus BEP plus projection plus roots plus cold-warm slices (issue #788)"
+fi
+
+# Pins record the onboarding registry plus checklist linkage (issue #788).
+if grep -q -F -e 'ONBOARDING_CHECKLIST = "admitted-pairs evolution checklist"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_PROVIDER = "narrow ruleset-specific adapter"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_BEP_GROUP = "dx_codegen_plans"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_SHARD_SUFFIX = ".dxcodegen.pb"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_PROJECTION = "symlink-only read-only mirror"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_ROOTS = "FROZEN_STRATEGY"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_COLD_WARM = "cold_ms + WARM_WEIGHT"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_QUALIFICATION = "bazel run //tools/ci:env_codegen_qualification"' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its onboarding checklist plus slice pins under issue #788"
+fi
+
+# Pins record the per-pair fixture labels for each admitted pair (issue #788).
+if grep -q -F -e 'ONBOARDING_PAIR_PROTOBUF_RUST = "protobuf/rust via //generation:codegen_prost_fixture"' "$pins" &&
+  grep -q -F -e 'ONBOARDING_CHAIN_FIXTURES' "$pins" &&
+  grep -q -F -e '//generation:codegen_shard_alpha' "$pins" &&
+  grep -q -F -e '//generation:codegen_shard_beta' "$pins" &&
+  grep -q -F -e '//generation:codegen_plan_chain_subject' "$pins" &&
+  grep -q -F -e '//generation:codegen_plan_prost_subject' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its per-pair fixture pins for protobuf/rust under issue #788"
+fi
+
+# Fixture expected texts cover onboarding plus per-pair fixtures (issue #788).
+if grep -q -F -e 'Admitted-pairs evolution onboarding (issue #788)' "$expected" &&
+  grep -q -F -e 'admitted-pairs evolution checklist' "$expected" &&
+  grep -q -F -e '//generation:codegen_prost_fixture' "$expected" &&
+  grep -q -F -e '//generation:codegen_plan_prost_subject' "$expected" &&
+  grep -q -F -e 'Admitted-pairs evolution onboarding (issue #788)' "$roots_bep" &&
+  grep -q -F -e '//generation:codegen_shard_alpha' "$roots_bep"; then
+  ok
+else
+  bad "env_codegen.expected plus roots_bep.txt lost onboarding plus per-pair coverage (issue #788)"
+fi
+
+# Admitted registry matches the pins for every pair (issue #788).
+if grep -q -F -e 'DX_CODEGEN_ADMITTED_PAIRS = (' generation/codegen.bzl &&
+  grep -q -F -e '("protobuf", "rust")' generation/codegen.bzl &&
+  grep -q -F -e 'WP1_ADMITTED_PAIRS = ("protobuf", "rust")' "$pins" &&
+  grep -q -F -e 'ONBOARDING_PAIR_PROTOBUF_RUST' "$pins"; then
+  ok
+else
+  bad "admitted-pair registry drifted between generation/codegen.bzl and pins.bzl (issue #788)"
+fi
+
+# Per-pair fixtures stay declared in the generation package (issue #788).
+if grep -q -F -e 'name = "codegen_shard_alpha"' generation/BUILD.bazel &&
+  grep -q -F -e 'name = "codegen_shard_beta"' generation/BUILD.bazel &&
+  grep -q -F -e 'name = "codegen_prost_fixture"' generation/BUILD.bazel &&
+  grep -q -F -e 'name = "codegen_plan_chain_subject"' generation/BUILD.bazel &&
+  grep -q -F -e 'name = "codegen_plan_prost_subject"' generation/BUILD.bazel; then
+  ok
+else
+  bad "generation/BUILD.bazel lost its per-pair onboarding fixtures (issue #788)"
+fi
+
+# Live proof: every admitted pair builds its fixtures green (issue #788).
+if bazel build //generation:codegen_shard_alpha //generation:codegen_shard_beta //generation:codegen_prost_fixture //generation:codegen_plan_chain_subject //generation:codegen_plan_prost_subject --noshow_progress >/dev/null 2>&1; then
+  ok
+else
+  bad "admitted-pair fixtures failed to build (want green protobuf/rust fixtures, issue #788)"
+fi
+
 # Verification matrix owns the qualified seed-only record under.
 if grep -q -F -e 'env_codegen_qualification' "$matrix" &&
   grep -q -F -e 'qualified seed-only under closed #506' "$matrix" &&
   grep -q -F -e 'bazel run //tools/ci:env_codegen_qualification' "$matrix" &&
-  grep -q -F -e '`env_codegen_qualification` 44/44' "$matrix"; then
+  grep -q -F -e '`env_codegen_qualification` 52/52' "$matrix"; then
   ok
 else
-  bad "verification-matrix lost its #506 plus #787 env codegen qualified record with 44/44"
+  bad "verification-matrix lost its #506 plus #787 plus #788 env codegen qualified record with 52/52"
 fi
 
 dx_test_summary "env/codegen qualification harness"

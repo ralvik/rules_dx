@@ -43,7 +43,9 @@ The physical root-selection mechanism is frozen to the `//...` baseline
 (see `FROZEN_STRATEGY` in `cli/roots/src/lib.rs`) by fiat per
 [ADR 0022](../decisions/0022-no-benchmarking.md). The admitted
 generator/language pairs stay frozen under closed #506
-(`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`; evolution #788). Concurrency,
+(`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`; evolution onboarding
+qualified under #788, see
+[Admitted-Pairs Evolution and New Generator Onboarding](#admitted-pairs-evolution-and-new-generator-onboarding)). Concurrency,
 interruption, remote materialization, and reuse certification are scoped under #753 as
 seed-host-only with documented non-goals (see Scaling Model below).
 
@@ -250,6 +252,67 @@ file, aggregate, and package-local shards are rejected alternatives with
 identical effective target, aspect, output-group, and configuration semantics
 where applicable.
 
+## Admitted-Pairs Evolution and New Generator Onboarding
+
+Accepted under #788 (successor to closed #506): the admitted generator/language
+pairs stay frozen in `generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`
+(currently `("protobuf", "rust")`). Adding a pair edits that registry data
+only and follows the admitted-pairs evolution checklist below. No pair is
+admitted by editing call sites or adding a second registry.
+
+Each newly admitted pair must prove the same five evidence slices the first
+pair proves: provider contract, BEP output groups, projection, roots, and
+cold-warm. Per-pair fixtures plus `env_codegen_qualification` coverage are
+required for every pair, not just the first.
+
+Onboarding checklist (every box required per pair):
+
+- Registry: append `(schema_kind, language)` to `DX_CODEGEN_ADMITTED_PAIRS`
+  with `codegen_schema_error` plus `codegen_pair_error` green and
+  `codegen_admitted_pairs` returning the registry data unchanged.
+- Provider contract: narrow ruleset-specific adapter normalizing verified
+  authoritative transitive upstream providers into the internal projection
+  provider (see [Provider Contract](#provider-contract)); unsupported rule
+  kinds fail closed with no `DefaultInfo` fallback; one normalized binary
+  Protobuf plan shard per contributing configured target with transitive
+  depset collection and deterministic merge plus conflict handling.
+- BEP output groups: private `dx_codegen_plans` output group carrying shards
+  plus every referenced generated artifact with the reserved `.dxcodegen.pb`
+  shard suffix; the CLI recognizes shards only among BEP-reported files and
+  rejects missing, duplicate, or unreported artifacts without scanning
+  `bazel-out`; remote outputs materialize through the requested output group
+  with no second remote-cache downloader.
+- Projection: deterministic logical workspace-relative paths with a
+  symlink-only read-only mirror under `.dx/setups/current/generated` (see
+  [Filesystem Projection](#filesystem-projection)); logical-path collisions
+  fail closed unless the claiming entry carries the explicit tested
+  replacement contract (`replaces` equal to the logical path with a non-empty
+  `exec_path`).
+- Roots: frozen `//...` baseline with `FROZEN_STRATEGY` plus exact-target
+  bypass plus bare-schema expansion via
+  `kind('.*codegen_shard rule', rdeps(//..., set(<target>)))` (see
+  [Repository Root Selection](#repository-root-selection) and [Scope](#scope));
+  declared-BUILD-only with no Gazelle freshness preflight.
+- Cold-warm: cold proportional to the selected graph with warm reuse through
+  the persistent server plus action cache and `cold_ms + WARM_WEIGHT` scoring
+  with no timing claims per [ADR 0022](../decisions/0022-no-benchmarking.md)
+  (see [Scaling Model](#scaling-model)).
+- Per-pair fixtures: one `dx_codegen_shard` plus one adapter-rule fixture plus
+  one `codegen_plan_subject` with fingerprint, plus
+  `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected` plus
+  `roots_bep.txt` entries naming the pair and its fixture labels.
+- Qualification: `bazel run //tools/ci:env_codegen_qualification` iterates
+  every admitted pair and proves its fixtures build plus its provider, BEP,
+  projection, roots, and cold-warm evidence (see
+  [Test Requirements](#test-requirements)); Starlark unit plus analysis tests
+  (`codegen_defs_unit`, `codegen_plan_analysis`) stay green.
+
+The first pair (`protobuf`/`rust`) proves this gate today through
+`//generation:codegen_shard_alpha`, `//generation:codegen_shard_beta`, and
+`//generation:codegen_prost_fixture` with
+`//generation:codegen_plan_chain_subject` plus
+`//generation:codegen_plan_prost_subject`.
+
 ## Test Requirements
 
 Codegen tests must cover:
@@ -288,6 +351,9 @@ Codegen tests must cover:
   cross-command execution.
 - Immediate LSP visibility after current-pointer replacement without environment
   regeneration or a pinned codegen identity.
+- Admitted-pairs evolution: onboarding checklist plus per-pair fixtures plus
+  `env_codegen_qualification` coverage for every admitted pair (see
+  [Admitted-Pairs Evolution and New Generator Onboarding](#admitted-pairs-evolution-and-new-generator-onboarding)).
 
 Cross-cutting fixture, platform, remote, and evidence requirements remain in
 [Testing Strategy](../testing/README.md). Shared identity, pointer, reuse, carry-forward,
@@ -299,4 +365,6 @@ Codegen deferred records with fixture evidence qualified seed-only under closed 
 admitted pairs, collector contracts, BEP output groups, projection, roots, and cold-warm with
 `env_codegen.expected` plus `roots_bep.txt`; platform plus consumer plus release evidence qualified
 under #787 with per-required-host symlink-only plus refusal, adopt-consumer, and release checklist
-linkage; #751 plus #752 plus #753 stay open and out of scope for #787; no Supported claim).
+linkage; admitted-pairs evolution onboarding qualified under #788 with checklist plus per-pair
+fixtures plus qualification coverage for each admitted pair; #751 plus #752 plus #753 stay open
+and out of scope for #787 plus #788; no Supported claim).
