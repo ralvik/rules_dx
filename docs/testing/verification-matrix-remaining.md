@@ -578,17 +578,27 @@ Remaining reds stay owned gaps, not green claims:
 - Quality family taxonomy execution with fixture evidence qualified seed-only under closed #512
   (`bazel run //tools/ci:quality_taxonomy_qualification` with
   `quality/tests/fixtures/quality_taxonomy/pins.bzl` plus
-  `quality_taxonomy.expected`; `quality_taxonomy_qualification` 17/17;
+  `quality_taxonomy.expected`; `quality_taxonomy_qualification` 25/25;
   47 classes each with exactly one owning family across 39 families with
-  css/json/python/typescript/javascript/cc groupings, 8 curated families
-  with lazy defaults plus 11 backed classes over 16 adapters with matrix
-  plus parser plus native plus aspect plus policy execution, 36 deferred
+  css/json/python/typescript/javascript/cc groupings, 10 curated families
+  with JVM java/kotlin delivered under #796 plus lazy defaults, 38 backed
+  classes over 53 adapters with JVM plus Scala/.NET plus native plus
+  structured plus file-family matrix plus parser plus checkstyle
+  native plus aspect plus policy execution, 9 deferred
   with ADR 0019 owner plus frozen route, curated audit empty with Bandit
   excluded plus secrets via Gitleaks, suffix rejected with cross-family
    union plus lazy plus no hidden preset; taxonomy doc only plus
-    report-not-gate shape only rejected; deferred adapters owned under
-    #796-#800 (successors to closed #416-#420) plus closed #307, digests plus rule-sets owned by cohorts, platform plus
-    consumer plus release evidence stays owned gap under #802 and #808; backends provisional; no
+    report-not-gate shape only rejected; deferred delivery linked under
+    #796 plus #797 plus #798 plus #799 plus #800
+    (successors to closed #416-#420) plus closed #307 with remaining owned
+    under ADR 0019, digest policy with JVM digests pinned in MODULE.bazel
+    plus standalone per-host digests in quality/artifacts plus rule-sets
+    qualified under #485-489, platform plus consumer plus release evidence
+    linked under #802 with support-matrix linkage (per-host artifacts plus
+    coverage cells plus CI matrix plus refusal, adopt workspaces plus
+    reusable-consumer workflow, promotion-checklist plus SBOM plus signing
+    plus supported_evidence_gate; owned gap under #802 and #808); backends
+    provisional; no
     Supported claim; closed #512 stays taxonomy-only).
 - Python source-audit selection with fixture evidence qualified seed-only
     under issue #801
