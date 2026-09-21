@@ -3,10 +3,12 @@
 ## Status
 
 Accepted. The boundary below plus the `//tools/ci:product_runtime_guards`
-fail-closed gate are decided constraints. Archiver/hasher plus SBOM/BCR
-generators are delivered Rust;
-the four remaining migration slices stay provisional phase indexes, each
-needing its own accepted successor record before its rule-kind change lands.
+fail-closed gate are decided constraints. Archiver/hasher plus preset plus
+depcheck plus SBOM/BCR generators are delivered Rust; deploy launchers stay
+provisional and the CI-drivers plus `quality/artifacts/update.py` stance is
+accepted deferred (see [ADR 0028](./0028-deferred-ci-drivers-update.md)).
+The provisional launcher slice still needs its own accepted successor record
+before its rule-kind change lands.
 
 ## Context
 
@@ -21,7 +23,9 @@ The as-built product inventory is the hermetic tools
 `npm_packer` as `py_binary`,
 `deploy/release:sbom_spdx_gen`/`sbom_prov_gen`/`bcr_source_gen` as Rust
 `rust_binary`,
-`tools/bazelrc:preset.update`, `tools/depcheck` checker,
+`tools/bazelrc:preset.update` as Rust `rust_binary`,
+`tools/depcheck:depcheck` as Rust `rust_binary` (per
+[ADR 0027](./0027-depcheck-rust.md)),
 `quality/artifacts:update`), the per-instance deploy launcher `py_binary`
 programs expanded by `archive`/`github`/`pypi`/`crates`/`npm`/`nuget`/`maven`/`oci`/`octopus`
 (see [Deploy Authoring](../deploy/authoring.md)), the `bcr`/`signing`
@@ -61,9 +65,12 @@ Concretely:
   direction; the gate allows it and only pins the Python/shell ceiling.
 - The phase index is: archiver/hasher tools (delivered Rust under #760),
   preset (delivered Rust under #761),
+  depcheck checker (delivered Rust under #762 per
+  [ADR 0027](./0027-depcheck-rust.md)),
   SBOM/BCR generators (delivered Rust under #763),
-  plus provisional depcheck checker, deploy launcher programs, and the
-  deferred CI-drivers plus `quality/artifacts/update.py` stance (defers to
+  plus provisional deploy launcher programs, and the
+  accepted deferred CI-drivers plus `quality/artifacts/update.py` stance (see
+  [ADR 0028](./0028-deferred-ci-drivers-update.md); defers to
   #667; no harness-wide Rust-ify). Each phase links its owning contract
   (`deploy/rules` plus [Deploy Authoring](../deploy/authoring.md),
   `tools/bazelrc` preset, `tools/depcheck`, `deploy/release` SBOM/BCR,
@@ -81,7 +88,8 @@ Concretely:
 - `docs/testing/tools.md` links this boundary; the guard owns the pin.
 - Phases shrink the allowlist slice by slice; the gate stays green by
   updating the pinned names plus counts together with each accepted phase.
-- CI drivers plus `quality/artifacts/update.py` stay Python/shell until #667
+- CI drivers plus `quality/artifacts/update.py` stay Python/shell per
+  [ADR 0028](./0028-deferred-ci-drivers-update.md) until #667
   decides otherwise; the guard pins that deferral instead of migrating it.
 
 ## Rejected Alternatives
