@@ -104,11 +104,19 @@ CI builds plus verifies SBOM plus provenance on every push/PR via the
 //deploy/release:sbom_demo` plus `bazel test
 //deploy/release:dx_release_tools_test`, staged under `RUNNER_TEMP/sbom` and
 uploaded as the `sbom-provenance` artifact (SPDX-2.3 plus SLSA v1, publishes
+nothing). Per-host release evidence for Linux arm64 glibc lands via the
+`sbom-arm64` job in `.github/workflows/ci.yml` (issue #803): the same
+`sbom_demo` build plus `dx_release_tools_test` verify on the arm64 native
+runner (`ubuntu-24.04-arm`, `bazel-arm64-` cache, `needs: [build-arm64]`,
+local-only), staged under `RUNNER_TEMP/sbom-arm64` and uploaded as the
+`sbom-provenance-linux_arm64` artifact (SPDX-2.3 plus SLSA v1, publishes
 nothing). Attestation stays owner-gated human-run via
 `//deploy/release:signing_demo` (Sigstore keyless plus GitHub attestations);
 CI never signs PR code. Pinned by `bazel run
 //tools/ci:sbom_upload_qualification` with fixture evidence in
-`tools/ci/tests/fixtures/sbom_upload/`.
+`tools/ci/tests/fixtures/sbom_upload/` plus `bazel run
+//tools/ci:release_arm64_qualification` with fixture evidence in
+`tools/ci/tests/fixtures/release_arm64/`.
 
 All release outputs stay under `RUNNER_TEMP` or the chosen outdir until
 published; `dist/` and `release/` stay git-ignored and the checkout is

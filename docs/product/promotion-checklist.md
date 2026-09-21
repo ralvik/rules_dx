@@ -80,7 +80,9 @@ A cell promotes only with its required-host evidence landed:
 - SBOM plus provenance: SPDX 2.3 JSON plus SLSA v1 via
   `//deploy/release:sbom_demo` with subject digest equal to artifact sha256,
   built plus verified plus uploaded as `sbom-provenance` on every push/PR via
-  the `sbom` job in `.github/workflows/ci.yml` (#612).
+  the `sbom` job in `.github/workflows/ci.yml` (#612), plus per-host
+  `sbom-provenance-linux_arm64` via the `sbom-arm64` job on the Linux arm64
+  native runner (`ubuntu-24.04-arm`, issue #803).
 - NOTICE bundling: aggregated NOTICE from the audited license inventory via
   `//deploy/release:notice_demo` (hermetic bundling with byte-identical
   rebuilds, `missing-notice-text` fails closed), verified via

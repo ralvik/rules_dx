@@ -69,12 +69,13 @@ else
 fi
 
 # Linux arm64 native is Platform-qualified, never Supported
-# without release evidence and never back to unqualified refusal.
+# without a release cut and never back to unqualified refusal.
+# Per-host release evidence landed under #803 (arm64 sbom-provenance).
 if grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#410' &&
-  grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open'; then
+  grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: linux_arm64 sbom-provenance delivered (#803'; then
   ok
 else
-  bad "support-matrix lost the Linux arm64 Platform-qualified record (issue #410, release evidence open)"
+  bad "support-matrix lost the Linux arm64 Platform-qualified record (issue #410 plus #803 release evidence delivered)"
 fi
 
 # Linux static-musl profiles are Platform-qualified, never
