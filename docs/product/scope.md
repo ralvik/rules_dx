@@ -106,7 +106,23 @@ dependency resolvers, runtimes, or framework engines. Reproducibly building upst
 reimplementing its semantics.
 
 Candidate-specific effort, patch/build provenance, upgrade strategy, and
-delivery ownership are open.
+delivery ownership are tracked per candidate under
+[remediation bounds](../native-toolchains.md#qualification-questions-and-delivery)
+(closed #505): each defect records estimate, actual owner, patch plus upstream issue
+plus upgrade tracking, and complete-workflow evidence in
+`cc/tests/fixtures/remediation_bounds/` via
+`bazel run //tools/ci:remediation_bounds_qualification`. Per-foundation effort
+and ownership follow the [minimal core](support-matrix.md#minimal-required-core)
+(sole maintainer owns every row until delegated; effort estimated from
+qualification evidence as each tracked item lands) with foundation mappings
+qualified seed-only under closed #470-#489 and adapters open
+under #796-#800. Patch/build provenance follows
+[delivery classes](../tools/tool-acquisition.md#delivery-classes) (pinned
+reproducible upstream source builds, checked-in digests, SBOM/provenance per
+closed #612); upgrade strategy follows
+[ADR 0008](../decisions/0008-dependency-currency.md) (exact latest-stable pins,
+native bump loop sole updater per closed #461) with per-defect upgrade tracking
+under closed #505.
 Exact upstream switches and new public APIs remain unapproved until their
 domain contracts and work packages are accepted. General permission for these maintenance routes
 does not prove any candidate feasible or authorize an unbounded fork.
@@ -173,10 +189,19 @@ waive lockfile consistency. Obsolete exceptions are errors: an exception naming 
 or no longer suppressing a finding in the owning scope must be removed, including when upstream
 improvements recognize the legitimate usage. Assess this against the same declared supported
 configurations as the usage test, not only the active host configuration. Validation reports the
-obsolete exception without deleting it automatically. Exact native configuration, reason validation,
-and obsolete-exception detection mappings require
-qualification open;
-no separate exception registry or public API is selected here.
+obsolete exception without deleting it automatically. The selected exception
+registry is the owning-scope `depcheck_exceptions.toml` (no separate global
+registry or public API): each `[[exception]]` carries its owning dependency
+plus an explanatory reason, missing reasons fail, and obsolete entries (removed
+dependency or now-recognized usage, including after a checker upgrade
+recognizes the usage) fail without auto-deletion, qualified in
+`tools/depcheck/` (closed #22) per the
+[dependency-check contract](../quality/quality-testing.md#tool-parity) and pinned by
+`bazel test //tools/depcheck/...` plus
+`bazel run //tools/ci:depcheck_contract`. Upstream-native checker configuration
+remains a per-language preference: where a qualified upstream config exists it
+is preferred, otherwise the owning-scope file is authoritative; exact
+per-language native-configuration choices stay open under #796-#800.
 
 Gazelle automatically maintains generated Bazel dependency edges under the
 [generation and merge contract](../generation/common.md#merge-and-lifecycle). Do not add a separate
