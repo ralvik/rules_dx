@@ -8,7 +8,11 @@
 # UP (pyupgrade percent-format) stays future work: 21 `%`-format sites
 # remain (see `quality/artifacts/update.py`, `tools/bazelrc/src/lib.rs`).
 # Pinned upstream defaults stay authoritative for omitted settings; this
-# file owns only the lint selection (same selection as the
-# `quality/testdata` fixture).
+# file owns the lint selection plus the Python floor (same selection and
+# floor as the `quality/testdata` fixture; see
+# `//tools/ci:config_consistency_test`).
+requires-python = ">=3.12"
+target-version = "py312"
+
 [lint]
 select = ["E4", "E7", "E9", "F", "W", "I", "B"]

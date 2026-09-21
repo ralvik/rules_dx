@@ -37,6 +37,10 @@ import zipfile
 
 SCHEMA_VERSION = 1
 
+# Canonical tool versions (issue #912): TOOLS[biome] upstream_version owns
+# the `$schema` pin in both `biome.json` files (root plus
+# `quality/testdata/biome_cfg/biome.json`); see
+# `//tools/ci:config_consistency_test`.
 TOOLS = {
     "buildifier": {
         "upstream_version": "8.5.1",

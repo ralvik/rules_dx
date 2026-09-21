@@ -52,6 +52,23 @@ filegroup(
     srcs = ["clean.rs"],
 )
 
+# Single-source fixture copies for //tools/ci:config_consistency_test
+# (issue #912). StylesPath differs per package, so the Vale style file
+# stays synced by byte-identity diff test, not by label sharing.
+exports_files(
+    [
+        "biome_cfg/biome.json",
+        "ruff.toml",
+        "styles/Dx/Markers.yml",
+        "vale_test.ini",
+    ],
+    visibility = [
+        "//quality:__pkg__",
+        "//quality:__subpackages__",
+        "//tools/ci:__pkg__",
+    ],
+)
+
 aspect_subject(
     name = "fixture_rust_subject",
     target = ":fixture_rust",

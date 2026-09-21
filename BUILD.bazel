@@ -77,6 +77,11 @@ exports_files([
     # test's runfiles so jest's ESM detection resolves first-party .js
     # as ESM (see //javascript/rules:defs.bzl).
     "package.json",
+    # Single-source config inputs for //tools/ci:config_consistency_test
+    # (issue #912): canonical Biome/Ruff plus pnpm workspace.
+    "biome.json",
+    "ruff.toml",
+    "pnpm-workspace.yaml",
     # Release notes: link-resolution sibling for //docs:corpus, never a
     # checked source of this package.
     "CHANGELOG.md",

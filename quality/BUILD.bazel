@@ -44,6 +44,15 @@ exports_files([
     "sources.bzl",
 ])
 
+# Single-source Vale corpus inputs for //tools/ci:config_consistency_test
+# (issue #912): the fixture copy in //quality/testdata must stay
+# byte-identical (StylesPath differs per package, so the style file itself
+# is synced by diff test, not by label sharing).
+exports_files([
+    "corpus_vale.ini",
+    "corpus_styles/Dx/Markers.yml",
+])
+
 # Frozen result schema (WP1): field and enum numbers are the
 # compatibility surface; see `result.proto` and the protocol doc.
 proto_library(

@@ -7,13 +7,22 @@
 #   Bazelisk version + per-OS sha256: `.github/actions/setup-bazelisk/action.yml`
 # defaults (the single portable installer,; Dockerfile tracks
 #     the linux-amd64 pair and docs bootstrap tracks all five hosts).
+#   Go toolchain: `MODULE.bazel` `go_sdk.download` owns the toolchain floor;
+#     `third_party/go/go.mod` carries the language floor (SDK minor must stay
+#     >= go.mod minor, issue #912).
+#   pnpm version: root `package.json` `packageManager` owns the pnpm pin;
+#     `quality/tools/javascript/package.json` must match and `MODULE.bazel`
+#     resolves the toolchain from the root pin (issue #912).
+#   Python foundation: `MODULE.bazel` `aspect_rules_py` prerelease stays an
+#     ADR 0008 exception with an explicit bump selector (issue #912).
 #
 # Every other pin below must equal its canonical source or this fails, so a
 # version bump means: bump the canonical file once, then update the tracked
 # copies in the same reviewed change.
 #
 # Usage: pin_consistency.sh <bazelversion> <module> <preset_rs>
-#   <dockerfile> <tested_stack> <action_yml> <local_workflows>
+#   <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod>
+#   <root_pkg> <js_pkg>
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
@@ -22,13 +31,16 @@ dx_bootstrap "tools/sh/lib.sh"
 
 dx_test_init
 
-bazelversion="${1:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-module="${2:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-preset_py="${3:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-dockerfile="${4:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-tested_stack="${5:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-action_yml="${6:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-local_workflows="${7:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+bazelversion="${1:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+module="${2:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+preset_py="${3:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+dockerfile="${4:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+tested_stack="${5:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+action_yml="${6:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+local_workflows="${7:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+go_mod="${8:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+root_pkg="${9:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+js_pkg="${10:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
 
 # --- Bazel canonical ---
 bazel_pin="$(tr -d '[:space:]' <"$bazelversion")"
@@ -120,5 +132,65 @@ for asset in bazelisk-linux-amd64 bazelisk-linux-arm64 bazelisk-darwin-amd64 baz
     bad "local-workflows.md missing canonical Bazelisk asset $asset (issue #617)"
   fi
 done
+
+# --- Go canonical: MODULE SDK owns the toolchain floor, go.mod the language floor ---
+sdk_version="$(grep -o -E -e 'go_sdk\.download\(version = "[^"]+"' "$module" | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+go_version="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$go_mod" | head -1 | cut -d' ' -f2 || true)"
+if [[ -z "$sdk_version" || -z "$go_version" ]]; then
+  bad "Go pin missing (want go_sdk.download version in MODULE.bazel plus go directive in third_party/go/go.mod, issue #912)"
+else
+  ok
+fi
+if [[ -n "$sdk_version" && -n "$go_version" ]]; then
+  sdk_minor="$(echo "$sdk_version" | cut -d. -f1,2)"
+  go_minor="$(echo "$go_version" | cut -d. -f1,2)"
+  # Compare minor versions numerically: SDK must stay >= language floor.
+  sdk_maj="${sdk_minor%%.*}"
+  sdk_min="${sdk_minor#*.}"
+  go_maj="${go_minor%%.*}"
+  go_min="${go_minor#*.}"
+  if [[ "$sdk_maj" -gt "$go_maj" ]] || { [[ "$sdk_maj" == "$go_maj" ]] && [[ "$sdk_min" -ge "$go_min" ]]; }; then
+    ok
+  else
+    bad "Go SDK $sdk_version predates go.mod language floor $go_version (want SDK minor >= go.mod minor, issue #912)"
+  fi
+  if grep -q -F -e 'third_party/go:go.mod' "$module"; then
+    ok
+  else
+    bad "MODULE.bazel lost the go_deps linkage to third_party/go:go.mod (want gazelle_go_deps.from_file with go_mod, issue #912)"
+  fi
+fi
+
+# --- pnpm canonical: root packageManager owns the pin, tool graph tracks it ---
+root_pm="$(grep -o -E -e '"packageManager": "[^"]+"' "$root_pkg" | head -1 | cut -d'"' -f4 || true)"
+js_pm="$(grep -o -E -e '"packageManager": "[^"]+"' "$js_pkg" | head -1 | cut -d'"' -f4 || true)"
+if [[ -z "$root_pm" || -z "$js_pm" ]]; then
+  bad "packageManager missing (want pnpm pin in both package.json files, issue #912)"
+elif [[ "$root_pm" == "$js_pm" ]]; then
+  ok
+else
+  bad "packageManager drifts ($root_pkg is $root_pm, $js_pkg is $js_pm; want identical, issue #912)"
+fi
+if [[ -n "$root_pm" ]]; then
+  pnpm_ver="${root_pm#pnpm@}"
+  if grep -q -F -e "pnpm $pnpm_ver" "$module"; then
+    ok
+  else
+    bad "MODULE.bazel lost the pnpm $pnpm_ver linkage (want comment resolving the toolchain from the root packageManager pin, issue #912)"
+  fi
+fi
+
+# --- Python foundation: aspect_rules_py prerelease needs a bump selector ---
+py_version="$(grep -o -E -e 'bazel_dep\(name = "aspect_rules_py", version = "[^"]+"' "$module" | head -1 | grep -o -E -e '"2[^"]*"$' | tr -d '"' || true)"
+if [[ -z "$py_version" ]]; then
+  bad "MODULE.bazel missing aspect_rules_py pin (want bazel_dep with explicit version, issue #912)"
+else
+  ok
+fi
+if grep -q -F -e 'Bump selector: latest stable 2.x' "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost the aspect_rules_py bump selector (want 'Bump selector: latest stable 2.x' for the ADR 0008 prerelease exception, issue #912)"
+fi
 
 dx_test_summary "pin consistency"
