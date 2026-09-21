@@ -79,14 +79,15 @@ else
 fi
 
 # Linux static-musl profiles are Platform-qualified, never
-# Supported without release evidence and never back to unqualified
+# Supported without a release cut and never back to unqualified
 # refusal. Dynamic musl stays explicitly out of scope.
+# Per-profile release evidence landed under #804 (musl sbom-provenance).
 if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#411' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open' &&
+  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: linux_x86_64_musl plus linux_arm64_musl sbom-provenance delivered (#804' &&
   grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'dynamic musl explicitly out of scope'; then
   ok
 else
-  bad "support-matrix lost the static-musl Platform-qualified record (issue #411, release evidence open, dynamic out of scope)"
+  bad "support-matrix lost the static-musl Platform-qualified record (issue #411 plus #804 release evidence delivered, dynamic out of scope)"
 fi
 
 # macOS arm64 native is Platform-qualified, never Supported
