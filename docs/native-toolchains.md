@@ -327,7 +327,12 @@ The following source facts prevent describing it as a drop-in hermetic stack:
   reads `BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1` through repository
   environment. Its README advertises a different variable. Preserve deliberate upstream acceptance;
   this observed API is not yet a promised `rules_dx` setup command. Deferred acceptance failure does
-  not prove laziness: extension evaluation already fetches manifests.
+  not prove laziness: extension evaluation already fetches manifests. Accepted fit (2026-09-21,
+  #959):
+  manifest reads are version-resolution cost while restricted MSVC payload download requires
+  explicit acceptance and never happens for unrelated workflows, per
+  [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
+  [Activation And Laziness](architecture/README.md#activation-and-laziness).
 - [Toolchain registration](https://github.com/Dragnalith/toolchains_msvc/blob/8e2aa4624bbb5a53a94f135e90995f307875d1ad/private/msvc_toolchains_repo.bzl)
   constrains Windows/CPU but not the LLVM MSVC ABI constraint used by rules_rs. Qualify an explicit
   constraint fix so it cannot accidentally satisfy GNU/GNULVM targets.

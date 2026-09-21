@@ -118,10 +118,14 @@ foundation admission, verified support, or an implementation milestone.
 
 The normal consumer adds only the `rules_dx` module dependency. Every supported application
 foundation is available automatically; there is no language enable list. Foundations remain
-strictly lazy: an unused language may add modules to Bzlmod version resolution, but it must add no
-configured targets, actions, module-extension dependency resolution, registered usable toolchain
+strictly lazy: an unused language may add modules to Bzlmod version resolution plus extension
+Starlark that reads checked-in locks and manifests, but it must add no
+configured targets, actions, module-extension payload download, registered usable toolchain
 payload, environment projection, compiler/runtime/package download, or application dependency
-fetch.
+fetch. `MODULE.bazel.lock` size is version-resolution metadata, not payload. Live-manifest
+fetches must use fixed-manifest plus package-index inputs, and deferred EULA failure never
+proves laziness: see the [Windows acquisition fit](../native-toolchains.md#windows-acquisition-and-compatibility).
+Accepted fit 2026-09-21 (#959).
 
 Automatic availability is through stable `rules_dx` wrappers, providers, aspects, and generated
 targets. Bzlmod does not make a dependency's transitive modules directly visible to a consumer;
