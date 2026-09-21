@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Verifies one `archive_release` output pair.
+# Verifies one `archive_deploy` output pair.
 #
 # `$1` is the tarball rootpath, `$2` the checksum rootpath, `$3` the
 # expected top-level member basename. Asserts the tarball lists the

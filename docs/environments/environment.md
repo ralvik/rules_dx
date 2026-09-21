@@ -316,7 +316,7 @@ owner-gated in `//deploy/release:all`; install-time verification itself is imple
 (SPDX-2.3 plus SLSA v1, publishes nothing); attestation stays owner-gated
 human-run.
 
-Draft-only publisher ceiling: the `github_release` rule (`deploy/rules/github.bzl`,
+Draft-only publisher ceiling: the `github_deploy` rule (`deploy/rules/github.bzl`,
 for example `//cli/cli:github_draft`) defaults to `draft = True` with the
 `v0.0.0-dryrun` placeholder tag, fails analysis on any `draft = False` or
 launcher-unsafe tag, and always passes `--draft --verify-tag`, so the program

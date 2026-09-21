@@ -44,7 +44,7 @@ and the `DX_PROFILE` name are implemented as specified in the
 [`dx deploy` command](../cli/commands/build-test-coverage.md#dx-deploy),
 delivered under closed #178/#179/#180.
 
-## Path C: `archive_release` (accepted)
+## Path C: `archive_deploy` (accepted)
 
 The first deploy macro
 (distribution artifact qualified under issue #459) packages
@@ -55,13 +55,16 @@ sha256 as declared genrule `tools` in `deploy/rules/`), no host
 registry, no credentials:
 
 ```starlark
-load("@rules_dx//deploy/rules:archive.bzl", "archive_release")
+load("@rules_dx//deploy/rules:archive.bzl", "archive_deploy")
 
-archive_release(
+archive_deploy(
     name = "release",
     app = ":hello",
 )
 ```
+
+`archive_release` stays as a thin compat alias for one release cycle,
+then it is removed.
 
 `bazel run //rust/tests/fixtures/hello:release` (or `dx deploy //rust/tests/fixtures/hello:release`)
 verifies the checksum and copies `release.tar.gz` +
@@ -72,7 +75,7 @@ runtime needs bash + python3 + POSIX coreutils only (hashing, realpath,
 and tar listing via python3). Deploy targets live
 next to the app they release.
 
-## Path D: `github_release` (accepted)
+## Path D: `github_deploy` (accepted)
 
 The second deploy macro
 (distribution artifact qualified under issue #459) publishes
@@ -80,13 +83,16 @@ pinned files as a draft-only GitHub Release via the host `gh` CLI, no
 new module dependencies:
 
 ```starlark
-load("@rules_dx//deploy/rules:github.bzl", "github_release")
+load("@rules_dx//deploy/rules:github.bzl", "github_deploy")
 
-github_release(
+github_deploy(
     name = "github_draft",
     artifacts = [":dx"],
 )
 ```
+
+`github_release` stays as a thin compat alias for one release cycle,
+then it is removed.
 
 `bazel run //cli/cli:github_draft` (or `dx deploy
 //cli/cli:github_draft`) execs `gh release create <tag> <assets...>

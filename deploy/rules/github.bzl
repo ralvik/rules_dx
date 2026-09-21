@@ -48,11 +48,11 @@ def tag_schema_error():
 def github_tag_error(tag):
     """Validates one release tag value."""
     if type(tag) != "string" or tag == "":
-        return ("github_release: invalid tag '" + str(tag) +
+        return ("github_deploy: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'v0.0.0-dryrun')")
     for c in tag.elems():
         if c not in _VALID_TAG_CHARS:
-            return ("github_release: invalid tag '" + tag +
+            return ("github_deploy: invalid tag '" + tag +
                     "': want only [A-Za-z0-9._-] so the tag embeds " +
                     "safely in the deploy launcher")
     return ""
@@ -60,7 +60,7 @@ def github_tag_error(tag):
 def github_draft_error(draft):
     """Validates the draft gate."""
     if draft != True:
-        return ("github_release: draft=False requires explicit owner " +
+        return ("github_deploy: draft=False requires explicit owner " +
                 "approval per issue #5; keep the draft gate and publish " +
                 "the release on GitHub after approval")
     return ""
@@ -70,13 +70,13 @@ def _github_launcher_impl(ctx):
 
     Each artifact resolves to a single file: executables (for example
     `rust_binary`, `sh_binary`) resolve to `files_to_run.executable`,
-    plain files (for example `archive_release` tarballs) must be the
+    plain files (for example `archive_deploy` tarballs) must be the
     sole member of `DefaultInfo.files`. The script sources the standard
     `runfiles.bash` initialization (v3) and resolves the deploy script,
     tag, and every pinned asset via `rlocation`, then execs
     `github_deploy.sh`. Rlocation strings and the tag embed with
     `shell.quote` (single-quote), never manual double-quote
-    interpolation. The wrapping `sh_binary` (see `github_release`)
+    interpolation. The wrapping `sh_binary` (see `github_deploy`)
     carries the pinned inputs in `data` plus the runfiles library.
     Extra user args after `--` are rejected: a release takes exactly
     the artifacts pinned at analysis time."""
@@ -88,7 +88,7 @@ def _github_launcher_impl(ctx):
         if f == None:
             files = info.files.to_list()
             if len(files) != 1:
-                fail("github_release " + str(ctx.label) + ": artifact " +
+                fail("github_deploy " + str(ctx.label) + ": artifact " +
                      str(target.label) + " provides " +
                      str(len(files)) + " files, want exactly one " +
                      "(executables resolve to their binary)")
@@ -105,10 +105,10 @@ def _github_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
-# Deploy launcher for `github_release`. Generated. Do not edit.
+# Deploy launcher for `github_deploy`. Generated. Do not edit.
 # Resolves the deploy script and every pinned asset via the standard
 # `runfiles.bash` `rlocation`, then execs the deploy script with the tag
-# plus the asset paths. Wrapped as `sh_binary` (see `github_release`).
+# plus the asset paths. Wrapped as `sh_binary` (see `github_deploy`).
 set -euo pipefail
 """ + RUNFILES_BASH_INIT + """if [[ "$#" -gt 0 ]]; then
   echo "github: this deploy target takes no extra args; the release is exactly the artifacts pinned at analysis time" >&2
@@ -140,10 +140,10 @@ _github_launcher = rule(
             default = "//deploy/rules:github_deploy.sh",
         ),
     },
-    doc = "Launcher script for github_release (wrapped as sh_binary).",
+    doc = "Launcher script for github_deploy (wrapped as sh_binary).",
 )
 
-def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
+def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
     """Publishes pinned files as a draft-only GitHub Release.
 
     Creates `<name>_launcher` (generated launcher script resolving
@@ -162,7 +162,7 @@ def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile
     if draft_error != "":
         fail(draft_error + " (in " + native.package_name() + ":" + name + ")")
     if len(artifacts) == 0:
-        fail("github_release " + native.package_name() + ":" + name +
+        fail("github_deploy " + native.package_name() + ":" + name +
              ": need at least one artifact")
 
     program_target = name + "_program"
@@ -186,5 +186,18 @@ def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile
     dx_deployment(
         name = name,
         deploy = ":" + program_target,
+        profile = profile,
+    )
+
+def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
+    """Compat alias for `github_deploy`.
+
+    Kept for one release cycle, then removed.
+    """
+    github_deploy(
+        name = name,
+        artifacts = artifacts,
+        tag = tag,
+        draft = draft,
         profile = profile,
     )

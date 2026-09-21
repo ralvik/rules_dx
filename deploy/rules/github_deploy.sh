@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy program for `github_release`.
+# Deploy program for `github_deploy`.
 #
 # Invoked via `bazel run :<name>` or `dx deploy :<name>`. The generated
 # launcher resolves the tag's asset files from its runfiles forest and

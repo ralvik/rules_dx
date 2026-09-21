@@ -16,10 +16,10 @@ def _archive_stage_impl(ctx):
     more than one file". The stage resolves `files_to_run.executable`
     once and symlinks it to `<stage>/<basename>`: the basename stays the
     original executable name (the tar member), while the parent directory
-    keeps each `archive_release` instance distinct."""
+    keeps each `archive_deploy` instance distinct."""
     exe = ctx.attr.app[DefaultInfo].files_to_run.executable
     if exe == None:
-        fail("archive_release " + str(ctx.label) + ": app " +
+        fail("archive_deploy " + str(ctx.label) + ": app " +
              str(ctx.attr.app.label) + " has no executable")
     staged = ctx.actions.declare_file(ctx.label.name + "/" + exe.basename)
     ctx.actions.symlink(output = staged, target_file = exe)
@@ -33,7 +33,7 @@ _archive_stage = rule(
             mandatory = True,
         ),
     },
-    doc = "Stages one executable for archive_release (single file, basename preserved).",
+    doc = "Stages one executable for archive_deploy (single file, basename preserved).",
 )
 
 def _archive_launcher_impl(ctx):
@@ -44,20 +44,20 @@ def _archive_launcher_impl(ctx):
     `rlocation`, then execs `archive_deploy.sh` with them plus user args
     (`"$@"` selects the output directory). Rlocation strings are embedded
     with `shell.quote` (single-quote), never manual double-quote
-    interpolation. The wrapping `sh_binary` (see `archive_release`)
+    interpolation. The wrapping `sh_binary` (see `archive_deploy`)
     carries the pinned inputs in `data` plus the runfiles library, so the
     launcher works under `bazel run`, `dx deploy` (which symlinks the
     `sh_binary` entrypoint and merges its runfiles), and direct
     `bazel-bin` execution."""
     app_files = ctx.attr.app[DefaultInfo].files.to_list()
     if len(app_files) != 1:
-        fail("archive_release " + str(ctx.label) + ": stage must provide exactly one file")
+        fail("archive_deploy " + str(ctx.label) + ": stage must provide exactly one file")
     archive_files = ctx.attr.archive[DefaultInfo].files.to_list()
     if len(archive_files) != 1:
-        fail("archive_release " + str(ctx.label) + ": archive must provide exactly one file")
+        fail("archive_deploy " + str(ctx.label) + ": archive must provide exactly one file")
     checksum_files = ctx.attr.checksum[DefaultInfo].files.to_list()
     if len(checksum_files) != 1:
-        fail("archive_release " + str(ctx.label) + ": checksum must provide exactly one file")
+        fail("archive_deploy " + str(ctx.label) + ": checksum must provide exactly one file")
     app_file = app_files[0]
     archive_file = archive_files[0]
     checksum_file = checksum_files[0]
@@ -72,10 +72,10 @@ def _archive_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """#!/usr/bin/env bash
-# Deploy launcher for `archive_release`. Generated. Do not edit.
+# Deploy launcher for `archive_deploy`. Generated. Do not edit.
 # Resolves the staged app, tarball, checksum, and deploy script via the
 # standard `runfiles.bash` `rlocation`, then execs the deploy script with
-# them plus user args. Wrapped as `sh_binary` (see `archive_release`).
+# them plus user args. Wrapped as `sh_binary` (see `archive_deploy`).
 set -euo pipefail
 """ + RUNFILES_BASH_INIT + """DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
 APP="$(rlocation """ + shell.quote(app_rloc) + """)"
@@ -98,14 +98,14 @@ _archive_launcher = rule(
             default = "//deploy/rules:archive_deploy.sh",
         ),
     },
-    doc = "Launcher script for archive_release (wrapped as sh_binary).",
+    doc = "Launcher script for archive_deploy (wrapped as sh_binary).",
 )
 
 def archive_filenames(name):
     """Returns the deterministic (tarball, checksum) output names."""
     return (name + ".tar.gz", name + ".tar.gz.sha256")
 
-def archive_release(name, app, profile = "release"):
+def archive_deploy(name, app, profile = "release"):
     """Packages one executable as a tarball + sha256 deployable target.
 
     Creates `<name>_stage` (single-file executable stage),
@@ -185,5 +185,16 @@ def archive_release(name, app, profile = "release"):
         name = name,
         app = app,
         deploy = ":" + program_target,
+        profile = profile,
+    )
+
+def archive_release(name, app, profile = "release"):
+    """Compat alias for `archive_deploy`.
+
+    Kept for one release cycle, then removed.
+    """
+    archive_deploy(
+        name = name,
+        app = app,
         profile = profile,
     )

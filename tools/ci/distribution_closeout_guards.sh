@@ -308,7 +308,7 @@ else
 fi
 
 if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel &&
-  grep -q -F -e 'archive_release(' cli/cli/BUILD.bazel; then
+  grep -q -F -e 'archive_deploy(' cli/cli/BUILD.bazel; then
   ok
 else
   bad "seed-host standalone archive missing (//cli/cli:dx_standalone, #26)"

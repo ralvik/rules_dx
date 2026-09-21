@@ -4,11 +4,11 @@ load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
-load(":archive.bzl", "archive_release")
+load(":archive.bzl", "archive_deploy")
 load(":archive_tests.bzl", "archive_analysis_tests", "archive_debug_analysis_tests", "archive_unit_tests")
 load(":defs.bzl", "dx_deployment")
 load(":deploy_tests.bzl", "deploy_analysis_tests", "deploy_app_analysis_tests", "deploy_debug_analysis_tests", "deploy_unit_tests")
-load(":github.bzl", "github_release")
+load(":github.bzl", "github_deploy")
 load(":github_tests.bzl", "github_analysis_tests", "github_debug_analysis_tests", "github_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
@@ -27,7 +27,7 @@ exports_files([
     "launcher.bzl",
 ])
 
-# Hermetic build tools for `archive_release`: deterministic
+# Hermetic build tools for `archive_deploy`: deterministic
 # tar.gz + sha256 via the managed Python 3.12 toolchain, no host
 # `tar`/`sha256sum`/`shasum`. Declared as genrule `tools` so action
 # keys cover the tool bytes and the sandbox runs no host PATH lookup.
@@ -90,12 +90,12 @@ deploy_app_analysis_tests(name = "deploy_app_analysis")
 
 # First deploy macro: credential-free archive releases over
 # the fixture deploy program. The debug variant pins profile passthrough.
-archive_release(
+archive_deploy(
     name = "release_demo",
     app = ":deploy_program",
 )
 
-archive_release(
+archive_deploy(
     name = "release_demo_debug",
     app = ":deploy_program",
     profile = "debug",
@@ -167,7 +167,7 @@ test_suite(
 # archive fixtures, proving macro composition (archive outputs become
 # release assets). The debug variant pins profile passthrough. Draft
 # verification runs with GH_RELEASE_DRY_RUN=1: no network, no mutation.
-github_release(
+github_deploy(
     name = "github_demo",
     artifacts = [
         ":release_demo_archive",
@@ -175,7 +175,7 @@ github_release(
     ],
 )
 
-github_release(
+github_deploy(
     name = "github_demo_debug",
     artifacts = [
         ":release_demo_archive",
