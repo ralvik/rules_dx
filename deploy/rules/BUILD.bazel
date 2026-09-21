@@ -12,6 +12,8 @@ load(":github.bzl", "github_deploy")
 load(":github_tests.bzl", "github_analysis_tests", "github_debug_analysis_tests", "github_unit_tests")
 load(":crates.bzl", "crates_deploy")
 load(":crates_tests.bzl", "crates_analysis_tests", "crates_debug_analysis_tests", "crates_unit_tests")
+load(":npm.bzl", "npm_deploy")
+load(":npm_tests.bzl", "npm_analysis_tests", "npm_debug_analysis_tests", "npm_unit_tests")
 load(":pypi.bzl", "pypi_deploy")
 load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 
@@ -31,6 +33,8 @@ exports_files([
     "crates.bzl",
     "crates_tests.bzl",
     "launcher.bzl",
+    "npm.bzl",
+    "npm_tests.bzl",
     "pypi.bzl",
     "pypi_tests.bzl",
 ])
@@ -65,6 +69,38 @@ py_library(
     name = "pypi_deploy_lib",
     srcs = ["pypi_deploy.py"],
     imports = ["."],
+)
+
+# Hermetic pack tool for `npm_deploy`: deterministic tgz + feed JSON
+# via the managed Python 3.12 toolchain, no host `tar`, no network.
+py_binary(
+    name = "npm_packer",
+    srcs = ["npm_pack.py"],
+    main = "npm_pack.py",
+)
+
+py_library(
+    name = "npm_pack_lib",
+    srcs = ["npm_pack.py"],
+    imports = ["."],
+)
+
+py_library(
+    name = "npm_deploy_lib",
+    srcs = ["npm_deploy.py"],
+    imports = ["."],
+)
+
+# Pack + feed output per fixture package.json
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "npm_deploy_test",
+    srcs = ["npm_deploy_test.py"],
+    deps = [
+        ":npm_deploy_lib",
+        ":npm_pack_lib",
+    ],
+    tags = ["no-coverage"],
 )
 
 sh_binary(
@@ -186,6 +222,10 @@ test_suite(
         ":github_debug_analysis",
         ":github_demo_verify",
         ":github_unit",
+        ":npm_analysis",
+        ":npm_debug_analysis",
+        ":npm_deploy_test",
+        ":npm_unit",
         ":pypi_analysis",
         ":pypi_debug_analysis",
         ":pypi_deploy_test",
@@ -337,6 +377,28 @@ py_test(
     deps = [":crates_deploy_lib"],
 )
 
+# Fifth deploy macro: hermetic npm pack feed over a fixture
+# package.json. The debug variant pins profile passthrough. Local by
+# default, never publishes; live needs explicit env plus approval.
+npm_deploy(
+    name = "npm_demo",
+    package = "npm-demo",
+    srcs = ["npm_demo/package.json"],
+)
+
+npm_deploy(
+    name = "npm_demo_debug",
+    package = "npm-demo",
+    srcs = ["npm_demo/package.json"],
+    profile = "debug",
+)
+
+npm_unit_tests(name = "npm_unit")
+
+npm_analysis_tests(name = "npm_analysis")
+
+npm_debug_analysis_tests(name = "npm_debug_analysis")
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
@@ -350,8 +412,16 @@ real_source_target(
         "github.bzl",
         "github_tests.bzl",
         "launcher.bzl",
+        "npm.bzl",
+        "npm_tests.bzl",
         "pypi.bzl",
         "pypi_tests.bzl",
     ],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_json",
+    json_srcs = ["npm_demo/package.json"],
     tags = ["corpus"],
 )

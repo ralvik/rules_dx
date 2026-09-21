@@ -231,6 +231,36 @@ tooling in `deploy/release/` with policy tests `bazel test
   image lifecycle per-scaffold-change); push plus `cosign sign <digest>`
   stay owner-gated with dry-run first.
 
+## Path I: `npm_deploy` (accepted)
+
+The fifth deploy macro (`deploy/rules/npm.bzl`) publishes packed files
+to a local npm folder feed with the managed Python 3.12 toolchain only
+(deterministic `npm_packer` tgz plus feed JSON as declared genrule
+`tools`), no host `tar`/`npm`, no new shell, no `sh_binary`, no
+registry, no credentials:
+
+```starlark
+load("@rules_dx//deploy/rules:npm.bzl", "npm_deploy")
+
+npm_deploy(
+    name = "npm_feed",
+    package = "npm-demo",
+    srcs = ["package.json"],
+)
+```
+
+`bazel run //path/to:npm_feed` (or `dx deploy //path/to:npm_feed`)
+verifies the sha256 plus tar members and copies `npm_feed.tgz` +
+`npm_feed.feed.json` to the output directory (first arg after `--`,
+else `$BUILD_WORKSPACE_DIRECTORY`, else the cwd), assembling an
+`npm_feed-feed/` folder with both files. Build actions are hermetic
+(toolchain packer, deterministic bytes); deploy runtime needs Python
+3.12 plus POSIX coreutils only. Live `npm publish --access public
+--provenance` runs only with `NPM_PUBLISH_LIVE=1` plus `NPM_TOKEN` and
+explicit owner approval, never by default; `NPM_PUBLISH_DRY_RUN=1`
+prints the would-publish command and publishes nothing. Deploy targets
+live next to the package they release.
+
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an

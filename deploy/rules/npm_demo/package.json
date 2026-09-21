@@ -1,0 +1,7 @@
+{
+  "description": "Fixture package for npm_deploy local feed",
+  "main": "index.js",
+  "name": "npm-demo",
+  "private": false,
+  "version": "0.0.0"
+}
