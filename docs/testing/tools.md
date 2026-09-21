@@ -226,7 +226,7 @@ non-unix no-symlink assertion); `/proc` scan plus clean-measure and
 resolve-symlink fixtures run portably via OS-selected planters, while
 unix-socket, POSIX-mode, permission-bit, and byte-path fixtures stay
 unix-gated with fail-fast reasons; release archives stay hermetic
-Python (`archiver.py` tarfile dereferences like `tar -h`, no host
+Rust (`archiver` dereferences like `tar -h`, no host
 `tar`, proven by `archive_verify` plus `//tools/ci:shell_contract`).
 `//tools/ci:shell_contract` machine-checks the no-host-tar pin. There
 are no standing benchmarks per
@@ -286,9 +286,9 @@ plus `rlocation` usage; shell drivers load it via `tools/sh/bootstrap.sh`
 `dx_process::workspace_start` and use standard `runfiles` `rlocation`,
 never `TEST_SRCDIR` in prod).
 
-Host-tool actions are hermetic under issue #318 (archive/SBOM/BCR
-genrules run toolchain-provided Python archiver/hasher/generators as
-declared `tools` with deterministic bytes and no host
+Host-tool actions are hermetic under issue #318 (archive genrules
+run toolchain-provided Rust archiver/hasher plus SBOM/BCR Python
+generators as declared `tools` with deterministic bytes and no host
 `tar`/`sha256sum`/`shasum`/`python3` probing; `extension.bzl` uses
 Bazel-native `ctx.download(executable=True)` plus archive-carried modes,
 with one `chmod +x` for the gzip single-file member (taplo, no mode in

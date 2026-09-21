@@ -1,9 +1,11 @@
 """Deploy rule fixtures and boundary tests."""
 
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 load(":archive.bzl", "archive_deploy")
 load(":archive_tests.bzl", "archive_analysis_tests", "archive_debug_analysis_tests", "archive_unit_tests")
 load(":defs.bzl", "dx_deployment")
@@ -56,20 +58,110 @@ exports_files([
 ])
 
 # Hermetic build tools for `archive_deploy`: deterministic
-# tar.gz + sha256 via the managed Python 3.12 toolchain, no host
-# `tar`/`sha256sum`/`shasum`. Declared as genrule `tools` so action
-# keys cover the tool bytes and the sandbox runs no host PATH lookup.
-py_binary(
-    name = "archiver",
-    srcs = ["archiver.py"],
-    main = "archiver.py",
+# tar.gz + sha256 via Rust, no host `tar`/`sha256sum`/`shasum`.
+# Declared as genrule `tools` so action keys cover the tool bytes
+# and the sandbox runs no host PATH lookup.
+rust_library(
+    name = "dx_deploy_tools",
+    srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_deploy_tools",
+        normal = True,
+    ),
+    crate_name = "dx_deploy_tools",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "flate2",
+            "hex",
+            "sha2",
+        ],
+        package_name = "deploy/dx_deploy_tools",
+    ),
 )
 
-py_binary(
-    name = "hasher",
-    srcs = ["hasher.py"],
-    main = "hasher.py",
+rust_binary(
+    name = "archiver",
+    srcs = ["src/bin_archiver.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_deploy_tools",
+        normal = True,
+    ),
+    crate_name = "archiver",
+    crate_root = "src/bin_archiver.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "flate2",
+            "hex",
+            "sha2",
+        ],
+        package_name = "deploy/dx_deploy_tools",
+    ) + [":dx_deploy_tools"],
 )
+
+rust_binary(
+    name = "hasher",
+    srcs = ["src/bin_hasher.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_deploy_tools",
+        normal = True,
+    ),
+    crate_name = "hasher",
+    crate_root = "src/bin_hasher.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "flate2",
+            "hex",
+            "sha2",
+        ],
+        package_name = "deploy/dx_deploy_tools",
+    ) + [":dx_deploy_tools"],
+)
+
+rust_test(
+    name = "dx_deploy_tools_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "deploy/dx_deploy_tools",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_deploy_tools",
+    deps = crate_deps(
+        [
+            "flate2",
+            "hex",
+            "sha2",
+            "tempfile",
+        ],
+        package_name = "deploy/dx_deploy_tools",
+    ),
+)
+
+rustfmt_test(
+    name = "dx_deploy_tools_fmt_test",
+    size = "small",
+    targets = [
+        ":dx_deploy_tools",
+        ":archiver",
+        ":hasher",
+    ],
+)
+
+rust_clippy_test(
+    name = "dx_deploy_tools_clippy_test",
+    size = "small",
+    targets = [
+        ":dx_deploy_tools",
+        ":archiver",
+        ":hasher",
+    ],
+)
+
+exports_files(["Cargo.toml"])
 
 # Shared staging logic for `archive_deploy` launchers plus `py_test`.
 # The launchers expand this template per instance; the test imports it.
@@ -705,4 +797,10 @@ real_source_target(
     name = "corpus_json",
     json_srcs = ["npm_demo/package.json"],
     tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

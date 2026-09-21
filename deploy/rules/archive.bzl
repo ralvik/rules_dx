@@ -128,8 +128,8 @@ def archive_deploy(name, app, profile = "release"):
     # The hermetic archiver dereferences the stage symlink (like
     # `tar -h`) and writes deterministic bytes (mtime 0, uid/gid 0,
     # gzip mtime 0); the hermetic hasher writes a sha256sum-compatible
-    # line. Both run as declared genrule `tools` from the managed
-    # Python toolchain: no host `tar`/`sha256sum`/`shasum`, no
+    # line. Both run as declared genrule `tools` from the Rust
+    # toolchain: no host `tar`/`sha256sum`/`shasum`, no
     # `command -v` probing, no shell-`$` escaping.
     native.genrule(
         name = archive_target,
