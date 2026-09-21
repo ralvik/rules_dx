@@ -82,7 +82,7 @@ Configuration-aware (`cquery`) mapping is rejected: measured 2026-09-17 on the
 seed host (Bazel 9.2.0, 3067 targets) across five representative owner sets,
 unconfigured `query` medians 0.28–0.32s and succeeds, while `cquery` medians
 0.42–0.50s and fails on the intentional `manual` negative fixture
-`//deploy/rules:deploy_invalid`. The sole `select()` in the repo lives in the
+`//quality/testdata:fixture_real_markdown_no_config_subject`. The sole `select()` in the repo lives in the
 external tool-hub template (`quality/artifacts/extension.bzl`), not in the
 main-workspace test graph, so measured over-selection is zero. Revisit only if
 `select()` enters the main-workspace test graph with evidence of material waste.

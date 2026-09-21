@@ -63,8 +63,11 @@ dx_deployment = rule(
     executable = True,
     attrs = {
         "app": attr.label(
+            cfg = "target",
             doc = "Deployed app target when distinct from the deploy program; None deploys the program itself.",
+            executable = True,
             mandatory = False,
+            providers = [DefaultInfo],
         ),
         "deploy": attr.label(
             cfg = "target",
@@ -75,6 +78,7 @@ dx_deployment = rule(
         "profile": attr.string(
             default = "release",
             doc = "Default profile for this deployment (debug, dev, or release). An explicit CLI flag always wins.",
+            values = VALID_DEPLOY_PROFILES,
         ),
     },
     doc = "Wraps one executable deploy program with DxDeployInfo (issue #178).",

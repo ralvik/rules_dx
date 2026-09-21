@@ -237,8 +237,11 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
     `aspect_hints` (typed native-config labels) ride the public forwarder
  where quality aspects visit (lane A): the forwarder is the
     `QualitySourcesInfo` owner, so hints must reach it, not only the
-    private upstream. Remaining kwargs stay upstream-only."""
+    private upstream. `hdrs` (C/C++ headers) ride both shapes where the
+    forwarder owns them for `QualitySourcesInfo`. Remaining kwargs stay
+    upstream-only."""
     hints = kwargs.get("aspect_hints", None)
+    hdrs = kwargs.get("hdrs", None)
     upstream_rule(
         name = name + "_upstream",
         srcs = srcs,
@@ -248,6 +251,8 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
     forward_kwargs = {}
     if hints != None:
         forward_kwargs["aspect_hints"] = hints
+    if hdrs != None:
+        forward_kwargs["hdrs"] = hdrs
     forward_rule(
         name = name,
         upstream = name + "_upstream",
