@@ -171,7 +171,7 @@ Biome takes `biome.json` only (accepted, pinned by `quality/native_config.bzl` p
 `quality/native_config_tests.bzl`): `biome.jsonc` is wont-fix (issue #589, no hidden preset;
 the `.json` extension is the JSON transport). The repository corpus binds Vale `Dx.Markers`
 only (accepted, pinned by `quality/corpus_vale.ini` plus `corpus_styles/Dx/Markers.yml`):
-prose rules stay wont-fix (issue #589, native-config owns policy with no hidden preset).
+prose rules stay wont-fix (issues #589 and #665, native-config owns policy with no hidden preset).
 Own-tree strict policy (issue #614) lives in the checked-in configs, not in defaults:
 workspace `ruff.toml` selects `E4/E7/E9/F/W/I/B`, workspace `biome.json` pins
 `recommended` plus `style/useTemplate` as error with tab formatting, and both Vale

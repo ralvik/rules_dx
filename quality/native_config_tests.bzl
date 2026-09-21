@@ -47,7 +47,7 @@ def native_config_unit_tests(name):
                 ".js",
             ),
             expect_equal(
-                "native_config_error rejects biome.jsonc (issue #589 wont-fix)",
+                "native_config_error rejects biome.jsonc",
                 native_config_error(
                     "biome",
                     "cfg/biome.jsonc",

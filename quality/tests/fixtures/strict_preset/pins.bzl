@@ -26,7 +26,7 @@ BIOME_STRICT_NO_UNUSED_VARIABLES = '"noUnusedVariables": "error"'
 TSC_STRICT = '"strict": true'
 
 # Vale strict stays markers-only (prose wont-fix).
-VALE_STRICT = "markers-only Dx.Markers with MinAlertLevel suggestion, prose wont-fix per issue #589"
+VALE_STRICT = "markers-only Dx.Markers with MinAlertLevel suggestion, prose wont-fix per issues #589, #665"
 
 # Live proof labels (defaults unchanged; no adapter or default change).
 STRICT_PRESET_RUFF_LOOSE = "//quality/tests/fixtures/strict_preset:ruff_loose"

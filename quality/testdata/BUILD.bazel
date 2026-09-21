@@ -87,7 +87,7 @@ aspect_fixture_tests(
     ],
 )
 
-# Hinted Vale policy for the real-pipeline fixture (strict per issue
+# Hinted Vale policy for the real-pipeline fixture (strict,
 # Dx.Markers enforced, same style as the workspace corpus.
 vale_config(
     name = "vale_cfg",
@@ -105,8 +105,8 @@ ruff_config(
     src = "ruff.toml",
 )
 
-# Hinted Biome policy for the real-pipeline fixture (strict per issue
-# , same selection as the workspace `biome.json`): `recommended`
+# Hinted Biome policy for the real-pipeline fixture (strict, same
+# selection as the workspace `biome.json`): `recommended`
 # plus `style/useTemplate` as error with tab formatting, so the hinted
 # run proves the config closure reaches the tool as --config-path
 # instead of the materialized defaults directory. The config lives in
@@ -200,7 +200,7 @@ real_aspect_subject(
 # Generated-shape binding: the default `<tool>_config` name with
 # a direct aspect_hint, exactly as Gazelle emits it. Proves the generated
 # single-tool binding analyzes and binds through the real aspects.
-# (Clippy bindings are gone with: Rust lint is upstream-delegated
+# (Clippy bindings are gone: Rust lint is upstream-delegated
 # and takes no dx-side config.)
 real_source_target(
     name = "fixture_real_rust_generated_shape",
