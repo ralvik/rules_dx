@@ -369,6 +369,12 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   stable at implementation; adapters stay owned under #800 (successor to closed #420)
   (see the Interpreted/file-family rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
+- **Python source-audit selection (#801, successor to closed #613):** adapter `ruff` audit
+  `python` plus `python_stub` check-only via the hermetic `check --output-format json` path
+  shared with lint; S (flake8-bandit) ruleset via native `ruff.toml` opt-in with pinned
+  upstream defaults otherwise clean and no hidden preset; standalone artifact route with
+  per-host digests in `quality/artifacts/ruff.*.bzl`; curated audit stays empty with explicit
+  disablement (audit opt-in, no default fetch); Bandit stays excluded by ADR 0019.
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.
 Freeze them in [Native Configuration](native-configuration.md#discovery) only with exact binding,

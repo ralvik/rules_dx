@@ -1,20 +1,29 @@
 #!/usr/bin/env bash
-# Python source-audit split qualification harness.
+# Python source-audit selection qualification harness.
 #
-# Splits Python source-audit tooling out of the quality family taxonomy
-# (stays taxonomy-only) with fixture evidence:
-# - disposition: no selected audit tool in v1; curated audit stays empty
-#   with explicit disablement for the python family, Bandit excluded from
-#   v1 by ADR 0019, secrets ride the separate Gitleaks family;
+# Selects Ruff S (flake8-bandit) via the pinned Ruff standalone artifact
+# as the Python source-audit tool beyond the empty curated set (successor
+# to closed #613), with fixture evidence:
+# - selection: ruff audit over python plus python_stub via the S ruleset,
+#   Ruff 0.16.7 standalone checksummed artifact with no new acquisition,
+#   S via native ruff.toml opt-in with pinned upstream defaults otherwise
+#   clean and no hidden preset, curated audit stays empty with explicit
+#   disablement (audit opt-in, no default fetch), Bandit excluded from v1
+#   by ADR 0019 (re-selection rejected here, reconsideration under #970),
+#   secrets ride the separate Gitleaks family;
 # - unaffected: python lint stays pydoclint plus ruff, format stays ruff,
 #   typecheck stays ty, flake8 plus pylint stay baseline opt-ins;
-# - adapters: no audit adapter claims python plus python_stub;
+# - adapters: ruff audit claims python plus python_stub check-only via
+#   the hermetic ruff check JSON path shared with lint;
 # - scope: per-language source audit distinct from ecosystem dx audit plus
 #   dx update live execution delivered repo-wide;
 # - rejected: leaving under taxonomy rejected with mismatched scope;
 # - fixtures: `python/tests/fixtures/python_audit/` (`pins.bzl` plus
-#   `python_audit.expected`) pins disposition plus rejected plus honesty;
-# - scope: quality-only; no workflow change.
+#   `python_audit.expected` plus audit samples) pins selection plus
+#   rejected plus honesty;
+# - platform: Ruff per-host standalone artifacts for the required hosts;
+# - consumer: adopt-python with lazy audit opt-in;
+# - release: promotion-checklist plus SBOM plus signing linkage.
 #   Seed only: no Supported claim.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:python_audit_qualification`,
@@ -33,6 +42,8 @@ dx_test_init
 pins="python/tests/fixtures/python_audit/pins.bzl"
 pins_build="python/tests/fixtures/python_audit/BUILD.bazel"
 expected="python/tests/fixtures/python_audit/python_audit.expected"
+clean_sample="python/tests/fixtures/python_audit/Sample_audit_clean.py"
+dirty_sample="python/tests/fixtures/python_audit/Sample_audit_dirty.py"
 adapters="quality/adapters.bzl"
 curated="quality/curated_defaults.bzl"
 support="docs/product/support-matrix.md"
@@ -42,38 +53,77 @@ python_adr="docs/decisions/0010-python-foundation.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
+verify_remaining="docs/testing/verification-matrix-remaining.md"
+promotion="docs/product/promotion-checklist.md"
+adopt="examples/adopt-python"
 
 # Fixture files stay present.
-if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
+if [[ -f "$pins" && -f "$pins_build" && -f "$expected" && -f "$clean_sample" && -f "$dirty_sample" ]]; then
   ok
 else
-  bad "python audit fixture missing (want $pins plus $pins_build plus python_audit.expected)"
+  bad "python audit fixture missing (want $pins plus $pins_build plus python_audit.expected plus audit samples)"
 fi
 
-# Pins record the empty audit plus Bandit plus secrets split.
-if grep -q -F -e 'curated audit stays empty with explicit disablement' "$pins" &&
+# Pins record the Ruff S selection plus empty curated plus Bandit plus secrets.
+if grep -q -F -e 'ruff audit over python plus python_stub via S ruleset' "$pins" &&
+  grep -q -F -e 'curated audit stays empty with explicit disablement' "$pins" &&
   grep -q -F -e 'python family audit stays empty with explicit disablement' "$pins" &&
   grep -q -F -e 'Bandit excluded from v1 by ADR 0019' "$pins" &&
   grep -q -F -e 'secrets family rides Gitleaks detect with redact plus SARIF' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its empty audit plus Bandit plus secrets split under issue #613"
+  bad "pins.bzl lost its Ruff S selection plus empty audit plus Bandit plus secrets split under issue #801"
 fi
 
-# Pins record the unaffected quality plus no-adapter plus scope plus rejected plus owned gaps.
-if grep -q -F -e 'python family lint pydoclint plus ruff' "$pins" &&
-  grep -q -F -e 'python family format ruff' "$pins" &&
-  grep -q -F -e 'python family typecheck ty' "$pins" &&
-  grep -q -F -e 'flake8 plus pylint stay baseline opt-ins' "$pins" &&
-  grep -q -F -e 'no audit adapter claims python plus python_stub' "$pins" &&
-  grep -q -F -e 'per-language source audit distinct from ecosystem dx audit plus dx update live execution' "$pins" &&
-  grep -q -F -e 'leaving under taxonomy rejected with mismatched scope' "$pins" &&
-  grep -q -F -e 'future tool selection stays owned under issue #613' "$pins" &&
-  grep -q -F -e 'platform plus consumer plus release evidence stays owned gap' "$pins" &&
-  grep -q -F -e 'qualified seed-only under issue #613' "$pins"; then
+# Pins record the artifact plus ruleset plus acquisition plus upstream defaults.
+if grep -q -F -e 'ruff 0.16.7 standalone artifact' "$pins" &&
+  grep -q -F -e 'S flake8-bandit ruleset via native ruff.toml opt-in' "$pins" &&
+  grep -q -F -e 'checksummed standalone artifact with no new acquisition' "$pins" &&
+  grep -q -F -e 'pinned upstream defaults otherwise clean with no hidden preset' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its lint plus format plus typecheck plus no-adapter plus scope plus rejected plus owned gaps under issue #613"
+  bad "pins.bzl lost its artifact plus ruleset plus acquisition plus upstream defaults under issue #801"
+fi
+
+# Pins record the audit adapter plus unaffected quality.
+if grep -q -F -e 'ruff audit claims python plus python_stub check-only via ruff check JSON' "$pins" &&
+  grep -q -F -e 'python family lint pydoclint plus ruff' "$pins" &&
+  grep -q -F -e 'python family format ruff' "$pins" &&
+  grep -q -F -e 'python family typecheck ty' "$pins" &&
+  grep -q -F -e 'flake8 plus pylint stay baseline opt-ins' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its audit adapter plus lint plus format plus typecheck under issue #801"
+fi
+
+# Pins record scope plus rejected substitutes.
+if grep -q -F -e 'per-language source audit distinct from ecosystem dx audit plus dx update live execution' "$pins" &&
+  grep -q -F -e 'leaving under taxonomy rejected with mismatched scope' "$pins" &&
+  grep -q -F -e 'Bandit re-selection rejected here with ADR 0019 exclusion standing' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its scope plus taxonomy plus Bandit rejected under issue #801"
+fi
+
+# Pins record platform plus consumer plus release evidence.
+if grep -q -F -e 'ruff per-host artifacts linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus windows_x86_64' "$pins" &&
+  grep -q -F -e 'standalone artifact route with per-host digests in quality/artifacts/ruff' "$pins" &&
+  grep -q -F -e 'examples/adopt-python consumer with lazy audit opt-in' "$pins" &&
+  grep -q -F -e 'promotion-checklist plus SBOM plus signing linkage with no Supported claim' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its platform plus consumer plus release evidence under issue #801"
+fi
+
+# Pins record owned selection plus taxonomy plus promotion plus honesty.
+if grep -q -F -e 'future tool selection owned under issue #801 with successor to closed #613' "$pins" &&
+  grep -q -F -e 'issue #512 stays taxonomy-only with no Python audit ownership' "$pins" &&
+  grep -q -F -e 'platform plus consumer plus release evidence stays owned gap' "$pins" &&
+  grep -q -F -e 'Supported promotion stays owned under #808 with per-host #803 through #807' "$pins" &&
+  grep -q -F -e 'qualified seed-only under issue #801' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its owned selection plus taxonomy plus promotion plus seed-only under issue #801"
 fi
 
 # Curated defaults keep python audit empty with lint plus format plus typecheck.
@@ -87,72 +137,74 @@ else
   bad "curated defaults lost python audit empty plus ruff plus pydoclint plus ty"
 fi
 
-# No audit adapter claims python: no audit capability in the real registry.
-if ! grep -q -F -e '"audit":' "$adapters"; then
+# Ruff audit adapter claims python plus python_stub in the real registry.
+if grep -q -F -e '"ruff": {"audit": ["python", "python_stub"]' "$adapters"; then
   ok
 else
-  bad "adapters.bzl must carry no audit capability under issue #613 (python audit has no adapter claim)"
+  bad "adapters.bzl lost its ruff audit claim over python plus python_stub under issue #801"
 fi
 
-# Support matrix owns the split Python audit record under.
-if grep -q -F -e 'qualified seed-only under issue #613' "$support" &&
+# Support matrix owns the #801 Python audit selection record.
+if grep -q -F -e 'qualified seed-only under issue #801' "$support" &&
   grep -q -F -e 'python_audit_qualification' "$support" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$support" &&
   grep -q -F -e 'Bandit excluded' "$support" &&
-  grep -q -F -e 'platform plus consumer plus release owned gap' "$support"; then
+  grep -q -F -e 'Ruff S' "$support"; then
   ok
 else
-  bad "docs/product/support-matrix.md lost its #613 Python audit record with fixtures plus qualification"
+  bad "docs/product/support-matrix.md lost its #801 Python audit selection record with fixtures plus qualification"
 fi
 
 # Support matrix keeps taxonomy-only with no Python audit ownership.
-if grep -q -F -e 'issue #512 stays taxonomy-only' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #512' "$support" &&
+if grep -q -F -e 'closed #512 stays taxonomy-only' "$support" &&
+  grep -q -F -e 'qualified seed-only under closed #512' "$support" &&
   grep -q -F -e 'quality_taxonomy_qualification' "$support"; then
   ok
 else
   bad "docs/product/support-matrix.md lost its #512 taxonomy-only split record"
 fi
 
-# Tool baseline owns the audit-open record with Bandit honesty.
-if grep -q -F -e 'issue #613' "$baseline" &&
+# Tool baseline owns the #801 selection record with Bandit honesty.
+if grep -q -F -e 'issue #801' "$baseline" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$baseline" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$baseline" &&
-  grep -q -F -e 'Bandit excluded from v1' "$baseline"; then
+  grep -q -F -e 'Bandit excluded from v1' "$baseline" &&
+  grep -q -F -e 'Ruff S' "$baseline"; then
   ok
 else
-  bad "docs/tools/tool-baseline.md lost its #613 audit-open record with fixtures plus qualification"
+  bad "docs/tools/tool-baseline.md lost its #801 audit-selection record with fixtures plus qualification"
 fi
 
-# Action model owns the audit-selection record with empty audit plus Bandit.
-if grep -q -F -e 'qualified seed-only under issue #613' "$action_doc" &&
+# Action model owns the audit-selection record with Ruff S plus Bandit.
+if grep -q -F -e 'qualified seed-only under issue #801' "$action_doc" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$action_doc" &&
   grep -q -F -e 'python_audit.expected' "$action_doc" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$action_doc" &&
-  grep -q -F -e 'Bandit excluded from v1' "$action_doc"; then
+  grep -q -F -e 'Bandit excluded from v1' "$action_doc" &&
+  grep -q -F -e 'Ruff S' "$action_doc"; then
   ok
 else
-  bad "docs/quality/action-model.md lost its #613 audit-selection record with fixtures plus qualification"
+  bad "docs/quality/action-model.md lost its #801 audit-selection record with fixtures plus qualification"
 fi
 
-# Python foundation ADR owns the source-audit selection.
-if grep -q -F -e 'issue #613' "$python_adr" &&
+# Python foundation ADR owns the source-audit selection under #801.
+if grep -q -F -e 'issue #801' "$python_adr" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$python_adr" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$python_adr"; then
   ok
 else
-  bad "docs/decisions/0010-python-foundation.md lost its #613 source-audit selection record"
+  bad "docs/decisions/0010-python-foundation.md lost its #801 source-audit selection record"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
+# Verification matrix owns the qualified seed-only record under #801.
 if grep -q -F -e 'python_audit_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #613' "$verify" &&
+  grep -q -F -e 'qualified seed-only under issue #801' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$verify" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$verify" &&
-  grep -q -F -e '`python_audit_qualification` 16/16' "$verify"; then
+  grep -q -F -e '`python_audit_qualification` 24/24' "$verify"; then
   ok
 else
-  bad "verification-matrix lost its #613 python audit qualified record"
+  bad "verification-matrix lost its #801 python audit qualified record"
 fi
 
 # Verification matrix lists the harness in dogfood-freshness.
@@ -163,37 +215,74 @@ else
 fi
 
 # Verification matrix Green lists the harness count.
-if grep -q -F -e '`python_audit_qualification` 16/16' "$verify"; then
+if grep -q -F -e '`python_audit_qualification` 24/24' "$verify"; then
   ok
 else
-  bad "verification-matrix Green lost python_audit_qualification 16/16"
+  bad "verification-matrix Green lost python_audit_qualification 24/24"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "python_audit_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:python_audit_qualification' "$ci"; then
-  ok
+if grep -q -F -e 'name = "python_audit_qualification"' "$build" ||
+  grep -q -F -e 'name = "python_audit_qualification"' "tools/ci/ci_targets_d.bzl"; then
+  if grep -q -F -e 'bazel run --noshow_progress //tools/ci:python_audit_qualification' "tools/ci/dogfood_freshness.sh" ||
+    grep -q -F -e 'bazel run --noshow_progress //tools/ci:python_audit_qualification' "$ci"; then
+    ok
+  else
+    bad "dogfood_freshness.sh lost the python_audit_qualification wiring"
+  fi
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the python_audit_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/BUILD.bazel or ci_targets_d.bzl lost the python_audit_qualification target"
 fi
 
-# Fixture expected covers the split with owned gaps.
-if grep -q -F -e 'qualified seed-only under issue #613' "$expected" &&
-  grep -q -F -e 'issue #512 stays taxonomy-only' "$expected" &&
+# Fixture expected covers the selection with owned gaps.
+if grep -q -F -e 'qualified seed-only under issue #801' "$expected" &&
+  grep -q -F -e 'Successor to closed #613' "$expected" &&
+  grep -q -F -e 'Ruff S' "$expected" &&
   grep -q -F -e 'Bandit excluded' "$expected" &&
-  grep -q -F -e 'owned gap' "$expected" &&
-  grep -q -F -e 'no' "$expected" &&
-  grep -q -F -e 'Supported claim' "$expected"; then
+  grep -q -F -e 'owned gaps' "$expected" &&
+  grep -q -F -e 'no Supported claim' "$expected"; then
   ok
 else
-  bad "python_audit.expected lost split coverage (want qualified plus taxonomy-only plus Bandit plus owned gap plus no Supported, issue #613)"
+  bad "python_audit.expected lost selection coverage (want qualified plus successor plus Ruff S plus Bandit plus owned gaps plus no Supported, issue #801)"
+fi
+
+# Audit samples pin the S ruleset split (clean versus S101 plus S602).
+if grep -q -F -e 'assert' "$dirty_sample" &&
+  grep -q -F -e 'shell=True' "$dirty_sample" &&
+  ! grep -q -F -e 'assert' "$clean_sample"; then
+  ok
+else
+  bad "audit samples lost their S ruleset split (want assert plus shell=True dirty, clean without assert)"
+fi
+
+# Platform evidence: Ruff per-host artifacts stay present.
+if [[ -f "quality/artifacts/ruff.linux_x86_64.bzl" && -f "quality/artifacts/ruff.linux_arm64.bzl" && -f "quality/artifacts/ruff.macos_arm64.bzl" && -f "quality/artifacts/ruff.macos_x86_64.bzl" && -f "quality/artifacts/ruff.windows_x86_64.bzl" ]]; then
+  ok
+else
+  bad "Ruff per-host artifacts missing (want quality/artifacts/ruff per-host bzl for platform evidence)"
+fi
+
+# Consumer plus release evidence stays linked.
+if [[ -d "$adopt" ]] &&
+  grep -q -F -e 'Promotion Checklist' "$promotion"; then
+  ok
+else
+  bad "consumer plus release evidence missing (want examples/adopt-python plus promotion-checklist)"
+fi
+
+# Verification-remaining mirrors the #801 record.
+if grep -q -F -e 'python_audit_qualification' "$verify_remaining" &&
+  grep -q -F -e 'under issue #801' "$verify_remaining"; then
+  ok
+else
+  bad "verification-matrix-remaining lost its #801 python audit record"
 fi
 
 # Live proof: the fixture build stays green on the seed host.
 if bazel build //python/tests/fixtures/python_audit/... --noshow_progress >/dev/null 2>&1; then
   ok
 else
-  bad "python audit live proof failed (want //python/tests/fixtures/python_audit green, issue #613)"
+  bad "python audit live proof failed (want //python/tests/fixtures/python_audit green, issue #801)"
 fi
 
 dx_test_summary "python audit qualification harness"

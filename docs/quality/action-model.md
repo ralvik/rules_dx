@@ -166,10 +166,11 @@ for initial findings proven absent at convergence because of their exact same-fi
 applies valid replacements once and does not automatically rerun any selected type checker. Findings
 not resolved by an applied guaranteed fix at or above `--fail-on`, or apply failures, determine a
 nonzero result. Suppression insertion is excluded from normal fixing. Security analyzers belong
-to `dx audit` and are not selected by lint or typecheck; initial v1 audit tool selection is
-qualified seed-only under issue #613 (`python/tests/fixtures/python_audit/pins.bzl` with
-`python_audit.expected` via `bazel run //tools/ci:python_audit_qualification` with empty
-curated audit plus explicit disablement; Bandit excluded from v1 by
+to `dx audit` and are not selected by lint or typecheck; Python source-audit selection is
+qualified seed-only under issue #801 (`python/tests/fixtures/python_audit/pins.bzl` with
+`python_audit.expected` via `bazel run //tools/ci:python_audit_qualification` with Ruff S
+selected via the pinned Ruff standalone artifact plus curated audit empty with explicit
+disablement; Bandit excluded from v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md); family taxonomy execution
 qualified seed-only under issue #512 via `bazel run //tools/ci:quality_taxonomy_qualification`,
 issue #512 stays taxonomy-only).

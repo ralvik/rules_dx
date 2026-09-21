@@ -101,8 +101,8 @@ live execution (ecosystem resolvers, advisory matching, secrets wiring). A sourc
 cell of `Not planned` or `Planned: audit tools (open work)` is consistent with a `Delivered`
 ecosystem `Audit/update` cell: Rust, JavaScript, TypeScript, Vue, Svelte, Astro, and MDX
 source audit is `Not planned` while ecosystem audit/update is delivered repo-wide, and Python
-source-audit tooling is qualified seed-only under closed #613 (future selection open under #801) while ecosystem audit/update wiring is delivered.
-Python source-audit tooling is tracked under closed #613 with fixture evidence in
+source-audit tooling is qualified seed-only under issue #801 (successor to closed #613; Ruff S selected, Bandit excluded) while ecosystem audit/update wiring is delivered.
+Python source-audit tooling is tracked under issue #801 with fixture evidence in
 `python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`;
 closed #512 stays taxonomy-only and owns no Python audit tool.
 Ecosystem dependency-vulnerability audit
@@ -116,7 +116,7 @@ They are not eligible for the additional-foundation deferral policy.
 | Language | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Format | Lint | Typecheck | Audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Rust | Planned | Planned | Planned: Cargo lock | Planned | Planned: native tools | Planned: rust-analyzer/flycheck | Planned | Planned: rustfmt | Planned: Clippy | Planned: compiler diagnostics | Not planned |
-| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under closed #613 with empty curated audit, Bandit excluded via `python/tests/fixtures/python_audit/pins.bzl` with `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification`; future selection #801 plus platform plus consumer plus release #808 owned gap) |
+| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under issue #801 with Ruff S selected via `python/tests/fixtures/python_audit/pins.bzl` with `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification`; Ruff S via pinned Ruff 0.16.7 standalone artifact with S opt-in, curated audit stays empty with explicit disablement, Bandit excluded; platform plus consumer plus release #808 owned gap) |
 | JavaScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: Node/modules | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | N/A | Not planned |
 | TypeScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: TypeScript/Node | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | Planned: `tsc` | Not planned |
 | Vue | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Not planned |

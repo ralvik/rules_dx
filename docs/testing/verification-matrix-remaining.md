@@ -590,17 +590,20 @@ Remaining reds stay owned gaps, not green claims:
     #796-#800 (successors to closed #416-#420) plus closed #307, digests plus rule-sets owned by cohorts, platform plus
     consumer plus release evidence stays owned gap under #802 and #808; backends provisional; no
     Supported claim; closed #512 stays taxonomy-only).
-- Python source-audit split with fixture evidence qualified seed-only
-    under closed #613
+- Python source-audit selection with fixture evidence qualified seed-only
+    under issue #801
    (`bazel run //tools/ci:python_audit_qualification` with
    `python/tests/fixtures/python_audit/pins.bzl` plus
-   `python_audit.expected`; `python_audit_qualification` 16/16;
-   curated audit empty with Bandit excluded plus secrets via Gitleaks,
-   lint Ruff plus pydoclint plus format Ruff plus typecheck Ty
-   unaffected with flake8 plus pylint opt-ins, no audit adapter claim,
+   `python_audit.expected`; `python_audit_qualification` 24/24;
+   Ruff S selected via pinned Ruff 0.16.7 standalone artifact with S
+   opt-in plus curated audit empty with explicit disablement plus Bandit
+   excluded plus secrets via Gitleaks, lint Ruff plus pydoclint plus
+   format Ruff plus typecheck Ty unaffected with flake8 plus pylint
+   opt-ins, ruff audit claims python plus python_stub check-only,
    source audit distinct from ecosystem audit/update delivered, leaving
-    under taxonomy rejected with mismatched scope; future selection (#801) plus
-    platform plus consumer plus release (#808) evidence stays owned gap;
+    under taxonomy rejected with mismatched scope; platform per-host Ruff
+    artifacts plus adopt-python consumer plus promotion-checklist release
+    linked; taxonomy #512 plus promotion #808 stay owned gaps;
     backends provisional; no Supported claim).
 - Selective `dx update` per-set support with fixture evidence qualified
   seed-only under #583
