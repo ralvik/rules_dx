@@ -144,11 +144,12 @@ pub enum PinError {
 }
 
 /// True for a full-length lowercase hex commit SHA (`[0-9a-f]{40}`).
+///
+/// Pin spelling owned by `dx_digest::is_pin_sha` (`hex::decode` + 20-byte
+/// length + lowercase re-encode check, no manual digit loop): uppercase
+/// stays rejected, matching the shell pin harnesses.
 fn is_full_sha(pin: &str) -> bool {
-    pin.len() == 40
-        && pin
-            .bytes()
-            .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+    dx_digest::is_pin_sha(pin)
 }
 
 /// Plan a workflow pin change over full-SHA pin identities.
