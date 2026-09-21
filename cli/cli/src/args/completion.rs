@@ -11,6 +11,33 @@ use super::ArgsError;
 /// Shells covered by `dx completion` (contract freeze).
 pub const COMPLETION_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
 
+/// Line-start of the `break` closing the `'dx'` case in the rendered
+/// powershell script, searched from the `'dx' {` header with whole-word
+/// matching so tooltip text (`breaking`) never matches (See:
+/// `docs/cli/commands/completion.md`).
+fn powershell_case_break(text: &str) -> Option<usize> {
+    let header = text.find("'dx' {")?;
+    let region = &text[header..];
+    let mut from = 0;
+    while let Some(rel) = region[from..].find("break") {
+        let abs_break = header + from + rel;
+        let before_ok = text[..abs_break]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '-'));
+        let after_ok = text[abs_break + "break".len()..]
+            .chars()
+            .next()
+            .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '-'));
+        if before_ok && after_ok {
+            let line_start = text[..abs_break].rfind('\n').map_or(0, |i| i + 1);
+            return Some(line_start);
+        }
+        from += rel + "break".len();
+    }
+    None
+}
+
 /// Renders one completion script from the [`Cli`] grammar definition
 ///: commands, flags, and fixed value sets come from the
 /// same source that feeds parsing and `--help`, so generated scripts
@@ -69,11 +96,21 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
             let anchor = "            break\n        }\n    })";
             if let Some(pos) = text.find(anchor) {
                 text.insert_str(pos, &additions);
+            } else if let Some(pos) = powershell_case_break(&text) {
+                // Whitespace-tolerant fallback: same functional insertion
+                // before the case-closing `break` (See:
+                // `docs/cli/commands/completion.md`).
+                text.insert_str(pos, &additions);
+            } else if let Some(header) = text.find("'dx' {") {
+                // Last functional fallback: commands before flags when the
+                // case tail drifted beyond recognition.
+                text.insert_str(header + "'dx' {".len(), &format!("\n{additions}"));
             } else {
-                text.push_str("\n# dx commands from the single Command source (issue #202; See: docs/cli/commands/completion.md)\n");
-                for cmd in Command::value_variants() {
-                    text.push_str(&format!("# dx {}\n", cmd.name()));
-                }
+                // Fail closed: never emit non-functional `# dx <cmd>`
+                // comments. Pinned by the anchor-stability fixture.
+                return Err(ArgsError::UnknownShell {
+                    shell: shell.to_owned(),
+                });
             }
         }
         _ => {}

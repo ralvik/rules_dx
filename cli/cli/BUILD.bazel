@@ -189,15 +189,19 @@ rust_binary(
     ],
 )
 
-# Dogfood draft release of the standalone `dx` binary: the
-# macro assembles the seed-host binary the publish dry-run workflow
-# qualifies, so workflow and macro stay consistent instead of duplicating
-# logic. Draft-only with the dry-run placeholder tag: publishing a real
-# draft needs the tag pushed beforehand and explicit owner approval
+# Dogfood draft release of the standalone `dx` binary plus the manual
+# page: the macro assembles the seed-host binary plus `man/dx.1` the
+# publish dry-run workflow qualifies, so workflow and macro stay
+# consistent instead of duplicating logic. Draft-only with the dry-run
+# placeholder tag: publishing a real draft needs the tag pushed
+# beforehand and explicit owner approval
 #
 github_deploy(
     name = "github_draft",
-    artifacts = [":dx"],
+    artifacts = [
+        ":dx",
+        ":man_pages",
+    ],
 )
 
 # Seed-host standalone archive: credential-free tarball +

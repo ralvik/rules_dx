@@ -7,5 +7,6 @@ Contracts for the `dx` command surface and its user-facing protocols:
 - [Target Resolution](target-resolution.md): path and label normalization through Bazel.
 - [Output Protocol](output-protocol.md): text, diff, NDJSON, streams, and errors.
 - [Standard Reports](standard-reports.md): authoritative SARIF, JUnit XML, and LCOV format profiles.
+- [dx completion](commands/completion.md): generated shell completions plus the `man/dx.1` manual page.
 
 Related: [GitHub CI](../github-ci.md) defines consumer CI execution and reporting integration.
