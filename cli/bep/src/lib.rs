@@ -127,9 +127,10 @@ pub(crate) fn malformed(line: u64, path: &str, detail: &str) -> BepError {
 /// Parses a reported `file://` URI into a local path without touching the
 /// filesystem. Any other scheme (notably remote `bytestream://`) fails so
 /// the CLI never performs a network fetch for unmaterialized outputs.
-/// `Url::parse` validates URI structure first (scheme `file`, empty or
-/// `localhost` host); the path itself keeps the exact legacy byte derivation
-/// with no percent-decoding, so accepted inputs resolve identically.
+/// `Url::parse` validates URI structure first (scheme `file`); path
+/// derivation goes through `Url::to_file_path`, which enforces an empty
+/// or `localhost` host (plus Windows UNC/share forms on Windows) and
+/// percent-decodes path segments.
 pub(crate) fn file_uri_to_path(uri: &str) -> Result<PathBuf, BepError> {
     let unsupported = || BepError::UnsupportedUri {
         uri: uri.to_owned(),
@@ -138,19 +139,7 @@ pub(crate) fn file_uri_to_path(uri: &str) -> Result<PathBuf, BepError> {
     if parsed.scheme() != "file" {
         return Err(unsupported());
     }
-    match parsed.host_str() {
-        None | Some("localhost") => {}
-        Some(_) => return Err(unsupported()),
-    }
-    let rest = uri.strip_prefix("file://").ok_or_else(unsupported)?;
-    let path = match rest.strip_prefix("localhost/") {
-        Some(trailing) => format!("/{trailing}"),
-        None => rest.to_owned(),
-    };
-    if !path.starts_with('/') {
-        return Err(unsupported());
-    }
-    Ok(PathBuf::from(path))
+    parsed.to_file_path().map_err(|_| unsupported())
 }
 
 #[cfg(test)]
@@ -167,8 +156,46 @@ mod tests {
             file_uri_to_path("file://localhost/out/a.pb").expect("localhost"),
             PathBuf::from("/out/a.pb")
         );
-        assert!(file_uri_to_path("bytestream://x").is_err());
-        assert!(file_uri_to_path("file://relative/path").is_err());
-        assert!(file_uri_to_path("/plain/path").is_err());
+        // Percent-encoded segments decode to local bytes.
+        assert_eq!(
+            file_uri_to_path("file:///out/a%20b.pb").expect("space"),
+            PathBuf::from("/out/a b.pb")
+        );
+        assert_eq!(
+            file_uri_to_path("file://localhost/out/a%20b.pb").expect("localhost space"),
+            PathBuf::from("/out/a b.pb")
+        );
+        // Drive-letter form keeps the legacy Unix resolution (`/C:/...`);
+        // on Windows `to_file_path` yields the drive path instead.
+        assert_eq!(
+            file_uri_to_path("file:///C:/out/a.pb").expect("drive"),
+            PathBuf::from(if cfg!(windows) {
+                "C:\\out\\a.pb"
+            } else {
+                "/C:/out/a.pb"
+            })
+        );
+        for uri in [
+            "bytestream://x",
+            "bytestream://remote/cache/a.pb",
+            "/plain/path",
+        ] {
+            assert!(
+                matches!(file_uri_to_path(uri), Err(BepError::UnsupportedUri { .. })),
+                "{uri} must fail as UnsupportedUri"
+            );
+        }
+        // Non-local hosts fail on Unix; on Windows they resolve to UNC
+        // share paths via `to_file_path`.
+        if cfg!(windows) {
+            assert!(file_uri_to_path("file://otherhost/out/a.pb").is_ok());
+        } else {
+            for uri in ["file://relative/path", "file://otherhost/out/a.pb"] {
+                assert!(
+                    matches!(file_uri_to_path(uri), Err(BepError::UnsupportedUri { .. })),
+                    "{uri} must fail as UnsupportedUri"
+                );
+            }
+        }
     }
 }
