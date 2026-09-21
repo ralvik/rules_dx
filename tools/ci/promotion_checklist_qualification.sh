@@ -48,7 +48,7 @@ verify="docs/testing/verification-matrix.md"
 
 # Checklist doc owns tag hygiene, versioning, and promotion evidence under.
 if [[ -f "$checklist" ]] &&
-  grep -q -F -e 'owned under issue #611' "$checklist" &&
+  grep -q -F -e 'owned under #611' "$checklist" &&
   grep -q -F -e 'Tag hygiene, versioning, and what' "$checklist" &&
   grep -q -F -e 'evidence promotes a cell' "$checklist" &&
   grep -q -F -e 'tools/ci/tests/fixtures/promotion_checklist/pins.bzl' "$checklist" &&
@@ -92,9 +92,9 @@ else
 fi
 
 # Checklist records platform evidence per cell.
-if grep -q -F -e 'Linux arm64 native issue #410' "$checklist" &&
+if grep -q -F -e 'Linux arm64 native #410' "$checklist" &&
   grep -q -F -e 'static-musl profiles' "$checklist" &&
-  grep -q -F -e 'issue #413' "$checklist" &&
+  grep -q -F -e '#413' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:deployment_floors_qualification' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:cross_routes_qualification' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:coverage_qualification' "$checklist" &&
@@ -106,7 +106,7 @@ fi
 
 # Checklist records consumer evidence per cell.
 if grep -q -F -e 'Nine checks through the reusable workflow' "$checklist" &&
-  grep -q -F -e 'All-enabled self-call in `ci.yml` (issue #408, verbatim `//...`)' "$checklist" &&
+  grep -q -F -e 'All-enabled self-call in `ci.yml` (#408, verbatim `//...`)' "$checklist" &&
   grep -q -F -e 'build-only self-call forever' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:consumer_ci_qualification' "$checklist" &&
   grep -q -F -e 'sole updater' "$checklist"; then
@@ -218,7 +218,7 @@ fi
 
 # Support matrix links the checklist as the promotion owner.
 if grep -q -F -e 'promotion-checklist.md' "$support" &&
-  grep -q -F -e 'issue #611' "$support"; then
+  grep -q -F -e '#611' "$support"; then
   ok
 else
   bad "support-matrix.md lost its promotion-checklist owner link under #611"

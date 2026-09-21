@@ -12,7 +12,7 @@ describe their owning contract's scope, not promotion under this lifecycle. `Pla
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md). A `Platform-qualified`
 cell never shares its status with a provisional backend without an explicit `provisional`
 qualifier: the provisional backend stays an exception, never a qualified claim, and
-`dx_tools` artifact delivery under issue #616 does not qualify a provisional
+`dx_tools` artifact delivery under #616 does not qualify a provisional
 compiler/SDK backend. `Supported`
 adds release evidence and is owned by this matrix; no cell is currently
 `Supported`. The per-cell promotion checklist (tag hygiene, versioning, platform
@@ -25,9 +25,9 @@ closed #611 with fixture evidence in
 ## Unqualified Platforms
 
 Only the Linux x86_64 seed host plus Linux arm64 glibc native (issue
-#410) plus the two Linux static-musl profiles (issue #411) plus macOS
-arm64 native (issue #412) plus macOS x86_64 best-effort native (issue
-#413) plus Windows x86_64 MSVC-compatible native (issue #414) are
+#410) plus the two Linux static-musl profiles (#411) plus macOS
+arm64 native (#412) plus macOS x86_64 best-effort native (issue
+#413) plus Windows x86_64 MSVC-compatible native (#414) are
 delivered today. Every other host, including the remaining
 [required platforms](../decisions/0014-tested-platform-release-stack.md#required-platforms),
 is unqualified: `dx` refuses cleanly with `unsupported_platform`, naming the
@@ -35,7 +35,7 @@ host and pointing here and at ADR 0014, before any Bazel work starts. It
 never presents partial execution on an unqualified host as success. The
 refusal reads the same qualified-host list that platform evidence extends,
 so a host flips on exactly when its evidence lands. Platform qualification is delivered seed-only under closed #410-#414 with CI matrix closed #415; release evidence stays open under #803-#807 (process #808).
-Platform qualification was tracked under issue #298 (closed): the Linux
+Platform qualification was tracked under #298 (closed): the Linux
 x86_64 seed host plus Linux arm64 native plus the two static-musl profiles
 plus macOS arm64 native plus macOS x86_64 best-effort native plus Windows
 x86_64 MSVC-compatible native are delivered and tested; every other
@@ -50,12 +50,12 @@ remain owned by issues #410-#414 and are not pinned here):
 
 | Host | V1 status | Qualification evidence | Current state |
 | --- | --- | --- | --- |
-| Linux x86_64 glibc | Required, primary bootstrap | Pins/hosts/floors, JDK/SDK/CRT identities, qualified native plus cross routes, per-cell coverage, consumer plus release evidence | Seed-host-delivered (CI: ubuntu-latest; artifacts: linux_x86_64; coverage: seed cell; consumer self-call: test-disabled on linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus windows_x86_64, issue #408 plus Phase 1 #607 coverage superset) |
-| Linux arm64 glibc | Required | Same dimensions as above, native workflow (not cross-only) | Platform-qualified (issue #410; CI: ubuntu-24.04-arm; dx_tools linux_arm64 artifacts delivered (issue #616); coverage: arm64 cell; consumer self-call: test-disabled, issue #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808)) |
-| Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Platform-qualified (issue #411; provisional-backend exception: hermetic-llvm static-only musl targets stay provisional, so the musl C/C++ backend itself is not qualified; CI: ubuntu-latest plus ubuntu-24.04-arm cross-build with per-profile bazel-musl-* cache scopes; Rust musl std via extra_target_triples with exec-platform tools for build scripts/proc macros and target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; coverage: musl x86_64 plus musl arm64 cells with no union; consumer self-call: test-disabled plus musl jobs (issue #408 plus Phase 1 #607 coverage superset); release evidence open (#803-#807, process #808)) |
-| macOS arm64 | Required | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor) | Platform-qualified (issue #412; provisional-backend exception: hermetic-llvm Apple-SDK backend provisional (backend itself not qualified); CI: macos-14 with bazel-macos-arm64- cache scope; pinned upstream toolchains with immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_arm64 artifacts delivered (issue #616); coverage: macos arm64 cell with no union; consumer self-call: test-disabled, issue #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808)) |
-| macOS x86_64 | Best-effort | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor); best-effort non-blocking | Platform-qualified (issue #413; provisional-backend exception: hermetic-llvm Apple-SDK backend provisional (backend itself not qualified); CI: macos-15-intel with bazel-macos-x86_64- cache scope; `macos-13` retired December 2025, `macos-15-intel` until August 2027; pinned upstream toolchains with immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_x86_64 artifacts delivered (issue #616); coverage: macos x86_64 cell with no union; consumer self-call: test-disabled, issue #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808); gaps never block required-host release) |
-| Windows x86_64 MSVC-compatible | Required | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Platform-qualified (issue #414; provisional-backend exception: toolchains_msvc clang-cl/Microsoft-STL backend provisional (backend itself not qualified); CI: windows-latest with bazel-windows-x86_64- cache scope plus shell bash; pinned upstream toolchains with immutable lazy fetch; explicit EULA acceptance required never automatic, usage vs redistribution reviewed separately, merely adding the module requires no acceptance and fetches no restricted payloads; installed Build Tools fallback never approved; prebuilt-MSVC interop fixtures with explicit STL/CRT/linker/library combos incl mixed Rust/C/C++ qualify host-to-target plus target execution separately, compiler-target availability alone is not proof; manifest/path/ABI gaps closed with fixtures, linux corpus qualified seed-only under issue #499; dx_tools windows_x86_64 artifacts delivered (issue #616); coverage: windows x86_64 cell with no union; consumer self-call: test-disabled, issue #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808)) |
+| Linux x86_64 glibc | Required, primary bootstrap | Pins/hosts/floors, JDK/SDK/CRT identities, qualified native plus cross routes, per-cell coverage, consumer plus release evidence | Seed-host-delivered (CI: ubuntu-latest; artifacts: linux_x86_64; coverage: seed cell; consumer self-call: test-disabled on linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus windows_x86_64, #408 plus Phase 1 #607 coverage superset) |
+| Linux arm64 glibc | Required | Same dimensions as above, native workflow (not cross-only) | Platform-qualified (#410; CI: ubuntu-24.04-arm; dx_tools linux_arm64 artifacts delivered (#616); coverage: arm64 cell; consumer self-call: test-disabled, #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808)) |
+| Linux x86_64/arm64 static musl | Required profiles | Same dimensions; static native closure; dynamic musl explicitly out of scope | Platform-qualified (#411; provisional-backend exception: hermetic-llvm static-only musl targets stay provisional, so the musl C/C++ backend itself is not qualified; CI: ubuntu-latest plus ubuntu-24.04-arm cross-build with per-profile bazel-musl-* cache scopes; Rust musl std via extra_target_triples with exec-platform tools for build scripts/proc macros and target musl libs for apps, prebuilt glibc libs never musl-compatible by linker change alone; coverage: musl x86_64 plus musl arm64 cells with no union; consumer self-call: test-disabled plus musl jobs (#408 plus Phase 1 #607 coverage superset); release evidence open (#803-#807, process #808)) |
+| macOS arm64 | Required | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor) | Platform-qualified (#412; provisional-backend exception: hermetic-llvm Apple-SDK backend provisional (backend itself not qualified); CI: macos-14 with bazel-macos-arm64- cache scope; pinned upstream toolchains with immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_arm64 artifacts delivered (#616); coverage: macos arm64 cell with no union; consumer self-call: test-disabled, #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808)) |
+| macOS x86_64 | Best-effort | Same dimensions; pinned acquired SDK (SDK version is not the deployment floor); best-effort non-blocking | Platform-qualified (#413; provisional-backend exception: hermetic-llvm Apple-SDK backend provisional (backend itself not qualified); CI: macos-15-intel with bazel-macos-x86_64- cache scope; `macos-13` retired December 2025, `macos-15-intel` until August 2027; pinned upstream toolchains with immutable lazy fetch; host-installed SDK fallback never approved; Apple-SDK handling leaks no secrets and needs no interactive acceptance; dx_tools macos_x86_64 artifacts delivered (#616); coverage: macos x86_64 cell with no union; consumer self-call: test-disabled, #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808); gaps never block required-host release) |
+| Windows x86_64 MSVC-compatible | Required | Same dimensions; hermetic acquisition plus MSVC compatibility gates unchanged; explicit EULA acceptance required, never automatic | Platform-qualified (#414; provisional-backend exception: toolchains_msvc clang-cl/Microsoft-STL backend provisional (backend itself not qualified); CI: windows-latest with bazel-windows-x86_64- cache scope plus shell bash; pinned upstream toolchains with immutable lazy fetch; explicit EULA acceptance required never automatic, usage vs redistribution reviewed separately, merely adding the module requires no acceptance and fetches no restricted payloads; installed Build Tools fallback never approved; prebuilt-MSVC interop fixtures with explicit STL/CRT/linker/library combos incl mixed Rust/C/C++ qualify host-to-target plus target execution separately, compiler-target availability alone is not proof; manifest/path/ABI gaps closed with fixtures, linux corpus qualified seed-only under #499; dx_tools windows_x86_64 artifacts delivered (#616); coverage: windows x86_64 cell with no union; consumer self-call: test-disabled, #408 plus Phase 1 #607 coverage superset; release evidence open (#803-#807, process #808)) |
 | Windows arm64 | Out of v1 scope | Not a claim of impossibility | Unqualified: clean `unsupported_platform` refusal |
 
 No cell below is `Supported`: promotion requires platform plus consumer plus
@@ -151,7 +151,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 
 | Foundation | Provisional upstream basis | Open mappings | Tracking |
 | --- | --- | --- | --- |
-| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers/Gazelle/integration pinned; kept CC opt-out linker pinned (issue #471); bindgen LLVM-22-vs-23 pinned (issue #473); CXX graph identity decided single-graph (issue #474); exact-target discovery qualified seed-only (issue #475); native gaps: shell-env default | Pinned (`bazel run //tools/ci:foundation_maps`, issue #470; `bazel run //tools/ci:cc_optout_qualification`, issue #471; `bazel run //tools/ci:bindgen_qualification`, issue #473; `bazel run //tools/ci:cxx_identity_qualification`, issue #474; `bazel run //tools/ci:exact_target_qualification`, issue #475); native gaps under issue #472 |
+| Rust application | `rules_rs` + pinned patched `rules_rust` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Providers/Gazelle/integration pinned; kept CC opt-out linker pinned (#471); bindgen LLVM-22-vs-23 pinned (#473); CXX graph identity decided single-graph (#474); exact-target discovery qualified seed-only (#475); native gaps: shell-env default | Pinned (`bazel run //tools/ci:foundation_maps`, #470; `bazel run //tools/ci:cc_optout_qualification`, #471; `bazel run //tools/ci:bindgen_qualification`, #473; `bazel run //tools/ci:cxx_identity_qualification`, #474; `bazel run //tools/ci:exact_target_qualification`, #475); native gaps under #472 |
 | Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
@@ -159,15 +159,15 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence qualified seed-only under closed #510 | Qualified (`bazel run //tools/ci:layer2_opens_qualification`, `quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`, adapter-less as pass rejected) |
 | Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
-| Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings qualified seed-only under issue #511 | Qualified (`bazel run //tools/ci:result_contract_qualification`, `quality/tests/fixtures/result_contract/pins.bzl` with `result_contract.expected`, bare contract rejected) |
+| Quality core/result contract | Internal Protobuf + NDJSON output | Core mappings qualified seed-only under #511 | Qualified (`bazel run //tools/ci:result_contract_qualification`, `quality/tests/fixtures/result_contract/pins.bzl` with `result_contract.expected`, bare contract rejected) |
 | Quality family taxonomy | Frozen class-to-family taxonomy plus curated execution | Taxonomy execution qualified seed-only under closed #512 | Qualified (`bazel run //tools/ci:quality_taxonomy_qualification`, `quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected`, taxonomy doc only rejected) |
 | Required platforms | [Required-platform table](../decisions/0014-tested-platform-release-stack.md#required-platforms) | Pins, hosts, floors | Pins, hosts, floors qualified seed-only under closed #410-#414 and closed #500; release evidence open under #803-#807 (process #808) |
 | Coverage gate | Instrumentation-first; behavioral fallback only on proof | Resolved in [coverage](../testing/README.md#coverage) | Enforced by CI |
 | Consumer CI | Reusable workflow + caller template | Delivered; verification open | Shipped |
 | Repository workflows | Codegen/env/setup implemented; `dx update` plus `dx audit` live execution delivered | Codegen pairs; audit/update | Codegen pairs open under #787 and #788 (successors to closed #506); audit/update delivered; closed #512 stays taxonomy-only |
 
-File-family quality defaults are qualified seed-only under issue #489 with modfmt plus gherkin/xml
-resolved seed-only under issue #582 (`bazel run //tools/ci:file_family_defaults_qualification` with
+File-family quality defaults are qualified seed-only under #489 with modfmt plus gherkin/xml
+resolved seed-only under #582 (`bazel run //tools/ci:file_family_defaults_qualification` with
 `quality/tests/fixtures/file_family_quality/pins.bzl` over upstream built-in defaults with no hidden preset;
 cue v0.17.1 plus jsonnetfmt v0.22.0 plus pkl 0.32.1 plus terraform v1.16.1 plus djlint v1.45.0 plus Stylelint
 17.14.1 plus Prettier 3.9.6 with prettier-plugin-sql 0.15.1 plus prettier-plugin-gherkin 4.0.0 plus
@@ -177,12 +177,12 @@ suffix inference rejected with registry-owned applicability, beyond-default swit
 digests plus adapter mappings stay owned under #800 (successor to closed #420); `protobuf`/`qml` stay owned by #799 (successor to closed #419),
 never double-claimed; no adapter claims `cue` yet; platform plus consumer plus release evidence stays owned gap; no Supported claim).
 
-Required-core Rust providers/Gazelle/integration are pinned (issue #470); kept CC
-opt-out linker is pinned seed-only (issue #471); bindgen LLVM-22-vs-23 compat is
-qualified seed-only (issue #473); CXX graph identity is pinned
-seed-only (issue #474); exact-target discovery is qualified seed-only
-(issue #475); the one remaining native
-gap below stays owned under issue #472; Vue/Svelte/Astro/MDX
+Required-core Rust providers/Gazelle/integration are pinned (#470); kept CC
+opt-out linker is pinned seed-only (#471); bindgen LLVM-22-vs-23 compat is
+qualified seed-only (#473); CXX graph identity is pinned
+seed-only (#474); exact-target discovery is qualified seed-only
+(#475); the one remaining native
+gap below stays owned under #472; Vue/Svelte/Astro/MDX
 adapter mappings plus composition evidence stay open under #796-#800 (successors to closed #510) with fixture evidence
 qualified seed-only under closed #510
 (`quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`
@@ -201,36 +201,36 @@ Rust provider plus Gazelle maps with fixtures (`rust/rules/defs.bzl` preserving
 kinds/loads in `gazelle/rust/lang.go` with cargo plus source-only plus merge plus
 native-config goldens; provider-derived env plan in `rust/env/plan.bzl` pinned by
 `rust/env/plan_tests.bzl`; hello plus `Cargo.lock` plus `cargo-bazel-lock.json` lock
-authority, issue #470),
+authority, #470),
 build-script hermetic defaults (`use_cc_toolchain = True`, `use_default_shell_env = False`,
 `emit_warnings = True` in `gazelle/rust/lang.go`, proven by `gazelle/rust/lang_test.go`),
-Ty provenance plus `ty` typecheck adapter mapping (`quality/artifacts/ty.linux_x86_64.bzl` plus per-host siblings under issue #616,
+Ty provenance plus `ty` typecheck adapter mapping (`quality/artifacts/ty.linux_x86_64.bzl` plus per-host siblings under #616,
 `quality/adapters.bzl`, `quality/adapter/src/parsers/ty.rs`), JS/TS quality adapter mappings
 (`biome`/`eslint`/`prettier`/`tsc` in `quality/adapters.bzl` plus their parsers), and
 framework composition (`examples/mixed/hello/` plus `gazelle/mixed/`). Kept CC
-opt-out linker failure path is pinned seed-only under issue #471 (pure-Rust
+opt-out linker failure path is pinned seed-only under #471 (pure-Rust
 `rust/tests/fixtures/cc_optout/` with kept opt-out, sysroot `rust-lld`
 fallback, `bazel run //tools/ci:cc_optout_qualification`). Bindgen LLVM-22-vs-23
-compat is qualified under issue #473 with the LLVM-22 parser baseline vs LLVM-23
+compat is qualified under #473 with the LLVM-22 parser baseline vs LLVM-23
 target pinned plus the standalone/build-script fixture pair
 (`bazel run //tools/ci:bindgen_qualification`). CXX graph identity
-is pinned seed-only under issue #474 (single crate_universe `crates` graph
+is pinned seed-only under #474 (single crate_universe `crates` graph
 with `cxx == cxxbridge-cmd == 1.0.200` and `@crates//:cxxbridge-cmd`, never a
 `cxx.rs` second graph, proven by `rust/tests/fixtures/cxx_identity/` via
 `bazel run //tools/ci:cxx_identity_qualification`). Exact-target discovery is
-qualified seed-only under issue #475 (resolver-owned exact labels to upstream
+qualified seed-only under #475 (resolver-owned exact labels to upstream
 `TARGETS`, `Path`/`Buildfile` widening plus project-owned graph plus
 `RustAnalyzerInfo` rejected, hello exact-isolation pair plus
 `rust/tests/fixtures/discovery/pins.bzl` via
 `bazel run //tools/ci:exact_target_qualification`). Cargo metadata is
-qualified seed-only under issue #502 (`rust/tests/fixtures/cargo_metadata/pins.bzl`
+qualified seed-only under #502 (`rust/tests/fixtures/cargo_metadata/pins.bzl`
 with the `Cargo.toml` plus `cargo_metadata.expected` pair via
 `bazel run //tools/ci:cargo_metadata_qualification`, ad-hoc metadata rejected).
 The remaining native gap
 (global shell-env False versus
-annotation extension decided hermetic under issue #472 with global `False`
+annotation extension decided hermetic under #472 with global `False`
 in `.bazelrc` and narrow per-crate opt-in at zero opt-ins) stays
-owned under issue #472 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
+owned under #472 per the [native plan](../native-toolchains.md#qualification-questions-and-delivery).
 No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
@@ -281,35 +281,35 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 [native plan](../native-toolchains.md#qualification-questions-and-delivery):
 wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
 env plans, hello builds, and lock authority (Maven `maven_install.json` plus fail-closed
-qualified seed-only under issue #481, Paket plus `paket.main` qualified seed-only
-under issue #482, Go `go.mod`/`go.sum` qualified seed-only under issue #483 with hello staying stdlib-only, C/C++ none), with test runners (JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476, xUnit v3 4.0.0
-mapping via xunit fixtures qualified seed-only under issue #477, `go test`
-qualified seed-only under issue #478, GoogleTest v1.18.0 plus C++17 floor
-qualified seed-only under issue #479, ScalaTest qualified seed-only under issue
+qualified seed-only under #481, Paket plus `paket.main` qualified seed-only
+under #482, Go `go.mod`/`go.sum` qualified seed-only under #483 with hello staying stdlib-only, C/C++ none), with test runners (JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under #476, xUnit v3 4.0.0
+mapping via xunit fixtures qualified seed-only under #477, `go test`
+qualified seed-only under #478, GoogleTest v1.18.0 plus C++17 floor
+qualified seed-only under #479, ScalaTest qualified seed-only under issue
 #480, plain `cc` executables, plain `csharp`/`fsharp` hello executables) and
 classification-only quality families. Dependency hygiene (lockfile-consistency plus
 declared-dependency usage with category, exception, and obsolete checks) is qualified for
-all admitted languages in `tools/depcheck/` (issue #22; remaining opens under #796-#800, successors to closed #510)
+all admitted languages in `tools/depcheck/` (#22; remaining opens under #796-#800, successors to closed #510)
 with native authorities (go.sum,
 `maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
 (quality adapters qualified under closed #307 with
 deferred implementation
 owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
 stay owned under issues #476-#484 plus #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
-qualified seed-only under issue #476 via `bazel run //tools/ci:junit_qualification`;
-xUnit v3 4.0.0 qualified seed-only under issue #477 via
+qualified seed-only under #476 via `bazel run //tools/ci:junit_qualification`;
+xUnit v3 4.0.0 qualified seed-only under #477 via
 `bazel run //tools/ci:xunit_qualification`;
-`go test` qualified seed-only under issue #478 via
+`go test` qualified seed-only under #478 via
 `bazel run //tools/ci:gotest_qualification`;
-GoogleTest v1.18.0 plus C++17 floor qualified seed-only under issue #479 via
+GoogleTest v1.18.0 plus C++17 floor qualified seed-only under #479 via
 `bazel run //tools/ci:googletest_qualification`;
-ScalaTest 3.2.20 qualified seed-only under issue #480 via
+ScalaTest 3.2.20 qualified seed-only under #480 via
 `bazel run //tools/ci:scalatest_qualification`;
-Maven `maven_install.json` plus fail-closed repin qualified seed-only under issue #481 via
+Maven `maven_install.json` plus fail-closed repin qualified seed-only under #481 via
 `bazel run //tools/ci:maven_lock_qualification`;
-Paket files plus sha512 qualified seed-only under issue #482 via
+Paket files plus sha512 qualified seed-only under #482 via
 `bazel run //tools/ci:paket_qualification`;
-Go `go.mod`/`go.sum` qualified seed-only under issue #483 via
+Go `go.mod`/`go.sum` qualified seed-only under #483 via
 `bazel run //tools/ci:godeps_qualification`).
 No `Supported` claim until platform plus consumer plus release
 evidence passes.
@@ -343,7 +343,7 @@ runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback 
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
 library-API binding, and per-tool adapter mappings qualified under closed #420 with deferred
 implementation owned by ADR 0019; reconsideration tracked under issues #777-#778,
-adapter execution under issue #800) stay decided by ADR 0019. No `Supported` claim until platform plus
+adapter execution under #800) stay decided by ADR 0019. No `Supported` claim until platform plus
 consumer plus release evidence passes.
 
 | Language | Application foundation | Format | Lint, typecheck, or audit |
@@ -378,7 +378,7 @@ This prioritization admits or defers no foundation and changes no tracking depen
 
 The following are upstream documentation/source observations, not executed qualification evidence.
 Status cells are owned by this matrix; provisional toolchain and backend
-choices are owned by the [native qualification plan](../native-toolchains.md). Bounded remediation is qualified seed-only under issue #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, Do not implement missing infra merely to fill cross-product with unbounded fork rejected); identified contract conflicts stay tracked there before affected implementation:
+choices are owned by the [native qualification plan](../native-toolchains.md). Bounded remediation is qualified seed-only under #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, Do not implement missing infra merely to fill cross-product with unbounded fork rejected); identified contract conflicts stay tracked there before affected implementation:
 
 - [rules_go](https://github.com/bazel-contrib/rules_go) and
   [Gazelle](https://github.com/bazel-contrib/bazel-gazelle) offer SDK acquisition, package build/test,
@@ -401,13 +401,13 @@ choices are owned by the [native qualification plan](../native-toolchains.md). B
   is the inspected release of the preferred Linux/macOS backend. Its released Windows route uses
   MinGW-w64/UCRT, which does not satisfy the approved Windows baseline by itself. MSVC-compatible
   interoperability and Windows coverage need qualification; Apple/Microsoft SDK acquisition rights
-  are qualified seed-only under issue #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via
+  are qualified seed-only under #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via
   `bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately).
   No host-installed SDK fallback is approved.
 - [gazelle_cc v0.6.0](https://github.com/EngFlow/gazelle_cc/tree/v0.6.0) and
   [Hedron's compilation-command extractor](https://github.com/hedronvision/bazel-compile-commands-extractor)
   are candidate generation/IDE building blocks, not conforming integrations yet. Strict include
-  resolution plus C++ module and PCH disposition qualified seed-only under issue #503
+  resolution plus C++ module and PCH disposition qualified seed-only under #503
   (`cc/tests/fixtures/strict_generation/pins.bzl` via
   `bazel run //tools/ci:strict_generation_qualification`, loose generation rejected);
   managed clangd/toolchain projections and selected-target context
@@ -429,7 +429,7 @@ comparison is not support evidence:
 [Microsoft's binary compatibility rules](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017?view=msvc-170)
 do not promise universal interchangeability. Representative
 prebuilt MSVC C++ library interoperability fixtures with explicit STL, CRT, linker, and library
-combinations, including mixed Rust/C/C++ dependencies, are qualified seed-only under issue #498
+combinations, including mixed Rust/C/C++ dependencies, are qualified seed-only under #498
 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via
 `bazel run //tools/ci:prebuilt_interop_qualification`, host-to-target plus target execution
 separately, compiler-target availability alone plus LLVM ancestry alone plus single-combo proof rejected).
@@ -441,11 +441,11 @@ The approved [Windows setup requirement](../decisions/0014-tested-platform-relea
 allows explicit Microsoft EULA acknowledgement, as required by the inspected toolchains_msvc and
 windows_support routes. This removes the prior setup-policy conflict, not the remaining transport,
 corpus, or coverage qualification gaps. Automatic acceptance is not approved;
-acquisition rights are qualified seed-only under issue #496
+acquisition rights are qualified seed-only under #496
 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via
 `bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately,
 official download not permission, assume rights rejected); prebuilt interop is qualified seed-only
-under issue #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via
+under #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via
 `bazel run //tools/ci:prebuilt_interop_qualification`, single-combo proof rejected).
 
 ### Native Toolchain Alternatives
@@ -453,7 +453,7 @@ under issue #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via
 The review prioritizes existing upstream capability and minimal project-owned integration over a
 universal compiler distribution. Linux cross-builds are the first priority, not a mandate to build
 every target from every host. The [approved stack](../decisions/0014-tested-platform-release-stack.md#decision)
-requires glibc and static-musl Linux profiles; runtime floors are qualified seed-only under issue #500 (`cc/tests/fixtures/deployment_floors/pins.bzl` via `bazel run //tools/ci:deployment_floors_qualification`, unpinned floors rejected) and qualified routes are qualified seed-only under issue #504 (`cc/tests/fixtures/cross_routes/pins.bzl` via `bazel run //tools/ci:cross_routes_qualification`, not a mandate to build every target from every host; corpus qualified seed-only under issue #499) and bounded remediation is qualified seed-only under issue #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, Do not implement missing infra merely to fill cross-product with unbounded fork rejected) with backends provisional and no `Supported` claim.
+requires glibc and static-musl Linux profiles; runtime floors are qualified seed-only under #500 (`cc/tests/fixtures/deployment_floors/pins.bzl` via `bazel run //tools/ci:deployment_floors_qualification`, unpinned floors rejected) and qualified routes are qualified seed-only under #504 (`cc/tests/fixtures/cross_routes/pins.bzl` via `bazel run //tools/ci:cross_routes_qualification`, not a mandate to build every target from every host; corpus qualified seed-only under #499) and bounded remediation is qualified seed-only under #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, Do not implement missing infra merely to fill cross-product with unbounded fork rejected) with backends provisional and no `Supported` claim.
 Broader cross-builds are desirable when upstream configuration keeps maintenance bounded.
 Windows hermeticity is not relaxed to reduce setup or integration effort.
 
@@ -461,7 +461,11 @@ The following are source/documentation observations; no builds were executed:
 
 | Candidate | Upstream capability | Tradeoff for general developer workflows |
 | --- | --- | --- |
-| [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) | Integrated Linux glibc and static-only musl targets on x86_64/arm64, Apple SDK acquisition, LLVM runtime and tool targets, and Linux/macOS coverage fixtures. | Strongest integrated primary candidate with the preferred Rust rules. Dynamic musl is not supported. Default libc++ does not imply compatibility with prebuilt libstdc++ libraries; its Linux-glibc libstdc++ route is dynamic-only. Released Windows support does not satisfy the approved baseline. Floors qualified seed-only under issue #500 (`cc/tests/fixtures/deployment_floors/pins.bzl` via `bazel run //tools/ci:deployment_floors_qualification`, unpinned floors rejected); libstdc++ interop fixtures qualified seed-only under issue #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via `bazel run //tools/ci:prebuilt_interop_qualification`, single-combo proof rejected); the SQLite plus OpenSSL plus ring plus bindgen plus CXX corpus qualified seed-only under issue #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected, native only); PIE plus ELF-dependency plus glibc-symbol bounded seed-only under issue #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, existing upstream constraints with no new infra), cross-build completeness qualified seed-only under issue #504 (`cc/tests/fixtures/cross_routes/pins.bzl` via `bazel run //tools/ci:cross_routes_qualification`). |
+| [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/blob/v0.8.19/README.md) | Integrated Linux glibc and static-only musl targets on x86_64/arm64, Apple SDK acquisition, LLVM runtime and tool targets, and Linux/macOS coverage fixtures. | Strongest integrated primary candidate with the preferred Rust rules. Dynamic musl is not supported. Default libc++ does not imply compatibility with prebuilt libstdc++ libraries; its Linux-glibc libstdc++ route is dynamic-only. Released Windows support does not satisfy the approved baseline. Floors qualified seed-only under #500 (`cc/tests/fixtures/deployment_floors/pins.bzl` via `bazel run //tools/ci:deployment_floors_qualification`, unpinned floors rejected); libstdc++ interop fixtures qualified seed-only under #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via `bazel run //tools/ci:prebuilt_interop_qualification`, single-combo proof rejected); the SQLite plus OpenSSL plus ring plus bindgen plus CXX corpus qualified seed-only under #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected, native only); PIE plus ELF-dependency plus glibc-symbol bounded seed-only under #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, existing upstream constraints with no new infra), cross-build completeness qualified seed-only under #504 (`cc/tests/fixtures/cross_routes/pins.bzl` via `bazel run //tools/ci:cross_routes_qualification`). |
 | [uber/hermetic_cc_toolchain v4.3.0](https://github.com/uber/hermetic_cc_toolchain/tree/v4.3.0) | Zig 0.15.2 supplies Linux glibc/musl cross-compilation and GNU/MinGW Windows targets. | Strong Linux alternative, but documented Apple SDK gaps, an external Zig runtime cache, and missing integrated Bazel coverage/Clang developer tools increase integration ownership. Shared-musl capability is not complete Rust/runtime-deployment evidence. Zig stays a comparison candidate only with the same evidence required, not a scope shortcut. |
 | [toolchains_llvm v1.9.0](https://github.com/bazel-contrib/toolchains_llvm/tree/v1.9.0) | Configurable LLVM distributions, Linux/macOS C/C++ toolchains, sysroot APIs, and coverage/tool paths. | Useful when consumers already manage SDK/sysroot artifacts. It does not supply the complete target runtime closure, and the inspected Windows distributions do not establish a Windows C/C++ backend. |
-| [toolchains_msvc prototype](https://github.com/Dragnalith/toolchains_msvc/tree/8e2aa4624bbb5a53a94f135e90995f307875d1ad) | No-install Microsoft compiler/SDK acquisition and real C/C++ toolchains, including clang-cl with Microsoft STL. | Candidate for Windows-hosted builds, not a qualified release: immutable lazy acquisition qualified seed-only under issue #495 (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`, mutable fetch rejected); acquisition rights qualified seed-only under issue #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately); transport plus ABI qualified seed-only under issue #497 (`cc/tests/fixtures/windows_transport/pins.bzl` via `bazel run //tools/ci:windows_transport_qualification`, compiler-target availability alone is not proof); prebuilt interop qualified seed-only under issue #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via `bazel run //tools/ci:prebuilt_interop_qualification`, single-combo proof rejected); linux corpus qualified seed-only under issue #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected); floors qualified seed-only under issue #500 (`cc/tests/fixtures/deployment_floors/pins.bzl` via `bazel run //tools/ci:deployment_floors_qualification`, unpinned floors rejected); LCOV accounting qualified seed-only under issue #501 (`cc/tests/fixtures/lcov_accounting/pins.bzl` via `bazel run //tools/ci:lcov_accounting_qualification`, unaccounted lines plus ignored collection failures rejected). Its current repository operations use Windows commands; do not infer cross-host support. |
+| [toolchains_msvc prototype](https://github.com/Dragnalith/toolchains_msvc/tree/8e2aa4624bbb5a53a94f135e90995f307875d1ad) | No-install Microsoft compiler/SDK acquisition and real C/C++ toolchains, including clang-cl with Microsoft STL. | Candidate for Windows-hosted builds, not a qualified release: immutable lazy acquisition qualified seed-only under #495 (`cc/tests/fixtures/windows_acquisition/pins.bzl` via `bazel run //tools/ci:windows_acquisition_qualification`, mutable fetch rejected); acquisition rights qualified seed-only under #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via `bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately); transport plus ABI qualified seed-only under #497 (`cc/tests/fixtures/windows_transport/pins.bzl` via `bazel run //tools/ci:windows_transport_qualification`, compiler-target availability alone is not proof); prebuilt interop qualified seed-only under #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via `bazel run //tools/ci:prebuilt_interop_qualification`, single-combo proof rejected); linux corpus qualified seed-only under #499 (`cc/tests/fixtures/linux_corpus/pins.bzl` via `bazel run //tools/ci:linux_corpus_qualification`, single-crate proof rejected); floors qualified seed-only under #500 (`cc/tests/fixtures/deployment_floors/pins.bzl` via `bazel run //tools/ci:deployment_floors_qualification`, unpinned floors rejected); LCOV accounting qualified seed-only under #501 (`cc/tests/fixtures/lcov_accounting/pins.bzl` via `bazel run //tools/ci:lcov_accounting_qualification`, unaccounted lines plus ignored collection failures rejected). Its current repository operations use Windows commands; do not infer cross-host support. |
+
+## Related issues
+
+Tracking lives in the [roadmap](../roadmap.md). Platform hosts: #410, #411, #412, #413, #414. Release evidence: #803-#807, process #808. Foundation mappings: #470-#489, #796-#800. See the roadmap for the full list.

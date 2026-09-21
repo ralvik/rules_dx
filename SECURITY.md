@@ -14,5 +14,7 @@ remediation guidance.
 
 ## Supported Versions
 
-No release exists yet. Once releases exist, fixes follow the
-[latest-release-only maintenance policy](docs/environments/environment.md#distribution).
+| Version | Supported |
+| --- | --- |
+| Unreleased (`0.0.0`, no release cut) | Yes, current tree |
+| Future releases | Latest release only, per the [maintenance policy](docs/environments/environment.md#distribution) |

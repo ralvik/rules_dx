@@ -88,3 +88,7 @@ shell with one theme and navigation. There is no planned replacement; the
 IR contract would survive one regardless, since no adapter or IR fact
 depends on the renderer. The search index is built directly from prose plus
 IR; it never parses rendered HTML.
+
+## Related issues
+
+Tracking lives in the [roadmap](../roadmap.md). Site execution: #779-#785. Reintroduction: #786.

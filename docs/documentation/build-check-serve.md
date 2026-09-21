@@ -1,6 +1,6 @@
 # Documentation Build Check Serve
 
-Accepted workflow (issue #620). Docs only; no `Supported` claim.
+Accepted workflow (#620). Docs only; no `Supported` claim.
 
 Build, check, and serve use existing tools only. A custom docs
 linter is rejected; link and reference checks reuse the existing
@@ -47,3 +47,7 @@ The `docs-ci` job in `.github/workflows/ci.yml`
 self-calls the reusable docs workflow over `//docs/...`. Pull
 requests stay check-only; the validated tree publishes only on `main`.
 The wiring is pinned by `bazel run //tools/ci:docs_build_qualification`.
+
+## Related issues
+
+Tracking lives in the [roadmap](../roadmap.md). Build workflow: #620. Pipeline gaps: #779-#785.

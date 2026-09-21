@@ -1,18 +1,44 @@
 # rules_dx
 
-Status: pre-release, no `Supported` cells yet, no release cut. See the [support matrix](docs/product/support-matrix.md#unqualified-platforms) for qualified hosts. No tags, GitHub releases, or registry submissions without explicit owner approval.
+Pre-release. See the [support matrix](docs/product/support-matrix.md#unqualified-platforms) for current platform status.
 
 `rules_dx` is an opinionated Bazel developer platform designed to provide a tested release stack,
 lazy application foundations, Bazel-owned quality workflows, and a thin `dx` CLI. The product aims
 to let consumers choose one platform version instead of independently reconciling language
 rulesets, toolchains, package managers, test frameworks, and developer tools.
 
-V1 prioritizes complete Rust, Python, JavaScript/TypeScript, and required framework workflows on all
-required platforms, with a broad quality-tool baseline and additional low-cost complete foundations.
-Upstream patches and packaging support the out-of-the-box experience without rebuilding stacks. See the
-[scope and feasibility gate](docs/product/scope.md#first-release-admission),
-[mandatory coverage gates](docs/testing/README.md#coverage), and
-[support matrix](docs/product/support-matrix.md#unqualified-platforms) for qualified hosts.
+## Installation
+
+Prerequisites: Bazel via Bazelisk (see `.bazelversion`), plus the pinned language toolchains
+that Bazel acquires automatically. No separate language runtimes or quality tools need
+manual installation.
+
+```sh
+# Build everything on the seed host.
+bazel build //...
+```
+
+## Quickstart
+
+`dx` runs through Bazel. No installation step publishes `dx` outside the repository yet.
+
+```sh
+# Show help.
+bazel run //cli/cli:dx -- --help
+
+# Build and test the current workspace.
+bazel run //cli/cli:dx -- build //...
+bazel run //cli/cli:dx -- test //...
+
+# Minimal example: adopt the Rust starter and generate targets.
+cp -r examples/adopt-rust /tmp/myapp
+bazel run //cli/cli:dx -- generate /tmp/myapp/...
+```
+
+Next: [CLI reference](docs/cli/README.md) and [Command reference](docs/cli/commands/README.md).
+For supported platforms and foundations, see the
+[support matrix](docs/product/support-matrix.md) and
+[product scope](docs/product/scope.md).
 
 ## Product
 

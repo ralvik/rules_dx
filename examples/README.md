@@ -1,9 +1,15 @@
 # Examples
 
-Substantial worked examples live here.
+Start a new consumer or adopt an existing tree. Each workspace below records exact
+commands and expected evidence in its own `README.md`.
+
+## Start From CI Templates
 
 - [consumer-ci](consumer-ci/) starter caller for the reusable consumer workflow.
 - [docs-ci](docs-ci/) starter caller for the reusable docs workflow.
+
+## Adopt An Existing Tree
+
 - [adopt-rust](adopt-rust/) foreign Cargo workspace adopted by `dx generate`.
 - [adopt-python](adopt-python/) foreign Python tree adopted by the Python Gazelle extension.
 - [adopt-js-ts](adopt-js-ts/) foreign JS/TS tree adopted by the JavaScript/TypeScript Gazelle extensions.
@@ -18,7 +24,6 @@ Substantial worked examples live here.
 
 `mixed/hello` is intentionally not indexed here: it is the mixed-framework
 composition fixture (Vue/Svelte/Astro/MDX over one shared helper, owned by
-the framework track), not an external-consumer workspace, so the
-consumer-example audits above do not apply to it.
+the framework track), not an external-consumer workspace.
 
-Each example records exact commands and expected evidence in its own `README.md`. Per-foundation external-consumer workspaces plus acquisition/laziness proof are delivered (seed host; platform/remote dimensions owned by #298/#507).
+Per-foundation external-consumer workspaces plus acquisition/laziness proof are delivered (seed host; platform and remote dimensions are tracked in the roadmap).
