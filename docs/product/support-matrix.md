@@ -247,7 +247,8 @@ each tracked item lands; no person-hour figures are frozen here.
 
 Admit/defer/exclude outcomes are decided by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md) and
-summarized in [Candidate Disposition Status](#candidate-disposition-status).
+summarized in [Admitted To V1](#admitted-to-v1) and
+[Deferred Beyond V1](#deferred-beyond-v1).
 The review below records upstream evidence only. Include complete low-cost
 upstream-backed foundations; substantial missing integration may justify an explicit approved
 deferral under the admission policy. Each foundation is tracked with applicable build, test, dependency, generation,
@@ -259,10 +260,10 @@ This is a minimum inventory, not an exhaustive list of eligible languages.
 
 Java, Kotlin, C#, F#, Go, C/C++, and Scala application foundations are admitted
 to v1 scope by [ADR 0019](../decisions/0019-first-release-additional-foundations.md), on the evidence in the
-[candidate review](#additional-language-foundation-candidate-review): each has
+[candidate review](#initial-feasibility-review): each has
 an active Bzlmod-published upstream ruleset with a concrete dependency-lock
 and toolchain story. Their quality integration is v1 scope with the defaults in
-[Provisional Default Quality Tools](#provisional-default-quality-tools);
+the [disposition table](#deferred-beyond-v1);
 exact versions, rule sets, and adapter mappings are tracked in
 qualified seed-only under closed #485-#489 with adapter delivery open under #796-#800 (successors to closed #416-#420). The managed Scala
 route decision was recorded 2026-09-13.
@@ -317,7 +318,7 @@ evidence passes.
 
 Ruby and PowerShell application foundations are deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md), with
-evidence in the [candidate review](#additional-language-foundation-candidate-review):
+evidence in the [candidate review](#initial-feasibility-review):
 Ruby's fragmented ruleset maintenance ownership and gem/bundler packaging
 effort, and PowerShell's single young execution-only upstream with unproven
 generation, dependency, environment, and IDE stories, exceed the low-cost
