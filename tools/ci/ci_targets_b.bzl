@@ -295,6 +295,16 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Per-host skip-budget harness; see docs/testing/tools.md.
+    sh_binary(
+        name = "skip_budget_qualification",
+        srcs = ["skip_budget_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Bootstrap portability harness; see tools/ci/bootstrap_portability.sh.
     sh_binary(
         name = "bootstrap_portability",

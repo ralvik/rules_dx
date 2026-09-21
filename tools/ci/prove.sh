@@ -10,6 +10,7 @@ bazel run --noshow_progress //tools/ci:musl_qualification
 bazel run --noshow_progress //tools/ci:macos_qualification
 bazel run --noshow_progress //tools/ci:windows_qualification
 bazel run --noshow_progress //tools/ci:ci_matrix_qualification
+bazel run --noshow_progress //tools/ci:skip_budget_qualification
 bazel run --noshow_progress //tools/ci:bootstrap_portability
 bazel run --noshow_progress //tools/ci:flakiness_qualification
 bazel run --noshow_progress //tools/ci:release_hygiene

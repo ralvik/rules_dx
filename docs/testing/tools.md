@@ -212,6 +212,31 @@ Windows quals run via `shell: bash` with portable forms, per-OS shells
 would double the harness for no product gain).
 `//tools/ci:shell_contract` machine-checks this contract.
 
+Per-host skip budget (issue #769): the bash harness stays Linux-only per
+the shell contract above, so non-Linux `test //...` cells skip honestly
+with a fail-closed budget, never silently. Pinned inventory is 31 `sh_test`
+plus 127 `sh_binary` plus 162 Linux-only labels, machine-checked by
+`bazel run //tools/ci:skip_budget_qualification`. Linux cells run the full
+scope with 0 skips; each non-Linux cell skips at most the pinned inventory.
+Growing the Linux-only harness beyond the budget fails qualification and
+must bump the budget plus this inventory in the same reviewed PR. Porting
+the harness (hermetic py_binary/Rust or POSIX fixtures) stays future work;
+coverage cells gate Rust code unaffected by sh skips with no union.
+
+### Real runs vs skips
+
+| Cell | Host | Scope |
+| --- | --- | --- |
+| seed linux_x86_64 | `ubuntu-latest` | real run, 0 skips: all 31 `sh_test` executed |
+| linux_arm64 | `ubuntu-24.04-arm` | real run, 0 skips: all 31 `sh_test` executed |
+| macos_arm64 | `macos-14` | budgeted 31 skips: 31 `sh_test` skips honestly (127 `sh_binary` build skips) |
+| macos_x86_64 | `macos-15-intel` best-effort | budgeted 31 skips: 31 `sh_test` skips honestly (127 `sh_binary` build skips) |
+| windows_x86_64 | `windows-latest` with shell bash | budgeted 31 skips: 31 `sh_test` skips honestly (127 `sh_binary` build skips) |
+
+Every per-host `test //...` job reports its cell skip volume to its step
+summary (Linux cells as real runs, non-Linux cells as budgeted skips), so
+qualification never passes on silent skips.
+
 Bootstrap requires bash by design under issue #450 (`BASH_SOURCE`, `[[`,
 arrays, `printf -v` plus the runfiles fallback never run under POSIX
 `sh`): every `tools/sh/lib.sh` driver carries `#!/usr/bin/env bash` plus
