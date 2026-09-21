@@ -1,0 +1,255 @@
+"""Staging-to-production promotion publisher for `dx deploy`.
+
+Contract: `docs/deploy/authoring.md`.
+"""
+
+load("@rules_python//python:defs.bzl", "py_binary")
+load(":defs.bzl", "dx_deployment")
+load(":launcher.bzl", "rlocation_path")
+
+# Versioned environment/version charset schema. Consumers query via
+# `promotion_environment_charset`, `promotion_version_charset`, and
+# `promotion_*_error` instead of duplicating the charset, so any charset
+# evolution edits this one data constant with schema review, never a
+# parallel allowlist.
+PROMOTION_SCHEMA_VERSION = 1
+
+# Environment names embed directly in the generated Python launcher, so
+# the charset is restricted to what is safe inside single quotes.
+_VALID_ENVIRONMENT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
+
+# Versions embed directly in the generated Python launcher, so the
+# charset is restricted to semver-safe characters inside single quotes
+# (`+` covers build metadata).
+_VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+"
+
+# Promotion artifacts are opaque deploy outputs (archive tarballs, image
+# tars, packed feeds); the basename check keeps only launcher-safe names
+# with a known artifact suffix so the launcher never stages stray files.
+_VALID_ARTIFACT_SUFFIXES = [".tar.gz", ".tar", ".tgz", ".whl", ".jar", ".nupkg", ".zip"]
+
+def promotion_environment_charset():
+    """Returns the launcher-safe environment charset via registry query.
+
+    Derived from `_VALID_ENVIRONMENT_CHARS`, never duplicated.
+    """
+    return _VALID_ENVIRONMENT_CHARS
+
+def promotion_version_charset():
+    """Returns the launcher-safe version charset via registry query.
+
+    Derived from `_VALID_VERSION_CHARS`, never duplicated.
+    """
+    return _VALID_VERSION_CHARS
+
+def promotion_schema_error():
+    """Validates the versioned environment charset schema.
+
+    Checks data shape without pinning exact contents: version is v1,
+    each charset is non-empty with unique launcher-safe characters and
+    never admits quotes, backslash, space, or newline so names embed
+    safely in the deploy launcher."""
+    if PROMOTION_SCHEMA_VERSION != 1:
+        return "promotion: unsupported schema v" + str(PROMOTION_SCHEMA_VERSION) + " (want v1)"
+    if type(_VALID_ENVIRONMENT_CHARS) != "string" or _VALID_ENVIRONMENT_CHARS == "":
+        return "promotion: want a non-empty charset (schema v1)"
+    seen = {}
+    for c in _VALID_ENVIRONMENT_CHARS.elems():
+        if c in seen:
+            return "promotion: duplicate charset char '" + c + "'"
+        seen[c] = True
+        if c in ["\"", "\\", "'", " ", "\n", "`", "$", "!", "#", "&", "|", ";", "<", ">", "(", ")", "[", "]", "{", "}", "*", "?", "~", "^", ":", ",", "/", "+"]:
+            return "promotion: unsafe charset char '" + c + "' (must stay launcher-safe)"
+    if type(_VALID_VERSION_CHARS) != "string" or _VALID_VERSION_CHARS == "":
+        return "promotion: want a non-empty version charset (schema v1)"
+    seen_version = {}
+    for c in _VALID_VERSION_CHARS.elems():
+        if c in seen_version:
+            return "promotion: duplicate version charset char '" + c + "'"
+        seen_version[c] = True
+        if c in ["\"", "\\", "'", " ", "\n", "`", "$", "!", "#", "&", "|", ";", "<", ">", "(", ")", "[", "]", "{", "}", "*", "?", "~", "^", ":", ",", "/"]:
+            return "promotion: unsafe version charset char '" + c + "' (must stay launcher-safe)"
+    if type(_VALID_ARTIFACT_SUFFIXES) != "list" or len(_VALID_ARTIFACT_SUFFIXES) == 0:
+        return "promotion: want a non-empty artifact suffix list (schema v1)"
+    return ""
+
+def promotion_environment_error(environment):
+    """Validates one promotion environment name value."""
+    if type(environment) != "string" or environment == "":
+        return ("promotion_deploy: invalid environment '" + str(environment) +
+                "': want a non-empty environment (for example 'staging')")
+    for c in environment.elems():
+        if c not in _VALID_ENVIRONMENT_CHARS:
+            return ("promotion_deploy: invalid environment '" + environment +
+                    "': want only [A-Za-z0-9._-] so the environment embeds " +
+                    "safely in the deploy launcher")
+    return ""
+
+def promotion_version_error(version):
+    """Validates one promotion version value."""
+    if type(version) != "string" or version == "":
+        return ("promotion_deploy: invalid version '" + str(version) +
+                "': want a non-empty version (for example '1.2.3')")
+    for c in version.elems():
+        if c not in _VALID_VERSION_CHARS:
+            return ("promotion_deploy: invalid version '" + version +
+                    "': want only [A-Za-z0-9._-+] so the version embeds " +
+                    "safely in the deploy launcher")
+    return ""
+
+def promotion_artifact_error(filename):
+    """Validates one promotion artifact filename value."""
+    if type(filename) != "string" or filename == "":
+        return ("promotion_deploy: invalid artifact '" + str(filename) +
+                "': want a non-empty deploy artifact filename")
+    matched = False
+    for suffix in _VALID_ARTIFACT_SUFFIXES:
+        if filename.endswith(suffix):
+            matched = True
+    if not matched:
+        return ("promotion_deploy: invalid artifact '" + filename +
+                "': want one of .tar.gz, .tar, .tgz, .whl, .jar, .nupkg, .zip")
+    for c in filename.elems():
+        if c in ["\"", "\\", "'", " ", "\n", "`", "$"]:
+            return ("promotion_deploy: invalid artifact '" + filename +
+                    "': want no quotes, backslashes, spaces, or newlines " +
+                    "so the filename embeds safely in the deploy launcher")
+    return ""
+
+def promotion_edge_error(from_environment, to_environment):
+    """Validates one staging-to-production promotion edge."""
+    if from_environment == to_environment:
+        return ("promotion_deploy: invalid edge '" + from_environment + " -> " +
+                to_environment + "': source and target environments must differ")
+    return ""
+
+def _promotion_launcher_impl(ctx):
+    """Expands the `py_binary` launcher for one promotion deployment.
+
+    The artifact resolves to a single deploy output file. The rule
+    computes the runfiles rlocation for the artifact via
+    `rlocation_path`, then expands the shared `promotion_deploy.py`
+    template with that pin plus deploy name, source and target
+    environments, and version. The wrapping `py_binary` (see
+    `promotion_deploy`) carries the pinned input in `data` plus the
+    Python runfiles library, so the program works under `bazel run`,
+    `dx deploy` (which symlinks the entrypoint and merges its runfiles),
+    and direct `bazel-bin` execution. Extra user args after `--` select
+    the output directory (default: `$BUILD_WORKSPACE_DIRECTORY`, else
+    the cwd). Registry credentials and app secrets stay env-only at
+    runtime and are never baked into the launcher."""
+    artifact_files = ctx.attr.artifact[DefaultInfo].files.to_list()
+    if len(artifact_files) != 1:
+        fail("promotion_deploy " + str(ctx.label) + ": artifact " +
+             str(ctx.attr.artifact.label) + " provides " +
+             str(len(artifact_files)) + " files, want exactly one deploy artifact")
+    artifact_file = artifact_files[0]
+    artifact_error = promotion_artifact_error(artifact_file.basename)
+    if artifact_error != "":
+        fail(artifact_error + " (in " + str(ctx.label) + ")")
+    artifact_rloc = rlocation_path(ctx, artifact_file)
+
+    launcher = ctx.actions.declare_file(ctx.label.name + ".py")
+    ctx.actions.expand_template(
+        template = ctx.file._template,
+        output = launcher,
+        substitutions = {
+            "@@ARTIFACT_RLOC@@": artifact_rloc,
+            "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
+            "@@FROM_ENV@@": ctx.attr.from_environment,
+            "@@TO_ENV@@": ctx.attr.to_environment,
+            "@@VERSION@@": ctx.attr.version,
+        },
+    )
+    return [DefaultInfo(files = depset([launcher]))]
+
+_promotion_launcher = rule(
+    implementation = _promotion_launcher_impl,
+    attrs = {
+        "artifact": attr.label(
+            allow_single_file = True,
+            doc = "Deploy artifact file pinned in the promotion directory.",
+            mandatory = True,
+        ),
+        "deploy_name": attr.string(
+            doc = "Deploy target name baked into the promotion directory.",
+            mandatory = True,
+        ),
+        "from_environment": attr.string(
+            doc = "Source environment baked into the promotion record.",
+            mandatory = True,
+        ),
+        "to_environment": attr.string(
+            doc = "Target environment baked into the promotion record.",
+            mandatory = True,
+        ),
+        "version": attr.string(
+            doc = "Promoted version baked into the promotion record.",
+            mandatory = True,
+        ),
+        "_template": attr.label(
+            allow_single_file = True,
+            default = "//deploy/rules:promotion_deploy.py",
+        ),
+    },
+    doc = "Launcher template expansion for promotion_deploy (wrapped as py_binary).",
+)
+
+def promotion_deploy(name, artifact, from_environment = "staging", to_environment = "production", version = "0.0.0", profile = "release"):
+    """Promotes one pinned artifact across environments with gated health and rollback.
+
+    Creates `<name>_program_launcher` (expanded Python launcher resolving
+    inputs via the Python runfiles library), `<name>_program` (`py_binary`
+    on the managed Python 3.12 toolchain wrapping the launcher with pinned
+    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
+    returning `DxDeployInfo` with no app and `profile`). Run with
+    `bazel run :<name>` or `dx deploy :<name>`; the default builds a local
+    promotion directory (`<name>-promotion/` holding the pinned artifact
+    plus `promotion.json` and `would-run.txt` with the promote, health,
+    and rollback lines) and verifies bytes, publishing nothing and running
+    no health checks. Live promotion runs only with `PROMOTION_LIVE=1`
+    and `PROMOTION_APPROVED=1` after explicit owner approval, refuses the
+    `0.0.0` placeholder, gates on `PROMOTION_REQUIRE_HEALTH=1` plus
+    `PROMOTION_HEALTH_CMD`, records rollbacks via `PROMOTION_ROLLBACK=1`
+    plus `PROMOTION_ROLLBACK_TO`, and reads registry credentials plus app
+    secrets from env only, never from BUILD."""
+    from_error = promotion_environment_error(from_environment)
+    if from_error != "":
+        fail(from_error + " (in " + native.package_name() + ":" + name + ")")
+    to_error = promotion_environment_error(to_environment)
+    if to_error != "":
+        fail(to_error + " (in " + native.package_name() + ":" + name + ")")
+    edge_error = promotion_edge_error(from_environment, to_environment)
+    if edge_error != "":
+        fail(edge_error + " (in " + native.package_name() + ":" + name + ")")
+    version_error = promotion_version_error(version)
+    if version_error != "":
+        fail(version_error + " (in " + native.package_name() + ":" + name + ")")
+
+    program_target = name + "_program"
+    launcher_target = program_target + "_launcher"
+    _promotion_launcher(
+        name = launcher_target,
+        artifact = artifact,
+        deploy_name = name,
+        from_environment = from_environment,
+        to_environment = to_environment,
+        version = version,
+    )
+
+    # `py_binary` wrapper: `srcs` is the expanded launcher,
+    # `data` pins the runfiles the launcher resolves via `Rlocation`,
+    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
+    py_binary(
+        name = program_target,
+        srcs = [":" + launcher_target],
+        data = [artifact],
+        main = launcher_target + ".py",
+        deps = ["@rules_python//python/runfiles"],
+    )
+
+    dx_deployment(
+        name = name,
+        deploy = ":" + program_target,
+        profile = profile,
+    )

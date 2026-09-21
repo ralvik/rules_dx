@@ -404,6 +404,60 @@ plus `create-release` runs only with `OCTOPUS_PUBLISH_LIVE=1`,
 after explicit owner approval, never by default. Deploy targets live
 next to the archive they release.
 
+## Path N: `promotion_deploy` (accepted)
+
+The tenth deploy macro (`deploy/rules/promotion.bzl`) is deploy
+automation, not a language registry publish: it promotes one pinned
+artifact (for example an `archive_deploy` tarball) from a source
+environment to a target environment with health gating and rollback,
+with a local-first Python publisher, no shell, no `sh_binary`:
+
+```starlark
+load("@rules_dx//deploy/rules:promotion.bzl", "promotion_deploy")
+
+promotion_deploy(
+    name = "promotion_demo",
+    artifact = ":release_demo_archive",
+    from_environment = "staging",
+    to_environment = "production",
+    version = "0.0.0",
+)
+```
+
+`bazel run //deploy/rules:promotion_demo` (or `dx deploy
+//deploy/rules:promotion_demo`) builds a local promotion directory
+(`<name>-promotion/` holding the pinned artifact plus `promotion.json`
+with the from/to environments, version, artifact sha256, secret
+reference names only, and health `skipped-local`, plus `would-run.txt`
+with the promote, health-gate, and rollback lines) and verifies bytes
+via sha256, publishing nothing and running no health checks. Pass an
+output directory after `--` to choose where the promotion lands
+(default: `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The deploy
+program is a `py_binary` on the managed Python 3.12 toolchain only,
+with pinned `data` plus the Python runfiles library.
+
+Promotion identity stays in target names (one target per
+staging-to-production edge); there are no `environment`, `kind`, or
+veto fields on `DxDeployInfo`. `dx deploy` keeps its single-label plus
+`--dry-run` contract: promote exactly the label named, preview with
+`--dry-run`, confirm live runs with explicit owner approval.
+
+Live promotion runs only with `PROMOTION_LIVE=1` and
+`PROMOTION_APPROVED=1` after explicit owner approval, never by
+default, and refuses the `0.0.0` placeholder version. Health gating
+runs only when requested: `PROMOTION_REQUIRE_HEALTH=1` plus
+`PROMOTION_HEALTH_CMD` (run without a shell; nonzero exits refuse the
+promotion). Rollbacks record a pointer without deleting history:
+`PROMOTION_ROLLBACK=1` plus `PROMOTION_ROLLBACK_TO=<version>` writes
+`rollback.txt` naming the version to restore. Registry credentials
+(`PROMOTION_REGISTRY_USER` plus `PROMOTION_REGISTRY_TOKEN`) and app
+secrets (`PROMOTION_SECRET_REFS` as `ENV_NAME`, `file:<path>`, or
+`cmd:<tool>` references) come from the environment only, never from
+BUILD: the Bazel graph holds only reference names, values are never
+read, copied, hashed, or printed, and external secret tools are never
+downloaded (a `cmd:` tool must already be installed with its license
+accepted). Deploy targets live next to the artifact they promote.
+
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an
