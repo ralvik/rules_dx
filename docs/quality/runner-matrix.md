@@ -14,9 +14,12 @@ recorded upstream diagnostics byte-identical to the parser unit samples
 
 Out of scope by design: `tsc` typechecks `typescript`/`tsx` but is
 target-coupled and never runs as a bare backend invocation, so it has no
-matrix cell; adapter-less classes (`cc`, `go`, `java`, `kotlin`, …) have
+matrix cell; `spotbugs` lints `java` but is target-coupled (needs
+`JavaInfo` classes, dropped for provider-less fixtures), so it has no
+matrix cell; adapter-less classes (`cc`, `go`, …) have
 no backing tool and no cells. Scala plus C# plus F# cells below are
-opt-in adapters delivered under #797 (successor to closed #417).
+opt-in adapters delivered under #797 (successor to closed #417), and
+Java plus Kotlin cells are delivered under #796 (successor to closed #416).
 
 Crate edition (issue #468): the two `edition_*` cells above pin the
 `--tool-edition` flow over the real toolchain rustfmt. The 2015 cell stays
@@ -96,6 +99,22 @@ so a single-edition rustfmt stays rejected.
 | `matrix_markdown_lint_fail` | lint | generated `matrix/markdown_dirty.md` (unresolved link) + `vale_test.ini` closure |
 | `matrix_markdown_sibling_pass` | lint | `sibling_clean.md` + `sibling_license.txt` sibling + `vale_test.ini` closure |
 
+## Java (`java`: google-java-format format, checkstyle plus pmd lint; spotbugs target-coupled)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_java_format_pass` / `matrix_java_format_fail` | format | `real_clean.java` / `real_dirty.java` |
+| `matrix_java_checkstyle_pass` / `matrix_java_checkstyle_fail` | lint (checkstyle) | `real_clean.java` / `real_dirty.java` + `checkstyle_cfg` closure |
+| `matrix_java_pmd_pass` / `matrix_java_pmd_fail` | lint (pmd) | `real_clean.java` / `real_dirty.java` (upstream quickstart default) |
+
+## Kotlin (`kotlin`: ktfmt format, ktlint lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_kotlin_format_pass` / `matrix_kotlin_format_fail` | format | `real_clean.kt` / `real_dirty.kt` |
+| `matrix_kotlin_lint_pass` | lint | generated `matrix/Hello.kt` (filename plus expression-body clean) |
+| `matrix_kotlin_lint_fail` | lint | `real_dirty.kt` (filename plus indent plus expression-body plus spacing) |
+
 ## Scala (`scala`: scalafmt format, scalafix lint)
 
 | Case | Capability | Input |
@@ -122,9 +141,11 @@ so a single-edition rustfmt stays rejected.
 Every adapter-backed tool keeps a parser with pass (clean) plus fail (dirty)
 samples exercised as unit tests under `quality/adapter/src/parsers/` and pinned by
 `bazel run //tools/ci:parser_sample_qualification`: biome lint plus format,
-buildifier, clippy plus rustc via the shared rust diagnostics, csharpier,
-eslint, fantomas, flake8, fsharplint, markdown_check, prettier, pydoclint,
-pylint, roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt,
+buildifier, checkstyle, clippy plus rustc via the shared rust diagnostics, csharpier,
+eslint, fantomas, flake8, fsharplint, google-java-format, ktfmt, ktlint,
+markdown_check, pmd, prettier, pydoclint, pylint, roslyn,
+ruff lint plus format, rustfmt, scalafix, scalafmt, shared SARIF for the
+JVM lint cohort plus spotbugs,
 taplo lint plus format, tsc, ty, vale. Recorded Clippy/rustc diagnostics stay
 byte-identical to the parser unit samples (`quality/adapter/src/parsers/rust.rs`);
 `tsc` keeps its adapter parser with pass plus fail samples but stays

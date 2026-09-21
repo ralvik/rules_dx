@@ -573,3 +573,77 @@ fn fsharplint_check_carries_project_and_config() {
     assert!(argv.contains(&"--project".to_owned()));
     assert!(argv.contains(&"--config".to_owned()));
 }
+
+#[test]
+fn jvm_format_checks_list_paths_and_fixes_rewrite() {
+    let java = Path::new("/scratch/src/Hello.java");
+    let check = google_java_format_check(Path::new(BIN), &[java]);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "--dry-run", "--set-exit-if-changed", "/scratch/src/Hello.java"]
+    );
+    assert_eq!(check.cwd_rel, "");
+    let fix = google_java_format_fix(Path::new(BIN), &[java]);
+    assert_eq!(
+        argv_strings(&fix),
+        vec![BIN, "--replace", "/scratch/src/Hello.java"]
+    );
+    assert_eq!(fix.cwd_rel, "");
+    let kt = Path::new("/scratch/src/Hello.kt");
+    let check = ktfmt_check(Path::new(BIN), &[kt]);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "--google-style", "--dry-run", "--set-exit-if-changed", "/scratch/src/Hello.kt"]
+    );
+    assert_eq!(check.cwd_rel, "");
+    let fix = ktfmt_fix(Path::new(BIN), &[kt]);
+    assert_eq!(
+        argv_strings(&fix),
+        vec![BIN, "--google-style", "/scratch/src/Hello.kt"]
+    );
+    assert_eq!(fix.cwd_rel, "");
+}
+
+#[test]
+fn jvm_lint_checks_use_sarif_with_explicit_config() {
+    let java = Path::new("/scratch/src/Hello.java");
+    let cfg = Path::new("/scratch/checkstyle.xml");
+    let check = checkstyle_check(Path::new(BIN), &[java], cfg);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "-c", "/scratch/checkstyle.xml", "-f", "sarif", "/scratch/src/Hello.java"]
+    );
+    assert_eq!(check.cwd_rel, "");
+    let bare = pmd_check(Path::new(BIN), &[java], None);
+    assert_eq!(
+        argv_strings(&bare),
+        vec![
+            BIN,
+            "check",
+            "--dir",
+            "/scratch/src/Hello.java",
+            "--format",
+            "sarif",
+            "--rulesets",
+            "rulesets/java/quickstart.xml"
+        ]
+    );
+    let hinted = pmd_check(Path::new(BIN), &[java], Some(cfg));
+    assert!(argv_strings(&hinted).contains(&"--rulesets".to_owned()));
+    let spot = spotbugs_check(Path::new(BIN), &[java]);
+    assert_eq!(
+        argv_strings(&spot),
+        vec![BIN, "-textui", "-effort:default", "-sarif", "/scratch/src/Hello.java"]
+    );
+    let kt = Path::new("/scratch/src/Hello.kt");
+    let check = ktlint_check(Path::new(BIN), &[kt]);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "--relative", "--log-level=none", "--reporter=sarif", "/scratch/src/Hello.kt"]
+    );
+    let fix = ktlint_fix(Path::new(BIN), &[kt]);
+    assert_eq!(
+        argv_strings(&fix),
+        vec![BIN, "--relative", "--format", "/scratch/src/Hello.kt"]
+    );
+}

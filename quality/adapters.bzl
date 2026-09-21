@@ -42,22 +42,28 @@ def adapter_supported_classes(tool_id, capability):
 
 # Real adapters: stable tool IDs users select in policy families.
 # Stages order by sorted tool ID; rustc and roslyn are upstream-delegated,
-# tsc is target-coupled, scalafix/fsharplint are callback/library-wired
-# check-only, and lint-only adapters stay check-only by design.
-# See `docs/quality/tool-integrations.md`.
+# tsc and spotbugs are target-coupled, scalafix/fsharplint are
+# callback/library-wired check-only, and lint-only adapters stay
+# check-only by design (ktlint lint fixes via `--format` like ESLint
+# `--fix`). See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
     "biome": {
         "format": ["javascript", "json", "jsx", "typescript", "tsx"],
         "lint": ["javascript", "json", "jsx", "typescript", "tsx"],
     },
     "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
+    "checkstyle": {"lint": ["java"]},
     "clippy": {"lint": ["rust"]},
     "csharpier": {"format": ["csharp"]},
     "eslint": {"lint": ["javascript", "jsx"]},
     "fantomas": {"format": ["fsharp"]},
     "flake8": {"lint": ["python", "python_stub"]},
     "fsharplint": {"lint": ["fsharp"]},
+    "google_java_format": {"format": ["java"]},
+    "ktfmt": {"format": ["kotlin"]},
+    "ktlint": {"lint": ["kotlin"]},
     "markdown_check": {"lint": ["markdown"]},
+    "pmd": {"lint": ["java"]},
     "prettier": {"format": ["javascript", "json", "jsx", "typescript", "tsx"]},
     "pydoclint": {"lint": ["python", "python_stub"]},
     "pylint": {"lint": ["python", "python_stub"]},
@@ -67,6 +73,7 @@ REAL_ADAPTERS = {
     "rustfmt": {"format": ["rust"]},
     "scalafix": {"lint": ["scala"]},
     "scalafmt": {"format": ["scala"]},
+    "spotbugs": {"lint": ["java"]},
     "taplo": {"format": ["toml"], "lint": ["toml"]},
     "tsc": {"typecheck": ["typescript", "tsx"]},
     "ty": {"typecheck": ["python", "python_stub"]},

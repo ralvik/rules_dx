@@ -1,0 +1,87 @@
+"""Complete-upstream-artifact plus shared-JDK JVM tool wrappers.
+
+Contract: `docs/tools/tool-acquisition.md#decided-route`,
+`docs/quality/tool-integrations.md#jvm-cohort`.
+
+Each tool resolves to its upstream-tested complete CLI distribution
+sharing the one managed JDK cohort (`--java_runtime_version=remotejdk_21`
+in `.bazelrc`); no tool is reconstructed from Maven modules and no
+consumer runs an installer, solver, or compiler. Versions qualified
+seed-only under issue #485
+(`java/tests/fixtures/jvm_quality/pins.bzl`); digests pinned here.
+"""
+
+load("@rules_java//java:defs.bzl", "java_binary", "java_import", "java_library")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//:__subpackages__"])
+
+java_import(
+    name = "google_java_format_import",
+    jars = ["@jvm_google_java_format//file"],
+)
+
+java_binary(
+    name = "google_java_format",
+    jvm_flags = [
+        "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+        "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+        "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
+        "--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
+        "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+        "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+    ],
+    main_class = "com.google.googlejavaformat.java.Main",
+    runtime_deps = [":google_java_format_import"],
+)
+
+java_import(
+    name = "checkstyle_import",
+    jars = ["@jvm_checkstyle//file"],
+)
+
+java_binary(
+    name = "checkstyle",
+    main_class = "com.puppycrawl.tools.checkstyle.Main",
+    runtime_deps = [":checkstyle_import"],
+)
+
+java_binary(
+    name = "pmd",
+    main_class = "net.sourceforge.pmd.cli.PmdCli",
+    runtime_deps = ["@jvm_pmd_dist//:lib"],
+)
+
+java_binary(
+    name = "spotbugs",
+    main_class = "edu.umd.cs.findbugs.LaunchAppropriateUI",
+    runtime_deps = ["@jvm_spotbugs_dist//:lib"],
+)
+
+java_import(
+    name = "ktfmt_import",
+    jars = ["@jvm_ktfmt//file"],
+)
+
+java_binary(
+    name = "ktfmt",
+    main_class = "com.facebook.ktfmt.cli.Main",
+    runtime_deps = [":ktfmt_import"],
+)
+
+java_import(
+    name = "ktlint_import",
+    jars = ["@jvm_ktlint//file"],
+)
+
+java_binary(
+    name = "ktlint",
+    main_class = "com.pinterest.ktlint.Main",
+    runtime_deps = [":ktlint_import"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

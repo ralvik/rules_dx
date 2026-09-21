@@ -1,4 +1,4 @@
-"""Typed native-configuration targets for adapters plus Ruff and Biome/ESLint.
+"""Typed native-configuration targets for adapters plus Ruff, Biome/ESLint, Checkstyle, and Scala/.NET.
 
 Contract: `docs/quality/native-configuration.md`.
 """
@@ -23,10 +23,15 @@ DxNativeConfigInfo = provider(
 # config's directory as `--config-path`, so the directory must hold
 # exactly one `biome.json` and never linted sources. ESLint takes the
 # flat-config `eslint.config.js`: the adapter passes it as `-c`, so the
-# `.js` extension pins the JavaScript module transport.
+# `.js` extension pins the JavaScript module transport. Checkstyle takes
+# the XML configuration (`checkstyle.xml`): the adapter passes it as
+# `-c`, so the `.xml` extension pins the XML transport (Checkstyle has
+# no usable upstream default; applicable stages fail without a hinted
+# config, mirroring ESLint/Vale).
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buildifier": ".json",
+    "checkstyle": ".xml",
     "csharpier": ".yaml",
     "eslint": ".js",
     "fsharplint": ".json",
@@ -166,4 +171,9 @@ csharpier_config = _make_native_config_rule(
 fsharplint_config = _make_native_config_rule(
     "fsharplint",
     "Checked-in FSharpLint JSON config (fsharplint.json) for F# lint.",
+)
+
+checkstyle_config = _make_native_config_rule(
+    "checkstyle",
+    "Checked-in Checkstyle XML config for Java lint. The adapter passes it as -c; no usable upstream default exists.",
 )

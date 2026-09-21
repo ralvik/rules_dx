@@ -355,10 +355,12 @@ is reconstructed from Maven modules and no consumer runs an installer,
 solver, or compiler. Exact versions plus rule-sets qualified seed-only under issue #485
 (`bazel run //tools/ci:jvm_quality_qualification` with
 `java/tests/fixtures/jvm_quality/pins.bzl` over upstream built-in defaults
-with no hidden preset); digests plus adapter mappings stay owned under #796 (successor to closed #416)
+with no hidden preset); digests pinned in `MODULE.bazel` plus adapter mappings
+delivered under #796 (successor to closed #416)
 (live successor to closed #307
-for this cohort) and no adapter claims `java` or `kotlin` yet
-(open under #796, successor to closed #416).
+for this cohort) with `java` plus `kotlin` claimed
+(delivered under #796, successor to closed #416; detekt pending plus Error Prone
+itemized open work stay owned under #796).
 
 Decided route: Scalafmt and Scalafix take the
 managed JVM route. Scalafmt resolves to a

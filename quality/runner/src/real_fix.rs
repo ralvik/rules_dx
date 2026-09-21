@@ -1,5 +1,12 @@
 //! Real-tool fix application (split from `real.rs`). No behavior change.
 //! `RealBackend::apply_fix` plus fix scratch helpers, moved verbatim.
+//!
+//! JVM notes: google-java-format and ktfmt rewrite in place via the
+//! shared `run_fix` (re-read on exit 0); ktlint lint fixes via
+//! `--format` (re-read on exit 0 or 1 like ESLint); Checkstyle, PMD,
+//! and SpotBugs are check-only and return their input. Scala/.NET
+//! notes: Scalafmt, CSharpier, and Fantomas rewrite in place;
+//! Scalafix, Roslyn, and FSharpLint are check-only.
 
 use super::*;
 
@@ -25,10 +32,13 @@ impl super::RealBackend {
     ) -> Result<String, RunnerError> {
         let tool = self.tool(tool_id)?;
         match tool_id {
-            "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
+            "rustfmt" | "buildifier" | "taplo" | "google_java_format" | "ktfmt" => {
+                self.run_fix(tool_id, tool, path, text)
+            }
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
             "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint"
-            | "clippy" | "scalafix" | "roslyn" | "fsharplint" => Ok(text.to_owned()),
+            | "clippy" | "scalafix" | "roslyn" | "fsharplint" | "checkstyle" | "pmd"
+            | "spotbugs" => Ok(text.to_owned()),
             "biome" => {
                 if capability == "format" {
                     self.run_biome_format_fix(tool, path, text)
@@ -47,6 +57,7 @@ impl super::RealBackend {
             "csharpier" => self.run_csharpier_fix(tool, path, text),
             "fantomas" => self.run_fantomas_fix(tool, path, text),
             "eslint" => self.run_eslint_fix(tool, path, text),
+            "ktlint" => self.run_ktlint_fix(tool, path, text),
             _ => Err(execution(
                 tool_id,
                 format!("unsupported real tool: {tool_id}"),
@@ -114,6 +125,8 @@ impl super::RealBackend {
                 &refs,
                 hint_dir(tool.config_rel.as_deref(), &cwd_rel),
             ),
+            "google_java_format" => commands::google_java_format_fix(&tool.binary, &refs),
+            "ktfmt" => commands::ktfmt_fix(&tool.binary, &refs),
             _ => commands::taplo_format(&tool.binary, &refs, config.as_deref(), false),
         };
         let out = self.run(tool_id, tool, &invocation, &scratch)?;
@@ -284,6 +297,29 @@ impl super::RealBackend {
         let invocation = commands::fantomas_fix(&tool.binary, &refs);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// Runs one ktlint lint fix round: `--relative --format`
+    /// (in-place). Re-reads on exit 0 or 1 because exit 1 signals
+    /// remaining unfixable findings after the fixable ones were
+    /// applied, mirroring the ESLint/Ruff lint-fix contract. Any other
+    /// exit keeps the input.
+    fn run_ktlint_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "ktlint";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::ktlint_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) && out.code != Some(1) {
             return cleaned(TOOL_ID, scratch, text.to_owned());
         }
         let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;

@@ -120,8 +120,8 @@ support-matrix promotion: it never promotes a support-matrix `Planned` cell to
 `Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under its owning tracker with no
 implementation claimed here. Owning trackers for table `Open` cells: Docs under no open implementation tracker (successor to closed #581,
 live successor to closed #421; full pipeline delivered seed-only under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; platform plus consumer plus release evidence stays owned gap under #808; no Supported claim); Env/codegen under #787 plus onboarding #788 (successors to closed #506); Layer-2
-adapter-less plus regions plus framework-composition Depcheck under #796 plus #798-#800 (successors to closed #416 plus #418-#420, delivery
-qualified seed-only under closed #510) with Scala/.NET Layer-2 delivered under #797 plus taxonomy promotion under #802 (successor to closed #512) and Python future
+adapter-less plus regions plus framework-composition Depcheck under #798-#800 (successors to closed #418-#420, delivery
+qualified seed-only under closed #510; JVM delivered under #796 plus Scala/.NET Layer-2 delivered under #797) with taxonomy promotion under #802 (successor to closed #512) and Python future
 selection under #801 (successor to closed #613). `Planning only` means planning is implemented with live
 execution deferred. No report-only status remains per ADR 0022 (no standing benchmarking).
 
@@ -132,8 +132,8 @@ execution deferred. No report-only status remains per ADR 0022 (no standing benc
 | JavaScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | TypeScript | Delivered | Delivered | Delivered | Delivered (`adopt-js-ts`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | Go | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-go`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Java | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
-| Kotlin | Delivered (code ownership) | Open (adapter-less) | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Java | Delivered (code ownership) | Delivered | Delivered | Delivered (`adopt-java`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
+| Kotlin | Delivered (code ownership) | Delivered | Delivered | Delivered (`adopt-kotlin`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | Scala | Delivered (code ownership) | Delivered | Delivered | Delivered (`adopt-scala`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | C# | Delivered (code ownership) | Delivered | Delivered | Delivered (`adopt-csharp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | F# | Delivered (code ownership) | Delivered | Delivered | Delivered (`adopt-fsharp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |

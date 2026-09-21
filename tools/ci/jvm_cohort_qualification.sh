@@ -2,29 +2,22 @@
 # JVM-cohort qualification harness.
 #
 # Qualifies the as-built JVM quality-cohort record with fixture evidence
-# and owned gaps, without claiming Supported and without a false adapter
-# claim:
-# - delivered: decided complete-upstream-artifact plus shared-JDK route
+# and owned gaps, without claiming Supported:
+# - delivered under #796 (successor to closed #416): decided
+#   complete-upstream-artifact plus shared-JDK route
 #   (google-java-format and Checkstyle all-deps JARs, PMD and SpotBugs
-#   binary distributions, ktfmt with-deps JAR, ktlint executable JAR over
+#   binary distributions, ktfmt with-deps JAR, ktlint CLI all JAR over
 #   one managed JDK cohort; no Maven-module reconstruction, no
-#   installer/solver/compiler on the consumer path), initial artifact
-#   research rows as observations for digests (versions qualified seed-only
-# , provisional SARIF-native
-#   adapter-input notes with Error Prone javac-diagnostic parsing itemized
-#   as open work (never silently dropped), native-config defaults qualified
-# seed-only (SpotBugs default effort, PMD default ruleset,
-#   Error Prone default severities, detekt buildUponDefaultConfig, ktlint
-#   standard as upstream built-in defaults with no hidden preset),
-#   parity-deferred java/kotlin
-#   with owner plus frozen route, classification-only taxonomy with no
-#   curated defaults and no native-config binding;
-# - open under with honest records: exact artifact digests
-#   plus shared-JDK cohort qualification, SARIF parser plus runner-matrix
-#   pass/fail plus fix/format evidence per adapter-backed class,
-#   native-config qualification against the native-config contract,
-#   platform plus consumer plus release evidence. REAL_ADAPTERS claims
-#   java/kotlin only when green.
+#   installer/solver/compiler on the consumer path), digests pinned in
+#   MODULE.bazel plus java_binary wrappers in quality/tools/jvm/,
+#   REAL_ADAPTERS claims java/kotlin via google_java_format, checkstyle,
+#   pmd, spotbugs, ktfmt, ktlint (detekt pending plus Error Prone
+#   itemized open work, never silently dropped), SARIF plus
+#   dry-run parsers with runner-matrix pass/fail plus fix/format
+#   evidence per adapter-backed class, Checkstyle native-config binding
+#   against the native-config contract (others run upstream defaults);
+# - open under #796 with honest records: detekt plus Error Prone
+#   adapters, platform plus consumer plus release evidence.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:jvm_cohort_qualification`,
 # following //tools/ci:file_family_qualification.
@@ -52,31 +45,34 @@ matrix="quality/testdata/runner_matrix_cases.bzl"
 subjects="quality/testdata/BUILD.bazel"
 aspects="quality/real_aspects.bzl"
 
-# No false adapter claim for the JVM cohort: none of the cohort tool IDs
-# appear in REAL_ADAPTERS. Classification exists in
-# REAL_CLASS_TO_FAMILY; adapter claim does not.
-jvm_claim=""
-for tool in google-java-format checkstyle pmd spotbugs ktfmt ktlint detekt error-prone error_prone; do
+# Delivered adapter claims for the JVM cohort: the six cohort tool IDs
+# appear in REAL_ADAPTERS with java/kotlin classes; detekt plus Error Prone
+# stay unclaimed (pending plus itemized open work, never silently dropped).
+jvm_missing=""
+for tool in google_java_format checkstyle pmd spotbugs ktfmt ktlint; do
+  grep -q -F -e "\"$tool\":" "$adapters" || jvm_missing="$jvm_missing $tool:missing"
+done
+jvm_pending=""
+for tool in detekt error_prone; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
-    jvm_claim="$jvm_claim $tool:claimed"
+    jvm_pending="$jvm_pending $tool:claimed"
   fi
 done
-if [[ -z "$jvm_claim" ]]; then
+if [[ -z "$jvm_missing" && -z "$jvm_pending" ]]; then
   ok
 else
-  bad "false adapter claim for JVM cohort:$jvm_claim"
+  bad "JVM adapter claims drifted (missing:$jvm_missing pending:$jvm_pending)"
 fi
 
-# Parity deferrals own java/kotlin with owner plus frozen route plus the
-# live-successor record (closed owns nothing here).
-if grep -q -F -e '"java": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"kotlin": ["ADR 0019"' "$parity" &&
-  grep -q -F -e 'complete upstream artifact plus shared JDK (google-java-format, Checkstyle, PMD, SpotBugs)' "$parity" &&
-  grep -q -F -e 'complete upstream artifact plus shared JDK (ktfmt, ktlint); detekt pending' "$parity" &&
-  grep -q -F -e 'issue #416' "$parity"; then
+# Parity deferrals no longer own java/kotlin (delivered under #796):
+# adapter-backed classes leave PARITY_DEFERRED; detekt/error_prone own
+# no class (they are tool-level pending, never a separate class).
+if ! grep -q -F -e '"java":' "$parity" &&
+  ! grep -q -F -e '"kotlin":' "$parity" &&
+  grep -q -F -e 'PARITY_DEFERRED = {' "$parity"; then
   ok
 else
-  bad "parity deferrals lost the JVM java/kotlin owner plus frozen route plus #416 record"
+  bad "parity deferrals still claim delivered java/kotlin (want removed under #796)"
 fi
 
 # Every JVM class stays classified in the frozen taxonomy, one family each.
@@ -87,104 +83,96 @@ else
   bad "frozen taxonomy lost the java/kotlin classification"
 fi
 
-# Classification-only today: java/kotlin families carry no curated defaults
-# (curated membership unchanged; opt-ins stay opt-ins).
-jvm_curated=""
-for family in '"java": {' '"kotlin": {'; do
-  if grep -q -F -e "$family" "$curated"; then
-    jvm_curated="$jvm_curated $family:claimed"
-  fi
-done
-if [[ -z "$jvm_curated" ]]; then
+# Delivered curated defaults: java/kotlin families carry the baseline
+# formatter plus linters (google-java-format plus checkstyle/pmd/spotbugs;
+# ktfmt plus ktlint).
+if grep -q -F -e '"java": {' "$curated" &&
+  grep -q -F -e '"kotlin": {' "$curated" &&
+  grep -q -F -e '"google_java_format"' "$curated" &&
+  grep -q -F -e '"ktfmt"' "$curated" &&
+  grep -q -F -e '"ktlint"' "$curated"; then
   ok
 else
-  bad "curated defaults claim a JVM family before adapters land:$jvm_curated"
+  bad "curated defaults lost delivered java/kotlin families under #796"
 fi
 
-# No hidden JVM native-config preset: no JVM binding exists in the typed
-# native-config rules (adapters run pinned upstream defaults until 
-# qualifies checked-in policy against the native-config contract).
-jvm_config=""
-for tool in google-java-format checkstyle pmd spotbugs ktfmt ktlint detekt; do
-  if grep -q -F -e "${tool}_config" "$native"; then
-    jvm_config="$jvm_config $tool:preset"
-  fi
-done
-if [[ -z "$jvm_config" ]]; then
+# Delivered native-config binding: Checkstyle carries the typed XML
+# binding (config-required, no usable upstream default); the remaining
+# cohort tools run pinned upstream defaults with no hidden preset.
+if grep -q -F -e 'checkstyle_config' "$native" &&
+  grep -q -F -e '"checkstyle": ".xml"' "$native"; then
   ok
 else
-  bad "native-config carries a hidden JVM preset:$jvm_config"
+  bad "native-config lost delivered checkstyle binding under #796"
 fi
 
-# No false green claim: the runner matrix carries no JVM cells yet, so
-# REAL_ADAPTERS cannot claim java/kotlin (claims land only with green
-# pass/fail plus fix/format evidence per adapter-backed class). The
-# trailing underscore keeps `matrix_javascript_*` from matching a future
-# `matrix_java_*` cell.
-if ! grep -q -F -e 'matrix_java_' "$matrix" &&
-  ! grep -q -F -e 'matrix_kotlin_' "$matrix"; then
+# Delivered green claim: the runner matrix carries JVM cells with
+# pass/fail plus fix/format evidence per adapter-backed class (SpotBugs
+# stays target-coupled with no matrix cell, like tsc). Cells live in
+# runner_matrix_jvm.bzl (split from the cases file, no behavior change).
+jvm_matrix="quality/testdata/runner_matrix_jvm.bzl"
+if grep -q -F -e 'matrix_java_format_pass' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_java_format_fail' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_java_checkstyle_pass' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_java_checkstyle_fail' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_java_pmd_pass' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_java_pmd_fail' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_kotlin_format_pass' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_kotlin_format_fail' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_kotlin_lint_pass' "$jvm_matrix" &&
+  grep -q -F -e 'matrix_kotlin_lint_fail' "$jvm_matrix"; then
   ok
 else
-  bad "runner matrix claims a JVM cell without adapter qualification"
+  bad "runner matrix lost delivered JVM cells under #796"
 fi
 
 # Tool acquisition keeps the decided complete-upstream-artifact plus
-# shared-JDK route with no Maven reconstruction and no false claim,
-# owned by (live successor to closed for this cohort).
+# shared-JDK route with digests pinned plus adapters delivered under #796.
 if grep -q -F -e 'Decided route: google-java-format, Checkstyle,' "$acquisition" &&
-  grep -q -F -e 'ktlint executable JAR) sharing the one managed JDK cohort runtime' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `java` or `kotlin` yet' "$acquisition" &&
-  grep -q -F -e '(open under issue #416)' "$acquisition" &&
-  grep -q -F -e 'no tool' "$acquisition"; then
+  grep -q -F -e 'sharing the one managed JDK cohort runtime' "$acquisition" &&
+  grep -q -F -e 'with `java` plus `kotlin` claimed' "$acquisition" &&
+  grep -q -F -e '(delivered under #796' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided JVM route or #416 ownership or no-claim honesty"
+  bad "tool-acquisition lost its delivered JVM route under #796"
 fi
 
-# Tool acquisition keeps initial artifact research rows for the cohort as
-# observations, not pins, with byte-identity risk explicit.
+# Tool acquisition keeps initial artifact research rows for the cohort
+# with byte-identity risk explicit (digests now pinned in MODULE.bazel).
 jvm_research=""
 for tool in '| google-java-format |' '| Checkstyle |' '| PMD |' '| SpotBugs |' '| ktfmt |' '| ktlint |' '| detekt |' '| Error Prone |'; do
   grep -q -F -e "$tool" "$acquisition" || jvm_research="$jvm_research $tool:missing"
 done
 if [[ -z "$jvm_research" ]] &&
-  grep -q -F -e 'owned by issue #416' "$acquisition" &&
-  grep -q -F -e 'observations, not pins' "$acquisition" &&
   grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost a JVM research row or its observations-not-pins honesty:$jvm_research"
+  bad "tool-acquisition lost a JVM research row:$jvm_research"
 fi
 
-# Tool integrations keep the JVM adapter-input notes: SARIF
-# shapes as unproven mappings, Error Prone javac-diagnostic parsing
-# itemized as open work (never silently dropped), versions qualified under
-# with digests as observations, no adapter claim.
-if grep -q -F -e '**JVM cohort (issue #416' "$integrations" &&
-  grep -q -F -e 'unproven mappings' "$integrations" &&
-  grep -q -F -e 'observations, not pins' "$integrations" &&
-  grep -q -F -e 'no adapter claims `java` or `kotlin` yet' "$integrations" &&
+# Tool integrations keep the delivered JVM adapter notes: SARIF
+# shapes plus dry-run grammars qualified with fixtures, Error Prone
+# javac-diagnostic parsing itemized as open work (never silently
+# dropped), versions qualified under #485 with digests pinned.
+if grep -q -F -e '**JVM cohort (#796' "$integrations" &&
+  grep -q -F -e 'digests pinned in `MODULE.bazel`' "$integrations" &&
+  grep -q -F -e 'adapters delivered under #796' "$integrations" &&
   grep -q -F -e 'Error Prone has no' "$integrations" &&
   grep -q -F -e 'itemized here, not silently dropped' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its JVM adapter-input notes or Error Prone open-work honesty"
+  bad "tool-integrations lost its delivered JVM notes under #796"
 fi
 
-# Support matrix keeps the JVM route plus qualified native-config defaults
-# plus SARIF notes plus cohort tracking, all citing for
-# adapters/digests without approving hidden presets or claiming support.
-if grep -q -F -e 'take the complete-upstream-artifact plus shared-JDK route (issue #416' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #485' "$support" &&
-  grep -q -F -e 'no auto-supplied Google checks' "$support" &&
-  grep -q -F -e 'upstream built-in defaults' "$support" &&
-  grep -q -F -e 'owned by issue #416.' "$support" &&
-  grep -q -F -e 'itemized under issue #416' "$support" &&
-  grep -q -F -e '(issue #416)' "$support" &&
-  grep -q -F -e 'to issue #416;' "$support"; then
+# Support matrix keeps the JVM rows plus the delivered Layer-2 mapping
+# (Java/Kotlin stay Planned per the lifecycle; verification Delivered is
+# seed-host layer evidence, never promotion).
+if grep -q -F -e '| Java | Planned | Planned: google-java-format | Planned: PMD, Checkstyle, SpotBugs' "$support" &&
+  grep -q -F -e '| Kotlin | Planned | Planned: ktfmt | Planned: ktlint' "$support" &&
+  grep -q -F -e 'JVM delivered under #796' "$support"; then
   ok
 else
-  bad "support-matrix lost its JVM route, qualified defaults, adapter notes, or #416 cohort tracking"
+  bad "support-matrix lost its delivered JVM rows under #796"
 fi
 
 # Tool baseline keeps the Java/Kotlin coverage rows (integration inventory,
