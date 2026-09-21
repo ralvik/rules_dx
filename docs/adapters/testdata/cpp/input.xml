@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doxygen version="1.18.0">
+  <compounddef>
+    <memberdef kind="class"><name>AccountService</name><briefdescription>Account aggregate root.</briefdescription><location file="src/account.h" line="10"/></memberdef>
+    <memberdef kind="function"><name>create</name><briefdescription>Creates a new account.</briefdescription><location file="src/account.h" line="42"/></memberdef>
+    <memberdef kind="function"><name>createWithOptions</name><briefdescription>Overload with options.</briefdescription><location file="src/account.h" line="58"/></memberdef>
+  </compounddef>
+</doxygen>

@@ -1,11 +1,12 @@
 # Documentation Site Build
 
-Implementation status: accepted v1 direction with provisional inputs;
-renderer/site execution delivered seed-only under #780 (successor to closed #581,
+Implementation status: accepted v1 direction with adapter runs delivered under #779 plus
+renderer/site execution delivered seed-only under #780 (successors to closed #581,
 live successor to closed #421); site-level byte-identical rebuild proof delivered
-seed-only under #781; remaining execution open (#779, #782-#785).
+seed-only under #781; remaining execution open (#782-#785).
 Accepted: the `dx_docs` site-build action planning over the
-Bazel-cached extract→aggregate→render graph (no committed IR). Delivered: fixture-scale
+Bazel-cached extract→aggregate→render graph (no committed IR). Delivered: per-language
+extraction runs under #779 (`//docs/adapters:docs_adapters` over pinned inputs) plus fixture-scale
 execution in [`docs/site/`](../../docs/site/site.bzl) (`docs_extract` per unit,
 `docs_aggregate` with shared validation, `docs_render` with the pinned mdBook
 artifact) producing mdBook-compatible prose plus generated API pages plus one search
@@ -15,9 +16,9 @@ is open under #786. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are delivered seed-only for the fixture-scale site (rebuild proof under #781);
 remaining timing and invalidation verification follows
-[Testing](../testing/) before any support statement. Open under #779, #782-#785
+[Testing](../testing/) before any support statement. Open under #782-#785
 (successors to closed #581; see [Documentation](README.md#contracts) for the full list):
-adapter runs, link/reference completeness,
+link/reference completeness,
 cache reuse and invalidation fixtures, guide-step CI wiring, and first-hour timing proof.
 Fixture-scale site execution plus byte-identical rebuild proof are qualified seed-only; no published site is claimed.
 
@@ -78,7 +79,7 @@ at the pre-render boundary remains a gap (#782, successor to closed #581). Neith
 may write Bazel outputs and cache entries but never write generated IR beside source
 files. The planned `--serve` previews the built output locally and is not a build action.
 
-Delivered (seed-only fixture execution under #780) fixtures prove a clean build without checked-in IR,
+Delivered (seed-only fixture execution under #779 plus #780) fixtures prove a clean build without checked-in IR,
 deterministic sorted outputs, and no source-tree writes; the demo chain
 (`//docs/site:demo_site`) emits IR shards plus SUMMARY plus API pages plus search records
 plus the rendered entry plus the single search index as Bazel-cached outputs.
@@ -106,4 +107,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #780; rebuild proof delivered under #781; remaining: #779, #782-#785. Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781; remaining: #782-#785. Reintroduction: #786.
