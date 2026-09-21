@@ -94,6 +94,14 @@ with fixture evidence pinned in
 `tools/coverage/tests/fixtures/per_cell/pins.bzl` via
 `bazel run //tools/ci:coverage_qualification` (issue #507).
 
+Coverage tools resolve per-host via the registered C++ toolchain. The
+vendored preset pins only `GENERATE_LLVM_LCOV=1` (LLVM LCOV where the
+toolchain emits profraw) plus `combined_report=lcov`, never an ambient
+`COVERAGE_GCOV_PATH=/usr/bin/*` path. `COVERAGE_GCOV_PATH`/`LLVM_COV`/
+`LLVM_PROFDATA` come from `cc_toolchain` per host; a GCC-gcov-only path
+where the toolchain provides no gcov fails closed in Bazel's collection
+script rather than silently using a wrong host path.
+
 ## Build Profiles
 
 Three shared Bazel configs select `compilation_mode` behind stable

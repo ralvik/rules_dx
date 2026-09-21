@@ -50,13 +50,25 @@ dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
   'coverage --test_env=GENERATE_LLVM_LCOV=1' \
   'coverage --combined_report=lcov' \
   'coverage --test_tag_filters=-no-coverage' \
-  'coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov' \
   'coverage --instrumentation_filter=^//' \
   '# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).' \
   'build:dx_debug --compilation_mode=dbg' \
   'build:dx_dev --compilation_mode=fastbuild' \
   'build:dx_release --compilation_mode=opt'
 echo "preset schema: checked-in fragment carries the pinned contract"
+
+# Hermetic coverage toolchain (issue #767): no ambient host gcov path;
+# coverage tools resolve per-host via the C++ toolchain
+# (`COVERAGE_GCOV_PATH`/`LLVM_COV`/`LLVM_PROFDATA` from `cc_toolchain`,
+# `GENERATE_LLVM_LCOV=1` selects the LLVM LCOV path where profraw exists).
+# A hardcoded `/usr/bin/gcov` breaks macOS/Windows cells and overrides
+# the toolchain hermetic path even on Linux, so it fails here, not silently.
+dx_guards_absent "$expected" "preset.bazelrc must not pin an ambient host gcov path (issue #767)" \
+  'COVERAGE_GCOV_PATH' \
+  '/usr/bin/gcov' \
+  '/usr/bin/*' \
+  '/usr/lib/*'
+echo "preset hermetic: no ambient host coverage-tool path"
 
 # Rust inventory pins (mirrors //tools/ci:pin_consistency_test for the
 # Bazel pin, plus the per-release dx stamp).

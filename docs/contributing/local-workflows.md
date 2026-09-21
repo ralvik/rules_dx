@@ -160,7 +160,10 @@ project overrides stay explicit and `user.bazelrc` stays last).
 in `bazel test //...`; `dx update` regenerates the consumer fragment
 atomically and `--check` gates staleness (exit `0` clean / `1` stale).
 Owned build profiles (`dx_debug`/`dx_dev`/`dx_release`) are reviewed the
-same way; see [ADR 0021](../decisions/0021-build-profiles.md).
+same way; see [ADR 0021](../decisions/0021-build-profiles.md). Coverage
+flags carry no ambient host path: `GENERATE_LLVM_LCOV=1` plus
+toolchain-provided gcov/llvm-cov per host (see
+[Build, Test, And Coverage](../cli/commands/build-test-coverage.md#dx-coverage)).
 
 Version bumps flow through the native widen-one-requirement loop
 (delivered, issue #260) as the sole updater (native-only, issue #461):
