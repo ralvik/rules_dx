@@ -160,11 +160,11 @@ else
 fi
 
 # Parity deferrals stay owned with fail-closed gate shape.
-# Scala/.NET delivered under #797, so csharp no longer deferred.
+# Scala/.NET delivered under #797 plus JVM delivered under #796, so csharp
+# plus java no longer deferred.
 if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
   grep -q -F -e '"c": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"cpp": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"java": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&

@@ -90,7 +90,7 @@ def native_config_unit_tests(name):
                 "native_config_error rejects an unknown tool",
                 native_config_error("prettier", "x.json", True, []),
                 "native_config: unknown tool 'prettier': want one of " +
-                "biome, buildifier, csharpier, eslint, fsharplint, ruff, rustfmt, scalafix, scalafmt, taplo, vale",
+                "biome, buildifier, checkstyle, csharpier, eslint, fsharplint, ruff, rustfmt, scalafix, scalafmt, taplo, vale",
             ),
             expect_equal(
                 "native_config_error requires a config",

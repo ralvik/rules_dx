@@ -302,6 +302,69 @@ else
   bad "fsharplint lost its library parser with records plus clean"
 fi
 
+# JVM cohort keeps SARIF plus dry-run parsers with pass plus fail samples (delivered under #796).
+if [[ -f "quality/adapter/src/parsers/sarif.rs" ]] &&
+  grep -q -F -e 'pub fn parse_sarif' quality/adapter/src/parsers/sarif.rs &&
+  grep -q -F -e 'sarif_reports_point_and_range' quality/adapter/src/parsers/sarif.rs; then
+  ok
+else
+  bad "sarif lost its shared JVM parser with point plus range samples"
+fi
+
+# Checkstyle keeps its SARIF parser with point plus clean samples.
+if [[ -f "quality/adapter/src/parsers/checkstyle.rs" ]] &&
+  grep -q -F -e 'pub fn parse_checkstyle' quality/adapter/src/parsers/checkstyle.rs &&
+  grep -q -F -e 'checkstyle_reports_sarif_points' quality/adapter/src/parsers/checkstyle.rs; then
+  ok
+else
+  bad "checkstyle lost its SARIF parser with point plus clean samples"
+fi
+
+# google-java-format keeps its dry-run parser with path plus clean samples.
+if [[ -f "quality/adapter/src/parsers/google_java_format.rs" ]] &&
+  grep -q -F -e 'pub fn parse_google_java_format' quality/adapter/src/parsers/google_java_format.rs &&
+  grep -q -F -e 'google_java_format_reports_paths' quality/adapter/src/parsers/google_java_format.rs; then
+  ok
+else
+  bad "google-java-format lost its dry-run parser with path plus clean samples"
+fi
+
+# ktfmt keeps its dry-run parser with path plus clean samples.
+if [[ -f "quality/adapter/src/parsers/ktfmt.rs" ]] &&
+  grep -q -F -e 'pub fn parse_ktfmt' quality/adapter/src/parsers/ktfmt.rs &&
+  grep -q -F -e 'ktfmt_reports_paths' quality/adapter/src/parsers/ktfmt.rs; then
+  ok
+else
+  bad "ktfmt lost its dry-run parser with path plus clean samples"
+fi
+
+# ktlint keeps its SARIF parser with range plus clean samples.
+if [[ -f "quality/adapter/src/parsers/ktlint.rs" ]] &&
+  grep -q -F -e 'pub fn parse_ktlint' quality/adapter/src/parsers/ktlint.rs &&
+  grep -q -F -e 'ktlint_reports_sarif_ranges' quality/adapter/src/parsers/ktlint.rs; then
+  ok
+else
+  bad "ktlint lost its SARIF parser with range plus clean samples"
+fi
+
+# PMD keeps its SARIF parser with range plus clean samples.
+if [[ -f "quality/adapter/src/parsers/pmd.rs" ]] &&
+  grep -q -F -e 'pub fn parse_pmd' quality/adapter/src/parsers/pmd.rs &&
+  grep -q -F -e 'pmd_reports_sarif_ranges' quality/adapter/src/parsers/pmd.rs; then
+  ok
+else
+  bad "pmd lost its SARIF parser with range plus clean samples"
+fi
+
+# SpotBugs keeps its SARIF parser with range plus clean samples (target-coupled, no matrix cell).
+if [[ -f "quality/adapter/src/parsers/spotbugs.rs" ]] &&
+  grep -q -F -e 'pub fn parse_spotbugs' quality/adapter/src/parsers/spotbugs.rs &&
+  grep -q -F -e 'spotbugs_reports_sarif_ranges' quality/adapter/src/parsers/spotbugs.rs; then
+  ok
+else
+  bad "spotbugs lost its SARIF parser with range plus clean samples"
+fi
+
 # Runner-matrix doc owns the parser-sample backfill record.
 if grep -q -F -e 'Parser samples' "$runner_doc" &&
   grep -q -F -e 'byte-identical to the parser unit samples' "$runner_doc" &&

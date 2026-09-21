@@ -69,7 +69,7 @@ per capability is owned by the [verification matrix](../testing/verification-mat
 A `Planned` cell whose capability maps to an `Open` verification cell is scope with open
 implementation: `Environment` maps to `Env/codegen` (`Open` for every language);
 `Format`/`Lint`/`Typecheck` for adapter-less or region-only rows map to `Layer-2 matrix`
-(`Open (adapter-less)` for Go, Java, Kotlin, Scala, C#, F#, C++ and `Open (regions)` for
+(`Open (adapter-less)` for Go, Scala, C#, F#, C++ and `Open (regions)` for
 Vue, Svelte, Astro, MDX); `Dependencies` and framework `Build`/`Test` composition for Vue,
 Svelte, Astro, MDX map to `Depcheck` (`Open`) and `Examples` (`Open (composition)`). Rust,
 Python, JavaScript, and TypeScript `Build`/`Test`/`Dependencies`/`Generate`/`Coverage`/
@@ -381,8 +381,8 @@ Every cell in the table above stays `Planned` (or `Deferred beyond v1` / `Not pl
 where marked); none is `Seed-host-delivered` or higher, even where the verification
 matrix shows `Delivered` for the capability: verification `Delivered` is seed-host
 layer evidence, not support-matrix promotion. Admitted `Format`/`Lint` cells map to `Layer-2 matrix Open (adapter-less)` (no adapter
-claims them yet; open under #798 for the Native cohort and #796/#797 for the
-JVM and Scala + .NET cohorts), `Environment`/`IDE` dimensions map to `Env/codegen Open`,
+claims them yet; open under #798 for the Native cohort and #797 for the
+Scala + .NET cohort; JVM delivered under #796), `Environment`/`IDE` dimensions map to `Env/codegen Open`,
 and per-language source audit lumped in the third column is distinct from ecosystem
 `Audit/update Delivered`.
 

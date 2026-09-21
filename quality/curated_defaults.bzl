@@ -13,6 +13,12 @@ CURATED_SCHEMA_VERSION = 1
 # order. Families absent from this map have no curated defaults yet
 # (their classes are PARITY_DEFERRED in quality/parity_tests.bzl).
 CURATED_DEFAULTS = {
+    "java": {
+        "audit": [],
+        "format": ["google_java_format"],
+        "lint": ["checkstyle", "pmd", "spotbugs"],
+        "typecheck": [],
+    },
     "javascript": {
         "audit": [],
         "format": ["biome"],
@@ -23,6 +29,12 @@ CURATED_DEFAULTS = {
         "audit": [],
         "format": ["prettier"],
         "lint": ["biome"],
+        "typecheck": [],
+    },
+    "kotlin": {
+        "audit": [],
+        "format": ["ktfmt"],
+        "lint": ["ktlint"],
         "typecheck": [],
     },
     "markdown": {
@@ -68,8 +80,10 @@ CURATED_DEFAULTS = {
 # exact lines below, so keep the `FORMAT_FROZEN[<family>] = [...]`
 # shape stable.
 FORMAT_FROZEN = {
+    "java": ["google_java_format"],
     "javascript": ["biome"],
     "json": ["prettier"],
+    "kotlin": ["ktfmt"],
     "markdown": [],
     "python": ["ruff"],
     "rust": ["rustfmt"],

@@ -228,7 +228,7 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   adapter only: it never runs as a bare file invocation and requires the authoritative
   `typescript_project` context (`TsConfigInfo`). Bare-file use would lose tsconfig and declaration
   context. Upstream mapping evidence is the `typescript_project` typecheck test target.
-- **JVM cohort (#796, successor to closed #416, provisional — no adapter claims `java` or `kotlin` yet):**
+- **JVM cohort (#796, successor to closed #416, delivered):**
   complete-upstream-artifact plus shared-JDK route for google-java-format, Checkstyle, PMD,
   SpotBugs, ktfmt, ktlint, with detekt pending and Error Prone as itemized open work under #796 (successor to closed #416).
   Research notes (unproven mappings): PMD and Checkstyle emit SARIF via `-f sarif`, SpotBugs
@@ -248,8 +248,10 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   check/diff mode; PMD, Checkstyle, SpotBugs, and detekt are check-only with the provisional
    sandbox-apply-and-diff fix flow. Versions qualified seed-only under issue #485
   (`java/tests/fixtures/jvm_quality/pins.bzl` via `bazel run //tools/ci:jvm_quality_qualification`
-  over upstream built-in defaults with no hidden preset); digests stay observations, not pins,
-  recheck latest stable at implementation; adapters stay owned under #796 (successor to closed #416)
+  over upstream built-in defaults with no hidden preset); digests pinned in `MODULE.bazel`
+  (`jvm_google_java_format`, `jvm_checkstyle`, `jvm_pmd_dist`, `jvm_spotbugs_dist`,
+  `jvm_ktfmt`, `jvm_ktlint`) plus `java_binary` wrappers in `quality/tools/jvm/`;
+  adapters delivered under #796 (successor to closed #416)
   (see the JVM rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Scala + .NET cohort (#797, successor to closed #417):** adapters `scalafmt` (format `scala`),

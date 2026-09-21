@@ -4,6 +4,7 @@ Contract: `docs/quality/tool-integrations.md`, `docs/quality/native-configuratio
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")
+load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 load("@rules_rust//rust:defs.bzl", "rust_clippy_aspect", _rust_common = "rust_common")
 load(
     "//quality:adapters.bzl",
@@ -32,7 +33,12 @@ def _family_selections(policy, capability):
 # and filters the resolved pipeline to `allowed_tools`; `select()` and
 # toolchain indirection cannot do this (all branches resolve), only separate
 # aspects avoid loading. Base handles single-file `dx_tools` artifacts plus
-# repo-owned markdown; JS/Python/Rust families are additive opt-ins.
+# repo-owned markdown; JS/Python/Rust/JVM families are additive opt-ins.
+# JVM tools run as `java_binary` wrappers over the complete upstream
+# artifacts plus the shared managed JDK (remotejdk_21 via
+# `--java_runtime_version`); SpotBugs is target-coupled (needs the
+# authoritative `JavaInfo` classes, dropped for provider-less targets
+# like tsc without `TsConfigInfo`).
 _CORE_LINT_TOOLS = ["biome", "buildifier", "markdown_check", "ruff", "taplo", "vale"]
 _CORE_FORMAT_TOOLS = ["biome", "buildifier", "ruff", "taplo"]
 _CORE_TYPECHECK_TOOLS = ["ty"]
@@ -42,6 +48,8 @@ _PY_LINT_TOOLS = ["flake8", "pydoclint", "pylint"]
 _RUST_LINT_TOOLS = ["clippy"]
 _RUST_FORMAT_TOOLS = ["rustfmt"]
 _RUST_TYPECHECK_TOOLS = ["rustc"]
+_JVM_LINT_TOOLS = ["checkstyle", "ktlint", "pmd", "spotbugs"]
+_JVM_FORMAT_TOOLS = ["google_java_format", "ktfmt"]
 
 def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain):
     if QualitySourcesInfo not in target:
@@ -95,6 +103,19 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         resolved = [stage for stage in resolved if stage["tool"] != "tsc"]
         if len(resolved) == 0:
             return []
+
+    # Target-coupled SpotBugs: SpotBugs analyzes compiled classes, never
+    # bare sources, so it requires the authoritative `JavaInfo` (its
+    # `transitive_runtime_jars` feed the `-textui` analysis). Fixture
+    # QualitySourcesInfo-only targets carry no `JavaInfo`, so drop
+    # SpotBugs stages there (unfetched, keys unchanged per the
+    # target-coupled laziness row). Authoritative `java_library` targets
+    # keep their SpotBugs stage with the compiled closure as inputs.
+    if "spotbugs" in [stage["tool"] for stage in resolved]:
+        if JavaInfo not in target:
+            resolved = [stage for stage in resolved if stage["tool"] != "spotbugs"]
+            if len(resolved) == 0:
+                return []
 
     # rustfmt crate context: the edition comes from the
     # authoritative `CrateInfo` (or the test crate's inner `CrateInfo`,
@@ -179,6 +200,8 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     for stage in resolved:
         if stage["tool"] == "vale" and stage["tool"] not in configs_by_tool:
             fail("real_aspect (" + str(target.label) + "): applicable Vale requires declared config; supply and bind native policy via aspect_hints (no usable upstream default)")
+        if stage["tool"] == "checkstyle" and stage["tool"] not in configs_by_tool:
+            fail("real_aspect (" + str(target.label) + "): applicable Checkstyle requires declared config; supply and bind native policy via aspect_hints (no usable upstream default)")
 
     tool_binaries = {}
     if "biome" in stage_tools:
@@ -205,6 +228,18 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         tool_binaries["ty"] = ctx.file._ty
     if "vale" in stage_tools:
         tool_binaries["vale"] = ctx.file._vale
+    if "google_java_format" in stage_tools:
+        tool_binaries["google_java_format"] = ctx.executable._google_java_format
+    if "ktfmt" in stage_tools:
+        tool_binaries["ktfmt"] = ctx.executable._ktfmt
+    if "checkstyle" in stage_tools:
+        tool_binaries["checkstyle"] = ctx.executable._checkstyle
+    if "pmd" in stage_tools:
+        tool_binaries["pmd"] = ctx.executable._pmd
+    if "spotbugs" in stage_tools:
+        tool_binaries["spotbugs"] = ctx.executable._spotbugs
+    if "ktlint" in stage_tools:
+        tool_binaries["ktlint"] = ctx.executable._ktlint
     if has_rust_toolchain:
         clippy_driver, rustfmt = rust_toolchain_tools(ctx)
         if "clippy" in stage_tools and not clippy_delegated:
@@ -366,6 +401,24 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             "--tool-env",
             "pylint=RUNFILES_DIR=" + ctx.executable._runner.path + ".runfiles",
         )
+    # JVM `java_binary` wrappers (google-java-format, Checkstyle, PMD,
+    # SpotBugs, ktfmt, ktlint) locate their managed JDK plus tool JARs
+    # through their runfiles forest (adjacent `$0.runfiles`), so each
+    # staged wrapper gets its runfiles merged into the runner's forest
+    # like the Python/Node launchers above. No extra tool-env: the
+    # wrappers respect the runner's scratch cwd.
+    if "google_java_format" in stage_tools:
+        run_tools.append(ctx.attr._google_java_format[DefaultInfo].files_to_run)
+    if "ktfmt" in stage_tools:
+        run_tools.append(ctx.attr._ktfmt[DefaultInfo].files_to_run)
+    if "checkstyle" in stage_tools:
+        run_tools.append(ctx.attr._checkstyle[DefaultInfo].files_to_run)
+    if "pmd" in stage_tools:
+        run_tools.append(ctx.attr._pmd[DefaultInfo].files_to_run)
+    if "spotbugs" in stage_tools:
+        run_tools.append(ctx.attr._spotbugs[DefaultInfo].files_to_run)
+    if "ktlint" in stage_tools:
+        run_tools.append(ctx.attr._ktlint[DefaultInfo].files_to_run)
 
     ctx.actions.run(
         executable = ctx.executable._runner,
@@ -398,6 +451,12 @@ def _real_js_format_impl(target, ctx):
 
 def _real_python_lint_impl(target, ctx):
     return _real_pipeline_action(target, ctx, "lint", _PY_LINT_TOOLS, "-py", False)
+
+def _real_jvm_lint_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "lint", _JVM_LINT_TOOLS, "-jvm", False)
+
+def _real_jvm_format_impl(target, ctx):
+    return _real_pipeline_action(target, ctx, "format", _JVM_FORMAT_TOOLS, "-jvm", False)
 
 def _real_rust_lint_impl(target, ctx):
     return _real_pipeline_action(target, ctx, "lint", _RUST_LINT_TOOLS, "-rust", True)
@@ -507,6 +566,72 @@ _REAL_JS_FORMAT_ATTRS = {
     ),
 }
 
+_REAL_JVM_LINT_ATTRS = {
+    "_checkstyle": attr.label(
+        default = "//quality/tools/jvm:checkstyle",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned Checkstyle java_binary wrapper for Java lint.",
+    ),
+    "_ktlint": attr.label(
+        default = "//quality/tools/jvm:ktlint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned ktlint java_binary wrapper for Kotlin lint (fixes via --format).",
+    ),
+    "_pmd": attr.label(
+        default = "//quality/tools/jvm:pmd",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned PMD java_binary wrapper for Java lint.",
+    ),
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
+    ),
+    "_spotbugs": attr.label(
+        default = "//quality/tools/jvm:spotbugs",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned SpotBugs java_binary wrapper for Java lint (target-coupled via JavaInfo).",
+    ),
+}
+
+_REAL_JVM_FORMAT_ATTRS = {
+    "_google_java_format": attr.label(
+        default = "//quality/tools/jvm:google_java_format",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned google-java-format java_binary wrapper for Java format.",
+    ),
+    "_ktfmt": attr.label(
+        default = "//quality/tools/jvm:ktfmt",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned ktfmt java_binary wrapper for Kotlin format.",
+    ),
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
+    ),
+}
+
 _REAL_PY_LINT_ATTRS = {
     "_flake8": attr.label(
         default = "//quality/tools/python:flake8",
@@ -595,6 +720,20 @@ real_python_lint_aspect = aspect(
     attr_aspects = ["aspect_hints"],
     attrs = _REAL_PY_LINT_ATTRS,
     doc = "Additive Python lint family aspect (flake8/pylint/pydoclint).",
+)
+
+real_jvm_lint_aspect = aspect(
+    implementation = _real_jvm_lint_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_JVM_LINT_ATTRS,
+    doc = "Additive JVM lint family aspect (Checkstyle/Pmd/SpotBugs/ktlint; SpotBugs target-coupled via JavaInfo).",
+)
+
+real_jvm_format_aspect = aspect(
+    implementation = _real_jvm_format_impl,
+    attr_aspects = ["aspect_hints"],
+    attrs = _REAL_JVM_FORMAT_ATTRS,
+    doc = "Additive JVM format family aspect (google-java-format/ktfmt).",
 )
 
 real_rust_lint_aspect = aspect(

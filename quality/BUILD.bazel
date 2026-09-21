@@ -166,10 +166,36 @@ quality_family(
     typecheck = ["tsc"],
 )
 
+# Real fixture JVM families: curated defaults per the tool baseline
+# (google-java-format format plus Checkstyle/PMD lint for Java, ktfmt
+# format plus ktlint lint for Kotlin). SpotBugs stays target-coupled
+# (needs JavaInfo, dropped for provider-less fixtures) but remains
+# selectable in the lint list so authoritative java_library targets
+# keep their stage.
+quality_family(
+    name = "real_java_family",
+    family_id = "java",
+    format = ["google_java_format"],
+    lint = [
+        "checkstyle",
+        "pmd",
+        "spotbugs",
+    ],
+)
+
+quality_family(
+    name = "real_kotlin_family",
+    family_id = "kotlin",
+    format = ["ktfmt"],
+    lint = ["ktlint"],
+)
+
 workspace_policy(
     name = "real_fixture_policy",
     families = [
+        ":real_java_family",
         ":real_javascript_family",
+        ":real_kotlin_family",
         ":real_json_family",
         ":real_markdown_family",
         ":real_python_family",

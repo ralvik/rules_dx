@@ -118,27 +118,29 @@ fi
 
 # Parity evidence: every adapter-backed curated family has a real_*
 # subject plus a native-config binding (fails CI when a required entry
-# lacks its tests per quality-testing.md:524-535). The eleven backed
-# classes are javascript, json, jsx, markdown, python, python_stub, rust,
-# starlark, toml, tsx, typescript; python_stub rides generated .pyi matrix
-# cases. The seven native-config tools are biome, buildifier, eslint,
-# ruff, rustfmt, taplo, vale; the other nine are explicitly config-free,
-# upstream-delegated, target-coupled, or check-only (see
-# //tools/ci:quality_adapters_parity for the full sixteen-tool
-# parser/matrix plus artifact plus packaging evidence).
+# lacks its tests per quality-testing.md:524-535). The thirteen backed
+# classes with real subjects are java, javascript, json, jsx, kotlin,
+# markdown, python, python_stub, rust, starlark, toml, tsx, typescript;
+# python_stub rides generated .pyi matrix cases; scala/csharp/fsharp ride
+# generated plus delegated matrix cases (issues #796/#797). The twelve
+# native-config tools are biome, buildifier, checkstyle, csharpier, eslint,
+# fsharplint, ruff, rustfmt, scalafix, scalafmt, taplo, vale; the other
+# sixteen are explicitly config-free, upstream-delegated, target-coupled, or
+# check-only (see //tools/ci:quality_adapters_parity for the full
+# twenty-eight-tool parser/matrix plus artifact plus packaging evidence).
 dx_mkscratch scratch
 evidence_ok=1
-for class in rust python markdown starlark toml javascript typescript json jsx tsx; do
+for class in rust python markdown starlark toml javascript typescript json jsx tsx java kotlin; do
   if ! grep -rq -F -e "$class" quality/testdata/BUILD.bazel; then
     echo "FAIL: no real_* subject for adapter-backed class $class" >&2
     evidence_ok=0
   fi
 done
-if ! grep -rq -F -e "python_stub" quality/testdata/runner_matrix_cases.bzl; then
+if ! grep -rq -F -e "python_stub" quality/testdata/runner_matrix_cases.bzl quality/testdata/runner_matrix_python.bzl; then
   echo "FAIL: no matrix evidence for adapter-backed class python_stub" >&2
   evidence_ok=0
 fi
-for tool in ruff biome rustfmt buildifier taplo vale eslint; do
+for tool in ruff biome rustfmt buildifier taplo vale eslint checkstyle scalafmt scalafix csharpier fsharplint; do
   if ! grep -rq -F -e "$tool" quality/native_config.bzl quality/native_config_tests.bzl quality/testdata/BUILD.bazel; then
     echo "FAIL: no native-config binding for adapter-backed tool $tool" >&2
     evidence_ok=0

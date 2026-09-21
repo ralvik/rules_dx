@@ -51,6 +51,7 @@ pub fn spec(command: Command) -> CommandSpec {
                 "//quality:real_aspects.bzl%real_lint_aspect",
                 "//quality:real_aspects.bzl%real_js_lint_aspect",
                 "//quality:real_aspects.bzl%real_python_lint_aspect",
+                "//quality:real_aspects.bzl%real_jvm_lint_aspect",
                 "//quality:real_aspects.bzl%real_rust_lint_aspect",
             ],
             reports: &["sarif"],
@@ -72,6 +73,7 @@ pub fn spec(command: Command) -> CommandSpec {
             aspects: &[
                 "//quality:real_aspects.bzl%real_format_aspect",
                 "//quality:real_aspects.bzl%real_js_format_aspect",
+                "//quality:real_aspects.bzl%real_jvm_format_aspect",
                 "//quality:real_aspects.bzl%real_rust_format_aspect",
             ],
             reports: &[],
@@ -262,6 +264,7 @@ mod tests {
                 "//quality:real_aspects.bzl%real_lint_aspect",
                 "//quality:real_aspects.bzl%real_js_lint_aspect",
                 "//quality:real_aspects.bzl%real_python_lint_aspect",
+                "//quality:real_aspects.bzl%real_jvm_lint_aspect",
                 "//quality:real_aspects.bzl%real_rust_lint_aspect",
             ]
         );
@@ -285,6 +288,7 @@ mod tests {
             &[
                 "//quality:real_aspects.bzl%real_format_aspect",
                 "//quality:real_aspects.bzl%real_js_format_aspect",
+                "//quality:real_aspects.bzl%real_jvm_format_aspect",
                 "//quality:real_aspects.bzl%real_rust_format_aspect",
             ]
         );

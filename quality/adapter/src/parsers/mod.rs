@@ -124,6 +124,20 @@
 //!   `file is not formatted`, warning). The `[warn] Code style issues`
 //!   summary and `Checking formatting...` stdout are skipped. Clean is
 //!   exit 0 with no warn lines; findings exit 1.
+//! * JVM SARIF (Checkstyle `-f sarif`, PMD `-f sarif`, SpotBugs
+//!   `-sarif`, ktlint `--reporter=sarif`, all on stdout): SARIF 2.1.0
+//!   `runs[].results[]` with `ruleId`, `level`, `message.text`, and
+//!   `locations[].physicalLocation` (`artifactLocation.uri` plus
+//!   `region.startLine/startColumn/endLine/endColumn`). URIs are `file:`
+//!   paths or workspace-relative mirrors; missing `level` is a warning,
+//!   `error`/`warning`/`note`/`none` map onto [`ToolSeverity`], anything
+//!   else is a grammar mismatch. Clean is empty `results` on exit 0;
+//!   findings exit 1.
+//! * google-java-format `--dry-run --set-exit-if-changed` and ktfmt
+//!   `--dry-run`: stdout lists the absolute paths that would change,
+//!   one per line (clean prints nothing). Each listed path becomes one
+//!   `1:1` format finding (empty rule, `file is not formatted`,
+//!   warning). Clean is empty output on exit 0; findings exit 1.
 //! * Error Prone (javac log on stderr, stdout empty): stderr lines
 //!   `<path>:<line>: error|warning: [Check] <message>` (unbracketed
 //!   javac headers report under rule `javac`, never silently dropped).
@@ -149,13 +163,18 @@
 
 pub mod biome;
 pub mod buildifier;
+pub mod checkstyle;
 pub mod csharpier;
 pub mod error_prone;
 pub mod eslint;
 pub mod fantomas;
 pub mod flake8;
 pub mod fsharplint;
+pub mod google_java_format;
+pub mod ktfmt;
+pub mod ktlint;
 pub mod markdown;
+pub mod pmd;
 pub mod prettier;
 pub mod pydoclint;
 pub mod pylint;
@@ -163,8 +182,10 @@ pub mod roslyn;
 pub mod ruff;
 pub mod rust;
 pub mod rustfmt;
+pub mod sarif;
 pub mod scalafix;
 pub mod scalafmt;
+pub mod spotbugs;
 pub mod taplo;
 pub mod tsc;
 pub mod ty;
@@ -172,13 +193,18 @@ pub mod vale;
 
 pub use biome::{parse_biome_format, parse_biome_lint};
 pub use buildifier::parse_buildifier;
+pub use checkstyle::parse_checkstyle;
 pub use csharpier::parse_csharpier;
 pub use error_prone::parse_error_prone;
 pub use eslint::parse_eslint;
 pub use fantomas::parse_fantomas;
 pub use flake8::parse_flake8;
 pub use fsharplint::parse_fsharplint;
+pub use google_java_format::parse_google_java_format;
+pub use ktfmt::parse_ktfmt;
+pub use ktlint::parse_ktlint;
 pub use markdown::parse_markdown_findings;
+pub use pmd::parse_pmd;
 pub use prettier::parse_prettier_check;
 pub use pydoclint::parse_pydoclint;
 pub use pylint::parse_pylint;
@@ -188,6 +214,7 @@ pub use rust::{parse_clippy, parse_rustc};
 pub use rustfmt::parse_rustfmt;
 pub use scalafix::parse_scalafix;
 pub use scalafmt::parse_scalafmt;
+pub use spotbugs::parse_spotbugs;
 pub use taplo::{parse_taplo_format_check, parse_taplo_lint};
 pub use tsc::parse_tsc;
 pub use ty::parse_ty;

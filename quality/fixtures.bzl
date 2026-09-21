@@ -57,8 +57,12 @@ def _real_source_target_impl(ctx):
         direct_sources["toml"] = depset(ctx.files.toml_srcs)
     if len(ctx.files.markdown_srcs) > 0:
         direct_sources["markdown"] = depset(ctx.files.markdown_srcs)
+    if len(ctx.files.java_srcs) > 0:
+        direct_sources["java"] = depset(ctx.files.java_srcs)
+    if len(ctx.files.kotlin_srcs) > 0:
+        direct_sources["kotlin"] = depset(ctx.files.kotlin_srcs)
     check_direct_sources(direct_sources, str(ctx.label))
-    all_files = list(ctx.files.javascript_srcs) + list(ctx.files.jsx_srcs) + list(ctx.files.typescript_srcs) + list(ctx.files.tsx_srcs) + list(ctx.files.json_srcs) + list(ctx.files.python_srcs) + list(ctx.files.python_stub_srcs) + list(ctx.files.rust_srcs) + list(ctx.files.starlark_srcs) + list(ctx.files.toml_srcs) + list(ctx.files.markdown_srcs)
+    all_files = list(ctx.files.javascript_srcs) + list(ctx.files.jsx_srcs) + list(ctx.files.typescript_srcs) + list(ctx.files.tsx_srcs) + list(ctx.files.json_srcs) + list(ctx.files.python_srcs) + list(ctx.files.python_stub_srcs) + list(ctx.files.rust_srcs) + list(ctx.files.starlark_srcs) + list(ctx.files.toml_srcs) + list(ctx.files.markdown_srcs) + list(ctx.files.java_srcs) + list(ctx.files.kotlin_srcs)
     return [
         DefaultInfo(files = depset(all_files)),
         QualitySourcesInfo(direct_sources = direct_sources),
@@ -67,10 +71,20 @@ def _real_source_target_impl(ctx):
 real_source_target = rule(
     implementation = _real_source_target_impl,
     attrs = {
+        "java_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned Java sources for this fixture target.",
+        ),
         "javascript_srcs": attr.label_list(
             allow_files = True,
             default = [],
             doc = "Directly owned JavaScript sources for this fixture target.",
+        ),
+        "kotlin_srcs": attr.label_list(
+            allow_files = True,
+            default = [],
+            doc = "Directly owned Kotlin sources for this fixture target.",
         ),
         "json_srcs": attr.label_list(
             allow_files = True,

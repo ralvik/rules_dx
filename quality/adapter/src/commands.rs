@@ -76,6 +76,29 @@
 //! * Prettier takes the whole stage file list as `--no-config
 //!   --no-editorconfig --check <files>` (check); fix is `--no-config
 //!   --no-editorconfig --write <files>` (in-place, re-read on exit 0).
+//! * google-java-format takes the whole stage file list as
+//!   `--dry-run --set-exit-if-changed <files>` (check; stdout lists
+//!   paths that would change); fix is `--replace <files>` (in-place,
+//!   re-read on exit 0).
+//! * ktfmt takes the whole stage file list as `--google-style
+//!   --dry-run <files>` (check; stdout lists paths that would change);
+//!   fix is `--google-style <files>` (in-place, re-read on exit 0).
+//! * Checkstyle takes the whole stage file list as `-c <config> -f
+//!   sarif <files>` (check; SARIF on stdout, chatter on stderr).
+//!   Check-only, never rewrites; the config is always explicit
+//!   (Checkstyle has no usable upstream default).
+//! * PMD takes the whole stage file list as `check --dir <file>
+//!   --format sarif` plus `--rulesets <config>` when hinted (without
+//!   a hint PMD runs the upstream quickstart default).
+//!   Check-only, never rewrites.
+//! * SpotBugs takes the whole stage file list as `-textui
+//!   -effort:default -sarif <files>` (check; SARIF on stdout).
+//!   Check-only, never rewrites; target-coupled (the aspect supplies
+//!   compiled classes from `JavaInfo`).
+//! * ktlint takes the whole stage file list as `--relative
+//!   --reporter=sarif <files>` (check; SARIF on stdout); fix is
+//!   `--relative --format <files>` (in-place, re-read on exit 0 or 1
+//!   like ESLint `--fix`).
 //!   `--no-editorconfig` stays mandatory because the `editorconfig`
 //!   package is absent from the runfiles forest, so `.editorconfig` files
 //!   are currently inert; the flag freezes that behavior against future
@@ -748,6 +771,145 @@ pub const ERROR_PRONE_PATCH_FILE: &str = "error-prone.patch";
 /// flags: check-only, no files written, scratch-root cwd.
 pub fn error_prone_check(javac: &Path, files: &[&Path]) -> Invocation {
     invocation(javac, &["-Xplugin:ErrorProne"], files, "")
+}
+
+/// google-java-format check invocation: `--dry-run --set-exit-if-changed`
+/// over the whole stage file list. Stdout lists the absolute paths that
+/// would change, one per line (clean prints nothing); exit 1 with listed
+/// paths is findings, exit 0 is clean.
+pub fn google_java_format_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(
+        binary,
+        &["--dry-run", "--set-exit-if-changed"],
+        files,
+        "",
+    )
+}
+
+/// google-java-format fix invocation: `--replace` (in-place). The
+/// caller re-reads on exit 0 and returns its input otherwise,
+/// mirroring the other format tools.
+pub fn google_java_format_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--replace"], files, "")
+}
+
+/// ktfmt check invocation: `--google-style --dry-run
+/// --set-exit-if-changed` over the whole stage file list. Stdout lists
+/// the absolute paths that would change, one per line (clean prints
+/// nothing); exit 1 with listed paths is findings, exit 0 is clean.
+/// The style flag is always explicit so no ambient style can leak in
+/// (`.editorconfig` stays opt-in via `--enable-editorconfig`, never
+/// passed here).
+pub fn ktfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(
+        binary,
+        &["--google-style", "--dry-run", "--set-exit-if-changed"],
+        files,
+        "",
+    )
+}
+
+/// ktfmt fix invocation: `--google-style` (in-place). The caller
+/// re-reads on exit 0 and returns its input otherwise.
+pub fn ktfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--google-style"], files, "")
+}
+
+/// Checkstyle lint check invocation: `-c <config> -f sarif` over the
+/// whole stage file list. SARIF goes to stdout; operational chatter
+/// (Reflections scan, `Checkstyle ends with N errors.`) goes to
+/// stderr and is ignored by the parser. Exit 1 with a non-empty
+/// results log is findings; exit 0 is clean. Check-only: the runner
+/// never passes a fix flag. The config is always explicit: Checkstyle
+/// has no usable upstream default, so the caller resolves it first
+/// and fails the action when absent (mirroring ESLint/Vale).
+pub fn checkstyle_check(binary: &Path, files: &[&Path], config: &Path) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("-c"),
+        config.as_os_str().to_owned(),
+        OsString::from("-f"),
+        OsString::from("sarif"),
+    ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// PMD lint check invocation: `check --dir <files> --format sarif`
+/// over the whole stage file list, plus `--rulesets <config>` when
+/// hinted (without a hint PMD runs the upstream quickstart default).
+/// SARIF goes to stdout; exit 1 with a non-empty results log is
+/// findings, exit 0 is clean. Check-only: the runner never passes a fix flag.
+pub fn pmd_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("check"),
+    ];
+    for file in files {
+        argv.push(OsString::from("--dir"));
+        argv.push(file.as_os_str().to_owned());
+    }
+    argv.push(OsString::from("--format"));
+    argv.push(OsString::from("sarif"));
+    argv.push(OsString::from("--rulesets"));
+    match config {
+        Some(path) => argv.push(path.as_os_str().to_owned()),
+        None => argv.push(OsString::from("rulesets/java/quickstart.xml")),
+    }
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// SpotBugs lint check invocation: `-textui -effort:default -sarif`
+/// over the whole stage file list. SARIF goes to stdout; exit 1 with
+/// a non-empty results log is findings, exit 0 is clean. Check-only:
+/// the runner never passes a fix flag. Target-coupled: the aspect
+/// supplies compiled classes from the authoritative `JavaInfo`, never
+/// bare sources (provider-less targets carry no classes, so the stage
+/// runs with no inputs and reports no findings, mirroring the
+/// target-coupled tsc laziness row).
+pub fn spotbugs_check(binary: &Path, files: &[&Path]) -> Invocation {
+    let mut argv = vec![
+        binary.as_os_str().to_owned(),
+        OsString::from("-textui"),
+        OsString::from("-effort:default"),
+        OsString::from("-sarif"),
+    ];
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// ktlint lint check invocation: `--relative --log-level=none
+/// --reporter=sarif` over the whole stage file list. SARIF goes to
+/// stdout; exit 1 with a non-empty results log is findings, exit 0 is
+/// clean. `--relative` keeps URIs stable across scratch roots (the
+/// parser also accepts absolute `file:` URIs); `--log-level=none`
+/// suppresses the autocorrect WARN preamble so stdout stays pure
+/// SARIF (probed: without it the WARN line precedes the JSON).
+pub fn ktlint_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(
+        binary,
+        &["--relative", "--log-level=none", "--reporter=sarif"],
+        files,
+        "",
+    )
+}
+
+/// ktlint lint fix invocation: `--relative --format` (in-place). The
+/// caller re-reads on exit 0 or 1 (exit 1 signals remaining unfixable
+/// findings after the fixable ones were applied, mirroring the
+/// ESLint/Ruff lint-fix contract) and keeps its input on any other
+/// exit.
+pub fn ktlint_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["--relative", "--format"], files, "")
 }
 
 /// Error Prone patch invocation: the check compile plus

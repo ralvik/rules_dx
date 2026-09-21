@@ -32,16 +32,18 @@
 //! Fix application is best-effort per file: a nonzero fix exit leaves
 //! the bytes unchanged and the check diagnostics report the cause, so
 //! syntax-broken files surface findings instead of failing the action.
-//! The exceptions are Ruff lint fix and ESLint fix: they exit 1 when
-//! unfixable findings remain *after* applying the fixable ones, so the
-//! backend re-reads the bytes on exit 0 or 1 and keeps its input only on
-//! any other exit. Spawn, materialization, and re-read failures still
-//! fail the action.
+//! The exceptions are Ruff lint fix, ESLint fix, and ktlint lint fix:
+//! they exit 1 when unfixable findings remain *after* applying the
+//! fixable ones, so the backend re-reads the bytes on exit 0 or 1 and
+//! keeps its input only on any other exit. Spawn, materialization, and
+//! re-read failures still fail the action.
 //! Clippy has no fix command and is check-only: its suggestions
 //! ride the frozen authoritative upstream diagnostics and never
 //! rewrite. Vale, the Markdown checker, rustc typecheck, Ty,
-//! pydoclint, flake8, pylint, and Biome lint are check-only and never
-//! rewrite.
+//! pydoclint, flake8, pylint, Checkstyle, PMD, SpotBugs, Scalafix,
+//! Roslyn, FSharpLint, and Biome lint are check-only and never
+//! rewrite. google-java-format, ktfmt, Scalafmt, CSharpier, and Fantomas
+//! rewrite in place like the other format tools.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -63,7 +65,9 @@ use quality_result::proto::Diagnostic;
 /// typecheck adapter, the Python adapters (Ruff, Ty, pydoclint,
 /// flake8, pylint), the JavaScript/TypeScript/JSON adapters
 /// (Biome, ESLint, Prettier; target-coupled tsc stays pipeline-only and
-/// never runs as a bare backend invocation), and the Scala/.NET cohort
+/// never runs as a bare backend invocation), the JVM cohort
+/// (google-java-format format, Checkstyle/PMD/SpotBugs lint, ktfmt
+/// format, ktlint lint; SpotBugs target-coupled), and the Scala/.NET cohort
 /// (Scalafmt format, Scalafix lint via callback, CSharpier format,
 /// Fantomas format, Roslyn lint via delegated SARIF, FSharpLint lint
 /// via library API).
@@ -76,13 +80,18 @@ use quality_result::proto::Diagnostic;
 pub const REAL_TOOLS: &[&str] = &[
     "biome",
     "buildifier",
+    "checkstyle",
     "clippy",
     "csharpier",
     "eslint",
     "fantomas",
     "flake8",
     "fsharplint",
+    "google_java_format",
+    "ktfmt",
+    "ktlint",
     "markdown_check",
+    "pmd",
     "prettier",
     "pydoclint",
     "pylint",
@@ -92,6 +101,7 @@ pub const REAL_TOOLS: &[&str] = &[
     "rustfmt",
     "scalafix",
     "scalafmt",
+    "spotbugs",
     "taplo",
     "ty",
     "vale",
@@ -950,6 +960,53 @@ impl RealBackend {
                         parsers::parse_fsharplint(&out.stdout, out.code, &strs),
                     )
                 }
+            }
+            "google_java_format" => {
+                let invocation = commands::google_java_format_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_google_java_format(&out.stdout, out.code, &strs),
+                )
+            }
+            "ktfmt" => {
+                let invocation = commands::ktfmt_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_ktfmt(&out.stdout, out.code, &strs))
+            }
+            "checkstyle" => {
+                let invocation = match config.as_ref() {
+                    Some(cfg) => commands::checkstyle_check(&tool.binary, &refs, cfg),
+                    None => {
+                        return Err(execution(
+                            tool_id,
+                            "checkstyle requires a config".to_owned(),
+                        ));
+                    }
+                };
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_checkstyle(&out.stdout, out.code, &strs),
+                )
+            }
+            "pmd" => {
+                let invocation = commands::pmd_check(&tool.binary, &refs, config.as_deref());
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_pmd(&out.stdout, out.code, &strs))
+            }
+            "spotbugs" => {
+                let invocation = commands::spotbugs_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_spotbugs(&out.stdout, out.code, &strs),
+                )
+            }
+            "ktlint" => {
+                let invocation = commands::ktlint_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(tool_id, parsers::parse_ktlint(&out.stdout, out.code, &strs))
             }
             _ => Err(execution(
                 tool_id,
