@@ -146,7 +146,35 @@ plus the Python runfiles library. Live `twine upload --non-interactive
 and `PYPI_PUBLISH_APPROVED=1` after explicit owner approval, never by
 default. Deploy targets live next to the distribution they publish.
 
-## Path F: standalone `dx` install verification (accepted)
+## Path F: `crates_deploy` (accepted)
+
+The fourth deploy macro publishes staged crate sources with a
+local-first Python publisher, no shell, no `sh_binary`:
+
+```starlark
+load("@rules_dx//deploy/rules:crates.bzl", "crates_deploy")
+
+crates_deploy(
+    name = "crates_demo",
+    crate = ":crates_demo_crate",
+    version = "0.0.0",
+)
+```
+
+`bazel run //deploy/rules:crates_demo` (or `dx deploy
+//deploy/rules:crates_demo`) builds a local vendor directory
+(`<crate>-vendor/` with `vendor/<crate>/` plus a file registry under
+`registry/<crate>/<version>/`) and verifies bytes via sha256, publishing
+nothing. Pass an output directory after `--` to choose where the vendor
+tree lands (default: `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The
+deploy program is a `py_binary` on the managed Python 3.12 toolchain
+only, with pinned `data` plus the Python runfiles library. Live
+`cargo publish` runs only with `CRATES_PUBLISH_LIVE=1`,
+`CARGO_REGISTRY_TOKEN`, and `CRATES_PUBLISH_APPROVED=1` after explicit
+owner approval, never by default, and never passes `--allow-dirty`.
+Deploy targets live next to the crate sources they publish.
+
+## Path G: standalone `dx` install verification (accepted)
 
 Standalone `dx` binaries verify publisher identity at install time via
 `//deploy/install:dx_verify` (`deploy/install/dx_verify.sh`). The verifier
@@ -167,7 +195,7 @@ Distribution verification qualified under issue #459. Policy tests are
 `bazel test //deploy/install:all` plus `bazel run
 //tools/ci:signing_distribution_qualification`.
 
-## Path G: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
+## Path H: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
 
 The full release path (issue #311; human-run driver owned under issue
 #458, live successor to closed #311 for the human-run path; signing stack

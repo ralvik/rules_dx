@@ -10,6 +10,8 @@ load(":defs.bzl", "dx_deployment")
 load(":deploy_tests.bzl", "deploy_analysis_tests", "deploy_app_analysis_tests", "deploy_debug_analysis_tests", "deploy_unit_tests")
 load(":github.bzl", "github_deploy")
 load(":github_tests.bzl", "github_analysis_tests", "github_debug_analysis_tests", "github_unit_tests")
+load(":crates.bzl", "crates_deploy")
+load(":crates_tests.bzl", "crates_analysis_tests", "crates_debug_analysis_tests", "crates_unit_tests")
 load(":pypi.bzl", "pypi_deploy")
 load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 
@@ -26,6 +28,8 @@ exports_files([
     "github_deploy.sh",
     "github_tests.bzl",
     "github_verify.sh",
+    "crates.bzl",
+    "crates_tests.bzl",
     "launcher.bzl",
     "pypi.bzl",
     "pypi_tests.bzl",
@@ -45,6 +49,14 @@ py_binary(
     name = "hasher",
     srcs = ["hasher.py"],
     main = "hasher.py",
+)
+
+# Shared vendor logic for `crates_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "crates_deploy_lib",
+    srcs = ["crates_deploy.py"],
+    imports = ["."],
 )
 
 # Shared wheelhouse logic for `pypi_deploy` launchers plus `py_test`.
@@ -162,6 +174,10 @@ test_suite(
         ":archive_analysis",
         ":archive_debug_analysis",
         ":archive_unit",
+        ":crates_analysis",
+        ":crates_debug_analysis",
+        ":crates_deploy_test",
+        ":crates_unit",
         ":deploy_analysis",
         ":deploy_app_analysis",
         ":deploy_debug_analysis",
@@ -268,12 +284,67 @@ py_test(
     deps = [":pypi_deploy_lib"],
 )
 
+# Fourth deploy macro: local-first crates.io publisher over deterministic
+# dummy crate sources. The debug variant pins profile passthrough. The
+# `py_test` below exercises the local vendor build with no network.
+genrule(
+    name = "crates_demo_manifest",
+    outs = ["crates_demo_crate/Cargo.toml"],
+    cmd = "printf '[package]\\nname = \"crates_demo\"\\nversion = \"0.0.0\"\\n' > $@",
+)
+
+genrule(
+    name = "crates_demo_source",
+    outs = ["crates_demo_crate/src/lib.rs"],
+    cmd = "printf 'pub fn hello() -> &str { \"hello\" }\\n' > $@",
+)
+
+filegroup(
+    name = "crates_demo_crate",
+    srcs = [
+        ":crates_demo_manifest",
+        ":crates_demo_source",
+    ],
+)
+
+crates_deploy(
+    name = "crates_demo",
+    crate = ":crates_demo_crate",
+    version = "0.0.0",
+)
+
+crates_deploy(
+    name = "crates_demo_debug",
+    crate = ":crates_demo_crate",
+    profile = "debug",
+    version = "0.0.0",
+)
+
+crates_unit_tests(name = "crates_unit")
+
+crates_analysis_tests(name = "crates_analysis")
+
+crates_debug_analysis_tests(name = "crates_debug_analysis")
+
+# Local vendor output per demo crate
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "crates_deploy_test",
+    srcs = ["crates_deploy_test.py"],
+    imports = ["."],
+    main = "crates_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":crates_deploy_lib"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
         "BUILD.bazel",
         "archive.bzl",
         "archive_tests.bzl",
+        "crates.bzl",
+        "crates_tests.bzl",
         "defs.bzl",
         "deploy_tests.bzl",
         "github.bzl",
