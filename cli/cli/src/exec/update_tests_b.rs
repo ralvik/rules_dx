@@ -143,7 +143,8 @@ fn default_updates_preset_atomically() {
 
 #[test]
 fn update_json_never_emits_change_or_mutation() {
-    // Wont-fix: backends provide no committed-change
+    // Wont-fix, Issue #586 (See: `docs/cli/output-protocol.md#mutation`):
+    // backends provide no committed-change
     // manifest and Git/BUILD inference is forbidden, so update JSON
     // never emits change/mutation events in any mode.
     let runner = ScriptRunner::new(&[]);
@@ -184,10 +185,13 @@ fn update_json_never_emits_change_or_mutation() {
 
 #[test]
 fn update_json_completeness_is_per_set_plus_finished() {
-    // Event-completeness contract: exactly one terminal
-    // per-set event per selected set in sorted order, then exactly
+    // Event-completeness contract, Issue #586 (See:
+    // `docs/cli/output-protocol.md#mutation`): exactly one terminal
+    // per-set event per selected set in sorted order, then an
+    // `update_recovery` notice on failure (issue #772, See:
+    // `docs/cli/commands/audit-update-bazel.md#dx-update`), then exactly
     // one command_finished. Preceding per-set events stay true with
-    // no rollback; nothing is inferred for unattempted sets.
+    // no automatic rollback; nothing is inferred for unattempted sets.
     let runner = ScriptRunner::new(&[("maven", Some(1))]);
     let (code, out, err) = run_with(&["update", "--output=json"], &runner);
     assert_eq!(code, 1, "{out}{err}");
@@ -202,9 +206,21 @@ fn update_json_completeness_is_per_set_plus_finished() {
         .collect();
     assert_eq!(kinds[0], "command_started");
     assert_eq!(kinds[kinds.len() - 1], "command_finished");
-    // Five selected sets means five terminal per-set events.
-    let per_set = &events[1..events.len() - 1];
-    assert_eq!(per_set.len(), 5, "{out}");
+    // Five selected sets means five terminal per-set events plus one
+    // recovery notice before finished.
+    let middle = &events[1..events.len() - 1];
+    assert_eq!(middle.len(), 6, "{out}");
+    let (per_set, recovery) = (&middle[..5], &middle[5]);
+    assert_eq!(
+        recovery["code"],
+        serde_json::json!("update_recovery"),
+        "{out}"
+    );
+    assert_eq!(recovery["event"], serde_json::json!("notice"), "{out}");
+    let recovery_message = recovery["message"].as_str().expect("message");
+    assert!(recovery_message.contains("dx update maven"), "{out}");
+    assert!(recovery_message.contains("idempotent"), "{out}");
+    assert!(err.contains("update_recovery"), "{err}");
     let scopes: Vec<String> = per_set
         .iter()
         .map(|event| {
@@ -246,8 +262,9 @@ fn update_json_completeness_is_per_set_plus_finished() {
 
 #[test]
 fn update_json_check_and_dryrun_emit_no_file_events_or_counts() {
-    // The wont-fix holds for --check and --dry-run too;
-    // neither emits file-level events nor counts.
+    // The wont-fix holds for --check and --dry-run too, Issue #586 (See:
+    // `docs/cli/output-protocol.md#mutation`); neither emits file-level
+    // events nor counts.
     let harness = Harness::new("update-586-check-json");
     harness.write_source(
         ".bazelrc",
@@ -276,4 +293,41 @@ fn update_json_check_and_dryrun_emit_no_file_events_or_counts() {
     assert_eq!(code, 0, "{out}{err}");
     assert!(!out.contains("\"event\":\"change\""), "{out}");
     assert!(!out.contains("\"event\":\"mutation\""), "{out}");
+}
+
+#[test]
+fn update_failure_reports_recovery_in_text_and_json() {
+    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`):
+    // a failed run keeps per-set commits and reports the manual recovery
+    // (idempotent retry plus `git checkout` restore) in both modes.
+    let runner = ScriptRunner::new(&[("maven", Some(1))]);
+    let (code, out, err) = run_with(&["update"], &runner);
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("update_recovery"), "{err}");
+    assert!(err.contains("dx update maven"), "{err}");
+    assert!(err.contains("idempotent"), "{err}");
+    assert!(err.contains("git checkout --"), "{err}");
+
+    let runner = ScriptRunner::new(&[("maven", Some(1))]);
+    let (code, out, err) = run_with(&["update", "--output=json"], &runner);
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(out.contains("\"code\":\"update_recovery\""), "{out}");
+    assert!(out.contains("dx update maven"), "{out}");
+    assert!(err.contains("update_recovery"), "{err}");
+}
+
+#[test]
+fn update_success_emits_no_recovery() {
+    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`):
+    // clean runs need no recovery hint.
+    let runner = ScriptRunner::new(&[]);
+    let (code, out, err) = run_with(&["update"], &runner);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(!err.contains("update_recovery"), "{err}");
+    assert!(!out.contains("update_recovery"), "{out}");
+
+    let runner = ScriptRunner::new(&[]);
+    let (code, out, err) = run_with(&["update", "--output=json"], &runner);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(!out.contains("update_recovery"), "{out}");
 }

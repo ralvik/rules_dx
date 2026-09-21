@@ -298,6 +298,16 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Atomic update rollback-plan harness (issue #772); see docs/cli/commands/audit-update-bazel.md#dx-update.
+    sh_binary(
+        name = "update_rollback_qualification",
+        srcs = ["update_rollback_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Starlark testing futures harness; see docs/testing/starlark.md#future-not-implemented.
     sh_binary(
         name = "starlark_futures_qualification",

@@ -519,7 +519,9 @@ A successful dependency update is not a guarantee that application code still bu
 Failure in one dependency set does not stop updates to independent selected sets. Preserve successful
 changes, report each failure, and return an overall failure status if any selected update fails.
 Do not run operations that depend on a failed update; report them as blocked, not successful.
-This is not a repository-wide transaction or rollback. Independence must follow the approved
+Atomicity is per set, never repository-wide: each backend success commits that set's locks
+immediately and a later failure or interruption keeps preceding successes with no automatic
+rollback. Independence must follow the approved
 upstream integration: sets sharing a lockfile or resolver workspace cannot be treated as independent
 merely because they have different Bazel labels.
 This is the explicit update exception to [common fail-fast handling](../cli-contract.md#exit-status),
@@ -538,8 +540,13 @@ resolver-owned by `dx_update::backend`, pinned by fixtures in
 `cli/update/tests/fixtures/update_events/` plus `cli/cli/src/exec/update.rs`): backends provide
 no committed-change manifest and Git scan/BUILD parse/rerun inference is rejected, so per-set
 `notice`/`error` plus `command_finished` is the complete event contract with sorted per-set order,
-`results_complete=true` on live terminal reports, no rollback, and interrupted runs keeping
-preceding per-set events true with nothing for sets not yet attempted. See the
+`results_complete=true` on live terminal reports, an `update_recovery` notice plus
+`dx: update_recovery:` text hint on failure carrying the idempotent retry (`dx update`
+with the failed/blocked sets) and the manual restore (`git checkout --` with the kept
+locks, run by the operator when version-controlled; `dx` never runs Git), and interrupted
+runs keeping preceding per-set events true with nothing for sets not yet attempted and the
+same retry shape for the unattempted sets. Recovery planning lives in `dx_update::recovery`
+and is pinned by fixtures in `cli/update/tests/fixtures/update_rollback/`. See the
 [Output Protocol](../output-protocol.md#mutation) for the full contract.
 
 Invoking `dx update` authorizes immediate application without an interactive confirmation prompt or

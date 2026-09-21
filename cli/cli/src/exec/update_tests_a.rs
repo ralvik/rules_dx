@@ -165,6 +165,10 @@ pub(super) fn live_independent_failure_preserves_success_and_exits_one() {
     assert!(out.contains("4 succeeded, 1 failed, 0 blocked"), "{out}");
     assert!(err.contains("update_failed"), "{err}");
     assert!(err.contains("failed to update maven"), "{err}");
+    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`):
+    // partial runs report the recovery plan, never silent success.
+    assert!(err.contains("update_recovery"), "{err}");
+    assert!(err.contains("dx update maven"), "{err}");
     assert_eq!(runner.calls.borrow().len(), 4);
 }
 
@@ -260,6 +264,9 @@ pub(super) fn live_json_emits_per_set_notices_and_finished() {
     assert!(kinds.contains(&"notice"));
     assert!(kinds.contains(&"error"));
     assert!(err.contains("update_failed"), "{err}");
+    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`).
+    assert!(out.contains("\"code\":\"update_recovery\""), "{out}");
+    assert!(err.contains("update_recovery"), "{err}");
 }
 
 #[test]
