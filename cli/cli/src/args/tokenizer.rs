@@ -7,6 +7,11 @@
 //! `is_command_positional` helpers). The full `parse` validation
 //! (scope shapes, per-command option ownership, output-contract gates,
 //! profile flags) stays in [`super::parser`].
+//! Strict dx CLI surface (See: `docs/cli/cli-contract.md`): exact long
+//! names only, help flag-only with no `help` verb (`disable_help_subcommand`),
+//! `dx bazel` tails forward verbatim while every other shape parses whole;
+//! attached `=value` echoes the whole token and missing values name the
+//! bare flag, pinned by strict fixtures plus help goldens.
 
 use clap::Parser;
 

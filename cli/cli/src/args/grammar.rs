@@ -20,12 +20,20 @@ use super::command::Command;
 /// `argv` order. `--help`/`-h` render from this same grammar definition
 ///: one source feeds parsing, help, and completions/man
 /// pages, never hand-maintained usage strings.
+/// Strict parsing (See: `docs/cli/cli-contract.md`): exact `--long` names
+/// only (no prefix inference), no `help` verb subcommand (help is
+/// flag-only via auto `--help`/`-h`), unknown flags/values fail as
+/// `UnknownOption`/`MissingValue`/`Bad*` through [`super::tokenizer`];
+/// `allow_negative_numbers` stays narrow (numeric `-1`-style values only),
+/// never the thin-shim `allow_hyphen_values` unconditional consumption;
+/// `dx bazel` tails forward verbatim via `split_bazel_verbatim`.
 #[derive(Parser)]
 #[command(
     name = "dx",
     about = "Transparent UI over Bazel: quality, workflow, and environment commands",
     long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults). --here selects the current directory tree instead (//path/...; //... at the root) and cannot be combined with explicit scopes.\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
-    version
+    version,
+    disable_help_subcommand = true
 )]
 pub(crate) struct Cli {
     /// Override upward workspace discovery (find MODULE.bazel).

@@ -1,0 +1,367 @@
+//! Strict parsing plus generated-help fixtures for the `dx` CLI.
+//!
+//! Qualified seed-only under #810 (See: `docs/cli/cli-contract.md`):
+//! exact `--long` names only, help flag-only with no `help` verb,
+//! unknown/missing/bad shapes fail fast with no silent ignore,
+//! attached `=value` echoes the whole token, hyphen-values never
+//! consumed as option values, `dx bazel` tails forward verbatim,
+//! and `--help`/`-h` render from the same grammar that parses.
+
+#![allow(unused_imports)]
+
+use super::*;
+
+use super::super::{ArgsError, Command, ReportRequest};
+use super::parse;
+use dx_output::{OutputMode, Threshold};
+
+fn args(words: &[&str]) -> Vec<String> {
+    words.iter().map(ToString::to_string).collect()
+}
+
+#[test]
+fn strict_unknown_options_fail_with_whole_token() {
+    for words in [
+        vec!["lint", "--jobs=4"],
+        vec!["lint", "-q"],
+        vec!["lint", "--dry-run=yes"],
+        vec!["lint", "--quiet=x"],
+        vec!["lint", "--check=x"],
+        vec!["clean", "--bazel=yes"],
+        vec!["init", "--force"],
+        vec!["hooks", "install", "--force"],
+        vec!["-"],
+        vec!["lint", "--bogus"],
+        vec!["lint", "--bogus=1"],
+    ] {
+        match parse(&args(&words)) {
+            Err(ArgsError::UnknownOption { option, .. }) => {
+                assert!(
+                    words.contains(&option.as_str()),
+                    "words: {words:?} echoed as {option:?}"
+                );
+            }
+            other => panic!("words: {words:?}: want UnknownOption, got {other:?}"),
+        }
+    }
+    assert_eq!(
+        parse(&args(&["lint", "--jobs=4"])),
+        Err(ArgsError::UnknownOption {
+            option: "--jobs=4".to_owned(),
+            suggestion: None,
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--dry-run=yes"])),
+        Err(ArgsError::UnknownOption {
+            option: "--dry-run=yes".to_owned(),
+            suggestion: None,
+        })
+    );
+}
+
+#[test]
+fn strict_missing_values_fail_with_bare_flag() {
+    assert_eq!(
+        parse(&args(&["lint", "--output"])),
+        Err(ArgsError::MissingValue {
+            option: "--output".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--workspace", "--quiet", "format"])),
+        Err(ArgsError::MissingValue {
+            option: "--workspace".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--workspace="])),
+        Err(ArgsError::MissingValue {
+            option: "--workspace".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["coverage", "--min-coverage"])),
+        Err(ArgsError::MissingValue {
+            option: "--min-coverage".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["docs", "--port"])),
+        Err(ArgsError::MissingValue {
+            option: "--port".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["migrate", "--from", "--to=2.0.0"])),
+        Err(ArgsError::MissingValue {
+            option: "--from".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn strict_hyphen_values_are_never_consumed_as_option_values() {
+    assert_eq!(
+        parse(&args(&["lint", "--output", "--quiet"])),
+        Err(ArgsError::MissingValue {
+            option: "--output".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--workspace", "--quiet"])),
+        Err(ArgsError::MissingValue {
+            option: "--workspace".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["build", "--output", "--dry-run"])),
+        Err(ArgsError::MissingValue {
+            option: "--output".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn strict_bad_values_fail_with_contract_shapes() {
+    assert_eq!(
+        parse(&args(&["lint", "--output=yaml"])),
+        Err(ArgsError::BadOutput {
+            value: "yaml".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--fail-on=never"])),
+        Err(ArgsError::BadFailOn {
+            value: "never".to_owned(),
+        })
+    );
+    for bad in ["sarif", "=out.sarif", "sarif=", ""] {
+        assert_eq!(
+            parse(&args(&["lint", &format!("--report={bad}")])),
+            Err(ArgsError::BadReport {
+                value: bad.to_owned(),
+            })
+        );
+    }
+    assert_eq!(
+        parse(&args(&["coverage", "--min-coverage=eighty"])),
+        Err(ArgsError::BadMinCoverage {
+            value: "eighty".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["coverage", "--min-coverage=101"])),
+        Err(ArgsError::BadMinCoverage {
+            value: "101".to_owned(),
+        })
+    );
+}
+
+#[test]
+fn strict_typo_suggestions_come_from_the_same_grammar() {
+    assert_eq!(
+        parse(&args(&["lintt"])),
+        Err(ArgsError::UnknownCommand {
+            command: "lintt".to_owned(),
+            suggestion: Some("lint".to_owned()),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["--ouptut=json"])),
+        Err(ArgsError::UnknownOption {
+            option: "--ouptut=json".to_owned(),
+            suggestion: Some("--output".to_owned()),
+        })
+    );
+}
+
+#[test]
+fn strict_bazel_tail_forwards_verbatim() {
+    let got = parse(&args(&["bazel", "build", "//...", "--", "--jobs=4"])).expect("parse");
+    assert_eq!(got.command, Command::Bazel);
+    assert_eq!(
+        got.bazel_options,
+        vec![
+            "build".to_owned(),
+            "//...".to_owned(),
+            "--jobs=4".to_owned()
+        ]
+    );
+    for words in [
+        vec!["bazel", "--jobs=4"],
+        vec!["bazel", "--check"],
+        vec!["bazel", "--pin=0.1.0"],
+        vec!["bazel", "build", "--here"],
+    ] {
+        let got = parse(&args(&words)).expect("verbatim");
+        assert_eq!(got.command, Command::Bazel, "words: {words:?}");
+    }
+    for words in [
+        vec!["--output=json", "bazel", "version"],
+        vec!["--check", "bazel", "version"],
+        vec!["--here", "bazel", "version"],
+    ] {
+        assert!(
+            matches!(
+                parse(&args(&words)),
+                Err(ArgsError::UnsupportedOption { .. })
+            ),
+            "words: {words:?}"
+        );
+    }
+}
+
+#[test]
+fn strict_no_help_verb_help_is_flag_only() {
+    for words in [vec!["help"], vec!["Help"], vec!["HELP"]] {
+        match parse(&args(&words)) {
+            Err(ArgsError::UnknownCommand { command, .. }) => {
+                assert_eq!(command, words[0]);
+            }
+            other => panic!("words: {words:?}: want UnknownCommand, got {other:?}"),
+        }
+    }
+    assert_eq!(
+        parse(&args(&["help", "lint"])),
+        Err(ArgsError::UnknownCommand {
+            command: "help".to_owned(),
+            suggestion: None,
+        })
+    );
+    for flag in ["--help", "-h"] {
+        match parse(&args(&[flag])) {
+            Err(ArgsError::Help { .. }) => {}
+            other => panic!("{flag}: want Help, got {other:?}"),
+        }
+    }
+    for argv in [
+        vec!["lint", "--help"],
+        vec!["--help", "lint"],
+        vec!["clean", "-h"],
+    ] {
+        match parse(&args(&argv)) {
+            Err(ArgsError::Help { .. }) => {}
+            other => panic!("{argv:?}: want Help, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn strict_help_is_generated_from_the_same_grammar() {
+    use clap::{CommandFactory, ValueEnum};
+    let text = match parse(&args(&["--help"])) {
+        Err(ArgsError::Help { text }) => text,
+        other => panic!("want Help, got {other:?}"),
+    };
+    for needle in [
+        "dx",
+        "lint",
+        "build",
+        "--workspace",
+        "--output",
+        "--fail-on",
+        "Exit codes",
+    ] {
+        assert!(text.contains(needle), "top help missing {needle:?}");
+    }
+    for command in Command::value_variants() {
+        assert!(
+            text.contains(command.name()),
+            "top help missing command {:?}",
+            command.name()
+        );
+    }
+    let grammar = super::super::grammar::cli_command();
+    for long in [
+        "workspace",
+        "output",
+        "fail-on",
+        "dry-run",
+        "quiet",
+        "verbose",
+    ] {
+        assert!(
+            grammar
+                .get_arguments()
+                .any(|arg| arg.get_long() == Some(long)),
+            "grammar missing --{long}"
+        );
+        assert!(text.contains(&format!("--{long}")), "help missing --{long}");
+    }
+    for argv in [vec!["lint", "--help"], vec!["status", "--help"]] {
+        let text = match parse(&args(&argv)) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("{argv:?}: want Help, got {other:?}"),
+        };
+        for needle in [
+            "Usage:",
+            "Scopes:",
+            "Exit codes:",
+            "Output:",
+            "Per-command flags:",
+            "--workspace",
+        ] {
+            assert!(text.contains(needle), "{argv:?}: missing {needle:?}");
+        }
+    }
+}
+
+#[test]
+fn strict_known_flags_on_wrong_commands_fail_as_unsupported() {
+    for words in [
+        vec!["build", "--serve"],
+        vec!["lint", "--serve"],
+        vec!["build", "--port=8080"],
+        vec!["lint", "--min-coverage=80"],
+        vec!["build", "--check"],
+        vec!["lint", "--bazel"],
+    ] {
+        assert!(
+            matches!(
+                parse(&args(&words)),
+                Err(ArgsError::UnsupportedOption { .. })
+            ),
+            "words: {words:?} must fail as unsupported, got {:?}",
+            parse(&args(&words))
+        );
+    }
+}
+
+#[test]
+fn strict_every_command_help_pins_usage_scopes_exits_output() {
+    use clap::ValueEnum;
+    for command in Command::value_variants() {
+        // `dx bazel --help` forwards `--help` verbatim to Bazel by contract,
+        // and `dx --help bazel` routes to top help via the verbatim split;
+        // dx-owned bazel help is the generated `render_command_help` golden.
+        let text = if *command == Command::Bazel {
+            super::super::help::render_command_help(Command::Bazel)
+        } else {
+            let argv: Vec<String> = args(&[command.name(), "--help"]);
+            match parse(&argv) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{:?}: want Help, got {other:?}", command.name()),
+            }
+        };
+        for needle in [
+            "Usage:",
+            "Scopes:",
+            "Exit codes:",
+            "Output:",
+            "Per-command flags:",
+        ] {
+            assert!(
+                text.contains(needle),
+                "{:?}: missing {needle:?}",
+                command.name()
+            );
+        }
+        assert!(
+            text.contains(command.name()),
+            "{:?}: missing command name",
+            command.name()
+        );
+    }
+    assert_eq!(Command::value_variants().len(), 32);
+}

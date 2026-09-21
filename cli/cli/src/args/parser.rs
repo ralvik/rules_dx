@@ -912,3 +912,6 @@ mod parser_tests_a;
 #[cfg(test)]
 #[path = "parser_tests_b.rs"]
 mod parser_tests_b;
+#[cfg(test)]
+#[path = "strict_tests.rs"]
+mod strict_tests;

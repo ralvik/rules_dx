@@ -74,6 +74,7 @@ bazel run --noshow_progress //tools/ci:update_events_qualification
 bazel run --noshow_progress //tools/ci:update_rollback_qualification
 bazel run --noshow_progress //tools/ci:starlark_futures_qualification
 bazel run --noshow_progress //tools/ci:cli_execution_gaps_qualification
+bazel run --noshow_progress //tools/ci:cli_strict_qualification
 bazel run --noshow_progress //tools/ci:layer4_loss_qualification
 bazel run --noshow_progress //tools/ci:shell_env_qualification
 bazel run --noshow_progress //tools/ci:bindgen_qualification
