@@ -41,6 +41,15 @@ TOOLCHAIN_SUBJECTS_USE_CASE = "platform plus toolchain mapping plus resolved rep
 TOOLCHAIN_SUBJECTS_SURFACE = "DxSubjectInfo fields plus DefaultInfo basenames only, no ToolchainInfo"
 TOOLCHAIN_SUBJECTS_ISSUE = "use case pinned under issue #792, stays deferred"
 
+# Output-group subjects use case (issue #794): group-to-files mapping plus
+# resolved report via output_group_subjects.bzl, proven by
+# //libs/starlark/tests:output_group_unit. Direct OutputGroupInfo
+# observation stays deferred; analysis observes DxSubjectInfo fields plus
+# DefaultInfo basenames only, wrapper forwarding does not imply observation.
+OUTPUT_GROUP_SUBJECTS_USE_CASE = "group-to-files mapping plus resolved report via output_group_subjects.bzl"
+OUTPUT_GROUP_SUBJECTS_SURFACE = "DxSubjectInfo fields plus DefaultInfo basenames only, no OutputGroupInfo"
+OUTPUT_GROUP_SUBJECTS_ISSUE = "use case pinned under issue #794, stays deferred"
+
 # ADR 0009 provisional coverage: configuration includes transitions,
 # action includes registered-action, broader subjects (targets, actions,
 # files, depsets, runfiles) stay provisional with the same deferred
