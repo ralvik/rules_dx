@@ -22,10 +22,11 @@
 //! artifact. Byte-identical duplicate records (one record reached through
 //! many transitive routes) merge silently; any other second claim on a
 //! logical path fails before selection with every claimant listed. The
-//! normalized fingerprint binds exec paths and is hashed with BLAKE3-256
-//! through `dx_digest` (no algorithm negotiation). [`plan_projection`]
-//! resolves the merged plan to deterministic mirror leaves
-//! (`logical_path` to full BEP artifact path) for setup to commit.
+//! normalized fingerprint binds exec paths and the replacement contract
+//! and is hashed with BLAKE3-256 through `dx_digest` (no algorithm
+//! negotiation). [`plan_projection`] resolves the merged plan to
+//! deterministic mirror leaves (`logical_path` to full BEP artifact path
+//! plus the replacement contract) for setup to commit.
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -209,12 +210,18 @@ pub fn build_argv_for_plan(plan: &RepositoryRootPlan) -> Vec<String> {
 /// `read_only: true` unconditionally, matching `codegen_entry`.
 /// `exec_path` is the BEP-matching suffix for the backing artifact, or
 /// empty for a logical-only entry requiring no materialized artifact.
+/// `replaces` is the replacement contract: empty for fail-closed
+/// entries, otherwise equal to `logical_path` with non-empty
+/// `exec_path`, identifying the replaced checked-in source and the
+/// replacing generated artifact.
+/// See: `docs/environments/codegen.md` (provider contract).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodegenEntry {
     pub logical_path: String,
     pub import_root: String,
     pub namespace: String,
     pub exec_path: String,
+    pub replaces: String,
 }
 
 /// One contributor record: all entries from one producer in one
@@ -313,6 +320,7 @@ pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<CodegenRecord>, Co
                         import_root: entry.import_root,
                         namespace: entry.namespace,
                         exec_path: entry.exec_path,
+                        replaces: entry.replaces,
                     })
                     .collect(),
             });
@@ -402,14 +410,16 @@ fn index_artifacts<'a>(
 }
 
 /// Merge index: owner `(producer, language)` to entry key
-/// `(logical_path, import_root, namespace, exec_path)` to entry.
-type MergeIndex<'a> =
-    BTreeMap<(&'a str, &'a str), BTreeMap<(&'a str, &'a str, &'a str, &'a str), &'a CodegenEntry>>;
+/// `(logical_path, import_root, namespace, exec_path, replaces)` to entry.
+type MergeIndex<'a> = BTreeMap<
+    (&'a str, &'a str),
+    BTreeMap<(&'a str, &'a str, &'a str, &'a str, &'a str), &'a CodegenEntry>,
+>;
 
 /// Merges records into deterministic normalized order, mirroring
 /// `codegen_merge_records`: byte-identical duplicate entries collapse,
 /// surviving records sort by `(producer, language)` with entries sorted
-/// by `(logical_path, import_root, namespace, exec_path)`.
+/// by `(logical_path, import_root, namespace, exec_path, replaces)`.
 pub fn merge_records(records: &[CodegenRecord]) -> Vec<CodegenRecord> {
     let mut owners: MergeIndex<'_> = BTreeMap::new();
     for record in records {
@@ -423,6 +433,7 @@ pub fn merge_records(records: &[CodegenRecord]) -> Vec<CodegenRecord> {
                     entry.import_root.as_str(),
                     entry.namespace.as_str(),
                     entry.exec_path.as_str(),
+                    entry.replaces.as_str(),
                 ))
                 .or_insert(entry);
         }
@@ -439,13 +450,13 @@ pub fn merge_records(records: &[CodegenRecord]) -> Vec<CodegenRecord> {
 
 /// Detects incompatible logical-path claims across records, mirroring
 /// `codegen_conflict_error`: byte-identical duplicates (same producer,
-/// language, root, namespace, and exec path) merge silently, any other
-/// second claim fails, listing every claimant. Returns `""` when
-/// conflict-free.
+/// language, root, namespace, exec path, and replaces) merge silently,
+/// any other second claim fails, listing every claimant. Returns `""`
+/// when conflict-free.
 pub fn conflict_error(records: &[CodegenRecord]) -> String {
     /// One logical-path claim: owner `(producer, language)` plus the
-    /// full entry identity `(import_root, namespace, exec_path)`.
-    type Claim<'a> = (&'a str, &'a str, &'a str, &'a str, &'a str);
+    /// full entry identity `(import_root, namespace, exec_path, replaces)`.
+    type Claim<'a> = (&'a str, &'a str, &'a str, &'a str, &'a str, &'a str);
     let mut by_path: BTreeMap<&str, BTreeSet<Claim<'_>>> = BTreeMap::new();
     for record in records {
         for entry in &record.entries {
@@ -458,6 +469,7 @@ pub fn conflict_error(records: &[CodegenRecord]) -> String {
                     entry.import_root.as_str(),
                     entry.namespace.as_str(),
                     entry.exec_path.as_str(),
+                    entry.replaces.as_str(),
                 ));
         }
     }
@@ -481,7 +493,7 @@ pub fn conflict_error(records: &[CodegenRecord]) -> String {
 /// Serializable fingerprint view: field order matches the frozen
 /// Starlark `codegen_plan_fingerprint` (`entries`, `language`,
 /// `producer`; entry `exec_path`, `import_root`, `logical_path`,
-/// `namespace`, `read_only`) so `serde_json::to_string` stays
+/// `namespace`, `read_only`, `replaces`) so `serde_json::to_string` stays
 /// byte-identical for the pinned fixtures while gaining correct
 /// escaping for quotes, backslashes, and control characters.
 #[derive(Serialize)]
@@ -491,6 +503,7 @@ struct FingerprintEntry<'a> {
     logical_path: &'a str,
     namespace: &'a str,
     read_only: bool,
+    replaces: &'a str,
 }
 
 #[derive(Serialize)]
@@ -503,10 +516,10 @@ struct FingerprintRecord<'a> {
 /// Renders the normalized complete-plan hash input, mirroring
 /// `codegen_plan_fingerprint`: deterministic JSON over the merged
 /// records, one object per record with producer, language, and entries
-/// sorted by (logical path, import root, namespace, exec path), each
-/// entry binding its exec suffix. Byte-identical to the Starlark
-/// rendering for the same records (pinned by the chain/prost fixture
-/// fingerprints).
+/// sorted by (logical path, import root, namespace, exec path,
+/// replaces), each entry binding its exec suffix and replacement
+/// contract. Byte-identical to the Starlark rendering for the same
+/// records (pinned by the chain/prost fixture fingerprints).
 ///
 /// Keep: the env fingerprint shares the JSON owner
 /// (`dx_fingerprint::to_json`) but keeps its own view shape (codegen
@@ -527,6 +540,7 @@ pub fn fingerprint(records: &[CodegenRecord]) -> String {
                     logical_path: entry.logical_path.as_str(),
                     namespace: entry.namespace.as_str(),
                     read_only: true,
+                    replaces: entry.replaces.as_str(),
                 })
                 .collect(),
             language: record.language.as_str(),
@@ -588,13 +602,17 @@ pub fn collect_plan(outputs: &[TargetOutput]) -> Result<CollectedPlan, CollectEr
 /// One planned mirror leaf: the deterministic workspace-relative
 /// logical path and the full BEP-reported artifact path it links to.
 /// Logical-only entries (empty exec) carry no backing artifact and hold
-/// no projection entry: the mirror links backed files only.
+/// no projection entry: the mirror links backed files only. `replaces`
+/// carries the replacement contract (empty for fail-closed entries,
+/// otherwise equal to `logical_path`); staging allows the workspace
+/// collision only for contracted entries.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectionEntry {
     pub logical_path: String,
     pub artifact: String,
     pub import_root: String,
     pub namespace: String,
+    pub replaces: String,
 }
 
 /// Plans the read-only mirror from merged records and BEP-reported
@@ -626,6 +644,7 @@ pub fn plan_projection(
                 artifact,
                 import_root: entry.import_root.clone(),
                 namespace: entry.namespace.clone(),
+                replaces: entry.replaces.clone(),
             });
         }
     }

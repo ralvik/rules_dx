@@ -152,10 +152,14 @@ infer late dependency edges.
 A generated logical module/path that conflicts with checked-in source also fails before
 selection. Root ordering never silently chooses checked-in or generated content. Accepted:
 fail-closed with no generic waiver flag; staging refuses the workspace collision
-before selection. Open: zero adapters currently define an explicit tested
-replacement contract identifying a replaced source and generated artifact, so
-every such collision fails today. Generated-to-generated duplicates require identical
-artifacts and explicit mergeable semantics, otherwise they fail.
+before selection unless the claiming entry carries the explicit tested
+replacement contract: `replaces` equal to the logical path with a non-empty
+`exec_path` binding the replacing generated artifact, identifying the replaced
+source and the generated artifact identity. Both adapters (`dx_codegen_shard`
+and `prost_codegen_shard`) define this contract with unit plus collection plus
+staging tests; uncontracted collisions still fail. Generated-to-generated
+duplicates require identical artifacts and explicit mergeable semantics,
+otherwise they fail.
 
 Each ruleset adapter defines the narrow tested edge and provider mapping needed to
 preserve that ruleset's authoritative transitive semantics. Generic collectors consume
@@ -251,8 +255,10 @@ Codegen tests must cover:
 - Per-contributor Protobuf shards, transitive depset deduplication, deterministic merge,
   reserved-suffix recognition only among BEP-reported files, and rejection of missing,
   duplicate, or unreported referenced artifacts.
-- Checked-in/generated logical path collisions fail closed today; zero adapters
-  define a replacement contract. No root-order shadowing.
+- Checked-in/generated logical path collisions fail closed unless the claiming
+  entry carries the explicit tested replacement contract (`replaces` equal to
+  the logical path with a non-empty `exec_path`); both adapters define the
+  contract. No root-order shadowing and no generic waiver flag.
 - Workspace-relative mirror paths, cross-language coexistence, leaf symlinks to Bazel
   outputs, and no root or source-directory overlay facade.
 - Read-only generated artifacts and exclusion from formatting or replacement.

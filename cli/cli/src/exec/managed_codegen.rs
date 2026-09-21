@@ -89,11 +89,14 @@ fn validate_logical_path(logical_path: &str) -> Result<(), ExecError> {
 
 /// Stages one immutable codegen generation: validates every mirror leaf
 /// against the current BEP result, refuses logical paths colliding with
-/// checked-in sources, and installs deterministic symlinks to Bazel-owned
+/// checked-in sources unless the entry carries the explicit replacement
+/// contract (`replaces` equal to the logical path with a backing
+/// artifact), and installs deterministic symlinks to Bazel-owned
 /// artifacts. Missing artifacts fail before selection; Bazel owns remote
 /// materialization and the CLI performs no fetch. Leaves install
 /// idempotently so concurrent preparation of one generation never fails;
 /// a leaf pointing elsewhere is reconstructed.
+/// See: `docs/environments/codegen.md` (provider contract).
 pub(crate) fn stage_codegen_generation(
     workspace: &Path,
     id: &dx_setup::GenerationId,
@@ -121,10 +124,20 @@ pub(crate) fn stage_codegen_generation(
                 format!("invalid codegen plan: {reason}"),
             )
         })?;
+        if !entry.replaces.is_empty() && entry.replaces != entry.logical_path {
+            return Err((
+                CODE_INVALID_RESULT.to_owned(),
+                format!(
+                    "invalid codegen plan: entry {:?} carries a replacement contract for {:?}, want the logical path itself",
+                    entry.logical_path, entry.replaces,
+                ),
+            ));
+        }
         if workspace
             .join(&entry.logical_path)
             .symlink_metadata()
             .is_ok()
+            && entry.replaces != entry.logical_path
         {
             return Err((
                 CODE_INVALID_RESULT.to_owned(),
@@ -382,6 +395,62 @@ mod tests {
         .expect_err("parent creation");
         assert_eq!(code, CODE_MANAGED_COMMIT_FAILED);
         assert!(message.contains("cannot create"), "{message}");
+    }
+
+    #[test]
+    fn managed_stage_codegen_replacement_contract_allows_declared_collision() {
+        let fixture = managed_stage_fixture("managed-codegen-replaces");
+        let workspace = fixture.workspace().to_path_buf();
+        let first = fixture.first.clone();
+        let id = empty_generated_id().expect("empty digest");
+        // A checked-in source at the generated logical path fails closed
+        // without the contract.
+        std::fs::create_dir_all(workspace.join("gen")).expect("source dir");
+        std::fs::write(workspace.join("gen/owned.txt"), "source").expect("source");
+        let (code, message) =
+            stage_codegen_generation(&workspace, &id, &[codegen_entry("gen/owned.txt", &first)])
+                .expect_err("workspace collision");
+        assert_eq!(code, CODE_INVALID_RESULT);
+        assert!(
+            message.contains("collides with a workspace source"),
+            "{message}"
+        );
+        // The same collision succeeds when the entry carries the explicit
+        // replacement contract identifying the replaced source
+        // (`replaces` equal to the logical path) and the backing artifact.
+        stage_codegen_generation(
+            &workspace,
+            &id,
+            &[codegen_replacement_entry("gen/owned.txt", &first)],
+        )
+        .expect("contracted collision stages");
+        let dir = workspace
+            .join(".dx")
+            .join(GENERATED_DIR_NAME)
+            .join(id.as_str());
+        assert_eq!(
+            std::fs::read_link(dir.join("gen/owned.txt")).expect("leaf"),
+            first
+        );
+        // The checked-in source itself is untouched: the mirror stages
+        // under the generation directory, never beside sources.
+        assert_eq!(
+            std::fs::read(workspace.join("gen/owned.txt")).expect("source"),
+            b"source"
+        );
+        // A cross-path contract never waives the collision: `replaces`
+        // must equal the logical path itself.
+        let bad = dx_codegen::ProjectionEntry {
+            logical_path: "gen/owned.txt".to_owned(),
+            artifact: first.to_string_lossy().into_owned(),
+            import_root: String::new(),
+            namespace: String::new(),
+            replaces: "gen/other.txt".to_owned(),
+        };
+        let (code, message) =
+            stage_codegen_generation(&workspace, &id, &[bad]).expect_err("cross-path contract");
+        assert_eq!(code, CODE_INVALID_RESULT);
+        assert!(message.contains("replacement contract"), "{message}");
     }
 
     #[test]

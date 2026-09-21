@@ -35,4 +35,14 @@ message DxCodegenEntry {
   // artifact; missing, ambiguous, or unreported artifacts fail
   // collection and never fall back to scanning `bazel-out`.
   string exec_path = 5;
+  // Workspace-relative checked-in source this generated artifact
+  // replaces. Empty means no replacement: a generated logical path
+  // colliding with a workspace source fails closed. Non-empty must
+  // equal logical_path (explicit self-replacement acknowledgment) and
+  // requires a non-empty exec_path binding the replacing generated
+  // artifact, so the contract identifies both the replaced source and
+  // the generated artifact identity. Staging allows the workspace
+  // collision only for such contracted entries; all other collisions
+  // fail with no generic waiver flag.
+  string replaces = 6;
 }
