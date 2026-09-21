@@ -64,6 +64,7 @@ position or reinterpret trailing values heuristically.
 
 `dx --help` and `dx <command> --help` (including `-h`) render
 human-readable help from the same CLI grammar that parses invocations.
+There is no `dx help` verb; `help` as a command word fails as unknown command.
 Help exits `0` on stdout and stays outside machine-output guarantees:
 no NDJSON, even with `--output json`. Top-level help lists commands,
 flags, scope forms, exit codes, and output modes; per-command help adds
@@ -307,10 +308,12 @@ migrate to strict clap parsing with auto help stays owned gap for any future
 migration).
 
 Final command registry plus mutating-vs-check semantics pinned under issues
-#457/#462 (`bazel run //tools/ci:cli_contract_qualification`; final registry
-holds exactly the 29 parsed commands including `deploy` plus `bump` plus
-`migrate` (`--from`/`--to` with upgrade-only gate plus manifest
-selection, issue #462 with upgrade scope under issue #671), with `doctor` plus `configure` rejected as unknown;
+#457/#462 plus #776 (`bazel run //tools/ci:cli_contract_qualification`; final registry
+holds exactly the 31 parsed commands including `deploy` plus `bump` plus
+`migrate` plus `new` plus `upgrade` (`--from`/`--to` with upgrade-only gate plus manifest
+selection, issue #462 with upgrade scope under issue #671; absent-only `new` plus
+one-shot `upgrade` composition, see [new/upgrade](commands/new-upgrade.md)), with `doctor` plus
+`configure` plus `docs` rejected as unknown;
 help plus `Command::is_mutating_by_default` identify the mutating default,
 `--output=diff` stays exactly the six patch producers, and the `check`/`fix`
 umbrella stays the sequential `format` then `lint` then `typecheck` then

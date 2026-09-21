@@ -93,7 +93,7 @@ mod tests {
         // The frozen vocabulary reference
         // pins the final CLI registry exactly (31 commands including
         // `deploy` plus `bump` plus `migrate` plus `new` plus `upgrade`;
-        // `doctor` plus `configure` stay rejected as unknown).
+        // `doctor` plus `configure` plus `docs` stay rejected as unknown).
         // See: `docs/cli/commands/new-upgrade.md`.
         let mut got = ALL_COMMANDS.to_vec();
         got.sort_unstable();

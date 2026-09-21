@@ -65,7 +65,9 @@ tests from inactive configurable branches.
 
 ## Excluded Commands
 
-There is no `dx doctor` or `dx configure`. Their intended
+There is no `dx doctor`, `dx configure`, or `dx docs`. Their intended
 behavior is covered by explicit commands or is outside the accepted surface
 (failure debugging uses `dx status` plus JSON `bazel_failed` errors, see
-[status/version](status-version.md#failure-explainer)).
+[status/version](status-version.md#failure-explainer); docs reintroduction
+is open per [dx docs](docs.md)). Help stays flag-only
+(`dx --help`, `dx <cmd> --help`); there is no `dx help` verb.
