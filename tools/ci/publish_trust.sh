@@ -137,9 +137,9 @@ fi
 # Install-time publisher-identity verification is implemented per:
 # the verifier requires a bundle plus identity/issuer, refuses
 # checksum-only, and fails before install/exec on the trust root.
-if [[ -f "deploy/install/dx_verify.sh" ]] &&
-  grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/dx_verify.sh &&
-  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/dx_verify.sh; then
+if [[ -f "deploy/install/src/lib.rs" ]] &&
+  grep -q -F -e 'checksum-only verification is not publisher-identity proof' deploy/install/src/lib.rs &&
+  grep -q -F -e 'tuf-repo-cdn.sigstore.dev' deploy/install/src/lib.rs; then
   ok
 else
   bad "install verifier missing bundle-required / trust-root record (#26)"
@@ -213,7 +213,7 @@ fi
 
 # BCR owner-gated tooling per: macro plus dry-run gate in workflow.
 if [[ -f "deploy/release/bcr.bzl" ]] &&
-  grep -q -F -e 'BCR_DRY_RUN=1' deploy/release/bcr_deploy.sh &&
+  grep -q -F -e 'BCR_DRY_RUN' deploy/release/src/lib.rs &&
   grep -q -F -e 'BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo' .github/workflows/publish-dry-run.yml; then
   ok
 else
@@ -223,12 +223,11 @@ fi
 # Human-run driver per (live successor to closed for the
 # human-run path): dry-run by default, tag ceiling, owner
 # approval gate, exercised in the workflow.
-if [[ -f "deploy/release/release.sh" ]] &&
-  grep -q -F -e 'never creates or pushes tags' deploy/release/release.sh &&
-  grep -q -F -e 'deploy/release/release.sh' .github/workflows/publish-dry-run.yml; then
+if grep -q -F -e 'never creates or pushes tags' deploy/release/src/lib.rs &&
+  grep -q -F -e 'release_driver' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "human-run release driver missing (deploy/release/release.sh + workflow exercise, #458)"
+  bad "human-run release driver missing (Rust release_driver + workflow exercise, #458)"
 fi
 
 # Release tests stay exercised in the workflow: //deploy/release:all

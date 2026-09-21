@@ -48,10 +48,11 @@ dx_guards_contains docs/decisions/0028-deferred-ci-drivers-update.md "deferred s
   '#667' \
   'opportunistically'
 
-# Decision log indexes the boundary plus depcheck plus deferred successors.
+# Decision log indexes the boundary plus depcheck plus deferred plus deploy-release successors.
 dx_guard_contains docs/decisions/README.md '0026-rust-product-code.md' "decision log lost ADR 0026 (want 0026-rust-product-code.md)"
 dx_guard_contains docs/decisions/README.md '0027-depcheck-rust.md' "decision log lost ADR 0027 (want 0027-depcheck-rust.md)"
 dx_guard_contains docs/decisions/README.md '0028-deferred-ci-drivers-update.md' "decision log lost ADR 0028 (want 0028-deferred-ci-drivers-update.md)"
+dx_guard_contains docs/decisions/README.md '0029-deploy-release-rust.md' "decision log lost ADR 0029 (want 0029-deploy-release-rust.md)"
 
 # Tool matrix links the boundary plus deferred stance instead of restating them.
 dx_guards_contains docs/testing/tools.md "tool matrix lost the product boundary link (want ADR 0026 plus ADR 0028 plus product_runtime_guards)" \
@@ -130,32 +131,35 @@ else
   bad "deploy-macro py_binary kinds drifted:$py_bzl_fail"
 fi
 
-# Release-macro launcher kinds stay sh_binary (two files): SBOM/signing
-# plus BCR migrate with their own accepted successors.
-if grep -q -F -e 'sh_binary(' deploy/release/bcr.bzl &&
-  grep -q -F -e 'sh_binary(' deploy/release/signing.bzl; then
+# Release-macro launcher kinds are Rust (two files): BCR plus signing
+# delivered Rust under ADR 0029 (no return to shell).
+if grep -q -F -e 'rust_binary(' deploy/release/bcr.bzl &&
+  grep -q -F -e 'rust_binary(' deploy/release/signing.bzl &&
+  ! grep -q -e '^[[:space:]]*sh_binary(' deploy/release/bcr.bzl &&
+  ! grep -q -e '^[[:space:]]*sh_binary(' deploy/release/signing.bzl; then
   ok
 else
-  bad "release-macro sh_binary kinds drifted (want bcr.bzl plus signing.bzl)"
+  bad "release-macro Rust delivery regressed (want rust_binary bcr.bzl plus signing.bzl with no sh_binary per ADR 0029)"
 fi
 
-# Direct product sh_binary allowlist stays exact (seven targets): POSIX
-# fixtures plus installer verifier plus human-run driver plus the
-# coverage reporter. A new product sh_binary fails here until its
-# accepted successor updates both this row and ADR 0026.
+# Direct product sh_binary allowlist stays exact (five targets): POSIX
+# fixtures plus the coverage reporter (dx_verify plus release_driver
+# delivered Rust under ADR 0029). A new product sh_binary fails here
+# until its accepted successor updates both this row and ADR 0026.
 sh_names="$(grep -h -A1 -e '^[[:space:]]*sh_binary(' deploy/rules/BUILD.bazel deploy/release/BUILD.bazel deploy/install/BUILD.bazel env/BUILD.bazel tools/coverage/BUILD.bazel 2>/dev/null | grep -e 'name = ' | sed -e 's/.*name = //' -e 's/[",]//g' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$sh_names" == "coverage_comment deploy_app deploy_program doctor dx_verify release_driver tool_sh" ]]; then
+if [[ "$sh_names" == "coverage_comment deploy_app deploy_program doctor tool_sh" ]]; then
   ok
 else
-  bad "product sh_binary allowlist drifted (want deploy fixtures plus dx_verify/release_driver plus tool_sh/doctor plus coverage_comment, got: $sh_names)"
+  bad "product sh_binary allowlist drifted (want deploy fixtures plus tool_sh/doctor plus coverage_comment with dx_verify/release_driver Rust per ADR 0029, got: $sh_names)"
 fi
 
-# No product sh_binary outside the five allowlisted BUILD files.
+# No product sh_binary outside the three allowlisted BUILD files
+# (deploy/install plus deploy/release went Rust under ADR 0029).
 sh_files="$(grep -rl -e '^[[:space:]]*sh_binary(' --include='BUILD.bazel' deploy env tools/coverage 2>/dev/null | sed -e 's|^\./||' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$sh_files" == "deploy/install/BUILD.bazel deploy/release/BUILD.bazel deploy/rules/BUILD.bazel env/BUILD.bazel tools/coverage/BUILD.bazel" ]]; then
+if [[ "$sh_files" == "deploy/rules/BUILD.bazel env/BUILD.bazel tools/coverage/BUILD.bazel" ]]; then
   ok
 else
-  bad "product sh_binary file set drifted (want exactly the five allowlisted BUILD files, got: $sh_files)"
+  bad "product sh_binary file set drifted (want exactly the three allowlisted BUILD files with install/release Rust per ADR 0029, got: $sh_files)"
 fi
 
 # Must-stay linter shims stay py_binary (Rust cannot import the libs).
@@ -199,6 +203,28 @@ fi
 
 # update.py deferral stays py_binary per ADR 0028 until #667 decides otherwise.
 dx_guard_contains quality/artifacts/BUILD.bazel 'name = "update"' "update.py deferral lost (want quality/artifacts:update py_binary per ADR 0028)"
+
+# Deploy/release shell is Rust (delivered Phase 5 per ADR 0029): no shell
+# launchers, no shell verifies, rust_binary plus portable rust_test present.
+if [[ ! -f "deploy/release/bcr_deploy.sh" ]] &&
+  [[ ! -f "deploy/release/sign_deploy.sh" ]] &&
+  [[ ! -f "deploy/release/release.sh" ]] &&
+  [[ ! -f "deploy/release/bcr_verify.sh" ]] &&
+  [[ ! -f "deploy/release/signing_verify.sh" ]] &&
+  [[ ! -f "deploy/release/release_verify.sh" ]] &&
+  [[ ! -f "deploy/release/sbom_verify.sh" ]] &&
+  [[ ! -f "deploy/install/dx_verify.sh" ]] &&
+  [[ ! -f "deploy/install/dx_verify_test.sh" ]] &&
+  grep -q -F -e 'name = "release_driver"' deploy/release/BUILD.bazel &&
+  grep -q -F -e 'name = "dx_verify"' deploy/install/BUILD.bazel &&
+  grep -q -F -e 'rust_binary(' deploy/install/BUILD.bazel &&
+  ! grep -q -e '^[[:space:]]*sh_binary(' deploy/install/BUILD.bazel &&
+  ! grep -q -e '^[[:space:]]*sh_test(' deploy/install/BUILD.bazel &&
+  ! grep -q -e '^[[:space:]]*sh_test(' deploy/release/BUILD.bazel; then
+  ok
+else
+  bad "deploy/release Rust delivery regressed (want no shell launchers/verifies with rust_binary release_driver/dx_verify plus portable rust_test per ADR 0029)"
+fi
 
 # CI drivers stay shell here per ADR 0028 (harness-wide migration owned by #667, not this umbrella).
 if [[ "$(ls tools/ci/*.sh 2>/dev/null | wc -l)" -ge 119 ]]; then

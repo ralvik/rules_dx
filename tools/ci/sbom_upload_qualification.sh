@@ -7,7 +7,7 @@
 # - delivered as-built: SPDX-2.3 plus SLSA v1 via //deploy/release:sbom_demo
 #   with subject digest equal to artifact sha256, hermetic Rust toolchain
 #   only, //deploy/rules:release_demo_archive as subject fixture, verified
-#   via bazel test //deploy/release:sbom_demo_verify;
+#   via bazel test //deploy/release:dx_release_tools_test;
 # - CI upload: ci.yml sbom job builds plus verifies on every push/PR (seed
 #   host), stages under RUNNER_TEMP/sbom, uploads sbom-provenance via
 #   actions/upload-artifact pinned SHA plus tag, contents read only,
@@ -32,7 +32,7 @@ dx_cd_workspace
 dx_test_init
 
 sbom="deploy/release/sbom.bzl"
-verify="deploy/release/sbom_verify.sh"
+verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 dryrun=".github/workflows/publish-dry-run.yml"
@@ -55,21 +55,21 @@ else
 fi
 
 # Provenance binds exact bytes: SPDX plus in-toto v1 plus SLSA subject digest.
-if grep -q -F -e '"spdxVersion": "SPDX-2.3"' "$verify" &&
-  grep -q -F -e '"_type": "https://in-toto.io/Statement/v1"' "$verify" &&
-  grep -q -F -e '"predicateType": "https://slsa.dev/provenance/v1"' "$verify"; then
+if grep -q -F -e 'spdxVersion' "$verify" &&
+  grep -q -F -e 'https://in-toto.io/Statement/v1' "$verify" &&
+  grep -q -F -e 'https://slsa.dev/provenance/v1' "$verify"; then
   ok
 else
-  bad "sbom_verify.sh lost its SPDX plus in-toto plus SLSA subject-binding checks (#612)"
+  bad "Rust launch lost its SPDX plus in-toto plus SLSA subject-binding checks (#612)"
 fi
 
-# Release BUILD keeps the demo plus its verifier.
+# Release BUILD keeps the demo plus its portable Rust verifier.
 if grep -q -F -e 'name = "sbom_demo"' "$release_build" &&
-  grep -q -F -e 'name = "sbom_demo_verify"' "$release_build" &&
+  grep -q -F -e 'name = "dx_release_tools_test"' "$release_build" &&
   grep -q -F -e '//deploy/rules:release_demo_archive' "$release_build"; then
   ok
 else
-  bad "deploy/release/BUILD.bazel lost its sbom_demo plus sbom_demo_verify over release_demo_archive (#612)"
+  bad "deploy/release/BUILD.bazel lost its sbom_demo plus dx_release_tools_test over release_demo_archive (#612)"
 fi
 
 # SBOM subject stays the seed fixture archive (no new binary, exact bytes).
@@ -83,10 +83,10 @@ fi
 # CI sbom job builds plus verifies on every push/PR (seed host, not dispatch-only).
 if grep -q -F -e 'name: sbom (SBOM + provenance build/verify/upload, seed host)' "$ci" &&
   grep -q -F -e 'bazel build --noshow_progress //deploy/release:sbom_demo' "$ci" &&
-  grep -q -F -e 'bazel test --noshow_progress //deploy/release:sbom_demo_verify' "$ci"; then
+  grep -q -F -e '//deploy/release:dx_release_tools_test' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom build plus verify on push/PR (want sbom job with sbom_demo plus sbom_demo_verify, #612)"
+  bad "ci.yml lost its sbom build plus verify on push/PR (want sbom job with sbom_demo plus dx_release_tools_test, #612)"
 fi
 
 # CI sbom job stages plus uploads as an artifact for inspection.

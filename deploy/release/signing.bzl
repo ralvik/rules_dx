@@ -4,10 +4,9 @@ Contract: `docs/deploy/release-runbook.md`.
 Decision: keep Sigstore keyless `cosign sign-blob --bundle` + GitHub attestations on the TUF trust root; no stack change.
 """
 
-load("@bazel_skylib//lib:shell.bzl", "shell")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//deploy/rules:defs.bzl", "dx_deployment")
-load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
+load("//deploy/rules:launcher.bzl", "rlocation_path")
+load("//rust/rules:defs.bzl", "rust_binary")
 
 # Trust root is documented, not self-hosted.
 SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"
@@ -50,7 +49,12 @@ def signing_bundle_names(name):
     return (name + ".bundle", name + ".attestation")
 
 def _signing_launcher_impl(ctx):
-    asset_files = []
+    """Writes the owner-gated signing deploy launcher Rust source.
+
+    Resolves pinned artifacts from runfiles via the Rust `runfiles`
+    library with identity/issuer baked as constants. Wrapped as
+    `rust_binary` (see `signed_release`).
+    """
     asset_rlocs = []
     for target in ctx.attr.artifacts:
         info = target[DefaultInfo]
@@ -62,33 +66,69 @@ def _signing_launcher_impl(ctx):
                      str(target.label) + " provides " +
                      str(len(files)) + " files, want exactly one")
             f = files[0]
-        asset_files.append(f)
-        asset_rlocs.append(rlocation_path(ctx, f))
-    deploy_file = ctx.file.deploy_sh
-    deploy_rloc = rlocation_path(ctx, deploy_file)
-    asset_lines = "".join(["  \"$(rlocation " + shell.quote(rloc) + ")\"\n" for rloc in asset_rlocs])
-    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
+        rloc = rlocation_path(ctx, f)
+        for banned in ["\"", "\\", "\n"]:
+            if banned in rloc:
+                fail("signed_release " + str(ctx.label) + ": rlocation '" + rloc +
+                     "' is not launcher-safe")
+        asset_rlocs.append(rloc)
+    for value in [ctx.attr.identity, ctx.attr.issuer]:
+        for banned in ["\"", "\\", "\n"]:
+            if banned in value:
+                fail("signed_release " + str(ctx.label) + ": value '" + value +
+                     "' is not launcher-safe")
+    rloc_list = ", ".join(["\"" + r + "\"" for r in asset_rlocs])
+    launcher = ctx.actions.declare_file(ctx.label.name + ".rs")
     ctx.actions.write(
         output = launcher,
-        content = """#!/usr/bin/env bash
-# Deploy launcher for `signed_release`. Generated. Do not edit.
-# Resolves inputs via the standard `runfiles.bash` `rlocation`; wrapped
-# as `sh_binary` (see `signed_release`).
-set -euo pipefail
-""" + RUNFILES_BASH_INIT + """if [[ "$#" -gt 0 ]]; then
-  echo "signing: this deploy target takes no extra args; artifacts are pinned at analysis time" >&2
-  exit 1
-fi
-DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
-IDENTITY=""" + shell.quote(ctx.attr.identity) + """
-ISSUER=""" + shell.quote(ctx.attr.issuer) + """
-ASSETS=(
-""" + asset_lines + """)
-export SIGNING_IDENTITY="${IDENTITY}"
-export SIGNING_ISSUER="${ISSUER}"
-exec "${DEPLOY}" "${ASSETS[@]}"
+        content = """// Deploy launcher for `signed_release`. Generated. Do not edit.
+// See: `docs/deploy/release-runbook.md` (signing release path).
+fn run() -> i32 {
+    const IDENTITY: &str = \"""" + ctx.attr.identity + """\";
+    const ISSUER: &str = \"""" + ctx.attr.issuer + """\";
+    const ASSET_RLOCS: &[&str] = &[""" + rloc_list + """];
+    if std::env::args_os().len() > 1 {
+        eprintln!("signing: this deploy target takes no extra args; artifacts are pinned at analysis time");
+        return 1;
+    }
+    let dry = std::env::var("RELEASE_SIGN_DRY_RUN").unwrap_or_default() == "1";
+    let runfiles = match runfiles::Runfiles::create() {
+        Ok(runfiles) => runfiles,
+        Err(error) => {
+            eprintln!("signing: cannot load runfiles: {error}");
+            return 1;
+        }
+    };
+    let mut assets = Vec::with_capacity(ASSET_RLOCS.len());
+    for rloc in ASSET_RLOCS {
+        match runfiles.rlocation(rloc) {
+            Some(path) => assets.push(path.to_string_lossy().into_owned()),
+            None => {
+                eprintln!("signing: runfile not found for '{rloc}'");
+                return 1;
+            }
+        }
+    }
+    let cosign_present = std::env::var_os("PATH").is_some_and(|paths| {
+        std::env::split_paths(&paths).any(|dir| {
+            dir.join("cosign").is_file() || dir.join("cosign.exe").is_file()
+        })
+    });
+    match dx_release_tools::signing_run(IDENTITY, ISSUER, &assets, dry, cosign_present) {
+        Ok(text) => {
+            print!("{text}");
+            0
+        }
+        Err(diagnostic) => {
+            eprintln!("{diagnostic}");
+            1
+        }
+    }
+}
+fn main() {
+    std::process::exit(run());
+}
 """,
-        is_executable = True,
     )
     return [DefaultInfo(files = depset([launcher]))]
 
@@ -98,20 +138,16 @@ _signing_launcher = rule(
         "artifacts": attr.label_list(mandatory = True),
         "identity": attr.string(mandatory = True),
         "issuer": attr.string(mandatory = True),
-        "deploy_sh": attr.label(
-            allow_single_file = True,
-            default = "//deploy/release:sign_deploy.sh",
-        ),
     },
 )
 
 def signed_release(name, artifacts, identity, issuer = "https://token.actions.githubusercontent.com", profile = "release"):
     """Creates an owner-gated signing deploy target for pinned artifacts.
 
-    Creates `<name>_launcher` (generated launcher script via
-    `runfiles.bash` `rlocation` with `shell.quote`), `<name>_program`
-    (`sh_binary` wrapping the launcher with pinned `data` plus the
-    runfiles library), and `<name>` (deployment returning `DxDeployInfo`).
+    Creates `<name>_launcher` (generated Rust launcher resolving inputs
+    via the Rust `runfiles` library), `<name>_program` (`rust_binary`
+    wrapping the launcher with pinned `data` plus the runfiles library),
+    and `<name>` (deployment returning `DxDeployInfo` with `profile`).
     Run with `RELEASE_SIGN_DRY_RUN=1 bazel run :<name>` to print the
     would-run `cosign sign-blob` + `gh attestation` commands (what CI
     exercises, publishes nothing). Real signing needs the tag pushed
@@ -129,11 +165,16 @@ def signed_release(name, artifacts, identity, issuer = "https://token.actions.gi
         identity = identity,
         issuer = issuer,
     )
-    sh_binary(
+    rust_binary(
         name = program_target,
         srcs = [":" + launcher_target],
-        data = artifacts + ["//deploy/release:sign_deploy.sh"],
-        deps = ["@rules_shell//shell/runfiles"],
+        crate_name = program_target.replace("-", "_"),
+        data = artifacts,
+        edition = "2021",
+        deps = [
+            "//deploy/release:dx_release_tools",
+            "@rules_rust//rust/runfiles",
+        ],
     )
     dx_deployment(
         name = name,

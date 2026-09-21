@@ -69,7 +69,7 @@ fi
 # long-timeouts-only substitute stays rejected.
 if ! grep -q -F -e 'run: bazel test --noshow_progress //...' "$ci" &&
   ! grep -q -F -e 'run: bazel test --noshow_progress //.devcontainer' "$ci" &&
-  ! grep -q -F -e 'run: bazel test --noshow_progress //deploy/release:sbom_demo_verify' "$ci"; then
+  ! grep -q -F -e 'run: bazel test --noshow_progress //deploy/release:dx_release_tools_test' "$ci"; then
   ok
 else
   bad "a bare bazel test without --flaky_test_attempts plus --test_timeout survives (long-timeouts-only rejected, issue #619)"

@@ -80,7 +80,7 @@ A cell promotes only with its required-host evidence landed:
 - BCR shape checked-not-submitted via `//deploy/release:bcr_demo`
   (`BCR_DRY_RUN=1`, `"submitted": False`); GHCR stays the separate
   `.github/workflows/ghcr.yml` route (#460).
-- Human-run driver `deploy/release/release.sh` in dry-run mode by default
+- Human-run driver `//deploy/release:release_driver` in dry-run mode by default
   (#458): tag ceiling plus owner-approval gate with nothing published.
 - Verifier refusal proved: `//deploy/install:dx_verify` refuses checksum-only
   inputs on the TUF trust root and installs nothing.

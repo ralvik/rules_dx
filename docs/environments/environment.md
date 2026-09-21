@@ -291,7 +291,7 @@ signing/attestation selection (Sigstore keyless cosign v2.4.1
 `deploy/release/signing.bzl` qualified under issue #459 (live successor
 to closed #311/#26/#78 for signing + distribution; no stack change),
 BCR shape tooling in `deploy/release/bcr.bzl`, GHCR via the separate
-`ghcr.yml` route, and the human-run driver in `deploy/release/release.sh`
+`ghcr.yml` route, and the human-run driver in `//deploy/release:release_driver`
 (issue #458). Publication still requires explicit approval and qualified
 release artifacts. Pinned by `bazel run
 //tools/ci:signing_distribution_qualification`.

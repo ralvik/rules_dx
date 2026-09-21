@@ -4,11 +4,13 @@
 
 Accepted. The boundary below plus the `//tools/ci:product_runtime_guards`
 fail-closed gate are decided constraints. Archiver/hasher plus preset plus
-depcheck plus SBOM/BCR generators are delivered Rust; deploy launchers stay
-provisional and the CI-drivers plus `quality/artifacts/update.py` stance is
-accepted deferred (see [ADR 0028](./0028-deferred-ci-drivers-update.md)).
-The provisional launcher slice still needs its own accepted successor record
-before its rule-kind change lands.
+depcheck plus SBOM/BCR generators plus deploy/release shell are delivered
+Rust; per-instance deploy launchers stay provisional and the CI-drivers plus
+`quality/artifacts/update.py` stance is accepted deferred (see
+[ADR 0028](./0028-deferred-ci-drivers-update.md) and
+[ADR 0029](./0029-deploy-release-rust.md)). The provisional launcher slice
+still needs its own accepted successor record before its rule-kind change
+lands.
 
 ## Context
 
@@ -21,19 +23,21 @@ everywhere while bash harnesses stay Linux-only with Windows `shell: bash`
 The as-built product inventory is the hermetic tools
 (`deploy/rules:archiver`/`hasher` as Rust `rust_binary` plus
 `npm_packer` as `py_binary`,
-`deploy/release:sbom_spdx_gen`/`sbom_prov_gen`/`bcr_source_gen` as Rust
-`rust_binary`,
+`deploy/release:sbom_spdx_gen`/`sbom_prov_gen`/`bcr_source_gen`/`release_driver`
+as Rust `rust_binary`, `deploy/install:dx_verify` as Rust `rust_binary`
+per [ADR 0029](./0029-deploy-release-rust.md),
 `tools/bazelrc:preset.update` as Rust `rust_binary`,
 `tools/depcheck:depcheck` as Rust `rust_binary` (per
 [ADR 0027](./0027-depcheck-rust.md)),
 `quality/artifacts:update`), the per-instance deploy launcher `py_binary`
 programs expanded by `archive`/`github`/`pypi`/`crates`/`npm`/`nuget`/`maven`/`oci`/`octopus`
 (see [Deploy Authoring](../deploy/authoring.md)), the `bcr`/`signing`
-`sh_binary` launchers, the `dx_verify` installer verifier, and the POSIX
-fixtures (`env/tool.sh`, `env/doctor.sh`, deploy fixtures) plus the CI
-`tools/ci` drivers and `tools/sh` helpers. The starting audit is tracked
-under the umbrella issue; counts moved since (depcheck split, archive/github
-hermetic `py_binary` per the deploy launcher direction).
+`rust_binary` launchers per [ADR 0029](./0029-deploy-release-rust.md), and
+the POSIX fixtures (`env/tool.sh`, `env/doctor.sh`, deploy fixtures) plus
+the CI `tools/ci` drivers and `tools/sh` helpers. The starting audit is
+tracked under the umbrella issue; counts moved since (depcheck split,
+archive/github hermetic `py_binary` per the deploy launcher direction,
+deploy/release shell Rust per ADR 0029).
 
 Some Python and shell must stay permanently. The toolchain
 (`MODULE.bazel` `aspect_rules_py` plus `rules_python`, managed 3.12) follows
@@ -68,7 +72,9 @@ Concretely:
   depcheck checker (delivered Rust under #762 per
   [ADR 0027](./0027-depcheck-rust.md)),
   SBOM/BCR generators (delivered Rust under #763),
-  plus provisional deploy launcher programs, and the
+  deploy/release shell launchers plus verifiers (delivered Rust under #764 per
+  [ADR 0029](./0029-deploy-release-rust.md)),
+  plus provisional per-instance deploy launcher `py_binary` programs, and the
   accepted deferred CI-drivers plus `quality/artifacts/update.py` stance (see
   [ADR 0028](./0028-deferred-ci-drivers-update.md); defers to
   #667; no harness-wide Rust-ify). Each phase links its owning contract

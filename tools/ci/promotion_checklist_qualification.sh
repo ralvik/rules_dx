@@ -122,7 +122,7 @@ if grep -q -F -e '//deploy/release:sbom_demo' "$checklist" &&
   grep -q -F -e 'nothing is drafted or published unsigned' "$checklist" &&
   grep -q -F -e '//deploy/release:bcr_demo' "$checklist" &&
   grep -q -F -e 'GHCR stays the separate' "$checklist" &&
-  grep -q -F -e 'deploy/release/release.sh' "$checklist" &&
+  grep -q -F -e '//deploy/release:release_driver' "$checklist" &&
   grep -q -F -e 'refuses checksum-only' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:signing_distribution_qualification' "$checklist"; then
   ok

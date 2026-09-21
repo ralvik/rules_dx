@@ -18,7 +18,7 @@ BAZELISK_CANONICAL = "canonical source .github/actions/setup-bazelisk/action.yml
 
 # Cosign pin (single-sourced across signing stack plus GHCR fetch plus dry-run).
 COSIGN_VERSION = "v2.4.1 checksum-verified fetch"
-COSIGN_SINGLE_SOURCE = "single-sourced SIGNING_COSIGN_VERSION plus ghcr.yml plus sign_deploy.sh"
+COSIGN_SINGLE_SOURCE = "single-sourced SIGNING_COSIGN_VERSION plus ghcr.yml plus Rust launch"
 
 # TUF trust pins (documented, not self-hosted).
 TUF_ROOT = "https://tuf-repo-cdn.sigstore.dev"

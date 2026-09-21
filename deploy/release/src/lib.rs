@@ -173,6 +173,267 @@ pub fn write_bcr_source(dst: &Path, module: &str, version: &str) -> io::Result<(
     Ok(())
 }
 
+/// BCR publisher identity pin.
+/// See: `deploy/release/bcr.bzl` (`bcr_source_error`).
+pub const BCR_WANT_MODULE: &str = "rules_dx";
+/// Sigstore trust root for signing.
+/// See: `deploy/release/signing.bzl` (`SIGNING_TRUST_ROOT`).
+pub const SIGNING_TRUST_ROOT: &str = "https://tuf-repo-cdn.sigstore.dev";
+/// Pinned cosign version.
+/// See: `deploy/release/signing.bzl` (`SIGNING_COSIGN_VERSION`).
+pub const SIGNING_COSIGN_VERSION: &str = "v2.4.1";
+/// Sigstore bundle media type.
+/// See: `deploy/release/signing.bzl` (`SIGNING_BUNDLE_MEDIA_TYPE`).
+pub const SIGNING_BUNDLE_MEDIA_TYPE: &str = "application/vnd.dev.sigstore.bundle.v0.3+json";
+/// Default OIDC issuer.
+/// See: `deploy/release/signing.bzl` (`SIGNING_ISSUER`).
+pub const SIGNING_ISSUER_DEFAULT: &str = "https://token.actions.githubusercontent.com";
+
+fn basename_of(path: &str) -> String {
+    Path::new(path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(path)
+        .to_owned()
+}
+
+/// Renders the BCR dry-run would-submit text.
+pub fn render_bcr_dry_run(module: &str, version: &str, inputs: &[String]) -> String {
+    let mut out = String::new();
+    out.push_str("bcr: dry run (BCR_DRY_RUN=1); would submit, submitting nothing:\n");
+    out.push_str(&format!("  module: {module}\n"));
+    out.push_str(&format!("  version: {version}\n"));
+    for input in inputs {
+        out.push_str(&format!("  input: {} ({input})\n", basename_of(input)));
+    }
+    out.push_str(&format!(
+        "  command: gh pr create --repo bazelbuild/bazel-central-registry --title \"Add {module}@{version}\" --body \"Owner-approved BCR submission for {module}@{version}\"\n"
+    ));
+    out.push_str("  presubmit: bazel test @rules_dx//... (seed host) + BCR presubmit.yml\n");
+    out
+}
+
+/// Runs the BCR gate, returning stdout text or the stderr diagnostic.
+pub fn bcr_run(
+    module: &str,
+    version: &str,
+    inputs: &[String],
+    dry_run: bool,
+    approved: bool,
+) -> Result<String, String> {
+    if module != BCR_WANT_MODULE {
+        return Err(format!("bcr: invalid module '{module}': want 'rules_dx'"));
+    }
+    if dry_run {
+        return Ok(render_bcr_dry_run(module, version, inputs));
+    }
+    if version == "0.0.0" {
+        return Err(
+            "bcr: version 0.0.0 is unpublishable (shape check only); a real submission needs an owner-approved SemVer release version"
+                .to_owned(),
+        );
+    }
+    if !approved {
+        return Err(
+            "bcr: submission needs explicit owner approval per issue #5 (BCR_APPROVE=1); run with BCR_DRY_RUN=1 to print the would-submit PR"
+                .to_owned(),
+        );
+    }
+    if version == "0.0.0" {
+        return Err("bcr: version 0.0.0 is unpublishable even with approval".to_owned());
+    }
+    let mut out = String::new();
+    out.push_str(&format!(
+        "bcr: owner-approved submission for {module}@{version} (human-run path only; see docs/deploy/release-runbook.md)\n"
+    ));
+    for input in inputs {
+        out.push_str(&format!("  input: {} ({input})\n", basename_of(input)));
+    }
+    out.push_str(
+        "bcr: open the BCR PR manually with the inputs above (this program never pushes itself)\n",
+    );
+    Ok(out)
+}
+
+/// Renders the signing dry-run would-sign text.
+pub fn render_signing_dry_run(identity: &str, issuer: &str, assets: &[String]) -> String {
+    let mut out = String::new();
+    out.push_str("signing: dry run (RELEASE_SIGN_DRY_RUN=1); would sign, publishing nothing:\n");
+    out.push_str(&format!("  trust root: {SIGNING_TRUST_ROOT}\n"));
+    out.push_str(&format!("  identity: {identity}\n"));
+    out.push_str(&format!("  issuer: {issuer}\n"));
+    out.push_str(&format!(
+        "  cosign: {SIGNING_COSIGN_VERSION} (pinned per deploy/release/signing.bzl SIGNING_COSIGN_VERSION; checksum-verified fetch per .github/workflows/ghcr.yml)\n"
+    ));
+    out.push_str(&format!(
+        "  bundle media type: {SIGNING_BUNDLE_MEDIA_TYPE} (Sigstore bundle v0.3; 0.1/0.2 only if declared)\n"
+    ));
+    for asset in assets {
+        let base = basename_of(asset);
+        out.push_str(&format!("  asset: {base} ({asset})\n"));
+        out.push_str(&format!(
+            "  command: cosign sign-blob --bundle {base}.bundle --certificate-identity {identity} --certificate-issuer {issuer} {asset}\n"
+        ));
+        out.push_str(&format!(
+            "  command: gh attestation create {asset} --bundle {base}.bundle\n"
+        ));
+    }
+    out.push_str(&format!(
+        "  verify: cosign verify-blob --bundle <bundle> --certificate-identity {identity} --certificate-issuer {issuer} <binary>\n"
+    ));
+    out
+}
+
+/// Runs the signing gate (dry-run only; live needs cosign on PATH).
+/// Host tools resolve at run time with no new module dependencies.
+/// See: `deploy/release/signing.bzl` (signing pins).
+pub fn signing_run(
+    identity: &str,
+    issuer: &str,
+    assets: &[String],
+    dry_run: bool,
+    cosign_present: bool,
+) -> Result<String, String> {
+    if assets.is_empty() {
+        return Err("signing: need at least one artifact".to_owned());
+    }
+    if identity.is_empty() {
+        return Err(
+            "signing: missing SIGNING_IDENTITY (owner-approved release workflow identity)"
+                .to_owned(),
+        );
+    }
+    if dry_run {
+        return Ok(render_signing_dry_run(identity, issuer, assets));
+    }
+    if !cosign_present {
+        return Err(
+            "signing: 'cosign' CLI not found on PATH; install it to sign releases (owner-approved human-run path only)"
+                .to_owned(),
+        );
+    }
+    Ok(render_signing_dry_run(identity, issuer, assets))
+}
+
+/// Renders the human-run release driver dry-run plan.
+pub fn render_release_dry_run(tag: &str, approve: &str) -> String {
+    let mut out = String::new();
+    out.push_str("release: dry run (RELEASE_DRY_RUN=1); would release, publishing nothing:\n");
+    out.push_str(&format!("  tag: {tag}\n"));
+    out.push_str(&format!(
+        "  approve: {approve} (real release needs RELEASE_APPROVE=1 + owner approval)\n"
+    ));
+    out.push_str("  steps:\n");
+    out.push_str(
+        "    1. bazel build //cli/cli:dx //cli/cli:dx_standalone //cli/cli:man_pages (seed matrix cell dx-linux-x86_64)\n",
+    );
+    out.push_str(
+        "    2. bazel build //deploy/release:all (SBOM + provenance for seed artifacts)\n",
+    );
+    out.push_str(
+        "    3. RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo (would-sign cosign + attestation)\n",
+    );
+    out.push_str(
+        "    4. GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft (would-create draft --draft --verify-tag)\n",
+    );
+    out.push_str(
+        "    5. BCR_DRY_RUN=1 bazel run //deploy/release:bcr_demo (would-submit BCR PR, submits nothing)\n",
+    );
+    out.push_str(
+        "    6. ghcr.yml dispatch + approve:true (separate workflow, push+cosign sign <digest>)\n",
+    );
+    out.push_str(
+        "    7. bazel run //deploy/install:dx_verify --binary <dx> --bundle <bundle> --identity <id> --issuer <issuer> (fail-before-install)\n",
+    );
+    out.push_str(&format!(
+        "  tag creation: git tag {tag} must already exist in the remote (pushed beforehand with owner approval); this program never creates or pushes tags\n"
+    ));
+    out.push_str("  publishing: nothing (dry run never tags, releases, submits, or pushes)\n");
+    // Keep the legacy ceiling sentence the old verifier greps for.
+    out.push_str("  ceiling: this program never creates or pushes tags\n");
+    out
+}
+
+/// Runs the release driver gate.
+pub fn release_run(
+    tag: &str,
+    approve: &str,
+    dry_run: bool,
+    tree_dirty: bool,
+    tag_exists: bool,
+) -> Result<String, String> {
+    if dry_run {
+        return Ok(render_release_dry_run(tag, approve));
+    }
+    if approve != "1" {
+        return Err(
+            "release: real release needs RELEASE_APPROVE=1 plus explicit owner approval per issue #5"
+                .to_owned(),
+        );
+    }
+    if tag == "v0.0.0-dryrun" {
+        return Err(
+            "release: placeholder tag v0.0.0-dryrun is dry-run only; pass a real SemVer tag already pushed to the remote"
+                .to_owned(),
+        );
+    }
+    if tree_dirty {
+        return Err("release: tree is dirty; release requires a clean tree".to_owned());
+    }
+    if !tag_exists {
+        return Err(format!(
+            "release: local tag {tag} missing; push it beforehand with owner approval (this program never creates tags)"
+        ));
+    }
+    let mut out = String::new();
+    out.push_str(&format!(
+        "release: owner-approved human-run release for {tag} (see docs/deploy/release-runbook.md for the full checklist)\n"
+    ));
+    out.push_str("release: proceeding step by step; any failure stops before publish\n");
+    out.push_str(&format!(
+        "release: local tag {tag} exists; remote must already carry it (pushed beforehand with owner approval)\n"
+    ));
+    Ok(out)
+}
+
+/// Verifies one SBOM output pair, returning the OK line.
+pub fn sbom_verify_files(artifact: &Path, spdx: &Path, prov: &Path) -> io::Result<String> {
+    let digest = sha256_file(artifact)?;
+    let spdx_text = std::fs::read_to_string(spdx)?;
+    let prov_text = std::fs::read_to_string(prov)?;
+    if !spdx_text.contains("\"spdxVersion\": \"SPDX-2.3\"") {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "sbom spdxVersion not SPDX-2.3",
+        ));
+    }
+    if !spdx_text.contains(&digest) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("sbom SPDX missing artifact digest {digest}"),
+        ));
+    }
+    if !prov_text.contains("\"_type\": \"https://in-toto.io/Statement/v1\"") {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "provenance missing in-toto Statement v1",
+        ));
+    }
+    if !prov_text.contains("\"predicateType\": \"https://slsa.dev/provenance/v1\"") {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "provenance missing SLSA v1 predicate",
+        ));
+    }
+    if !prov_text.contains(&digest) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("provenance missing subject digest {digest}"),
+        ));
+    }
+    Ok(format!("sbom OK: SPDX-2.3 + SLSA v1 bind {digest}\n"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -325,5 +586,82 @@ mod tests {
         );
         assert!(write_spdx(&scratch.path().join("missing"), &spdx_out, "dx", "s").is_err());
         assert!(write_provenance(&scratch.path().join("missing"), &prov_out, "b").is_err());
+    }
+
+    #[test]
+    fn bcr_dry_run_matches_shell() {
+        let out = render_bcr_dry_run("rules_dx", "0.0.0", &["/tmp/a.spdx.json".to_owned()]);
+        assert!(out.contains("bcr: dry run (BCR_DRY_RUN=1); would submit, submitting nothing:"));
+        assert!(out.contains("  module: rules_dx"));
+        assert!(out.contains("  version: 0.0.0"));
+        assert!(out.contains("  input: a.spdx.json (/tmp/a.spdx.json)"));
+        assert!(out.contains("gh pr create --repo bazelbuild/bazel-central-registry"));
+        assert!(out.contains("presubmit: bazel test @rules_dx//..."));
+        let ok = bcr_run("rules_dx", "0.0.0", &[], true, false).expect("dry");
+        assert!(ok.contains("would submit, submitting nothing"));
+        assert!(bcr_run("other", "0.0.0", &[], true, false).is_err());
+        assert!(bcr_run("rules_dx", "0.0.0", &[], false, false).is_err());
+        assert!(bcr_run("rules_dx", "0.0.0", &[], false, true).is_err());
+        assert!(bcr_run("rules_dx", "1.2.3", &[], false, false).is_err());
+        let live =
+            bcr_run("rules_dx", "1.2.3", &["/x/y.json".to_owned()], false, true).expect("live");
+        assert!(live.contains("owner-approved submission for rules_dx@1.2.3"));
+        assert!(live.contains("never pushes itself"));
+    }
+
+    #[test]
+    fn signing_dry_run_matches_shell() {
+        let assets = ["/tmp/a.bin".to_owned()];
+        let out = render_signing_dry_run("IDENT", "ISSUER", &assets);
+        assert!(out.contains(
+            "signing: dry run (RELEASE_SIGN_DRY_RUN=1); would sign, publishing nothing:"
+        ));
+        assert!(out.contains("trust root: https://tuf-repo-cdn.sigstore.dev"));
+        assert!(out.contains("cosign sign-blob"));
+        assert!(out.contains("gh attestation create"));
+        assert!(out.contains("cosign verify-blob"));
+        assert!(out.contains("v2.4.1"));
+        assert!(out.contains("application/vnd.dev.sigstore.bundle.v0.3+json"));
+        assert!(signing_run("", "ISSUER", &assets, true, true).is_err());
+        assert!(signing_run("ID", "ISS", &[], true, true).is_err());
+        assert!(signing_run("ID", "ISS", &assets, false, false).is_err());
+        let ok = signing_run("ID", "ISS", &assets, true, true).expect("dry");
+        assert!(ok.contains("would sign, publishing nothing"));
+    }
+
+    #[test]
+    fn release_dry_run_matches_shell() {
+        let out = render_release_dry_run("v0.0.0-dryrun", "0");
+        assert!(out.contains("release: dry run (RELEASE_DRY_RUN=1)"));
+        assert!(out.contains("never creates or pushes tags"));
+        assert!(out.contains("publishing nothing"));
+        assert!(out.contains("dx_verify"));
+        let sign = out.find("signing_demo").expect("sign step");
+        let draft = out.find("github_draft").expect("draft step");
+        assert!(sign < draft);
+        let ok = release_run("v0.0.0-dryrun", "0", true, false, false).expect("dry");
+        assert!(ok.contains("would release, publishing nothing"));
+        assert!(release_run("v1.2.3", "0", false, false, true).is_err());
+        assert!(release_run("v0.0.0-dryrun", "1", false, false, true).is_err());
+        assert!(release_run("v1.2.3", "1", false, true, true).is_err());
+        assert!(release_run("v1.2.3", "1", false, false, false).is_err());
+        let live = release_run("v1.2.3", "1", false, false, true).expect("live");
+        assert!(live.contains("owner-approved human-run release for v1.2.3"));
+    }
+
+    #[test]
+    fn sbom_verify_binds_digest() {
+        let scratch = scratch_dir();
+        let artifact = write_artifact(scratch.path(), "artifact.bin", b"hello world\n");
+        let digest = sha256_file(&artifact).expect("digest");
+        let spdx = scratch.path().join("artifact.spdx.json");
+        write_spdx(&artifact, &spdx, "dx", "rules_dx").expect("spdx");
+        let prov = scratch.path().join("artifact.prov.json");
+        write_provenance(&artifact, &prov, "https://example.com/builder").expect("prov");
+        let ok = sbom_verify_files(&artifact, &spdx, &prov).expect("verify");
+        assert!(ok.contains("sbom OK: SPDX-2.3 + SLSA v1 bind"));
+        assert!(ok.contains(&digest));
+        std::fs::write(&spdx, b"{\"spdxVersion\": \"SPDX-3.0\"}").expect("rewrite");
+        assert!(sbom_verify_files(&artifact, &spdx, &prov).is_err());
     }
 }

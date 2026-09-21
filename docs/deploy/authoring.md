@@ -226,7 +226,7 @@ they publish.
 ## Path H: standalone `dx` install verification (accepted)
 
 Standalone `dx` binaries verify publisher identity at install time via
-`//deploy/install:dx_verify` (`deploy/install/dx_verify.sh`). The verifier
+`//deploy/install:dx_verify` (portable Rust, no Linux pin). The verifier
 requires a Sigstore keyless bundle (`cosign sign-blob --bundle`) plus the
 expected certificate identity and issuer, or a GitHub attestation
 (`gh attestation verify`), on the Sigstore TUF trust root
@@ -264,18 +264,20 @@ tooling in `deploy/release/` with policy tests `bazel test
   push/PR the `sbom` job in `.github/workflows/ci.yml` (issue #612) builds
   plus verifies `//deploy/release:sbom_demo` and uploads the
   `sbom-provenance` artifact (publishes nothing).
-- Signing/attestation (`signing.bzl` plus `sign_deploy.sh`, qualified
-  under issue #459): Sigstore keyless (`cosign sign-blob --bundle`
-  v2.4.1 pinned, bundle media type
+- Signing/attestation (`signing.bzl` plus Rust launch per ADR 0029,
+  qualified under issue #459): Sigstore keyless (`cosign sign-blob
+  --bundle` v2.4.1 pinned, bundle media type
   `application/vnd.dev.sigstore.bundle.v0.3+json`) plus GitHub
   attestations on the TUF trust root; `RELEASE_SIGN_DRY_RUN=1` prints
   would-sign, publishes nothing.
-- BCR (`bcr.bzl` plus `bcr_deploy.sh`): `source.json` plus integrity
-  shape check; `BCR_DRY_RUN=1` prints would-submit, submits nothing;
-  `0.0.0` never submits.
-- Human-run driver (`release.sh`, issue #458): dry-run by default, requires
-  `RELEASE_APPROVE=1` plus a pre-pushed tag plus clean tree; never
-  creates tags, never runs on CI.
+- BCR (`bcr.bzl` plus Rust launch per ADR 0029): `source.json` plus
+  integrity shape check; `BCR_DRY_RUN=1` prints would-submit, submits
+  nothing; `0.0.0` never submits.
+- Human-run driver (`//deploy/release:release_driver` Rust, issue #458):
+  dry-run by default, requires `RELEASE_APPROVE=1` plus a pre-pushed tag
+  plus clean tree; never creates tags, never runs on CI. `profile` is the
+  default only (`debug`, `dev`, or `release`, default `release`); an
+  explicit `--debug`/`--release` flag always wins, same as Path B.
 - GHCR stays the separate `.github/workflows/ghcr.yml` route (issue #460,
   image lifecycle per-scaffold-change); push plus `cosign sign <digest>`
   stay owner-gated with dry-run first.

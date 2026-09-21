@@ -36,3 +36,4 @@ validation and are not stable commitments.
 | [0026: Rust Product Code Boundary And Migration Umbrella](0026-rust-product-code.md) | Accepted | — | Product runtime |
 | [0027: Depcheck Checker Rust Delivery](0027-depcheck-rust.md) | Accepted | — | Product runtime |
 | [0028: Deferred CI Drivers Plus Artifacts Update Stance](0028-deferred-ci-drivers-update.md) | Accepted | — | Product runtime |
+| [0029: Deploy/Release Shell Rust Delivery](0029-deploy-release-rust.md) | Accepted | — | Product runtime |

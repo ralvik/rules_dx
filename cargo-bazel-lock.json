@@ -1,5 +1,5 @@
 {
-  "checksum": "b40b1f242ba5f214c0e686dc398fb789673ff586952c6430e022458a91870339",
+  "checksum": "dd823503086359a7c433677b5272703a9cb3c8af0d9bf172cdf7191f43fa602e",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -3055,6 +3055,39 @@
         {
           "Library": {
             "crate_name": "dx_fingerprint",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.0.0"
+    },
+    "dx_install_tools 0.0.0": {
+      "common_attrs": {
+        "deps": [
+          {
+            "id": "hex 0.4.3",
+            "target": "hex"
+          },
+          {
+            "id": "sha2 0.10.9",
+            "target": "sha2"
+          }
+        ],
+        "deps_dev": [
+          {
+            "id": "tempfile 3.27.0",
+            "target": "tempfile"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "dx_install_tools",
+      "name": "dx_install_tools",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "dx_install_tools",
             "crate_root": "src/lib.rs"
           }
         }
@@ -12947,6 +12980,7 @@
     "dx_env 0.0.0": "cli/dx_env",
     "dx_env_plan 0.0.0": "cli/dx_env_plan",
     "dx_fingerprint 0.0.0": "cli/dx_fingerprint",
+    "dx_install_tools 0.0.0": "deploy/dx_install_tools",
     "dx_lcov 0.0.0": "cli/dx_lcov",
     "dx_output 0.0.0": "cli/dx_output",
     "dx_path 0.0.0": "cli/dx_path",

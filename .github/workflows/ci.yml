@@ -76,7 +76,7 @@ jobs:
     # SBOM plus provenance on CI (issue #612): sbom_demo only ran on
     # workflow_dispatch dry-run, never built or verified on push, with no
     # attestation. This job builds //deploy/release:sbom_demo plus verifies
-    # via //deploy/release:sbom_demo_verify on every push/PR (seed host),
+    # via //deploy/release:dx_release_tools_test on every push/PR (seed host),
     # stages SPDX-2.3 + SLSA v1 under RUNNER_TEMP, and uploads as a CI
     # artifact for inspection. Real Sigstore plus GitHub attestation stays
     # owner-gated human-run via //deploy/release:signing_demo (fork-safe:
@@ -101,7 +101,7 @@ jobs:
       - name: Build SBOM + provenance demo
         run: bazel build --noshow_progress //deploy/release:sbom_demo
       - name: Verify SBOM + provenance bind artifact
-        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //deploy/release:sbom_demo_verify
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //deploy/release:dx_release_tools_test
       - name: Stage SBOM + provenance for upload
         run: |
           set -euo pipefail
@@ -139,7 +139,7 @@ jobs:
         if: always()
         run: |
           echo "### sbom — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: bazel build //deploy/release:sbom_demo; bazel test //deploy/release:sbom_demo_verify; stage SPDX-2.3 + SLSA v1 under RUNNER_TEMP/sbom and upload as sbom-provenance (seed host, publishes nothing; attestation stays owner-gated human-run via //deploy/release:signing_demo, issue #612)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: bazel build //deploy/release:sbom_demo; bazel test //deploy/release:dx_release_tools_test; stage SPDX-2.3 + SLSA v1 under RUNNER_TEMP/sbom and upload as sbom-provenance (seed host, publishes nothing; attestation stays owner-gated human-run via //deploy/release:signing_demo, issue #612)." >> "$GITHUB_STEP_SUMMARY"
   preset-stale:
     name: preset-stale (dx update --check, Linux once)
     # Consumer-CI stale cell (issue #332): Linux-once preset freshness

@@ -654,6 +654,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dx_install_tools"
+version = "0.0.0"
+dependencies = [
+ "hex",
+ "sha2",
+ "tempfile",
+]
+
+[[package]]
 name = "dx_lcov"
 version = "0.0.0"
 dependencies = [
