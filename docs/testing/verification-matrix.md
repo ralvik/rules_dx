@@ -144,7 +144,7 @@ execution deferred. No report-only status remains per ADR 0022 (no standing benc
 `Audit/update Delivered` above is ecosystem live execution delivered repo-wide; it stays
 consistent with per-language source-`Audit` scope in the support matrix (`Not planned` for
 Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; Python source-audit tooling qualified
-seed-only under closed #613 with future selection open under #801).
+seed-only under issue #801 with Ruff S selected).
 `Support-matrix Planned` cells claim accepted scope only; where this matrix shows `Open`,
 the corresponding `Planned` cell is scope with open implementation, and where this
 matrix shows `Delivered`, the corresponding `Planned` cell is scope with seed-host
@@ -167,14 +167,17 @@ provider/import/lock/tool-graph proofs are pinned by
    taxonomy doc only plus report-not-gate shape only rejected; deferred
    adapters plus digests plus platform plus consumer plus release stay owned
    gaps under #802 (successor to closed #512); no Supported claim; closed #512 stays taxonomy-only). Python
-   source-audit tooling with fixture evidence qualified seed-only under closed #613
+   source-audit tooling with fixture evidence qualified seed-only under issue #801
 (`bazel run //tools/ci:python_audit_qualification` with
 `python/tests/fixtures/python_audit/pins.bzl` plus
-`python_audit.expected`; `python_audit_qualification` 16/16; curated
-audit empty with Bandit excluded plus secrets via Gitleaks, lint
-Ruff plus pydoclint plus format Ruff plus typecheck Ty unaffected, no
-   audit adapter claim, leaving under taxonomy rejected; future selection (#801) plus
-   platform plus consumer plus release (#808) stay owned gaps; no Supported
+`python_audit.expected`; `python_audit_qualification` 24/24; Ruff S
+selected via pinned Ruff 0.16.7 standalone artifact with S opt-in plus
+curated audit empty with explicit disablement plus Bandit excluded plus
+secrets via Gitleaks, lint Ruff plus pydoclint plus format Ruff plus
+typecheck Ty unaffected, ruff audit claims python plus python_stub
+check-only, leaving under taxonomy rejected; platform per-host Ruff
+artifacts plus adopt-python consumer plus promotion-checklist release
+linked; taxonomy #512 plus promotion #808 stay owned gaps; no Supported
    claim).
 
 ## Battery
@@ -337,8 +340,8 @@ CI only, no Supported claim).
    depcheck pins plus fixture evidence, closed #510; delivery now #754, #796-#800),
    `:quality_taxonomy_qualification` (taxonomy execution pins plus
    fixture evidence, closed #512; promotion gaps #802),
-   `:python_audit_qualification` (Python source-audit split pins plus
-   fixture evidence, closed #613; future selection #801),
+   `:python_audit_qualification` (Python source-audit selection pins plus
+   fixture evidence, issue #801; successor to closed #613),
   `:selective_update_qualification` (per-set selective vs wont-fix pins plus
   fixture evidence, issue #583),
   `:selective_cargo_qualification` (Cargo per-crate wont-fix pins plus
@@ -395,7 +398,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 46/46, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `cpp_snapshot_qualification` 17/17, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `scala_dotnet_adapters_qualification` 18/18, `native_adapters_qualification` 19/19, `structured_adapters_qualification` 16/16, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 16/16, `selective_update_qualification` 16/16, `selective_cargo_qualification` 16/16, `selective_nuget_qualification` 16/16, `selective_maven_qualification` 16/16, `selective_go_qualification` 16/16, `bump_chain_qualification` 16/16, `bump_discovery_qualification` 16/16, `bump_gha_qualification` 16/16, `runner_rotation_qualification` 16/16, `ghcr_rebuild_rotation_qualification` 16/16, `devcontainer_boot_qualification` 16/16, `update_events_qualification` 16/16, `update_rollback_qualification` 16/16, `env_plugins_cgo_qualification` 24/24, `starlark_futures_qualification` 40/40,
+`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 24/24, `selective_update_qualification` 16/16, `selective_cargo_qualification` 16/16, `selective_nuget_qualification` 16/16, `selective_maven_qualification` 16/16, `selective_go_qualification` 16/16, `bump_chain_qualification` 16/16, `bump_discovery_qualification` 16/16, `bump_gha_qualification` 16/16, `runner_rotation_qualification` 16/16, `ghcr_rebuild_rotation_qualification` 16/16, `devcontainer_boot_qualification` 16/16, `update_events_qualification` 16/16, `update_rollback_qualification` 16/16, `env_plugins_cgo_qualification` 24/24, `starlark_futures_qualification` 40/40,
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and

@@ -46,7 +46,9 @@ def adapter_supported_classes(tool_id, capability):
 # callback/library-wired check-only, buf lint plus qmllint plus
 # clang-tidy/cppcheck/staticcheck/govet/errcheck are
 # recorded-diagnostics/delegated-record check-only in the matrix
-# (spawned in production), and lint-only adapters stay check-only by
+# (spawned in production), ruff audit is check-only over the S ruleset
+# via the same hermetic `check` JSON path as lint (native-config sole
+# policy, no hidden preset), and lint-only adapters stay check-only by
 # design (ktlint lint fixes via `--format` like ESLint `--fix`).
 # See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
@@ -83,7 +85,7 @@ REAL_ADAPTERS = {
     "qmlformat": {"format": ["qml"]},
     "qmllint": {"lint": ["qml"]},
     "roslyn": {"lint": ["csharp"]},
-    "ruff": {"format": ["python", "python_stub"], "lint": ["python", "python_stub"]},
+    "ruff": {"audit": ["python", "python_stub"], "format": ["python", "python_stub"], "lint": ["python", "python_stub"]},
     "rustc": {"typecheck": ["rust"]},
     "rustfmt": {"format": ["rust"]},
     "scalafix": {"lint": ["scala"]},

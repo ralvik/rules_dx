@@ -75,9 +75,11 @@ Strict lint is an opt-in checked-in native config, not a default or hidden prese
 [opt-in strict preset](../quality/strict-preset.md) (issue #615).
 
 The planned initial curated Python defaults are Ruff, Ty, and pydoclint. Ruff
-and pydoclint run under lint and Ty runs under typecheck; initial audit tool selection is
-open under issue #613 (Bandit excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md), with fixture evidence in
+and pydoclint run under lint and Ty runs under typecheck; Python source-audit selection is
+Ruff S (flake8-bandit) via the pinned Ruff 0.16.7 standalone artifact with S opt-in under issue #801
+(successor to closed #613; Bandit excluded from v1 by
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md), curated audit stays empty with
+explicit disablement, with fixture evidence in
 `python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`).
 Ruff is planned as the default and only active Python formatter. Flake8 and pylint remain
 baseline opt-ins.

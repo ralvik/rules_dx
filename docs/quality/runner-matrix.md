@@ -42,7 +42,7 @@ so a single-edition rustfmt stays rejected.
 | `matrix_rust_typecheck_pass` | typecheck | generated `matrix/rustc_type_clean.rs`, empty upstream |
 | `matrix_rust_typecheck_fail` | typecheck | generated `matrix/rustc_type.rs`, recorded `E0308` |
 
-## Python (`python` + `python_stub`: pydoclint+ruff lint, ruff format, ty typecheck)
+## Python (`python` + `python_stub`: pydoclint+ruff lint, ruff format, ty typecheck, ruff S audit opt-in under #801)
 
 | Case | Capability | Input |
 | --- | --- | --- |
