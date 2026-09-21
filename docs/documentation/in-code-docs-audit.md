@@ -56,13 +56,13 @@ Checks:
 
 ### `tools/` (Python/Starlark/shell, Rust shims)
 
-- Keep: `preset.py` module/function docstrings (runfiles vs direct,
+- Keep: `tools/bazelrc/src/lib.rs` module docs (workspace env, minimal headers,
   version pins, regen/verify commands add signal; required by
   `pydoclint`); `depcheck/testdata/**/hello.py` fixture docstrings
   (dep-shape signal); `LCOV` reasons as above.
 - Shrink: preset fragment line to
   `# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).`
-  synced across `preset.py`, `preset_fragment.rs`, `preset.bazelrc`,
+  synced across `src/lib.rs`, `preset_fragment.rs`, `preset.bazelrc`,
   `preset_tests.bzl`, `preset_parity_test.sh`; `ci_targets_b/c.bzl`
   `see docs/` to `See: docs/`.
 - Delete: none; shell has no trivial docstrings.

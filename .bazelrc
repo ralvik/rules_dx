@@ -1,6 +1,6 @@
 # Seed Bazel configuration. Linux-first, local-only bring-up.
 # Shared execution flags live in the vendored preset fragment (issue #2);
-# review and change them only through `tools/bazelrc/preset.py`.
+# review and change them only through `tools/bazelrc/src/lib.rs`.
 import %workspace%/tools/bazelrc/preset.bazelrc
 
 # Project overrides stay explicit here, never in the generated fragment.

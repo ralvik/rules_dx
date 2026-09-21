@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Preset parity fixture (snapshot workflow): the
 # repository's own `tools/bazelrc/preset.bazelrc` is a snapshot of both the
-# Python inventory (`tools/bazelrc/preset.py`) and the Rust renderer
+# Rust inventory (`tools/bazelrc/src/lib.rs`) and the Rust renderer
 # (`cli/adopt/src/preset_fragment.rs` via `dx update`), so the fragment
 # consumers regenerate is the one dogfooded here. A drifting hand copy is
 # worse than none.
@@ -30,21 +30,19 @@ dx_bootstrap "tools/sh/guards.sh"
 
 expected="$(dx_realpath "$1")"
 dx_bin="$(dx_realpath "$2")"
-preset_py="$(dx_realpath "$3")"
+preset_rs="$(dx_realpath "$3")"
 
 dx_test_init
 
 # Schema validation: pin the contract fields on the checked-in fragment,
 # mirroring `tools/bazelrc/preset_tests.bzl` and
-# `cli/adopt/src/preset_fragment.rs::fragment_matches_python_inventory`.
+# `cli/adopt/src/preset_fragment.rs::fragment_matches_preset_inventory`.
 # Exact bytes stay in the snapshot below; this fails first on shape drift.
 # Fixed-string guard table (fail-closed, no refresh): snapshot owns the
 # byte-identity golden, this table owns the contract sentences.
 dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
   'GENERATED, do not edit' \
-  'Version-matched to Bazel 9.2.0' \
-  'and dx 0.0.0' \
-  'Consumer refresh: `dx update`' \
+  'Regenerate: `bazel run //tools/bazelrc:preset.update`' \
   'common --enable_bzlmod' \
   'build --verbose_failures' \
   'test --test_output=errors' \
@@ -60,11 +58,13 @@ dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
   'build:dx_release --compilation_mode=opt'
 echo "preset schema: checked-in fragment carries the pinned contract"
 
-# Python inventory pins (mirrors //tools/ci:pin_consistency_test for the
+# Rust inventory pins (mirrors //tools/ci:pin_consistency_test for the
 # Bazel pin, plus the per-release dx stamp).
-dx_guards_contains "$preset_py" "preset.py lost its Bazel/dx version pins" \
-  'PRESET_BAZEL_VERSION = "9.2.0"' \
-  'PRESET_DX_VERSION = "0.0.0"'
+dx_guards_contains "$preset_rs" "preset src lost its Bazel/dx version pins" \
+  'PRESET_BAZEL_VERSION' \
+  'PRESET_DX_VERSION' \
+  '"9.2.0"' \
+  '"0.0.0"'
 
 dx_mkscratch scratch
 
@@ -79,7 +79,7 @@ printf '%s\n' \
 
 # Rust renderer parity: `dx update go` (Go is a no-op backend, no Bazel
 # launch) regenerates the fragment via `dx_adopt::update_preset`; the
-# snapshot below proves it matches the Python-generated checked-in file.
+# snapshot below proves it matches the Rust-generated checked-in file.
 if "$dx_bin" --workspace "$scratch" update go --quiet >/dev/null 2>&1; then
   ok
 else

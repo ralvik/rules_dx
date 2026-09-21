@@ -106,7 +106,7 @@ Three shared Bazel configs select `compilation_mode` behind stable
 | `dx_release` | `opt` | `deploy` default |
 
 The configs live in the vendored preset (`tools/bazelrc/preset.bazelrc`,
-reviewed via `tools/bazelrc/preset.py`, wired through the root
+reviewed via `tools/bazelrc/src/lib.rs`, wired through the root
 `.bazelrc`) and are additive: bare invocations keep today's behavior.
 
 `dx build`, `dx run`, `dx test`, and `dx deploy` accept

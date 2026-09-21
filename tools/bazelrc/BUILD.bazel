@@ -1,28 +1,68 @@
-"""Vendored Bazel execution preset.
+"""Vendored Bazel execution preset. Contract: `docs/contributing/local-workflows.md#preset-update-loop`."""
 
-`bazel run //tools/bazelrc:preset.update` regenerates the checked-in
-fragment from the reviewed inventory in `preset.py`;
-`preset.update_test` pins the Bazel pin, the per-release dx stamp, and
-the flag inventory via file substring checks on the fragment. Consumers
-refresh via `dx update` and gate staleness via `dx update --check`.
-"""
-
-load("@rules_python//python:defs.bzl", "py_binary")
+load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
+load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 load(":preset_tests.bzl", "preset_update_tests")
 
 package(default_visibility = ["//:__subpackages__"])
 
-py_binary(
+rust_library(
+    name = "dx_preset",
+    srcs = ["src/lib.rs"],
+    crate_name = "dx_preset",
+    crate_root = "src/lib.rs",
+    edition = "2021",
+)
+
+rust_binary(
     name = "preset.update",
-    srcs = ["preset.py"],
-    main = "preset.py",
+    srcs = ["src/bin_preset_update.rs"],
+    crate_name = "preset_update",
+    crate_root = "src/bin_preset_update.rs",
+    edition = "2021",
+    deps = [":dx_preset"],
+)
+
+rust_test(
+    name = "dx_preset_test",
+    size = "small",
+    aliases = aliases(
+        package_name = "tools/dx_preset",
+        normal = True,
+        normal_dev = True,
+    ),
+    crate = ":dx_preset",
+    deps = crate_deps(
+        ["tempfile"],
+        package_name = "tools/dx_preset",
+    ),
+)
+
+rustfmt_test(
+    name = "dx_preset_fmt_test",
+    size = "small",
+    targets = [
+        ":dx_preset",
+        ":preset.update",
+    ],
+)
+
+rust_clippy_test(
+    name = "dx_preset_clippy_test",
+    size = "small",
+    targets = [
+        ":dx_preset",
+        ":preset.update",
+    ],
 )
 
 exports_files([
     "preset.bazelrc",
-    "preset.py",
+    "src/lib.rs",
 ])
+
+exports_files(["Cargo.toml"])
 
 preset_update_tests(name = "preset.update_test")
 
@@ -38,4 +78,10 @@ real_source_target(
         "preset_tests.bzl",
     ],
     tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_toml",
+    tags = ["corpus"],
+    toml_srcs = ["Cargo.toml"],
 )

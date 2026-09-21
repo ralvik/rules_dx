@@ -1,5 +1,5 @@
 {
-  "checksum": "8f74bf4dc88d5c1c993eea326b210fb1bac06f8a506286f6cc51ad2a7a9809df",
+  "checksum": "320f219c10b8da6a28f81f0d8bc0257ed5c9b96c7915d78d2ca97e3bc433ab13",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -3109,6 +3109,29 @@
         {
           "Library": {
             "crate_name": "dx_path",
+            "crate_root": "src/lib.rs"
+          }
+        }
+      ],
+      "version": "0.0.0"
+    },
+    "dx_preset 0.0.0": {
+      "common_attrs": {
+        "deps_dev": [
+          {
+            "id": "tempfile 3.27.0",
+            "target": "tempfile"
+          }
+        ],
+        "edition": "2021"
+      },
+      "library_target_name": "dx_preset",
+      "name": "dx_preset",
+      "repository": null,
+      "targets": [
+        {
+          "Library": {
+            "crate_name": "dx_preset",
             "crate_root": "src/lib.rs"
           }
         }
@@ -12844,6 +12867,7 @@
     "dx_lcov 0.0.0": "cli/dx_lcov",
     "dx_output 0.0.0": "cli/dx_output",
     "dx_path 0.0.0": "cli/dx_path",
+    "dx_preset 0.0.0": "tools/dx_preset",
     "dx_process 0.0.0": "cli/dx_process",
     "dx_proto_validate 0.0.0": "cli/dx_proto_validate",
     "dx_roots 0.0.0": "cli/dx_roots",

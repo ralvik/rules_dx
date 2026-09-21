@@ -68,7 +68,7 @@ the keep-regeneration essay, and `Release:` provenance lines.
 Header is `GENERATED, do not edit` plus one regenerate command. Provenance
 lives in generator inputs and locks; artifact metadata already carries
 `url`/`sha256`. See `quality/artifacts/update.py` and
-`tools/bazelrc/preset.py`.
+`tools/bazelrc/src/lib.rs`.
 
 ## Gazelle Boundary
 

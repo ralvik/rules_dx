@@ -12,7 +12,7 @@
 # version bump means: bump the canonical file once, then update the tracked
 # copies in the same reviewed change.
 #
-# Usage: pin_consistency.sh <bazelversion> <module> <preset_py>
+# Usage: pin_consistency.sh <bazelversion> <module> <preset_rs>
 #   <dockerfile> <tested_stack> <action_yml> <local_workflows>
 set -euo pipefail
 
@@ -22,13 +22,13 @@ dx_bootstrap "tools/sh/lib.sh"
 
 dx_test_init
 
-bazelversion="${1:?usage: pin_consistency.sh <bazelversion> <module> <preset_py> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-module="${2:?usage: pin_consistency.sh <bazelversion> <module> <preset_py> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-preset_py="${3:?usage: pin_consistency.sh <bazelversion> <module> <preset_py> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-dockerfile="${4:?usage: pin_consistency.sh <bazelversion> <module> <preset_py> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-tested_stack="${5:?usage: pin_consistency.sh <bazelversion> <module> <preset_py> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-action_yml="${6:?usage: pin_consistency.sh <bazelversion> <module> <preset_py> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
-local_workflows="${7:?usage: pin_consistency.sh <bazelversion> <module> <preset_py> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+bazelversion="${1:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+module="${2:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+preset_py="${3:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+dockerfile="${4:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+tested_stack="${5:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+action_yml="${6:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
+local_workflows="${7:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows>}"
 
 # --- Bazel canonical ---
 bazel_pin="$(tr -d '[:space:]' <"$bazelversion")"
@@ -55,8 +55,8 @@ else
   ok
 fi
 
-preset_py_pin="$(grep -o -E -e 'PRESET_BAZEL_VERSION = "[^"]+"' "$preset_py" | head -1 | cut -d'"' -f2 || true)"
-check_bazel_pin "tools/bazelrc/preset.py pin" "$preset_py_pin"
+preset_py_pin="$(grep -o -E -e 'PRESET_BAZEL_VERSION[^"]*"[^"]+"' "$preset_py" | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+check_bazel_pin "tools/bazelrc/src/lib.rs pin" "$preset_py_pin"
 
 docker_bazel_pin="$(grep -o -E -e 'USE_BAZEL_VERSION=[0-9.]+' "$dockerfile" | head -1 | cut -d= -f2 || true)"
 check_bazel_pin "Dockerfile USE_BAZEL_VERSION" "$docker_bazel_pin"

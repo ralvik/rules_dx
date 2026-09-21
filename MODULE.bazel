@@ -341,6 +341,7 @@ crate.from_cargo(
         "//generation/codegen_shard:Cargo.toml",
         "//docs/ir/ir:Cargo.toml",
         "//deploy/rules:Cargo.toml",
+        "//tools/bazelrc:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")

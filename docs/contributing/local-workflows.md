@@ -141,7 +141,7 @@ owner.
 Shared Bazel execution flags live in the vendored preset (`tools/bazelrc`),
 version-matched to `.bazelversion` and stamped with the per-release
 `dx` version (`MODULE.bazel`). Review and change flags only through
-the inventory in `tools/bazelrc/preset.py` (mirrored in
+the inventory in `tools/bazelrc/src/lib.rs` (mirrored in
 `cli/adopt/src/preset_fragment.rs`; `//:preset_parity_test` proves
 byte-identity):
 
