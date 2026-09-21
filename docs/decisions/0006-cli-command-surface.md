@@ -5,9 +5,11 @@
 Date: 2026-09-09.
 
 Superseded for the `dx check` / `dx fix` / `dx clean` surface by
-[ADR 0018](0018-umbrella-check-fix-cleanup-clean.md) and for the `dx docs`
-surface by [ADR 0020](0020-remove-dx-docs-placeholder.md). Remaining invocation,
-scope, output, and workflow-composition constraints stand.
+[ADR 0018](0018-umbrella-check-fix-cleanup-clean.md), for the `dx docs`
+surface by [ADR 0020](0020-remove-dx-docs-placeholder.md), and for the
+`dx new` rejection by delivered absent-only `dx new` plus one-shot
+`dx upgrade` (see [new/upgrade](../cli/commands/new-upgrade.md)).
+Remaining invocation, scope, output, and workflow-composition constraints stand.
 
 Historical note: `Oxx`/`Mxx` identifiers below predate the GitHub-issues work
 register and are not normative. Planned work lives in GitHub issues and [roadmap](../roadmap.md) (see
@@ -244,9 +246,11 @@ absent side uses a versioned managed empty generation.
 - `dx configure` as the Gazelle command.
 - Requiring `dx fix` or `dx lint --fix` for the default lint mutation.
 - Combining lint and type checking into one command.
-- A `dx new` app/service/component template generator: out of v1 (rejected 2026-09-09); new-repository
-  scaffolding stays in `dx init`, BUILD maintenance stays in `dx generate`, and breaking-change
-  rewrites remain unselected (see Status note). No `dx new` command is selected.
+- A general `dx new` app/service/component template generator: out of v1 (rejected 2026-09-09;
+  original rejection superseded for absent-only per-language `dx new` plus one-shot `dx upgrade`
+  composition, see [new/upgrade](../cli/commands/new-upgrade.md)); new-repository
+  scaffolding stays in `dx init`, BUILD maintenance stays in `dx generate`, and general
+  breaking-change rewrites remain unselected beyond `dx migrate`/`dx upgrade` (see Status note).
 - Language/profile selectors, path/pattern scope, or an interactive shell under
   `dx env`.
 - Making `env` or `codegen` implicitly run the other instead of using explicit

@@ -284,10 +284,19 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx bazel` | retain | Exact-forwarding escape hatch through the selected repository launcher |
 | `dx docs` | removed; reintroduction with real extraction/validation open under #786 (successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site; `--check` is non-mutating |
 
-`dx doctor` and `dx configure` are not commands. `dx check` and `dx fix`
-are thin sequential umbrellas, not a general CI scheduler. `generate`
-is preferred to `configure` because Gazelle generates repository metadata rather
-than configuring developer preferences.
+`dx doctor`, `dx configure`, and `dx docs` are not commands. Help stays
+flag-only (`dx --help`, `dx <cmd> --help`) with no `help` verb.
+`dx check` and `dx fix` are thin sequential umbrellas, not a general CI
+scheduler. `generate` is preferred to `configure` because Gazelle generates
+repository metadata rather than configuring developer preferences.
+
+Thin fit (2026-09-21): the 31-verb surface stays thin because each verb
+names one explicit behavior with fail-closed misuse handling. `dx fix`
+applies once in phase order with no post-apply rerun (run `dx check`
+again); `dx clean` prunes only validated unselected `.dx` state by default
+(`--bazel` forwards `bazel clean`, distinct from `--configured` and
+`dx bazel`); `dx status` is the unscoped diagnostics surface that always
+prints; `dx completion` only prints scripts with no `--check` mode.
 
 Normal CLI operation prints concise workflow summaries without subprocess argv or
 forwarded option values. `--quiet` suppresses wrapper planning output while preserving

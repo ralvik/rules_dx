@@ -17,7 +17,7 @@
 # - execution: `--dry-run` plans without writes (text plus JSON
 #   `migrate_planned`), live runs fail closed with `migrate_failed`
 #   (exit 1, no writes) until the first manifest lands (module 0.0.0);
-# - registry: `migrate` inside the final 29 parsed commands with
+# - registry: `migrate` inside the final 31 parsed commands with
 #   `--from`/`--to` owned, mutating by default, JSON-capable, diff
 #   rejected, help plus docs in place.
 #
@@ -83,11 +83,11 @@ else
   bad "migrate grammar lost its --from/--to value-option pin"
 fi
 
-# Parser requires both versions for migrate and rejects them elsewhere.
+# Parser requires both versions for migrate/upgrade and rejects them elsewhere.
 if grep -q -F -e 'Command::Migrate' "$parser_rs" &&
   grep -q -F -e '--from <version> --to <version>' "$parser_rs" &&
   grep -q -F -e '--from' "$parser_rs" &&
-  grep -q -F -e 'belong to `migrate` only' "$parser_rs"; then
+  grep -q -F -e 'belong to `migrate` plus `upgrade` only' "$parser_rs"; then
   ok
 else
   bad "migrate parser lost its required-versions plus ownership pin"
