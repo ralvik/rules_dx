@@ -9,10 +9,7 @@
 //! evaluation), and the `inventory` module (repo inventory).
 
 use super::{evaluate, parse_inventory, parse_lcov, render, LcovError};
-use clap::{
-    error::{ContextKind, ContextValue, ErrorKind},
-    Parser,
-};
+use clap::{error::ErrorKind, Parser};
 
 fn print_usage(print: &mut dyn FnMut(&str)) {
     print("usage: check --report <combined.lcov> --inventory <inventory.txt> --sources <sources.txt> [--root <dir>]");
@@ -41,12 +38,10 @@ struct Cli {
 }
 
 /// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
+/// Shared plumbing; message formats stay local to the frozen contract.
+/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
-    match error.get(ContextKind::InvalidArg) {
-        Some(ContextValue::String(token)) => token.clone(),
-        Some(ContextValue::Strings(tokens)) => tokens.first().cloned().unwrap_or_default(),
-        _ => String::new(),
-    }
+    dx_output::invalid_token(error)
 }
 
 /// Map `clap` tokenizing failures onto the legacy usage-routed surface:
@@ -59,29 +54,18 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
+        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
-            let echoed = args
-                .iter()
-                .find(|arg| *arg == &token)
-                .or_else(|| {
-                    args.iter()
-                        .find(|arg| arg.starts_with(&format!("{token}=")))
-                })
-                .map_or(token.clone(), Clone::clone);
+            let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown argument: {echoed}")
         }
         ErrorKind::InvalidValue => {
             // `clap` renders the pending option as `--flag <VALUE>`; the
             // legacy message names the bare `--flag`.
-            let flag = token.split_whitespace().next().unwrap_or(&token);
+            let flag = dx_output::leading_flag(&token);
             format!("missing value for {flag}")
         }
-        _ => error
-            .to_string()
-            .lines()
-            .next()
-            .unwrap_or("invalid arguments")
-            .to_owned(),
+        _ => dx_output::first_line(&error),
     }
 }
 

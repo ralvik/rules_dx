@@ -29,7 +29,10 @@ dx_rust_crate(
         "src/watch.rs",
     ],
     dev_deps = ["insta"],
-    extra_deps = ["//cli/atomic_fs:dx_atomic_fs"],
+    extra_deps = [
+        "//cli/atomic_fs:dx_atomic_fs",
+        "//cli/fingerprint:dx_fingerprint",
+    ],
     extra_test_deps = ["//cli/test_scratch:dx_test_scratch"],
     deps = [
         "notify",

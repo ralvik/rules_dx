@@ -141,6 +141,7 @@ rust_library(
         "//cli/diff:dx_diff",
         "//cli/digest:dx_digest",
         "//cli/env_plan:dx_env_plan",
+        "//cli/fingerprint:dx_fingerprint",
         "//cli/lcov:dx_lcov",
         "//cli/output:dx_output",
         "//cli/process:dx_process",

@@ -27,6 +27,7 @@
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod changes;
+pub mod clap_errors;
 pub mod diagnostics;
 pub mod findings;
 pub mod lifecycle;
@@ -35,6 +36,9 @@ pub mod severity;
 pub mod validation;
 
 pub use changes::{change_event, mutation_event, ChangeEvent, ChangeKind, MutationOutcome};
+pub use clap_errors::{
+    first_line, invalid_token, leading_flag, recover_unknown_token, rejected_value,
+};
 pub use diagnostics::{
     color_enabled, colors_allowed, emit_status, format_status, init_diagnostics, styled_status,
     styled_status_for, DEFAULT_LOG_FILTER, VERBOSE_LOG_FILTER,
