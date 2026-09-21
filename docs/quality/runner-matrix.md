@@ -14,8 +14,9 @@ recorded upstream diagnostics byte-identical to the parser unit samples
 
 Out of scope by design: `tsc` typechecks `typescript`/`tsx` but is
 target-coupled and never runs as a bare backend invocation, so it has no
-matrix cell; adapter-less classes (`cc`, `csharp`, `go`, `java`, `kotlin`,
-`scala`, …) have no backing tool and no cells.
+matrix cell; adapter-less classes (`cc`, `go`, `java`, `kotlin`, …) have
+no backing tool and no cells. Scala plus C# plus F# cells below are
+opt-in adapters delivered under #797 (successor to closed #417).
 
 Crate edition (issue #468): the two `edition_*` cells above pin the
 `--tool-edition` flow over the real toolchain rustfmt. The 2015 cell stays
@@ -95,17 +96,41 @@ so a single-edition rustfmt stays rejected.
 | `matrix_markdown_lint_fail` | lint | generated `matrix/markdown_dirty.md` (unresolved link) + `vale_test.ini` closure |
 | `matrix_markdown_sibling_pass` | lint | `sibling_clean.md` + `sibling_license.txt` sibling + `vale_test.ini` closure |
 
+## Scala (`scala`: scalafmt format, scalafix lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_scala_format_pass` / `matrix_scala_format_fail` | format (scalafmt) | generated `matrix/scalafmt_clean.scala` / `matrix/scalafmt_dirty.scala` |
+| `matrix_scala_lint_pass` / `matrix_scala_lint_fail` | lint (scalafix) | generated `matrix/scalafix_clean.scala` / recorded Scalafix callback NDJSON |
+
+## C# (`csharp`: csharpier format, roslyn lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_csharp_format_pass` / `matrix_csharp_format_fail` | format (csharpier) | generated `matrix/csharpier_clean.cs` / `matrix/csharpier_dirty.cs` |
+| `matrix_csharp_lint_pass` / `matrix_csharp_lint_fail` | lint (roslyn) | generated `matrix/roslyn_clean.cs`, empty SARIF / recorded per-pivot SARIF union |
+
+## F# (`fsharp`: fantomas format, fsharplint lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_fsharp_format_pass` / `matrix_fsharp_format_fail` | format (fantomas) | generated `matrix/fantomas_clean.fs` / `matrix/fantomas_dirty.fs` |
+| `matrix_fsharp_lint_pass` / `matrix_fsharp_lint_fail` | lint (fsharplint) | generated `matrix/fsharplint_clean.fs` / recorded library NDJSON |
+
 ## Parser samples (issue #465)
 
 Every adapter-backed tool keeps a parser with pass (clean) plus fail (dirty)
 samples exercised as unit tests under `quality/adapter/src/parsers/` and pinned by
 `bazel run //tools/ci:parser_sample_qualification`: biome lint plus format,
-buildifier, clippy plus rustc via the shared rust diagnostics, eslint, flake8,
-markdown_check, prettier, pydoclint, pylint, ruff lint plus format, rustfmt,
+buildifier, clippy plus rustc via the shared rust diagnostics, csharpier,
+eslint, fantomas, flake8, fsharplint, markdown_check, prettier, pydoclint,
+pylint, roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt,
 taplo lint plus format, tsc, ty, vale. Recorded Clippy/rustc diagnostics stay
 byte-identical to the parser unit samples (`quality/adapter/src/parsers/rust.rs`);
 `tsc` keeps its adapter parser with pass plus fail samples but stays
 pipeline-only by design (target-coupled, no runner dispatch, no matrix cell).
+Roslyn keeps its SARIF parser with pass plus fail samples and runs delegated
+(per-pivot SARIF inputs, no spawn), like Clippy/rustc.
 
 ## Adding a cell
 

@@ -225,6 +225,16 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Scala plus .NET adapters harness (issue #797); see docs/quality/tool-integrations.md#initial-adapter-qualification.
+    sh_binary(
+        name = "scala_dotnet_adapters_qualification",
+        srcs = ["scala_dotnet_adapters_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Stable-stack compose harness; see docs/native-toolchains.md#qualification-questions-and-delivery.
     sh_binary(
         name = "stable_stack_qualification",

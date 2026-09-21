@@ -1,6 +1,7 @@
 """WP2c aspect fixtures and evidence (synthetic, real, Python)."""
 
 load("//libs/starlark:failure_test.bzl", "failure_test")
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
 load("//quality:native_config.bzl", "biome_config", "eslint_config", "ruff_config", "rustfmt_config", "vale_config")
@@ -452,6 +453,24 @@ real_typecheck_fixture_tests(
 # Layer-2 full-matrix runner tests: real runner over provider-less
 # data; goldens live in runner_matrix_cases.bzl.
 runner_matrix_cases(name = "runner_matrix")
+
+# Fake format doubles for the Scala/.NET cohort matrix cells (issue #797,
+# seed-only wiring proof without a JVM/.NET toolchain; real-tool behavior
+# stays proven by the per-tool fixtures).
+sh_binary(
+    name = "fake_scalafmt",
+    srcs = ["fake_scalafmt.sh"],
+)
+
+sh_binary(
+    name = "fake_csharpier",
+    srcs = ["fake_csharpier.sh"],
+)
+
+sh_binary(
+    name = "fake_fantomas",
+    srcs = ["fake_fantomas.sh"],
+)
 
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(

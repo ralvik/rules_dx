@@ -32,16 +32,16 @@ CURATED_STARLARK = "starlark family lint buildifier plus format buildifier"
 CURATED_TOML = "toml family lint taplo plus format taplo"
 CURATED_TYPESCRIPT = "typescript family lint biome plus format biome plus typecheck tsc"
 
-# Adapter-backed execution: 11 classes ride 16 real adapters with
+# Adapter-backed execution: 14 classes ride 22 real adapters with
 # runner-matrix pass plus fail plus parser plus native-config plus
-# aspect evidence.
-BACKED_CLASSES = "11 adapter-backed classes: javascript plus json plus jsx plus markdown plus python plus python_stub plus rust plus starlark plus toml plus tsx plus typescript"
-BACKED_TOOLS = "16 real adapters: biome plus buildifier plus clippy plus eslint plus flake8 plus markdown_check plus prettier plus pydoclint plus pylint plus ruff plus rustc plus rustfmt plus taplo plus tsc plus ty plus vale"
+# aspect evidence. Scala plus C# plus F# delivered under #797.
+BACKED_CLASSES = "14 adapter-backed classes: csharp plus fsharp plus javascript plus json plus jsx plus markdown plus python plus python_stub plus rust plus scala plus starlark plus toml plus tsx plus typescript"
+BACKED_TOOLS = "22 real adapters: biome plus buildifier plus clippy plus csharpier plus eslint plus fantomas plus flake8 plus fsharplint plus markdown_check plus prettier plus pydoclint plus pylint plus roslyn plus ruff plus rustc plus rustfmt plus scalafix plus scalafmt plus taplo plus tsc plus ty plus vale"
 
-# Deferred execution boundary: 36 classes stay deferred with owning
+# Deferred execution boundary: 33 classes stay deferred with owning
 # decision plus frozen delivery route; classification exists, adapter
 # claim does not.
-DEFERRED_COUNT = "36 deferred classes with owner plus frozen route"
+DEFERRED_COUNT = "33 deferred classes with owner plus frozen route"
 DEFERRED_OWNER = "every deferral names ADR 0019 plus frozen delivery route"
 DEFERRED_NO_DOUBLE_CLAIM = "no class is both adapter-backed and deferred"
 DEFERRED_NO_UNDISPOSITIONED = "no classified class lacks a disposition"
@@ -79,7 +79,7 @@ REGISTRY_QUERIES = "consumers query via registry plus curated plus parity querie
 EXECUTION_POLICY = "real_fixture_policy executes the 8 curated families"
 EXECUTION_MATRIX = "runner matrix pass plus fail per backed class plus capability"
 EXECUTION_PARSERS = "every backed tool keeps a parser with pass plus fail samples"
-EXECUTION_NATIVE = "native bindings for biome plus buildifier plus eslint plus ruff plus rustfmt plus taplo plus vale"
+EXECUTION_NATIVE = "native bindings for biome plus buildifier plus csharpier plus eslint plus fsharplint plus ruff plus rustfmt plus scalafix plus scalafmt plus taplo plus vale"
 EXECUTION_ASPECTS = "real aspects wire target-coupled plus upstream-delegated plus check-only"
 EXECUTION_PARITY_GATE = "parity gate fails closed on unclassified plus undispositioned plus double-claim"
 

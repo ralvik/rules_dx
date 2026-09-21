@@ -61,26 +61,37 @@ use quality_result::proto::Diagnostic;
 
 /// Real tool IDs for the initial adapters plus the rustc
 /// typecheck adapter, the Python adapters (Ruff, Ty, pydoclint,
-/// flake8, pylint), and the JavaScript/TypeScript/JSON adapters
+/// flake8, pylint), the JavaScript/TypeScript/JSON adapters
 /// (Biome, ESLint, Prettier; target-coupled tsc stays pipeline-only and
-/// never runs as a bare backend invocation).
+/// never runs as a bare backend invocation), and the Scala/.NET cohort
+/// (Scalafmt format, Scalafix lint via callback, CSharpier format,
+/// Fantomas format, Roslyn lint via delegated SARIF, FSharpLint lint
+/// via library API).
 /// Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
 /// implements.
+///
+/// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 pub const REAL_TOOLS: &[&str] = &[
     "biome",
     "buildifier",
     "clippy",
+    "csharpier",
     "eslint",
+    "fantomas",
     "flake8",
+    "fsharplint",
     "markdown_check",
     "prettier",
     "pydoclint",
     "pylint",
+    "roslyn",
     "ruff",
     "rustc",
     "rustfmt",
+    "scalafix",
+    "scalafmt",
     "taplo",
     "ty",
     "vale",
@@ -499,6 +510,98 @@ impl RealBackend {
         Ok(findings)
     }
 
+    /// Roslyn check: parses the authoritative per-pivot SARIF files the
+    /// aspect declared as action inputs (one `/errorlog` SARIF per
+    /// TFM/RID pivot, concatenated as a union with per-pivot provenance).
+    /// Artifact URIs already address workspace paths, so findings are
+    /// re-addressed to staged scratch-absolute paths. Nothing spawns.
+    fn check_roslyn_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(tool_id, parsers::parse_roslyn(&bytes, &workspaces))?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// Scalafix check via recorded callback NDJSON: parses the
+    /// authoritative upstream diagnostics files the aspect declared as
+    /// action inputs (one JSON record per line from the
+    /// `ScalafixMainCallback` entrypoint). Records address workspace
+    /// paths, so findings are re-addressed to staged scratch-absolute
+    /// paths like Clippy/Roslyn. Nothing spawns.
+    fn check_scalafix_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_scalafix(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// FSharpLint check via recorded library NDJSON: parses the
+    /// authoritative upstream diagnostics files the aspect declared as
+    /// action inputs (one JSON record per line from the
+    /// `FSharpLint.Application.Lint` entrypoint). Records address
+    /// workspace paths, so findings are re-addressed to staged
+    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
+    fn check_fsharplint_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_fsharplint(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
     /// Runs one check over the staged files and returns the parsed
     /// findings still addressed by absolute scratch path. Sibling pairs
     /// reach only the Markdown checker as `--sibling` mappings; every
@@ -778,6 +881,75 @@ impl RealBackend {
                     found.file = absolute.to_string_lossy().into_owned();
                 }
                 Ok(findings)
+            }
+            "scalafmt" => {
+                let invocation = commands::scalafmt_check(&tool.binary, &refs, config.as_deref());
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                parsed(
+                    tool_id,
+                    parsers::parse_scalafmt(&out.stdout, out.code, &strs),
+                )
+            }
+            "scalafix" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_scalafix_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation =
+                        commands::scalafix_check(&tool.binary, &refs, None, None, None);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_scalafix(&out.stdout, out.code, &strs),
+                    )
+                }
+            }
+            "csharpier" => {
+                let invocation = commands::csharpier_check(&tool.binary, &refs, config.as_deref());
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let mut findings = parsed(
+                    tool_id,
+                    parsers::parse_csharpier(&out.stdout, out.code, &workspaces),
+                )?;
+                for found in &mut findings {
+                    let absolute = reanchor(tool_id, pairs, &found.file)?;
+                    found.file = absolute.to_string_lossy().into_owned();
+                }
+                Ok(findings)
+            }
+            "fantomas" => {
+                let invocation = commands::fantomas_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let mut findings = parsed(
+                    tool_id,
+                    parsers::parse_fantomas(&out.stdout, out.code, &workspaces),
+                )?;
+                for found in &mut findings {
+                    let absolute = reanchor(tool_id, pairs, &found.file)?;
+                    found.file = absolute.to_string_lossy().into_owned();
+                }
+                Ok(findings)
+            }
+            "roslyn" => self.check_roslyn_delegated(tool_id, tool, pairs),
+            "fsharplint" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_fsharplint_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation =
+                        commands::fsharplint_check(&tool.binary, &refs, None, config.as_deref());
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_fsharplint(&out.stdout, out.code, &strs),
+                    )
+                }
             }
             _ => Err(execution(
                 tool_id,

@@ -41,8 +41,9 @@ def adapter_supported_classes(tool_id, capability):
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
 # Real adapters: stable tool IDs users select in policy families.
-# Stages order by sorted tool ID; rustc is upstream-delegated,
-# tsc is target-coupled, and lint-only adapters stay check-only by design.
+# Stages order by sorted tool ID; rustc and roslyn are upstream-delegated,
+# tsc is target-coupled, scalafix/fsharplint are callback/library-wired
+# check-only, and lint-only adapters stay check-only by design.
 # See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
     "biome": {
@@ -51,15 +52,21 @@ REAL_ADAPTERS = {
     },
     "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
     "clippy": {"lint": ["rust"]},
+    "csharpier": {"format": ["csharp"]},
     "eslint": {"lint": ["javascript", "jsx"]},
+    "fantomas": {"format": ["fsharp"]},
     "flake8": {"lint": ["python", "python_stub"]},
+    "fsharplint": {"lint": ["fsharp"]},
     "markdown_check": {"lint": ["markdown"]},
     "prettier": {"format": ["javascript", "json", "jsx", "typescript", "tsx"]},
     "pydoclint": {"lint": ["python", "python_stub"]},
     "pylint": {"lint": ["python", "python_stub"]},
+    "roslyn": {"lint": ["csharp"]},
     "ruff": {"format": ["python", "python_stub"], "lint": ["python", "python_stub"]},
     "rustc": {"typecheck": ["rust"]},
     "rustfmt": {"format": ["rust"]},
+    "scalafix": {"lint": ["scala"]},
+    "scalafmt": {"format": ["scala"]},
     "taplo": {"format": ["toml"], "lint": ["toml"]},
     "tsc": {"typecheck": ["typescript", "tsx"]},
     "ty": {"typecheck": ["python", "python_stub"]},
