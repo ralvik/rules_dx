@@ -21,10 +21,11 @@ version. The capability provides:
 
 - Load tests for public `.bzl` entry points and symbols.
 - Unit-test-style assertions for pure Starlark functions and values.
-- Analysis tests for rules, providers, and declared outputs, with
-  deterministic observation rendering. Aspect, toolchain, configuration,
+- Analysis tests for rules, providers, declared outputs, and aspect notes,
+  with deterministic observation rendering. Toolchain, configuration,
   output-group, registered-action, and transition subjects remain
-  provisional pending concrete use cases; This record does not claim them.
+  provisional pending concrete use cases; this record does not claim them.
+  Aspect subjects graduated under #791.
 - Ordinary Bazel test protocol behavior, logs, and standard test outputs suitable
   for Bazel, BEP, and CI collection.
 - Small fixture helpers without mocking or reimplementing Bazel semantics.
@@ -48,11 +49,13 @@ test `.bzl` file, not hand-written assertion manifests.
 
 The qualified `expect` surface is five constructors, `expect_equal`,
 `expect_true`, `expect_false`, `expect_contains`, `expect_match`, plus the
-`DxSubjectInfo` provider for analysis observations. Broader subjects
-(targets, actions, files, depsets, runfiles) remain provisional
+`DxSubjectInfo` provider plus the `DxAspectInfo` provider with the
+`dx_aspect_note` observation aspect for analysis observations. Broader
+subjects (targets, actions, files, depsets, runfiles) remain provisional
 pending concrete use cases; do not treat them as available API through this
 record. The matcher set graduated under #790; no larger matcher library
-is claimed.
+is claimed. The aspect-subject set graduated under #791; toolchain plus
+configuration plus output-group plus action subjects stay deferred.
 
 Expected-failure tests identify the required failure phase (`load`, `unit`,
 `analysis`, or `execution`) and one or more diagnostic substrings. The

@@ -8,9 +8,9 @@ environment, tool, and quality matrices.
 
 Public API: `starlark_test` macro, `expect_equal`, `expect_true`,
 `expect_false`, `expect_contains`, `expect_match` assertion constructors,
-and `DxSubjectInfo` provider, all loadable from
-`//libs/starlark:defs.bzl`. One macro call is one addressable Bazel test
-target with one Bazel result.
+`DxSubjectInfo` plus `DxAspectInfo` providers plus `dx_aspect_note`
+aspect, all loadable from `//libs/starlark:defs.bzl`. One macro call is
+one addressable Bazel test target with one Bazel result.
 
 ## Modes
 
@@ -22,9 +22,17 @@ target with one Bazel result.
   `subjects`.
 - `unit` asserts pure Starlark function results with no I/O. Requires
   non-empty `checks`, rejects `subjects`.
-- `analysis` observes subject targets (provider fields, output basenames),
-  renders deterministic observations, and compares them against
-  `expected_observations`. Requires non-empty `subjects`.
+- `analysis` observes subject targets (provider fields, output basenames,
+  aspect notes), renders deterministic observations, and compares them
+  against `expected_observations`. Requires non-empty `subjects`. Every
+  subject carries the `dx_aspect_note` observation aspect, which derives
+  `aspect_seen` plus `subject_label` plus `has_subject` plus
+  `field_count` plus transitive `deps` notes without subject cooperation;
+  observations render sorted `aspect_field` lines. The concrete use case
+  lives in
+  `../../libs/starlark/tests/fixtures/starlark_futures/aspect_subjects.bzl`
+  (leaf plus group with deps, direct plus transitive notes), proven by
+  `//libs/starlark/tests:aspect_subject_analysis`.
 - `execution` greps runfiles fixtures (`file_checks`, AND semantics over
   newline-separated substrings, one result line per substring). Requires
   non-empty `file_checks`, rejects `subjects`.
@@ -112,14 +120,17 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Decided under closed #588 plus #790 per [ADR 0009](../decisions/0009-starlark-testing.md)
+Decided under closed #588 plus #790 plus #791 per [ADR 0009](../decisions/0009-starlark-testing.md)
 (remaining subjects provisional pending concrete use cases), pinned by fixtures in
 `../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
-`starlark_futures.expected` plus `matchers.bzl`) and qualified by
+`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl`)
+and qualified by
 `bazel run //tools/ci:starlark_futures_qualification`. Test framework only;
 seed only, no Supported claim. Richer matchers graduated under #790 and
 are accepted above; no larger matcher library beyond the five
-constructors is committed.
+constructors is committed. Aspect subjects graduated under #791 and are
+accepted above; toolchain plus configuration plus output-group plus action
+subjects stay deferred.
 
 - Per-check filtering stays wont-fix: target granularity is contract. One
   macro call is one addressable Bazel test target with one Bazel result;
@@ -128,10 +139,6 @@ constructors is committed.
   `--test_filter` parsing is rejected; split checks into separate
   `starlark_test` targets for finer filtering, caching, retries, and
   diagnostics.
-- Aspect subjects stay deferred (#791), pending a concrete use case plus fixtures
-  plus successor issue. Analysis observes `DxSubjectInfo` fields plus
-  `DefaultInfo` output basenames only; applying aspects to subjects is not
-  claimed.
 - Toolchain subjects stay deferred (#792), pending a concrete use case plus
   fixtures plus successor issue. Toolchain resolution needs platform and
   toolchain context beyond provider-field observation.

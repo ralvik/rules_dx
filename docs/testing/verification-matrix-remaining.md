@@ -767,16 +767,20 @@ Remaining reds stay owned gaps, not green claims:
    plus replacement graph plus ambient fallback plus generic parity plus cgo completion claim
    rejected; env only, no PATH-tool collision rule change; platform plus consumer plus release
    evidence stays owned gap under #808; no Supported claim).
-- Starlark testing futures with fixture evidence qualified seed-only under closed #588 plus #790
+- Starlark testing futures with fixture evidence qualified seed-only under closed #588 plus #790 plus #791
   (`bazel run //tools/ci:starlark_futures_qualification` with
   `libs/starlark/tests/fixtures/starlark_futures/pins.bzl` plus
-  `starlark_futures.expected` plus `matchers.bzl`; `starlark_futures_qualification` 21/21;
+  `starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl`;
+  `starlark_futures_qualification` 26/26;
   per-check filtering plus per-function targets plus Rust orchestration with BEP
   wont-fix on target granularity plus explicit macro instantiation plus single
    invocation with no nested Bazel, richer matchers supported under #790
    (expect_equal plus expect_true/false plus expect_contains plus expect_match
    with greet plus pair-error plus admitted-list plus subject-fields plus
-   fingerprint use case via `//libs/starlark/tests:matcher_unit`), aspect (#791) plus toolchain
+   fingerprint use case via `//libs/starlark/tests:matcher_unit`), aspect
+   subjects supported under #791 (DxAspectInfo plus dx_aspect_note plus
+   aspect_field observations with leaf plus group use case via
+   `//libs/starlark/tests:aspect_subject_analysis`), toolchain
    (#792) plus configuration including transitions (#793) plus output-group (#794) plus action
    including registered-action (#795) subjects deferred pending a concrete use case
    plus fixtures plus successor issue, second Starlark interpreter plus per-check

@@ -5,7 +5,8 @@
 # failing (sum fixed to 0), this test fails.
 #
 # Mirrors `libs/starlark/defs.bzl` analysis-mode observation rendering:
-# "subject <label>", "file <basename>", "field <key>=<value>" lines.
+# "subject <label>", "file <basename>", "field <key>=<value>",
+# "aspect_field <key>=<value>" lines.
 # Hermetic: sandbox-only, TEST_TMPDIR scratch, offline, no nested Bazel.
 set -euo pipefail
 
@@ -32,13 +33,23 @@ actual="subject //libs/starlark/tests/negative:negative_subject
 file negative_subject.txt
 field left=0
 field right=0
-field sum=0"
+field sum=0
+aspect_field aspect_seen=True
+aspect_field field_count=3
+aspect_field has_subject=True
+aspect_field subject_label=//libs/starlark/tests/negative:negative_subject
+aspect_field transitive_count=0"
 # Red fixture: deliberately wrong expected with field sum=43.
 want="subject //libs/starlark/tests/negative:negative_subject
 file negative_subject.txt
 field left=0
 field right=0
-field sum=43"
+field sum=43
+aspect_field aspect_seen=True
+aspect_field field_count=3
+aspect_field has_subject=True
+aspect_field subject_label=//libs/starlark/tests/negative:negative_subject
+aspect_field transitive_count=0"
 
 printf '%s\n' "$actual" >"$scratch/actual.txt"
 printf '%s\n' "$want" >"$scratch/want.txt"

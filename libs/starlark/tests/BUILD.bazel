@@ -3,10 +3,12 @@
 load("//quality:fixtures.bzl", "real_source_target")
 load(":analysis_tests.bzl", "subject_analysis_tests")
 load(":arithmetic_tests.bzl", "arithmetic_load_tests", "arithmetic_unit_tests")
+load(":aspect_tests.bzl", "aspect_subject_tests")
 load(":execution_tests.bzl", "fixture_execution_tests")
 load(":matcher_tests.bzl", "matcher_unit_tests")
 load(":matrix_tests.bzl", "matrix_validation_tests")
 load(":subject.bzl", "example_subject")
+load("//libs/starlark/tests/fixtures/starlark_futures:aspect_subjects.bzl", "aspect_group", "aspect_leaf")
 
 example_subject(
     name = "subject_under_test",
@@ -14,11 +16,28 @@ example_subject(
     right = 2,
 )
 
+aspect_leaf(
+    name = "aspect_leaf_under_test",
+    left = 19,
+    right = 23,
+)
+
+aspect_group(
+    name = "aspect_group_under_test",
+    deps = [
+        ":aspect_leaf_under_test",
+        ":subject_under_test",
+    ],
+    note = "group-note",
+)
+
 arithmetic_unit_tests(name = "arithmetic_unit")
 
 arithmetic_load_tests(name = "arithmetic_load")
 
 subject_analysis_tests(name = "subject_analysis")
+
+aspect_subject_tests(name = "aspect_subject_analysis")
 
 fixture_execution_tests(name = "fixture_execution")
 
@@ -31,6 +50,7 @@ test_suite(
     tests = [
         ":arithmetic_load",
         ":arithmetic_unit",
+        ":aspect_subject_analysis",
         ":fixture_execution",
         ":matcher_unit",
         ":matrix_validation",
@@ -46,6 +66,7 @@ real_source_target(
         "analysis_tests.bzl",
         "arithmetic.bzl",
         "arithmetic_tests.bzl",
+        "aspect_tests.bzl",
         "execution_tests.bzl",
         "matcher_tests.bzl",
         "matrix_tests.bzl",
