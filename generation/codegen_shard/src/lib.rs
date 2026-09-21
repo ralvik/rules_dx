@@ -45,6 +45,12 @@ pub enum Error {
         path: String,
         reason: &'static str,
     },
+    #[error("invalid replaces for {producer} {path:?}: {reason}")]
+    BadReplaces {
+        producer: String,
+        path: String,
+        reason: &'static str,
+    },
     #[error("duplicate logical path for {producer} {path:?}")]
     DuplicateLogicalPath { producer: String, path: String },
     #[error("entry not read-only for {producer} {path:?}: projections are always read-only")]
@@ -105,6 +111,48 @@ fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
     })
 }
 
+fn check_replaces(
+    producer: &str,
+    logical_path: &str,
+    exec_path: &str,
+    replaces: &str,
+) -> Result<(), Error> {
+    // Empty replaces means no replacement: colliding workspace sources
+    // fail closed. Non-empty must equal the logical path (explicit
+    // self-replacement acknowledgment) and requires a non-empty exec
+    // path binding the replacing generated artifact.
+    // See: `//generation:codegen.bzl` (`codegen_replaces_error`).
+    if replaces.is_empty() {
+        return Ok(());
+    }
+    if let Err(error) = check_path(producer, replaces) {
+        let (path, reason) = match error {
+            Error::BadPath { path, reason, .. } => (path, reason),
+            other => return Err(other),
+        };
+        return Err(Error::BadReplaces {
+            producer: producer.to_owned(),
+            path,
+            reason,
+        });
+    }
+    if replaces != logical_path {
+        return Err(Error::BadReplaces {
+            producer: producer.to_owned(),
+            path: replaces.to_owned(),
+            reason: "must equal logical path",
+        });
+    }
+    if exec_path.is_empty() {
+        return Err(Error::BadReplaces {
+            producer: producer.to_owned(),
+            path: replaces.to_owned(),
+            reason: "needs a non-empty exec path binding the replacing artifact",
+        });
+    }
+    Ok(())
+}
+
 /// Validates one contributor shard, mirroring `codegen_record_error`.
 pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
     if shard.producer.is_empty() {
@@ -130,6 +178,12 @@ pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
         check_path(&shard.producer, &entry.logical_path)?;
         check_path(&shard.producer, &entry.import_root)?;
         check_exec_path(&shard.producer, &entry.exec_path)?;
+        check_replaces(
+            &shard.producer,
+            &entry.logical_path,
+            &entry.exec_path,
+            &entry.replaces,
+        )?;
         if !entry.read_only {
             return Err(Error::NotReadOnly {
                 producer: shard.producer.clone(),
@@ -171,6 +225,7 @@ mod tests {
             namespace: namespace.into(),
             read_only: true,
             exec_path: String::new(),
+            replaces: String::new(),
         }
     }
 
@@ -186,6 +241,24 @@ mod tests {
             namespace: namespace.into(),
             read_only: true,
             exec_path: exec_path.into(),
+            replaces: String::new(),
+        }
+    }
+
+    fn entry_with_replaces(
+        logical_path: &str,
+        import_root: &str,
+        namespace: &str,
+        exec_path: &str,
+        replaces: &str,
+    ) -> DxCodegenEntry {
+        DxCodegenEntry {
+            logical_path: logical_path.into(),
+            import_root: import_root.into(),
+            namespace: namespace.into(),
+            read_only: true,
+            exec_path: exec_path.into(),
+            replaces: replaces.into(),
         }
     }
 
@@ -298,6 +371,54 @@ mod tests {
                 path: "src/beta.rs".into(),
             })
         );
+    }
+
+    #[test]
+    fn accepts_explicit_replacement_contract() {
+        let mut shard = sample();
+        shard.entries[0] =
+            entry_with_replaces("src/beta.rs", "src", "beta", "result.lib.rs", "src/beta.rs");
+        assert!(validate(&shard).is_ok());
+        let bytes = encode_validated(&shard).expect("encode contracted shard");
+        assert_eq!(decode_validated(&bytes).expect("decode"), shard);
+    }
+
+    #[test]
+    fn rejects_bad_replacement_contracts() {
+        // Replaces without a backing exec path carries no generated
+        // artifact identity.
+        let mut shard = sample();
+        shard.entries[0] = entry_with_replaces("src/beta.rs", "src", "beta", "", "src/beta.rs");
+        assert!(
+            matches!(validate(&shard), Err(Error::BadReplaces { .. })),
+            "replaces without exec must fail",
+        );
+        // Replaces must equal the logical path: an explicit
+        // self-replacement acknowledgment, never a cross-path claim.
+        let mut shard = sample();
+        shard.entries[0] = entry_with_replaces(
+            "src/beta.rs",
+            "src",
+            "beta",
+            "result.lib.rs",
+            "src/other.rs",
+        );
+        assert!(
+            matches!(validate(&shard), Err(Error::BadReplaces { .. })),
+            "cross-path replaces must fail",
+        );
+        // Replaces follows workspace-relative shape rules.
+        for path in ["/src/a.rs", "src\\a.rs", "src/./a.rs"] {
+            let mut shard = sample();
+            shard.entries[0] =
+                entry_with_replaces("src/beta.rs", "src", "beta", "result.lib.rs", path);
+            assert!(
+                matches!(validate(&shard), Err(Error::BadReplaces { .. })),
+                "replaces {path:?} must fail",
+            );
+        }
+        // Empty replaces stays fail-closed and valid.
+        assert!(validate(&sample()).is_ok());
     }
 
     #[test]

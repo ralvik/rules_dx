@@ -9,13 +9,17 @@
 //! ```text
 //! codegen_shard_writer --producer LABEL --language LANG \
 //!   --entry LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[--entry ...] \
-//!   --entry LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH [--entry ...] \
+//!   --entry LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH[--entry ...] \
+//!   --entry LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH|REPLACES [--entry ...] \
 //!   --output OUT.dxcodegen.pb
 //! ```
 //!
 //! The three-part entry form declares a logical-only entry (empty
 //! exec path, requiring no materialized artifact). The four-part form
 //! declares the BEP-matching exec-path suffix for the backing artifact.
+//! The five-part form additionally declares the replacement contract:
+//! REPLACES must equal LOGICAL_PATH with non-empty EXEC_PATH,
+//! identifying the replaced checked-in source and the replacing artifact.
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
@@ -108,8 +112,8 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
 }
 
 /// `clap` value parser for `--entry`: the single source for
-/// `LOGICAL|ROOT|NAMESPACE[|EXEC]` shape, so tokenizing accepts exactly 3-4
-/// `|`-separated parts and rejections already carry the legacy
+/// `LOGICAL|ROOT|NAMESPACE[|EXEC[|REPLACES]]` shape, so tokenizing accepts
+/// exactly 3-5 `|`-separated parts and rejections already carry the legacy
 /// `bad --entry …` text that [`parse_error`] recovers from the error context.
 fn parse_entry_value(raw: &str) -> Result<DxCodegenEntry, String> {
     let parts: Vec<&str> = raw.split('|').collect();
@@ -120,6 +124,7 @@ fn parse_entry_value(raw: &str) -> Result<DxCodegenEntry, String> {
             namespace: parts[2].into(),
             read_only: true,
             exec_path: String::new(),
+            replaces: String::new(),
         }),
         4 => Ok(DxCodegenEntry {
             logical_path: parts[0].into(),
@@ -127,9 +132,18 @@ fn parse_entry_value(raw: &str) -> Result<DxCodegenEntry, String> {
             namespace: parts[2].into(),
             read_only: true,
             exec_path: parts[3].into(),
+            replaces: String::new(),
+        }),
+        5 => Ok(DxCodegenEntry {
+            logical_path: parts[0].into(),
+            import_root: parts[1].into(),
+            namespace: parts[2].into(),
+            read_only: true,
+            exec_path: parts[3].into(),
+            replaces: parts[4].into(),
         }),
         _ => Err(format!(
-            "bad --entry {raw:?}: want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH]"
+            "bad --entry {raw:?}: want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH[|REPLACES]]"
         )),
     }
 }

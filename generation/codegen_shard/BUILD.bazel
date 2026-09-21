@@ -9,6 +9,7 @@ load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library",
 package(default_visibility = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
+    "//generation:__pkg__",
 ])
 
 rust_library(

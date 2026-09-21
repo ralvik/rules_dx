@@ -15,6 +15,7 @@ fn entry(logical_path: &str, import_root: &str, namespace: &str) -> CodegenEntry
         import_root: import_root.to_owned(),
         namespace: namespace.to_owned(),
         exec_path: String::new(),
+        replaces: String::new(),
     }
 }
 
@@ -29,6 +30,23 @@ fn entry_with_exec(
         import_root: import_root.to_owned(),
         namespace: namespace.to_owned(),
         exec_path: exec_path.to_owned(),
+        replaces: String::new(),
+    }
+}
+
+fn entry_with_replaces(
+    logical_path: &str,
+    import_root: &str,
+    namespace: &str,
+    exec_path: &str,
+    replaces: &str,
+) -> CodegenEntry {
+    CodegenEntry {
+        logical_path: logical_path.to_owned(),
+        import_root: import_root.to_owned(),
+        namespace: namespace.to_owned(),
+        exec_path: exec_path.to_owned(),
+        replaces: replaces.to_owned(),
     }
 }
 
@@ -57,18 +75,36 @@ fn record_b() -> CodegenRecord {
 }
 
 fn shard_bytes(producer: &str, language: &str, entries: Vec<(&str, &str, &str, &str)>) -> Vec<u8> {
+    shard_bytes_with_replaces(
+        producer,
+        language,
+        entries
+            .into_iter()
+            .map(|(logical_path, import_root, namespace, exec_path)| {
+                (logical_path, import_root, namespace, exec_path, "")
+            })
+            .collect(),
+    )
+}
+
+fn shard_bytes_with_replaces(
+    producer: &str,
+    language: &str,
+    entries: Vec<(&str, &str, &str, &str, &str)>,
+) -> Vec<u8> {
     let shard = DxCodegenShard {
         producer: producer.to_owned(),
         language: language.to_owned(),
         entries: entries
             .into_iter()
             .map(
-                |(logical_path, import_root, namespace, exec_path)| DxCodegenEntry {
+                |(logical_path, import_root, namespace, exec_path, replaces)| DxCodegenEntry {
                     logical_path: logical_path.to_owned(),
                     import_root: import_root.to_owned(),
                     namespace: namespace.to_owned(),
                     read_only: true,
                     exec_path: exec_path.to_owned(),
+                    replaces: replaces.to_owned(),
                 },
             )
             .collect(),
@@ -451,8 +487,8 @@ fn merge_groups_by_owner_and_sorts_entries() {
 fn fingerprint_matches_starlark_rendering() {
     assert_eq!(
         fingerprint(&[record_b(), record_a(), record_a()]),
-        "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"},\
-         {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]"
+        "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"},\
+         {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]"
     );
     assert_eq!(
         fingerprint(&[record(
@@ -460,7 +496,15 @@ fn fingerprint_matches_starlark_rendering() {
             "rust",
             vec![entry_with_exec("a", "b", "", "out/a.rs")]
         )]),
-        "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]"
+        "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]"
+    );
+    assert_eq!(
+        fingerprint(&[record(
+            "//gen:a",
+            "rust",
+            vec![entry_with_replaces("a", "b", "", "out/a.rs", "a")]
+        )]),
+        "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true,\"replaces\":\"a\"}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]"
     );
 }
 
@@ -480,8 +524,8 @@ fn fingerprint_matches_chain_fixture() {
     ];
     assert_eq!(
         fingerprint(&records),
-        "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_alpha\"},\
-         {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_beta\"}]"
+        "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_alpha\"},\
+         {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\",\"namespace\":\"beta\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_beta\"}]"
     );
 }
 
@@ -499,7 +543,7 @@ fn fingerprint_matches_prost_fixture() {
     )];
     assert_eq!(
         fingerprint(&records),
-        "[{\"entries\":[{\"exec_path\":\"result_proto.lib.rs\",\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\",\"namespace\":\"result\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//generation:codegen_prost_fixture\"}]"
+        "[{\"entries\":[{\"exec_path\":\"result_proto.lib.rs\",\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\",\"namespace\":\"result\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//generation:codegen_prost_fixture\"}]"
     );
 }
 
@@ -513,6 +557,7 @@ fn fingerprint_escapes_quotes_newlines_and_controls() {
             import_root: "src".to_owned(),
             namespace: "ns\\q".to_owned(),
             exec_path: "out/a.rs".to_owned(),
+            replaces: String::new(),
         }],
     }];
     let rendered = fingerprint(&records);
@@ -575,6 +620,115 @@ fn conflict_lists_every_claimant() {
             ),
         ]),
         "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha"
+    );
+}
+
+#[test]
+fn replaces_binds_into_merge_conflict_and_fingerprint() {
+    // Identical replacement contracts merge silently.
+    let contracted = record(
+        "//gen:alpha",
+        "rust",
+        vec![entry_with_replaces(
+            "src/alpha.rs",
+            "src",
+            "alpha",
+            "out/a.rs",
+            "src/alpha.rs",
+        )],
+    );
+    assert_eq!(
+        conflict_error(&[contracted.clone(), contracted.clone()]),
+        ""
+    );
+    assert_eq!(
+        merge_records(&[contracted.clone(), contracted.clone()]).len(),
+        1
+    );
+    // Divergent replacement contracts conflict: no traversal-order winner.
+    assert_eq!(
+        conflict_error(&[
+            record(
+                "//gen:alpha",
+                "rust",
+                vec![entry_with_exec("src/alpha.rs", "src", "alpha", "out/a.rs")]
+            ),
+            contracted,
+        ]),
+        "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha"
+    );
+    // Contracted and uncontracted fingerprints differ: the plan identity
+    // binds the replacement contract.
+    let plain = fingerprint(&[record(
+        "//gen:a",
+        "rust",
+        vec![entry_with_exec("a", "b", "", "out/a.rs")],
+    )]);
+    let replaced = fingerprint(&[record(
+        "//gen:a",
+        "rust",
+        vec![entry_with_replaces("a", "b", "", "out/a.rs", "a")],
+    )]);
+    assert_ne!(plain, replaced);
+    assert!(replaced.contains("\"replaces\":\"a\""), "{replaced}");
+}
+
+#[test]
+fn collect_shards_round_trips_replacement_contract() {
+    let outputs = vec![output(
+        "//gen:beta",
+        vec![
+            (
+                "/out/beta.dxcodegen.pb",
+                shard_bytes_with_replaces(
+                    "//gen:beta",
+                    "rust",
+                    vec![("gen/beta.rs", "gen", "beta", "beta.lib.rs", "gen/beta.rs")],
+                ),
+            ),
+            ("/bazel-out/k8-fastbuild/bin/gen/beta.lib.rs", vec![1, 2, 3]),
+        ],
+    )];
+    let records = collect_shards(&outputs).expect("collect");
+    assert_eq!(
+        records,
+        vec![record(
+            "//gen:beta",
+            "rust",
+            vec![entry_with_replaces(
+                "gen/beta.rs",
+                "gen",
+                "beta",
+                "beta.lib.rs",
+                "gen/beta.rs",
+            )]
+        )]
+    );
+    let projection = plan_projection(&records, &outputs).expect("projection");
+    assert_eq!(projection.len(), 1);
+    assert_eq!(projection[0].logical_path, "gen/beta.rs");
+    assert_eq!(projection[0].replaces, "gen/beta.rs");
+}
+
+#[test]
+fn collect_shards_rejects_bad_replacement_contract() {
+    // Replaces without a backing exec path carries no generated artifact
+    // identity; the shard validation rejects it before collection.
+    let bad = DxCodegenShard {
+        producer: "//gen:beta".to_owned(),
+        language: "rust".to_owned(),
+        entries: vec![DxCodegenEntry {
+            logical_path: "gen/beta.rs".to_owned(),
+            import_root: "gen".to_owned(),
+            namespace: "beta".to_owned(),
+            read_only: true,
+            exec_path: String::new(),
+            replaces: "gen/beta.rs".to_owned(),
+        }],
+    };
+    assert!(
+        codegen_shard::encode_validated(&bad).is_err(),
+        "replaces without exec must fail shard validation"
     );
 }
 

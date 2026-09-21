@@ -20,6 +20,7 @@ load(
     "codegen_plan_fingerprint",
     "codegen_record",
     "codegen_record_error",
+    "codegen_replaces_error",
     "codegen_schema_error",
 )
 
@@ -97,9 +98,9 @@ def codegen_defs_unit_tests(name):
                 ],
             ),
             expect_equal(
-                "codegen_entry marks projections read-only with empty exec by default",
-                [codegen_entry("src/a.rs", "src", "a").read_only, codegen_entry("src/a.rs", "src", "a").exec_path],
-                [True, ""],
+                "codegen_entry marks projections read-only with empty exec and replaces by default",
+                [codegen_entry("src/a.rs", "src", "a").read_only, codegen_entry("src/a.rs", "src", "a").exec_path, codegen_entry("src/a.rs", "src", "a").replaces],
+                [True, "", ""],
             ),
             expect_equal(
                 "codegen_exec_error accepts empty logical-only and relative suffixes",
@@ -159,6 +160,43 @@ def codegen_defs_unit_tests(name):
                 "invalid codegen record '//gen:a': invalid codegen exec path 'x.dxcodegen.pb': must not use the reserved shard suffix '.dxcodegen.pb'",
             ),
             expect_equal(
+                "codegen_replaces_error accepts empty and self-equal contracted paths",
+                [
+                    codegen_replaces_error("a", "out/a.rs", ""),
+                    codegen_replaces_error("a", "out/a.rs", "a"),
+                ],
+                ["", ""],
+            ),
+            expect_equal(
+                "codegen_replaces_error rejects cross-path and exec-less contracts",
+                [
+                    codegen_replaces_error("a", "out/a.rs", "b"),
+                    codegen_replaces_error("a", "", "a"),
+                    codegen_replaces_error("a", "out/a.rs", "/a"),
+                ],
+                [
+                    "invalid codegen replaces 'b': must equal logical path 'a'",
+                    "invalid codegen replaces 'a': needs a non-empty exec path binding the replacing artifact",
+                    "invalid codegen replaces '/a': must not be absolute",
+                ],
+            ),
+            expect_equal(
+                "codegen_record_error accepts an explicit replacement contract",
+                codegen_record_error(codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs", "a")])),
+                "",
+            ),
+            expect_equal(
+                "codegen_record_error rejects bad replacement contracts",
+                [
+                    codegen_record_error(codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "", "a")])),
+                    codegen_record_error(codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs", "b")])),
+                ],
+                [
+                    "invalid codegen record '//gen:a': invalid codegen replaces 'a': needs a non-empty exec path binding the replacing artifact",
+                    "invalid codegen record '//gen:a': invalid codegen replaces 'b': must equal logical path 'a'",
+                ],
+            ),
+            expect_equal(
                 "codegen_record_error rejects within-record duplicate paths",
                 codegen_record_error(codegen_record("//gen:a", "rust", [codegen_entry("a", "b"), codegen_entry("a", "c")])),
                 "invalid codegen record '//gen:a': duplicate logical path 'a'",
@@ -196,6 +234,22 @@ def codegen_defs_unit_tests(name):
                     codegen_record("//gen:alpha", "rust", [codegen_entry("src/alpha.rs", "src", "alpha", "out/a.rs")]),
                 ]),
                 "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha",
+            ),
+            expect_equal(
+                "codegen_conflict_error merges identical replacement contracts silently",
+                codegen_conflict_error([
+                    codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs", "a")]),
+                    codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs", "a")]),
+                ]),
+                "",
+            ),
+            expect_equal(
+                "codegen_conflict_error fails divergent replacement contracts",
+                codegen_conflict_error([
+                    codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs")]),
+                    codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs", "a")]),
+                ]),
+                "codegen path conflict: logical path 'a' claimed by //gen:a, //gen:a",
             ),
             expect_equal(
                 "codegen_merge_records normalizes without pinning exact contents (schema)",
@@ -240,8 +294,8 @@ def codegen_defs_unit_tests(name):
             expect_equal(
                 "codegen_plan_fingerprint renders the normalized hash input (snapshot)",
                 codegen_plan_fingerprint([_record_b(), _record_a(), _record_a()]),
-                "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"}," +
-                "{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]",
+                "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"}," +
+                "{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]",
             ),
             expect_equal(
                 "codegen_plan_fingerprint exec paths validate shape (schema)",
@@ -251,7 +305,17 @@ def codegen_defs_unit_tests(name):
             expect_equal(
                 "codegen_plan_fingerprint binds exec paths (snapshot)",
                 codegen_plan_fingerprint([codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs")])]),
-                "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]",
+                "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]",
+            ),
+            expect_equal(
+                "codegen_plan_fingerprint binds the replacement contract (snapshot)",
+                codegen_plan_fingerprint([codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs", "a")])]),
+                "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true,\"replaces\":\"a\"}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]",
+            ),
+            expect_equal(
+                "codegen_plan_fingerprint contracted entries validate shape (schema)",
+                codegen_fingerprint_schema_error(codegen_plan_fingerprint([codegen_record("//gen:a", "rust", [codegen_entry("a", "b", "", "out/a.rs", "a")])])),
+                "",
             ),
             expect_equal(
                 "codegen_pair_error defers non-admitted pairs (message lists the registry data)",
@@ -271,16 +335,16 @@ def codegen_defs_unit_tests(name):
 
 _CHAIN_FINGERPRINT = (
     "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\"," +
-    "\"namespace\":\"alpha\",\"read_only\":true}],\"language\":\"rust\"," +
+    "\"namespace\":\"alpha\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\"," +
     "\"producer\":\"//generation:codegen_shard_alpha\"}," +
     "{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\"," +
-    "\"namespace\":\"beta\",\"read_only\":true}],\"language\":\"rust\"," +
+    "\"namespace\":\"beta\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\"," +
     "\"producer\":\"//generation:codegen_shard_beta\"}]"
 )
 
 _PROST_FINGERPRINT = (
     "[{\"entries\":[{\"exec_path\":\"result_proto.lib.rs\",\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\"," +
-    "\"namespace\":\"result\",\"read_only\":true}],\"language\":\"rust\"," +
+    "\"namespace\":\"result\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\"," +
     "\"producer\":\"//generation:codegen_prost_fixture\"}]"
 )
 

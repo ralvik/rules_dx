@@ -559,6 +559,20 @@ pub(crate) fn codegen_entry(logical: &str, artifact: &Path) -> dx_codegen::Proje
         artifact: artifact.to_string_lossy().into_owned(),
         import_root: String::new(),
         namespace: String::new(),
+        replaces: String::new(),
+    }
+}
+
+pub(crate) fn codegen_replacement_entry(
+    logical: &str,
+    artifact: &Path,
+) -> dx_codegen::ProjectionEntry {
+    dx_codegen::ProjectionEntry {
+        logical_path: logical.to_owned(),
+        artifact: artifact.to_string_lossy().into_owned(),
+        import_root: String::new(),
+        namespace: String::new(),
+        replaces: logical.to_owned(),
     }
 }
 

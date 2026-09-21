@@ -50,7 +50,7 @@ def codegen_path_error(path):
             return "invalid codegen path '" + path + "': must not contain '.' or '..' segments"
     return ""
 
-def codegen_entry(logical_path, import_root, namespace = "", exec_path = ""):
+def codegen_entry(logical_path, import_root, namespace = "", exec_path = "", replaces = ""):
     """Builds one normalized projection entry struct."""
     return struct(
         exec_path = exec_path,
@@ -58,6 +58,7 @@ def codegen_entry(logical_path, import_root, namespace = "", exec_path = ""):
         logical_path = logical_path,
         namespace = namespace,
         read_only = True,
+        replaces = replaces,
     )
 
 def codegen_record(producer, language, entries):
@@ -89,6 +90,9 @@ def codegen_record_error(record):
         error = codegen_exec_error(entry.exec_path)
         if error != "":
             return "invalid codegen record '" + record.producer + "': " + error
+        error = codegen_replaces_error(entry.logical_path, entry.exec_path, entry.replaces)
+        if error != "":
+            return "invalid codegen record '" + record.producer + "': " + error
         if entry.logical_path in seen:
             return "invalid codegen record '" + record.producer + "': duplicate logical path '" + entry.logical_path + "'"
         seen[entry.logical_path] = True
@@ -110,16 +114,36 @@ def codegen_exec_error(path):
         return error.replace("invalid codegen path", "invalid codegen exec path", 1)
     return ""
 
+def codegen_replaces_error(logical_path, exec_path, replaces):
+    """Validates one replacement contract declaration.
+
+    Empty means no replacement: colliding workspace sources fail
+    closed. Non-empty must be a workspace-relative path equal to the
+    entry logical path (explicit self-replacement acknowledgment) and
+    requires a non-empty exec path binding the replacing generated
+    artifact, so the contract identifies both the replaced source and
+    the generated artifact identity."""
+    if replaces == "":
+        return ""
+    error = codegen_path_error(replaces)
+    if error != "":
+        return error.replace("invalid codegen path", "invalid codegen replaces", 1)
+    if replaces != logical_path:
+        return "invalid codegen replaces '" + replaces + "': must equal logical path '" + logical_path + "'"
+    if exec_path == "":
+        return "invalid codegen replaces '" + replaces + "': needs a non-empty exec path binding the replacing artifact"
+    return ""
+
 def _codegen_entry_key(entry):
-    return (entry.logical_path, entry.import_root, entry.namespace, entry.exec_path)
+    return (entry.logical_path, entry.import_root, entry.namespace, entry.exec_path, entry.replaces)
 
 def codegen_conflict_error(records):
     """Detects incompatible logical-path claims across records.
 
     Byte-identical duplicates (same producer, language, path, root,
-    namespace, and exec path) merge silently. Any other second claim on
-    one logical path fails, listing every claimant: no traversal-order
-    winner is accepted."""
+    namespace, exec path, and replaces) merge silently. Any other
+    second claim on one logical path fails, listing every claimant:
+    no traversal-order winner is accepted."""
     claimants_by_path = {}
     for record in records:
         for entry in record.entries:
@@ -143,10 +167,10 @@ def codegen_merge_records(records):
 
     Byte-identical duplicate entries collapse; surviving records sort
     by (producer, language) with entries sorted by (logical path,
-    import root, namespace, exec path). The rendering is the normalized
-    complete-plan form the CLI hashes; repository roots emit no second
-    closure manifest, so shared closures serialize once per record, not
-    once per selected root."""
+    import root, namespace, exec path, replaces). The rendering is the
+    normalized complete-plan form the CLI hashes; repository roots emit
+    no second closure manifest, so shared closures serialize once per
+    record, not once per selected root."""
     entries_by_owner = {}
     for record in records:
         owner = (record.producer, record.language)
@@ -188,7 +212,7 @@ def codegen_merge_schema_error(records, merged):
     for record in merged:
         keys = [_codegen_entry_key(e) for e in record.entries]
         if keys != sorted(keys):
-            return "codegen merge: entries for " + record.producer + " must sort by (logical, root, namespace, exec)"
+            return "codegen merge: entries for " + record.producer + " must sort by (logical, root, namespace, exec, replaces)"
         seen_keys = {}
         for key in keys:
             if key in seen_keys:
@@ -225,6 +249,7 @@ def codegen_plan_fingerprint(records):
                     "logical_path": entry.logical_path,
                     "namespace": entry.namespace,
                     "read_only": entry.read_only,
+                    "replaces": entry.replaces,
                 }
                 for entry in record.entries
             ],
@@ -240,8 +265,9 @@ def codegen_fingerprint_schema_error(fingerprint):
     Checks structure without pinning exact bytes, so entry additions edit
     test data only: a list of {producer, language, entries} sorted by
     (producer, language) with entries sorted by the full key, each entry
-    carrying validated paths plus read-only truth. Exact fingerprint bytes
-    stay in snapshot assertions; this proves the hash-input contract."""
+    carrying validated paths plus read-only truth plus the replacement
+    contract. Exact fingerprint bytes stay in snapshot assertions; this
+    proves the hash-input contract."""
     decoded = json.decode(fingerprint)
     if type(decoded) != "list" or len(decoded) == 0:
         return "codegen fingerprint: want a non-empty list"
@@ -268,7 +294,7 @@ def codegen_fingerprint_schema_error(fingerprint):
         for entry in entries:
             if type(entry) != "dict":
                 return "codegen fingerprint: want entry objects for " + producer
-            for ekey in ("exec_path", "import_root", "logical_path", "namespace", "read_only"):
+            for ekey in ("exec_path", "import_root", "logical_path", "namespace", "read_only", "replaces"):
                 if ekey not in entry:
                     return "codegen fingerprint: missing entry key '" + ekey + "' for " + producer
             if entry["read_only"] != True:
@@ -282,9 +308,12 @@ def codegen_fingerprint_schema_error(fingerprint):
             err = codegen_exec_error(entry["exec_path"])
             if err != "":
                 return "codegen fingerprint: " + err
-            keys.append((entry["logical_path"], entry["import_root"], entry["namespace"], entry["exec_path"]))
+            err = codegen_replaces_error(entry["logical_path"], entry["exec_path"], entry["replaces"])
+            if err != "":
+                return "codegen fingerprint: " + err
+            keys.append((entry["logical_path"], entry["import_root"], entry["namespace"], entry["exec_path"], entry["replaces"]))
         if keys != sorted(keys):
-            return "codegen fingerprint: entries for " + producer + " must sort by (logical, root, namespace, exec)"
+            return "codegen fingerprint: entries for " + producer + " must sort by (logical, root, namespace, exec, replaces)"
     if owners != sorted(owners):
         return "codegen fingerprint: records must sort by (producer, language): " + str(owners)
     return ""
@@ -329,20 +358,25 @@ def codegen_pair_error(schema_kind, language):
     )
 
 def _parse_entry_spec(spec, label_text):
-    """Parses one LOGICAL|ROOT|NAMESPACE[|EXEC] entry spec.
+    """Parses one LOGICAL|ROOT|NAMESPACE[|EXEC[|REPLACES]] entry spec.
 
     The three-part form declares a logical-only entry (empty exec path,
     requiring no materialized artifact). The four-part form declares the
-    BEP-matching exec-path suffix for the backing artifact."""
+    BEP-matching exec-path suffix for the backing artifact. The five-part
+    form additionally declares the replacement contract: REPLACES must
+    equal LOGICAL and EXEC must be non-empty, identifying the replaced
+    checked-in source and the replacing generated artifact."""
     parts = spec.split("|")
     if len(parts) == 3:
         return codegen_entry(parts[0], parts[1], parts[2])
     if len(parts) == 4:
         return codegen_entry(parts[0], parts[1], parts[2], parts[3])
+    if len(parts) == 5:
+        return codegen_entry(parts[0], parts[1], parts[2], parts[3], parts[4])
     fail(
         "dx_codegen_shard " + label_text +
         ": bad entry " + repr(spec) +
-        ": want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH]",
+        ": want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH[|REPLACES]]",
     )
 
 def _emit_shard(ctx, producer, language, entry_structs):
@@ -361,10 +395,15 @@ def _emit_shard(ctx, producer, language, entry_structs):
                 "--entry",
                 entry.logical_path + "|" + entry.import_root + "|" + entry.namespace,
             )
-        else:
+        elif entry.replaces == "":
             args.add(
                 "--entry",
                 entry.logical_path + "|" + entry.import_root + "|" + entry.namespace + "|" + entry.exec_path,
+            )
+        else:
+            args.add(
+                "--entry",
+                entry.logical_path + "|" + entry.import_root + "|" + entry.namespace + "|" + entry.exec_path + "|" + entry.replaces,
             )
     args.add("--output", out.path)
     ctx.actions.run(
@@ -406,7 +445,7 @@ dx_codegen_shard = rule(
         ),
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Non-empty projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH].",
+            doc = "Non-empty projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH[|REPLACES]]. The five-part form declares the replacement contract: REPLACES must equal LOGICAL_PATH with non-empty EXEC_PATH.",
         ),
         "language": attr.string(
             mandatory = True,
@@ -546,7 +585,7 @@ prost_codegen_shard = rule(
     attrs = {
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Explicit logical projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH. Paths are never inferred from the upstream action; every entry binds one rust_generated_srcs artifact and every generated artifact needs one claimant.",
+            doc = "Explicit logical projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH[|REPLACES]. Paths are never inferred from the upstream action; every entry binds one rust_generated_srcs artifact and every generated artifact needs one claimant. The optional REPLACES must equal LOGICAL_PATH with non-empty EXEC_PATH, declaring the replacement contract for a colliding workspace source.",
         ),
         "language": attr.string(
             default = "rust",
