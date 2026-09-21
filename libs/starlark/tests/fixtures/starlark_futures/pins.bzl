@@ -57,6 +57,16 @@ CONFIGURATION_SUBJECTS_USE_CASE = "leaf plus group with select plus fragment plu
 CONFIGURATION_SUBJECTS_SURFACE = "DxConfigInfo plus config_value plus select plus fragment plus transition plus config_field observations"
 CONFIGURATION_SUBJECTS_ISSUE = "qualified under issue #793"
 
+# Action subjects use case (issue #795): mnemonic-to-outputs mapping plus
+# resolved report via action_subjects.bzl, proven by
+# //libs/starlark/tests:action_unit. Registered-action observation stays
+# deferred; analysis observes DxSubjectInfo fields plus DefaultInfo
+# basenames only, actions are proven via execution-mode file_checks or
+# aquery evidence.
+ACTION_SUBJECTS_USE_CASE = "mnemonic-to-outputs mapping plus resolved report via action_subjects.bzl"
+ACTION_SUBJECTS_SURFACE = "DxSubjectInfo fields plus DefaultInfo basenames only, no registered actions"
+ACTION_SUBJECTS_ISSUE = "use case pinned under issue #795, stays deferred"
+
 # ADR 0009 provisional coverage: configuration includes transitions,
 # action includes registered-action, broader subjects (targets, actions,
 # files, depsets, runfiles) stay provisional with the same deferred
@@ -64,7 +74,8 @@ CONFIGURATION_SUBJECTS_ISSUE = "qualified under issue #793"
 # provisional under #588 and are now supported under #790; aspects left
 # provisional under #588 and are now supported under #791; toolchain use case
 # pinned under #792 but stays deferred; output-group use case pinned under
-# #794 but stays deferred; configuration left provisional under #588 and is
+# #794 but stays deferred; action use case pinned under #795 but stays
+# deferred; configuration left provisional under #588 and is
 # now supported under #793.
 PROVISIONAL_RULE = "provisional pending concrete use cases"
 SUCCESSOR_REQUIREMENT = "concrete use case plus fixtures plus successor issue"

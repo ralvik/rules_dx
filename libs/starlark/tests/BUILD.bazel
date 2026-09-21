@@ -1,6 +1,7 @@
 """Starlark framework conformance tests (ADR 0009)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
+load(":action_tests.bzl", "action_unit_tests")
 load(":analysis_tests.bzl", "subject_analysis_tests")
 load(":arithmetic_tests.bzl", "arithmetic_load_tests", "arithmetic_unit_tests")
 load(":aspect_tests.bzl", "aspect_subject_tests")
@@ -58,6 +59,8 @@ arithmetic_unit_tests(name = "arithmetic_unit")
 
 arithmetic_load_tests(name = "arithmetic_load")
 
+action_unit_tests(name = "action_unit")
+
 subject_analysis_tests(name = "subject_analysis")
 
 aspect_subject_tests(name = "aspect_subject_analysis")
@@ -77,6 +80,7 @@ matrix_validation_tests(name = "matrix_validation")
 test_suite(
     name = "all",
     tests = [
+        ":action_unit",
         ":arithmetic_load",
         ":arithmetic_unit",
         ":aspect_subject_analysis",
@@ -95,6 +99,7 @@ real_source_target(
     testonly = True,
     starlark_srcs = [
         "BUILD.bazel",
+        "action_tests.bzl",
         "analysis_tests.bzl",
         "arithmetic.bzl",
         "arithmetic_tests.bzl",

@@ -128,10 +128,10 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Decided under closed #588 plus #790 plus #791 plus #792 plus #793 plus #794 per [ADR 0009](../decisions/0009-starlark-testing.md)
+Decided under closed #588 plus #790 plus #791 plus #792 plus #793 plus #794 plus #795 per [ADR 0009](../decisions/0009-starlark-testing.md)
 (remaining subjects provisional pending concrete use cases), pinned by fixtures in
 `../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
-`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus `output_group_subjects.bzl` plus `config_subjects.bzl`)
+`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus `output_group_subjects.bzl` plus `config_subjects.bzl` plus `action_subjects.bzl`)
 and qualified by
 `bazel run //tools/ci:starlark_futures_qualification`. Test framework only;
 seed only, no Supported claim. Richer matchers graduated under #790 and
@@ -144,7 +144,10 @@ output-group subjects stay deferred with the group-to-files mapping plus
 resolved-report use case pinned under #794 (via
 `output_group_subjects.bzl`, proven by
 `//libs/starlark/tests:output_group_unit`); configuration subjects graduated
-under #793 and are accepted above; action subjects stay deferred.
+under #793 and are accepted above; action subjects stay deferred
+with the mnemonic-to-outputs mapping plus resolved-report use case pinned
+under #795 (via `action_subjects.bzl`, proven by
+`//libs/starlark/tests:action_unit`).
 
 - Per-check filtering stays wont-fix: target granularity is contract. One
   macro call is one addressable Bazel test target with one Bazel result;
@@ -171,10 +174,12 @@ under #793 and are accepted above; action subjects stay deferred.
   `//libs/starlark/tests:output_group_unit`). Observation renders
   `DefaultInfo` files only, not `OutputGroupInfo`; wrapper forwarding of
   output groups does not imply observation.
-- Action subjects stay deferred (#795), including registered-action, pending a
-  concrete use case plus fixtures plus successor issue. Actions are proven
-  via execution-mode `file_checks` or `aquery` evidence, not analysis
-  subjects.
+- Action subjects stay deferred (#795), including registered-action, with the mnemonic-to-outputs
+  mapping plus resolved-report use case pinned via
+  `action_subjects.bzl` (proven by
+  `//libs/starlark/tests:action_unit`). Registered actions are not
+  observed; actions are proven via execution-mode `file_checks` or
+  `aquery` evidence, not analysis subjects.
 - Per-function targets stay wont-fix: explicit macro instantiation is contract.
   BUILD instantiates the exported macro with a target name;
   dynamic function discovery would hide the static `load()` constraint

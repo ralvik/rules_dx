@@ -767,11 +767,11 @@ Remaining reds stay owned gaps, not green claims:
    plus replacement graph plus ambient fallback plus generic parity plus cgo completion claim
    rejected; env only, no PATH-tool collision rule change; platform plus consumer plus release
    evidence stays owned gap under #808; no Supported claim).
-- Starlark testing futures with fixture evidence qualified seed-only under closed #588 plus #790 plus #791 plus #792 plus #793 plus #794
+- Starlark testing futures with fixture evidence qualified seed-only under closed #588 plus #790 plus #791 plus #792 plus #793 plus #794 plus #795
   (`bazel run //tools/ci:starlark_futures_qualification` with
   `libs/starlark/tests/fixtures/starlark_futures/pins.bzl` plus
-  `starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus `output_group_subjects.bzl` plus `config_subjects.bzl`;
-  `starlark_futures_qualification` 37/37;
+  `starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl` plus `output_group_subjects.bzl` plus `config_subjects.bzl` plus `action_subjects.bzl`;
+  `starlark_futures_qualification` 40/40;
   per-check filtering plus per-function targets plus Rust orchestration with BEP
   wont-fix on target granularity plus explicit macro instantiation plus single
    invocation with no nested Bazel, richer matchers supported under #790
@@ -790,8 +790,10 @@ Remaining reds stay owned gaps, not green claims:
    supported under #793 (DxConfigInfo plus config_field observations with
    select plus fragment plus transition use case via
    `//libs/starlark/tests:config_subject_analysis`), action
-   including registered-action (#795) subjects deferred pending a concrete use case
-   plus fixtures plus successor issue, second Starlark interpreter plus per-check
+   subjects deferred including registered-action (#795) with the
+   mnemonic-to-outputs mapping plus resolved-report use case pinned under
+   #795 (via `action_subjects.bzl` plus `//libs/starlark/tests:action_unit`,
+   stays deferred), second Starlark interpreter plus per-check
   `--test_filter` parsing plus nested Bazel plus behavioral matrix as line
   coverage rejected; test framework only, no Bazel semantics change; platform
   plus consumer plus release evidence stays owned gap; no Supported claim).
