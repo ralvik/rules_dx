@@ -1,5 +1,5 @@
 {
-  "checksum": "5fbab6082673ec67ca92a9a8cd557afe40c27fe0727e3576175132f3677b407f",
+  "checksum": "88ce1d10e5938030cf460966fac24619a12ac4c5ed0f32d8e964b5c49d465f88",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2326,6 +2326,10 @@
           {
             "id": "thiserror 2.0.20",
             "target": "thiserror"
+          },
+          {
+            "id": "toml 1.1.6+spec-1.1.0",
+            "target": "toml"
           }
         ],
         "deps_dev": [
