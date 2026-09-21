@@ -132,11 +132,29 @@ def _dx_quality_files(ctx, extra_quality_attrs):
         files.extend(getattr(ctx.files, name, []))
     return files
 
-def _dx_runtime_providers(upstream, what, runtime):
+def _dx_runtime_providers(ctx, upstream, what, runtime, extra_quality_attrs = None):
     if runtime == "mandatory":
         return dx_forwarded_runtime_providers(upstream, what)
     elif runtime == "besteffort":
-        return dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo, RunEnvironmentInfo])
+        out = []
+        if InstrumentedFilesInfo in upstream:
+            out.append(upstream[InstrumentedFilesInfo])
+        else:
+            # Synthesize coverage metadata from direct srcs when upstream
+            # lacks it (e.g., rules_dotnet libraries). Transitive closure
+            # follows the upstream edge; direct srcs are always instrumented.
+            # See: docs/product/support-matrix.md (Coverage Planned for C#/F#).
+            src_attrs = ["srcs"] + (list(extra_quality_attrs) if extra_quality_attrs else [])
+            out.append(coverage_common.instrumented_files_info(
+                ctx,
+                source_attributes = src_attrs,
+                dependency_attributes = ["upstream"],
+            ))
+        if OutputGroupInfo in upstream:
+            out.append(upstream[OutputGroupInfo])
+        if RunEnvironmentInfo in upstream:
+            out.append(upstream[RunEnvironmentInfo])
+        return out
     else:
         fail("dx wrapper: unknown runtime '" + runtime + "': want \"mandatory\" or \"besteffort\"")
 
@@ -152,7 +170,7 @@ def dx_library_forward_rule(provides, required_providers, quality_specs, what, a
         return (
             dx_preserved_providers(upstream, required_providers, what) +
             [upstream[DefaultInfo]] +
-            _dx_runtime_providers(upstream, what, runtime) +
+            _dx_runtime_providers(ctx, upstream, what, runtime, extra_quality_attrs) +
             [dx_quality_sources(_dx_quality_files(ctx, extra_quality_attrs), quality_specs, str(ctx.label))]
         )
 
@@ -183,7 +201,7 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
             [dx_symlink_default_info(ctx, what)] +
             dx_preserved_providers(upstream, required_providers, what) +
             dx_forwarded_optional(upstream, optional_providers) +
-            _dx_runtime_providers(upstream, what, runtime) +
+            _dx_runtime_providers(ctx, upstream, what, runtime, extra_quality_attrs) +
             [dx_quality_sources(_dx_quality_files(ctx, extra_quality_attrs), quality_specs, str(ctx.label))]
         )
 

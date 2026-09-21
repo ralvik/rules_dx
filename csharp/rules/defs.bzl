@@ -5,13 +5,14 @@ Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 
 load("@rules_dotnet//dotnet:defs.bzl", _csharp_binary = "csharp_binary", _csharp_library = "csharp_library", _csharp_test = "csharp_test")
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_CSHARP_LIBRARY_PROVIDES = [
     DotnetAssemblyCompileInfo,
     DotnetAssemblyRuntimeInfo,
     DefaultInfo,
+    InstrumentedFilesInfo,
     QualitySourcesInfo,
 ]
 
@@ -82,18 +83,7 @@ def _csharp_with_tfm(kwargs):
     return upstream_kwargs
 
 def _csharp_wrap_library(name, srcs, visibility = None, **kwargs):
-    _csharp_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        visibility = ["//visibility:private"],
-        **_csharp_with_tfm(kwargs)
-    )
-    _csharp_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _csharp_library, _csharp_library_forward, srcs, visibility = visibility, **_csharp_with_tfm(kwargs))
 
 def _csharp_wrap_binary(name, srcs, visibility = None, **kwargs):
     upstream_kwargs = _csharp_with_tfm(kwargs)
