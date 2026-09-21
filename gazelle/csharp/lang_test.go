@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/bazel-contrib/bazel-gazelle/v2/label"
+	"github.com/bazel-contrib/bazel-gazelle/v2/merger"
 	"github.com/bazel-contrib/bazel-gazelle/v2/rule"
 	"github.com/bazelbuild/bazel-gazelle/config"
 	"github.com/bazelbuild/bazel-gazelle/language"
@@ -347,5 +348,53 @@ func TestResolveAmbiguousFails(t *testing.T) {
 	l.Resolve(cfg, index, nil, rule.NewRule(LibraryKind, "app"), targetImports{imports: []string{"Dup"}}, label.New("", "app", "app"))
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "ambiguous import") {
 		t.Errorf("ambiguous errors = %v", l.errors)
+	}
+}
+
+func TestAspectHintsSurviveRegen(t *testing.T) {
+	root := t.TempDir()
+	for name, content := range map[string]string{
+		"pkg/demo/Demo.cs":   "namespace Demo;\n\nclass Demo\n",
+		"pkg/demo/Helper.cs": "namespace Demo;\n\nclass Helper\n",
+	} {
+		writeFixture(t, root, name, content)
+	}
+	build := `load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
+
+csharp_library(
+    name = "demo",
+    srcs = [
+        "Demo.cs",
+        "Helper.cs",
+    ],
+    aspect_hints = [":my_config"],
+)
+`
+	file, err := rule.LoadData("BUILD.bazel", "pkg/demo", []byte(build))
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := NewLanguage().GenerateRules(language.GenerateArgs{
+		Config:       &config.Config{RepoRoot: root},
+		Dir:          filepath.Join(root, "pkg", "demo"),
+		Rel:          "pkg/demo",
+		RegularFiles: []string{"Demo.cs", "Helper.cs"},
+		File:         file,
+	})
+	if len(result.Gen) != 1 {
+		t.Fatalf("generated %d rules, want 1", len(result.Gen))
+	}
+	merger.MergeFile(file, result.Empty, result.Gen, merger.PreResolve, csharpKinds, nil)
+	var merged *rule.Rule
+	for _, r := range file.Rules {
+		if r.Kind() == LibraryKind && r.Name() == "demo" {
+			merged = r
+		}
+	}
+	if merged == nil {
+		t.Fatal("merged demo rule missing")
+	}
+	if got := strings.Join(merged.AttrStrings("aspect_hints"), ","); got != ":my_config" {
+		t.Errorf("merged aspect_hints = %q, want :my_config to survive regen", got)
 	}
 }

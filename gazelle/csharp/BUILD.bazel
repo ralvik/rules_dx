@@ -57,6 +57,7 @@ go_test(
     ],
     embed = [":csharp"],
     pure = "on",
+    deps = ["@gazelle//v2/merger"],
 )
 
 real_source_target(
