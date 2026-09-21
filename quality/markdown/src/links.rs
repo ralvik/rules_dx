@@ -212,8 +212,11 @@ pub fn resolve_target(source: &str, target: &str) -> String {
 /// event for these (only absolute URIs and emails are CommonMark
 /// autolinks), so the retired `<...>` rule is kept as a fallback: a `<`
 /// closed on the same line whose trimmed content is non-empty with no
-/// whitespace and no `@`. Candidates overlapping a code span, a link the
-/// parser already emitted, or an inline HTML tag are skipped.
+/// whitespace. Email autolinks are skipped via overlap with the parser's
+/// Email span (recorded as a link span with no finding), so `@` in a
+/// relative target still resolves fail-closed. Candidates overlapping a
+/// code span, a link the parser already emitted, or an inline HTML tag
+/// are skipped.
 pub(crate) fn scan_bare_autolinks(
     line: &str,
     base: usize,
@@ -239,7 +242,6 @@ pub(crate) fn scan_bare_autolinks(
         let content = line[candidate.start + 1 - base..candidate.end - 1 - base].trim();
         if content.is_empty()
             || content.contains(char::is_whitespace)
-            || content.contains('@')
             || code_spans.iter().any(|span| overlaps(span, &candidate))
             || link_spans.iter().any(|span| overlaps(span, &candidate))
             || html_spans.iter().any(|span| overlaps(span, &candidate))
