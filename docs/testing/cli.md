@@ -196,6 +196,12 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   package identities; package-specific advisory queries and lockfile uploads must not occur. Run
   snapshot matching with network access denied after inputs are acquired. A query-only integration
   must not be admitted as a conforming fallback.
+- Verify audit curator data rides declared Bazel inputs with unchanged semantics: the committed
+  `licenses.toml` bytes ride `//:audit_curator` as a declared input, advisory snapshots ride
+  identified snapshot plus identity rels as declared analysis inputs, and the per-package
+  `[[inventory]]` shape stays identical so NOTICE aggregation stays hermetic and cached.
+  Pinned by fixtures in `cli/audit/tests/fixtures/declared_inputs/` plus `dx_audit::curator`
+  plus `bazel run //tools/ci:audit_declared_inputs_qualification` under issue #812.
 - Verify vulnerabilities with and without available fixed versions are reported and evaluated under
   the same severity threshold and failure policy. An unfixable finding at the failure threshold must
   fail audit absent explicit risk acceptance, not be hidden or downgraded merely for lacking a fix.
