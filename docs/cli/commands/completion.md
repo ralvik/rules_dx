@@ -11,9 +11,17 @@ Implementation status: implemented
 
 Scripts are generated at runtime by the `dx` binary itself from the single CLI command-definition source, following the `kubectl`/`gh` generator-subcommand convention: a framework facility (of the `clap_complete` class) renders every supported shell from the command table, so no script is ever handwritten or stored. The owning source is the `Command` vocabulary in `cli/cli/src/args/command.rs` plus the `Cli` grammar in `cli/cli/src/args/grammar.rs` (re-exported through `cli/cli/src/args.rs`), rendered by `cli/cli/src/args/completion.rs`. Adding a command or flag regenerates every script, so completion cannot drift from the [command reference](README.md) or [ADR 0006](../../decisions/0006-cli-command-surface.md). Fixture tests assert every command and flag appears in each supported shell's output.
 
+## Dynamic Candidates
+
+Scope and task positions complete dynamically through a completion-time callback into the binary, matching the dynamic-candidate pattern used by the same convention. Each generated script invokes `dx __complete <typed...> <current>` at completion time (last word is the current prefix, `""` for a new word) and offers one candidate per line.
+
+`__complete` is hidden: never a `Command` variant, never in `--help` or usage, so the 32-command registry stays exact. It always exits `0` with no stderr, so completion never breaks typing; unknown shapes yield no output.
+
+First-slot tasks come from the same tables as execution: `watch` offers the watchable commands, `hooks` its verbs then (`run`) its triggers, `new` its languages, `audit` its families, `completion` its shells, `update`/`bump` their dependency sets. All other scope slots offer Bazel labels: `//...` plus `//dir/...` per directory holding a `BUILD.bazel`/`BUILD` marker (bounded scan; hidden, `bazel-*`, and symlinked directories skipped; external `@` and path prefixes yield nothing so shell file completion owns them). The per-slot dispatch in `cli/cli/src/args/complete.rs` matches exhaustively over `Command`, so adding a command breaks compilation until its slot is classified. Fixture tests pin the fish task payloads verbatim plus the callback marker in every shell.
+
 ## Installation
 
-Installation is a one-time shell setup, not a per-directory step: evaluate the script from the shell rc file guarded by `command -v dx`, or place it in the shell's completions directory. Do not evaluate it from `.envrc`; direnv re-evaluates on every directory change, and completion setup must not run on every `cd`.
+Installation is a one-time shell setup, not a per-directory step: evaluate the script from the shell rc file guarded by `command -v dx`, or place it in the shell's completions directory. Do not evaluate it from `.envrc`; direnv re-evaluates on every directory change, and completion setup must not run on every `cd`. Regenerate after upgrading `dx`: the embedded callback tracks the binary it was generated from.
 
 Per-shell homes: bash `~/.bash_completion.d/dx` (or `/usr/share/bash-completion/completions/dx`), zsh a `${fpath}` entry named `_dx`, fish `~/.config/fish/completions/dx.fish`, powershell a file dot-sourced from `$PROFILE`. Generate each file with `dx completion <shell>`.
 
@@ -24,7 +32,3 @@ Build the manual page with `bazel build //cli/cli:man_pages` (emits `man/dx.1` u
 ## Direnv Composition
 
 Direnv and completion compose without integration. Direnv places `.dx/bin` on `PATH` per directory, which keeps the `dx` binary visible so lazily-loaded completions resolve. No completion state lives in `.envrc`, and completion never reads direnv state.
-
-## Out Of Scope
-
-Dynamic candidate completion (target labels, task names, and similar repository-derived candidates) stays a future option; v1 completes commands, flags, and fixed value sets only. The reserved extension point is a completion-time callback into the binary, matching the dynamic-candidate pattern used by the same convention.

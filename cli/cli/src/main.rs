@@ -227,6 +227,22 @@ fn main() {
 
 fn run() -> i32 {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // Hidden completion-time callback for the generated `dx completion`
+    // scripts (See: `docs/cli/commands/completion.md`): answers scope
+    // and task candidates without parsing, workspace gates, or Bazel so
+    // completion stays fast and never breaks typing. Never a `Command`,
+    // never in `--help` or usage.
+    if args
+        .first()
+        .is_some_and(|first| first.as_str() == dx_cli::args::COMPLETE_SUBCOMMAND)
+    {
+        let cwd = std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+        let stdout = io::stdout();
+        let mut out = stdout.lock();
+        let code = dx_cli::args::run_complete(&args[1..], &cwd, &mut out);
+        let _ = out.flush();
+        return code;
+    }
     let mut invocation = match parse(&args) {
         Ok(invocation) => invocation,
         Err(dx_cli::args::ArgsError::Help { text }) => {
