@@ -275,30 +275,38 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   `quality/adapter/src/parsers/` plus `quality/testdata` matrix cells)
   (see the Scala + .NET rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
-- **Native cohort (#798, successor to closed #418, provisional — no adapter claims `c`, `cpp`, or `go` yet):**
-  split native route for clang-format/clang-tidy via the qualified hermetic-llvm LLVM tool
-  targets (authoritative-toolchain class, no separate acquisition) plus cppcheck as a
-  standalone checksummed-artifact candidate, and split Go route for gofumpt (strict gofmt
-  superset) plus staticcheck/govet with errcheck complementary for unhandled errors.
-  Research notes (unproven mappings): clang-tidy needs compile-commands context, so the
-  target-coupled wiring versus check-only decision is recorded here, not silent; cppcheck
-  parses `--xml --xml-version=2` on stderr; staticcheck default checks are qualified
-  seed-only under issue #487 as the upstream built-in default checks (the `SA`-only
-  shortcut is rejected without qualification);
-  `govet` default analyzers with errcheck complementary for unhandled errors are qualified
-  seed-only under issue #487; `govet` and errcheck parse `file:line[:col]: message` text;
-  clang-tidy fixes travel separately as `--export-fixes` YAML for
-  `clang-apply-replacements`. Formatters (clang-format,
-  gofumpt) are whole-file rewrite with check/diff mode; clang-tidy is whole-file rewrite
-  (`--fix` or `--export-fixes`) versus check-only per the target-coupling decision above;
-  staticcheck, `govet`, errcheck, and cppcheck are check-only with the provisional
-  sandbox-apply-and-diff fix flow. C/C++ MSVC-interop and SDK licensing stay with the Windows
-  platform issue — this cohort covers adapter behavior given a qualified toolchain. Versions
-  plus rule-sets qualified seed-only under issue #487
+- **Native cohort (#798, successor to closed #418):** adapters `clang_format` (format `c`,
+  `cpp`), `clang_tidy` (lint `c`, `cpp`), `cppcheck` (lint `c`, `cpp`),
+  `gofumpt` (format `go`), `staticcheck` (lint `go`), `govet` (lint `go`),
+  `errcheck` (lint `go`, complementary) over the decided routes: split
+  native route for clang-format/clang-tidy via the qualified hermetic-llvm
+  LLVM tool targets (authoritative-toolchain class, no separate acquisition)
+  plus cppcheck as a standalone checksummed artifact, and split Go route
+  for gofumpt (strict gofmt superset) plus staticcheck/govet with errcheck
+  complementary (staticcheck default checks with the SA-only shortcut is rejected without qualification).
+  Research notes (unproven mappings): clang-tidy target-coupled wiring versus
+  check-only is decided check-only with delegated text diagnostics
+  (`file:line:col: warning|error: message [check]` on stderr, exit 1 with
+  findings; compile-commands context rides the authoritative target when
+  present but findings never silently depend on it; `--fix` plus
+  `--export-fixes` stay unbound, recorded here, not silent); cppcheck parses
+  `--xml --xml-version=2` on stderr; gofumpt `-d` emits unified diff on
+  stdout with exit 0 either way (like `gofmt -d`); staticcheck `-f json`
+  emits a JSON array; `govet` and errcheck parse `file:line:col: message`
+  text (stderr and stdout respectively). Formatters (clang-format,
+  gofumpt) are whole-file rewrite with check/diff mode; clang-tidy,
+  staticcheck, `govet`, errcheck, and cppcheck are check-only with the
+  provisional sandbox-apply-and-diff fix flow. C/C++ MSVC-interop and SDK licensing stay with the Windows platform issue — this cohort covers
+  adapter behavior given a qualified toolchain. Versions plus rule-sets
+  qualified seed-only under issue #487
   (`cc/tests/fixtures/native_quality/pins.bzl` via
-  `bazel run //tools/ci:native_quality_qualification` over upstream built-in defaults
-  with no hidden preset); digests stay observations, not pins, recheck latest stable at
-  implementation; adapters stay owned under #798 (successor to closed #418)
+  `bazel run //tools/ci:native_quality_qualification` over upstream built-in
+  defaults with no hidden preset); digests stay observations, not pins,
+  recheck latest stable at implementation; adapters qualified seed-only
+  under #798
+  (`bazel run //tools/ci:native_adapters_qualification` with per-tool
+  fixtures plus `quality/adapter/src/parsers/` plus `quality/testdata`
+  matrix cells)
   (see the Native rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Structured cohort (#799, successor to closed #419, provisional — no adapter claims `protobuf` or `qml` yet):**

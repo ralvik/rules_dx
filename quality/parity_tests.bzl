@@ -22,13 +22,10 @@ PARITY_SCHEMA_VERSION = 1
 # under the owning decision.
 PARITY_DEFERRED = {
     "astro": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "c": ["ADR 0019", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "cpp": ["ADR 0019", "authoritative hermetic-llvm toolchain (clang-format, clang-tidy); cppcheck standalone artifact -- Native cohort owned by issue #418; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "css": ["ADR 0019", "private Node graph (Prettier); standalone artifact (Stylelint) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "cuda": ["ADR 0019", "authoritative toolchain (clang-format); CUDA scope fails closed until qualified"],
     "cue": ["ADR 0019", "checksummed standalone artifact (cue fmt) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "gherkin": ["ADR 0019", "private Node graph (Prettier prettier-plugin-gherkin closure) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
-    "go": ["ADR 0019", "authoritative Go toolchain (gofmt/gofumpt); staticcheck/govet standalone artifacts -- Native cohort owned by issue #418; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "go_module": ["ADR 0019", "checksummed standalone artifact (modfmt) -- Interpreted/file-family cohort owned by issue #420; See: docs/decisions/0019-first-release-additional-foundations.md"],
     "graphql": ["ADR 0019", "private Node graph (Prettier GraphQL parser)"],
     "html": ["ADR 0019", "private Node graph (Prettier HTML parser)"],

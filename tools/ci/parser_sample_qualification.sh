@@ -6,9 +6,10 @@
 # - delivered: every adapter-backed tool keeps a parser module with pinned
 #   pass (clean) plus fail (dirty) samples exercised as unit tests
 #   (`quality/adapter/src/parsers/*.rs`: biome lint plus format, buildifier,
-#   clippy plus rustc via the shared rust diagnostics, csharpier, eslint,
-#   fantomas, flake8, fsharplint, markdown_check, prettier, pydoclint, pylint,
-#   roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt, taplo lint
+#   clang_format, clang_tidy, clippy plus rustc via the shared rust diagnostics,
+#   cppcheck, csharpier, errcheck, eslint,
+#   fantomas, flake8, fsharplint, gofumpt, govet, markdown_check, prettier, pydoclint, pylint,
+#   roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt, staticcheck, taplo lint
 #   plus format, tsc, ty, vale);
 # - wiring: recorded Clippy/rustc diagnostics stay byte-identical between
 #   the parser unit samples and the Layer-2 matrix injected upstream
@@ -35,10 +36,12 @@ roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
 verify_remaining="docs/testing/verification-matrix-remaining.md"
 runner_doc="docs/quality/runner-matrix.md"
-ci=".github/workflows/ci.yml"
-build="tools/ci/BUILD.bazel"
+targets="tools/ci/ci_targets_c.bzl"
+dogfood="tools/ci/dogfood_freshness.sh"
 matrix="quality/testdata/runner_matrix_cases.bzl"
+matrix_rust="quality/testdata/runner_matrix_rust.bzl"
 real_rs="quality/runner/src/real.rs"
+real_tests_b="quality/runner/src/real_tests_b.rs"
 
 # Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
 if grep -q -F -e 'parser-sample backfill Seed-host-delivered (closed #465' "$roadmap"; then
@@ -64,24 +67,18 @@ else
 fi
 
 # Verification matrix Green lists the harness count.
-if grep -q -F -e '`parser_sample_qualification` 29/29' "$verify"; then
+if grep -q -F -e '`parser_sample_qualification` 42/42' "$verify"; then
   ok
 else
   bad "verification-matrix Green lost parser_sample_qualification 23/23"
 fi
 
-# BUILD owns the harness target.
-if grep -q -F -e 'name = "parser_sample_qualification"' "$build"; then
+# Targets own the harness plus dogfood wires it.
+if grep -q -F -e 'name = "parser_sample_qualification"' "$targets" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:parser_sample_qualification' "$dogfood"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the parser_sample_qualification target"
-fi
-
-# CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:parser_sample_qualification' "$ci"; then
-  ok
-else
-  bad "ci.yml lost the parser_sample_qualification step (want dogfood-freshness)"
+  bad "ci_targets or dogfood lost the parser_sample_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Biome keeps lint plus format parsers with dirty plus clean samples.
@@ -119,12 +116,12 @@ else
 fi
 
 # Recorded Clippy/rustc diagnostics stay byte-identical to the matrix injected upstream.
-if grep -q -F -e '_CLIPPY_LINT' "$matrix" &&
-  grep -q -F -e '_RUSTC_TYPE_ERROR' "$matrix" &&
-  grep -q -F -e 'byte-identical to' "$matrix" &&
-  grep -q -F -e 'parser unit samples' "$matrix" &&
-  grep -q -F -e 'clippy::len_zero' "$matrix" &&
-  grep -q -F -e 'E0308' "$matrix"; then
+if grep -q -F -e 'CLIPPY_LINT' "$matrix_rust" &&
+  grep -q -F -e 'RUSTC_TYPE_ERROR' "$matrix_rust" &&
+  grep -q -F -e 'byte-identical to' "$matrix_rust" &&
+  grep -q -F -e 'parser unit samples' "$matrix_rust" &&
+  grep -q -F -e 'clippy::len_zero' "$matrix_rust" &&
+  grep -q -F -e 'E0308' "$matrix_rust"; then
   ok
 else
   bad "runner matrix lost its byte-identical clippy/rustc parser-sample pin"
@@ -223,7 +220,7 @@ if [[ -f "quality/adapter/src/parsers/tsc.rs" ]] &&
   grep -q -F -e 'TS1109' quality/adapter/src/parsers/tsc.rs &&
   grep -q -F -e 'tsc' quality/tools/typescript/BUILD.bazel &&
   ! grep -q -F -e '"tsc",' "$real_rs" &&
-  grep -q -F -e 'keeps an adapter parser' "$real_rs"; then
+  grep -q -F -e 'keeps an adapter parser' "$real_tests_b"; then
   ok
 else
   bad "tsc lost its parser samples or pipeline-only wiring (parser plus no dispatch)"
@@ -363,6 +360,69 @@ if [[ -f "quality/adapter/src/parsers/spotbugs.rs" ]] &&
   ok
 else
   bad "spotbugs lost its SARIF parser with range plus clean samples"
+fi
+
+# clang-format keeps its diff parser with dirty plus clean samples (issue #798).
+if [[ -f "quality/adapter/src/parsers/clang_format.rs" ]] &&
+  grep -q -F -e 'pub fn parse_clang_format' quality/adapter/src/parsers/clang_format.rs &&
+  grep -q -F -e '--- a/' quality/adapter/src/parsers/clang_format.rs; then
+  ok
+else
+  bad "clang_format lost its diff parser with dirty plus clean samples"
+fi
+
+# gofumpt keeps its diff parser with dirty plus clean samples (issue #798).
+if [[ -f "quality/adapter/src/parsers/gofumpt.rs" ]] &&
+  grep -q -F -e 'pub fn parse_gofumpt' quality/adapter/src/parsers/gofumpt.rs &&
+  grep -q -F -e '--- a/' quality/adapter/src/parsers/gofumpt.rs; then
+  ok
+else
+  bad "gofumpt lost its diff parser with dirty plus clean samples"
+fi
+
+# clang-tidy keeps its text parser with diagnostics plus clean (issue #798).
+if [[ -f "quality/adapter/src/parsers/clang_tidy.rs" ]] &&
+  grep -q -F -e 'pub fn parse_clang_tidy' quality/adapter/src/parsers/clang_tidy.rs &&
+  grep -q -F -e 'readability-else-after-return' quality/adapter/src/parsers/clang_tidy.rs; then
+  ok
+else
+  bad "clang_tidy lost its text parser with diagnostics plus clean"
+fi
+
+# cppcheck keeps its XML parser with errors plus clean (issue #798).
+if [[ -f "quality/adapter/src/parsers/cppcheck.rs" ]] &&
+  grep -q -F -e 'pub fn parse_cppcheck' quality/adapter/src/parsers/cppcheck.rs &&
+  grep -q -F -e 'nullPointer' quality/adapter/src/parsers/cppcheck.rs; then
+  ok
+else
+  bad "cppcheck lost its XML parser with errors plus clean"
+fi
+
+# staticcheck keeps its JSON parser with findings plus clean (issue #798).
+if [[ -f "quality/adapter/src/parsers/staticcheck.rs" ]] &&
+  grep -q -F -e 'pub fn parse_staticcheck' quality/adapter/src/parsers/staticcheck.rs &&
+  grep -q -F -e 'SA4006' quality/adapter/src/parsers/staticcheck.rs; then
+  ok
+else
+  bad "staticcheck lost its JSON parser with findings plus clean"
+fi
+
+# govet keeps its text parser with diagnostics plus clean (issue #798).
+if [[ -f "quality/adapter/src/parsers/govet.rs" ]] &&
+  grep -q -F -e 'pub fn parse_govet' quality/adapter/src/parsers/govet.rs &&
+  grep -q -F -e 'non-constant format string' quality/adapter/src/parsers/govet.rs; then
+  ok
+else
+  bad "govet lost its text parser with diagnostics plus clean"
+fi
+
+# errcheck keeps its text parser with diagnostics plus clean (issue #798).
+if [[ -f "quality/adapter/src/parsers/errcheck.rs" ]] &&
+  grep -q -F -e 'pub fn parse_errcheck' quality/adapter/src/parsers/errcheck.rs &&
+  grep -q -F -e 'unchecked error' quality/adapter/src/parsers/errcheck.rs; then
+  ok
+else
+  bad "errcheck lost its text parser with diagnostics plus clean"
 fi
 
 # Runner-matrix doc owns the parser-sample backfill record.

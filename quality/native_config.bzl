@@ -27,11 +27,23 @@ DxNativeConfigInfo = provider(
 # the XML configuration (`checkstyle.xml`): the adapter passes it as
 # `-c`, so the `.xml` extension pins the XML transport (Checkstyle has
 # no usable upstream default; applicable stages fail without a hinted
-# config, mirroring ESLint/Vale).
+# config, mirroring ESLint/Vale). clang-format takes
+# the extensionless `.clang-format` dotfile via `--style=file:<path>` and
+# clang-tidy the extensionless `.clang-tidy` dotfile via `--config-file`,
+# so the required suffix is the whole dotfile name. cppcheck takes a
+# suppressions list (`.txt`) via `--suppressions-list`, staticcheck the
+# `staticcheck.conf` (`.conf`) discovered upward from the working
+# directory. gofumpt, govet, and errcheck take no native config file:
+# gofumpt has no rule selection, govet runs default analyzers only, and
+# errcheck stays complementary with flags only, so no typed rule exists
+# for them by design.
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buildifier": ".json",
     "checkstyle": ".xml",
+    "clang_format": ".clang-format",
+    "clang_tidy": ".clang-tidy",
+    "cppcheck": ".txt",
     "csharpier": ".yaml",
     "eslint": ".js",
     "fsharplint": ".json",
@@ -39,6 +51,7 @@ _NATIVE_CONFIG_EXTENSIONS = {
     "rustfmt": ".toml",
     "scalafix": ".conf",
     "scalafmt": ".conf",
+    "staticcheck": ".conf",
     "taplo": ".toml",
     "vale": ".ini",
 }
@@ -166,6 +179,26 @@ scalafix_config = _make_native_config_rule(
 csharpier_config = _make_native_config_rule(
     "csharpier",
     "Checked-in CSharpier YAML config (.csharpierrc) for C# format.",
+)
+
+clang_format_config = _make_native_config_rule(
+    "clang_format",
+    "Checked-in clang-format dotfile (.clang-format) for C/C++ format. The adapter passes it as --style=file:<path>.",
+)
+
+clang_tidy_config = _make_native_config_rule(
+    "clang_tidy",
+    "Checked-in clang-tidy dotfile (.clang-tidy) for C/C++ lint. The adapter passes it as --config-file.",
+)
+
+cppcheck_config = _make_native_config_rule(
+    "cppcheck",
+    "Checked-in cppcheck suppressions list (.txt) for C/C++ lint. The adapter passes it as --suppressions-list.",
+)
+
+staticcheck_config = _make_native_config_rule(
+    "staticcheck",
+    "Checked-in staticcheck HOCON config (staticcheck.conf) for Go lint.",
 )
 
 fsharplint_config = _make_native_config_rule(

@@ -4,11 +4,10 @@
 # Qualifies the as-built open record with fixture evidence pinned in
 # `quality/tests/fixtures/layer2_opens/pins.bzl` (plus
 # `layer2_opens.expected`), without claiming delivery or Supported:
-# - Layer-2 adapter-less cells stay open for Go plus
-#   C/C++ (no adapter claim, no runner-matrix cells, parity deferred with
-#   owner plus frozen route; defaults qualified under -, digests plus
-#   adapters stay owned under -; Scala plus C# plus F# delivered under #797
-#   plus Java plus Kotlin delivered under #796).
+# - No Layer-2 adapter-less cells remain open: Scala plus C# plus F#
+#   delivered under #797 plus Java plus Kotlin delivered under #796 plus
+#   C plus C++ plus Go delivered under #798 (no adapter-less inventory,
+#   parity delivered, runner-matrix cells delivered).
 #   Closed only for required core).
 # - Framework regions stay classification-only for Vue plus Svelte plus Astro
 #   plus MDX (frozen taxonomy plus quality-region mappings, no adapter claim,
@@ -48,11 +47,12 @@ matrix="quality/testdata/runner_matrix_cases.bzl"
 sources="quality/sources.bzl"
 support="docs/product/support-matrix.md"
 verify="docs/testing/verification-matrix.md"
+verify_remaining="docs/testing/verification-matrix-remaining.md"
 framework="docs/generation/framework-adapters.md"
 testing_doc="docs/quality/quality-testing.md"
 depcheck_build="tools/depcheck/BUILD.bazel"
-build="tools/ci/BUILD.bazel"
-ci=".github/workflows/ci.yml"
+targets="tools/ci/ci_targets_d.bzl"
+dogfood="tools/ci/dogfood_freshness.sh"
 
 # Fixture triple stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
@@ -62,10 +62,11 @@ else
 fi
 
 # Pins record the adapter-less plus framework inventory with rejected plus honesty lines.
-# Scala plus C# plus F# delivered under #797 plus Java plus Kotlin delivered under #796 (no longer adapter-less).
-if grep -q -F -e 'ADAPTER_LESS_GO = "go"' "$pins" &&
-  grep -q -F -e 'ADAPTER_LESS_C = "c"' "$pins" &&
-  grep -q -F -e 'ADAPTER_LESS_CPP = "cpp"' "$pins" &&
+# Scala plus C# plus F# delivered under #797 plus Java plus Kotlin under
+# #796 plus C plus C++ plus Go under #798 (no adapter-less inventory remains).
+if ! grep -q -F -e 'ADAPTER_LESS_GO' "$pins" &&
+  ! grep -q -F -e 'ADAPTER_LESS_C' "$pins" &&
+  ! grep -q -F -e 'ADAPTER_LESS_CPP' "$pins" &&
   ! grep -q -F -e 'ADAPTER_LESS_JAVA' "$pins" &&
   ! grep -q -F -e 'ADAPTER_LESS_KOTLIN' "$pins" &&
   ! grep -q -F -e 'ADAPTER_LESS_SCALA' "$pins" &&
@@ -99,12 +100,12 @@ else
   bad "pins.bzl lost its composition plus depcheck plus owning qualifications under issue #510"
 fi
 
-# No false adapter claim for the adapter-less cohorts: none of the cohort
-# tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (digests plus adapters stay owned under -). Scala/.NET delivered
-# under #797 plus JVM delivered under #796, so their tools are excluded here.
+# No false adapter claim for the remaining open cohorts: none of the open
+# tool IDs appear in REAL_ADAPTERS. Scala/.NET delivered under #797 plus
+# JVM delivered under #796 plus native delivered under #798, so only the
+# still-open detekt stays guarded here.
 opens_claim=""
-for tool in gofumpt staticcheck govet errcheck clang-format clang-tidy cppcheck detekt; do
+for tool in detekt; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
     opens_claim="$opens_claim $tool:claimed"
   fi
@@ -115,11 +116,12 @@ else
   bad "false adapter claim for adapter-less cohorts:$opens_claim"
 fi
 
-# Adapter-less plus framework classes keep no runner-matrix cells
+# Framework classes keep no runner-matrix cells
 # (adapter-less as pass rejected: absence is the open record, never a pass).
-# Scala/.NET cells delivered under #797 plus JVM cells delivered under #796, so excluded here.
+# Scala/.NET cells delivered under #797 plus JVM cells under #796 plus
+# native cells under #798, so only framework cells stay guarded here.
 opens_matrix=""
-for cell in matrix_go_ matrix_c_ matrix_cpp_ matrix_vue_ matrix_svelte_ matrix_astro_ matrix_mdx_; do
+for cell in matrix_vue_ matrix_svelte_ matrix_astro_ matrix_mdx_; do
   if grep -q -F -e "$cell" "$matrix"; then
     opens_matrix="$opens_matrix $cell:claimed"
   fi
@@ -131,13 +133,13 @@ else
 fi
 
 # Parity deferrals name owner plus frozen route for every open class.
-# Scala/.NET delivered under #797 plus JVM delivered under #796, so excluded here.
+# Scala/.NET delivered under #797 plus JVM delivered under #796 plus native
+# delivered under #798, so only framework classes stay guarded here.
 opens_deferred=""
-for cls in go c cpp vue svelte astro mdx; do
+for cls in vue svelte astro mdx; do
   grep -q -F -e "\"$cls\":" "$parity" || opens_deferred="$opens_deferred $cls:missing"
 done
 if [[ -z "$opens_deferred" ]] &&
-  grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"vue": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"vue": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'PARITY_DEFERRED = {' "$parity"; then
@@ -225,11 +227,14 @@ else
 fi
 
 # Expected fixture covers the open cells with rejected plus route honesty.
-# Scala/C#/F# delivered under #797 plus Java/Kotlin delivered under #796.
-if grep -q -F -e 'Go Layer-2 Open (adapter-less)' "$expected" &&
-  grep -q -F -e 'C++ Layer-2 Open (adapter-less)' "$expected" &&
+# Scala/C#/F# delivered under #797 plus Java/Kotlin under #796 plus C/C++/Go under #798.
+if ! grep -q -F -e 'Go Layer-2 Open (adapter-less)' "$expected" &&
+  ! grep -q -F -e 'C++ Layer-2 Open (adapter-less)' "$expected" &&
+  ! grep -q -F -e 'Java Layer-2 Open (adapter-less)' "$expected" &&
+  ! grep -q -F -e 'Kotlin Layer-2 Open (adapter-less)' "$expected" &&
   grep -q -F -e 'Scala/C#/F# Layer-2 Delivered under #797' "$expected" &&
   grep -q -F -e 'Java/Kotlin Layer-2 Delivered under #796' "$expected" &&
+  grep -q -F -e 'C/C++/Go Layer-2 Delivered under #798' "$expected" &&
   grep -q -F -e 'Vue/Svelte/Astro/MDX Layer-2 Open (regions)' "$expected" &&
   grep -q -F -e 'Vue/Svelte/Astro/MDX Examples Open (composition)' "$expected" &&
   grep -q -F -e 'Vue/Svelte/Astro/MDX Depcheck Open' "$expected" &&
@@ -241,14 +246,14 @@ else
   bad "layer2_opens.expected lost its open-cells plus rejected plus route record under issue #510"
 fi
 
-# Support matrix owns the qualified seed-only record under.
-if grep -q -F -e 'qualified seed-only under issue #510' "$support" &&
+# Support matrix owns the qualified seed-only record under closed #510.
+if grep -q -F -e 'qualified seed-only under closed #510' "$support" &&
   grep -q -F -e 'quality/tests/fixtures/layer2_opens/pins.bzl' "$support" &&
   grep -q -F -e 'layer2_opens_qualification' "$support" &&
   grep -q -F -e 'adapter-less as pass rejected' "$support"; then
   ok
 else
-  bad "support-matrix lost its #510 qualified seed-only record with fixtures plus harness"
+  bad "support-matrix lost its closed-#510 qualified seed-only record with fixtures plus harness"
 fi
 
 # Framework adapters plus quality-testing docs own their records.
@@ -262,22 +267,30 @@ else
   bad "framework-adapters or quality-testing lost its #510 qualified plus route record"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'layer2_opens_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under issue #510' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:layer2_opens_qualification' "$verify" &&
+# Verification-matrix-remaining owns the qualified seed-only record under
+# closed #510.
+if grep -q -F -e 'layer2_opens_qualification' "$verify_remaining" &&
+  grep -q -F -e 'qualified seed-only under closed #510' "$verify_remaining" &&
+  grep -q -F -e 'bazel run //tools/ci:layer2_opens_qualification' "$verify_remaining"; then
+  ok
+else
+  bad "verification-matrix-remaining lost its closed-#510 qualified record"
+fi
+
+# Verification matrix lists the harness in dogfood-freshness plus Green.
+if grep -q -F -e ':layer2_opens_qualification' "$verify" &&
   grep -q -F -e '`layer2_opens_qualification` 16/16' "$verify"; then
   ok
 else
-  bad "verification-matrix lost its #510 qualified record"
+  bad "verification-matrix lost its layer2-opens dogfood plus Green record"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "layer2_opens_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:layer2_opens_qualification' "$ci"; then
+# Targets own the harness plus dogfood wires it.
+if grep -q -F -e 'name = "layer2_opens_qualification"' "$targets" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:layer2_opens_qualification' "$dogfood"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the layer2_opens_qualification wiring (want target plus dogfood-freshness)"
+  bad "ci_targets or dogfood lost the layer2_opens_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the fixture plus the mixed composition build green on the

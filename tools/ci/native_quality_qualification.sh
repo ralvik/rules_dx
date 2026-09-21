@@ -21,9 +21,10 @@
 #   Beyond-default switches (staticcheck -all/SA-only preset, govet all
 #   analyzers, clang-tidy --checks=*, cppcheck --enable=all) rejected.
 # - fixtures: `cc/tests/fixtures/native_quality/` pins plus BUILD; no native
-#   native-config preset, no adapter claim, no curated defaults, no matrix
-#   cells; cc/go hello fixtures stay green.
-# - open owned gaps: digests plus adapters under, platform plus consumer
+#   native-config preset beyond the four bindings delivered under #798, no
+#   curated defaults; cc/go hello fixtures stay green; adapters plus matrix
+#   cells delivered under #798.
+# - open owned gaps: digests plus toolchain bounds, platform plus consumer
 #   plus release evidence, no `Supported` claim. Compatibility is defaults only.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:native_quality_qualification`,
@@ -51,8 +52,8 @@ baseline="docs/tools/tool-baseline.md"
 acquisition="docs/tools/tool-acquisition.md"
 integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
-build="tools/ci/BUILD.bazel"
-ci=".github/workflows/ci.yml"
+targets="tools/ci/ci_targets_d.bzl"
+dogfood="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
@@ -104,39 +105,33 @@ else
   bad "pins.bzl lost its sole-policy plus rule-set resolutions plus rejections under issue #487"
 fi
 
-# No hidden native native-config preset: no cohort binding exists in the
-# typed native-config rules (adapters run pinned upstream defaults until
-# checked-in policy qualifies against the native-config contract).
+# Native native-config bindings delivered under #798 (checked-in policy
+# qualifies against the native-config contract; no hidden preset).
 native_config=""
-for tool in clang-format clang-tidy cppcheck gofumpt staticcheck govet errcheck; do
-  if grep -q -F -e "${tool}_config" "$native"; then
-    native_config="$native_config $tool:preset"
-  fi
+for tool in clang_format clang_tidy cppcheck staticcheck; do
+  grep -q -F -e "${tool}_config" "$native" || native_config="$native_config $tool:missing"
 done
 if [[ -z "$native_config" ]]; then
   ok
 else
-  bad "native-config carries a hidden native preset:$native_config"
+  bad "native-config lost native bindings:$native_config (want all four under #798)"
 fi
 
-# No false adapter claim for the native cohort: none of the cohort tool IDs
-# appear in REAL_ADAPTERS. Classification exists; adapter claim does not
-# (owned).
+# Adapters delivered under #798: all seven cohort tools appear in
+# REAL_ADAPTERS. Classification exists; adapter claim delivered.
 native_claim=""
-for tool in clang-format clang-tidy cppcheck gofmt gofumpt staticcheck govet errcheck; do
-  if grep -q -F -e "\"$tool\":" "$adapters"; then
-    native_claim="$native_claim $tool:claimed"
-  fi
+for tool in clang_format clang_tidy cppcheck gofumpt staticcheck govet errcheck; do
+  grep -q -F -e "\"$tool\":" "$adapters" || native_claim="$native_claim $tool:missing"
 done
 if [[ -z "$native_claim" ]]; then
   ok
 else
-  bad "false adapter claim for native cohort:$native_claim"
+  bad "native adapter delivery missing:$native_claim (want all seven under #798)"
 fi
 
-# Classification-only today: cc/go families carry no curated defaults,
-# no runner-matrix cells (claims land only with green adapter evidence
-#
+# Delivered: cc/go families carry no curated defaults (claims land only
+# with green adapter evidence) but do carry runner-matrix cells under
+# #798.
 native_curated=""
 for family in '"cc": {' '"go": {'; do
   if grep -q -F -e "$family" "$curated"; then
@@ -144,59 +139,56 @@ for family in '"cc": {' '"go": {'; do
   fi
 done
 if [[ -z "$native_curated" ]] &&
-  ! grep -q -F -e 'matrix_c_' "$matrix" &&
-  ! grep -q -F -e 'matrix_cpp_' "$matrix" &&
-  ! grep -q -F -e 'matrix_go_' "$matrix"; then
+  grep -q -F -e 'NATIVE_CASES' "$matrix"; then
   ok
 else
-  bad "curated or matrix claims a native family before adapters land:$native_curated"
+  bad "curated claims a native family or matrix lost cohort cells:$native_curated (want no curated, NATIVE_CASES under #798)"
 fi
 
-# Support matrix keeps the qualified native versions plus rule-sets with
-# fixtures and harness; digests plus adapters stay under.
-if grep -q -F -e 'qualified seed-only under issue #487' "$support" &&
-  grep -q -F -e 'native_quality_qualification' "$support" &&
-  grep -q -F -e 'cc/tests/fixtures/native_quality/pins.bzl' "$support" &&
-  grep -q -F -e 'no hidden preset' "$support" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #418' "$support"; then
+# Support matrix keeps the qualified native coverage rows with the #798
+# delivery record; digests stay owned.
+if grep -q -F -e '| Go | Planned | Planned: gofumpt | Planned: staticcheck, govet |' "$support" &&
+  grep -q -F -e '| C and C++ | Planned | Planned: clang-format | Planned: clang-tidy, cppcheck |' "$support" &&
+  grep -q -F -e 'Native Layer-2' "$support" &&
+  grep -q -F -e 'delivered under #798' "$support"; then
   ok
 else
-  bad "support-matrix lost its #487 qualified native versions plus rule-sets record with fixtures"
+  bad "support-matrix lost its qualified native coverage rows plus #798 delivery record"
 fi
 
 # Support matrix resolves the SA-only versus default-checks conflict as
 # upstream built-in defaults (SA-only shortcut rejected without qualification).
-if grep -q -F -e 'shortcut is rejected without qualification' "$support" &&
-  grep -q -F -e 'upstream built-in defaults' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #487' "$support"; then
+if grep -q -F -e 'SA`-only shortcut is rejected without qualification' "$acquisition" &&
+  grep -q -F -e 'upstream built-in default checks' "$acquisition"; then
   ok
 else
-  bad "support-matrix lost its #487 SA-only plus defaults conflict resolution"
+  bad "tool-acquisition lost its SA-only plus defaults conflict resolution"
 fi
 
 # Tool acquisition keeps the decided split native route with no separate
-# acquisition and no false claim; versions qualified under, digests
-# plus adapters stay pending under.
+# acquisition; versions qualified under #487, digests plus adapters owned
+# under #798.
 if grep -q -F -e 'Decided route: clang-format, clang-tidy, and cppcheck take the' "$acquisition" &&
   grep -q -F -e 'no separate acquisition' "$acquisition" &&
   grep -q -F -e 'no adapter claims `c` or `cpp` yet' "$acquisition" &&
   grep -q -F -e 'qualified seed-only under issue #487' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #418' "$acquisition"; then
+  grep -q -F -e 'digests plus adapter mappings stay owned under #798 (successor to closed #418)' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided native route with #487 versions plus #418 digests/adapters split"
+  bad "tool-acquisition lost its decided native route with #487 versions plus #798 digests/adapters split"
 fi
 
 # Tool acquisition keeps the decided split Go route with the SA-only
-# conflict resolved (neither provisional); versions qualified under.
+# conflict resolved; versions qualified under #487, digests plus adapters
+# owned under #798.
 if grep -q -F -e 'Decided route: gofumpt, staticcheck, govet, and errcheck take the' "$acquisition" &&
   grep -q -F -e 'strict superset of gofmt' "$acquisition" &&
   grep -q -F -e 'qualified seed-only under issue #487' "$acquisition" &&
   grep -q -F -e 'no adapter claims `go`' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #418' "$acquisition"; then
+  grep -q -F -e 'digests plus adapter mappings stay owned under #798 (successor to closed #418)' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided Go route with #487 versions plus #418 digests/adapters split"
+  bad "tool-acquisition lost its decided Go route with #487 versions plus #798 digests/adapters split"
 fi
 
 # Tool acquisition keeps the seven research rows with byte-identity risk.
@@ -211,15 +203,15 @@ else
   bad "tool-acquisition lost a native research row or byte-identity honesty:$native_research"
 fi
 
-# Tool integrations keep the native adapter-input notes with pinned
-# versions (adapters still open under).
-if grep -q -F -e 'Native cohort' "$integrations" &&
-  grep -q -F -e 'no adapter claims `c`, `cpp`, or `go` yet' "$integrations" &&
+# Tool integrations keep the native adapter delivery record with pinned
+# versions (adapters delivered under #798).
+if grep -q -F -e 'Native cohort (#798' "$integrations" &&
   grep -q -F -e 'qualified seed-only under issue #487' "$integrations" &&
-  grep -q -F -e 'adapters stay owned under issue #418' "$integrations"; then
+  grep -q -F -e 'adapters qualified seed-only' "$integrations" &&
+  grep -q -F -e 'under #798' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its native notes with #487 versions plus #418 adapters split"
+  bad "tool-integrations lost its native delivery record with #487 versions plus #798 adapters"
 fi
 
 # Native-configuration sole policy stands (no hidden presets authorized).
@@ -230,22 +222,20 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'native_quality_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #487' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:native_quality_qualification' "$verify" &&
+# Verification matrix owns the battery plus Green record for the harness.
+if grep -q -F -e ':native_quality_qualification' "$verify" &&
   grep -q -F -e '`native_quality_qualification` 17/17' "$verify"; then
   ok
 else
-  bad "verification-matrix lost its #487 native quality qualified record"
+  bad "verification-matrix lost its native quality battery plus Green record"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "native_quality_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:native_quality_qualification' "$ci"; then
+# Targets own the harness plus dogfood wires it.
+if grep -q -F -e 'name = "native_quality_qualification"' "$targets" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:native_quality_qualification' "$dogfood"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the native_quality_qualification wiring (want target plus dogfood-freshness)"
+  bad "ci_targets or dogfood lost the native_quality_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: native foundation fixtures stay green on the seed host
