@@ -322,6 +322,36 @@ plus the Python runfiles library. Live `dotnet nuget push --source
 approval, never by default. Deploy targets live next to the package they
 publish.
 
+## Path L: `oci_deploy` (accepted)
+
+The eighth deploy macro (`deploy/rules/oci.bzl`) publishes one image tar
+to a local OCI image layout with a local-first Python publisher, no shell,
+no `sh_binary`:
+
+```starlark
+load("@rules_dx//deploy/rules:oci.bzl", "oci_deploy")
+
+oci_deploy(
+    name = "oci_demo",
+    image_tar = ":oci_demo.tar",
+)
+```
+
+`bazel run //deploy/rules:oci_demo` (or `dx deploy
+//deploy/rules:oci_demo`) builds a local image-layout directory
+(`<repo>-oci-layout/` with `oci-layout`, `index.json`, and
+`blobs/sha256/`) and verifies bytes via sha256, publishing nothing, with
+no daemon. Pass an output directory after `--` to choose where the layout
+lands (default: `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The deploy
+program is a `py_binary` on the managed Python 3.12 toolchain only, with
+pinned `data` plus the Python runfiles library. Live `docker push` plus
+`cosign sign <digest>` runs only with `OCI_PUBLISH_LIVE=1`,
+`OCI_REGISTRY_USER`, `OCI_REGISTRY_TOKEN`, and `OCI_PUBLISH_APPROVED=1`
+after explicit owner approval, with SBOM/provenance plus signing verification first, never by
+default; registry credentials come from env only, never from BUILD. The
+`ghcr.yml` workflow stays the GHCR route until this macro qualifies as its
+successor. Deploy targets live next to the image tar they publish.
+
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an
