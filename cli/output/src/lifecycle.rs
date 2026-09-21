@@ -114,6 +114,36 @@ pub fn selection_event(
     Ok(Value::Object(map))
 }
 
+/// One consolidated `dx status` check as an NDJSON event.
+/// See: `docs/cli/output-protocol.md#status`, Owning contract: `docs/cli/output-protocol.md`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StatusEvent {
+    pub name: String,
+    pub status: String,
+    pub detail: String,
+    pub hint: String,
+}
+
+/// Renders one `status` event (`ok|warn|error` closed set).
+/// See: `docs/cli/output-protocol.md#status`.
+pub fn status_event(check: &StatusEvent) -> Result<Value, OutputError> {
+    nonempty("name", &check.name)?;
+    nonempty("status", &check.status)?;
+    if check.status != "ok" && check.status != "warn" && check.status != "error" {
+        return Err(OutputError::BadSeverity {
+            value: check.status.clone(),
+        });
+    }
+    nonempty("detail", &check.detail)?;
+    nonempty("hint", &check.hint)?;
+    let mut map = base("status");
+    map.insert("name".to_owned(), Value::String(check.name.clone()));
+    map.insert("status".to_owned(), Value::String(check.status.clone()));
+    map.insert("detail".to_owned(), Value::String(check.detail.clone()));
+    map.insert("hint".to_owned(), Value::String(check.hint.clone()));
+    Ok(Value::Object(map))
+}
+
 /// CLI, orchestration, protocol, or infrastructure failure. Never carries
 /// argv, option values, environment values, external labels, or raw tool
 /// output; `code` is stable machine data while `message` is for people.
@@ -341,5 +371,39 @@ mod tests {
             write_event(&mut Vec::new(), &fake).expect_err("no schema"),
             OutputError::NotAnEvent
         );
+    }
+
+    #[test]
+    fn status_event_shape() {
+        let event = status_event(&StatusEvent {
+            name: "pin".to_owned(),
+            status: "ok".to_owned(),
+            detail: "dx 0.0.0 vs module 0.0.0".to_owned(),
+            hint: "dx version --pin 0.0.0".to_owned(),
+        })
+        .expect("status");
+        assert_eq!(event["event"], Value::String("status".to_owned()));
+        assert_eq!(event["schema"], schema());
+        assert_eq!(event["name"], Value::String("pin".to_owned()));
+        assert_eq!(event["status"], Value::String("ok".to_owned()));
+        let mut bad = StatusEvent {
+            name: "pin".to_owned(),
+            status: "bogus".to_owned(),
+            detail: "d".to_owned(),
+            hint: "h".to_owned(),
+        };
+        assert!(status_event(&bad).is_err());
+        bad.status = String::new();
+        assert!(status_event(&bad).is_err());
+        assert!(status_event(&StatusEvent {
+            name: String::new(),
+            status: "ok".to_owned(),
+            detail: "d".to_owned(),
+            hint: "h".to_owned(),
+        })
+        .is_err());
+        let mut buf = Vec::new();
+        write_event(&mut buf, &event).expect("write");
+        assert!(buf.ends_with(b"\n"));
     }
 }

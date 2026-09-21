@@ -6,8 +6,10 @@ Implementation status: implemented
 There is no `dx doctor` command per
 [ADR 0006](../decisions/0006-cli-command-surface.md). `dx status [--output text|json]`
 reports toolchain resolution, platform/host coverage, missing tools, and pin staleness
-with vocabulary `ok/warn/error` plus actionable hints; JSON shape is
-`{"checks":[{"name","status","detail","hint}]}`. See the [hooks contract](../cli/commands/hooks.md)
+with vocabulary `ok/warn/error` plus actionable hints; text prints one line per
+check, JSON streams the NDJSON envelope (`command_started` plus one `status`
+event per check plus `command_finished`, see the
+[output protocol](../cli/output-protocol.md#status)). See the [hooks contract](../cli/commands/hooks.md)
 for the two-layer hook configuration this surface reports on. Platform evidence beyond
 Linux x86_64 remains a gap; no working multi-platform support is claimed until qualified
 execution lands.

@@ -10,11 +10,12 @@ use std::io::Write;
 use crate::args::{Command, Invocation};
 use crate::resolve::QueryRunner;
 
-use super::{operational, pre_exec};
+use super::{operational, pre_exec, summaries_suppressed};
 
 /// Runs one inspect command (`owners`/`deps`/`why`) via `bazel query`
 /// forwarding. `why` resolves the file owner first, then explains one
-/// path from the resolved owner to the target.
+/// path from the resolved owner to the target. `--dry-run` plans without
+/// launching Bazel.
 pub(crate) fn execute_inspect(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -26,6 +27,23 @@ pub(crate) fn execute_inspect(
         return execute_why(invocation, workspace, query_runner, out, err);
     }
     let kind = invocation.command.name();
+    // Dry-run plans each scope without launching: validate the plan for
+    // usage errors, then print the would-run summary.
+    if invocation.dry_run {
+        for scope in &invocation.targets {
+            if let Err(error) = dx_adopt::plan_inspect(kind, scope, invocation.configured) {
+                return pre_exec(err, &error.to_string());
+            }
+        }
+        if !summaries_suppressed(invocation) {
+            for scope in &invocation.targets {
+                if let Ok(plan) = dx_adopt::plan_inspect(kind, scope, invocation.configured) {
+                    let _ = writeln!(out, "would run bazel {} {}", plan.verb, plan.expr);
+                }
+            }
+        }
+        return 0;
+    }
     let mut code = 0;
     for scope in &invocation.targets {
         let plan = match dx_adopt::plan_inspect(kind, scope, invocation.configured) {
@@ -88,6 +106,23 @@ fn execute_why(
     // Argument parsing guarantees exactly `<file> <label>`.
     let file = &invocation.targets[0];
     let label = &invocation.targets[1];
+    // Dry-run plans without launching: validate both plan shapes, then
+    // print the would-run summary (the `somepath` leg needs the resolved
+    // owner, so live resolution is skipped).
+    if invocation.dry_run {
+        let owner_plan = match dx_adopt::plan_inspect("owners", file, invocation.configured) {
+            Ok(plan) => plan,
+            Err(error) => return pre_exec(err, &error.to_string()),
+        };
+        if !summaries_suppressed(invocation) {
+            let _ = writeln!(
+                out,
+                "would run bazel {} {} then somepath to {label}",
+                owner_plan.verb, owner_plan.expr
+            );
+        }
+        return 0;
+    }
     // Step 1: resolve the file's depth-1 owner. `why` never resolves
     // the raw file path against the target graph: Bazel `somepath`
     // needs rule-to-rule endpoints.
@@ -301,5 +336,47 @@ mod tests {
         assert_eq!(code, 1);
         assert!(String::from_utf8(err).expect("err").contains("no owner"));
         assert_eq!(runner.calls.borrow().len(), 1);
+    }
+
+    #[test]
+    fn inspect_dry_run_plans_without_query() {
+        let runner = ScriptedQuery::with(&["//a:one\n"]);
+        let inv = invocation(&["owners", "//a:one", "--dry-run"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-dry-");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out)
+            .expect("out")
+            .contains("would run bazel"));
+        assert_eq!(runner.calls.borrow().len(), 0);
+        let runner = ScriptedQuery::with(&["//owner:lib\n"]);
+        let inv = invocation(&["why", "src/lib.rs", "//app:server", "--dry-run"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out)
+            .expect("out")
+            .contains("would run bazel"));
+        assert_eq!(runner.calls.borrow().len(), 0);
     }
 }

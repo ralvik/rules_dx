@@ -37,7 +37,8 @@ pub fn render_status_text(checks: &[StatusCheck]) -> String {
         .join("\n")
 }
 
-/// Render JSON status (single object, NDJSON-compatible).
+/// Render legacy JSON payload (single object, not the NDJSON envelope).
+/// See: `docs/cli/output-protocol.md#status` for the CLI envelope.
 pub fn render_status_json(checks: &[StatusCheck]) -> String {
     // Infallible shape: strings only, so `serde_json` cannot
     // fail; the fallback names the invariant instead of `expect`.

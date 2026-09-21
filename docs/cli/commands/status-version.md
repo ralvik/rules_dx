@@ -19,9 +19,16 @@ Text mode prints one line per check:
 <name>: <ok|warn|error> (<detail>) hint: <hint>
 ```
 
-JSON mode prints `{"checks":[{"name","status","detail","hint}]}` on stdout.
+JSON mode streams the NDJSON envelope on stdout: `command_started`, then one
+`status` event per check (`name`, `status`, `detail`, `hint`), then
+`command_finished` (see the [output protocol](../output-protocol.md#status)).
 The check set is `toolchain`, `platform`, `tools`, `pin`; see the
 contributing page for vocabulary and platform-evidence limits.
+
+`dx status --dry-run` plans without reading the pin or computing checks:
+text prints `would report status`, JSON emits only `command_started`
+(`dry_run=true`) plus `command_finished`. Dry-run plans are summaries,
+suppressed under `--quiet`; live status output always prints.
 
 Exit `0` when every check passes; exit `1` (operational) when any check is
 `error` — today that is pin mismatch, with a stderr hint pointing at
@@ -39,7 +46,10 @@ this pin check and the skew gate below. `dx version --pin <ver>` bumps from
 verified release artifacts only; `dx version --rollback` re-pins the
 recorded previous release. `--pin` and `--rollback` are mutually exclusive,
 neither combines with `--check` (exit `2`), and both accept `--dry-run`
-(`would pin …` without writing). A pin that does not equal the module
+(`would pin …` without writing). Bare `dx version --dry-run` prints
+`would report version` and `dx version --check --dry-run` prints
+`would check version pin` without reading the pin; dry-run plans are
+summaries, suppressed under `--quiet`. A pin that does not equal the module
 version, or a rollback with nothing to restore, fails operationally
 (exit `1`).
 

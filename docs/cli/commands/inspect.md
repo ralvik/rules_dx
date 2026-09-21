@@ -33,3 +33,8 @@ Expressions are `kind('rule', rdeps(//..., <scope>, 1))` for `owners`,
 `deps(<scope>)` for `deps`, and `somepath(<owner>, <label>)` for `why`;
 the verb and expression stay separate argv elements and are never
 double-wrapped.
+
+`--dry-run` plans without launching Bazel: `owners`/`deps` print
+`would run bazel <verb> <expr>` per scope, `why` prints
+`would run bazel <verb> <expr> then somepath to <label>`. Plans are
+summaries, suppressed under `--quiet`.
