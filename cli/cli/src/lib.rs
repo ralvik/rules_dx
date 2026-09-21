@@ -37,7 +37,7 @@ pub use generate::{
 pub use plan::{BuildPlan, CommandSpec};
 pub use reports::{Destination, PlannedReport, ReportError, StandardFormat};
 pub use resolve::{
-    map_owners_to_tests, resolve, resolve_for_test, resolve_run, ProcessQueryRunner, QueryResult,
-    QueryRunner, ResolveError, ResolvedScope,
+    expand_codegen_roots, map_owners_to_tests, resolve, resolve_for_test, resolve_run,
+    ProcessQueryRunner, QueryResult, QueryRunner, ResolveError, ResolvedScope,
 };
 // LCOV_EXCL_STOP - reason: end of re-export-only module root exclusion.

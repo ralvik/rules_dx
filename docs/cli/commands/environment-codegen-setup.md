@@ -8,11 +8,14 @@ test, example, and development generators. The workflow uses the frozen `//...`
 Bazel root mechanism documented in [Generated Code](../../environments/codegen.md).
 
 `dx codegen <target>` accepts exactly one explicit target label and selects generated
-sources from that configured target's transitive provider closure. It does not require
+sources from that configured target's transitive provider closure plus its
+bare-schema expansion. It does not require
 a sibling projection target for a consumer. Accepted: exact-closure selection
-only; a bare schema selects its own closure (empty when it contributes no
-shards). Open: reverse-dependent expansion to all registered projections
-consuming a bare schema via Bazel query. Paths, patterns, multiple labels, profiles, and language selectors are
+plus reverse-dependent expansion to all registered projections
+consuming a bare schema via one unconfigured `bazel query`
+`kind('.*codegen_shard rule', rdeps(//..., set(<target>)))` whose union with
+the target feeds analysis; a bare schema with no consumers keeps its own
+closure (empty when it contributes no shards). Paths, patterns, multiple labels, profiles, and language selectors are
 rejected. A target with no generated sources selects an empty exact projection rather
 than retaining unrelated generated imports.
 
@@ -64,9 +67,9 @@ configured closures and actions; provider applicability keeps each aspect bounde
 targets with nonempty effective stage subsets.
 
 For an exact target with only one capability, setup prepares that side and carries the
-other current generation forward. A bare schema therefore carries the selected
-environment forward today; all-projection codegen expansion waits on the open
-reverse-dependent query. A missing prior side uses its
+other current generation forward. A bare schema therefore expands its codegen
+side to all registered projections while carrying the selected
+environment forward. A missing prior side uses its
 managed empty generation.
 
 Before `dx` is installed, `bazel run //dx:env` remains the minimal bootstrap that
