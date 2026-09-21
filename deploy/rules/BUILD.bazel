@@ -29,13 +29,13 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "archive.bzl",
-    "archive_deploy.sh",
+    "archive_deploy.py",
     "archive_tests.bzl",
     "archive_verify.sh",
     "defs.bzl",
     "deploy_tests.bzl",
     "github.bzl",
-    "github_deploy.sh",
+    "github_deploy.py",
     "github_tests.bzl",
     "github_verify.sh",
     "crates.bzl",
@@ -69,6 +69,22 @@ py_binary(
     name = "hasher",
     srcs = ["hasher.py"],
     main = "hasher.py",
+)
+
+# Shared staging logic for `archive_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "archive_deploy_lib",
+    srcs = ["archive_deploy.py"],
+    imports = ["."],
+)
+
+# Shared staging logic for `github_deploy` launchers plus `py_test`.
+# The launchers expand this template per instance; the test imports it.
+py_library(
+    name = "github_deploy_lib",
+    srcs = ["github_deploy.py"],
+    imports = ["."],
 )
 
 # Shared vendor logic for `crates_deploy` launchers plus `py_test`.
@@ -215,6 +231,17 @@ archive_analysis_tests(name = "archive_analysis")
 
 archive_debug_analysis_tests(name = "archive_debug_analysis")
 
+# Local staging output per release fixture
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "archive_deploy_test",
+    srcs = ["archive_deploy_test.py"],
+    imports = ["."],
+    main = "archive_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":archive_deploy_lib"],
+)
+
 # Tarball contents + checksum validity per release fixture
 # No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
@@ -257,6 +284,7 @@ test_suite(
     tests = [
         ":archive_analysis",
         ":archive_debug_analysis",
+        ":archive_deploy_test",
         ":archive_unit",
         ":crates_analysis",
         ":crates_debug_analysis",
@@ -269,6 +297,7 @@ test_suite(
         ":github_analysis",
         ":github_debug_analysis",
         ":github_demo_verify",
+        ":github_deploy_test",
         ":github_unit",
         ":maven_analysis",
         ":maven_debug_analysis",
@@ -325,6 +354,17 @@ github_unit_tests(name = "github_unit")
 github_analysis_tests(name = "github_analysis")
 
 github_debug_analysis_tests(name = "github_debug_analysis")
+
+# Local release staging per demo assets
+# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
+py_test(
+    name = "github_deploy_test",
+    srcs = ["github_deploy_test.py"],
+    imports = ["."],
+    main = "github_deploy_test.py",
+    tags = ["no-coverage"],
+    deps = [":github_deploy_lib"],
+)
 
 # Would-run command + draft-only flags per release fixture
 # No-coverage: process-spawning test; see docs/contributing/build-conventions.md.

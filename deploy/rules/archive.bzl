@@ -3,10 +3,9 @@
 Contract: `docs/deploy/authoring.md`.
 """
 
-load("@bazel_skylib//lib:shell.bzl", "shell")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
-load(":launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
+load(":launcher.bzl", "rlocation_path")
 
 def _archive_stage_impl(ctx):
     """Stages one executable as a single file preserving its basename.
@@ -37,18 +36,17 @@ _archive_stage = rule(
 )
 
 def _archive_launcher_impl(ctx):
-    """Writes the `sh_binary` launcher script for one release.
+    """Expands the `py_binary` launcher for one release.
 
-    The script sources the standard `runfiles.bash` initialization (v3)
-    and resolves the staged app, tarball, checksum, and deploy script via
-    `rlocation`, then execs `archive_deploy.sh` with them plus user args
-    (`"$@"` selects the output directory). Rlocation strings are embedded
-    with `shell.quote` (single-quote), never manual double-quote
-    interpolation. The wrapping `sh_binary` (see `archive_deploy`)
-    carries the pinned inputs in `data` plus the runfiles library, so the
-    launcher works under `bazel run`, `dx deploy` (which symlinks the
-    `sh_binary` entrypoint and merges its runfiles), and direct
-    `bazel-bin` execution."""
+    The rule computes the runfiles rlocations for the staged app,
+    tarball, and checksum via `rlocation_path`, then expands the shared
+    `archive_deploy.py` template with those pins. The wrapping
+    `py_binary` (see `archive_deploy`) carries the pinned inputs in
+    `data` plus the Python runfiles library, so the launcher works under
+    `bazel run`, `dx deploy` (which symlinks the `py_binary` entrypoint
+    and merges its runfiles), and direct `bazel-bin` execution. Extra
+    user args after `--` select the output directory (default:
+    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd)."""
     app_files = ctx.attr.app[DefaultInfo].files.to_list()
     if len(app_files) != 1:
         fail("archive_deploy " + str(ctx.label) + ": stage must provide exactly one file")
@@ -61,29 +59,20 @@ def _archive_launcher_impl(ctx):
     app_file = app_files[0]
     archive_file = archive_files[0]
     checksum_file = checksum_files[0]
-    deploy_file = ctx.file.deploy_sh
 
     app_rloc = rlocation_path(ctx, app_file)
     archive_rloc = rlocation_path(ctx, archive_file)
     checksum_rloc = rlocation_path(ctx, checksum_file)
-    deploy_rloc = rlocation_path(ctx, deploy_file)
 
-    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
-    ctx.actions.write(
+    launcher = ctx.actions.declare_file(ctx.label.name + ".py")
+    ctx.actions.expand_template(
+        template = ctx.file._template,
         output = launcher,
-        content = """#!/usr/bin/env bash
-# Deploy launcher for `archive_deploy`. Generated. Do not edit.
-# Resolves the staged app, tarball, checksum, and deploy script via the
-# standard `runfiles.bash` `rlocation`, then execs the deploy script with
-# them plus user args. Wrapped as `sh_binary` (see `archive_deploy`).
-set -euo pipefail
-""" + RUNFILES_BASH_INIT + """DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
-APP="$(rlocation """ + shell.quote(app_rloc) + """)"
-TARBALL="$(rlocation """ + shell.quote(archive_rloc) + """)"
-CHECKSUM="$(rlocation """ + shell.quote(checksum_rloc) + """)"
-exec "${DEPLOY}" "${APP}" "${TARBALL}" "${CHECKSUM}" "$@"
-""",
-        is_executable = True,
+        substitutions = {
+            "@@APP_RLOC@@": app_rloc,
+            "@@CHECKSUM_RLOC@@": checksum_rloc,
+            "@@TARBALL_RLOC@@": archive_rloc,
+        },
     )
     return [DefaultInfo(files = depset([launcher]))]
 
@@ -93,12 +82,12 @@ _archive_launcher = rule(
         "app": attr.label(mandatory = True),
         "archive": attr.label(mandatory = True),
         "checksum": attr.label(mandatory = True),
-        "deploy_sh": attr.label(
+        "_template": attr.label(
             allow_single_file = True,
-            default = "//deploy/rules:archive_deploy.sh",
+            default = "//deploy/rules:archive_deploy.py",
         ),
     },
-    doc = "Launcher script for archive_deploy (wrapped as sh_binary).",
+    doc = "Launcher template expansion for archive_deploy (wrapped as py_binary).",
 )
 
 def archive_filenames(name):
@@ -112,14 +101,16 @@ def archive_deploy(name, app, profile = "release"):
     `<name>_archive` (deterministic tarball via the hermetic
     `//deploy/rules:archiver` tool), `<name>_checksum` (sha256 via the
     hermetic `//deploy/rules:hasher` tool), `<name>_program_launcher`
-    (generated launcher script resolving inputs via `runfiles.bash`
-    `rlocation` with `shell.quote`), `<name>_program` (`sh_binary`
-    wrapping the launcher with pinned `data` plus the runfiles
+    (expanded Python launcher resolving inputs via the Python runfiles
+    library), `<name>_program` (`py_binary` on the managed Python 3.12
+    toolchain wrapping the launcher with pinned `data` plus the runfiles
     library), and `<name>` (the `dx_deployment` returning
     `DxDeployInfo` with `app` and `profile`). Run with
     `bazel run :<name>` or `dx deploy :<name>`; pass an output directory
     after `--` to choose where the artifacts land (default:
-    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd)."""
+    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Deploy runtime is
+    hermetic Python only (hashlib plus file copies): no bash, no host
+    `tar`/`sha256sum`, no `sh_binary`."""
     (tarball, checksum) = archive_filenames(name)
     archive_target = name + "_archive"
     checksum_target = name + "_checksum"
@@ -164,21 +155,19 @@ def archive_deploy(name, app, profile = "release"):
         checksum = ":" + checksum_target,
     )
 
-    # `sh_binary` wrapper: `srcs` is the generated launcher
-    # script, `data` pins the runfiles the launcher resolves via
-    # `rlocation` (location expansion: `data` labels expanded to runfiles
-    # paths at analysis time, resolved at runtime). `deps` carries the
-    # standard runfiles library, replacing the custom `rloc()` probe.
-    sh_binary(
+    # `py_binary` wrapper: `srcs` is the expanded launcher,
+    # `data` pins the runfiles the launcher resolves via `Rlocation`,
+    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
+    py_binary(
         name = program_target,
         srcs = [":" + launcher_target],
         data = [
             ":" + stage_target,
             ":" + archive_target,
             ":" + checksum_target,
-            "//deploy/rules:archive_deploy.sh",
         ],
-        deps = ["@rules_shell//shell/runfiles"],
+        main = launcher_target + ".py",
+        deps = ["@rules_python//python/runfiles"],
     )
 
     dx_deployment(
