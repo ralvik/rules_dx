@@ -23,7 +23,8 @@
 # - mutated inputs fail closed (missing report, uninventoried source,
 #   undeclared eligible source, uncovered line with location,
 #   malformed exclusion directive, exclusion without nearby reason),
-# - the //... rate gate step is still present in CI.
+# - the //... rate flag stays present in CI as the user-facing configurable
+#   threshold; the single exact per-cell gate decides the repo verdict (issue #964).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_cell`,
 # following //tools/ci:target_tags.
@@ -234,7 +235,7 @@ else
   bad "reason-less exclusion did not fail closed: rc=$noreason_rc out=$noreason_out"
 fi
 
-# The //... rate gate still guards the whole tree in CI.
+# The //... rate flag stays present in CI as the user-facing threshold; the exact gate decides.
 if grep -q -F -e 'coverage --min-coverage' .github/workflows/ci.yml; then
   ok
 else

@@ -427,9 +427,14 @@ adapter, leaves its pipeline key unchanged.
 Verification uses `aquery` to inspect declared inputs/action shape and Bazel
 execution logs or a controlled remote cache to distinguish executed actions from
 cache hits. Tests compare clean output bases and, where available, separate machines
-or containers. A warm local no-op alone is not a cache test.
+or containers. A warm local no-op alone is not a cache test. The delivered evidence is
+local execution-log hit/miss; controlled remote-cache proof stays unverified per
+[Testing Strategy](../testing/README.md#remote-tests).
 
 ## Determinism
+
+Determinism here is local per-cell determinism only, with no cross-cell union and no
+remote claim (remote stays unverified per [Testing Strategy](../testing/README.md#remote-tests)).
 
 - Reorder equivalent source and dependency declarations and compare action arguments
   and keys where semantic order is irrelevant.
