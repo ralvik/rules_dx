@@ -373,6 +373,8 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         tools = run_tools,
         outputs = [out],
         arguments = [args],
+        # Local-only until remote qualified (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
+        execution_requirements = {"no-remote-exec": "1"},
         mnemonic = "DxRealQuality" + capability.capitalize(),
         progress_message = "Dx real quality " + capability + " %{label}",
     )

@@ -89,9 +89,15 @@ Bazel-affecting lock/config (issue #618: `MODULE.bazel` plus `MODULE.bazel.lock`
 `tools/bazelrc/preset.bazelrc` plus `.bazelversion` plus `.npmrc` plus `cargo-bazel-lock.json` plus
 `Cargo.lock`/`Cargo.toml` plus `pnpm-lock.yaml`/`pnpm-workspace.yaml` plus `maven_install.json` plus
 `go.mod`/`go.sum` plus `paket.dependencies`/`paket.lock` plus `uv.lock`/`pyproject.toml`; `user.bazelrc`
-never hashed because CI checkouts never contain it). Remote cache stays unwired (issue #618 wont-fix):
+never hashed because CI checkouts never contain it) with exact hits only
+(no prefix fallback: a lock/config bust starts cold instead of reusing a
+stale entry). Dx pipeline plus evaluator actions carry `no-remote-exec`
+(local-only until remote is qualified). Remote cache stays unwired (issue #618 wont-fix):
 local `actions/cache` disk scope only, no `--remote_cache`/`--remote_executor`/`--bes_backend` flags,
-per the free-tier budget plus Apple/MS cache-rights bounds (issues #496/#507). Pass `--noshow_progress` to Bazel invocations, run the corpus
+per the free-tier budget plus Apple/MS cache-rights bounds (issues #496/#507). Qualified seed-only via
+`bazel run //tools/ci:action_execution_cache_qualification` (aquery
+`ExecutionInfo` plus `ActionKey` shape plus local execution-log hit/miss;
+remote stays unverified). Pass `--noshow_progress` to Bazel invocations, run the corpus
 ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.

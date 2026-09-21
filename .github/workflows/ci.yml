@@ -60,8 +60,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -96,8 +95,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Build SBOM + provenance demo
         run: bazel build --noshow_progress //deploy/release:sbom_demo
       - name: Verify SBOM + provenance bind artifact
@@ -159,8 +157,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Check preset freshness
         run: |
           bazel run --noshow_progress //tools/bazelrc:preset.update -- --verify-only
@@ -185,8 +182,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -217,8 +213,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Enforce seed coverage cell
         run: |
           set +e
@@ -313,8 +308,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-arm64-
+          # exact key only, bust starts cold
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -339,8 +333,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-arm64-
+          # exact key only, bust starts cold
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -370,8 +363,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-arm64-
+          # exact key only, bust starts cold
       - name: Enforce arm64 coverage cell
         run: |
           set +e
@@ -421,8 +413,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-musl-x86_64-
+          # exact key only, bust starts cold
       - name: Prove Rust static-musl std resolves
         run: bazel query @rust_toolchains//... 2>/dev/null | grep -E -e 'musl' | LC_ALL=C sort -u
       - name: Build workspace (exec-platform tools)
@@ -446,8 +437,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-musl-arm64-
+          # exact key only, bust starts cold
       - name: Prove Rust static-musl std resolves
         run: bazel query @rust_toolchains//... 2>/dev/null | grep -E -e 'musl' | LC_ALL=C sort -u
       - name: Build workspace (exec-platform tools)
@@ -474,8 +464,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-musl-x86_64-
+          # exact key only, bust starts cold
       - name: Enforce musl x86_64 coverage cell
         run: |
           set +e
@@ -529,8 +518,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-musl-arm64-
+          # exact key only, bust starts cold
       - name: Enforce musl arm64 coverage cell
         run: |
           set +e
@@ -581,8 +569,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-macos-arm64-
+          # exact key only, bust starts cold
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -607,8 +594,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-macos-arm64-
+          # exact key only, bust starts cold
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -638,8 +624,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-macos-arm64-
+          # exact key only, bust starts cold
       - name: Enforce macos arm64 coverage cell
         run: |
           set +e
@@ -690,8 +675,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-macos-x86_64-
+          # exact key only, bust starts cold
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -716,8 +700,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-macos-x86_64-
+          # exact key only, bust starts cold
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -747,8 +730,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-macos-x86_64-
+          # exact key only, bust starts cold
       - name: Enforce macos x86_64 coverage cell
         run: |
           set +e
@@ -803,8 +785,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-windows-x86_64-
+          # exact key only, bust starts cold
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -832,8 +813,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-windows-x86_64-
+          # exact key only, bust starts cold
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -866,8 +846,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-windows-x86_64-
+          # exact key only, bust starts cold
       - name: Enforce windows x86_64 coverage cell
         run: |
           set +e
@@ -920,8 +899,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Prove battery (target tags, coverage, platforms, release, shell)
         run: tools/ci/prove.sh
       - name: Write job summary
@@ -945,9 +923,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-dogfood-
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Run dogfood-freshness battery (tools, freshness, audits)
         run: tools/ci/dogfood_freshness.sh
       - name: Write job summary
@@ -970,9 +946,7 @@ jobs:
         with:
           path: ~/.cache/bazel
           key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            bazel-dogfood-
-            bazel-seed-
+          # exact key only, bust starts cold
       - name: Prove dx init scaffold matches checked-in definition
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //.devcontainer:devcontainer_parity_test
       - name: Validate devcontainer definition shape
