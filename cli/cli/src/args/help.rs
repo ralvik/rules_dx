@@ -81,8 +81,14 @@ pub(crate) fn render_top_help() -> String {
 /// collision is documented, not hidden.
 pub(crate) fn per_command_flags(command: Command) -> &'static str {
     match command {
+        Command::Check => {
+            "Per-command flags: --check/--fail-on/--report pass through per phase (check only; non-mutating umbrella over format+lint+typecheck+generate, stop-on-first-failure)."
+        }
+        Command::Fix => {
+            "Per-command flags: --check/--fail-on/--report pass through per phase (fix only; mutating by default with no rerun, run `dx check` to validate)."
+        }
         Command::Clean => {
-            "Per-command flags: --bazel (also run `bazel clean` after pruning; distinct from `dx bazel`, which forwards raw args)."
+            "Per-command flags: --bazel (also run `bazel clean` after pruning; default never touches Bazel outputs; distinct from `dx bazel`, which forwards raw args)."
         }
         Command::Owners | Command::Deps | Command::Why => {
             "Per-command flags: --configured (use `bazel cquery` instead of `bazel query`; distinct from `dx clean --bazel`, which forwards `bazel clean`)."
@@ -260,6 +266,27 @@ mod tests {
         assert!(
             clean.contains("distinct from `dx bazel`"),
             "clean disambiguation:\n{clean}"
+        );
+        assert!(
+            clean.contains("never touches Bazel outputs") || clean.contains("never Bazel outputs"),
+            "clean surprise:\n{clean}"
+        );
+        let fix_help = match parse(&args(&["fix", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("fix --help: want Help, got {other:?}"),
+        };
+        assert!(fix_help.contains("no rerun"), "fix surprise:\n{fix_help}");
+        assert!(
+            fix_help.contains("dx check"),
+            "fix rerun guidance:\n{fix_help}"
+        );
+        let check_help = match parse(&args(&["check", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("check --help: want Help, got {other:?}"),
+        };
+        assert!(
+            check_help.contains("non-mutating"),
+            "check mode:\n{check_help}"
         );
         for command in ["owners", "deps", "why"] {
             let text = match parse(&args(&[command, "--help"])) {
