@@ -36,13 +36,14 @@
 //! with no query parameters, request body, or telemetry carrying package
 //! names or versions. The OSV API query route (`https://api.osv.dev/v1/query`
 //! with package/version in the body) discloses the inventory and never
-//! satisfies this contract. V1 snapshots (OSV-format records in the
-//! [`crate::vuln::Advisory`] subset) are derived from these databases via
-//! upstream tooling (such as `osv-scanner --offline` with a local DB, which
-//! sends no project information); the derived bytes plus their identity
-//! (`url`, `sha256`, `retrieved_at`) are the audited inputs. A missing,
-//! invalid, or stale snapshot fails with [`CODE_ADVISORY_REFRESH_FAILED`],
-//! never clean and never a stale fallback.
+//! satisfies this contract. V1 snapshots (typed OSV records projected
+//! via the `osv` crate `schema` feature, offline; issue #676, plus legacy
+//! [`crate::vuln::Advisory`] minimal still accepted) are derived from these
+//! databases via upstream tooling (such as `osv-scanner --offline` with a
+//! local DB, which sends no project information); the derived bytes plus
+//! their identity (`url`, `sha256`, `retrieved_at`) are the audited inputs.
+//! A missing, invalid, or stale snapshot fails with
+//! [`CODE_ADVISORY_REFRESH_FAILED`], never clean and never a stale fallback.
 
 use serde::{Deserialize, Serialize};
 

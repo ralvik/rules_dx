@@ -688,3 +688,197 @@ fn snapshot_parses_osv_array_and_rejects_malformed() {
     assert_eq!(parsed[0].id, "GHSA-1");
     assert!(parse_snapshot("not json").is_err());
 }
+
+#[test]
+fn osv_typed_cargo_projects_interval_and_matches() {
+    // Typed OSV via `osv` crate (issue #676): ranges become semver scopes,
+    // fixed preserves, severity from database_specific, no matcher change.
+    let text = r#"[{
+        "id": "GHSA-cargo-osv-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "serde", "ecosystem": "crates.io"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "1.0.0"}, {"fixed": "1.5.0"}]}],
+            "database_specific": {"severity": "high"}
+        }]
+    }]"#;
+    let parsed = parse_snapshot(text).expect("osv parses");
+    assert_eq!(parsed.len(), 1);
+    assert_eq!(parsed[0].id, "GHSA-cargo-osv-0001");
+    assert_eq!(parsed[0].package, "serde");
+    assert_eq!(parsed[0].set, "cargo");
+    assert_eq!(parsed[0].versions, ">=1.0.0, <1.5.0");
+    assert_eq!(parsed[0].severity, "high");
+    assert_eq!(parsed[0].fixed, vec!["1.5.0".to_owned()]);
+    assert!(version_affected("cargo", &parsed[0].versions, "1.2.0"));
+    assert!(!version_affected("cargo", &parsed[0].versions, "1.5.0"));
+}
+
+#[test]
+fn osv_typed_sets_project_to_native_scopes() {
+    // npm semver, go v-prefix, maven/nuget intervals (no narrowing change).
+    let text = r#"[{
+        "id": "GHSA-npm-osv-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "react", "ecosystem": "npm"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "18.0.0"}, {"fixed": "18.3.0"}]}]
+        }]
+    },
+    {
+        "id": "GHSA-go-osv-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "github.com/google/go-cmp", "ecosystem": "Go"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "v0.5.0"}, {"fixed": "v0.7.0"}]}]
+        }]
+    },
+    {
+        "id": "GHSA-maven-osv-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "com.google.guava:guava", "ecosystem": "Maven"},
+            "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "30.0"}, {"fixed": "33.0"}]}]
+        }]
+    },
+    {
+        "id": "GHSA-nuget-osv-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "Newtonsoft.Json", "ecosystem": "NuGet"},
+            "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "12.0"}, {"fixed": "13.0.2"}]}]
+        }]
+    }]"#;
+    let parsed = parse_snapshot(text).expect("osv parses");
+    assert_eq!(parsed.len(), 4);
+    let npm = parsed
+        .iter()
+        .find(|entry| entry.id == "GHSA-npm-osv-0001")
+        .expect("npm");
+    assert_eq!(npm.set, "npm");
+    assert_eq!(npm.versions, ">=18.0.0, <18.3.0");
+    assert!(version_affected("npm", &npm.versions, "18.2.0"));
+    assert!(!version_affected("npm", &npm.versions, "18.3.0"));
+    let go = parsed
+        .iter()
+        .find(|entry| entry.id == "GHSA-go-osv-0001")
+        .expect("go");
+    assert_eq!(go.set, "go");
+    assert!(version_affected("go", &go.versions, "v0.6.0"));
+    assert!(!version_affected("go", &go.versions, "v0.7.0"));
+    let maven = parsed
+        .iter()
+        .find(|entry| entry.id == "GHSA-maven-osv-0001")
+        .expect("maven");
+    assert_eq!(maven.set, "maven");
+    assert_eq!(maven.versions, "[30.0,33.0)");
+    assert!(version_affected("maven", &maven.versions, "32.0.0"));
+    assert!(!version_affected("maven", &maven.versions, "33.0"));
+    let nuget = parsed
+        .iter()
+        .find(|entry| entry.id == "GHSA-nuget-osv-0001")
+        .expect("nuget");
+    assert_eq!(nuget.set, "nuget");
+    assert_eq!(nuget.versions, "[12.0,13.0.2)");
+    assert!(version_affected("nuget", &nuget.versions, "13.0.1"));
+    assert!(!version_affected("nuget", &nuget.versions, "13.0.2"));
+}
+
+#[test]
+fn osv_typed_withdrawn_unsupported_and_git_skip() {
+    // Withdrawn, PyPI ecosystem, and GIT ranges yield zero advisories;
+    // explicit versions list yields one scope per version.
+    let text = r#"[{
+        "id": "GHSA-withdrawn-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "withdrawn": "2026-09-19T00:00:00Z",
+        "affected": [{
+            "package": {"name": "serde", "ecosystem": "crates.io"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "1.0.0"}, {"fixed": "2.0.0"}]}]
+        }]
+    },
+    {
+        "id": "GHSA-pypi-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "django", "ecosystem": "PyPI"},
+            "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "1.0"}, {"fixed": "2.0"}]}]
+        }]
+    },
+    {
+        "id": "GHSA-git-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "serde", "ecosystem": "crates.io"},
+            "ranges": [{"type": "GIT", "events": [{"introduced": "abc123"}, {"fixed": "def456"}]}]
+        }]
+    },
+    {
+        "id": "GHSA-explicit-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "serde", "ecosystem": "crates.io"},
+            "versions": ["1.2.3", "1.2.4"]
+        }]
+    }]"#;
+    let parsed = parse_snapshot(text).expect("osv parses");
+    // Only the explicit-versions entry projects (two scopes).
+    assert_eq!(parsed.len(), 2);
+    assert!(parsed.iter().all(|entry| entry.id == "GHSA-explicit-0001"));
+    assert!(parsed.iter().any(|entry| entry.versions == "1.2.3"));
+    assert!(parsed.iter().any(|entry| entry.versions == "1.2.4"));
+}
+
+#[test]
+fn osv_typed_severity_unknown_fails_closed_and_last_affected_inclusive() {
+    // CVSS vectors stay unknown (fail by default); last_affected is
+    // inclusive; unbounded lower/upper map to native all-match scopes.
+    let text = r#"[{
+        "id": "GHSA-cvss-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "severity": [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}],
+        "affected": [{
+            "package": {"name": "serde", "ecosystem": "crates.io"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "1.0.0"}, {"last_affected": "1.4.0"}]}]
+        }]
+    },
+    {
+        "id": "GHSA-unbounded-0001",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "serde", "ecosystem": "crates.io"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "0"}, {"fixed": "2.0.0"}]}]
+        }]
+    }]"#;
+    let parsed = parse_snapshot(text).expect("osv parses");
+    assert_eq!(parsed.len(), 2);
+    let cvss = parsed
+        .iter()
+        .find(|entry| entry.id == "GHSA-cvss-0001")
+        .expect("cvss");
+    assert_eq!(cvss.severity, "");
+    assert_eq!(cvss.versions, ">=1.0.0, <=1.4.0");
+    assert_eq!(canonical_severity(&cvss.severity), "unknown");
+    assert_eq!(
+        normalize_level(&canonical_severity(&cvss.severity)),
+        "error"
+    );
+    assert!(version_affected("cargo", &cvss.versions, "1.4.0"));
+    assert!(!version_affected("cargo", &cvss.versions, "1.4.1"));
+    let unbounded = parsed
+        .iter()
+        .find(|entry| entry.id == "GHSA-unbounded-0001")
+        .expect("unbounded");
+    assert_eq!(unbounded.versions, "<2.0.0");
+    assert!(version_affected("cargo", &unbounded.versions, "1.9.0"));
+}
+
+#[test]
+fn osv_typed_malformed_fails_closed() {
+    // Missing required OSV `modified` fails (fail-closed, never empty clean).
+    assert!(parse_snapshot(r#"[{"id":"GHSA-bad","affected":[]}]"#).is_err());
+    assert!(parse_snapshot("not json").is_err());
+    assert!(parse_snapshot("").is_err());
+    // Empty array stays empty (no advisories, clean only with assessment).
+    assert_eq!(parse_snapshot("[]").expect("empty"), Vec::new());
+}
