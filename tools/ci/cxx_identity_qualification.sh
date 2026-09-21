@@ -40,6 +40,7 @@ dx_test_init
 
 roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
+verify_remaining="docs/testing/verification-matrix-remaining.md"
 gen_rust="docs/generation/rust.md"
 gen_readme="docs/generation/README.md"
 native="docs/native-toolchains.md"
@@ -52,20 +53,20 @@ fixture_bridge="rust/tests/fixtures/cxx_identity/cxx_bridge.bzl"
 fixture_manifest="rust/tests/fixtures/cxx_identity/Cargo.toml"
 fixture_lib="rust/tests/fixtures/cxx_identity/src/lib.rs"
 
-# Roadmap owns the delivered record under.
-if grep -q -F -e 'CXX graph identity decided (issue #474' "$roadmap"; then
+# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
+if grep -q -F -e 'CXX graph identity decided Seed-host-delivered (closed #474' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its CXX graph identity decided record under #474"
+  bad "roadmap lost its CXX graph identity Seed-host-delivered record under closed #474"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'cxx_identity_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #474' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:cxx_identity_qualification' "$verify"; then
+# Remaining matrix owns the qualified seed-only record under.
+if grep -q -F -e 'cxx_identity_qualification' "$verify_remaining" &&
+  grep -q -F -e 'qualified seed-only under #474' "$verify_remaining" &&
+  grep -q -F -e 'bazel run //tools/ci:cxx_identity_qualification' "$verify_remaining"; then
   ok
 else
-  bad "verification-matrix lost its #474 CXX identity qualified record"
+  bad "verification-matrix-remaining lost its #474 CXX identity qualified record"
 fi
 
 # Verification matrix lists the harness in dogfood-freshness.

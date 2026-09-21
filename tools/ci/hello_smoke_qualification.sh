@@ -31,23 +31,24 @@ dx_test_init
 
 roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
+verify_remaining="docs/testing/verification-matrix-remaining.md"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 
-# Roadmap owns the delivered record under.
-if grep -q -F -e 'hello smoke as test delivered (issue #464' "$roadmap"; then
+# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
+if grep -q -F -e 'hello smoke as test Seed-host-delivered (closed #464' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its hello smoke delivered record under #464"
+  bad "roadmap lost its hello smoke Seed-host-delivered record under closed #464"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'hello_smoke_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #464' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:hello_smoke_qualification' "$verify"; then
+# Remaining matrix owns the qualified seed-only record under.
+if grep -q -F -e 'hello_smoke_qualification' "$verify_remaining" &&
+  grep -q -F -e 'qualified seed-only under #464' "$verify_remaining" &&
+  grep -q -F -e 'bazel run //tools/ci:hello_smoke_qualification' "$verify_remaining"; then
   ok
 else
-  bad "verification-matrix lost its #464 hello-smoke qualified record"
+  bad "verification-matrix-remaining lost its #464 hello-smoke qualified record"
 fi
 
 # Verification matrix lists the harness in dogfood-freshness.

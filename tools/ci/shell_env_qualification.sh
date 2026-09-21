@@ -46,7 +46,15 @@ lang_test="gazelle/rust/lang_test.go"
 golden="gazelle/rust/testdata/cargo/crates/scripted/BUILD.out"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
+verify_remaining="docs/testing/verification-matrix-remaining.md"
+roadmap="docs/roadmap.md"
+
+# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
+if grep -q -F -e 'Shell-env default vs annotation extension Seed-host-delivered (closed #472' "$roadmap"; then
+  ok
+else
+  bad "roadmap lost its shell-env Seed-host-delivered record under closed #472"
+fi
 
 # Global hermetic default stays pinned False in.bazelrc.
 if grep -q -F -e 'build --@rules_rust//cargo/settings:use_default_shell_env=False' "$bazelrc" &&
@@ -168,13 +176,13 @@ else
   bad "ci.yml lost the shell_env_qualification step (want dogfood-freshness)"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'shell_env_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #472' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:shell_env_qualification' "$verify"; then
+# Remaining matrix owns the qualified seed-only record under.
+if grep -q -F -e 'shell_env_qualification' "$verify_remaining" &&
+  grep -q -F -e 'qualified seed-only under #472' "$verify_remaining" &&
+  grep -q -F -e 'bazel run //tools/ci:shell_env_qualification' "$verify_remaining"; then
   ok
 else
-  bad "verification-matrix lost its #472 shell-env qualified record"
+  bad "verification-matrix-remaining lost its #472 shell-env qualified record"
 fi
 
 dx_test_summary "shell-env qualification harness"

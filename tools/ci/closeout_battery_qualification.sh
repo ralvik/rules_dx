@@ -36,11 +36,11 @@ ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 reusable=".github/workflows/reusable-docs.yml"
 
-# Roadmap owns the delivered record under.
-if grep -q -F -e 'close-out battery + docs delivered (issue #467' "$roadmap"; then
+# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
+if grep -q -F -e 'close-out battery + docs Seed-host-delivered (closed #467' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its close-out battery delivered record under #467"
+  bad "roadmap lost its close-out battery Seed-host-delivered record under closed #467"
 fi
 
 # Verification matrix owns the qualified seed-only record under.
