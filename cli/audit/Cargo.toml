@@ -4,6 +4,7 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
+cargo-lock = "11"
 chrono = { version = "0.4", default-features = false, features = ["alloc"] }
 packageurl = { version = "0.7", features = ["serde"] }
 regex = "1"
