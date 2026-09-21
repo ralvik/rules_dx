@@ -57,6 +57,13 @@ A cell promotes only with its required-host evidence landed:
 - Unqualified hosts keep the clean `unsupported_platform` refusal; a host flips
   on exactly when its evidence lands. Best-effort gaps never block
   required-host release.
+- Per-host skip budget as platform evidence (issue #769): Linux cells show
+  real runs with 0 skips while macOS arm64 plus macOS x86_64 best-effort plus
+  Windows x86_64 show budgeted skips, never silent skips, pinned by
+  `bazel run //tools/ci:skip_budget_qualification` with the inventory in
+  [Tool And Platform Test Matrix](../testing/tools.md#shell-and-host-tool-contract).
+  A cell promotes only with its skip-volume report landed; a missing or
+  over-budget skip volume blocks that support claim.
 
 ## Consumer evidence per cell
 

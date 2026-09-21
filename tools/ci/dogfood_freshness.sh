@@ -51,6 +51,7 @@ bazel run --noshow_progress //tools/ci:musl_qualification
 bazel run --noshow_progress //tools/ci:macos_qualification
 bazel run --noshow_progress //tools/ci:windows_qualification
 bazel run --noshow_progress //tools/ci:ci_matrix_qualification
+bazel run --noshow_progress //tools/ci:skip_budget_qualification
 bazel run --noshow_progress //tools/ci:runner_rotation_qualification
 bazel run --noshow_progress //tools/ci:ghcr_rebuild_rotation_qualification
 bazel run --noshow_progress //tools/ci:devcontainer_boot_qualification

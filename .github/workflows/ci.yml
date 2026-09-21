@@ -189,6 +189,11 @@ jobs:
             bazel-seed-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+      - name: Report skip volume (Linux-only sh harness, issue #769)
+        if: always()
+        run: |
+          echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell seed linux_x86_64 real run, 0 skips: all 31 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -338,6 +343,11 @@ jobs:
             bazel-arm64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+      - name: Report skip volume (Linux-only sh harness, issue #769)
+        if: always()
+        run: |
+          echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell linux_arm64 real run, 0 skips: all 31 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -601,6 +611,11 @@ jobs:
             bazel-macos-arm64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+      - name: Report skip volume (Linux-only sh harness, issue #769)
+        if: always()
+        run: |
+          echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell macos_arm64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -705,6 +720,11 @@ jobs:
             bazel-macos-x86_64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+      - name: Report skip volume (Linux-only sh harness, issue #769)
+        if: always()
+        run: |
+          echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell macos_x86_64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -816,6 +836,11 @@ jobs:
             bazel-windows-x86_64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+      - name: Report skip volume (Linux-only sh harness, issue #769)
+        if: always()
+        run: |
+          echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell windows_x86_64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
