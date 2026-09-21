@@ -1,8 +1,9 @@
 # Documentation
 
 Accepted v1 direction; adapter runs plus renderer/site execution plus rebuild
-proof plus link/reference completeness plus first-hour timing proof delivered seed-only (see Contracts). No `Supported`
-claim; fixture-scale adapter plus site execution plus rebuild proof plus link completeness plus timing are qualified
+proof plus link/reference completeness plus first-hour timing proof plus
+per-release pin-bump plus drift process delivered seed-only (see Contracts). No `Supported`
+claim; fixture-scale adapter plus site execution plus rebuild proof plus link completeness plus timing plus drift are qualified
 and no site is published yet.
 
 Accepted design: native language tooling extracts API semantics; thin per-language adapters
@@ -32,7 +33,8 @@ API changes require no IR snapshot update.
 ## Contracts
 
 - [Documentation IR](doc-ir.md): common symbol model, language extensions,
-  validation, fixtures, and drift policy. Authoritative for IR facts.
+  validation, fixtures, and drift policy with the per-release pin-bump plus
+  drift process. Authoritative for IR facts.
 - [Site build](site.md): Bazel cache-friendly action design, determinism
   rules plus delivered byte-identical rebuild proof, laziness, generated-artifact lifecycle,
   and the decided mdBook renderer.
@@ -52,10 +54,10 @@ API changes require no IR snapshot update.
   site-level byte-identical rebuild proof delivered seed-only under #781;
   link and reference completeness delivered seed-only under #782;
   first-hour timing proof delivered seed-only under #784 as one-shot evidence
-  per [ADR 0022](../decisions/0022-no-benchmarking.md), not a standing benchmark.
-  Docs pipeline gaps stay open under #783 plus #785 (successors
-  to closed #581; guide-step CI wiring
-  and per-release pin-bump plus drift process;
+  per [ADR 0022](../decisions/0022-no-benchmarking.md), not a standing benchmark;
+  per-release pin-bump plus drift process delivered seed-only under #785.
+  Docs pipeline gaps stay open under #783 (successor
+  to closed #581; guide-step CI wiring;
   fixture-scale execution qualified and no site is published yet).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala TASTy spike
@@ -65,9 +67,10 @@ mappings, and adapter runs delivered under #779 with golden fixtures;
 renderer/site-build execution delivered seed-only under #780; rebuild proof
 delivered seed-only under #781; link and reference completeness delivered
 seed-only under #782; first-hour timing proof delivered seed-only under #784;
-remaining #783 plus #785 items above stay open;
+per-release pin-bump plus drift process delivered seed-only under #785;
+remaining #783 items above stay open;
 no published site exists today.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #784 (timing delivered) plus #783 plus #785. Reintroduction: #786. Build workflow: #620.
+Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #784 (timing delivered) plus #785 (drift delivered) plus #783. Reintroduction: #786. Build workflow: #620.

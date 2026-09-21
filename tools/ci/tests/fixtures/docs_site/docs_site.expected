@@ -7,6 +7,7 @@ Deterministic sorted rebuilds with no timestamps and no absolute paths
 Byte-identical rebuild proof delivered seed-only (issue #781, two builds diffed)
 Link and reference completeness delivered seed-only (issue #782, pre-render shared validation with no dangling targets)
 First-hour timing proof delivered seed-only (issue #784, one-shot evidence per ADR 0022 with no CI timing budget)
+Per-release pin-bump plus drift process delivered seed-only (issue #785, codec roundtrip/parity/ordering/compat with no IR snapshot update)
 Check selects extract plus aggregate without render; build renders
 Qualified seed-only, no Supported claim
-Guide-step wiring plus drift stay owned gaps
+Guide-step wiring stays owned gap

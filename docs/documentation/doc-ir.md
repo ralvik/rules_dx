@@ -1,7 +1,8 @@
 # Documentation IR
 
 Implementation status: accepted v1 direction with adapter runs plus site execution plus
-rebuild proof plus link/reference completeness plus first-hour timing proof delivered; remaining execution open (#783 plus #785, successors to closed #581,
+rebuild proof plus link/reference completeness plus first-hour timing proof plus
+per-release pin-bump plus drift process delivered; remaining execution open (#783, successor to closed #581,
 live successor to closed #421). Accepted: the `dx_docs` planning library
 (command dispatch removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md);
 reintroduction tracked under #786) —
@@ -15,10 +16,11 @@ Delivered under #779 (successor to closed #581; see [Documentation](README.md#co
 per-language adapter runs with pins and mappings (`//docs/adapters:docs_adapters`
 over pinned native inputs with golden fixtures per scope). Same-producer byte-identical rebuild proof
 for the fixture-scale site is delivered seed-only under #781. Link/reference completeness at the
-pre-render boundary is delivered seed-only under #782. Open under #785 plus #783
-(successors to closed #581; see [Documentation](README.md#contracts) for the full list):
-symbol-count inventory and native-output comparison fixtures (delivered under #779),
-and per-release pin-bump plus drift process. No working docs support is claimed until
+pre-render boundary is delivered seed-only under #782. Per-release pin-bump plus
+drift process is delivered seed-only under #785. Open under #783
+(successor to closed #581; see [Documentation](README.md#contracts) for the full list):
+guide-step CI wiring. Symbol-count inventory and native-output comparison fixtures were
+delivered under #779; adapter golden fixtures stay inputs, not snapshots to refresh. No working docs support is claimed until
 qualified site execution lands.
 
 ## Versioning
@@ -33,7 +35,7 @@ is the schema source of truth: generated IR action outputs use
 binary Protobuf with deterministic serialization, and human-readable review
 uses textproto against the same schema. Exact field and enum numbers and
 reserved ranges live in that file, validated by the
-`documentation_ir` codec crate; compatibility fixtures are tracked under
+`documentation_ir` codec crate; drift fixtures are delivered under
 #785 (successor to closed #581), following the
 [Quality Result Protocol](../quality/quality-result-protocol.md) precedent.
 
@@ -255,10 +257,29 @@ through rules_dx releases: each release bumps pins, runs drift testing
 inputs, and ships only when everything is green. An upstream format or
 toolchain change can therefore turn rules_dx CI red during release
 preparation, but never a user's build — users stay on pinned, checksummed
-inputs and receive working adapters with the release. The exact per-release
-pin-bump and drift-test process stays open under
-#785 (successor to closed #581).
+inputs and receive working adapters with the release.
+
+Per-release pin-bump plus drift process delivered seed-only under #785
+(successor to closed #581; fixtures in
+`tools/ci/tests/fixtures/docs_site/drift.expected` via
+`bazel run //tools/ci:docs_pipeline_qualification`):
+
+- Pins live in three places and bump together: `docs/adapters/pins.bzl`,
+  `docs/adapters/src/lib.rs` constants, and the machine-inputs table above.
+- Each release rechecks every pin and schema version, runs drift testing
+  (contract suite, golden fixtures, determinism evidence) against the new
+  inputs, and ships only when everything is green plus explicitly reviewed
+  (see `plan_drift_upgrade`).
+- Drift detection reuses the codec gates: roundtrip, rejection parity,
+  symbol and extension ordering, and minor forward-compat; same-producer
+  rebuilds stay byte-identical while cross-version compatibility compares
+  decoded semantics, never bytes.
+- Ordinary API changes require no IR snapshot update: generated shards stay
+  in Bazel outputs, never committed, and there is no snapshot refresh step;
+  adapter golden fixtures stay pinned native inputs, not snapshots.
+- Users stay on pinned, checksummed inputs; an upstream change may turn
+  release preparation red but never reaches users outside a release.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #784 (timing delivered) plus #783 plus #785 (successors to closed #581). Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #784 (timing delivered) plus #785 (drift delivered) plus #783 (successor to closed #581). Reintroduction: #786.
