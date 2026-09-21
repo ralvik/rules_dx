@@ -382,6 +382,8 @@ CI only, no Supported claim).
    fixture evidence, closed #612; per-host release evidence #803-#807),
    `:release_arm64_qualification` (Linux arm64 per-host release evidence pins plus
    fixture evidence, issue #803; `release_arm64_qualification` 18/18),
+   `:release_musl_qualification` (Linux static-musl per-profile release evidence pins plus
+   fixture evidence, issue #804; `release_musl_qualification` 22/22),
    `:offline_airgap_qualification` (offline bootstrap plus vendored
    advisory mirror pins plus fixture evidence, issue #774; seed-only, no
    Supported claim; platform plus consumer plus release evidence stays

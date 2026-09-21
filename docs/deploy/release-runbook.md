@@ -110,13 +110,25 @@ nothing). Per-host release evidence for Linux arm64 glibc lands via the
 runner (`ubuntu-24.04-arm`, `bazel-arm64-` cache, `needs: [build-arm64]`,
 local-only), staged under `RUNNER_TEMP/sbom-arm64` and uploaded as the
 `sbom-provenance-linux_arm64` artifact (SPDX-2.3 plus SLSA v1, publishes
-nothing). Attestation stays owner-gated human-run via
+nothing). Per-profile release evidence for the two Linux static-musl profiles
+lands via the `sbom-musl-x86_64` plus `sbom-musl-arm64` jobs in
+`.github/workflows/ci.yml` (issue #804): the same `sbom_demo` build plus
+`dx_release_tools_test` verify on the musl profile runners (`ubuntu-latest`
+with `bazel-musl-x86_64-` cache, `needs: [build-musl-x86_64]`, plus
+`ubuntu-24.04-arm` with `bazel-musl-arm64-` cache, `needs: [build-musl-arm64]`,
+local-only), staged under `RUNNER_TEMP/sbom-musl-x86_64` plus
+`RUNNER_TEMP/sbom-musl-arm64` and uploaded as the
+`sbom-provenance-linux_x86_64_musl` plus `sbom-provenance-linux_arm64_musl`
+artifacts (SPDX-2.3 plus SLSA v1, static native closure only with dynamic musl
+explicitly out of scope, publishes nothing). Attestation stays owner-gated human-run via
 `//deploy/release:signing_demo` (Sigstore keyless plus GitHub attestations);
 CI never signs PR code. Pinned by `bazel run
 //tools/ci:sbom_upload_qualification` with fixture evidence in
 `tools/ci/tests/fixtures/sbom_upload/` plus `bazel run
 //tools/ci:release_arm64_qualification` with fixture evidence in
-`tools/ci/tests/fixtures/release_arm64/`.
+`tools/ci/tests/fixtures/release_arm64/` plus `bazel run
+//tools/ci:release_musl_qualification` with fixture evidence in
+`tools/ci/tests/fixtures/release_musl/`.
 
 All release outputs stay under `RUNNER_TEMP` or the chosen outdir until
 published; `dist/` and `release/` stay git-ignored and the checkout is

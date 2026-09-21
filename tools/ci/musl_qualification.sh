@@ -7,13 +7,13 @@
 #   qualified_static_musl_profiles plus musl_profile_refusal with dynamic
 #   explicitly refused, per-cell coverage for both musl cells with no
 #   union, musl CI jobs cross-building from Linux runners with per-profile
-#   cache scopes under the portable-shell contract, consumer plus release
-#   evidence per the support-matrix lifecycle (release evidence open),
+#   cache scopes under the portable-shell contract, consumer plus per-profile
+#   release evidence (sbom-provenance delivered under #804),
 #   docs in support-matrix plus ADR 0014 plus native-toolchains;
 # - open with honest records: full hermetic-llvm backend, prebuilt glibc
 #   interop (never by linker change alone), remaining native-plan corpus
 #   (SQLite/OpenSSL/ring/bindgen/CXX), dx_tools musl artifacts (exec tools
-#   stay glibc), release evidence (SBOM/provenance/signing/BCR).
+#   stay glibc), remaining release evidence (signing/BCR plus tag cut).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:musl_qualification`,
 # following //tools/ci:coverage_qualification.
@@ -69,12 +69,13 @@ else
 fi
 
 # Support matrix flips the two static profiles only; dynamic stays out.
+# Per-profile release evidence delivered under #804.
 if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#411' &&
   grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'dynamic musl explicitly out of scope' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence open'; then
+  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: linux_x86_64_musl plus linux_arm64_musl sbom-provenance delivered (#804'; then
   ok
 else
-  bad "support-matrix lost the static-musl Platform-qualified record (issue #411)"
+  bad "support-matrix lost the static-musl Platform-qualified record (issue #411 plus #804 release evidence delivered)"
 fi
 
 # ADR 0014 keeps static musl required and records the qualification.
@@ -144,7 +145,7 @@ else
   bad "a dynamic-musl support claim appeared (stays explicitly out of scope, issue #411)"
 fi
 
-# No Supported claim for musl: Platform-qualified only, release open.
+# No Supported claim for musl: Platform-qualified only, per-profile release delivered.
 if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified' &&
   ! grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Supported'; then
   ok
