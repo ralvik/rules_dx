@@ -26,7 +26,7 @@ if [[ "$dry_run" != "0" ]]; then
   echo "  tag: ${tag}"
   echo "  approve: ${approve} (real release needs RELEASE_APPROVE=1 + owner approval)"
   echo "  steps:"
-  echo "    1. bazel build //cli/cli:dx //cli/cli:dx_standalone (seed matrix cell dx-linux-x86_64)"
+  echo "    1. bazel build //cli/cli:dx //cli/cli:dx_standalone //cli/cli:man_pages (seed matrix cell dx-linux-x86_64)"
   echo "    2. bazel build //deploy/release:all (SBOM + provenance for seed artifacts)"
   echo "    3. RELEASE_SIGN_DRY_RUN=1 bazel run //deploy/release:signing_demo (would-sign cosign + attestation)"
   echo "    4. GH_RELEASE_DRY_RUN=1 bazel run //cli/cli:github_draft (would-create draft --draft --verify-tag)"

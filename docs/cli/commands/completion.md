@@ -15,6 +15,12 @@ Scripts are generated at runtime by the `dx` binary itself from the single CLI c
 
 Installation is a one-time shell setup, not a per-directory step: evaluate the script from the shell rc file guarded by `command -v dx`, or place it in the shell's completions directory. Do not evaluate it from `.envrc`; direnv re-evaluates on every directory change, and completion setup must not run on every `cd`.
 
+Per-shell homes: bash `~/.bash_completion.d/dx` (or `/usr/share/bash-completion/completions/dx`), zsh a `${fpath}` entry named `_dx`, fish `~/.config/fish/completions/dx.fish`, powershell a file dot-sourced from `$PROFILE`. Generate each file with `dx completion <shell>`.
+
+## Manual Page
+
+Build the manual page with `bazel build //cli/cli:man_pages` (emits `man/dx.1` under `bazel-bin/cli/cli/`, section 1). Preview with `man --local-file bazel-bin/cli/cli/man/dx.1`; install system-wide to `/usr/share/man/man1/dx.1`, then `mandb`. The draft release ships `man/dx.1` alongside the `dx` binary (see the [release runbook](../../deploy/release-runbook.md)). The CLI is a single command with a command-word value, so the grammar yields one page; per-command pages arrive only if the grammar ever gains subcommands.
+
 ## Direnv Composition
 
 Direnv and completion compose without integration. Direnv places `.dx/bin` on `PATH` per directory, which keeps the `dx` binary visible so lazily-loaded completions resolve. No completion state lives in `.envrc`, and completion never reads direnv state.

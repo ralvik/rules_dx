@@ -27,7 +27,7 @@ x86_64 qualified-built-here; Linux arm64, macOS arm64, macOS x86_64,
 Windows x86_64 unqualified until their hosts qualify per
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms)).
 Build each qualified cell with `bazel build //cli/cli:dx
-//cli/cli:dx_standalone`, then `bazel build //deploy/release:all` for
+//cli/cli:dx_standalone //cli/cli:man_pages`, then `bazel build //deploy/release:all` for
 SBOM and provenance. Unqualified cells fail closed; never claim them. What
 evidence promotes a cell to `Supported` (tag hygiene, versioning, platform
 plus consumer plus release evidence) is owned by the
@@ -70,7 +70,8 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
    --bundle` on the TUF trust root plus `gh attestation create`).
 5. Draft release: `bazel run //cli/cli:github_draft` with the real tag
    (`--draft --verify-tag`; publish by editing the draft on GitHub
-   after approval).
+   after approval). The draft ships the `dx` binary plus `man/dx.1`
+   (section 1, single page); install the page to `/usr/share/man/man1/dx.1`.
 6. BCR: `bazel run //deploy/release:bcr_demo` without the dry-run env
    (opens the `source.json` plus integrity plus presubmit PR manually;
    this program never pushes itself).

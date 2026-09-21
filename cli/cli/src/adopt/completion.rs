@@ -71,8 +71,30 @@ mod tests {
     #[test]
     fn completion_renders_from_single_source() {
         use clap::ValueEnum;
-        // Every supported shell renders every command and key flag from
-        // the single Cli grammar; no hand-maintained list.
+        // Every supported shell renders every command and every grammar
+        // flag from the single Cli grammar (See:
+        // docs/cli/commands/completion.md).
+        const FLAGS: &[&str] = &[
+            "workspace",
+            "dry-run",
+            "quiet",
+            "verbose",
+            "output",
+            "report",
+            "fail-on",
+            "min-coverage",
+            "check",
+            "debug",
+            "release",
+            "bazel",
+            "pin",
+            "rollback",
+            "configured",
+            "from",
+            "to",
+            "here",
+            "cwd",
+        ];
         for &shell in crate::args::COMPLETION_SHELLS {
             let inv = invocation(&["completion", shell]);
             let scratch = dx_test_scratch::scratch("dx-adopt-completion-renders-");
@@ -97,15 +119,54 @@ mod tests {
                     cmd.name()
                 );
             }
-            for flag in [
-                "workspace",
-                "dry-run",
-                "output",
-                "report",
-                "fail-on",
-                "check",
-            ] {
-                assert!(text.contains(flag), "shell {shell} misses flag {flag}");
+            for flag in FLAGS {
+                if shell == "fish" {
+                    assert!(
+                        text.contains(&format!("-l {flag}")),
+                        "shell {shell} misses flag {flag}"
+                    );
+                } else {
+                    assert!(
+                        text.contains(&format!("--{flag}")),
+                        "shell {shell} misses flag {flag}"
+                    );
+                }
+            }
+            // Fish appends functional `complete -c dx -a <cmd>` lines (See:
+            // docs/cli/commands/completion.md).
+            if shell == "fish" {
+                for cmd in crate::args::Command::value_variants() {
+                    assert!(
+                        text.contains(&format!("-a {} -d", cmd.name())),
+                        "shell {shell} misses functional completion for {}",
+                        cmd.name()
+                    );
+                }
+            }
+            // Powershell anchor stability: the `'dx'` case plus functional
+            // `CompletionResult` entries must survive template upgrades and
+            // never degrade to `# dx <cmd>` comments (See:
+            // docs/cli/commands/completion.md).
+            if shell == "powershell" {
+                assert!(
+                    text.contains("'dx' {"),
+                    "shell {shell} lost the 'dx' case anchor"
+                );
+                assert!(
+                    !text.contains("# dx "),
+                    "shell {shell} degraded to non-functional comments"
+                );
+                for cmd in crate::args::Command::value_variants() {
+                    assert!(
+                        text.contains(&format!(
+                            "[CompletionResult]::new('{}', '{}'",
+                            cmd.name(),
+                            cmd.name()
+                        )),
+                        "shell {shell} misses functional completion for {}",
+                        cmd.name()
+                    );
+                }
             }
         }
         // Unknown shells keep the contract error.
