@@ -36,6 +36,7 @@ dx_test_init
 
 roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
+verify_remaining="docs/testing/verification-matrix-remaining.md"
 gen_rust="docs/generation/rust.md"
 gen_readme="docs/generation/README.md"
 native="docs/native-toolchains.md"
@@ -47,20 +48,20 @@ fixture_script="rust/tests/fixtures/cc_optout/build.rs"
 fixture_lib="rust/tests/fixtures/cc_optout/src/lib.rs"
 fixture_manifest="rust/tests/fixtures/cc_optout/Cargo.toml"
 
-# Roadmap owns the delivered record under.
-if grep -q -F -e 'CC opt-out linker delivered (issue #471' "$roadmap"; then
+# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
+if grep -q -F -e 'CC opt-out linker Seed-host-delivered (closed #471' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its CC opt-out delivered record under #471"
+  bad "roadmap lost its CC opt-out Seed-host-delivered record under closed #471"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'cc_optout_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #471' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:cc_optout_qualification' "$verify"; then
+# Remaining matrix owns the qualified seed-only record under.
+if grep -q -F -e 'cc_optout_qualification' "$verify_remaining" &&
+  grep -q -F -e 'qualified seed-only under #471' "$verify_remaining" &&
+  grep -q -F -e 'bazel run //tools/ci:cc_optout_qualification' "$verify_remaining"; then
   ok
 else
-  bad "verification-matrix lost its #471 CC opt-out qualified record"
+  bad "verification-matrix-remaining lost its #471 CC opt-out qualified record"
 fi
 
 # Verification matrix lists the harness in dogfood-freshness.

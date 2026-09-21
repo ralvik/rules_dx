@@ -32,6 +32,7 @@ dx_test_init
 
 roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
+verify_remaining="docs/testing/verification-matrix-remaining.md"
 runner_doc="docs/quality/runner-matrix.md"
 integrations="docs/quality/tool-integrations.md"
 ci=".github/workflows/ci.yml"
@@ -40,20 +41,20 @@ matrix="quality/testdata/runner_matrix_cases.bzl"
 fixture_build="rust/tests/fixtures/hello/BUILD.bazel"
 fixture_src="rust/tests/fixtures/hello/edition_2015.rs"
 
-# Roadmap owns the delivered record under.
-if grep -q -F -e 'rustfmt with crate edition delivered (issue #468' "$roadmap"; then
+# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
+if grep -q -F -e 'rustfmt with crate edition Seed-host-delivered (closed #468' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its rustfmt delivered record under #468"
+  bad "roadmap lost its rustfmt Seed-host-delivered record under closed #468"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'rustfmt_edition_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #468' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:rustfmt_edition_qualification' "$verify"; then
+# Remaining matrix owns the qualified seed-only record under.
+if grep -q -F -e 'rustfmt_edition_qualification' "$verify_remaining" &&
+  grep -q -F -e 'qualified seed-only under #468' "$verify_remaining" &&
+  grep -q -F -e 'bazel run //tools/ci:rustfmt_edition_qualification' "$verify_remaining"; then
   ok
 else
-  bad "verification-matrix lost its #468 rustfmt-edition qualified record"
+  bad "verification-matrix-remaining lost its #468 rustfmt-edition qualified record"
 fi
 
 # Verification matrix lists the harness in dogfood-freshness.
