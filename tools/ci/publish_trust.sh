@@ -103,16 +103,16 @@ fi
 
 # The real publisher path always passes --draft --verify-tag, so the
 # program never creates or pushes tags itself.
-if grep -q -F -e 'exec gh release create "${tag}" "$@" --draft --verify-tag' deploy/rules/github_deploy.sh; then
+if grep -q -F -e '"--draft", "--verify-tag"' deploy/rules/github_deploy.py; then
   ok
 else
-  bad "deploy/rules/github_deploy.sh real path lost the --draft --verify-tag flags"
+  bad "deploy/rules/github_deploy.py real path lost the --draft --verify-tag flags"
 fi
 
 # No other executable `gh release create` line exists without the
-# draft-only flags (printf dry-run text plus echo/grep verify contexts
-# are the only other mentions).
-if grep -rn -F -e 'gh release create' --include='*.sh' deploy/ cli/ | grep -v -F -e 'printf' | grep -v -F -e 'echo' | grep -v -F -e 'grep -q' | grep -v -F -e '--draft --verify-tag' | head -n 5 | grep -q .; then
+# draft-only flags (release_command plus would-run manifest plus
+# echo/grep/test verify contexts are the only other mentions).
+if grep -rn -F -e 'gh release create' --include='*.py' --include='*.sh' --include='*.bzl' deploy/ cli/ | grep -v -F -e '_test.py' | grep -v -F -e 'release_command' | grep -v -F -e 'would-run' | grep -v -F -e 'would create' | grep -v -F -e 'printf' | grep -v -F -e 'echo' | grep -v -F -e 'grep -q' | grep -v -F -e '--draft --verify-tag' | grep -v -F -e '"--draft", "--verify-tag"' | head -n 5 | grep -q .; then
   bad "an executable gh release create line lacks the draft-only flags"
 else
   ok

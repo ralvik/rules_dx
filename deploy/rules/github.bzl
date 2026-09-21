@@ -3,10 +3,9 @@
 Contract: `docs/deploy/authoring.md`.
 """
 
-load("@bazel_skylib//lib:shell.bzl", "shell")
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
-load(":launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
+load(":launcher.bzl", "rlocation_path")
 
 # Versioned tag-charset schema. Consumers query via
 # `tag_charset` and `github_tag_error` instead of duplicating the charset,
@@ -66,21 +65,22 @@ def github_draft_error(draft):
     return ""
 
 def _github_launcher_impl(ctx):
-    """Writes the `sh_binary` launcher script for one draft release.
+    """Expands the `py_binary` launcher for one draft release.
 
     Each artifact resolves to a single file: executables (for example
-    `rust_binary`, `sh_binary`) resolve to `files_to_run.executable`,
+    `rust_binary`, `py_binary`) resolve to `files_to_run.executable`,
     plain files (for example `archive_deploy` tarballs) must be the
-    sole member of `DefaultInfo.files`. The script sources the standard
-    `runfiles.bash` initialization (v3) and resolves the deploy script,
-    tag, and every pinned asset via `rlocation`, then execs
-    `github_deploy.sh`. Rlocation strings and the tag embed with
-    `shell.quote` (single-quote), never manual double-quote
-    interpolation. The wrapping `sh_binary` (see `github_deploy`)
-    carries the pinned inputs in `data` plus the runfiles library.
-    Extra user args after `--` are rejected: a release takes exactly
-    the artifacts pinned at analysis time."""
-    asset_files = []
+    sole member of `DefaultInfo.files`. The rule computes the runfiles
+    rlocations for every pinned asset via `rlocation_path`, then expands
+    the shared `github_deploy.py` template with those pins plus the tag
+    and deploy name. The wrapping `py_binary` (see `github_deploy`)
+    carries the pinned inputs in `data` plus the Python runfiles
+    library, so the program works under `bazel run`, `dx deploy` (which
+    symlinks the entrypoint and merges its runfiles), and direct
+    `bazel-bin` execution. Extra user args after `--` select the output
+    directory for the local staging dir (default:
+    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd); the default stages
+    locally and publishes nothing."""
     asset_rlocs = []
     for target in ctx.attr.artifacts:
         info = target[DefaultInfo]
@@ -93,34 +93,17 @@ def _github_launcher_impl(ctx):
                      str(len(files)) + " files, want exactly one " +
                      "(executables resolve to their binary)")
             f = files[0]
-        asset_files.append(f)
         asset_rlocs.append(rlocation_path(ctx, f))
-    deploy_file = ctx.file.deploy_sh
-    deploy_rloc = rlocation_path(ctx, deploy_file)
 
-    asset_lines = "".join(
-        ["  \"$(rlocation " + shell.quote(rloc) + ")\"\n" for rloc in asset_rlocs],
-    )
-    launcher = ctx.actions.declare_file(ctx.label.name + ".sh")
-    ctx.actions.write(
+    launcher = ctx.actions.declare_file(ctx.label.name + ".py")
+    ctx.actions.expand_template(
+        template = ctx.file._template,
         output = launcher,
-        content = """#!/usr/bin/env bash
-# Deploy launcher for `github_deploy`. Generated. Do not edit.
-# Resolves the deploy script and every pinned asset via the standard
-# `runfiles.bash` `rlocation`, then execs the deploy script with the tag
-# plus the asset paths. Wrapped as `sh_binary` (see `github_deploy`).
-set -euo pipefail
-""" + RUNFILES_BASH_INIT + """if [[ "$#" -gt 0 ]]; then
-  echo "github: this deploy target takes no extra args; the release is exactly the artifacts pinned at analysis time" >&2
-  exit 1
-fi
-DEPLOY="$(rlocation """ + shell.quote(deploy_rloc) + """)"
-TAG=""" + shell.quote(ctx.attr.tag) + """
-ASSETS=(
-""" + asset_lines + """)
-exec "${DEPLOY}" "${TAG}" "${ASSETS[@]}"
-""",
-        is_executable = True,
+        substitutions = {
+            "@@ASSET_RLOCS@@": ";".join(asset_rlocs),
+            "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
+            "@@TAG@@": ctx.attr.tag,
+        },
     )
     return [DefaultInfo(files = depset([launcher]))]
 
@@ -131,30 +114,39 @@ _github_launcher = rule(
             doc = "Release asset files (executables resolve to their binary).",
             mandatory = True,
         ),
+        "deploy_name": attr.string(
+            doc = "Deploy target name baked into the local staging directory.",
+            mandatory = True,
+        ),
         "tag": attr.string(
             doc = "Release tag; must already exist in the remote (--verify-tag).",
             mandatory = True,
         ),
-        "deploy_sh": attr.label(
+        "_template": attr.label(
             allow_single_file = True,
-            default = "//deploy/rules:github_deploy.sh",
+            default = "//deploy/rules:github_deploy.py",
         ),
     },
-    doc = "Launcher script for github_deploy (wrapped as sh_binary).",
+    doc = "Launcher template expansion for github_deploy (wrapped as py_binary).",
 )
 
 def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
     """Publishes pinned files as a draft-only GitHub Release.
 
-    Creates `<name>_launcher` (generated launcher script resolving
-    inputs via `runfiles.bash` `rlocation` with `shell.quote`),
-    `<name>_program` (`sh_binary` wrapping the launcher with pinned
-    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
-    returning `DxDeployInfo` with no app and `profile`). Run with
-    `bazel run :<name>` or `dx deploy :<name>`; the program execs
-    `gh release create <tag> <assets...> --draft --verify-tag`. With
-    `GH_RELEASE_DRY_RUN=1` it prints the command and publishes nothing
-    (this is what CI exercises)."""
+    Creates `<name>_program_launcher` (expanded Python launcher resolving
+    inputs via the Python runfiles library), `<name>_program`
+    (`py_binary` on the managed Python 3.12 toolchain wrapping the
+    launcher with pinned `data` plus the runfiles library), and `<name>`
+    (the `dx_deployment` returning `DxDeployInfo` with no app and
+    `profile`). Run with `bazel run :<name>` or `dx deploy :<name>`; the
+    default builds a local staging directory (`<name>-release/` holding
+    the pinned assets plus `would-run.txt` with the `gh release create
+    <tag> <assets...> --draft --verify-tag` manifest) and verifies bytes,
+    publishing nothing. `GH_RELEASE_DRY_RUN=1` prints the dry-run header
+    and publishes nothing (this is what CI exercises). Live `gh release
+    create --draft --verify-tag` runs only with `GH_RELEASE_LIVE=1` and
+    `GH_RELEASE_APPROVED=1` after explicit owner approval, never by
+    default, and refuses the `v0.0.0-dryrun` placeholder."""
     tag_error = github_tag_error(tag)
     if tag_error != "":
         fail(tag_error + " (in " + native.package_name() + ":" + name + ")")
@@ -170,17 +162,19 @@ def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile 
     _github_launcher(
         name = launcher_target,
         artifacts = artifacts,
+        deploy_name = name,
         tag = tag,
     )
 
-    # `sh_binary` wrapper: `srcs` is the generated launcher,
-    # `data` pins the runfiles the launcher resolves via `rlocation`
-    # (location expansion), `deps` carries the standard runfiles library.
-    sh_binary(
+    # `py_binary` wrapper: `srcs` is the expanded launcher,
+    # `data` pins the runfiles the launcher resolves via `Rlocation`,
+    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
+    py_binary(
         name = program_target,
         srcs = [":" + launcher_target],
-        data = artifacts + ["//deploy/rules:github_deploy.sh"],
-        deps = ["@rules_shell//shell/runfiles"],
+        data = artifacts,
+        main = launcher_target + ".py",
+        deps = ["@rules_python//python/runfiles"],
     )
 
     dx_deployment(

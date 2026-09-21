@@ -60,27 +60,31 @@ load("@rules_dx//deploy/rules:archive.bzl", "archive_deploy")
 archive_deploy(
     name = "release",
     app = ":hello",
+    profile = "release",
 )
 ```
 
 `archive_release` stays as a thin compat alias for one release cycle,
-then it is removed.
+then it is removed. `profile` is the default only (`debug`, `dev`, or
+`release`, default `release`); an explicit `--debug`/`--release` flag
+always wins, same as Path B.
 
 `bazel run //rust/tests/fixtures/hello:release` (or `dx deploy //rust/tests/fixtures/hello:release`)
 verifies the checksum and copies `release.tar.gz` +
 `release.tar.gz.sha256` to the output directory (first arg after `--`,
 else `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Build actions are
-hermetic (toolchain archiver/hasher, deterministic bytes); deploy
-runtime needs bash + python3 + POSIX coreutils only (hashing, realpath,
-and tar listing via python3). Deploy targets live
+hermetic (toolchain archiver/hasher, deterministic bytes); the deploy
+program is a `py_binary` on the managed Python 3.12 toolchain only,
+with pinned `data` plus the Python runfiles library — no shell, no
+`sh_binary`, no host `tar`/`sha256sum`. Deploy targets live
 next to the app they release.
 
 ## Path D: `github_deploy` (accepted)
 
 The second deploy macro
 (distribution artifact qualified under issue #459) publishes
-pinned files as a draft-only GitHub Release via the host `gh` CLI, no
-new module dependencies:
+pinned files as a draft-only GitHub Release with a local-first Python
+publisher, no shell, no `sh_binary`:
 
 ```starlark
 load("@rules_dx//deploy/rules:github.bzl", "github_deploy")
@@ -88,21 +92,33 @@ load("@rules_dx//deploy/rules:github.bzl", "github_deploy")
 github_deploy(
     name = "github_draft",
     artifacts = [":dx"],
+    profile = "release",
 )
 ```
 
 `github_release` stays as a thin compat alias for one release cycle,
-then it is removed.
+then it is removed. `profile` is the default only (`debug`, `dev`, or
+`release`, default `release`); an explicit `--debug`/`--release` flag
+always wins, same as Path B.
 
 `bazel run //cli/cli:github_draft` (or `dx deploy
-//cli/cli:github_draft`) execs `gh release create <tag> <assets...>
---draft --verify-tag`. Draft-only by construction
+//cli/cli:github_draft`) builds a local staging directory
+(`<name>-release/` holding the pinned assets plus `would-run.txt` with
+the `gh release create <tag> <assets...> --draft --verify-tag` manifest)
+and verifies bytes via sha256, publishing nothing. Pass an output
+directory after `--` to choose where the staging lands (default:
+`$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The deploy program is a
+`py_binary` on the managed Python 3.12 toolchain only, with pinned `data`
+plus the Python runfiles library. Draft-only by construction
 (open work under issue #458): `draft`
 must stay `True`, `--verify-tag` means the program never creates or
 pushes tags itself, and the default tag is the `v0.0.0-dryrun`
-placeholder. `GH_RELEASE_DRY_RUN=1` prints the would-run command and
-publishes nothing; this is what CI exercises. A real draft needs the
-tag pushed beforehand and explicit owner approval, then publishing
+placeholder. `GH_RELEASE_DRY_RUN=1` prints the dry-run header plus the
+would-run command and publishes nothing; this is what CI exercises. Live
+`gh release create --draft --verify-tag` runs only with
+`GH_RELEASE_LIVE=1` and `GH_RELEASE_APPROVED=1` after explicit owner
+approval, never by default, and refuses the placeholder tag. A real draft
+needs the tag pushed beforehand and explicit owner approval, then publishing
 happens by editing the draft on GitHub.
 
 Our own release runbook is the publish dry-run workflow
