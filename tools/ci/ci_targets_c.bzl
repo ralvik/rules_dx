@@ -14,6 +14,16 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Offline/airgap bootstrap harness; see docs/deploy/offline-bootstrap.md.
+    sh_binary(
+        name = "offline_airgap_qualification",
+        srcs = ["offline_airgap_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Env plugin-model plus Go cgo exception harness; see docs/environments/environment.md.
     sh_binary(
         name = "env_plugins_cgo_qualification",

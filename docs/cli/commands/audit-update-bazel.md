@@ -108,6 +108,14 @@ with 24h same-day freshness and refresh-failure mapping pinned in `dx_audit::adv
 invalid, or stale snapshot fails with `advisory_refresh_failed`, never clean and never a stale
 fallback; live CLI performs no network fetch.
 
+Airgapped workspaces populate the same `.dx/advisory/` inputs by
+copying the vendored advisory mirror instead of fetching (see
+[Offline Bootstrap](../../deploy/offline-bootstrap.md#vendored-advisory-mirror)):
+mirror identities carry a `file://` URL naming the vendored source
+while upstream identities keep their `https://` database-download URL,
+and both shapes enforce the same `sha256` byte binding plus the same
+same-day freshness gate with the same fail-closed mapping.
+
 Keep dependency inventories out of external vulnerability services. Download applicable advisory
 databases and match packages against the identified snapshots within Bazel-owned analysis; do not
 upload lockfiles or send dependency package names and versions through query parameters, request

@@ -44,6 +44,14 @@
 //! their identity (`url`, `sha256`, `retrieved_at`) are the audited inputs.
 //! A missing, invalid, or stale snapshot fails with
 //! [`CODE_ADVISORY_REFRESH_FAILED`], never clean and never a stale fallback.
+//!
+//! Vendored local mirrors (See: `docs/deploy/offline-bootstrap.md`):
+//! an airgapped workspace populates `.dx/advisory/` by copying the
+//! vendored bundle bytes plus identity instead of fetching. Mirror
+//! identities carry a `file://` URL naming the vendored source; upstream
+//! identities keep their `https://` database-download URL. Both shapes
+//! enforce the same `sha256` byte binding plus same-day freshness plus
+//! fail-closed mapping, so the mirror never weakens the audit gate.
 
 use serde::{Deserialize, Serialize};
 
@@ -76,7 +84,8 @@ pub enum SnapshotProblem {
     /// Empty set, URL, digest, date, or path.
     #[error("advisory snapshot missing {field}")]
     MissingField { field: &'static str },
-    /// URL is not an immutable `https://` reference.
+    /// URL is not an accepted provenance (upstream `https://` or
+    /// vendored `file://` mirror).
     #[error("advisory snapshot has non-https URL {url:?}")]
     BadUrl { url: String },
     /// Digest is not 64 lowercase hex characters.
@@ -139,6 +148,24 @@ pub fn advisory_source(set: &str) -> Option<&'static str> {
     }
 }
 
+/// Whether one identity URL is a vendored local mirror: a `file://`
+/// URL naming the vendored bundle source the snapshot bytes were copied
+/// from. Mirror snapshots analyze only when their `sha256` binds the
+/// exact copied bytes and `retrieved_at` is today, exactly like
+/// upstream `https://` snapshots.
+/// See: `docs/deploy/offline-bootstrap.md`.
+pub fn is_local_mirror(snapshot: &AdvisorySnapshot) -> bool {
+    snapshot.url.starts_with("file://")
+}
+
+/// Whether one identity URL is an accepted advisory provenance: the
+/// upstream `https://` database-download source or a vendored `file://`
+/// local mirror. Anything else (including plaintext `http://`) fails
+/// closed, never analyzed.
+pub fn is_accepted_url(url: &str) -> bool {
+    (url.starts_with("https://") || url.starts_with("file://")) && url::Url::parse(url).is_ok()
+}
+
 /// Workspace-relative snapshot bytes for one set: the identified advisory
 /// snapshot supplied as analysis input (Bazel input in aspect execution,
 /// cache file in CLI execution). A missing file means current data could
@@ -172,7 +199,9 @@ pub fn identity_matches_bytes(snapshot: &AdvisorySnapshot, bytes: &[u8]) -> bool
 }
 
 /// Validate one snapshot identity without fetching anything: set, URL,
-/// digest, date, and path must be present; the URL must be `https://`;
+/// digest, date, and path must be present; the URL must be an accepted
+/// provenance (upstream `https://` database download or vendored
+/// `file://` local mirror, See: `docs/deploy/offline-bootstrap.md`);
 /// the digest must be 64 lowercase hex; the date must be calendar
 /// `YYYY-MM-DD`. Byte identity against upstream is proven by the
 /// acquisition command that wrote the snapshot, not here.
@@ -188,7 +217,7 @@ pub fn validate_snapshot(snapshot: &AdvisorySnapshot) -> Result<(), SnapshotProb
             return Err(SnapshotProblem::MissingField { field });
         }
     }
-    if !(snapshot.url.starts_with("https://") && url::Url::parse(&snapshot.url).is_ok()) {
+    if !is_accepted_url(&snapshot.url) {
         return Err(SnapshotProblem::BadUrl {
             url: snapshot.url.clone(),
         });
@@ -330,6 +359,29 @@ mod tests {
                 url: "http://osv.dev/snapshot.json".to_owned()
             })
         );
+    }
+
+    #[test]
+    fn vendored_file_mirror_validates_like_upstream() {
+        // Vendored local mirrors (See: `docs/deploy/offline-bootstrap.md`)
+        // carry a `file://` provenance URL but enforce the same sha256
+        // byte binding plus same-day freshness plus fail-closed mapping.
+        let mut mirror = snapshot();
+        mirror.url = "file:///opt/dx-offline/advisory/cargo.json".to_owned();
+        validate_snapshot(&mirror).expect("vendored file:// mirror validates");
+        assert!(is_local_mirror(&mirror));
+        assert!(!is_local_mirror(&snapshot()));
+        assert!(is_accepted_url(&mirror.url));
+        assert!(is_accepted_url(&snapshot().url));
+        assert!(!is_accepted_url("http://osv.dev/snapshot.json"));
+        assert!(!is_accepted_url(""));
+        assert_eq!(freshness(&mirror, "2026-09-18"), Freshness::Fresh);
+        assert_eq!(freshness(&mirror, "2026-09-19"), Freshness::Stale);
+        let bytes = b"[]";
+        let mut bound = mirror.clone();
+        bound.sha256 = dx_digest::sha256_hex(bytes);
+        assert!(identity_matches_bytes(&bound, bytes));
+        assert!(!identity_matches_bytes(&bound, b"tampered"));
     }
 
     #[test]
