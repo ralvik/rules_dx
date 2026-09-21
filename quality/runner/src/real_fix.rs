@@ -28,7 +28,7 @@ impl super::RealBackend {
             "rustfmt" | "buildifier" | "taplo" => self.run_fix(tool_id, tool, path, text),
             "ruff" => self.run_ruff_fix(tool, path, text, capability == "format"),
             "vale" | "markdown_check" | "rustc" | "ty" | "pydoclint" | "flake8" | "pylint"
-            | "clippy" => Ok(text.to_owned()),
+            | "clippy" | "scalafix" | "roslyn" | "fsharplint" => Ok(text.to_owned()),
             "biome" => {
                 if capability == "format" {
                     self.run_biome_format_fix(tool, path, text)
@@ -43,6 +43,9 @@ impl super::RealBackend {
                     Ok(text.to_owned())
                 }
             }
+            "scalafmt" => self.run_scalafmt_fix(tool, path, text),
+            "csharpier" => self.run_csharpier_fix(tool, path, text),
+            "fantomas" => self.run_fantomas_fix(tool, path, text),
             "eslint" => self.run_eslint_fix(tool, path, text),
             _ => Err(execution(
                 tool_id,
@@ -219,6 +222,68 @@ impl super::RealBackend {
         let invocation = commands::eslint_fix(&tool.binary, &refs, cfg);
         let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
         if out.code != Some(0) && out.code != Some(1) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// Runs one Scalafmt format fix round: in-place rewrite.
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_scalafmt_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "scalafmt";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let config = self.config_abs(TOOL_ID, tool, &scratch)?;
+        let invocation = commands::scalafmt_fix(&tool.binary, &refs, config.as_deref());
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// Runs one CSharpier format fix round: `format` (in-place).
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_csharpier_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "csharpier";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let config = self.config_abs(TOOL_ID, tool, &scratch)?;
+        let invocation = commands::csharpier_fix(&tool.binary, &refs, config.as_deref());
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
+            return cleaned(TOOL_ID, scratch, text.to_owned());
+        }
+        let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;
+        cleaned(TOOL_ID, scratch, fixed)
+    }
+
+    /// Runs one Fantomas format fix round: in-place format.
+    /// Re-reads only on exit 0; any other exit keeps the input.
+    fn run_fantomas_fix(
+        &self,
+        tool: &RealTool,
+        path: &str,
+        text: &str,
+    ) -> Result<String, RunnerError> {
+        const TOOL_ID: &str = "fantomas";
+        let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;
+        let refs = [absolute.as_path()];
+        let invocation = commands::fantomas_fix(&tool.binary, &refs);
+        let out = self.run(TOOL_ID, tool, &invocation, &scratch)?;
+        if out.code != Some(0) {
             return cleaned(TOOL_ID, scratch, text.to_owned());
         }
         let fixed = Self::reread_fixed(TOOL_ID, &absolute)?;

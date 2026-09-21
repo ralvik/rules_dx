@@ -134,19 +134,37 @@
 //!   mismatches until observed upstream. Check-only: findings never
 //!   carry suggestions; fixes travel as declared `error-prone.patch`
 //!   outputs (see `commands::error_prone_patch`), never `IN_PLACE`.
+//! * Scalafmt `--check`: stdout unified diff with `--- a/<path>` headers;
+//!   exit 0 clean, exit 1 dirty with one `1:1` finding per header.
+//! * Scalafix callback NDJSON: one JSON record per line with rule plus
+//!   positions; console-parse rejected, exit 0 only, check-only.
+//! * CSharpier `check`: stdout one unformatted path per line; exit 0
+//!   clean, exit 1 dirty with one `1:1` finding per line.
+//! * Fantomas `check --json`: stdout JSON `{files:[{path,status}]}`;
+//!   exit 0 all unchanged, exit 99 with `needs-formatting` findings.
+//! * Roslyn aggregated SARIF 2.1: union of per-pivot `runs[].results[]`
+//!   with single schema plus version; single-SARIF and merged-run rejected.
+//! * FSharpLint library NDJSON: one JSON record per line with rule plus
+//!   full range; console-parse rejected, exit 0 only, check-only.
 
 pub mod biome;
 pub mod buildifier;
+pub mod csharpier;
 pub mod error_prone;
 pub mod eslint;
+pub mod fantomas;
 pub mod flake8;
+pub mod fsharplint;
 pub mod markdown;
 pub mod prettier;
 pub mod pydoclint;
 pub mod pylint;
+pub mod roslyn;
 pub mod ruff;
 pub mod rust;
 pub mod rustfmt;
+pub mod scalafix;
+pub mod scalafmt;
 pub mod taplo;
 pub mod tsc;
 pub mod ty;
@@ -154,16 +172,22 @@ pub mod vale;
 
 pub use biome::{parse_biome_format, parse_biome_lint};
 pub use buildifier::parse_buildifier;
+pub use csharpier::parse_csharpier;
 pub use error_prone::parse_error_prone;
 pub use eslint::parse_eslint;
+pub use fantomas::parse_fantomas;
 pub use flake8::parse_flake8;
+pub use fsharplint::parse_fsharplint;
 pub use markdown::parse_markdown_findings;
 pub use prettier::parse_prettier_check;
 pub use pydoclint::parse_pydoclint;
 pub use pylint::parse_pylint;
+pub use roslyn::parse_roslyn;
 pub use ruff::{parse_ruff, parse_ruff_format};
 pub use rust::{parse_clippy, parse_rustc};
 pub use rustfmt::parse_rustfmt;
+pub use scalafix::parse_scalafix;
+pub use scalafmt::parse_scalafmt;
 pub use taplo::{parse_taplo_format_check, parse_taplo_lint};
 pub use tsc::parse_tsc;
 pub use ty::parse_ty;

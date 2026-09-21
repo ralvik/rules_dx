@@ -146,20 +146,20 @@ else
   bad "msbuild console fixture lost its shape-plus-lossiness proof (want 4-tuple ranges with rule IDs, shared-stream info, fix context owned by the library record)"
 fi
 
-# No false adapter claim: fsharplint stays out of REAL_ADAPTERS and the runner
-# matrix carries no fsharp cells (claims land only with green adapter
-# evidence; cohort classification stays, owned under).
-if ! grep -q -F -e '"fsharplint":' "$adapters" &&
-  ! grep -q -F -e 'matrix_fsharp_' "$matrix" &&
+# Adapter delivered under #797: fsharplint claims fsharp in REAL_ADAPTERS and
+# the runner matrix carries fsharp cells (green adapter evidence; cohort
+# classification stays).
+if grep -q -F -e '"fsharplint":' "$adapters" &&
+  grep -q -F -e 'matrix_fsharp_' quality/testdata/runner_matrix_scala_dotnet.bzl &&
   grep -q -F -e '"fsharp": "fsharp"' "$adapters"; then
   ok
 else
-  bad "false fsharplint adapter claim (want no fsharplint in REAL_ADAPTERS, no matrix_fsharp_ cells, fsharp stays classified)"
+  bad "fsharplint adapter delivery missing (want fsharplint in REAL_ADAPTERS plus matrix_fsharp_ cells plus fsharp classified under #797)"
 fi
 
 # Tool integrations record the explicit decision (wire required,
 # console-parse rejected both shapes, target-coupled project context,
-# sandbox fix flow), never silent, with no adapter claim.
+# sandbox fix flow), never silent, with the adapter delivered under #797.
 if grep -q -F -e 'decided under issue #493' "$integrations" &&
   grep -q -F -e 'fsharp/tests/fixtures/fsharplint/' "$integrations" &&
   grep -q -F -e 'wire via `FSharpLint.Application.Lint`' "$integrations" &&
@@ -168,7 +168,7 @@ if grep -q -F -e 'decided under issue #493' "$integrations" &&
   grep -q -F -e 'sandbox-apply-and-diff' "$integrations" &&
   grep -q -F -e 'ReceivedWarning' "$integrations" &&
   grep -q -F -e 'not silent' "$integrations" &&
-  grep -q -F -e 'no adapter claims `scala`, `csharp`, or' "$integrations"; then
+  grep -q -F -e 'adapters qualified seed-only under #797' "$integrations"; then
   ok
 else
   bad "tool-integrations lost its explicit FSharpLint parse-vs-wire plus wiring decision under issue #493"
@@ -180,7 +180,6 @@ if grep -q -F -e '| FSharpLint |' "$acquisition" &&
   grep -q -F -e 'decided under issue #493' "$acquisition" &&
   grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
   grep -q -F -e 'no consumer runs `dotnet tool install`' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `csharp` or' "$acquisition" &&
   grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
   ok
 else

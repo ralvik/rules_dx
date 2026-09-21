@@ -27,9 +27,13 @@ DxNativeConfigInfo = provider(
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buildifier": ".json",
+    "csharpier": ".yaml",
     "eslint": ".js",
+    "fsharplint": ".json",
     "ruff": ".toml",
     "rustfmt": ".toml",
+    "scalafix": ".conf",
+    "scalafmt": ".conf",
     "taplo": ".toml",
     "vale": ".ini",
 }
@@ -142,4 +146,24 @@ biome_config = _make_native_config_rule(
 eslint_config = _make_native_config_rule(
     "eslint",
     "Checked-in ESLint flat config (eslint.config.js) for JavaScript lint. The adapter passes it as -c; no usable upstream default exists.",
+)
+
+scalafmt_config = _make_native_config_rule(
+    "scalafmt",
+    "Checked-in Scalafmt HOCON config (.scalafmt.conf) for Scala format.",
+)
+
+scalafix_config = _make_native_config_rule(
+    "scalafix",
+    "Checked-in Scalafix HOCON config (.scalafix.conf) for Scala lint.",
+)
+
+csharpier_config = _make_native_config_rule(
+    "csharpier",
+    "Checked-in CSharpier YAML config (.csharpierrc) for C# format.",
+)
+
+fsharplint_config = _make_native_config_rule(
+    "fsharplint",
+    "Checked-in FSharpLint JSON config (fsharplint.json) for F# lint.",
 )

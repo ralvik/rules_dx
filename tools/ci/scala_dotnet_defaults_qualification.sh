@@ -102,39 +102,32 @@ else
   bad "pins.bzl lost its sole-policy plus rule-set resolutions plus rejections under issue #486"
 fi
 
-# No hidden Scala + .NET native-config preset: no cohort binding exists in
-# the typed native-config rules (adapters run pinned upstream defaults until
-# checked-in policy qualifies against the native-config contract).
+# Scala + .NET native-config bindings delivered under #797 (checked-in
+# policy qualifies against the native-config contract; no hidden preset).
 cohort_config=""
-for tool in scalafmt scalafix csharpier fantomas fsharplint roslyn; do
-  if grep -q -F -e "${tool}_config" "$native"; then
-    cohort_config="$cohort_config $tool:preset"
-  fi
+for tool in scalafmt scalafix csharpier fsharplint; do
+  grep -q -F -e "${tool}_config" "$native" || cohort_config="$cohort_config $tool:missing"
 done
 if [[ -z "$cohort_config" ]]; then
   ok
 else
-  bad "native-config carries a hidden Scala + .NET preset:$cohort_config"
+  bad "native-config lost Scala + .NET bindings:$cohort_config (want all four under #797)"
 fi
 
-# No false adapter claim for the Scala + .NET cohort: none of the cohort
-# tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (owned).
+# Adapters delivered under #797: all six cohort tools appear in REAL_ADAPTERS.
 cohort_claim=""
 for tool in scalafmt scalafix csharpier fantomas fsharplint roslyn; do
-  if grep -q -F -e "\"$tool\":" "$adapters"; then
-    cohort_claim="$cohort_claim $tool:claimed"
-  fi
+  grep -q -F -e "\"$tool\":" "$adapters" || cohort_claim="$cohort_claim $tool:missing"
 done
 if [[ -z "$cohort_claim" ]]; then
   ok
 else
-  bad "false adapter claim for Scala + .NET cohort:$cohort_claim"
+  bad "Scala + .NET adapter delivery missing:$cohort_claim (want all six under #797)"
 fi
 
-# Classification-only today: scala/csharp/fsharp families carry no curated
-# defaults, no runner-matrix cells (claims land only with green adapter
-# evidence; StyleCop stays opt-in, never default).
+# Delivered: scala/csharp/fsharp families carry no curated defaults (claims
+# land only with green adapter evidence) but do carry runner-matrix cells
+# under #797; StyleCop stays opt-in, never default.
 cohort_curated=""
 for family in '"scala": {' '"csharp": {' '"fsharp": {'; do
   if grep -q -F -e "$family" "$curated"; then
@@ -142,12 +135,10 @@ for family in '"scala": {' '"csharp": {' '"fsharp": {'; do
   fi
 done
 if [[ -z "$cohort_curated" ]] &&
-  ! grep -q -F -e 'matrix_scala_' "$matrix" &&
-  ! grep -q -F -e 'matrix_csharp_' "$matrix" &&
-  ! grep -q -F -e 'matrix_fsharp_' "$matrix"; then
+  grep -q -F -e 'SCALA_DOTNET_CASES' "$matrix"; then
   ok
 else
-  bad "curated or matrix claims a Scala + .NET family before adapters land:$cohort_curated"
+  bad "curated claims a Scala + .NET family or matrix lost cohort cells:$cohort_curated (want no curated, SCALA_DOTNET_CASES under #797)"
 fi
 
 # Support matrix keeps the qualified Scala + .NET versions plus rule-sets
@@ -212,16 +203,16 @@ else
   bad "tool-acquisition lost a Scala + .NET research row or byte-identity honesty:$cohort_research"
 fi
 
-# Tool integrations keep the Scala + .NET adapter-input notes with open
-# parser work plus pinned versions (adapters still open under).
+# Tool integrations keep the Scala + .NET adapter-input notes with pinned
+# versions (adapters delivered under #797, successor to #486 versions plus
+# #417 ownership).
 if grep -q -F -e 'Scala + .NET cohort' "$integrations" &&
-  grep -q -F -e 'no adapter claims `scala`, `csharp`, or' "$integrations" &&
   grep -q -F -e 'no machine-readable CLI output' "$integrations" &&
   grep -q -F -e 'qualified seed-only under issue #486' "$integrations" &&
-  grep -q -F -e 'adapters stay owned under issue #417' "$integrations"; then
+  grep -q -F -e 'adapters qualified seed-only under #797' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its Scala + .NET notes with #486 versions plus #417 adapters split"
+  bad "tool-integrations lost its Scala + .NET notes with #486 versions plus #797 delivery"
 fi
 
 # Native-configuration sole policy stands (no hidden presets authorized).

@@ -55,33 +55,26 @@ matrix="quality/testdata/runner_matrix_cases.bzl"
 subjects="quality/testdata/BUILD.bazel"
 aspects="quality/real_aspects.bzl"
 
-# No false adapter claim for the Scala + .NET cohort: none of the cohort
-# tool IDs appear in REAL_ADAPTERS. Classification exists in
-# REAL_CLASS_TO_FAMILY; adapter claim does not.
+# Adapters delivered under #797 (successor to closed #417): all six cohort
+# tools appear in REAL_ADAPTERS.
 cohort_claim=""
 for tool in scalafmt scalafix csharpier fantomas fsharplint roslyn; do
-  if grep -q -F -e "\"$tool\":" "$adapters"; then
-    cohort_claim="$cohort_claim $tool:claimed"
-  fi
+  grep -q -F -e "\"$tool\":" "$adapters" || cohort_claim="$cohort_claim $tool:missing"
 done
 if [[ -z "$cohort_claim" ]]; then
   ok
 else
-  bad "false adapter claim for Scala + .NET cohort:$cohort_claim"
+  bad "Scala + .NET adapter delivery missing:$cohort_claim (want all six under #797)"
 fi
 
-# Parity deferrals own scala/csharp/fsharp with owner plus frozen route plus
-# the live-successor record (closed owns nothing here).
-if grep -q -F -e '"scala": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"csharp": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"fsharp": ["ADR 0019"' "$parity" &&
-  grep -q -F -e 'managed JVM route: compatible JVM artifact (scalafmt); semantic-rule artifacts over shared JDK (Scalafix)' "$parity" &&
-  grep -q -F -e 'exact upstream package plus shared .NET runtime (CSharpier)' "$parity" &&
-  grep -q -F -e 'exact upstream package plus shared .NET runtime (Fantomas)' "$parity" &&
-  grep -q -F -e 'issue #417' "$parity"; then
+# Parity no longer defers the delivered Scala/.NET classes (closed #417 owns
+# nothing here; delivery under #797).
+if ! grep -q -F -e '"scala":' "$parity" &&
+  ! grep -q -F -e '"csharp":' "$parity" &&
+  ! grep -q -F -e '"fsharp":' "$parity"; then
   ok
 else
-  bad "parity deferrals lost the Scala + .NET owner plus frozen route plus #417 record"
+  bad "parity still defers delivered Scala/.NET classes (want none under #797)"
 fi
 
 # Every cohort class stays classified in the frozen taxonomy, one family each.
@@ -107,32 +100,23 @@ else
   bad "curated defaults claim a Scala + .NET family before adapters land:$cohort_curated"
 fi
 
-# No hidden Scala + .NET native-config preset: no cohort binding exists in
-# the typed native-config rules (adapters run pinned upstream defaults until
-# qualifies checked-in policy against the native-config contract; the
-# provisional Scalafix OrganizeImports plus RemoveUnused suggestion stays a
-# review input, never a supplied config).
+# Scala + .NET native-config bindings delivered under #797.
 cohort_config=""
-for tool in scalafmt scalafix csharpier fantomas fsharplint roslyn; do
-  if grep -q -F -e "${tool}_config" "$native"; then
-    cohort_config="$cohort_config $tool:preset"
-  fi
+for tool in scalafmt scalafix csharpier fsharplint; do
+  grep -q -F -e "${tool}_config" "$native" || cohort_config="$cohort_config $tool:missing"
 done
 if [[ -z "$cohort_config" ]]; then
   ok
 else
-  bad "native-config carries a hidden Scala + .NET preset:$cohort_config"
+  bad "native-config lost Scala + .NET bindings:$cohort_config (want all four under #797)"
 fi
 
-# No false green claim: the runner matrix carries no Scala + .NET cells yet,
-# so REAL_ADAPTERS cannot claim scala/csharp/fsharp (claims land only with
-# green pass/fail plus fix/format evidence per adapter-backed class).
-if ! grep -q -F -e 'matrix_scala_' "$matrix" &&
-  ! grep -q -F -e 'matrix_csharp_' "$matrix" &&
-  ! grep -q -F -e 'matrix_fsharp_' "$matrix"; then
+# Matrix carries Scala + .NET cells with green pass/fail plus fix/format
+# evidence per adapter-backed class (delivery under #797).
+if grep -q -F -e 'SCALA_DOTNET_CASES' "$matrix"; then
   ok
 else
-  bad "runner matrix claims a Scala + .NET cell without adapter qualification"
+  bad "runner matrix lost Scala + .NET cells (want SCALA_DOTNET_CASES under #797)"
 fi
 
 # Tool acquisition keeps the decided managed-JVM route for Scalafmt/Scalafix
@@ -174,23 +158,18 @@ else
   bad "tool-acquisition lost a Scala + .NET research row or its observations-not-pins honesty:$cohort_research"
 fi
 
-# Tool integrations keep the Scala + .NET adapter-input notes:
-# Roslyn SDK-default plus StyleCop opt-in with per-TFM/RID SARIF aggregation,
-# FSharpLint console-parse versus library-API binding, Scalafix console-output
-# limitation as a recorded parse-vs-wire decision (never silently dropped),
-# versions qualified under with digests as observations, no adapter claim.
-if grep -q -F -e '**Scala + .NET cohort (issue #417' "$integrations" &&
-  grep -q -F -e 'unproven mappings' "$integrations" &&
-  grep -q -F -e 'observations,' "$integrations" &&
-  grep -q -F -e 'not pins' "$integrations" &&
-  grep -q -F -e 'no adapter claims `scala`, `csharp`, or' "$integrations" &&
+# Tool integrations record the Scala + .NET adapter delivery under #797
+# (successor to the #417 provisional notes): decided routes plus wire
+# decisions plus versions qualified under #486, adapters qualified under #797.
+if grep -q -F -e 'Scala + .NET cohort' "$integrations" &&
+  grep -q -F -e 'adapters qualified seed-only under #797' "$integrations" &&
   grep -q -F -e 'no machine-readable CLI output' "$integrations" &&
   grep -q -F -e 'not silent' "$integrations" &&
   grep -q -F -e 'SDK-default mode' "$integrations" &&
   grep -q -F -e 'StyleCop remains' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its provisional Scala + .NET adapter-input notes or open-work honesty"
+  bad "tool-integrations lost its Scala + .NET delivery record under #797"
 fi
 
 # Support matrix keeps the Scala + .NET routes plus qualified native-config

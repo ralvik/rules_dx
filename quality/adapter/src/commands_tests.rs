@@ -486,3 +486,90 @@ fn error_prone_patch_declares_a_directory_never_in_place() {
     );
     assert_eq!(ERROR_PRONE_PATCH_FILE, "error-prone.patch");
 }
+
+#[test]
+fn scalafmt_check_and_fix_share_config() {
+    let file = Path::new("/scratch/Sample.scala");
+    let check = scalafmt_check(Path::new(BIN), &[file], None);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "--check", "/scratch/Sample.scala"]
+    );
+    assert_eq!(check.cwd_rel, "");
+    let hinted = scalafmt_check(
+        Path::new(BIN),
+        &[file],
+        Some(Path::new("/scratch/.scalafmt.conf")),
+    );
+    assert!(argv_strings(&hinted).contains(&"--config".to_owned()));
+    let fix = scalafmt_fix(Path::new(BIN), &[file], None);
+    assert!(!argv_strings(&fix).contains(&"--check".to_owned()));
+}
+
+#[test]
+fn scalafix_check_carries_target_coupled_wiring() {
+    let file = Path::new("/scratch/Sample.scala");
+    let bare = scalafix_check(Path::new(BIN), &[file], None, None, None);
+    assert_eq!(argv_strings(&bare), vec![BIN, "/scratch/Sample.scala"]);
+    let wired = scalafix_check(
+        Path::new(BIN),
+        &[file],
+        Some(Path::new("/scratch/root")),
+        Some("/scratch/cp.jar"),
+        Some(Path::new("/scratch/semanticdb")),
+    );
+    let argv = argv_strings(&wired);
+    assert!(argv.contains(&"--sourceroot".to_owned()));
+    assert!(argv.contains(&"--classpath".to_owned()));
+    assert!(argv.contains(&"--semanticdb-targetroots".to_owned()));
+    assert!(!argv.iter().any(|arg| arg.contains("IN_PLACE")));
+}
+
+#[test]
+fn csharpier_check_and_fix_share_config() {
+    let file = Path::new("/scratch/Sample.cs");
+    let check = csharpier_check(Path::new(BIN), &[file], None);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "check", "/scratch/Sample.cs"]
+    );
+    let hinted = csharpier_check(
+        Path::new(BIN),
+        &[file],
+        Some(Path::new("/scratch/.csharpierrc")),
+    );
+    assert!(argv_strings(&hinted).contains(&"--config-path".to_owned()));
+    let fix = csharpier_fix(Path::new(BIN), &[file], None);
+    assert_eq!(
+        argv_strings(&fix),
+        vec![BIN, "format", "/scratch/Sample.cs"]
+    );
+}
+
+#[test]
+fn fantomas_check_is_json_and_fix_is_bare() {
+    let file = Path::new("/scratch/Sample.fs");
+    let check = fantomas_check(Path::new(BIN), &[file]);
+    assert_eq!(
+        argv_strings(&check),
+        vec![BIN, "check", "--json", "/scratch/Sample.fs"]
+    );
+    let fix = fantomas_fix(Path::new(BIN), &[file]);
+    assert_eq!(argv_strings(&fix), vec![BIN, "/scratch/Sample.fs"]);
+}
+
+#[test]
+fn fsharplint_check_carries_project_and_config() {
+    let file = Path::new("/scratch/Sample.fs");
+    let bare = fsharplint_check(Path::new(BIN), &[file], None, None);
+    assert_eq!(argv_strings(&bare), vec![BIN, "/scratch/Sample.fs"]);
+    let wired = fsharplint_check(
+        Path::new(BIN),
+        &[file],
+        Some(Path::new("/scratch/Sample.fsproj")),
+        Some(Path::new("/scratch/fsharplint.json")),
+    );
+    let argv = argv_strings(&wired);
+    assert!(argv.contains(&"--project".to_owned()));
+    assert!(argv.contains(&"--config".to_owned()));
+}

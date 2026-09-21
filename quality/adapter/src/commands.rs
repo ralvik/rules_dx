@@ -1,4 +1,4 @@
-//! Exact tool invocations for the initial adapters plus Python.
+//! Exact tool invocations for the initial adapters plus Python plus Scala/.NET.
 //!
 //! Every flag here was probed against the pinned binaries; probing notes
 //! live in the completion evidence (Python probes in the
@@ -577,6 +577,159 @@ pub fn markdown_check(
         mapping.push(absolute.as_os_str());
         argv.push(mapping);
     }
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Scalafmt check invocation: `scalafmt --check` over the whole stage
+/// file list plus `--config <hint>` when hinted. Exit 0 clean, exit 1
+/// with unified diff on stdout when dirty. Scratch-root cwd blocks
+/// ambient `.scalafmt.conf` discovery; the hinted config directory is
+/// passed explicitly, never discovered.
+pub fn scalafmt_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--check")];
+    if let Some(path) = config {
+        argv.push(OsString::from("--config"));
+        argv.push(path.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Scalafmt fix invocation: in-place rewrite over the whole stage file
+/// list. The caller re-reads on exit 0 and returns its input otherwise.
+pub fn scalafmt_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned()];
+    if let Some(path) = config {
+        argv.push(OsString::from("--config"));
+        argv.push(path.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Scalafix check invocation: custom Java entrypoint binding
+/// `scalafix.interfaces.ScalafixMainCallback` over semantic-rule
+/// artifacts. Target-coupled `--classpath` plus `--sourceroot` plus
+/// `--semanticdb-targetroots` come from the authoritative target;
+/// syntactic-only runs pass none. Console-parse rejected: diagnostics
+/// arrive as callback NDJSON on stdout, never console text.
+/// Check-only with sandbox-apply-and-diff fix flow and declared outputs.
+pub fn scalafix_check(
+    binary: &Path,
+    files: &[&Path],
+    sourceroot: Option<&Path>,
+    classpath: Option<&str>,
+    semanticdb_targetroots: Option<&Path>,
+) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned()];
+    if let Some(root) = sourceroot {
+        argv.push(OsString::from("--sourceroot"));
+        argv.push(root.as_os_str().to_owned());
+    }
+    if let Some(cp) = classpath {
+        argv.push(OsString::from("--classpath"));
+        argv.push(OsString::from(cp));
+    }
+    if let Some(roots) = semanticdb_targetroots {
+        argv.push(OsString::from("--semanticdb-targetroots"));
+        argv.push(roots.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// CSharpier check invocation: `check` over the whole stage file list
+/// plus `--config-path <hint>` when hinted. Exit 0 clean, exit 1 with
+/// unformatted paths on stdout when dirty. Scratch-root cwd blocks
+/// ambient config discovery. Declared DLLs over the managed .NET
+/// runtime, never `dotnet tool install`.
+pub fn csharpier_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("check")];
+    if let Some(path) = config {
+        argv.push(OsString::from("--config-path"));
+        argv.push(path.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// CSharpier fix invocation: `format` (in-place). The caller re-reads
+/// on exit 0 and returns its input otherwise.
+pub fn csharpier_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("format")];
+    if let Some(path) = config {
+        argv.push(OsString::from("--config-path"));
+        argv.push(path.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
+    Invocation {
+        argv,
+        cwd_rel: String::new(),
+    }
+}
+
+/// Fantomas check invocation: `check --json` over the whole stage file
+/// list. Exit 0 all unchanged, exit 99 with `needs-formatting` files,
+/// exit 1 operational failure. JSON on stdout carries per-file status;
+/// the caller re-anchors workspace-relative paths. Declared DLLs over
+/// the managed .NET runtime, never `dotnet tool install`.
+pub fn fantomas_check(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &["check", "--json"], files, "")
+}
+
+/// Fantomas fix invocation: in-place format over the whole stage file
+/// list. The caller re-reads on exit 0 and returns its input otherwise.
+pub fn fantomas_fix(binary: &Path, files: &[&Path]) -> Invocation {
+    invocation(binary, &[], files, "")
+}
+
+/// Roslyn check invocation shape: `csc /errorlog:<sarif>` per pivot.
+/// The adapter never spawns this directly in the runner: per-pivot
+/// SARIF files are declared action inputs from the authoritative
+/// target, concatenated into one log in deterministic pivot order and
+/// parsed via `parsers::parse_roslyn`. Single-SARIF and merged-run
+/// rejected. Check-only with sandbox-apply-and-diff fix flow.
+pub fn roslyn_errorlog(sarif: &Path) -> OsString {
+    OsString::from(format!("/errorlog:{}", sarif.to_string_lossy()))
+}
+
+/// FSharpLint check invocation: custom .NET entrypoint binding
+/// `FSharpLint.Application.Lint` with `ReceivedWarning` over exact
+/// package artifacts. Target-coupled `.fsproj`/`.sln` plus
+/// `fsharplint.json` come from the authoritative target. Console-parse
+/// rejected: diagnostics arrive as library NDJSON on stdout, never
+/// console text. Check-only with sandbox-apply-and-diff fix flow.
+pub fn fsharplint_check(
+    binary: &Path,
+    files: &[&Path],
+    project: Option<&Path>,
+    config: Option<&Path>,
+) -> Invocation {
+    let mut argv = vec![binary.as_os_str().to_owned()];
+    if let Some(proj) = project {
+        argv.push(OsString::from("--project"));
+        argv.push(proj.as_os_str().to_owned());
+    }
+    if let Some(cfg) = config {
+        argv.push(OsString::from("--config"));
+        argv.push(cfg.as_os_str().to_owned());
+    }
+    argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
     Invocation {
         argv,
         cwd_rel: String::new(),

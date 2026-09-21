@@ -109,20 +109,20 @@ else
   bad "console fixtures lost their lossiness proof (want rule IDs in lint sample, diff-only with no rule ID in rewrite sample)"
 fi
 
-# No false adapter claim: scalafix stays out of REAL_ADAPTERS and the runner
-# matrix carries no scala cells (claims land only with green adapter
-# evidence; cohort classification stays, owned under).
-if ! grep -q -F -e '"scalafix":' "$adapters" &&
-  ! grep -q -F -e 'matrix_scala_' "$matrix" &&
+# Adapter delivered under #797: scalafix claims scala in REAL_ADAPTERS and
+# the runner matrix carries scala cells (green adapter evidence; cohort
+# classification stays).
+if grep -q -F -e '"scalafix":' "$adapters" &&
+  grep -q -F -e 'matrix_scala_' quality/testdata/runner_matrix_scala_dotnet.bzl &&
   grep -q -F -e '"scala": "scala"' "$adapters"; then
   ok
 else
-  bad "false scalafix adapter claim (want no scalafix in REAL_ADAPTERS, no matrix_scala_ cells, scala stays classified)"
+  bad "scalafix adapter delivery missing (want scalafix in REAL_ADAPTERS plus matrix_scala_ cells plus scala classified under #797)"
 fi
 
 # Tool integrations record the explicit decision (wire required,
 # console-parse rejected, target-coupled wiring, sandbox fix flow), never
-# silent, with no adapter claim.
+# silent, with the adapter delivered under #797.
 if grep -q -F -e 'decided under issue #490' "$integrations" &&
   grep -q -F -e 'wire via `scalafix.interfaces.ScalafixMainCallback`' "$integrations" &&
   grep -q -F -e 'console-parse is rejected' "$integrations" &&
@@ -130,7 +130,7 @@ if grep -q -F -e 'decided under issue #490' "$integrations" &&
   grep -q -F -e 'sandbox-apply-and-diff' "$integrations" &&
   grep -q -F -e 'no machine-readable CLI output' "$integrations" &&
   grep -q -F -e 'not silent' "$integrations" &&
-  grep -q -F -e 'no adapter claims `scala`, `csharp`, or' "$integrations"; then
+  grep -q -F -e 'adapters qualified seed-only under #797' "$integrations"; then
   ok
 else
   bad "tool-integrations lost its explicit Scalafix parse-vs-wire plus wiring decision under issue #490"

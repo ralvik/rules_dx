@@ -13,10 +13,10 @@
 #   pydoclint+ruff+ty, rust clippy+rustfmt+rustc, starlark buildifier,
 #   toml taplo, typescript biome+tsc); audit stays empty with explicit
 #   disablement, Bandit excluded, secrets via Gitleaks separate.
-# - backed: 11 adapter-backed classes ride 16 real adapters with
+# - backed: 14 adapter-backed classes ride 22 real adapters with
 #   runner-matrix pass plus fail plus parser plus native-config plus
 #   aspect plus policy execution.
-# - deferred: 36 classes with ADR 0019 owner plus frozen route, no
+# - deferred: 33 classes with ADR 0019 owner plus frozen route, no
 #   double-claim, no undispositioned.
 # - applicability: provider intersect adapter intersect policy, suffix
 #   rejected, cross-family union into one stage, lazy with no fetch,
@@ -94,15 +94,15 @@ if grep -q -F -e '8 curated families: javascript plus json plus markdown plus py
   grep -q -F -e 'markdown family lint markdown_check plus vale' "$pins" &&
   grep -q -F -e 'python family lint pydoclint plus ruff plus format ruff plus typecheck ty' "$pins" &&
   grep -q -F -e 'rust family lint clippy plus format rustfmt plus typecheck rustc' "$pins" &&
-  grep -q -F -e '11 adapter-backed classes:' "$pins" &&
-  grep -q -F -e '16 real adapters:' "$pins"; then
+  grep -q -F -e '14 adapter-backed classes:' "$pins" &&
+  grep -q -F -e '22 real adapters:' "$pins"; then
   ok
 else
   bad "pins.bzl lost its curated plus backed execution under issue #512"
 fi
 
 # Pins record the deferred plus audit plus rejected plus owned gaps.
-if grep -q -F -e '36 deferred classes with owner plus frozen route' "$pins" &&
+if grep -q -F -e '33 deferred classes with owner plus frozen route' "$pins" &&
   grep -q -F -e 'every deferral names ADR 0019 plus frozen delivery route' "$pins" &&
   grep -q -F -e 'no class is both adapter-backed and deferred' "$pins" &&
   grep -q -F -e 'curated audit stays empty with explicit disablement' "$pins" &&
@@ -160,11 +160,11 @@ else
 fi
 
 # Parity deferrals stay owned with fail-closed gate shape.
+# Scala/.NET delivered under #797, so csharp no longer deferred.
 if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
   grep -q -F -e '"c": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"cpp": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"java": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"csharp": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&
@@ -299,7 +299,7 @@ fi
 if grep -q -F -e 'qualified seed-only under issue #512' "$expected" &&
   grep -q -F -e 'taxonomy doc only' "$expected" &&
   grep -q -F -e '47 classes' "$expected" &&
-  grep -q -F -e '36 deferred' "$expected" &&
+  grep -q -F -e '33 deferred' "$expected" &&
   grep -q -F -e 'Bandit excluded' "$expected" &&
   grep -q -F -e 'owned gap' "$expected"; then
   ok

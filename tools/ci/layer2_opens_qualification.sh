@@ -5,10 +5,10 @@
 # `quality/tests/fixtures/layer2_opens/pins.bzl` (plus
 # `layer2_opens.expected`), without claiming delivery or Supported:
 # - Layer-2 adapter-less cells stay open for Go plus Java plus Kotlin plus
-#   Scala plus C# plus F# plus C/C++ (no adapter claim, no runner-matrix
-#   cells, parity deferred with owner plus frozen route; defaults qualified
-# under -, digests plus adapters stay owned under -;
-# Closed only for required core).
+#   C/C++ (no adapter claim, no runner-matrix cells, parity deferred with
+#   owner plus frozen route; defaults qualified under -, digests plus
+#   adapters stay owned under -; Scala plus C# plus F# delivered under #797).
+#   Closed only for required core).
 # - Framework regions stay classification-only for Vue plus Svelte plus Astro
 #   plus MDX (frozen taxonomy plus quality-region mappings, no adapter claim,
 #   no matrix cells, no curated defaults; Prettier/ESLint plugin closure
@@ -61,14 +61,15 @@ else
 fi
 
 # Pins record the adapter-less plus framework inventory with rejected plus honesty lines.
+# Scala plus C# plus F# delivered under #797 (no longer adapter-less).
 if grep -q -F -e 'ADAPTER_LESS_GO = "go"' "$pins" &&
   grep -q -F -e 'ADAPTER_LESS_JAVA = "java"' "$pins" &&
   grep -q -F -e 'ADAPTER_LESS_KOTLIN = "kotlin"' "$pins" &&
-  grep -q -F -e 'ADAPTER_LESS_SCALA = "scala"' "$pins" &&
-  grep -q -F -e 'ADAPTER_LESS_CSHARP = "csharp"' "$pins" &&
-  grep -q -F -e 'ADAPTER_LESS_FSHARP = "fsharp"' "$pins" &&
   grep -q -F -e 'ADAPTER_LESS_C = "c"' "$pins" &&
   grep -q -F -e 'ADAPTER_LESS_CPP = "cpp"' "$pins" &&
+  ! grep -q -F -e 'ADAPTER_LESS_SCALA' "$pins" &&
+  ! grep -q -F -e 'ADAPTER_LESS_CSHARP' "$pins" &&
+  ! grep -q -F -e 'ADAPTER_LESS_FSHARP' "$pins" &&
   grep -q -F -e 'FRAMEWORK_VUE = "vue"' "$pins" &&
   grep -q -F -e 'FRAMEWORK_SVELTE = "svelte"' "$pins" &&
   grep -q -F -e 'FRAMEWORK_ASTRO = "astro"' "$pins" &&
@@ -99,9 +100,10 @@ fi
 
 # No false adapter claim for the adapter-less cohorts: none of the cohort
 # tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (digests plus adapters stay owned under -).
+# does not (digests plus adapters stay owned under -). Scala/.NET delivered
+# under #797, so its tools are excluded here.
 opens_claim=""
-for tool in gofumpt staticcheck govet errcheck clang-format clang-tidy cppcheck google-java-format checkstyle pmd spotbugs ktfmt ktlint detekt scalafmt scalafix csharpier fantomas; do
+for tool in gofumpt staticcheck govet errcheck clang-format clang-tidy cppcheck google-java-format checkstyle pmd spotbugs ktfmt ktlint detekt; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
     opens_claim="$opens_claim $tool:claimed"
   fi
@@ -114,8 +116,9 @@ fi
 
 # Adapter-less plus framework classes keep no runner-matrix cells
 # (adapter-less as pass rejected: absence is the open record, never a pass).
+# Scala/.NET cells delivered under #797, so excluded here.
 opens_matrix=""
-for cell in matrix_go_ matrix_java_ matrix_kotlin_ matrix_scala_ matrix_csharp_ matrix_fsharp_ matrix_c_ matrix_cpp_ matrix_vue_ matrix_svelte_ matrix_astro_ matrix_mdx_; do
+for cell in matrix_go_ matrix_java_ matrix_kotlin_ matrix_c_ matrix_cpp_ matrix_vue_ matrix_svelte_ matrix_astro_ matrix_mdx_; do
   if grep -q -F -e "$cell" "$matrix"; then
     opens_matrix="$opens_matrix $cell:claimed"
   fi
@@ -127,14 +130,14 @@ else
 fi
 
 # Parity deferrals name owner plus frozen route for every open class.
+# Scala/.NET delivered under #797, so excluded here.
 opens_deferred=""
-for cls in go c cpp java kotlin scala csharp fsharp vue svelte astro mdx; do
+for cls in go c cpp java kotlin vue svelte astro mdx; do
   grep -q -F -e "\"$cls\":" "$parity" || opens_deferred="$opens_deferred $cls:missing"
 done
 if [[ -z "$opens_deferred" ]] &&
   grep -q -F -e '"go": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"java": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"csharp": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"vue": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'PARITY_DEFERRED = {' "$parity"; then
   ok
@@ -221,9 +224,11 @@ else
 fi
 
 # Expected fixture covers the open cells with rejected plus route honesty.
+# Scala/C#/F# delivered under #797.
 if grep -q -F -e 'Go Layer-2 Open (adapter-less)' "$expected" &&
   grep -q -F -e 'Java Layer-2 Open (adapter-less)' "$expected" &&
   grep -q -F -e 'C++ Layer-2 Open (adapter-less)' "$expected" &&
+  grep -q -F -e 'Scala/C#/F# Layer-2 Delivered under #797' "$expected" &&
   grep -q -F -e 'Vue/Svelte/Astro/MDX Layer-2 Open (regions)' "$expected" &&
   grep -q -F -e 'Vue/Svelte/Astro/MDX Examples Open (composition)' "$expected" &&
   grep -q -F -e 'Vue/Svelte/Astro/MDX Depcheck Open' "$expected" &&

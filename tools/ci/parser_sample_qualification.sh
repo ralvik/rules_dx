@@ -6,9 +6,10 @@
 # - delivered: every adapter-backed tool keeps a parser module with pinned
 #   pass (clean) plus fail (dirty) samples exercised as unit tests
 #   (`quality/adapter/src/parsers/*.rs`: biome lint plus format, buildifier,
-#   clippy plus rustc via the shared rust diagnostics, eslint, flake8,
-#   markdown_check, prettier, pydoclint, pylint, ruff lint plus format,
-#   rustfmt, taplo lint plus format, tsc, ty, vale);
+#   clippy plus rustc via the shared rust diagnostics, csharpier, eslint,
+#   fantomas, flake8, fsharplint, markdown_check, prettier, pydoclint, pylint,
+#   roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt, taplo lint
+#   plus format, tsc, ty, vale);
 # - wiring: recorded Clippy/rustc diagnostics stay byte-identical between
 #   the parser unit samples and the Layer-2 matrix injected upstream
 #   (`quality/testdata/runner_matrix_cases.bzl`); tsc keeps its adapter
@@ -63,7 +64,7 @@ else
 fi
 
 # Verification matrix Green lists the harness count.
-if grep -q -F -e '`parser_sample_qualification` 23/23' "$verify"; then
+if grep -q -F -e '`parser_sample_qualification` 29/29' "$verify"; then
   ok
 else
   bad "verification-matrix Green lost parser_sample_qualification 23/23"
@@ -246,6 +247,59 @@ if [[ -f "quality/adapter/src/parsers/vale.rs" ]] &&
   ok
 else
   bad "vale lost its JSON parser with alert plus config plus clean samples"
+fi
+
+# Scalafmt keeps its diff parser with dirty plus clean samples (issue #797).
+if [[ -f "quality/adapter/src/parsers/scalafmt.rs" ]] &&
+  grep -q -F -e 'pub fn parse_scalafmt' quality/adapter/src/parsers/scalafmt.rs &&
+  grep -q -F -e '--- a/' quality/adapter/src/parsers/scalafmt.rs; then
+  ok
+else
+  bad "scalafmt lost its diff parser with dirty plus clean samples"
+fi
+
+# Scalafix keeps its callback-NDJSON parser with records plus clean (issue #797).
+if [[ -f "quality/adapter/src/parsers/scalafix.rs" ]] &&
+  grep -q -F -e 'pub fn parse_scalafix' quality/adapter/src/parsers/scalafix.rs &&
+  grep -q -F -e 'DisableSyntax' quality/adapter/src/parsers/scalafix.rs; then
+  ok
+else
+  bad "scalafix lost its callback parser with records plus clean"
+fi
+
+# CSharpier keeps its check parser with path plus clean samples (issue #797).
+if [[ -f "quality/adapter/src/parsers/csharpier.rs" ]] &&
+  grep -q -F -e 'pub fn parse_csharpier' quality/adapter/src/parsers/csharpier.rs; then
+  ok
+else
+  bad "csharpier lost its check parser with path plus clean samples"
+fi
+
+# Fantomas keeps its JSON parser with needs-formatting plus clean (issue #797).
+if [[ -f "quality/adapter/src/parsers/fantomas.rs" ]] &&
+  grep -q -F -e 'pub fn parse_fantomas' quality/adapter/src/parsers/fantomas.rs &&
+  grep -q -F -e 'needs-formatting' quality/adapter/src/parsers/fantomas.rs; then
+  ok
+else
+  bad "fantomas lost its JSON parser with needs-formatting plus clean"
+fi
+
+# Roslyn keeps its SARIF parser with results plus clean (issue #797, delegated).
+if [[ -f "quality/adapter/src/parsers/roslyn.rs" ]] &&
+  grep -q -F -e 'pub fn parse_roslyn' quality/adapter/src/parsers/roslyn.rs &&
+  grep -q -F -e 'CA1822' quality/adapter/src/parsers/roslyn.rs; then
+  ok
+else
+  bad "roslyn lost its SARIF parser with results plus clean"
+fi
+
+# FSharpLint keeps its library-NDJSON parser with records plus clean (issue #797).
+if [[ -f "quality/adapter/src/parsers/fsharplint.rs" ]] &&
+  grep -q -F -e 'pub fn parse_fsharplint' quality/adapter/src/parsers/fsharplint.rs &&
+  grep -q -F -e 'FL0036' quality/adapter/src/parsers/fsharplint.rs; then
+  ok
+else
+  bad "fsharplint lost its library parser with records plus clean"
 fi
 
 # Runner-matrix doc owns the parser-sample backfill record.

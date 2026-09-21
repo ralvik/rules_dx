@@ -47,6 +47,16 @@ def native_config_unit_tests(name):
                 ".js",
             ),
             expect_equal(
+                "native_config_extension pins Scala/.NET transports",
+                [
+                    native_config_extension("scalafmt"),
+                    native_config_extension("scalafix"),
+                    native_config_extension("csharpier"),
+                    native_config_extension("fsharplint"),
+                ],
+                [".conf", ".conf", ".yaml", ".json"],
+            ),
+            expect_equal(
                 "native_config_error rejects biome.jsonc",
                 native_config_error(
                     "biome",
@@ -80,7 +90,7 @@ def native_config_unit_tests(name):
                 "native_config_error rejects an unknown tool",
                 native_config_error("prettier", "x.json", True, []),
                 "native_config: unknown tool 'prettier': want one of " +
-                "biome, buildifier, eslint, ruff, rustfmt, taplo, vale",
+                "biome, buildifier, csharpier, eslint, fsharplint, ruff, rustfmt, scalafix, scalafmt, taplo, vale",
             ),
             expect_equal(
                 "native_config_error requires a config",

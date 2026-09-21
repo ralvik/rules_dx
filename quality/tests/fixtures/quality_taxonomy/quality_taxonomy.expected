@@ -9,9 +9,9 @@ typescript; javascript plus jsx in javascript; c plus cpp in cc.
 json (biome lint plus prettier format), markdown (markdown_check plus
 vale), python (pydoclint plus ruff plus ty), rust (clippy plus rustfmt
 plus rustc), starlark (buildifier), toml (taplo), typescript (biome
-plus tsc). 11 adapter-backed classes ride 16 real adapters with runner
+plus tsc). 14 adapter-backed classes ride 22 real adapters with runner
 matrix pass plus fail plus parser plus native plus aspect evidence.
-36 deferred classes carry ADR 0019 owner plus frozen route with no
+33 deferred classes carry ADR 0019 owner plus frozen route with no
 double-claim and no undispositioned class.
 Curated audit stays empty with explicit disablement; Bandit excluded
 from v1 by ADR 0019; secrets ride Gitleaks detect with redact plus SARIF.

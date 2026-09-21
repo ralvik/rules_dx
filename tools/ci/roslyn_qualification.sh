@@ -168,27 +168,27 @@ else
   bad "aggregated SARIF lost its runs-concatenation plus order plus union proof (want 2 runs in TFM order, 3 results, provenance, workspace-relative URIs)"
 fi
 
-# No false adapter claim: roslyn stays out of REAL_ADAPTERS and the runner
-# matrix carries no csharp cells (claims land only with green adapter
-# evidence; cohort classification stays, owned under).
-if ! grep -q -F -e '"roslyn":' "$adapters" &&
-  ! grep -q -F -e 'matrix_csharp_' "$matrix" &&
+# Adapter delivered under #797: roslyn claims csharp in REAL_ADAPTERS and
+# the runner matrix carries csharp cells (green adapter evidence; cohort
+# classification stays).
+if grep -q -F -e '"roslyn":' "$adapters" &&
+  grep -q -F -e 'matrix_csharp_' quality/testdata/runner_matrix_scala_dotnet.bzl &&
   grep -q -F -e '"csharp": "csharp"' "$adapters"; then
   ok
 else
-  bad "false roslyn adapter claim (want no roslyn in REAL_ADAPTERS, no matrix_csharp_ cells, csharp stays classified)"
+  bad "roslyn adapter delivery missing (want roslyn in REAL_ADAPTERS plus matrix_csharp_ cells plus csharp classified under #797)"
 fi
 
 # Tool integrations record the explicit decision (aggregation required,
 # single-SARIF rejected, runs concatenation with provenance), never silent,
-# with no adapter claim.
+# with the adapter delivered under #797.
 if grep -q -F -e 'decided under issue #492' "$integrations" &&
   grep -q -F -e 'csharp/tests/fixtures/roslyn/' "$integrations" &&
   grep -q -F -e 'single-SARIF assumption is rejected' "$integrations" &&
   grep -q -F -e 'concatenate' "$integrations" &&
   grep -q -F -e 'automationDetails.id' "$integrations" &&
   grep -q -F -e 'not silent' "$integrations" &&
-  grep -q -F -e 'no adapter claims `scala`, `csharp`, or' "$integrations"; then
+  grep -q -F -e 'adapters qualified seed-only under #797' "$integrations"; then
   ok
 else
   bad "tool-integrations lost its explicit Roslyn aggregation decision under issue #492"
@@ -199,7 +199,6 @@ fi
 if grep -q -F -e 'decided under issue #492' "$acquisition" &&
   grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
   grep -q -F -e 'no consumer runs `dotnet tool install`' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `csharp` or' "$acquisition" &&
   grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
   ok
 else

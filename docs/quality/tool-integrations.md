@@ -252,8 +252,10 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   recheck latest stable at implementation; adapters stay owned under #796 (successor to closed #416)
   (see the JVM rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
-- **Scala + .NET cohort (#797, successor to closed #417, provisional — no adapter claims `scala`, `csharp`, or
-  `fsharp` yet):** managed JVM route for Scalafmt (compatible JVM artifact over the shared
+- **Scala + .NET cohort (#797, successor to closed #417):** adapters `scalafmt` (format `scala`),
+  `scalafix` (lint `scala`), `csharpier` (format `csharp`), `roslyn` (lint `csharp`),
+  `fantomas` (format `fsharp`), `fsharplint` (lint `fsharp`) over the decided routes:
+  managed JVM route for Scalafmt (compatible JVM artifact over the shared
   managed JDK plus the Scala Maven-lock story, `maven_install.json` plus `fail_if_repin_required`)
   and Scalafix (semantic-rule artifacts over the same JDK with target-coupled semanticdb plus classpath wiring
   for semantic rules, decided under issue #490); exact-package plus shared-.NET-runtime route for CSharpier and Fantomas
@@ -266,7 +268,9 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   are check-only with the provisional sandbox-apply-and-diff fix flow. Versions qualified seed-only under issue #486
   (`scala/tests/fixtures/scala_dotnet_quality/pins.bzl` via `bazel run //tools/ci:scala_dotnet_defaults_qualification`
   over upstream built-in defaults with no hidden preset); digests stay observations, not pins,
-  recheck latest stable at implementation; adapters stay owned under #797 (successor to closed #417)
+  recheck latest stable at implementation; adapters qualified seed-only under #797
+  (`bazel run //tools/ci:scala_dotnet_adapters_qualification` with per-tool fixtures plus
+  `quality/adapter/src/parsers/` plus `quality/testdata` matrix cells)
   (see the Scala + .NET rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Native cohort (#798, successor to closed #418, provisional — no adapter claims `c`, `cpp`, or `go` yet):**
