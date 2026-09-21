@@ -35,15 +35,28 @@ dx_guards_contains docs/decisions/0026-rust-product-code.md "product boundary re
   'depcheck' \
   'SBOM/BCR' \
   'deploy launcher' \
-  'CI-drivers'
+  'CI-drivers' \
+  'ADR 0028'
 
-# Decision log indexes the boundary plus depcheck successor.
+# Deferred stance is accepted in ADR 0028 (Phase 6): CI drivers stay bash,
+# update.py stays Python, opportunistic migration only.
+dx_guards_contains docs/decisions/0028-deferred-ci-drivers-update.md "deferred stance record missing (want ADR 0028 Accepted with CI-drivers plus update.py)" \
+  '## Status' \
+  'Accepted.' \
+  'tools/ci' \
+  'quality/artifacts:update' \
+  '#667' \
+  'opportunistically'
+
+# Decision log indexes the boundary plus depcheck plus deferred successors.
 dx_guard_contains docs/decisions/README.md '0026-rust-product-code.md' "decision log lost ADR 0026 (want 0026-rust-product-code.md)"
 dx_guard_contains docs/decisions/README.md '0027-depcheck-rust.md' "decision log lost ADR 0027 (want 0027-depcheck-rust.md)"
+dx_guard_contains docs/decisions/README.md '0028-deferred-ci-drivers-update.md' "decision log lost ADR 0028 (want 0028-deferred-ci-drivers-update.md)"
 
-# Tool matrix links the boundary instead of restating it.
-dx_guards_contains docs/testing/tools.md "tool matrix lost the product boundary link (want ADR 0026 plus product_runtime_guards)" \
+# Tool matrix links the boundary plus deferred stance instead of restating them.
+dx_guards_contains docs/testing/tools.md "tool matrix lost the product boundary link (want ADR 0026 plus ADR 0028 plus product_runtime_guards)" \
   'ADR 0026' \
+  'ADR 0028' \
   'product_runtime_guards'
 
 # Direct product py_binary allowlist stays exact (4 targets): hermetic
@@ -184,14 +197,14 @@ else
   bad "depcheck Rust delivery regressed (want depcheck_lib plus rust_binary depcheck with no .py/sh harness per ADR 0027)"
 fi
 
-# update.py deferral stays py_binary until #667 decides otherwise.
-dx_guard_contains quality/artifacts/BUILD.bazel 'name = "update"' "update.py deferral lost (want quality/artifacts:update py_binary per ADR 0026)"
+# update.py deferral stays py_binary per ADR 0028 until #667 decides otherwise.
+dx_guard_contains quality/artifacts/BUILD.bazel 'name = "update"' "update.py deferral lost (want quality/artifacts:update py_binary per ADR 0028)"
 
-# CI drivers stay shell here (harness-wide migration owned by #667, not this umbrella).
+# CI drivers stay shell here per ADR 0028 (harness-wide migration owned by #667, not this umbrella).
 if [[ "$(ls tools/ci/*.sh 2>/dev/null | wc -l)" -ge 119 ]]; then
   ok
 else
-  bad "tools/ci driver count dropped below 119 (CI-driver stance defers to #667, not this umbrella)"
+  bad "tools/ci driver count dropped below 119 (CI-driver stance defers to #667 per ADR 0028, not this umbrella)"
 fi
 
 # Wiring: BUILD owns the harness target.

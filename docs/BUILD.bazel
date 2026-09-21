@@ -74,6 +74,8 @@ real_source_target(
         "decisions/0024-selective-update.md",
         "decisions/0025-migrate-upgrade-scope.md",
         "decisions/0026-rust-product-code.md",
+        "decisions/0027-depcheck-rust.md",
+        "decisions/0028-deferred-ci-drivers-update.md",
         "decisions/AGENTS.md",
         "decisions/README.md",
         "deploy/README.md",

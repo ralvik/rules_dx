@@ -203,6 +203,8 @@ product runtime is Rust and shell-free except
 generated deploy launchers plus the managed doctor shim. The Python/shell
 product boundary plus the migration umbrella lives in
 [ADR 0026](../decisions/0026-rust-product-code.md);
+the deferred CI-driver plus `update.py` stance lives in
+[ADR 0028](../decisions/0028-deferred-ci-drivers-update.md);
 `//tools/ci:product_runtime_guards` pins the allowlist and rejects new
 product `py_binary`/`sh_binary` without a decision.
 PowerShell port stays wont-fix under issue #750 (same bash-only reason:
