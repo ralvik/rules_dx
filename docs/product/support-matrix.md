@@ -238,7 +238,7 @@ delivery of this inventory. Admitted additional foundations are tracked in
 open work under #796-#800 (successors to closed #416-#420) with foundation mappings
 qualified seed-only under closed #476-#489;
 remaining feasibility detail stays in the
-[feasibility review](#additional-v1-foundations) for qualification.
+[feasibility review](#initial-feasibility-review) for qualification.
 Swift is an evidence-backed v1 exclusion, not a pending assessment. Effort
 is estimated from qualification evidence as
 each tracked item lands; no person-hour figures are frozen here.
