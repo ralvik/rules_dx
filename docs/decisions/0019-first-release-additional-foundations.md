@@ -5,7 +5,7 @@
 Date: 2026-09-08.
 
 Accepted. Records the scope dispositions summarized in the
-[support matrix](../product/support-matrix.md#candidate-disposition-status).
+[support matrix](../product/support-matrix.md#additional-v1-foundations).
 It complements [ADR 0016](0016-broad-first-release.md), which sets direction
 but approves no milestone by itself.
 
@@ -27,7 +27,7 @@ The following dispositions are v1 scope decisions under the admission policy:
 - Admitted to v1: Java, Kotlin, C#, F#, Go, C/C++, and Scala application
   foundations. Each has an active Bzlmod-published upstream ruleset with a
   concrete dependency-lock and toolchain story, documented in the
-  [candidate review](../product/support-matrix.md#additional-language-foundation-candidate-review).
+  [candidate review](../product/support-matrix.md#initial-feasibility-review).
   Provisional upstreams, exact versions, mappings, and adapter work stay under
   ADR 0019/qualification; this record freezes only the admit outcome.
 - Deferred beyond v1: Ruby and PowerShell application foundations. Ruby's
