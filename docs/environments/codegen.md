@@ -297,5 +297,6 @@ concurrency, ownership, and retention requirements remain in
 Codegen deferred records with fixture evidence qualified seed-only under closed #506
 (`env/tests/fixtures/env_codegen/pins.bzl` via `bazel run //tools/ci:env_codegen_qualification`;
 admitted pairs, collector contracts, BEP output groups, projection, roots, and cold-warm with
-`env_codegen.expected` plus `roots_bep.txt`; platform plus consumer plus release evidence stays
-owned gap under #808; no Supported claim).
+`env_codegen.expected` plus `roots_bep.txt`; platform plus consumer plus release evidence qualified
+under #787 with per-required-host symlink-only plus refusal, adopt-consumer, and release checklist
+linkage; #751 plus #752 plus #753 stay open and out of scope for #787; no Supported claim).

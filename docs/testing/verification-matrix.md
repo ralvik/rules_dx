@@ -86,8 +86,10 @@ class by design — never silently under the standard dogfood gates.
   Windows fallback, standalone, signing/trust, plus bootstrap/fidelity/
   stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with WP1-WP5 plus
   `env/tests/fixtures/env_codegen/pins.bzl` plus `env_codegen.expected`
-  plus `roots_bep.txt`; platform plus consumer plus release evidence stays
-  owned gap; no Supported claim).
+  plus `roots_bep.txt`; platform plus consumer plus release evidence qualified
+  under #787 with per-required-host symlink-only plus refusal, adopt-consumer,
+  and release checklist linkage; #751 plus #752 plus #753 stay open and out of
+  scope for #787; no Supported claim).
 - **Non-dogfed execution plan**: the cohorts that never run under the
   standard dogfood gates each have an explicit path, qualified seed-only
   under #508 (`bazel run //tools/ci:non_dogfed_qualification` with
@@ -379,7 +381,7 @@ CI only, no Supported claim).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`, `product_runtime_guards` 26/26,
-`env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 84/84 (adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift green: IR plus planning plus per-language adapter runs with pins plus goldens under #779 plus Bazel-cached extract to render with mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel outputs only under #780 plus byte-identical rebuild proof under #781 plus link/reference completeness with no dangling targets under #782 plus guide prose with guide-step CI wiring with every step executed and no unexecuted steps under #783 plus first-hour timing proof one-shot per ADR 0022 with no CI timing budget under #784 plus per-release pin-bump plus drift process with no IR snapshot update under #785; no owned gaps remain with no working site claimed),
+`env_codegen_qualification` 44/44, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 84/84 (adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift green: IR plus planning plus per-language adapter runs with pins plus goldens under #779 plus Bazel-cached extract to render with mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel outputs only under #780 plus byte-identical rebuild proof under #781 plus link/reference completeness with no dangling targets under #782 plus guide prose with guide-step CI wiring with every step executed and no unexecuted steps under #783 plus first-hour timing proof one-shot per ADR 0022 with no CI timing budget under #784 plus per-release pin-bump plus drift process with no IR snapshot update under #785; no owned gaps remain with no working site claimed),
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `cpp_snapshot_qualification` 17/17, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
