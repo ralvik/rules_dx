@@ -1,0 +1,7 @@
+# Invented distributed-tier root for `notice_demo`.
+# Derived from the `dx audit license` audited-inventory shape
+# (`package|set|version|license|text`): the two entries below require
+# reproduction (MIT plus Apache-2.0 family), so the bundling action
+# must carry their words into the aggregated NOTICE.
+demo-lib-a|cargo|1.0.0|MIT|notice_demo_a.txt
+demo-lib-b|npm|2.3.4|Apache-2.0|notice_demo_b.txt

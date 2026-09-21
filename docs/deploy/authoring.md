@@ -236,7 +236,9 @@ There is no checksum-only fallback: a sha256 alone is not proof of
 publisher identity and is rejected. Verification runs before any install
 or exec; on failure nothing is installed and the binary never executes.
 SBOM (Syft/CycloneDX) bundles verify through the same cosign path when
-passed as `--sbom`. BCR needs no signing (archive `source.json` +
+passed as `--sbom`. Aggregated NOTICE bundles verify against the audited
+inventory manifest when passed as `--notice --notice-manifest`
+(`missing-notice-text` fails closed before install). BCR needs no signing (archive `source.json` +
 integrity hash + `presubmit.yml` + PR review). Seed-host standalone
 packaging is `//cli/cli:dx_standalone`; the wider matrix stays
 unqualified per the [distribution policy](../environments/environment.md#distribution).
@@ -264,6 +266,13 @@ tooling in `deploy/release/` with policy tests `bazel test
   push/PR the `sbom` job in `.github/workflows/ci.yml` (issue #612) builds
   plus verifies `//deploy/release:sbom_demo` and uploads the
   `sbom-provenance` artifact (publishes nothing).
+- NOTICE bundling (`notice.bzl`): aggregated NOTICE from the `dx audit
+  license` audited inventory via the hermetic `notice_gen` tool only
+  (deterministic bytes with byte-identical rebuilds, `missing-notice-text`
+  fails the action); verifies via `notice_verify_files` plus
+  `//deploy/install:dx_verify --notice`, and ships signed alongside the
+  SBOM bundle via `//deploy/release:signing_demo`. Fixture evidence is the
+  invented distributed-tier root `//deploy/release:notice_demo`.
 - Signing/attestation (`signing.bzl` plus Rust launch per ADR 0029,
   qualified under issue #459): Sigstore keyless (`cosign sign-blob
   --bundle` v2.4.1 pinned, bundle media type

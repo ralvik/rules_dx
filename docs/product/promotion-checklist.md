@@ -81,6 +81,11 @@ A cell promotes only with its required-host evidence landed:
   `//deploy/release:sbom_demo` with subject digest equal to artifact sha256,
   built plus verified plus uploaded as `sbom-provenance` on every push/PR via
   the `sbom` job in `.github/workflows/ci.yml` (#612).
+- NOTICE bundling: aggregated NOTICE from the audited license inventory via
+  `//deploy/release:notice_demo` (hermetic bundling with byte-identical
+  rebuilds, `missing-notice-text` fails closed), verified via
+  `//deploy/install:dx_verify --notice` and signed alongside the SBOM bundle
+  via `//deploy/release:signing_demo`.
 - Signing-first: Sigstore keyless `cosign sign-blob --bundle` plus GitHub
   attestations on the #311 trust root via
   `//deploy/release:signing_demo`; nothing is drafted or published unsigned.

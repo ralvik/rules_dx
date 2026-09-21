@@ -13,9 +13,11 @@
 //! The report is one SPDX 2.3 JSON document per invocation, with
 //! package IDs as package URLs, `DESCRIBES` relations from each audited
 //! root, and `CONTAINS` relations where the lock graph is known.
-//! Assembling and bundling an aggregated NOTICE artifact into releases
-//! is out of scope until the deferred packaging/publishing pipeline
-//! exists; collecting the texts now keeps the data ready.
+//! Aggregated NOTICE assembly for distributed-tier releases rides the
+//! packaging pipeline in `deploy/release/notice.bzl` (hermetic
+//! `notice_gen` over these same per-package inputs, verified by
+//! `notice_verify_files` plus `dx_verify --notice`); collecting the
+//! texts here keeps that pipeline fed with already-validated inputs.
 //!
 //! This module plans over injected notice records only. The shared
 //! `--report` format identifier and event mapping for SPDX remain
@@ -47,11 +49,11 @@ pub fn documents_per_invocation() -> usize {
     1
 }
 
-/// Aggregated NOTICE assembly stays out of scope until the deferred
-/// packaging/publishing pipeline exists. Pinned here so a future
-/// release integration cannot assume the artifact already ships.
+/// Aggregated NOTICE assembly rides the packaging pipeline in
+/// `deploy/release/notice.bzl`, which bundles these per-package inputs
+/// into releases with byte-identical rebuilds plus verification.
 pub fn aggregates_notice_artifact() -> bool {
-    false
+    true
 }
 
 /// SPDX identities the contract names as legally requiring notice-text
@@ -163,7 +165,7 @@ mod tests {
         assert_eq!(DESCRIBES_RELATIONSHIP, "DESCRIBES");
         assert_eq!(CONTAINS_RELATIONSHIP, "CONTAINS");
         assert_eq!(documents_per_invocation(), 1);
-        assert!(!aggregates_notice_artifact());
+        assert!(aggregates_notice_artifact());
     }
 
     #[test]

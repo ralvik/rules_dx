@@ -36,7 +36,7 @@ under issue #611.
 
 ## Steps
 
-Signing-first: step 4 signs plus attests before step 5 opens the draft
+Signing-first: step 5 signs plus attests before step 6 opens the draft
 release, so nothing is drafted or published unsigned. Pinned by
 `bazel test //deploy/release:all`.
 
@@ -59,33 +59,43 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
    bazel run //cli/cli:github_draft`, `RELEASE_SIGN_DRY_RUN=1 bazel run
    //deploy/release:signing_demo`, and `BCR_DRY_RUN=1 bazel run
    //deploy/release:bcr_demo`.
-2. Archive plus checksum: `bazel run //cli/cli:dx_standalone -- <outdir>`
-   (hermetic Rust archiver plus hasher, verified before copy).
-3. SBOM plus provenance: `bazel build //deploy/release:sbom_demo`
-   (SPDX 2.3 JSON plus SLSA v1 in-toto Statement v1, subject digest
-   equals artifact sha256; Syft/CycloneDX output verifies through the
-   same path when owners adopt it).
-4. Signing plus attestation: `bazel run //deploy/release:signing_demo`
-   without the dry-run env (Sigstore keyless `cosign sign-blob
-   --bundle` on the TUF trust root plus `gh attestation create`).
-5. Draft release: `bazel run //cli/cli:github_draft` with the real tag
-   (`--draft --verify-tag`; publish by editing the draft on GitHub
-   after approval). The draft ships the `dx` binary plus `man/dx.1`
-   (section 1, single page); install the page to `/usr/share/man/man1/dx.1`.
-6. BCR: `bazel run //deploy/release:bcr_demo` without the dry-run env
-   (opens the `source.json` plus integrity plus presubmit PR manually;
-   this program never pushes itself).
-7. GHCR (issue #460): dispatch `ghcr.yml` with `approve: true`, then `cosign sign
-   <digest>` plus attestation on the same trust root; record quotas and
-   update the scaffold digest reference. Base-image plus Bazelisk plus
-   Cosign plus TUF rebuild and rotation follows the manual on-demand
-   [GHCR rebuild plus signing rotation](../contributing/devcontainer.md#ghcr-rebuild-plus-signing-rotation)
-   contract (issue #647).
-8. Verify before install: `bazel run //deploy/install:dx_verify --
-   --binary <dx> --bundle <bundle> --identity <workflow-id> --issuer
-   https://token.actions.githubusercontent.com [--sbom <sbom>
-   --sbom-bundle <sbom-bundle>]`; checksum-only is rejected and failure
-   happens before install or exec.
+ 2. Archive plus checksum: `bazel run //cli/cli:dx_standalone -- <outdir>`
+    (hermetic Rust archiver plus hasher, verified before copy).
+ 3. SBOM plus provenance: `bazel build //deploy/release:sbom_demo`
+    (SPDX 2.3 JSON plus SLSA v1 in-toto Statement v1, subject digest
+    equals artifact sha256; Syft/CycloneDX output verifies through the
+    same path when owners adopt it).
+ 4. NOTICE bundling: `bazel build //deploy/release:notice_demo`
+    (aggregated NOTICE from the `dx audit license` audited inventory via
+    hermetic `notice_bundle` in `deploy/release/notice.bzl`: deterministic
+    bytes with byte-identical rebuilds, `missing-notice-text` fails the
+    action with an actionable diagnostic; verified by `notice_verify_files`
+    plus `dx_verify --notice` before install, signed alongside the SBOM
+    bundle via `//deploy/release:signing_demo`).
+ 5. Signing plus attestation: `bazel run //deploy/release:signing_demo`
+    without the dry-run env (Sigstore keyless `cosign sign-blob
+    --bundle` on the TUF trust root plus `gh attestation create`; signs the
+    SBOM pair plus the NOTICE bundle, so nothing ships unsigned).
+ 6. Draft release: `bazel run //cli/cli:github_draft` with the real tag
+    (`--draft --verify-tag`; publish by editing the draft on GitHub
+    after approval). The draft ships the `dx` binary plus `man/dx.1`
+    (section 1, single page); install the page to `/usr/share/man/man1/dx.1`.
+ 7. BCR: `bazel run //deploy/release:bcr_demo` without the dry-run env
+    (opens the `source.json` plus integrity plus presubmit PR manually;
+    this program never pushes itself).
+ 8. GHCR (issue #460): dispatch `ghcr.yml` with `approve: true`, then `cosign sign
+    <digest>` plus attestation on the same trust root; record quotas and
+    update the scaffold digest reference. Base-image plus Bazelisk plus
+    Cosign plus TUF rebuild and rotation follows the manual on-demand
+    [GHCR rebuild plus signing rotation](../contributing/devcontainer.md#ghcr-rebuild-plus-signing-rotation)
+    contract (issue #647).
+ 9. Verify before install: `bazel run //deploy/install:dx_verify --
+    --binary <dx> --bundle <bundle> --identity <workflow-id> --issuer
+    https://token.actions.githubusercontent.com [--sbom <sbom>
+    --sbom-bundle <sbom-bundle>] [--notice <NOTICE>
+    --notice-manifest <manifest>]`; checksum-only is rejected, a NOTICE
+    missing bundled entries or words fails with `missing-notice-text`,
+    and failure happens before install or exec.
 
 ## CI SBOM Upload
 
