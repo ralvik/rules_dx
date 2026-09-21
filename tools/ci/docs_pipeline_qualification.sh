@@ -11,11 +11,12 @@
 #   stub behind ADR 0020, plus fixture-scale renderer/site execution as
 #   Bazel-cached extract to aggregate to render (`docs/site`: mdBook-compatible
 #   prose plus generated API pages plus one search index, generated IR in
-#   Bazel outputs only, seed-only under #780), no Supported claim;
-# - open under #779 plus #781-#785 with honest records: 13 per-language adapter runs with
+#   Bazel outputs only, seed-only under #780), plus site-level byte-identical
+#   rebuild proof (two builds hashed and diffed, sorted outputs with no
+#   timestamps and no absolute paths, seed-only under #781), no Supported claim;
+# - open under #779 plus #782-#785 with honest records: 13 per-language adapter runs with
 #   pins/mappings (Scala TASTy proof spike first, Astro/MDX prose-only),
-#   site-level byte-identical rebuild proof (codec same-producer proof is
-#   delivered, site-level is not), link/reference completeness at the
+#   link/reference completeness at the
 #   pre-render boundary, guide prose plus guide-step CI wiring, first-hour
 #   timing proof, per-release pin-bump plus drift process, dx docs
 #   reintroduction per ADR 0006 build-vs-validation split, reusable-docs
@@ -61,6 +62,7 @@ site_demo_prose="docs/site/demo/demo_prose.md"
 site_demo_book="docs/site/demo/book.toml"
 site_pins="tools/ci/tests/fixtures/docs_site/pins.bzl"
 site_expected="tools/ci/tests/fixtures/docs_site/docs_site.expected"
+site_rebuild_expected="tools/ci/tests/fixtures/docs_site/rebuild.expected"
 site_fixture_build="tools/ci/tests/fixtures/docs_site/BUILD.bazel"
 
 # IR schema identity stays dx.documentation.v1 with v1 enums and messages.
@@ -211,29 +213,30 @@ else
 fi
 
 # Site build keeps the decided mdBook renderer with no replacement and the
-# delivered seed-only execution record under #780.
+# delivered seed-only execution plus rebuild records under #780 plus #781.
 if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
   grep -q -F -e 'There is no planned replacement' "$site" &&
   grep -q -F -e 'renderer/site execution delivered seed-only under #780' "$site" &&
-  grep -q -F -e 'Fixture-scale site execution is qualified seed-only; no published site is claimed' "$site" &&
+  grep -q -F -e 'site-level byte-identical rebuild proof delivered' "$site" &&
+  grep -q -F -e 'Fixture-scale site execution plus byte-identical rebuild proof are qualified seed-only' "$site" &&
   grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
   grep -q -F -e 'one DocsAggregate action' "$site" &&
   grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
   ok
 else
-  bad "site build lost its mdBook decision or delivered-execution record (#780)"
+  bad "site build lost its mdBook decision or delivered-execution plus rebuild record (#780 plus #781)"
 fi
 
-# Determinism stays a design requirement with byte-identical rebuild
-# evidence open, never an assumed property.
-if grep -q -F -e 'Outputs are designed to be deterministic' "$site" &&
-  grep -q -F -e 'Determinism is a' "$site" &&
-  grep -q -F -e 'design requirement; byte-identical rebuild evidence remains open' "$site" &&
-  grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is required' "$site" &&
+# Determinism is delivered seed-only with byte-identical rebuild proof,
+# never an assumed property.
+if grep -q -F -e 'Outputs are deterministic seed-only' "$site" &&
+  grep -q -F -e 'Determinism is delivered' "$site" &&
+  grep -q -F -e 'byte-identical rebuild proof under #781' "$site" &&
+  grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is delivered seed-only under' "$site" &&
   grep -q -F -e 'same_producer_requires_byte_equality' "$planning"; then
   ok
 else
-  bad "site determinism lost its design-requirement plus open-evidence record"
+  bad "site determinism lost its delivered-plus-proof record (#781)"
 fi
 
 # Laziness and freshness keep no-committed-IR plus no-source-write honesty
@@ -325,42 +328,45 @@ else
   bad "a docs adapter implementation appeared or the no-execution record drifted"
 fi
 
-# Contracts keep the gap list with delivered site execution under #780 and
-# no published-site honesty.
+# Contracts keep the gap list with delivered site execution under #780 plus
+# delivered rebuild proof under #781 and no published-site honesty.
 if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
   grep -q -F -e 'per-language adapter runs' "$readme" &&
   grep -q -F -e 'renderer and site execution delivered seed-only' "$readme" &&
   grep -q -F -e 'under #780' "$readme" &&
-  grep -q -F -e 'byte-identical rebuild proof' "$readme" &&
+  grep -q -F -e 'site-level byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
   grep -q -F -e 'link and reference completeness' "$readme" &&
   grep -q -F -e 'guide-step CI wiring' "$readme" &&
   grep -q -F -e 'first-hour timing proof' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "documentation README lost its #780 delivered plus remaining-gap list"
+  bad "documentation README lost its #780 plus #781 delivered plus remaining-gap list"
 fi
 
-# Roadmap keeps the execution-gap list with delivered site execution.
-if grep -q -F -e 'Docs-pipeline execution gaps stay open under #779 plus #781-#785' "$roadmap" &&
+# Roadmap keeps the execution-gap list with delivered site execution plus
+# delivered rebuild proof.
+if grep -q -F -e 'Docs-pipeline execution gaps stay open under #779 plus #782-#785' "$roadmap" &&
   grep -q -F -e 'adapter runs with pins' "$roadmap" &&
   grep -q -F -e 'renderer and site execution delivered seed-only' "$roadmap" &&
+  grep -q -F -e 'rebuild proof delivered seed-only under #781' "$roadmap" &&
   grep -q -F -e 'no working site claimed' "$roadmap"; then
   ok
 else
-  bad "roadmap lost its #780 delivered plus remaining-gap list"
+  bad "roadmap lost its #780 plus #781 delivered plus remaining-gap list"
 fi
 
 # Verification matrix keeps Docs Open with no Supported claim and no
-# working site, with site execution delivered.
-if grep -q -F -e 'stay open under #779 plus #781-#785' "$matrix" &&
+# working site, with site execution plus rebuild proof delivered.
+if grep -q -F -e 'stay open under #779 plus #782-#785' "$matrix" &&
   grep -q -F -e 'renderer/site execution delivered' "$matrix" &&
+  grep -q -F -e 'rebuild proof delivered seed-only under #781' "$matrix" &&
   grep -q -F -e 'no working site claimed' "$matrix" &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
   ok
 else
-  bad "verification matrix lost its Docs Open plus #780 delivered plus no-Supported gate"
+  bad "verification matrix lost its Docs Open plus #780 plus #781 delivered plus no-Supported gate"
 fi
 
 # Functional: schema major pins agree (proto v1, codec example, shared helper).
@@ -410,17 +416,18 @@ else
   bad "doc-ir/README lost its Scala-spike plus Astro/MDX prose-only record"
 fi
 
-# Site-level rebuild stays distinct from the delivered codec
-# same-producer proof
-# site-level does not).
+# Site-level rebuild is delivered alongside the codec same-producer proof
+# (both green seed-only under #781 for the fixture-scale site).
 if grep -q -F -e 'Same producer plus same inputs rebuild byte-identical' "$codec" &&
   grep -q -F -e 'same_producer_requires_byte_equality' "$planning" &&
   grep -q -F -e 'Same-producer rebuilds are byte-identical' "$docir" &&
-  grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is required' "$site" &&
-  grep -q -F -e 'design requirement; byte-identical rebuild evidence remains open' "$site"; then
+  grep -q -F -e 'Same-producer byte-identical rebuild proof' "$docir" &&
+  grep -q -F -e 'delivered seed-only under' "$docir" &&
+  grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is delivered seed-only under' "$site" &&
+  grep -q -F -e 'byte-identical rebuild proof under #781' "$site"; then
   ok
 else
-  bad "rebuild proof lost its codec-delivered versus site-level-open split"
+  bad "rebuild proof lost its codec-delivered plus site-level-delivered split (#781)"
 fi
 
 # ADR 0006 build-vs-validation split stays pinned for dx docs
@@ -535,14 +542,22 @@ else
   bad "docs/site demo lost its miniature symbols plus prose plus book inputs (#780)"
 fi
 
-# Fixture pins stay present with the #780 execution record.
-if [[ -f "$site_pins" && -f "$site_expected" && -f "$site_fixture_build" ]] &&
+# Fixture pins stay present with the #780 execution plus #781 rebuild
+# records.
+if [[ -f "$site_pins" && -f "$site_expected" && -f "$site_rebuild_expected" && -f "$site_fixture_build" ]] &&
   grep -q -F -e 'MDBOOK_VERSION = "0.4.43"' "$site_pins" &&
-  grep -q -F -e 'qualified seed-only under issue #780' "$site_pins" &&
-  grep -q -F -e '(issue #780)' "$site_expected"; then
+  grep -q -F -e 'qualified seed-only under issues #780 plus #781' "$site_pins" &&
+  grep -q -F -e 'REBUILD_PROOF = "two builds hashed and diffed byte-identical under issue #781"' "$site_pins" &&
+  grep -q -F -e 'REBUILD_OUTPUTS = "shard plus SUMMARY plus API plus records plus entry plus search index"' "$site_pins" &&
+  grep -q -F -e 'stay owned gaps under #782-#785' "$site_pins" &&
+  grep -q -F -e '(issue #780)' "$site_expected" &&
+  grep -q -F -e 'Byte-identical rebuild proof delivered seed-only (issue #781, two builds diffed)' "$site_expected" &&
+  grep -q -F -e 'Docs site byte-identical rebuild proof (issue #781)' "$site_rebuild_expected" &&
+  grep -q -F -e 'Two builds hashed and diffed' "$site_rebuild_expected" &&
+  grep -q -F -e 'rebuild.expected' "$site_fixture_build"; then
   ok
 else
-  bad "docs_site fixture missing (want pins.bzl plus BUILD.bazel plus expected with #780 pins)"
+  bad "docs_site fixture missing (want pins.bzl plus BUILD.bazel plus expected plus rebuild.expected with #780 plus #781 pins)"
 fi
 
 # Live proof: the site package builds green on the seed host.
@@ -578,6 +593,80 @@ if grep -q -F -e '<!-- rendered by mdBook 0.4.43 fixture -->' bazel-bin/docs/sit
   ok
 else
   bad "rendered site lost its pinned stamp plus demo symbols (want mdBook 0.4.43 plus demo IDs, #780)"
+fi
+
+# Site aggregate plus render keep the deterministic record (sorted, LF,
+# no timestamps, no absolute paths) under #781.
+if grep -q -F -e 'LC_ALL=C sort' "$site_bzl" &&
+  [[ "$(grep -c -F -e 'LC_ALL=C sort' "$site_bzl")" -ge "4" ]] &&
+  grep -q -F -e 'sorted JSON keys' "$site_bzl" &&
+  grep -q -F -e 'LF bytes' "$site_bzl" &&
+  grep -q -F -e 'no timestamps' "$site_bzl" &&
+  grep -q -F -e 'workspace-relative' "$site_bzl" &&
+  ! grep -E -e '(^|[^_a-zA-Z])date([^_a-zA-Z]|$)' "$site_bzl" | grep -q . &&
+  ! grep -q -F -e '/tmp/' "$site_bzl"; then
+  ok
+else
+  bad "docs/site aggregate/render lost its deterministic record (want LC_ALL=C sorted plus LF plus no timestamps plus workspace-relative, #781)"
+fi
+
+# Live proof: demo outputs stay sorted (shard IDs, API pages, search
+# records) under #781.
+if bazel build //docs/site:demo_extract //docs/site:demo_aggregate --noshow_progress >/dev/null 2>&1 &&
+  grep -h '^  id: ' bazel-bin/docs/site/demo_extract.ir.textproto | LC_ALL=C sort -c &&
+  grep '^## ' bazel-bin/docs/site/demo_aggregate_api.md | LC_ALL=C sort -c &&
+  python3 -c 'import json,sys; d=json.load(open("bazel-bin/docs/site/demo_aggregate_search_records.json")); urls=[r["url"] for r in d]; sys.exit(0 if urls==sorted(urls) else 1)'; then
+  ok
+else
+  bad "docs/site demo outputs lost their sorted order (want LC_ALL=C sorted shard plus API plus records, #781)"
+fi
+
+# Live proof: demo outputs carry no timestamps, absolute paths, or CR
+# bytes (LF plus workspace-relative only) under #781.
+if ! grep -q -F -e '/home/' bazel-bin/docs/site/demo_extract.ir.textproto bazel-bin/docs/site/demo_aggregate_api.md bazel-bin/docs/site/demo_render_index.html bazel-bin/docs/site/demo_render_searchindex.json 2>/dev/null &&
+  ! grep -q -F -e '/tmp/' bazel-bin/docs/site/demo_extract.ir.textproto bazel-bin/docs/site/demo_aggregate_api.md bazel-bin/docs/site/demo_render_index.html bazel-bin/docs/site/demo_render_searchindex.json 2>/dev/null &&
+  ! grep -E -e '[0-9]{4}-[0-9]{2}-[0-9]{2}T' bazel-bin/docs/site/demo_extract.ir.textproto bazel-bin/docs/site/demo_render_index.html 2>/dev/null | grep -q . &&
+  python3 -c 'import sys; files=["bazel-bin/docs/site/demo_extract.ir.textproto","bazel-bin/docs/site/demo_aggregate_api.md","bazel-bin/docs/site/demo_render_index.html"]; sys.exit(0 if all(b"\r" not in open(f,"rb").read() for f in files) else 1)'; then
+  ok
+else
+  bad "docs/site demo outputs gained timestamps, absolute paths, or CR bytes (want LF plus workspace-relative only, #781)"
+fi
+
+# Live proof: reversed inputs still sort to the same shard order
+# (order-independent determinism) under #781.
+dx_mkscratch rebuild_order_scratch "${TEST_TMPDIR:-/tmp}/docs-rebuild-order.XXXXXX"
+if LC_ALL=C sort "$site_demo_symbols" >"$rebuild_order_scratch/sorted.txt" &&
+  python3 -c 'import sys; lines=open(sys.argv[1]).read().splitlines(); print("\n".join(reversed(lines)))' "$site_demo_symbols" | LC_ALL=C sort >"$rebuild_order_scratch/reversed-sorted.txt" &&
+  diff -u "$rebuild_order_scratch/sorted.txt" "$rebuild_order_scratch/reversed-sorted.txt" >/dev/null &&
+  LC_ALL=C sort "$site_demo_symbols" | cut -d'|' -f1 | sed 's/^/  id: "python:demo:/;s/$/"/' >"$rebuild_order_scratch/want-ids.txt" &&
+  grep -h '^  id: ' bazel-bin/docs/site/demo_extract.ir.textproto >"$rebuild_order_scratch/got-ids.txt" &&
+  diff -u "$rebuild_order_scratch/want-ids.txt" "$rebuild_order_scratch/got-ids.txt" >/dev/null; then
+  ok
+else
+  bad "docs/site extract lost its order-independent sorted determinism (want reversed inputs to sort identically, #781)"
+fi
+
+# Live proof: identical inputs rebuild to byte-identical site outputs
+# (two builds hashed and diffed) under #781.
+dx_mkscratch rebuild_scratch "${TEST_TMPDIR:-/tmp}/docs-rebuild.XXXXXX"
+if bazel build //docs/site:demo_extract //docs/site:demo_aggregate //docs/site:demo_render --noshow_progress >/dev/null 2>&1; then
+  for f in bazel-bin/docs/site/demo_extract.ir.textproto bazel-bin/docs/site/demo_aggregate_SUMMARY.md bazel-bin/docs/site/demo_aggregate_api.md bazel-bin/docs/site/demo_aggregate_search_records.json bazel-bin/docs/site/demo_render_index.html bazel-bin/docs/site/demo_render_searchindex.json; do
+    dx_sha256_file "$f"
+  done | LC_ALL=C sort >"$rebuild_scratch/first.sums"
+  if bazel build //docs/site:demo_extract //docs/site:demo_aggregate //docs/site:demo_render --noshow_progress >/dev/null 2>&1; then
+    for f in bazel-bin/docs/site/demo_extract.ir.textproto bazel-bin/docs/site/demo_aggregate_SUMMARY.md bazel-bin/docs/site/demo_aggregate_api.md bazel-bin/docs/site/demo_aggregate_search_records.json bazel-bin/docs/site/demo_render_index.html bazel-bin/docs/site/demo_render_searchindex.json; do
+      dx_sha256_file "$f"
+    done | LC_ALL=C sort >"$rebuild_scratch/second.sums"
+    if diff -u "$rebuild_scratch/first.sums" "$rebuild_scratch/second.sums" >/dev/null; then
+      ok
+    else
+      bad "docs/site rebuild was not byte-identical (want two builds diffed identical, #781)"
+    fi
+  else
+    bad "docs/site rebuild second build failed (want green rebuild, #781)"
+  fi
+else
+  bad "docs/site rebuild first build failed (want green build, #781)"
 fi
 
 dx_test_summary "docs pipeline qualification harness"

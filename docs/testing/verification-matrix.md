@@ -64,20 +64,20 @@ class by design — never silently under the standard dogfood gates.
   per-language source audit in the [support matrix](../product/support-matrix.md#application-foundations).
 - **Docs pipeline**: per-language adapter runs, link/reference proofs,
    cache and determinism measurements, guide prose with
-   guide-step verification, and first-hour timing proof stay open under #779 plus #781-#785
+   guide-step verification, and first-hour timing proof stay open under #779 plus #782-#785
    (successors to closed #581, live successor to closed #421)
    (see [Documentation](../documentation/README.md#contracts)); renderer/site execution delivered
-   seed-only under #780 and no working site claimed.
-   IR plus planning plus site-execution records with fixture evidence qualified seed-only under closed #581
-   plus #780
+   seed-only under #780, rebuild proof delivered seed-only under #781, and no working site claimed.
+   IR plus planning plus site-execution plus rebuild records with fixture evidence qualified seed-only under closed #581
+   plus #780 plus #781
    (`bazel run //tools/ci:docs_pipeline_qualification`; versioned IR schema,
    codec roundtrip/parity/ordering/compat, dx_docs planning units, frozen
    contracts, removed stub behind ADR 0020, plus Bazel-cached extract to aggregate to render
    with mdBook-compatible prose plus generated API pages plus one search index and generated IR
-   in Bazel outputs only, with adapter runs,
-   rebuild proof, link completeness, guide-step wiring, timing proof,
-   and pin-bump/drift as owned gaps under #779 plus #781-#785). That qualification is
-   site-execution green, not full-pipeline green.
+   in Bazel outputs only plus byte-identical rebuild proof, with adapter runs,
+   link completeness, guide-step wiring, timing proof,
+   and pin-bump/drift as owned gaps under #779 plus #782-#785). That qualification is
+   site-execution plus rebuild green, not full-pipeline green.
 - **Environment/codegen**: deferred/unsupported records plus fixture
    evidence qualified seed-only under closed #506
   (`bazel run //tools/ci:env_codegen_qualification`; public protocol,
@@ -112,7 +112,7 @@ x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
  native (issue #414). `Delivered` here is verification-layer evidence only, not
 support-matrix promotion: it never promotes a support-matrix `Planned` cell to
 `Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under its owning tracker with no
-implementation claimed here. Owning trackers for table `Open` cells: Docs under #779 plus #781-#785 (successors to closed #581,
+implementation claimed here. Owning trackers for table `Open` cells: Docs under #779 plus #782-#785 (successors to closed #581,
 live successor to closed #421); Env/codegen under #787 plus onboarding #788 (successors to closed #506); Layer-2
 adapter-less plus regions plus framework-composition Depcheck under #796-#800 (successors to closed #416-#420, delivery
 qualified seed-only under closed #510) with taxonomy promotion under #802 (successor to closed #512) and Python future
@@ -377,7 +377,7 @@ CI only, no Supported claim).
 
 Green here (static guards on a clean tree, no full rebuild):
 `non_dogfed_paths`, `non_dogfed_qualification` 16/16, `supported_evidence_gate`, `distribution_closeout_guards`, `product_runtime_guards` 26/26,
-`env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 43/43 (site-execution green: IR plus planning plus Bazel-cached extract to render with mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel outputs only under #780; adapter runs, rebuild proof, link completeness, guide-step wiring, timing proof, and pin-bump/drift stay open under #779 plus #781-#785 with no working site claimed),
+`env_codegen_qualification` 32/32, `env_plugins_cgo_qualification` 16/16, `docs_pipeline_qualification` 48/48 (site-execution plus rebuild green: IR plus planning plus Bazel-cached extract to render with mdBook-compatible prose plus API pages plus one search index and generated IR in Bazel outputs only under #780 plus byte-identical rebuild proof under #781; adapter runs, link completeness, guide-step wiring, timing proof, and pin-bump/drift stay open under #779 plus #782-#785 with no working site claimed),
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 23/23, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `cpp_snapshot_qualification` 17/17, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,

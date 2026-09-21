@@ -40,11 +40,11 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   stays owner-gated human-run; dry-run-only rejected; no Supported claim;
   per-host release evidence #803-#807).
 * Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (#787, #788; successors to closed #506), coverage plus consumer plus quality (#802; successor to closed #512).
-* Docs-pipeline execution gaps stay open under #779 plus #781-#785 (successors to closed #581, live successor to closed #421; adapter runs with pins
-  and mappings, byte-identical rebuild proof, link and
+* Docs-pipeline execution gaps stay open under #779 plus #782-#785 (successors to closed #581, live successor to closed #421; adapter runs with pins
+  and mappings, link and
   reference completeness, guide prose with guide-step CI wiring, first-hour timing proof,
   and per-release pin-bump plus drift process; renderer and site execution delivered seed-only
-  under #780 and no working site claimed).
+  under #780, rebuild proof delivered seed-only under #781, and no working site claimed).
 * Robustness and hygiene: CI hygiene,
   warnings-as-errors, visibility hardening, cli-contract claims, human-run
   release path (signing-first, issue #458), signing stack + distribution
