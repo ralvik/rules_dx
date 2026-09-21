@@ -51,7 +51,8 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   images (separate workflow, issue #460), native bump loop as sole updater
   (decided, issue #461), automation policy (native-only).
 * V1 scope: `dx migrate` syntax + manifest selection delivered (issue #462, parsed CLI
-  plus major-release-only gate plus one manifest per major hop with fail-closed execution).
+  plus upgrade-only gate plus one manifest per major hop and one per full version pair for minor/patch
+  with fail-closed execution; upgrade scope issue #671 per ADR 0025).
   `dx run` multirun delivered (issue #463, sequential local-only multirun for explicit
   labels/patterns). No post-v1 bucket.
 * Rust library extraction decided internal-only under issue #469 (see ADR 0023; 34 internal crates, binaries-only boundary, no consumer migration).

@@ -97,10 +97,11 @@ pub(crate) const CODE_UPDATE_FAILED: &str = "update_failed";
 /// live runs widen exactly one requirement atomically.
 pub(crate) const CODE_BUMP_FAILED: &str = "bump_failed";
 /// Stable operational error code for live migrate failures:
-/// no migrate manifest exists yet (module at `0.0.0`, no major releases
+/// no migrate manifest exists yet (module at `0.0.0`, no releases
 /// cut), so every live run fails closed with no writes. Planning
 /// (`--dry-run`) succeeds; live runs select one manifest per major hop
-/// (`migrate-v<from>-to-v<to>.json`) once published.
+/// (`migrate-v<from>-to-v<to>.json`) or per full version pair for
+/// minor/patch upgrades once published.
 pub(crate) const CODE_MIGRATE_FAILED: &str = "migrate_failed";
 
 /// Execution environment: resolved workspace, process seams for the

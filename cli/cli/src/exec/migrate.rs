@@ -1,4 +1,4 @@
-//! Migrate command execution: major-release-only planning plus
+//! Migrate command execution: upgrade-only planning plus
 //! fail-closed execution.
 
 use super::common::*;
@@ -11,13 +11,15 @@ use dx_output::{
 
 /// Runs `dx migrate --from <version> --to <version> [scope ...]`
 ///: validates the version pair through
-/// `dx_adopt::plan_migrate` (Cargo-flavor semver, major-release-only
+/// `dx_adopt::plan_migrate` (Cargo-flavor semver, upgrade-only
 /// gate, one manifest per major hop
-/// `migrate-v<from_major>-to-v<to_major>.json`), then fails closed
+/// `migrate-v<from_major>-to-v<to_major>.json` plus one manifest per
+/// full version pair for minor/patch upgrades
+/// `migrate-v<from>-to-v<to>.json`), then fails closed
 /// because no manifests exist yet (module at `0.0.0`, no releases
 /// cut). `--dry-run` plans without touching the tree; live execution
 /// reports `migrate_failed` (exit 1) with no writes. Usage errors
-/// (missing `--from`/`--to`, non-semver, non-major bumps) exit `2`
+/// (missing `--from`/`--to`, non-semver, downgrades/equal versions) exit `2`
 /// before any write.
 pub(crate) fn execute_migrate(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
@@ -87,7 +89,7 @@ pub(crate) fn execute_migrate(invocation: &Invocation, env: Env<'_>) -> i32 {
         err,
         CODE_MIGRATE_FAILED,
         &format!(
-            "no migrate manifest {} yet (module at 0.0.0, no major releases cut)",
+            "no migrate manifest {} yet (module at 0.0.0, no releases cut)",
             plan.manifest
         ),
     )
@@ -168,7 +170,7 @@ mod tests {
     }
 
     #[test]
-    fn missing_versions_and_non_major_are_pre_exec() {
+    fn missing_versions_and_non_upgrades_are_pre_exec() {
         // Missing `--to` never reaches execution: `parse` rejects it
         // with `MissingValue` (exit 2) before any write.
         use crate::args::parse;
@@ -179,12 +181,22 @@ mod tests {
             parse(&args(&["migrate", "--from=1.2.3", "--dry-run"])),
             Err(crate::args::ArgsError::MissingValue { .. })
         ));
-        // Well-formed versions that fail the major gate reach execution
+        // Minor/patch upgrades plan like major hops (issue #671):
+        // dry-run succeeds with the full-version manifest.
+        let harness = Harness::new("migrate-minor");
+        let (code, out, err) = harness.run(&["migrate", "--from=1.2.3", "--to=1.3.0", "--dry-run"]);
+        assert_eq!(code, 0, "{err}");
+        assert!(out.contains("migrate-v1.2.3-to-v1.3.0.json"), "{out}");
+        // Well-formed versions that fail the upgrade gate reach execution
         // and fail pre-exec with the stable gate diagnostic.
-        let harness = Harness::new("migrate-nonmajor");
-        let (code, _, err) = harness.run(&["migrate", "--from=1.2.3", "--to=1.3.0", "--dry-run"]);
+        let harness = Harness::new("migrate-downgrade");
+        let (code, _, err) = harness.run(&["migrate", "--from=2.0.0", "--to=1.0.0", "--dry-run"]);
         assert_eq!(code, 2, "{err}");
-        assert!(err.contains("major-release-only"), "{err}");
+        assert!(err.contains("upgrade-only"), "{err}");
+        let harness = Harness::new("migrate-equal");
+        let (code, _, err) = harness.run(&["migrate", "--from=1.2.3", "--to=1.2.3", "--dry-run"]);
+        assert_eq!(code, 2, "{err}");
+        assert!(err.contains("upgrade-only"), "{err}");
         let harness = Harness::new("migrate-badsemver");
         let (code, _, err) = harness.run(&["migrate", "--from=abc", "--to=2.0.0", "--dry-run"]);
         assert_eq!(code, 2, "{err}");

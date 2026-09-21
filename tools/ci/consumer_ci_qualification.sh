@@ -281,20 +281,23 @@ else
 fi
 
 # dx migrate syntax plus manifest selection delivered with fail-closed execution honesty.
-if grep -q -F -e 'pub fn migrate_is_major_bump' "$migrate_rs" &&
+if grep -q -F -e 'pub fn migrate_is_upgrade' "$migrate_rs" &&
+  grep -q -F -e 'pub fn migrate_is_major_bump' "$migrate_rs" &&
   grep -q -F -e 'pub fn migrate_manifest_name' "$migrate_rs" &&
+  grep -q -F -e 'pub fn migrate_manifest_name_full' "$migrate_rs" &&
   grep -q -F -e 'pub fn plan_migrate' "$migrate_rs" &&
-  grep -q -F -e 'migrate_is_major_release_only' "$migrate_rs" &&
+  grep -q -F -e 'migrate_upgrade_gate_accepts_any_upgrade' "$migrate_rs" &&
   grep -q -F -e 'migrate_manifest_selection_is_mechanical' "$migrate_rs" &&
   grep -q -F -e 'Migrate,' cli/cli/src/args/command.rs &&
   grep -q -F -e 'execute_migrate' cli/cli/src/exec/migrate.rs &&
   grep -q -F -e 'migrate_failed' cli/cli/src/exec/migrate.rs &&
   grep -q -F -e 'delivered CLI' "$migrate_doc" &&
   grep -q -F -e 'No manifests exist yet' "$migrate_doc" &&
-  grep -q -F -e 'migrate-v<from_major>-to-v<to_major>.json' "$migrate_doc"; then
+  grep -q -F -e 'migrate-v<from_major>-to-v<to_major>.json' "$migrate_doc" &&
+  grep -q -F -e 'migrate-v<from>-to-v<to>.json' "$migrate_doc"; then
   ok
 else
-  bad "dx migrate syntax plus manifest selection lost (major-bump plus manifest plus CLI plus fail-closed doc)"
+  bad "dx migrate syntax plus manifest selection lost (upgrade plus manifest plus CLI plus fail-closed doc)"
 fi
 
 # dx run multirun delivered: sequential, local-only, single plus multi.

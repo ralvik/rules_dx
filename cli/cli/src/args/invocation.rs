@@ -58,7 +58,7 @@ pub struct Invocation {
     pub configured: bool,
     /// `dx migrate --from <version>`: source version (Migrate only).
     pub from: Option<String>,
-    /// `dx migrate --to <version>`: target major-release version
+    /// `dx migrate --to <version>`: target version
     /// (Migrate only).
     pub to: Option<String>,
 }

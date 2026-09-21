@@ -207,7 +207,7 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Major-release migration: `--from`/`--to`
+        // Upgrade migration: `--from`/`--to`
         // versions through `dx_adopt::plan_migrate`, never the quality
         // aspect pipeline and no standard reports. Live execution
         // fails closed until the first manifest lands.

@@ -109,7 +109,7 @@ impl Command {
     /// (Gitleaks secrets, 24h advisory, local vuln matching, SPDX 2.3);
     /// update and bump are mutating without confirmation with live resolver
     /// backends, and bump widens exactly one requirement explicitly.
-    /// `migrate` is not audit/update: it plans major-release rewrites
+    /// `migrate` is not audit/update: it plans upgrade rewrites
     /// through `dx_adopt::plan_migrate` over `--from`/`--to` versions
     /// with its own fail-closed execution.
     pub fn is_audit_update(self) -> bool {
@@ -252,7 +252,7 @@ impl Command {
             Command::Clean => "prune unselected managed state (no scopes)",
             Command::Update => "update dependencies per set through qualified resolvers (mutating without confirmation; --check is the preset stale gate)",
             Command::Bump => "widen one declared requirement to a new version (explicit; mutating without confirmation)",
-            Command::Migrate => "rewrite breaking changes across major releases (major-release-only; mutating by default; --dry-run plans without writes)",
+            Command::Migrate => "rewrite breaking changes across releases (upgrade-only; mutating by default; --dry-run plans without writes)",
             Command::Codegen => "collect codegen outputs with atomic commit (mutating managed state)",
             Command::Env => "collect the managed development environment (mutating managed state)",
             Command::Setup => "collect setup outputs with atomic commit (mutating managed state)",
