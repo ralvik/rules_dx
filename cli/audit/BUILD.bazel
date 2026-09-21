@@ -36,6 +36,7 @@ dx_rust_crate(
     ],
     extra_deps = ["//cli/digest:dx_digest"],
     deps = [
+        "cargo-lock",
         "chrono",
         "packageurl",
         "regex",

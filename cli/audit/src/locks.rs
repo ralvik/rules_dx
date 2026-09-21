@@ -63,54 +63,49 @@ use regex::Regex;
 use crate::vuln::LockedPackage;
 
 /// Parse one `Cargo.lock` (TOML) into assessable locked packages for the
-/// `cargo` set. Registry packages become assessable entries; `git+`
-/// sources become `is_git` incomplete markers; path-only workspace members
-/// (no `source`) are skipped as first-party.
+/// `cargo` set via the upstream `cargo-lock` crate (RustSec, V1/V2/V3/V4).
+/// Registry packages (including sparse registries) become assessable
+/// entries; `git` sources become `is_git` incomplete markers via
+/// `SourceId::is_git`; path-only workspace members (`None` source) and
+/// explicit `path` sources are skipped as first-party. Missing or
+/// malformed fields fail closed through the crate's structured errors,
+/// never silent skips.
 pub fn parse_cargo_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
-    let value: toml::Value =
-        toml::from_str(text).map_err(|error| format!("invalid Cargo.lock: {error}"))?;
-    let packages = value
-        .get("package")
-        .and_then(|value| value.as_array())
-        .ok_or_else(|| "invalid Cargo.lock: missing [[package]]".to_owned())?;
+    let lockfile: cargo_lock::Lockfile = text
+        .parse()
+        .map_err(|error: cargo_lock::Error| format!("invalid Cargo.lock: {error}"))?;
+    if lockfile.packages.is_empty() {
+        return Err("invalid Cargo.lock: missing [[package]]".to_owned());
+    }
     let mut out = Vec::new();
-    for package in packages {
-        let name = package
-            .get("name")
-            .and_then(|value| value.as_str())
-            .unwrap_or("")
-            .trim();
-        let version = package
-            .get("version")
-            .and_then(|value| value.as_str())
-            .unwrap_or("")
-            .trim();
-        if name.is_empty() || version.is_empty() {
-            continue;
+    for package in &lockfile.packages {
+        let name = package.name.as_str().to_owned();
+        let version = package.version.to_string();
+        if name.trim().is_empty() || version.trim().is_empty() {
+            return Err("invalid Cargo.lock: empty package name or version".to_owned());
         }
-        let source = package
-            .get("source")
-            .and_then(|value| value.as_str())
-            .unwrap_or("")
-            .to_owned();
-        if source.is_empty() {
+        let Some(source) = &package.source else {
             // First-party workspace member (e.g. `dx_* 0.0.0`): skip, not
             // an upstream dependency with advisory identity.
             continue;
-        }
-        if source.contains("git+") {
+        };
+        if source.is_git() {
             out.push(LockedPackage {
-                name: name.to_owned(),
-                version: version.to_owned(),
+                name,
+                version,
                 set: "cargo".to_owned(),
                 is_git: true,
                 is_private: false,
             });
             continue;
         }
+        if source.is_path() {
+            // Explicit path source: first-party, not assessed.
+            continue;
+        }
         out.push(LockedPackage {
-            name: name.to_owned(),
-            version: version.to_owned(),
+            name,
+            version,
             set: "cargo".to_owned(),
             is_git: false,
             is_private: false,

@@ -11,7 +11,7 @@ fn cargo_lock_splits_registry_git_and_first_party() {
 name = "serde"
 version = "1.0.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abc"
+checksum = "0000000000000000000000000000000000000000000000000000000000000000"
 
 [[package]]
 name = "git-dep"
@@ -35,6 +35,51 @@ version = "0.0.0"
         .expect("git");
     assert!(git.is_git);
     assert!(!packages.iter().any(|package| package.name == "dx_audit"));
+}
+
+#[test]
+fn cargo_lock_sparse_registry_is_assessable_path_is_skipped() {
+    let text = r#"
+version = 4
+
+[[package]]
+name = "sparse-dep"
+version = "1.2.3"
+source = "sparse+https://index.crates.io/"
+checksum = "1111111111111111111111111111111111111111111111111111111111111111"
+
+[[package]]
+name = "path-dep"
+version = "0.1.0"
+source = "path+file:///tmp/path-dep"
+
+[[package]]
+name = "workspace-member"
+version = "0.0.0"
+"#;
+    let packages = parse_cargo_lock(text).expect("parses");
+    assert_eq!(packages.len(), 1);
+    let sparse = &packages[0];
+    assert_eq!(sparse.name, "sparse-dep");
+    assert!(!sparse.is_git && !sparse.is_private);
+    assert!(!packages.iter().any(|package| package.name == "path-dep"));
+    assert!(!packages
+        .iter()
+        .any(|package| package.name == "workspace-member"));
+}
+
+#[test]
+fn cargo_lock_malformed_fails_closed() {
+    assert!(parse_cargo_lock("not toml [[[ ").is_err());
+    assert!(parse_cargo_lock("version = 4\n").is_err());
+    let bad_checksum = r#"
+[[package]]
+name = "serde"
+version = "1.0.100"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abc"
+"#;
+    assert!(parse_cargo_lock(bad_checksum).is_err());
 }
 
 #[test]
