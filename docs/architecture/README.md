@@ -133,10 +133,14 @@ into it. See [Quality Sources and Applicability](../quality/quality-sources.md).
 
 ### Facade Twins (Post-Reorg Mapping)
 
-`cli/` holds the Rust implementation (27 crates, `dx_*` crate names stable) and
+`cli/` holds the Rust implementation (34 crates: 27 under `cli/` plus 5
+under `quality/` plus 2 under `generation/`, `dx_*` crate names stable) and
 `dx/` is the Starlark-only consumer-policy facade (`//dx:config`, `//dx:env`,
 `//dx:codegen`, `//dx:generate`), landed as the facade reorganization under issue #76 with visibility
-decisions recorded alongside. The move
+decisions recorded alongside. Only `//dx:generate` and `//dx:env` are
+executable workflows (Gazelle binary, installer binary); `//dx:codegen` and
+`//dx:config` are Accepted empty reservations (CLI selection identity,
+workspace-flag default) with a qualification guard, not executable targets. The move
 fixed the two true collisions (`dx/qual` → `cli/qualification`,
 `dx/docs` → `cli/docgen`); the facade labels below are unchanged.
 The reorganization is complete with no successor: `dx/` Rust to `cli/`, documentation IR to
@@ -149,7 +153,7 @@ hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
 
 | Facade label | Actual owner | Status |
 | --- | --- | --- |
-| `//dx:generate` / `//dx:generate_check` | Same Gazelle wiring, `mode=diff` only on the check twin (`dx/BUILD.bazel`) | Accepted |
+| `//dx:generate` / `//dx:generate_check` | Same Rust-only Gazelle wiring (`//gazelle/rust:gazelle`, `mode=diff` only on the check twin, `dx/BUILD.bazel`); other languages via per-language `//gazelle/<lang>:gazelle` until canonical composition. See [`dx generate`](../cli/commands/generate.md). | Accepted (Rust-only provisional; repo-wide promise in [scope](../product/scope.md) stays durable) |
 | `//dx:env` | Alias to `//cli/env:env` installer binary (`dx/BUILD.bazel`) | Accepted |
 | `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is the `dx_codegen_plan_aspect` plus `dx_codegen_plans` output group (frozen), effective roots on the frozen `//...` baseline (issue #506) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
 | `//dx:config` | Empty filegroup default for the `//config:workspace` label flag, failing fast until a consumer binds its typed workspace policy; typed per-family sections frozen in `//quality:policy.bzl` (the issue tracker) and `//quality:sources.bzl` (the issue tracker) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |

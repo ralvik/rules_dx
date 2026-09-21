@@ -7,7 +7,9 @@
 # while the real typed sections and plan collection live in their frozen
 # owners (`//quality:policy.bzl` for `//quality:sources.bzl` for
 # `//generation:codegen.bzl` plus `//cli/codegen` for, `//cli/roots`
-# for the `//...` baseline). Docs assert the same Accepted state.
+# for the `//...` baseline). Only `//dx:generate` and `//dx:env` are
+# executable workflows; `//dx:generate` is Rust-only until canonical
+# composition lands. Docs assert the same Accepted state.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:dx_facade_qualification`,
 # following //tools/ci:backlog_contracts.
@@ -57,10 +59,20 @@ fi
 
 # The canonical repository selection still resolves to the facade label.
 if grep -q -F -e 'pub const REPOSITORY_TARGET: &str = "//dx:codegen";' cli/codegen/src/lib.rs &&
-  grep -q -F -e 'pub const CODEGEN_REPOSITORY_TARGET: &str = "//dx:codegen";' cli/setup/src/lib.rs; then
+  grep -q -F -e 'pub const CODEGEN_REPOSITORY_TARGET: &str = "//dx:codegen";' cli/setup/src/lib.rs &&
+  grep -q -F -e 'pub const REPOSITORY_TARGET: &str = "//dx:env";' cli/env_plan/src/lib.rs &&
+  grep -q -F -e 'pub const ENV_REPOSITORY_TARGET: &str = "//dx:env";' cli/setup/src/lib.rs; then
   ok
 else
-  bad "CLI REPOSITORY_TARGET drifted from //dx:codegen"
+  bad "CLI REPOSITORY_TARGET drifted from //dx:codegen or //dx:env"
+fi
+
+# The env facade stays a bare alias to the installer binary (executable
+# workflow, not an empty reservation).
+if grep -E -e 'name = "env"' -A2 dx/BUILD.bazel | grep -q -F -e 'actual = "//cli/env:env"'; then
+  ok
+else
+  bad "//dx:env must stay an alias to //cli/env:env"
 fi
 
 # Rust and Starlark codegen constants still agree (frozen).
@@ -127,11 +139,75 @@ else
 fi
 
 # Generation contracts reference the frozen behind the facade identity.
-if grep -q -F -e 'issue #506' docs/environments/codegen.md &&
+if grep -q -F -e '#506' docs/environments/codegen.md &&
   grep -q -F -e '//dx:codegen' docs/environments/codegen.md; then
   ok
 else
-  bad "docs/environments/codegen.md lost its issue #506 plus //dx:codegen record"
+  bad "docs/environments/codegen.md lost its #506 plus //dx:codegen record"
+fi
+
+# The canonical generate twins stay Rust-only with diff-only on the check
+# twin: widening to another extension without this harness moving would
+# silently re-promise repo-wide execution.
+if grep -q -F -e 'gazelle = "//gazelle/rust:gazelle"' dx/BUILD.bazel &&
+  grep -E -e 'name = "generate_check"' -A3 dx/BUILD.bazel | grep -q -F -e 'mode = "diff"'; then
+  ok
+else
+  bad "dx/BUILD.bazel lost its Rust-only //dx:generate twins with diff-only check"
+fi
+
+# Per-language Gazelle binaries stay composable into the facade: every
+# first-party extension host keeps //dx visibility for canonical wiring.
+if ! grep -rl -e 'gazelle_binary' --include='BUILD.bazel' gazelle | while read -r f; do
+  case "$f" in
+    gazelle/mixed/BUILD.bazel) continue ;;
+  esac
+  grep -q -F -e '"//dx:__pkg__"' "$f" || echo "$f"
+done | grep -q .; then
+  ok
+else
+  bad "per-language gazelle_binary lost its //dx:__pkg__ visibility for canonical composition"
+fi
+
+# The facade docstring records the Rust-only generate scope, not a
+# repo-wide multi-language promise.
+if grep -q -F -e 'Rust-only repository default' dx/BUILD.bazel &&
+  grep -q -F -e 'per-language `//gazelle/<lang>:gazelle`' dx/BUILD.bazel &&
+  grep -q -F -e '//tools/ci:dx_facade_qualification' dx/BUILD.bazel; then
+  ok
+else
+  bad "dx/BUILD.bazel lost its Rust-only generate record with per-language pointer"
+fi
+
+# Architecture owns the 34-crate inventory (27 cli plus 5 quality plus 2
+# generation) with the binaries-only boundary: the old 27-crate line
+# silently dropped the quality/generation owners.
+if grep -q -F -e '34 crates: 27 under `cli/` plus 5' docs/architecture/README.md &&
+  grep -q -F -e 'under `quality/` plus 2' docs/architecture/README.md; then
+  ok
+else
+  bad "docs/architecture/README.md lost its 34-crate inventory record"
+fi
+
+# Architecture distinguishes executable workflows from empty reservations:
+# only generate/env execute, codegen/config reserve.
+if grep -q -F -e 'Only `//dx:generate` and `//dx:env` are' docs/architecture/README.md &&
+  grep -q -F -e 'not executable targets' docs/architecture/README.md; then
+  ok
+else
+  bad "docs/architecture/README.md lost its executable-vs-reservation facade record"
+fi
+
+# Architecture and the generate contract record the Rust-only canonical
+# wiring with the per-language escape hatch (repo-wide promise stays
+# durable in scope).
+if grep -q -F -e 'Same Rust-only Gazelle wiring' docs/architecture/README.md &&
+  grep -q -F -e 'per-language `//gazelle/<lang>:gazelle`' docs/architecture/README.md &&
+  grep -q -F -e 'Provisional: the canonical target currently' docs/cli/commands/generate.md &&
+  grep -q -F -e 'per-language `//gazelle/<lang>:gazelle`' docs/cli/commands/generate.md; then
+  ok
+else
+  bad "generate docs lost their Rust-only canonical record with per-language pointer"
 fi
 
 dx_test_summary "dx facade qualification harness"

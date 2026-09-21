@@ -27,11 +27,14 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:public"])
 
-# Canonical public generation workflow: repository-wide
-# default with scoped traversal from resolved scope. The check
-# twin shares the language wiring with upstream `-mode diff` encoded in
+# Canonical public generation workflow: Rust-only repository default
+# with scoped traversal from resolved scope. Other languages use their
+# per-language `//gazelle/<lang>:gazelle` binary until canonical composition
+# lands. Contract: `docs/cli/commands/generate.md`. The check
+# twin shares the Rust wiring with upstream `-mode diff` encoded in
 # canonical-target wiring (dispatch): same rewrite and intended
-# manifest, no workspace writes, nonzero exit on changes.
+# manifest, no workspace writes, nonzero exit on changes. Guard:
+# `//tools/ci:dx_facade_qualification`.
 gazelle(
     name = "generate",
     gazelle = "//gazelle/rust:gazelle",
