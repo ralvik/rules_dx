@@ -352,6 +352,40 @@ default; registry credentials come from env only, never from BUILD. The
 `ghcr.yml` workflow stays the GHCR route until this macro qualifies as its
 successor. Deploy targets live next to the image tar they publish.
 
+## Path M: `octopus_deploy` (accepted)
+
+The ninth deploy macro (`deploy/rules/octopus.bzl`) is deploy
+automation, not a language registry publish: it pushes one
+`archive_deploy` tarball to the Octopus built-in feed and creates a
+release, with a local-first Python publisher, no shell, no `sh_binary`:
+
+```starlark
+load("@rules_dx//deploy/rules:octopus.bzl", "octopus_deploy")
+
+octopus_deploy(
+    name = "octopus_demo",
+    package = ":release_demo_archive",
+    project = "octopus_demo",
+    channel = "Default",
+    deploy_to = ["Production"],
+)
+```
+
+`bazel run //deploy/rules:octopus_demo` (or `dx deploy
+//deploy/rules:octopus_demo`) builds a local package-drop directory
+(`<name>-drop/` holding the pinned `.tar.gz`, an Octopus feed is just
+files) plus `would-run.txt` with the `create-release --project
+--channel` manifest and verifies bytes via sha256, publishing nothing.
+Pass an output directory after `--` to choose where the drop lands
+(default: `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). The deploy
+program is a `py_binary` on the managed Python 3.12 toolchain only,
+with pinned `data` plus the Python runfiles library. The payload is
+always an `archive_deploy` output; Octopus never builds. Live `push`
+plus `create-release` runs only with `OCTOPUS_PUBLISH_LIVE=1`,
+`OCTOPUS_URL`, `OCTOPUS_API_KEY`, and `OCTOPUS_PUBLISH_APPROVED=1`
+after explicit owner approval, never by default. Deploy targets live
+next to the archive they release.
+
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an
