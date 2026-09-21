@@ -11,20 +11,26 @@ use std::io::Write;
 
 use crate::args::Invocation;
 use dx_output::{
-    command_finished, command_started, status_event, write_event, FinishedCounts, OutputMode,
-    StatusEvent,
+    command_finished, command_started, error_event, status_event, write_event, FinishedCounts,
+    OutputMode, StatusEvent,
 };
 use dx_process::operational_code;
+
+/// Stable operational error code for `dx status` pin failures: any check
+/// reporting `error` (today pin mismatch) fails closed with this code in
+/// JSON mode so machine consumers match on code, not message text.
+// See: `docs/cli/output-protocol.md#operational-error`.
+pub(crate) const CODE_STATUS_PIN_MISMATCH: &str = "status_pin_mismatch";
 
 use super::summaries_suppressed;
 
 /// Runs `dx status`: prints the pin plus default status checks as NDJSON
 /// vs text (the only mode branch; `--output=diff` is rejected at parse
 /// time because status has no patch to emit). JSON streams
-/// `command_started` plus one `status` event per check plus
-/// `command_finished` via `write_event`; `--dry-run` plans without
-/// reading the pin or computing checks. Returns operational failure
-/// when any check reports `error`.
+/// `command_started` plus one `status` event per check plus an optional
+/// `error` (`status_pin_mismatch`) before `command_finished` via
+/// `write_event`; `--dry-run` plans without reading the pin or computing
+/// checks. Returns operational failure when any check reports `error`.
 pub(crate) fn execute_status(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -54,6 +60,10 @@ pub(crate) fn execute_status(
             let message = error.to_string();
             if invocation.output == OutputMode::Json {
                 if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+                    let _ = write_event(out, &event);
+                }
+                if let Ok(event) = error_event(CODE_STATUS_PIN_MISMATCH, &message, None, None, None)
+                {
                     let _ = write_event(out, &event);
                 }
                 let _ = write_event(
@@ -87,9 +97,20 @@ pub(crate) fn execute_status(
         }
         let failed = checks.iter().any(|c| c.status == "error");
         let code = if failed { operational_code() } else { 0 };
-        let _ = write_event(out, &command_finished(code, &FinishedCounts::default()));
         if failed {
             let _ = writeln!(err, "dx: status: pin mismatch (see hint)");
+            if let Ok(event) = error_event(
+                CODE_STATUS_PIN_MISMATCH,
+                "pin mismatch (see hint)",
+                None,
+                None,
+                None,
+            ) {
+                let _ = write_event(out, &event);
+            }
+        }
+        let _ = write_event(out, &command_finished(code, &FinishedCounts::default()));
+        if failed {
             return operational_code();
         }
         return 0;
@@ -200,6 +221,7 @@ mod tests {
         assert_eq!(kinds[0], "command_started");
         assert_eq!(kinds[kinds.len() - 1], "command_finished");
         assert!(kinds.contains(&"status"), "{kinds:?}");
+        assert!(!kinds.contains(&"error"), "{kinds:?}");
         assert_eq!(
             events[0]["dry_run"],
             serde_json::Value::Bool(false),
@@ -258,6 +280,20 @@ mod tests {
                     events.last().expect("finished")["exit_code"],
                     serde_json::json!(1)
                 );
+                let kinds: Vec<&str> = events
+                    .iter()
+                    .map(|event| event["event"].as_str().expect("event"))
+                    .collect();
+                assert_eq!(kinds[0], "command_started");
+                assert_eq!(kinds[kinds.len() - 1], "command_finished");
+                assert!(kinds.contains(&"status"), "{kinds:?}");
+                let error_index = kinds
+                    .iter()
+                    .position(|kind| *kind == "error")
+                    .expect("status failure emits error");
+                assert_eq!(kinds[error_index + 1..], ["command_finished"]);
+                let error = &events[error_index];
+                assert_eq!(error["code"], serde_json::json!("status_pin_mismatch"));
             }
         }
     }
@@ -299,6 +335,22 @@ mod tests {
                 assert_eq!(
                     events.last().expect("finished")["exit_code"],
                     serde_json::json!(1)
+                );
+                let kinds: Vec<&str> = events
+                    .iter()
+                    .map(|event| event["event"].as_str().expect("event"))
+                    .collect();
+                assert_eq!(kinds[0], "command_started");
+                assert_eq!(kinds[kinds.len() - 1], "command_finished");
+                assert!(!kinds.contains(&"status"), "{kinds:?}");
+                let error_index = kinds
+                    .iter()
+                    .position(|kind| *kind == "error")
+                    .expect("missing pin emits error");
+                assert_eq!(kinds[error_index + 1..], ["command_finished"]);
+                assert_eq!(
+                    events[error_index]["code"],
+                    serde_json::json!("status_pin_mismatch")
                 );
             }
         }
