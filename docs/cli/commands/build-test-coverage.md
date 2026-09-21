@@ -133,3 +133,8 @@ Precedence is explicit flag over deploy target `profile` attribute over
 command default. The deploy target `profile` attribute comes from
 `DxDeployInfo` (see [Deploy authoring](../../deploy/authoring.md));
 `DX_PROFILE=debug|dev|release` is forwarded to the deploy program.
+Flags plus forwarding are pinned by
+`cli/cli/tests/fixtures/build_profiles/` (`pins.bzl` plus
+`build_profiles.expected`) via
+`bazel run //tools/ci:build_profiles_qualification`
+(qualified seed-only under issue #814 with no Supported claim).

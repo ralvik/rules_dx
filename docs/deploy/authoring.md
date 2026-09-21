@@ -42,7 +42,11 @@ Profile vocabulary follows [ADR 0021](../decisions/0021-build-profiles.md).
 Precedence (explicit flag over target `profile` over command default)
 and the `DX_PROFILE` name are implemented as specified in the
 [`dx deploy` command](../cli/commands/build-test-coverage.md#dx-deploy),
-delivered under closed #178/#179/#180.
+delivered under closed #178/#179/#180. Flags plus forwarding are pinned by
+`cli/cli/tests/fixtures/build_profiles/` (`pins.bzl` plus
+`build_profiles.expected`) via
+`bazel run //tools/ci:build_profiles_qualification`
+(qualified seed-only under issue #814 with no Supported claim).
 
 ## Path C: `archive_deploy` (accepted)
 

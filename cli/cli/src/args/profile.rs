@@ -151,6 +151,17 @@ mod tests {
             assert_eq!(release.profile_flag(), Some(Profile::Release));
             assert_eq!(release.profile(), Profile::Release);
         }
+        // Deploy shares the flags with a release default (flag over default).
+        // See: `docs/cli/commands/build-test-coverage.md#build-profiles`.
+        let bare = parse(&args(&["deploy"])).expect("bare deploy parse");
+        assert_eq!(bare.profile_flag(), None);
+        assert_eq!(bare.profile(), Profile::Release);
+        let debug = parse(&args(&["deploy", "--debug"])).expect("deploy debug parse");
+        assert_eq!(debug.profile_flag(), Some(Profile::Debug));
+        assert_eq!(debug.profile(), Profile::Debug);
+        let release = parse(&args(&["deploy", "--release"])).expect("deploy release parse");
+        assert_eq!(release.profile_flag(), Some(Profile::Release));
+        assert_eq!(release.profile(), Profile::Release);
         let got = parse(&args(&["--debug", "build"])).expect("parse");
         assert_eq!(got.profile_flag(), Some(Profile::Debug));
         let got = parse(&args(&["test", "--release", "//a:t"])).expect("parse");
@@ -159,7 +170,7 @@ mod tests {
 
     #[test]
     fn profile_flags_reject_conflicts_and_foreign_commands() {
-        for command in ["build", "run", "test"] {
+        for command in ["build", "run", "test", "deploy"] {
             assert_eq!(
                 parse(&args(&[command, "--debug", "--release"])),
                 Err(ArgsError::ConflictingProfiles)
