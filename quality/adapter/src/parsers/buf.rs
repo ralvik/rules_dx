@@ -1,0 +1,233 @@
+//! Buf output grammar (protobuf format plus lint).
+//!
+//! Per-family module of [`crate::parsers`]: the pinned-shape contract
+//! and [`ParseError`] semantics live in the parent module docs.
+//!
+//! `buf lint --error-format=json` emits JSONL, one object per line with
+//! `path,start_line,start_column,end_line,end_column,type,message`
+//! (`COMPILE` for build errors; no SARIF in 1.71.0, so the native JSON
+//! parser is the faithful shape, never SARIF ingestion). `buf format
+//! --diff --exit-code` emits unified diff with `--- a/<path>` headers;
+//! `--write` applies formatting in place.
+//!
+//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+
+use serde::Deserialize;
+
+use super::{code_name, known, point, FileFinding, ParseError};
+use crate::{Finding, TextPosition, ToolSeverity};
+
+#[derive(Debug, Deserialize)]
+struct BufLintRecord {
+    path: String,
+    #[serde(default)]
+    start_line: Option<u64>,
+    #[serde(default)]
+    start_column: Option<u64>,
+    #[serde(default)]
+    end_line: Option<u64>,
+    #[serde(default)]
+    end_column: Option<u64>,
+    #[serde(rename = "type")]
+    kind: String,
+    message: String,
+}
+
+/// Parses `buf lint --error-format=json` JSONL stdout. `files` are the
+/// scratch-absolute paths the tool checked.
+///
+/// Clean is exit 0 with empty output. Findings exit 1 with at least one
+/// JSONL record; each record needs a nonempty `type` plus nonzero
+/// positions. Unknown paths and malformed lines fail closed. All
+/// findings are errors: buf lint has no severity field and fails the
+/// action on any finding.
+pub fn parse_buf_lint(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "buf";
+    let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut findings = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let record: BufLintRecord =
+            serde_json::from_str(trimmed).map_err(|err| ParseError::Json {
+                tool: TOOL,
+                detail: err.to_string(),
+            })?;
+        if record.kind.is_empty() || record.message.is_empty() {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("malformed record: {trimmed}"),
+            });
+        }
+        let (start_line, start_column) = match (record.start_line, record.start_column) {
+            (Some(line), Some(column)) => {
+                if line == 0 || column == 0 {
+                    return Err(ParseError::Shape {
+                        tool: TOOL,
+                        detail: format!("malformed start: {trimmed}"),
+                    });
+                }
+                (line, column)
+            }
+            _ => {
+                return Err(ParseError::Shape {
+                    tool: TOOL,
+                    detail: format!("missing start: {trimmed}"),
+                });
+            }
+        };
+        let end = match (record.end_line, record.end_column) {
+            (Some(line), Some(column)) => {
+                if line == 0 || column == 0 {
+                    return Err(ParseError::Shape {
+                        tool: TOOL,
+                        detail: format!("malformed end: {trimmed}"),
+                    });
+                }
+                Some(TextPosition { line, column })
+            }
+            (None, None) => None,
+            _ => {
+                return Err(ParseError::Shape {
+                    tool: TOOL,
+                    detail: format!("partial end: {trimmed}"),
+                });
+            }
+        };
+        let checked = known(TOOL, files, &record.path)?;
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: record.kind,
+                message: record.message,
+                severity: ToolSeverity::Error,
+                start: TextPosition {
+                    line: start_line,
+                    column: start_column,
+                },
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    if findings.is_empty() {
+        if code != Some(0) {
+            return Err(ParseError::Shape {
+                tool: TOOL,
+                detail: format!("exit {} with no findings", code_name(code)),
+            });
+        }
+    } else if code != Some(1) {
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("findings with exit {} (want 1)", code_name(code)),
+        });
+    }
+    Ok(findings)
+}
+
+/// Parses `buf format --diff --exit-code` stdout. `files` are the
+/// scratch-absolute paths the tool checked.
+///
+/// Clean is exit 0 with no diff markers. Dirty is exit 1 with unified
+/// diff markers (`--- ` plus `+++ `) mentioning at least one checked
+/// file; each mentioned file becomes one `1:1` format finding. Any
+/// other shape is a grammar mismatch, never a silent pass.
+pub fn parse_buf_format(
+    stdout: &[u8],
+    code: Option<i32>,
+    files: &[&str],
+) -> Result<Vec<FileFinding>, ParseError> {
+    const TOOL: &str = "buf";
+    let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
+        tool: TOOL,
+        detail: err.to_string(),
+    })?;
+    let mut mentioned: Vec<String> = Vec::new();
+    for line in text.lines() {
+        if let Some(path) = line.strip_prefix("--- ") {
+            let path = path.strip_prefix("a/").unwrap_or(path).trim();
+            if path.is_empty() || path == "/dev/null" {
+                continue;
+            }
+            if !mentioned.iter().any(|known| known == path) {
+                mentioned.push(path.to_owned());
+            }
+        }
+    }
+    if mentioned.is_empty() {
+        if code == Some(0) {
+            return Ok(Vec::new());
+        }
+        return Err(ParseError::Shape {
+            tool: TOOL,
+            detail: format!("exit {} with no diff markers", code_name(code)),
+        });
+    }
+    let mut findings = Vec::with_capacity(mentioned.len());
+    for path in mentioned {
+        let checked = known(TOOL, files, &path)?;
+        let (start, end) = point(1, 1);
+        findings.push(FileFinding {
+            file: checked.to_owned(),
+            finding: Finding {
+                tool_id: TOOL.to_owned(),
+                rule_id: String::new(),
+                message: "file is not formatted".to_owned(),
+                severity: ToolSeverity::Warning,
+                start,
+                end,
+                suggestions: Vec::new(),
+            },
+        });
+    }
+    Ok(findings)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const LINT: &str = "{\"path\": \"proto/hello.proto\", \"start_line\": 4, \"start_column\": 3, \"end_line\": 4, \"end_column\": 12, \"type\": \"PACKAGE_DIRECTORY_MATCH\", \"message\": \"Files with package foo must be in a directory foo.\"}\n";
+    const DIFF: &str = "--- a/proto/hello.proto\n+++ b/proto/hello.proto\n@@ -1 +1 @@\n-syntax = \"proto3\";\n+syntax = \"proto3\";\n";
+
+    #[test]
+    fn buf_lint_reports_jsonl_records() {
+        let findings =
+            parse_buf_lint(LINT.as_bytes(), Some(1), &["proto/hello.proto"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.rule_id, "PACKAGE_DIRECTORY_MATCH");
+        assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
+        let clean = parse_buf_lint(b"", Some(0), &["proto/hello.proto"]).expect("parsed");
+        assert!(clean.is_empty());
+        assert!(parse_buf_lint(LINT.as_bytes(), Some(0), &["proto/hello.proto"]).is_err());
+        assert!(parse_buf_lint(b"", Some(1), &["proto/hello.proto"]).is_err());
+        assert!(parse_buf_lint(LINT.as_bytes(), Some(1), &["other.proto"]).is_err());
+        assert!(parse_buf_lint(b"not json\n", Some(1), &["proto/hello.proto"]).is_err());
+        assert!(parse_buf_lint(&[0xff], Some(1), &["x"]).is_err());
+    }
+
+    #[test]
+    fn buf_format_reports_diff_files() {
+        let findings =
+            parse_buf_format(DIFF.as_bytes(), Some(1), &["proto/hello.proto"]).expect("parsed");
+        assert_eq!(findings.len(), 1);
+        assert_eq!(findings[0].finding.message, "file is not formatted");
+        let clean =
+            parse_buf_format(b"", Some(0), &["proto/hello.proto"]).expect("parsed");
+        assert!(clean.is_empty());
+        assert!(parse_buf_format(b"", Some(1), &["proto/hello.proto"]).is_err());
+        assert!(parse_buf_format(DIFF.as_bytes(), Some(1), &["other.proto"]).is_err());
+        assert!(parse_buf_format(&[0xff], Some(1), &["x"]).is_err());
+    }
+}

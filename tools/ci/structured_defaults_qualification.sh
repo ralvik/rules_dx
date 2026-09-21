@@ -56,8 +56,8 @@ baseline="docs/tools/tool-baseline.md"
 acquisition="docs/tools/tool-acquisition.md"
 integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
-build="tools/ci/BUILD.bazel"
-ci=".github/workflows/ci.yml"
+build="tools/ci/ci_targets_d.bzl"
+ci="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
@@ -100,39 +100,32 @@ else
   bad "pins.bzl lost its sole-policy plus rule-set resolutions plus rejections under issue #488"
 fi
 
-# No hidden structured native-config preset: no cohort binding exists in
-# the typed native-config rules (adapters run pinned upstream defaults until
-# checked-in policy qualifies against the native-config contract).
+# Structured native-config bindings delivered under #799 (checked-in
+# policy qualifies against the native-config contract; no hidden preset).
 cohort_config=""
-for tool in buf qmlformat qmllint qml protobuf; do
-  if grep -q -F -e "${tool}_config" "$native"; then
-    cohort_config="$cohort_config $tool:preset"
-  fi
+for tool in buf qmlformat qmllint; do
+  grep -q -F -e "${tool}_config" "$native" || cohort_config="$cohort_config $tool:missing"
 done
 if [[ -z "$cohort_config" ]]; then
   ok
 else
-  bad "native-config carries a hidden structured preset:$cohort_config"
+  bad "native-config lost structured bindings:$cohort_config (want all three under #799)"
 fi
 
-# No false adapter claim for the structured cohort: none of the cohort
-# tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (owned).
+# Adapters delivered under #799: all three cohort tools appear in REAL_ADAPTERS.
 cohort_claim=""
 for tool in buf qmlformat qmllint; do
-  if grep -q -F -e "\"$tool\":" "$adapters"; then
-    cohort_claim="$cohort_claim $tool:claimed"
-  fi
+  grep -q -F -e "\"$tool\":" "$adapters" || cohort_claim="$cohort_claim $tool:missing"
 done
 if [[ -z "$cohort_claim" ]]; then
   ok
 else
-  bad "false adapter claim for structured cohort:$cohort_claim"
+  bad "structured adapter delivery missing:$cohort_claim (want all three under #799)"
 fi
 
-# Classification-only today: protobuf/qml families carry no curated defaults,
-# no runner-matrix cells (claims land only with green adapter evidence
-#
+# Delivered: protobuf/qml families carry no curated defaults (claims
+# land only with green adapter evidence, opt-in like Scala/.NET) but do
+# carry runner-matrix cells under #799.
 cohort_curated=""
 for family in '"protobuf": {' '"qml": {'; do
   if grep -q -F -e "$family" "$curated"; then
@@ -140,63 +133,57 @@ for family in '"protobuf": {' '"qml": {'; do
   fi
 done
 if [[ -z "$cohort_curated" ]] &&
-  ! grep -q -F -e 'matrix_protobuf_' "$matrix" &&
-  ! grep -q -F -e 'matrix_qml_' "$matrix"; then
+  grep -q -F -e 'STRUCTURED_CASES' "$matrix"; then
   ok
 else
-  bad "curated or matrix claims a structured family before adapters land:$cohort_curated"
+  bad "curated claims a structured family or matrix lost cohort cells:$cohort_curated (want no curated, STRUCTURED_CASES under #799)"
 fi
 
 # Support matrix keeps the qualified structured versions plus rule-sets
-# with fixtures and harness; digests plus adapters stay under.
+# with fixtures and harness; adapters delivered under #799.
 if grep -q -F -e 'qualified seed-only under issue #488' "$support" &&
   grep -q -F -e 'structured_defaults_qualification' "$support" &&
   grep -q -F -e 'quality/tests/fixtures/structured_quality/pins.bzl' "$support" &&
   grep -q -F -e 'no hidden preset' "$support" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #419' "$support"; then
+  grep -q -F -e '`protobuf`/`qml` adapters delivered under #799' "$support"; then
   ok
 else
-  bad "support-matrix lost its #488 qualified structured versions plus rule-sets record with fixtures"
+  bad "support-matrix lost its #488 qualified structured versions plus rule-sets record with fixtures plus #799 delivery"
 fi
 
-# Support matrix resolves the buf STANDARD plus qml ini conflicts as
-# upstream built-in defaults (no auto-supplied preset).
-if grep -q -F -e 'STANDARD' "$support" &&
-  grep -q -F -e 'upstream built-in default' "$support" &&
-  grep -q -F -e 'no auto-supplied' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #488' "$support"; then
+# Support matrix records protobuf/qml delivered under #799, never
+# double-claimed.
+if grep -q -F -e '`protobuf`/`qml` adapters delivered under #799' "$support" &&
+  grep -q -F -e 'never double-claimed' "$support"; then
   ok
 else
-  bad "support-matrix lost its #488 buf STANDARD plus qml ini conflict resolution"
+  bad "support-matrix lost its #799 protobuf/qml delivered record"
 fi
 
 # Tool acquisition keeps the decided checksummed buf route with no
-# target-compiler context plus execution-platform laziness and no false
-# claim; versions qualified under, digests plus adapters stay pending
-# under.
+# target-compiler context plus execution-platform laziness, delivered
+# under #799; versions qualified under #488.
 if grep -q -F -e 'Decided route: `buf` takes the checksummed' "$acquisition" &&
   grep -q -F -e 'needs no target compiler context' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `protobuf` yet' "$acquisition" &&
+  grep -q -F -e 'with `protobuf` claimed via `buf`' "$acquisition" &&
   grep -q -F -e 'qualified seed-only under issue #488' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #419' "$acquisition"; then
+  grep -q -F -e '(delivered under #799' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided buf route with #488 versions plus #419 digests/adapters split"
+  bad "tool-acquisition lost its delivered buf route with #488 versions plus #799 delivery"
 fi
 
 # Tool acquisition keeps the decided Qt-last authoritative-toolchain route
-# for qmlformat/qmllint with distribution identity plus licensing plus
-# platform artifacts pending and no false claim; versions qualified under
-# , digests plus adapters stay pending under.
+# for qmlformat/qmllint, delivered under #799; versions qualified under
+# #488.
 if grep -q -F -e 'Decided route (Qt last)' "$acquisition" &&
   grep -q -F -e 'qmlformat and qmllint take the authoritative-toolchain route' "$acquisition" &&
-  grep -q -F -e 'exact Qt distribution identity, licensing, and platform' "$acquisition" &&
-  grep -q -F -e 'no adapter claiming `qml` yet' "$acquisition" &&
+  grep -q -F -e 'with `qml` claimed via' "$acquisition" &&
   grep -q -F -e 'qualified seed-only under issue #488' "$acquisition" &&
-  grep -q -F -e 'stay owned under issue #419' "$acquisition"; then
+  grep -q -F -e '(delivered under #799' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided Qt route with #488 versions plus #419 digests/adapters split"
+  bad "tool-acquisition lost its delivered Qt route with #488 versions plus #799 delivery"
 fi
 
 # Tool acquisition keeps the three research rows with byte-identity risk.
@@ -211,15 +198,15 @@ else
   bad "tool-acquisition lost a structured research row or byte-identity honesty:$cohort_research"
 fi
 
-# Tool integrations keep the structured adapter-input notes with open
-# parser work plus pinned versions (adapters still open under).
-if grep -q -F -e '**Structured cohort (issue #419' "$integrations" &&
-  grep -q -F -e 'no adapter claims `protobuf` or `qml` yet' "$integrations" &&
+# Tool integrations keep the delivered structured notes with pinned
+# versions (adapters delivered under #799).
+if grep -q -F -e '**Structured cohort (#799' "$integrations" &&
+  grep -q -F -e 'adapters `buf` (format plus lint `protobuf`)' "$integrations" &&
   grep -q -F -e 'qualified seed-only under issue #488' "$integrations" &&
-  grep -q -F -e 'adapters stay owned under issue #419' "$integrations"; then
+  grep -q -F -e 'adapters qualified seed-only under #799' "$integrations"; then
   ok
 else
-  bad "tool-integrations lost its structured notes with #488 versions plus #419 adapters split"
+  bad "tool-integrations lost its structured notes with #488 versions plus #799 delivery"
 fi
 
 # Native-configuration sole policy stands (no hidden presets authorized).
@@ -230,14 +217,12 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'structured_defaults_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #488' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:structured_defaults_qualification' "$verify" &&
+# Verification matrix owns the harness in battery plus Green.
+if grep -q -F -e ':structured_defaults_qualification' "$verify" &&
   grep -q -F -e '`structured_defaults_qualification` 17/17' "$verify"; then
   ok
 else
-  bad "verification-matrix lost its #488 structured quality qualified record"
+  bad "verification-matrix lost its #488 structured quality harness record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
@@ -245,7 +230,7 @@ if grep -q -F -e 'name = "structured_defaults_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:structured_defaults_qualification' "$ci"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the structured_defaults_qualification wiring (want target plus dogfood-freshness)"
+  bad "ci_targets or dogfood lost the structured_defaults_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the structured fixture loads on the seed host (no

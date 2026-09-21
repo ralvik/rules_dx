@@ -18,9 +18,10 @@ matrix cell; `spotbugs` lints `java` but is target-coupled (needs
 `JavaInfo` classes, dropped for provider-less fixtures), so it has no
 matrix cell. Scala plus C# plus F# cells below are opt-in adapters
 delivered under #797 (successor to closed #417), Java plus Kotlin cells
-are opt-in adapters delivered under #796 (successor to closed #416), and
+are opt-in adapters delivered under #796 (successor to closed #416),
 C plus C++ plus Go cells are opt-in adapters delivered under #798
-(successor to closed #418).
+(successor to closed #418), and Protobuf plus QML cells below are
+opt-in adapters delivered under #799 (successor to closed #419).
 
 Crate edition (issue #468): the two `edition_*` cells above pin the
 `--tool-edition` flow over the real toolchain rustfmt. The 2015 cell stays
@@ -160,14 +161,30 @@ so a single-edition rustfmt stays rejected.
 | `matrix_go_govet_pass` / `matrix_go_govet_fail` | lint (govet) | generated `matrix/govet_clean.go` / recorded text diagnostics |
 | `matrix_go_errcheck_pass` / `matrix_go_errcheck_fail` | lint (errcheck) | generated `matrix/errcheck_clean.go` / recorded text diagnostics |
 
+## Protobuf (`protobuf`: buf format plus lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_protobuf_format_pass` / `matrix_protobuf_format_fail` | format (buf) | generated `matrix/buf_clean.proto` / `matrix/buf_dirty.proto` |
+| `matrix_protobuf_lint_pass` / `matrix_protobuf_lint_fail` | lint (buf) | generated `matrix/buf_lint_clean.proto` / recorded buf JSONL |
+
+## QML (`qml`: qmlformat format, qmllint lint)
+
+| Case | Capability | Input |
+| --- | --- | --- |
+| `matrix_qml_format_pass` / `matrix_qml_format_fail` | format (qmlformat) | generated `matrix/qmlformat_clean.qml` / `matrix/qmlformat_dirty.qml` |
+| `matrix_qml_lint_pass` / `matrix_qml_lint_fail` | lint (qmllint) | generated `matrix/qmllint_clean.qml` / recorded qmllint JSON |
+
 ## Parser samples (issue #465)
 
 Every adapter-backed tool keeps a parser with pass (clean) plus fail (dirty)
 samples exercised as unit tests under `quality/adapter/src/parsers/` and pinned by
 `bazel run //tools/ci:parser_sample_qualification`: biome lint plus format,
-buildifier, checkstyle, clang_format, clang_tidy, clippy plus rustc via the shared rust diagnostics, cppcheck,
-csharpier, errcheck, eslint, fantomas, flake8, fsharplint, gofumpt, google-java-format, govet, ktfmt, ktlint,
-markdown_check, pmd, prettier, pydoclint, pylint, roslyn,
+buf lint plus format, buildifier, checkstyle, clang_format, clang_tidy,
+clippy plus rustc via the shared rust diagnostics, cppcheck, csharpier,
+errcheck, eslint, fantomas, flake8, fsharplint, gofumpt, google-java-format,
+govet, ktfmt, ktlint, markdown_check, pmd, prettier, pydoclint, pylint,
+qmlformat, qmllint, roslyn,
 ruff lint plus format, rustfmt, scalafix, scalafmt, shared SARIF for the
 JVM lint cohort plus spotbugs, staticcheck,
 taplo lint plus format, tsc, ty, vale. Recorded Clippy/rustc diagnostics stay
@@ -175,7 +192,10 @@ byte-identical to the parser unit samples (`quality/adapter/src/parsers/rust.rs`
 `tsc` keeps its adapter parser with pass plus fail samples but stays
 pipeline-only by design (target-coupled, no runner dispatch, no matrix cell).
 Roslyn keeps its SARIF parser with pass plus fail samples and runs delegated
-(per-pivot SARIF inputs, no spawn), like Clippy/rustc.
+(per-pivot SARIF inputs, no spawn), like Clippy/rustc. Buf lint plus qmllint
+keep their JSON parsers with pass plus fail samples and run delegated
+(recorded upstream diagnostics, no spawn) in the matrix, like Clippy/rustc;
+in production they spawn the pinned binaries.
 
 ## Adding a cell
 

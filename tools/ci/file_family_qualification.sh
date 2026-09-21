@@ -143,44 +143,46 @@ else
   bad "tool-acquisition lost a file-family delivery route (node/python/standalone)"
 fi
 
-# Tool acquisition keeps the decided buf route with no false adapter claim.
+# Tool acquisition keeps the decided buf route, delivered under #799.
 if grep -q -F -e 'Decided route: `buf` takes the checksummed' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `protobuf` yet' "$acquisition"; then
+  grep -q -F -e 'with `protobuf` claimed via `buf`' "$acquisition" &&
+  grep -q -F -e '(delivered under #799' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided buf route or no-claim honesty"
+  bad "tool-acquisition lost its delivered buf route under #799"
 fi
 
-# Tool acquisition keeps the qml authoritative-toolchain route with no false claim.
+# Tool acquisition keeps the qml authoritative-toolchain route, delivered under #799.
 if grep -q -F -e 'qmlformat and qmllint take the authoritative-toolchain route' "$acquisition" &&
-  grep -q -F -e 'no adapter claiming `qml` yet' "$acquisition"; then
+  grep -q -F -e 'with `qml` claimed via' "$acquisition" &&
+  grep -q -F -e '(delivered under #799' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its qml route or no-claim honesty"
+  bad "tool-acquisition lost its delivered qml route under #799"
 fi
 
-# Parity deferrals name owner plus frozen route for every file-family class.
+# Parity deferrals name owner plus frozen route for every remaining file-family class
+# (protobuf/qml delivered under #799, no longer deferred here).
 if grep -q -F -e '"css": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"html_template": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"protobuf": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"shell": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"text": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"yaml": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"cue": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"jsonnet": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"pkl": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"qml": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"terraform": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'PARITY_DEFERRED = {' "$parity"; then
   ok
 else
-  bad "parity deferrals lost a file-family owner/route (css/template/protobuf/shell/text/yaml/cue/jsonnet/pkl/qml/terraform)"
+  bad "parity deferrals lost a file-family owner/route (css/template/shell/text/yaml/cue/jsonnet/pkl/terraform)"
 fi
 
-# No false adapter claim for the deferred file-family tools (tool IDs only;
-# class==tool names like cue/pkl/terraform live in the taxonomy, not here).
+# No false adapter claim for the remaining deferred file-family tools (tool IDs only;
+# class==tool names like cue/pkl/terraform live in the taxonomy, not here;
+# buf/qmlformat/qmllint delivered under #799, no longer guarded here).
 file_claim=""
-for tool in buf qmlformat qmllint shfmt shellcheck yamlfmt yamllint keep-sorted keep_sorted djlint stylelint jsonnetfmt; do
+for tool in shfmt shellcheck yamlfmt yamllint keep-sorted keep_sorted djlint stylelint jsonnetfmt; do
   if grep -q -F -e "\"$tool\":" "$adapters"; then
     file_claim="$file_claim $tool:claimed"
   fi

@@ -5,11 +5,11 @@
 # owned gaps, without claiming Supported:
 # - delivered: every adapter-backed tool keeps a parser module with pinned
 #   pass (clean) plus fail (dirty) samples exercised as unit tests
-#   (`quality/adapter/src/parsers/*.rs`: biome lint plus format, buildifier,
-#   clang_format, clang_tidy, clippy plus rustc via the shared rust diagnostics,
+#   (`quality/adapter/src/parsers/*.rs`: biome lint plus format, buf lint plus format,
+#   buildifier, clang_format, clang_tidy, clippy plus rustc via the shared rust diagnostics,
 #   cppcheck, csharpier, errcheck, eslint,
 #   fantomas, flake8, fsharplint, gofumpt, govet, markdown_check, prettier, pydoclint, pylint,
-#   roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt, staticcheck, taplo lint
+#   qmlformat, qmllint, roslyn, ruff lint plus format, rustfmt, scalafix, scalafmt, staticcheck, taplo lint
 #   plus format, tsc, ty, vale);
 # - wiring: recorded Clippy/rustc diagnostics stay byte-identical between
 #   the parser unit samples and the Layer-2 matrix injected upstream
@@ -40,6 +40,9 @@ targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
 matrix="quality/testdata/runner_matrix_cases.bzl"
 matrix_rust="quality/testdata/runner_matrix_rust.bzl"
+ci="tools/ci/dogfood_freshness.sh"
+build="tools/ci/ci_targets_c.bzl"
+matrix_cases="quality/testdata/runner_matrix_cases.bzl"
 real_rs="quality/runner/src/real.rs"
 real_tests_b="quality/runner/src/real_tests_b.rs"
 
@@ -67,7 +70,7 @@ else
 fi
 
 # Verification matrix Green lists the harness count.
-if grep -q -F -e '`parser_sample_qualification` 42/42' "$verify"; then
+if grep -q -F -e '`parser_sample_qualification` 46/46' "$verify"; then
   ok
 else
   bad "verification-matrix Green lost parser_sample_qualification 23/23"
@@ -79,6 +82,13 @@ if grep -q -F -e 'name = "parser_sample_qualification"' "$targets" &&
   ok
 else
   bad "ci_targets or dogfood lost the parser_sample_qualification wiring (want target plus dogfood-freshness)"
+fi
+
+# CI wires the harness in dogfood-freshness.
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:parser_sample_qualification' "$ci"; then
+  ok
+else
+  bad "dogfood_freshness.sh lost the parser_sample_qualification step (want dogfood-freshness)"
 fi
 
 # Biome keeps lint plus format parsers with dirty plus clean samples.
@@ -220,7 +230,8 @@ if [[ -f "quality/adapter/src/parsers/tsc.rs" ]] &&
   grep -q -F -e 'TS1109' quality/adapter/src/parsers/tsc.rs &&
   grep -q -F -e 'tsc' quality/tools/typescript/BUILD.bazel &&
   ! grep -q -F -e '"tsc",' "$real_rs" &&
-  grep -q -F -e 'keeps an adapter parser' "$real_tests_b"; then
+  grep -q -F -e 'keeps an adapter parser' "$real_tests_b" &&
+  grep -q -F -e 'pipeline-only' "$real_rs"; then
   ok
 else
   bad "tsc lost its parser samples or pipeline-only wiring (parser plus no dispatch)"
@@ -423,6 +434,33 @@ if [[ -f "quality/adapter/src/parsers/errcheck.rs" ]] &&
   ok
 else
   bad "errcheck lost its text parser with diagnostics plus clean"
+fi
+
+# Buf keeps its JSONL plus diff parsers with records plus clean (issue #799).
+if [[ -f "quality/adapter/src/parsers/buf.rs" ]] &&
+  grep -q -F -e 'pub fn parse_buf_lint' quality/adapter/src/parsers/buf.rs &&
+  grep -q -F -e 'pub fn parse_buf_format' quality/adapter/src/parsers/buf.rs &&
+  grep -q -F -e 'PACKAGE_DIRECTORY_MATCH' quality/adapter/src/parsers/buf.rs; then
+  ok
+else
+  bad "buf lost its JSONL plus diff parsers with records plus clean"
+fi
+
+# qmlformat keeps its check parser with path plus clean samples (issue #799).
+if [[ -f "quality/adapter/src/parsers/qmlformat.rs" ]] &&
+  grep -q -F -e 'pub fn parse_qmlformat' quality/adapter/src/parsers/qmlformat.rs; then
+  ok
+else
+  bad "qmlformat lost its check parser with path plus clean samples"
+fi
+
+# qmllint keeps its JSON parser with diagnostics plus clean (issue #799).
+if [[ -f "quality/adapter/src/parsers/qmllint.rs" ]] &&
+  grep -q -F -e 'pub fn parse_qmllint' quality/adapter/src/parsers/qmllint.rs &&
+  grep -q -F -e 'unqualified' quality/adapter/src/parsers/qmllint.rs; then
+  ok
+else
+  bad "qmllint lost its JSON parser with diagnostics plus clean"
 fi
 
 # Runner-matrix doc owns the parser-sample backfill record.

@@ -68,10 +68,10 @@ aspects="quality/real_aspects.bzl"
 # REAL_CLASS_TO_FAMILY; adapter claim does not. (The `"tool": {` shape
 # matches adapter entries only: class==tool taxonomy rows like
 # `"cue": "cue"` carry a family string, never a capability map, so they
-# cannot match here. `protobuf`/`qml` tools stay owned and
+# cannot match here. `protobuf`/`qml` tools delivered under #799 and
 # are never claimed here either.)
 cohort_claim=""
-for tool in rubocop standardrb standard psscriptanalyzer cue jsonnetfmt pkl djlint stylelint modfmt terraform yamlfmt yamllint keep-sorted keep_sorted buf qmlformat qmllint; do
+for tool in rubocop standardrb standard psscriptanalyzer cue jsonnetfmt pkl djlint stylelint modfmt terraform yamlfmt yamllint keep-sorted keep_sorted; do
   if grep -q -F -e "\"$tool\": {" "$adapters"; then
     cohort_claim="$cohort_claim $tool:claimed"
   fi

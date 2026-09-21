@@ -15,6 +15,7 @@ load(":runner_matrix_jvm.bzl", "JVM_CASES")
 load(":runner_matrix_markdown.bzl", "MARKDOWN_CASES")
 load(":runner_matrix_scala_dotnet.bzl", "SCALA_DOTNET_CASES")
 load(":runner_matrix_native.bzl", "NATIVE_CASES")
+load(":runner_matrix_structured.bzl", "STRUCTURED_CASES")
 
 def runner_matrix_cases(name):
-    runner_matrix_suite(name, RUST_CASES + PYTHON_CASES + JS_CASES + TS_CASES + JSON_CASES + DATA_CASES + MARKDOWN_CASES + JVM_CASES + SCALA_DOTNET_CASES + NATIVE_CASES)
+    runner_matrix_suite(name, RUST_CASES + PYTHON_CASES + JS_CASES + TS_CASES + JSON_CASES + DATA_CASES + MARKDOWN_CASES + JVM_CASES + SCALA_DOTNET_CASES + NATIVE_CASES + STRUCTURED_CASES)

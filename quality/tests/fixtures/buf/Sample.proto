@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package fixtures.buf;
+
+message Sample {
+  string greet = 1;
+}

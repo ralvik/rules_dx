@@ -160,6 +160,15 @@
 //!   with single schema plus version; single-SARIF and merged-run rejected.
 //! * FSharpLint library NDJSON: one JSON record per line with rule plus
 //!   full range; console-parse rejected, exit 0 only, check-only.
+//! * Buf `lint --error-format=json`: stdout JSONL, one object per line
+//!   with `path,start_line,start_column,end_line,end_column,type,
+//!   message`; no SARIF, clean is empty on exit 0, findings exit 1.
+//! * Buf `format --diff --exit-code`: stdout unified diff with
+//!   `--- a/<path>` headers; exit 0 clean, exit 1 dirty.
+//! * qmlformat check: stdout one unformatted path per line; exit 0
+//!   clean, exit 1 dirty with one `1:1` finding per line.
+//! * qmllint `--json -`: stdout JSON `{diagnostics:[{file,line,
+//!   column,rule,message,severity}]}`; exit 0 clean, exit 1 dirty.
 //! * clang-format check: stdout unified diff with `--- a/<path>` headers;
 //!   exit 0 clean, exit 1 dirty with one `1:1` finding per header.
 //! * `gofumpt -d`: stdout unified diff with `--- a/<path>` headers;
@@ -189,6 +198,7 @@
 
 pub mod biome;
 pub mod buildifier;
+pub mod buf;
 pub mod checkstyle;
 pub mod clang_format;
 pub mod clang_tidy;
@@ -210,6 +220,8 @@ pub mod pmd;
 pub mod prettier;
 pub mod pydoclint;
 pub mod pylint;
+pub mod qmlformat;
+pub mod qmllint;
 pub mod roslyn;
 pub mod ruff;
 pub mod rust;
@@ -226,6 +238,7 @@ pub mod vale;
 
 pub use biome::{parse_biome_format, parse_biome_lint};
 pub use buildifier::parse_buildifier;
+pub use buf::{parse_buf_format, parse_buf_lint};
 pub use checkstyle::parse_checkstyle;
 pub use clang_format::parse_clang_format;
 pub use clang_tidy::parse_clang_tidy;
@@ -247,6 +260,8 @@ pub use pmd::parse_pmd;
 pub use prettier::parse_prettier_check;
 pub use pydoclint::parse_pydoclint;
 pub use pylint::parse_pylint;
+pub use qmlformat::parse_qmlformat;
+pub use qmllint::parse_qmllint;
 pub use roslyn::parse_roslyn;
 pub use ruff::{parse_ruff, parse_ruff_format};
 pub use rust::{parse_clippy, parse_rustc};

@@ -41,9 +41,10 @@
 //! ride the frozen authoritative upstream diagnostics and never
 //! rewrite. Vale, the Markdown checker, rustc typecheck, Ty,
 //! pydoclint, flake8, pylint, Checkstyle, PMD, SpotBugs, Scalafix,
-//! Roslyn, FSharpLint, and Biome lint are check-only and never
-//! rewrite. google-java-format, ktfmt, Scalafmt, CSharpier, and Fantomas
-//! rewrite in place like the other format tools.
+//! Roslyn, FSharpLint, Buf lint, qmllint, and Biome lint are check-only
+//! and never rewrite. google-java-format, ktfmt, Scalafmt, CSharpier,
+//! Fantomas, Buf format, and qmlformat rewrite in place like the other
+//! format tools.
 
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
@@ -70,10 +71,11 @@ use quality_result::proto::Diagnostic;
 /// format, ktlint lint; SpotBugs target-coupled), the Scala/.NET cohort
 /// (Scalafmt format, Scalafix lint via callback, CSharpier format,
 /// Fantomas format, Roslyn lint via delegated SARIF, FSharpLint lint
-/// via library API), and the native cohort (clang-format format,
+/// via library API), the native cohort (clang-format format,
 /// gofumpt format, clang-tidy/cppcheck/staticcheck/govet/errcheck
 /// lint check-only via delegated recorded diagnostics like
-/// Clippy/rustc).
+/// Clippy/rustc), and the Structured cohort (Buf format plus lint
+/// via native JSONL/diff, qmlformat format, qmllint lint via JSON).
 /// Mirrors `REAL_ADAPTERS`
 /// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
 /// for pipeline construction, this list pins the dispatch the backend
@@ -82,6 +84,7 @@ use quality_result::proto::Diagnostic;
 /// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 pub const REAL_TOOLS: &[&str] = &[
     "biome",
+    "buf",
     "buildifier",
     "checkstyle",
     "clang_format",
@@ -104,6 +107,8 @@ pub const REAL_TOOLS: &[&str] = &[
     "prettier",
     "pydoclint",
     "pylint",
+    "qmlformat",
+    "qmllint",
     "roslyn",
     "ruff",
     "rustc",
@@ -614,6 +619,79 @@ impl RealBackend {
             findings.extend(parsed(
                 tool_id,
                 parsers::parse_fsharplint(&bytes, Some(0), &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// Buf lint check via recorded JSONL: parses the authoritative
+    /// upstream diagnostics files the aspect declared as action inputs
+    /// (one JSON object per line from `buf lint --error-format=json`).
+    /// Records address workspace paths, so findings are re-addressed to
+    /// staged scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
+    fn check_buf_lint_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            let code = if bytes.iter().all(|b| b.is_ascii_whitespace()) {
+                Some(0)
+            } else {
+                Some(1)
+            };
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_buf_lint(&bytes, code, &workspaces),
+            )?);
+        }
+        for found in &mut findings {
+            let absolute = reanchor(tool_id, pairs, &found.file)?;
+            found.file = absolute.to_string_lossy().into_owned();
+        }
+        Ok(findings)
+    }
+
+    /// qmllint check via recorded JSON: parses the authoritative
+    /// upstream diagnostics files the aspect declared as action inputs
+    /// (one `{diagnostics:[]}` object from `qmllint --json -`). Records
+    /// address workspace paths, so findings are re-addressed to staged
+    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
+    fn check_qmllint_delegated(
+        &self,
+        tool_id: &str,
+        tool: &RealTool,
+        pairs: &[(String, PathBuf)],
+    ) -> Result<Vec<FileFinding>, RunnerError> {
+        let workspaces: Vec<&str> = pairs
+            .iter()
+            .map(|(workspace, _)| workspace.as_str())
+            .collect();
+        let mut findings = Vec::new();
+        for path in &tool.upstream_diagnostics {
+            let bytes = std::fs::read(path)
+                .map_err(|err| execution(tool_id, format!("upstream diagnostics: {err}")))?;
+            let text = String::from_utf8_lossy(&bytes);
+            let code = if text.contains("\"diagnostics\": []") || text.trim().is_empty() {
+                Some(0)
+            } else {
+                Some(1)
+            };
+            findings.extend(parsed(
+                tool_id,
+                parsers::parse_qmllint(&bytes, code, &workspaces),
             )?);
         }
         for found in &mut findings {
@@ -1255,6 +1333,63 @@ impl RealBackend {
                         tool_id,
                         parsers::parse_errcheck(&out.stdout, out.code, &strs),
                     )
+                }
+            }
+            "buf" => {
+                if capability == "format" {
+                    let invocation = commands::buf_format_check(&tool.binary, &refs);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_buf_format(&out.stdout, out.code, &strs),
+                    )
+                } else if !tool.upstream_diagnostics.is_empty() {
+                    self.check_buf_lint_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation = commands::buf_lint_check(&tool.binary, &refs);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    parsed(
+                        tool_id,
+                        parsers::parse_buf_lint(&out.stdout, out.code, &strs),
+                    )
+                }
+            }
+            "qmlformat" => {
+                let invocation = commands::qmlformat_check(&tool.binary, &refs);
+                let out = self.run(tool_id, tool, &invocation, scratch)?;
+                let workspaces: Vec<&str> = pairs
+                    .iter()
+                    .map(|(workspace, _)| workspace.as_str())
+                    .collect();
+                let mut findings = parsed(
+                    tool_id,
+                    parsers::parse_qmlformat(&out.stdout, out.code, &workspaces),
+                )?;
+                for found in &mut findings {
+                    let absolute = reanchor(tool_id, pairs, &found.file)?;
+                    found.file = absolute.to_string_lossy().into_owned();
+                }
+                Ok(findings)
+            }
+            "qmllint" => {
+                if !tool.upstream_diagnostics.is_empty() {
+                    self.check_qmllint_delegated(tool_id, tool, pairs)
+                } else {
+                    let invocation = commands::qmllint_check(&tool.binary, &refs);
+                    let out = self.run(tool_id, tool, &invocation, scratch)?;
+                    let workspaces: Vec<&str> = pairs
+                        .iter()
+                        .map(|(workspace, _)| workspace.as_str())
+                        .collect();
+                    let mut findings = parsed(
+                        tool_id,
+                        parsers::parse_qmllint(&out.stdout, out.code, &workspaces),
+                    )?;
+                    for found in &mut findings {
+                        let absolute = reanchor(tool_id, pairs, &found.file)?;
+                        found.file = absolute.to_string_lossy().into_owned();
+                    }
+                    Ok(findings)
                 }
             }
             _ => Err(execution(

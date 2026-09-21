@@ -67,6 +67,15 @@ def native_config_unit_tests(name):
                 [".clang-format", ".clang-tidy", ".txt", ".conf"],
             ),
             expect_equal(
+                "native_config_extension pins Structured transports",
+                [
+                    native_config_extension("buf"),
+                    native_config_extension("qmlformat"),
+                    native_config_extension("qmllint"),
+                ],
+                [".yaml", ".ini", ".ini"],
+            ),
+            expect_equal(
                 "native_config_error rejects biome.jsonc",
                 native_config_error(
                     "biome",
@@ -100,7 +109,7 @@ def native_config_unit_tests(name):
                 "native_config_error rejects an unknown tool",
                 native_config_error("prettier", "x.json", True, []),
                 "native_config: unknown tool 'prettier': want one of " +
-                "biome, buildifier, checkstyle, clang_format, clang_tidy, cppcheck, csharpier, eslint, fsharplint, ruff, rustfmt, scalafix, scalafmt, staticcheck, taplo, vale",
+                "biome, buf, buildifier, checkstyle, clang_format, clang_tidy, cppcheck, csharpier, eslint, fsharplint, qmlformat, qmllint, ruff, rustfmt, scalafix, scalafmt, staticcheck, taplo, vale",
             ),
             expect_equal(
                 "native_config_error requires a config",

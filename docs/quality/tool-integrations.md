@@ -309,29 +309,35 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   matrix cells)
   (see the Native rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
-- **Structured cohort (#799, successor to closed #419, provisional — no adapter claims `protobuf` or `qml` yet):**
-  checksummed native/self-contained artifact route for `buf` (self-contained per-platform
+- **Structured cohort (#799, successor to closed #419, delivered):**
+  adapters `buf` (format plus lint `protobuf`), `qmlformat` (format `qml`),
+  `qmllint` (lint `qml`) over the decided routes: checksummed
+  native/self-contained artifact route for `buf` (self-contained per-platform
   binaries with published checksums, no target compiler context, execution-platform lazy)
   plus authoritative-toolchain route for qmlformat/qmllint from the Qt distribution
   (Qt-last ordering decided; exact Qt distribution identity, licensing, and platform
   artifact qualification remain pending).
-  Research notes (unproven mappings): `buf lint --error-format=json` emits JSONL
+  Research notes (qualified mappings): `buf lint --error-format=json` JSONL
   (`path,start_line,start_column,end_line,end_column,type,message` with `COMPILE` for
   build errors; no SARIF in 1.71.0, so the native JSON parser is the faithful shape, never
   SARIF ingestion) plus text `file:line:column:message`, with lint `STANDARD` versus
   `MINIMAL`/`BASIC`/`COMMENTS`/`UNARY_RPC` rule selection and module-root-sensitive
-  `PACKAGE_DIRECTORY_MATCH` plus `--path`/`--exclude-path` scoping as open work under #799 (successor to closed #419) itemized
+  `PACKAGE_DIRECTORY_MATCH` plus `--path`/`--exclude-path` scoping itemized
   here, not silently dropped; `buf format --diff --exit-code` unified diff plus `--write`
   is whole-file rewrite with check/diff mode while `buf lint` is check-only with the
-  provisional sandbox-apply-and-diff fix flow; qmlformat writes stdout plus `-i` inplace
+  provisional sandbox-apply-and-diff fix flow; qmlformat `--check` path listing plus `-i` inplace
    with `.qmlformat.ini` upward settings and `--ignore-settings` (including `--sort-imports`
-   and semicolon-rule behavior as open work under #799 (successor to closed #419)); qmllint verifies syntax plus anti-patterns
-   with `--json <file>` (`-` for stdout) JSON carrying messages plus file/line/severity
-    plus `.qmllint.ini` and `//qmllint enable/disable` scoping as open work under #799 (successor to closed #419). Versions
+   and semicolon-rule behavior itemized here, not silently dropped); qmllint verifies syntax plus anti-patterns
+   with `--json -` JSON `{diagnostics:[{file,line,column,rule,message,severity}]}`
+    plus `.qmllint.ini` and `//qmllint enable/disable` scoping itemized here, not silently dropped. Formatters (buf format,
+  qmlformat) are whole-file rewrite with check/diff mode; buf lint plus qmllint
+  are check-only with the provisional sandbox-apply-and-diff fix flow. Versions
     qualified seed-only under issue #488
    (`quality/tests/fixtures/structured_quality/pins.bzl` via `bazel run //tools/ci:structured_defaults_qualification`
    over upstream built-in defaults with no hidden preset); digests stay
-   observations, not pins, recheck latest stable at implementation; adapters stay owned under #799 (successor to closed #419)
+   observations, not pins, recheck latest stable at implementation; adapters qualified seed-only under #799
+   (`bazel run //tools/ci:structured_adapters_qualification` with per-tool fixtures plus
+   `quality/adapter/src/parsers/` plus `quality/testdata` matrix cells)
    (see the Structured rows in
    [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Interpreted/file-family cohort (#800, successor to closed #420, provisional — no adapter claims `ruby`,

@@ -32,17 +32,18 @@ CURATED_STARLARK = "starlark family lint buildifier plus format buildifier"
 CURATED_TOML = "toml family lint taplo plus format taplo"
 CURATED_TYPESCRIPT = "typescript family lint biome plus format biome plus typecheck tsc"
 
-# Adapter-backed execution: 17 classes ride 29 real adapters with
+# Adapter-backed execution: 19 classes ride 32 real adapters with
 # runner-matrix pass plus fail plus parser plus native-config plus
 # aspect evidence. Scala plus C# plus F# delivered under #797; C plus
-# C++ plus Go delivered under #798.
-BACKED_CLASSES = "17 adapter-backed classes: c plus cpp plus csharp plus fsharp plus go plus javascript plus json plus jsx plus markdown plus python plus python_stub plus rust plus scala plus starlark plus toml plus tsx plus typescript"
-BACKED_TOOLS = "29 real adapters: biome plus buildifier plus clang_format plus clang_tidy plus clippy plus cppcheck plus csharpier plus errcheck plus eslint plus fantomas plus flake8 plus fsharplint plus gofumpt plus govet plus markdown_check plus prettier plus pydoclint plus pylint plus roslyn plus ruff plus rustc plus rustfmt plus scalafix plus scalafmt plus staticcheck plus taplo plus tsc plus ty plus vale"
+# C++ plus Go delivered under #798; Protobuf plus QML delivered under
+# #799.
+BACKED_CLASSES = "19 adapter-backed classes: c plus cpp plus csharp plus fsharp plus go plus javascript plus json plus jsx plus markdown plus protobuf plus python plus python_stub plus qml plus rust plus scala plus starlark plus toml plus tsx plus typescript"
+BACKED_TOOLS = "32 real adapters: biome plus buf plus buildifier plus clang_format plus clang_tidy plus clippy plus cppcheck plus csharpier plus errcheck plus eslint plus fantomas plus flake8 plus fsharplint plus gofumpt plus govet plus markdown_check plus prettier plus pydoclint plus pylint plus qmlformat plus qmllint plus roslyn plus ruff plus rustc plus rustfmt plus scalafix plus scalafmt plus staticcheck plus taplo plus tsc plus ty plus vale"
 
-# Deferred execution boundary: 30 classes stay deferred with owning
+# Deferred execution boundary: 28 classes stay deferred with owning
 # decision plus frozen delivery route; classification exists, adapter
 # claim does not.
-DEFERRED_COUNT = "30 deferred classes with owner plus frozen route"
+DEFERRED_COUNT = "28 deferred classes with owner plus frozen route"
 DEFERRED_OWNER = "every deferral names ADR 0019 plus frozen delivery route"
 DEFERRED_NO_DOUBLE_CLAIM = "no class is both adapter-backed and deferred"
 DEFERRED_NO_UNDISPOSITIONED = "no classified class lacks a disposition"
@@ -80,7 +81,7 @@ REGISTRY_QUERIES = "consumers query via registry plus curated plus parity querie
 EXECUTION_POLICY = "real_fixture_policy executes the 8 curated families"
 EXECUTION_MATRIX = "runner matrix pass plus fail per backed class plus capability"
 EXECUTION_PARSERS = "every backed tool keeps a parser with pass plus fail samples"
-EXECUTION_NATIVE = "native bindings for biome plus buildifier plus clang_format plus clang_tidy plus cppcheck plus csharpier plus eslint plus fsharplint plus ruff plus rustfmt plus scalafix plus scalafmt plus staticcheck plus taplo plus vale"
+EXECUTION_NATIVE = "native bindings for biome plus buf plus buildifier plus clang_format plus clang_tidy plus cppcheck plus csharpier plus eslint plus fsharplint plus qmlformat plus qmllint plus ruff plus rustfmt plus scalafix plus scalafmt plus staticcheck plus taplo plus vale"
 EXECUTION_ASPECTS = "real aspects wire target-coupled plus upstream-delegated plus check-only"
 EXECUTION_PARITY_GATE = "parity gate fails closed on unclassified plus undispositioned plus double-claim"
 

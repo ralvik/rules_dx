@@ -95,6 +95,7 @@ bazel run --noshow_progress //tools/ci:roslyn_qualification
 bazel run --noshow_progress //tools/ci:fsharplint_qualification
 bazel run --noshow_progress //tools/ci:scala_dotnet_adapters_qualification
 bazel run --noshow_progress //tools/ci:native_adapters_qualification
+bazel run --noshow_progress //tools/ci:structured_adapters_qualification
 bazel run --noshow_progress //tools/ci:stable_stack_qualification
 bazel run --noshow_progress //tools/ci:windows_acquisition_qualification
 bazel run --noshow_progress //tools/ci:acquisition_rights_qualification
