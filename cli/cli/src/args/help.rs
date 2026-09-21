@@ -117,8 +117,26 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
         Command::Bazel => {
             "Per-command flags: none (raw Bazel forwarding; dx-owned options must precede the command word and most are rejected)."
         }
-        _ => {
-            "Per-command flags: --check/--fail-on/--report/--min-coverage/--debug/--release/--bazel/--pin/--rollback/--configured are owned per command; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`."
+        Command::Lint | Command::Typecheck | Command::Format | Command::Generate => {
+            "Per-command flags: --check/--fail-on/--report (quality only; --here for cwd scope; --output text|diff|json; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+        }
+        Command::Codegen | Command::Env | Command::Setup => {
+            "Per-command flags: none (repository-wide or one exact // or @ label; --check/--fail-on/--report/--output json|diff and version/clean/inspect/migrate flags do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+        }
+        Command::Init => {
+            "Per-command flags: none (optional [module-name]; --check/--fail-on/--report/--output json|diff and `-- --bazel-options` do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+        }
+        Command::Hooks => {
+            "Per-command flags: none (verbs install|uninstall|status|run [pre-commit|pre-push]; --check/--fail-on/--report/--output json|diff and `-- --bazel-options` do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+        }
+        Command::Status => {
+            "Per-command flags: none (no scopes; --output text|json only, diff has no patch; --check/--fail-on/--report and `-- --bazel-options` do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+        }
+        Command::Watch => {
+            "Per-command flags: wrapped-command flags pass through per iteration (watch only wraps build|test|run|lint|typecheck|format|check|fix; local only, refuses CI; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+        }
+        Command::Completion => {
+            "Per-command flags: none (exactly one <shell> bash|zsh|fish|powershell; unknown shells fail with unknown-shell; --output json|diff and `-- --bazel-options` do not apply)."
         }
     }
 }
@@ -148,12 +166,23 @@ pub(crate) fn render_command_help(command: Command) -> String {
             "Usage: dx [global-options] migrate --from <version> --to <version> [scope ...]"
         }
         Command::Lint | Command::Typecheck | Command::Format | Command::Generate => {
-            "Usage: dx [global-options] <command> [--here] [scope ...] [-- bazel-options ...]"
+            "Usage: dx [global-options] lint|typecheck|format|generate [--here] [scope ...] [-- bazel-options ...]"
         }
         Command::Check | Command::Fix => {
             "Usage: dx [global-options] check|fix [--here] [scope ...] [-- bazel-options ...]"
         }
-        _ => "Usage: dx [global-options] <command> [scope ...] [-- bazel-options ...]",
+        Command::Codegen | Command::Env | Command::Setup => {
+            "Usage: dx [global-options] codegen|env|setup [<label>] [-- bazel-options ...]"
+        }
+        Command::Init => "Usage: dx [global-options] init [module-name]",
+        Command::Hooks => {
+            "Usage: dx [global-options] hooks <install|uninstall|status|run [pre-commit|pre-push]>"
+        }
+        Command::Status => "Usage: dx [global-options] status",
+        Command::Watch => {
+            "Usage: dx [global-options] watch <build|test|run|lint|typecheck|format|check|fix> [scope ...] [-- bazel-options ...]"
+        }
+        Command::Completion => "Usage: dx [global-options] completion <shell>",
     };
     let scopes = match command {
         Command::Clean => "Scopes: none (clean takes no scopes).",
@@ -173,6 +202,12 @@ pub(crate) fn render_command_help(command: Command) -> String {
         | Command::Coverage
         | Command::Check
         | Command::Fix => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied. Pass --here (--cwd alias) for the current directory tree instead (//path/...; //... at the root); --here cannot be combined with explicit scopes and never changes the no-flag default.",
+        Command::Codegen | Command::Env | Command::Setup => "Scopes: none for repository-wide canonical selection, or exactly one exact // or @ label; patterns, paths, and multiple labels are usage failures (see docs/cli/commands/environment-codegen-setup.md).",
+        Command::Init => "Scopes: optional single module name (defaults to my_project when absent); Bazel labels/patterns are not scopes; extra positionals are usage failures.",
+        Command::Hooks => "Scopes: verb install|uninstall|status|run (run requires pre-commit|pre-push); no Bazel scopes; `-- --bazel-options` does not apply.",
+        Command::Status => "Scopes: none (status takes no scopes).",
+        Command::Watch => "Scopes: wrapped command plus its scopes, re-resolved each iteration (local only, refuses CI=true; only build|test|run|lint|typecheck|format|check|fix are watchable).",
+        Command::Completion => "Scopes: exactly one shell (bash|zsh|fish|powershell); unknown shells fail with unknown-shell.",
         _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults).",
     };
     let mut out = String::new();

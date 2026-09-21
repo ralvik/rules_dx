@@ -567,6 +567,15 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                     option: "<file> <label>".to_owned(),
                 });
             }
+            // `dx init` takes an optional single module name (defaults to
+            // `my_project` when absent); extra positionals are usage
+            // failures instead of silently ignored scopes.
+            Command::Init if targets.len() > 1 => {
+                return Err(ArgsError::UnsupportedOption {
+                    command: command.name(),
+                    option: targets[1].clone(),
+                });
+            }
             _ => {}
         }
     }
