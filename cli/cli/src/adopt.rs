@@ -50,13 +50,13 @@ fn operational(out: &mut dyn Write, err: &mut dyn Write, message: &str) -> i32 {
 /// True when stdout prose summaries should be suppressed.
 /// `--quiet` (and its `Text { quiet: true }` encoding) suppresses `dx`
 /// lifecycle summaries but never result documents: `status` / `version`
-/// (except `version` dry-run plans, which are summaries) / inspect labels
+/// (except dry-run plans, which are summaries) / inspect labels
 /// / completion scripts / `hooks status` views always print because they
 /// are the answer, not a summary. Summary owners (`init`,
 /// `hooks install` / `uninstall` / `run`, `watch`, dry-run plans including
-/// `version --dry-run --pin` / `--rollback`) check this; result owners do
-/// not, and that non-suppression is documented in the output protocol
-/// rather than a silent ignore.
+/// `status`, `version`, `hooks status`, `completion`, `owners` / `deps` /
+/// `why`) check this; result owners do not, and that non-suppression is
+/// documented in the output protocol rather than a silent ignore.
 fn summaries_suppressed(invocation: &Invocation) -> bool {
     invocation.quiet || matches!(invocation.output, OutputMode::Text { quiet: true })
 }

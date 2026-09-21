@@ -41,6 +41,11 @@ are implemented as specified here: managed shims only, unmanaged refusal; this i
 effective merged configuration and last-run timings per check. Native launcher shims
 cover hosts where shell hooks do not execute.
 
+`--dry-run` plans without mutating or reading config: `install` prints
+`would install …`, `uninstall` prints `would remove …`, `status` prints
+`would show hooks status`, `run` prints `would run <trigger>`. Plans are
+summaries, suppressed under `--quiet`.
+
 Installation stays manual opt-in: neither `dx init` nor CI installs hooks, and CI
 never requires installed shims. `dx init` only scaffolds hook configuration; CI
 enforces the committed baseline directly and remains ground truth whether or not

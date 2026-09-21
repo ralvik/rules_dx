@@ -5,7 +5,7 @@ Implementation status: implemented
 
 ## Invocation
 
-`dx completion <shell>` (shells `bash|zsh|fish|powershell`) prints a static completion script for the named shell to stdout and exits `0`. An unknown shell name fails with `unknown-shell` and a non-zero exit. The command writes no files and mutates no shell state.
+`dx completion <shell>` (shells `bash|zsh|fish|powershell`) prints a static completion script for the named shell to stdout and exits `0`. An unknown shell name fails with `unknown-shell` and a non-zero exit. The command writes no files and mutates no shell state. `--dry-run` prints `would render completion for <shell>` without rendering; plans are summaries, suppressed under `--quiet`.
 
 ## Generation Source
 

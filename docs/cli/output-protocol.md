@@ -56,7 +56,8 @@ coverage, check, fix, audit, update, bump, migrate, status. `update` JSON covers
 (`command_started` / `command_finished`) and live execution per-set `notice`/`error`
 events plus `command_finished`; `bump` and `migrate` follow the same dry-run plus live
 `notice`/`error` frame; `audit` JSON covers dry-run planning plus live per-family
-`notice`/`error` events plus `command_finished`.
+`notice`/`error` events plus `command_finished`; `status` JSON covers dry-run planning
+plus live per-check `status` events plus `command_finished` (see [Status](#status)).
 Text-only commands (reject `--output=json` pre-exec, exit 2): clean, codegen, env, setup
 (prose collection lifecycle); `bazel`, `run`, `deploy` (each sequential child owns the terminal in turn,
 see [dx run](commands/build-test-coverage.md#dx-run) and [dx deploy](commands/build-test-coverage.md#dx-deploy)); init, hooks,
@@ -187,6 +188,7 @@ The initial event kinds are:
 - `mutation`
 - `report`
 - `selection`
+- `status`
 - `error`
 - `command_finished`
 
@@ -531,6 +533,29 @@ prepared generations; consumers do not infer provenance from the IDs.
 {"schema":{"major":1,"minor":0},"event":"selection","setup_id":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","environment_id":"123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0","codegen_id":"23456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef01"}
 ```
 
+## Status
+
+A `status` event reports one consolidated `dx status` check.
+
+| Field | Required | Type | Meaning |
+| --- | --- | --- | --- |
+| `name` | yes | string | Check name (`toolchain`, `platform`, `tools`, `pin`) |
+| `status` | yes | string | `ok`, `warn`, or `error` |
+| `detail` | yes | string | Human detail |
+| `hint` | yes | string | Actionable hint |
+
+Live `dx status --output=json` streams `command_started`, then one `status`
+event per check in check order, then `command_finished`. Dry-run emits only
+`command_started` (`dry_run=true`) plus `command_finished` with no `status`
+events. `command_finished` carries only `exit_code` (no `results_complete`,
+`diagnostics`, `changes`, or `mutations`); exit `1` means a check reported
+`error` (today pin mismatch, with a stderr hint pointing at
+`dx version --pin`).
+
+```json
+{"schema":{"major":1,"minor":0},"event":"status","name":"pin","status":"ok","detail":"dx 0.0.0 vs module 0.0.0","hint":"dx version --pin 0.0.0"}
+```
+
 ## Operational Error
 
 CLI, orchestration, protocol, and infrastructure failures use `error`, not `diagnostic`.
@@ -654,7 +679,9 @@ default modes, including zero values when no changes are calculated.
 `mutations` is present exactly for non-dry-run default-mode lint, typecheck, format, and generate,
 including when active producers return no candidate changes. Update never carries `diagnostics`,
 `changes`, or `mutations` in any mode (issue #586 wont-fix); its `command_finished` carries only
-`results_complete` on live execution. A validated empty quality
+`results_complete` on live execution. Status never carries `results_complete`, `diagnostics`,
+`changes`, or `mutations` in any mode; its `command_finished` carries only `exit_code`.
+A validated empty quality
 selection has no mutation events or mutation count because no apply set was attempted.
 Dry-run and check mode omit mutation counts.
 
@@ -696,7 +723,10 @@ Default mutating JSON order is:
 6. Exactly one `command_finished` event.
 
 Non-mutating commands without check mode omit changes and mutations and emit diagnostics,
-notices, reports, selections, and completion after their producing phases.
+notices, reports, selections, status checks, and completion after their producing phases.
+Status JSON order is `command_started`, then one `status` event per check in check
+order, then exactly one `command_finished`; it emits no `change`, `mutation`,
+`diagnostic`, `operation`, `notice`, `report`, or `selection` events.
 
 An operational `error` is emitted after all durable output derived safely from the failed phase and
 before `command_finished`. For partial quality collection, validated diagnostics with truthful
@@ -728,8 +758,9 @@ sets not yet attempted; signal termination promises no `command_finished`.
 
 Dry-run may execute read-only Bazel `query` or `cquery` needed for scope resolution. It
 emits `command_started` with `dry_run=true` and the same safe `operation` summaries as an
-executing plan. It emits no `diagnostic`, `change`, `mutation`, `report`, or `selection` event
-for a workflow it did not execute. Resolution errors and `command_finished` behave normally.
+executing plan. It emits no `diagnostic`, `change`, `mutation`, `report`, `selection`, or
+`status` event for a workflow it did not execute. Resolution errors and `command_finished` behave normally.
+`status` dry-run emits only `command_started` (`dry_run=true`) plus `command_finished`.
 `--dry-run` conflicts with every `--report` request and fails before query or workflow
 execution with `conflicting_option` naming `--report`.
 

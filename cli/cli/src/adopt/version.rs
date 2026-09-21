@@ -87,6 +87,16 @@ pub(crate) fn execute_version(
             Err(error) => operational(out, err, &error.to_string()),
         };
     }
+    if invocation.dry_run {
+        if !summaries_suppressed(invocation) {
+            if invocation.check {
+                let _ = writeln!(out, "would check version pin");
+            } else {
+                let _ = writeln!(out, "would report version");
+            }
+        }
+        return 0;
+    }
     let current = dx_adopt::read_version_pin(workspace).unwrap_or_else(|_| "0.0.0".to_owned());
     if invocation.check {
         if dx_adopt::version_pin_matches_module(&current, dx_adopt::MODULE_VERSION) {
@@ -253,5 +263,36 @@ mod tests {
         );
         assert_eq!(code, 1);
         assert!(String::from_utf8(err).expect("err").contains("drift"));
+    }
+
+    #[test]
+    fn version_bare_and_check_dry_run_plan_without_reading() {
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-dry-bare-");
+        let root = scratch.path().to_path_buf();
+        for (words, want) in [
+            (vec!["version", "--dry-run"], "would report version"),
+            (
+                vec!["version", "--check", "--dry-run"],
+                "would check version pin",
+            ),
+        ] {
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let inv = invocation(&words);
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &NullQuery,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 0, "words: {words:?}");
+            assert!(
+                String::from_utf8(out).expect("out").contains(want),
+                "words: {words:?}"
+            );
+        }
     }
 }
