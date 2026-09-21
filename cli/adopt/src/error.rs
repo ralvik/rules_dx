@@ -89,9 +89,9 @@ pub enum AdoptError {
     /// `dx migrate` requires distinct valid semver versions.
     #[error("migrate needs distinct versions: {detail}")]
     MigrateVersions { detail: String },
-    /// `dx migrate` is major-release-only.
-    #[error("migrate is major-release-only: {from} -> {to}")]
-    MigrateNotMajor { from: String, to: String },
+    /// `dx migrate` needs an upgrade (`to` exceeds `from` semver).
+    #[error("migrate is upgrade-only: {from} -> {to}")]
+    MigrateNotUpgrade { from: String, to: String },
 }
 
 #[cfg(test)]

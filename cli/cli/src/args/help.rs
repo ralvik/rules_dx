@@ -97,7 +97,7 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: --check (drift check), --pin <version>, --rollback (version only; --pin and --rollback conflict)."
         }
         Command::Migrate => {
-            "Per-command flags: --from <version> --to <version> (migrate only; both Cargo semver, major-release-only gate)."
+            "Per-command flags: --from <version> --to <version> (migrate only; both Cargo semver, upgrade-only gate)."
         }
         Command::Audit => {
             "Per-command flags: --fail-on info|warning|error, --report sarif|spdx (audit only; --check and `-- --bazel-options` do not apply; --output diff has no patch)."

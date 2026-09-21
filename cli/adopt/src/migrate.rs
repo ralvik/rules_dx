@@ -1,20 +1,21 @@
-//! Major-release migration planning for `dx migrate`.
+//! Migration planning for `dx migrate`.
 //!
 //! Split from `super` (`lib.rs`): owns `migrate_is_major_bump`,
-//! `migrate_manifest_name`, `MigratePlan`, and `plan_migrate`.
+//! `migrate_is_upgrade`, `migrate_manifest_name`,
+//! `migrate_manifest_name_full`, `MigratePlan`, and `plan_migrate`.
 //! Re-exported through `super` so the public path stays
-//! `dx_adopt::{migrate_is_major_bump, migrate_manifest_name, MigratePlan,
+//! `dx_adopt::{migrate_is_major_bump, migrate_is_upgrade,
+//! migrate_manifest_name, migrate_manifest_name_full, MigratePlan,
 //! plan_migrate}`.
 
 use super::AdoptError;
 
 /// Whether a `dx migrate` version pair is a major-release bump.
 ///
-/// The migrator is major-release-only breaking-change rewrites over the
-/// generation edit-manifest pattern: both versions must parse as
-/// Cargo-flavor semver, differ, and the target major must exceed the
-/// source major. Minor/patch-only bumps, downgrades, and non-semver
-/// text never qualify — they run through `dx generate`, not `migrate`.
+/// Major bumps are the coarse subset of upgrades: both versions parse
+/// as Cargo-flavor semver, differ, and the target major exceeds the
+/// source major. Kept so major-hop manifests stay addressable; the
+/// planning gate itself is [`migrate_is_upgrade`].
 pub fn migrate_is_major_bump(from: &str, to: &str) -> bool {
     let from_v = match semver::Version::parse(from) {
         Ok(v) => v,
@@ -30,16 +31,50 @@ pub fn migrate_is_major_bump(from: &str, to: &str) -> bool {
     to_v.major > from_v.major
 }
 
-/// Manifest selection for `dx migrate`.
+/// Whether a `dx migrate` version pair is any upgrade.
+///
+/// The migrator accepts breaking-ish rewrites over the generation
+/// edit-manifest pattern for any upgrading pair: both versions parse
+/// as Cargo-flavor semver and the target exceeds the source semver
+/// (`to > from`). Minor/patch upgrades qualify alongside major hops
+/// (see issue #671); downgrades, equal versions, and non-semver text
+/// never qualify.
+pub fn migrate_is_upgrade(from: &str, to: &str) -> bool {
+    let from_v = match semver::Version::parse(from) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    let to_v = match semver::Version::parse(to) {
+        Ok(v) => v,
+        Err(_) => return false,
+    };
+    to_v > from_v
+}
+
+/// Manifest selection for `dx migrate` major hops.
 ///
 /// One manifest per major-release hop, named after the major versions
 /// so selection is mechanical: `migrate-v<from_major>-to-v<to_major>.json`.
 /// The manifest carries generation edit-manifest records (create/modify
 /// with digests and byte-range replacements); the migrator applies them
 /// through the same write-outcome/completion reporting as `dx generate`.
-/// Callers must validate via [`migrate_is_major_bump`] first.
+/// Callers must validate via [`migrate_is_upgrade`] first, then branch
+/// on [`migrate_is_major_bump`] for this name versus
+/// [`migrate_manifest_name_full`].
 pub fn migrate_manifest_name(from_major: u64, to_major: u64) -> String {
     format!("migrate-v{from_major}-to-v{to_major}.json")
+}
+
+/// Manifest selection for `dx migrate` minor/patch upgrades.
+///
+/// One manifest per full version pair, named mechanically after the
+/// full versions so strict/config rollouts stay addressable without a
+/// major bump: `migrate-v<from>-to-v<to>.json` (for example
+/// `migrate-v1.2.3-to-v1.3.0.json`). Same edit-manifest records as
+/// [`migrate_manifest_name`]. Callers must validate via
+/// [`migrate_is_upgrade`] first.
+pub fn migrate_manifest_name_full(from: &str, to: &str) -> String {
+    format!("migrate-v{from}-to-v{to}.json")
 }
 
 /// One planned migration: the validated version pair plus
@@ -48,9 +83,10 @@ pub fn migrate_manifest_name(from_major: u64, to_major: u64) -> String {
 pub struct MigratePlan {
     /// Source version (inclusive, already installed).
     pub from: String,
-    /// Target major-release version.
+    /// Target version.
     pub to: String,
-    /// Selected manifest (see [`migrate_manifest_name`]).
+    /// Selected manifest (see [`migrate_manifest_name`] plus
+    /// [`migrate_manifest_name_full`]).
     pub manifest: String,
 }
 
@@ -58,13 +94,16 @@ pub struct MigratePlan {
 ///
 /// Syntax (live successor to closed):
 /// `dx migrate --from <version> --to <version> [scope ...]`. Both
-/// versions are Cargo-flavor semver; the pair must be a major-release
-/// bump (see [`migrate_is_major_bump`]). Scope selection reuses
+/// versions are Cargo-flavor semver; the pair must be an upgrade
+/// (see [`migrate_is_upgrade`]). Major bumps select one manifest per
+/// major hop (see [`migrate_manifest_name`]); minor/patch upgrades
+/// select one manifest per full version pair (see
+/// [`migrate_manifest_name_full`]). Scope selection reuses
 /// generation scope resolution verbatim (empty scope refreshes
 /// `//...`); external scopes are rejected like workflow commands.
 /// With no breaking-change manifests published yet (module at `0.0.0`,
 /// no releases cut), planning succeeds but execution fails closed
-/// (`migrate_failed`) until the first major-release manifest lands —
+/// (`migrate_failed`) until the first manifest lands —
 /// the same fail-closed discipline as `audit_failed` (`dx audit` plus
 /// `dx update` execute live, and).
 pub fn plan_migrate(from: &str, to: &str) -> Result<MigratePlan, AdoptError> {
@@ -79,16 +118,21 @@ pub fn plan_migrate(from: &str, to: &str) -> Result<MigratePlan, AdoptError> {
     let to_v = semver::Version::parse(to).map_err(|_| AdoptError::MigrateVersions {
         detail: format!("invalid to version: {to}"),
     })?;
-    if !migrate_is_major_bump(from, to) {
-        return Err(AdoptError::MigrateNotMajor {
+    if !migrate_is_upgrade(from, to) {
+        return Err(AdoptError::MigrateNotUpgrade {
             from: from.to_owned(),
             to: to.to_owned(),
         });
     }
+    let manifest = if to_v.major > from_v.major {
+        migrate_manifest_name(from_v.major, to_v.major)
+    } else {
+        migrate_manifest_name_full(from, to)
+    };
     Ok(MigratePlan {
         from: from.to_owned(),
         to: to.to_owned(),
-        manifest: migrate_manifest_name(from_v.major, to_v.major),
+        manifest,
     })
 }
 
@@ -97,30 +141,45 @@ mod tests {
     use super::*;
 
     #[test]
-    fn migrate_is_major_release_only() {
-        // (live successor to closed): major-release-only
-        // gate. Minor/patch bumps, downgrades, equal versions, and
-        // non-semver never qualify — they run through `dx generate`,
-        // not `migrate`.
+    fn migrate_upgrade_gate_accepts_any_upgrade() {
+        // (issue #671, ADR 0025): upgrade-only gate. Major, minor,
+        // and patch upgrades qualify; downgrades, equal versions,
+        // and non-semver never qualify.
+        assert!(migrate_is_upgrade("1.2.3", "2.0.0"));
+        assert!(migrate_is_upgrade("1.2.3", "1.3.0"));
+        assert!(migrate_is_upgrade("1.2.3", "1.2.4"));
+        assert!(migrate_is_upgrade("1.9.9", "2.0.0-alpha.1"));
+        assert!(migrate_is_upgrade("0.0.0", "1.0.0"));
+        assert!(migrate_is_upgrade("0.0.0", "0.1.0"));
+        assert!(migrate_is_upgrade("1.0.0-alpha", "1.0.0"));
+        assert!(!migrate_is_upgrade("2.0.0", "1.0.0"));
+        assert!(!migrate_is_upgrade("1.2.3", "1.2.3"));
+        assert!(!migrate_is_upgrade("abc", "2.0.0"));
+        assert!(!migrate_is_upgrade("1.2.3", ""));
+        // Major bumps stay the coarse subset for major-hop manifests.
         assert!(migrate_is_major_bump("1.2.3", "2.0.0"));
         assert!(migrate_is_major_bump("1.9.9", "2.0.0-alpha.1"));
         assert!(migrate_is_major_bump("0.0.0", "1.0.0"));
         assert!(!migrate_is_major_bump("1.2.3", "1.3.0"));
         assert!(!migrate_is_major_bump("1.2.3", "1.2.4"));
-        assert!(!migrate_is_major_bump("2.0.0", "1.0.0"));
-        assert!(!migrate_is_major_bump("1.2.3", "1.2.3"));
-        assert!(!migrate_is_major_bump("abc", "2.0.0"));
-        assert!(!migrate_is_major_bump("1.2.3", ""));
         assert_eq!(migrate_manifest_name(1, 2), "migrate-v1-to-v2.json");
+        assert_eq!(
+            migrate_manifest_name_full("1.2.3", "1.3.0"),
+            "migrate-v1.2.3-to-v1.3.0.json"
+        );
         let plan = plan_migrate("1.2.3", "2.0.0").expect("major bump plans");
         assert_eq!(plan.manifest, "migrate-v1-to-v2.json");
-        assert!(plan_migrate("1.2.3", "1.3.0").is_err());
+        let minor = plan_migrate("1.2.3", "1.3.0").expect("minor plans");
+        assert_eq!(minor.manifest, "migrate-v1.2.3-to-v1.3.0.json");
+        let patch = plan_migrate("1.2.3", "1.2.4").expect("patch plans");
+        assert_eq!(patch.manifest, "migrate-v1.2.3-to-v1.2.4.json");
+        assert!(plan_migrate("2.0.0", "1.0.0").is_err());
         assert!(plan_migrate("", "2.0.0").is_err());
         assert!(plan_migrate("abc", "2.0.0").is_err());
         // Typed errors render stably for CLI diagnostics.
         assert_eq!(
-            plan_migrate("1.0.0", "1.1.0").unwrap_err().to_string(),
-            "migrate is major-release-only: 1.0.0 -> 1.1.0"
+            plan_migrate("2.0.0", "1.0.0").unwrap_err().to_string(),
+            "migrate is upgrade-only: 2.0.0 -> 1.0.0"
         );
     }
 
@@ -149,7 +208,7 @@ mod tests {
     fn migrate_syntax_pins_semver_prerelease_and_errors() {
         // `dx migrate --from <version> --to <version>` takes
         // Cargo-flavor semver only; prerelease/build metadata ride the
-        // same major gate, and every rejection renders stably for CLI
+        // same upgrade gate, and every rejection renders stably for CLI
         // usage diagnostics (exit 2).
         assert!(migrate_is_major_bump("1.0.0", "2.0.0-alpha.1"));
         assert!(migrate_is_major_bump("1.0.0+build.1", "2.0.0"));
@@ -177,11 +236,11 @@ mod tests {
         );
         assert_eq!(
             plan_migrate("2.0.0", "1.0.0").unwrap_err().to_string(),
-            "migrate is major-release-only: 2.0.0 -> 1.0.0"
+            "migrate is upgrade-only: 2.0.0 -> 1.0.0"
         );
         assert_eq!(
             plan_migrate("1.2.3", "1.2.3").unwrap_err().to_string(),
-            "migrate is major-release-only: 1.2.3 -> 1.2.3"
+            "migrate is upgrade-only: 1.2.3 -> 1.2.3"
         );
     }
 }

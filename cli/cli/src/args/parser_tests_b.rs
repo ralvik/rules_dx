@@ -93,8 +93,9 @@ fn bump_needs_exactly_one_selector_plus_version() {
 #[test]
 fn migrate_needs_from_and_to_versions() {
     // `dx migrate --from <version> --to <version>`:
-    // both Cargo semver, major-release-only gate, one manifest per
-    // major hop, mutating by default with fail-closed execution.
+    // both Cargo semver, upgrade-only gate, one manifest per
+    // major hop plus one per full version pair for minor/patch,
+    // mutating by default with fail-closed execution.
     let migrate = parse(&args(&["migrate", "--from=1.2.3", "--to=2.0.0"])).expect("parse migrate");
     assert_eq!(migrate.command, Command::Migrate);
     assert_eq!(migrate.command.name(), "migrate");

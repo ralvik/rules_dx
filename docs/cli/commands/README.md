@@ -49,10 +49,12 @@ tests from inactive configurable branches.
   forwarding reusing [target resolution](../target-resolution.md) without
   a custom graph engine.
 - [`dx completion`](completion.md): generated static shell scripts.
-- [`dx migrate`](migrate.md): major-release-only breaking-change rewrites
+- [`dx migrate`](migrate.md): upgrade-only breaking-change rewrites
   over the generation edit-manifest pattern (`--from`/`--to` plus one
-  manifest per major hop; live execution fails closed until the first
-  major-release manifest lands under issue #462, inside the parsed final
+  manifest per major hop and one per full version pair for minor/patch;
+  live execution fails closed until the first
+  manifest lands under issue #462 with upgrade scope under issue #671,
+  inside the parsed final
   registry pinned under issues #457/#462).
 
 ## Excluded Commands

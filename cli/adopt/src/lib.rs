@@ -35,7 +35,10 @@ pub use hooks::{
     render_hook_shim, render_hooks_status, uninstall_hooks, HOOK_BUDGET_SECS, HOOK_MANAGED_MARKER,
 };
 pub use inspect::{inspect_scope_allowed, plan_inspect, plan_somepath, InspectPlan};
-pub use migrate::{migrate_is_major_bump, migrate_manifest_name, plan_migrate, MigratePlan};
+pub use migrate::{
+    migrate_is_major_bump, migrate_is_upgrade, migrate_manifest_name, migrate_manifest_name_full,
+    plan_migrate, MigratePlan,
+};
 pub use policy::{devcontainer_is_admissible, diagnostics_command_allowed};
 pub use preset_fragment::{
     check_preset, owned_collisions_in_content, preset_paths, render_preset_fragment, update_preset,

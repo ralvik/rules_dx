@@ -358,12 +358,13 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     if command == Command::Migrate {
         // Migrate plans through `dx_adopt::plan_migrate`:
         // `dx migrate --from <version> --to <version> [scope ...]`,
-        // both Cargo-flavor semver with a major-release-only gate plus
-        // one manifest per major hop. Scope selection reuses generation
+        // both Cargo-flavor semver with an upgrade-only gate plus
+        // one manifest per major hop and one per full version pair
+        // for minor/patch upgrades. Scope selection reuses generation
         // scope resolution verbatim; external scopes are rejected like
         // workflow commands during execution. Thresholds, standard
         // reports, and check mode do not apply on this path; live
-        // execution fails closed until the first major-release manifest
+        // execution fails closed until the first manifest
         // lands (module at `0.0.0`, no releases cut).
         if check {
             return Err(ArgsError::UnsupportedOption {
