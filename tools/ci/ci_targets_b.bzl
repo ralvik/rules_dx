@@ -44,6 +44,16 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Action execution plus disk-cache harness; see tools/ci/action_execution_cache_qualification.sh.
+    sh_binary(
+        name = "action_execution_cache_qualification",
+        srcs = ["action_execution_cache_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Dependency-check contract harness (; opens under); see tools/ci/depcheck_contract.sh.
     sh_binary(
         name = "depcheck_contract",

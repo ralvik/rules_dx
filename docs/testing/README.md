@@ -238,8 +238,11 @@ behavior remains unverified, with no remote cache or executor wired
 wont-fix recorded under issue #618: paid remote services stay unapproved per
 the budget above, and Apple/MS cache rights stay license-bounded per issue
 #496, so CI keeps the local `actions/cache` disk scope with comprehensive
-lock/config keys and no `--remote_cache`/`--remote_executor`/`--bes_backend`
-flags). First-party PR
+lock/config keys (exact hits only, a bust starts cold with no prefix
+fallback) and no `--remote_cache`/`--remote_executor`/`--bes_backend`
+flags). Dx pipeline plus evaluator actions carry `no-remote-exec`
+(local-only until remote is qualified; `bazel run
+//tools/ci:action_execution_cache_qualification`). First-party PR
 reporting itself is adopted under #254; Codecov stays opt-in only.
 
 Snapshot goldens use schema validation plus byte snapshots with an

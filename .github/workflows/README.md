@@ -48,8 +48,8 @@ The following policy notes lived as header comments in `ci.yml`:
 # docs/testing/README.md. Cache keys hash every Bazel-affecting
 # lock/config (issue #618): MODULE plus bazelrc plus toolchain plus all
 # resolver locks, so lock/config changes bust the cache instead of reusing
-# a stale disk entry; `restore-keys` still falls back to the per-scope
-# prefix on a bust. Remote cache stays unwired (issue #618 wont-fix):
+# a stale disk entry; exact key only with no prefix fallback, so a bust
+# starts cold. Remote cache stays unwired (issue #618 wont-fix):
 # paid remote services are not approved per the budget, and Apple/MS
 # acquisition plus cache rights stay license-bounded (issue #496), so CI
 # stays local execution with no remote cache/executor/BES flags

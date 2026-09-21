@@ -108,16 +108,27 @@ discovering artifacts through BEP.
 Each result is a single binary Protobuf message. Incremental processing occurs
 across independently completed action artifacts, not within one message.
 
-Hermetic actions should be cacheable and remotely executable when a
-matching execution platform and tool artifact exist. Platform-specific binaries
-produce platform-specific action keys. Rules must not force local execution merely
-for convenience. If Ty lacks a supported hermetic route on a required platform, the
-first-release parity gate remains blocked unless the baseline is explicitly changed.
+Hermetic actions are cacheable and local-only until remote is qualified:
+every Dx pipeline plus evaluator action carries `no-remote-exec`, so Bazel
+never schedules them on a remote executor (wrong-platform remote exec is
+rejected by construction) while local disk-cache reuse still applies.
+Platform-specific binaries produce platform-specific action keys. Rules must
+not drop the marker merely for convenience. If Ty lacks a supported hermetic
+route on a required platform, the first-release parity gate remains blocked
+unless the baseline is explicitly changed.
 
-The actions may execute remotely; only the final Rust apply step updates the local
+Remote boundary: pipeline plus evaluator actions are safe to cache locally
+(deterministic inputs plus versioned result messages) but not safe to
+execute remotely today — tool artifacts are per-host pinned binaries with no
+matching remote execution platform qualified, and no remote cache or executor
+is wired. Only the final Rust apply step updates the local
 working tree. It validates complete result envelopes, groups edits by path, and atomically
 applies each valid file independently. Its design is covered by
 [ADR 0005](../decisions/0005-mutating-operations.md).
+
+Evidence: `bazel run //tools/ci:action_execution_cache_qualification`
+(aquery `ExecutionInfo` plus `ActionKey` shape plus local execution-log
+hit/miss; remote stays unverified).
 
 ## Aggregation
 

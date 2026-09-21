@@ -84,6 +84,8 @@ def _quality_pipeline_action(target, ctx, capability):
         inputs = depset(inputs),
         outputs = [out],
         arguments = [args],
+        # Local-only until remote qualified (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
+        execution_requirements = {"no-remote-exec": "1"},
         mnemonic = "DxQuality" + capability.capitalize(),
         progress_message = "Dx quality " + capability + " %{label}",
     )
@@ -103,6 +105,8 @@ def _quality_pipeline_action(target, ctx, capability):
         inputs = depset([out]),
         outputs = [marker],
         arguments = [eval_args],
+        # Local-only until remote qualified (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
+        execution_requirements = {"no-remote-exec": "1"},
         mnemonic = "DxQualityEval",
         progress_message = "Dx quality evaluate " + capability + " %{label}",
     )
