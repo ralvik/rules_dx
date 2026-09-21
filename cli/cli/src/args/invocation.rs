@@ -28,9 +28,9 @@ pub struct ReportRequest {
 pub struct Invocation {
     pub command: Command,
     pub check: bool,
-    /// `--debug` (build/run/test only).
+    /// `--debug` (build/run/test/deploy only).
     pub debug: bool,
-    /// `--release` (build/run/test only).
+    /// `--release` (build/run/test/deploy only).
     pub release: bool,
     pub workspace: Option<String>,
     pub dry_run: bool,

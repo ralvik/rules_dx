@@ -336,6 +336,22 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   `cli/cli/tests/fixtures/strict_parsing/` plus
   `cli/cli/tests/fixtures/help_goldens/` plus `dx_cli::strict_tests`
   fixtures under issue #810.
+- Verify build-profiles flags plus `DX_PROFILE` forwarding: `dx build`,
+  `dx run`, `dx test`, and `dx deploy` accept `--debug`/`--release`
+  (mutually exclusive, exit 2; no `--dev` flag; every other command
+  rejects them; `dx coverage` takes none with unchanged argv),
+  `--debug` maps to `--config=dx_debug` (`dbg`), bare maps to
+  `--config=dx_dev` (`fastbuild`), `--release` maps to
+  `--config=dx_release` (`opt`), defaults are `dev` for
+  `build`/`run`/`test` and `release` for `deploy`, precedence is
+  explicit flag over deploy target `profile` over command default, and
+  `DX_PROFILE=debug|dev|release` forwards on the deploy run env with
+  the `DxDeployInfo` vocabulary (`debug`, `dev`, `release`). Pinned by
+  `bazel run //tools/ci:build_profiles_qualification` plus
+  `cli/cli/tests/fixtures/build_profiles/` plus `dx_cli::profile`
+  plus `dx_cli::workflow` plus `dx_cli::run_deploy` plus
+  `dx_cli::deploy` plus `deploy/rules/deploy_tests.bzl` fixtures under
+  issue #814.
 - Verify path queries receive supported query options only, final workflows retain
   unrelated configuration options, and unsupported mirroring neither alters query
   argv nor rejects path scope.

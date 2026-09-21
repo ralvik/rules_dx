@@ -358,6 +358,16 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Build-profile flags plus forwarding harness; see docs/cli/commands/build-test-coverage.md#build-profiles.
+    sh_binary(
+        name = "build_profiles_qualification",
+        srcs = ["build_profiles_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Audit curator declared-inputs harness; see docs/cli/commands/audit-update-bazel.md.
     sh_binary(
         name = "audit_declared_inputs_qualification",
