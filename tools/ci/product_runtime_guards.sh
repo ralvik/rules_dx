@@ -45,16 +45,28 @@ dx_guards_contains docs/testing/tools.md "tool matrix lost the product boundary 
   'ADR 0026' \
   'product_runtime_guards'
 
-# Direct product py_binary allowlist stays exact (10 targets): hermetic
-# tools plus preset/update plus the two must-stay linter shims. A new
+# Direct product py_binary allowlist stays exact (8 targets): hermetic
+# npm_packer plus SBOM/BCR gens plus preset/update plus the two must-stay
+# linter shims (archiver/hasher delivered Rust under #760). A new
 # product py_binary fails here until its accepted successor updates both
 # this row and ADR 0026. Depcheck stays a filegroup run via sh_test, not
 # a py_binary, and migrates as its own phase.
 py_names="$(grep -h -A1 -e '^[[:space:]]*py_binary(' deploy/rules/BUILD.bazel deploy/release/BUILD.bazel tools/bazelrc/BUILD.bazel quality/artifacts/BUILD.bazel quality/tools/python/BUILD.bazel 2>/dev/null | grep -e 'name = ' | sed -e 's/.*name = //' -e 's/[",]//g' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$py_names" == "archiver bcr_source_gen flake8 hasher npm_packer preset.update pylint sbom_prov_gen sbom_spdx_gen update" ]]; then
+if [[ "$py_names" == "bcr_source_gen flake8 npm_packer preset.update pylint sbom_prov_gen sbom_spdx_gen update" ]]; then
   ok
 else
-  bad "product py_binary allowlist drifted (want archiver/hasher/npm_packer plus sbom/bcr gens plus preset.update/update plus flake8/pylint shims, got: $py_names)"
+  bad "product py_binary allowlist drifted (want npm_packer plus sbom/bcr gens plus preset.update/update plus flake8/pylint shims with archiver/hasher Rust, got: $py_names)"
+fi
+
+# Archiver/hasher stay Rust (delivered Phase 1): no return to Python.
+if [[ ! -f "deploy/rules/archiver.py" ]] &&
+  [[ ! -f "deploy/rules/hasher.py" ]] &&
+  grep -q -F -e 'name = "archiver"' deploy/rules/BUILD.bazel &&
+  grep -q -F -e 'name = "hasher"' deploy/rules/BUILD.bazel &&
+  grep -q -F -e 'rust_binary(' deploy/rules/BUILD.bazel; then
+  ok
+else
+  bad "archiver/hasher Rust delivery regressed (want no archiver.py/hasher.py with rust_binary archiver/hasher)"
 fi
 
 # No product py_binary outside the five allowlisted BUILD files. New
