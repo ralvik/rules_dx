@@ -210,9 +210,9 @@ for lang in rust python js ts go java kotlin scala csharp fsharp cc; do
   [[ -d "tools/depcheck/testdata/$lang" ]] || depcheck_missing="$depcheck_missing $lang:dir"
 done
 if [[ -z "$depcheck_missing" ]] &&
-  grep -q -F -e 'name = "go_consistency_test"' "$depcheck_build" &&
-  grep -q -F -e 'name = "java_consistency_test"' "$depcheck_build" &&
-  grep -q -F -e 'name = "cc_consistency_test"' "$depcheck_build" &&
+  grep -q -F -e 'name = "depcheck_test"' "$depcheck_build" &&
+  grep -q -F -e 'name = "depcheck"' "$depcheck_build" &&
+  grep -q -F -e 'rust_test(' "$depcheck_build" &&
   [[ ! -d "tools/depcheck/testdata/vue" && ! -d "tools/depcheck/testdata/svelte" && ! -d "tools/depcheck/testdata/astro" && ! -d "tools/depcheck/testdata/mdx" ]] &&
   grep -q -F -e 'framework-composition depcheck stays with the JS/TS pnpm route' "$verify"; then
   ok

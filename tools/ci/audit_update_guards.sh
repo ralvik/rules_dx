@@ -93,7 +93,9 @@ else
 fi
 
 # plus: required-core plus admitted checker is implemented with fixtures (no false claim).
-if [[ -f "tools/depcheck/depcheck.py" ]] &&
+if [[ -f "tools/depcheck/src/lib.rs" ]] &&
+  [[ -f "tools/depcheck/src/main.rs" ]] &&
+  [[ -f "tools/depcheck/Cargo.toml" ]] &&
   [[ -f "tools/depcheck/BUILD.bazel" ]] &&
   [[ -d "tools/depcheck/testdata/rust/ok_used" ]] &&
   [[ -d "tools/depcheck/testdata/python/ok_used" ]] &&

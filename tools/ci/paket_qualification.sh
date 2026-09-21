@@ -56,7 +56,7 @@ gen_readme="docs/generation/README.md"
 verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-checker="tools/depcheck/depcheck.py"
+checker="tools/depcheck/src/lib.rs"
 
 # Pins fixture stays present as the single shared owner.
 if [[ -f "$pins" && -f "$pins_build" ]]; then

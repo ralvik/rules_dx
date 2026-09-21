@@ -138,18 +138,17 @@ fi
 
 # Portable hashing lives once in tools/sh/lib.sh
 # dx_sha256_* + dx_tree_sha256 with shasum/python fallbacks); deploy stays
-# hermetic python, gazelle/depcheck use the lib helpers.
+# hermetic python, gazelle uses the lib helpers (depcheck is Rust since ADR 0027).
 if grep -q -F -e 'dx_sha256_file() {' tools/sh/lib.sh &&
   grep -q -F -e 'dx_tree_sha256() {' tools/sh/lib.sh &&
   grep -q -F -e 'dx_sha256_check() {' tools/sh/lib.sh &&
   grep -q -F -e 'shasum -a 256' tools/sh/lib.sh &&
   grep -q -F -e 'py_sha256() {' deploy/rules/archive_verify.sh &&
   grep -q -F -e 'dx_sha256_file' gazelle/rust/idempotent_test.sh &&
-  grep -q -F -e 'dx_sha256_check' gazelle/rust/native_config_test.sh &&
-  grep -q -F -e 'dx_tree_sha256' tools/depcheck/usage_test.sh; then
+  grep -q -F -e 'dx_sha256_check' gazelle/rust/native_config_test.sh; then
   ok
 else
-  bad "portable hashing must live once in tools/sh/lib.sh with gazelle/depcheck using it and deploy hermetic python (issues #318, #323)"
+  bad "portable hashing must live once in tools/sh/lib.sh with gazelle using it and deploy hermetic python (issues #318, #323)"
 fi
 
 # Dedup: harness counters live once in tools/sh/lib.sh
