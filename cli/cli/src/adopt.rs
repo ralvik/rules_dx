@@ -35,6 +35,7 @@ use dx_process::{operational_code, pre_exec_code};
 pub struct AdoptEnv<'a> {
     pub workspace: &'a std::path::Path,
     pub query_runner: &'a dyn QueryRunner,
+    pub runner: &'a dyn dx_process::Runner,
     pub out: &'a mut dyn Write,
     pub err: &'a mut dyn Write,
 }
@@ -71,6 +72,7 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
     let AdoptEnv {
         workspace,
         query_runner,
+        runner,
         out,
         err,
     } = env;
@@ -78,7 +80,9 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         Command::Init => init::execute_init(invocation, workspace, out, err),
         Command::New => new::execute_new(invocation, workspace, out, err),
         Command::Upgrade => upgrade::execute_upgrade(invocation, workspace, out, err),
-        Command::Hooks => hooks::execute_hooks(invocation, workspace, out, err),
+        Command::Hooks => {
+            hooks::execute_hooks(invocation, workspace, query_runner, runner, out, err)
+        }
         Command::Status => status::execute_status(invocation, workspace, out, err),
         Command::Version => version::execute_version(invocation, workspace, out, err),
         Command::Watch => watch::execute_watch(invocation, workspace, out, err),
@@ -88,10 +92,6 @@ pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
         Command::Completion => completion::execute_completion(invocation, out, err),
         _ => pre_exec(err, "not an adoption command"),
     }
-}
-
-fn read_optional(root: &std::path::Path, name: &str) -> String {
-    std::fs::read_to_string(root.join(name)).unwrap_or_else(|_| format!("(missing {name})"))
 }
 
 #[cfg(test)]
@@ -120,6 +120,19 @@ mod tests {
         }
     }
 
+    struct NullRunner;
+
+    impl dx_process::Runner for NullRunner {
+        fn run(
+            &self,
+            _argv: &[String],
+            _cwd: &std::path::Path,
+            _env: &[(&str, &str)],
+        ) -> io::Result<dx_process::ChildStatus> {
+            Ok(dx_process::ChildStatus { code: Some(0) })
+        }
+    }
+
     #[test]
     fn quiet_suppresses_summaries_but_not_results() {
         // `--quiet` silences `dx` prose summaries while result
@@ -135,6 +148,7 @@ mod tests {
             AdoptEnv {
                 workspace: &root,
                 query_runner: &NullQuery,
+                runner: &NullRunner,
                 out: &mut out,
                 err: &mut err,
             },
@@ -153,6 +167,7 @@ mod tests {
             AdoptEnv {
                 workspace: &root,
                 query_runner: &NullQuery,
+                runner: &NullRunner,
                 out: &mut out,
                 err: &mut err,
             },
@@ -172,6 +187,7 @@ mod tests {
             AdoptEnv {
                 workspace: &root,
                 query_runner: &NullQuery,
+                runner: &NullRunner,
                 out: &mut out,
                 err: &mut err,
             },
@@ -189,6 +205,7 @@ mod tests {
             AdoptEnv {
                 workspace: &root,
                 query_runner: &NullQuery,
+                runner: &NullRunner,
                 out: &mut out,
                 err: &mut err,
             },

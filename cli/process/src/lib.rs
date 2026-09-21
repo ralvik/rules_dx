@@ -563,6 +563,15 @@ pub trait Runner {
     fn gitleaks_tool(&self) -> Option<PathBuf> {
         None
     }
+
+    /// Hermetic Git binary path, when the runner environment supplies one.
+    /// Production resolves `DX_GIT_BIN` to the pinned managed Git artifact;
+    /// the default is absent so hook Git fails closed instead of searching
+    /// ambient `PATH` (See: `docs/cli/commands/hooks.md#dx-hooks`).
+    /// Test fakes return an absolute hermetic placeholder.
+    fn git_tool(&self) -> Option<PathBuf> {
+        None
+    }
 }
 
 /// Real runner that spawns the process directly. Argument vectors are
@@ -606,6 +615,12 @@ impl Runner for SystemRunner {
 
     fn gitleaks_tool(&self) -> Option<PathBuf> {
         std::env::var_os("DX_GITLEAKS_BIN")
+            .map(PathBuf::from)
+            .filter(|path| path.is_absolute())
+    }
+
+    fn git_tool(&self) -> Option<PathBuf> {
+        std::env::var_os("DX_GIT_BIN")
             .map(PathBuf::from)
             .filter(|path| path.is_absolute())
     }

@@ -7,10 +7,12 @@
 //! stays `crate::adopt::execute_adoption`.
 
 use std::io::Write;
+use std::time::Instant;
 
 use crate::args::Invocation;
+use crate::resolve::{QueryResult, QueryRunner};
 
-use super::{operational, pre_exec, read_optional, summaries_suppressed};
+use super::{operational, pre_exec, summaries_suppressed};
 
 /// Runs `dx hooks <install|uninstall|status|run>`: mutating verbs print
 /// prose summaries (suppressed under `--quiet`), `status` prints the
@@ -19,6 +21,8 @@ use super::{operational, pre_exec, read_optional, summaries_suppressed};
 pub(crate) fn execute_hooks(
     invocation: &Invocation,
     workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+    runner: &dyn dx_process::Runner,
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
@@ -65,43 +69,304 @@ pub(crate) fn execute_hooks(
                 Err(error) => operational(out, err, &error.to_string()),
             }
         }
-        "status" => {
-            if invocation.dry_run {
-                if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "would show hooks status");
-                }
-                return 0;
-            }
-            let baseline = read_optional(workspace, "dx.hooks.toml");
-            let overlay = read_optional(workspace, "dx.local.toml");
-            let timings = "pre-commit: p95 12s\npre-push: p95 40s\n";
-            let view = dx_adopt::render_hooks_status(&baseline, &overlay, timings);
-            let _ = write!(out, "{view}");
-            if !dx_adopt::hook_status_shows_merged(true, true, true) {
-                return operational(out, err, "hooks status missing merged layer");
-            }
-            0
-        }
-        "run" => {
-            let trigger = invocation.targets.get(1).map(String::as_str).unwrap_or("");
-            if trigger != "pre-commit" && trigger != "pre-push" {
-                return pre_exec(err, "usage: dx hooks run <pre-commit|pre-push>");
-            }
-            if invocation.dry_run {
-                if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "would run {trigger}");
-                }
-                return 0;
-            }
-            if !dx_adopt::hook_git_is_hermetic(true, false) {
-                return operational(out, err, "hook git must be hermetic");
-            }
-            if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "ran {trigger}: ok (budget 120s)");
-            }
-            0
-        }
+        "status" => execute_status(invocation, workspace, out, err),
+        "run" => execute_run(invocation, workspace, query_runner, runner, out, err),
         _ => pre_exec(err, "usage: dx hooks <install|uninstall|status|run>"),
+    }
+}
+
+fn read_file_opt(root: &std::path::Path, rel: &str) -> Option<String> {
+    std::fs::read_to_string(root.join(rel)).ok()
+}
+
+/// Status prints the effective merged baseline/overlay result with measured
+/// timings. Missing files fall back to defaults/empty; invalid TOML fails
+/// closed through the merged gate below.
+fn execute_status(
+    invocation: &Invocation,
+    workspace: &std::path::Path,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> i32 {
+    if invocation.dry_run {
+        if !summaries_suppressed(invocation) {
+            let _ = writeln!(out, "would show hooks status");
+        }
+        return 0;
+    }
+    let baseline_opt = read_file_opt(workspace, dx_adopt::HOOK_BASELINE_REL);
+    let overlay_opt = read_file_opt(workspace, dx_adopt::HOOK_OVERLAY_REL);
+    let timings_opt = read_file_opt(workspace, dx_adopt::HOOK_TIMINGS_REL);
+    let baseline_res = dx_adopt::load_hooks_config(baseline_opt.as_deref(), None);
+    let overlay_res = dx_adopt::load_hooks_config(None, overlay_opt.as_deref());
+    let timings_res = dx_adopt::load_hook_timings(timings_opt.as_deref());
+    let shows_baseline = baseline_res.is_ok();
+    let shows_overlay = overlay_res.is_ok();
+    let shows_timings = timings_res.is_ok();
+    if !dx_adopt::hook_status_shows_merged(shows_baseline, shows_overlay, shows_timings) {
+        let mut detail = String::new();
+        if let Err(error) = &baseline_res {
+            detail.push_str(&error.to_string());
+            detail.push_str("; ");
+        }
+        if let Err(error) = &overlay_res {
+            detail.push_str(&error.to_string());
+            detail.push_str("; ");
+        }
+        if let Err(error) = &timings_res {
+            detail.push_str(&error.to_string());
+        }
+        let detail = detail.trim_end_matches("; ");
+        return operational(
+            out,
+            err,
+            &format!("hooks status missing merged layer: {detail}"),
+        );
+    }
+    let merged = match dx_adopt::load_hooks_config(baseline_opt.as_deref(), overlay_opt.as_deref())
+    {
+        Ok(config) => config,
+        Err(error) => return operational(out, err, &error.to_string()),
+    };
+    let timings = match timings_res {
+        Ok(timings) => timings,
+        Err(error) => return operational(out, err, &error.to_string()),
+    };
+    let baseline_src = if baseline_opt.is_some() {
+        dx_adopt::HOOK_BASELINE_REL.to_owned()
+    } else {
+        "defaults (no dx.hooks.toml)".to_owned()
+    };
+    let overlay_src = if overlay_opt.is_some() {
+        dx_adopt::HOOK_OVERLAY_REL.to_owned()
+    } else {
+        "absent (no dx.local.toml)".to_owned()
+    };
+    let view = dx_adopt::render_hooks_status_merged(&merged, &timings, &baseline_src, &overlay_src);
+    let _ = write!(out, "{view}");
+    0
+}
+
+/// Run executes the affected closure checks hermetically with per-check
+/// budget enforcement. Any check failure or budget overrun blocks (exit 1).
+fn execute_run(
+    invocation: &Invocation,
+    workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+    runner: &dyn dx_process::Runner,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> i32 {
+    let trigger = invocation.targets.get(1).map(String::as_str).unwrap_or("");
+    if !dx_adopt::is_hook_trigger(trigger) {
+        return pre_exec(err, "usage: dx hooks run <pre-commit|pre-push>");
+    }
+    if invocation.dry_run {
+        if !summaries_suppressed(invocation) {
+            let _ = writeln!(out, "would run {trigger}");
+        }
+        return 0;
+    }
+    let git_path = runner.git_tool();
+    let uses_hermetic = git_path
+        .as_ref()
+        .is_some_and(|path| dx_adopt::hook_git_path_is_hermetic(path));
+    if !dx_adopt::hook_git_is_hermetic(uses_hermetic, false) {
+        return operational(
+            out,
+            err,
+            &format!(
+                "hook git must be hermetic: set {} to an absolute managed Git path; ambient PATH lookup is rejected",
+                dx_adopt::HOOK_GIT_ENV_VAR
+            ),
+        );
+    }
+    let git = git_path.unwrap_or_else(|| std::path::PathBuf::from("git"));
+    let baseline_opt = read_file_opt(workspace, dx_adopt::HOOK_BASELINE_REL);
+    let overlay_opt = read_file_opt(workspace, dx_adopt::HOOK_OVERLAY_REL);
+    let config = match dx_adopt::load_hooks_config(baseline_opt.as_deref(), overlay_opt.as_deref())
+    {
+        Ok(config) => config,
+        Err(error) => return operational(out, err, &error.to_string()),
+    };
+    let checks = dx_adopt::checks_for_trigger(&config, trigger);
+    if checks.is_empty() {
+        if !summaries_suppressed(invocation) {
+            let _ = writeln!(out, "ran {trigger}: ok (no checks configured)");
+        }
+        return 0;
+    }
+    let staged = match staged_files(&git, workspace, query_runner) {
+        Ok(files) => files,
+        Err(detail) => return operational(out, err, &detail),
+    };
+    if staged.is_empty() {
+        if !summaries_suppressed(invocation) {
+            let _ = writeln!(out, "ran {trigger}: ok (no staged files)");
+        }
+        return 0;
+    }
+    let targets = match affected_targets(&staged, workspace, query_runner) {
+        Ok(targets) => targets,
+        Err(detail) => return operational(out, err, &detail),
+    };
+    if targets.is_empty() {
+        if !summaries_suppressed(invocation) {
+            let _ = writeln!(out, "ran {trigger}: ok (no affected targets)");
+        }
+        return 0;
+    }
+    let dx_exe = match std::env::current_exe() {
+        Ok(exe) => exe.to_string_lossy().into_owned(),
+        Err(error) => {
+            return operational(
+                out,
+                err,
+                &format!("hook dx executable unavailable: {error}"),
+            );
+        }
+    };
+    let mut measured: Vec<(String, f64)> = Vec::with_capacity(checks.len());
+    for check in &checks {
+        let argv = check_argv(&dx_exe, check, &targets);
+        let start = Instant::now();
+        let status = match runner.run(&argv, workspace, &[]) {
+            Ok(status) => status,
+            Err(error) => {
+                return operational(
+                    out,
+                    err,
+                    &format!("hook check {check:?} launch failed: {error}"),
+                );
+            }
+        };
+        let elapsed = start.elapsed().as_secs_f64();
+        if dx_adopt::hook_check_timed_out(elapsed, config.budget_secs) {
+            return operational(
+                out,
+                err,
+                &format!(
+                    "hook check {check:?} exceeded budget (took {elapsed:.2}s, budget {}s)",
+                    config.budget_secs
+                ),
+            );
+        }
+        match status.code {
+            Some(0) => {
+                measured.push((check.clone(), elapsed));
+            }
+            Some(code) => {
+                return operational(
+                    out,
+                    err,
+                    &format!("hook check {check:?} failed with exit {code}"),
+                );
+            }
+            None => {
+                return operational(
+                    out,
+                    err,
+                    &format!("hook check {check:?} terminated by signal"),
+                );
+            }
+        }
+    }
+    if let Err(detail) = record_timings(workspace, &measured) {
+        return operational(out, err, &detail);
+    }
+    if !summaries_suppressed(invocation) {
+        for (check, elapsed) in &measured {
+            let _ = writeln!(
+                out,
+                "ran {trigger}: {check} ok ({elapsed:.2}s / budget {}s)",
+                config.budget_secs
+            );
+        }
+    }
+    0
+}
+
+/// Staged file set via hermetic Git only (never ambient `PATH` lookup).
+fn staged_files(
+    git: &std::path::Path,
+    workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+) -> Result<Vec<String>, String> {
+    let argv = vec![
+        git.to_string_lossy().into_owned(),
+        "diff".to_owned(),
+        "--cached".to_owned(),
+        "--name-only".to_owned(),
+    ];
+    let result: QueryResult = query_runner
+        .run_query(&argv, workspace)
+        .map_err(|error| format!("hook git diff failed: {error}"))?;
+    if result.code != Some(0) {
+        let detail = first_line(&result.stderr);
+        return Err(format!("hook git diff failed: {detail}"));
+    }
+    let text = String::from_utf8(result.stdout)
+        .map_err(|error| format!("hook git diff output is not UTF-8: {error}"))?;
+    Ok(text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(ToOwned::to_owned)
+        .collect())
+}
+
+/// Affected-target closure over worktree content for staged paths.
+fn affected_targets(
+    staged: &[String],
+    workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+) -> Result<Vec<String>, String> {
+    let existing: Vec<String> = staged
+        .iter()
+        .filter(|path| workspace.join(path).is_file())
+        .cloned()
+        .collect();
+    if existing.is_empty() {
+        return Ok(Vec::new());
+    }
+    crate::resolve::resolve(&existing, workspace, query_runner)
+        .map(|resolved| resolved.targets)
+        .map_err(|error| error.to_string())
+}
+
+/// Check argv re-invoking the current `dx` binary (no `PATH` lookup).
+fn check_argv(dx_exe: &str, check: &str, targets: &[String]) -> Vec<String> {
+    let mut argv = vec![dx_exe.to_owned()];
+    argv.extend(check.split_whitespace().map(ToOwned::to_owned));
+    argv.extend(targets.iter().cloned());
+    argv
+}
+
+/// Merge measured timings into the persisted timings file.
+fn record_timings(workspace: &std::path::Path, measured: &[(String, f64)]) -> Result<(), String> {
+    let path = workspace.join(dx_adopt::HOOK_TIMINGS_REL);
+    let existing = std::fs::read_to_string(&path).ok();
+    let mut timings =
+        dx_adopt::load_hook_timings(existing.as_deref()).map_err(|error| error.to_string())?;
+    for (check, elapsed) in measured {
+        timings.secs_by_check.insert(check.clone(), *elapsed);
+    }
+    let body = dx_adopt::render_hook_timings(&timings).map_err(|error| error.to_string())?;
+    dx_atomic_fs::write_atomic(&path, body.as_bytes())
+        .map_err(|error| format!("write timings: {error}"))?;
+    Ok(())
+}
+
+fn first_line(bytes: &[u8]) -> String {
+    let text = String::from_utf8_lossy(bytes);
+    let line = text.lines().next().unwrap_or("no Git diagnostic").trim();
+    if line.is_empty() {
+        return "no Git diagnostic".to_owned();
+    }
+    if line.len() > 200 {
+        format!("{}...", &line[..200])
+    } else {
+        line.to_owned()
     }
 }
 
@@ -110,7 +375,9 @@ mod tests {
     use super::*;
     use crate::adopt::{execute_adoption, AdoptEnv};
     use crate::args::parse;
+    use std::cell::RefCell;
     use std::io;
+    use std::path::{Path, PathBuf};
 
     fn invocation(words: &[&str]) -> Invocation {
         parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
@@ -132,6 +399,35 @@ mod tests {
         }
     }
 
+    struct NullRunner;
+
+    impl dx_process::Runner for NullRunner {
+        fn run(
+            &self,
+            _argv: &[String],
+            _cwd: &Path,
+            _env: &[(&str, &str)],
+        ) -> io::Result<dx_process::ChildStatus> {
+            Ok(dx_process::ChildStatus { code: Some(0) })
+        }
+    }
+
+    fn env<'a>(
+        root: &'a Path,
+        query: &'a dyn QueryRunner,
+        runner: &'a dyn dx_process::Runner,
+        out: &'a mut Vec<u8>,
+        err: &'a mut Vec<u8>,
+    ) -> AdoptEnv<'a> {
+        AdoptEnv {
+            workspace: root,
+            query_runner: query,
+            runner,
+            out,
+            err,
+        }
+    }
+
     #[test]
     fn hooks_status_shows_merged_layers() {
         let inv = invocation(&["hooks", "status"]);
@@ -141,18 +437,56 @@ mod tests {
         let mut err = Vec::new();
         let code = execute_adoption(
             &inv,
-            AdoptEnv {
-                workspace: &root,
-                query_runner: &NullQuery,
-                out: &mut out,
-                err: &mut err,
-            },
+            env(&root, &NullQuery, &NullRunner, &mut out, &mut err),
         );
         assert_eq!(code, 0);
         let text = String::from_utf8(out).expect("out");
         assert!(text.contains("baseline:"));
         assert!(text.contains("overlay:"));
         assert!(text.contains("timings:"));
+        assert!(text.contains("effective:"));
+        assert!(!text.contains("p95"));
+    }
+
+    #[test]
+    fn hooks_status_rejects_invalid_toml() {
+        let inv = invocation(&["hooks", "status"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-status-bad-");
+        let root = scratch.path().to_path_buf();
+        std::fs::write(root.join("dx.hooks.toml"), "not toml = [").expect("bad baseline");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            env(&root, &NullQuery, &NullRunner, &mut out, &mut err),
+        );
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err)
+            .expect("err")
+            .contains("hooks status"));
+    }
+
+    #[test]
+    fn hooks_status_shows_measured_timings() {
+        let inv = invocation(&["hooks", "status"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-status-timed-");
+        let root = scratch.path().to_path_buf();
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(
+            root.join(".dx/hooks-timings.toml"),
+            "[timings]\n\"format --check\" = 1.23\n",
+        )
+        .expect("timings");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            env(&root, &NullQuery, &NullRunner, &mut out, &mut err),
+        );
+        assert_eq!(code, 0);
+        let text = String::from_utf8(out).expect("out");
+        assert!(text.contains("1.23s (measured)"));
+        assert!(!text.contains("p95 12s"));
     }
 
     #[test]
@@ -173,12 +507,7 @@ mod tests {
             let mut err = Vec::new();
             let code = execute_adoption(
                 &inv,
-                AdoptEnv {
-                    workspace: &root,
-                    query_runner: &NullQuery,
-                    out: &mut out,
-                    err: &mut err,
-                },
+                env(&root, &NullQuery, &NullRunner, &mut out, &mut err),
             );
             assert_eq!(code, 0, "words: {words:?}");
             assert!(
@@ -194,14 +523,191 @@ mod tests {
         let mut err = Vec::new();
         let code = execute_adoption(
             &inv,
-            AdoptEnv {
-                workspace: &root,
-                query_runner: &NullQuery,
-                out: &mut out,
-                err: &mut err,
-            },
+            env(&root, &NullQuery, &NullRunner, &mut out, &mut err),
         );
         assert_eq!(code, 0);
         assert!(String::from_utf8(out).expect("out").is_empty());
+    }
+
+    /// Scripted query runner: first call answers hermetic `git diff`,
+    /// later calls answer Bazel ownership queries in order.
+    struct ScriptQuery {
+        outputs: RefCell<Vec<crate::resolve::QueryResult>>,
+        seen: RefCell<Vec<Vec<String>>>,
+    }
+
+    impl ScriptQuery {
+        fn staged_then_owners(staged: &str, owners: &str) -> Self {
+            Self {
+                outputs: RefCell::new(vec![
+                    crate::resolve::QueryResult {
+                        code: Some(0),
+                        stdout: staged.as_bytes().to_vec(),
+                        stderr: Vec::new(),
+                    },
+                    crate::resolve::QueryResult {
+                        code: Some(0),
+                        stdout: owners.as_bytes().to_vec(),
+                        stderr: Vec::new(),
+                    },
+                ]),
+                seen: RefCell::new(Vec::new()),
+            }
+        }
+    }
+
+    impl QueryRunner for ScriptQuery {
+        fn run_query(&self, argv: &[String], _cwd: &Path) -> io::Result<QueryResult> {
+            self.seen.borrow_mut().push(argv.to_vec());
+            Ok(self.outputs.borrow_mut().remove(0))
+        }
+    }
+
+    /// Recording check runner with an explicit hermetic Git tool.
+    struct ScriptRunner {
+        git: Option<PathBuf>,
+        codes: RefCell<Vec<Option<i32>>>,
+        seen: RefCell<Vec<Vec<String>>>,
+    }
+
+    impl ScriptRunner {
+        fn git_with_codes(git: &str, codes: Vec<Option<i32>>) -> Self {
+            Self {
+                git: Some(PathBuf::from(git)),
+                codes: RefCell::new(codes),
+                seen: RefCell::new(Vec::new()),
+            }
+        }
+    }
+
+    impl dx_process::Runner for ScriptRunner {
+        fn git_tool(&self) -> Option<PathBuf> {
+            self.git.clone()
+        }
+
+        fn run(
+            &self,
+            argv: &[String],
+            _cwd: &Path,
+            _env: &[(&str, &str)],
+        ) -> io::Result<dx_process::ChildStatus> {
+            self.seen.borrow_mut().push(argv.to_vec());
+            Ok(dx_process::ChildStatus {
+                code: self.codes.borrow_mut().remove(0),
+            })
+        }
+    }
+
+    fn write_workspace(root: &Path) {
+        std::fs::create_dir_all(root.join("pkg")).expect("pkg");
+        std::fs::write(root.join("pkg/BUILD.bazel"), "").expect("build");
+        std::fs::write(root.join("pkg/a.py"), "x = 1\n").expect("source");
+    }
+
+    #[test]
+    fn hooks_run_executes_checks_and_records_measured_timings() {
+        let inv = invocation(&["hooks", "run", "pre-commit"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-run-");
+        let root = scratch.path().to_path_buf();
+        write_workspace(&root);
+        let query = ScriptQuery::staged_then_owners("pkg/a.py\n", "//pkg:lib\n");
+        let runner = ScriptRunner::git_with_codes("/hermetic/git", vec![Some(0), Some(0)]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(&inv, env(&root, &query, &runner, &mut out, &mut err));
+        assert_eq!(code, 0);
+        assert_eq!(runner.seen.borrow().len(), 2);
+        assert!(runner.seen.borrow()[0][1..].contains(&"format".to_owned()));
+        let text = String::from_utf8(out).expect("out");
+        assert!(text.contains("format --check ok"));
+        assert!(!text.contains("budget 120s)") || text.contains("/ budget 120s)"));
+        assert!(!text.contains("ran pre-commit: ok (budget 120s)"));
+        let timings =
+            std::fs::read_to_string(root.join(".dx/hooks-timings.toml")).expect("timings");
+        assert!(timings.contains("format --check"));
+        assert!(!timings.contains("p95"));
+        assert_eq!(query.seen.borrow().len(), 2);
+        assert!(
+            query.seen.borrow()[0][0].ends_with("git")
+                || query.seen.borrow()[0][0] == "/hermetic/git"
+        );
+    }
+
+    #[test]
+    fn hooks_run_blocks_on_check_failure() {
+        let inv = invocation(&["hooks", "run", "pre-commit"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-run-fail-");
+        let root = scratch.path().to_path_buf();
+        write_workspace(&root);
+        let query = ScriptQuery::staged_then_owners("pkg/a.py\n", "//pkg:lib\n");
+        let runner = ScriptRunner::git_with_codes("/hermetic/git", vec![Some(1), Some(0)]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(&inv, env(&root, &query, &runner, &mut out, &mut err));
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err).expect("err").contains("failed"));
+    }
+
+    #[test]
+    fn hooks_run_blocks_on_budget_timeout() {
+        let inv = invocation(&["hooks", "run", "pre-commit"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-run-timeout-");
+        let root = scratch.path().to_path_buf();
+        write_workspace(&root);
+        std::fs::write(root.join("dx.hooks.toml"), "[hooks]\nbudget_secs = 0\n")
+            .expect("zero budget");
+        let query = ScriptQuery::staged_then_owners("pkg/a.py\n", "//pkg:lib\n");
+        let runner = ScriptRunner::git_with_codes("/hermetic/git", vec![Some(0), Some(0)]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(&inv, env(&root, &query, &runner, &mut out, &mut err));
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err)
+            .expect("err")
+            .contains("exceeded budget"));
+    }
+
+    #[test]
+    fn hooks_run_needs_hermetic_git() {
+        let inv = invocation(&["hooks", "run", "pre-commit"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-run-nogit-");
+        let root = scratch.path().to_path_buf();
+        write_workspace(&root);
+        let runner = ScriptRunner {
+            git: None,
+            codes: RefCell::new(vec![]),
+            seen: RefCell::new(Vec::new()),
+        };
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(&inv, env(&root, &NullQuery, &runner, &mut out, &mut err));
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err).expect("err").contains("hermetic"));
+        assert!(runner.seen.borrow().is_empty());
+    }
+
+    #[test]
+    fn hooks_run_passes_with_no_staged_files() {
+        let inv = invocation(&["hooks", "run", "pre-commit"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-hooks-run-empty-");
+        let root = scratch.path().to_path_buf();
+        write_workspace(&root);
+        let query = ScriptQuery {
+            outputs: RefCell::new(vec![crate::resolve::QueryResult {
+                code: Some(0),
+                stdout: Vec::new(),
+                stderr: Vec::new(),
+            }]),
+            seen: RefCell::new(Vec::new()),
+        };
+        let runner = ScriptRunner::git_with_codes("/hermetic/git", vec![]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(&inv, env(&root, &query, &runner, &mut out, &mut err));
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out)
+            .expect("out")
+            .contains("no staged files"));
+        assert!(runner.seen.borrow().is_empty());
     }
 }

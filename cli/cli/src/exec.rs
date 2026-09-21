@@ -66,6 +66,7 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command.is_adoption() {
         let Env {
             workspace,
+            runner,
             query_runner,
             out,
             err,
@@ -76,6 +77,7 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
             crate::adopt::AdoptEnv {
                 workspace,
                 query_runner,
+                runner,
                 out,
                 err,
             },

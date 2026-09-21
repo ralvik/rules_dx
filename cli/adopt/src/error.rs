@@ -98,6 +98,15 @@ pub enum AdoptError {
     /// `dx new` needs a supported language template.
     #[error("unknown language for dx new: {language} (want one of rust, python, javascript, typescript, go, java, kotlin, scala, csharp, fsharp, c, cc, cpp)")]
     NewUnknownLanguage { language: String },
+    /// Hooks baseline/overlay TOML does not parse as a `[hooks]` table.
+    #[error("invalid hooks config: {detail}")]
+    InvalidHooks { detail: String },
+    /// Hook timings TOML does not parse as a `[timings]` table.
+    #[error("invalid hooks timings: {detail}")]
+    InvalidTimings { detail: String },
+    /// Failed to render hook timings via the TOML crate.
+    #[error("render timings: {detail}")]
+    RenderTimings { detail: String },
 }
 
 #[cfg(test)]
