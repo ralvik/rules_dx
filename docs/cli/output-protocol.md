@@ -582,7 +582,8 @@ event per check in check order, then `command_finished`. Dry-run emits only
 events. `command_finished` carries only `exit_code` (no `results_complete`,
 `diagnostics`, `changes`, or `mutations`); exit `1` means a check reported
 `error` (today pin mismatch, with a stderr hint pointing at
-`dx version --pin`).
+`dx version --pin`) or the pin was missing/unreadable (lifecycle-only
+envelope plus a stderr read error, no forged `ok`).
 
 `dx status` is the failure explainer entry point (there is no `dx doctor`;
 see [status/version](commands/status-version.md)): workflow `bazel_failed`

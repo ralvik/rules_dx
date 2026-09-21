@@ -39,10 +39,16 @@ pub(crate) fn execute_version(
         // ruleset (`dx_adopt::PREVIOUS_VERSION`); there is no deeper
         // pin history to walk back through. Rolling to the current pin
         // or to an unknown version is rejected by the admissibility
-        // gate, not silently re-pinned.
+        // gate, not silently re-pinned. A missing or unreadable pin
+        // fails closed without forging a default (See:
+        // `docs/cli/commands/status-version.md`).
         let previous = dx_adopt::PREVIOUS_VERSION;
-        let current = dx_adopt::read_version_pin(workspace).unwrap_or_default();
-        if !dx_adopt::rollback_re_pins_previous(&current, previous, previous) {
+        let current = match dx_adopt::read_version_pin(workspace) {
+            Ok(pin) => pin,
+            Err(error) => return operational(out, err, &error.to_string()),
+        };
+        if current.is_empty() || !dx_adopt::rollback_re_pins_previous(&current, previous, previous)
+        {
             return operational(
                 out,
                 err,
@@ -97,7 +103,13 @@ pub(crate) fn execute_version(
         }
         return 0;
     }
-    let current = dx_adopt::read_version_pin(workspace).unwrap_or_else(|_| "0.0.0".to_owned());
+    // A missing or unreadable pin fails closed: propagate the read
+    // error instead of forging a default ok (See:
+    // `docs/cli/commands/status-version.md`).
+    let current = match dx_adopt::read_version_pin(workspace) {
+        Ok(pin) => pin,
+        Err(error) => return operational(out, err, &error.to_string()),
+    };
     if invocation.check {
         if dx_adopt::version_pin_matches_module(&current, dx_adopt::MODULE_VERSION) {
             let _ = writeln!(out, "version ok: {current}");
@@ -183,9 +195,49 @@ mod tests {
     fn version_rollback_pins_previous_release() {
         let scratch = dx_test_scratch::scratch("dx-adopt-version-rollback-");
         let root = scratch.path().to_path_buf();
+        let inv = invocation(&["version", "--rollback"]);
+        // Pin-less tree refuses without creating a pin: a missing pin
+        // fails closed on the read error.
         let mut out = Vec::new();
         let mut err = Vec::new();
-        let inv = invocation(&["version", "--rollback"]);
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err)
+            .expect("err")
+            .contains("read version pin"));
+        assert!(!root.join(".dx/version").exists());
+        // An empty pin is also no prior pin: refuse without writing.
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(root.join(".dx/version"), "\n").expect("empty pin");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err)
+            .expect("err")
+            .contains("rollback refused"));
+        // A drifted pin rolls back to the previous release.
+        std::fs::write(root.join(".dx/version"), "9.9.9\n").expect("drifted pin");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
         let code = execute_adoption(
             &inv,
             AdoptEnv {
@@ -282,6 +334,38 @@ mod tests {
         );
         assert_eq!(code, 1);
         assert!(String::from_utf8(err).expect("err").contains("drift"));
+    }
+
+    #[test]
+    fn version_missing_pin_fails_closed() {
+        for words in [vec!["version", "--check"], vec!["version"]] {
+            let scratch = dx_test_scratch::scratch("dx-adopt-version-missing-");
+            let root = scratch.path().to_path_buf();
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let inv = invocation(&words);
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &NullQuery,
+                    runner: &NullRunner,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 1, "words: {words:?}");
+            assert!(
+                String::from_utf8(err)
+                    .expect("err")
+                    .contains("read version pin"),
+                "words: {words:?}"
+            );
+            assert!(
+                !String::from_utf8(out).expect("out").contains("version ok"),
+                "words: {words:?}"
+            );
+        }
     }
 
     #[test]

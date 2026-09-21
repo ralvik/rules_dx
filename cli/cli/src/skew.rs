@@ -14,8 +14,9 @@
 //! `owners`, `deps`, `why`) warn and proceed; every mutating or generating
 //! command refuses. `--dry-run` downgrades refusal to a warning because a
 //! preview never mutates. A missing or empty pin is a never-pinned tree,
-//! not skew, so fresh checkouts proceed (this matches `dx status`, which
-//! reports an absent pin as `ok`).
+//! not skew, so fresh checkouts proceed through the gate to `init`;
+//! `version` and `status` themselves fail closed on the missing pin.
+//! See: `docs/cli/commands/status-version.md#startup-skew-gate`.
 
 use crate::args::Command;
 

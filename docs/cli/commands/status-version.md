@@ -32,7 +32,9 @@ suppressed under `--quiet`; live status output always prints.
 
 Exit `0` when every check passes; exit `1` (operational) when any check is
 `error` — today that is pin mismatch, with a stderr hint pointing at
-`dx version --pin`. Usage errors exit `2`.
+`dx version --pin`. A missing or unreadable `.dx/version` pin fails closed
+(exit `1`) instead of reporting `ok`; JSON still closes the envelope with
+`command_finished` exit `1`. Usage errors exit `2`.
 
 ## Failure explainer
 
@@ -62,8 +64,10 @@ neither combines with `--check` (exit `2`), and both accept `--dry-run`
 `would report version` and `dx version --check --dry-run` prints
 `would check version pin` without reading the pin; dry-run plans are
 summaries, suppressed under `--quiet`. A pin that does not equal the module
-version, or a rollback with nothing to restore, fails operationally
-(exit `1`).
+version, a missing or unreadable pin, or a rollback with nothing to restore
+(including a rollback with no prior pin) fails operationally (exit `1`):
+`--check` and bare `version` propagate the read error instead of forging
+`0.0.0`, and rollback refuses without writing.
 
 ## Startup skew gate
 
@@ -86,4 +90,5 @@ implemented in `cli/cli/src/skew.rs`):
   every other command.
 
 A missing or empty pin is a never-pinned tree, not skew, so fresh
-checkouts proceed.
+checkouts proceed through the gate to `init`; `version` and `status`
+themselves fail closed on the missing pin.

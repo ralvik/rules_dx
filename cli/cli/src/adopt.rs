@@ -160,6 +160,7 @@ mod tests {
         let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-status-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -198,6 +199,8 @@ mod tests {
         let inv = invocation(&["version", "--quiet"]);
         let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-version-");
         let root = scratch.path().to_path_buf();
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(

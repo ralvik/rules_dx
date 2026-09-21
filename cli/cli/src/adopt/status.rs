@@ -44,11 +44,27 @@ pub(crate) fn execute_status(
         }
         return 0;
     }
-    let pinned = dx_adopt::read_version_pin(workspace).unwrap_or_default();
-    let pinned = if pinned.is_empty() {
-        dx_adopt::DX_VERSION.to_owned()
-    } else {
-        pinned
+    // A missing or unreadable pin fails closed: propagate the read
+    // error instead of forging a default ok (See:
+    // `docs/cli/commands/status-version.md`). An empty pin flows into
+    // the checks below, where it can never match the module version.
+    let pinned = match dx_adopt::read_version_pin(workspace) {
+        Ok(pin) => pin,
+        Err(error) => {
+            let message = error.to_string();
+            if invocation.output == OutputMode::Json {
+                if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+                    let _ = write_event(out, &event);
+                }
+                let _ = write_event(
+                    out,
+                    &command_finished(operational_code(), &FinishedCounts::default()),
+                );
+            }
+            let _ = writeln!(err, "dx: {message}");
+            let _ = out.flush();
+            return operational_code();
+        }
     };
     let checks = dx_adopt::default_status_checks(&pinned);
     // Result document: always prints even under `--quiet` (quiet suppresses
@@ -244,6 +260,74 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn status_missing_pin_fails_closed() {
+        for words in [vec!["status"], vec!["status", "--output=json"]] {
+            let inv = invocation(&words);
+            let scratch = dx_test_scratch::scratch("dx-adopt-status-missing-");
+            let root = scratch.path().to_path_buf();
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &NullQuery,
+                    runner: &NullRunner,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 1, "words: {words:?}");
+            assert!(
+                String::from_utf8(err)
+                    .expect("err")
+                    .contains("read version pin"),
+                "words: {words:?}"
+            );
+            let stdout = String::from_utf8(out).expect("out");
+            assert!(!stdout.contains("pin: ok"), "words: {words:?}");
+            if words.contains(&"--output=json") {
+                let events: Vec<serde_json::Value> = stdout
+                    .lines()
+                    .map(serde_json::from_str)
+                    .collect::<Result<_, _>>()
+                    .expect("NDJSON");
+                assert_eq!(events[0]["event"], serde_json::json!("command_started"));
+                assert_eq!(
+                    events.last().expect("finished")["exit_code"],
+                    serde_json::json!(1)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn status_empty_pin_reports_error() {
+        let inv = invocation(&["status"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-status-empty-");
+        let root = scratch.path().to_path_buf();
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(root.join(".dx/version"), "\n").expect("empty pin");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        assert!(String::from_utf8(err)
+            .expect("err")
+            .contains("pin mismatch"));
+        assert!(!String::from_utf8(out).expect("out").contains("pin: ok"));
     }
 
     #[test]
