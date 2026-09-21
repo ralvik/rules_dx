@@ -1,4 +1,4 @@
-"""Docs site execution plus rebuild plus link-completeness plus timing pins (renderer plus site execution, mdBook).
+"""Docs site execution plus rebuild plus link-completeness plus timing plus drift pins (renderer plus site execution, mdBook).
 
 Contract: `docs/documentation/site.md`.
 Fixture: `tools/ci/tests/fixtures/docs_site/` via
@@ -73,6 +73,8 @@ NO_COMMITTED_IR = "no committed IR shards"
 
 # Rejected substitutes.
 REJECTED_COMMITTED_IR = "committed IR snapshots are rejected"
+REJECTED_SNAPSHOT_REFRESH = "committed IR snapshot refresh machinery is rejected"
+REJECTED_UNPINNED_UPGRADE = "unpinned or user-side pin upgrade is rejected"
 REJECTED_HTML_PARSED_INDEX = "search index parsing rendered HTML is rejected"
 REJECTED_WATCHER = "custom watcher or refresh engine is rejected; Bazel incrementality only"
 REJECTED_MDBOOK_TEST = "mdbook test wrapper is rejected"
@@ -91,9 +93,24 @@ TIMING_NO_GATE = "no CI timing budget enforced"
 TIMING_METHOD = "wall plus Elapsed plus actions on seed host, historical reference only"
 TIMING_SEED_ONLY = "first-hour timing proof qualified seed-only under issue #784"
 
+# Per-release pin-bump plus drift process: maintainers bump every pinned
+# native input per release, run drift testing, and ship only when green plus
+# reviewed. Delivered seed-only under issue #785 via the codec
+# roundtrip/parity/ordering/compat gates plus adapter version-mismatch plus
+# same-producer byte-identical proof; ordinary API changes require no IR
+# snapshot update and adapter goldens stay inputs, not snapshots.
+PIN_BUMP_PROCESS = "per release bump pins plus drift-test plus review, ship only when green"
+DRIFT_GATES = ["contract suite", "golden fixtures", "determinism evidence", "review"]
+DRIFT_CODEC_GATES = ["roundtrip", "rejection-parity", "symbol-ordering", "extension-ordering", "minor-compat"]
+DRIFT_SAME_PRODUCER = "same pinned producer plus inputs rebuild byte-identical"
+DRIFT_CROSS_VERSION = "cross-version compares decoded semantics never bytes"
+DRIFT_NO_SNAPSHOT = "ordinary API changes require no IR snapshot update; no committed IR"
+DRIFT_USER_PINNED = "users stay on pinned checksummed inputs; upstream change reds release prep never user build"
+DRIFT_SEED_ONLY = "pin-bump plus drift qualified seed-only under issue #785"
+
 COMPAT_SEED_ONLY = "Compatibility: seed Linux x86_64 only"
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issues #780 plus #781 plus #782 plus #784"
+SEED_ONLY = "qualified seed-only under issues #780 plus #781 plus #782 plus #784 plus #785"
 REBUILD_SEED_ONLY = "rebuild proof qualified seed-only under issue #781"
 LINK_SEED_ONLY_QUAL = "link completeness qualified seed-only under issue #782"
-OWNED_GAP = "guide-step wiring plus pin-bump/drift stay owned gaps under #783 plus #785"
+OWNED_GAP = "guide-step wiring stays owned gap under #783"

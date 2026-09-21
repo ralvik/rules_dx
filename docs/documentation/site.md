@@ -4,8 +4,9 @@ Implementation status: accepted v1 direction with adapter runs delivered under #
 renderer/site execution delivered seed-only under #780 (successors to closed #581,
 live successor to closed #421); site-level byte-identical rebuild proof delivered
 seed-only under #781; link/reference completeness delivered seed-only under #782;
-first-hour timing proof delivered seed-only under #784; remaining execution open
-(#783 plus #785).
+first-hour timing proof delivered seed-only under #784; per-release pin-bump plus
+drift process delivered seed-only under #785; remaining execution open
+(#783).
 Accepted: the `dx_docs` site-build action planning over the
 Bazel-cached extract→aggregate→render graph (no committed IR). Delivered: per-language
 extraction runs under #779 (`//docs/adapters:docs_adapters` over pinned inputs) plus fixture-scale
@@ -20,10 +21,10 @@ below are delivered seed-only for the fixture-scale site (rebuild proof under #7
 link/reference completeness delivered seed-only under #782; first-hour timing
 proof delivered seed-only under #784; remaining guide-step
 and invalidation verification follows
-[Testing](../testing/) before any support statement. Open under #783 plus #785
-(successors to closed #581; see [Documentation](README.md#contracts) for the full list):
+[Testing](../testing/) before any support statement. Open under #783
+(successor to closed #581; see [Documentation](README.md#contracts) for the full list):
 cache reuse and invalidation fixtures and guide-step CI wiring.
-Fixture-scale site execution plus byte-identical rebuild proof plus link completeness plus first-hour timing are qualified seed-only; no published site is claimed.
+Fixture-scale site execution plus byte-identical rebuild proof plus link completeness plus first-hour timing plus drift are qualified seed-only; no published site is claimed.
 
 ## Action Graph
 
@@ -101,6 +102,13 @@ plus warm-server plus `//docs/...` plus `//docs/site/...` tests, recorded one-sh
 2026-09-21 on Linux x86_64 under Bazel 9.2.0 with warm disk cache (see
 `tools/ci/tests/fixtures/docs_site/timing.expected`); this is one-shot evidence
 per [ADR 0022](../decisions/0022-no-benchmarking.md), not a standing benchmark, with no CI timing budget enforced.
+Delivered (seed-only per-release pin-bump plus drift process under #785) fixtures prove
+pinned native inputs bump per release with drift testing (contract suite plus golden
+fixtures plus determinism evidence, ship only when green plus reviewed): the codec
+roundtrip/parity/ordering/compat gates plus adapter version-mismatch plus same-producer
+byte-identical proof hold, ordinary API changes require no IR snapshot update with no
+committed shards, and users stay on pinned inputs (see
+`tools/ci/tests/fixtures/docs_site/drift.expected`).
 Cache reuse and rebuilds must produce equivalent validated artifacts;
 remote-cache claims additionally require the central [testing evidence](../testing/README.md#remote-tests).
 Cache reuse timing and appropriate invalidation after source/extractor/configuration changes
@@ -122,4 +130,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #784; remaining: #783 plus #785. Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #784 plus #785; remaining: #783. Reintroduction: #786.

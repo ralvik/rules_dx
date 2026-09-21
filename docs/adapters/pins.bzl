@@ -28,4 +28,4 @@ REJECTED_CONSOLE_PARSE = "console-parse for extractor outputs is rejected"
 
 NO_SUPPORTED = "no Supported claim"
 SEED_ONLY = "qualified seed-only under issue #779"
-OWNED_GAP = "renderer plus site plus rebuild plus link plus guide plus timing plus drift stay owned gaps under #780-#785"
+OWNED_GAP = "renderer plus site plus rebuild plus link plus guide plus timing stay owned gaps under #780-#784 plus drift delivered under #785"
