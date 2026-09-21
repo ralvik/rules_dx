@@ -245,6 +245,10 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 			continue
 		}
 		for _, root := range roots {
+			if IsCgoImport(root) {
+				l.fail("go: %s: %s imports cgo (\"C\"); cgo stays handwritten, so split cgo sources into their own handwritten directory before adopting generation", args.Rel, src)
+				continue
+			}
 			if IsStdLib(root) || seen[root] {
 				continue
 			}
@@ -301,6 +305,10 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 			continue
 		}
 		for _, root := range roots {
+			if IsCgoImport(root) {
+				l.fail("go: %s: %s imports cgo (\"C\"); cgo stays handwritten, so split cgo sources into their own handwritten directory before adopting generation", args.Rel, src)
+				continue
+			}
 			if IsStdLib(root) || seen[root] || testSeen[root] {
 				continue
 			}
@@ -325,6 +333,9 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 	result := language.GenerateResult{}
 	r := rule.NewRule(LibraryKind, name)
 	r.SetAttr("srcs", sources)
+	// Pure-Go scope: generated rules carry srcs plus importpath only, never
+	// cgo/race scope attrs (cgo, pure, race, msan, gotags, cdeps); those stay
+	// handwritten on wrappers that need them.
 	if importpath, ok := goImportPath(args.Config.RepoRoot, args.Dir); ok {
 		r.SetAttr("importpath", importpath)
 	}

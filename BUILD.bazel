@@ -39,6 +39,9 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # tools/depcheck/testdata holds depcheck fixtures with intentionally
 # unresolved imports (truth table); Gazelle never owns them.
 # gazelle:exclude tools/depcheck/testdata
+# go/tests/fixtures/cgo holds the handwritten cgo scope fixture with
+# `import "C"`; generation fails closed on cgo, so Gazelle never owns it.
+# gazelle:exclude go/tests/fixtures/cgo
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")

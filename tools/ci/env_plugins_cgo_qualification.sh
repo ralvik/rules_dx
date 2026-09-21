@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Third-party env plugin model plus Go cgo exception qualification.
+# Third-party env plugin model plus Go cgo scope qualification.
 #
 # Qualifies the two slices that explicitly does not cover:
 # - plugin model: third-party language-integration (persistent-environment)
@@ -16,6 +16,12 @@
 #   completion plus cgo diagnostics stay the explicit out-of-scope
 #   exception because upstream does not guarantee cgo completion, so cgo
 #   fixtures record gaps rather than claiming generic IDE parity;
+# - cgo scope (issue #789): source-only module identity, strict dependency
+#   resolution, and cgo/race scope resolution per the support-matrix
+#   Initial Feasibility Review; generation fails closed on `import "C"`
+#   (cgo stays handwritten), generated rules carry no cgo/race scope attrs,
+#   handwritten wrappers may set them upstream, and the live
+#   `go/tests/fixtures/cgo/` pair proves the scope with race requiring cgo;
 # - fixtures: `env/tests/fixtures/env_plugins_cgo/` (`pins.bzl` plus
 #   `env_plugins_cgo.expected`) pins dispositions plus rejected routes
 #   plus honesty; seed only, no Supported claim.
@@ -40,18 +46,17 @@ matrix_support="docs/product/support-matrix.md"
 pins="env/tests/fixtures/env_plugins_cgo/pins.bzl"
 expected="env/tests/fixtures/env_plugins_cgo/env_plugins_cgo.expected"
 fixture_build="env/tests/fixtures/env_plugins_cgo/BUILD.bazel"
-build="tools/ci/BUILD.bazel"
-ci=".github/workflows/ci.yml"
+build="tools/ci/ci_targets_c.bzl"
+ci="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
-# Plugin model stays deferred past v1 with an explicit design owner under.
-if grep -q -F -e 'third-party language-integration plugins are deferred past v1' "$env_doc" &&
-  grep -q -F -e 'issue #587' "$env_doc" &&
-  grep -q -F -e '//env' "$env_doc" &&
-  grep -q -F -e '//cli/env' "$env_doc"; then
+# Plugin model stays Not planned with no v1 plugin model or extension point.
+if grep -q -F -e 'Not planned: third-party language-integration plugins' "$env_doc" &&
+  grep -q -F -e 'There is no v1 persistent-environment plugin' "$env_doc" &&
+  grep -q -F -e 'no `EnvironmentInfo` extension point' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its deferred plugin model with design owner under #587"
+  bad "environment.md lost its Not planned plugin model under #587"
 fi
 
 # Repurposing EnvironmentInfo as a persistent-environment plugin API is wont-fix.
@@ -80,14 +85,13 @@ else
   bad "public PATH-tool API lost its defs.bzl pin under #587"
 fi
 
-# Post-v1 acceptance criteria stay recorded (provider-derived, managed selection, boundary, no private path, qualification).
-if grep -q -F -e 'provider-derived symlink-only plans' "$env_doc" &&
-  grep -q -F -e 'managed identity/commit/reuse selection' "$env_doc" &&
-  grep -q -F -e 'PATH-tools-only boundary' "$env_doc" &&
-  grep -q -F -e 'fixture-pinned qualification' "$env_doc"; then
+# Plugin model stays pinned by the env_plugins_cgo fixtures with no Supported claim.
+if grep -q -F -e 'Pinned by fixtures in' "$env_doc" &&
+  grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$env_doc" &&
+  grep -q -F -e 'env_plugins_cgo_qualification' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its post-v1 plugin acceptance criteria under #587"
+  bad "environment.md lost its plugin fixture pin under #587"
 fi
 
 # Go driver reuse stays upstream with no static snapshot or replacement graph.
@@ -140,7 +144,7 @@ fi
 if grep -q -F -e 'explicit cgo exception boundary' "$testing_doc" &&
   grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$testing_doc" &&
   grep -q -F -e 'does not guarantee cgo completion' "$testing_doc" &&
-  grep -q -F -e 'issue #587' "$testing_doc"; then
+  grep -q -F -e '#587' "$testing_doc"; then
   ok
 else
   bad "testing/environments.md lost its explicit cgo boundary wiring under #587"
@@ -150,7 +154,7 @@ fi
 if grep -q -F -e 'explicit cgo exception' "$matrix_support" &&
   grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$matrix_support" &&
   grep -q -F -e 'does not guarantee cgo completion' "$matrix_support" &&
-  grep -q -F -e 'issue #587' "$matrix_support"; then
+  grep -q -F -e '#587' "$matrix_support"; then
   ok
 else
   bad "support-matrix.md lost its cgo exception wiring under #587"
@@ -196,7 +200,7 @@ if grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/pins.bzl' "$env_doc" &&
   grep -q -F -e 'env_plugins_cgo_qualification' "$build" &&
   grep -q -F -e 'env_plugins_cgo_qualification' "$ci" &&
   grep -q -F -e 'env_plugins_cgo_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #587' "$verify"; then
+  grep -q -F -e '#587' "$verify"; then
   ok
 else
   bad "docs/build/CI/matrix lost the #587 qualified seed-only wiring"
@@ -207,6 +211,90 @@ if bazel build //env/tests/fixtures/env_plugins_cgo/... //go/env:hello_lib_plan 
   ok
 else
   bad "env_plugins_cgo fixture plus Go env plan build failed (want green on the seed host, issue #587)"
+fi
+
+# Go cgo scope stays handwritten in generation (issue #789).
+if grep -q -F -e 'imports cgo' gazelle/go/lang.go &&
+  grep -q -F -e 'IsCgoImport' gazelle/go/parser.go &&
+  grep -q -F -e 'gazelle:exclude go/tests/fixtures/cgo' BUILD.bazel; then
+  ok
+else
+  bad "Go generation lost its handwritten cgo fail-closed scope under #789"
+fi
+
+# Generated rules stay pure-Go without cgo/race scope attrs (issue #789).
+if grep -q -F -e 'cgo/race scope attrs' gazelle/go/lang.go &&
+  grep -q -F -e 'Handwritten wrappers may set upstream cgo scope attrs' go/rules/defs.bzl; then
+  ok
+else
+  bad "Go generation lost its pure-Go no-cgo-race-attrs scope under #789"
+fi
+
+# Source-only module identity stays pinned (issue #789).
+if grep -q -F -e 'SOURCE_ONLY_IMPORTPATH' "$pins" &&
+  grep -q -F -e 'SOURCE_ONLY_OMITTED' "$pins" &&
+  grep -q -F -e 'SOURCE_ONLY_NO_GUESS' "$pins" &&
+  grep -q -F -e 'goImportPath' gazelle/go/lang.go &&
+  grep -q -F -e 'omits importpath' gazelle/go/lang.go; then
+  ok
+else
+  bad "Go source-only module identity lost its pins plus generation wiring under #789"
+fi
+
+# Strict dependency resolution stays pinned (issue #789).
+if grep -q -F -e 'STRICT_LOCAL_STEMS' "$pins" &&
+  grep -q -F -e 'STRICT_THIRD_PARTY_EXACT' "$pins" &&
+  grep -q -F -e 'STRICT_STDLIB_FILTERED' "$pins" &&
+  grep -q -F -e 'STRICT_UNRESOLVED_FAILS' "$pins" &&
+  grep -q -F -e 'STRICT_AMBIGUOUS_FAILS' "$pins" &&
+  grep -q -F -e 'STRICT_TEST_EMBED' "$pins"; then
+  ok
+else
+  bad "Go strict dependency resolution lost its pins wiring under #789"
+fi
+
+# Handwritten cgo fixture stays present with cgo plus race scope (issue #789).
+if [[ -f "go/tests/fixtures/cgo/BUILD.bazel" && -f "go/tests/fixtures/cgo/pins.bzl" ]] &&
+  grep -q -F -e 'cgo = True' go/tests/fixtures/cgo/BUILD.bazel &&
+  grep -q -F -e 'race = "on"' go/tests/fixtures/cgo/BUILD.bazel &&
+  grep -q -F -e 'CGO_LIB = "//go/tests/fixtures/cgo:cgo"' go/tests/fixtures/cgo/pins.bzl &&
+  grep -q -F -e 'RACE_REQUIRES_CGO' go/tests/fixtures/cgo/pins.bzl; then
+  ok
+else
+  bad "go/tests/fixtures/cgo lost its handwritten cgo plus race scope under #789"
+fi
+
+# Env pins carry the cgo plus race scope with the live fixture labels (issue #789).
+if grep -q -F -e 'CGO_SCOPE_HANDWRITTEN' "$pins" &&
+  grep -q -F -e 'CGO_SCOPE_FAILS_CLOSED' "$pins" &&
+  grep -q -F -e 'CGO_SCOPE_NO_GENERATED_ATTRS' "$pins" &&
+  grep -q -F -e 'CGO_SCOPE_PASSTHROUGH' "$pins" &&
+  grep -q -F -e 'CGO_FIXTURE_LIB = "//go/tests/fixtures/cgo:cgo"' "$pins" &&
+  grep -q -F -e 'RACE_REQUIRES_CGO' "$pins" &&
+  grep -q -F -e 'qualified seed-only under issue #789' "$pins"; then
+  ok
+else
+  bad "env_plugins_cgo pins lost its cgo plus race scope wiring under #789"
+fi
+
+# Expected fixture pins the #789 scope plus honesty lines.
+if grep -q -F -e 'source-only module identity' "$expected" &&
+  grep -q -F -e 'strict dependency resolution' "$expected" &&
+  grep -q -F -e 'cgo stays handwritten' "$expected" &&
+  grep -q -F -e 'never cgo scope attrs' "$expected" &&
+  grep -q -F -e 'race requires cgo' "$expected" &&
+  grep -q -F -e 'qualified seed-only under issue #789' "$expected"; then
+  ok
+else
+  bad "env_plugins_cgo.expected lost its #789 scope plus honesty lines"
+fi
+
+# Live proof: the handwritten cgo scope builds and tests green on the seed host.
+if bazel build //go/tests/fixtures/cgo/... --noshow_progress >/dev/null 2>&1 &&
+  bazel test //go/tests/fixtures/cgo:cgo_test --test_output=errors >/dev/null 2>&1; then
+  ok
+else
+  bad "go/tests/fixtures/cgo build plus test failed (want green on the seed host, issue #789)"
 fi
 
 dx_test_summary "env plugins plus cgo qualification harness"

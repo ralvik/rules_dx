@@ -1,4 +1,4 @@
-"""Third-party env plugin model plus Go cgo exception pins.
+"""Third-party env plugin model plus Go cgo scope pins.
 
 Contract: `docs/environments/environment.md#public-tool-api`,
 `docs/environments/environment.md#ownership-and-refresh`,
@@ -43,6 +43,32 @@ CGO_OUT_OF_SCOPE = "cgo completion is out of scope"
 CGO_EXCEPTION_NOTE = "this exception does not admit the complete Go foundation"
 CGO_UPSTREAM_NON_GUARANTEE = "upstream does not guarantee cgo completion"
 CGO_RECORD_GAPS = "record cgo and platform gaps rather than claiming generic IDE parity"
+
+# Go cgo scope completion (issue #789): source-only module identity.
+SOURCE_ONLY_IMPORTPATH = "importpath from the nearest enclosing go.mod"
+SOURCE_ONLY_OMITTED = "omits importpath without a module"
+SOURCE_ONLY_NO_GUESS = "never a guessed path"
+SOURCE_ONLY_UNPARSEABLE_FAILS = "unparseable go.mod fails closed"
+
+# Go cgo scope completion (issue #789): strict dependency resolution.
+STRICT_LOCAL_STEMS = "local imports resolve via final-segment stems"
+STRICT_THIRD_PARTY_EXACT = "third-party imports resolve only through an exact resolve mapping"
+STRICT_STDLIB_FILTERED = "standard-library imports stay without an edge"
+STRICT_UNRESOLVED_FAILS = "unresolved import fails closed"
+STRICT_AMBIGUOUS_FAILS = "ambiguous import fails closed"
+STRICT_TEST_EMBED = "the owning library reaches the test via embed"
+
+# Go cgo scope completion (issue #789): cgo plus race scope.
+CGO_SCOPE_HANDWRITTEN = "cgo stays handwritten"
+CGO_SCOPE_FAILS_CLOSED = "imports cgo"
+CGO_SCOPE_NO_GENERATED_ATTRS = "never cgo scope attrs"
+CGO_SCOPE_PASSTHROUGH = "handwritten wrappers may set cgo scope attrs upstream"
+CGO_FIXTURE_LIB = "//go/tests/fixtures/cgo:cgo"
+CGO_FIXTURE_TEST = "//go/tests/fixtures/cgo:cgo_test"
+CGO_FIXTURE_ATTR = "cgo = True"
+RACE_SCOPE_ATTRS = "race = on plus pure = off"
+RACE_REQUIRES_CGO = "race requires cgo"
+CGO_SCOPE_SEED_ONLY = "qualified seed-only under issue #789"
 
 # Rejected substitutes (never accepted as the resolution).
 REJECTED_PLUGIN_CLAIM = "third-party plugin claim"

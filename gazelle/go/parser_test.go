@@ -79,3 +79,27 @@ func TestIsStdLibExact(t *testing.T) {
 		}
 	}
 }
+
+func TestIsCgoImportExact(t *testing.T) {
+	if !IsCgoImport("C") {
+		t.Error(`IsCgoImport("C") = false, want true`)
+	}
+	for _, name := range []string{"", "c", "C/", "C/x", "fmt", "runtime/cgo"} {
+		if IsCgoImport(name) {
+			t.Errorf("IsCgoImport(%q) = true, want false", name)
+		}
+	}
+	if IsStdLib("C") {
+		t.Error(`IsStdLib("C") = true, want false (cgo is never stdlib)`)
+	}
+}
+
+func TestParseImportsCgoSurfaces(t *testing.T) {
+	got, err := ParseImports([]byte("package demo\n\nimport \"C\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != "C" {
+		t.Fatalf("ParseImports cgo = %v, want [C] for fail-closed detection", got)
+	}
+}
