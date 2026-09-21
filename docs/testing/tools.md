@@ -201,6 +201,9 @@ plus no `rules_powershell` per
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms);
 product runtime is Rust and shell-free except
 generated deploy launchers plus the managed doctor shim.
+PowerShell port stays wont-fix under issue #750 (same bash-only reason:
+Windows quals run via `shell: bash` with portable forms, per-OS shells
+would double the harness for no product gain).
 `//tools/ci:shell_contract` machine-checks this contract.
 
 Bootstrap requires bash by design under issue #450 (`BASH_SOURCE`, `[[`,
@@ -232,7 +235,12 @@ are no standing benchmarks per
 CI shell dedup plus portable forms are delivered (closed issue #323):
 shared `tools/sh/lib.sh`, shellcheck plus shfmt, portable realpath, hashing,
 sed, cp, and timing with no per-file copies. `//tools/ci:shell_contract`
-machine-checks this contract.
+machine-checks this contract. Scratch plus temp discipline is delivered
+under issue #750: workflows stage under `${RUNNER_TEMP:-/tmp}` (never
+hardcoded `/tmp`), shell drivers use `dx_mkscratch` (EXIT) except the
+function-scoped `snapshot.sh` RETURN tmp plus the standalone deploy
+verifier (both `TMPDIR`-aware), prod Rust owns `Scratch` versus
+`create_run_temp_dir`, and tests own `dx_test_scratch`.
 
 Shell-harness elimination stays wont-fix under issue #667 (CI/harness only,
 no product behavior; affirms decided #299, not a reversal). Inventory at

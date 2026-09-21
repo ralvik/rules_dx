@@ -62,6 +62,9 @@ pub struct MirrorFile {
 /// `quality_runner` reuses this type (no second `Scratch`); unit-test
 /// scratch dirs use `dx_test_scratch::scratch`, and `dx` per-run temp dirs
 /// use `dx_cli::plan::create_run_temp_dir`.
+/// Scratch discipline (See: `docs/testing/README.md`, issue #750): test
+/// parents below stay on `tempfile::Builder` directly because they are the
+/// explicit parents under test for `Scratch::create`, not second policies.
 ///
 /// The tree is a `tempfile::TempDir`: OS-random `O_EXCL`-claimed names
 /// with internal collision retries replace the former

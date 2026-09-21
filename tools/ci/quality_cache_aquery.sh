@@ -735,8 +735,10 @@ if [[ "$no_typecheck_actions" == *"tsc"* ]]; then bad "no-typecheck: forbidden [
 # rebuild unchanged (log must be empty: cache hit, nothing executed).
 # Controlled remote-cache / separate-machine proof stays tracked under
 # per docs/testing/README.md (infrastructure unavailable here).
-exec_first="$(mktemp /tmp/quality_cache_exec_first.XXXXXX.json)"
-exec_second="$(mktemp /tmp/quality_cache_exec_second.XXXXXX.json)"
+# Runner-temp discipline (issue #750): never hardcode /tmp; Bazel scopes
+# TMPDIR per action and runners provide RUNNER_TEMP, so mktemp honors both.
+exec_first="$(mktemp "${TMPDIR:-${RUNNER_TEMP:-/tmp}}/quality_cache_exec_first.XXXXXX.json")"
+exec_second="$(mktemp "${TMPDIR:-${RUNNER_TEMP:-/tmp}}/quality_cache_exec_second.XXXXXX.json")"
 lint_pb="bazel-bin/quality/testdata/fixture_real_python-real-lint.pb"
 rm -f "$lint_pb"
 if bazel build '//quality/testdata:fixture_real_python' \

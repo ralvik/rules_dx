@@ -617,6 +617,10 @@ fn parse_maven_version(version: &str) -> Vec<(char, MavenToken)> {
 /// hyphen-number before dot-number regardless of value. Trailing
 /// nulls already trimmed, so exhaustion compares remainders against
 /// null.
+///
+/// Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
+/// no stable Rust crate matches this ordering plus fail-closed bracket
+/// intervals for the audited subset, so the hand-rolled parser stays.
 pub fn maven_compare(left: &str, right: &str) -> std::cmp::Ordering {
     let left_tokens = parse_maven_version(left);
     let right_tokens = parse_maven_version(right);

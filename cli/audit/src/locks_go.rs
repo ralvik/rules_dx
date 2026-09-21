@@ -1,4 +1,8 @@
 //! Go module parsing (split from `locks.rs`). No behavior change.
+//!
+//! Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
+//! `require` plus `replace` with first-party skipping has no stable Rust
+//! crate; the line parser stays and `go.sum` (hashes only) is never parsed.
 
 use super::*;
 
