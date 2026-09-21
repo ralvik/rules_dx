@@ -325,6 +325,10 @@ other systems.
 
 Family taxonomy execution with fixture evidence qualified seed-only under issue #512
 (`quality/tests/fixtures/quality_taxonomy/pins.bzl` with `quality_taxonomy.expected` via
-`bazel run //tools/ci:quality_taxonomy_qualification`, taxonomy doc only rejected).
+`bazel run //tools/ci:quality_taxonomy_qualification`, taxonomy doc only rejected;
+deferred delivery linked under #796 plus #797 plus #798 plus #799 plus #800 with promotion
+gaps linked under #802).
 Seed only: no platform, consumer, or release claim and no `Supported` claim; backends stay
-provisional. Deferred adapters stay owned under issues 416-420 plus 307.
+provisional. Deferred adapters delivered under #796 plus #797 plus #798 plus #799 plus #800
+with remaining owned under ADR 0019 plus 307; digest policy plus platform plus consumer
+plus release linkage owned under #802 with support-matrix linkage.

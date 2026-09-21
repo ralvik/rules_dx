@@ -160,13 +160,24 @@ provider/import/lock/tool-graph proofs are pinned by
 [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification), and
  [Tools](../tools/README.md#language-mapping-qualification). Quality
- family taxonomy execution with fixture evidence qualified seed-only under closed #512
+  family taxonomy execution with fixture evidence qualified seed-only under closed #512
 (`bazel run //tools/ci:quality_taxonomy_qualification` with
 `quality/tests/fixtures/quality_taxonomy/pins.bzl` plus
-`quality_taxonomy.expected`; `quality_taxonomy_qualification` 17/17;
+`quality_taxonomy.expected`; `quality_taxonomy_qualification` 25/25;
+ 10 curated families with JVM java/kotlin delivered under #796, 38 backed
+ classes over 53 adapters with JVM plus Scala/.NET plus native plus
+ structured plus file-family matrix plus parser plus checkstyle
+ native evidence, 9 deferred with ADR 0019 owner plus frozen route;
    taxonomy doc only plus report-not-gate shape only rejected; deferred
-   adapters plus digests plus platform plus consumer plus release stay owned
-   gaps under #802 (successor to closed #512); no Supported claim; closed #512 stays taxonomy-only). Python
+   delivery linked under #796 plus #797 plus #798 plus #799 plus #800
+   with remaining owned under ADR 0019 plus #307, digest policy with JVM
+   digests pinned in MODULE.bazel plus standalone per-host digests in
+   quality/artifacts plus rule-sets qualified under #485-489, platform plus
+   consumer plus release linkage (per-host artifacts plus coverage cells
+   plus CI matrix plus refusal, adopt workspaces plus reusable-consumer
+   workflow, promotion-checklist plus SBOM plus signing plus
+   supported_evidence_gate) with promotion gaps #802 (successor to closed
+   #512); no Supported claim; closed #512 stays taxonomy-only). Python
    source-audit tooling with fixture evidence qualified seed-only under issue #801
 (`bazel run //tools/ci:python_audit_qualification` with
 `python/tests/fixtures/python_audit/pins.bzl` plus
@@ -341,7 +352,8 @@ CI only, no Supported claim).
    `:layer2_opens_qualification` (Layer-2 adapter-less plus composition plus
    depcheck pins plus fixture evidence, closed #510; delivery now #754, #796-#800),
    `:quality_taxonomy_qualification` (taxonomy execution pins plus
-   fixture evidence, closed #512; promotion gaps #802),
+   fixture evidence, closed #512; deferred delivery plus digest policy plus
+   platform plus consumer plus release linkage with promotion gaps #802),
    `:python_audit_qualification` (Python source-audit selection pins plus
    fixture evidence, issue #801; successor to closed #613),
   `:selective_update_qualification` (per-set selective vs wont-fix pins plus
@@ -404,7 +416,7 @@ Green here (static guards on a clean tree, no full rebuild):
 `consumer_ci_qualification` 43/43, `review_threads_qualification` 16/16, `file_family_qualification` 24/24,
 `helper_qualification` 27/27, `clap_tokenizer_qualification` 19/19,
 `hello_smoke_qualification` 16/16, `parser_sample_qualification` 61/61, `rustfmt_edition_qualification` 20/20, `cc_optout_qualification` 18/18, `shell_env_qualification` 15/15, `bindgen_qualification` 16/16, `cxx_identity_qualification` 18/18, `exact_target_qualification` 16/16, `cpp_snapshot_qualification` 17/17, `junit_qualification` 16/16, `xunit_qualification` 16/16, `gotest_qualification` 16/16, `googletest_qualification` 16/16, `scalatest_qualification` 16/16, `paket_qualification` 16/16, `godeps_qualification` 16/16, `cc_hermetic_qualification` 16/16, `jvm_quality_qualification` 16/16, `scala_dotnet_defaults_qualification` 17/17, `native_quality_qualification` 17/17, `structured_defaults_qualification` 17/17, `file_family_defaults_qualification` 17/17, `scalafix_qualification` 12/12, `roslyn_qualification` 13/13, `fsharplint_qualification` 13/13, `scala_dotnet_adapters_qualification` 18/18, `native_adapters_qualification` 19/19, `structured_adapters_qualification` 16/16, `file_family_adapters_qualification` 19/19, `stable_stack_qualification` 16/16, `musl_qualification` 12/12, `macos_qualification` 12/12,
-`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 17/17, `python_audit_qualification` 24/24, `selective_update_qualification` 16/16, `selective_cargo_qualification` 16/16, `selective_nuget_qualification` 16/16, `selective_maven_qualification` 16/16, `selective_go_qualification` 16/16, `bump_chain_qualification` 16/16, `bump_discovery_qualification` 16/16, `bump_gha_qualification` 16/16, `runner_rotation_qualification` 16/16, `ghcr_rebuild_rotation_qualification` 16/16, `devcontainer_boot_qualification` 16/16, `update_events_qualification` 16/16, `update_rollback_qualification` 16/16, `env_plugins_cgo_qualification` 24/24, `starlark_futures_qualification` 40/40,
+`windows_qualification` 13/13, `windows_acquisition_qualification` 14/14, `acquisition_rights_qualification` 15/15, `windows_transport_qualification` 16/16, `prebuilt_interop_qualification` 16/16, `linux_corpus_qualification` 16/16, `lcov_accounting_qualification` 16/16, `cargo_metadata_qualification` 16/16, `strict_generation_qualification` 16/16, `cross_routes_qualification` 17/17, `remediation_bounds_qualification` 16/16, `layer2_opens_qualification` 16/16, `quality_taxonomy_qualification` 25/25, `python_audit_qualification` 24/24, `selective_update_qualification` 16/16, `selective_cargo_qualification` 16/16, `selective_nuget_qualification` 16/16, `selective_maven_qualification` 16/16, `selective_go_qualification` 16/16, `bump_chain_qualification` 16/16, `bump_discovery_qualification` 16/16, `bump_gha_qualification` 16/16, `runner_rotation_qualification` 16/16, `ghcr_rebuild_rotation_qualification` 16/16, `devcontainer_boot_qualification` 16/16, `update_events_qualification` 16/16, `update_rollback_qualification` 16/16, `env_plugins_cgo_qualification` 24/24, `starlark_futures_qualification` 40/40,
 Full `build`/`test` green is owned by CI on this tree via `bazel run //tools/ci:closeout_battery_qualification` (issue #467;
 battery commands plus docs gate pinned, full rebuild owned by CI jobs, not re-claimed here).
 Full-tree `dx lint/format/typecheck/test --check //...` over fixtures and
