@@ -112,7 +112,7 @@ focused-target plan reading the preserved `JsInfo` transitive sources plus
 `QualitySourcesInfo` direct sources, pinned by `<fw>/env/plan_tests.bzl` and
 exercised by `<fw>/env:hello_lib_plan` over `//<fw>/tests/fixtures/hello:hello_lib`.
 Binaries and tests share the same closure through `data`/runfiles;
-repository/root/exact-target orchestration remains issue #506.
+repository/root/exact-target orchestration remains closed #506 (successors closed #787 and #788).
 
 Quality-region: `vue`, `svelte`, `astro`, and `mdx` are frozen semantic
 file classes in `quality/sources.bzl`, each owning its own policy family in
@@ -126,7 +126,7 @@ per-container helper references, and no framework-to-framework imports.
 `gazelle/mixed/` proves the partition is disjoint and complete for the closed
 v1 set with case-sensitive extension matching, no fallback, and no eager work
 for unused adapters. Required-core adapter mappings plus composition evidence
-stay open with fixture evidence qualified seed-only under issue #510
+stay qualified seed-only under closed #510 (successors closed #796-#800)
 (`quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`
 via `bazel run //tools/ci:layer2_opens_qualification`, adapter-less as pass
 rejected); no `Supported` claim until platform plus consumer

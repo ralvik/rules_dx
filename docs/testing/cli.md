@@ -126,7 +126,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   and shared-resolver-workspace fixtures so distinct labels alone do not imply independence; do not
   roll back successful independent updates. Exact aggregate exit codes and per-set
   text/NDJSON reporting are tracked in
-  open work under issue #511; successful updates must not
+delivered work under closed #511; successful updates must not
   hide a failed set or claim blocked dependents succeeded.
 - Run every compatibility fixture required by [Output Protocol](../cli/output-protocol.md) for
   each command and supported mode. Cross-command fixtures additionally prove that child

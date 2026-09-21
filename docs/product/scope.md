@@ -72,9 +72,9 @@ required set, provisional upstreams, owning trackers, and roles.
 Review the wider upstream ecosystem and record each named capability's
 rules/tools, acquisition route, public providers, dependency authority, applicable platforms,
 integration effort, contract compatibility, evidence, and delivery owner, tracked in
-qualified seed-only under closed #476-#484 and open work under #796-#800
-(successors to closed #510; framework adapters in
-open work under #796-#800). Apply the same review to
+qualified seed-only under closed #476-#484 and delivered work under closed #796-#800
+(successors to closed #510; framework adapters delivered
+under closed #796-#800). Apply the same review to
 existing feature exclusions, additional test runners, framework adapters, plugins, audit/update
 ecosystems, and codegen pairs. Apply the foundation admission rule above separately from tool and
 workflow obligations; an unreviewed entry is not an exclusion. Freeze a reviewed release inventory
@@ -85,7 +85,7 @@ Each candidate must become required v1 scope, a recorded additional-foundation d
 evidence-backed recorded exclusion. No individual foundation is deferred by this policy alone.
 There is no post-v1 bucket for workflow scope: delivered work under closed #462,
 delivered work under closed #463, and
-open work under #787 and #788 (successors to closed #506) are v1 scope per the sole repository maintainer decision in [roadmap](../roadmap.md).
+delivered work under closed #787 and closed #788 (successors to closed #506) are v1 scope per the sole repository maintainer decision in [roadmap](../roadmap.md).
 Record missing upstream rules, non-hermetic acquisition, unsupported platform requirements, or
 substantial integration effort precisely, including concrete gaps and ongoing maintenance ownership.
 Scheduling preference and omission from the original plan are not feasibility failures.
@@ -125,8 +125,8 @@ plus upgrade tracking, and complete-workflow evidence in
 and ownership follow the [minimal core](support-matrix.md#minimal-required-core)
 (sole maintainer owns every row until delegated; effort estimated from
 qualification evidence as each tracked item lands) with foundation mappings
-qualified seed-only under closed #470-#489 and adapters open
-under #796-#800. Patch/build provenance follows
+qualified seed-only under closed #470-#489 and adapters delivered
+under closed #796-#800. Patch/build provenance follows
 [delivery classes](../tools/tool-acquisition.md#delivery-classes) (pinned
 reproducible upstream source builds, checked-in digests, SBOM/provenance per
 closed #612); upgrade strategy follows
@@ -177,7 +177,7 @@ active default configuration. A dependency used by a supported platform or optio
 as used without an exception merely for being inactive in the current run. Declaration as optional
 or platform-specific is not itself proof of usage. Qualify the authoritative configuration inputs
 and upstream analysis for each language, tracked in
-open work under #796-#800 (successors to closed #510); this does not require executing every target
+delivered work under closed #796-#800 (successors to closed #510); this does not require executing every target
 platform's binaries on the checking host or weakening selected-target build isolation.
 
 The usage test also reports incorrect declaration categories as errors where the ecosystem
@@ -186,13 +186,13 @@ does not justify a production declaration. Evaluate categories across the declar
 configurations using qualified upstream semantics, not one universal category model. Legitimate
 multi-category usage must remain valid. Tests report miscategorization without moving declarations
 or rewriting locks; exact ecosystem category and checker mappings are tracked in
-open work under #796-#800 (successors to closed #510).
+delivered work under closed #796-#800 (successors to closed #510).
 
 Generate both checks as normal Bazel test targets for the applicable dependency-owning scopes.
 They participate in `bazel test //...` and bare `dx test` by default, without a separate opt-in or
 default `manual` exclusion. They remain independently runnable through their generated labels.
 Exact naming, rules/providers, and generation mappings require qualification tracked in
-open work under #796-#800 (successors to closed #510).
+delivered work under closed #796-#800 (successors to closed #510).
 
 Declared-dependency usage permits narrow, explicit exceptions for legitimate uses the checker
 cannot recognize, such as dynamic plugins or tools invoked by scripts. Prefer upstream-native
@@ -214,7 +214,7 @@ recognizes the usage) fail without auto-deletion, qualified in
 `bazel run //tools/ci:depcheck_contract`. Upstream-native checker configuration
 remains a per-language preference: where a qualified upstream config exists it
 is preferred, otherwise the owning-scope file is authoritative; exact
-per-language native-configuration choices stay open under #796-#800.
+per-language native-configuration choices stay tracked under closed #796-#800.
 
 Gazelle automatically maintains generated Bazel dependency edges under the
 [generation and merge contract](../generation/common.md#merge-and-lifecycle). Do not add a separate
@@ -225,9 +225,9 @@ tests remain required.
 The two-test requirement and explained usage exceptions are accepted, with required-core
 (Rust, Python, JavaScript, TypeScript) plus admitted (Go, Java, Kotlin, Scala, C#, F#, C/C++)
 lock/usage scopes, non-import recognition, native exception/reason-validation mappings, and focused
-failing/passing fixtures qualified in `tools/depcheck/` (#22; remaining opens under
-#796-#800, successors to closed #510). Remaining admitted
-quality-adapter mappings stay open under #796-#800 (successors to closed #307 and closed #416-#420); foundation mappings qualified seed-only under closed #476-#484.
+failing/passing fixtures qualified in `tools/depcheck/` (closed #22; remaining composition plus Layer-2 cells delivered under
+closed #796-#800, successors to closed #510). Remaining admitted
+quality-adapter mappings are delivered under closed #796-#800 (successors to closed #307 and closed #416-#420); foundation mappings qualified seed-only under closed #476-#484.
 Existing strict generation alone is not proof of lockfile consistency or declared-dependency
 usage. This is dependency hygiene, not an expansion of `dx audit`.
 
@@ -290,7 +290,7 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx why` | retain | Explain one dependency path via `somepath`; see [inspect wrappers](../cli/commands/inspect.md) |
 | `dx completion` | retain | Generated static shell scripts from the single command-definition source; see [dx completion](../cli/commands/completion.md) |
 | `dx bazel` | retain | Exact-forwarding escape hatch through the selected repository launcher |
-| `dx docs` | retain, non-mutating (delivered under #786, successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site over the Bazel-cached extract to aggregate to render chain; `--check` validates without rendering, `--serve` previews the last build locally; see [`dx docs`](../cli/commands/docs.md) |
+| `dx docs` | retain, non-mutating (delivered under closed #786, successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site over the Bazel-cached extract to aggregate to render chain; `--check` validates without rendering, `--serve` previews the last build locally; see [`dx docs`](../cli/commands/docs.md) |
 
 `dx doctor` and `dx configure` are not commands. Help stays
 flag-only (`dx --help`, `dx <cmd> --help`) with no `help` verb.
@@ -325,4 +325,4 @@ retired them live only in git history.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Depcheck: #22. Codegen: #787, #788. Adapters: #796-#800. Docs reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Depcheck: closed #22. Codegen: closed #787, closed #788. Adapters: closed #796-#800. Docs reintroduction: closed #786.

@@ -236,11 +236,11 @@ cgo completion and cgo diagnostics are the explicit exception: upstream does not
 completion, so cgo fixtures record gaps rather than claiming generic IDE parity, with failure
 propagation, separate IDE output base, exact-target isolation, and no environment/codegen selection
 or tracked-file mutation. Pinned by fixtures in `env/tests/fixtures/env_plugins_cgo/` via
-`bazel run //tools/ci:env_plugins_cgo_qualification` (issue #587). Go cgo scope
+`bazel run //tools/ci:env_plugins_cgo_qualification` (closed #587). Go cgo scope
 (source-only module identity, strict dependency resolution, cgo stays handwritten with
 no generated cgo/race scope attrs, handwritten wrappers may set them upstream, live
 `go/tests/fixtures/cgo/` pair with race requiring cgo) is resolved seed-only under
-issue #789; the IDE cgo completion gap above remains.
+closed #789; the IDE cgo completion gap above remains.
 
 `bazel clean`, output-base changes, or removed outputs can invalidate links. An automatic editor
 request can run only while its managed executable remains usable; a dangling symlink cannot repair
@@ -372,8 +372,8 @@ Environment tests must cover:
   isolation, exact-target constraints, failure propagation, and no environment/codegen selection or
   tracked-file mutation; record cgo and platform gaps rather than claiming generic IDE parity
   (pure-Go boundary plus explicit cgo exception pinned by `env/tests/fixtures/env_plugins_cgo/`
-  via `bazel run //tools/ci:env_plugins_cgo_qualification`, issue #587; cgo scope
-  source-only plus strict plus handwritten cgo/race resolved seed-only under issue #789
+  via `bazel run //tools/ci:env_plugins_cgo_qualification`, closed #587; cgo scope
+  source-only plus strict plus handwritten cgo/race resolved seed-only under closed #789
   with the same fixtures plus `go/tests/fixtures/cgo/`).
 - Configured tool inclusion, inactive/private tool exclusion, transitive provider
   composition, aliases, runfiles, and collision diagnostics.
@@ -399,8 +399,8 @@ Generated-source ownership and tests are defined in [Generated Code](codegen.md)
 Shared state, pointer, reuse, concurrency, symlink, ownership, and retention tests are defined in
 [Managed Environment State](managed-state.md#test-requirements).
 Cross-cutting fixture, platform, and evidence rules remain in
-[Testing Strategy](../testing/README.md). Environment and codegen gaps stay open
-under #787 and #788 (successors to closed #506; admitted-pairs evolution, Windows .envrc and junction
+[Testing Strategy](../testing/README.md). Environment and codegen gaps are delivered
+under closed #787 and closed #788 (successors to closed #506; admitted-pairs evolution, Windows .envrc and junction
 fallback, standalone-without-Bazel path, signing and trust selection, plus the
 required bootstrap, fidelity, spaces, stale-clean, IDE, atomic-commit, BEP,
 projection, and root-candidate tests).
@@ -410,18 +410,18 @@ Env plus codegen deferred records with fixture evidence qualified seed-only unde
 public protocol, Windows fallback, standalone, signing/trust, plus
 bootstrap/fidelity/spaces/stale/IDE/atomic-commit/BEP/projection/roots/cold-warm with
 WP1-WP5 shard plus root plus clean plus plan evidence and `env_codegen.expected` plus
-`roots_bep.txt`; platform plus consumer plus release evidence qualified under #787 with
+`roots_bep.txt`; platform plus consumer plus release evidence qualified under closed #787 with
 per-required-host symlink-only plus refusal, adopt-consumer, and release checklist linkage;
-admitted-pairs evolution onboarding qualified under #788 with checklist plus per-pair
+admitted-pairs evolution onboarding qualified under closed #788 with checklist plus per-pair
 fixtures plus qualification coverage for each admitted pair;
-#751 plus #752 plus #753 stay open and out of scope for #787 plus #788; no Supported
+closed #751 plus closed #752 plus closed #753 delivered and out of scope for closed #787 plus closed #788; no Supported
 claim; backends stay provisional).
 
 Go cgo exception boundary with fixture evidence qualified seed-only
-under closed #587 plus issue #789 (`env/tests/fixtures/env_plugins_cgo/pins.bzl` via
+under closed #587 plus closed #789 (`env/tests/fixtures/env_plugins_cgo/pins.bzl` via
 `bazel run //tools/ci:env_plugins_cgo_qualification`; no third-party plugin model,
 plus pure-Go `GOPACKAGESDRIVER`
 boundary with explicit cgo out-of-scope exception and `env_plugins_cgo.expected` (cgo
-scope source-only plus strict plus handwritten cgo/race resolved seed-only under #789
+scope source-only plus strict plus handwritten cgo/race resolved seed-only under closed #789
 with `go/tests/fixtures/cgo/`); platform plus
-consumer plus release evidence stays owned gap under #808; no Supported claim).
+consumer plus release evidence stays owned gap under closed #808; no Supported claim).

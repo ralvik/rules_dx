@@ -51,7 +51,7 @@ The same caller-pin pattern covers documentation: `.github/workflows/reusable-do
 is a reusable workflow running `dx lint --check` over a
 caller-selected docs scope, with an opt-in `publish` input that deploys the validated
 docs tree to GitHub Pages. The deployed content is the validated tree, not a rendered
-site; the renderer arrives via the docs-pipeline track (open, issue #581, live successor to closed #421).
+site; the renderer arrives via the docs-pipeline track (delivered seed-only under closed #780, successor to closed #581, live successor to closed #421).
 Third-party reuse is templated in `examples/docs-ci/`; this repository self-calls the
 workflow from `.github/workflows/ci.yml` (check-only on pull requests, publishing on
 `main`). Pages needs source GitHub Actions enabled in repository settings before the
@@ -341,20 +341,20 @@ reopen the accepted policies above. Resolve them before affected implementation:
   sensitive-content handling, bounded transport retries, and opt-in Code Scanning publication.
 
 Consumer-CI qualification, release qualification, and publication of qualified
-identities remain open tracks. Track unresolved work in
-[roadmap](roadmap.md) and open work under issue #509 and prove the contract
-through the [consumer CI test matrix](testing/github-ci.md). The open qualification
-track stays owned under issue #509. Review-thread limit plus accounting frozen at 50 open
-threads under issue #592 (`tools/ci/tests/fixtures/review_threads/pins.bzl` plus
+identities are delivered tracks. Track resolved work in
+[roadmap](roadmap.md) and delivered work under closed #509 and prove the contract
+through the [consumer CI test matrix](testing/github-ci.md). The qualification
+track stays owned under closed #509. Review-thread limit plus accounting frozen at 50 open
+threads under closed #592 (`tools/ci/tests/fixtures/review_threads/pins.bzl` plus
 `review_threads.expected` via `bazel run //tools/ci:review_threads_qualification`). Reusable-workflow contract plus caller
 plus gate/aggregate plus per-gap decisions with fixture evidence qualified
-seed-only under #509 (`bazel run //tools/ci:consumer_ci_qualification`;
+seed-only under closed #509 (`bazel run //tools/ci:consumer_ci_qualification`;
 nine checks, explicit platforms, fail-closed sequential, stable aggregate,
 hygiene, concurrency, permissions, per-cell coverage with fork-safe comments,
-test-disabled self-call (issue #408 plus Phase 1 #607 coverage superset, verbatim `//...`),
-native bump loop (sole updater, issue #461), migrate syntax plus manifest
-selection (delivered CLI with fail-closed execution, issue #462) plus run
-multirun (issue #463 delivered), tag hygiene as-built, with platform, runner,
+test-disabled self-call (closed #408 plus Phase 1 closed #607 coverage superset, verbatim `//...`),
+native bump loop (sole updater, closed #461), migrate syntax plus manifest
+selection (delivered CLI with fail-closed execution, closed #462) plus run
+multirun (closed #463 delivered), tag hygiene as-built, with platform, runner,
 isolation, cache, ordering, merge, diff, queue, cancellation, aggregate
 binding, thread identity, ordering, limits, fork, untrusted, sensitive,
 retries, Code-Scanning, sequential, tag/release, native-bot, and

@@ -36,4 +36,4 @@ Protocol](../output-protocol.md). Failures name the affected (language,
 package) unit and, on extractor drift, the pinned input whose schema
 changed.
 
-Delivered under #786 (successor to closed #581, live successor to closed #421).
+Delivered under closed #786 (successor to closed #581, live successor to closed #421).
