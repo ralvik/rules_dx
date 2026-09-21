@@ -105,14 +105,14 @@ CI builds plus verifies SBOM plus provenance on every push/PR via the
 //deploy/release:dx_release_tools_test`, staged under `RUNNER_TEMP/sbom` and
 uploaded as the `sbom-provenance` artifact (SPDX-2.3 plus SLSA v1, publishes
 nothing). Per-host release evidence for Linux arm64 glibc lands via the
-`sbom-arm64` job in `.github/workflows/ci.yml` (issue #803): the same
+`sbom-arm64` job in `.github/workflows/ci.yml` (issue #803 closed): the same
 `sbom_demo` build plus `dx_release_tools_test` verify on the arm64 native
 runner (`ubuntu-24.04-arm`, `bazel-arm64-` cache, `needs: [build-arm64]`,
 local-only), staged under `RUNNER_TEMP/sbom-arm64` and uploaded as the
 `sbom-provenance-linux_arm64` artifact (SPDX-2.3 plus SLSA v1, publishes
 nothing). Per-profile release evidence for the two Linux static-musl profiles
 lands via the `sbom-musl-x86_64` plus `sbom-musl-arm64` jobs in
-`.github/workflows/ci.yml` (issue #804): the same `sbom_demo` build plus
+`.github/workflows/ci.yml` (issue #804 closed): the same `sbom_demo` build plus
 `dx_release_tools_test` verify on the musl profile runners (`ubuntu-latest`
 with `bazel-musl-x86_64-` cache, `needs: [build-musl-x86_64]`, plus
 `ubuntu-24.04-arm` with `bazel-musl-arm64-` cache, `needs: [build-musl-arm64]`,
@@ -121,7 +121,7 @@ local-only), staged under `RUNNER_TEMP/sbom-musl-x86_64` plus
 `sbom-provenance-linux_x86_64_musl` plus `sbom-provenance-linux_arm64_musl`
 artifacts (SPDX-2.3 plus SLSA v1, static native closure only with dynamic musl
 explicitly out of scope, publishes nothing). Per-host release evidence for macOS arm64 native
-lands via the `sbom-macos-arm64` job in `.github/workflows/ci.yml` (issue #805): the same
+lands via the `sbom-macos-arm64` job in `.github/workflows/ci.yml` (issue #805 closed): the same
 `sbom_demo` build plus `dx_release_tools_test` verify on the macos arm64 native
 runner (`macos-14`, `bazel-macos-arm64-` cache, `needs: [build-macos-arm64]`,
 local-only), staged under `RUNNER_TEMP/sbom-macos-arm64` and uploaded as the
@@ -129,7 +129,7 @@ local-only), staged under `RUNNER_TEMP/sbom-macos-arm64` and uploaded as the
 with hermetic-llvm Apple-SDK backend provisional and no host-installed SDK fallback never approved,
 publishes nothing). Per-host release evidence for Windows
 x86_64 MSVC-compatible lands via the `sbom-windows-x86_64` job in
-`.github/workflows/ci.yml` (issue #807): the same `sbom_demo` build plus
+`.github/workflows/ci.yml` (issue #807 closed): the same `sbom_demo` build plus
 `dx_release_tools_test` verify on the windows native runner (`windows-latest`
 with shell bash, `bazel-windows-x86_64-` cache, `needs: [build-windows-x86_64]`,
 local-only), staged under `RUNNER_TEMP/sbom-windows-x86_64` and uploaded as the

@@ -68,7 +68,9 @@ Remaining reds stay owned gaps, not green claims:
   `review_threads_qualification` 16/16);
    platform qualification
    beyond the seed plus arm64 plus musl plus macos plus macos-x86_64 plus
-   windows hosts stays open under #803-#807 (successors to closed #298; native
+   windows hosts landed under closed #803 plus #804 plus #805 plus #807 with
+   best-effort macOS x86_64 exempt under closed #806 moot (successors to closed #298,
+   process #808; native
    qualification delivered seed-only under closed #410-#414).
 - File-family quality record with fixture evidence qualified seed-only under #489
   (`bazel run //tools/ci:file_family_qualification`; provider-class

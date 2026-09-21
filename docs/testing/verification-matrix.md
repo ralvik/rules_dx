@@ -37,8 +37,9 @@ class by design — never silently under the standard dogfood gates.
   plus bump-PR `generate --check` verify; custom freshness harness rejected.
 - **Examples external-consumer**: per-foundation `adopt-*` workspaces
   proving generation as a consumer, plus acquisition/laziness proof
-   (delivered on the seed host; platform/remote dimensions owned by
-   #803-#807, successors to closed #298).
+   (delivered on the seed host; platform/remote dimensions landed under
+   closed #803 plus #804 plus #805 plus #807 with best-effort exempt under
+   closed #806 moot, successors to closed #298, process #808).
 - **Layer-4 CLI-contract (issue #407, hermetic, replaces nested E2E)**:
   `dx test`/`dx build` exit-code preservation via `cli/cli/src/exec` unit
   pins (including Bazel test-failure code 3), format rewrite `x=1` →
@@ -391,15 +392,15 @@ CI only, no Supported claim).
    `:promotion_checklist_qualification` (promotion checklist pins plus
    fixture evidence, closed #611; process now #808),
    `:sbom_upload_qualification` (SBOM plus provenance CI upload pins plus
-   fixture evidence, closed #612; per-host release evidence #803-#807),
+   fixture evidence, closed #612; per-host release evidence closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot, process #808),
    `:release_arm64_qualification` (Linux arm64 per-host release evidence pins plus
-   fixture evidence, issue #803; `release_arm64_qualification` 18/18),
+   fixture evidence, issue #803 closed; `release_arm64_qualification` 18/18),
    `:release_musl_qualification` (Linux static-musl per-profile release evidence pins plus
-   fixture evidence, issue #804; `release_musl_qualification` 22/22),
+   fixture evidence, issue #804 closed; `release_musl_qualification` 22/22),
    `:release_macos_arm64_qualification` (macOS arm64 per-host release evidence pins plus
-   fixture evidence, issue #805; `release_macos_arm64_qualification` 20/20),
+   fixture evidence, issue #805 closed; `release_macos_arm64_qualification` 20/20),
    `:release_windows_qualification` (Windows x86_64 per-host release evidence pins plus
-   fixture evidence, issue #807; `release_windows_qualification` 21/21),
+   fixture evidence, issue #807 closed; `release_windows_qualification` 21/21),
    `:offline_airgap_qualification` (offline bootstrap plus vendored
    advisory mirror pins plus fixture evidence, issue #774; seed-only, no
    Supported claim; platform plus consumer plus release evidence stays

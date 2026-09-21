@@ -82,21 +82,24 @@ A cell promotes only with its required-host evidence landed:
   built plus verified plus uploaded as `sbom-provenance` on every push/PR via
   the `sbom` job in `.github/workflows/ci.yml` (#612), plus per-host
   `sbom-provenance-linux_arm64` via the `sbom-arm64` job on the Linux arm64
-  native runner (`ubuntu-24.04-arm`, issue #803), plus per-profile
+  native runner (`ubuntu-24.04-arm`, issue #803 closed), plus per-profile
   `sbom-provenance-linux_x86_64_musl` via the `sbom-musl-x86_64` job
   (`ubuntu-latest`, `bazel-musl-x86_64-` cache) plus
   `sbom-provenance-linux_arm64_musl` via the `sbom-musl-arm64` job
   (`ubuntu-24.04-arm`, `bazel-musl-arm64-` cache) for the two Linux static-musl
   profiles (static native closure only, dynamic musl explicitly out of scope,
-  issue #804), plus per-host `sbom-provenance-macos_arm64` via the
+  issue #804 closed), plus per-host `sbom-provenance-macos_arm64` via the
   `sbom-macos-arm64` job (`macos-14`, `bazel-macos-arm64-` cache) for macOS
   arm64 native (pinned acquired SDK, hermetic-llvm Apple-SDK backend
-  provisional with no host-installed SDK fallback, issue #805), plus per-host
+  provisional with no host-installed SDK fallback, issue #805 closed), plus per-host
   `sbom-provenance-windows_x86_64` via the `sbom-windows-x86_64` job
   (`windows-latest` with shell bash, `bazel-windows-x86_64-` cache) for
   Windows x86_64 MSVC-compatible (hermetic acquisition plus MSVC compatibility
   gates unchanged, explicit EULA acceptance never automatic with no installed
-  Build Tools fallback, issue #807).
+  Build Tools fallback, issue #807 closed). Best-effort macOS x86_64 carries no
+  per-host SBOM job and never blocks required-host release (closed #806 moot).
+  Every required host landed under closed #803 plus #804 plus #805 plus #807
+  with best-effort exempt under closed #806 moot (process #808).
 - NOTICE bundling: aggregated NOTICE from the audited license inventory via
   `//deploy/release:notice_demo` (hermetic bundling with byte-identical
   rebuilds, `missing-notice-text` fails closed), verified via
@@ -132,9 +135,10 @@ claim, enforced by `bazel run //tools/ci:supported_evidence_gate`
 (#301). Ad-hoc release without this checklist is rejected.
 Compatibility: Release only.
 
-Qualified seed-only under #611; platform plus consumer plus release
-evidence stays owned gap; no Supported claim.
+Qualified seed-only under #611; required-host release evidence landed under
+closed #803 plus #804 plus #805 plus #807 with best-effort macOS x86_64 exempt
+under closed #806 moot (process #808); remaining platform plus consumer plus release gaps stay owned; no Supported claim.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md) and the [support matrix](support-matrix.md#status-lifecycle). Checklist: #611. Platform: #410-#414. Consumer: #408, #461. Release: #459, #460, #612. Gate: #301.
+Tracking lives in the [roadmap](../roadmap.md) and the [support matrix](support-matrix.md#status-lifecycle). Checklist: #611. Platform: #410-#414. Consumer: #408, #461. Release: #459, #460, #612. Per-host release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot. Process: #808. Gate: #301.
