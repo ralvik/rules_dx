@@ -2,7 +2,7 @@
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":defs.bzl", "javascript_test_env", "javascript_test_rejection")
+load(":defs.bzl", "javascript_binary_upstream_data", "javascript_test_env", "javascript_test_rejection")
 
 def javascript_wrapper_contract_tests(name):
     starlark_test(
@@ -52,6 +52,26 @@ def javascript_wrapper_contract_tests(name):
                 "present filter channel is not duplicated",
                 javascript_test_env(["FOO", "TESTBRIDGE_TEST_ONLY"]),
                 ["FOO", "TESTBRIDGE_TEST_ONLY"],
+            ),
+            expect_equal(
+                "thin binary keeps upstream data unchanged",
+                javascript_binary_upstream_data([], [":main"]),
+                [":main"],
+            ),
+            expect_equal(
+                "thin binary with no data stays empty",
+                javascript_binary_upstream_data([], None),
+                [],
+            ),
+            expect_equal(
+                "ordinary binary srcs ride upstream as data",
+                javascript_binary_upstream_data(["app.js"], [":hello_lib"]),
+                ["app.js", ":hello_lib"],
+            ),
+            expect_equal(
+                "ordinary binary srcs without data become data",
+                javascript_binary_upstream_data(["app.js"], None),
+                ["app.js"],
             ),
         ],
     )
