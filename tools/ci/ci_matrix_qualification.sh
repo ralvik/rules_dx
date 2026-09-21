@@ -36,6 +36,7 @@ dx_cd_workspace
 dx_test_init
 
 ci=".github/workflows/ci.yml"
+cache_action=".github/actions/restore-bazel-cache/action.yml"
 consumer=".github/workflows/reusable-consumer.yml"
 platform="cli/cli/src/platform.rs"
 cells="tools/coverage/cells.txt"
@@ -72,7 +73,8 @@ else
 fi
 
 # Per-host cache scopes: seed plus arm64 plus per-profile musl plus
-# per-host macos plus windows, all free-tier actions/cache
+# per-host macos plus windows, all free-tier actions/cache via the
+# single-source restore action (issue #953: ci.yml passes only prefixes).
 #
 if grep -q -F -e 'bazel-seed-' "$ci" &&
   grep -q -F -e 'bazel-arm64-' "$ci" &&
@@ -81,7 +83,7 @@ if grep -q -F -e 'bazel-seed-' "$ci" &&
   grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
   grep -q -F -e 'bazel-macos-x86_64-' "$ci" &&
   grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
-  grep -q -F -e 'actions/cache' "$ci"; then
+  grep -q -F -e 'actions/cache' "$cache_action"; then
   ok
 else
   bad "ci.yml lost a per-host Bazel disk-cache scope (seed plus arm64 plus musl pair plus macos pair plus windows)"

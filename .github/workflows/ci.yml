@@ -56,11 +56,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-seed-
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -69,7 +67,7 @@ jobs:
         if: always()
         run: |
           echo "### build — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: bazel build //... plus adopt-rust dx_dev smoke (seed host, local-only; hermetic CLI-contract, issue #407)." >> "$GITHUB_STEP_SUMMARY" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel build //... plus adopt-rust dx_dev smoke (seed host, local-only; hermetic CLI-contract, issue #407)." >> "$GITHUB_STEP_SUMMARY"
   sbom:
     name: sbom (SBOM + provenance build/verify/upload, seed host)
     # SBOM plus provenance on CI (issue #612): sbom_demo only ran on
@@ -91,11 +89,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-seed-
       - name: Build SBOM + provenance demo
         run: bazel build --noshow_progress //deploy/release:sbom_demo
       - name: Verify SBOM + provenance bind artifact
@@ -153,11 +149,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-seed-
       - name: Check preset freshness
         run: |
           bazel run --noshow_progress //tools/bazelrc:preset.update -- --verify-only
@@ -178,11 +172,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-seed-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -209,11 +201,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-seed-
       - name: Enforce seed coverage cell
         run: |
           set +e
@@ -304,11 +294,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-arm64-
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -329,11 +317,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-arm64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -359,11 +345,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-arm64-
       - name: Enforce arm64 coverage cell
         run: |
           set +e
@@ -409,11 +393,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-musl-x86_64-
       - name: Prove Rust static-musl std resolves
         run: bazel query @rust_toolchains//... 2>/dev/null | grep -E -e 'musl' | LC_ALL=C sort -u
       - name: Build workspace (exec-platform tools)
@@ -433,11 +415,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-musl-arm64-
       - name: Prove Rust static-musl std resolves
         run: bazel query @rust_toolchains//... 2>/dev/null | grep -E -e 'musl' | LC_ALL=C sort -u
       - name: Build workspace (exec-platform tools)
@@ -460,11 +440,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-musl-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-musl-x86_64-
       - name: Enforce musl x86_64 coverage cell
         run: |
           set +e
@@ -514,11 +492,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-musl-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-musl-arm64-
       - name: Enforce musl arm64 coverage cell
         run: |
           set +e
@@ -565,11 +541,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-macos-arm64-
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -590,11 +564,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-macos-arm64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -620,11 +592,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-macos-arm64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-macos-arm64-
       - name: Enforce macos arm64 coverage cell
         run: |
           set +e
@@ -671,11 +641,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-macos-x86_64-
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -696,11 +664,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-macos-x86_64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -726,11 +692,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-macos-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-macos-x86_64-
       - name: Enforce macos x86_64 coverage cell
         run: |
           set +e
@@ -781,11 +745,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-windows-x86_64-
       - name: Build workspace
         run: bazel build --noshow_progress //...
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
@@ -809,11 +771,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-windows-x86_64-
       - name: Test workspace
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
@@ -842,11 +802,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-windows-x86_64-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-windows-x86_64-
       - name: Enforce windows x86_64 coverage cell
         run: |
           set +e
@@ -895,11 +853,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-seed-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-seed-
       - name: Prove battery (target tags, coverage, platforms, release, shell)
         run: tools/ci/prove.sh
       - name: Write job summary
@@ -907,7 +863,7 @@ jobs:
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 under #410/#411/#412/#413/#414), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), Windows x86_64 qualification (issue #414 native MSVC-compatible plus per-cell plus portable-shell plus explicit EULA never automatic), CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell), bootstrap portability (issue #617 five hosts plus retry plus no sudo plus portable hash), CI flakiness plus timeout tuning (issue #619 retries plus timeouts plus sharding, long-timeouts-only rejected), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only harness plus portable forms with windows shell bash, issue #414)." >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved (follow-up): coverage spill containment (issues #252/#54, LLVM_PROFILE_FILE to scratch)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved (follow-up): coverage spill containment (issues #252/#656/#953, LLVM_PROFILE_FILE to scratch plus shared-library default)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)
     needs: [build]
@@ -919,11 +875,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-dogfood-
       - name: Run dogfood-freshness battery (tools, freshness, audits)
         run: tools/ci/dogfood_freshness.sh
       - name: Write job summary
@@ -942,11 +896,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        uses: ./.github/actions/restore-bazel-cache
         with:
-          path: ~/.cache/bazel
-          key: bazel-dogfood-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-          # exact key only, bust starts cold
+          prefix: bazel-dogfood-
       - name: Prove dx init scaffold matches checked-in definition
         run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //.devcontainer:devcontainer_parity_test
       - name: Validate devcontainer definition shape

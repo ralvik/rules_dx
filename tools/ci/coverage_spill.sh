@@ -15,7 +15,8 @@
 # tree today: the LLVM_PROFILE_FILE export targets the
 # auto-cleaned scratch dir before the first helper execution, the trap
 # still cleans scratch, the gate invocations are intact (not deleted to
-# fake containment), the gitignore defense-in-depth stays, and the
+# fake containment), the gitignore defense-in-depth stays, the shared
+# library default contains every harness at source time (issue #953), and the
 # seed inventory still exists. It proves
 # containment statically; the full `coverage_cell` run remains the
 # end-to-end proof under.
@@ -174,6 +175,16 @@ if compgen -G "*.profraw" >/dev/null || compgen -G "*.profdata" >/dev/null; then
   bad "profraw/profdata spill present in checkout root (want LLVM_PROFILE_FILE containment, issue #656)"
 else
   ok
+fi
+
+# Local default containment (issue #953): tools/sh/lib.sh defaults
+# LLVM_PROFILE_FILE to an auto-cleaned scratch dir at source time, so every
+# harness is contained even before its explicit export above.
+if grep -q -F -e 'export LLVM_PROFILE_FILE="$_DX_PROFRAW_DIR/profraw_%m_%p.profraw"' tools/sh/lib.sh &&
+  grep -q -F -e 'dx_mkscratch _DX_PROFRAW_DIR' tools/sh/lib.sh; then
+  ok
+else
+  bad "tools/sh/lib.sh lost the default LLVM_PROFILE_FILE scratch containment (issue #953)"
 fi
 
 # The seed inventory the cell gates still exists.

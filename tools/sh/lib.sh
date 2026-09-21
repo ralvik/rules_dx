@@ -476,3 +476,16 @@ dx_expect_absent() {
   fi
   return 0
 }
+
+# Default LLVM_PROFILE_FILE containment (issue #953): instrumented Rust
+# binaries (e.g. `bazel coverage`-built helpers executed directly from the
+# workspace root) spill `default_%m_%p.profraw` into CWD when the variable
+# is unset. Default it here to an auto-cleaned scratch dir so every driver
+# sourcing this library is contained even before its explicit per-harness
+# export; an explicit `export LLVM_PROFILE_FILE=...` later still wins.
+# Non-instrumented binaries ignore it; `bazel test` coverage collection is
+# unaffected (Bazel sandboxes test env, direct runs are what spill).
+if [[ -z "${LLVM_PROFILE_FILE:-}" ]]; then
+  dx_mkscratch _DX_PROFRAW_DIR
+  export LLVM_PROFILE_FILE="$_DX_PROFRAW_DIR/profraw_%m_%p.profraw"
+fi

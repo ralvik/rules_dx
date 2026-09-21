@@ -43,13 +43,17 @@ The following policy notes lived as header comments in `ci.yml`:
 # Hygiene (issue #80): Bazelisk installs go through the single
 # `.github/actions/setup-bazelisk` composite action; every third-party
 # action is pinned to a commit SHA with its tag in a trailing comment.
-# The Bazel disk cache uses actions/cache, which is free-tier eligible
+# Bazel disk-cache restores go through the single
+# `.github/actions/restore-bazel-cache` composite action (issue #953),
+# which uses actions/cache, free-tier eligible
 # for public repositories, per the infrastructure budget in
-# docs/testing/README.md. Cache keys hash every Bazel-affecting
+# docs/testing/README.md. The composite owns the cache-key hashFiles list
+# once: every Bazel-affecting
 # lock/config (issue #618): MODULE plus bazelrc plus toolchain plus all
 # resolver locks, so lock/config changes bust the cache instead of reusing
 # a stale disk entry; exact key only with no prefix fallback, so a bust
-# starts cold. Remote cache stays unwired (issue #618 wont-fix):
+# starts cold; ci.yml passes only the per-host prefix, so the list cannot
+# drift across jobs. Remote cache stays unwired (issue #618 wont-fix):
 # paid remote services are not approved per the budget, and Apple/MS
 # acquisition plus cache rights stay license-bounded (issue #496), so CI
 # stays local execution with no remote cache/executor/BES flags
