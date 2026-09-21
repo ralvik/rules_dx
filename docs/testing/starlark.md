@@ -120,17 +120,19 @@ stream, and must never be presented as source-line or branch coverage.
 
 ## Future (Not Implemented)
 
-Decided under closed #588 plus #790 plus #791 per [ADR 0009](../decisions/0009-starlark-testing.md)
+Decided under closed #588 plus #790 plus #791 plus #792 per [ADR 0009](../decisions/0009-starlark-testing.md)
 (remaining subjects provisional pending concrete use cases), pinned by fixtures in
 `../../libs/starlark/tests/fixtures/starlark_futures/` (`pins.bzl` plus
-`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl`)
+`starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl`)
 and qualified by
 `bazel run //tools/ci:starlark_futures_qualification`. Test framework only;
 seed only, no Supported claim. Richer matchers graduated under #790 and
 are accepted above; no larger matcher library beyond the five
 constructors is committed. Aspect subjects graduated under #791 and are
-accepted above; toolchain plus configuration plus output-group plus action
-subjects stay deferred.
+accepted above; toolchain subjects stay deferred with the platform plus
+toolchain mapping plus resolved-report use case pinned under #792 (via
+`toolchain_subjects.bzl`, proven by `//libs/starlark/tests:toolchain_unit`);
+configuration plus output-group plus action subjects stay deferred.
 
 - Per-check filtering stays wont-fix: target granularity is contract. One
   macro call is one addressable Bazel test target with one Bazel result;
@@ -139,9 +141,12 @@ subjects stay deferred.
   `--test_filter` parsing is rejected; split checks into separate
   `starlark_test` targets for finer filtering, caching, retries, and
   diagnostics.
-- Toolchain subjects stay deferred (#792), pending a concrete use case plus
-  fixtures plus successor issue. Toolchain resolution needs platform and
-  toolchain context beyond provider-field observation.
+- Toolchain subjects stay deferred (#792) with the platform plus toolchain
+  mapping plus resolved-report use case pinned via `toolchain_subjects.bzl`
+  (proven by `//libs/starlark/tests:toolchain_unit`). Toolchain resolution
+  needs platform and toolchain context beyond provider-field observation;
+  direct toolchain observation stays deferred and consumers expose resolved
+  state via `DxSubjectInfo` when observation is needed.
 - Configuration subjects stay deferred (#793), including transitions, pending a
   concrete use case plus fixtures plus successor issue. Configurable
   attributes, fragments, and transitions are not observed.

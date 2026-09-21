@@ -767,11 +767,11 @@ Remaining reds stay owned gaps, not green claims:
    plus replacement graph plus ambient fallback plus generic parity plus cgo completion claim
    rejected; env only, no PATH-tool collision rule change; platform plus consumer plus release
    evidence stays owned gap under #808; no Supported claim).
-- Starlark testing futures with fixture evidence qualified seed-only under closed #588 plus #790 plus #791
+- Starlark testing futures with fixture evidence qualified seed-only under closed #588 plus #790 plus #791 plus #792
   (`bazel run //tools/ci:starlark_futures_qualification` with
   `libs/starlark/tests/fixtures/starlark_futures/pins.bzl` plus
-  `starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl`;
-  `starlark_futures_qualification` 26/26;
+  `starlark_futures.expected` plus `matchers.bzl` plus `aspect_subjects.bzl` plus `toolchain_subjects.bzl`;
+  `starlark_futures_qualification` 29/29;
   per-check filtering plus per-function targets plus Rust orchestration with BEP
   wont-fix on target granularity plus explicit macro instantiation plus single
    invocation with no nested Bazel, richer matchers supported under #790
@@ -780,8 +780,11 @@ Remaining reds stay owned gaps, not green claims:
    fingerprint use case via `//libs/starlark/tests:matcher_unit`), aspect
    subjects supported under #791 (DxAspectInfo plus dx_aspect_note plus
    aspect_field observations with leaf plus group use case via
-   `//libs/starlark/tests:aspect_subject_analysis`), toolchain
-   (#792) plus configuration including transitions (#793) plus output-group (#794) plus action
+   `//libs/starlark/tests:aspect_subject_analysis`), toolchain subjects
+   deferred with the platform plus toolchain mapping plus resolved-report
+   use case pinned under #792 (via `toolchain_subjects.bzl` plus
+   `//libs/starlark/tests:toolchain_unit`, stays deferred), configuration
+   including transitions (#793) plus output-group (#794) plus action
    including registered-action (#795) subjects deferred pending a concrete use case
    plus fixtures plus successor issue, second Starlark interpreter plus per-check
   `--test_filter` parsing plus nested Bazel plus behavioral matrix as line

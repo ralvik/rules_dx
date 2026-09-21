@@ -32,6 +32,15 @@ ASPECT_SUBJECTS_USE_CASE = "leaf plus group with deps via aspect_subjects.bzl"
 ASPECT_SUBJECTS_SURFACE = "DxAspectInfo plus dx_aspect_note plus aspect_field observations"
 ASPECT_SUBJECTS_ISSUE = "qualified under issue #791"
 
+# Toolchain subjects use case (issue #792): platform plus toolchain mapping
+# plus resolved report via toolchain_subjects.bzl, proven by
+# //libs/starlark/tests:toolchain_unit. Direct toolchain observation stays
+# deferred; analysis observes DxSubjectInfo fields plus DefaultInfo basenames
+# only.
+TOOLCHAIN_SUBJECTS_USE_CASE = "platform plus toolchain mapping plus resolved report via toolchain_subjects.bzl"
+TOOLCHAIN_SUBJECTS_SURFACE = "DxSubjectInfo fields plus DefaultInfo basenames only, no ToolchainInfo"
+TOOLCHAIN_SUBJECTS_ISSUE = "use case pinned under issue #792, stays deferred"
+
 # ADR 0009 provisional coverage: configuration includes transitions,
 # action includes registered-action, broader subjects (targets, actions,
 # files, depsets, runfiles) stay provisional with the same deferred

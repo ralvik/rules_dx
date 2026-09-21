@@ -12,6 +12,7 @@ exports_files([
     "matchers.bzl",
     "pins.bzl",
     "starlark_futures.expected",
+    "toolchain_subjects.bzl",
 ])
 
 real_source_target(
@@ -22,6 +23,7 @@ real_source_target(
         "aspect_subjects.bzl",
         "matchers.bzl",
         "pins.bzl",
+        "toolchain_subjects.bzl",
     ],
     tags = ["corpus"],
 )
