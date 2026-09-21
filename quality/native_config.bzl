@@ -136,7 +136,7 @@ ruff_config = _make_native_config_rule(
 
 biome_config = _make_native_config_rule(
     "biome",
-    "Checked-in Biome JSON config (biome.json only, issue #589 wont-fix rejects biome.jsonc) for JavaScript/TypeScript/JSON lint/format. The adapter passes the config's directory as --config-path.",
+    "Checked-in Biome JSON config (biome.json only, issue #589 wont-fix rejects biome.jsonc; See: docs/quality/native-configuration.md) for JavaScript/TypeScript/JSON lint/format. The adapter passes the config's directory as --config-path.",
 )
 
 eslint_config = _make_native_config_rule(

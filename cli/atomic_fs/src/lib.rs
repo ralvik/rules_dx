@@ -1,5 +1,7 @@
 //! Race-free atomic filesystem writes shared by every apply/commit path.
 //!
+//! Contract: `docs/environments/managed-state.md`.
+//!
 //! `dx_apply::RealFileSystem::write_atomic`
 //! (sibling+rename) duplicated the staging discipline that
 //! `quality_adapter::exec::Scratch`, `dx_process::Fs`, and
@@ -27,7 +29,7 @@
 //! misreported as busy. Locks release when the holding `File` drops
 //! (fd close).
 //!
-//! Dependency evaluation (rejected; 
+//! Dependency evaluation (rejected;
 //! stays hand-rolled): no `fs2`/`fslock` — the
 //! stable `std::fs::File::try_lock` API is the upstreamed equivalent and
 //! already owns the flock here, so the crates would add supply-chain

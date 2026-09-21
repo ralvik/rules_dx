@@ -209,7 +209,7 @@ pub fn nuget_version_eq(left: &str, right: &str) -> bool {
     nuget_compare(left_trimmed, right_trimmed) == std::cmp::Ordering::Equal
 }
 
-/// NuGet-native affected-scope matching (issue #624): bare versions use
+/// NuGet-native affected-scope matching (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #624): bare versions use
 /// NuGet equality (so `1.0` matches `1.0.0` but not `1.5.0`; the
 /// dependency-requirement `>=` reading of bare versions does not apply
 /// to advisory scopes, where `[1.0,)` spells the minimum), bracketed

@@ -1,4 +1,6 @@
 //! Validation and codec helpers for the Documentation IR.
+//!
+//! Contract: `docs/documentation/README.md`.
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).

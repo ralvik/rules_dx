@@ -201,7 +201,7 @@ impl Command {
     }
 
     /// True when `--here` (`--cwd` alias) selects the current directory
-    /// tree instead of `//...` (issue #699): the graph-scope commands whose
+    /// tree instead of `//...` (See: `docs/cli/target-resolution.md`, issue #699): the graph-scope commands whose
     /// empty scope means repository-wide `//...` via directory-scope
     /// resolution (`//path/...`; `//...` at the root). Every other command
     /// rejects `--here` pre-exec instead of silently ignoring it; `--here`

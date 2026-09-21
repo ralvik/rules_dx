@@ -11,7 +11,7 @@
 //! `bump.yml` runner; custom code here is limited to snapshot matching plus
 //! shape validation for the one-tag-per-run loop.
 //!
-//! Policy (issue #640):
+//! Policy (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #640):
 //! - Tags auto-resolve to SHA via upstream snapshots; manual SHA only is
 //!   rejected as the sole route for the automatic goal.
 //! - Discovery lists the tag candidate but never invents a SHA
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn upstream_client_is_github_releases() {
-        // Issue #640: GHA tags enumerate plus auto-resolve through the
+        // Issue #640 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): GHA tags enumerate plus auto-resolve through the
         // upstream GitHub releases client, never custom HTTP.
         assert_eq!(upstream_client(), "GitHub releases");
         assert_eq!(
@@ -229,7 +229,7 @@ mod tests {
 
     #[test]
     fn tag_auto_resolves_to_sha_from_upstream_snapshot() {
-        // Issue #640: `v5` auto-resolves to its upstream SHA before the file
+        // Issue #640 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): `v5` auto-resolves to its upstream SHA before the file
         // edit; manual SHA only stays rejected as the sole route.
         let snapshots = snapshot();
         assert_eq!(

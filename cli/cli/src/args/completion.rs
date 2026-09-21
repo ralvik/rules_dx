@@ -44,7 +44,7 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
     match shell {
         "fish" => {
             use clap::ValueEnum;
-            text.push_str("\n# dx commands from the single Command source (issue #202)\n");
+            text.push_str("\n# dx commands from the single Command source (issue #202; See: docs/cli/commands/completion.md)\n");
             for cmd in Command::value_variants() {
                 let desc = cmd.describe().replace('\'', "\\'");
                 text.push_str(&format!(
@@ -70,7 +70,7 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
             if let Some(pos) = text.find(anchor) {
                 text.insert_str(pos, &additions);
             } else {
-                text.push_str("\n# dx commands from the single Command source (issue #202)\n");
+                text.push_str("\n# dx commands from the single Command source (issue #202; See: docs/cli/commands/completion.md)\n");
                 for cmd in Command::value_variants() {
                     text.push_str(&format!("# dx {}\n", cmd.name()));
                 }

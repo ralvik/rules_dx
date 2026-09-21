@@ -172,14 +172,14 @@ impl BumpRequest {
     }
 
     /// Whether lock refresh chains automatically resolver-owned after this
-    /// widen edit (issue #638: Cargo full, npm selective, Go noop, Maven
+    /// widen edit (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638: Cargo full, npm selective, Go noop, Maven
     /// full, NuGet full) or the set is file-only (Bazel, GitHub Actions:
     /// preset flag-diff review plus build, no launch).
     pub fn needs_update_refresh(&self) -> bool {
         self.set.needs_update_refresh()
     }
 
-    /// Refresh selector chained automatically after the widen (issue #638):
+    /// Refresh selector chained automatically after the widen (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638):
     /// `cargo` full, `npm:<package>` selective, `go` noop, `maven` full,
     /// `nuget` full. File-only sets have no refresh selector (verification
     /// stays flag-diff plus build).
@@ -215,7 +215,7 @@ impl BumpRequest {
     }
 
     /// Human planning summary for `--dry-run` (never argv).
-    /// Resolver sets chain automatically (issue #638); file-only sets
+    /// Resolver sets chain automatically (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638); file-only sets
     /// still need the flag-diff review plus build.
     pub fn summary(&self) -> String {
         let through = if self.needs_update_refresh() {

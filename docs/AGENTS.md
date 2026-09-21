@@ -2,6 +2,7 @@
 
 - Put cross-domain docs in `docs/`. Use the existing domain folders.
 - Edit in place. One doc per fact; link, don't copy. Link-don't-copy applies to code comments and docstrings too: `.bzl` headers carry one-line purpose plus owning-contract link, function docs keep only non-obvious invariants, Rust keeps only why-not-obvious notes with owning issue/ADR link.
+- In-code docs rule (enforceable, audited under #710): `.bzl` headers are one-line purpose plus `Contract:` link; function docs keep only non-obvious invariants with a `See:` link. Rust keeps `//!`/`///` only for why-not-obvious (protocol, safety/ordering, error-mapping) with a `See:` or `Owning contract:` link; crate roots link the owning `docs/` contract once and never restate file lists. Python/Starlark/shell keep docstrings only where they add signal beyond the def name. `LCOV_EXCL_*` reasons stay short (`policy: docs/testing/README.md#coverage`); full rationale lives once in `docs/testing/README.md#coverage`. No bare `Issue #` in non-test source: `rg "Issue #|issue #" --glob '*.rs' --glob '*.bzl' cli/ quality/ tools/` must show only lines containing `See:` or `Owning contract:` or inside test pins (`pins.bzl`, `*_tests*.rs`/`*_tests*.bzl`, `tests/`, `testdata/`). Per-area keep/shrink/delete list: `docs/documentation/in-code-docs-audit.md`.
 - One H1 per file. Short paragraphs, relative links.
 - Label accepted vs provisional vs open clearly.
 - Keep repo facts separate from future plans.

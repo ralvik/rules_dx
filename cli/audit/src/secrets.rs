@@ -1,7 +1,7 @@
 //! Secrets-audit invocation planning plus V1 depth disposition.
 //!
 //! Pure qualification planning for the V1 secrets integration
-//! (Gitleaks-only, issue #629) per the audit contract: a checksummed
+//! (Gitleaks-only, issue #629; See: `docs/cli/commands/audit-update-bazel.md#dx-audit`) per the audit contract: a checksummed
 //! standalone artifact with SARIF output and secret-value redaction.
 //! This module plans over injected pin records and argument strings
 //! only, so artifact identity, report wiring, and exit classification
@@ -12,7 +12,7 @@
 //! [`TRUFFLEHOG_V1`]). A silent tool swap is rejected: tool identity
 //! is pinned here and in [`crate::backend`], never substituted.
 //!
-//! Redaction is proven by construction plus fixtures (issue #629):
+//! Redaction is proven by construction plus fixtures (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #629):
 //! planned argv always carries `--redact`, and [`triage_sarif`]
 //! surfaces only rule IDs plus artifact paths, never SARIF
 //! `message.text`, fingerprints, snippets, or properties, so even an
@@ -41,7 +41,7 @@
 /// artifact, never an ambient PATH lookup.
 pub const GITLEAKS_TOOL: &str = "gitleaks";
 
-/// Trufflehog V1 disposition (issue #629, wont-fix, auditor-owned):
+/// Trufflehog V1 disposition (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #629, wont-fix, auditor-owned):
 /// Gitleaks-only V1. A second detector would need its own pin,
 /// adapter, and offline/no-upload qualification with no evidenced
 /// coverage gap; the silent tool swap is rejected, so V1 keeps one
@@ -278,7 +278,7 @@ pub struct SecretFinding {
 /// still mean clean here because the SARIF report is the disambiguating
 /// evidence the exit classification requires.
 ///
-/// Redaction is proven by construction plus fixtures (issue #629):
+/// Redaction is proven by construction plus fixtures (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #629):
 /// the planned argv always carries `--redact` (see
 /// `backend::plan_secrets`), and triage surfaces only the rule ID
 /// plus the artifact URI. SARIF `message.text`, `fingerprints`,
@@ -359,7 +359,7 @@ mod tests {
 
     #[test]
     fn trufflehog_v1_stays_wont_fix() {
-        // Issue #629: V1 is Gitleaks-only. The pin gate above rejects
+        // Issue #629 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): V1 is Gitleaks-only. The pin gate above rejects
         // a `trufflehog` tool identity, and this disposition pins the
         // docs-level decision so a silent tool swap cannot qualify.
         assert_eq!(TRUFFLEHOG_V1, "wont-fix");
@@ -502,7 +502,7 @@ mod tests {
 
     #[test]
     fn sarif_triage_redaction_ignores_every_secret_field() {
-        // Issue #629: even an unredacted report cannot leak through
+        // Issue #629 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): even an unredacted report cannot leak through
         // triage. Every plausible secret-carrying SARIF field carries
         // a distinct sentinel; triaged output must contain none of
         // them while still counting the finding with its rule and path.

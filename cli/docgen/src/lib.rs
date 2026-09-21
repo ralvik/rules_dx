@@ -2,6 +2,8 @@
 //! identity, validation, mode shape; guides/examples corpus shape;
 //! site-build action planning; `dx docs` invocation planning).
 //!
+//! Contract: `docs/documentation/README.md`.
+//!
 //! This crate owns the documentation pipeline shape before any extractor,
 //! schema-number freeze, adapter, site-build rule, or `dx docs` command
 //! lands: IR version compatibility, stable symbol identities, the

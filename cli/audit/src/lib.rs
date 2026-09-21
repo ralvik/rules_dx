@@ -1,5 +1,7 @@
 //! Pure `dx audit` request planning plus live auditor backends.
 //!
+//! Contract: `docs/cli/commands/audit-update-bazel.md#dx-audit`.
+//!
 //! This crate owns the audit command surface: family selection, scope
 //! defaults, and the non-mutating marker, plus live auditor wiring
 //! (Gitleaks subprocess planning), advisory snapshot acquisition with

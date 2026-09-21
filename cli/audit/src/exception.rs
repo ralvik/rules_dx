@@ -122,7 +122,7 @@ pub fn check_expiry(expires: &str, today: &str) -> Result<(), ExceptionProblem> 
 /// match only the narrow upstream rule (a requirement with a pre-release
 /// on the same version); a bare range never covers a pre-release.
 ///
-/// Go normalization rule (issue #679): `go.mod` versions carry a leading
+/// Go normalization rule (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #679): `go.mod` versions carry a leading
 /// `v` (`v1.2.3`), pseudo-versions (`v0.0.0-20240101-abcdef`,
 /// `v1.2.4-0.20240101-abcdef`), and `+incompatible` suffixes
 /// (`v2.0.0+incompatible`). `crate::vuln::go_in_scope` strips one leading

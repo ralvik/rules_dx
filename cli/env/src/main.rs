@@ -1,5 +1,7 @@
 //! `env` binary: thin CLI shim over the managed-environment bootstrap library.
 //!
+//! Contract: `docs/environments/environment.md`.
+//!
 //! Refresh semantics, marker validation, and the atomic swap live in the
 //! library and are unit-tested there. This shim owns process concerns
 //! only: flag parsing, workspace discovery, staged-input location (explicit

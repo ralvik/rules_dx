@@ -126,7 +126,7 @@ def _render_fragment():
     for group in sorted(EXTRA_PRESETS):
         lines += ["# Owned extra_presets group: %s." % group]
         lines += [line for line, _review in EXTRA_PRESETS[group]]
-    lines += ["# Owned build profiles (issue #177)."]
+    lines += ["# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md)."]
     lines += [line for line, _review in BUILD_PROFILES]
     lines += [""]
     return "\n".join(lines)

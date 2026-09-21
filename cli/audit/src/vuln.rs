@@ -80,7 +80,7 @@ pub struct LockedPackage {
 
 /// One OSV-format advisory record from the identified snapshot. This is
 /// the matching shape projected from typed OSV via the upstream `osv`
-/// crate (`schema` feature only, offline; issue #676): upstream advisory
+/// crate (`schema` feature only, offline; See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #676): upstream advisory
 /// identity, affected package and version scope, severity text, and
 /// remediation. Legacy V1 minimal snapshots still parse; unknown fields
 /// ignore so snapshot evolution never breaks matching.
@@ -232,7 +232,7 @@ fn strip_go_v(text: &str) -> String {
 
 /// Go affected-scope matching: [`strip_go_v`] normalization on both the
 /// advisory scope and the locked version, then Cargo-flavor ordering
-/// without the Cargo prerelease gate (issue #679).
+/// without the Cargo prerelease gate (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #679).
 ///
 /// Spike result: `v`-strip preprocessing suffices, no Go-aware crate.
 /// `semver` ordering already matches Go precedence (pseudo-versions sort

@@ -64,7 +64,10 @@ pub fn render_preset_fragment() -> String {
     lines.extend(UPSTREAM_FLAGS.iter().map(|s| (*s).to_owned()));
     lines.push("# Owned extra_presets group: coverage.".to_owned());
     lines.extend(COVERAGE_FLAGS.iter().map(|s| (*s).to_owned()));
-    lines.push("# Owned build profiles (issue #177).".to_owned());
+    lines.push(
+        "# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md)."
+            .to_owned(),
+    );
     lines.extend(BUILD_PROFILES.iter().map(|s| (*s).to_owned()));
     let mut out = lines.join("\n");
     out.push('\n');

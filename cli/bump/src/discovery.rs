@@ -13,7 +13,7 @@
 //! is limited to stable-only filtering, semver ordering, and the next-candidate
 //! selection for the one-dep-per-PR loop.
 //!
-//! Policy (issue #639):
+//! Policy (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #639):
 //! - Discovery proposes stable versions only; prerelease eligibility
 //!   follows the upstream resolver and project configuration, never a
 //!   private `dx` policy (`version::prerelease_follows_upstream`).
@@ -26,7 +26,7 @@
 //!   outdated via the upstream clients, never requires an operator
 //!   `selector`/`version` pair to make progress.
 //! - GitHub Actions tags need SHA resolution through the upstream GitHub
-//!   releases client before the file edit (issue #640 owns the auto
+//!   releases client before the file edit (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #640 owns the auto
 //!   resolution); discovery lists the tag candidate but never invents a SHA.
 
 use super::sets::BumpSet;
@@ -83,7 +83,7 @@ pub enum DiscoveryError {
 
 /// Upstream registry client owning enumeration for one set (never custom
 /// HTTP). GitHub Actions enumerates tags via the upstream GitHub releases
-/// client; SHA resolution stays owned under issue #640.
+/// client; SHA resolution stays owned under issue #640 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`).
 pub fn registry_client(set: BumpSet) -> &'static str {
     match set {
         BumpSet::Bazel => "BCR",
@@ -98,7 +98,7 @@ pub fn registry_client(set: BumpSet) -> &'static str {
 
 /// Parses one semver discovery entry (`selector` plus pinned `current`
 /// text). GitHub Actions has no semver current (SHA-plus-tag pins), so it
-/// fails closed here; its tag enumeration stays owned under issue #640.
+/// fails closed here; its tag enumeration stays owned under issue #640 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`).
 pub fn parse_declared(selector: &str, current: &str) -> Result<Snapshot, DiscoveryError> {
     if selector.is_empty() || current.is_empty() {
         return Err(DiscoveryError::Empty);
@@ -231,7 +231,7 @@ mod tests {
 
     #[test]
     fn semver_sets_parse_declared_with_client_mapping() {
-        // Issue #639: discovery covers the six semver sets; each maps to
+        // Issue #639 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): discovery covers the six semver sets; each maps to
         // its upstream registry client, never custom HTTP.
         for (selector, client) in [
             ("bazel:rules_rust", "BCR"),
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn github_actions_has_no_semver_current() {
         // GHA pins are tag/SHA-shaped: discovery lists tags via GitHub
-        // releases but never invents a SHA here (issue #640 owns auto).
+        // releases but never invents a SHA here (issue #640 owns auto; See: `docs/cli/commands/audit-update-bazel.md#dx-bump`).
         assert!(matches!(
             parse_declared("github-actions:actions/checkout", "v4"),
             Err(DiscoveryError::UnknownSelector { .. })

@@ -302,7 +302,7 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Runner plus SDK rotation harness (issue #642); see docs/github-ci.md#runner-plus-sdk-rotation.
+    # Runner plus SDK rotation harness (issue #642; See: docs/github-ci.md#runner-plus-sdk-rotation).
     sh_binary(
         name = "runner_rotation_qualification",
         srcs = ["runner_rotation_qualification.sh"],
@@ -312,7 +312,7 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # GHCR rebuild plus signing rotation harness (issue #647); see docs/contributing/devcontainer.md#ghcr-rebuild-plus-signing-rotation.
+    # GHCR rebuild plus signing rotation harness (issue #647; See: docs/contributing/devcontainer.md#ghcr-rebuild-plus-signing-rotation).
     sh_binary(
         name = "ghcr_rebuild_rotation_qualification",
         srcs = ["ghcr_rebuild_rotation_qualification.sh"],
@@ -322,7 +322,7 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Devcontainer boot manual plus wont-fix harness (issue #648); see docs/contributing/devcontainer.md#container-boot-manual.
+    # Devcontainer boot manual plus wont-fix harness (issue #648; See: docs/contributing/devcontainer.md#container-boot-manual).
     sh_binary(
         name = "devcontainer_boot_qualification",
         srcs = ["devcontainer_boot_qualification.sh"],

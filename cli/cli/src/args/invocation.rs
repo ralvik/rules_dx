@@ -106,7 +106,7 @@ impl Invocation {
 }
 
 /// Workspace-relative scope spelling for `--here` (`--cwd` alias,
-/// issue #699): the current directory tree as a directory scope for the
+/// See: `docs/cli/target-resolution.md`, issue #699): the current directory tree as a directory scope for the
 /// existing resolution (`//path/...` via `classify`; `//...` at the root
 /// directly so both the `classify` directory path and the audit
 /// `owning_sets` label path resolve repository-wide). Never implicit:

@@ -1,5 +1,7 @@
 //! Workspace-relative path shape checks shared by every shard validator.
 //!
+//! Contract: `docs/architecture/README.md`.
+//!
 //! The empty → absolute → backslash → empty-component →
 //! `.` → `..` ladder was copy-pasted across `quality/result`,
 //! `codegen_shard`, `docs/ir`, `env_shard`, and

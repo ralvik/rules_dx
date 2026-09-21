@@ -4,7 +4,7 @@
 //! the staged `environment_tree` output set atomically, and prove
 //! provenance with a binary marker so later runs can no-op or replace.
 //!
-//! Contracts: `docs/environments/environment.md` (Tool Exposure, Ownership
+//! Contract: `docs/environments/environment.md` (Tool Exposure, Ownership
 //! and Refresh) and `docs/environments/managed-state.md` (Installation and
 //! Ownership, Commit Lock and Concurrency, Windows Symlink Pre-Check,
 //! Marker Encoding and Versioning).

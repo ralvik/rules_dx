@@ -800,7 +800,7 @@ mod tests {
 
     #[test]
     fn maven_selective_parses_group_artifact_and_stays_selective() {
-        // Issue #634: per-artifact identities parse (seed plus Jupiter)
+        // Issue #634 (See: `docs/decisions/0024-selective-update.md`): per-artifact identities parse (seed plus Jupiter)
         // and resolve to `Packages`; the backend owns the wont-fix
         // `unsupported` call, never a silent full substitution. Bare
         // group-only shapes stay parse errors.
@@ -833,7 +833,7 @@ mod tests {
 
     #[test]
     fn go_selective_parses_module_path_and_stays_selective() {
-        // Issue #636: per-module identities parse (pinned `go-cmp` plus
+        // Issue #636 (See: `docs/decisions/0024-selective-update.md`): per-module identities parse (pinned `go-cmp` plus
         // hello importpath) and resolve to `Packages`; the backend owns
         // the wont-fix `unsupported` call, never a silent full
         // substitution. Bare `go:` stays a parse error.
@@ -856,8 +856,8 @@ mod tests {
                 "rules_dx/go/tests/fixtures/hello".to_owned()
             ]))
         );
-        let resolved = resolve(&strings(&["go", "go:github.com/google/go-cmp/cmp"]))
-            .expect("go full wins");
+        let resolved =
+            resolve(&strings(&["go", "go:github.com/google/go-cmp/cmp"])).expect("go full wins");
         assert_eq!(resolved.get(&SetId::Go), Some(&SetRequest::Full));
     }
 

@@ -92,7 +92,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         min_coverage = Some(parse_min_coverage(value)?);
     }
     let command = command_name.ok_or(ArgsError::MissingCommand)?;
-    // `--here` (`--cwd` alias, issue #699): explicit cwd scope only.
+    // `--here` (`--cwd` alias, See: `docs/cli/target-resolution.md`, issue #699): explicit cwd scope only.
     // Supported graph-scope commands select `//path/...` (`//...` at the
     // root) via directory-scope resolution; every other command rejects
     // it, and it never combines with explicit scopes (audit allows one

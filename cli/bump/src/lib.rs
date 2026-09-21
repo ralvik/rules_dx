@@ -1,5 +1,7 @@
 //! Pure `dx bump` widen-one-requirement planning.
 //!
+//! Contract: `docs/cli/commands/audit-update-bazel.md#dx-bump`.
+//!
 //! This crate owns the explicit widen operation, separate from `dx
 //! update`: `dx bump <selector> <version>` rewrites exactly one declared
 //! requirement in the working copy. `dx update` keeps its never-rewrites
@@ -21,10 +23,10 @@
 //! Frozen command shape (`docs/cli/commands/audit-update-bazel.md`):
 //! `dx bump <set:package> <version>`. One invocation widens one
 //! requirement (never batch) then chains the refresh automatically
-//! (issue #638). Discovery enumerates outdated via the upstream registry
-//! clients and proposes stable versions only (issue #639, planned in
+//! (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638). Discovery enumerates outdated via the upstream registry
+//! clients and proposes stable versions only (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #639, planned in
 //! [`discovery`]); GitHub Actions tags auto-resolve to SHA via the upstream
-//! GitHub releases client before the file edit (issue #640, planned in
+//! GitHub releases client before the file edit (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #640, planned in
 //! [`gha`]); prerelease
 //! eligibility follows the upstream resolver and project configuration,
 //! never a private policy. Transitive versions stay resolver-governed;

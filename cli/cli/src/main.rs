@@ -244,7 +244,7 @@ fn run() -> i32 {
     // diagnostic naming the three versions and the repair. Read-only
     // commands warn and proceed; the diagnose/repair path stays usable.
     // One small file read, no subprocesses.
-    // `--here` (`--cwd` alias, issue #699): explicit cwd scope only.
+    // `--here` (`--cwd` alias, See: `docs/cli/target-resolution.md`, issue #699): explicit cwd scope only.
     // Consumed here into a directory scope (`//path/...`; `//...` at the
     // root) so downstream resolution reuses the existing path verbatim.
     // The no-flag default stays `//...`; explicit scopes never combine.
