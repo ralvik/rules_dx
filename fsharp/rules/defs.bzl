@@ -52,7 +52,7 @@ _fsharp_binary_forward = dx_executable_forward_rule(
     quality_specs = _DX_FSHARP_SOURCE_SPECS,
     what = "fsharp_*",
     allow_files = _DX_FSHARP_SOURCE_EXTS,
-    upstream_providers = None,
+    upstream_providers = [[DotnetAssemblyCompileInfo, DotnetAssemblyRuntimeInfo]],
     doc = "Executable forwarder for fsharp_binary: symlinks the upstream binary.",
     srcs_doc = "Direct F# sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream fsharp_binary target whose executable is symlinked.",
@@ -67,7 +67,7 @@ _fsharp_forward_test = dx_executable_forward_rule(
     quality_specs = _DX_FSHARP_SOURCE_SPECS,
     what = "fsharp_*",
     allow_files = _DX_FSHARP_SOURCE_EXTS,
-    upstream_providers = None,
+    upstream_providers = [[DotnetAssemblyCompileInfo, DotnetAssemblyRuntimeInfo]],
     doc = "Test forwarder for fsharp_test: symlinks the upstream test executable.",
     srcs_doc = "Direct F# test sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream fsharp_test target whose executable is symlinked.",
@@ -133,10 +133,12 @@ def fsharp_test(name, srcs, visibility = None, **kwargs):
     # The private upstream test stays an implementation detail via private
     # visibility; both it and the public wrapper run under `bazel test //...`
     # (no manual; double-execution is the cost of green suites).
-    if "tags" in kwargs:
-        upstream_kwargs["tags"] = list(kwargs["tags"])
-    elif "tags" in upstream_kwargs:
-        upstream_kwargs.pop("tags")
+    if "tags" in upstream_kwargs:
+        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
+        if len(kept) > 0:
+            upstream_kwargs["tags"] = kept
+        else:
+            upstream_kwargs.pop("tags")
     upstream_kwargs["visibility"] = ["//visibility:private"]
     if srcs != None:
         upstream_kwargs["srcs"] = srcs

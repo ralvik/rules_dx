@@ -298,16 +298,6 @@ dx_deployment(
     deploy = ":deploy_app",
 )
 
-# Manual negative demo: invalid profiles fail analysis with the helper
-# message. Never part of `//...` suites: build explicitly with
-# --nobuild to observe the failure.
-dx_deployment(
-    name = "deploy_invalid",
-    deploy = ":deploy_program",
-    profile = "staging",
-    tags = ["manual"],
-)
-
 deploy_unit_tests(name = "deploy_unit")
 
 deploy_analysis_tests(name = "deploy_analysis")

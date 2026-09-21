@@ -30,6 +30,7 @@ _svelte_library_forward = dx_library_forward_rule(
 )
 
 def _svelte_wrap_library(name, srcs, visibility = None, **kwargs):
+    # Lane-A: aspect_hints ride the public forwarder via dx_wrap.
     dx_wrap(name, _js_library, _svelte_library_forward, srcs, visibility = visibility, **kwargs)
 
 def svelte_library(name, srcs, visibility = None, **kwargs):

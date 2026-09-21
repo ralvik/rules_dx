@@ -96,20 +96,7 @@ def _cc_with_werror(kwargs):
     return upstream_kwargs
 
 def _cc_wrap_library(name, srcs, hdrs, visibility = None, **kwargs):
-    _cc_library(
-        name = name + "_upstream",
-        srcs = srcs,
-        hdrs = hdrs,
-        visibility = ["//visibility:private"],
-        **_cc_with_werror(kwargs)
-    )
-    _cc_library_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        hdrs = hdrs,
-        visibility = visibility,
-    )
+    dx_wrap(name, _cc_library, _cc_library_forward, srcs, hdrs = hdrs, visibility = visibility, **_cc_with_werror(kwargs))
 
 def _cc_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _cc_binary, _cc_binary_forward, srcs, visibility = visibility, **_cc_with_werror(kwargs))

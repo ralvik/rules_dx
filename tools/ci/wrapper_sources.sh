@@ -82,7 +82,12 @@ if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl &&
   grep -q -F -e 'aspect_hints' cc/rules/defs.bzl &&
   grep -q -F -e 'aspect_hints' python/rules/defs.bzl &&
   grep -q -F -e 'aspect_hints' rust/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
+  grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' typescript/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' vue/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' svelte/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' astro/rules/defs.bzl &&
+  grep -q -F -e 'aspect_hints' mdx/rules/defs.bzl; then
   ok
 else
   bad "wrappers lost their lane-A aspect_hints forwarder plumbing"
@@ -99,6 +104,52 @@ if [[ -f "ruff.toml" && -f "biome.json" && -f "rustfmt.toml" ]] &&
   ok
 else
   bad "lane-A workspace-level native policy binding missing (root configs + proof aspect_hints)"
+fi
+
+# Libraries route via dx_wrap so aspect_hints (and CC hdrs) reach the
+# QualitySourcesInfo owner, not only the private upstream.
+if grep -q -F -e 'dx_wrap(name, _cc_library' cc/rules/defs.bzl; then
+  ok
+else
+  bad "cc library bypasses dx_wrap (aspect_hints/hdrs lost)"
+fi
+
+# Manual-tag handling stays unified: test forwarders strip `manual` so both
+# the private upstream and the public wrapper run under `bazel test //...`.
+if grep -q -F -e '!= "manual"' cc/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' go/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' java/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' kotlin/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' scala/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' csharp/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' fsharp/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' python/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' rust/rules/defs.bzl &&
+  grep -q -F -e '!= "manual"' javascript/rules/defs.bzl; then
+  ok
+else
+  bad "test wrappers drifted on manual-tag stripping"
+fi
+
+# Upstream providers stay sealed: binary/test forwarders declare the expected
+# provider set instead of accepting any target.
+if ! grep -q -F -e 'upstream_providers = None' java/rules/defs.bzl &&
+  ! grep -q -F -e 'upstream_providers = None' kotlin/rules/defs.bzl &&
+  ! grep -q -F -e 'upstream_providers = None' scala/rules/defs.bzl &&
+  ! grep -q -F -e 'upstream_providers = None' csharp/rules/defs.bzl &&
+  ! grep -q -F -e 'upstream_providers = None' fsharp/rules/defs.bzl; then
+  ok
+else
+  bad "binary/test forwarders lost their sealed upstream_providers"
+fi
+
+# Deploy boundary validates at analysis: profile uses values=, app requires
+# an executable DefaultInfo target.
+if grep -q -F -e 'values = VALID_DEPLOY_PROFILES' deploy/rules/defs.bzl &&
+  grep -q -F -e 'providers = [DefaultInfo]' deploy/rules/defs.bzl; then
+  ok
+else
+  bad "deploy attrs lost analysis-time validation (values/providers)"
 fi
 
 # Wrapper precision is pinned by wrapper tests alongside the wrappers.

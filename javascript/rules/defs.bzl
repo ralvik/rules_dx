@@ -223,12 +223,6 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
             upstream_kwargs.pop("tags")
     elif "tags" in upstream_kwargs:
         upstream_kwargs.pop("tags")
-    if "tags" in upstream_kwargs:
-        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
-        if len(kept) > 0:
-            upstream_kwargs["tags"] = kept
-        else:
-            upstream_kwargs.pop("tags")
 
     # Workspace ESM scope marker (see docstring): must resolve in runfiles
     # above every first-party test source. Referenced as the root
