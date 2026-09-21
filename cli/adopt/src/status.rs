@@ -40,10 +40,9 @@ pub fn render_status_text(checks: &[StatusCheck]) -> String {
 /// Render legacy JSON payload (single object, not the NDJSON envelope).
 /// See: `docs/cli/output-protocol.md#status` for the CLI envelope.
 pub fn render_status_json(checks: &[StatusCheck]) -> String {
-    // Infallible shape: strings only, so `serde_json` cannot
-    // fail; the fallback names the invariant instead of `expect`.
-    serde_json::to_string(&StatusPayload { checks })
-        .unwrap_or_else(|err| unreachable!("status JSON serializes: {err:?}"))
+    // Single owner for infallible string-only JSON shapes.
+    // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
+    dx_fingerprint::to_json(&StatusPayload { checks })
 }
 
 /// Default local status checks (toolchain + platform + tools + pin).

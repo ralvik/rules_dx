@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use clap::error::{ContextKind, ContextValue, ErrorKind};
+use clap::error::ErrorKind;
 use clap::Parser as ClapParser;
 use pulldown_cmark::{BrokenLink, Event, LinkType, Options, Parser, Tag, TagEnd};
 use serde::Serialize;
@@ -334,29 +334,18 @@ struct Cli {
 }
 
 /// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
+/// Shared plumbing; message formats stay local to the frozen contract.
+/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
-    match error.get(ContextKind::InvalidArg) {
-        Some(ContextValue::String(token)) => token.clone(),
-        Some(ContextValue::Strings(tokens)) => tokens.first().cloned().unwrap_or_default(),
-        _ => String::new(),
-    }
+    dx_output::invalid_token(error)
 }
 
 /// Rejected mapping value behind a [`clap::Error`], if the error carries a
 /// non-empty one. Empty values (`--source ""`, `--source=`) carry none (or
 /// an empty one); the caller resolves those via [`empty_rejection`].
+/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn rejected_value(error: &clap::Error) -> Option<String> {
-    let invalid = error.get(ContextKind::InvalidValue)?;
-    let raw = match invalid {
-        ContextValue::String(value) => value.clone(),
-        ContextValue::Strings(values) => values.first().cloned().unwrap_or_default(),
-        _ => String::new(),
-    };
-    if raw.is_empty() {
-        None
-    } else {
-        Some(raw)
-    }
+    dx_output::rejected_value(error)
 }
 
 /// Empty-value rejection with no carried value: mirrors the legacy
@@ -398,15 +387,7 @@ fn check_mapping(flag: &str, raw: &str, error: &clap::Error) -> Vec<String> {
     };
     match legacy {
         Err(message) => vec![message, usage()],
-        Ok(_) => vec![
-            error
-                .to_string()
-                .lines()
-                .next()
-                .unwrap_or("invalid arguments")
-                .to_owned(),
-            usage(),
-        ],
+        Ok(_) => vec![dx_output::first_line(error), usage()],
     }
 }
 
@@ -446,20 +427,14 @@ fn parse_error(error: clap::Error, args: &[String]) -> Vec<String> {
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
+        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
-            let echoed = args
-                .iter()
-                .find(|arg| *arg == &token)
-                .or_else(|| {
-                    args.iter()
-                        .find(|arg| arg.starts_with(&format!("{token}=")))
-                })
-                .map_or(token.clone(), Clone::clone);
+            let echoed = dx_output::recover_unknown_token(args, &token);
             vec![format!("unknown argument: {echoed}"), usage()]
         }
         // The legacy loop names the bare `--flag` here.
         ErrorKind::InvalidValue => {
-            let flag = token.split_whitespace().next().unwrap_or(&token);
+            let flag = dx_output::leading_flag(&token);
             vec![format!("missing value for {flag}"), usage()]
         }
         ErrorKind::ValueValidation => {
@@ -482,15 +457,7 @@ fn parse_error(error: clap::Error, args: &[String]) -> Vec<String> {
                 EmptyRejection::Neither => check_mapping("--source", "", &error),
             }
         }
-        _ => vec![
-            error
-                .to_string()
-                .lines()
-                .next()
-                .unwrap_or("invalid arguments")
-                .to_owned(),
-            usage(),
-        ],
+        _ => vec![dx_output::first_line(&error), usage()],
     }
 }
 
@@ -595,8 +562,9 @@ pub fn run_cli(
                 message: finding.message.as_str(),
             };
             print_out(
-                &serde_json::to_string(&line)
-                    .unwrap_or_else(|err| unreachable!("finding line serializes: {err:?}")),
+                // Single owner for infallible string-only JSON shapes.
+                // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
+                &dx_fingerprint::to_json(&line),
             );
         }
         for remote in &outcome.skipped_remotes {

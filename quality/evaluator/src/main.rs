@@ -15,10 +15,7 @@
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 // LCOV_EXCL_START - reason: thin binary shim; CLI parsing and file I/O failures are operational action failures verified by build and WP3 evaluator execution, not unit coverage.
-use clap::{
-    error::{ContextKind, ContextValue, ErrorKind},
-    Parser,
-};
+use clap::{error::ErrorKind, Parser};
 use quality_evaluator::{evaluate, parse_threshold, Threshold};
 use quality_result::decode_validated;
 
@@ -48,12 +45,10 @@ struct Cli {
 }
 
 /// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
+/// Shared plumbing; message formats stay local to the frozen contract.
+/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
-    match error.get(ContextKind::InvalidArg) {
-        Some(ContextValue::String(token)) => token.clone(),
-        Some(ContextValue::Strings(tokens)) => tokens.first().cloned().unwrap_or_default(),
-        _ => String::new(),
-    }
+    dx_output::invalid_token(error)
 }
 
 /// Map `clap` tokenizing failures onto the legacy `run()` error surface.
@@ -67,15 +62,9 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
+        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
-            let echoed = args
-                .iter()
-                .find(|arg| *arg == &token)
-                .or_else(|| {
-                    args.iter()
-                        .find(|arg| arg.starts_with(&format!("{token}=")))
-                })
-                .map_or(token.clone(), Clone::clone);
+            let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown flag {echoed:?}")
         }
         ErrorKind::InvalidValue => {
@@ -83,7 +72,7 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
             // legacy message names the bare `--flag`. A missing value
             // carries no rejected value, so the `--fail_on` threshold
             // mapping below cannot misfire on it.
-            let flag = token.split_whitespace().next().unwrap_or(&token);
+            let flag = dx_output::leading_flag(&token);
             if flag == "--fail_on" {
                 if let Some(raw) = rejected_value(&error) {
                     if let Err(legacy) = parse_threshold(&raw) {
@@ -103,38 +92,19 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
             let raw = rejected_value(&error).unwrap_or_default();
             match parse_threshold(&raw) {
                 Err(legacy) => legacy.to_string(),
-                Ok(_) => error
-                    .to_string()
-                    .lines()
-                    .next()
-                    .unwrap_or("invalid arguments")
-                    .to_owned(),
+                Ok(_) => dx_output::first_line(&error),
             }
         }
-        _ => error
-            .to_string()
-            .lines()
-            .next()
-            .unwrap_or("invalid arguments")
-            .to_owned(),
+        _ => dx_output::first_line(&error),
     }
 }
 
 /// Rejected `--fail_on` value behind a [`clap::Error`], if the error
 /// carries a non-empty one. Missing values carry none (or an empty one),
 /// which the caller treats as missing rather than rejected.
+/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn rejected_value(error: &clap::Error) -> Option<String> {
-    let invalid = error.get(ContextKind::InvalidValue)?;
-    let raw = match invalid {
-        ContextValue::String(value) => value.clone(),
-        ContextValue::Strings(values) => values.first().cloned().unwrap_or_default(),
-        _ => String::new(),
-    };
-    if raw.is_empty() {
-        None
-    } else {
-        Some(raw)
-    }
+    dx_output::rejected_value(error)
 }
 
 /// `clap` value parser for `--fail_on`: the single source is

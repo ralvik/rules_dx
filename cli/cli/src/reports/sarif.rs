@@ -248,8 +248,9 @@ pub fn render_sarif(
         .runs(runs)
         .version(serde_json::Value::String("2.1.0".to_owned()))
         .build();
-    Ok(serde_json::to_string(&document)
-        .unwrap_or_else(|err| unreachable!("SARIF serialization is infallible: {err:?}")))
+    // Single owner for infallible string-only JSON shapes.
+    // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
+    Ok(dx_fingerprint::to_json(&document))
 }
 
 #[cfg(test)]

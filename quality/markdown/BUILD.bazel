@@ -38,7 +38,10 @@ rust_library(
             "tracing",
         ],
         package_name = "quality/quality_markdown",
-    ),
+    ) + [
+        "//cli/fingerprint:dx_fingerprint",
+        "//cli/output:dx_output",
+    ],
 )
 
 rust_binary(

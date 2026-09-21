@@ -203,22 +203,19 @@ pub enum CollectError {
 
 /// Reports whether a BEP-reported artifact path is a plan shard, by
 /// reserved filename suffix on the raw path bytes.
+/// Shared index plumbing; only the suffix is plan-specific.
+/// See: `cli/bep/src/lib.rs` (`dx_bep::is_shard_artifact`).
 pub fn is_shard_artifact(path: &Path) -> bool {
-    path.as_os_str()
-        .as_encoded_bytes()
-        .ends_with(SHARD_SUFFIX.as_bytes())
+    dx_bep::is_shard_artifact(path, SHARD_SUFFIX)
 }
 
 /// Reports whether a BEP-reported artifact path satisfies an entry's
 /// exec suffix: exact equality or a "/"-boundary suffix match, so
 /// different output bases still resolve without scanning `bazel-out`.
 /// Mirrors `_exec_matches` in `//env:plan.bzl`.
+/// Shared index plumbing. See: `cli/bep/src/lib.rs` (`dx_bep::exec_matches`).
 pub fn exec_matches(artifact_path: &Path, exec_path: &str) -> bool {
-    if exec_path.is_empty() {
-        return false;
-    }
-    let rendered = artifact_path.as_os_str().to_string_lossy();
-    rendered.as_ref() == exec_path || rendered.ends_with(&format!("/{exec_path}"))
+    dx_bep::exec_matches(artifact_path, exec_path)
 }
 
 /// Decodes every shard among the BEP-reported artifacts and validates
@@ -228,6 +225,11 @@ pub fn exec_matches(artifact_path: &Path, exec_path: &str) -> bool {
 /// (sharing is allowed). Logical-only entries (empty exec) require no
 /// artifact. Inputs arrive sorted by label from `dx_bep`; determinism
 /// comes from [`merge_records`], never arrival order.
+///
+/// Keep: the codegen collector shares the shard/index plumbing via
+/// `dx_bep` but keeps its own decode plus duplicate-claim rejection
+/// (env allows sharing; codegen is a closed manifest).
+/// See: `cli/codegen/src/lib.rs` (`collect_shards`).
 pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<EnvRecord>, CollectError> {
     let backing_paths = backing_artifact_paths(outputs);
     let mut records = Vec::new();
@@ -262,22 +264,16 @@ pub fn collect_shards(outputs: &[TargetOutput]) -> Result<Vec<EnvRecord>, Collec
 /// Lists every BEP-reported non-shard artifact path: the backing files
 /// the entry `exec_path` suffixes index into. Shard files are
 /// recognized by the reserved suffix and excluded.
+/// Shared index plumbing. See: `cli/bep/src/lib.rs`.
 fn backing_artifact_paths(outputs: &[TargetOutput]) -> Vec<String> {
-    let mut paths = Vec::new();
-    for output in outputs {
-        for artifact in &output.artifacts {
-            if !is_shard_artifact(&artifact.exec_path) {
-                paths.push(artifact.exec_path.display().to_string());
-            }
-        }
-    }
-    paths
+    dx_bep::non_shard_artifact_paths(outputs, SHARD_SUFFIX)
 }
 
 /// Reports whether a BEP-reported artifact path satisfies an entry's
 /// exec suffix: exact equality or a "/"-boundary suffix match.
+/// Shared index plumbing. See: `cli/bep/src/lib.rs` (`dx_bep::suffix_matches`).
 fn suffix_matches(artifact: &str, exec_path: &str) -> bool {
-    artifact == exec_path || artifact.ends_with(&format!("/{exec_path}"))
+    dx_bep::suffix_matches(artifact, exec_path)
 }
 
 /// Validates the artifact index and resolves every exec-bound entry to
@@ -433,6 +429,12 @@ struct FingerprintRecord<'a> {
 /// one object per record with producer, integration, and entries sorted
 /// by (key, value, exec path), each entry binding its exec-path suffix.
 /// Byte-identical to the Starlark rendering for the same records.
+///
+/// Keep: the codegen fingerprint shares the JSON owner
+/// (`dx_fingerprint::to_json`) but keeps its own view shape (env
+/// keys on integration plus key/value; codegen on language plus
+/// logical path, import root, namespace).
+/// See: `cli/codegen/src/lib.rs` (`fingerprint`).
 pub fn fingerprint(records: &[EnvRecord]) -> String {
     let merged = merge_records(records);
     let view: Vec<FingerprintRecord<'_>> = merged

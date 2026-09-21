@@ -118,6 +118,9 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
         report.add_test_suite(suite);
     }
     report.set_time(total_time);
+    // Keep: `quick-junit` renders via `Display`, not `serde_json::Serialize`,
+    // so the JSON owner cannot cover it.
+    // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
     report
         .to_string()
         .unwrap_or_else(|err| unreachable!("junit report serialization is infallible: {err:?}"))

@@ -142,9 +142,76 @@ pub(crate) fn file_uri_to_path(uri: &str) -> Result<PathBuf, BepError> {
     parsed.to_file_path().map_err(|_| unsupported())
 }
 
+/// Reports whether a BEP-reported artifact path is a plan shard, by
+/// reserved filename suffix on the raw path bytes.
+///
+/// Single owner for the env/codegen shard split (see `dx_env_plan` and
+/// `dx_codegen`): both collectors recognize shards by their own frozen
+/// suffix and never scan `bazel-out`; only the suffix differs.
+pub fn is_shard_artifact(path: &Path, suffix: &str) -> bool {
+    path.as_os_str()
+        .as_encoded_bytes()
+        .ends_with(suffix.as_bytes())
+}
+
+/// Reports whether a BEP-reported artifact path satisfies an entry's
+/// exec suffix: exact equality or a "/"-boundary suffix match, so
+/// different output bases still resolve without scanning `bazel-out`.
+/// Mirrors `_exec_matches` in `//env:plan.bzl` and
+/// `//generation:codegen.bzl`.
+///
+/// Single owner for the env/codegen artifact index.
+pub fn exec_matches(artifact_path: &Path, exec_path: &str) -> bool {
+    if exec_path.is_empty() {
+        return false;
+    }
+    let rendered = artifact_path.as_os_str().to_string_lossy();
+    rendered.as_ref() == exec_path || rendered.ends_with(&format!("/{exec_path}"))
+}
+
+/// String form of [`exec_matches`] over rendered BEP paths: exact
+/// equality or a "/"-boundary suffix match.
+///
+/// Single owner for the env/codegen artifact index.
+pub fn suffix_matches(artifact: &str, exec_path: &str) -> bool {
+    artifact == exec_path || artifact.ends_with(&format!("/{exec_path}"))
+}
+
+/// Lists every BEP-reported non-shard artifact path: the backing files
+/// the entry `exec_path` suffixes index into. Shard files are
+/// recognized by `suffix` and excluded.
+///
+/// Single owner for the env/codegen artifact index.
+pub fn non_shard_artifact_paths(outputs: &[TargetOutput], suffix: &str) -> Vec<String> {
+    let mut paths = Vec::new();
+    for output in outputs {
+        for artifact in &output.artifacts {
+            if !is_shard_artifact(&artifact.exec_path, suffix) {
+                paths.push(artifact.exec_path.display().to_string());
+            }
+        }
+    }
+    paths
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shard_helpers_split_on_suffix_and_component_boundaries() {
+        assert!(is_shard_artifact(Path::new("/out/a.dxenv.pb"), ".dxenv.pb"));
+        assert!(!is_shard_artifact(Path::new("/out/a.pb"), ".dxenv.pb"));
+        assert!(!is_shard_artifact(
+            Path::new("/out/a.dxenv.pb.txt"),
+            ".dxenv.pb"
+        ));
+        assert!(exec_matches(Path::new("/out/rustc"), "rustc"));
+        assert!(!exec_matches(Path::new("/out/xrustc"), "rustc"));
+        assert!(!exec_matches(Path::new("/out/rustc"), ""));
+        assert!(suffix_matches("bazel-out/bin/rustc", "bin/rustc"));
+        assert!(!suffix_matches("bazel-out/xbin/rustc", "bin/rustc"));
+    }
 
     #[test]
     fn file_uri_forms() {

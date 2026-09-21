@@ -52,43 +52,37 @@ fn split_bazel_verbatim(args: &[String]) -> Option<usize> {
 
 /// Reads the clap invalid-argument context (`--flag <VALUE>` render or
 /// bare token) as a string.
+/// Shared plumbing; the suggestion/command mapping below stays local.
+/// See: `cli/output/src/clap_errors.rs`.
 fn invalid_token(error: &clap::Error) -> Option<String> {
-    match error.get(clap::error::ContextKind::InvalidArg) {
-        Some(clap::error::ContextValue::String(token)) => Some(token.clone()),
-        Some(clap::error::ContextValue::Strings(tokens)) => tokens.first().cloned(),
-        _ => None,
+    let token = dx_output::invalid_token(error);
+    if token.is_empty() {
+        None
+    } else {
+        Some(token)
     }
 }
 
 /// Reads the clap invalid-value context (empty when an option value is
 /// missing, the offending value otherwise).
+/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn invalid_value(error: &clap::Error) -> Option<String> {
-    match error.get(clap::error::ContextKind::InvalidValue) {
-        Some(clap::error::ContextValue::String(value)) => Some(value.clone()),
-        Some(clap::error::ContextValue::Strings(values)) => values.first().cloned(),
-        _ => None,
-    }
+    dx_output::rejected_value(error)
 }
 
 /// Recovers the exact offending `argv` token for an unknown option:
 /// clap reports the bare flag name for `--flag=value` spellings, while
 /// the contract pins the whole token.
+/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn recover_token(args: &[String], token: Option<String>) -> String {
-    let token = token.unwrap_or_default();
-    if args.contains(&token) {
-        return token;
-    }
-    let inline = format!("{token}=");
-    if let Some(arg) = args.iter().rfind(|arg| arg.starts_with(&inline)) {
-        return arg.clone();
-    }
-    token
+    dx_output::recover_unknown_token(args, &token.unwrap_or_default())
 }
 
 /// Extracts the leading `--flag` from a clap missing-value render such
 /// as `--output <OUTPUT>`.
+/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn leading_flag(token: &str) -> String {
-    token.split_whitespace().next().unwrap_or(token).to_owned()
+    dx_output::leading_flag(token).to_owned()
 }
 
 /// True when a clap invalid-argument render names the command
