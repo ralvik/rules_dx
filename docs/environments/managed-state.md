@@ -147,11 +147,18 @@ Pinned by `cli/env` and `cli/atomic_fs` unit tests, including contention timeout
 immediate non-contention errors, no child-handle inheritance, drop-release, and
 crash/interruption preservation of the prior pointer.
 
-Open: NFS, append-only, and same-handle relock. No NFS evidence exists and NFS
-correctness is not claimed. The implementation never opens the lock append-only;
-append-only opens failing to lock on Windows is a platform fact, not a pinned
-case. Same-handle relock behavior is unspecified. Crash release follows handle
-closure on the seed host; cross-platform crash-release beyond that stays open.
+Scoped under #753 as seed-host-only with documented non-goals: local filesystem only
+with no NFS claim; the lock file is never opened append-only; same-handle relock is
+unspecified and never relied upon; crash release via handle closure qualified seed-only.
+No NFS evidence exists and NFS correctness is not claimed: workspaces on NFS are
+unsupported. The implementation opens the lock for reading and writing without truncation
+and never append-only (`cli/env/src/lib.rs`), so append-only opens failing to lock on
+Windows is a platform fact, not a pinned case. Each commit acquires once, holds the guard,
+and drops to release; it never relocks the same handle, so same-handle relock behavior
+stays unspecified. Crash release follows handle closure on the seed host (pinned by
+`cli/env` and `cli/atomic_fs` drop-release tests); cross-platform release relies on the
+same OS handle-closure semantics without separate per-host evidence and stays out of the
+Supported claim (platform plus consumer plus release evidence stays owned gap under #808).
 The OS lock coordinates cooperating commands; it is not a security boundary.
 Locking behavior is implemented in `cli/env/src` and pinned by its unit tests.
 

@@ -44,8 +44,8 @@ The physical root-selection mechanism is frozen to the `//...` baseline
 [ADR 0022](../decisions/0022-no-benchmarking.md). The admitted
 generator/language pairs stay frozen under closed #506
 (`generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`; evolution #788). Concurrency,
-interruption, remote materialization, and reuse certification stay open under #753 per
-that crate's docs.
+interruption, remote materialization, and reuse certification are scoped under #753 as
+seed-host-only with documented non-goals (see Scaling Model below).
 
 Repository-wide selection includes every registered production, test, example, and
 development projection. It does not omit test-only generators to improve performance.
@@ -216,9 +216,27 @@ uncached generator actions. A query-produced target-pattern file still loads
 packages containing indexed labels and analyzes every selected configured closure.
 Bazel's persistent server and action cache improve unchanged warm runs by design;
 no timing claims are made per [ADR 0022](../decisions/0022-no-benchmarking.md).
-Concurrency, interruption, remote materialization,
-and reuse certification remain unverified claims tracked as later WP4 slices
-in that crate.
+
+Scoped under #753 as seed-host-only with documented non-goals: single-workspace
+commit serialization plus prior-pointer preservation qualified seed-only, with no
+timing, distributed, remote-execution, cross-machine-reuse, or NFS claims. Concurrency
+means parallel Bazel preparation with serialized commit plus re-read under the commit
+lock (pinned by `cli/setup` concurrent-commit plus carry-forward tests and
+`cli/atomic_fs` lock units; see [Managed Environment State](managed-state.md#commit-lock-and-concurrency));
+no throughput claim per [ADR 0022](../decisions/0022-no-benchmarking.md) and no
+multi-workspace coordination. Interruption preserves the prior pointer: build,
+preparation, validation, or commit failure leaves the current setup unchanged, and
+SIGINT/SIGTERM forward to the active Bazel child with shell re-raise (see the
+[CLI contract](../cli/cli-contract.md)); Bazel owns mid-action state. Remote materialization is Bazel-owned download
+of the requested codegen output group with fail-closed local collection (unmaterialized
+`bytestream://` URIs fail, no second downloader); remote cache and execution stay
+unwired with no `--remote_cache`/`--remote_executor`/`--bes_backend` flags (see
+[Testing Strategy](../testing/README.md#remote-tests)). Reuse certifies per-workspace
+against the current BEP result only: exact versioned-identity match plus BEP-backed
+projection validation with idempotent installation (see
+[Managed Environment State](managed-state.md#preparation-validation-and-reuse));
+Bazel stays authoritative for freshness, and cross-machine or cross-output-base reuse
+is not certified.
 
 Exact-target runs bypass repository root selection and analyze only one configured
 target closure. Generator action invalidation may be narrow after one schema change,
