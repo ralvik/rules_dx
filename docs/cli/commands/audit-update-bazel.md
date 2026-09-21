@@ -413,10 +413,14 @@ member requires). Those words ride per-package `text_present` in `[[inventory]]`
 (committed curator data; the future declared-Bazel-inputs delivery keeps the same
 per-package shape so NOTICE aggregation stays hermetic and cached). A package whose
 license requires reproduction but ships no text reports `missing-notice-text`, which
-fails in `distributed` unless excepted and is inventoried in `internal`. Collecting
-the texts now keeps the data ready; assembling and bundling an aggregated NOTICE
-artifact into releases is out of scope until the deferred packaging/publishing
-pipeline exists, at which point it consumes these already-validated inputs.
+fails in `distributed` unless excepted and is inventoried in `internal`. The
+packaging pipeline that assembles the aggregated NOTICE from these
+already-validated inputs is `notice_bundle` in `deploy/release/notice.bzl`
+(hermetic `notice_gen`, byte-identical rebuilds, `missing-notice-text` fails
+the action; verified by `notice_verify_files` plus `dx_verify --notice`
+before install, and signed alongside the SBOM bundle via
+`//deploy/release:signing_demo`); see the
+[release runbook](../../deploy/release-runbook.md#steps) for the release evidence.
 
 Validation (all fail the audit, none auto-repair):
 

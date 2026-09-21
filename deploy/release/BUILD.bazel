@@ -6,6 +6,8 @@ load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library",
 load(":bcr.bzl", "bcr_check")
 load(":bcr_tests.bzl", "bcr_unit_tests")
 load(":matrix_tests.bzl", "matrix_unit_tests")
+load(":notice.bzl", "notice_bundle")
+load(":notice_tests.bzl", "notice_file_tests", "notice_unit_tests")
 load(":sbom.bzl", "sbom_release")
 load(":sbom_tests.bzl", "sbom_unit_tests")
 load(":signing.bzl", "signed_release")
@@ -18,6 +20,11 @@ exports_files([
     "bcr_tests.bzl",
     "matrix.bzl",
     "matrix_tests.bzl",
+    "notice.bzl",
+    "notice_tests.bzl",
+    "notice_demo_a.txt",
+    "notice_demo_b.txt",
+    "notice_demo_inventory.txt",
     "sbom.bzl",
     "sbom_tests.bzl",
     "signing.bzl",
@@ -107,6 +114,26 @@ rust_binary(
     ) + [":dx_release_tools"],
 )
 
+rust_binary(
+    name = "notice_gen",
+    srcs = ["src/bin_notice_gen.rs"],
+    aliases = aliases(
+        package_name = "deploy/dx_release_tools",
+        normal = True,
+    ),
+    crate_name = "notice_gen",
+    crate_root = "src/bin_notice_gen.rs",
+    edition = "2021",
+    deps = crate_deps(
+        [
+            "hex",
+            "serde_json",
+            "sha2",
+        ],
+        package_name = "deploy/dx_release_tools",
+    ) + [":dx_release_tools"],
+)
+
 rust_test(
     name = "dx_release_tools_test",
     size = "small",
@@ -135,6 +162,7 @@ rustfmt_test(
         ":sbom_spdx_gen",
         ":sbom_prov_gen",
         ":bcr_source_gen",
+        ":notice_gen",
         ":release_driver",
     ],
 )
@@ -147,6 +175,7 @@ rust_clippy_test(
         ":sbom_spdx_gen",
         ":sbom_prov_gen",
         ":bcr_source_gen",
+        ":notice_gen",
         ":release_driver",
     ],
 )
@@ -179,6 +208,8 @@ matrix_unit_tests(name = "matrix_unit")
 
 sbom_unit_tests(name = "sbom_unit")
 
+notice_unit_tests(name = "notice_unit")
+
 signing_unit_tests(name = "signing_unit")
 
 bcr_unit_tests(name = "bcr_unit")
@@ -191,14 +222,30 @@ sbom_release(
     artifact = "//deploy/rules:release_demo_archive",
 )
 
-# Signing demo over the SBOM demo outputs: proves the dry-run would-sign
-# path binds Sigstore keyless + attestation without network. Verified by
-# the portable `dx_release_tools_test` signing unit.
+# NOTICE demo over an invented distributed-tier root: proves the
+# aggregated NOTICE bundles the audited-inventory words with
+# byte-identical rebuilds. Verified by the portable
+# `dx_release_tools_test` NOTICE unit plus `dx_verify --notice`.
+notice_bundle(
+    name = "notice_demo",
+    inventory = ":notice_demo_inventory.txt",
+    root = "//deploy/release:notice_demo",
+    texts = [
+        ":notice_demo_a.txt",
+        ":notice_demo_b.txt",
+    ],
+)
+
+# Signing demo over the SBOM demo outputs plus the NOTICE bundle:
+# proves the dry-run would-sign path binds Sigstore keyless +
+# attestation for the SBOM pair and the NOTICE without network.
+# Verified by the portable `dx_release_tools_test` signing unit.
 signed_release(
     name = "signing_demo",
     artifacts = [
         ":sbom_demo_spdx",
         ":sbom_demo_provenance",
+        ":notice_demo_notice",
     ],
     identity = "https://github.com/ralvik/rules_dx/.github/workflows/release.yml@refs/tags/v0.0.0-dryrun",
 )
@@ -217,12 +264,19 @@ bcr_check(
 # `release_driver` rust_binary below is the driver; its dry-run plan is
 # pinned by the portable `dx_release_tools_test` release unit.
 
+notice_file_tests(
+    name = "notice_demo_contains_words",
+    notice = ":notice_demo_notice",
+)
+
 test_suite(
     name = "all",
     tests = [
         ":bcr_unit",
         ":dx_release_tools_test",
         ":matrix_unit",
+        ":notice_demo_contains_words",
+        ":notice_unit",
         ":sbom_unit",
         ":signing_unit",
     ],
@@ -236,6 +290,8 @@ real_source_target(
         "bcr_tests.bzl",
         "matrix.bzl",
         "matrix_tests.bzl",
+        "notice.bzl",
+        "notice_tests.bzl",
         "sbom.bzl",
         "sbom_tests.bzl",
         "signing.bzl",

@@ -1,0 +1,1 @@
+Fixture license words for demo-lib-a 1.0.0 (MIT placeholder for bundling tests only; not legal advice, not a license text).

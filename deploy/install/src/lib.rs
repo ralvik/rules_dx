@@ -35,6 +35,10 @@ pub struct VerifyArgs {
     pub sbom: String,
     /// Bundle binding the SBOM bytes.
     pub sbom_bundle: String,
+    /// Optional aggregated NOTICE file.
+    pub notice: String,
+    /// Manifest binding the NOTICE entries.
+    pub notice_manifest: String,
     /// Optional install directory (copy only, never exec).
     pub install_dir: String,
 }
@@ -52,7 +56,7 @@ impl std::fmt::Display for ArgsError {
 impl std::error::Error for ArgsError {}
 
 fn help_text() -> String {
-    "usage: dx_verify --binary PATH --bundle PATH --identity ID --issuer ISSUER [--attestation PATH] [--owner OWNER] [--sbom PATH --sbom-bundle PATH] [--install-dir DIR]".to_owned()
+    "usage: dx_verify --binary PATH --bundle PATH --identity ID --issuer ISSUER [--attestation PATH] [--owner OWNER] [--sbom PATH --sbom-bundle PATH] [--notice PATH --notice-manifest PATH] [--install-dir DIR]".to_owned()
 }
 
 /// Parses verifier argv, rejecting checksum-only flags.
@@ -91,6 +95,14 @@ pub fn parse_args(argv: &[String]) -> Result<VerifyArgs, ArgsError> {
             }
             "--sbom-bundle" => {
                 args.sbom_bundle = argv.get(i + 1).cloned().unwrap_or_default();
+                i += 2;
+            }
+            "--notice" => {
+                args.notice = argv.get(i + 1).cloned().unwrap_or_default();
+                i += 2;
+            }
+            "--notice-manifest" => {
+                args.notice_manifest = argv.get(i + 1).cloned().unwrap_or_default();
                 i += 2;
             }
             "--install-dir" => {
@@ -144,6 +156,17 @@ pub fn parse_args(argv: &[String]) -> Result<VerifyArgs, ArgsError> {
             "dx_verify: --sbom-bundle needs --sbom".to_owned(),
         ));
     }
+    if !args.notice.is_empty() && args.notice_manifest.is_empty() {
+        return Err(ArgsError(
+            "dx_verify: --notice needs --notice-manifest (NOTICE verifies against the audited inventory manifest)"
+                .to_owned(),
+        ));
+    }
+    if args.notice.is_empty() && !args.notice_manifest.is_empty() {
+        return Err(ArgsError(
+            "dx_verify: --notice-manifest needs --notice".to_owned(),
+        ));
+    }
     Ok(args)
 }
 
@@ -174,6 +197,8 @@ pub trait Verifier {
     fn sha256_file(&self, path: &Path) -> io::Result<String>;
     /// Copies one file, preserving bytes.
     fn install_copy(&self, src: &Path, dst: &Path) -> io::Result<()>;
+    /// Reads one UTF-8 file, if present.
+    fn read_text(&self, path: &Path) -> Option<String>;
 }
 
 /// Real verifier using the host filesystem plus subprocesses.
@@ -275,6 +300,83 @@ impl Verifier for SystemVerifier {
         }
         Ok(())
     }
+
+    fn read_text(&self, path: &Path) -> Option<String> {
+        std::fs::read_to_string(path).ok()
+    }
+}
+
+/// One NOTICE manifest entry the verifier binds.
+struct NoticeEntry {
+    package: String,
+    version: String,
+    license: String,
+    text_basename: String,
+}
+
+/// Parses the NOTICE manifest the verifier binds.
+/// See: `deploy/release/notice.bzl` (manifest shape).
+fn parse_notice_manifest(text: &str) -> Result<Vec<NoticeEntry>, String> {
+    let mut entries = Vec::new();
+    for (index, raw) in text.lines().enumerate() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let fields: Vec<&str> = line.split('|').collect();
+        if fields.len() != 5 {
+            return Err(format!(
+                "dx_verify: notice manifest line {}: want 5 '|' fields, got {}",
+                index + 1,
+                fields.len()
+            ));
+        }
+        let entry = NoticeEntry {
+            package: fields[0].trim().to_owned(),
+            version: fields[2].trim().to_owned(),
+            license: fields[3].trim().to_owned(),
+            text_basename: fields[4].trim().to_owned(),
+        };
+        if entry.package.is_empty() || entry.version.is_empty() || entry.license.is_empty() {
+            return Err(format!(
+                "dx_verify: notice manifest line {}: package, version, and license must be non-empty",
+                index + 1
+            ));
+        }
+        entries.push(entry);
+    }
+    Ok(entries)
+}
+
+/// Binds one NOTICE file to its audited-inventory manifest.
+fn verify_notice(notice_text: &str, manifest_text: &str) -> Result<usize, String> {
+    let entries = parse_notice_manifest(manifest_text)?;
+    if entries.is_empty() {
+        return Err(
+            "dx_verify: notice manifest lists no packages; refusing empty NOTICE".to_owned(),
+        );
+    }
+    if !notice_text.starts_with("NOTICE for ") {
+        return Err("dx_verify: NOTICE missing 'NOTICE for <root>' header".to_owned());
+    }
+    for entry in &entries {
+        if entry.text_basename.is_empty() {
+            return Err(format!(
+                "dx_verify: missing-notice-text: {}@{} ({}) ships no LICENSE*/NOTICE* words; record the words in the audited inventory before bundling",
+                entry.package, entry.version, entry.license
+            ));
+        }
+        let header = format!(
+            "=== {} {} ({}) ===",
+            entry.package, entry.version, entry.license
+        );
+        if !notice_text.contains(&header) {
+            return Err(format!(
+                "dx_verify: NOTICE missing entry '{header}' (fail closed before install)"
+            ));
+        }
+    }
+    Ok(entries.len())
 }
 
 /// Verifies one standalone binary, returning the success transcript.
@@ -304,6 +406,15 @@ pub fn verify(args: &VerifyArgs, verifier: &dyn Verifier) -> Result<String, Stri
         return Err(format!(
             "dx_verify: sbom bundle not found: {}",
             args.sbom_bundle
+        ));
+    }
+    if !args.notice.is_empty() && !verifier.is_file(Path::new(&args.notice)) {
+        return Err(format!("dx_verify: notice not found: {}", args.notice));
+    }
+    if !args.notice_manifest.is_empty() && !verifier.is_file(Path::new(&args.notice_manifest)) {
+        return Err(format!(
+            "dx_verify: notice manifest not found: {}",
+            args.notice_manifest
         ));
     }
     if !verifier.is_nonempty_file(&bundle) {
@@ -378,6 +489,24 @@ pub fn verify(args: &VerifyArgs, verifier: &dyn Verifier) -> Result<String, Stri
                 "dx_verify: SBOM verification failed (fail closed before install)".to_owned(),
             );
         }
+    }
+    if !args.notice.is_empty() {
+        let notice_path = PathBuf::from(&args.notice);
+        let manifest_path = PathBuf::from(&args.notice_manifest);
+        let notice_text = verifier
+            .read_text(&notice_path)
+            .ok_or_else(|| format!("dx_verify: notice not readable: {}", args.notice))?;
+        if notice_text.trim().is_empty() {
+            return Err(format!("dx_verify: notice is empty: {}", args.notice));
+        }
+        let manifest_text = verifier.read_text(&manifest_path).ok_or_else(|| {
+            format!(
+                "dx_verify: notice manifest not readable: {}",
+                args.notice_manifest
+            )
+        })?;
+        let count = verify_notice(&notice_text, &manifest_text)?;
+        out.push_str(&format!("dx_verify: NOTICE OK ({count} entries bundled)\n"));
     }
     if !args.install_dir.is_empty() {
         let base = binary
@@ -501,6 +630,12 @@ mod tests {
         fn install_copy(&self, _src: &Path, _dst: &Path) -> io::Result<()> {
             Ok(())
         }
+
+        fn read_text(&self, path: &Path) -> Option<String> {
+            self.files
+                .get(path)
+                .and_then(|data| String::from_utf8(data.clone()).ok())
+        }
     }
 
     fn valid_args() -> VerifyArgs {
@@ -600,6 +735,23 @@ mod tests {
         .map(ToString::to_string)
         .collect::<Vec<_>>();
         assert!(parse_args(&sbom_only).is_err());
+        let notice_only = [
+            "dx_verify",
+            "--binary",
+            "/b",
+            "--bundle",
+            "/u",
+            "--identity",
+            "ID",
+            "--issuer",
+            "ISS",
+            "--notice",
+            "/n",
+        ]
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>();
+        assert!(parse_args(&notice_only).is_err());
     }
 
     #[test]
@@ -662,5 +814,40 @@ mod tests {
         let out = verify(&args, &fake).expect("install");
         assert!(out.contains("installed dx-fake to /tmp/install"));
         assert!(out.contains("sha256"));
+    }
+
+    fn notice_fake() -> (VerifyArgs, FakeVerifier) {
+        let mut args = valid_args();
+        args.notice = "/tmp/NOTICE".to_owned();
+        args.notice_manifest = "/tmp/inventory.txt".to_owned();
+        let mut fake = valid_fake();
+        fake.write(
+            "/tmp/inventory.txt",
+            b"demo-lib-a|cargo|1.0.0|MIT|demo-lib-a.txt\ndemo-lib-b|npm|2.3.4|Apache-2.0|demo-lib-b.txt\n",
+        );
+        fake.write(
+            "/tmp/NOTICE",
+            b"NOTICE for //demo:root\nGenerated by rules_dx notice_bundle from the audited license inventory; do not edit.\n\n=== demo-lib-a 1.0.0 (MIT) ===\nFixture words for demo-lib-a.\n=== demo-lib-b 2.3.4 (Apache-2.0) ===\nFixture words for demo-lib-b.\n",
+        );
+        (args, fake)
+    }
+
+    #[test]
+    fn binds_notice_to_manifest() {
+        let (args, fake) = notice_fake();
+        let out = verify(&args, &fake).expect("notice valid");
+        assert!(out.contains("NOTICE OK (2 entries bundled)"));
+    }
+
+    #[test]
+    fn notice_missing_text_fails_actionable() {
+        let (args, mut fake) = notice_fake();
+        fake.write("/tmp/inventory.txt", b"demo-lib-a|cargo|1.0.0|MIT|\n");
+        let err = verify(&args, &fake).expect_err("missing text");
+        assert!(err.contains("missing-notice-text"), "got {err}");
+        let (args, mut fake) = notice_fake();
+        fake.write("/tmp/NOTICE", b"tampered notice\n");
+        let err = verify(&args, &fake).expect_err("tampered notice");
+        assert!(err.contains("NOTICE"), "got {err}");
     }
 }
