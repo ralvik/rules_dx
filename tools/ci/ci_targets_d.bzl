@@ -45,6 +45,16 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # C++ exact-target snapshot harness; see docs/cli/target-resolution.md#exact-target-discovery.
+    sh_binary(
+        name = "cpp_snapshot_qualification",
+        srcs = ["cpp_snapshot_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # JUnit 6.1.3 plus 5.14.x fallback harness; see docs/product/support-matrix.md#provisional-default-test-runners.
     sh_binary(
         name = "junit_qualification",

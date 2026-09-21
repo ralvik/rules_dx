@@ -157,6 +157,19 @@ Remaining reds stay owned gaps, not green claims:
   in [Target Resolution](../cli/target-resolution.md#exact-target-discovery);
   platform plus consumer plus release evidence stays owned gap; no
   Supported claim).
+- C++ exact-target snapshot with fixture evidence qualified seed-only under #754
+  (`bazel run //tools/ci:cpp_snapshot_qualification`; resolver-owned exact labels
+  as snapshot input with the hello exact-isolation pair (`hello.cc` to `hello_lib`
+  only, `main.cc` to `hello` only) plus `cc/tests/fixtures/cpp_snapshot/pins.bzl`
+  plus `snapshot.expected` plus `exact_targets.txt`, action-derived `CppCompile`
+  via `aquery` with command plus inputs, generated-output materialization through
+  exact mappings, `hello.h` multi-context kept apart, managed host-native clangd
+  never unrestricted query-driver, Bazel 9.2.0 plus rules_cc 0.2.22, `CcInfo`
+  inference plus workspace-writing refresh plus continued-after-failures plus
+  package-wide widening rejected, and the snapshot contract
+  in [Target Resolution](../cli/target-resolution.md#exact-target-discovery);
+  platform plus consumer plus release evidence stays owned gap; no
+  Supported claim).
 - JUnit 6.1.3 plus 5.14.x fallback with fixture evidence qualified seed-only under #476
   (`bazel run //tools/ci:junit_qualification`; JUnit 6.1.3 primary plus Jupiter 5.14.4
   plus Platform 1.14.4 fallback pinned in `java/tests/fixtures/junit/pins.bzl` with

@@ -71,6 +71,7 @@ bazel run --noshow_progress //tools/ci:shell_env_qualification
 bazel run --noshow_progress //tools/ci:bindgen_qualification
 bazel run --noshow_progress //tools/ci:cxx_identity_qualification
 bazel run --noshow_progress //tools/ci:exact_target_qualification
+bazel run --noshow_progress //tools/ci:cpp_snapshot_qualification
 bazel run --noshow_progress //tools/ci:junit_qualification
 bazel run --noshow_progress //tools/ci:xunit_qualification
 bazel run --noshow_progress //tools/ci:gotest_qualification
