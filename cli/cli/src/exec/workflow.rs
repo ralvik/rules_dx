@@ -14,7 +14,9 @@ use crate::args::{Command, Invocation};
 use crate::plan::{bep_path, plan_workflow, WorkflowVerb};
 use crate::reports::{plan_reports, Destination};
 use crate::resolve::{resolve, resolve_for_test};
-use dx_output::{command_finished, command_started, write_event, FinishedCounts, OutputMode};
+use dx_output::{
+    command_finished, command_started, error_event, write_event, FinishedCounts, OutputMode,
+};
 use dx_process::ForwardError;
 
 /// Workflow dispatch: `build`/`test`/`coverage` preserve Bazel status
@@ -156,6 +158,23 @@ pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     };
     if verb == WorkflowVerb::Build {
         if invocation.output == OutputMode::Json {
+            if bazel_code != 0 {
+                // Failure explainer without argv/secrets: which workflow
+                // failed plus the stderr pointer; Bazel diagnostics stay on
+                // stderr. See: `docs/cli/output-protocol.md#operational-error`.
+                if let Ok(event) = error_event(
+                    "bazel_failed",
+                    &format!(
+                        "Bazel {} failed with exit {bazel_code} (see stderr diagnostics; run `dx status` for toolchain/pin)",
+                        invocation.command.name(),
+                    ),
+                    None,
+                    None,
+                    Some("execute"),
+                ) {
+                    let _ = write_event(out, &event);
+                }
+            }
             let _ = write_event(
                 out,
                 &command_finished(bazel_code, &FinishedCounts::default()),

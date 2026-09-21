@@ -406,11 +406,16 @@ fn clean_rejects_scopes_and_quality_options() {
             option: "--fail-on".to_owned(),
         })
     );
+    // `clean` supports `--output=json` (planning + per-entry notices); only
+    // `--output=diff` has no patch to emit.
+    let got = parse(&args(&["clean", "--output=json"])).expect("clean json");
+    assert_eq!(got.output, OutputMode::Json);
+    assert!(got.command.supports_json());
     assert_eq!(
-        parse(&args(&["clean", "--output=json"])),
+        parse(&args(&["clean", "--output=diff"])),
         Err(ArgsError::UnsupportedOption {
             command: "clean",
-            option: "--output=json".to_owned(),
+            option: "--output=diff".to_owned(),
         })
     );
     assert_eq!(

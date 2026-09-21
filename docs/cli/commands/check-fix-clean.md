@@ -112,6 +112,15 @@ deletes nothing and holds no lock. `--bazel` forwards exactly
 `bazel clean` after pruning (listed, never run, under `--dry-run`) and
 prints the recovery guidance.
 
+`dx clean` accepts `--output=text|json` (`--output=diff` has no patch to emit
+and is rejected pre-exec). Text prints the dry-run listing or prune summary on
+stdout unless `--quiet` suppresses it. JSON streams `command_started`, one
+`collect` `operation`, per-entry `clean_planned` (dry-run) or `clean_pruned`
+(live) `notice` events with workspace-relative paths and measured bytes, and
+`command_finished`; a nonzero `bazel clean` forward emits a sanitized
+`bazel_failed` `error` before `command_finished` (see the
+[output protocol](../output-protocol.md)).
+
 Active means observed live by the process scan: `dx clean` inspects the
 live `/proc` for processes whose working directory or open files sit
 under the workspace `.dx` roots, and observed setup and generation hexes

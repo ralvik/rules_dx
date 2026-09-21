@@ -59,14 +59,22 @@ bytes to stdout; Bazel and tool stdout and stderr remain visible on stderr. JSON
 stream per event (`write_event`), never buffer-then-dump, so there is no measurable
 overhead vs text mode on large result sets.
 JSON-capable commands (accepted): lint, typecheck, format, generate, build, test,
-coverage, check, fix, audit, update, bump, migrate, status. `update` JSON covers dry-run planning
+coverage, run, check, fix, audit, update, bump, migrate, clean, codegen, env, setup,
+status. `update` JSON covers dry-run planning
 (`command_started` / `command_finished`) and live execution per-set `notice`/`error`
 events plus `command_finished`; `bump` and `migrate` follow the same dry-run plus live
 `notice`/`error` frame; `audit` JSON covers dry-run planning plus live per-family
 `notice`/`error` events plus `command_finished`; `status` JSON covers dry-run planning
-plus live per-check `status` events plus `command_finished` (see [Status](#status)).
-Text-only commands (reject `--output=json` pre-exec, exit 2): clean, codegen, env, setup
-(prose collection lifecycle); `bazel`, `run`, `deploy` (each sequential child owns the terminal in turn,
+plus live per-check `status` events plus `command_finished` (see [Status](#status));
+managed (`codegen`/`env`/`setup`) JSON covers dry-run planning (`command_started`,
+one `collect` `operation` with explicit scope when present, `command_finished`) plus
+live `selection` and `command_finished`; `clean` JSON covers dry-run planning
+(`command_started`, one `collect` `operation`, per-entry `clean_planned` notices,
+`command_finished`) plus live per-entry `clean_pruned` notices and `command_finished`;
+`run` JSON covers dry-run planning plus live one `execute` `operation` per target in
+execution order and `command_finished` (see [Operation](#operation)).
+Text-only commands (reject `--output=json` pre-exec, exit 2): `bazel`, `deploy`
+(each sequential child owns the terminal in turn,
 see [dx run](commands/build-test-coverage.md#dx-run) and [dx deploy](commands/build-test-coverage.md#dx-deploy)); init, hooks,
 version, watch, owners, deps, why, completion (local helpers, thin query lines, or shell
 scripts — automation uses `generate --check`, Bazel query, or `status --output=json`).
@@ -250,8 +258,11 @@ groups, or subprocess boundaries. Repeated phases are interpreted by line order.
 `query` operation omits it; the subsequent `execute` operation contains the resolved owner
 or mapped test/coverage labels. Other graph-scoped quality, build, test, audit, and
 coverage operations include compact scope immediately. Explicit-target env/codegen/setup
-operations include scope; no-argument env/codegen/setup, generate, update, and bazel omit
-it. Canonical workflow implementation roots such as `//dx:env` are not emitted unless the
+operations include scope (bare-schema `codegen`/`setup` expansion lists the full
+analyzed roots); no-argument env/codegen/setup, generate, update, and bazel omit
+it. `clean` `collect` operations omit scope (clean takes no scope). `run` emits one
+`execute` operation per target in sequential execution order, each with its
+single-label scope. Canonical workflow implementation roots such as `//dx:env` are not emitted unless the
 user supplied that label as scope.
 
 ## Diagnostic
@@ -345,7 +356,12 @@ one notice. Ignored-import notices sort by path, language, and import bytes. Lif
 plus manual restore hint, warning with `related_command: update` and retry sets as scope, see
 [dx update](commands/audit-update-bazel.md#dx-update)), and `audit_<family>_clean`
 (`audit_security_clean`, `audit_license_clean` for per-family clean, see
-[dx audit](commands/audit-update-bazel.md#dx-audit)). Notices do not affect
+[dx audit](commands/audit-update-bazel.md#dx-audit)), plus `clean_planned` (dry-run per-entry
+prune plan, info with `related_command: clean` and the workspace-relative prune path)
+and `clean_pruned` (live per-entry removal, same shape, see
+[dx clean](commands/check-fix-clean.md#dx-clean)). Clean notices carry workspace-relative
+paths and measured bytes in the message only; they never carry argv, env values, or
+absolute paths. Notices do not affect
 `--fail-on`, diagnostic counts, SARIF, or exit status.
 
 ```json
@@ -568,6 +584,15 @@ events. `command_finished` carries only `exit_code` (no `results_complete`,
 `error` (today pin mismatch, with a stderr hint pointing at
 `dx version --pin`).
 
+`dx status` is the failure explainer entry point (there is no `dx doctor`;
+see [status/version](commands/status-version.md)): workflow `bazel_failed`
+`error` events name the failed command and phase plus the stderr pointer
+without argv, option values, env values, or raw tool output, and the detailed
+Bazel diagnostic stays on stderr. Consumers correlate the failed scope from the
+preceding `operation` event, check `dx status` for toolchain/platform/pin, and
+rerun the Bazel verb directly for `aquery`/sandbox/cache introspection outside
+the `dx` API (raw BEP is never part of this API).
+
 ```json
 {"schema":{"major":1,"minor":0},"event":"status","name":"pin","status":"ok","detail":"dx 0.0.0 vs module 0.0.0","hint":"dx version --pin 0.0.0"}
 ```
@@ -588,6 +613,14 @@ Error events do not contribute to diagnostic counts or SARIF findings. They neve
 argv, option values, environment values, external labels, or raw tool output. Detailed
 Bazel/tool diagnostics remain on stderr. `code` is stable machine data; `message` is for
 people and is not a stable value for matching or control flow.
+
+Failure explainer: `build`/`test`/`coverage`/`run`/managed/`clean --bazel` emit a
+sanitized `bazel_failed` `error` with `phase: execute` (managed uses `collect`)
+before `command_finished` when the required Bazel subprocess exits nonzero. The event
+names the failed command and phase plus the stderr pointer; the preceding `operation`
+event carries the failed scope, `dx status` covers toolchain/platform/pin, and
+`aquery`/sandbox/cache introspection stays outside the `dx` API via direct Bazel
+invocation. Raw BEP is never part of this API.
 
 The documented list is derived from the code (single source):
 `../../cli/cli/src/exec/common.rs` (`CODE_*` including `bump_failed` and `migrate_failed`),
@@ -740,6 +773,16 @@ Default mutating JSON order is:
 
 Non-mutating commands without check mode omit changes and mutations and emit diagnostics,
 notices, reports, selections, status checks, and completion after their producing phases.
+Managed JSON order is `command_started`, one `collect` `operation`, `selection`, then
+exactly one `command_finished`; dry-run omits `selection`. Clean JSON order is
+`command_started`, one `collect` `operation`, per-entry `clean_planned` (dry-run) or
+`clean_pruned` (live) `notice` events, then exactly one `command_finished`. Run JSON
+order is `command_started`, one `execute` `operation` per target in execution order,
+an optional `bazel_failed` `error` for the failed target, then exactly one
+`command_finished`; dry-run omits the error. Build/test/coverage JSON emit
+`command_started`, then an optional `bazel_failed` `error` with `phase: execute` on
+Bazel nonzero, then `command_finished` (test/coverage also emit their
+`incomplete_results`/`report` events per the collection rules).
 Status JSON order is `command_started`, then one `status` event per check in check
 order, then exactly one `command_finished`; it emits no `change`, `mutation`,
 `diagnostic`, `operation`, `notice`, `report`, or `selection` events.
@@ -778,8 +821,12 @@ carry a `dx: update_recovery:` line with the same retry plus restore.
 Dry-run may execute read-only Bazel `query` or `cquery` needed for scope resolution. It
 emits `command_started` with `dry_run=true` and the same safe `operation` summaries as an
 executing plan. It emits no `diagnostic`, `change`, `mutation`, `report`, `selection`, or
-`status` event for a workflow it did not execute. Resolution errors and `command_finished` behave normally.
+`status` event for a workflow it did not execute, except clean dry-run per-entry
+`clean_planned` notices which describe the plan without deleting. Resolution errors and `command_finished` behave normally.
 `status` dry-run emits only `command_started` (`dry_run=true`) plus `command_finished`.
+Managed dry-run emits `command_started` plus the `collect` `operation` with no
+`selection`; run dry-run emits `command_started` plus one `execute` `operation` per
+target.
 `--dry-run` conflicts with every `--report` request and fails before query or workflow
 execution with `conflicting_option` naming `--report`.
 

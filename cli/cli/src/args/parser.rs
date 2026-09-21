@@ -134,7 +134,8 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         // managed state with no scopes and no quality/workflow options:
         // `--dry-run` deletes nothing (a `--bazel` forward is listed,
         // never run), and only `--workspace`, `--dry-run`, `--quiet`,
-        // and `--bazel` apply.
+        // `--output text|json`, and `--bazel` apply (`--output=diff` has
+        // no patch to emit).
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -147,10 +148,10 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--fail-on".to_owned(),
             });
         }
-        if output_name != "text" {
+        if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
-                option: format!("--output={output_name}"),
+                option: "--output=diff".to_owned(),
             });
         }
         if let Some(request) = reports.first() {
@@ -180,9 +181,11 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     if command.is_managed() {
         // Managed environment/codegen/setup commands run one
         // Bazel collection request behind a canonical selection with
-        // text prose only: no check mode, no finding thresholds, no
-        // standard reports, and no version/clean-only flags.
-        // `--bazel` is rejected by the clean-ownership arm above;
+        // text prose or NDJSON (`--output=json` streams
+        // `command_started`/`operation`/`selection`/`command_finished`):
+        // no check mode, no finding thresholds, no standard reports, and
+        // no version/clean-only flags. `--output=diff` has no patch to
+        // emit. `--bazel` is rejected by the clean-ownership arm above;
         // `--rollback`/`--configured` by the catch-alls below. Scope is
         // repository-wide by default or one exact target label, validated
         // through the shared setup scope rules (identical across the
@@ -200,10 +203,10 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--fail-on".to_owned(),
             });
         }
-        if output_name != "text" {
+        if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
-                option: format!("--output={output_name}"),
+                option: "--output=diff".to_owned(),
             });
         }
         if let Some(request) = reports.first() {
@@ -625,15 +628,25 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
     }
     if command == Command::Run || command == Command::Deploy {
-        //: `dx run` is a local-only single-target launcher with prose
-        // lifecycle on stderr. Machine-owned stdout modes are rejected
-        // pre-exec so the application keeps the terminal. `dx deploy`
-        // shares the terminal contract: text only, no reports, args
-        // after `--` forward verbatim to the program.
-        if !matches!(output, OutputMode::Text { .. }) {
+        // `dx run` is a local-only launcher: text prose lifecycle on
+        // stderr by default, NDJSON (`command_started`, one `operation`
+        // per target, `command_finished`) on stdout under
+        // `--output=json` with child stdout/stderr routed to stderr so
+        // stdout stays machine-owned (see `BinaryRunner`). `--output=diff`
+        // has no patch to emit. `dx deploy` shares the terminal contract
+        // but stays text only (two-phase build+run owns the terminal),
+        // no reports; args after `--` forward verbatim to the program.
+        if command == Command::Deploy {
+            if !matches!(output, OutputMode::Text { .. }) {
+                return Err(ArgsError::UnsupportedOption {
+                    command: command.name(),
+                    option: format!("--output={output_name}"),
+                });
+            }
+        } else if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
-                option: format!("--output={output_name}"),
+                option: "--output=diff".to_owned(),
             });
         }
         if let Some(request) = reports.first() {
@@ -646,11 +659,12 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     // Uniform `--output` contract: shared `supports_json` /
     // `supports_diff` gate so no command silently ignores a machine-output
     // request. Commands with their own output arm above (clean, managed,
-    // update, `bazel`, `run`) already returned the same error; this gate
-    // owns adoption/inspect (only `status` supports JSON, none supports
-    // diff), `audit` diff, and workflow `build`/`test`/`coverage` diff.
-    // Quality, generate, umbrellas, `audit`/`update` JSON, workflow JSON,
-    // and `status` JSON pass through to streaming NDJSON execution.
+    // update, `bazel`, `run`/`deploy`) already returned the same error;
+    // this gate owns adoption/inspect (only `status` supports JSON, none
+    // supports diff), `audit` diff, and workflow `build`/`test`/`coverage`
+    // diff. Quality, generate, umbrellas, `audit`/`update`/`bump`/`migrate`
+    // JSON, workflow `build`/`test`/`coverage`/`run` JSON, managed/clean
+    // JSON, and `status` JSON pass through to streaming NDJSON execution.
     if output_name == "json" && !command.supports_json() {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),

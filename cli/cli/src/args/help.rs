@@ -88,7 +88,7 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: --check/--fail-on/--report pass through per phase (fix only; mutating by default with no rerun, run `dx check` to validate)."
         }
         Command::Clean => {
-            "Per-command flags: --bazel (also run `bazel clean` after pruning; default never touches Bazel outputs; distinct from `dx bazel`, which forwards raw args)."
+            "Per-command flags: --bazel (also run `bazel clean` after pruning; default never touches Bazel outputs; distinct from `dx bazel`, which forwards raw args; --output text|json only, diff has no patch)."
         }
         Command::Owners | Command::Deps | Command::Why => {
             "Per-command flags: --configured (use `bazel cquery` instead of `bazel query`; distinct from `dx clean --bazel`, which forwards `bazel clean`)."
@@ -121,7 +121,7 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: --check/--fail-on/--report (quality only; --here for cwd scope; --output text|diff|json; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
         }
         Command::Codegen | Command::Env | Command::Setup => {
-            "Per-command flags: none (repository-wide or one exact // or @ label; --check/--fail-on/--report/--output json|diff and version/clean/inspect/migrate flags do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+            "Per-command flags: none (repository-wide or one exact // or @ label; --check/--fail-on/--report/--output diff and version/clean/inspect/migrate flags do not apply; --output text|json only; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
         }
         Command::Init => {
             "Per-command flags: none (optional [module-name]; --check/--fail-on/--report/--output json|diff and `-- --bazel-options` do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."

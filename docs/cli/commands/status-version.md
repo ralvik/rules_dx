@@ -34,6 +34,18 @@ Exit `0` when every check passes; exit `1` (operational) when any check is
 `error` — today that is pin mismatch, with a stderr hint pointing at
 `dx version --pin`. Usage errors exit `2`.
 
+## Failure explainer
+
+There is no `dx doctor` per [ADR 0006](../../decisions/0006-cli-command-surface.md).
+`dx status` plus sanitized JSON `error` events are the failure explainer:
+a nonzero Bazel subprocess emits `bazel_failed` with `phase: execute` (managed:
+`collect`) before `command_finished`, naming the failed command and phase plus
+the stderr pointer without argv, option values, env values, or raw tool output.
+Correlate the failed scope from the preceding `operation` event, check
+`dx status` for toolchain/platform/pin, read the detailed Bazel diagnostic on
+stderr, and rerun the Bazel verb directly for `aquery`/sandbox/cache
+introspection outside the `dx` API (raw BEP is never part of the API).
+
 ## `dx version`
 
 `dx version` prints the single version (`dx`, `rules_dx`, pin, all `0.0.0`
@@ -75,5 +87,3 @@ implemented in `cli/cli/src/skew.rs`):
 
 A missing or empty pin is a never-pinned tree, not skew, so fresh
 checkouts proceed.
-
-There is no `dx doctor` per [ADR 0006](../../decisions/0006-cli-command-surface.md).

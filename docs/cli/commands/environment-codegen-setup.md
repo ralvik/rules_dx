@@ -94,3 +94,12 @@ cache. See [Generated Code](../../environments/codegen.md),
 [Developer Environments](../../environments/environment.md), and
 [Managed Environment State](../../environments/managed-state.md) for the
 owning contracts.
+
+`dx codegen`, `dx env`, and `dx setup` accept `--output=text|json`
+(`--output=diff` has no patch to emit and is rejected pre-exec). Text prints
+the planned operation and selection summary unless `--quiet` suppresses it.
+JSON streams `command_started`, one `collect` `operation` (explicit scope
+included, repository scope omitted), `selection` with the committed IDs, and
+`command_finished`; dry-run omits `selection`. A nonzero collection build
+emits a sanitized `bazel_failed` `error` before `command_finished` (see the
+[output protocol](../output-protocol.md)).

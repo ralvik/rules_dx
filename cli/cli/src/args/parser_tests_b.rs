@@ -194,13 +194,11 @@ fn migrate_needs_from_and_to_versions() {
 
 #[test]
 fn run_rejects_machine_output_and_reports() {
-    assert_eq!(
-        parse(&args(&["run", "//app:bin", "--output=json"])),
-        Err(ArgsError::UnsupportedOption {
-            command: "run",
-            option: "--output=json".to_owned(),
-        })
-    );
+    // `run` supports `--output=json` (NDJSON planning + per-target events);
+    // only `--output=diff` has no patch to emit.
+    let got = parse(&args(&["run", "//app:bin", "--output=json"])).expect("run json");
+    assert_eq!(got.output, OutputMode::Json);
+    assert!(got.command.supports_json());
     assert_eq!(
         parse(&args(&["run", "//app:bin", "--output=diff"])),
         Err(ArgsError::UnsupportedOption {
@@ -227,8 +225,8 @@ fn output_contract_has_no_silent_ignore() {
     // rejects it pre-exec with `UnsupportedOption`. Silent ignore (accept
     // the flag, print text anyway) is never allowed.
     //
-    // JSON-capable: quality, generate, workflow build/test/coverage,
-    // umbrellas, audit, update, status.
+    // JSON-capable: quality, generate, workflow build/test/coverage/run,
+    // umbrellas, audit, update, managed, clean, status.
     for command in [
         "lint",
         "typecheck",
@@ -237,10 +235,15 @@ fn output_contract_has_no_silent_ignore() {
         "build",
         "test",
         "coverage",
+        "run",
         "check",
         "fix",
         "audit",
         "update",
+        "clean",
+        "codegen",
+        "env",
+        "setup",
     ] {
         let got = parse(&args(&[command, "--output=json"])).expect("json capable");
         assert_eq!(got.output, OutputMode::Json, "command: {command}");
@@ -274,12 +277,14 @@ fn output_contract_has_no_silent_ignore() {
     // Text-only exemptions fail fast on both machine modes.
     // (`bazel` takes dx flags before the command word; tokens after it
     // forward verbatim to the launcher.)
+    // `clean`, `codegen`, `env`, `setup`, and `run` are JSON-capable now;
+    // only their `--output=diff` (no patch) stays rejected below.
     for words in [
-        vec!["clean", "--output=json"],
         vec!["clean", "--output=diff"],
-        vec!["codegen", "--output=json"],
+        vec!["codegen", "--output=diff"],
         vec!["env", "--output=diff"],
-        vec!["setup", "--output=json"],
+        vec!["setup", "--output=diff"],
+        vec!["run", "//app:bin", "--output=diff"],
         vec!["--output=json", "bazel", "version"],
         vec!["init", "--output=json"],
         vec!["init", "proj", "--output=diff"],
@@ -305,9 +310,14 @@ fn output_contract_has_no_silent_ignore() {
         vec!["build", "//a:one", "--output=diff"],
         vec!["test", "//a:one", "--output=diff"],
         vec!["coverage", "--output=diff"],
+        vec!["run", "//a:one", "--output=diff"],
         vec!["audit", "--output=diff"],
         vec!["update", "--output=diff"],
         vec!["status", "--output=diff"],
+        vec!["clean", "--output=diff"],
+        vec!["codegen", "--output=diff"],
+        vec!["env", "--output=diff"],
+        vec!["setup", "--output=diff"],
         vec!["bump", "cargo:anyhow", "1.2.3", "--output=diff"],
         vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--output=diff"],
     ] {
@@ -446,11 +456,12 @@ fn managed_commands_parse_repo_and_exact_scopes() {
         );
     }
     // Quality-only, version-only, and clean-only options
-    // fail fast on managed commands.
+    // fail fast on managed commands (`--output=json` is accepted; only
+    // `--output=diff` has no patch to emit).
     for words in [
         vec!["codegen", "--check"],
         vec!["env", "--fail-on=error"],
-        vec!["setup", "--output=json"],
+        vec!["setup", "--output=diff"],
         vec!["codegen", "--report=sarif=out.sarif"],
         vec!["env", "--pin=0.1.0"],
         vec!["setup", "--rollback"],

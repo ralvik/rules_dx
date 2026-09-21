@@ -63,5 +63,7 @@ tests from inactive configurable branches.
 ## Excluded Commands
 
 There is no `dx doctor` or `dx configure`. Their intended
-behavior is covered by explicit commands or is outside the accepted surface.
+behavior is covered by explicit commands or is outside the accepted surface
+(failure debugging uses `dx status` plus JSON `bazel_failed` errors, see
+[status/version](status-version.md#failure-explainer)).
 There are no `dx new` app or service templates in v1.

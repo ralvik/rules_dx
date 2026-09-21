@@ -151,9 +151,9 @@ impl Command {
     /// JSON-capable commands stream one object per line via `write_event`
     /// (never buffer-then-dump). Text-only commands reject `--output=json`
     /// pre-exec with `UnsupportedOption` instead of silently ignoring it:
-    /// clean/managed print prose lifecycle, `bazel`/`run`/`deploy` own the terminal
-    /// for passthrough applications, and adoption helpers (except
-    /// `status`) print local-helper prose or thin query lines.
+    /// `bazel`/`deploy` own the terminal for passthrough applications,
+    /// and adoption helpers (except `status`) print local-helper prose
+    /// or thin query lines.
     /// `update` supports JSON: dry-run planning emits
     /// `command_started`/`command_finished`, while live execution adds
     /// per-set `notice`/`error` events with the same frame.
@@ -161,7 +161,15 @@ impl Command {
     /// widen summary, live execution adds the widen `notice`/`error`
     ///. `migrate` supports JSON the same way: dry-run
     /// planning emits the manifest plan, live execution fails closed
-    /// with `migrate_failed` (no manifests yet).
+    /// with `migrate_failed` (no manifests yet). Managed
+    /// (`codegen`/`env`/`setup`) support JSON with `command_started`,
+    /// one `operation` (`collect`, explicit scope included), `selection`,
+    /// and `command_finished`; `clean` supports JSON with
+    /// `command_started`, one `operation` (`collect`), per-entry
+    /// `notice` events, and `command_finished`; `run` supports JSON with
+    /// `command_started`, one `operation` per target (`execute` with
+    /// single-label scope), and `command_finished` (see
+    /// `docs/cli/output-protocol.md`).
     pub fn supports_json(self) -> bool {
         matches!(
             self,
@@ -173,11 +181,16 @@ impl Command {
                 | Command::Build
                 | Command::Test
                 | Command::Coverage
+                | Command::Run
                 | Command::Update
                 | Command::Bump
                 | Command::Migrate
                 | Command::Check
                 | Command::Fix
+                | Command::Clean
+                | Command::Codegen
+                | Command::Env
+                | Command::Setup
                 | Command::Status
         )
     }

@@ -317,6 +317,23 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
         1
     };
     if invocation.output == OutputMode::Json {
+        if bazel_code != 0 {
+            // Failure explainer without argv/secrets: which workflow failed
+            // plus the stderr pointer; Bazel diagnostics stay on stderr.
+            // See: `docs/cli/output-protocol.md#operational-error`.
+            if let Ok(event) = dx_output::error_event(
+                "bazel_failed",
+                &format!(
+                    "Bazel {} failed with exit {bazel_code} (see stderr diagnostics; run `dx status` for toolchain/pin)",
+                    invocation.command.name(),
+                ),
+                None,
+                None,
+                Some("execute"),
+            ) {
+                let _ = write_event(out, &event);
+            }
+        }
         let _ = write_event(
             out,
             &command_finished(
