@@ -32,13 +32,17 @@ Cleanup first; expand and improve without haste for v1. Domain docs under
   `docs/product/promotion-checklist.md` with fixture evidence via
   `bazel run //tools/ci:promotion_checklist_qualification`; tag hygiene,
   versioning, and platform plus consumer plus release evidence per cell;
-  ad-hoc release rejected; no Supported claim).
+  ad-hoc release rejected; gate enforces the checklist via
+  `bazel run //tools/ci:supported_evidence_gate`; every required host landed
+  under closed #803 plus #804 plus #805 plus #807 with best-effort macOS x86_64
+  exempt under closed #806 moot; no Supported claim).
 * SBOM plus provenance upload on CI owned under closed #612
   (`sbom` job in `.github/workflows/ci.yml` plus fixture evidence via
   `bazel run //tools/ci:sbom_upload_qualification`; SPDX-2.3 plus SLSA v1
   build plus verify plus `sbom-provenance` upload on every push/PR, attestation
   stays owner-gated human-run; dry-run-only rejected; no Supported claim;
-  per-host release evidence #803-#807).
+  per-host release evidence closed #803 plus #804 plus #805 plus #807 with
+  best-effort exempt under closed #806 moot, process #808).
 * Toolchain, provider, and adapter qualification backlogs: Rust providers plus Gazelle plus integration (issues #470-#475), runners plus locks plus defaults (issues #476-#489), adapter wiring (issues #490-#493), native qualification (issues #494-#505), env plus codegen (#787, #788; successors to closed #506), coverage plus consumer plus quality (#802; successor to closed #512).
 * Docs-pipeline adapter runs delivered under #779 plus renderer/site execution
   delivered under #780 plus rebuild proof delivered under #781 plus link/reference
