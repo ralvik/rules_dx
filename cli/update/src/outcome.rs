@@ -7,7 +7,8 @@
 //! run returns an overall failure status when any selected update fails.
 //! Operations depending on a failed update are reported as blocked, not
 //! run and never reported successful. This is not a repository-wide
-//! transaction or rollback.
+//! transaction or rollback: each success commits its set immediately and
+//! recovery is manual plus idempotent retry (see [`super::recovery`]).
 //!
 //! Independence follows the approved upstream integration, not label
 //! distinctness: sets sharing a lockfile or resolver workspace cannot be

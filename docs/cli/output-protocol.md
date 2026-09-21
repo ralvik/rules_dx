@@ -341,6 +341,8 @@ one notice. Ignored-import notices sort by path, language, and import bytes. Lif
 [dx bump](commands/audit-update-bazel.md#dx-bump)), `migrate_planned` (dry-run migrate plan, see
 [dx migrate](commands/migrate.md)), `update_set_success` (per-set update success) and
 `update_set_blocked` (unattempted dependent blocked by a failed update, see
+[dx update](commands/audit-update-bazel.md#dx-update)), `update_recovery` (failed-run retry
+plus manual restore hint, warning with `related_command: update` and retry sets as scope, see
 [dx update](commands/audit-update-bazel.md#dx-update)), and `audit_<family>_clean`
 (`audit_security_clean`, `audit_license_clean` for per-family clean, see
 [dx audit](commands/audit-update-bazel.md#dx-audit)). Notices do not affect
@@ -461,19 +463,26 @@ Update emits no v1 `change` or `mutation` events and its `command_finished` carr
 Bazel-pinned pnpm, rules_jvm_external pin, paket2bazel regen, Go no-op) provide no
 committed-change manifest equivalent to the Gazelle result manifest, and inferring changes via
 Git scan, BUILD parse, or rerun is rejected because the protocol already forbids it. Per-set
-`notice`/`error` events plus `command_finished` are the complete update event contract: exactly
-one terminal per-set event for every selected set (`update_set_success` notice, `update_failed`
+`notice`/`error` events plus an optional `update_recovery` notice plus `command_finished`
+are the complete update event contract: exactly one terminal per-set event for every selected set (`update_set_success` notice, `update_failed`
 error, or `update_set_blocked` notice for unattempted dependents) in sorted set order, then
+an `update_recovery` warning notice on failure carrying the idempotent retry plus manual
+restore (planned in `dx_update::recovery`, pinned by fixtures in
+`cli/update/tests/fixtures/update_rollback/`), then
 exactly one `command_finished`. Live execution carries `results_complete=true` when every
 selected set reached such a terminal report, including runs with failures; dry-run, `--check`,
 and initialization failure omit it. No event claims which lockfile entries or workspace files a
-backend committed.
+backend committed. Atomicity is per set, never repository-wide: each success commits its
+set immediately with no automatic rollback.
 
 Interrupted-run completeness follows the same contract. An interruption (signal, `SIGKILL`, or
 loss of stdout) after some sets completed leaves their preceding per-set events true with
-successful changes preserved and no rollback; sets not yet attempted emit no events and must not
+successful changes preserved and no automatic rollback; sets not yet attempted emit no events and must not
 be inferred as successful, failed, or blocked. No `command_finished` is promised after signal
-termination. A future backend committed-change manifest may add update `change`/`mutation`
+termination. Recovery after interruption is the same manual plan: rerun `dx update` with the
+unattempted sets (idempotent retry) and, when version-controlled, restore kept locks with
+`git checkout --` to discard them; `dx` never runs Git. Text failures always carry a
+`dx: update_recovery:` line so partial runs never read as silent success. A future backend committed-change manifest may add update `change`/`mutation`
 events as a minor-compatible addition only when every backend provides one; until then the
 absence is intentional, not a missing feature.
 
@@ -753,13 +762,16 @@ The [update exception](commands/audit-update-bazel.md#dx-update) permits later i
 selected dependency sets to run after a set failure, preserving successes and reporting
 blocked dependents. Update JSON order is `command_started`, then exactly one terminal per-set
 event per selected set in sorted set order (`update_set_success` notice, `update_failed` error,
-or `update_set_blocked` notice), then exactly one `command_finished`; it emits no `change`,
-`mutation`, `diagnostic`, or `operation` events. Operation boundaries, per-set reporting, and aggregate
+or `update_set_blocked` notice), then an optional `update_recovery` warning notice carrying
+the idempotent retry plus manual restore on failure, then exactly one `command_finished`; it emits no `change`,
+`mutation`, `diagnostic`, or `operation` events. Operation boundaries, per-set reporting, recovery planning
+(`dx_update::recovery`), and aggregate
 exit selection are specified in the [update contract](commands/audit-update-bazel.md#dx-update); live resolver-backend
 execution runs `dx_update::backend` per set with `notice`/`error` per-set events. This does not
 authorize new event fields or update `change`/`mutation` events (issue #586 wont-fix), nor parallel execution.
-Interrupted update runs keep preceding per-set events true with no rollback and emit nothing for
-sets not yet attempted; signal termination promises no `command_finished`.
+Interrupted update runs keep preceding per-set events true with no automatic rollback and emit nothing for
+sets not yet attempted; signal termination promises no `command_finished`. Text failures always
+carry a `dx: update_recovery:` line with the same retry plus restore.
 
 ## Dry Run
 
@@ -812,12 +824,15 @@ value requires a new major version.
 Protocol fixtures must verify:
 
 - Update continuation, per-set success/failure/blocked reporting, and overall
-  failure without rollback of successful independent changes. Update emits no v1 `change` or
+  failure without automatic rollback of successful independent changes. Update emits no v1 `change` or
   `mutation` events and no `changes`/`mutations`/`diagnostics` counts in any mode (wont-fix,
   issue #586, pinned by fixtures in `cli/update/tests/fixtures/update_events/` plus
-  `cli/cli/src/exec/update.rs`): per-set `notice`/`error` plus `command_finished` is the complete
+  `cli/cli/src/exec/update.rs`): per-set `notice`/`error` plus optional `update_recovery`
+  plus `command_finished` is the complete
   contract, with sorted per-set order, `results_complete=true` on live terminal reports, no Git
-  scan/BUILD parse/rerun inference, and interrupted runs keeping preceding per-set events true
+  scan/BUILD parse/rerun inference, atomicity per set with manual restore plus idempotent
+  retry (pinned by fixtures in `cli/update/tests/fixtures/update_rollback/` plus
+  `dx_update::recovery`), and interrupted runs keeping preceding per-set events true
   with nothing emitted for sets not yet attempted.
 - Exclusive stdout ownership and arbitrary subprocess output on stderr.
 - Complete deterministic unified patches in diff mode, including new files, multiple files,

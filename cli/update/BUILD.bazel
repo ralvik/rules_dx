@@ -18,6 +18,7 @@ dx_rust_crate(
         "src/backend.rs",
         "src/lib.rs",
         "src/outcome.rs",
+        "src/recovery.rs",
         "src/report.rs",
         "src/selector.rs",
         "src/semantics.rs",

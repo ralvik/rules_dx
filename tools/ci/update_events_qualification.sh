@@ -41,8 +41,9 @@ pins="cli/update/tests/fixtures/update_events/pins.bzl"
 expected="cli/update/tests/fixtures/update_events/update_events.expected"
 fixture_build="cli/update/tests/fixtures/update_events/BUILD.bazel"
 exec_update="cli/cli/src/exec/update.rs"
-build="tools/ci/BUILD.bazel"
-ci=".github/workflows/ci.yml"
+exec_tests="cli/cli/src/exec/update_tests_b.rs"
+targets="tools/ci/ci_targets_c.bzl"
+dogfood="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
 # Protocol owns the wont-fix under with resolver-owned backends.
@@ -90,10 +91,10 @@ else
   bad "output-protocol.md lost its rejected Git-scan BUILD-parse rerun record"
 fi
 
-# Protocol pins interrupted-run completeness (keeps preceding, no rollback, unattempted emits nothing, signal promises nothing).
+# Protocol pins interrupted-run completeness (keeps preceding, no automatic rollback, unattempted emits nothing, signal promises nothing).
 if grep -q -F -e 'Interrupted-run completeness follows the same contract' "$protocol" &&
   grep -q -F -e 'leaves their preceding per-set events true with' "$protocol" &&
-  grep -q -F -e 'no rollback' "$protocol" &&
+  grep -q -F -e 'no automatic rollback' "$protocol" &&
   grep -q -F -e 'must not' "$protocol" &&
   grep -q -F -e 'No `command_finished` is promised after signal' "$protocol"; then
   ok
@@ -160,13 +161,13 @@ else
 fi
 
 # Execution pins the wont-fix with three dedicated JSON tests.
-if grep -q -F -e 'update_json_never_emits_change_or_mutation' "$exec_update" &&
-  grep -q -F -e 'update_json_completeness_is_per_set_plus_finished' "$exec_update" &&
-  grep -q -F -e 'update_json_check_and_dryrun_emit_no_file_events_or_counts' "$exec_update" &&
-  grep -q -F -e 'Issue #586' "$exec_update"; then
+if grep -q -F -e 'update_json_never_emits_change_or_mutation' "$exec_tests" &&
+  grep -q -F -e 'update_json_completeness_is_per_set_plus_finished' "$exec_tests" &&
+  grep -q -F -e 'update_json_check_and_dryrun_emit_no_file_events_or_counts' "$exec_tests" &&
+  grep -q -F -e 'Issue #586' "$exec_tests"; then
   ok
 else
-  bad "exec/update.rs lost its three #586 wont-fix JSON fixtures"
+  bad "exec/update_tests_b.rs lost its three #586 wont-fix JSON fixtures"
 fi
 
 # Execution never builds change/mutation events on the update path.
@@ -185,13 +186,13 @@ else
   bad "exec/update.rs lost its results_complete-only finished wiring under #586"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "update_events_qualification"' "$build" &&
-  grep -q -F -e 'update_events_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:update_events_qualification' "$ci"; then
+# Targets own the harness plus dogfood wires it in dogfood-freshness.
+if grep -q -F -e 'name = "update_events_qualification"' "$targets" &&
+  grep -q -F -e 'update_events_qualification.sh' "$targets" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:update_events_qualification' "$dogfood"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the update_events_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci targets or dogfood lost the update_events_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Verification matrix owns the harness entry as seed-only fixture evidence.

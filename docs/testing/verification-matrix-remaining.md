@@ -736,6 +736,17 @@ Remaining reds stay owned gaps, not green claims:
   rejected, interrupted runs keep preceding per-set events true with no rollback and nothing
   for unattempted sets; protocol-only, no workflow change; platform plus consumer plus release
   evidence stays owned gap; no Supported claim).
+- Atomic update rollback plan with fixture evidence qualified
+  seed-only under issue #772
+  (`bazel run //tools/ci:update_rollback_qualification` with
+  `cli/update/tests/fixtures/update_rollback/pins.bzl` plus
+  `update_rollback.expected`; `update_rollback_qualification` 16/16;
+  per-set commit boundary never repository-wide with no automatic rollback,
+  idempotent retry plus manual `git checkout` restore planned in
+  `dx_update::recovery`, `update_recovery` notice plus text hint with no
+  silent partial success, interrupted runs keep preceding per-set events true
+  with defined retry for unattempted sets; update-only, no resolver change;
+  platform plus consumer plus release evidence stays owned gap; no Supported claim).
 - Third-party env plugin-model (not planned) plus Go cgo exception boundary with fixture evidence
    qualified seed-only under closed #587
    (`bazel run //tools/ci:env_plugins_cgo_qualification` with

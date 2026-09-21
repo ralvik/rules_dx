@@ -317,6 +317,29 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
                 }
             }
         }
+        // Recovery hint (update_recovery): per-set commits are kept (no automatic rollback);
+        // print the idempotent retry plus manual restore so a partial run
+        // never reads as silent success.
+        if let Some(plan) = dx_update::recovery::plan(&report) {
+            if let Ok(event) = notice_event(&NoticeEvent {
+                level: "warning".to_owned(),
+                code: dx_update::recovery::RECOVERY_CODE.to_owned(),
+                message: plan.message.clone(),
+                related_command: Some("update".to_owned()),
+                scope: Some(plan.retry_sets.clone()),
+                path: None,
+                language: None,
+                import: None,
+            }) {
+                let _ = write_event(out, &event);
+            }
+            let _ = writeln!(
+                err,
+                "dx: {}: {}",
+                dx_update::recovery::RECOVERY_CODE,
+                plan.message
+            );
+        }
         let finished = command_finished(
             exit,
             &FinishedCounts {
@@ -353,6 +376,16 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
                 }
             }
         }
+    }
+    // Text recovery hint (update_recovery) on failure: always to stderr (never silent
+    // partial success), even when the per-set summary below is quiet.
+    if let Some(plan) = dx_update::recovery::plan(&report) {
+        let _ = writeln!(
+            err,
+            "dx: {}: {}",
+            dx_update::recovery::RECOVERY_CODE,
+            plan.message
+        );
     }
     if verbose {
         let succeeded = report

@@ -25,12 +25,14 @@
 //! backend operations in [`backend`]. Independent-set
 //! continuation/blocked-dependent execution semantics live in [`outcome`],
 //! and aggregate exit-status selection over its reports lives in
-//! [`report`]. Within-constraint and Git handling live in [`semantics`].
+//! [`report`]. Per-set commit boundary plus manual recovery planning
+//! lives in [`recovery`]. Within-constraint and Git handling live in [`semantics`].
 
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod backend;
 pub mod outcome;
+pub mod recovery;
 pub mod report;
 pub mod selector;
 pub mod semantics;
