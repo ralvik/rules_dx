@@ -47,19 +47,6 @@ const corpusValeHint = "//quality:corpus_vale_config"
 // `corpus_markdown`, `corpus_starlark`, `corpus_toml`, and `corpus_json`.
 const corpusTag = "corpus"
 
-type corpusType struct {
-	id   string
-	attr string
-	name string
-}
-
-var corpusTypes = []corpusType{
-	{id: "markdown", attr: "markdown_srcs", name: "corpus_markdown"},
-	{id: "starlark", attr: "starlark_srcs", name: "corpus_starlark"},
-	{id: "toml", attr: "toml_srcs", name: "corpus_toml"},
-	{id: "json", attr: "json_srcs", name: "corpus_json"},
-}
-
 // corpusKinds declares the managed corpus rule kind: matched by name,
 // every planner-owned attr mergeable so fresh lists replace stale ones
 // (Gazelle preserves non-mergeable attrs on match, which would pin
@@ -388,8 +375,3 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 	}
 	return plan
 }
-
-// applyCorpusHints is a no-op placeholder: corpus splits already carry
-// exactly their own tool's native config (markdown binds Vale, others run
-// pinned defaults), so Rust rules never inherit corpus hints.
-func applyCorpusHints() {}
