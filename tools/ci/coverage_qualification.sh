@@ -254,7 +254,7 @@ fi
 if ! grep -rn -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' .github/workflows/ 2>/dev/null | grep -q . &&
   grep -q -F -e 'runs-on: ubuntu-latest' .github/workflows/ci.yml &&
   grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
-  grep -q -F -e 'actions/cache' .github/workflows/ci.yml; then
+  grep -q -F -e 'actions/cache' .github/actions/restore-bazel-cache/action.yml; then
   ok
 else
   bad "workflows gained a non-standard runner (paid or unqualified)"

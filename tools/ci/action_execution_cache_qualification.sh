@@ -37,6 +37,7 @@ synthetic="quality/aspects.bzl"
 real="quality/real_aspects.bzl"
 ci=".github/workflows/ci.yml"
 bump=".github/workflows/bump.yml"
+cache_action=".github/actions/restore-bazel-cache/action.yml"
 workflows_readme=".github/workflows/README.md"
 action_model="docs/quality/action-model.md"
 testing_readme="docs/testing/README.md"
@@ -100,40 +101,47 @@ else
   bad "real lint vs format ActionKeys must differ with the marker (capability isolation)"
 fi
 
-# Exact-key disk cache: no prefix fallback in owned workflows.
+# Exact-key disk cache: no prefix fallback in owned workflows or the shared
+# restore action.
 if ! grep -q -F -e 'restore-keys:' "$ci" &&
-  ! grep -q -F -e 'restore-keys:' "$bump"; then
+  ! grep -q -F -e 'restore-keys:' "$bump" &&
+  ! grep -q -F -e 'restore-keys:' "$cache_action"; then
   ok
 else
   bad "workflows regained a prefix fallback (want exact key only, bust starts cold)"
 fi
 
-# Exact-key record stays explicit at each cache site plus the policy note.
-if [[ "$(grep -c -F -e 'exact key only, bust starts cold' "$ci")" -ge "20" ]] &&
+# Exact-key record stays explicit in the single-source restore action plus
+# the policy note (issue #953): the hashFiles list lives once in the
+# composite while ci.yml passes only per-host prefixes.
+if grep -q -F -e 'exact key only, bust starts cold' "$cache_action" &&
+  [[ "$(grep -c -F -e './.github/actions/restore-bazel-cache' "$ci")" -ge "20" ]] &&
   grep -q -F -e 'exact key only with no prefix fallback' "$workflows_readme"; then
   ok
 else
-  bad "ci.yml plus workflows README lost the exact-key-only record"
+  bad "restore-bazel-cache plus ci.yml plus workflows README lost the exact-key-only single-source record"
 fi
 
-# Cache keys stay comprehensive across locks plus configs plus toolchains.
-if grep -q -F -e "MODULE.bazel.lock" "$ci" &&
-  grep -q -F -e ".bazelrc" "$ci" &&
-  grep -q -F -e "tools/bazelrc/preset.bazelrc" "$ci" &&
-  grep -q -F -e ".bazelversion" "$ci" &&
-  grep -q -F -e "cargo-bazel-lock.json" "$ci" &&
-  grep -q -F -e "Cargo.lock" "$ci" &&
-  grep -q -F -e "pnpm-lock.yaml" "$ci" &&
-  grep -q -F -e "maven_install.json" "$ci" &&
-  grep -q -F -e "go.mod" "$ci" &&
-  grep -q -F -e "uv.lock" "$ci" &&
-  grep -q -F -e "pyproject.toml" "$ci"; then
+# Cache keys stay comprehensive across locks plus configs plus toolchains
+# (single-sourced in the restore action, issue #953).
+if grep -q -F -e "MODULE.bazel.lock" "$cache_action" &&
+  grep -q -F -e ".bazelrc" "$cache_action" &&
+  grep -q -F -e "tools/bazelrc/preset.bazelrc" "$cache_action" &&
+  grep -q -F -e ".bazelversion" "$cache_action" &&
+  grep -q -F -e "cargo-bazel-lock.json" "$cache_action" &&
+  grep -q -F -e "Cargo.lock" "$cache_action" &&
+  grep -q -F -e "pnpm-lock.yaml" "$cache_action" &&
+  grep -q -F -e "maven_install.json" "$cache_action" &&
+  grep -q -F -e "go.mod" "$cache_action" &&
+  grep -q -F -e "uv.lock" "$cache_action" &&
+  grep -q -F -e "pyproject.toml" "$cache_action"; then
   ok
 else
-  bad "ci.yml lost a comprehensive lock/config key (want MODULE plus bazelrc plus toolchain plus resolver locks)"
+  bad "restore-bazel-cache lost a comprehensive lock/config key (want MODULE plus bazelrc plus toolchain plus resolver locks)"
 fi
 
-# Per-host cache scopes stay pinned per platform family.
+# Per-host cache scopes stay pinned per platform family: ci.yml passes the
+# prefix per job while the shared action owns the exact-key shape.
 if grep -q -F -e 'bazel-seed-' "$ci" &&
   grep -q -F -e 'bazel-arm64-' "$ci" &&
   grep -q -F -e 'bazel-musl-x86_64-' "$ci" &&
@@ -141,7 +149,7 @@ if grep -q -F -e 'bazel-seed-' "$ci" &&
   grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
   grep -q -F -e 'bazel-macos-x86_64-' "$ci" &&
   grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
-  grep -q -F -e 'actions/cache' "$ci"; then
+  grep -q -F -e 'actions/cache' "$cache_action"; then
   ok
 else
   bad "ci.yml lost a per-host Bazel disk-cache scope (seed plus arm64 plus musl pair plus macos pair plus windows)"
