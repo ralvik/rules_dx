@@ -2,10 +2,14 @@
 
 Two paths produce a deployable target for `dx deploy`.
 
+## Path A: raw executable (accepted)
+
 Path A is a raw executable: any `*_binary` or executable target (aliases
 included) is deployable with no provider. Bazel owns executability.
 Use this path for a single program with no separate app identity and no
 non-default profile.
+
+## Path B: `dx_deployment` wrapper (accepted)
 
 Path B wraps the program in `dx_deployment`
 (`deploy/rules/defs.bzl`):
@@ -36,10 +40,9 @@ the need.
 
 Profile vocabulary follows [ADR 0021](../decisions/0021-build-profiles.md).
 Precedence (explicit flag over target `profile` over command default)
-and the `DX_PROFILE` name are accepted per
-open work under issue #457; the
-`dx deploy` command wiring them is delivered per
-open work under issue #457.
+and the `DX_PROFILE` name are implemented as specified in the
+[`dx deploy` command](../cli/commands/build-test-coverage.md#dx-deploy),
+delivered under closed #178/#179/#180.
 
 ## Path C: `archive_release` (accepted)
 
@@ -110,6 +113,27 @@ The full matrix is frozen in `deploy/release/matrix.bzl` (seed Linux
 x86_64 qualified; four follow-ups unqualified until their hosts
 qualify). Draft-only ceiling enforced, owner approval required.
 
+## Path E: standalone `dx` install verification (accepted)
+
+Standalone `dx` binaries verify publisher identity at install time via
+`//deploy/install:dx_verify` (`deploy/install/dx_verify.sh`). The verifier
+requires a Sigstore keyless bundle (`cosign sign-blob --bundle`) plus the
+expected certificate identity and issuer, or a GitHub attestation
+(`gh attestation verify`), on the Sigstore TUF trust root
+(`tuf-repo-cdn.sigstore.dev`); verifiers are `cosign verify-blob` /
+`gh attestation verify` / `slsa-verifier` (documented, not self-hosted).
+There is no checksum-only fallback: a sha256 alone is not proof of
+publisher identity and is rejected. Verification runs before any install
+or exec; on failure nothing is installed and the binary never executes.
+SBOM (Syft/CycloneDX) bundles verify through the same cosign path when
+passed as `--sbom`. BCR needs no signing (archive `source.json` +
+integrity hash + `presubmit.yml` + PR review). Seed-host standalone
+packaging is `//cli/cli:dx_standalone`; the wider matrix stays
+unqualified per the [distribution policy](../environments/environment.md#distribution).
+Distribution verification qualified under issue #459. Policy tests are
+`bazel test //deploy/install:all` plus `bazel run
+//tools/ci:signing_distribution_qualification`.
+
 ## Path F: release matrix, SBOM/provenance, signing, BCR, human-run (accepted)
 
 The full release path (issue #311; human-run driver owned under issue
@@ -145,27 +169,6 @@ tooling in `deploy/release/` with policy tests `bazel test
 - GHCR stays the separate `.github/workflows/ghcr.yml` route (issue #460,
   image lifecycle per-scaffold-change); push plus `cosign sign <digest>`
   stay owner-gated with dry-run first.
-
-## Path E: standalone `dx` install verification (accepted)
-
-Standalone `dx` binaries verify publisher identity at install time via
-`//deploy/install:dx_verify` (`deploy/install/dx_verify.sh`). The verifier
-requires a Sigstore keyless bundle (`cosign sign-blob --bundle`) plus the
-expected certificate identity and issuer, or a GitHub attestation
-(`gh attestation verify`), on the Sigstore TUF trust root
-(`tuf-repo-cdn.sigstore.dev`); verifiers are `cosign verify-blob` /
-`gh attestation verify` / `slsa-verifier` (documented, not self-hosted).
-There is no checksum-only fallback: a sha256 alone is not proof of
-publisher identity and is rejected. Verification runs before any install
-or exec; on failure nothing is installed and the binary never executes.
-SBOM (Syft/CycloneDX) bundles verify through the same cosign path when
-passed as `--sbom`. BCR needs no signing (archive `source.json` +
-integrity hash + `presubmit.yml` + PR review). Seed-host standalone
-packaging is `//cli/cli:dx_standalone`; the wider matrix stays
-unqualified per the [distribution policy](../environments/environment.md#distribution).
-Distribution verification qualified under issue #459. Policy tests are
-`bazel test //deploy/install:all` plus `bazel run
-//tools/ci:signing_distribution_qualification`.
 
 ## Custom deployers (accepted)
 
