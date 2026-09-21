@@ -73,8 +73,11 @@ upstream acquisition mechanism. Document the applicable terms and require delibe
 do not automatically accept on the consumer's behalf or bypass upstream controls. Acceptance is not
 permission to redistribute: applicable usage and distribution rights still require review. Merely
 adding the module or using unrelated tools must not require acceptance or acquire restricted native
-payloads. The exact mechanism remains open; this setup step does not relax hermetic acquisition,
-MSVC compatibility, or qualification requirements.
+payloads. The acknowledgement is `BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1`
+via repository-env for the toolchains_msvc prototype, qualified seed-only under issue #818
+(`cc/tests/fixtures/windows_eula/pins.bzl` via `bazel run //tools/ci:windows_eula_qualification`,
+missing-ack fails before fetch with an actionable error, unrelated-workflows-green); this setup step
+does not relax hermetic acquisition, MSVC compatibility, or qualification requirements.
 
 Linux requires glibc and static-musl profiles on x86_64/arm64. Dynamic musl is not an initial
 requirement. Static-musl profiles are qualified under issue #411 on the
