@@ -25,17 +25,16 @@ repository without an existing `MODULE.bazel`; ordinary commands still require i
 Bootstrap writes are absent-only and do not inspect Git to classify files as tracked
 or untracked. Init never contacts the network beyond pinned artifact fetch.
 
-Bootstrap destination mechanics and any `--force` syntax or managed-replacement behavior
-are implemented as specified here: absent-only bootstrap writes,
-unmanaged refusal even with force. Force cannot authorize overwriting arbitrary existing files
-or unmanaged hooks.
+Bootstrap destination mechanics are implemented as specified here: absent-only bootstrap writes,
+unmanaged refusal with no overwrite flag. There is no `--force` flag; existing files
+or unmanaged hooks are never overwritten.
 
 ## `dx hooks`
 
 `dx hooks install` installs thin trigger shims (`pre-commit`, `pre-push`), bootstraps
 the gitignored root overlay (`dx.local.toml`) and its gitignore entry through absent-only
 file writes, and verifies the shims resolve to the pinned `dx`. It refuses unmanaged
-existing hooks rather than replacing them, including when force is requested.
+existing hooks rather than replacing them; there is no `--force` flag to override this.
 Hook destination/identity mechanics and handling of existing ignore configuration
 are implemented as specified here: managed shims only, unmanaged refusal; this is not permission to overwrite existing files.
 `dx hooks uninstall` removes only shims it installed. `dx hooks status` prints the
@@ -56,7 +55,7 @@ status checks or clean-worktree gates, including during init.
 
 The approved bootstrap/hook exception narrows the earlier blanket discovery/Git rules so init can
 create a module and hooks can select staged paths without weakening ordinary workflow
-safety. Bootstrap APIs and force behavior are implemented as specified above.
+safety. Bootstrap APIs are implemented as specified above; no overwrite flag exists.
 
 ## Triggers And Default Checks
 

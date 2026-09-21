@@ -23,10 +23,11 @@ pub fn absent_only_write_allowed(target_exists: bool) -> bool {
 
 /// Whether `dx init` must refuse one scaffolded path.
 ///
-/// An existing file is refused even with force: an unmanaged `.envrc` or any
-/// other present file is never overwritten by scaffolding. Absent paths go
+/// An existing file is always refused: an unmanaged `.envrc` or any
+/// other present file is never overwritten by scaffolding (there is no
+/// `--force` flag). Absent paths go
 /// through [`absent_only_write_allowed`].
-pub fn init_must_refuse(target_exists: bool, _force: bool) -> bool {
+pub fn init_must_refuse(target_exists: bool) -> bool {
     target_exists
 }
 
@@ -66,8 +67,8 @@ pub const DEVCONTAINER_JSON: &str = concat!(
 
 /// Plan the `dx init` scaffold for a module name.
 ///
-/// All writes are absent-only; the caller refuses existing paths even with
-/// force (see [`init_must_refuse`]). Contents are pinned (no network) and
+/// All writes are absent-only; the caller refuses existing paths
+/// (see [`init_must_refuse`]; there is no overwrite flag). Contents are pinned (no network) and
 /// point editors at `.dx` projections, checked-in native configs, and
 /// managed `.dx/bin` tools.
 pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
@@ -171,11 +172,9 @@ mod tests {
     }
 
     #[test]
-    fn init_refuses_existing_paths_even_with_force() {
-        assert!(init_must_refuse(true, false));
-        assert!(init_must_refuse(true, true));
-        assert!(!init_must_refuse(false, false));
-        assert!(!init_must_refuse(false, true));
+    fn init_refuses_existing_paths() {
+        assert!(init_must_refuse(true));
+        assert!(!init_must_refuse(false));
     }
 
     #[test]

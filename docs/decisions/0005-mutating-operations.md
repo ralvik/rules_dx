@@ -100,9 +100,9 @@ merge behavior.
 The approved bootstrap/hook exception permits init without an existing `MODULE.bazel` and the narrow
 hook exception so bootstrap can create the module and hooks can select staged paths.
 Bootstrap writes are absent-only, without Git-based tracked-file inspection. Unmanaged
-hooks are refused; force cannot overwrite arbitrary existing files or hooks. Bootstrap
-destination mechanics and force syntax/managed-replacement behavior follow the frozen
-the issue tracker mappings, not an unrestricted overwrite API.
+hooks are refused; there is no `--force` flag to overwrite arbitrary existing files or hooks. Bootstrap
+destination mechanics follow the
+issue tracker mappings, not an unrestricted overwrite API.
 
 `dx codegen` is explicitly mutating only in managed `.dx/` state. Bazel actions build
 declared generated artifacts without writing source packages; Rust validates their

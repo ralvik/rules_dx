@@ -51,20 +51,20 @@ The command surface is:
   config, CI caller template, hermetic hook installation, devcontainer, and the `dx`
    version pin. It may bootstrap without an existing `MODULE.bazel` and writes only
    absent files, without Git-based tracked-file inspection. Bootstrap destination
-   mechanics and force syntax/managed-replacement behavior follow the
+   mechanics follow the
    [hooks contract](../cli/commands/hooks.md) (see Status note);
-   unqualified force behavior is blocked.
+   there is no overwrite flag.
 - `dx hooks` for managing the custom hermetic git-hook runner in an existing repository
   (`install`, `uninstall`, `status`). Hook management and staged-file selection are narrow
   Git exceptions: all product Git operations for hooks use hermetic managed Git, never
-  ambient Git. Refuse unmanaged existing hooks; force cannot authorize arbitrary hook
+  ambient Git. Refuse unmanaged existing hooks; there is no `--force` flag to authorize hook
    overwrite. Exact installation and snapshot mechanics follow the
    [hooks contract](../cli/commands/hooks.md) (see Status note).
 
 The approved bootstrap/hook exception allows module creation and staged-path hook selection without
 general Git status inspection, clean-worktree requirements, or weakening ordinary workspace
 discovery. This amends the design-only scaffold in place; no shipped compatibility behavior
-or new unrestricted force API is established.
+or overwrite flag is established.
 
 Historical note: the original decision rejected `dx check` and `dx fix` as
 general umbrellas. That rejection is superseded by

@@ -490,3 +490,24 @@ fn why_requires_file_and_label() {
         );
     }
 }
+
+#[test]
+fn init_and_hooks_have_no_force_flag() {
+    // Issue #700: absent-only writes plus unmanaged refusal ship with no
+    // overwrite flag, so `--force` must fail as an unknown option rather
+    // than read as a no-op.
+    for words in [
+        vec!["init", "--force"],
+        vec!["init", "--force", "demo"],
+        vec!["hooks", "install", "--force"],
+    ] {
+        assert!(
+            matches!(
+                parse(&args(&words)),
+                Err(ArgsError::UnknownOption { option, .. }) if option == "--force"
+            ),
+            "words: {words:?} must reject --force as unknown, got {:?}",
+            parse(&args(&words))
+        );
+    }
+}
