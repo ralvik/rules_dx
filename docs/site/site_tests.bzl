@@ -1,7 +1,7 @@
 """Unit plus execution tests for docs site execution."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":site.bzl", "MDBOOK_VERSION", "site_api_path", "site_html_name", "site_index_name", "site_is_external_link", "site_link_target_error", "site_prose_error", "site_records_name", "site_search_record", "site_shard_name", "site_summary_name", "site_api_name", "site_symbol_id", "site_symbol_id_error", "site_url_for_symbol")
+load(":site.bzl", "MDBOOK_VERSION", "site_api_path", "site_guide_step_error", "site_html_name", "site_index_name", "site_is_external_link", "site_is_known_guide", "site_link_target_error", "site_prose_error", "site_records_name", "site_search_record", "site_shard_name", "site_summary_name", "site_api_name", "site_symbol_id", "site_symbol_id_error", "site_url_for_symbol")
 
 def site_unit_tests(name):
     starlark_test(
@@ -106,6 +106,35 @@ def site_unit_tests(name):
                     "docs_site: dangling prose link 'missing.md'",
                     "docs_site: dangling API link 'api/missing.md'",
                     "docs_site: unknown link target 'unknown-target'",
+                ],
+            ),
+            expect_equal(
+                "only the three frozen guides are known",
+                [
+                    site_is_known_guide("quickstart"),
+                    site_is_known_guide("tutorial"),
+                    site_is_known_guide("migration"),
+                    site_is_known_guide("howto"),
+                    site_is_known_guide(""),
+                    site_is_known_guide("Quickstart"),
+                ],
+                [True, True, True, False, False, False],
+            ),
+            expect_equal(
+                "unexecuted guide steps fail closed with no silent pass",
+                [
+                    site_guide_step_error("bazel build //docs/site:demo_extract"),
+                    site_guide_step_error(""),
+                    site_guide_step_error("# comment lines are skipped"),
+                    site_guide_step_error("bazel build //docs/site:demo_extract # TODO"),
+                    site_guide_step_error("UNEXECUTED step"),
+                ],
+                [
+                    "",
+                    "",
+                    "",
+                    "docs_site: unexecuted guide step 'bazel build //docs/site:demo_extract # TODO'",
+                    "docs_site: unexecuted guide step 'UNEXECUTED step'",
                 ],
             ),
         ],

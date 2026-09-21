@@ -1,8 +1,8 @@
 # Documentation IR
 
 Implementation status: accepted v1 direction with adapter runs plus site execution plus
-rebuild proof plus link/reference completeness plus first-hour timing proof plus
-per-release pin-bump plus drift process delivered; remaining execution open (#783, successor to closed #581,
+rebuild proof plus link/reference completeness plus guide-step wiring plus first-hour timing proof plus
+per-release pin-bump plus drift process delivered; no execution gaps remain (successor to closed #581,
 live successor to closed #421). Accepted: the `dx_docs` planning library
 (command dispatch removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md);
 reintroduction tracked under #786) —
@@ -16,10 +16,11 @@ Delivered under #779 (successor to closed #581; see [Documentation](README.md#co
 per-language adapter runs with pins and mappings (`//docs/adapters:docs_adapters`
 over pinned native inputs with golden fixtures per scope). Same-producer byte-identical rebuild proof
 for the fixture-scale site is delivered seed-only under #781. Link/reference completeness at the
-pre-render boundary is delivered seed-only under #782. Per-release pin-bump plus
-drift process is delivered seed-only under #785. Open under #783
+pre-render boundary is delivered seed-only under #782. Guide prose with guide-step CI wiring
+is delivered seed-only under #783. Per-release pin-bump plus
+drift process is delivered seed-only under #785. No open drift or guide gap remains
 (successor to closed #581; see [Documentation](README.md#contracts) for the full list):
-guide-step CI wiring. Symbol-count inventory and native-output comparison fixtures were
+symbol-count inventory and native-output comparison fixtures were
 delivered under #779; adapter golden fixtures stay inputs, not snapshots to refresh. No working docs support is claimed until
 qualified site execution lands.
 
@@ -282,4 +283,4 @@ Per-release pin-bump plus drift process delivered seed-only under #785
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #784 (timing delivered) plus #785 (drift delivered) plus #783 (successor to closed #581). Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction: #786.

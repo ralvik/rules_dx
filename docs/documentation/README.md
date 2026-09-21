@@ -1,9 +1,9 @@
 # Documentation
 
 Accepted v1 direction; adapter runs plus renderer/site execution plus rebuild
-proof plus link/reference completeness plus first-hour timing proof plus
-per-release pin-bump plus drift process delivered seed-only (see Contracts). No `Supported`
-claim; fixture-scale adapter plus site execution plus rebuild proof plus link completeness plus timing plus drift are qualified
+proof plus link/reference completeness plus guide-step wiring plus first-hour timing
+plus per-release pin-bump plus drift process delivered seed-only (see Contracts). No `Supported`
+claim; fixture-scale adapter plus site execution plus rebuild proof plus link completeness plus guide-step wiring plus timing plus drift are qualified
 and no site is published yet.
 
 Accepted design: native language tooling extracts API semantics; thin per-language adapters
@@ -53,11 +53,13 @@ API changes require no IR snapshot update.
   to closed #581); renderer and site execution delivered seed-only under #780;
   site-level byte-identical rebuild proof delivered seed-only under #781;
   link and reference completeness delivered seed-only under #782;
+  guide prose with guide-step CI wiring delivered seed-only under #783;
   first-hour timing proof delivered seed-only under #784 as one-shot evidence
   per [ADR 0022](../decisions/0022-no-benchmarking.md), not a standing benchmark;
   per-release pin-bump plus drift process delivered seed-only under #785.
-  Docs pipeline gaps stay open under #783 (successor
-  to closed #581; guide-step CI wiring;
+  Docs pipeline gaps stay open under no open issue (successors
+  to closed #581; #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785
+  delivered seed-only;
   fixture-scale execution qualified and no site is published yet).
 
 Rust uses pinned nightly `rustdoc --output-format json`; Scala TASTy spike
@@ -66,11 +68,12 @@ Accepted scope covers thirteen adapter scopes. Per-language input pins,
 mappings, and adapter runs delivered under #779 with golden fixtures;
 renderer/site-build execution delivered seed-only under #780; rebuild proof
 delivered seed-only under #781; link and reference completeness delivered
-seed-only under #782; first-hour timing proof delivered seed-only under #784;
+seed-only under #782; guide prose with guide-step CI wiring delivered
+seed-only under #783; first-hour timing proof delivered seed-only under #784;
 per-release pin-bump plus drift process delivered seed-only under #785;
-remaining #783 items above stay open;
+no items above stay open;
 no published site exists today.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #784 (timing delivered) plus #785 (drift delivered) plus #783. Reintroduction: #786. Build workflow: #620.
+Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction: #786. Build workflow: #620.

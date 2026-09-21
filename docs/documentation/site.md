@@ -3,10 +3,11 @@
 Implementation status: accepted v1 direction with adapter runs delivered under #779 plus
 renderer/site execution delivered seed-only under #780 (successors to closed #581,
 live successor to closed #421); site-level byte-identical rebuild proof delivered
-seed-only under #781; link/reference completeness delivered seed-only under #782;
-first-hour timing proof delivered seed-only under #784; per-release pin-bump plus
-drift process delivered seed-only under #785; remaining execution open
-(#783).
+seed-only under #781; link/reference completeness delivered seed-only under #782
+plus guide-step CI wiring delivered seed-only under #783
+plus first-hour timing proof delivered seed-only under #784
+plus per-release pin-bump plus drift process delivered seed-only under #785;
+no execution gaps remain.
 Accepted: the `dx_docs` site-build action planning over the
 Bazel-cached extract→aggregate→render graph (no committed IR). Delivered: per-language
 extraction runs under #779 (`//docs/adapters:docs_adapters` over pinned inputs) plus fixture-scale
@@ -18,13 +19,13 @@ removed per [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md); reintro
 is open under #786. mdBook is the decided
 renderer with no planned replacement. Cache and hermeticity properties
 below are delivered seed-only for the fixture-scale site (rebuild proof under #781);
-link/reference completeness delivered seed-only under #782; first-hour timing
-proof delivered seed-only under #784; remaining guide-step
-and invalidation verification follows
-[Testing](../testing/) before any support statement. Open under #783
-(successor to closed #581; see [Documentation](README.md#contracts) for the full list):
-cache reuse and invalidation fixtures and guide-step CI wiring.
-Fixture-scale site execution plus byte-identical rebuild proof plus link completeness plus first-hour timing plus drift are qualified seed-only; no published site is claimed.
+link/reference completeness delivered seed-only under #782; guide-step CI wiring
+delivered seed-only under #783; first-hour timing proof delivered seed-only under
+#784; per-release pin-bump plus drift process delivered seed-only under #785;
+remaining cache-invalidation verification follows
+[Testing](../testing/) before any support statement; cache reuse and
+invalidation fixtures stay advisory with no owning execution gap.
+Fixture-scale site execution plus byte-identical rebuild proof plus link completeness plus guide-step wiring plus first-hour timing plus drift are qualified seed-only; no published site is claimed.
 
 ## Action Graph
 
@@ -109,6 +110,10 @@ roundtrip/parity/ordering/compat gates plus adapter version-mismatch plus same-p
 byte-identical proof hold, ordinary API changes require no IR snapshot update with no
 committed shards, and users stay on pinned inputs (see
 `tools/ci/tests/fixtures/docs_site/drift.expected`).
+Delivered (seed-only guide-step wiring under #783) fixtures prove user guide prose stays
+executable: the fixture-scale quickstart guide lists the extract, aggregate, and unit-check
+steps, every step is executed by `docs_pipeline_qualification` in CI with no unexecuted
+steps allowed, and the prose stays in sync with the executable steps file.
 Cache reuse and rebuilds must produce equivalent validated artifacts;
 remote-cache claims additionally require the central [testing evidence](../testing/README.md#remote-tests).
 Cache reuse timing and appropriate invalidation after source/extractor/configuration changes
@@ -130,4 +135,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #784 plus #785; remaining: #783. Reintroduction: #786.
+Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; no execution gaps remain. Reintroduction: #786.

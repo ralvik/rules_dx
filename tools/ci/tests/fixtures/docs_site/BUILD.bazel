@@ -1,4 +1,4 @@
-"""Docs site execution plus rebuild plus link-completeness plus timing plus drift fixture."""
+"""Docs site execution plus rebuild plus link-completeness plus guide plus timing plus drift fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 
@@ -12,6 +12,7 @@ exports_files([
     "docs_site.expected",
     "rebuild.expected",
     "links.expected",
+    "guide.expected",
     "timing.expected",
     "drift.expected",
 ])
