@@ -140,6 +140,10 @@ cannot become applicable from a `typescript` class alone. Enabling quality does 
 activate an application foundation, and activating an application foundation does not bypass normal
 class and policy applicability.
 
+Wrapper ownership is tracked per family in `quality/wrapper_owners.bzl`: covered families
+name their `//<lang>/rules:defs.bzl` owner, uncovered families are explicitly `other`
+(fixture- and matrix-owned ad-hoc, no wrapper).
+
 Every built-in quality policy family has lazy curated defaults. Users do not maintain a family
 enable list: matching direct source classes make the relevant default adapters applicable.
 Families appear in workspace configuration only to add or remove supported tools or explicitly

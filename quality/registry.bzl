@@ -7,6 +7,7 @@ load(":adapters.bzl", "ADAPTER_REGISTRY_SCHEMA_VERSION", "REAL_ADAPTERS", "REAL_
 load(":curated_defaults.bzl", "CURATED_DEFAULTS", "CURATED_SCHEMA_VERSION", "FORMAT_FROZEN", "curated_schema_error")
 load(":parity_tests.bzl", "PARITY_DEFERRED", "PARITY_SCHEMA_VERSION", "parity_schema_error")
 load(":sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "SOURCES_REGISTRY_SCHEMA_VERSION", "sources_schema_error")
+load(":wrapper_owners.bzl", "WRAPPER_OWNERS", "WRAPPER_SCHEMA_VERSION", "wrapper_schema_error")
 
 # Version of this aggregated registry-query surface. Bumped only when the
 # query set itself breaks; registry data additions never bump it.
@@ -52,8 +53,10 @@ def registry_schema_error():
 
     Combines the per-registry schema checks without pinning exact contents:
     versions are v1, class spellings are canonical, adapter-backed classes
-    are classified, curated families/tools stay within the taxonomy, and
-    deferrals carry owner/route. Additions edit registry data only."""
+    are classified, curated families/tools stay within the taxonomy,
+    deferrals carry owner/route, and every taxonomy family carries a
+    wrapper owner or an explicit uncovered verdict. Additions edit
+    registry data only."""
     if REGISTRY_SCHEMA_VERSION != 1:
         return "registry: unsupported schema v" + str(REGISTRY_SCHEMA_VERSION) + " (want v1)"
     if SOURCES_REGISTRY_SCHEMA_VERSION != 1:
@@ -64,6 +67,8 @@ def registry_schema_error():
         return "registry: curated schema v" + str(CURATED_SCHEMA_VERSION) + " is unsupported (want v1)"
     if PARITY_SCHEMA_VERSION != 1:
         return "registry: parity schema v" + str(PARITY_SCHEMA_VERSION) + " is unsupported (want v1)"
+    if WRAPPER_SCHEMA_VERSION != 1:
+        return "registry: wrapper schema v" + str(WRAPPER_SCHEMA_VERSION) + " is unsupported (want v1)"
     err = sources_schema_error()
     if err != "":
         return err
@@ -76,11 +81,15 @@ def registry_schema_error():
     err = parity_schema_error()
     if err != "":
         return err
+    err = wrapper_schema_error()
+    if err != "":
+        return err
 
     # Cross-registry singularity without duplicating inventories: every
     # known source class has a family assignment, every adapter-backed
-    # class is classified, every curated family is a registry family, and
-    # every curated tool is a registry tool.
+    # class is classified, every curated family is a registry family,
+    # every curated tool is a registry tool, and every taxonomy family
+    # carries a wrapper owner or an explicit uncovered verdict.
     for class_id in KNOWN_SEMANTIC_FILE_CLASSES:
         if class_id not in REAL_CLASS_TO_FAMILY:
             return "registry: known class '" + class_id + "' has no owning family"
@@ -103,4 +112,8 @@ def registry_schema_error():
     for family in FORMAT_FROZEN:
         if family not in CURATED_DEFAULTS:
             return "registry: FORMAT_FROZEN family '" + family + "' has no curated entry"
+    for class_id in REAL_CLASS_TO_FAMILY:
+        family = REAL_CLASS_TO_FAMILY[class_id]
+        if family not in WRAPPER_OWNERS:
+            return "registry: taxonomy family '" + family + "' has no wrapper owner or uncovered verdict"
     return ""
