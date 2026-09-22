@@ -199,7 +199,12 @@ Because actions receive explicit config labels and never ambient-search, user-au
 files are colocated near their owners (package-local, matching locality evidence), not
 piled at the repository root. Root placement is used only where consumption outside Bazel
 forces it: editor and language-server discovery and raw `.dx/bin` invocation follow
-upstream discovery rules `rules_dx` does not control. `.dx/` is managed machine state
+upstream discovery rules `rules_dx` does not control. The root `.vale.ini` is the Vale
+instance of that exception: an editor-discovery shim mirroring the canonical
+`quality/corpus_vale.ini` binding (its `StylesPath` points at `quality/corpus_styles`),
+so editors find the corpus policy without guessing a config path. Bazel actions keep
+binding `quality/corpus_vale.ini` explicitly and `//tools/ci:config_consistency_test`
+pins the shim to the corpus policy. `.dx/` is managed machine state
 (binaries, setup pointers, environments), never user-authored configuration. The one
 root-level personal file is the gitignored `dx.local.toml` overlay (see the
 [hooks contract](../cli/commands/hooks.md)); no per-feature local files are added.
