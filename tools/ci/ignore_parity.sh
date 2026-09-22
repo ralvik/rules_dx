@@ -79,6 +79,11 @@ dx_guards_contains "$local_workflows" "local-workflows.md lost the user.bazelrc 
   'user.bazelrc' \
   'bcr.bazel.build'
 
+# Local-workflows doc stays the owner for the opencode local-only state.
+dx_guards_contains "$local_workflows" "local-workflows.md lost the opencode local-only record (want .opencode plus opencode.json, issue #1070)" \
+  '.opencode' \
+  'opencode.json'
+
 # Tracked-tree guard (workspace only): none of the ignored trees or file
 # singletons may be committed. Skipped under `bazel test` sandbox here (no
 # git checkout there); enforced on a clean tree via direct execution plus

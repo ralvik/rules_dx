@@ -238,3 +238,8 @@ by `dx hooks install`; the committed typed `hooks` workspace-policy section stay
 baseline and CI never reads the personal overlay. This checkout does not consume the overlay
 beyond hook-shim merging. Exact schema stays under the
 [hooks contract](../cli/commands/hooks.md); this is not a current setup step beyond hooks.
+
+Agent-local tool state (`.opencode/` whole-dir, machine-managed) plus the
+`opencode.json` personal overlay stay untracked by design and are never
+committed, so no committed copy exists. `.gitignore` owns both ignores and
+`.bazelignore` mirrors the directory scope (file singletons have no form there).
