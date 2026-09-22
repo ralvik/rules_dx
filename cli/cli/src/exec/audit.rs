@@ -334,6 +334,28 @@ fn run_secrets(
     } else {
         None
     };
+    // Committed-config trust boundary (see `docs/cli/commands/audit-update-bazel.md#dx-audit`):
+    // the workspace file is honored without a hash pin, so a tampered
+    // config can disable rules. Surface a warning whenever the scan runs
+    // under it; env-provided configs are never inherited (see
+    // `dx_audit::secrets::hermetic_env`), so this is the only
+    // non-default config source.
+    let trust_warning: Vec<DiagnosticEvent> = match &config {
+        Some(path) => vec![DiagnosticEvent {
+            severity: Severity::Warning,
+            tool: "gitleaks".to_owned(),
+            message: format!(
+                "using committed config '{path}' without a hash pin; review it before trusting this scan"
+            ),
+            rule: None,
+            path: Some(path.to_string()),
+            range: None,
+            snapshot: Snapshot::Terminal,
+            fixable: false,
+            resolution: None,
+        }],
+        None => Vec::new(),
+    };
     let tool_path = match runner.gitleaks_tool() {
         Some(path) => path.to_string_lossy().into_owned(),
         None => {
@@ -392,9 +414,9 @@ fn run_secrets(
                 ),
                 Ok(findings) => {
                     if findings.is_empty() {
-                        (Vec::new(), None, Vec::new())
+                        (Vec::new(), None, trust_warning.clone())
                     } else {
-                        let diagnostics = findings
+                        let mut diagnostics: Vec<DiagnosticEvent> = findings
                             .iter()
                             .map(|finding| DiagnosticEvent {
                                 severity: Severity::Error,
@@ -408,6 +430,7 @@ fn run_secrets(
                                 resolution: None,
                             })
                             .collect();
+                        diagnostics.extend(trust_warning.clone());
                         (findings, None, diagnostics)
                     }
                 }
@@ -433,10 +456,10 @@ fn run_secrets(
                                 "secrets auditor exited {} with no SARIF results",
                                 code.unwrap_or(1)
                             )),
-                            Vec::new(),
+                            trust_warning.clone(),
                         )
                     } else {
-                        let diagnostics = findings
+                        let mut diagnostics: Vec<DiagnosticEvent> = findings
                             .iter()
                             .map(|finding| DiagnosticEvent {
                                 severity: Severity::Error,
@@ -450,6 +473,7 @@ fn run_secrets(
                                 resolution: None,
                             })
                             .collect();
+                        diagnostics.extend(trust_warning.clone());
                         (findings, None, diagnostics)
                     }
                 }

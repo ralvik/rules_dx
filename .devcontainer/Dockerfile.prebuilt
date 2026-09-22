@@ -40,7 +40,7 @@ RUN apt-get update \
 # Bazel fetch. `//tools/ci:pin_consistency_test` fails when either pin
 # drifts from its canonical source.
 # arm64/macOS/Windows matrix follows platform qualification (#5).
-RUN curl -sL -o /tmp/bazelisk \
+RUN curl -fsSL --proto '=https' --tlsv1.2 --retry 3 --retry-delay 2 -o /tmp/bazelisk \
       "https://github.com/bazelbuild/bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64" \
     && echo "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992  /tmp/bazelisk" | sha256sum -c - \
     && install -m755 /tmp/bazelisk /usr/local/bin/bazel \

@@ -531,6 +531,13 @@ wheel/package archives and runtime identity participate in Bazel action keys. A 
 upgrade, lock change, runtime change, or platform selection therefore invalidates affected
 actions without mutable CLI state.
 
+Fetch robustness: maintainer fetches (`quality/artifacts/update.py`) are https-only with
+retries plus backoff, and published checksums files are a cross-check only — the trust
+anchor is the checked-in digest plus `--verify-only`, never first-seen bytes. Consumer
+fetches verify both layers: `ctx.download` checks the outer asset digest and the extension
+re-hashes the extracted executable against the recorded inner digest, so a substituted
+archive member fails the fetch instead of reaching the build.
+
 ## Provenance Profile Research
 
 Read-only research recommends qualifying SPDX 2.3 JSON and SLSA Build

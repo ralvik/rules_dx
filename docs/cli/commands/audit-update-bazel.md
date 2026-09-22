@@ -52,7 +52,10 @@ per-run temp directory) reaches Gitleaks, `PATH` is never set, and
 `GITLEAKS_CONFIG`/`GITLEAKS_CONFIG_TOML` plus every other parent variable are
 never inherited, so configuration flows only through explicit `--config`, the
 committed `.gitleaks.toml`, or built-in defaults and ambient values cannot
-inject rules. Detection flags are unchanged. Platform evidence: SARIF
+inject rules. The committed file is honored without a hash pin, so a tampered
+config can disable rules: every scan under it carries a warning diagnostic,
+and the checked-in allowlist stays narrowed to docs prose with owner plus
+review notes (see `.gitleaks.toml`). Detection flags are unchanged. Platform evidence: SARIF
 pass/fail triage is host-independent and pinned by fixtures in
 `dx_audit::secrets` plus `dx_cli::exec::audit`; per-host bytes are pinned by
 checksums plus archive members in `quality/artifacts/gitleaks.*.bzl`

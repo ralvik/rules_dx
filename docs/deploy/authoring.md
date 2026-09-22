@@ -225,11 +225,22 @@ via sha256, publishing nothing. Pass an output directory after `--` to
 choose where the repo lands (default: `$BUILD_WORKSPACE_DIRECTORY`,
 else the cwd). The deploy program is a `py_binary` on the managed
 Python 3.12 toolchain only, with pinned `data` plus the Python runfiles
-library. Live `mvn deploy:deploy-file` staging with GPG signing runs
-only with `MAVEN_PUBLISH_LIVE=1`, `MAVEN_USERNAME`,
-`MAVEN_PASSWORD`, and `MAVEN_PUBLISH_APPROVED=1` after explicit owner
-approval, never by default. Deploy targets live next to the jar and pom
-they publish.
+ library. Live `mvn deploy:deploy-file` staging with GPG signing runs
+ only with `MAVEN_PUBLISH_LIVE=1`, `MAVEN_USERNAME`,
+ `MAVEN_PASSWORD`, and `MAVEN_PUBLISH_APPROVED=1` after explicit owner
+ approval, never by default. The GPG passphrase comes from
+ `MAVEN_GPG_PASSPHRASE` and never appears on the command line: it rides
+ in the 0600 `settings.xml` profile properties, and the settings file is
+ unlinked after the run. Without a passphrase the run is refused unless
+ unsigned staging is explicitly recorded with `MAVEN_ALLOW_UNSIGNED=1`
+ (owner approval still required). Deploy targets live next to the jar
+ and pom they publish.
+
+ Registry credentials everywhere (PyPI, crates.io, npm, OCI, promotion)
+ are single-string env tokens: prefer short-lived tokens rotated per
+ release, and uploaders inherit a minimal environment (PATH/HOME plus
+ the credential only), never the full parent env. OIDC-based publish
+ stays an owned gap until tooled.
 
 ## Path H: standalone `dx` install verification (accepted)
 

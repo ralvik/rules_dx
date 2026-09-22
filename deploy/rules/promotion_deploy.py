@@ -5,11 +5,12 @@ Hermetic default copies the pinned artifact into a local promotion
 directory plus a `promotion.json` record and a `would-run.txt` manifest
 (promote plus health plus rollback lines with the artifact sha256) and
 verifies bytes via sha256, publishing nothing and running no health
-checks. The live promote path runs only with explicit env plus owner
-approval and never by default. Used as an `expand_template` template
-per deploy instance (placeholders below) and as a `py_library` for
-`py_test`.
-"""
+ checks. The live promote path runs only with explicit env plus owner
+ approval and never by default. Registry credentials stay env-only
+ (never from BUILD): prefer short-lived tokens rotated per promotion;
+ OIDC-based promotion auth stays an owned gap until tooled. Used as an
+ `expand_template` template per deploy instance (placeholders below) and as a `py_library` for `py_test`.
+ """
 
 import hashlib
 import json

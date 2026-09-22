@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 
-from crates_deploy import build_vendor
+from crates_deploy import build_vendor, minimal_publish_env
 
 
 def _sha256(path):
@@ -79,6 +79,18 @@ class VendorTest(unittest.TestCase):
             with open(index, encoding="utf-8") as f:
                 body = json.load(f)
             self.assertEqual(body["version"], "0.0.1")
+
+
+class MinimalEnvTest(unittest.TestCase):
+    def test_drops_ambient_secrets_keeps_token(self):
+        os.environ["CRATES_MINIMAL_ENV_PROBE"] = "ambient-secret"
+        try:
+            env = minimal_publish_env({"CARGO_REGISTRY_TOKEN": "tok"})
+        finally:
+            del os.environ["CRATES_MINIMAL_ENV_PROBE"]
+        self.assertNotIn("CRATES_MINIMAL_ENV_PROBE", env)
+        self.assertEqual(env["CARGO_REGISTRY_TOKEN"], "tok")
+        self.assertIn("PATH", env)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Local wheelhouse builder plus gated PyPI uploader for `pypi_deploy`.
 
-Hermetic default builds a local wheelhouse directory (`simple-index/` plus
-the pinned `.whl` and optional sdist) and verifies bytes via sha256; the
-live `twine upload` path runs only with explicit env plus owner approval
-and never by default. Used as an `expand_template` template per deploy
-instance (placeholders below) and as a `py_library` for `py_test`.
-"""
+ Hermetic default builds a local wheelhouse directory (`simple-index/` plus
+ the pinned `.whl` and optional sdist) and verifies bytes via sha256; the
+ live `twine upload` path runs only with explicit env plus owner approval
+ and never by default. The live child inherits a minimal environment
+ (PATH/HOME plus the Twine credentials only), never the full parent env,
+ so ambient secrets cannot leak into the uploader. Single-string API
+ tokens are the only supported credential: prefer short-lived tokens and
+ rotate them per release; trusted-publisher (OIDC) upload stays an owned
+ gap until tooled. Used as an `expand_template` template per deploy
+ instance (placeholders below) and as a `py_library` for `py_test`.
+ """
 
 import hashlib
 import os
@@ -76,12 +81,37 @@ def build_wheelhouse(wheel_src, sdist_src, outdir, dist_name):
     return house
 
 
+def minimal_upload_env(extra):
+    """Builds the minimal child environment for a registry uploader.
+
+    Carries locale/PATH/HOME/TMP plus exactly the credential entries in
+    `extra`; every other parent variable (ambient secrets, proxies,
+    configuration overrides) is dropped. Documented once here so the
+    PyPI/crates uploaders cannot drift into `dict(os.environ)` copies.
+    """
+    keep = (
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "PATH",
+        "TMPDIR",
+        "USER",
+        "LOGNAME",
+        "SystemRoot",
+        "SystemDrive",
+        "PATHEXT",
+    )
+    env = {key: os.environ[key] for key in keep if key in os.environ}
+    env.update(extra)
+    return env
+
+
 def live_upload(wheel_src, sdist_src, repository_url, token):
     """Uploads wheel plus optional sdist via twine without interactive prompts."""
     files = [wheel_src] + ([sdist_src] if sdist_src else [])
-    env = dict(os.environ)
-    env["TWINE_USERNAME"] = "__token__"
-    env["TWINE_PASSWORD"] = token
+    env = minimal_upload_env(
+        {"TWINE_USERNAME": "__token__", "TWINE_PASSWORD": token}
+    )
     cmd = [
         "twine",
         "upload",

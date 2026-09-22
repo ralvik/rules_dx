@@ -185,6 +185,9 @@ pub fn write_spdx(src: &Path, dst: &Path, package: &str, supplier: &str) -> io::
 
 /// Writes the SLSA v1 provenance statement for `src` to `dst`.
 pub fn write_provenance(src: &Path, dst: &Path, builder: &str) -> io::Result<()> {
+    if let Err(problem) = provenance_builder_error(builder) {
+        return Err(io::Error::other(problem));
+    }
     let digest = sha256_file(src)?;
     let base = basename(src)?;
     std::fs::write(dst, render_provenance(&base, &digest, builder).as_bytes())?;
@@ -212,6 +215,28 @@ pub const SIGNING_BUNDLE_MEDIA_TYPE: &str = "application/vnd.dev.sigstore.bundle
 /// Default OIDC issuer.
 /// See: `deploy/release/signing.bzl` (`SIGNING_ISSUER`).
 pub const SIGNING_ISSUER_DEFAULT: &str = "https://token.actions.githubusercontent.com";
+/// Allowlisted SLSA builder ids (issue #924): provenance binds exactly
+/// one of these workflow identities, never an arbitrary string. The
+/// dry-run id serves the `sbom_demo` shape check only; real releases
+/// pass the release id explicitly.
+/// See: `deploy/release/sbom.bzl` (`SBOM_BUILDER_DRY_RUN`).
+pub const PROVENANCE_BUILDER_DRY_RUN: &str =
+    "https://github.com/ralvik/rules_dx/.github/workflows/publish-dry-run.yml";
+/// Owner-approved release builder id.
+/// See: `deploy/release/sbom.bzl` (`SBOM_BUILDER_RELEASE`).
+pub const PROVENANCE_BUILDER_RELEASE: &str =
+    "https://github.com/ralvik/rules_dx/.github/workflows/release.yml";
+
+/// Validates one SLSA builder id against the allowlist, returning the
+/// diagnostic for an unlisted (possibly forged) builder.
+pub fn provenance_builder_error(builder: &str) -> Result<(), String> {
+    if builder == PROVENANCE_BUILDER_DRY_RUN || builder == PROVENANCE_BUILDER_RELEASE {
+        return Ok(());
+    }
+    Err(format!(
+        "provenance: invalid builder '{builder}': want '{PROVENANCE_BUILDER_DRY_RUN}' (dry-run demo only) or '{PROVENANCE_BUILDER_RELEASE}' (owner-approved release)"
+    ))
+}
 
 fn basename_of(path: &str) -> String {
     Path::new(path)
@@ -308,7 +333,9 @@ pub fn render_signing_dry_run(identity: &str, issuer: &str, assets: &[String]) -
     out
 }
 
-/// Runs the signing gate (dry-run only; live needs cosign on PATH).
+/// Runs the signing gate: dry-run prints the would-sign plan;
+/// live runs version-pinned `cosign sign-blob --bundle` per asset plus
+/// an immediate `cosign verify-blob --bundle` per bundle.
 /// Host tools resolve at run time with no new module dependencies.
 /// See: `deploy/release/signing.bzl` (signing pins).
 pub fn signing_run(
@@ -336,7 +363,106 @@ pub fn signing_run(
                 .to_owned(),
         );
     }
-    Ok(render_signing_dry_run(identity, issuer, assets))
+    signing_live(identity, issuer, assets)
+}
+
+/// Builds the `cosign sign-blob --bundle` argv for one asset (pure,
+/// unit-tested; [`signing_live`] executes it).
+pub fn signing_sign_argv(asset: &str, bundle: &str, identity: &str, issuer: &str) -> Vec<String> {
+    vec![
+        "cosign".to_owned(),
+        "sign-blob".to_owned(),
+        "--yes".to_owned(),
+        "--bundle".to_owned(),
+        bundle.to_owned(),
+        "--certificate-identity".to_owned(),
+        identity.to_owned(),
+        "--certificate-oidc-issuer".to_owned(),
+        issuer.to_owned(),
+        asset.to_owned(),
+    ]
+}
+
+/// Builds the `cosign verify-blob --bundle` argv for one asset (pure,
+/// unit-tested; [`signing_live`] executes it right after signing so a
+/// bundle that fails verification never ships silently).
+pub fn signing_verify_argv(asset: &str, bundle: &str, identity: &str, issuer: &str) -> Vec<String> {
+    vec![
+        "cosign".to_owned(),
+        "verify-blob".to_owned(),
+        "--bundle".to_owned(),
+        bundle.to_owned(),
+        "--certificate-identity".to_owned(),
+        identity.to_owned(),
+        "--certificate-oidc-issuer".to_owned(),
+        issuer.to_owned(),
+        asset.to_owned(),
+    ]
+}
+
+/// Reports whether `cosign version` output names the pinned CLI.
+/// The pin is enforced before any live sign runs, so a drifted cosign
+/// fails closed instead of signing under an unreviewed version.
+/// See: `deploy/release/signing.bzl` (`SIGNING_COSIGN_VERSION`).
+pub fn signing_version_ok(version_output: &str) -> bool {
+    version_output.contains(SIGNING_COSIGN_VERSION)
+}
+
+/// Bundle path for one asset: `<basename>.bundle` next to the asset.
+fn signing_bundle_for(asset: &str) -> String {
+    format!("{}.bundle", basename_of(asset))
+}
+
+/// Executes the live owner-approved signing path: version-enforced
+/// `cosign sign-blob --bundle` per asset plus an immediate
+/// `cosign verify-blob --bundle` per bundle. Any failure stops before
+/// publish; nothing is printed as signed until verify passes.
+fn signing_live(identity: &str, issuer: &str, assets: &[String]) -> Result<String, String> {
+    let version_out = std::process::Command::new("cosign")
+        .arg("version")
+        .output()
+        .map_err(|error| {
+            format!("signing: cannot run 'cosign version' (is cosign on PATH?): {error}")
+        })?;
+    let version_text = String::from_utf8_lossy(&version_out.stdout).into_owned()
+        + &String::from_utf8_lossy(&version_out.stderr);
+    if !version_out.status.success() || !signing_version_ok(&version_text) {
+        return Err(format!(
+            "signing: cosign version must be {SIGNING_COSIGN_VERSION} (pinned per deploy/release/signing.bzl SIGNING_COSIGN_VERSION); got: {}",
+            version_text.trim()
+        ));
+    }
+    let mut out = String::new();
+    out.push_str(&format!(
+        "signing: live sign with cosign {SIGNING_COSIGN_VERSION} on {SIGNING_TRUST_ROOT}:\n"
+    ));
+    for asset in assets {
+        let bundle = signing_bundle_for(asset);
+        let sign_argv = signing_sign_argv(asset, &bundle, identity, issuer);
+        let sign_status = std::process::Command::new(&sign_argv[0])
+            .args(&sign_argv[1..])
+            .status()
+            .map_err(|error| format!("signing: cannot run '{}': {error}", sign_argv.join(" ")))?;
+        if !sign_status.success() {
+            return Err(format!(
+                "signing: '{}' failed for {asset}; publishing nothing",
+                sign_argv.join(" ")
+            ));
+        }
+        let verify_argv = signing_verify_argv(asset, &bundle, identity, issuer);
+        let verify_status = std::process::Command::new(&verify_argv[0])
+            .args(&verify_argv[1..])
+            .status()
+            .map_err(|error| format!("signing: cannot run '{}': {error}", verify_argv.join(" ")))?;
+        if !verify_status.success() {
+            return Err(format!(
+                "signing: '{}' failed for {asset}; bundle rejected, publishing nothing",
+                verify_argv.join(" ")
+            ));
+        }
+        out.push_str(&format!("  signed: {asset} -> {bundle} (verified)\n"));
+    }
+    Ok(out)
 }
 
 /// Renders the human-run release driver dry-run plan.
@@ -456,6 +582,14 @@ pub fn sbom_verify_files(artifact: &Path, spdx: &Path, prov: &Path) -> io::Resul
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             format!("provenance missing subject digest {digest}"),
+        ));
+    }
+    if !prov_text.contains(PROVENANCE_BUILDER_DRY_RUN)
+        && !prov_text.contains(PROVENANCE_BUILDER_RELEASE)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "provenance builder.id is not an allowlisted workflow identity (forged builders fail closed)",
         ));
     }
     Ok(format!("sbom OK: SPDX-2.3 + SLSA v1 bind {digest}\n"))
@@ -696,10 +830,11 @@ pub fn notice_verify_files(
 mod tests {
     use super::*;
 
-    /// Test-only SLSA builder identity (issue #914): `invalid.test`
-    /// (RFC 2606) can never resolve, so it cannot be copied into a real
-    /// builder ID, unlike `example.com`.
-    const TEST_BUILDER_ID: &str = "https://invalid.test/builder";
+    /// Test-only forged SLSA builder identity (issue #924): `invalid.test`
+    /// (RFC 2606) can never resolve, so it models a forged builder.id
+    /// that verification must reject; writable provenance uses the
+    /// allowlisted dry-run builder instead.
+    const FORGED_BUILDER_ID: &str = "https://invalid.test/builder";
 
     fn scratch_dir() -> tempfile::TempDir {
         tempfile::TempDir::new().expect("scratch")
@@ -769,7 +904,7 @@ mod tests {
     fn provenance_bytes_match_python_golden() {
         // Golden from `sbom_prov_gen.py` over the same digest plus builder.
         let digest = "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
-        let text = render_provenance("artifact.bin", digest, TEST_BUILDER_ID);
+        let text = render_provenance("artifact.bin", digest, PROVENANCE_BUILDER_DRY_RUN);
         assert!(text.ends_with('\n'));
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
         assert_eq!(
@@ -790,7 +925,7 @@ mod tests {
         );
         assert_eq!(
             value["predicate"]["runDetails"]["builder"]["id"],
-            serde_json::json!(TEST_BUILDER_ID)
+            serde_json::json!(PROVENANCE_BUILDER_DRY_RUN)
         );
         // Underscore key sorts first, matching `sort_keys=True`.
         let lines: Vec<&str> = text.lines().collect();
@@ -835,11 +970,11 @@ mod tests {
             render_spdx("artifact.bin", &digest, "dx", "rules_dx")
         );
         let prov_out = scratch.path().join("out.prov.json");
-        write_provenance(&src, &prov_out, TEST_BUILDER_ID).expect("write prov");
+        write_provenance(&src, &prov_out, PROVENANCE_BUILDER_DRY_RUN).expect("write prov");
         let prov_text = std::fs::read_to_string(&prov_out).expect("read prov");
         assert_eq!(
             prov_text,
-            render_provenance("artifact.bin", &digest, TEST_BUILDER_ID)
+            render_provenance("artifact.bin", &digest, PROVENANCE_BUILDER_DRY_RUN)
         );
         let bcr_out = scratch.path().join("out.source.json");
         write_bcr_source(&bcr_out, "rules_dx", "1.2.3").expect("write bcr");
@@ -929,12 +1064,79 @@ mod tests {
         let spdx = scratch.path().join("artifact.spdx.json");
         write_spdx(&artifact, &spdx, "dx", "rules_dx").expect("spdx");
         let prov = scratch.path().join("artifact.prov.json");
-        write_provenance(&artifact, &prov, TEST_BUILDER_ID).expect("prov");
+        write_provenance(&artifact, &prov, PROVENANCE_BUILDER_DRY_RUN).expect("prov");
         let ok = sbom_verify_files(&artifact, &spdx, &prov).expect("verify");
         assert!(ok.contains("sbom OK: SPDX-2.3 + SLSA v1 bind"));
         assert!(ok.contains(&digest));
         std::fs::write(&spdx, b"{\"spdxVersion\": \"SPDX-3.0\"}").expect("rewrite");
         assert!(sbom_verify_files(&artifact, &spdx, &prov).is_err());
+    }
+
+    #[test]
+    fn provenance_builder_allowlist_rejects_forgeries() {
+        assert!(provenance_builder_error(PROVENANCE_BUILDER_DRY_RUN).is_ok());
+        assert!(provenance_builder_error(PROVENANCE_BUILDER_RELEASE).is_ok());
+        assert!(provenance_builder_error(FORGED_BUILDER_ID).is_err());
+        assert!(provenance_builder_error("https://example.com/builder").is_err());
+        assert!(provenance_builder_error("").is_err());
+        // Unlisted builders never reach disk.
+        let scratch = scratch_dir();
+        let src = write_artifact(scratch.path(), "artifact.bin", b"hello world\n");
+        let dst = scratch.path().join("out.prov.json");
+        assert!(write_provenance(&src, &dst, FORGED_BUILDER_ID).is_err());
+        assert!(!dst.exists());
+    }
+
+    #[test]
+    fn sbom_verify_rejects_forged_builder() {
+        let scratch = scratch_dir();
+        let artifact = write_artifact(scratch.path(), "artifact.bin", b"hello world\n");
+        let digest = sha256_file(&artifact).expect("digest");
+        let spdx = scratch.path().join("artifact.spdx.json");
+        write_spdx(&artifact, &spdx, "dx", "rules_dx").expect("spdx");
+        // Forged builder.id with the right digest still fails closed.
+        let prov = scratch.path().join("forged.prov.json");
+        let forged = render_provenance("artifact.bin", &digest, FORGED_BUILDER_ID);
+        std::fs::write(&prov, forged.as_bytes()).expect("write forged");
+        assert!(sbom_verify_files(&artifact, &spdx, &prov).is_err());
+    }
+
+    #[test]
+    fn signing_argv_pins_bundle_and_version() {
+        let sign = signing_sign_argv("/tmp/a.bin", "a.bin.bundle", "IDENT", "ISSUER");
+        assert_eq!(
+            sign,
+            vec![
+                "cosign",
+                "sign-blob",
+                "--yes",
+                "--bundle",
+                "a.bin.bundle",
+                "--certificate-identity",
+                "IDENT",
+                "--certificate-oidc-issuer",
+                "ISSUER",
+                "/tmp/a.bin",
+            ]
+        );
+        let verify = signing_verify_argv("/tmp/a.bin", "a.bin.bundle", "IDENT", "ISSUER");
+        assert_eq!(
+            verify,
+            vec![
+                "cosign",
+                "verify-blob",
+                "--bundle",
+                "a.bin.bundle",
+                "--certificate-identity",
+                "IDENT",
+                "--certificate-oidc-issuer",
+                "ISSUER",
+                "/tmp/a.bin",
+            ]
+        );
+        assert!(signing_version_ok("cosign version v2.4.1 (go1.24)\n"));
+        assert!(!signing_version_ok("cosign version v2.4.0 (go1.24)\n"));
+        assert!(!signing_version_ok(""));
     }
 
     fn notice_fixture(dir: &Path) -> (std::path::PathBuf, Vec<std::path::PathBuf>) {

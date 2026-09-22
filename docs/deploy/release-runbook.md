@@ -92,10 +92,15 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
  2b. Packaging: `bazel build //deploy/release:release_artifacts` (see
      [Packaging](#packaging): curator plus binary plus man page plus NOTICE
      plus SBOM/provenance as one releasable unit, publishes nothing).
- 3. SBOM plus provenance: `bazel build //deploy/release:sbom_demo`
-    (SPDX 2.3 JSON plus SLSA v1 in-toto Statement v1, subject digest
-    equals artifact sha256; Syft/CycloneDX output verifies through the
-    same path when owners adopt it).
+  3. SBOM plus provenance: `bazel build //deploy/release:sbom_demo`
+     (SPDX 2.3 JSON plus SLSA v1 in-toto Statement v1, subject digest
+     equals artifact sha256; Syft/CycloneDX output verifies through the
+     same path when owners adopt it). Builder identity is allowlisted
+     (`SBOM_BUILDER_DRY_RUN` for the demo shape check,
+     `SBOM_BUILDER_RELEASE` for real releases): unlisted builders fail at
+     analysis time, `write_provenance` refuses them, and verification
+     rejects provenance whose `builder.id` is not allowlisted, so a
+     forged builder fails closed.
  4. NOTICE bundling: `bazel build //deploy/release:notice_demo`
     (aggregated NOTICE from the `dx audit license` audited inventory via
     hermetic `notice_bundle` in `deploy/release/notice.bzl`: deterministic
@@ -103,10 +108,13 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
     action with an actionable diagnostic; verified by `notice_verify_files`
     plus `dx_verify --notice` before install, signed alongside the SBOM
     bundle via `//deploy/release:signing_demo`).
- 5. Signing plus attestation: `bazel run //deploy/release:signing_demo`
-    without the dry-run env (Sigstore keyless `cosign sign-blob
-    --bundle` on the TUF trust root plus `gh attestation create`; signs the
-    SBOM pair plus the NOTICE bundle, so nothing ships unsigned).
+  5. Signing plus attestation: `bazel run //deploy/release:signing_demo`
+     without the dry-run env (Sigstore keyless `cosign sign-blob
+     --bundle` on the TUF trust root plus `gh attestation create`; signs the
+     SBOM pair plus the NOTICE bundle, so nothing ships unsigned). Live
+     signing enforces the pinned cosign version before signing and runs
+     `cosign verify-blob --bundle` after every sign; a version drift or a
+     failed verify stops before publish.
  6. Draft release: `bazel run //cli/cli:github_draft` with the real tag
     (`--draft --verify-tag`; publish by editing the draft on GitHub
     after approval). The draft ships the `dx` binary plus `man/dx.1`
