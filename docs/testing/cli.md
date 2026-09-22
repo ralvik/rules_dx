@@ -79,7 +79,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   with the qualified [command reference](../cli/commands/README.md), not an earlier partial CLI.
   Pinned by `bazel run //tools/ci:cli_contract_qualification` plus
   `dx_adopt::ALL_COMMANDS` plus `dx_cli::Command` fixtures under issue #457 plus issue #462 plus #776 plus #786.
-- Verify `doctor` and `configure` are rejected as unknown; help stays flag-only (`dx --help`, `dx <cmd> --help`) with no `help` verb.
+- Verify `doctor` and `configure` are rejected as unknown suggesting `dx status`; help is `dx --help`, `dx <cmd> --help`, plus the `dx help [command]` verb redirect.
 - Verify help and machine-readable metadata identify `lint`, `typecheck`, `format`,
   `update`, `bump`, `migrate`, `new`, `upgrade`, `generate`, `codegen`, `env`, `setup`, `init`, `fix`, and `hooks` as mutating by default
   (`Command::is_mutating_by_default` plus `Command::describe`, pinned under issue #457 plus issue #462 plus #776).
@@ -325,17 +325,18 @@ delivered work under closed #511; successful updates must not
   `bazel run //tools/ci:cli_execution_gaps_qualification` plus
   `dx_update::aggregate` fixtures under issue #590.
 - Verify strict argument parsing plus generated help for the `dx` CLI surface:
-  exact `--long` names only with no `help` verb (help is flag-only via auto
-  `--help`/`-h`), unknown/missing/bad shapes fail fast with whole-token echo
-  plus bare-flag naming plus grammar-owned suggestions, hyphen-values never
-  consumed, known flags on wrong commands fail as unsupported, `dx bazel`
-  tails forward verbatim, and `--help` renders from the same grammar that
+  exact `--long` names only with `dx help [command]` verb redirecting to the same
+  generated help as auto `--help`/`-h`, unknown/missing/bad shapes fail fast with
+  whole-token echo plus bare-flag naming plus grammar-owned suggestions, hyphen-values
+  never consumed, known flags on wrong commands fail as unsupported, `dx bazel`
+  tails forward verbatim, and `--help` plus `dx help` render from the same grammar that
   parses (top plus all 32 per-command helps pin usage plus scopes plus exits
-  plus output). Pinned by
+  plus output; top lists completion shells, status names NDJSON shape, completion
+  names `--check`). Pinned by
   `bazel run //tools/ci:cli_strict_qualification` plus
   `cli/cli/tests/fixtures/strict_parsing/` plus
   `cli/cli/tests/fixtures/help_goldens/` plus `dx_cli::strict_tests`
-  fixtures under issue #810.
+  fixtures under issue #810 plus issue #951.
 - Verify build-profiles flags plus `DX_PROFILE` forwarding: `dx build`,
   `dx run`, `dx test`, and `dx deploy` accept `--debug`/`--release`
   (mutually exclusive, exit 2; no `--dev` flag; every other command

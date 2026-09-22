@@ -80,5 +80,7 @@ tests from inactive configurable branches.
 There is no `dx doctor` or `dx configure`. Their intended
 behavior is covered by explicit commands or is outside the accepted surface
 (failure debugging uses `dx status` plus JSON `bazel_failed` errors, see
-[status/version](status-version.md#failure-explainer)). Help stays flag-only
-(`dx --help`, `dx <cmd> --help`); there is no `dx help` verb.
+[status/version](status-version.md#failure-explainer)). `dx doctor` and
+`dx configure` fail as unknown commands suggesting `dx status`. Help is
+`dx --help`, `dx <cmd> --help` (including `-h`), plus the `dx help [command]`
+verb redirect to the same generated help.

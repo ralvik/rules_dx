@@ -21,8 +21,10 @@ use super::command::Command;
 ///: one source feeds parsing, help, and completions/man
 /// pages, never hand-maintained usage strings.
 /// Strict parsing (See: `docs/cli/cli-contract.md`): exact `--long` names
-/// only (no prefix inference), no `help` verb subcommand (help is
-/// flag-only via auto `--help`/`-h`), unknown flags/values fail as
+/// only (no prefix inference), `dx help [command]` verb redirects to the
+/// same generated help as `--help`/`-h` (clap keeps
+/// `disable_help_subcommand`, the redirect lives in [`super::help`]),
+/// unknown flags/values fail as
 /// `UnknownOption`/`MissingValue`/`Bad*` through [`super::tokenizer`];
 /// `allow_negative_numbers` stays narrow (numeric `-1`-style values only),
 /// never the thin-shim `allow_hyphen_values` unconditional consumption;

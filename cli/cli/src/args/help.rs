@@ -7,6 +7,7 @@
 
 use super::command::Command;
 use super::grammar::{Cli, VALUE_OPTIONS};
+use super::{suggest, ArgsError};
 
 /// Finds the command word for `--help` routing: the first positional
 /// token that parses as [`Command`], skipping flag payloads exactly
@@ -39,6 +40,91 @@ pub(crate) fn help_command_in(args: &[String]) -> Option<Command> {
         return Command::parse(arg);
     }
     None
+}
+
+/// Detects the `dx help [command]` verb redirect (See:
+/// `docs/cli/cli-contract.md#invocation-shape`).
+///
+/// The verb is the first positional token exactly `help` (case-sensitive,
+/// like [`Command::parse`]), skipping flag payloads exactly like
+/// [`help_command_in`] and stopping at `--`. When present, returns the
+/// help or unknown-command error so `dx help`, `dx help <cmd>`, and
+/// `dx help doctor` behave like their `--help` counterparts without
+/// entering the grammar: no positional renders top help, a known command
+/// renders its per-command help (extra positionals ignored, like
+/// `--help`), `help help` renders top help, and an unknown word fails as
+/// [`ArgsError::UnknownCommand`] with grammar-owned suggestions
+/// (excluded `doctor`/`configure` redirect to `status` via
+/// [`suggest::suggest_command`]). Returns `None` when the first
+/// positional is not `help` (normal parse path).
+pub(crate) fn help_verb_error_in(args: &[String]) -> Option<ArgsError> {
+    let mut index = 0;
+    let mut help_at: Option<usize> = None;
+    while index < args.len() {
+        let arg = &args[index];
+        if arg == "--" {
+            break;
+        }
+        if arg.starts_with('-') {
+            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
+                match args.get(index + 1) {
+                    Some(next) if !next.starts_with("--") && next != "--" => index += 2,
+                    _ => index += 1,
+                }
+                continue;
+            }
+            index += 1;
+            continue;
+        }
+        if arg == "help" {
+            help_at = Some(index);
+        }
+        break;
+    }
+    let help_at = help_at?;
+    let mut target: Option<String> = None;
+    let mut scan = help_at + 1;
+    while scan < args.len() {
+        let arg = &args[scan];
+        if arg == "--" {
+            break;
+        }
+        if arg.starts_with('-') {
+            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
+                match args.get(scan + 1) {
+                    Some(next) if !next.starts_with("--") && next != "--" => scan += 2,
+                    _ => scan += 1,
+                }
+                continue;
+            }
+            scan += 1;
+            continue;
+        }
+        target = Some(arg.clone());
+        break;
+    }
+    match target {
+        None => Some(ArgsError::Help {
+            text: render_top_help(),
+        }),
+        Some(word) if word == "help" => Some(ArgsError::Help {
+            text: render_top_help(),
+        }),
+        Some(word) => match Command::parse(&word) {
+            Some(command) => Some(ArgsError::Help {
+                text: render_command_help(command),
+            }),
+            None => {
+                let suggestion = suggest::suggest_command(&word);
+                Some(ArgsError::UnknownCommand {
+                    command: word,
+                    suggestion,
+                })
+            }
+        },
+    }
 }
 
 /// Renders top-level `--help` from the [`Cli`] grammar definition (one
@@ -136,13 +222,13 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: none (verbs install|uninstall|status|run [pre-commit|pre-push]; --check/--fail-on/--report/--output json|diff and `-- --bazel-options` do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
         }
         Command::Status => {
-            "Per-command flags: none (no scopes; --output text|json only, diff has no patch; --check/--fail-on/--report and `-- --bazel-options` do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
+            "Per-command flags: none (no scopes; --output text|json only, diff has no patch; --check/--fail-on/--report/--pin/--rollback/--configured and `-- --bazel-options` do not apply; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`; JSON streams command_started, one status event per check (name, status, detail, hint), optional status_pin_mismatch error, command_finished; no dx doctor, use dx status, see docs/cli/commands/status-version.md#failure-explainer)."
         }
         Command::Watch => {
             "Per-command flags: wrapped-command flags pass through per iteration (watch only wraps build|test|run|lint|typecheck|format|check|fix; local only, refuses CI; unsupported uses fail with `option \"--flag\" is not supported by dx <command>`)."
         }
         Command::Completion => {
-            "Per-command flags: none (exactly one <shell> bash|zsh|fish|powershell; unknown shells fail with unknown-shell; --output json|diff and `-- --bazel-options` do not apply)."
+            "Per-command flags: [--check] verifies without writing (exactly one <shell> bash|zsh|fish|powershell without --check; zero shells checks all, one checks that shell with --check; unknown shells fail with unknown-shell; --output json|diff and `-- --bazel-options` do not apply)."
         }
         Command::Docs => {
             "Per-command flags: --check/--serve/--port (docs only; --check validates without rendering, --serve previews the last build locally, --port requires --serve; --output text|json only, diff has no patch)."
@@ -195,7 +281,9 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Watch => {
             "Usage: dx [global-options] watch <build|test|run|lint|typecheck|format|check|fix> [scope ...] [-- bazel-options ...]"
         }
-        Command::Completion => "Usage: dx [global-options] completion <shell>",
+        Command::Completion => {
+            "Usage: dx [global-options] completion [<shell> bash|zsh|fish|powershell] [--check]"
+        }
         Command::Docs => {
             "Usage: dx [global-options] docs [--check] [--serve [--port <n>]] [--here] [scope ...]"
         }
@@ -226,7 +314,7 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Hooks => "Scopes: verb install|uninstall|status|run (run requires pre-commit|pre-push); no Bazel scopes; `-- --bazel-options` does not apply.",
         Command::Status => "Scopes: none (status takes no scopes).",
         Command::Watch => "Scopes: wrapped command plus its scopes, re-resolved each iteration (local only, refuses CI=true; only build|test|run|lint|typecheck|format|check|fix are watchable).",
-        Command::Completion => "Scopes: exactly one shell (bash|zsh|fish|powershell); unknown shells fail with unknown-shell.",
+        Command::Completion => "Scopes: exactly one shell (bash|zsh|fish|powershell) without --check, zero (all shells) or one with --check; unknown shells fail with unknown-shell.",
         _ => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults).",
     };
     let mut out = String::new();
@@ -407,5 +495,76 @@ mod tests {
             other => panic!("want Help, got {other:?}"),
         };
         assert!(text.contains("--output"));
+    }
+
+    #[test]
+    fn help_verb_redirects_to_generated_help() {
+        // See: `docs/cli/cli-contract.md#invocation-shape`.
+        let top = match parse(&args(&["help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("help: want Help, got {other:?}"),
+        };
+        assert!(top.contains("Commands:"), "help:\n{top}");
+        assert!(top.contains("bash|zsh|fish|powershell"), "help:\n{top}");
+        for command in ["lint", "status", "completion"] {
+            let verb = match parse(&args(&["help", command])) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("help {command}: want Help, got {other:?}"),
+            };
+            let flag = match parse(&args(&[command, "--help"])) {
+                Err(ArgsError::Help { text }) => text,
+                other => panic!("{command} --help: want Help, got {other:?}"),
+            };
+            assert_eq!(verb, flag, "help {command} must match --help");
+        }
+        // Unknown words after the verb fail as unknown commands.
+        assert!(matches!(
+            parse(&args(&["help", "bogus"])),
+            Err(ArgsError::UnknownCommand { .. })
+        ));
+    }
+
+    #[test]
+    fn top_help_names_completion_shells() {
+        let text = match parse(&args(&["--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("want Help, got {other:?}"),
+        };
+        assert!(
+            text.contains("bash|zsh|fish|powershell"),
+            "top help must list completion shells:\n{text}"
+        );
+    }
+
+    #[test]
+    fn status_help_hints_rejected_flags_and_ndjson_shape() {
+        let text = match parse(&args(&["status", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("want Help, got {other:?}"),
+        };
+        for needle in [
+            "--check",
+            "status_pin_mismatch",
+            "command_started",
+            "no dx doctor",
+        ] {
+            assert!(
+                text.contains(needle),
+                "status help missing {needle:?}:\n{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn completion_help_names_check_verification() {
+        let text = match parse(&args(&["completion", "--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("want Help, got {other:?}"),
+        };
+        assert!(text.contains("--check"), "completion help:\n{text}");
+        assert!(
+            text.contains("bash|zsh|fish|powershell"),
+            "completion help:\n{text}"
+        );
     }
 }

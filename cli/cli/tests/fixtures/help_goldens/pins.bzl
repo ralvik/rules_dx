@@ -5,8 +5,9 @@ Fixture: `cli/cli/tests/fixtures/help_goldens/` via
 `bazel run //tools/ci:cli_strict_qualification`.
 Goldens: `top_help.golden` plus per-command goldens generated from the
 same `Cli` grammar that parses invocations (`dx --help` plus
-`dx <command> --help` flag-only; no `help` verb; `dx bazel --help`
-forwards verbatim so its golden rides `render_command_help`).
+`dx <command> --help` plus `dx help [command]` verb redirect;
+`dx bazel --help` forwards verbatim so its golden rides
+`render_command_help`).
 Unit fixtures: `cli/cli/src/args/strict_tests.rs` plus
 `cli/cli/src/args/help.rs` help tests.
 """
@@ -40,9 +41,9 @@ HELP_COMMAND_INVARIANTS = [
     "Per-command flags:",
 ]
 
-# Help is flag-only with no verb; bazel tail forwards verbatim.
+# Help via flags plus `dx help [command]` verb redirect; bazel tail forwards verbatim.
 HELP_FLAG_ONLY = ["--help", "-h"]
-HELP_NO_VERB = True
+HELP_VERB_REDIRECT = True
 HELP_BAZEL_VERBATIM = True
 
 # All 32 commands have generated help from the same source.

@@ -8,7 +8,9 @@
 //! (scope shapes, per-command option ownership, output-contract gates,
 //! profile flags) stays in [`super::parser`].
 //! Strict dx CLI surface (See: `docs/cli/cli-contract.md`): exact long
-//! names only, help flag-only with no `help` verb (`disable_help_subcommand`),
+//! names only, help via `--help`/`-h` plus the `dx help [command]` verb
+//! redirect (clap keeps `disable_help_subcommand`, the verb lives in
+//! [`super::help`]),
 //! `dx bazel` tails forward verbatim while every other shape parses whole;
 //! attached `=value` echoes the whole token and missing values name the
 //! bare flag, pinned by strict fixtures plus help goldens.
@@ -148,8 +150,18 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
                     ArgsError::UnknownOption { option, suggestion }
                 } else {
                     let command = recover_token(args, Some(value.clone()));
-                    let suggestion = suggest::clap_command_suggestion(error)
-                        .or_else(|| suggest::suggest_command(&command));
+                    // Excluded `doctor`/`configure` always redirect to
+                    // `status` (See:
+                    // `docs/cli/commands/status-version.md#failure-explainer`),
+                    // never a clap jaro guess like `docs`.
+                    let suggestion = if command.eq_ignore_ascii_case("doctor")
+                        || command.eq_ignore_ascii_case("configure")
+                    {
+                        Some("status".to_owned())
+                    } else {
+                        suggest::clap_command_suggestion(error)
+                            .or_else(|| suggest::suggest_command(&command))
+                    };
                     ArgsError::UnknownCommand {
                         command,
                         suggestion,
