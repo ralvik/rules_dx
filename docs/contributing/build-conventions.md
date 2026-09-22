@@ -47,13 +47,15 @@ Allowed ref: `Bash-only harness is Linux-only (issue #299 shell contract).`
 
 ## Visibility
 
-Public (`//visibility:public`) is external API only: `//config`, `//dx`,
-`//env`, `//generation`, `//quality` roots, `//<lang>/rules` wrappers, and
-`//deploy/rules` macros. Everything else is repo-internal
-(`//:__subpackages__`) or narrower (`//cli`, `//quality`, `//env`,
-`//generation`, `//docs`, `//tools` scopes; `//visibility:private` for
-`<lang>/env` test plans with no cross-package consumers). No new public
-defaults or public target visibilities outside the allowlist. Guard:
+Public (`//visibility:public`) is external API only: `//config`, `//env`,
+`//generation`, `//quality` roots, `//<lang>/rules` wrappers, plus
+`//deploy/rules`, `//deploy/offline`, and `//modules` entry points.
+Everything else is repo-internal (`//:__subpackages__`) or narrower
+(`//cli`, `//quality`, `//env`, `//generation`, `//docs`, `//tools` scopes;
+`//visibility:private` for `<lang>/env` test plans with no cross-package
+consumers plus `//dx` and `//gazelle/*` leaves). No new public defaults or
+public target visibilities outside the allowlist. Single contract:
+`tools/visibility/visibility.bzl`. Guard:
 `//tools/ci:visibility_guards` (issue #456).
 
 ## Comment Rules

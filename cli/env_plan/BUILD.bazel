@@ -4,11 +4,9 @@ load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 
 # gazelle:resolve rust env_shard //env/env_shard
 load("//rust/rules:defs.bzl", "dx_rust_crate")
+load("//tools/visibility:visibility.bzl", "VIS_CLI")
 
-package(default_visibility = [
-    "//cli:__pkg__",
-    "//cli:__subpackages__",
-])
+package(default_visibility = VIS_CLI)
 
 # Leaf-crate pattern via `dx_rust_crate`: emits
 # `dx_env_plan` + `dx_env_plan_test` + fmt/clippy tests +

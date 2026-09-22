@@ -5,12 +5,9 @@
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
+load("//tools/visibility:visibility.bzl", "VIS_CLI")
 
-package(default_visibility = [
-    "//cli:__pkg__",
-    "//cli:__subpackages__",
-    "//generation:__pkg__",
-])
+package(default_visibility = VIS_CLI)
 
 rust_library(
     name = "codegen_shard",

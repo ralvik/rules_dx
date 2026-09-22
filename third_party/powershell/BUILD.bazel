@@ -1,6 +1,6 @@
 """Provisional PowerShell Gallery lock authority (ADR 0032)."""
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 exports_files([
     "PSGallery.lock.json",

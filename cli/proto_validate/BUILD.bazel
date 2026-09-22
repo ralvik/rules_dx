@@ -2,15 +2,9 @@
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")
+load("//tools/visibility:visibility.bzl", "VIS_CLI_WIDE")
 
-package(default_visibility = [
-    "//cli:__pkg__",
-    "//cli:__subpackages__",
-    "//docs:__subpackages__",
-    "//env:__subpackages__",
-    "//generation:__subpackages__",
-    "//quality:__subpackages__",
-])
+package(default_visibility = VIS_CLI_WIDE)
 
 # Leaf-crate pattern via `dx_rust_crate`: emits
 # `dx_proto_validate` + `dx_proto_validate_test` + fmt/clippy tests +
