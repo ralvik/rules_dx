@@ -308,6 +308,7 @@ fn manifest_name(eco: Ecosystem) -> &'static str {
         Ecosystem::Java | Ecosystem::Kotlin | Ecosystem::Scala => "jvm_deps.toml",
         Ecosystem::Csharp | Ecosystem::Fsharp => "paket.dependencies",
         Ecosystem::Cc => "cc_deps.toml",
+        Ecosystem::Ruby => "Gemfile",
     }
 }
 
@@ -320,6 +321,7 @@ fn lock_name(eco: Ecosystem) -> &'static str {
         Ecosystem::Java | Ecosystem::Kotlin | Ecosystem::Scala => "maven_install.json",
         Ecosystem::Csharp | Ecosystem::Fsharp => "paket.lock",
         Ecosystem::Cc => "cc_lock.json",
+        Ecosystem::Ruby => "Gemfile.lock",
     }
 }
 
@@ -336,6 +338,7 @@ fn eco_dir(eco: Ecosystem) -> &'static str {
         Ecosystem::Csharp => "csharp",
         Ecosystem::Fsharp => "fsharp",
         Ecosystem::Cc => "cc",
+        Ecosystem::Ruby => "ruby",
     }
 }
 
@@ -545,6 +548,14 @@ fn write_workspace_locks(dir: &Path, stale_cargo: bool) {
         &dir.join("paket.lock"),
         "NUGET\n  remote: https://nuget.org/api/v2\n    FSharp.Core (10.1.201)\n",
     );
+    write_file(
+        &dir.join("Gemfile"),
+        "source \"https://rubygems.org\"\n\ngem \"rspec\", \"3.13.0\"\n",
+    );
+    write_file(
+        &dir.join("Gemfile.lock"),
+        "GEM\n  remote: https://rubygems.org/\n  specs:\n    rspec (3.13.0)\n",
+    );
 }
 
 fn locks_case(dir: &Path, stale_cargo: bool) -> (Vec<PathBuf>, i32) {
@@ -562,6 +573,8 @@ fn locks_case(dir: &Path, stale_cargo: bool) -> (Vec<PathBuf>, i32) {
         dir.join("maven_install.json"),
         dir.join("paket.dependencies"),
         dir.join("paket.lock"),
+        dir.join("Gemfile"),
+        dir.join("Gemfile.lock"),
     ]
     .into_iter()
     .collect::<Vec<_>>();
@@ -578,6 +591,8 @@ fn locks_case(dir: &Path, stale_cargo: bool) -> (Vec<PathBuf>, i32) {
         maven_lock: &owned[9],
         paket_manifest: &owned[10],
         paket_lock: &owned[11],
+        ruby_manifest: &owned[12],
+        ruby_lock: &owned[13],
     };
     let mut out = String::new();
     let mut err = String::new();
@@ -634,6 +649,8 @@ fn locks_missing_file_is_actionable() {
     let maven_lock = dir.path().join("maven_install.json");
     let paket_manifest = dir.path().join("paket.dependencies");
     let paket_lock = dir.path().join("paket.lock");
+    let ruby_manifest = dir.path().join("Gemfile");
+    let ruby_lock = dir.path().join("Gemfile.lock");
     let cargo_manifest = dir.path().join("Cargo.toml");
     let locks = WorkspaceLocks {
         cargo_manifest: &cargo_manifest,
@@ -648,6 +665,8 @@ fn locks_missing_file_is_actionable() {
         maven_lock: &maven_lock,
         paket_manifest: &paket_manifest,
         paket_lock: &paket_lock,
+        ruby_manifest: &ruby_manifest,
+        ruby_lock: &ruby_lock,
     };
     let mut out = String::new();
     let mut err = String::new();
@@ -714,4 +733,51 @@ fn typed_errors_keep_display_and_source_chain() {
         DepcheckError::NoMavenCoords.to_string(),
         "unreadable manifest: no maven coordinates"
     );
+}
+
+#[test]
+fn ruby_manifest_covers_gem_spec() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(
+        &dir.path().join("Gemfile"),
+        "source \"https://rubygems.org\"\n\ngem \"rspec\", \"3.13.0\"\ngem \"rake\"\n",
+    );
+    let deps = parse_ruby_manifest(&dir.path().join("Gemfile")).expect("parse");
+    assert_eq!(deps["rspec"].spec, "3.13.0");
+    assert_eq!(deps["rake"].spec, "*");
+}
+
+#[test]
+fn ruby_lock_parses_specs() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(
+        &dir.path().join("Gemfile.lock"),
+        "GEM\n  remote: https://rubygems.org/\n  specs:\n    diff-lcs (1.5.0)\n    rspec (3.13.0)\n",
+    );
+    let pkgs = parse_ruby_lock(&dir.path().join("Gemfile.lock")).expect("parse");
+    assert_eq!(pkgs["rspec"], "3.13.0");
+    assert_eq!(pkgs["diff-lcs"], "1.5.0");
+}
+
+#[test]
+fn ruby_consistency_ok() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(
+        &dir.path().join("Gemfile"),
+        "source \"https://rubygems.org\"\n\ngem \"rspec\", \"3.13.0\"\n",
+    );
+    write_file(
+        &dir.path().join("Gemfile.lock"),
+        "GEM\n  remote: https://rubygems.org/\n  specs:\n    rspec (3.13.0)\n",
+    );
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_consistency(
+        Ecosystem::Ruby,
+        &dir.path().join("Gemfile"),
+        &dir.path().join("Gemfile.lock"),
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 0, "{err}");
 }

@@ -1,0 +1,20 @@
+"""Adopted foreign Ruby tree: corpus ownership for arrival files."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//:__subpackages__"])
+
+# Arrival files; generator-owned BUILD files, regen must be no-op; see docs/generation/README.md.
+# Corpus: root arrival files only; see docs/contributing/build-conventions.md.
+real_source_target(
+    name = "corpus_markdown",
+    aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_srcs = ["README.md"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

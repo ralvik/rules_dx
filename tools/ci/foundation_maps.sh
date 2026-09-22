@@ -14,15 +14,15 @@
 # Required-core mappings (Rust providers/Gazelle/integration under plus native gaps
 # under -, Python/JS mappings pinned, framework adapter mappings plus composition
 # under) are pinned here.
-# Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#)
+# Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#, Ruby)
 # keep provisional upstreams with hello test runners, lock authority, and
-# classification-only quality families pinned here-; upgrades plus
+# classification-only quality families pinned here; upgrades plus
 # quality adapters (qualified under with deferred ADR 0019 routes) plus
 # the C/C++ MSVC block stay owned gaps.
-# Deferred/excluded record (Ruby plus PowerShell deferred, Swift plus Bandit
-# excluded, host-toolchain fallback never approved) is pinned here per ADR 0019;
-# retained cohorts plus exclusion evidence stay owned gaps with reconsideration
-# requiring a new scope decision.
+# Deferred/excluded record (PowerShell pending, Swift plus Bandit
+# exclusion re-evidenced, host-toolchain fallback never approved) is pinned
+# here per ADR 0032; retained cohorts plus exclusion evidence stay owned gaps
+# with reconsideration requiring a new scope decision.
 # Class-to-family taxonomy stays open under; native config binding +
 # CI scope extension stay open under.
 #
@@ -61,7 +61,7 @@ fi
 
 # language wrappers advertise QualitySourcesInfo (aspects gate on it).
 langs_missing=""
-for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
+for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc ruby; do
   if ! grep -q -F -e 'QualitySourcesInfo' "$lang/rules/defs.bzl" 2>/dev/null; then
     langs_missing="$langs_missing $lang"
   fi
@@ -85,6 +85,7 @@ grep -q -F -e 'JavaInfo' scala/rules/defs.bzl || provider_fail="$provider_fail s
 grep -q -F -e 'DotnetAssemblyCompileInfo' csharp/rules/defs.bzl || provider_fail="$provider_fail csharp:DotnetAssembly"
 grep -q -F -e 'DotnetAssemblyCompileInfo' fsharp/rules/defs.bzl || provider_fail="$provider_fail fsharp:DotnetAssembly"
 grep -q -F -e 'CcInfo' cc/rules/defs.bzl || provider_fail="$provider_fail cc:CcInfo"
+grep -q -F -e 'RubyFilesInfo' ruby/rules/defs.bzl || provider_fail="$provider_fail ruby:RubyFilesInfo"
 if [[ -z "$provider_fail" ]]; then
   ok
 else
@@ -104,6 +105,7 @@ grep -q -F -e 'rules_scala 7.3.0' scala/rules/defs.bzl || upstream_fail="$upstre
 grep -q -F -e 'rules_dotnet 0.22.1' csharp/rules/defs.bzl || upstream_fail="$upstream_fail csharp"
 grep -q -F -e 'rules_dotnet 0.22.1' fsharp/rules/defs.bzl || upstream_fail="$upstream_fail fsharp"
 grep -q -F -e 'rules_cc 0.2.22' cc/rules/defs.bzl || upstream_fail="$upstream_fail cc"
+grep -q -F -e 'rules_ruby 0.28.0' ruby/rules/defs.bzl || upstream_fail="$upstream_fail ruby"
 grep -q -F -e 'bazel_dep(name = "rules_rust", version = "0.74.0")' MODULE.bazel || upstream_fail="$upstream_fail module:rust"
 grep -q -F -e 'bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")' MODULE.bazel || upstream_fail="$upstream_fail module:py"
 grep -q -F -e 'bazel_dep(name = "aspect_rules_js", version = "3.4.1")' MODULE.bazel || upstream_fail="$upstream_fail module:js"
@@ -116,6 +118,7 @@ grep -q -F -e 'bazel_dep(name = "rules_scala", version = "7.3.0")' MODULE.bazel 
 grep -q -F -e 'bazel_dep(name = "rules_dotnet", version = "0.22.1")' MODULE.bazel || upstream_fail="$upstream_fail module:dotnet"
 grep -q -F -e 'bazel_dep(name = "rules_cc", version = "0.2.22")' MODULE.bazel || upstream_fail="$upstream_fail module:cc"
 grep -q -F -e 'bazel_dep(name = "rules_jvm_external", version = "7.1")' MODULE.bazel || upstream_fail="$upstream_fail module:jvm"
+grep -q -F -e 'bazel_dep(name = "rules_ruby", version = "0.28.0")' MODULE.bazel || upstream_fail="$upstream_fail module:ruby"
 if [[ -z "$upstream_fail" ]]; then
   ok
 else
@@ -125,7 +128,7 @@ fi
 # Gazelle recognizer fixtures stay present (parser/lang/naming plus
 # focused tests per language).
 gazelle_missing=""
-for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
+for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc ruby; do
   if [[ ! -f "gazelle/$lang/parser.go" || ! -f "gazelle/$lang/lang.go" || ! -f "gazelle/$lang/naming.go" ]]; then
     gazelle_missing="$gazelle_missing $lang:impl"
   fi
@@ -141,7 +144,7 @@ fi
 
 # environment plans stay present (plan + focused fixtures per language).
 env_missing=""
-for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
+for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc ruby; do
   if [[ ! -f "$lang/env/plan.bzl" || ! -f "$lang/env/plan_tests.bzl" ]]; then
     env_missing="$env_missing $lang"
   fi
@@ -155,7 +158,7 @@ fi
 # hello builds stay present as wrapper consumers (import/search-path
 # proof per language).
 hello_missing=""
-for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc; do
+for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc ruby; do
   if [[ ! -f "$lang/tests/fixtures/hello/BUILD.bazel" ]]; then
     hello_missing="$hello_missing $lang:BUILD"
   elif ! grep -q -F -e "$lang/rules:defs.bzl" "$lang/tests/fixtures/hello/BUILD.bazel" && ! grep -q -F -e "javascript/rules:defs.bzl" "$lang/tests/fixtures/hello/BUILD.bazel"; then
@@ -187,6 +190,8 @@ locks_missing=""
 [[ -f "third_party/dotnet/paket.dependencies" ]] || locks_missing="$locks_missing paket.dependencies"
 [[ -f "third_party/go/go.mod" ]] || locks_missing="$locks_missing go.mod"
 [[ -f "third_party/go/go.sum" ]] || locks_missing="$locks_missing go.sum"
+[[ -f "third_party/ruby/Gemfile" ]] || locks_missing="$locks_missing Gemfile"
+[[ -f "third_party/ruby/Gemfile.lock" ]] || locks_missing="$locks_missing Gemfile.lock"
 grep -q -F -e 'fail_if_repin_required' MODULE.bazel || locks_missing="$locks_missing fail-closed"
 grep -q -F -e 'gazelle_go_deps.from_file(go_mod = "//third_party/go:go.mod")' MODULE.bazel || locks_missing="$locks_missing go-from-file"
 if [[ -z "$locks_missing" ]]; then
@@ -634,6 +639,14 @@ grep -q -F -e '"-std=c++17"' cc/tests/fixtures/googletest/BUILD.bazel || runner_
 grep -q -F -e 'TEST(GreeterTest' cc/tests/fixtures/googletest/greeter_test.cc || runner_fail="$runner_fail gtest:test"
 grep -q -F -e 'static_assert(__cplusplus >= 201703L' cc/tests/fixtures/googletest/greeter_test.cc || runner_fail="$runner_fail gtest:static-assert"
 grep -q -F -e 'std::optional' cc/tests/fixtures/googletest/greeter.h || runner_fail="$runner_fail gtest:optional"
+grep -q -F -e 'ruby_test' ruby/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail ruby:kind"
+grep -q -F -e 'Hello.hello' ruby/tests/fixtures/hello/hello_test.rb || runner_fail="$runner_fail ruby:plain"
+grep -q -F -e 'RSpec via `rb_test`' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:rspec"
+grep -q -F -e 'RSPEC_VERSION = "3.13.0"' ruby/tests/fixtures/rspec/pins.bzl || runner_fail="$runner_fail rspec:pin"
+grep -q -F -e 'ruby_test' ruby/tests/fixtures/rspec/BUILD.bazel || runner_fail="$runner_fail rspec:kind"
+grep -q -F -e '@bundle//bin:rspec' ruby/tests/fixtures/rspec/BUILD.bazel || runner_fail="$runner_fail rspec:dep"
+grep -q -F -e 'RSpec.describe' ruby/tests/fixtures/rspec/greeter_spec.rb || runner_fail="$runner_fail rspec:spec"
+grep -q -F -e 'rspec_qualification' docs/generation/README.md || runner_fail="$runner_fail gen:rspec-qual"
 if [[ -z "$runner_fail" ]]; then
   ok
 else
@@ -648,6 +661,7 @@ lock304_fail=""
 grep -q -F -e 'maven_install.json' docs/generation/README.md || lock304_fail="$lock304_fail gen:maven"
 grep -q -F -e 'paket.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:paket"
 grep -q -F -e 'go.mod' docs/generation/README.md || lock304_fail="$lock304_fail gen:go"
+grep -q -F -e 'Gemfile.lock' docs/generation/README.md || lock304_fail="$lock304_fail gen:ruby"
 grep -q -F -e 'C/C++ none' docs/generation/README.md || lock304_fail="$lock304_fail gen:cc"
 grep -q -F -e '@paket.main//fsharp.core' fsharp/tests/fixtures/hello/BUILD.bazel || lock304_fail="$lock304_fail fsharp:paket"
 grep -q -F -e 'paket.main' MODULE.bazel || lock304_fail="$lock304_fail module:paket"
@@ -668,6 +682,9 @@ grep -q -F -e 'GO_CMP_VERSION = "v0.6.0"' go/tests/fixtures/godeps/pins.bzl || l
 grep -q -F -e 'hand module tags rejected' go/tests/fixtures/godeps/pins.bzl || lock304_fail="$lock304_fail godeps:rejected"
 grep -q -F -e 'godeps_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:godeps-qual"
 grep -q -F -e 'godeps_qualification' docs/generation/README.md || lock304_fail="$lock304_fail gen:godeps-qual"
+grep -q -F -e 'RSPEC_VERSION = "3.13.0"' ruby/tests/fixtures/rspec/pins.bzl || lock304_fail="$lock304_fail rspec:pin"
+grep -q -F -e 'git gems rejected' ruby/tests/fixtures/gems/pins.bzl || lock304_fail="$lock304_fail gems:rejected"
+grep -q -F -e 'gems_qualification' docs/generation/README.md || lock304_fail="$lock304_fail gen:gems-qual"
 if [[ -z "$lock304_fail" ]]; then
   ok
 else
@@ -703,7 +720,10 @@ buildtools_pin="$(grep -o -E -e '^BUILDTOOLS_VERSION = "[^"]+"' go/tests/fixture
 fsharp_gomod="$(grep -o -E -e 'nuget FSharp.Core [^ ]+' third_party/dotnet/paket.dependencies | head -1 | awk '{print $3}' || true)"
 fsharp_pin="$(grep -o -E -e '^FSHARP_CORE_VERSION = "[^"]+"' csharp/tests/fixtures/paket/pins.bzl | head -1 | cut -d'"' -f2 || true)"
 [[ -n "$fsharp_gomod" && "$fsharp_gomod" == "$fsharp_pin" ]] || currency_fail="$currency_fail fsharp:$fsharp_gomod-vs-$fsharp_pin"
-for pinfile in go/tests/fixtures/godeps/pins.bzl third_party/jvm/pins.bzl csharp/tests/fixtures/paket/pins.bzl; do
+rspec_gemfile="$(grep -o -E -e 'gem \"rspec\", \"[^\"]+\"' third_party/ruby/Gemfile | head -1 | grep -o -E -e '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+rspec_pin="$(grep -o -E -e '^RSPEC_VERSION = "[^"]+"' ruby/tests/fixtures/rspec/pins.bzl | head -1 | cut -d'"' -f2 || true)"
+[[ -n "$rspec_gemfile" && "$rspec_gemfile" == "$rspec_pin" ]] || currency_fail="$currency_fail rspec:$rspec_gemfile-vs-$rspec_pin"
+for pinfile in go/tests/fixtures/godeps/pins.bzl third_party/jvm/pins.bzl csharp/tests/fixtures/paket/pins.bzl ruby/tests/fixtures/rspec/pins.bzl ruby/tests/fixtures/gems/pins.bzl; do
   date="$(grep -o -E -e '_CURRENCY_RECHECK = "[^"]+"' "$pinfile" | head -1 | cut -d'"' -f2 || true)"
   if [[ "$date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && [[ "$date" > "2026-01-01" ]] && [[ "$date" < "2027-06-01" ]]; then
     true
@@ -765,25 +785,29 @@ else
   bad "admitted foundations unowned:$own304_fail"
 fi
 
-# ADR 0032: Ruby/Swift absence plus PowerShell delivery stay pinned (no
-# ruby/swift dirs, wrappers, Gazelle extensions, env plans, hello builds,
-# or MODULE deps; powershell/ lands provisionally under issue #972).
+# ADR 0032: Ruby plus PowerShell delivered, Swift still absent (no swift
+# dirs, wrappers, Gazelle extensions, env plans, hello builds, or MODULE deps;
+# ruby/ plus powershell/ dirs plus MODULE deps delivered).
 abs305_fail=""
-for d in ruby swift; do
+for d in swift; do
   [[ ! -d "$d" ]] || abs305_fail="$abs305_fail $d:dir"
   [[ ! -d "gazelle/$d" ]] || abs305_fail="$abs305_fail $d:gazelle"
   [[ ! -f "$d/rules/defs.bzl" ]] || abs305_fail="$abs305_fail $d:wrapper"
   [[ ! -f "$d/env/plan.bzl" ]] || abs305_fail="$abs305_fail $d:env"
   [[ ! -f "$d/tests/fixtures/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail $d:hello"
 done
-# PowerShell delivery (issue #972): dirs, wrappers, env plan, hello plus
-# Pester plus Gallery fixtures, and MODULE deps land here.
-[[ -d "powershell" ]] || abs305_fail="$abs305_fail powershell:dir"
-[[ -f "powershell/rules/defs.bzl" ]] || abs305_fail="$abs305_fail powershell:wrapper"
-[[ -f "powershell/env/plan.bzl" ]] || abs305_fail="$abs305_fail powershell:env"
-[[ -f "powershell/tests/fixtures/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail powershell:hello"
-if grep -q -F -e 'rules_ruby' MODULE.bazel; then
-  abs305_fail="$abs305_fail module:rules_ruby"
+# Ruby plus PowerShell delivery: dirs, wrappers, env plans, hello builds
+# (plus Ruby Gazelle extension plus RSpec fixtures, plus PowerShell Pester
+# plus Gallery fixtures), and MODULE deps land here.
+for d in ruby powershell; do
+  [[ -d "$d" ]] || abs305_fail="$abs305_fail $d:dir-missing"
+  [[ -f "$d/rules/defs.bzl" ]] || abs305_fail="$abs305_fail $d:wrapper-missing"
+  [[ -f "$d/env/plan.bzl" ]] || abs305_fail="$abs305_fail $d:env-missing"
+  [[ -f "$d/tests/fixtures/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail $d:hello-missing"
+done
+[[ -d "gazelle/ruby" ]] || abs305_fail="$abs305_fail ruby:gazelle-missing"
+if ! grep -q -F -e 'rules_ruby' MODULE.bazel; then
+  abs305_fail="$abs305_fail module:rules_ruby-missing"
 fi
 if ! grep -q -F -e 'rules_powershell' MODULE.bazel; then
   abs305_fail="$abs305_fail module:rules_powershell-missing"
@@ -791,34 +815,30 @@ fi
 if grep -q -i -F -e 'swift' MODULE.bazel; then
   abs305_fail="$abs305_fail module:swift"
 fi
-grep -q -F -e 'no `ruby/`' docs/generation/README.md || abs305_fail="$abs305_fail gen:absence"
-grep -q -F -e 'no `ruby/`' docs/environments/README.md || abs305_fail="$abs305_fail env:absence"
-grep -q -F -e 'no `ruby/` or `swift/`' docs/product/support-matrix.md || abs305_fail="$abs305_fail matrix:absence"
+grep -q -F -e 'no `swift/`' docs/generation/README.md || abs305_fail="$abs305_fail gen:absence"
+grep -q -F -e 'no `swift/`' docs/environments/README.md || abs305_fail="$abs305_fail env:absence"
+grep -q -F -e 'no `swift/`' docs/product/support-matrix.md || abs305_fail="$abs305_fail matrix:absence"
 if [[ -z "$abs305_fail" ]]; then
   ok
 else
   bad "deferred foundation absence drifted:$abs305_fail"
 fi
 
-# ADR 0019: deferred quality classification stays pinned (families exist,
-# no adapter claims ruby/powershell yet; parity defers with ADR 0019 + ADR 0019).
+# ADR 0032: Ruby/PowerShell quality classification stays pinned (families exist,
+# RuboCop/StandardRB plus PSScriptAnalyzer claimed; parity no longer defers
+# ruby/powershell; SwiftFormat plus Bandit stay unclaimed pending #800/#801).
 class305_fail=""
 for cls in ruby powershell; do
   grep -q -F -e "\"$cls\":" quality/adapters.bzl || class305_fail="$class305_fail $cls:family"
 done
-grep -q -F -e 'adapter claims ruby or powershell yet' quality/adapters.bzl || class305_fail="$class305_fail ruby-pw:open"
-grep -q -F -e 'beyond v1 per ADR 0019' quality/adapters.bzl || class305_fail="$class305_fail adapters:adr"
-grep -q -F -e '"ruby": ["ADR 0019"' quality/parity_tests.bzl || class305_fail="$class305_fail ruby:parity"
-grep -q -F -e '"powershell": ["ADR 0019"' quality/parity_tests.bzl || class305_fail="$class305_fail powershell:parity"
-grep -q -F -e 'foundation deferred by ADR 0019' quality/parity_tests.bzl || class305_fail="$class305_fail parity:adr"
-if grep -q -F -e '"rubocop":' quality/adapters.bzl; then
-  class305_fail="$class305_fail unexpected:rubocop"
+grep -q -F -e '"rubocop":' quality/adapters.bzl || class305_fail="$class305_fail missing:rubocop"
+grep -q -F -e '"standardrb":' quality/adapters.bzl || class305_fail="$class305_fail missing:standardrb"
+grep -q -F -e '"psscriptanalyzer":' quality/adapters.bzl || class305_fail="$class305_fail missing:psscriptanalyzer"
+if grep -q -F -e '"ruby": ["ADR 0019"' quality/parity_tests.bzl; then
+  class305_fail="$class305_fail unexpected:ruby-parity"
 fi
-if grep -q -F -e '"standardrb":' quality/adapters.bzl; then
-  class305_fail="$class305_fail unexpected:standardrb"
-fi
-if grep -q -F -e '"psscriptanalyzer":' quality/adapters.bzl; then
-  class305_fail="$class305_fail unexpected:psscriptanalyzer"
+if grep -q -F -e '"powershell": ["ADR 0019"' quality/parity_tests.bzl; then
+  class305_fail="$class305_fail unexpected:powershell-parity"
 fi
 if grep -q -F -e '"swiftformat":' quality/adapters.bzl; then
   class305_fail="$class305_fail unexpected:swiftformat"
@@ -832,9 +852,9 @@ else
   bad "deferred quality classification drifted:$class305_fail"
 fi
 
-# ADR 0019: retained cohorts plus exclusions stay pinned (Ruby closure,
-# PowerShell module+runtime, Swift/SwiftFormat plus Bandit exclusions,
-# host-toolchain fallback never approved).
+# ADR 0032: retained cohorts plus exclusions stay pinned (Ruby closure,
+# PowerShell module+runtime, Swift/SwiftFormat exclusion plus Bandit
+# re-selection, host-toolchain fallback never approved).
 cohort305_fail=""
 grep -q -F -e 'Release-assembled Ruby closure' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:ruby-route"
 grep -q -F -e 'RuboCop, StandardRB' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:rubocop"
@@ -848,21 +868,22 @@ grep -q -F -e 'Bandit excluded from v1 by' docs/tools/tool-baseline.md || cohort
 grep -q -F -e 'Bandit excluded from v1 by' docs/product/support-matrix.md || cohort305_fail="$cohort305_fail matrix:bandit"
 grep -q -F -e 'host-toolchain fallback never approved' docs/product/support-matrix.md || cohort305_fail="$cohort305_fail matrix:host-fallback"
 grep -q -F -e 'retained RuboCop/StandardRB plus' docs/tools/README.md || cohort305_fail="$cohort305_fail tools:retained"
-grep -q -F -e 'Swift/SwiftFormat plus Bandit stay excluded' docs/tools/README.md || cohort305_fail="$cohort305_fail tools:excluded"
+grep -q -F -e 'Swift/SwiftFormat stay excluded' docs/tools/README.md || cohort305_fail="$cohort305_fail tools:excluded"
 if [[ -z "$cohort305_fail" ]]; then
   ok
 else
   bad "deferred retained cohorts drifted:$cohort305_fail"
 fi
 
-# ADR 0019: deferred/excluded record stays owned (docs cite ADR 0019; remaining
-# gaps owned with no Supported claim; reconsideration needs a new decision).
+# ADR 0032: Ruby plus PowerShell delivered plus Swift record stays owned (docs cite
+# ADR 0032; remaining gaps owned with no Supported claim; reconsideration
+# needs a new decision).
 own305_fail=""
 grep -q -F -e 'decided by' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:tracking"
-grep -q -F -e 'decided by [ADR 0019]' docs/generation/README.md || own305_fail="$own305_fail gen:tracking"
-grep -q -F -e 'decided by [ADR 0019]' docs/environments/README.md || own305_fail="$own305_fail env:tracking"
-grep -q -F -e 'decided by [ADR 0019]' docs/tools/README.md || own305_fail="$own305_fail tools:tracking"
-grep -q -F -e 'decided by ADR 0019 with no open tracker' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:swift-tracking"
+grep -q -F -e 'decided by [ADR 0032]' docs/generation/README.md || own305_fail="$own305_fail gen:tracking"
+grep -q -F -e 'decided by [ADR 0032]' docs/environments/README.md || own305_fail="$own305_fail env:tracking"
+grep -q -F -e 'decided by [ADR 0032]' docs/tools/README.md || own305_fail="$own305_fail tools:tracking"
+grep -q -F -e 'exclusion re-evidenced by ADR 0032' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:swift-tracking"
 grep -q -F -e 'Bundle contents, lock inputs' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-gaps"
 grep -q -F -e 'console-parse versus library-API' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-gaps"
 grep -q -F -e 'no adapter claims `ruby` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-open"

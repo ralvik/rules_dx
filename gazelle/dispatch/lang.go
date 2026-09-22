@@ -22,6 +22,7 @@ import (
 	"github.com/ralvik/rules_dx/gazelle/kotlin"
 	"github.com/ralvik/rules_dx/gazelle/mdx"
 	"github.com/ralvik/rules_dx/gazelle/python"
+	"github.com/ralvik/rules_dx/gazelle/ruby"
 	"github.com/ralvik/rules_dx/gazelle/rust"
 	"github.com/ralvik/rules_dx/gazelle/scala"
 	"github.com/ralvik/rules_dx/gazelle/svelte"
@@ -47,6 +48,7 @@ func composedLanguages() []language.Language {
 		kotlin.NewLanguage(),
 		mdx.NewLanguage(),
 		python.NewLanguage(),
+		ruby.NewLanguage(),
 		rust.NewLanguage(),
 		scala.NewLanguage(),
 		svelte.NewLanguage(),
@@ -147,6 +149,7 @@ func (l *dispatchLang) collectUsedIgnores() []collectedIgnore {
 		emit("kotlin", kotlin.CollectUsedIgnores(cfg))
 		emit("mdx", mdx.CollectUsedIgnores(cfg))
 		emit("python", python.CollectUsedIgnores(cfg))
+		emit("ruby", ruby.CollectUsedIgnores(cfg))
 		emit("rust", rust.CollectUsedIgnores(cfg))
 		emit("scala", scala.CollectUsedIgnores(cfg))
 		emit("svelte", svelte.CollectUsedIgnores(cfg))

@@ -36,12 +36,12 @@ provisional) with deferred implementation owned by ADR 0019.
 Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
 claimed adapter yet; foundation-side classification stays owned under issues #476-#484 and
 per-tool qualification is qualified under issue #307 with deferred routes owned by ADR 0019.
-Ruby tool cohort stays v1 scope; its foundation is admitted
+Ruby and PowerShell tool cohorts stay v1 scope; their foundations are admitted
 to v1 by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md)
 (superseding the [ADR 0019](../decisions/0019-first-release-additional-foundations.md)
-deferral), with foundation delivery pending in the parallel Ruby track
-(issue #971). PowerShell foundation is delivered provisionally under issue
-#972 over the portable `pwsh` runtime with the Gallery lock;
+deferral), with Ruby foundation delivered in the Ruby track and PowerShell
+foundation delivered provisionally under issue #972 over the portable `pwsh`
+runtime with the Gallery lock;
 PSScriptAnalyzer adapter wiring (console-parse vs library-API binding)
 stays owned under #800;
 Swift is excluded from v1 by the same record, re-evidenced by ADR 0032.
@@ -49,7 +49,8 @@ Deferred/excluded tool record is decided by [ADR 0032](../decisions/0032-ruby-po
 retained RuboCop/StandardRB plus
 PSScriptAnalyzer cohorts keep their frozen routes in
 [Tool Acquisition](tool-acquisition.md#first-release-tool-routing) with `ruby`/`powershell`
-classes classified but no foundation adapter claim yet (`quality/adapters.bzl` plus `quality/parity_tests.bzl`
+classes classified with `ruby` foundation delivered plus no foundation adapter
+claim yet (`quality/adapters.bzl` plus `quality/parity_tests.bzl`
 with ADR 0019, foundation admission by ADR 0032); Swift/SwiftFormat stay excluded with host-toolchain
 fallback never approved plus Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801.
 

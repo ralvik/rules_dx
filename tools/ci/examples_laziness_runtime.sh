@@ -75,6 +75,7 @@ check_no_installers adopt-kotlin
 check_no_installers adopt-scala
 check_no_installers adopt-csharp
 check_no_installers adopt-fsharp
+check_no_installers adopt-ruby
 check_no_installers adopt-polyglot
 
 dx_test_summary "examples laziness runtime"

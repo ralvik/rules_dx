@@ -126,6 +126,7 @@ pub enum Ecosystem {
     Csharp,
     Fsharp,
     Cc,
+    Ruby,
 }
 
 impl Ecosystem {
@@ -142,6 +143,7 @@ impl Ecosystem {
             "csharp" => Some(Self::Csharp),
             "fsharp" => Some(Self::Fsharp),
             "cc" => Some(Self::Cc),
+            "ruby" => Some(Self::Ruby),
             _ => None,
         }
     }
@@ -159,6 +161,7 @@ impl Ecosystem {
             Self::Csharp => "csharp",
             Self::Fsharp => "fsharp",
             Self::Cc => "cc",
+            Self::Ruby => "ruby",
         }
     }
 }
@@ -189,6 +192,10 @@ pub fn normalize_dotnet(name: &str) -> String {
 
 pub fn normalize_cc(name: &str) -> String {
     name.to_lowercase().replace('-', "_")
+}
+
+pub fn normalize_ruby(name: &str) -> String {
+    name.to_lowercase()
 }
 
 fn split_version_parts(value: &str, count: usize) -> Vec<String> {
@@ -1120,6 +1127,68 @@ pub fn parse_cc_lock_sha(path: &Path) -> BTreeMap<String, String> {
     out
 }
 
+/// Parse `Gemfile` fixture manifest (Bundler authority).
+pub fn parse_ruby_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
+    let gem_re = regex::Regex::new(r#"(?m)^\s*gem\s+["']([^"']+)["']\s*(?:,\s*["']([^"']*)["'])?"#)
+        .map_err(DepcheckError::ManifestRegex)?;
+    let optional_re =
+        regex::Regex::new(r"(?i)#\s*optional\b").map_err(DepcheckError::ManifestRegex)?;
+    let platform_re =
+        regex::Regex::new(r"(?i)#\s*platform\b").map_err(DepcheckError::ManifestRegex)?;
+    let mut deps = BTreeMap::new();
+    for rawline in text.lines() {
+        let line = rawline.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let low = line.to_lowercase();
+        if low.starts_with("source ") || low.starts_with("ruby ") {
+            continue;
+        }
+        let Some(caps) = gem_re.captures(line) else {
+            continue;
+        };
+        let name = caps[1].to_owned();
+        let ver = caps
+            .get(2)
+            .map(|m| m.as_str().to_owned())
+            .unwrap_or_default();
+        let spec = if ver.trim().is_empty() {
+            "*".to_owned()
+        } else {
+            ver.trim().to_owned()
+        };
+        deps.insert(
+            normalize_ruby(&name),
+            DepInfo {
+                spec,
+                category: "prod".to_owned(),
+                optional: optional_re.is_match(line),
+                platform: platform_re.is_match(line),
+                raw: name,
+                peer: false,
+                sha256: String::new(),
+            },
+        );
+    }
+    Ok(deps)
+}
+
+/// Parse `Gemfile.lock` (native; top-level specs only, never nested constraints).
+pub fn parse_ruby_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
+    let re = regex::Regex::new(r"^    ([A-Za-z0-9_.\-]+) \(([^)]+)\)")
+        .map_err(DepcheckError::LockRegex)?;
+    let mut pkgs = BTreeMap::new();
+    for line in text.lines() {
+        if let Some(caps) = re.captures(line) {
+            pkgs.insert(normalize_ruby(&caps[1]), caps[2].trim().to_owned());
+        }
+    }
+    Ok(pkgs)
+}
+
 /// Parse `depcheck_exceptions.toml` (raw key uses lower plus dash-to-underscore).
 pub fn parse_exceptions(path: Option<&Path>) -> Result<BTreeMap<String, Exception>, DepcheckError> {
     let Some(path) = path else {
@@ -1169,6 +1238,7 @@ fn normalize_exception_key(eco: Ecosystem, raw: &str) -> String {
         Ecosystem::Csharp | Ecosystem::Fsharp => normalize_dotnet(raw),
         Ecosystem::Cc => normalize_cc(raw),
         Ecosystem::Js | Ecosystem::Ts => normalize_js(raw),
+        Ecosystem::Ruby => normalize_ruby(raw),
     }
 }
 
@@ -1233,13 +1303,16 @@ pub fn is_test_file(eco: Ecosystem, path: &Path) -> bool {
                 || s.contains("/__tests__/")
                 || s.contains("/tests/")
         }
+        Ecosystem::Ruby => {
+            name.ends_with("_spec.rb") || name.ends_with("_test.rb") || s.contains("/tests/")
+        }
     }
 }
 
 fn source_suffixes() -> BTreeSet<&'static str> {
     [
         ".rs", ".py", ".js", ".ts", ".mjs", ".cjs", ".jsx", ".tsx", ".go", ".java", ".kt", ".kts",
-        ".scala", ".cs", ".fs", ".fsi", ".fsx", ".cc", ".cpp", ".cxx", ".c", ".h", ".hpp",
+        ".scala", ".cs", ".fs", ".fsi", ".fsx", ".cc", ".cpp", ".cxx", ".c", ".h", ".hpp", ".rb",
     ]
     .into_iter()
     .collect()
@@ -1261,6 +1334,8 @@ fn skip_names() -> BTreeSet<&'static str> {
         "paket.lock",
         "cc_deps.toml",
         "cc_lock.json",
+        "Gemfile",
+        "Gemfile.lock",
         "depcheck_exceptions.toml",
     ]
     .into_iter()
@@ -1370,6 +1445,13 @@ pub fn find_usages(
                 format!(r#"require\(\s*['"]{}['"]\s*\)"#, regex_escape(dep)),
                 format!(r#"import\(\s*['"]{}['"]\s*\)"#, regex_escape(dep)),
             ],
+            Ecosystem::Ruby => vec![
+                format!(r#"(?m)^\s*require\s+['"]{}['"]"#, regex_escape(dep)),
+                format!(
+                    r#"(?m)^\s*require\s+['"]{}(?:/[^'"]*)?['"]"#,
+                    regex_escape(dep)
+                ),
+            ],
         };
         let mut compiled = Vec::new();
         for pat in patterns {
@@ -1411,6 +1493,7 @@ fn load_manifest(
         Ecosystem::Java | Ecosystem::Kotlin | Ecosystem::Scala => parse_jvm_manifest(manifest),
         Ecosystem::Csharp | Ecosystem::Fsharp => parse_dotnet_manifest(manifest),
         Ecosystem::Cc => parse_cc_manifest(manifest),
+        Ecosystem::Ruby => parse_ruby_manifest(manifest),
     }
 }
 
@@ -1423,6 +1506,7 @@ fn load_lock(eco: Ecosystem, lock: &Path) -> Result<BTreeMap<String, String>, De
         Ecosystem::Java | Ecosystem::Kotlin | Ecosystem::Scala => parse_jvm_lock(lock),
         Ecosystem::Csharp | Ecosystem::Fsharp => parse_dotnet_lock(lock),
         Ecosystem::Cc => parse_cc_lock(lock),
+        Ecosystem::Ruby => parse_ruby_lock(lock),
     }
 }
 
@@ -1594,6 +1678,8 @@ pub struct WorkspaceLocks<'a> {
     pub maven_lock: &'a Path,
     pub paket_manifest: &'a Path,
     pub paket_lock: &'a Path,
+    pub ruby_manifest: &'a Path,
+    pub ruby_lock: &'a Path,
 }
 
 fn check_pair(
@@ -1727,6 +1813,13 @@ pub fn cmd_locks(
             Ecosystem::Csharp,
             locks.paket_manifest,
             locks.paket_lock,
+            stdout,
+            stderr,
+        ),
+        check_pair(
+            Ecosystem::Ruby,
+            locks.ruby_manifest,
+            locks.ruby_lock,
             stdout,
             stderr,
         ),

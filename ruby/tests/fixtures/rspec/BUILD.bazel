@@ -1,0 +1,48 @@
+"""Seed Ruby RSpec fixture: ruby_test over pinned rspec 3.13.0."""
+
+load("//ruby/rules:defs.bzl", "ruby_library", "ruby_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+ruby_library(
+    name = "greeter_lib",
+    srcs = ["greeter.rb"],
+)
+
+ruby_library(
+    name = "spec_helper",
+    srcs = ["spec_helper.rb"],
+    deps = [":greeter_lib"],
+)
+
+# RSpec 3.13.0 mapping: plain ruby_test with `main = "@bundle//bin:rspec"`
+# plus `args` naming the spec file and `deps` on the spec helper plus
+# `@bundle` (no new rule kind; the runner itself needs no new rule, only
+# the lock story in `ruby/tests/fixtures/gems/pins.bzl`). Unpinned runner:
+# rejected per `pins.bzl`.
+ruby_test(
+    name = "greeter_spec",
+    srcs = ["greeter_spec.rb"],
+    args = ["ruby/tests/fixtures/rspec/greeter_spec.rb"],
+    main = "@bundle//bin:rspec",
+    deps = [
+        ":spec_helper",
+        "@bundle",
+    ],
+)
+
+exports_files(["pins.bzl"])
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)

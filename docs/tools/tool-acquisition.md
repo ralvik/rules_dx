@@ -416,8 +416,8 @@ ready-to-run Ruby runtime/package closure with manifest, SBOM, licenses,
 and constituent provenance; consumer builds only download, verify, extract,
 and execute it. The Ruby application foundation is admitted to v1 by
 [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding
-the ADR 0019 deferral), with foundation delivery pending in the Ruby
-track. Bundle contents, lock inputs, and
+the ADR 0019 deferral), with foundation delivered in the Ruby track.
+Bundle contents, lock inputs, and
 adapter qualification remain tracked under closed #800 (successor to closed #420; live successor to
 closed #307 for the `ruby` class) and no adapter claims `ruby` yet
 (tracked under closed #800, successor to closed #420). This

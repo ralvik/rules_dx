@@ -1,0 +1,15 @@
+load("@rules_dx//ruby/rules:defs.bzl", "ruby_library")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+ruby_library(
+    name = "demo",
+    srcs = [
+        "demo.rb",
+        "helper.rb",
+    ],
+)

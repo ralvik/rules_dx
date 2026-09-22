@@ -1,0 +1,53 @@
+"""Seed Ruby binary and library; consumer of ruby_* wrappers."""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//ruby/rules:defs.bzl", "ruby_binary", "ruby_library", "ruby_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+ruby_library(
+    name = "hello_lib",
+    srcs = ["hello.rb"],
+)
+
+ruby_binary(
+    name = "hello",
+    srcs = ["main.rb"],
+    main = "main.rb",
+    deps = [":hello_lib"],
+)
+
+ruby_test(
+    name = "hello_test",
+    srcs = ["hello_test.rb"],
+    deps = [":hello_lib"],
+)
+
+# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
+# Hello smoke test; no-coverage process-spawning, see build-conventions.
+sh_test(
+    name = "hello_output_test",
+    size = "small",
+    timeout = "short",
+    srcs = ["hello_output_test.sh"],
+    args = ["$(rootpath :hello)"],
+    data = [
+        ":hello",
+        "//tools/sh:bootstrap",
+        "//tools/sh:lib",
+    ],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
