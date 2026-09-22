@@ -20,6 +20,10 @@
 #   Tool repos: `quality/artifacts/repos.bzl` owns the `dx_tools`
 #     `use_repo` inventory; `//quality/artifacts:metadata` proves it
 #     against metadata and this test proves MODULE.bazel against it.
+#   JVM tool repos: `quality/tools/jvm/repos.bzl` owns the `jvm_tools`
+#     `use_repo` inventory plus artifact metadata (issue #1038); this test
+#     proves MODULE.bazel against it and proves the versions against
+#     `modules/java-scala-kotlin.bzl` `JVM_TOOL_VERSIONS`.
 #   Go toolchain: `modules/toolchains.bzl` `GO_SDK_VERSION` owns the
 #     toolchain floor (MODULE.bazel `go_sdk.download` mirrors it);
 #     `GO_LANGUAGE_FLOOR` owns the language floor
@@ -77,6 +81,7 @@ preset_fragment="${19:?usage: pin_consistency.sh <bazelversion> <module> <preset
 root_bazelrc="${20:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
 version_rs="${21:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
 ghcr_yml="${22:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+jvm_repos_bzl="${23:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml> <jvm_repos_bzl>}"
 
 # --- Bazel canonical ---
 bazel_pin="$(tr -d '[:space:]' <"$bazelversion")"
@@ -409,6 +414,56 @@ if [[ -n "$want_repos" && "$want_repos" == "$have_repos" ]]; then
 else
   bad "MODULE.bazel dx_tools use_repo drifts from quality/artifacts/repos.bzl DX_TOOL_REPOS"
 fi
+
+# --- JVM tool repos (issue #1038): MODULE jvm_tools use_repo must equal repos.bzl ---
+want_jvm_repos="$(grep -o -E -e '"jvm_[a-z0-9_]+"' "$jvm_repos_bzl" | tr -d '"' | LC_ALL=C sort -u || true)"
+have_jvm_repos="$(sed -n '/^use_repo($/,/^)/p' "$module" | grep -o -E -e '"jvm_[a-z0-9_]+"' | tr -d '"' | LC_ALL=C sort -u || true)"
+if [[ -n "$want_jvm_repos" && "$want_jvm_repos" == "$have_jvm_repos" ]]; then
+  ok
+else
+  bad "MODULE.bazel jvm_tools use_repo drifts from quality/tools/jvm/repos.bzl JVM_TOOL_REPOS"
+fi
+
+# JVM acquisition stays unified under the lazy extension (issue #1038):
+# no inline http_file/http_archive for jvm_ repos in MODULE.bazel.
+if grep -E -e '^(http_file|http_archive)\(' "$module" | grep -q .; then
+  bad "MODULE.bazel carries inline http_file/http_archive (want JVM tools via jvm_tools extension only, issue #1038)"
+else
+  ok
+fi
+if grep -q -F -e 'use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl"' "$module"; then
+  bad "MODULE.bazel carries use_repo_rule http (want JVM tools via jvm_tools extension only, issue #1038)"
+else
+  ok
+fi
+if grep -q -F -e 'jvm_tools = use_extension("//quality/tools/jvm:extension.bzl", "jvm_tools")' "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost the jvm_tools extension (want use_extension //quality/tools/jvm:extension.bzl, issue #1038)"
+fi
+
+# JVM versions: every modules/java-scala-kotlin.bzl JVM_TOOL_VERSIONS entry
+# must appear in quality/tools/jvm/repos.bzl artifact URLs.
+for ver in 1.35.0 14.1.0 7.27.0 4.10.4 0.63 1.8.0; do
+  if grep -q -F -e "$ver" "$jvm_repos_bzl"; then
+    ok
+  else
+    bad "quality/tools/jvm/repos.bzl lost JVM version $ver (want mirror of modules/java-scala-kotlin.bzl JVM_TOOL_VERSIONS, issue #1038)"
+  fi
+done
+# JVM digests stay single-sourced in repos.bzl, never duplicated in MODULE.
+for sha in bfb7f9ead6cd328389bc2da53860443bc0e805dfd08cc889bfdf43b26cb2a6e8 51e2bc7fed1bb56808aa39045f655a316194997acd24bac5195253dcf342b380 4ae396ffaf2b0d3ef0b73a10b2925e77066f73d57a4ce9078c60e7302bcddec9 72bc0d4edd686e462c0f71f42a049b27bf4da6708797ff7b2b56dd202714b4e5 a015521ddb1c7a80c41edb56b91b4a231439592ffd2e85ac866ff8134c37c112 369ad2b789f95a011f807e1fcb690ccef80bd7cd014fd139e73ae82dcc0baeab; do
+  if grep -q -F -e "$sha" "$jvm_repos_bzl"; then
+    ok
+  else
+    bad "quality/tools/jvm/repos.bzl lost JVM digest $sha (want single-sourced digests, issue #1038)"
+  fi
+  if grep -q -F -e "$sha" "$module"; then
+    bad "MODULE.bazel duplicates JVM digest $sha (want digests single-sourced in quality/tools/jvm/repos.bzl, issue #1038)"
+  else
+    ok
+  fi
+done
 
 # --- Shell-env policy: third-party pin stays False with zero opt-ins ---
 if grep -q -F -e 'build --@rules_rust//cargo/settings:use_default_shell_env=False' "$root_bazelrc"; then

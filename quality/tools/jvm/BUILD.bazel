@@ -9,6 +9,11 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
+exports_files([
+    "extension.bzl",
+    "repos.bzl",
+])
+
 java_import(
     name = "google_java_format_import",
     jars = ["@jvm_google_java_format//file"],
@@ -75,6 +80,10 @@ java_binary(
 
 real_source_target(
     name = "corpus_starlark",
-    starlark_srcs = ["BUILD.bazel"],
+    starlark_srcs = [
+        "BUILD.bazel",
+        "extension.bzl",
+        "repos.bzl",
+    ],
     tags = ["corpus"],
 )

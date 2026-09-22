@@ -165,7 +165,8 @@ fi
 
 # Tool integrations keep the delivered JVM notes under #796.
 if grep -q -F -e '**JVM cohort (#796' "$integrations" &&
-  grep -q -F -e 'digests pinned in `MODULE.bazel`' "$integrations" &&
+  grep -q -F -e 'digests pinned in' "$integrations" &&
+  grep -q -F -e '`quality/tools/jvm/repos.bzl`' "$integrations" &&
   grep -q -F -e 'adapters delivered under #796' "$integrations" &&
   grep -q -F -e 'Error Prone has no' "$integrations"; then
   ok

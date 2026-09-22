@@ -143,6 +143,7 @@ def add_a():
             "$(rootpath //:.bazelrc)",
             "$(rootpath //cli/adopt:src/version.rs)",
             "$(rootpath //.github:workflows/ghcr.yml)",
+            "$(rootpath //quality/tools/jvm:repos.bzl)",
         ],
         data = [
             "//:.bazelversion",
@@ -164,6 +165,7 @@ def add_a():
             "//modules:toolchains.bzl",
             "//quality/artifacts:repos.bzl",
             "//quality/tools/javascript:package.json",
+            "//quality/tools/jvm:repos.bzl",
             "//third_party/go:go.mod",
             "//tools/bazelrc:preset.bazelrc",
             "//tools/bazelrc:src/lib.rs",

@@ -108,7 +108,7 @@ REJECTED_ALTERNATIVES = [
 # no Supported claim.
 OWNED_DEFERRED = "deferred adapters delivered under 796 plus 797 plus 798 plus 799 plus 800 with remaining owned under ADR 0019 plus 307"
 OWNED_DIGESTS = "digests plus rule-sets stay owned by their cohort qualifications"
-OWNED_DIGEST_POLICY = "digest policy with JVM digests pinned in MODULE.bazel plus standalone per-host digests in quality/artifacts plus rule-sets qualified under 485 through 489"
+OWNED_DIGEST_POLICY = "digest policy with JVM digests pinned in quality/tools/jvm/repos.bzl plus standalone per-host digests in quality/artifacts plus rule-sets qualified under 485 through 489"
 OWNED_PLATFORM = "platform evidence with per-host artifacts plus coverage cells plus CI matrix plus unsupported_platform refusal"
 OWNED_CONSUMER = "consumer evidence with adopt workspaces plus reusable-consumer workflow"
 OWNED_RELEASE = "release evidence with promotion-checklist plus SBOM plus signing plus supported_evidence_gate linkage"
