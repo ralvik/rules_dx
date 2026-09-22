@@ -218,8 +218,8 @@ impl Command {
     /// (never buffer-then-dump). Text-only commands reject `--output=json`
     /// pre-exec with `UnsupportedOption` instead of silently ignoring it:
     /// `bazel`/`deploy` own the terminal for passthrough applications,
-    /// and adoption helpers (except `status` plus `upgrade`) print
-    /// local-helper prose or thin query lines.
+    /// and remaining adoption helpers print local-helper prose or shell
+    /// scripts.
     /// `update` supports JSON: dry-run planning emits
     /// `command_started`/`command_finished`, while live execution adds
     /// per-set `notice`/`error` events with the same frame.
@@ -239,7 +239,11 @@ impl Command {
     /// `command_started`, one `operation` per target (`execute` with
     /// single-label scope), and `command_finished`; `docs` supports JSON
     /// with `command_started`, one `operation` (`extract`/`aggregate` in
-    /// check mode, plus `render` in build mode), and `command_finished`
+    /// check mode, plus `render` in build mode), and `command_finished`;
+    /// `version` plus `owners`/`deps`/`why` support JSON by reusing the
+    /// `status` envelope (`command_started`, one `status` event per
+    /// version or label, optional `error`, `command_finished` with only
+    /// `exit_code`)
     /// (see `docs/cli/output-protocol.md`).
     pub fn supports_json(self) -> bool {
         matches!(
@@ -264,6 +268,10 @@ impl Command {
                 | Command::Env
                 | Command::Setup
                 | Command::Status
+                | Command::Version
+                | Command::Owners
+                | Command::Deps
+                | Command::Why
                 | Command::Docs
         )
     }

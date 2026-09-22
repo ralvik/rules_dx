@@ -86,6 +86,15 @@ version, a missing or unreadable pin, or a rollback with nothing to restore
 `--check` and bare `version` propagate the read error instead of forging
 `0.0.0`, and rollback refuses without writing.
 
+`dx version [--check|--pin <ver>|--rollback] [--output text|json]`
+reuses the status envelope in JSON mode (see the
+[output protocol](../output-protocol.md#status)): `command_started`, then one
+`status` event per version (`binary`, `module`, `pin`; `pin` only for
+`--check`/`--pin`/`--rollback`), then an optional `status_pin_mismatch`
+`error` on drift or unreadable pin, then `command_finished` with only
+`exit_code`. Dry-run JSON emits only `command_started` (`dry_run=true`) plus
+`command_finished`. `--output=diff` is rejected pre-exec (exit 2).
+
 ## Startup skew gate
 
 Every workspace command checks the `.dx/version` pin at startup, before

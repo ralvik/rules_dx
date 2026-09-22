@@ -8,15 +8,22 @@
 use std::io::Write;
 
 use crate::args::{Command, Invocation};
-use crate::exec::common::check_stdout_write;
+use crate::exec::common::{check_stdout_write, emit_event};
 use crate::resolve::QueryRunner;
+use dx_output::{
+    command_finished, command_started, error_event, status_event, FinishedCounts, OutputMode,
+    StatusEvent,
+};
+use dx_process::operational_code;
 
 use super::{operational, pre_exec, summaries_suppressed};
 
 /// Runs one inspect command (`owners`/`deps`/`why`) via `bazel query`
 /// forwarding. `why` resolves the file owner first, then explains one
 /// path from the resolved owner to the target. `--dry-run` plans without
-/// launching Bazel.
+/// launching Bazel. JSON reuses the status envelope (`command_started`,
+/// one `status` event per label, optional `error`, `command_finished`
+/// with only `exit_code`); dry-run JSON is lifecycle-only.
 pub(crate) fn execute_inspect(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -28,6 +35,7 @@ pub(crate) fn execute_inspect(
         return execute_why(invocation, workspace, query_runner, out, err);
     }
     let kind = invocation.command.name();
+    let is_json = invocation.output == OutputMode::Json;
     // Dry-run plans each scope without launching: validate the plan for
     // usage errors, then print the would-run summary.
     if invocation.dry_run {
@@ -35,6 +43,17 @@ pub(crate) fn execute_inspect(
             if let Err(error) = dx_adopt::plan_inspect(kind, scope, invocation.configured) {
                 return pre_exec(err, &error.to_string());
             }
+        }
+        if is_json {
+            if let Ok(event) = command_started(kind, true, "default") {
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
+            }
+            if let Err(exit) = emit_event(out, &command_finished(0, &FinishedCounts::default())) {
+                return exit;
+            }
+            return 0;
         }
         if !summaries_suppressed(invocation) {
             for scope in &invocation.targets {
@@ -51,6 +70,44 @@ pub(crate) fn execute_inspect(
         }
         return 0;
     }
+    if is_json {
+        // Validate all plans before emitting so usage errors stay
+        // pre-exec (exit 2) without JSON.
+        for scope in &invocation.targets {
+            if let Err(error) = dx_adopt::plan_inspect(kind, scope, invocation.configured) {
+                return pre_exec(err, &error.to_string());
+            }
+        }
+        if let Ok(event) = command_started(kind, false, "default") {
+            if let Err(exit) = emit_event(out, &event) {
+                return exit;
+            }
+        }
+        let mut failed = false;
+        for scope in &invocation.targets {
+            let plan = match dx_adopt::plan_inspect(kind, scope, invocation.configured) {
+                Ok(plan) => plan,
+                Err(error) => return pre_exec(err, &error.to_string()),
+            };
+            if let Err(exit) =
+                run_inspect_query_json(kind, scope, &plan, workspace, query_runner, out, err)
+            {
+                // `Err` here is the terminal exit: `141` on `EPIPE`
+                // breaks the stream, while `1` marks a failed scope
+                // and continues with remaining scopes.
+                if exit == operational_code() {
+                    failed = true;
+                    continue;
+                }
+                return exit;
+            }
+        }
+        let code = if failed { operational_code() } else { 0 };
+        if let Err(exit) = emit_event(out, &command_finished(code, &FinishedCounts::default())) {
+            return exit;
+        }
+        return code;
+    }
     let mut code = 0;
     for scope in &invocation.targets {
         let plan = match dx_adopt::plan_inspect(kind, scope, invocation.configured) {
@@ -63,6 +120,65 @@ pub(crate) fn execute_inspect(
         }
     }
     code
+}
+
+/// Runs one planned inspect query in JSON mode: emits one `status`
+/// event per sorted deduplicated label (`name` is the command,
+/// `detail` is the label, `hint` is the requesting scope). Query
+/// failures emit `bazel_failed` (`phase: query`) and return `1` so the
+/// caller continues with remaining scopes; stdout truncation returns
+/// `141` immediately.
+fn run_inspect_query_json(
+    kind: &str,
+    scope: &str,
+    plan: &dx_adopt::InspectPlan,
+    workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> Result<(), i32> {
+    let argv = vec!["bazel".to_owned(), plan.verb.clone(), plan.expr.clone()];
+    match query_runner.run_query(&argv, workspace) {
+        Ok(result) => {
+            if result.code != Some(0) {
+                let message = format!(
+                    "query failed: bazel {} {} exited with code {}",
+                    plan.verb,
+                    plan.expr,
+                    result.code.unwrap_or(-1)
+                );
+                let _ = writeln!(err, "dx: {message}");
+                if let Ok(event) = error_event("bazel_failed", &message, None, None, Some("query"))
+                {
+                    emit_event(out, &event)?;
+                }
+                return Err(operational_code());
+            }
+            let text = String::from_utf8_lossy(&result.stdout);
+            let mut lines: Vec<&str> = text.lines().collect();
+            lines.sort_unstable();
+            lines.dedup();
+            for line in lines {
+                if let Ok(event) = status_event(&StatusEvent {
+                    name: kind.to_owned(),
+                    status: "ok".to_owned(),
+                    detail: line.to_owned(),
+                    hint: scope.to_owned(),
+                }) {
+                    emit_event(out, &event)?;
+                }
+            }
+            Ok(())
+        }
+        Err(error) => {
+            let message = error.to_string();
+            let _ = writeln!(err, "dx: {message}");
+            if let Ok(event) = error_event("bazel_failed", &message, None, None, Some("query")) {
+                emit_event(out, &event)?;
+            }
+            Err(operational_code())
+        }
+    }
 }
 
 /// Runs one planned inspect query as `bazel <verb> <expr>` and prints
@@ -124,6 +240,7 @@ fn execute_why(
     if invocation.targets.len() != 2 {
         return pre_exec(err, "why needs exactly <file> <label>");
     }
+    let is_json = invocation.output == OutputMode::Json;
     // Dry-run plans without launching: validate both plan shapes, then
     // print the would-run summary (the `somepath` leg needs the resolved
     // owner, so live resolution is skipped).
@@ -132,6 +249,17 @@ fn execute_why(
             Ok(plan) => plan,
             Err(error) => return pre_exec(err, &error.to_string()),
         };
+        if is_json {
+            if let Ok(event) = command_started("why", true, "default") {
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
+            }
+            if let Err(exit) = emit_event(out, &command_finished(0, &FinishedCounts::default())) {
+                return exit;
+            }
+            return 0;
+        }
         if !summaries_suppressed(invocation) {
             if let Err(exit) = check_stdout_write(writeln!(
                 out,
@@ -142,6 +270,9 @@ fn execute_why(
             }
         }
         return 0;
+    }
+    if is_json {
+        return execute_why_json(invocation, file, label, workspace, query_runner, out, err);
     }
     // Step 1: resolve the file's depth-1 owner. `why` never resolves
     // the raw file path against the target graph: Bazel `somepath`
@@ -195,6 +326,195 @@ fn execute_why(
         Err(error) => return pre_exec(err, &error.to_string()),
     };
     run_inspect_query(&leg.verb, &leg.expr, workspace, query_runner, out, err)
+}
+
+/// JSON `why`: reuses the status envelope with one `status` event per
+/// `somepath` label (`name: why`, `detail: label`,
+/// `hint: "<file> -> <label>"`). Owner query failures emit
+/// `bazel_failed` (`phase: query`), an empty owner emits `no_owner`,
+/// and a derived `somepath` plan failure emits `invalid_result`.
+fn execute_why_json(
+    invocation: &Invocation,
+    file: &str,
+    label: &str,
+    workspace: &std::path::Path,
+    query_runner: &dyn QueryRunner,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> i32 {
+    // Usage errors stay pre-exec without JSON: validate the owner plan
+    // plus the target scope before emitting.
+    if let Err(error) = dx_adopt::plan_inspect("owners", file, invocation.configured) {
+        return pre_exec(err, &error.to_string());
+    }
+    if file.is_empty() || label.is_empty() || label.starts_with('@') || file.starts_with('@') {
+        return pre_exec(err, "why needs exactly <file> <label>");
+    }
+    if let Ok(event) = command_started("why", false, "default") {
+        if let Err(exit) = emit_event(out, &event) {
+            return exit;
+        }
+    }
+    let owner_plan = match dx_adopt::plan_inspect("owners", file, invocation.configured) {
+        Ok(plan) => plan,
+        Err(error) => return pre_exec(err, &error.to_string()),
+    };
+    let owner_argv = vec![
+        "bazel".to_owned(),
+        owner_plan.verb.clone(),
+        owner_plan.expr.clone(),
+    ];
+    let owner = match query_runner.run_query(&owner_argv, workspace) {
+        Ok(result) => {
+            if result.code != Some(0) {
+                let message = format!(
+                    "query failed: bazel {} {} for file {file} exited with code {}",
+                    owner_plan.verb,
+                    owner_plan.expr,
+                    result.code.unwrap_or(-1)
+                );
+                let _ = writeln!(err, "dx: {message}");
+                if let Ok(event) = error_event("bazel_failed", &message, None, None, Some("query"))
+                {
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
+                }
+                if let Err(exit) = emit_event(
+                    out,
+                    &command_finished(operational_code(), &FinishedCounts::default()),
+                ) {
+                    return exit;
+                }
+                return operational_code();
+            }
+            let text = String::from_utf8_lossy(&result.stdout);
+            let mut labels: Vec<&str> = text.lines().collect();
+            labels.sort_unstable();
+            labels.dedup();
+            match labels.into_iter().next() {
+                Some(owner) => owner.to_owned(),
+                None => {
+                    let message = format!(
+                        "no owner for {file} via bazel {} {}",
+                        owner_plan.verb, owner_plan.expr
+                    );
+                    let _ = writeln!(err, "dx: {message}");
+                    if let Ok(event) = error_event("no_owner", &message, None, None, None) {
+                        if let Err(exit) = emit_event(out, &event) {
+                            return exit;
+                        }
+                    }
+                    if let Err(exit) = emit_event(
+                        out,
+                        &command_finished(operational_code(), &FinishedCounts::default()),
+                    ) {
+                        return exit;
+                    }
+                    return operational_code();
+                }
+            }
+        }
+        Err(error) => {
+            let message = error.to_string();
+            let _ = writeln!(err, "dx: {message}");
+            if let Ok(event) = error_event("bazel_failed", &message, None, None, Some("query")) {
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
+            }
+            if let Err(exit) = emit_event(
+                out,
+                &command_finished(operational_code(), &FinishedCounts::default()),
+            ) {
+                return exit;
+            }
+            return operational_code();
+        }
+    };
+    let leg = match dx_adopt::plan_somepath(&owner, label, invocation.configured) {
+        Ok(leg) => leg,
+        Err(error) => {
+            let message = error.to_string();
+            let _ = writeln!(err, "dx: {message}");
+            if let Ok(event) = error_event("invalid_result", &message, None, None, None) {
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
+            }
+            if let Err(exit) = emit_event(
+                out,
+                &command_finished(operational_code(), &FinishedCounts::default()),
+            ) {
+                return exit;
+            }
+            return operational_code();
+        }
+    };
+    let argv = vec!["bazel".to_owned(), leg.verb.clone(), leg.expr.clone()];
+    match query_runner.run_query(&argv, workspace) {
+        Ok(result) => {
+            if result.code != Some(0) {
+                let message = format!(
+                    "query failed: bazel {} {} exited with code {}",
+                    leg.verb,
+                    leg.expr,
+                    result.code.unwrap_or(-1)
+                );
+                let _ = writeln!(err, "dx: {message}");
+                if let Ok(event) = error_event("bazel_failed", &message, None, None, Some("query"))
+                {
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
+                }
+                if let Err(exit) = emit_event(
+                    out,
+                    &command_finished(operational_code(), &FinishedCounts::default()),
+                ) {
+                    return exit;
+                }
+                return operational_code();
+            }
+            let text = String::from_utf8_lossy(&result.stdout);
+            let mut lines: Vec<&str> = text.lines().collect();
+            lines.sort_unstable();
+            lines.dedup();
+            let hint = format!("{file} -> {label}");
+            for line in lines {
+                if let Ok(event) = status_event(&StatusEvent {
+                    name: "why".to_owned(),
+                    status: "ok".to_owned(),
+                    detail: line.to_owned(),
+                    hint: hint.clone(),
+                }) {
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
+                }
+            }
+            if let Err(exit) = emit_event(out, &command_finished(0, &FinishedCounts::default())) {
+                return exit;
+            }
+            0
+        }
+        Err(error) => {
+            let message = error.to_string();
+            let _ = writeln!(err, "dx: {message}");
+            if let Ok(event) = error_event("bazel_failed", &message, None, None, Some("query")) {
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
+            }
+            if let Err(exit) = emit_event(
+                out,
+                &command_finished(operational_code(), &FinishedCounts::default()),
+            ) {
+                return exit;
+            }
+            operational_code()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -461,5 +781,241 @@ mod tests {
             );
             assert_eq!(runner.calls.borrow().len(), 0);
         }
+    }
+
+    #[test]
+    fn inspect_json_streams_status_per_label() {
+        // See: `docs/cli/output-protocol.md#status`.
+        let runner = ScriptedQuery::with(&["//z:two\n//a:one\n//z:two\n"]);
+        let inv = invocation(&["owners", "//a:one", "--output=json"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-json-");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds[0], "command_started");
+        assert_eq!(kinds[kinds.len() - 1], "command_finished");
+        assert!(!kinds.contains(&"error"), "{kinds:?}");
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+        let details: Vec<&str> = events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("status"))
+            .map(|event| event["detail"].as_str().expect("detail"))
+            .collect();
+        assert_eq!(details, vec!["//a:one", "//z:two"], "{details:?}");
+        for event in events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("status"))
+        {
+            assert_eq!(event["name"], serde_json::json!("owners"), "{event}");
+            assert_eq!(event["status"], serde_json::json!("ok"), "{event}");
+            assert_eq!(event["hint"], serde_json::json!("//a:one"), "{event}");
+        }
+        assert!(String::from_utf8(err).expect("err").is_empty());
+    }
+
+    #[test]
+    fn inspect_query_failure_json_emits_bazel_failed() {
+        struct FailingQuery;
+        impl QueryRunner for FailingQuery {
+            fn run_query(
+                &self,
+                _argv: &[String],
+                _cwd: &std::path::Path,
+            ) -> io::Result<QueryResult> {
+                Ok(QueryResult {
+                    code: Some(1),
+                    stdout: Vec::new(),
+                    stderr: Vec::new(),
+                })
+            }
+        }
+        let inv = invocation(&["deps", "//a:one", "--output=json"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-json-fail-");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &FailingQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["command_started", "error", "command_finished"],
+            "{kinds:?}"
+        );
+        assert_eq!(events[1]["code"], serde_json::json!("bazel_failed"));
+        assert_eq!(events[1]["phase"], serde_json::json!("query"));
+    }
+
+    #[test]
+    fn inspect_dry_run_json_emits_lifecycle_only() {
+        for words in [
+            vec!["owners", "//a:one", "--dry-run", "--output=json"],
+            vec![
+                "why",
+                "src/lib.rs",
+                "//app:server",
+                "--dry-run",
+                "--output=json",
+            ],
+        ] {
+            let runner = ScriptedQuery::with(&["//a:one\n"]);
+            let inv = invocation(&words);
+            let scratch = dx_test_scratch::scratch("dx-adopt-inspect-dry-json-");
+            let root = scratch.path().to_path_buf();
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &runner,
+                    runner: &NullRunner,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 0, "words: {words:?}");
+            let text = String::from_utf8(out).expect("out");
+            let events: Vec<serde_json::Value> = text
+                .lines()
+                .map(serde_json::from_str)
+                .collect::<Result<_, _>>()
+                .expect("NDJSON");
+            let kinds: Vec<&str> = events
+                .iter()
+                .map(|event| event["event"].as_str().expect("event"))
+                .collect();
+            assert_eq!(
+                kinds,
+                vec!["command_started", "command_finished"],
+                "words: {words:?}"
+            );
+            assert_eq!(events[0]["dry_run"], serde_json::json!(true));
+            assert_eq!(runner.calls.borrow().len(), 0, "words: {words:?}");
+        }
+    }
+
+    #[test]
+    fn why_json_streams_somepath_labels() {
+        let runner = ScriptedQuery::with(&["//owner:lib\n", "//owner:lib\n//app:server\n"]);
+        let inv = invocation(&["why", "src/lib.rs", "//app:server", "--output=json"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-why-json-");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds[0], "command_started");
+        assert_eq!(kinds[kinds.len() - 1], "command_finished");
+        assert!(!kinds.contains(&"error"), "{kinds:?}");
+        for event in events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("status"))
+        {
+            assert_eq!(event["name"], serde_json::json!("why"), "{event}");
+            assert_eq!(
+                event["hint"],
+                serde_json::json!("src/lib.rs -> //app:server"),
+                "{event}"
+            );
+        }
+    }
+
+    #[test]
+    fn why_without_owner_json_emits_no_owner() {
+        let runner = ScriptedQuery::with(&[""]);
+        let inv = invocation(&["why", "src/orphan.rs", "//app:server", "--output=json"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-inspect-why-json-orphan-");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &runner,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["command_started", "error", "command_finished"],
+            "{kinds:?}"
+        );
+        assert_eq!(events[1]["code"], serde_json::json!("no_owner"));
     }
 }

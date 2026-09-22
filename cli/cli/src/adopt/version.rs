@@ -7,16 +7,89 @@
 use std::io::Write;
 
 use crate::args::Invocation;
-use crate::exec::common::check_stdout_write;
+use crate::exec::common::{check_stdout_write, emit_event, flush_out};
+use dx_output::{
+    command_finished, command_started, error_event, status_event, FinishedCounts, OutputMode,
+    StatusEvent,
+};
 use dx_process::operational_code;
 
+use super::status::CODE_STATUS_PIN_MISMATCH;
 use super::{operational, pre_exec, summaries_suppressed};
+
+/// Emits lifecycle-only JSON for dry-run plans: `command_started`
+/// (`dry_run=true`) plus `command_finished`, no `status` events.
+/// See: `docs/cli/output-protocol.md#status`.
+fn json_dry_run(invocation: &Invocation, out: &mut dyn Write) -> i32 {
+    if let Ok(event) = command_started(invocation.command.name(), true, "default") {
+        if let Err(exit) = emit_event(out, &event) {
+            return exit;
+        }
+    }
+    if let Err(exit) = emit_event(out, &command_finished(0, &FinishedCounts::default())) {
+        return exit;
+    }
+    0
+}
+
+/// Emits operational failure JSON reusing the status envelope:
+/// `command_started` plus `status_pin_mismatch` `error` plus
+/// `command_finished`, with the diagnostic on stderr.
+/// See: `docs/cli/output-protocol.md#status`.
+fn json_error(
+    invocation: &Invocation,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+    message: &str,
+) -> i32 {
+    if let Ok(event) = command_started(invocation.command.name(), invocation.dry_run, "default") {
+        if let Err(exit) = emit_event(out, &event) {
+            return exit;
+        }
+    }
+    if let Ok(event) = error_event(CODE_STATUS_PIN_MISMATCH, message, None, None, None) {
+        if let Err(exit) = emit_event(out, &event) {
+            return exit;
+        }
+    }
+    if let Err(exit) = emit_event(
+        out,
+        &command_finished(operational_code(), &FinishedCounts::default()),
+    ) {
+        return exit;
+    }
+    let _ = writeln!(err, "dx: {message}");
+    let _ = flush_out(out);
+    operational_code()
+}
+
+/// Emits one `status` event, mapping stdout truncation to `141`.
+fn json_status(
+    out: &mut dyn Write,
+    name: &str,
+    status: &str,
+    detail: &str,
+    hint: &str,
+) -> Result<(), i32> {
+    if let Ok(event) = status_event(&StatusEvent {
+        name: name.to_owned(),
+        status: status.to_owned(),
+        detail: detail.to_owned(),
+        hint: hint.to_owned(),
+    }) {
+        emit_event(out, &event)?;
+    }
+    Ok(())
+}
 
 /// Runs `dx version`: `--pin` / `--rollback` mutate the pin (dry-run
 /// plans are summaries, suppressed under `--quiet`), `--check`
 /// validates without mutating, bare reports the binary, module, and
 /// pin. Flag combinations that mix check with mutation (or the two
-/// mutations with each other) are usage errors.
+/// mutations with each other) are usage errors. JSON reuses the status
+/// envelope (`command_started`, `status` events, optional
+/// `status_pin_mismatch` `error`, `command_finished` with only
+/// `exit_code`); dry-run JSON is lifecycle-only.
 pub(crate) fn execute_version(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -35,6 +108,7 @@ pub(crate) fn execute_version(
     if invocation.pin.is_some() && invocation.rollback {
         return pre_exec(err, "version --pin and --rollback are mutually exclusive");
     }
+    let is_json = invocation.output == OutputMode::Json;
     if invocation.rollback {
         // Rollback re-pins the previous release recorded by the
         // ruleset (`dx_adopt::PREVIOUS_VERSION`); there is no deeper
@@ -46,19 +120,27 @@ pub(crate) fn execute_version(
         let previous = dx_adopt::PREVIOUS_VERSION;
         let current = match dx_adopt::read_version_pin(workspace) {
             Ok(pin) => pin,
-            Err(error) => return operational(out, err, &error.to_string()),
+            Err(error) => {
+                if is_json {
+                    return json_error(invocation, out, err, &error.to_string());
+                }
+                return operational(out, err, &error.to_string());
+            }
         };
         if current.is_empty() || !dx_adopt::rollback_re_pins_previous(&current, previous, previous)
         {
-            return operational(
-                out,
-                err,
-                &format!(
-                    "rollback refused: pin {current:?} is not newer than previous release {previous:?}"
-                ),
+            let message = format!(
+                "rollback refused: pin {current:?} is not newer than previous release {previous:?}"
             );
+            if is_json {
+                return json_error(invocation, out, err, &message);
+            }
+            return operational(out, err, &message);
         }
         if invocation.dry_run {
+            if is_json {
+                return json_dry_run(invocation, out);
+            }
             if !summaries_suppressed(invocation) {
                 if let Err(exit) =
                     check_stdout_write(writeln!(out, "would pin {previous} (rollback)"))
@@ -70,24 +152,55 @@ pub(crate) fn execute_version(
         }
         return match dx_adopt::write_version_pin(workspace, previous) {
             Ok(()) => {
+                if is_json {
+                    if let Ok(event) = command_started(invocation.command.name(), false, "default")
+                    {
+                        if let Err(exit) = emit_event(out, &event) {
+                            return exit;
+                        }
+                    }
+                    if let Err(exit) = json_status(
+                        out,
+                        "pin",
+                        "ok",
+                        previous,
+                        &format!("dx version --pin {}", dx_adopt::MODULE_VERSION),
+                    ) {
+                        return exit;
+                    }
+                    if let Err(exit) =
+                        emit_event(out, &command_finished(0, &FinishedCounts::default()))
+                    {
+                        return exit;
+                    }
+                    return 0;
+                }
                 if let Err(exit) = check_stdout_write(writeln!(out, "pinned {previous} (rollback)"))
                 {
                     return exit;
                 }
                 0
             }
-            Err(error) => operational(out, err, &error.to_string()),
+            Err(error) => {
+                if is_json {
+                    return json_error(invocation, out, err, &error.to_string());
+                }
+                operational(out, err, &error.to_string())
+            }
         };
     }
     if let Some(pin) = &invocation.pin {
         if !dx_adopt::version_pin_matches_module(pin, dx_adopt::MODULE_VERSION) {
-            return operational(
-                out,
-                err,
-                &format!("version pin must equal module {}", dx_adopt::MODULE_VERSION),
-            );
+            let message = format!("version pin must equal module {}", dx_adopt::MODULE_VERSION);
+            if is_json {
+                return json_error(invocation, out, err, &message);
+            }
+            return operational(out, err, &message);
         }
         if invocation.dry_run {
+            if is_json {
+                return json_dry_run(invocation, out);
+            }
             if !summaries_suppressed(invocation) {
                 if let Err(exit) = check_stdout_write(writeln!(out, "would pin {pin}")) {
                     return exit;
@@ -97,15 +210,46 @@ pub(crate) fn execute_version(
         }
         return match dx_adopt::write_version_pin(workspace, pin) {
             Ok(()) => {
+                if is_json {
+                    if let Ok(event) = command_started(invocation.command.name(), false, "default")
+                    {
+                        if let Err(exit) = emit_event(out, &event) {
+                            return exit;
+                        }
+                    }
+                    if let Err(exit) = json_status(
+                        out,
+                        "pin",
+                        "ok",
+                        pin,
+                        &format!("dx version --pin {}", dx_adopt::MODULE_VERSION),
+                    ) {
+                        return exit;
+                    }
+                    if let Err(exit) =
+                        emit_event(out, &command_finished(0, &FinishedCounts::default()))
+                    {
+                        return exit;
+                    }
+                    return 0;
+                }
                 if let Err(exit) = check_stdout_write(writeln!(out, "pinned {pin}")) {
                     return exit;
                 }
                 0
             }
-            Err(error) => operational(out, err, &error.to_string()),
+            Err(error) => {
+                if is_json {
+                    return json_error(invocation, out, err, &error.to_string());
+                }
+                operational(out, err, &error.to_string())
+            }
         };
     }
     if invocation.dry_run {
+        if is_json {
+            return json_dry_run(invocation, out);
+        }
         if !summaries_suppressed(invocation) {
             if invocation.check {
                 if let Err(exit) = check_stdout_write(writeln!(out, "would check version pin")) {
@@ -124,15 +268,60 @@ pub(crate) fn execute_version(
     // `docs/cli/commands/status-version.md`).
     let current = match dx_adopt::read_version_pin(workspace) {
         Ok(pin) => pin,
-        Err(error) => return operational(out, err, &error.to_string()),
+        Err(error) => {
+            if is_json {
+                return json_error(invocation, out, err, &error.to_string());
+            }
+            return operational(out, err, &error.to_string());
+        }
     };
     if invocation.check {
+        let detail = format!("dx {current} vs module {}", dx_adopt::MODULE_VERSION);
+        let hint = format!("dx version --pin {}", dx_adopt::MODULE_VERSION);
         if dx_adopt::version_pin_matches_module(&current, dx_adopt::MODULE_VERSION) {
+            if is_json {
+                if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
+                }
+                if let Err(exit) = json_status(out, "pin", "ok", &detail, &hint) {
+                    return exit;
+                }
+                if let Err(exit) = emit_event(out, &command_finished(0, &FinishedCounts::default()))
+                {
+                    return exit;
+                }
+                return 0;
+            }
             if let Err(exit) = check_stdout_write(writeln!(out, "version ok: {current}")) {
                 return exit;
             }
             0
         } else {
+            if is_json {
+                if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
+                }
+                if let Err(exit) = json_status(out, "pin", "error", &detail, &hint) {
+                    return exit;
+                }
+                let message = format!("version drift: {current} != {}", dx_adopt::MODULE_VERSION);
+                if let Ok(event) = error_event(CODE_STATUS_PIN_MISMATCH, &message, None, None, None)
+                {
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
+                }
+                if let Err(exit) = emit_event(
+                    out,
+                    &command_finished(operational_code(), &FinishedCounts::default()),
+                ) {
+                    return exit;
+                }
+            }
             let _ = writeln!(
                 err,
                 "dx: version drift: {current} != {}",
@@ -141,6 +330,35 @@ pub(crate) fn execute_version(
             operational_code()
         }
     } else {
+        if is_json {
+            if let Ok(event) = command_started(invocation.command.name(), false, "default") {
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
+            }
+            if let Err(exit) = json_status(out, "binary", "ok", dx_adopt::DX_VERSION, "dx version")
+            {
+                return exit;
+            }
+            if let Err(exit) =
+                json_status(out, "module", "ok", dx_adopt::MODULE_VERSION, "dx version")
+            {
+                return exit;
+            }
+            if let Err(exit) = json_status(
+                out,
+                "pin",
+                "ok",
+                &current,
+                &format!("dx version --pin {}", dx_adopt::MODULE_VERSION),
+            ) {
+                return exit;
+            }
+            if let Err(exit) = emit_event(out, &command_finished(0, &FinishedCounts::default())) {
+                return exit;
+            }
+            return 0;
+        }
         if let Err(exit) = check_stdout_write(writeln!(out, "dx {}", dx_adopt::DX_VERSION)) {
             return exit;
         }
@@ -424,5 +642,208 @@ mod tests {
                 "words: {words:?}"
             );
         }
+    }
+
+    #[test]
+    fn version_json_streams_status_envelope() {
+        // See: `docs/cli/output-protocol.md#status`.
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-json-");
+        let root = scratch.path().to_path_buf();
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let inv = invocation(&["version", "--output=json"]);
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds[0], "command_started");
+        assert_eq!(kinds[kinds.len() - 1], "command_finished");
+        assert!(kinds.contains(&"status"), "{kinds:?}");
+        assert!(!kinds.contains(&"error"), "{kinds:?}");
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(0)
+        );
+        let names: Vec<&str> = events
+            .iter()
+            .filter(|event| event["event"] == serde_json::json!("status"))
+            .map(|event| event["name"].as_str().expect("name"))
+            .collect();
+        assert_eq!(names, vec!["binary", "module", "pin"], "{names:?}");
+        assert!(String::from_utf8(err).expect("err").is_empty());
+    }
+
+    #[test]
+    fn version_check_json_reports_drift_with_error() {
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-check-json-");
+        let root = scratch.path().to_path_buf();
+        std::fs::create_dir_all(root.join(".dx")).expect("dx");
+        std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let inv = invocation(&["version", "--check", "--output=json"]);
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["command_started", "status", "command_finished"],
+            "{kinds:?}"
+        );
+        std::fs::write(root.join(".dx/version"), "9.9.9\n").expect("drift");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["command_started", "status", "error", "command_finished"],
+            "{kinds:?}"
+        );
+        assert_eq!(
+            events.last().expect("finished")["exit_code"],
+            serde_json::json!(1)
+        );
+        assert_eq!(
+            events[2]["code"],
+            serde_json::json!(CODE_STATUS_PIN_MISMATCH)
+        );
+        assert!(String::from_utf8(err).expect("err").contains("drift"));
+    }
+
+    #[test]
+    fn version_dry_run_json_emits_lifecycle_only() {
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-dry-json-");
+        let root = scratch.path().to_path_buf();
+        for words in [
+            vec!["version", "--dry-run", "--output=json"],
+            vec!["version", "--check", "--dry-run", "--output=json"],
+        ] {
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let inv = invocation(&words);
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &NullQuery,
+                    runner: &NullRunner,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 0, "words: {words:?}");
+            let text = String::from_utf8(out).expect("out");
+            let events: Vec<serde_json::Value> = text
+                .lines()
+                .map(serde_json::from_str)
+                .collect::<Result<_, _>>()
+                .expect("NDJSON");
+            let kinds: Vec<&str> = events
+                .iter()
+                .map(|event| event["event"].as_str().expect("event"))
+                .collect();
+            assert_eq!(
+                kinds,
+                vec!["command_started", "command_finished"],
+                "{words:?}"
+            );
+            assert_eq!(events[0]["dry_run"], serde_json::json!(true), "{words:?}");
+        }
+    }
+
+    #[test]
+    fn version_missing_pin_json_fails_closed() {
+        let scratch = dx_test_scratch::scratch("dx-adopt-version-missing-json-");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let inv = invocation(&["version", "--output=json"]);
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 1);
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(
+            kinds,
+            vec!["command_started", "error", "command_finished"],
+            "{kinds:?}"
+        );
+        assert_eq!(
+            events[1]["code"],
+            serde_json::json!(CODE_STATUS_PIN_MISMATCH)
+        );
     }
 }
