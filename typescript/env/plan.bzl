@@ -5,8 +5,8 @@ Contract: `docs/environments/environment.md`.
 
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo")
+load("//env:focused.bzl", "focused_direct_sources", "focused_js_closure", "focused_typescript_plan", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
-load("//quality:sources.bzl", "QualitySourcesInfo")
 
 TypeScriptEnvPlanInfo = provider(
     doc = "Provider-derived focused TypeScript target environment plan.",
@@ -20,49 +20,25 @@ TypeScriptEnvPlanInfo = provider(
     },
 )
 
-def _direct_sources(target):
-    if QualitySourcesInfo not in target:
-        return []
-    info = target[QualitySourcesInfo]
-    out = []
-    for class_id in sorted(info.direct_sources.keys()):
-        for f in info.direct_sources[class_id].to_list():
-            out.append(f.basename)
-    return sorted(out)
-
 def _typescript_env_plan_impl(ctx):
     target = ctx.attr.target
     if _JsInfo not in target:
         fail("typescript_env_plan: target has no JsInfo: " + display_label(target.label))
     js_info = target[_JsInfo]
-    seen = {}
-    for f in js_info.transitive_sources.to_list():
-        seen[f.basename] = True
-    transitive = sorted(seen.keys())
-    direct = _direct_sources(target)
-    npm_sources = js_info.npm_sources.to_list()
-    npm_source_count = len(npm_sources)
-    has_npm = npm_source_count > 0
+    closure = focused_js_closure(js_info.transitive_sources.to_list(), js_info.npm_sources.to_list())
+    direct = focused_direct_sources(target)
     has_tsconfig = _TsConfigInfo in target
-    plan = {
-        "direct_sources": ",".join(direct),
-        "has_npm": str(has_npm),
-        "has_tsconfig": str(has_tsconfig),
-        "npm_source_count": str(npm_source_count),
-        "target": display_label(ctx.attr.target.label),
-        "transitive_sources": ",".join(transitive),
-    }
-    out = ctx.actions.declare_file(ctx.label.name + ".json")
-    ctx.actions.write(out, json.encode(plan) + "\n")
+    plan = focused_typescript_plan(direct, closure, has_tsconfig, display_label(ctx.attr.target.label))
+    out = focused_write_plan(ctx, plan)
     return [
         DefaultInfo(files = depset([out])),
         TypeScriptEnvPlanInfo(
             direct_sources = direct,
-            has_npm = has_npm,
+            has_npm = closure.has_npm,
             has_tsconfig = has_tsconfig,
-            npm_source_count = npm_source_count,
+            npm_source_count = closure.npm_count,
             target = plan["target"],
-            transitive_sources = transitive,
+            transitive_sources = closure.transitive,
         ),
         DxSubjectInfo(fields = plan),
     ]

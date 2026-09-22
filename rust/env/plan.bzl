@@ -4,8 +4,8 @@ Contract: `docs/environments/environment.md`.
 """
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
+load("//env:focused.bzl", "focused_direct_sources", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
-load("//quality:sources.bzl", "QualitySourcesInfo")
 
 RustEnvPlanInfo = provider(
     doc = "Provider-derived focused Rust target environment plan.",
@@ -28,20 +28,10 @@ def _crate_of(target):
     fail("rust_env_plan: target has neither CrateInfo nor TestCrateInfo: " +
          display_label(target.label))
 
-def _direct_sources(target):
-    if QualitySourcesInfo not in target:
-        return []
-    info = target[QualitySourcesInfo]
-    out = []
-    for class_id in sorted(info.direct_sources.keys()):
-        for f in info.direct_sources[class_id].to_list():
-            out.append(f.basename)
-    return sorted(out)
-
 def _rust_env_plan_impl(ctx):
     target = ctx.attr.target
     crate, via_test_crate = _crate_of(target)
-    sources = _direct_sources(target)
+    sources = focused_direct_sources(target)
     plan = {
         "crate_name": crate.name,
         "crate_type": crate.type,
@@ -52,8 +42,7 @@ def _rust_env_plan_impl(ctx):
         "target": display_label(ctx.attr.target.label),
         "via_test_crate": str(via_test_crate),
     }
-    out = ctx.actions.declare_file(ctx.label.name + ".json")
-    ctx.actions.write(out, json.encode(plan) + "\n")
+    out = focused_write_plan(ctx, plan)
     return [
         DefaultInfo(files = depset([out])),
         RustEnvPlanInfo(

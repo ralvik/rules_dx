@@ -4,9 +4,9 @@ Contract: `docs/environments/environment.md`.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")
+load("//env:focused.bzl", "focused_direct_sources", "focused_python_plan", "focused_python_transitive", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//python/env:aspect.bzl", "PythonEnvWheelsInfo", "dx_python_env_wheels_aspect")
-load("//quality:sources.bzl", "QualitySourcesInfo")
 
 PythonEnvPlanInfo = provider(
     doc = "Provider-derived focused Python target environment plan.",
@@ -20,52 +20,25 @@ PythonEnvPlanInfo = provider(
     },
 )
 
-def _direct_sources(target):
-    if QualitySourcesInfo not in target:
-        return []
-    info = target[QualitySourcesInfo]
-    out = []
-    for class_id in sorted(info.direct_sources.keys()):
-        for f in info.direct_sources[class_id].to_list():
-            out.append(f.basename)
-    return sorted(out)
-
 def _python_env_plan_impl(ctx):
     target = ctx.attr.target
     if _PyInfo not in target:
         fail("python_env_plan: target has no PyInfo: " + display_label(target.label))
     py_info = target[_PyInfo]
     imports = sorted(py_info.imports.to_list())
-
-    # First-party/driver `.py` closure for import projection. Wheel payloads
-    # are covered by `wheel_count` plus the site-packages import roots above;
-    # raw venv markers (e.g. repeated `actual_install.install`) carry no
-    # import identity and would collapse lossily under basename projection.
-    seen = {}
-    for f in py_info.transitive_sources.to_list():
-        if f.basename.endswith(".py"):
-            seen[f.basename] = True
-    transitive = sorted(seen.keys())
-    direct = _direct_sources(target)
+    transitive = focused_python_transitive(py_info.transitive_sources.to_list())
+    direct = focused_direct_sources(target)
     if PythonEnvWheelsInfo not in target:
         fail("python_env_plan: wheels aspect missing on target: " + display_label(target.label))
     wheel_count = len(target[PythonEnvWheelsInfo].wheels.to_list())
-    has_wheels = wheel_count > 0
-    plan = {
-        "direct_sources": ",".join(direct),
-        "has_wheels": str(has_wheels),
-        "imports": ",".join(imports),
-        "target": display_label(ctx.attr.target.label),
-        "transitive_sources": ",".join(transitive),
-        "wheel_count": str(wheel_count),
-    }
-    out = ctx.actions.declare_file(ctx.label.name + ".json")
-    ctx.actions.write(out, json.encode(plan) + "\n")
+    info = focused_python_plan(direct, transitive, imports, wheel_count, display_label(ctx.attr.target.label))
+    plan = info.plan
+    out = focused_write_plan(ctx, plan)
     return [
         DefaultInfo(files = depset([out])),
         PythonEnvPlanInfo(
             direct_sources = direct,
-            has_wheels = has_wheels,
+            has_wheels = info.has_wheels,
             imports = imports,
             target = plan["target"],
             transitive_sources = transitive,
