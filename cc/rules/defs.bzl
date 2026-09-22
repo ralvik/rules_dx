@@ -32,7 +32,11 @@ _DX_CC_EXEC_PROVIDES = [
 ]
 
 # Header ownership is per extension, not per including source: `.h` maps to
-# `c` and `.hh`/`.hpp`/`.hxx` map to `cpp`.
+# `c` and `.hh`/`.hpp`/`.hxx` map to `cpp` (See: docs/quality/quality-sources.md).
+# `hdrs` stays library-only by design: upstream `cc_binary`/`cc_test` take no
+# `hdrs`, headers arrive via library `deps`, so binaries/tests own `srcs`
+# only. `cuda` (`.cu`/`.cuh`) stays deferred with no wrapper claim (See:
+# quality/parity_tests.bzl); `.cu` sources fail closed until qualified.
 _DX_CC_SOURCE_SPECS = [
     ("c", ["c", "h"]),
     ("cpp", ["cc", "cpp", "cxx", "hh", "hpp", "hxx"]),

@@ -30,6 +30,9 @@ _DX_GO_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
+# Go owns `.go` only. `go_module` (`go.mod`/`go.sum`) stays fixture-owned
+# ad-hoc (See: docs/quality/quality-sources.md): upstream `go_*` rules take
+# no manifest `srcs`, so `modfmt` runs via matrix fixtures, never these wrappers.
 _DX_GO_SOURCE_SPECS = [("go", "go")]
 _DX_GO_SOURCE_EXTS = [".go"]
 

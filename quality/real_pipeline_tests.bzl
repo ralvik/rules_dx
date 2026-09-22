@@ -4,6 +4,7 @@
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "real_supported_classes")
 load(":pipeline.bzl", "authorize_classes", "pipeline_stages", "resolve_pipeline")
+load(":real_aspects.bzl", "real_allowed_tools_error")
 
 _LINT_SELECTIONS = {
     "javascript": ["biome"],
@@ -464,6 +465,11 @@ def real_pipeline_unit_tests(name):
                         "tool": "rustc",
                     },
                 ],
+            ),
+            expect_equal(
+                "aspect shards stay registry subsets",
+                real_allowed_tools_error(),
+                "",
             ),
         ],
     )

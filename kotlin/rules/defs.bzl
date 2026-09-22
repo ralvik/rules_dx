@@ -28,8 +28,11 @@ _DX_KOTLIN_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-_DX_KOTLIN_SOURCE_SPECS = [("kotlin", "kt"), ("java", "java")]
-_DX_KOTLIN_SOURCE_EXTS = [".kt", ".java"]
+# Kotlin owns `.kt`/`.kts` only; same-unit `.java` stays `java` per the
+# admissibility table (See: docs/quality/quality-sources.md). Java sources
+# belong in a `java_library`, so mixed targets keep one owner per file.
+_DX_KOTLIN_SOURCE_SPECS = [("kotlin", ["kt", "kts"])]
+_DX_KOTLIN_SOURCE_EXTS = [".kt", ".kts"]
 
 _kotlin_library_forward = dx_library_forward_rule(
     provides = _DX_KOTLIN_LIBRARY_PROVIDES,
@@ -39,7 +42,7 @@ _kotlin_library_forward = dx_library_forward_rule(
     allow_files = _DX_KOTLIN_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
     doc = "Forwards upstream Kotlin library providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct Kotlin/Java sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct Kotlin sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream kt_jvm_library target whose providers are preserved.",
 )
 
@@ -52,7 +55,7 @@ _kotlin_binary_forward = dx_executable_forward_rule(
     allow_files = _DX_KOTLIN_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
     doc = "Executable forwarder for kotlin_binary: symlinks the upstream binary.",
-    srcs_doc = "Direct Kotlin/Java sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct Kotlin sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream kt_jvm_binary target whose executable is symlinked.",
     optional_providers = [JavaInfo],
     runtime = "besteffort",
@@ -67,7 +70,7 @@ _kotlin_forward_test = dx_executable_forward_rule(
     allow_files = _DX_KOTLIN_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
     doc = "Test forwarder for kotlin_test: symlinks the upstream test executable.",
-    srcs_doc = "Direct Kotlin/Java test sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct Kotlin test sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream kt_jvm_test target whose executable is symlinked.",
     extra_attrs = dx_lcov_merger_attr(),
     optional_providers = [JavaInfo],

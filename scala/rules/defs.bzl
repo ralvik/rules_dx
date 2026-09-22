@@ -29,8 +29,11 @@ _DX_SCALA_EXEC_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-_DX_SCALA_SOURCE_SPECS = [("scala", "scala"), ("java", "java")]
-_DX_SCALA_SOURCE_EXTS = [".scala", ".java"]
+# Scala owns `.scala` only; same-unit `.java` stays `java` per the
+# admissibility table (See: docs/quality/quality-sources.md). Java sources
+# belong in a `java_library`, so mixed targets keep one owner per file.
+_DX_SCALA_SOURCE_SPECS = [("scala", "scala")]
+_DX_SCALA_SOURCE_EXTS = [".scala"]
 
 _scala_library_forward = dx_library_forward_rule(
     provides = _DX_SCALA_LIBRARY_PROVIDES,
@@ -40,7 +43,7 @@ _scala_library_forward = dx_library_forward_rule(
     allow_files = _DX_SCALA_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
     doc = "Forwards upstream Scala library providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct Scala/Java sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct Scala sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream scala_library target whose providers are preserved.",
 )
 
@@ -53,7 +56,7 @@ _scala_binary_forward = dx_executable_forward_rule(
     allow_files = _DX_SCALA_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
     doc = "Executable forwarder for scala_binary: symlinks the upstream binary.",
-    srcs_doc = "Direct Scala/Java sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct Scala sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream scala_binary target whose executable is symlinked.",
     optional_providers = [JavaInfo],
     runtime = "besteffort",
@@ -68,7 +71,7 @@ _scala_forward_test = dx_executable_forward_rule(
     allow_files = _DX_SCALA_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
     doc = "Test forwarder for scala_test: symlinks the upstream test executable.",
-    srcs_doc = "Direct Scala/Java test sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct Scala test sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream scala_test target whose executable is symlinked.",
     extra_attrs = dx_lcov_merger_attr(),
     optional_providers = [JavaInfo],

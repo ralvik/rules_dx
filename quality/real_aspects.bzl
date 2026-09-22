@@ -12,21 +12,11 @@ load(
     "REAL_CLASS_TO_FAMILY",
 )
 load("//quality:native_config.bzl", "DxNativeConfigInfo", "collect_native_configs")
-load("//quality:pipeline.bzl", "resolve_pipeline")
+load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "resolve_pipeline")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 load("//rust/rules:edition.bzl", "RUST_EDITION")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
-
-def _capability_tags(rule_attr, capability):
-    tags = getattr(rule_attr, "tags", [])
-    return ("no-" + capability) in tags
-
-def _family_selections(policy, capability):
-    selections = {}
-    for family_id in policy.families.keys():
-        selections[family_id] = getattr(policy.families[family_id], capability)
-    return selections
 
 # Cold-server laziness: the shared aspect no longer resolves every
 # ecosystem on every visit. Each aspect declares only its own tool labels
@@ -34,6 +24,9 @@ def _family_selections(policy, capability):
 # toolchain indirection cannot do this (all branches resolve), only separate
 # aspects avoid loading. Base handles single-file `dx_tools` artifacts plus
 # repo-owned markdown; JS/Python/Rust/JVM families are additive opt-ins.
+# Every entry below stays a subset of the single-sourced registry
+# (See: //quality:registry.bzl); adding a tool edits the registry data
+# plus the owning aspect shard here, never a parallel allowlist.
 # JVM tools run as `java_binary` wrappers over the complete upstream
 # artifacts plus the shared managed JDK (remotejdk_21 via
 # `--java_runtime_version`); SpotBugs is target-coupled (needs the
@@ -54,25 +47,13 @@ _JVM_FORMAT_TOOLS = ["google_java_format", "ktfmt"]
 def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain):
     if QualitySourcesInfo not in target:
         return []
-    if _capability_tags(ctx.rule.attr, capability):
+    if aspect_capability_blocked(ctx.rule.attr, capability):
         return []
     info = target[QualitySourcesInfo]
     policy = ctx.attr._policy[QualityPolicyInfo]
 
-    direct_files = {}
-    direct_paths = {}
-    path_to_file = {}
-    for class_id in info.direct_sources.keys():
-        files = info.direct_sources[class_id].to_list()
-        direct_files[class_id] = files
-        paths = sorted([f.short_path for f in files])
-        direct_paths[class_id] = paths
-        for f in files:
-            if f.short_path not in path_to_file:
-                path_to_file[f.short_path] = f
-
-    target_classes = sorted(direct_files.keys())
-    selections = _family_selections(policy, capability)
+    (target_classes, direct_files, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources)
+    selections = aspect_family_selections(policy, capability)
     resolved = resolve_pipeline(
         target_classes,
         direct_paths,
@@ -467,7 +448,35 @@ def _real_rust_format_impl(target, ctx):
 def _real_rust_typecheck_impl(target, ctx):
     return _real_pipeline_action(target, ctx, "typecheck", _RUST_TYPECHECK_TOOLS, "-rust", True)
 
-_REAL_CORE_ATTRS = {
+def real_allowed_tools_error():
+    """Validates aspect shards stay registry subsets (See: //quality:registry.bzl)."""
+    allowed = (
+        _CORE_LINT_TOOLS + _CORE_FORMAT_TOOLS + _CORE_TYPECHECK_TOOLS +
+        _JS_LINT_TOOLS + _JS_FORMAT_TOOLS + _PY_LINT_TOOLS +
+        _RUST_LINT_TOOLS + _RUST_FORMAT_TOOLS + _RUST_TYPECHECK_TOOLS +
+        _JVM_LINT_TOOLS + _JVM_FORMAT_TOOLS
+    )
+    for tool in allowed:
+        if tool not in REAL_ADAPTERS:
+            return "real aspects: allowed tool '" + tool + "' is outside REAL_ADAPTERS"
+    return ""
+
+_REAL_BASE_ATTRS = {
+    "_policy": attr.label(
+        default = "//quality:real_fixture_policy",
+        providers = [QualityPolicyInfo],
+        doc = "Aggregate workspace policy expanding tool IDs to classes.",
+    ),
+    "_runner": attr.label(
+        default = "//quality/runner:quality_runner",
+        executable = True,
+        cfg = "exec",
+        allow_files = True,
+        doc = "Deterministic pipeline runner with --real backend.",
+    ),
+}
+
+_REAL_CORE_ATTRS = _REAL_BASE_ATTRS | {
     "_biome": attr.label(
         default = "@dx_tools//:biome",
         allow_single_file = True,
@@ -486,23 +495,11 @@ _REAL_CORE_ATTRS = {
         cfg = "exec",
         doc = "Repo-owned Markdown link/structure checker for Markdown pipelines.",
     ),
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
     "_ruff": attr.label(
         default = "@dx_tools//:ruff",
         allow_single_file = True,
         cfg = "exec",
         doc = "Pinned Ruff artifact for Python pipelines.",
-    ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
     ),
     "_taplo": attr.label(
         default = "@dx_tools//:taplo",
@@ -524,49 +521,25 @@ _REAL_CORE_ATTRS = {
     ),
 }
 
-_REAL_JS_LINT_ATTRS = {
+_REAL_JS_LINT_ATTRS = _REAL_BASE_ATTRS | {
     "_eslint": attr.label(
         default = "//quality/tools/javascript/bin:eslint",
         cfg = "exec",
         executable = True,
         doc = "Private ESLint js_binary wrapper for JavaScript lint opt-ins.",
     ),
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
-    ),
 }
 
-_REAL_JS_FORMAT_ATTRS = {
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
+_REAL_JS_FORMAT_ATTRS = _REAL_BASE_ATTRS | {
     "_prettier": attr.label(
         default = "//quality/tools/javascript/bin:prettier",
         cfg = "exec",
         executable = True,
         doc = "Private Prettier js_binary wrapper for JavaScript/JSON format.",
     ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
-    ),
 }
 
-_REAL_JVM_LINT_ATTRS = {
+_REAL_JVM_LINT_ATTRS = _REAL_BASE_ATTRS | {
     "_checkstyle": attr.label(
         default = "//quality/tools/jvm:checkstyle",
         cfg = "exec",
@@ -585,18 +558,6 @@ _REAL_JVM_LINT_ATTRS = {
         executable = True,
         doc = "Pinned PMD java_binary wrapper for Java lint.",
     ),
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
-    ),
     "_spotbugs": attr.label(
         default = "//quality/tools/jvm:spotbugs",
         cfg = "exec",
@@ -605,7 +566,7 @@ _REAL_JVM_LINT_ATTRS = {
     ),
 }
 
-_REAL_JVM_FORMAT_ATTRS = {
+_REAL_JVM_FORMAT_ATTRS = _REAL_BASE_ATTRS | {
     "_google_java_format": attr.label(
         default = "//quality/tools/jvm:google_java_format",
         cfg = "exec",
@@ -618,31 +579,14 @@ _REAL_JVM_FORMAT_ATTRS = {
         executable = True,
         doc = "Pinned ktfmt java_binary wrapper for Kotlin format.",
     ),
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
-    ),
 }
 
-_REAL_PY_LINT_ATTRS = {
+_REAL_PY_LINT_ATTRS = _REAL_BASE_ATTRS | {
     "_flake8": attr.label(
         default = "//quality/tools/python:flake8",
         cfg = "exec",
         executable = True,
         doc = "Pinned flake8 launcher (stub plus runfiles closure) for Python lint opt-ins.",
-    ),
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
     ),
     "_pydoclint": attr.label(
         default = "//quality/tools/python:pydoclint",
@@ -656,29 +600,9 @@ _REAL_PY_LINT_ATTRS = {
         executable = True,
         doc = "Pinned pylint launcher (stub plus runfiles closure) for Python lint opt-ins.",
     ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
-    ),
 }
 
-_REAL_RUST_ATTRS = {
-    "_policy": attr.label(
-        default = "//quality:real_fixture_policy",
-        providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
-    ),
-    "_runner": attr.label(
-        default = "//quality/runner:quality_runner",
-        executable = True,
-        cfg = "exec",
-        allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
-    ),
-}
+_REAL_RUST_ATTRS = _REAL_BASE_ATTRS
 
 real_lint_aspect = aspect(
     implementation = _real_lint_impl,

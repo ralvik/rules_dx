@@ -9,42 +9,20 @@ load(
     "SYNTHETIC_ADAPTERS",
     "SYNTHETIC_CLASS_TO_FAMILY",
 )
-load("//quality:pipeline.bzl", "resolve_pipeline")
+load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "resolve_pipeline")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
-
-def _capability_tags(rule_attr, capability):
-    tags = getattr(rule_attr, "tags", [])
-    return ("no-" + capability) in tags
-
-def _family_selections(policy, capability):
-    selections = {}
-    for family_id in policy.families.keys():
-        selections[family_id] = getattr(policy.families[family_id], capability)
-    return selections
 
 def _quality_pipeline_action(target, ctx, capability):
     if QualitySourcesInfo not in target:
         return []
-    if _capability_tags(ctx.rule.attr, capability):
+    if aspect_capability_blocked(ctx.rule.attr, capability):
         return []
     info = target[QualitySourcesInfo]
     policy = ctx.attr._policy[QualityPolicyInfo]
 
-    direct_files = {}
-    direct_paths = {}
-    path_to_file = {}
-    for class_id in info.direct_sources.keys():
-        files = info.direct_sources[class_id].to_list()
-        direct_files[class_id] = files
-        paths = sorted([f.short_path for f in files])
-        direct_paths[class_id] = paths
-        for f in files:
-            if f.short_path not in path_to_file:
-                path_to_file[f.short_path] = f
-
-    target_classes = sorted(direct_files.keys())
-    selections = _family_selections(policy, capability)
+    (target_classes, direct_files, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources)
+    selections = aspect_family_selections(policy, capability)
     resolved = resolve_pipeline(
         target_classes,
         direct_paths,
