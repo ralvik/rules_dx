@@ -485,29 +485,21 @@ Update emits per-set `notice`/`error` events plus an optional `update_recovery` 
 as its complete v1.0 event contract: exactly one terminal per-set event for every selected set (`update_set_success` notice, `update_failed`
 error, or `update_set_blocked` notice for unattempted dependents) in sorted set order, then
 an `update_recovery` warning notice on failure carrying the idempotent retry plus manual
-restore (planned in `dx_update::recovery`, pinned by fixtures in
-`cli/update/tests/fixtures/update_rollback/`), then
+restore (planned in `dx_update::recovery`), then
 exactly one `command_finished`. Live execution carries `results_complete=true` when every
 selected set reached such a terminal report, including runs with failures; dry-run, `--check`,
 and initialization failure omit it. Atomicity is per set, never repository-wide: each success commits its
-set immediately with no automatic rollback. The v1.0 absence of file events was wont-fix
-(issue #586, resolver-owned by `dx_update::backend`, pinned by fixtures in
-`cli/update/tests/fixtures/update_events/` plus `cli/cli/src/exec/update.rs`): the five
-authoritative backends provided no committed-change manifest and inferring changes via
-Git scan, BUILD parse, or rerun was rejected because the protocol already forbids it.
+set immediately with no automatic rollback. Backends that provide no committed-change manifest report per-set events only; inferring changes via
+Git scan, BUILD parse, or rerun is rejected because the protocol already forbids it.
 
 Minor 1.1 adds the backend committed-change manifest (`dx_update::manifest`, validated
-against `dx_update::sets::SetId::locks`, pinned by fixtures in
-`cli/update/tests/fixtures/correlation_manifest/` plus `bazel run
-//tools/ci:correlation_manifest_qualification`, issue #811): each validated file
+against `dx_update::sets::SetId::locks`): each validated file
 change projects to one `change` (single full-file spanning edit: `0..old_len`
 replacement for `modify` with its pre-commit digest, `0..0` insertion for `create`)
 followed by its terminal `applied` `mutation`, grouped under the same
 `update:<set>` correlation and streamed before that set's terminal per-set report,
 in normalized path order. Empty or absent manifests project to no file events,
-preserving the v1.0 per-set contract; the Go pinned no-op owns an empty manifest
-today while other backends own no CLI-readable manifest yet, so live update still
-emits per-set reports only and its `command_finished` still omits file counts.
+preserving the v1.0 per-set contract.
 When a manifest does supply file deltas, the CLI emits the paired events and
 `command_finished` carries the matching `changes`/`mutations` counts; `diagnostics`
 stay absent for update in every mode. Directory hubs (such as
@@ -521,9 +513,7 @@ be inferred as successful, failed, or blocked. No `command_finished` is promised
 termination. Recovery after interruption is the same manual plan: rerun `dx update` with the
 unattempted sets (idempotent retry) and, when version-controlled, restore kept locks with
 `git checkout --` to discard them; `dx` never runs Git. Text failures always carry a
-`dx: update_recovery:` line so partial runs never read as silent success. A future backend committed-change manifest may add update `change`/`mutation`
-events as a minor-compatible addition only when every backend provides one; until then the
-absence is intentional, not a missing feature.
+`dx: update_recovery:` line so partial runs never read as silent success.
 
 The private Gazelle result manifest is versioned and has a completion state. Each file record
 contains normalized path, `create` or `modify`, optional original BLAKE3-256 digest under the same
@@ -560,8 +550,7 @@ confirmation in text mode.
 
 The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
 is specified in the license-family contract; its shared-report format identifier
-and event mapping add no new profile here. Live SPDX emission plus audit SARIF run shape are
-pinned under issue #632 (pairs with #511).
+and event mapping add no new profile here.
 
 ```json
 {"schema":{"major":1,"minor":0},"event":"report","format":"sarif","path":"reports/lint.sarif","results_complete":true}
@@ -759,7 +748,7 @@ default modes, including zero values when no changes are calculated.
 including when active producers return no candidate changes. Update never carries `diagnostics`
 in any mode; its `command_finished` carries only
 `results_complete` on live execution when no manifest supplies file deltas, and additionally
-carries `changes`/`mutations` when a non-empty manifest projects paired events (issue #811).
+carries `changes`/`mutations` when a non-empty manifest projects paired events.
 Status never carries `results_complete`, `diagnostics`,
 `changes`, or `mutations` in any mode; its `command_finished` carries only `exit_code`.
 A validated empty quality
@@ -846,8 +835,8 @@ the idempotent retry plus manual restore on failure, then exactly one `command_f
 `diagnostic` or `operation` events. Operation boundaries, per-set reporting, recovery planning
 (`dx_update::recovery`), and aggregate
 exit selection are specified in the [update contract](commands/audit-update-bazel.md#dx-update); live resolver-backend
-execution runs `dx_update::backend` per set with `notice`/`error` per-set events plus
-validated `dx_update::manifest` file pairs when present (issue #811). This does not
+execution runs per set with `notice`/`error` per-set events plus
+validated file pairs when present. This does not
 authorize parallel execution.
 Interrupted update runs keep preceding per-set events true with no automatic rollback and emit nothing for
 sets not yet attempted; signal termination promises no `command_finished`. Text failures always
@@ -870,8 +859,7 @@ execution with `conflicting_option` naming `--report`.
 ## Standard Reports
 
 The report formats, SARIF/JUnit/LCOV profiles, SPDX mapping (specified in
-[Standard Reports](standard-reports.md); audit SARIF/SPDX mapping pinned under
-issue #632, SPDX parsing/loading stays owned under issue #511), destination validation,
+[Standard Reports](standard-reports.md)), destination validation,
 deterministic ordering, and partial-document behavior are defined in
 [Standard Reports](standard-reports.md). This document owns only report interaction with
 live streams and the NDJSON `report` event.
@@ -905,70 +893,17 @@ value requires a new major version.
 
 ## Compatibility Tests
 
-Protocol fixtures must verify:
-
-- Update continuation, per-set success/failure/blocked reporting, and overall
-  failure without automatic rollback of successful independent changes. The v1.0
-  absence of file events was wont-fix
-  (issue #586, pinned by fixtures in `cli/update/tests/fixtures/update_events/` plus
-  `cli/cli/src/exec/update.rs`); minor 1.1 adds the backend committed-change manifest
-  (issue #811, pinned by fixtures in `cli/update/tests/fixtures/correlation_manifest/` plus
-  `bazel run //tools/ci:correlation_manifest_qualification` plus
-  `cli/cli/src/exec/update.rs` plus `dx_update::manifest`): per-set `notice`/`error` plus optional `update_recovery`
-  plus `command_finished` stays the complete
-  contract when manifests are absent or empty, with sorted per-set order, `results_complete=true` on live terminal reports, no Git
-  scan/BUILD parse/rerun inference, atomicity per set with manual restore plus idempotent
-  retry (pinned by fixtures in `cli/update/tests/fixtures/update_rollback/` plus
-  `dx_update::recovery`), and interrupted runs keeping preceding per-set events true
-  with nothing emitted for sets not yet attempted.
-- Minor-1.1 correlation plus manifest version compat (issue #811, pinned by fixtures in
-  `cli/update/tests/fixtures/correlation_manifest/` plus
-  `bazel run //tools/ci:correlation_manifest_qualification`): `run` operations carry
-  `run:<target>`, per-set reports carry `update:<set>`, file pairs share their set's
-  correlation, line order stays authoritative, v1.0 consumers ignore the field, omitted
-  correlation preserves v1.0 wire shape, `1.0` witnesses decode under `1.1` by major-only
-  enforcement, and empty or absent manifests emit no file events.
-- Exclusive stdout ownership and arbitrary subprocess output on stderr.
-- Complete deterministic unified patches in diff mode, including new files, multiple files,
-  context, missing-final-newline markers, empty output, and rejected unrepresentable paths.
-- Mutating diff output includes every validated intended change regardless of its later
-  `applied` or `not_applied` outcome and never claims to describe final workspace state.
-- One valid JSON object per NDJSON line and one schema version per invocation.
-- Unknown-field and unknown-event tolerance within one major version.
-- Exact field presence, omission rules, enums, stable error codes, and event ordering.
-- Strict fixability and resolution presence, conservative deduplication, and mutating
-  diagnostic emission only after outcomes are known.
-- Deterministic diagnostics and compact scopes independent of BEP order.
-- Exact change reconstruction for insertions, deletions, adjacent edits, multibyte UTF-8,
-  JSON escaping, full-file replacements, and new files; replacement text is never truncated.
-- Reject malformed digest encoding, invalid UTF-8 sources or replacements, unsorted or
-  overlapping edits, same-offset insertions, no-op edits/candidates, duplicate file events,
-  create events with a digest or existing destination, and quality-originated creates.
-- Verify every check-mode change forces nonzero status, default-mode changes pair with terminal
-  mutations, and aggregate counts describe deduplicated file events.
-- Check/write parity: applying check-mode edits to their validated snapshot produces exactly
-  the bytes submitted to or confirmed by default mode.
-- No `dx`-generated argv, option values, credentials, external labels, or original source
-  bytes; child-output passthrough remains explicitly untrusted. Exact proposed replacement
-  text appears in JSON `change` events in both check and default modes.
-- Aggregate counts matching individual events.
-- Check-mode changes, default-mode mutations, and ignored-import notices deriving from equivalent
-  normalized quality results or one exact Gazelle-owned result manifest, without a human diff,
-  second run, source/BUILD parsing, or Git inspection.
-- Incomplete quality and check-mode generation collection emits no changes or mutations; a
-  structurally valid default-generation late-failure manifest reports only its validated attempted
-  prefix, while malformed or contradictory manifests fail closed.
-- Atomic file reports, exclusive stdout reports, and conformance with
-  [Standard Reports](standard-reports.md).
-- Equivalent text, diff, NDJSON, and standard-report semantics over one normalized result set.
-- Execution/reporting gaps stay wont-fix with fail-closed contract matrices
-  (issue #590, pinned by fixtures in
-  `cli/cli/tests/fixtures/cli_execution_gaps/` plus
-  `bazel run //tools/ci:cli_execution_gaps_qualification`): the
-  per-command standard-report matrix (`lint`/`typecheck`/`check`/`fix`
-  `sarif`, `test` `junit`, `coverage` `lcov`, `audit` `sarif`/`spdx`,
-  every other command none including `format`) fails unsupported combos
-  with `UnsupportedFormat` instead of silent substitution; sequential
-  plans (`check`/`fix` phases, `watch` iterations, `update` per-set
-  continuation, `run` multirun) keep deterministic NDJSON ordering with no
-  parallel execution.
+Protocol fixtures verify update continuation, per-set reporting, and overall
+failure without automatic rollback; correlation grouping with authoritative
+line order and empty-manifest compatibility; exclusive stdout ownership;
+deterministic diff patches; one JSON object per NDJSON line with one schema
+version per invocation; unknown-field tolerance within one major version;
+exact field presence, enums, error codes, and ordering; strict fixability and
+resolution; deterministic diagnostics and scopes; exact change reconstruction;
+rejection of malformed digests, edits, and duplicate file events; check-mode
+and default-mode change/mutation pairing with matching aggregate counts;
+check/write parity; no `dx`-generated secrets or source bytes; manifest-only
+change derivation without Git/BUILD parsing; fail-closed incomplete
+collection; atomic file reports; equivalent text/diff/NDJSON/report
+semantics; and fail-closed unsupported report combinations with deterministic
+ordering for sequential plans. Open work is tracked in GitHub issues.
