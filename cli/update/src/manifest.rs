@@ -93,22 +93,21 @@ pub enum ManifestError {
 }
 
 fn check_path_shape(path: &str) -> Result<(), &'static str> {
-    if path.is_empty() {
-        return Err("path must be non-empty");
+    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
+    // Messages preserve the historical manifest wording; Dot/DotDot share
+    // one message. Pinned tests below prove the mapping plus ladder order.
+    match dx_path::classify(path) {
+        None => Ok(()),
+        Some(dx_path::PathProblem::Empty) => Err("path must be non-empty"),
+        Some(dx_path::PathProblem::Absolute) => {
+            Err("path must be workspace-relative, not absolute")
+        }
+        Some(dx_path::PathProblem::Backslash) => Err("path must use forward slashes"),
+        Some(dx_path::PathProblem::EmptyComponent) => Err("path must have no empty component"),
+        Some(dx_path::PathProblem::Dot) | Some(dx_path::PathProblem::DotDot) => {
+            Err("path must have no '.' or '..' component")
+        }
     }
-    if path.starts_with('/') {
-        return Err("path must be workspace-relative, not absolute");
-    }
-    if path.contains('\\') {
-        return Err("path must use forward slashes");
-    }
-    if path.split('/').any(str::is_empty) {
-        return Err("path must have no empty component");
-    }
-    if path.split('/').any(|part| part == "." || part == "..") {
-        return Err("path must have no '.' or '..' component");
-    }
-    Ok(())
 }
 
 fn is_directory_hub(path: &str) -> bool {
@@ -407,6 +406,37 @@ mod tests {
         // See: `docs/cli/output-protocol.md#mutation`.
         assert!(matches!(validate(&dir), Err(ManifestError::BadPath { .. })));
         assert!(project(&dir).is_err());
+    }
+
+    #[test]
+    fn path_messages_are_pinned_to_dx_path_ladder() {
+        // Thin wrapper over `dx_path::classify`: exact messages plus ladder
+        // order are pinned so drift fails here.
+        for (path, reason) in [
+            ("", "path must be non-empty"),
+            ("/abs", "path must be workspace-relative, not absolute"),
+            ("a\\b", "path must use forward slashes"),
+            ("a//b", "path must have no empty component"),
+            ("a/./b", "path must have no '.' or '..' component"),
+            ("a/../b", "path must have no '.' or '..' component"),
+        ] {
+            assert_eq!(check_path_shape(path), Err(reason), "path: {path:?}");
+        }
+        assert_eq!(check_path_shape("pnpm-lock.yaml"), Ok(()));
+        // Ladder order: absolute beats backslash/dot, dot beats dot-dot
+        // (shared message, but the winning rung is order-determined).
+        assert_eq!(
+            check_path_shape("/a//b"),
+            Err("path must be workspace-relative, not absolute")
+        );
+        assert_eq!(
+            check_path_shape("a\\//b"),
+            Err("path must use forward slashes")
+        );
+        assert_eq!(
+            check_path_shape("a/./../b"),
+            Err("path must have no '.' or '..' component")
+        );
     }
 
     #[test]

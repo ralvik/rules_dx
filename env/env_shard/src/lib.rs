@@ -94,13 +94,14 @@ fn check_value(producer: &str, key: &str, value: &str) -> Result<(), Error> {
 }
 
 fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
-    // Empty exec paths are logical-only identity inputs requiring no
-    // artifact. Non-empty exec paths are BEP-matching suffixes:
+    // Thin wrapper around `dx_path::classify` (sole ladder owner for
+    // order). Empty exec paths are logical-only identity inputs requiring
+    // no artifact. Non-empty exec paths are BEP-matching suffixes:
     // workspace-relative, no backslashes or dot segments, and never the
     // reserved shard suffix so a shard can never back another shard.
-    // Uses `dx_path::classify` for ladder order; Empty/EmptyComponent are
-    // intentionally allowed here (empty returns Ok above; empty-component
-    // preserves parity with Starlark `env_plan_exec_error`) (slice 4).
+    // Empty/EmptyComponent stay allowed to preserve parity with Starlark
+    // `env_plan_exec_error`; messages mirror `//env:plan.bzl` verbatim and
+    // are pinned by tests below.
     if path.is_empty() {
         return Ok(());
     }
@@ -286,6 +287,51 @@ mod tests {
         let mut ok = sample();
         ok.entries[0].exec_path = "toolchain/rustc".into();
         assert!(validate(&ok).is_ok());
+    }
+
+    #[test]
+    fn exec_path_messages_are_pinned_to_dx_path_ladder() {
+        // Thin wrapper over `dx_path::classify`: exact messages (mirroring
+        // `//env:plan.bzl`) plus ladder order are pinned so drift fails
+        // here. Empty/EmptyComponent stay allowed (Starlark parity).
+        for (path, reason) in [
+            ("/out/rustc", "must not be absolute"),
+            ("tool\\chain", "must not contain '\\'"),
+            ("src/./rustc", "must not contain '.' or '..' segments"),
+            ("src/../rustc", "must not contain '.' or '..' segments"),
+            ("a.dxenv.pb", "must not use the reserved shard suffix"),
+        ] {
+            let mut shard = sample();
+            shard.entries[0].exec_path = path.into();
+            assert_eq!(
+                validate(&shard),
+                Err(Error::BadExecPath {
+                    producer: "//env:alpha".into(),
+                    path: path.into(),
+                    reason,
+                }),
+                "exec path {path:?}"
+            );
+        }
+        // Empty and empty-component stay allowed for Starlark parity.
+        assert!(validate(&sample()).is_ok());
+        let mut allowed = sample();
+        allowed.entries[0].exec_path = "a//b".into();
+        assert!(
+            validate(&allowed).is_ok(),
+            "empty-component stays allowed for Starlark parity"
+        );
+        // Ladder order: absolute beats backslash/dot.
+        let mut ordered = sample();
+        ordered.entries[0].exec_path = "/src/./rustc".into();
+        assert_eq!(
+            validate(&ordered),
+            Err(Error::BadExecPath {
+                producer: "//env:alpha".into(),
+                path: "/src/./rustc".into(),
+                reason: "must not be absolute",
+            })
+        );
     }
 
     #[test]

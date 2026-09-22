@@ -65,9 +65,10 @@ pub enum ValidationError {
 /// does not exist). Path checks precede content checks; digest/existence
 /// checks run last.
 pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), ValidationError> {
-    // Canonical workspace-relative ladder via `dx_path::classify`
-    // slice 6). Tightens historical checks to also reject backslashes and
-    // single-dot segments as malformed; `..` still maps to EscapesWorkspace.
+    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
+    // Tightens historical checks to also reject backslashes and single-dot
+    // segments as malformed; `..` still maps to EscapesWorkspace. Pinned
+    // tests below prove the rung mapping plus ladder order.
     match dx_path::classify(&op.path) {
         None => {}
         Some(dx_path::PathProblem::Empty) => return Err(ValidationError::EmptyPath),
@@ -195,7 +196,7 @@ mod tests {
 
     #[test]
     fn backslash_and_dot_segment_rejected() {
-        // Tightened to the canonical dx_path ladder (slice 6).
+        // Tightened to the canonical dx_path ladder.
         assert_eq!(
             validate(&create("a\\b", "hi\n"), None),
             Err(ValidationError::MalformedPath)
@@ -203,6 +204,53 @@ mod tests {
         assert_eq!(
             validate(&create("a/./b", "hi\n"), None),
             Err(ValidationError::MalformedPath)
+        );
+    }
+
+    #[test]
+    fn path_rungs_are_pinned_to_dx_path_ladder() {
+        // Thin wrapper over `dx_path::classify`: every rung mapping plus
+        // ladder order (first problem wins) is pinned so drift fails here.
+        for (path, expected) in [
+            ("", ValidationError::EmptyPath),
+            ("/etc/x", ValidationError::AbsolutePath),
+            ("a\\b", ValidationError::MalformedPath),
+            ("a//b", ValidationError::MalformedPath),
+            ("trailing/", ValidationError::MalformedPath),
+            ("a/./b", ValidationError::MalformedPath),
+            (".", ValidationError::MalformedPath),
+            ("a/../b", ValidationError::EscapesWorkspace),
+            ("..", ValidationError::EscapesWorkspace),
+        ] {
+            assert_eq!(
+                validate(&create(path, "hi\n"), None),
+                Err(expected),
+                "path: {path:?}"
+            );
+        }
+        // Ladder order: absolute beats everything, backslash beats
+        // empty-component/dot, empty-component beats dot, dot beats dot-dot.
+        assert_eq!(
+            validate(&create("/a//b", "hi\n"), None),
+            Err(ValidationError::AbsolutePath)
+        );
+        assert_eq!(
+            validate(&create("a\\//b", "hi\n"), None),
+            Err(ValidationError::MalformedPath)
+        );
+        assert_eq!(
+            validate(&create("a//./b", "hi\n"), None),
+            Err(ValidationError::MalformedPath)
+        );
+        assert_eq!(
+            validate(&create("a/./../b", "hi\n"), None),
+            Err(ValidationError::MalformedPath)
+        );
+        // `..` still escapes even when a malformed rung is also present
+        // below it in the path: dot-dot is its own verdict, not malformed.
+        assert_eq!(
+            validate(&create("a/../../x", "hi\n"), None),
+            Err(ValidationError::EscapesWorkspace)
         );
     }
 

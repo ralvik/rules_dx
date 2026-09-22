@@ -104,26 +104,16 @@ pub enum Error {
 }
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
-    // Ladder order and messages mirror `dx_path::classify` one-to-one;
-    // only the error payload stays crate-local (slice 1).
-    let reason = match dx_path::classify(path) {
-        None => None,
-        Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
-        Some(dx_path::PathProblem::Absolute) => {
-            Some("path must be workspace-relative, not absolute")
-        }
-        Some(dx_path::PathProblem::Backslash) => Some("path must use forward slashes"),
-        Some(dx_path::PathProblem::EmptyComponent) => Some("path must have no empty component"),
-        Some(dx_path::PathProblem::Dot) => Some("path must have no '.' component"),
-        Some(dx_path::PathProblem::DotDot) => Some("path must have no '..' component"),
-    };
-    match reason {
+    // Thin wrapper around `dx_path`: ladder order and canonical messages
+    // live in `dx_path::PathProblem::reason` (sole owner); only the error
+    // payload stays crate-local.
+    match dx_path::reject_reason(path) {
+        None => Ok(()),
         Some(reason) => Err(Error::BadPath {
             at: at.to_owned(),
             path: path.to_owned(),
             reason,
         }),
-        None => Ok(()),
     }
 }
 
@@ -453,6 +443,56 @@ mod tests {
             result.stages[0].source_paths = vec![path.to_owned()];
             assert!(validate(&result).is_err(), "path accepted: {path:?}");
         }
+    }
+
+    #[test]
+    fn path_messages_are_pinned_to_dx_path_ladder() {
+        // Thin wrapper over `dx_path::reject_reason`: exact messages plus
+        // ladder order (first problem wins) are pinned so drift fails here.
+        for (path, reason) in [
+            ("", "path must be non-empty"),
+            ("/absolute", "path must be workspace-relative, not absolute"),
+            ("back\\slash", "path must use forward slashes"),
+            ("a//b", "path must have no empty component"),
+            ("trailing/", "path must have no empty component"),
+            ("a/./b", "path must have no '.' component"),
+            (".", "path must have no '.' component"),
+            ("a/../b", "path must have no '..' component"),
+            ("..", "path must have no '..' component"),
+        ] {
+            let mut result = sample();
+            result.stages[0].source_paths = vec![path.to_owned()];
+            assert_eq!(
+                validate(&result),
+                Err(Error::BadPath {
+                    at: "stages[0]".to_owned(),
+                    path: path.to_owned(),
+                    reason,
+                }),
+                "path: {path:?}"
+            );
+        }
+        // Ladder order: absolute beats empty-component, dot beats dot-dot.
+        let mut result = sample();
+        result.stages[0].source_paths = vec!["/a//b".to_owned()];
+        assert_eq!(
+            validate(&result),
+            Err(Error::BadPath {
+                at: "stages[0]".to_owned(),
+                path: "/a//b".to_owned(),
+                reason: "path must be workspace-relative, not absolute",
+            })
+        );
+        let mut result = sample();
+        result.stages[0].source_paths = vec!["a/./../b".to_owned()];
+        assert_eq!(
+            validate(&result),
+            Err(Error::BadPath {
+                at: "stages[0]".to_owned(),
+                path: "a/./../b".to_owned(),
+                reason: "path must have no '.' component",
+            })
+        );
     }
 
     #[test]
