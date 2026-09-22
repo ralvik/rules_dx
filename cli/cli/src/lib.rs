@@ -1,4 +1,4 @@
-// LCOV_EXCL_START - reason: module root holds only mod declarations and re-exports with no executable statements; every item is covered in its own module.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 //! `dx_cli`: quality command planning for the `dx` CLI.
 //!
 //! Contract: `docs/cli/cli-contract.md`.
@@ -40,4 +40,4 @@ pub use resolve::{
     expand_codegen_roots, map_owners_to_tests, resolve, resolve_for_test, resolve_run,
     ProcessQueryRunner, QueryResult, QueryRunner, ResolveError, ResolvedScope,
 };
-// LCOV_EXCL_STOP - reason: end of re-export-only module root exclusion.
+// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage

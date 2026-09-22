@@ -445,11 +445,11 @@ func sourceFiles(dir, rel string) ([]string, error) {
 			}
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".rs") {
 				local, relErr := filepath.Rel(dir, name)
-				// LCOV_EXCL_START - reason: WalkDir only yields descendants of dir, so Rel cannot fail on Linux; this branch is defensive only.
+				// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 				if relErr != nil {
 					return relErr
 				}
-				// LCOV_EXCL_STOP - reason: end of unreachable Rel-failure guard.
+				// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 				files = append(files, path.Join(rel, filepath.ToSlash(local)))
 			}
 			return nil

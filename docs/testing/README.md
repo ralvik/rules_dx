@@ -71,7 +71,7 @@ in CI, plus reviewer approval in the owning PR that the line cannot be covered b
 or deleted; new denominator-shrinking excludes without fault-injection or deletion
 evidence are rejected.
 Valid ignores exclude their executable lines from the denominator. Custom Starlark instrumentation uses the same markers.
-Ignore syntax is `LCOV_EXCL_LINE` for one line and `LCOV_EXCL_START` / `LCOV_EXCL_STOP` for a range, each with a `reason:` comment on the same or previous line. CI validates the marker and the nearby reason; missing reasons and malformed directives fail the gate. Markers live in line comments outside string literals only: block comments and raw strings stay wont-fix out of scope (issue #589, pinned by `dx_lcov::ignores` unit tests; no eligible source uses those shapes).
+Ignore syntax is `LCOV_EXCL_LINE` for one line and `LCOV_EXCL_START` / `LCOV_EXCL_STOP` for a range, each with a short `policy:` comment (`policy: docs/testing/README.md#coverage`, at most 120 chars) on the same or previous line. CI validates the marker and the nearby reason; missing, empty, over-long, and malformed directives fail the gate. Markers live in line comments outside string literals only: block comments and raw strings stay wont-fix out of scope (issue #589, pinned by `dx_lcov::ignores` unit tests; no eligible source uses those shapes).
 
 Non-ignored eligible sources absent from reports or never executed remain in the
 denominator and are reported as uncovered. Missing reports and incomplete required

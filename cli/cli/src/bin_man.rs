@@ -15,7 +15,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-// LCOV_EXCL_START - reason: thin build-step binary; man-page rendering is verified by the man_pages genrule build, not unit coverage.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 fn main() {
     // Structured diagnostics: build-step failures report via
     // `tracing::error!` with the legacy message text; init is idempotent
@@ -28,6 +28,7 @@ fn main() {
             tracing::error!("usage: dx_man <output-file>");
             std::process::exit(2);
         });
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     let man = clap_mangen::Man::new(dx_cli::args::cli_command()).section("1");
     let mut buffer = Vec::new();
     man.render(&mut buffer).unwrap_or_else(|error| {
@@ -51,4 +52,3 @@ fn main() {
         std::process::exit(1);
     });
 }
-// LCOV_EXCL_STOP - reason: end of thin build-step binary exclusion.

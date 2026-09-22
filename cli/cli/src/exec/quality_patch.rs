@@ -40,10 +40,10 @@ pub(crate) fn render_diff_patch(
         };
         let candidate_text = match String::from_utf8(candidate) {
             Ok(text) => text,
-            // LCOV_EXCL_START - reason: apply_to_bytes only returns valid UTF-8.
+            // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
             Err(_) => {
                 return Err(format!("candidate for {} is not UTF-8 text", change.path));
-            } // LCOV_EXCL_STOP - reason: end of unreachable candidate arm.
+            } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
         };
         owned.push((
             change.path.clone(),

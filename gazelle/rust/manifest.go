@@ -276,16 +276,16 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) error {
 		if a.Path != b.Path {
 			return a.Path < b.Path
 		}
-		// LCOV_EXCL_START - reason: emit stamps every entry with languageName, so languages never differ here; the tiebreak mirrors the crate's (path, language, import) key for protocol evolution.
+		// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 		if a.Language != b.Language {
 			return a.Language < b.Language
 		}
-		// LCOV_EXCL_STOP - reason: end of unreachable language-tiebreak exclusion.
+		// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 		return a.Import < b.Import
 	})
 	data, err := json.Marshal(manifest)
 	if err != nil {
-		return fmt.Errorf("rust: cannot encode intended manifest: %v", err) // LCOV_EXCL_LINE - reason: manifest holds only strings, bytes, ints, and bools, so Marshal cannot fail; this branch is defensive only.
+		return fmt.Errorf("rust: cannot encode intended manifest: %v", err) // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
 	}
 	if err := os.WriteFile(r.outPath, data, 0o600); err != nil {
 		return fmt.Errorf("rust: cannot write intended manifest: %v", err)
@@ -331,7 +331,7 @@ func (r *manifestRecorder) witness(rec packageRecord) (intendedFile, bool, error
 	file.OriginalContent = original
 	file.Edits = diffLines(original, intended)
 	if len(file.Edits) == 0 {
-		return file, false, fmt.Errorf("rust: changed package %q produced no edits", rec.rel) // LCOV_EXCL_LINE - reason: differing bytes always differ in at least one line run, so a changed package always yields a non-noop edit; this branch is defensive only.
+		return file, false, fmt.Errorf("rust: changed package %q produced no edits", rec.rel) // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
 	}
 	return file, true, nil
 }
@@ -468,11 +468,11 @@ func diffLines(original, intended []byte) []intendedEdit {
 			// string. Normalize to empty so deletions emit "".
 			Replacement: nonNilBytes(bytes.Join(newLines[code.J1:code.J2], nil)),
 		}
-		// LCOV_EXCL_START - reason: difflib only emits non-equal opcodes for differing line runs, so the replacement always differs from the covered bytes; this guard is defensive only.
+		// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 		if bytes.Equal(original[edit.Start:edit.End], edit.Replacement) {
 			continue
 		}
-		// LCOV_EXCL_STOP - reason: end of defensive no-op edit guard.
+		// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 		edits = append(edits, edit)
 	}
 	return edits

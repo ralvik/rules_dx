@@ -93,14 +93,14 @@ pub(crate) fn prepare_managed_sides(
                 ..empties()?
             })
         }
-        // LCOV_EXCL_START - reason: defense-in-depth; execute routes only managed commands here, so this arm is unreachable; retained to fail closed as invalid_result instead of panicking.
+        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
         _ => {
             debug_assert!(false, "managed dispatch guards commands");
             Err((
                 CODE_INVALID_RESULT.to_owned(),
                 "unsupported managed command".to_owned(),
             ))
-        } // LCOV_EXCL_STOP - reason: end of unreachable managed-dispatch arm.
+        } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     }
 }
 

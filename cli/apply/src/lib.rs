@@ -1,4 +1,4 @@
-// LCOV_EXCL_START - reason: module root holds only mod declarations and re-exports with no executable statements; every item is covered in its own module.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 //! `dx_apply`: validated, consensus-gated file mutations for the `dx` CLI.
 //!
 //! Contract: `docs/architecture/README.md`.
@@ -26,4 +26,4 @@ pub use envelope::{
     FileOperation, ENVELOPE_VERSION,
 };
 pub use validators::{validate, ValidationError, BLOCKED_EXTENSIONS, MAX_OPERATION_BYTES};
-// LCOV_EXCL_STOP - reason: end of re-export-only module root exclusion.
+// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage

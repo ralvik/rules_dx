@@ -141,49 +141,49 @@ pub(crate) fn collect_results_in(bep: &Path, group: &str) -> Result<Collected, (
                 match snapshot.digest.as_slice().try_into() {
                     Ok(digest) => staged_digests.push((snapshot.path.clone(), digest)),
                     Err(_) => {
-                        target_ok = false; // LCOV_EXCL_LINE - reason: defense-in-depth; quality_result validation enforces DIGEST_LEN snapshots before mapping, so this arm is unreachable via decode_validated.
-                        break; // LCOV_EXCL_LINE - reason: defense-in-depth; unreachable with the line above.
+                        target_ok = false; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                        break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
                     }
                 }
             }
             if !target_ok {
-                break; // LCOV_EXCL_LINE - reason: defense-in-depth; the guarded mapping arm above is unreachable via decode_validated, so this break never fires.
+                break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
             }
             for diagnostic in &result.initial_diagnostics {
                 match map_diagnostic(diagnostic, Snapshot::Initial) {
                     Some(mapped) => staged_initial.push(mapped),
                     None => {
-                        target_ok = false; // LCOV_EXCL_LINE - reason: defense-in-depth; quality_result validation enforces mappable diagnostic shapes before mapping, so this arm is unreachable via decode_validated.
-                        break; // LCOV_EXCL_LINE - reason: defense-in-depth; unreachable with the line above.
+                        target_ok = false; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                        break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
                     }
                 }
             }
             if !target_ok {
-                break; // LCOV_EXCL_LINE - reason: defense-in-depth; the guarded initial-diagnostic mapping arm above is unreachable via decode_validated, so this break never fires.
+                break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
             }
             for diagnostic in &result.terminal_diagnostics {
                 match map_diagnostic(diagnostic, Snapshot::Terminal) {
                     Some(mapped) => staged_terminal.push(mapped),
                     None => {
-                        target_ok = false; // LCOV_EXCL_LINE - reason: defense-in-depth; quality_result validation enforces mappable diagnostic shapes before mapping, so this arm is unreachable via decode_validated.
-                        break; // LCOV_EXCL_LINE - reason: defense-in-depth; unreachable with the line above.
+                        target_ok = false; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                        break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
                     }
                 }
             }
             if !target_ok {
-                break; // LCOV_EXCL_LINE - reason: defense-in-depth; the guarded terminal-diagnostic mapping arm above is unreachable via decode_validated, so this break never fires.
+                break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
             }
             for file in &result.replacements {
                 match map_change(file) {
                     Some(mapped) => staged_changes.push(mapped),
                     None => {
-                        target_ok = false; // LCOV_EXCL_LINE - reason: defense-in-depth; quality_result validation enforces DIGEST_LEN change digests before mapping, so this arm is unreachable via decode_validated.
-                        break; // LCOV_EXCL_LINE - reason: defense-in-depth; unreachable with the line above.
+                        target_ok = false; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                        break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
                     }
                 }
             }
             if !target_ok {
-                break; // LCOV_EXCL_LINE - reason: defense-in-depth; the guarded change mapping arm above is unreachable via decode_validated, so this break never fires.
+                break; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
             }
         }
         if !target_ok {
@@ -252,7 +252,7 @@ mod tests {
         let bep = dir.path().join("empty.json");
         std::fs::write(&bep, "").expect("bep");
         let Err((code, message)) = collect_results_in(&bep, "") else {
-            panic!("empty output group must fail"); // LCOV_EXCL_LINE - reason: defensive test panic that never fires when the seam rejects correctly.
+            panic!("empty output group must fail"); // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
         };
         assert_eq!(code, CODE_INVALID_BEP);
         assert!(message.contains("invalid BEP config"));

@@ -154,13 +154,13 @@ mod tests {
     /// label scopes must resolve without touching Bazel.
     struct NeverQuery;
 
-    // LCOV_EXCL_START - reason: test-only guard; NeverQuery is never called.
+    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
     impl QueryRunner for NeverQuery {
         fn run_query(&self, _argv: &[String], _cwd: &Path) -> std::io::Result<QueryResult> {
             panic!("directory and label scopes must not run queries");
         }
     }
-    // LCOV_EXCL_STOP - reason: end of NeverQuery exclusion.
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

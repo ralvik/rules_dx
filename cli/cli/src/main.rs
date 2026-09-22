@@ -6,7 +6,6 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin binary shim; process wiring, signal forwarding, and stdio routing are operational behaviors verified by build and dogfood execution, not unit coverage.
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -226,6 +225,7 @@ fn main() {
 }
 
 fn run() -> i32 {
+    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
     let args: Vec<String> = std::env::args().skip(1).collect();
     // Hidden completion-time callback for the generated `dx completion`
     // scripts (See: `docs/cli/commands/completion.md`): answers scope
@@ -256,6 +256,7 @@ fn run() -> i32 {
         }
         Err(error) => return usage_error(&error.to_string()),
     };
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     // Structured diagnostics: tracing subscriber init is
     // idempotent and emits nothing by default, keeping runs byte-identical
     // unless `--verbose` (info) or `RUST_LOG` overrides the filter.
@@ -437,4 +438,3 @@ fn run() -> i32 {
     }
     code
 }
-// LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.
