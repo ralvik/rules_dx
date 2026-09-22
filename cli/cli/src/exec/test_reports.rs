@@ -180,7 +180,7 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
                     Some(combined)
                 }
             }
-            _ => None, // LCOV_EXCL_LINE - reason: defense-in-depth; execute_test_reports is only reached for Test/Coverage (Build returns early, Run returns earlier), so Build/Run arms are unreachable
+            _ => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
         };
         let Some(document) = document else {
             reports_ok = false;

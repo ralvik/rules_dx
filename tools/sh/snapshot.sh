@@ -123,9 +123,9 @@ snapshot_canonical_json_diff() {
   local expected="$1" actual="$2" workspace_rel="${3:-}"
   local tmp
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/snapshot.XXXXXX")"
-  # LCOV_EXCL_START - reason: hermetic harness failure path; covered by negative manual runs, not line coverage.
+  # LCOV_EXCL_START - policy: docs/testing/README.md#coverage
   trap 'rm -rf "$tmp"' RETURN
-  # LCOV_EXCL_STOP
+  # LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
   if ! python3 -c 'import json,sys; json.load(open(sys.argv[1])); json.load(open(sys.argv[2]))' "$expected" "$actual"; then
     echo "snapshot FAIL: non-JSON input ($expected vs $actual)" >&2
     return 1

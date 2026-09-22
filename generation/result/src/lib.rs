@@ -174,7 +174,7 @@ fn apply_modification(path: &str, modification: &Modification) -> Result<Vec<u8>
                 index,
             });
         }
-        // LCOV_EXCL_START - reason: u64 byte offsets always fit usize on the required 64-bit hosts, so these conversions never fail there; the end-vs-length bound below enforces range.
+        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
         let Ok(start) = usize::try_from(edit.start_byte) else {
             return Err(Error::EditOutOfBounds {
                 path: path.to_owned(),
@@ -187,7 +187,7 @@ fn apply_modification(path: &str, modification: &Modification) -> Result<Vec<u8>
                 index,
             });
         };
-        // LCOV_EXCL_STOP - reason: end of 64-bit-unreachable conversion exclusion.
+        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
         if end > original.len() {
             return Err(Error::EditOutOfBounds {
                 path: path.to_owned(),

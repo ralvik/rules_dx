@@ -404,8 +404,8 @@ func valeStylesData(repoRoot, dir, rel string, tool nativeTool) []string {
 		}
 		local, relErr := filepath.Rel(dir, name)
 		if relErr != nil {
-			return nil // LCOV_EXCL_LINE - reason: WalkDir only yields paths beneath its root and both inputs are already host-native paths, so filepath.Rel cannot fail on the seed host.
-		} // LCOV_EXCL_LINE - reason: closing brace belongs only to the unreachable filepath.Rel error guard above.
+			return nil // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+		}
 		slash := filepath.ToSlash(local)
 		if slash == ".." || strings.HasPrefix(slash, "../") {
 			return nil

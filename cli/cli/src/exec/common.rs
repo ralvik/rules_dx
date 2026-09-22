@@ -181,7 +181,7 @@ pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> 
         }
         let head = &original[cursor..start];
         if std::str::from_utf8(head).is_err() {
-            return None; // LCOV_EXCL_LINE - reason: defense-in-depth; the whole-text UTF-8 check above accepts only valid UTF-8 sources, so no slice of it can fail; covered logically by the invalid-original test.
+            return None; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
         }
         if std::str::from_utf8(replacement).is_err() {
             return None;
@@ -192,7 +192,7 @@ pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> 
     }
     let tail = &original[cursor..];
     if std::str::from_utf8(tail).is_err() {
-        return None; // LCOV_EXCL_LINE - reason: defense-in-depth; the whole-text UTF-8 check above accepts only valid UTF-8 sources, so the tail cannot fail; covered logically by the invalid-original test.
+        return None; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
     }
     candidate.extend_from_slice(tail);
     Some(candidate)

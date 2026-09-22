@@ -32,7 +32,7 @@ pub trait QueryRunner {
 
 /// Production query runner: spawns the launcher with piped stdio and
 /// waits for completion.
-// LCOV_EXCL_START - reason: thin process-spawn seam; resolution logic is unit-covered through scripted runners and the spawner itself is verified by dogfood evidence.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 pub struct ProcessQueryRunner;
 
 impl QueryRunner for ProcessQueryRunner {
@@ -51,7 +51,7 @@ impl QueryRunner for ProcessQueryRunner {
         })
     }
 }
-// LCOV_EXCL_STOP - reason: end of process-spawn seam exclusion.
+// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 
 /// Resolved scope: exact Bazel targets plus the summary scope.
 #[derive(Debug, Clone, PartialEq, Eq)]

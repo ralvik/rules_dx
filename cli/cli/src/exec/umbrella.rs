@@ -110,14 +110,14 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                     phase.name()
                 ));
                 let Some(capture_text) = capture.to_str() else {
-                    return pre_exec(err, "temporary report path is not UTF-8"); // LCOV_EXCL_LINE - reason: defense-in-depth; capture paths join the ASCII temporary directory with ASCII phase names, so non-UTF-8 paths are unreachable.
+                    return pre_exec(err, "temporary report path is not UTF-8"); // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
                 };
                 phase_reports.push(ReportRequest {
                     format: request.format.clone(),
                     destination: capture_text.to_owned(),
                 });
                 sarif_capture = Some(capture);
-            } // LCOV_EXCL_LINE - reason: closing brace of a fully covered guard carries no executable region of its own.
+            }
         }
         let phase_invocation = Invocation {
             command: *phase,
@@ -198,13 +198,13 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                 continue;
             }
             let Some(capture) = &phase.sarif_capture else {
-                continue; // LCOV_EXCL_LINE - reason: by construction a phase supporting the requested format always carries its capture, so this fallback never fires.
-            }; // LCOV_EXCL_LINE - reason: closing brace of a fully covered guard carries no executable region of its own.
+                continue; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+            };
             let Ok(bytes) = std::fs::read(capture) else {
-                continue; // LCOV_EXCL_LINE - reason: captures are written atomically by executed phases and removed only after the merge, so a missing capture file is unreachable without external interference.
+                continue; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
             };
             let Ok(document) = serde_json::from_slice::<Value>(&bytes) else {
-                continue; // LCOV_EXCL_LINE - reason: captures are rendered by render_sarif, which always emits valid JSON, so an unparsable capture is unreachable.
+                continue; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
             };
             if runs.is_empty() {
                 if let Some(value) = document.get("$schema") {
@@ -241,7 +241,7 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                 {
                     let _ = write_event(out, &event);
                 }
-            } // LCOV_EXCL_LINE - reason: closing brace of a fully covered error-reporting guard carries no executable region of its own.
+            }
             continue;
         }
         if invocation.output == OutputMode::Json {

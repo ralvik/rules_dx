@@ -5,7 +5,7 @@
 
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin binary shim; argument handling is verified by rust_test parity plus binary execution, not unit coverage.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -55,6 +55,7 @@ fn parse_eco(text: &str) -> Result<String, String> {
 
 fn run() -> i32 {
     let cli = Cli::parse();
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     match cli.cmd {
         Command::Consistency {
             ecosystem,
@@ -110,4 +111,3 @@ fn run() -> i32 {
 fn main() {
     std::process::exit(run());
 }
-// LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

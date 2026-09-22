@@ -38,7 +38,7 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin binary shim; CLI parsing and file I/O failures are operational action failures verified by build and WP2c aspect execution, not unit coverage.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -412,6 +412,7 @@ fn run() -> Result<(), RunnerError> {
     for spec in &cli.upstream_diagnostics {
         upstream.push(parse_upstream_diagnostics(spec)?);
     }
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     let mut files = Vec::with_capacity(sources.len());
     for (workspace, exec) in &sources {
         let bytes = std::fs::read(exec).map_err(|e| RunnerError::UnreadableSource {
@@ -586,4 +587,3 @@ fn run() -> Result<(), RunnerError> {
     })?;
     Ok(())
 }
-// LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

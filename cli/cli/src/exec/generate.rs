@@ -163,7 +163,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     };
     let projected = match project(&manifest) {
         Ok(projected) => projected,
-        // LCOV_EXCL_START - reason: defense-in-depth; finalize returns a validated manifest and project revalidates the same value deterministically, so projection cannot fail here.
+        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
         Err(error) => {
             return operational(
                 invocation,
@@ -172,7 +172,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 CODE_INVALID_RESULT,
                 &format!("invalid generation manifest: {error}"),
             );
-        } // LCOV_EXCL_STOP - reason: end of unreachable projection arm.
+        } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     };
     if invocation.output == OutputMode::Json {
         for file in projected.sorted_files() {
@@ -180,7 +180,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 Ok(event) => {
                     let _ = write_event(env.out, &event);
                 }
-                // LCOV_EXCL_START - reason: defense-in-depth; project builds changes from a validated manifest (sound paths, non-empty ordered edits, valid hex digests), so change_event cannot fail here.
+                // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
                 Err(error) => {
                     return operational(
                         invocation,
@@ -189,7 +189,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         CODE_INVALID_RESULT,
                         &format!("invalid change for output: {error}"),
                     );
-                } // LCOV_EXCL_STOP - reason: end of unreachable change arm.
+                } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
             }
         }
         if !invocation.check {
@@ -199,7 +199,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                     Some(MutationOutcome::NotApplied) => {
                         (MutationOutcome::NotApplied, file.failure_code.as_deref())
                     }
-                    // LCOV_EXCL_START - reason: defense-in-depth; project maps every default-mode file to Applied or NotApplied, so a missing outcome is unreachable here.
+                    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
                     None => {
                         return operational(
                             invocation,
@@ -208,13 +208,13 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                             CODE_INVALID_RESULT,
                             &format!("invalid mutation for output: {}", file.change.path),
                         );
-                    } // LCOV_EXCL_STOP - reason: end of unreachable outcome arm.
+                    } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
                 };
                 match mutation_event(&file.change.path, file.kind(), outcome, reason) {
                     Ok(event) => {
                         let _ = write_event(env.out, &event);
                     }
-                    // LCOV_EXCL_START - reason: defense-in-depth; manifest validation requires a nonempty failure_code exactly for NotApplied, so mutation_event cannot fail here.
+                    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
                     Err(error) => {
                         return operational(
                             invocation,
@@ -223,7 +223,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                             CODE_INVALID_RESULT,
                             &format!("invalid mutation for output: {error}"),
                         );
-                    } // LCOV_EXCL_STOP - reason: end of unreachable mutation arm.
+                    } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
                 }
             }
         }
@@ -232,7 +232,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 Ok(event) => {
                     let _ = write_event(env.out, &event);
                 }
-                // LCOV_EXCL_START - reason: defense-in-depth; project builds notices from validated ignored imports (warning level, nonempty code/message/path/language/import), so notice_event cannot fail here.
+                // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
                 Err(error) => {
                     return operational(
                         invocation,
@@ -241,7 +241,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         CODE_INVALID_RESULT,
                         &format!("invalid notice for output: {error}"),
                     );
-                } // LCOV_EXCL_STOP - reason: end of unreachable notice arm.
+                } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
             }
         }
         let code = projected.exit_code(bazel_code);
@@ -258,7 +258,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
             Ok(patch) => {
                 env.out.write_all(patch.as_bytes()).ok();
             }
-            // LCOV_EXCL_START - reason: defense-in-depth; validated manifests hold unique paths, empty originals on creates, and no noop edits, so render_diff cannot fail here.
+            // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
             Err(error) => {
                 return operational(
                     invocation,
@@ -267,7 +267,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                     CODE_DIFF_FAILED,
                     &format!("failed to render generate patch: {error}"),
                 );
-            } // LCOV_EXCL_STOP - reason: end of unreachable diff arm.
+            } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
         }
     } else {
         for line in text_lines(&projected) {

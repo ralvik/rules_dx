@@ -38,10 +38,31 @@ pub fn is_ignored(ignores: &Ignores, line: u32) -> bool {
     false
 }
 
-/// Non-empty reason text after `reason:` on `line`, if present.
+/// Short-reason cap for exclusion markers (`policy: docs/testing/README.md#coverage`).
+///
+/// Full rationale lives once in `docs/testing/README.md#coverage`; marker
+/// reasons stay short pointers so the coverage denominator is argued away
+/// nowhere. Paragraph-long reasons fail the gate via [`LcovError::ReasonTooLong`].
+pub const MAX_REASON_LEN: usize = 120;
+
+/// Non-empty reason text after `reason:` or `policy:` on `line`, if present.
+///
+/// Both keys are accepted: historical markers use `reason:`, while the
+/// short-reason policy (`docs/testing/README.md#coverage`) blesses the
+/// `policy:` pointer form. `reason:` wins when a line carries both.
 fn reason_value(line: &str) -> Option<String> {
-    let marker = line.find("reason:")?;
-    let value = line[marker + "reason:".len()..].trim().to_string();
+    let offset = match (line.find("reason:"), line.find("policy:")) {
+        (Some(left), Some(right)) => Some(left.min(right)),
+        (Some(left), None) => Some(left),
+        (None, Some(right)) => Some(right),
+        (None, None) => None,
+    }?;
+    let key_len = if line[offset..].starts_with("reason:") {
+        "reason:".len()
+    } else {
+        "policy:".len()
+    };
+    let value = line[offset + key_len..].trim().to_string();
     if value.is_empty() {
         None
     } else {
@@ -49,27 +70,43 @@ fn reason_value(line: &str) -> Option<String> {
     }
 }
 
-/// Reason for `directive` at 1-based `lineno`: `reason:` with non-empty text
-/// on the same line or the line directly above it.
+/// Reason for `directive` at 1-based `lineno`: `reason:`/`policy:` with
+/// non-empty short text on the same line or the line directly above it.
 fn nearby_reason(
     path: &str,
     directive: &str,
     lineno: usize,
     lines: &[&str],
 ) -> Result<String, LcovError> {
-    if let Some(reason) = reason_value(lines[lineno - 1]) {
-        return Ok(reason);
-    }
-    if lineno >= 2 {
+    let reason = if let Some(reason) = reason_value(lines[lineno - 1]) {
+        reason
+    } else if lineno >= 2 {
         if let Some(reason) = reason_value(lines[lineno - 2]) {
-            return Ok(reason);
+            reason
+        } else {
+            return Err(LcovError::MissingReason {
+                path: path.to_string(),
+                lineno,
+                directive: directive.to_string(),
+            });
         }
+    } else {
+        return Err(LcovError::MissingReason {
+            path: path.to_string(),
+            lineno,
+            directive: directive.to_string(),
+        });
+    };
+    if reason.len() > MAX_REASON_LEN {
+        return Err(LcovError::ReasonTooLong {
+            path: path.to_string(),
+            lineno,
+            directive: directive.to_string(),
+            len: reason.len(),
+            max: MAX_REASON_LEN,
+        });
     }
-    Err(LcovError::MissingReason {
-        path: path.to_string(),
-        lineno,
-        directive: directive.to_string(),
-    })
+    Ok(reason)
 }
 
 /// Comment style for marker extraction, selected by source extension.
@@ -304,7 +341,8 @@ fn take_word(rest: &str, word: &str) -> bool {
 
 /// Validate the exclusion markers in the `source` of `path`.
 ///
-/// Every LINE/START/STOP directive needs a nearby non-empty `reason:`; ranges
+/// Every LINE/START/STOP directive needs a nearby non-empty short
+/// (`MAX_REASON_LEN`) `reason:`/`policy:`; ranges
 /// must open and close exactly once; any other spelling of the marker prefix
 /// is an unrecognized directive and fails. Markers are honored only inside
 /// the extension-selected comment style (see [`comment_style`]) outside
@@ -774,6 +812,68 @@ mod tests {
         ]);
         let ignores = find_ignores("t.pyi", &source).unwrap();
         assert!(ignores.singles.contains_key(&2));
+    }
+
+    #[test]
+    fn policy_pointer_is_accepted_as_short_reason() {
+        let source = file_lines(&[format!(
+            "// {} - policy: docs/testing/README.md#coverage",
+            marker("_LINE")
+        )]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+    }
+
+    #[test]
+    fn policy_pointer_on_previous_line_is_accepted() {
+        let source = file_lines(&[
+            "    // policy: docs/testing/README.md#coverage".to_string(),
+            format!("    // {}", marker("_LINE")),
+            "    1".to_string(),
+        ]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.contains_key(&2));
+    }
+
+    #[test]
+    fn long_reason_fails_for_single_line() {
+        let long = "x".repeat(MAX_REASON_LEN + 1);
+        let source = file_lines(&[format!("// {} - reason: {long}", marker("_LINE"))]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(err.to_string().contains("too long"), "{err}");
+        assert!(err.to_string().contains("t.rs:1"), "{err}");
+    }
+
+    #[test]
+    fn long_policy_reason_fails_for_range_start() {
+        let long = "y".repeat(MAX_REASON_LEN + 40);
+        let source = file_lines(&[
+            format!("// {} - policy: {long}", marker("_START")),
+            "code();".to_string(),
+            format!("// {} - reason: closes.", marker("_STOP")),
+        ]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(err.to_string().contains("too long"), "{err}");
+    }
+
+    #[test]
+    fn max_length_reason_passes_at_boundary() {
+        let exact = "z".repeat(MAX_REASON_LEN);
+        let source = file_lines(&[format!("// {} - reason: {exact}", marker("_LINE"))]);
+        assert!(find_ignores("t.rs", &source)
+            .unwrap()
+            .singles
+            .contains_key(&1));
+    }
+
+    #[test]
+    fn empty_policy_reason_fails() {
+        let source = file_lines(&[
+            "    // policy:   ".to_string(),
+            format!("    // {}", marker("_LINE")),
+            "    1".to_string(),
+        ]);
+        assert!(find_ignores("t.rs", &source).is_err());
     }
 
     #[test]

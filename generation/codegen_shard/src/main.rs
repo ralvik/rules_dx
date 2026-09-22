@@ -25,7 +25,7 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin binary shim; CLI parsing and file I/O failures are operational action failures verified by build and shard-emission execution, not unit coverage.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 use std::path::PathBuf;
 
 use clap::{error::ErrorKind, Parser};
@@ -156,6 +156,7 @@ fn run(args: &[String]) -> Result<(), String> {
         language: cli.language.ok_or_else(usage)?,
         entries: cli.entry,
     };
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     let bytes = encode_validated(&shard).map_err(|error| error.to_string())?;
     // Read back before writing so a codec regression fails the action
     // instead of emitting bytes the CLI would reject.
@@ -175,4 +176,3 @@ fn main() {
         std::process::exit(1);
     }
 }
-// LCOV_EXCL_STOP - reason: end of thin binary shim exclusion.

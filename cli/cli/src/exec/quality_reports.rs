@@ -67,7 +67,7 @@ pub(crate) fn write_standard_reports(
                 if finding.range.is_some() {
                     needed.insert(path.as_str());
                 }
-            } // LCOV_EXCL_LINE - reason: closing brace of a fully covered nesting level carries no executable region of its own.
+            }
         }
         for path in needed {
             match std::fs::read(workspace.join(path)) {
@@ -85,7 +85,7 @@ pub(crate) fn write_standard_reports(
                             });
                             break;
                         }
-                    } // LCOV_EXCL_LINE - reason: closing brace of a fully covered guard carries no executable region of its own.
+                    }
                     match String::from_utf8(bytes) {
                         Ok(text) => {
                             snapshots.insert(path.to_owned(), text);
@@ -133,7 +133,7 @@ pub(crate) fn write_standard_reports(
                         {
                             let _ = write_event(out, &event);
                         }
-                    } // LCOV_EXCL_LINE - reason: closing brace of a fully covered error-reporting guard carries no executable region of its own.
+                    }
                     continue;
                 }
                 if *output == OutputMode::Json {

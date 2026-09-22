@@ -39,12 +39,12 @@ pub(crate) fn collect_managed_codegen(
         )
     })?;
     let projection = dx_codegen::plan_projection(&plan.records, &outputs).map_err(|err| {
-        // LCOV_EXCL_START - reason: defense-in-depth; collect_plan runs the identical artifact-index validation over the same outputs, so projection cannot fail after a successful collect; retained so a future divergence fails closed as invalid_result rather than panicking.
+        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid codegen plan: {err}"),
         )
-        // LCOV_EXCL_STOP - reason: end of unreachable projection-failure mapping.
+        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     })?;
     Ok((outputs, plan, projection))
 }
@@ -52,14 +52,14 @@ pub(crate) fn collect_managed_codegen(
 /// Managed empty generated-code identity, mirroring
 /// [`empty_env_id`](super::managed_env::empty_env_id).
 pub(crate) fn empty_generated_id() -> Result<dx_setup::GenerationId, (String, String)> {
-    // LCOV_EXCL_START - reason: defense-in-depth; plan_hex always renders a valid generation id, so construction cannot fail; retained so a future divergence fails closed as invalid_result rather than panicking.
+    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
     dx_setup::GenerationId::new(&dx_codegen::plan_hex("[]")).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid empty codegen plan digest: {err}"),
         )
     })
-    // LCOV_EXCL_STOP - reason: end of unreachable digest-construction exclusion.
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 }
 
 /// Rejects workspace-absolute, escaping, or empty logical paths before
@@ -218,12 +218,12 @@ pub(crate) fn stage_codegen_side(
     projection: &[dx_codegen::ProjectionEntry],
 ) -> Result<dx_setup::GenerationId, (String, String)> {
     let id = dx_setup::GenerationId::new(&plan.hex()).map_err(|err| {
-        // LCOV_EXCL_START - reason: defense-in-depth; plan digests always render valid generation ids, so construction cannot fail; retained so a future divergence fails closed as invalid_result rather than panicking.
+        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid codegen plan digest: {err}"),
         )
-        // LCOV_EXCL_STOP - reason: end of unreachable digest-construction exclusion.
+        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     })?;
     stage_codegen_generation(workspace, &id, projection)?;
     Ok(id)

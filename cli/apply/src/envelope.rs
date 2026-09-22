@@ -91,9 +91,9 @@ pub fn parse_envelope(json: &str) -> Result<Envelope, EnvelopeError> {
 
 /// Serializes an envelope to its canonical compact JSON form.
 pub fn emit_envelope(envelope: &Envelope) -> Result<String, EnvelopeError> {
-    // LCOV_EXCL_START - reason: unreachable for well-typed envelopes; serde_json only fails serialization on maps with non-string keys, which this schema has none of. The error path exists so library callers get a Result instead of a panic.
+    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
     serde_json::to_string(envelope).map_err(|err| EnvelopeError::Unserializable(err.to_string()))
-    // LCOV_EXCL_STOP - reason: end of unreachable serialization-failure exclusion.
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 }
 
 /// Lowercase hex SHA-256 of `bytes` (frozen envelope contract:
