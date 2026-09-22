@@ -471,12 +471,19 @@ jobs:
           echo "### sbom-windows-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Commands: bazel build //deploy/release:sbom_demo; bazel test //deploy/release:dx_release_tools_test; stage SPDX-2.3 + SLSA v1 under RUNNER_TEMP/sbom-windows-x86_64 and upload as sbom-provenance-windows_x86_64 (windows x86_64 MSVC-compatible native on windows-latest with shell bash, local-only, explicit EULA never automatic with no installed fallback, publishes nothing; attestation stays owner-gated human-run via //deploy/release:signing_demo, issue #807)." >> "$GITHUB_STEP_SUMMARY"
   preset-stale:
-    name: preset-stale (dx update --check, Linux once)
-    # Consumer-CI stale cell (issue #332): Linux-once preset freshness
-    # gate. Review-required with no auto-merge per issue #332
+    name: preset-stale (dx update --check + root locks, Linux once)
+    # Consumer-CI stale cell (issue #332) plus root-lock freshness
+    # (issue #1060): Linux-once preset plus lock gate. Review-required
+    # with no auto-merge per issue #332
     # (`dx_ci::preset_bot_auto_merge_allowed()==false`,
     # `preset_regen_requires_review()==true`): a stale fragment fails
     # here and must be fixed by a reviewed `dx update` plus flag-diff.
+    # Root locks fail here when stale (existence-only rejected per
+    # #1060): MODULE.bazel.lock via `mod deps --lockfile_mode=error`,
+    # cargo-bazel-lock.json via the crate_universe repin target without
+    # CARGO_BAZEL_REPIN, pnpm-lock.yaml via the Bazel-pinned pnpm
+    # `--frozen-lockfile` install (maven stays fail-closed via
+    # fail_if_repin_required in MODULE.bazel).
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
@@ -487,13 +494,18 @@ jobs:
           prefix: bazel-seed-
       - name: Check preset freshness
         run: |
-          bazel run --noshow_progress //tools/bazelrc:preset.update -- --verify-only
+          bazel run --noshow_progress //tools/bazelrc:preset_update -- --verify-only
           bazel run --noshow_progress //cli/cli:dx -- update --check
+      - name: Check root lock freshness (issue #1060)
+        run: |
+          bazel mod deps --lockfile_mode=error > /dev/null
+          bazel build --noshow_progress //rust/tests/fixtures/hello:hello
+          bazel run --noshow_progress @pnpm//:pnpm -- install --frozen-lockfile --lockfile-only
       - name: Write job summary
         if: always()
         run: |
           echo "### preset-stale — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: bazel run //tools/bazelrc:preset.update -- --verify-only; bazel run //cli/cli:dx -- update --check (Linux once, review-required, no auto-merge)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: bazel run //tools/bazelrc:preset_update -- --verify-only; bazel run //cli/cli:dx -- update --check; bazel mod deps --lockfile_mode=error; bazel build //rust/tests/fixtures/hello:hello (crate_universe check, no repin); bazel run @pnpm//:pnpm -- install --frozen-lockfile --lockfile-only (Linux once, review-required, no auto-merge)." >> "$GITHUB_STEP_SUMMARY"
   gitleaks:
     name: gitleaks (secret scan, Linux once)
     # Secret scanning (issue #1057): Linux-once `gitleaks detect --no-git`

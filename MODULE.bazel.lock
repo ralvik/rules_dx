@@ -779,7 +779,7 @@
     },
     "//quality/tools/jvm:extension.bzl%jvm_tools": {
       "general": {
-        "bzlTransitiveDigest": "08tjYmlJu3ydkUu5rYonw3JjG1LqyuV74fOSEvk9tKo=",
+        "bzlTransitiveDigest": "bMoYq7Cj5YElh+7l2rp0Ux/iptCeMQkSXajkfPwGm5E=",
         "usagesDigest": "TdQ+MCt/ktY7u4UHGWmyCKzaW0XduslfKJ+GgNfzaCI=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
