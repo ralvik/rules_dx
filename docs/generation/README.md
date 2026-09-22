@@ -17,6 +17,7 @@ ADRs explain why the contracts exist; the test matrix defines the required evide
 - [C#](csharp.md): directory libraries over the Paket scope.
 - [F#](fsharp.md): directory libraries over the Paket scope.
 - [C/C++](cc.md): directory libraries with sources plus headers and no lockfile.
+- [Ruby](ruby.md): directory libraries over the shared Bundler scope.
 - [PowerShell](powershell.md): handwritten wrappers over the portable pwsh runtime with the explicitly scoped no-Gazelle alternative.
 - [Mixed ownership](mixed.md): disjoint v1 container partition.
 - [Framework adapters](framework-adapters.md): Vue, Svelte, Astro, and MDX container boundaries.
@@ -49,6 +50,12 @@ C/C++ has none (every `http_archive` carries `sha256`/`integrity`).
 C/C++ hash wiring qualified seed-only under issue #484 via
 `bazel run //tools/ci:cc_hermetic_qualification` with `cc/tests/fixtures/hermetic/`.
 Upstream pins live in `MODULE.bazel`.
+Ruby generation mapping is delivered (`gazelle/ruby/` plus
+`third_party/ruby/Gemfile.lock` qualified seed-only via
+`bazel run //tools/ci:gems_qualification` with
+`ruby/tests/fixtures/gems/pins.bzl` and RSpec mapping via
+`bazel run //tools/ci:rspec_qualification` with
+`ruby/tests/fixtures/rspec/pins.bzl`, hello staying stdlib-only).
 PowerShell has a provisional generation mapping (issue #972):
 `powershell/rules/defs.bzl` wrappers preserving `PwshInfo` plus
 `QualitySourcesInfo` with `powershell/rules/wrapper_tests.bzl` conformance
@@ -59,13 +66,9 @@ explicitly scoped no-Gazelle alternative per
 `third_party/powershell/PSGallery.lock.json` per
 `powershell/tests/fixtures/gallery/pins.bzl` (consumes never writes,
 fail-closed, no consumer installer).
-Ruby has no generation mapping yet: admitted to v1 by
-[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding the
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md) deferral),
-with mapping pending in the parallel Ruby track (issue #971).
 Swift has none: excluded from v1 by the same record, re-evidenced by ADR 0032.
 Deferred/excluded generation record is decided by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md);
-no `ruby/` or `swift/` Gazelle extension lands here yet (PowerShell takes
+no `swift/` Gazelle extension lands here (PowerShell takes
 the explicitly scoped no-Gazelle alternative, so no `gazelle/powershell/`
 lands either).
 
@@ -121,13 +124,18 @@ upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures
 `java/tests/fixtures/junit/` plus `kotlin/tests/fixtures/junit/` via
 `bazel run //tools/ci:junit_qualification` under issue #476), plain
 `cc_test` assert executables plus the qualified GoogleTest v1.18.0 mapping
-below, plain `csharp_test`/`fsharp_test` hello executables)
+below, plain `csharp_test`/`fsharp_test` hello executables, plain
+`ruby_test` hello executables plus the qualified RSpec 3.13.0 mapping
+below)
 and lock authority (`third_party/jvm/maven_install.json`,
 `third_party/dotnet/paket.lock` plus `paket.dependencies` qualified seed-only
 under issue #482 via `bazel run //tools/ci:paket_qualification` with
 `csharp/tests/fixtures/paket/pins.bzl`, Go `go.mod` plus `go.sum` qualified
 seed-only under issue #483 via `bazel run //tools/ci:godeps_qualification` with
-`go/tests/fixtures/godeps/pins.bzl`, C/C++ none qualified
+`go/tests/fixtures/godeps/pins.bzl`, Ruby `Gemfile` plus `Gemfile.lock`
+qualified seed-only via `bazel run //tools/ci:gems_qualification` with
+`ruby/tests/fixtures/gems/pins.bzl` and hello staying stdlib-only, C/C++
+none qualified
 seed-only under issue #484 via `bazel run //tools/ci:cc_hermetic_qualification`
 with `cc/tests/fixtures/hermetic/`).
 The qualified Maven maven_install.json plus fail-closed repin is pinned under issue #481
@@ -144,6 +152,10 @@ The qualified GoogleTest v1.18.0 mapping is pinned under issue #479 (plain
 `@googletest//:gtest_main` with an explicit `-std=c++17` floor, proven by
 `cc/tests/fixtures/googletest/` via
 `bazel run //tools/ci:googletest_qualification`; living at head rejected).
+The qualified RSpec 3.13.0 mapping is pinned for Ruby (plain `ruby_test`
+with `main = "@bundle//bin:rspec"` plus `args` and `deps` on the spec
+helper plus `@bundle`, proven by `ruby/tests/fixtures/rspec/` via
+`bazel run //tools/ci:rspec_qualification`; unpinned runner rejected).
 Upgrades stay owned under issues #476-#484 (JUnit 6.1.3
 plus 5.14.x fallback qualified seed-only under issue #476 via
 `bazel run //tools/ci:junit_qualification`; xUnit v3 4.0.0 qualified seed-only

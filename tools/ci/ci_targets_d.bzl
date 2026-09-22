@@ -135,6 +135,26 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Ruby Gemfile.lock wiring harness; see docs/product/support-matrix.md#provisional-default-dependency-locks.
+    sh_binary(
+        name = "gems_qualification",
+        srcs = ["gems_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
+    # RSpec runner harness; see docs/product/support-matrix.md#provisional-default-test-runners.
+    sh_binary(
+        name = "rspec_qualification",
+        srcs = ["rspec_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # C/C++ sha256-integrity plus no-system-package harness; see docs/product/support-matrix.md#provisional-default-dependency-locks.
     sh_binary(
         name = "cc_hermetic_qualification",

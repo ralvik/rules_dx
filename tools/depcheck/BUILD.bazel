@@ -77,6 +77,7 @@ rust_test(
         ":js_testdata",
         ":kotlin_testdata",
         ":python_testdata",
+        ":ruby_testdata",
         ":rust_testdata",
         ":scala_testdata",
         ":ts_testdata",
@@ -136,6 +137,8 @@ sh_test(
         "$(rootpath //third_party/jvm:maven_install.json)",
         "$(rootpath //third_party/dotnet:paket.dependencies)",
         "$(rootpath //third_party/dotnet:paket.lock)",
+        "$(rootpath //third_party/ruby:Gemfile)",
+        "$(rootpath //third_party/ruby:Gemfile.lock)",
     ],
     data = [
         "//:package.json",
@@ -150,6 +153,8 @@ sh_test(
         "//third_party/go:go.sum",
         "//third_party/jvm:maven_install.json",
         "//third_party/jvm:pins.bzl",
+        "//third_party/ruby:Gemfile",
+        "//third_party/ruby:Gemfile.lock",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
         ":depcheck",
@@ -211,6 +216,11 @@ filegroup(
 filegroup(
     name = "cc_testdata",
     srcs = glob(["testdata/cc/**"]),
+)
+
+filegroup(
+    name = "ruby_testdata",
+    srcs = glob(["testdata/ruby/**"]),
 )
 
 real_source_target(

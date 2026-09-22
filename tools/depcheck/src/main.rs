@@ -25,6 +25,10 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
+// `Locks` carries the full workspace lock set; boxing its `PathBuf`s would
+// silence `large_enum_variant` but `clap` has no `ValueParser` for
+// `Box<PathBuf>`, so the variant stays inline (See: `docs/quality/quality-testing.md`).
+#[allow(clippy::large_enum_variant)]
 enum Command {
     /// Verify manifest vs lock (offline, non-mutating).
     Consistency {
@@ -72,12 +76,17 @@ enum Command {
         paket_manifest: PathBuf,
         #[arg(long)]
         paket_lock: PathBuf,
+        #[arg(long)]
+        ruby_manifest: PathBuf,
+        #[arg(long)]
+        ruby_lock: PathBuf,
     },
 }
 
 fn parse_eco(text: &str) -> Result<String, String> {
     const KNOWN: &[&str] = &[
         "rust", "python", "js", "ts", "go", "java", "kotlin", "scala", "csharp", "fsharp", "cc",
+        "ruby",
     ];
     if KNOWN.contains(&text) {
         Ok(text.to_owned())
@@ -159,6 +168,8 @@ fn run() -> i32 {
             maven_lock,
             paket_manifest,
             paket_lock,
+            ruby_manifest,
+            ruby_lock,
         } => {
             let mut out = String::new();
             let mut err = String::new();
@@ -176,6 +187,8 @@ fn run() -> i32 {
                     maven_lock: &maven_lock,
                     paket_manifest: &paket_manifest,
                     paket_lock: &paket_lock,
+                    ruby_manifest: &ruby_manifest,
+                    ruby_lock: &ruby_lock,
                 },
                 &mut out,
                 &mut err,
