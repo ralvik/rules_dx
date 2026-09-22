@@ -9,6 +9,10 @@ providers and add `QualitySourcesInfo`. The extension lives in
 `gazelle/csharp/` with parser/naming/lang fixtures plus focused tests.
 Hello builds in `csharp/tests/fixtures/hello/` consume the wrappers.
 
+Wrappers default to single-TFM `net10.0`; multi-pivot consumers declare
+one `csharp_library` per TFM and aggregate per-pivot Roslyn SARIFs in
+deterministic pivot order, proven by `csharp/tests/fixtures/roslyn/`.
+
 ## Sources And Ownership
 
 One directory holds one reusable `csharp_library` named after the directory

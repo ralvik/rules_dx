@@ -35,6 +35,11 @@ def csharp_wrapper_contract_tests(name):
                 ["net9.0"],
             ),
             expect_equal(
+                "explicit tfm matrix wins",
+                csharp_tfm_with_defaults({"target_frameworks": ["net8.0", "net10.0"]})["target_frameworks"],
+                ["net8.0", "net10.0"],
+            ),
+            expect_equal(
                 "explicit warnings setting wins",
                 csharp_tfm_with_defaults({"treat_warnings_as_errors": False})["treat_warnings_as_errors"],
                 False,
