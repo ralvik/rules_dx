@@ -35,7 +35,10 @@ Bash `sh_binary`/`sh_test` targets carry
 `target_compatible_with = ["@platforms//os:linux"]` plus
 `data = ["//tools/sh:bootstrap", "//tools/sh:lib"]` for the single-sourced
 bootstrap loader plus `dx_bootstrap` (plus `data = ["//tools/sh:guards"]`
-when the driver uses the table-driven guard rows). See the
+when the driver uses the table-driven guard rows). Every `sh_test` also
+carries explicit `size` plus `timeout` (`small`/`short` for grep harnesses;
+`moderate` where the driver runs nested Bazel) so the global
+`--test_timeout` cap never masks slowness. See the
 [shell contract](../testing/tools.md#shell-and-host-tool-contract) for the
 bash-only bootstrap floor plus guard maintenance (shared helpers plus
 snapshot versus grep policy under issue #450, table rows under issue #653,

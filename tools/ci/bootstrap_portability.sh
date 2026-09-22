@@ -9,7 +9,8 @@
 #   from RUNNER_OS/RUNNER_ARCH with a uname fallback; download retries;
 #   checksum verifies via sha256sum with shasum plus python3 fallbacks;
 #   install lands under RUNNER_TEMP without sudo and joins GITHUB_PATH;
-#   per-OS copy-paste is rejected;
+#   per-OS copy-paste is rejected; curl hardening extends to the
+#   Dockerfile plus ghcr cosign fetches with --retry everywhere (issue #932);
 # - pins: version plus per-OS sha256 inputs stay canonical in action.yml
 #   (checked by //tools/ci:pin_consistency_test); Dockerfile tracks the
 #   linux-amd64 pair; docs bootstrap documents all five hosts;
@@ -33,6 +34,8 @@ dx_test_init
 
 action=".github/actions/setup-bazelisk/action.yml"
 docs="docs/contributing/local-workflows.md"
+dockerfile=".devcontainer/Dockerfile.prebuilt"
+ghcr=".github/workflows/ghcr.yml"
 
 # Single portable action owns the Bazelisk install: per-OS sha inputs exist,
 # legacy single sha256 stays absent.
@@ -70,6 +73,28 @@ if grep -q -F -e 'curl -fsSL --retry 3' "$action" &&
   ok
 else
   bad "setup-bazelisk lost bounded download retry (curl --retry plus 3-attempt loop, issue #617)"
+fi
+
+# Curl hardening extends beyond the action (issue #932): the Dockerfile
+# Bazelisk fetch plus the ghcr cosign fetch carry the same fail-closed
+# retry flags, not just presence.
+if grep -q -F -e 'curl -fsSL' "$dockerfile" &&
+  grep -q -F -e '--retry 3 --retry-delay 2' "$dockerfile" &&
+  grep -q -F -e 'curl -fsSL' "$ghcr" &&
+  grep -q -F -e '--retry 3 --retry-delay 2' "$ghcr"; then
+  ok
+else
+  bad "Dockerfile.prebuilt or ghcr.yml lost hardened curl flags (want -fsSL plus --retry 3 --retry-delay 2, issue #932)"
+fi
+
+# No bare curl without retry survives in the fetch sites: every curl
+# invocation (curl with flags) in the action plus Dockerfile plus ghcr
+# cosign fetch carries --retry (fail-closed on flag drift, not presence).
+if grep -h -o -E -e 'curl -[^|;&]*' "$action" "$dockerfile" "$ghcr" 2>/dev/null | grep -q -F -e 'curl -' &&
+  ! grep -h -o -E -e 'curl -[^|;&]*' "$action" "$dockerfile" "$ghcr" 2>/dev/null | grep -v -F -e '--retry' | grep -q .; then
+  ok
+else
+  bad "a bare curl without --retry survives in setup-bazelisk, Dockerfile.prebuilt, or ghcr.yml (want --retry everywhere, issue #932)"
 fi
 
 # No sudo assumption: no sudo command in executable lines (comments may name
@@ -133,6 +158,19 @@ if grep -q -F -e 'bazelisk-linux-amd64' "$docs" &&
   ok
 else
   bad "local-workflows.md lost the portable bootstrap record (five assets plus retry plus portable hash plus no-sudo, issue #617)"
+fi
+
+# Bootstrap git probe stays bounded (issue #932): `timeout` guards the
+# rev-parse with a fail-open fallback to the source-tree walk, and the
+# budget is documented in the bootstrap header.
+bootstrap="tools/sh/bootstrap.sh"
+if grep -q -F -e 'DX_BOOTSTRAP_TIMEOUT' "$bootstrap" &&
+  grep -q -F -e 'command -v timeout' "$bootstrap" &&
+  grep -q -F -e 'git rev-parse --show-toplevel' "$bootstrap" &&
+  grep -q -F -e 'Budget (issue #932)' "$bootstrap"; then
+  ok
+else
+  bad "tools/sh/bootstrap.sh lost its bounded git probe (want DX_BOOTSTRAP_TIMEOUT plus timeout guard with fail-open walk, issue #932)"
 fi
 
 dx_test_summary "bootstrap portability harness"

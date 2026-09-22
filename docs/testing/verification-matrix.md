@@ -220,7 +220,9 @@ CI flakiness plus timeout tuning qualified seed-only under #619
 carries `--flaky_test_attempts=3 --test_timeout=300`, seed test/coverage at 45
 minutes plus per-host test/coverage at 60 minutes with no blanket 90, sharding
 stays per-host/per-stage with ordinary Bazel intra-job sharding and no
-`strategy.matrix`, long-timeouts-only rejected; `flakiness_qualification` 16/16;
+`strategy.matrix`, long-timeouts-only rejected; reusable-consumer timeouts
+pinned plus per-target sh_test size/timeout under issue #932;
+`flakiness_qualification` 19/19;
 CI only, no Supported claim).
 
 - `build`: `bazel build //...` plus the adopt-rust `dx_dev` smoke

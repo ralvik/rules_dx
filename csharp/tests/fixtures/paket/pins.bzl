@@ -45,3 +45,9 @@ PAKET_FIXTURE_FSHARP_XUNIT = "//fsharp/tests/fixtures/xunit:greeter_test"
 # incompatible with Bazel's downloader per rules_dotnet issue 444);
 # unpinned or floating Paket entries.
 PAKET_REJECTED = "packages.lock.json rejected: central paket.lock plus sha512 only"
+
+# Currency recheck (issue #932): directives below were verified current on
+# this date (dotnet SDK 10.0.201 with FSharp.Core 10.1.201 plus xUnit v3
+# 4.0.0 per ADR 0008 latest-stable). Refresh the date with each
+# dependency-currency pass; pin_consistency.sh fails when absent or stale.
+PAKET_CURRENCY_RECHECK = "2026-09-22"

@@ -45,3 +45,9 @@ MAVEN_FIXTURE_KOTLIN_SEED = "//kotlin/tests/fixtures/hello:hello_test"
 
 # Rejected: non-fail-closed lock wiring.
 MAVEN_REJECTED = "non-fail-closed rejected: no lock without fail_if_repin_required, no floating coordinates, no hand-edited lock"
+
+# Currency recheck (issue #932): coordinates below were verified current on
+# this date (JUnit 4.13.2 plus 6.1.3 line per ADR 0008 latest-stable).
+# Refresh the date with each dependency-currency pass; pin_consistency.sh
+# fails when absent or stale.
+MAVEN_CURRENCY_RECHECK = "2026-09-22"

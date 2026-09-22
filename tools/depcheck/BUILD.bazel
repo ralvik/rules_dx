@@ -119,6 +119,8 @@ exports_files(["Cargo.toml"])
 # check; repinning stays with `bazel run //tools:repin-all`.
 sh_test(
     name = "repo_locks_test",
+    size = "small",
+    timeout = "short",
     srcs = ["repo_locks_test.sh"],
     args = [
         "$(rootpath :depcheck)",

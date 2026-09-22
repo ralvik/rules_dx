@@ -107,7 +107,10 @@ Verify CI flakiness plus timeout tuning (issue #619, qualified seed-only via
 every direct `bazel test` invocation carries `--flaky_test_attempts=3` plus
 `--test_timeout=300` for bounded transient-flake retries with a per-test 300s
 cap; GitHub `timeout-minutes` stay tuned (seed test/coverage 45, per-host
-test/coverage 60, builds 30/60, no blanket 90); sharding stays per-host/per-stage
+test/coverage 60, builds 30/60, no blanket 90); reusable-consumer timeouts
+stay pinned (gate 5, Linux-once 30, per-platform 60, aggregate 10, no 90)
+with every `sh_test` carrying explicit per-target `size` plus `timeout`
+(issue #932); sharding stays per-host/per-stage
 jobs with Bazel intra-job test sharding under ordinary semantics (no
 `strategy.matrix`, per the issue #415 policy). Long timeouts only is rejected:
 timeouts without bounded retries stay a failure mode, and retry-until-green

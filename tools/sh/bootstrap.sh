@@ -15,6 +15,11 @@
 #                                library (e.g. `tools/sh/lib.sh`)
 #                                runfiles-first, then source tree with no
 #                                per-file depth adjustment.
+# Budget (issue #932): runfiles plus BUILD_WORKSPACE_DIRECTORY probes are
+# instant; the git top-level probe is bounded to
+# `${DX_BOOTSTRAP_TIMEOUT:-5}` seconds via `timeout` when available and
+# fails open to the source-tree walk (bounded by the filesystem root), so
+# a hung git never hangs the bootstrap.
 #
 # Bash-only Linux harness: sourced by `sh_binary` /
 # `sh_test` drivers carrying `target_compatible_with =
@@ -39,6 +44,18 @@ set -euo pipefail
 # then the enclosing git top-level, then an upward walk from the caller so
 # no per-file `../` depth adjustment is needed. Fails actionably when the
 # library cannot be located.
+# The git probe below is bounded (see Budget above): `timeout` guards it
+# when installed, otherwise it runs directly; either way a failure or
+# timeout falls through to the walk instead of hanging.
+_dx_git_toplevel() {
+  local budget="${DX_BOOTSTRAP_TIMEOUT:-5}"
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$budget" git rev-parse --show-toplevel 2>/dev/null || true
+  else
+    git rev-parse --show-toplevel 2>/dev/null || true
+  fi
+}
+
 dx_bootstrap() {
   local rel="${1:-}" top="" caller="" caller_dir="" dir="" parent=""
   if [[ -z "$rel" ]]; then
@@ -54,7 +71,7 @@ dx_bootstrap() {
   if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" && -f "${BUILD_WORKSPACE_DIRECTORY}/${rel}" ]]; then
     source "${BUILD_WORKSPACE_DIRECTORY}/${rel}" && return 0 || return 1
   fi
-  top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  top="$(_dx_git_toplevel)"
   if [[ -n "$top" && -f "$top/${rel}" ]]; then
     source "$top/${rel}" && return 0 || return 1
   fi

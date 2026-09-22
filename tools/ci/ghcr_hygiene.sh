@@ -14,12 +14,12 @@
 # bytes are recorded on push; build-only PRs push nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (22 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# today (23 checks): separate ghcr.yml route, PR-paths build, dispatch +
 # default-closed approve gate, typed approve, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
 # no docker/* or sigstore/* actions with checkout SHA-pinned, no-secrets checkout plus
 # non-cancelling concurrency, cosign sign/verify + attestation with pinned
-# fetch, version-tracked tags, id-token keyless scope, trust root,
+# fetch plus hardened retry flags (issue #932), version-tracked tags, id-token keyless scope, trust root,
 # scaffold-digest procedure + qualified quota, scaffold still on mcr (switch follows first push).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:ghcr_hygiene`,
@@ -148,6 +148,16 @@ if grep -q -F -e 'COSIGN_VERSION=' .github/workflows/ghcr.yml && grep -q -F -e '
   ok
 else
   bad "ghcr.yml lost the pinned cosign fetch (version + checksums + sha256sum -c)"
+fi
+
+# Cosign curls stay hardened (issue #932): fail-closed retry flags, not
+# just presence, on both the binary and checksum fetches.
+if grep -q -F -e 'curl -fsSL' .github/workflows/ghcr.yml &&
+  grep -q -F -e '--retry 3 --retry-delay 2 -o /tmp/cosign ' .github/workflows/ghcr.yml &&
+  grep -q -F -e '--retry 3 --retry-delay 2 -o /tmp/cosign_checksums' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "ghcr.yml lost hardened cosign curl flags (want -fsSL plus --retry 3 --retry-delay 2 on both fetches, issue #932)"
 fi
 
 # Single-version tag tracking: push and PR tags carry dx ==

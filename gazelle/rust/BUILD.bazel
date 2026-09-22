@@ -60,6 +60,8 @@ gazelle_generation_test(
 
 sh_test(
     name = "failure_test",
+    size = "small",
+    timeout = "short",
     srcs = ["failure_test.sh"],
     args = ["$(rootpath :gazelle)"],
     data = [
@@ -74,6 +76,8 @@ sh_test(
 
 sh_test(
     name = "idempotent_test",
+    size = "small",
+    timeout = "short",
     srcs = ["idempotent_test.sh"],
     args = ["$(rootpath :gazelle)"],
     data = [
@@ -88,6 +92,8 @@ sh_test(
 
 sh_test(
     name = "native_config_test",
+    size = "small",
+    timeout = "short",
     srcs = ["native_config_test.sh"],
     args = ["$(rootpath :gazelle)"],
     data = [
