@@ -89,7 +89,9 @@ Bazel-affecting lock/config (issue #618: `MODULE.bazel` plus `MODULE.bazel.lock`
 `go.mod`/`go.sum` plus `paket.dependencies`/`paket.lock` plus `uv.lock`/`pyproject.toml`; `user.bazelrc`
 never hashed because CI checkouts never contain it) with exact hits only
 (no prefix fallback: a lock/config bust starts cold instead of reusing a
-stale entry). Dx pipeline plus evaluator actions carry `no-remote-exec`
+stale entry) scoped by branch via `github.ref` with no restore-keys
+fallback, so a poisoned PR entry is never reusable by main (issue #1059),
+with PR runs restore-only via `lookup-only` and saves owned by main. Dx pipeline plus evaluator actions carry `no-remote-exec`
 (local-only until remote is qualified). Remote cache stays unwired (issue #618 wont-fix):
 local `actions/cache` disk scope only, no `--remote_cache`/`--remote_executor`/`--bes_backend` flags,
 per the free-tier budget plus Apple/MS cache-rights bounds (issues #496/#507). Qualified seed-only via

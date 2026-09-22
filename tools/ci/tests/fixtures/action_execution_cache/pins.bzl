@@ -22,7 +22,10 @@ REMOTE_CONFIG = "RemoteConfig"
 REMOTE_DOWNLOADER = "LocalDownloader"
 
 # Disk-cache keys stay exact-only: every Bazel-affecting lock/config is
-# hashed and no prefix fallback reuses a stale entry after a bust.
+# hashed and no prefix fallback reuses a stale entry after a bust. Keys are
+# branch-scoped via github.ref with no restore fallback, so a poisoned PR
+# entry is never reusable by main; PR runs are restore-only via lookup-only
+# while main owns saves (issue #1059).
 CACHE_KEY_FILES = [
     "MODULE.bazel",
     "MODULE.bazel.lock",
@@ -40,6 +43,9 @@ CACHE_KEY_FILES = [
     "pyproject.toml",
 ]
 CACHE_NO_FALLBACK = "exact key only, bust starts cold"
+CACHE_BRANCH_SCOPE = "github.ref"
+CACHE_RESTORE_ONLY = "lookup-only"
+CACHE_SAVE_MAIN_ONLY = "refs/heads/main"
 CACHE_SCOPES = [
     "bazel-seed-",
     "bazel-arm64-",
