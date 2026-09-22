@@ -23,7 +23,7 @@ mod audit;
 mod bazel;
 mod bump;
 mod clean;
-mod common;
+pub(crate) mod common;
 mod deploy;
 mod docs;
 mod generate;

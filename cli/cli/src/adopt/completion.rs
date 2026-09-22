@@ -8,6 +8,7 @@
 use std::io::Write;
 
 use crate::args::Invocation;
+use crate::exec::common::check_stdout_write;
 
 use super::{operational, pre_exec, summaries_suppressed};
 
@@ -33,13 +34,19 @@ pub(crate) fn execute_completion(
     }
     if invocation.dry_run {
         if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "would render completion for {shell}");
+            if let Err(exit) =
+                check_stdout_write(writeln!(out, "would render completion for {shell}"))
+            {
+                return exit;
+            }
         }
         return 0;
     }
     match crate::args::render_completion(shell) {
         Ok(script) => {
-            let _ = write!(out, "{script}");
+            if let Err(exit) = check_stdout_write(write!(out, "{script}")) {
+                return exit;
+            }
             0
         }
         Err(error) => pre_exec(err, &error.to_string()),
@@ -72,9 +79,15 @@ fn execute_completion_check(
     if invocation.dry_run {
         if !summaries_suppressed(invocation) {
             if shells.len() == 1 {
-                let _ = writeln!(out, "would check completion for {}", shells[0]);
+                if let Err(exit) =
+                    check_stdout_write(writeln!(out, "would check completion for {}", shells[0]))
+                {
+                    return exit;
+                }
             } else {
-                let _ = writeln!(out, "would check completion");
+                if let Err(exit) = check_stdout_write(writeln!(out, "would check completion")) {
+                    return exit;
+                }
             }
         }
         return 0;
@@ -90,9 +103,13 @@ fn execute_completion_check(
         }
     }
     if shells.len() == 1 {
-        let _ = writeln!(out, "completion ok for {}", shells[0]);
+        if let Err(exit) = check_stdout_write(writeln!(out, "completion ok for {}", shells[0])) {
+            return exit;
+        }
     } else {
-        let _ = writeln!(out, "completion ok");
+        if let Err(exit) = check_stdout_write(writeln!(out, "completion ok")) {
+            return exit;
+        }
     }
     0
 }

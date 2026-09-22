@@ -56,6 +56,18 @@ pub enum OutputError {
     BadCorrelation { value: String },
 }
 
+impl OutputError {
+    /// True when an `Io` failure is `EPIPE` (message contains `broken pipe`).
+    /// `write_event` stringifies `io::Error`, so kind survives as text.
+    /// See: `docs/cli/output-protocol.md#exit-codes`.
+    pub fn is_broken_pipe(&self) -> bool {
+        match self {
+            OutputError::Io(message) => message.to_lowercase().contains("broken pipe"),
+            _ => false,
+        }
+    }
+}
+
 /// Validates a normalized workspace-relative source path: valid UTF-8,
 /// slash-separated, non-empty, lexical, no `.` or `..` component, beneath
 /// the main workspace. Mirrors the result-protocol path rules so JSON-shape
@@ -297,5 +309,14 @@ mod tests {
                 value: "bad!".to_owned()
             }
         );
+    }
+
+    #[test]
+    fn broken_pipe_detected_case_insensitive() {
+        // See: `docs/cli/output-protocol.md#exit-codes`.
+        assert!(OutputError::Io("Broken pipe (os error 32)".to_owned()).is_broken_pipe());
+        assert!(OutputError::Io("broken pipe".to_owned()).is_broken_pipe());
+        assert!(!OutputError::Io("boom".to_owned()).is_broken_pipe());
+        assert!(!OutputError::NotAnEvent.is_broken_pipe());
     }
 }

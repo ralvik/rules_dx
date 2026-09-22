@@ -10,9 +10,10 @@
 use std::io::Write;
 
 use crate::args::Invocation;
+use crate::exec::common::{check_stdout_write, emit_event, flush_out};
 use dx_output::{
-    command_finished, command_started, error_event, status_event, write_event, FinishedCounts,
-    OutputMode, StatusEvent,
+    command_finished, command_started, error_event, status_event, FinishedCounts, OutputMode,
+    StatusEvent,
 };
 use dx_process::operational_code;
 
@@ -31,6 +32,8 @@ use super::summaries_suppressed;
 /// `error` (`status_pin_mismatch`) before `command_finished` via
 /// `write_event`; `--dry-run` plans without reading the pin or computing
 /// checks. Returns operational failure when any check reports `error`.
+/// Stdout truncation returns `141` on `EPIPE`, else operational.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub(crate) fn execute_status(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -42,11 +45,17 @@ pub(crate) fn execute_status(
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
-                let _ = write_event(out, &event);
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
             }
-            let _ = write_event(out, &command_finished(0, &FinishedCounts::default()));
+            if let Err(exit) = emit_event(out, &command_finished(0, &FinishedCounts::default())) {
+                return exit;
+            }
         } else if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "would report status");
+            if let Err(exit) = check_stdout_write(writeln!(out, "would report status")) {
+                return exit;
+            }
         }
         return 0;
     }
@@ -60,19 +69,27 @@ pub(crate) fn execute_status(
             let message = error.to_string();
             if invocation.output == OutputMode::Json {
                 if let Ok(event) = command_started(invocation.command.name(), false, "default") {
-                    let _ = write_event(out, &event);
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
                 }
                 if let Ok(event) = error_event(CODE_STATUS_PIN_MISMATCH, &message, None, None, None)
                 {
-                    let _ = write_event(out, &event);
+                    if let Err(exit) = emit_event(out, &event) {
+                        return exit;
+                    }
                 }
-                let _ = write_event(
+                if let Err(exit) = emit_event(
                     out,
                     &command_finished(operational_code(), &FinishedCounts::default()),
-                );
+                ) {
+                    return exit;
+                }
             }
             let _ = writeln!(err, "dx: {message}");
-            let _ = out.flush();
+            if let Err(exit) = flush_out(out) {
+                return exit;
+            }
             return operational_code();
         }
     };
@@ -83,7 +100,9 @@ pub(crate) fn execute_status(
     // is rejected at parse time because status has no patch to emit.
     if invocation.output == OutputMode::Json {
         if let Ok(event) = command_started(invocation.command.name(), false, "default") {
-            let _ = write_event(out, &event);
+            if let Err(exit) = emit_event(out, &event) {
+                return exit;
+            }
         }
         for check in &checks {
             if let Ok(event) = status_event(&StatusEvent {
@@ -92,7 +111,9 @@ pub(crate) fn execute_status(
                 detail: check.detail.clone(),
                 hint: check.hint.clone(),
             }) {
-                let _ = write_event(out, &event);
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
             }
         }
         let failed = checks.iter().any(|c| c.status == "error");
@@ -106,16 +127,24 @@ pub(crate) fn execute_status(
                 None,
                 None,
             ) {
-                let _ = write_event(out, &event);
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
             }
         }
-        let _ = write_event(out, &command_finished(code, &FinishedCounts::default()));
+        if let Err(exit) = emit_event(out, &command_finished(code, &FinishedCounts::default())) {
+            return exit;
+        }
         if failed {
             return operational_code();
         }
         return 0;
     }
-    let _ = writeln!(out, "{}", dx_adopt::render_status_text(&checks));
+    if let Err(exit) =
+        check_stdout_write(writeln!(out, "{}", dx_adopt::render_status_text(&checks)))
+    {
+        return exit;
+    }
     if checks.iter().any(|c| c.status == "error") {
         let _ = writeln!(err, "dx: status: pin mismatch (see hint)");
         return operational_code();
@@ -454,5 +483,32 @@ mod tests {
             events.last().expect("finished")["exit_code"],
             serde_json::json!(0)
         );
+    }
+
+    struct BrokenPipeWriter;
+
+    impl io::Write for BrokenPipeWriter {
+        fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"))
+        }
+    }
+
+    #[test]
+    fn status_broken_pipe_returns_141() {
+        // See: `docs/cli/output-protocol.md#exit-codes`.
+        for words in [vec!["status"], vec!["status", "--output=json"]] {
+            let inv = invocation(&words);
+            let scratch = dx_test_scratch::scratch("dx-adopt-status-broken-");
+            let root = scratch.path().to_path_buf();
+            std::fs::create_dir_all(root.join(".dx")).expect("dx");
+            std::fs::write(root.join(".dx/version"), "0.0.0\n").expect("pin");
+            let mut err = Vec::new();
+            let code = execute_status(&inv, &root, &mut BrokenPipeWriter, &mut err);
+            assert_eq!(code, 128 + 13, "words: {words:?}");
+        }
     }
 }

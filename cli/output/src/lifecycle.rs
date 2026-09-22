@@ -260,9 +260,14 @@ pub fn write_event(writer: &mut dyn std::io::Write, event: &Value) -> Result<(),
         }
         _ => return Err(OutputError::NotAnEvent),
     }
-    serde_json::to_writer(&mut *writer, event).map_err(|e| OutputError::Io(e.to_string()))?;
+    // Serialize first so the only I/O is one atomic line write: `EPIPE`
+    // surfaces from `write_all` with its `broken pipe` text intact for
+    // `OutputError::is_broken_pipe` instead of wrapped in `serde_json::Error`.
+    // See: `docs/cli/output-protocol.md#exit-codes`.
+    let mut buf = serde_json::to_vec(event).map_err(|e| OutputError::Io(e.to_string()))?;
+    buf.push(b'\n');
     writer
-        .write_all(b"\n")
+        .write_all(&buf)
         .map_err(|e| OutputError::Io(e.to_string()))
 }
 
@@ -483,5 +488,28 @@ mod tests {
         // Omitting correlation preserves v1.0 wire shape.
         let bare = operation_event("run", "execute", None).expect("bare");
         assert!(bare.get("correlation").is_none());
+    }
+
+    #[test]
+    fn write_event_reports_broken_pipe() {
+        // See: `docs/cli/output-protocol.md#exit-codes`.
+        struct BrokenPipe;
+        impl std::io::Write for BrokenPipe {
+            fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "broken pipe",
+                ))
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::BrokenPipe,
+                    "broken pipe",
+                ))
+            }
+        }
+        let event = command_started("status", false, "default").expect("started");
+        let error = write_event(&mut BrokenPipe, &event).expect_err("broken pipe");
+        assert!(error.is_broken_pipe());
     }
 }

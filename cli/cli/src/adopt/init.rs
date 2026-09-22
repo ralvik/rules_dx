@@ -8,6 +8,7 @@
 use std::io::Write;
 
 use crate::args::Invocation;
+use crate::exec::common::check_stdout_write;
 
 use super::{operational, summaries_suppressed};
 
@@ -27,7 +28,9 @@ pub(crate) fn execute_init(
     if invocation.dry_run {
         if !summaries_suppressed(invocation) {
             for file in dx_adopt::plan_init_files(module) {
-                let _ = writeln!(out, "would write {}", file.path);
+                if let Err(exit) = check_stdout_write(writeln!(out, "would write {}", file.path)) {
+                    return exit;
+                }
             }
         }
         return 0;
@@ -41,7 +44,9 @@ pub(crate) fn execute_init(
                 if let Some(path) = entry.strip_prefix("refused:") {
                     let _ = writeln!(err, "dx: {path} (absent-only, left untouched)");
                 } else if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "wrote {entry}");
+                    if let Err(exit) = check_stdout_write(writeln!(out, "wrote {entry}")) {
+                        return exit;
+                    }
                 }
             }
             0

@@ -791,3 +791,16 @@ fn exe_available_covers_help_file_and_path() {
     assert!(!exe_available("/nonexistent-dx-tool-xyz"));
     assert!(!exe_available(""));
 }
+
+#[test]
+fn stdout_broken_pipe_maps_to_141() {
+    // See: `docs/cli/output-protocol.md#exit-codes`.
+    assert_eq!(broken_pipe_code(), 128 + 13);
+    assert_eq!(EXIT_BROKEN_PIPE, 128 + 13);
+    let broken = io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe");
+    assert!(is_broken_pipe_io(&broken));
+    assert_eq!(stdout_io_code(&broken), 128 + 13);
+    let other = io::Error::new(io::ErrorKind::Other, "boom");
+    assert!(!is_broken_pipe_io(&other));
+    assert_eq!(stdout_io_code(&other), operational_code());
+}

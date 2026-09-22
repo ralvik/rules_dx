@@ -8,6 +8,7 @@
 use std::io::Write;
 
 use crate::args::{Command, Invocation};
+use crate::exec::common::check_stdout_write;
 use crate::resolve::QueryRunner;
 
 use super::{operational, pre_exec, summaries_suppressed};
@@ -38,7 +39,13 @@ pub(crate) fn execute_inspect(
         if !summaries_suppressed(invocation) {
             for scope in &invocation.targets {
                 if let Ok(plan) = dx_adopt::plan_inspect(kind, scope, invocation.configured) {
-                    let _ = writeln!(out, "would run bazel {} {}", plan.verb, plan.expr);
+                    if let Err(exit) = check_stdout_write(writeln!(
+                        out,
+                        "would run bazel {} {}",
+                        plan.verb, plan.expr
+                    )) {
+                        return exit;
+                    }
                 }
             }
         }
@@ -88,7 +95,9 @@ fn run_inspect_query(
             lines.sort_unstable();
             lines.dedup();
             for line in lines {
-                let _ = writeln!(out, "{line}");
+                if let Err(exit) = check_stdout_write(writeln!(out, "{line}")) {
+                    return exit;
+                }
             }
             0
         }
@@ -124,11 +133,13 @@ fn execute_why(
             Err(error) => return pre_exec(err, &error.to_string()),
         };
         if !summaries_suppressed(invocation) {
-            let _ = writeln!(
+            if let Err(exit) = check_stdout_write(writeln!(
                 out,
                 "would run bazel {} {} then somepath to {label}",
                 owner_plan.verb, owner_plan.expr
-            );
+            )) {
+                return exit;
+            }
         }
         return 0;
     }

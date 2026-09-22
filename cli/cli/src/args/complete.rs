@@ -308,7 +308,9 @@ fn bare_words(prior_all: &[String]) -> Vec<String> {
 /// stderr so completion never breaks typing. `cwd` anchors workspace
 /// discovery; discovery failure falls back to `cwd` itself. Accepts
 /// `OsStr` elements via `args_os` so non-UTF8 typing never panics;
-/// values decode lossy for candidate matching.
+/// values decode lossy for candidate matching. Truncated stdout returns
+/// `141` on `EPIPE`, else operational.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub fn run_complete<S: AsRef<std::ffi::OsStr>>(
     words: &[S],
     cwd: &Path,
@@ -350,7 +352,9 @@ pub fn run_complete<S: AsRef<std::ffi::OsStr>>(
     candidates.sort();
     candidates.dedup();
     for candidate in &candidates {
-        let _ = writeln!(out, "{candidate}");
+        if let Err(error) = writeln!(out, "{candidate}") {
+            return dx_process::stdout_io_code(&error);
+        }
     }
     0
 }
