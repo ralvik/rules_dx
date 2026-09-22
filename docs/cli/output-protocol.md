@@ -655,7 +655,8 @@ event carries the failed scope, `dx status` covers toolchain/platform/pin, and
 invocation. Raw BEP is never part of this API.
 
 The documented list is derived from the code (single source):
-`../../cli/cli/src/exec/common.rs` (`CODE_*` including `bump_failed` and `migrate_failed`),
+`../../cli/cli/src/exec/common.rs` (`CODE_*` including `bump_failed`, `migrate_failed`,
+and `offline_required`),
 `../../cli/cli/src/adopt/upgrade.rs` (`CODE_UPGRADE_FAILED` and `NOTICE_UPGRADE_PLANNED`),
 `../../cli/cli/src/exec/docs.rs` (`CODE_SERVE_FAILED`),
 `../../cli/cli/src/exec/run.rs` (`resolve_code` including `scope_error`),
@@ -713,6 +714,7 @@ Stable codes are:
 | `advisory_refresh_failed` | Advisory snapshot could not be obtained or refreshed (missing, empty, invalid, stale, or unsupported set; detail prefix inside `audit_failed`, see [dx audit](commands/audit-update-bazel.md#dx-audit)) |
 | `update_failed` | Live update per-set failure (resolver reported failure, unsupported selection, launch failure, or signal) |
 | `bump_failed` | Live bump widen failure (missing, ambiguous, or unsupported manifest shape, or unreadable/unwritable manifest, see [dx bump](commands/audit-update-bazel.md#dx-bump)) |
+| `offline_required` | Cache-only `--offline`/`--frozen` run would need network (advisory refresh, resolver update, or bump refresh; detail prefix inside `audit_failed` for audit, operational code for update/bump, see [Offline Bootstrap](../deploy/offline-bootstrap.md)) |
 | `migrate_failed` | Live migrate failure (no migrate manifest exists yet, see [dx migrate](commands/migrate.md)) |
 | `upgrade_failed` | Live upgrade failure (no upgrade manifest exists yet, see [dx upgrade](commands/new-upgrade.md#dx-upgrade)) |
 | `serve_failed` | Docs preview failure (`dx docs --serve` preview server exited nonzero after a successful build, see [dx docs](commands/docs.md)) |

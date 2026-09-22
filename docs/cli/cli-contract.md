@@ -52,6 +52,7 @@ Global options:
 | `--report <format>=<destination>` | Write a supported standard report to a file or `-` for stdout; repeatable |
 | `--fail-on info\|warning\|error` | Lowest diagnostic severity that makes a quality command fail |
 | `--here` (`--cwd` alias) | Select the current directory tree instead of `//...` (cwd-scope commands only: audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs; `//path/...`, `//...` at the root; cannot be combined with explicit scopes; never implicit) |
+| `--offline` (`--frozen` alias) | Force cache-only operation without network fetches (audit/update/bump only; see [Offline Bootstrap](../deploy/offline-bootstrap.md)) |
 
 These option names are accepted. Only `dx bazel` promises arbitrary unchanged
 forwarding. For workflow commands, arguments after `--` are Bazel command options
@@ -167,7 +168,9 @@ summaries unless `--quiet` is present, but never prints subprocess argv or forwa
 option values. Machine-readable mode emits the same structured operation summaries. It
 never runs the final build, test, coverage, check, audit, update, generation, or mutation
 subprocesses. If resolution itself would require an action, dry-run fails rather than
-executing that action.
+executing that action. `--offline` (`--frozen` alias) is the cache-only guard dry-run
+lacks: audit/update/bump fail with `offline_required` instead of fetching (see
+[Offline Bootstrap](../deploy/offline-bootstrap.md)).
 
 ## Commands
 

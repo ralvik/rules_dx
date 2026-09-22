@@ -111,6 +111,11 @@ pub(crate) struct Cli {
     /// See: `docs/cli/commands/docs.md`.
     #[arg(long, allow_negative_numbers = true, overrides_with = "port")]
     pub(crate) port: Option<String>,
+    /// Force cache-only operation without network fetches (audit/update/bump
+    /// only; `--frozen` alias).
+    /// See: `docs/deploy/offline-bootstrap.md`.
+    #[arg(long, visible_alias = "frozen")]
+    pub(crate) offline: bool,
     /// First positional: the command word (a [`Command`] value so the
     /// same grammar feeds parsing, `--help`, and shell completions).
     #[arg(value_enum)]

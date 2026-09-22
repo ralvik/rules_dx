@@ -642,6 +642,7 @@ mod tests {
             here: false,
             serve: false,
             port: None,
+            offline: false,
         }
     }
 

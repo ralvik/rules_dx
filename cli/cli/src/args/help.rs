@@ -224,13 +224,13 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: --from <version> --to <version> (upgrade only; pin+migrate+setup composition with recovery pointer)."
         }
         Command::Audit => {
-            "Per-command flags: --fail-on info|warning|error, --report sarif|spdx (audit only; --check and `-- --bazel-options` do not apply; --output diff has no patch)."
+            "Per-command flags: --offline/--frozen (cache-only, no network fetches), --fail-on info|warning|error, --report sarif|spdx (audit only; --check and `-- --bazel-options` do not apply; --output diff has no patch)."
         }
         Command::Update => {
-            "Per-command flags: --check (preset stale gate; selectors ignored) (update only; --fail-on/--report and `-- --bazel-options` do not apply; --output diff has no patch)."
+            "Per-command flags: --offline/--frozen (cache-only, no network fetches), --check (preset stale gate; selectors ignored) (update only; --fail-on/--report and `-- --bazel-options` do not apply; --output diff has no patch)."
         }
         Command::Bump => {
-            "Per-command flags: none (exactly one `set:package` plus version; --check/--fail-on/--report and `-- --bazel-options` do not apply; --output diff has no patch)."
+            "Per-command flags: --offline/--frozen (cache-only, no network fetches; exactly one `set:package` plus version; --check/--fail-on/--report and `-- --bazel-options` do not apply; --output diff has no patch)."
         }
         Command::Bazel => {
             "Per-command flags: none (raw Bazel forwarding; dx-owned options must precede the command word and most are rejected)."
@@ -280,9 +280,9 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Version => {
             "Usage: dx [global-options] version [--check] [--pin <version>|--rollback]"
         }
-        Command::Update => "Usage: dx [global-options] update [selector ...]",
-        Command::Bump => "Usage: dx [global-options] bump <set:package> <version>",
-        Command::Audit => "Usage: dx [global-options] audit [--here] [security|license] [scope ...]",
+        Command::Update => "Usage: dx [global-options] update [--offline|--frozen] [selector ...]",
+        Command::Bump => "Usage: dx [global-options] bump [--offline|--frozen] <set:package> <version>",
+        Command::Audit => "Usage: dx [global-options] audit [--offline|--frozen] [--here] [security|license] [scope ...]",
         Command::Migrate => {
             "Usage: dx [global-options] migrate --from <version> --to <version> [scope ...]"
         }

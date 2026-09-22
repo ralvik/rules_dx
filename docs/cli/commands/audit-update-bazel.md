@@ -16,7 +16,7 @@ a dx-owned option before the command word is rejected rather than forwarded.
 ## `dx audit`
 
 ```text
-dx audit [--here] [security|license] [scope ...] [--report <format>=<destination> ...]
+dx audit [--offline|--frozen] [--here] [security|license] [scope ...] [--report <format>=<destination> ...]
 ```
 
 Implementation status: the audit/update policy below is accepted. Command dispatch
@@ -608,7 +608,7 @@ for the regen-and-review workflow.
 ## `dx bump`
 
 ```text
-dx bump <set:package> <version>
+dx bump [--offline|--frozen] <set:package> <version>
 ```
 
 Explicit widen-one-requirement operation (issue #260), separate from `dx update`.
@@ -730,3 +730,18 @@ atomically then chains the refresh. JSON supports the shared
 `1` with `bump_failed`; refresh failures exit `1` with `update_failed`.
 `--check`, `--fail-on`, `--report`, `--output=diff`, and
 `-- <bazel-options>` do not apply on this path.
+
+## Offline mode (`--offline`/`--frozen`)
+
+`dx audit`, `dx update`, and `dx bump` accept `--offline` (`--frozen` alias)
+to force cache-only operation without network fetches (see
+[Offline Bootstrap](../../deploy/offline-bootstrap.md#offline-flag)).
+`--dry-run` plans without launching and never fails for offline; live runs
+fail closed with `offline_required` (exit `1`, no launch and — except for
+bump refresh races — no mutation) instead of fetching. Audit matches locally
+against already-fresh `.dx/advisory/` snapshots (vendored mirror or prior
+fetch); any advisory failure becomes `offline_required` instead of
+`advisory_refresh_failed`. Update fails per fetching set with
+`offline_required` while the pinned Go no-op still succeeds. Bump fails
+before any widen when its refresh would fetch; file-only sets and the Go
+no-op still succeed. Every other command rejects `--offline` pre-exec.

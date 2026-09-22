@@ -903,3 +903,56 @@ fn audit_report_write_failure_json_reports_error_event() {
     assert!(out_text.contains("command_finished"), "{out_text}");
     assert!(out_text.contains("results_complete"), "{out_text}");
 }
+
+#[test]
+fn offline_dry_run_plans_cache_only_without_launching() {
+    // See: `docs/deploy/offline-bootstrap.md`. Dry-run never launches, so
+    // offline dry-run plans cache-only and exits 0.
+    let harness = Harness::new("audit-offline-dryrun");
+    let (code, out, err) = harness.run(&["audit", "--offline", "--dry-run"]);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(
+        out.contains("Running audit security+license for //..."),
+        "{out}"
+    );
+    assert!(out.contains("offline, cache-only"), "{out}");
+    assert_eq!(err, "", "{err}");
+    assert!(
+        harness.seen_env.borrow().is_empty(),
+        "offline dry-run launches nothing"
+    );
+    let alias = Harness::new("audit-frozen-dryrun");
+    let (code, out, err) = alias.run(&["audit", "--frozen", "--dry-run"]);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("offline, cache-only"), "{out}");
+}
+
+#[test]
+fn offline_live_missing_advisory_fails_with_offline_required() {
+    // See: `docs/deploy/offline-bootstrap.md`. Cache-only runs cannot
+    // refresh advisory data over the network, so a missing snapshot fails
+    // with `offline_required` (wrapping the advisory detail as the cause).
+    let runner = AuditRunner::clean();
+    let (code, out, err) = run_with(&["audit", "security", "--offline"], &runner, &|harness| {
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+    });
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("offline_required"), "{err}");
+    assert!(err.contains("cannot obtain current advisory data"), "{err}");
+    assert!(err.contains("dx: offline_required:"), "{err}");
+    let (code, out, err) = run_with(
+        &["audit", "security", "--offline", "--output=json"],
+        &AuditRunner::clean(),
+        &|harness| {
+            harness.write_source(
+                "rust/tests/fixtures/hello/Cargo.lock",
+                "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+            );
+        },
+    );
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(out.contains("\"code\":\"offline_required\""), "{out}");
+}

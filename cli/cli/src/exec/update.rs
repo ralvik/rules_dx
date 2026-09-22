@@ -17,7 +17,10 @@ use std::collections::BTreeMap;
 /// atomically; `--check` is the non-mutating preset stale gate (exit `0`
 /// clean / `1` stale, copying the `generate --check` exit contract) and
 /// ignores selectors. `--dry-run` plans without launching or touching
-/// the tree. Usage errors exit `2` before any launch.
+/// the tree. `--offline` (`--frozen` alias) forces cache-only: every
+/// fetching resolver fails with `offline_required` instead of launching,
+/// while the pinned Go no-op still succeeds. Usage errors exit `2`
+/// before any launch.
 pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
         invocation.command == Command::Update,
@@ -110,7 +113,10 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
         Ok(resolved) => resolved,
         Err(error) => return pre_exec(err, &error.to_string()),
     };
-    let summary = display_summary(&resolved);
+    let mut summary = display_summary(&resolved);
+    if invocation.offline {
+        summary.push_str(" (offline, cache-only)");
+    }
     if invocation.dry_run {
         return emit_update_dry_run(invocation, out, &summary, verbose);
     }
@@ -129,7 +135,8 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
     if verbose && invocation.output != OutputMode::Json {
         let _ = writeln!(out, "updated preset (tools/bazelrc/preset.bazelrc)");
     }
-    let (attempted, details) = run_update_backends(&resolved, runner, workspace);
+    let (attempted, details) =
+        run_update_backends(&resolved, runner, workspace, invocation.offline);
     let selected: Vec<String> = resolved.keys().map(|set| set.name().to_owned()).collect();
     let depends: BTreeMap<String, Vec<String>> = BTreeMap::new();
     let report = match dx_update::outcome::aggregate(&selected, &attempted, &depends) {
@@ -199,11 +206,15 @@ fn record_set_success(
 /// Live backend execution over the resolved sets in sorted order.
 /// Extracted from `execute_update_default` so the orchestrator stays
 /// under the `too_many_lines` budget; continuing independent sets after
-/// failures preserves the V1 independence contract.
+/// failures preserves the V1 independence contract. `offline` forces
+/// cache-only: fetching resolvers fail with `offline_required` instead
+/// of launching, while the Go pinned no-op still succeeds.
+/// See: `docs/deploy/offline-bootstrap.md`.
 fn run_update_backends(
     resolved: &BTreeMap<dx_update::sets::SetId, dx_update::selector::SetRequest>,
     runner: &dyn dx_process::Runner,
     workspace: &std::path::Path,
+    offline: bool,
 ) -> (
     Vec<dx_update::outcome::SetOutcome>,
     BTreeMap<dx_update::sets::SetId, SetDetail>,
@@ -215,19 +226,28 @@ fn run_update_backends(
     let mut attempted: Vec<dx_update::outcome::SetOutcome> = Vec::new();
     let mut details: BTreeMap<dx_update::sets::SetId, SetDetail> = BTreeMap::new();
     for (set, request) in resolved {
-        let plan = match dx_update::backend::plan(*set, request) {
+        let plan = match dx_update::backend::plan(*set, request, offline) {
             Ok(plan) => plan,
             Err(error) => {
-                let reason = match error {
-                    dx_update::backend::BackendError::Unsupported { reason, .. } => reason,
-                };
-                let detail = format!("unsupported update: {reason}");
-                record_set_failed(
-                    &mut attempted,
-                    &mut details,
-                    *set,
-                    format!("failed to update {}: {detail}", set.name()),
-                );
+                match error {
+                    dx_update::backend::BackendError::Unsupported { reason, .. } => {
+                        let detail = format!("unsupported update: {reason}");
+                        record_set_failed(
+                            &mut attempted,
+                            &mut details,
+                            *set,
+                            format!("failed to update {}: {detail}", set.name()),
+                        );
+                    }
+                    dx_update::backend::BackendError::OfflineRequired { .. } => {
+                        record_set_failed(
+                            &mut attempted,
+                            &mut details,
+                            *set,
+                            format!("failed to update {}: {error}", set.name()),
+                        );
+                    }
+                }
                 continue;
             }
         };
@@ -393,13 +413,19 @@ fn emit_update_json(
                         SetDetail::Success { .. } => None,
                     })
                     .unwrap_or_else(|| format!("failed to update {set_name}"));
-                if let Ok(event) =
-                    error_event(CODE_UPDATE_FAILED, &message, None, None, Some("execute"))
-                {
+                // Cache-only runs surface `offline_required` (not
+                // `update_failed`) when the resolver would need a network
+                // fetch. See: `docs/deploy/offline-bootstrap.md`.
+                let code = if message.contains(CODE_OFFLINE_REQUIRED) {
+                    CODE_OFFLINE_REQUIRED
+                } else {
+                    CODE_UPDATE_FAILED
+                };
+                if let Ok(event) = error_event(code, &message, None, None, Some("execute")) {
                     let event = with_correlation(event.clone(), &correlation).unwrap_or(event);
                     let _ = write_event(out, &event);
                 }
-                let _ = writeln!(err, "dx: {CODE_UPDATE_FAILED}: {message}");
+                let _ = writeln!(err, "dx: {code}: {message}");
             }
             dx_update::outcome::ReportedStatus::Blocked => {
                 let message = format!("blocked {set_name} (depends on a failed update)");
@@ -485,7 +511,12 @@ fn emit_update_text(
                 if let Some(SetDetail::Failed { message }) =
                     details.get(&parse_set(outcome.set.as_str()))
                 {
-                    let _ = writeln!(err, "dx: {CODE_UPDATE_FAILED}: {message}");
+                    let code = if message.contains(CODE_OFFLINE_REQUIRED) {
+                        CODE_OFFLINE_REQUIRED
+                    } else {
+                        CODE_UPDATE_FAILED
+                    };
+                    let _ = writeln!(err, "dx: {code}: {message}");
                 }
             }
             dx_update::outcome::ReportedStatus::Blocked => {

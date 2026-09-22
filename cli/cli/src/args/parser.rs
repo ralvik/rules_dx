@@ -84,6 +84,7 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
         here,
         serve,
         port: port_name,
+        offline,
         command: command_name,
         targets: targets_os,
         ..
@@ -166,6 +167,16 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
         } else if !targets.is_empty() {
             return Err(ArgsError::ConflictingHere);
         }
+    }
+    // `--offline` (`--frozen` alias, See:
+    // `docs/deploy/offline-bootstrap.md`): force cache-only operation
+    // without network fetches on audit/update/bump only. Every other
+    // command rejects it pre-exec instead of silently ignoring it.
+    if offline && !command.supports_offline() {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--offline".to_owned(),
+        });
     }
     // `dx bazel` tails never reach this check: the verbatim forwarding
     // above owns every token after the command word.
@@ -954,6 +965,7 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
         here,
         serve,
         port,
+        offline,
     })
 }
 

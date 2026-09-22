@@ -329,3 +329,65 @@ fn update_success_emits_no_recovery() {
     assert_eq!(code, 0, "{out}{err}");
     assert!(!out.contains("update_recovery"), "{out}");
 }
+
+#[test]
+fn offline_dry_run_plans_cache_only_without_launching() {
+    // See: `docs/deploy/offline-bootstrap.md`. Dry-run never launches, so
+    // offline dry-run plans cache-only and exits 0.
+    let harness = Harness::new("update-offline-dryrun");
+    let (code, out, err) = harness.run(&["update", "--offline", "--dry-run"]);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(
+        out.contains("Running update for all dependency sets"),
+        "{out}"
+    );
+    assert!(out.contains("offline, cache-only"), "{out}");
+    assert_eq!(err, "", "{err}");
+    assert!(
+        harness.seen_env.borrow().is_empty(),
+        "offline dry-run launches nothing"
+    );
+    let alias = Harness::new("update-frozen-dryrun");
+    let (code, out, err) = alias.run(&["update", "--frozen", "--dry-run"]);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(out.contains("offline, cache-only"), "{out}");
+}
+
+#[test]
+fn offline_live_fails_with_offline_required_without_launching() {
+    // See: `docs/deploy/offline-bootstrap.md`. Fetching resolvers fail with
+    // `offline_required` instead of launching; the pinned Go no-op still
+    // succeeds with no launch.
+    let runner = ScriptRunner::new(&[]);
+    let (code, out, err) = run_with(&["update", "cargo", "--offline"], &runner);
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("offline_required"), "{err}");
+    assert!(err.contains("cannot update cargo without network"), "{err}");
+    assert!(runner.calls.borrow().is_empty(), "offline launches nothing");
+    let (code, out, err) = run_with(&["update", "cargo", "--offline", "--output=json"], &runner);
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(out.contains("\"code\":\"offline_required\""), "{out}");
+    assert!(!out.contains("\"code\":\"update_failed\""), "{out}");
+    // Go pinned no-op succeeds offline with no launch.
+    let go_runner = ScriptRunner::new(&[]);
+    let (code, out, err) = run_with(&["update", "go", "--offline"], &go_runner);
+    assert_eq!(code, 0, "{out}{err}");
+    assert!(
+        out.contains("updated go (pinned module lock; no-op success)"),
+        "{out}"
+    );
+    assert!(
+        go_runner.calls.borrow().is_empty(),
+        "go noop launches nothing"
+    );
+}
+
+#[test]
+fn offline_required_code_is_stable_single_source() {
+    // Fixture pins the stable wire code so output-protocol drift fails here.
+    // See: `docs/cli/output-protocol.md#operational-error`.
+    assert_eq!(
+        crate::exec::common::CODE_OFFLINE_REQUIRED,
+        "offline_required"
+    );
+}

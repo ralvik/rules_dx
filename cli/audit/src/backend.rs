@@ -128,12 +128,20 @@ pub enum BackendError {
 /// ambient `GITLEAKS_CONFIG` values never reach the child, and an
 /// attacker-controlled config can disable rules, so callers warn when a
 /// non-default config is selected.
+///
+/// `offline` forces cache-only: the secrets scan is already hermetic and
+/// local (no fetch, no upload), so offline planning is identical and
+/// never fails. Threaded for per-backend parity with
+/// `dx_update::backend::plan` so air-gapped runs prove the same argv.
+/// See: `docs/deploy/offline-bootstrap.md`.
 pub fn plan_secrets(
     tool: &str,
     report_path: &str,
     config: Option<&str>,
     temp_dir: &str,
+    offline: bool,
 ) -> Result<BackendPlan, BackendError> {
+    let _ = offline;
     if tool.trim().is_empty() {
         return Err(BackendError::MissingTool);
     }
@@ -204,8 +212,14 @@ mod tests {
 
     #[test]
     fn secrets_plan_pins_gitleaks_sarif_redact_and_exit_split() {
-        let plan = plan_secrets("/hermetic/gitleaks", "out/gitleaks.sarif", None, "/tmp/dx")
-            .expect("plans");
+        let plan = plan_secrets(
+            "/hermetic/gitleaks",
+            "out/gitleaks.sarif",
+            None,
+            "/tmp/dx",
+            false,
+        )
+        .expect("plans");
         match plan {
             BackendPlan::Run { argv, env } => {
                 assert_eq!(argv[0], "/hermetic/gitleaks");
@@ -233,6 +247,7 @@ mod tests {
             "out.sarif",
             Some(".gitleaks.toml"),
             "/tmp/dx",
+            false,
         )
         .expect("plans");
         match plan {
@@ -247,7 +262,7 @@ mod tests {
     #[test]
     fn secrets_plan_rejects_empty_report_path() {
         assert_eq!(
-            plan_secrets("/hermetic/gitleaks", "  ", None, "/tmp/dx"),
+            plan_secrets("/hermetic/gitleaks", "  ", None, "/tmp/dx", false),
             Err(BackendError::MissingReportPath)
         );
     }
@@ -257,23 +272,23 @@ mod tests {
         // Hermetic acquisition: `argv[0]` is always the absolute declared
         // artifact path, never an ambient `PATH` lookup.
         assert_eq!(
-            plan_secrets("", "out.sarif", None, "/tmp/dx"),
+            plan_secrets("", "out.sarif", None, "/tmp/dx", false),
             Err(BackendError::MissingTool)
         );
         assert_eq!(
-            plan_secrets("gitleaks", "out.sarif", None, "/tmp/dx"),
+            plan_secrets("gitleaks", "out.sarif", None, "/tmp/dx", false),
             Err(BackendError::NonAbsoluteTool {
                 tool: "gitleaks".to_owned()
             })
         );
         assert_eq!(
-            plan_secrets("tools/gitleaks", "out.sarif", None, "/tmp/dx"),
+            plan_secrets("tools/gitleaks", "out.sarif", None, "/tmp/dx", false),
             Err(BackendError::NonAbsoluteTool {
                 tool: "tools/gitleaks".to_owned()
             })
         );
         assert_eq!(
-            plan_secrets("/hermetic/gitleaks", "out.sarif", None, "  "),
+            plan_secrets("/hermetic/gitleaks", "out.sarif", None, "  ", false),
             Err(BackendError::MissingTempDir)
         );
     }
@@ -282,8 +297,14 @@ mod tests {
     fn secrets_plan_env_is_sanitized_tmpdir_only() {
         // Sanitized invocation: exactly `TMPDIR`, never `PATH` and never
         // ambient `GITLEAKS_*`.
-        let plan =
-            plan_secrets("/hermetic/gitleaks", "out.sarif", None, "/tmp/dx-run").expect("plans");
+        let plan = plan_secrets(
+            "/hermetic/gitleaks",
+            "out.sarif",
+            None,
+            "/tmp/dx-run",
+            false,
+        )
+        .expect("plans");
         match plan {
             BackendPlan::Run { env, .. } => {
                 assert_eq!(env, vec![("TMPDIR".to_owned(), "/tmp/dx-run".to_owned())]);
@@ -318,5 +339,34 @@ mod tests {
         assert_eq!(SOURCE_FLAG, "--source");
         assert_eq!(WORKSPACE_SOURCE, ".");
         assert_eq!(SECRETS_ERROR_EXIT, "2");
+    }
+
+    #[test]
+    fn secrets_plan_is_cache_only_identical_offline() {
+        // See: `docs/deploy/offline-bootstrap.md`. The secrets scan is
+        // hermetic and local, so `--offline`/`--frozen` planning is byte
+        // -identical and never fails: no fetch, no upload.
+        let online = plan_secrets("/hermetic/gitleaks", "out.sarif", None, "/tmp/dx", false)
+            .expect("online plans");
+        let offline = plan_secrets("/hermetic/gitleaks", "out.sarif", None, "/tmp/dx", true)
+            .expect("offline plans");
+        assert_eq!(online, offline);
+        let online_configed = plan_secrets(
+            "/hermetic/gitleaks",
+            "out.sarif",
+            Some(".gitleaks.toml"),
+            "/tmp/dx",
+            false,
+        )
+        .expect("online configed");
+        let offline_configed = plan_secrets(
+            "/hermetic/gitleaks",
+            "out.sarif",
+            Some(".gitleaks.toml"),
+            "/tmp/dx",
+            true,
+        )
+        .expect("offline configed");
+        assert_eq!(online_configed, offline_configed);
     }
 }
