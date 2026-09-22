@@ -160,11 +160,15 @@ the ecosystem's install command in a consumer build.
 
 ## First-Release Tool Routing
 
-The planned first-release routing below is an implementation hypothesis
-governed by delivery-class proofs. Provisional entries do not count toward
-parity until their focused proof selects a route.
+The routing below is delivered as-built. Adapters are claimed in
+`quality/adapters.bzl` with fixture evidence in `quality/testdata` plus
+`quality/adapter/src/parsers`: JVM cohort delivered under #796, Scala/.NET
+cohort delivered under #797, native cohort delivered under #798, Structured
+cohort delivered under #799, file-family cohort delivered under #800. Only
+ADR 0019 deferred-framework regions remain without an adapter claim (see
+`quality/parity_tests.bzl` `PARITY_DEFERRED`).
 
-| Delivery path | Initial tools |
+| Delivery path | Delivered tools |
 | --- | --- |
 | Authoritative selected toolchain | `tsc`, gofmt, rustfmt, Clippy, clang-format, clang-tidy |
 | Checksummed native/self-contained artifact | Biome, `buf`, Buildifier, cppcheck, CUE, gofumpt, jsonnetfmt, keep-sorted, modfmt, Pkl, Ruff, shfmt, ShellCheck, Taplo, Terraform, Ty, Vale, yamlfmt |
@@ -174,8 +178,8 @@ parity until their focused proof selects a route.
 | Private wheel-only Python graph plus shared managed Python | djlint, flake8, pydoclint, pylint, yamllint |
 | Private pure-JavaScript graph plus shared managed Node | ESLint, Prettier, Stylelint, prettier-plugin-gherkin, prettier-plugin-sql, prettier-plugin-xml |
 | Release-assembled Ruby closure | RuboCop, StandardRB |
-| Focused proof selects authoritative toolchain or standalone artifact | qmlformat, qmllint |
-| Focused proof selects compatible native/JVM artifact or target-coupled route | Scalafmt, Scalafix |
+| Authoritative selected toolchain (Qt distribution) | qmlformat, qmllint |
+| Complete upstream artifact plus shared JDK (managed-JVM route) | Scalafmt, Scalafix |
 
 A tool appearing once above is not downloaded again for each capability.
 Acquisition deduplicates by tool/runtime identity even when adapter metadata

@@ -46,6 +46,9 @@ metadata="quality/artifacts/metadata_tests.bzl"
 update="quality/artifacts/update.py"
 qual="cli/qualification/src/lib.rs"
 integrations="docs/quality/tool-integrations.md"
+acquisition="docs/tools/tool-acquisition.md"
+tools_qual="docs/tools/foundation-qualification.md"
+tools_readme="docs/tools/README.md"
 
 # No false adapter claim: all cohorts delivered, no missing tool IDs remain
 # among those cohorts. Classification exists in
@@ -355,5 +358,34 @@ dx_guards_contains "$integrations" "provisional probe record drifted (want unpro
   'unproven mappings' \
   'observations, not pins' \
   'Direct probes show'
+
+# Tool-acquisition delivered record (issue #1063): all cohorts delivered,
+# only ADR 0019 deferred-framework remains; no stale no-adapter claim.
+dx_guards_contains "$acquisition" "tool-acquisition delivered record drifted (want delivered cohorts plus ADR-0019 framework-only, issue #1063)" \
+  'delivered under #796' \
+  'delivered under #797' \
+  'delivered under #798' \
+  'delivered under #799' \
+  'delivered under #800' \
+  'ADR 0019' \
+  'PARITY_DEFERRED'
+dx_guards_absent "$acquisition" "tool-acquisition stale no-adapter claim (want delivered, issue #1063)" \
+  'no adapter claims' \
+  'No adapter claims' \
+  'no claimed adapter'
+dx_guards_contains "$tools_qual" "foundation-qualification delivered record drifted (want delivered plus ADR-0019 framework-only, issue #1063)" \
+  'delivered under #796' \
+  'delivered under #797' \
+  'delivered under #798' \
+  'delivered under #799' \
+  'delivered under #800' \
+  'ADR 0019 deferred-framework'
+dx_guards_absent "$tools_qual" "foundation-qualification stale no-adapter claim (want delivered, issue #1063)" \
+  'claimed adapter yet' \
+  'no foundation adapter'
+dx_guards_absent "$tools_readme" "tools README stale no-adapter claim (want short index, issue #1063)" \
+  'no claimed adapter' \
+  'no adapter claims' \
+  'No adapter claims'
 
 dx_test_summary "quality adapters parity harness"
