@@ -107,7 +107,7 @@ owned gap under issue #500.
 | Layer | First choice | Why and boundary |
 | --- | --- | --- |
 | C/C++ build semantics | `rules_cc 0.2.22` | Reuse `cc_library`, `cc_binary`, `cc_test`, `cc_import`, `CcInfo`, and the standard C++ toolchain. Qualify `cc_shared_library` separately where needed; no replacement compiler rules. |
-| Rust | `rules_rs v0.0.109` and its pinned patched `rules_rust` | Retain the preferred foundation and provider identities in ADR 0013; do not compose a second independent Rust rules graph. |
+| Rust | `rules_rs v0.0.109` and its pinned patched `rules_rust` | Retain the preferred foundation and provider identities in ADR 0013; do not compose a second independent Rust rules graph. Patch inventory plus upstreaming plus upgrade owned by issue #916 (commit `e9dd49f`, see Inspected Identities below). |
 | Linux/macOS native backend | `hermetic-llvm v0.8.19`, LLVM `23.1.0` | Most complete inspected acquisition, target-runtime, LLVM-tool, and coverage integration. |
 | Windows native backend | `toolchains_msvc` at `8e2aa4624bbb5a53a94f135e90995f307875d1ad`, clang-cl + lld-link + Microsoft STL | First Windows-hosted candidate with existing no-install toolchains and the required STL family. Prototype acquisition and coverage gaps block adoption unchanged. |
 | Windows compatibility control | `cl.exe` through the same backend | Use to diagnose actual MSVC-library/compiler compatibility failures, not as a second default or an automatic fallback. |

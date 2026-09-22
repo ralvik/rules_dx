@@ -248,6 +248,8 @@ documented and tested. Explicit commands remain useful for recovery and controll
 when routine refresh is automatic. The accepted exception is the thin local-only
 `dx watch` loop defined by [ADR 0017](../decisions/0017-dx-watch.md), which reuses
 existing command resolution and Bazel execution without a daemon, cache, or graph.
+Retirement of that exception (frozen debounce/ignore/restart, accept-or-demote)
+is owned by issue #916.
 
 Review existing explicit-only workflows against this preference as their upstream mappings are
 qualified; update their owning contracts and tests together before changing behavior. This policy

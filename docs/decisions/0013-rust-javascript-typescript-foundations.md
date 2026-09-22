@@ -29,15 +29,22 @@ Rust uses an exact latest-stable `hermeticbuild/rules_rs` release and its pinned
 providers, proc macros, build scripts, generated sources, and rust-analyzer integration.
 `rules_dx` does not implement another compiler rule, Cargo resolver, crate graph, linker model,
 build-script protocol, or proc-macro transition. Exact release and patched-commit identities
-are provisional pending ADR 0014 and the issue tracker stack qualification; `latest-stable` here states the
+are provisional pending ADR 0014 and issue #916 stack qualification (the single
+retirement tracker for the five provisional exceptions); `latest-stable` here states the
 selection policy, not a frozen pin. This record does not pin a version through prose.
+Patch inventory plus upstreaming plus upgrade are owned by issue #916: the
+pinned patched `rules_rust` commit `e9dd49f` under `rules_rs v0.0.109`
+(see [Native Toolchain Qualification](../native-toolchains.md#selected-qualification-stack))
+stays pinned reproducibly with prefer-upstreaming track until an upstream release
+replaces it after passing fixture evidence plus consumer and platform evidence
+per ADR 0008/0014.
 
 The tested-stack manifest records both the selected `rules_rs` release and the identity of its
 underlying patched `rules_rust`. Both follow the strict dependency and compatibility-exception
 policy in [ADR 0008](0008-dependency-currency.md). This preferred stack remains selected. Direct
 `rules_rust` is an established upstream alternative to compare if substantial fixes are needed, not
 an automatic fallback. Any switch requires explicit contract/API review and approval through
-Open Decisions, plus fixture-proven conformance; it does not permit a
+Open Decisions (retirement owned by issue #916), plus fixture-proven conformance; it does not permit a
 project-owned Rust engine.
 
 Rust native dependencies follow the Windows compatibility baseline and platform-specific native
@@ -55,7 +62,7 @@ For every language, `rules_dx` exposes only narrow conventional wrappers, provid
 owns opinionated defaults and compatibility at that boundary but does not re-export the complete
 upstream API. Consumers needing advanced upstream APIs may declare and load the upstream
 module directly. Exact public symbols and provider mappings remain fixture-gated in
-Open Decisions and [Testing](../testing/).
+Open Decisions (retirement owned by issue #916) and [Testing](../testing/).
 
 ### Core-Language Completion And Remediation
 
@@ -66,7 +73,8 @@ and evidence; this requirement does not claim that unverified capabilities alrea
 preferred foundation remains defined by [ADR 0010](0010-python-foundation.md).
 
 Focused upstream rules patches are allowed when pinned reproducibly and tested against the accepted
-contracts and required platforms. Prefer upstreaming those fixes. Small missing integration pieces
+contracts and required platforms. Prefer upstreaming those fixes; patch inventory
+plus upstream issue plus upgrade tracking are owned by issue #916. Small missing integration pieces
 may be owned by `rules_dx` with a clearly bounded scope and maintenance responsibility, while
 preserving upstream language semantics and verified public provider boundaries.
 
@@ -123,7 +131,7 @@ guessed, omitted, installed, or deferred to a later build.
 The uniform strict-resolution and user-owned exception policy is authoritative under
 [Generation](../generation/). Exact syntax recognizers, Cargo target mappings, pnpm importer/store
 mappings, version selection, tests, coverage, and other upstream adaptations remain unresolved where
-listed in Open Decisions.
+listed in Open Decisions (retirement owned by issue #916).
 
 ### Environment And IDE Direction
 
@@ -140,7 +148,7 @@ their separate Bazel IDE path, but they do not mutate selected environment or co
 Node environments preserve pnpm importer semantics and conventional importer-local `node_modules`
 facades over Bazel-selected artifacts. They do not flatten a multi-importer graph or perform a
 host-side install. Exact Rust and Node provider mappings and persistent shapes remain evidence-gated
-through Open Decisions.
+through Open Decisions (retirement owned by issue #916).
 
 Selection, native layouts, immutable state, atomic commits, carry-forward, generated-code separation,
 ownership, and retention are authoritative under [Environments](../environments/), including the
@@ -189,7 +197,9 @@ The required platform, consumer, remote, compatibility, and laziness evidence is
 - Upstream gaps require remediation through focused, tested, pinned patches, bounded integration, or
   an explicitly reviewed and approved alternative upstream. Unresolved gaps block conformance and
   support claims, not remediation; they do not authorize private graph coupling or a project-owned
-  replacement engine.
+  replacement engine. Patch inventory plus upstreaming plus upgrade are owned by
+  issue #916 with fixture evidence plus consumer and platform evidence per ADR
+  0008/0014 before ship.
 
 ## Rejected Alternatives
 
