@@ -11,7 +11,8 @@ integration under [First-Release Admission](../product/scope.md#first-release-ad
 Curated default tool selections are owned by the [tool baseline](../tools/tool-baseline.md);
 this document owns adapter mechanics and does not re-pin defaults.
 Swift and SwiftFormat are excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md); see
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md), re-evidenced by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md); see
 [Swift Feasibility](../tools/tool-baseline.md#swift-feasibility). Reconsidering Swift after v1
 requires a new scope decision.
 
@@ -392,7 +393,7 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   shared with lint; S (flake8-bandit) ruleset via native `ruff.toml` opt-in with pinned
   upstream defaults otherwise clean and no hidden preset; standalone artifact route with
   per-host digests in `quality/artifacts/ruff.*.bzl`; curated audit stays empty with explicit
-  disablement (audit opt-in, no default fetch); Bandit stays excluded by ADR 0019.
+  disablement (audit opt-in, no default fetch); Bandit excluded by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801.
 
 Candidate native filenames are `.buildifier.json`, `.taplo.toml`/`taplo.toml`, and `.vale.ini`.
 Freeze them in [Native Configuration](native-configuration.md#discovery) only with exact binding,

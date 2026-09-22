@@ -33,7 +33,7 @@ ADRs explain why the contracts exist; the test matrix defines the required evide
 Accepted. Each foundation keeps its provisional upstream; no switch is approved here.
 
 Core (Rust, Python, JavaScript, TypeScript) plus admitted additional foundations
-(Go, Java, Kotlin, Scala, C#, F#, C/C++) are qualified by focused fixtures:
+(Go, Java, Kotlin, Scala, C#, F#, C/C++, Ruby, PowerShell) are qualified by focused fixtures:
 thin wrappers in `<lang>/rules/defs.bzl` preserving the upstream provider and
 adding `QualitySourcesInfo`, Gazelle extensions in `gazelle/<lang>/` with
 parser/naming/lang fixtures plus focused tests, hello builds in `<lang>/tests/fixtures/hello/`
@@ -48,12 +48,14 @@ C/C++ has none (every `http_archive` carries `sha256`/`integrity`).
 C/C++ hash wiring qualified seed-only under issue #484 via
 `bazel run //tools/ci:cc_hermetic_qualification` with `cc/tests/fixtures/hermetic/`.
 Upstream pins live in `MODULE.bazel`.
-Ruby and PowerShell have no generation mapping: deferred beyond v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md).
-Swift has none: excluded from v1 by the same record.
-Deferred/excluded generation record is decided by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
+Ruby and PowerShell have no generation mapping yet: admitted to v1 by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding the
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md) deferral),
+with mappings pending in parallel Ruby/PowerShell tracks.
+Swift has none: excluded from v1 by the same record, re-evidenced by ADR 0032.
+Deferred/excluded generation record is decided by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md);
 no `ruby/`, `powershell/`,
-or `swift/` Gazelle extension lands here.
+or `swift/` Gazelle extension lands here yet.
 
 Required-core Rust provider plus Gazelle maps are pinned (issue #470):
 `rust/rules/defs.bzl` wrappers preserve `CrateInfo`/`DepInfo`/`TestCrateInfo`/`CcInfo`

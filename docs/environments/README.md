@@ -40,11 +40,13 @@ and C/C++ plans are owned by [Go](go.md), [Java](java.md),
 [C/C++](cc.md); Vue, Svelte, Astro, and MDX plans are owned by [Vue](vue.md),
 [Svelte](svelte.md), [Astro](astro.md), and [MDX](mdx.md). Additional toolchains use the default
 upstream toolchain now; per-platform acquisition stays open under the native plan.
-Ruby and PowerShell have no environment mapping: deferred beyond v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md).
-Deferred/excluded env record is decided by [ADR 0019](../decisions/0019-first-release-additional-foundations.md);
+Ruby and PowerShell have no environment mapping yet: admitted to v1 by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding the
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md) deferral),
+with mappings pending in parallel Ruby/PowerShell tracks.
+Deferred/excluded env record is decided by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md);
 no `ruby/`, `powershell/`, or
-`swift/` env plan lands here.
+`swift/` env plan lands here yet.
 
 Required-core Rust integration is pinned (issue #470): the provider-derived focused-target
 `rust_env_plan` in `rust/env/plan.bzl` (`RustEnvPlanInfo` from authoritative

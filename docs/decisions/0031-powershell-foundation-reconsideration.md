@@ -7,7 +7,9 @@ Date: 2026-09-21.
 Accepted. Reconsideration scope decision for issue #778 under
 [ADR 0019](0019-first-release-additional-foundations.md) and the
 [first-release admission](../product/scope.md#first-release-admission).
-It affirms the PowerShell deferral; it supersedes nothing.
+It affirmed the PowerShell deferral; it superseded nothing. Superseded
+by [ADR 0032](0032-ruby-powershell-bandit-swift.md), which admits the
+PowerShell foundation to v1 for issue #970.
 
 ## Context
 

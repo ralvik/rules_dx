@@ -181,7 +181,8 @@ qualified seed-only under closed #801 (`python/tests/fixtures/python_audit/pins.
 `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification` with Ruff S
 selected via the pinned Ruff standalone artifact plus curated audit empty with explicit
 disablement; Bandit excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md); family taxonomy execution
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md) and re-selected by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) with wiring pending under #801; family taxonomy execution
 qualified seed-only under closed #512 via `bazel run //tools/ci:quality_taxonomy_qualification`,
 closed #512 stays taxonomy-only).
 
