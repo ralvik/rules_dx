@@ -58,8 +58,9 @@ STRICT_UNSUPPORTED_REJECTED = [
 STRICT_BAZEL_FORWARDS_VERBATIM = True
 STRICT_BAZEL_PREFIX_OPTIONS_REJECTED = True
 
-# Strict: no `help` verb; help is flag-only (`dx --help`, `dx <cmd> --help`).
-STRICT_NO_HELP_VERB = True
+# Strict: `dx help [command]` verb redirects to the same generated help as
+# flags (`dx --help`, `dx <cmd> --help`); clap keeps `disable_help_subcommand`.
+STRICT_HELP_VERB_REDIRECT = True
 STRICT_HELP_FLAG_ONLY = ["--help", "-h"]
 
 # Strict: generated help from the same grammar (parsing plus help plus
@@ -71,7 +72,6 @@ STRICT_GENERATED_HELP_FROM_GRAMMAR = True
 # Rejected substitutes (never accepted as the resolution).
 REJECTED_SILENT_IGNORE = "silent ignore rejected"
 REJECTED_PREFIX_INFERENCE = "prefix inference rejected"
-REJECTED_HELP_VERB = "help verb rejected"
 REJECTED_HYPHEN_CONSUMPTION = "hyphen-value consumption rejected"
 
 # Honesty lines (never pinned as supported here).

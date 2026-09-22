@@ -62,13 +62,16 @@ options and test-binary arguments are not supported by other workflow commands; 
 `dx bazel` when either is required. `dx` does not infer an option class from target
 position or reinterpret trailing values heuristically.
 
-`dx --help` and `dx <command> --help` (including `-h`) render
-human-readable help from the same CLI grammar that parses invocations.
-There is no `dx help` verb; `help` as a command word fails as unknown command.
-Help exits `0` on stdout and stays outside machine-output guarantees:
-no NDJSON, even with `--output json`. Top-level help lists commands,
-flags, scope forms, exit codes, and output modes; per-command help adds
-that command's usage and scope notes.
+`dx --help`, `dx <command> --help` (including `-h`), and `dx help [command]`
+render human-readable help from the same CLI grammar that parses invocations.
+`dx help` shows top-level help and `dx help <command>` shows that command's help,
+matching the `--help` outputs. Help exits `0` on stdout and stays outside
+machine-output guarantees: no NDJSON, even with `--output json`. Top-level help
+lists commands (including `completion` shells `bash|zsh|fish|powershell`), flags,
+scope forms, exit codes, and output modes; per-command help adds that command's
+usage and scope notes (`dx status` help names its rejected flags and NDJSON shape;
+`dx completion` help names `--check` verification). Unknown `doctor`/`configure`
+suggest `dx status` (see [status/version](commands/status-version.md#failure-explainer)).
 
 Workflow commands reserve flags required for correctness: aspect selection,
 `dx_results`, `@rules_dx//config:workspace`,
@@ -327,11 +330,12 @@ Strict clap parsing with auto help for the `dx` CLI surface (qualified seed-only
 `cli/cli/tests/fixtures/strict_parsing/` plus help-output goldens in
 `cli/cli/tests/fixtures/help_goldens/` plus `cli/cli/src/args/strict_tests.rs`
 plus `cli/cli/src/args/help.rs`; exact `--long` names only with
-`disable_help_subcommand` (no `help` verb, help is flag-only via auto
-`--help`/`-h`), unknown/missing/bad shapes fail fast with whole-token echo
+`disable_help_subcommand` (clap has no help subcommand; `dx help [command]`
+redirects to the same generated help as auto `--help`/`-h`),
+unknown/missing/bad shapes fail fast with whole-token echo
 plus bare-flag naming plus grammar-owned suggestions, hyphen-values never
 consumed, known flags on wrong commands fail as unsupported, `dx bazel`
-tails forward verbatim, and `--help` renders from the same `Cli` grammar
+tails forward verbatim, and `--help` plus `dx help` render from the same `Cli` grammar
 that parses, plus completions plus man pages; thin-shim frozen legacy under
 #316 unchanged; CLI-only, no Bazel semantics change; seed only, no
 Supported claim).
@@ -343,7 +347,8 @@ holds exactly the 32 parsed commands including `deploy` plus `bump` plus
 selection, issue #462 with upgrade scope under issue #671; absent-only `new` plus
 one-shot `upgrade` composition, see [new/upgrade](commands/new-upgrade.md); docs
 build/check/serve over the Bazel-cached site, see [dx docs](commands/docs.md)), with `doctor` plus
-`configure` rejected as unknown;
+`configure` rejected as unknown suggesting `dx status` (see [status/version](commands/status-version.md#failure-explainer));
+`dx help [command]` redirects to generated help and `dx completion --check` verifies scripts;
 help plus `Command::is_mutating_by_default` identify the mutating default,
 `--output=diff` stays exactly the six patch producers, and the `check`/`fix`
 umbrella stays the sequential `format` then `lint` then `typecheck` then

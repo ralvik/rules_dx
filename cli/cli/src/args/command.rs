@@ -379,7 +379,7 @@ impl Command {
             Command::Owners => "query owners of files via Bazel query",
             Command::Deps => "query dependencies of targets",
             Command::Why => "explain why a target depends on another",
-            Command::Completion => "emit shell completions from the CLI grammar",
+            Command::Completion => "emit shell completions from the CLI grammar (bash|zsh|fish|powershell; --check verifies without writing)",
             Command::Docs => "build, check, and serve the unified documentation site (non-mutating; --check validates without rendering)",
             Command::Bazel => "forward raw arguments to the Bazel launcher",
         }

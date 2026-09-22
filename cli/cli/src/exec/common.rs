@@ -225,11 +225,13 @@ pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     // Single-sourced fallback registry (See: `docs/cli/commands/README.md`):
     // the command list renders from `Command::pipe_list` so `--help`/grammar
     // drift fails the `fallback_usage_registry_is_single_sourced` fixture.
+    // `--check` is per-command only (status rejects it; see
+    // `dx help <command>`), never a generic flag.
     let commands = crate::args::Command::pipe_list();
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [per-command-flags] [scope ...] [-- command-options...] (see `dx help <command>` or `dx <command> --help`; no dx doctor, use `dx status`)"
     );
     pre_exec_code()
 }

@@ -37,6 +37,12 @@ pub(crate) use super::grammar::Cli;
 /// package-relative labels and empty scopes fail here. Arguments after
 /// the first bare `--` forward to Bazel as command options verbatim.
 pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
+    // `dx help [command]` verb redirect (See:
+    // `docs/cli/cli-contract.md#invocation-shape`): handled before the
+    // grammar so `help` never reaches the `ValueEnum` positional.
+    if let Some(error) = super::help::help_verb_error_in(args) {
+        return Err(error);
+    }
     let (cli, bazel_options) = tokenize(args)?;
     let Cli {
         workspace,
@@ -631,8 +637,9 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     if command.is_adoption() {
         // Adoption/inspect surfaces run local helpers or thin query
         // forwarding: quality-only thresholds/reports and Bazel forwards
-        // do not apply. `--check` belongs to `version` (pin drift)
-        // only; `--pin` belongs to `version`
+        // do not apply. `--check` belongs to `version` (pin drift) plus
+        // `completion` (verify scripts without writing; See:
+        // `docs/cli/commands/completion.md`); `--pin` belongs to `version`
         // only. `--rollback`
         // and `--configured` ownership is enforced by the catch-all
         // below.
@@ -660,7 +667,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 option: "--".to_owned(),
             });
         }
-        if check && command != Command::Version {
+        if check && command != Command::Version && command != Command::Completion {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
                 option: "--check".to_owned(),
@@ -688,7 +695,18 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
                 }
             }
             Command::Completion => {
-                if targets.len() != 1 {
+                // Without `--check` exactly one shell renders; with
+                // `--check` zero shells verifies all shells and one
+                // verifies that shell (See:
+                // `docs/cli/commands/completion.md`).
+                if check {
+                    if targets.len() > 1 {
+                        return Err(ArgsError::UnsupportedOption {
+                            command: command.name(),
+                            option: targets[1].clone(),
+                        });
+                    }
+                } else if targets.len() != 1 {
                     return Err(ArgsError::MissingValue {
                         option: "<shell>".to_owned(),
                     });

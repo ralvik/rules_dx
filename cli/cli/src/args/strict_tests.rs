@@ -1,7 +1,8 @@
 //! Strict parsing plus generated-help fixtures for the `dx` CLI.
 //!
 //! Qualified seed-only under #810 (See: `docs/cli/cli-contract.md`):
-//! exact `--long` names only, help flag-only with no `help` verb,
+//! exact `--long` names only, help via `--help`/`-h` plus the `dx help`
+//! verb redirect (See: `docs/cli/cli-contract.md#invocation-shape`),
 //! unknown/missing/bad shapes fail fast with no silent ignore,
 //! attached `=value` echoes the whole token, hyphen-values never
 //! consumed as option values, `dx bazel` tails forward verbatim,
@@ -208,8 +209,12 @@ fn strict_bazel_tail_forwards_verbatim() {
 }
 
 #[test]
-fn strict_no_help_verb_help_is_flag_only() {
-    for words in [vec!["help"], vec!["Help"], vec!["HELP"]] {
+fn strict_help_verb_redirects_to_generated_help() {
+    // `dx help [command]` verb redirects to the same generated help as
+    // `--help`/`-h` (See: `docs/cli/cli-contract.md#invocation-shape`).
+    // Only exact lowercase `help` is the verb; `Help`/`HELP` stay unknown
+    // like any other casing typo.
+    for words in [vec!["Help"], vec!["HELP"]] {
         match parse(&args(&words)) {
             Err(ArgsError::UnknownCommand { command, .. }) => {
                 assert_eq!(command, words[0]);
@@ -217,13 +222,31 @@ fn strict_no_help_verb_help_is_flag_only() {
             other => panic!("words: {words:?}: want UnknownCommand, got {other:?}"),
         }
     }
-    assert_eq!(
-        parse(&args(&["help", "lint"])),
-        Err(ArgsError::UnknownCommand {
-            command: "help".to_owned(),
-            suggestion: None,
-        })
-    );
+    for words in [vec!["help"], vec!["help", "lint"], vec!["help", "status"]] {
+        match parse(&args(&words)) {
+            Err(ArgsError::Help { text }) => {
+                if words.len() > 1 {
+                    assert!(
+                        text.contains(words[1]),
+                        "words: {words:?}: help missing command"
+                    );
+                } else {
+                    assert!(text.contains("Commands:"), "words: {words:?}");
+                }
+            }
+            other => panic!("words: {words:?}: want Help, got {other:?}"),
+        }
+    }
+    // `dx help lint` matches `dx lint --help`.
+    let verb = match parse(&args(&["help", "lint"])) {
+        Err(ArgsError::Help { text }) => text,
+        other => panic!("help lint: want Help, got {other:?}"),
+    };
+    let flag = match parse(&args(&["lint", "--help"])) {
+        Err(ArgsError::Help { text }) => text,
+        other => panic!("lint --help: want Help, got {other:?}"),
+    };
+    assert_eq!(verb, flag, "help verb must redirect to per-command help");
     for flag in ["--help", "-h"] {
         match parse(&args(&[flag])) {
             Err(ArgsError::Help { .. }) => {}

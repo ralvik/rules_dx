@@ -3,14 +3,17 @@
 #
 # Qualifies the dx CLI strict surface with fixture evidence (issue #810,
 # successor to the #316 owned gap for the dx CLI tokenizer only; thin shims
-# stay frozen legacy under #316):
+# stay frozen legacy under #316; plus issue #951 help verb redirect plus
+# completion/status/doctor discoverability):
 # - strict parsing: exact `--long` names only, unknown/missing/bad shapes
 #   fail fast with whole-token echo plus bare-flag naming plus grammar-owned
 #   suggestions, hyphen-values never consumed, known flags on wrong commands
-#   fail as unsupported, `dx bazel` tails forward verbatim, no `help` verb;
-# - generated help: `--help`/`-h` render from the same `Cli` grammar that
+#   fail as unsupported, `dx bazel` tails forward verbatim, `dx help [command]`
+#   verb redirects to the same generated help as `--help`/`-h`;
+# - generated help: `--help`/`-h` plus `dx help` render from the same `Cli` grammar that
 #   parses (top plus all 32 per-command helps pin usage plus scopes plus
-#   exits plus output plus owned flags);
+#   exits plus output plus owned flags; top lists completion shells,
+#   status names NDJSON shape, completion names `--check`);
 # - fixtures: `cli/cli/tests/fixtures/strict_parsing/` (`pins.bzl` plus
 #   `strict_parsing.expected`) plus `cli/cli/tests/fixtures/help_goldens/`
 #   (`pins.bzl` plus `help_goldens.expected` plus `top_help.golden` plus
@@ -70,7 +73,7 @@ if [[ -f "$strict_pins" && -f "$strict_expected" && -f "$strict_build" ]] &&
   grep -q -F -e 'STRICT_MISSING_REJECTED' "$strict_pins" &&
   grep -q -F -e 'STRICT_HYPHEN_VALUES_NOT_CONSUMED' "$strict_pins" &&
   grep -q -F -e 'STRICT_BAZEL_FORWARDS_VERBATIM' "$strict_pins" &&
-  grep -q -F -e 'STRICT_NO_HELP_VERB' "$strict_pins" &&
+  grep -q -F -e 'STRICT_HELP_VERB_REDIRECT' "$strict_pins" &&
   grep -q -F -e 'STRICT_GENERATED_HELP_FROM_GRAMMAR' "$strict_pins" &&
   grep -q -F -e 'qualified seed-only under issue #810' "$strict_pins"; then
   ok
@@ -82,7 +85,7 @@ fi
 if grep -q -F -e 'unknown options rejected' "$strict_expected" &&
   grep -q -F -e 'missing values rejected' "$strict_expected" &&
   grep -q -F -e 'hyphen-led tokens never consumed' "$strict_expected" &&
-  grep -q -F -e 'no help verb' "$strict_expected" &&
+  grep -q -F -e 'help verb redirect' "$strict_expected" &&
   grep -q -F -e 'qualified seed-only under issue #810' "$strict_expected" &&
   grep -q -F -e 'no Supported claim' "$strict_expected"; then
   ok
@@ -104,7 +107,7 @@ if [[ -f "$help_pins" && -f "$help_expected" && -f "$help_build" ]] &&
   grep -q -F -e 'HELP_TOP_GOLDEN' "$help_pins" &&
   grep -q -F -e 'HELP_REPRESENTATIVE_GOLDENS' "$help_pins" &&
   grep -q -F -e 'HELP_COMMAND_INVARIANTS' "$help_pins" &&
-  grep -q -F -e 'HELP_NO_VERB' "$help_pins" &&
+  grep -q -F -e 'HELP_VERB_REDIRECT' "$help_pins" &&
   grep -q -F -e 'HELP_COMMAND_COUNT = 32' "$help_pins" &&
   grep -q -F -e 'qualified seed-only under issue #810' "$help_pins"; then
   ok
@@ -115,7 +118,7 @@ fi
 # Help expected pins the golden plus invariant plus honesty lines.
 if grep -q -F -e 'top help golden' "$help_expected" &&
   grep -q -F -e 'Per-command flags' "$help_expected" &&
-  grep -q -F -e 'no help verb' "$help_expected" &&
+  grep -q -F -e 'help verb redirect' "$help_expected" &&
   grep -q -F -e 'qualified seed-only under issue #810' "$help_expected" &&
   grep -q -F -e 'no Supported claim' "$help_expected"; then
   ok
@@ -144,7 +147,8 @@ done
 if grep -q -F -e 'dx - Transparent UI over Bazel' "$top_golden" &&
   grep -q -F -e 'Commands:' "$top_golden" &&
   grep -q -F -e '--workspace' "$top_golden" &&
-  grep -q -F -e 'Exit codes' "$top_golden"; then
+  grep -q -F -e 'Exit codes' "$top_golden" &&
+  grep -q -F -e 'bash|zsh|fish|powershell' "$top_golden"; then
   ok
 else
   bad "top_help.golden lost its generated brand plus commands plus flags under #810"
@@ -162,9 +166,10 @@ for golden in "$lint_golden" "$build_golden" "$clean_golden" "$bazel_golden" "$d
   fi
 done
 
-# Grammar pins strict help-subcommand refusal with auto help (flag-only, no verb).
+# Grammar pins strict help-subcommand refusal with auto help plus verb redirect.
 if grep -q -F -e 'disable_help_subcommand' "$grammar" &&
-  grep -q -F -e 'Strict parsing' "$grammar"; then
+  grep -q -F -e 'Strict parsing' "$grammar" &&
+  grep -q -F -e 'dx help [command]' "$grammar"; then
   ok
 else
   bad "grammar.rs lost its #810 strict disable_help_subcommand plus auto-help pin"
@@ -174,7 +179,7 @@ fi
 if grep -q -F -e 'strict_unknown_options_fail_with_whole_token' "$strict_tests" &&
   grep -q -F -e 'strict_missing_values_fail_with_bare_flag' "$strict_tests" &&
   grep -q -F -e 'strict_hyphen_values_are_never_consumed' "$strict_tests" &&
-  grep -q -F -e 'strict_no_help_verb_help_is_flag_only' "$strict_tests" &&
+  grep -q -F -e 'strict_help_verb_redirects_to_generated_help' "$strict_tests" &&
   grep -q -F -e 'strict_help_is_generated_from_the_same_grammar' "$strict_tests" &&
   grep -q -F -e 'strict_every_command_help_pins_usage_scopes_exits_output' "$strict_tests"; then
   ok
@@ -182,10 +187,11 @@ else
   bad "strict_tests.rs lost its #810 strict plus help fixtures"
 fi
 
-# Help module keeps generated rendering from the same grammar.
+# Help module keeps generated rendering from the same grammar plus verb redirect.
 if grep -q -F -e 'render_top_help' "$help_mod" &&
   grep -q -F -e 'render_command_help' "$help_mod" &&
-  grep -q -F -e 'per_command_flags' "$help_mod"; then
+  grep -q -F -e 'per_command_flags' "$help_mod" &&
+  grep -q -F -e 'help_verb_error_in' "$help_mod"; then
   ok
 else
   bad "help.rs lost its generated help rendering pins under #810"

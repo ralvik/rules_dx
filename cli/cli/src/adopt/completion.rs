@@ -9,11 +9,13 @@ use std::io::Write;
 
 use crate::args::Invocation;
 
-use super::{pre_exec, summaries_suppressed};
+use super::{operational, pre_exec, summaries_suppressed};
 
 /// Runs `dx completion`: renders the shell script from the `Cli`
 /// grammar so parsing, `--help`, and completions cannot drift from the
-/// command reference. `--dry-run` plans without rendering.
+/// command reference. `--dry-run` plans without rendering. `--check`
+/// verifies without writing (one shell checks that shell, no shell
+/// checks all; See: `docs/cli/commands/completion.md`).
 pub(crate) fn execute_completion(
     invocation: &Invocation,
     out: &mut dyn Write,
@@ -22,6 +24,9 @@ pub(crate) fn execute_completion(
     // Scripts render at runtime from the `Cli` grammar:
     // the same definition feeds parsing, `--help`, and completions, so
     // output cannot drift from the command reference.
+    if invocation.check {
+        return execute_completion_check(invocation, out, err);
+    }
     let shell = invocation.targets.first().map(String::as_str).unwrap_or("");
     if !crate::args::COMPLETION_SHELLS.contains(&shell) {
         return pre_exec(err, &format!("unknown-shell: {shell}"));
@@ -39,6 +44,57 @@ pub(crate) fn execute_completion(
         }
         Err(error) => pre_exec(err, &error.to_string()),
     }
+}
+
+/// Verifies completion scripts without writing: renders each selected
+/// shell and checks the dynamic callback marker plus non-empty output,
+/// so manual placement has a verification step (See:
+/// `docs/cli/commands/completion.md`). Prints `completion ok ...` on
+/// success (always, even under `--quiet`; dry-run plans are summaries
+/// and respect `--quiet`). Unknown shells fail pre-exec (exit 2) like
+/// rendering; template-drift render failures fail the same way, while
+/// a rendered script missing its callback fails operational (exit 1).
+fn execute_completion_check(
+    invocation: &Invocation,
+    out: &mut dyn Write,
+    err: &mut dyn Write,
+) -> i32 {
+    let shells: Vec<&str> = if invocation.targets.is_empty() {
+        crate::args::COMPLETION_SHELLS.to_vec()
+    } else {
+        vec![invocation.targets[0].as_str()]
+    };
+    for shell in &shells {
+        if !crate::args::COMPLETION_SHELLS.contains(shell) {
+            return pre_exec(err, &format!("unknown-shell: {shell}"));
+        }
+    }
+    if invocation.dry_run {
+        if !summaries_suppressed(invocation) {
+            if shells.len() == 1 {
+                let _ = writeln!(out, "would check completion for {}", shells[0]);
+            } else {
+                let _ = writeln!(out, "would check completion");
+            }
+        }
+        return 0;
+    }
+    for shell in &shells {
+        match crate::args::render_completion(shell) {
+            Ok(script) => {
+                if script.is_empty() || !script.contains(crate::args::COMPLETE_SUBCOMMAND) {
+                    return operational(out, err, &format!("completion check failed for {shell}"));
+                }
+            }
+            Err(error) => return pre_exec(err, &error.to_string()),
+        }
+    }
+    if shells.len() == 1 {
+        let _ = writeln!(out, "completion ok for {}", shells[0]);
+    } else {
+        let _ = writeln!(out, "completion ok");
+    }
+    0
 }
 
 #[cfg(test)]
@@ -311,5 +367,92 @@ mod tests {
         assert!(String::from_utf8(err)
             .expect("err")
             .contains("unknown-shell"));
+    }
+
+    #[test]
+    fn completion_check_verifies_without_writing() {
+        // See: `docs/cli/commands/completion.md`.
+        for words in [
+            vec!["completion", "bash", "--check"],
+            vec!["completion", "--check"],
+        ] {
+            let inv = invocation(&words);
+            let scratch = dx_test_scratch::scratch("dx-adopt-completion-check-");
+            let root = scratch.path().to_path_buf();
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let code = execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &NullQuery,
+                    runner: &NullRunner,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 0, "words: {words:?}");
+            let text = String::from_utf8(out).expect("out");
+            assert!(text.contains("completion ok"), "words: {words:?}: {text}");
+            assert!(
+                !text.contains("COMPREPLY=()") || text.contains("completion ok"),
+                "{text}"
+            );
+        }
+        let inv = invocation(&["completion", "bash", "--check"]);
+        let scratch = dx_test_scratch::scratch("dx-adopt-completion-check-one-");
+        let root = scratch.path().to_path_buf();
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out)
+            .expect("out")
+            .contains("completion ok for bash"));
+        // Unknown shells still fail pre-exec in check mode.
+        let inv = invocation(&["completion", "tcsh", "--check"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 2);
+        assert!(String::from_utf8(err)
+            .expect("err")
+            .contains("unknown-shell"));
+        // Dry-run check plans without rendering.
+        let inv = invocation(&["completion", "--check", "--dry-run"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute_adoption(
+            &inv,
+            AdoptEnv {
+                workspace: &root,
+                query_runner: &NullQuery,
+                runner: &NullRunner,
+                out: &mut out,
+                err: &mut err,
+            },
+        );
+        assert_eq!(code, 0);
+        assert!(String::from_utf8(out)
+            .expect("out")
+            .contains("would check completion"));
     }
 }

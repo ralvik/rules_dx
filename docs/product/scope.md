@@ -294,8 +294,8 @@ public APIs. The approved Rust and Go editor behavior is defined in
 | `dx bazel` | retain | Exact-forwarding escape hatch through the selected repository launcher |
 | `dx docs` | retain, non-mutating (delivered under closed #786, successor to closed #581, live successor to closed #421) | Build, check, and serve the unified documentation site over the Bazel-cached extract to aggregate to render chain; `--check` validates without rendering, `--serve` previews the last build locally; see [`dx docs`](../cli/commands/docs.md) |
 
-`dx doctor` and `dx configure` are not commands. Help stays
-flag-only (`dx --help`, `dx <cmd> --help`) with no `help` verb.
+`dx doctor` and `dx configure` are not commands (unknown, suggesting `dx status`).
+Help is `dx --help`, `dx <cmd> --help`, plus the `dx help [command]` verb redirect.
 `dx check` and `dx fix` are thin sequential umbrellas, not a general CI
 scheduler. `generate` is preferred to `configure` because Gazelle generates
 repository metadata rather than configuring developer preferences.
@@ -306,7 +306,7 @@ applies once in phase order with no post-apply rerun (run `dx check`
 again); `dx clean` prunes only validated unselected `.dx` state by default
 (`--bazel` forwards `bazel clean`, distinct from `--configured` and
 `dx bazel`); `dx status` is the unscoped diagnostics surface that always
-prints; `dx completion` only prints scripts with no `--check` mode.
+prints; `dx completion` prints scripts with `--check` verification without writing.
 
 Normal CLI operation prints concise workflow summaries without subprocess argv or
 forwarded option values. `--quiet` suppresses wrapper planning output while preserving

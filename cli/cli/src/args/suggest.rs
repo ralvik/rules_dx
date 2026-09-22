@@ -30,7 +30,16 @@ pub(crate) fn best_match(
 /// Suggests the closest command word from the [`Command`] derive (the
 /// single grammar source), so the hint can never drift from the
 /// accepted spellings.
+///
+/// Redirects the excluded `doctor`/`configure` names to `status` per
+/// the failure-explainer contract (See:
+/// `docs/cli/commands/status-version.md#failure-explainer`): there is
+/// no `dx doctor`, so unknown `doctor`/`configure` always suggest
+/// `status` instead of a jaro guess.
 pub(crate) fn suggest_command(input: &str) -> Option<String> {
+    if input.eq_ignore_ascii_case("doctor") || input.eq_ignore_ascii_case("configure") {
+        return Some("status".to_owned());
+    }
     use clap::ValueEnum;
     best_match(
         input,
@@ -127,5 +136,35 @@ mod tests {
         let option = parse(&args(&["--ouptut=json"])).unwrap_err().to_string();
         assert!(option.contains("unknown option \"--ouptut=json\""));
         assert!(option.contains("did you mean \"--output\"?"));
+    }
+
+    #[test]
+    fn excluded_doctor_and_configure_redirect_to_status() {
+        // See: `docs/cli/commands/status-version.md#failure-explainer`.
+        for word in ["doctor", "configure"] {
+            assert_eq!(
+                parse(&args(&[word])),
+                Err(ArgsError::UnknownCommand {
+                    command: word.to_owned(),
+                    suggestion: Some("status".to_owned()),
+                }),
+                "word: {word}"
+            );
+            let text = parse(&args(&[word])).unwrap_err().to_string();
+            assert!(
+                text.contains("did you mean \"status\"?"),
+                "word: {word}: {text}"
+            );
+        }
+        for word in ["doctor", "configure"] {
+            assert_eq!(
+                parse(&args(&["help", word])),
+                Err(ArgsError::UnknownCommand {
+                    command: word.to_owned(),
+                    suggestion: Some("status".to_owned()),
+                }),
+                "help {word}"
+            );
+        }
     }
 }
