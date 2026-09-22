@@ -36,10 +36,14 @@ provisional) with deferred implementation owned by ADR 0019.
 Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
 claimed adapter yet; foundation-side classification stays owned under issues #476-#484 and
 per-tool qualification is qualified under issue #307 with deferred routes owned by ADR 0019.
-Ruby and PowerShell tool cohorts stay v1 scope; their foundations are admitted
+Ruby tool cohort stays v1 scope; its foundation is admitted
 to v1 by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md)
 (superseding the [ADR 0019](../decisions/0019-first-release-additional-foundations.md)
-deferral), with foundation delivery pending in parallel tracks;
+deferral), with foundation delivery pending in the parallel Ruby track
+(issue #971). PowerShell foundation is delivered provisionally under issue
+#972 over the portable `pwsh` runtime with the Gallery lock;
+PSScriptAnalyzer adapter wiring (console-parse vs library-API binding)
+stays owned under #800;
 Swift is excluded from v1 by the same record, re-evidenced by ADR 0032.
 Deferred/excluded tool record is decided by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md):
 retained RuboCop/StandardRB plus

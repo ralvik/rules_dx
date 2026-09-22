@@ -765,28 +765,35 @@ else
   bad "admitted foundations unowned:$own304_fail"
 fi
 
-# ADR 0019: deferred foundation absence stays pinned (no ruby/powershell/swift
-# dirs, wrappers, Gazelle extensions, env plans, hello builds, or MODULE deps).
+# ADR 0032: Ruby/Swift absence plus PowerShell delivery stay pinned (no
+# ruby/swift dirs, wrappers, Gazelle extensions, env plans, hello builds,
+# or MODULE deps; powershell/ lands provisionally under issue #972).
 abs305_fail=""
-for d in ruby powershell swift; do
+for d in ruby swift; do
   [[ ! -d "$d" ]] || abs305_fail="$abs305_fail $d:dir"
   [[ ! -d "gazelle/$d" ]] || abs305_fail="$abs305_fail $d:gazelle"
   [[ ! -f "$d/rules/defs.bzl" ]] || abs305_fail="$abs305_fail $d:wrapper"
   [[ ! -f "$d/env/plan.bzl" ]] || abs305_fail="$abs305_fail $d:env"
   [[ ! -f "$d/tests/fixtures/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail $d:hello"
 done
+# PowerShell delivery (issue #972): dirs, wrappers, env plan, hello plus
+# Pester plus Gallery fixtures, and MODULE deps land here.
+[[ -d "powershell" ]] || abs305_fail="$abs305_fail powershell:dir"
+[[ -f "powershell/rules/defs.bzl" ]] || abs305_fail="$abs305_fail powershell:wrapper"
+[[ -f "powershell/env/plan.bzl" ]] || abs305_fail="$abs305_fail powershell:env"
+[[ -f "powershell/tests/fixtures/hello/BUILD.bazel" ]] || abs305_fail="$abs305_fail powershell:hello"
 if grep -q -F -e 'rules_ruby' MODULE.bazel; then
   abs305_fail="$abs305_fail module:rules_ruby"
 fi
-if grep -q -F -e 'rules_powershell' MODULE.bazel; then
-  abs305_fail="$abs305_fail module:rules_powershell"
+if ! grep -q -F -e 'rules_powershell' MODULE.bazel; then
+  abs305_fail="$abs305_fail module:rules_powershell-missing"
 fi
 if grep -q -i -F -e 'swift' MODULE.bazel; then
   abs305_fail="$abs305_fail module:swift"
 fi
 grep -q -F -e 'no `ruby/`' docs/generation/README.md || abs305_fail="$abs305_fail gen:absence"
 grep -q -F -e 'no `ruby/`' docs/environments/README.md || abs305_fail="$abs305_fail env:absence"
-grep -q -F -e 'no `ruby/`, `powershell/`, or `swift/`' docs/product/support-matrix.md || abs305_fail="$abs305_fail matrix:absence"
+grep -q -F -e 'no `ruby/` or `swift/`' docs/product/support-matrix.md || abs305_fail="$abs305_fail matrix:absence"
 if [[ -z "$abs305_fail" ]]; then
   ok
 else

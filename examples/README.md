@@ -20,6 +20,7 @@ commands and expected evidence in its own `README.md`.
 - [adopt-scala](adopt-scala/) foreign sbt-layout tree adopted by the Scala Gazelle extension.
 - [adopt-csharp](adopt-csharp/) foreign SDK-style tree adopted by the C# Gazelle extension.
 - [adopt-fsharp](adopt-fsharp/) foreign SDK-style tree adopted by the F# Gazelle extension.
+- [adopt-powershell](adopt-powershell/) foreign PowerShell tree adopted by handwritten wrappers with the explicitly scoped no-Gazelle alternative.
 - [adopt-polyglot](adopt-polyglot/) foreign Python+Rust+JS/TS tree adopted package by package.
 
 `mixed/hello` is intentionally not indexed here: it is the mixed-framework

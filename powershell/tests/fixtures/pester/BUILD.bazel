@@ -1,0 +1,31 @@
+"""Pester fixture over the provisional pwsh_test runner mapping."""
+
+load("//powershell/rules:defs.bzl", "pwsh_library", "pwsh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+pwsh_library(
+    name = "greeter_lib",
+    srcs = ["Greeter.psm1"],
+)
+
+pwsh_test(
+    name = "greeter_test",
+    srcs = ["Greeter.Tests.ps1"],
+    data = ["Greeter.Describe.ps1"],
+    deps = [":greeter_lib"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = [
+        "BUILD.bazel",
+        "pins.bzl",
+    ],
+    tags = ["corpus"],
+)

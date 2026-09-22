@@ -198,14 +198,18 @@ else
   bad "shellcheck/shfmt pins missing (.shellcheckrc bash+all plus shfmt -i 2 -ci, issue #323)"
 fi
 
-# Windows shell stays bash-only: no.ps1/.bat, no
-# rules_powershell; Windows CI jobs run via shell bash with portable forms.
-if [[ -z "$(find . -name '*.ps1' -not -path './bazel-*' -print -quit)" ]] &&
+# Windows shell stays bash-only for the harness: no harness `.ps1`/`.bat`,
+# no harness `rules_powershell`; Windows CI jobs run via shell bash with
+# portable forms. Product PowerShell application sources are explicitly
+# allowed under ADR 0032 (`powershell/`, `examples/adopt-powershell/`,
+# `third_party/powershell/` plus their `MODULE.bazel` toolchain): the
+# harness shell stays bash-only while the product language ships `.ps1`.
+if [[ -z "$(find . -name '*.ps1' -not -path './bazel-*' -not -path './powershell/*' -not -path './examples/adopt-powershell/*' -not -path './third_party/powershell/*' -not -path './quality/tests/fixtures/file_family_adapters/psscriptanalyzer/*' -print -quit)" ]] &&
   [[ -z "$(find . -name '*.bat' -not -path './bazel-*' -print -quit)" ]] &&
-  ! grep -rn -F -e 'rules_powershell' --include='*.bzl' --include='MODULE.bazel' --include='*.bazel' . | grep -q .; then
+  ! grep -rn -F -e 'rules_powershell' --include='*.bzl' --include='MODULE.bazel' --include='*.bazel' . | grep -v -F -e 'powershell/rules/' | grep -v -F -e 'powershell/env/' | grep -v -F -e 'powershell/tests/' | grep -v -F -e 'examples/adopt-powershell' | grep -v -F -e 'third_party/powershell' | grep -v -F -e 'modules/powershell.bzl' | grep -v -F -e 'tools/ci/foundation_maps.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | grep -v -e 'MODULE.bazel.*rules_powershell' | grep -v -e 'MODULE.bazel.lock' | grep -v -F -e 'docs/' | grep -q .; then
   ok
 else
-  bad "a Windows shell artifact appeared (shell stays bash-only under issue #414, no ps1/bat/powershell)"
+  bad "a Windows harness shell artifact appeared (harness stays bash-only under issue #414, no ps1/bat/powershell outside the ADR 0032 product PowerShell foundation)"
 fi
 
 # Windows CI jobs run bash-only: every windows-latest job sets shell bash
