@@ -27,6 +27,9 @@ Environment-specific contracts are defined in
 [Python Environment](../environments/python-environment.md). Each focused matrix links
 to the authoritative product contracts that its tests exercise.
 
+## Coverage
+
+Coverage gate and short `policy:` ignore rule live in [Strategy Details](strategy-details.md#coverage).
 
 ## Details
 
