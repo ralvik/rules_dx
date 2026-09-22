@@ -1,4 +1,6 @@
 """Real typecheck aspect evidence tests (WP3).
+
+Contract: `docs/quality/action-model.md`.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

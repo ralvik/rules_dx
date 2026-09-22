@@ -1,14 +1,7 @@
 """Structured cohort matrix cells (issue #799).
 
-Seed-only wiring proof: format cells run fake shell doubles
-(`fake_buf_format.sh`, `fake_qmlformat.sh`) that mimic the real
-check/fix shapes over the BADFMT marker (real-tool behavior stays
-proven by the per-tool fixtures with recorded upstream samples);
-lint cells inject recorded buf JSONL plus qmllint JSON diagnostics
-byte-identical in shape to the parser unit samples (delegated, no
-spawn, like Clippy/rustc).
-
 Contract: `docs/quality/runner-matrix.md`.
+Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
 # Recorded Buf lint JSONL for the lint-fail cell, shaped like the

@@ -1,4 +1,6 @@
 """Analysis subject observing aspect-produced dx_results (WP2c).
+
+Contract: `docs/quality/action-model.md`, `docs/quality/quality-result-protocol.md#transport`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

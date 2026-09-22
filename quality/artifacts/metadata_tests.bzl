@@ -1,4 +1,6 @@
 """Load tests pinning standalone-artifact metadata (WP1).
+
+Contract: `docs/tools/tool-acquisition.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

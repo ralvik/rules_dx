@@ -1,13 +1,7 @@
 """Native cohort matrix cells (issue #798).
 
-Seed-only wiring proof: format cells run fake shell doubles
-(`fake_clang_format.sh`, `fake_gofumpt.sh`) that mimic the real
-check/fix shapes over the BADFMT marker (real-tool behavior stays
-proven by the per-tool fixtures with recorded upstream samples); lint
-cells inject recorded text/XML/JSON diagnostics byte-identical in shape
-to the parser unit samples (delegated, no spawn, like Clippy/rustc).
-
 Contract: `docs/quality/runner-matrix.md`.
+Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
 # Recorded clang-tidy text diagnostics for the lint-fail cell, shaped

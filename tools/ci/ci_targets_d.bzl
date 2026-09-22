@@ -1,4 +1,7 @@
-"""Split from `BUILD.bazel`. No behavior change."""
+"""CI hygiene targets shard D (split from `BUILD.bazel`).
+
+Contract: `docs/github-ci.md`.
+"""
 
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

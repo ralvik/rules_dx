@@ -1,4 +1,6 @@
 """Layer-2 full-matrix runner tests (snapshot workflow).
+
+Contract: `docs/quality/runner-matrix.md`.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")

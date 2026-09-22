@@ -38,8 +38,7 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 /// `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`, JVM
 /// `.java`/`.kt`/`.scala`, .NET `.cs`/`.fs`/`.fsi`, plus C/C++ `.c`/`.cc`/`.cpp`/`.cxx`/`.h`/`.hh`/`.hpp`/`.hxx`
 ///) through the shared `dx_lcov` scanner (a
-/// `reason:` comment stays required exactly as under the retired gate;
-/// see the marker syntax in `docs/testing/README.md`). Sources that fail to load count raw: Bazel may
+/// `policy:` comment stays required (see the marker syntax in `docs/testing/README.md#coverage`). Sources that fail to load count raw: Bazel may
 /// instrument generated or external files outside the workspace.
 /// Records outside the covered languages have no marker language and count
 /// raw. Invalid markers fail the computation.

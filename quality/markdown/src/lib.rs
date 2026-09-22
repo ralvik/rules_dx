@@ -1,5 +1,7 @@
 //! WP3 repository-owned Markdown link/structure checker.
 //!
+//! Contract: `docs/quality/tool-integrations.md`.
+//!
 //! Boundary (frozen in `docs/quality/tool-integrations.md`): this crate
 //! parses one Markdown source plus its declared sibling-file closure and
 //! reports structured findings. It is distinct from Vale: Vale owns prose

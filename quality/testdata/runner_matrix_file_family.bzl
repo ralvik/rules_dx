@@ -1,14 +1,7 @@
 """Interpreted/file-family cohort matrix cells (issue #800).
 
-Seed-only wiring proof: format cells run fake shell doubles
-that mimic the real check/fix shapes over the BADFMT marker (real-tool
-behavior stays proven by the per-tool fixtures with recorded upstream
-samples); lint cells inject recorded text/JSON diagnostics byte-identical
-in shape to the parser unit samples (delegated, no spawn, like
-Clippy/rustc). Prettier new-class format cells run a fake prettier
-that mimics --check warn lines plus --write over BADFMT.
-
 Contract: `docs/quality/runner-matrix.md`.
+Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
 # Recorded djlint lint diagnostics.

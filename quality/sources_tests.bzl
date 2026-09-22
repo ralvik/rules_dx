@@ -1,4 +1,6 @@
-"""Versioned semantic-class registry tests (freeze for).
+"""Versioned semantic-class registry tests (freeze).
+
+Contract: `docs/quality/quality-sources.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

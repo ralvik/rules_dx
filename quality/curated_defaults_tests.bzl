@@ -1,4 +1,6 @@
 """Unit tests for the versioned curated defaults.
+
+Contract: `docs/tools/tool-baseline.md#curated-differences`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

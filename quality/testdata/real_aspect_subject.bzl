@@ -1,4 +1,6 @@
 """Analysis subject observing real-aspect dx_results (WP2).
+
+Contract: `docs/quality/action-model.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
