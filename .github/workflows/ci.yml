@@ -494,6 +494,38 @@ jobs:
         run: |
           echo "### preset-stale — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Commands: bazel run //tools/bazelrc:preset.update -- --verify-only; bazel run //cli/cli:dx -- update --check (Linux once, review-required, no auto-merge)." >> "$GITHUB_STEP_SUMMARY"
+  gitleaks:
+    name: gitleaks (secret scan, Linux once)
+    # Secret scanning (issue #1057): Linux-once `gitleaks detect --no-git`
+    # over the working tree using the pinned vendored artifact
+    # (@dx_gitleaks_linux_x86_64//:tool, v8.30.1, checksums in
+    # quality/artifacts/gitleaks.*.bzl). Explicit `--config .gitleaks.toml`
+    # pins the committed allowlist (scoped to docs prose via `paths:` plus
+    # `regexTarget = "match"`); `--redact` plus `--exit-code 2` match the
+    # `dx audit security` secrets invocation. `--no-git` treats the checkout
+    # as a regular directory (no history scan).
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: ./.github/actions/setup-checkout-bazelisk
+      - name: Restore Bazel disk cache
+        uses: ./.github/actions/restore-bazel-cache
+        with:
+          prefix: bazel-seed-
+      - name: Run gitleaks detect --no-git (pinned vendored artifact)
+        run: |
+          set -euo pipefail
+          bazel build --noshow_progress @dx_gitleaks_linux_x86_64//:tool
+          rel="$(bazel cquery --output=files @dx_gitleaks_linux_x86_64//:tool)"
+          bin="$(bazel info execution_root)/$rel"
+          "$bin" detect --source . --no-git --config .gitleaks.toml --redact --exit-code 2
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### gitleaks — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Command: bazel build @dx_gitleaks_linux_x86_64//:tool; gitleaks detect --source . --no-git --config .gitleaks.toml --redact --exit-code 2 (Linux once, pinned v8.30.1, allowlist scoped to docs prose, issue #1057)." >> "$GITHUB_STEP_SUMMARY"
   test:
     name: test (bazel test //...)
     needs: [build]
