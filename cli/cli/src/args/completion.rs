@@ -15,33 +15,6 @@ use super::ArgsError;
 /// Shells covered by `dx completion` (contract freeze).
 pub const COMPLETION_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
 
-/// Line-start of the `break` closing the `'dx'` case in the rendered
-/// powershell script, searched from the `'dx' {` header with whole-word
-/// matching so tooltip text (`breaking`) never matches (See:
-/// `docs/cli/commands/completion.md`).
-fn powershell_case_break(text: &str) -> Option<usize> {
-    let header = text.find("'dx' {")?;
-    let region = &text[header..];
-    let mut from = 0;
-    while let Some(rel) = region[from..].find("break") {
-        let abs_break = header + from + rel;
-        let before_ok = text[..abs_break]
-            .chars()
-            .next_back()
-            .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '-'));
-        let after_ok = text[abs_break + "break".len()..]
-            .chars()
-            .next()
-            .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '-'));
-        if before_ok && after_ok {
-            let line_start = text[..abs_break].rfind('\n').map_or(0, |i| i + 1);
-            return Some(line_start);
-        }
-        from += rel + "break".len();
-    }
-    None
-}
-
 /// Sorted space-joined rendering of one fixed candidate table for the
 /// fish task lines below.
 fn sorted_join(names: &[&str]) -> String {
@@ -239,21 +212,18 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
                     desc
                 ));
             }
+            // Anchor-stability (See: `docs/cli/commands/completion.md`):
+            // only the exact generator anchor inserts functional entries.
+            // A `clap_complete` upgrade that shifts the template fails
+            // closed here instead of emitting silently-drifted scripts via
+            // whitespace-tolerant/header fallbacks (removed: silent drift).
             let anchor = "            break\n        }\n    })";
             if let Some(pos) = text.find(anchor) {
                 text.insert_str(pos, &additions);
-            } else if let Some(pos) = powershell_case_break(&text) {
-                // Whitespace-tolerant fallback: same functional insertion
-                // before the case-closing `break` (See:
-                // `docs/cli/commands/completion.md`).
-                text.insert_str(pos, &additions);
-            } else if let Some(header) = text.find("'dx' {") {
-                // Last functional fallback: commands before flags when the
-                // case tail drifted beyond recognition.
-                text.insert_str(header + "'dx' {".len(), &format!("\n{additions}"));
             } else {
                 // Fail closed: never emit non-functional `# dx <cmd>`
-                // comments. Pinned by the anchor-stability fixture.
+                // comments nor fallback-positioned entries. Pinned by the
+                // anchor-stability fixture.
                 return Err(ArgsError::UnknownShell {
                     shell: shell.to_owned(),
                 });

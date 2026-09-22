@@ -24,10 +24,16 @@ constructs source lists.
 No-scope lint, typecheck, format, and audit commands use the explicit target pattern
 `//...`. This is independent of the current directory and does not authorize
 filesystem source discovery; aspects and providers determine applicable work.
-Pass `--here` (`--cwd` alias) for the current directory tree instead on the
-cwd-scope commands (audit/lint/typecheck/format/generate/build/test/coverage/check/fix):
+Pass `--here` (`--cwd` alias, canonicalized through `here_scope` path
+components so `./`, trailing slashes, and doubled separators never reach
+classification) for the current directory tree instead on the
+cwd-scope commands (audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs):
 it maps through the same directory rule below (`//path/...`; `//...` at the root)
-and never combines with explicit scopes.
+and never combines with explicit scopes (audit allows one family selector
+plus `--here`; every other combination fails closed, exit 2). Bare
+invocations in a subdir stay `//...`: only `--here`/`--cwd` selects the
+directory tree, never the no-flag default (pinned by
+`here_scope_canonicalizes_and_bare_stays_repo_wide`).
 
 ## File Ownership
 

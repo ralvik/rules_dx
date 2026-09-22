@@ -243,4 +243,22 @@ mod tests {
             "migrate is upgrade-only: 1.2.3 -> 1.2.3"
         );
     }
+
+    #[test]
+    fn migrate_prerelease_and_build_metadata_table() {
+        // See: `docs/cli/commands/migrate.md`.
+        // Prerelease and build metadata ride the same `to > from` upgrade
+        // gate (Cargo-flavor semver via the `semver` crate, which orders
+        // build metadata for a total order). Multi-major jumps select one
+        // manifest (`v1-to-v3`), never a chain.
+        assert!(migrate_is_upgrade("1.9.9", "2.0.0-alpha.1"));
+        assert!(migrate_is_upgrade("1.0.0-alpha", "1.0.0"));
+        assert!(migrate_is_upgrade("1.0.0+build.1", "1.0.1"));
+        assert!(migrate_is_upgrade("1.0.0+build.1", "2.0.0"));
+        assert!(migrate_is_upgrade("1.0.0+build.1", "1.0.0+build.2"));
+        assert!(migrate_is_upgrade("1.0.0", "1.0.0+build.1"));
+        assert!(!migrate_is_upgrade("2.0.0-alpha.1", "1.9.9"));
+        let skip = plan_migrate("1.0.0", "3.0.0").expect("multi-hop plans single");
+        assert_eq!(skip.manifest, "migrate-v1-to-v3.json");
+    }
 }

@@ -51,7 +51,7 @@ Global options:
 | `--output text\|diff\|json` | Select concise text, complete unified patches, or versioned machine-readable events (per-command support in [Output Protocol](output-protocol.md); unsupported modes fail fast, never silently ignored) |
 | `--report <format>=<destination>` | Write a supported standard report to a file or `-` for stdout; repeatable |
 | `--fail-on info\|warning\|error` | Lowest diagnostic severity that makes a quality command fail |
-| `--here` (`--cwd` alias) | Select the current directory tree instead of `//...` (cwd-scope commands only: audit/lint/typecheck/format/generate/build/test/coverage/check/fix; `//path/...`, `//...` at the root; cannot be combined with explicit scopes; never implicit) |
+| `--here` (`--cwd` alias) | Select the current directory tree instead of `//...` (cwd-scope commands only: audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs; `//path/...`, `//...` at the root; cannot be combined with explicit scopes; never implicit) |
 
 These option names are accepted. Only `dx bazel` promises arbitrary unchanged
 forwarding. For workflow commands, arguments after `--` are Bazel command options
@@ -240,6 +240,21 @@ an explicit label-representation contract.
   `dx fix`, is unchanged.
 - Signals are forwarded to the active Bazel process; interruption should preserve
   conventional shell behavior. On Unix, `dx` re-raises the signal after safe cleanup.
+  Forwarding contract (`cli/cli/src/main.rs`, pinned by its doc comments):
+  `SIGINT`/`SIGTERM` only to the active child; `SIGHUP`/`SIGQUIT`/`SIGPIPE`
+  keep default disposition (SIGHUP not forwarded: terminal hangup kills the
+  shim without forwarding, matching direct Bazel invocation). The handler is
+  async-signal-safe (atomic pid load plus `kill` only). Pid `0` (startup
+  before spawn, teardown after reap) swallows the signal, so Ctrl-C during
+  startup needs a second interrupt once the child registers. Teardown is
+  reap, clear pid registration, join the stdout pump, then reset to
+  `SIG_DFL` and re-raise (unix-only; Windows reports codes only, no
+  re-raise). The `wait`-to-clear window may forward to an already-reaped
+  (possibly recycled) pid: accepted two-store race, never shim state.
+  Raw `libc::signal` stays over `signal-hook`/`sigaction`/`pidfd` (spike in
+  `main.rs`): the hook thread adds forward latency for zero safety win
+  (`kill` stays `unsafe libc` either way), and `pidfd` adds Linux-only
+  complexity for the same accepted race.
 
 The common mapping and machine-output behavior are defined in
 [Output Protocol](output-protocol.md#exit-codes); the update aggregate mapping above

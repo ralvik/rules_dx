@@ -115,9 +115,13 @@ impl Invocation {
 /// existing resolution (`//path/...` via `classify`; `//...` at the root
 /// directly so both the `classify` directory path and the audit
 /// `owning_sets` label path resolve repository-wide). Never implicit:
-/// only called when `here` is set.
+/// only called when `here` is set. Bare invocations in a subdir stay
+/// `//...`; only `--here`/`--cwd` selects the directory tree.
 /// Fails when `cwd` is outside `workspace` or not UTF-8.
+/// Canonicalizes through `Component::Normal` so `./`, trailing slashes,
+/// and doubled separators never reach `classify`.
 pub fn here_scope(workspace: &std::path::Path, cwd: &std::path::Path) -> Result<String, String> {
+    use std::path::Component;
     let rel = cwd.strip_prefix(workspace).map_err(|_| {
         format!(
             "current directory {} is outside workspace {}: --here needs a directory under the workspace",
@@ -128,18 +132,38 @@ pub fn here_scope(workspace: &std::path::Path, cwd: &std::path::Path) -> Result<
     if rel.as_os_str().is_empty() {
         return Ok("//...".to_owned());
     }
-    let text = rel.to_str().ok_or_else(|| {
-        format!(
-            "current directory {} is not valid UTF-8: --here needs a UTF-8 path",
-            cwd.display()
-        )
-    })?;
-    if text.is_empty() {
+    let mut parts: Vec<String> = Vec::new();
+    for component in rel.components() {
+        match component {
+            Component::Normal(part) => {
+                let text = part.to_str().ok_or_else(|| {
+                    format!(
+                        "current directory {} is not valid UTF-8: --here needs a UTF-8 path",
+                        cwd.display()
+                    )
+                })?;
+                // Normalize Windows separators inside a part (defensive;
+                // `components` already splits on both separators).
+                for piece in text.replace('\\', "/").split('/') {
+                    if !piece.is_empty() && piece != "." {
+                        parts.push(piece.to_owned());
+                    }
+                }
+            }
+            Component::CurDir => {}
+            Component::RootDir | Component::Prefix(_) | Component::ParentDir => {
+                return Err(format!(
+                    "current directory {} is outside workspace {}: --here needs a directory under the workspace",
+                    cwd.display(),
+                    workspace.display()
+                ));
+            }
+        }
+    }
+    if parts.is_empty() {
         return Ok("//...".to_owned());
     }
-    // Normalize Windows separators so the scope stays workspace-relative
-    // for `classify` on every host.
-    Ok(text.replace('\\', "/"))
+    Ok(parts.join("/"))
 }
 
 /// Consumes `--here` into explicit targets: replaces an empty scope (or
@@ -298,5 +322,49 @@ mod tests {
         let resolved = apply_here(&plain, workspace, subdir).expect("passthrough");
         assert!(resolved.targets.is_empty());
         assert!(!resolved.here);
+    }
+
+    #[test]
+    fn here_scope_canonicalizes_and_bare_stays_repo_wide() {
+        // See: `docs/cli/target-resolution.md`.
+        let workspace = std::path::Path::new("/ws");
+        assert_eq!(
+            here_scope(workspace, std::path::Path::new("/ws")),
+            Ok("//...".to_owned())
+        );
+        assert_eq!(
+            here_scope(workspace, std::path::Path::new("/ws/cli/cli")),
+            Ok("cli/cli".to_owned())
+        );
+        // Canonicalization: trailing slashes, dot segments, and doubled
+        // separators never reach `classify`.
+        assert_eq!(
+            here_scope(workspace, std::path::Path::new("/ws/cli/cli/")),
+            Ok("cli/cli".to_owned())
+        );
+        assert_eq!(
+            here_scope(workspace, std::path::Path::new("/ws/./cli/cli")),
+            Ok("cli/cli".to_owned())
+        );
+        // Bare invocations in a subdir stay `//...`: only `--here`/`--cwd`
+        // selects the directory tree, never the no-flag default.
+        let mut bare = invocation_for(Command::Lint, &[]);
+        bare.here = false;
+        let resolved = apply_here(
+            &bare,
+            workspace,
+            std::path::Path::new("/ws/cli/cli"),
+        )
+        .expect("passthrough");
+        assert!(resolved.targets.is_empty(), "bare subdir must stay empty (=//...)");
+        // `--cwd` is the same flag as `--here` (visible alias).
+        let aliased = crate::args::parse(
+            &["lint", "--cwd"]
+                .iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>(),
+        )
+        .expect("cwd alias parses");
+        assert!(aliased.here, "--cwd must set here");
     }
 }

@@ -495,4 +495,58 @@ mod tests {
         assert_eq!(got, scopes(&["//app:bin"]));
         assert_eq!(query.calls().len(), 1);
     }
+
+    #[test]
+    fn run_cross_pattern_order_is_input_order_with_sorted_batches() {
+        // See: `docs/cli/commands/build-test-coverage.md#dx-run`.
+        // Each `...`/`*` pattern expands Bazel-owned (sorted per batch),
+        // batches concatenate in input order with first-seen dedup — never
+        // globally re-sorted. Same `--` args forward to each target and
+        // stop-first-failure stays wont-fix (sequential, no supervisor).
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-cross-pattern-");
+        let workspace = scratch.path().to_path_buf();
+        let query = FakeQuery::new(vec![
+            FakeQuery::ok("//b:two\n//b:one\n"),
+            FakeQuery::ok("//a:two\n//a:one\n"),
+        ]);
+        let got = resolve_run(&scopes(&["//b/...", "//a/..."]), &workspace, &query)
+            .expect("cross-pattern");
+        assert_eq!(
+            got,
+            scopes(&["//b:one", "//b:two", "//a:one", "//a:two"]),
+            "batches stay in input order, each sorted"
+        );
+        // First-seen dedup across labels and patterns.
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-dedup-");
+        let workspace = scratch.path().to_path_buf();
+        let query = FakeQuery::new(vec![FakeQuery::ok("//a:bin\n//a:other\n")]);
+        let got = resolve_run(&scopes(&["//a:bin", "//a/..."]), &workspace, &query)
+            .expect("dedup");
+        assert_eq!(got, scopes(&["//a:bin", "//a:other"]));
+    }
+
+    #[test]
+    fn run_file_alias_is_fail_closed_with_explicit_label_hint() {
+        // See: `docs/cli/commands/build-test-coverage.md#dx-run`.
+        // Plain labels pass through (Bazel owns alias/executability) without
+        // a query; file scopes match only direct `*_binary` owners (aliases
+        // not followed) and fail closed with a hint to pass the alias label
+        // explicitly. Aliases are `alias` kind, never `*_binary`.
+        let scratch = dx_test_scratch::scratch("dx-resolve-run-test-alias-");
+        let workspace = scratch.path().to_path_buf();
+        write(&workspace, "app/BUILD.bazel", "");
+        write(&workspace, "app/main.py", "x = 1\n");
+        let query = FakeQuery::new(vec![FakeQuery::ok("\n"), FakeQuery::ok("//app:lib\n")]);
+        let err = resolve_run(&scopes(&["app/main.py"]), &workspace, &query).expect_err("alias");
+        assert_eq!(
+            err,
+            ResolveError::NoRunnable {
+                scopes: scopes(&["app/main.py"]),
+            }
+        );
+        assert!(
+            err.to_string().contains("explicit runnable label"),
+            "alias fail-closed must hint explicit label: {err}"
+        );
+    }
 }
