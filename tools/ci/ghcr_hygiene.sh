@@ -14,12 +14,12 @@
 # bytes are recorded on push; build-only PRs push nothing.
 #
 # This harness machine-checks the gate half verifiable on a clean tree
-# today (23 checks): separate ghcr.yml route, PR-paths build, dispatch +
+# today (25 checks): separate ghcr.yml route, PR-paths build, dispatch +
 # default-closed approve gate, typed approve, push run-gate explicit, no push/tag/schedule trigger, digest-pinned
 # base + Bazelisk delegation + no ambient toolchains in Dockerfile.prebuilt,
 # no docker/* or sigstore/* actions with checkout SHA-pinned, no-secrets checkout plus
 # non-cancelling concurrency, cosign sign/verify + attestation with pinned
-# fetch plus hardened retry flags (issue #932), version-tracked tags, id-token keyless scope, trust root,
+# fetch plus hardened retry flags (issue #932) plus out-of-band sha (issue #1058), version-tracked tags, id-token keyless scope, trust root,
 # scaffold-digest procedure + qualified quota, scaffold still on mcr (switch follows first push).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:ghcr_hygiene`,
@@ -142,12 +142,33 @@ else
   bad "ghcr.yml lost the gated cosign sign --yes / verify / attestation (echo-only signs nothing)"
 fi
 
-# Pinned cosign fetch (no installer action): version-pinned curl plus
-# checksum verification against the published release checksums.
-if grep -q -F -e 'COSIGN_VERSION=' .github/workflows/ghcr.yml && grep -q -F -e 'cosign_checksums' .github/workflows/ghcr.yml && grep -q -F -e 'sha256sum -c' .github/workflows/ghcr.yml; then
+# Pinned cosign fetch (no installer action): version plus out-of-band
+# linux-amd64 sha (Bazelisk-like, issue #1058) plus checksum verification
+# against the published release checksums, verified before use.
+if grep -q -F -e 'COSIGN_VERSION=' .github/workflows/ghcr.yml && grep -q -F -e 'COSIGN_SHA256_LINUX_AMD64=' .github/workflows/ghcr.yml && grep -q -F -e '8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b' .github/workflows/ghcr.yml && grep -q -F -e 'cosign_checksums' .github/workflows/ghcr.yml && grep -q -F -e 'sha256sum -c' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "ghcr.yml lost the pinned cosign fetch (version + checksums + sha256sum -c)"
+  bad "ghcr.yml lost the pinned cosign fetch (version + COSIGN_SHA256_LINUX_AMD64 + checksums + sha256sum -c, issue #1058)"
+fi
+
+# Cosign sha stays single-sourced with signing.bzl (issue #1058): the
+# workflow out-of-band pin must equal the canonical
+# SIGNING_COSIGN_SHA256_LINUX_AMD64, so a bump means one reviewed PR.
+if grep -q -F -e 'SIGNING_COSIGN_SHA256_LINUX_AMD64 = "8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"' deploy/release/signing.bzl && grep -q -F -e 'COSIGN_SHA256_LINUX_AMD64="8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "cosign sha drifted across signing.bzl plus ghcr.yml (want SIGNING_COSIGN_SHA256_LINUX_AMD64 equal COSIGN_SHA256_LINUX_AMD64, issue #1058)"
+fi
+
+# Cosign pinned sha verifies before use (issue #1058): the out-of-band
+# sha256sum -c over /tmp/cosign must precede install, so no chmod or
+# sign runs on unverified bytes (fail-closed via set -euo pipefail).
+sha_line="$(grep -n -F -e 'COSIGN_SHA256_LINUX_AMD64}  /tmp/cosign' .github/workflows/ghcr.yml | head -1 | cut -d: -f1 || true)"
+install_line="$(grep -n -F -e 'install -m755 /tmp/cosign' .github/workflows/ghcr.yml | head -1 | cut -d: -f1 || true)"
+if [[ -n "$sha_line" && -n "$install_line" && "$sha_line" -lt "$install_line" ]]; then
+  ok
+else
+  bad "ghcr.yml verifies cosign after use (want sha256sum -c over COSIGN_SHA256_LINUX_AMD64 before install, issue #1058)"
 fi
 
 # Cosign curls stay hardened (issue #932): fail-closed retry flags, not

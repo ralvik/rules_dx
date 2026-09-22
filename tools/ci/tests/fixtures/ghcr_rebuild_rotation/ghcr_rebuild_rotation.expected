@@ -3,7 +3,8 @@ Base is ubuntu:24.04@sha256:69cecf4b... resolved 2026-09-17, re-pin
 deliberately with evidence, never latest; Bazelisk v1.29.0 (per-OS shas
 in the setup action, Dockerfile tracks the linux-amd64 pair, Bazel 9.2.0
 via USE_BAZEL_VERSION); Cosign v2.4.1 checksum-verified fetch
-single-sourced with SIGNING_COSIGN_VERSION; trust root
+single-sourced with SIGNING_COSIGN_VERSION plus
+SIGNING_COSIGN_SHA256_LINUX_AMD64; trust root
 https://tuf-repo-cdn.sigstore.dev plus issuer
 https://token.actions.githubusercontent.com plus bundle media
 application/vnd.dev.sigstore.bundle.v0.3+json.
