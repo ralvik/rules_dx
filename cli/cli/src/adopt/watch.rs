@@ -21,7 +21,10 @@ pub(crate) fn execute_watch(
     err: &mut dyn Write,
 ) -> i32 {
     let wrapped = invocation.targets.first().map(String::as_str).unwrap_or("");
-    let ci = std::env::var("CI").is_ok_and(|v| !v.is_empty());
+    // Local-only gate shares the single `dx_process::is_ci` owner with
+    // `dx run` so `CI=1`/`yes`/empty cannot diverge again.
+    // See: `docs/cli/commands/watch.md`.
+    let ci = dx_process::is_ci();
     match dx_adopt::plan_watch(wrapped, ci) {
         Ok(plan) => {
             if invocation.dry_run {
