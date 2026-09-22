@@ -107,7 +107,7 @@ real_source_target = rule(
         "markdown_siblings": attr.label_list(
             allow_files = True,
             default = [],
-            doc = "Unclassified Markdown link-resolution siblings (for example a LICENSE file): mirrored into the check for target resolution, never linted, never in findings or snapshots. Unbounded by design: siblings carry no linted extension. See issue #928.",
+            doc = "Unclassified Markdown link-resolution siblings (for example a LICENSE file): mirrored into the check for target resolution, never linted, never in findings or snapshots. Unbounded by design: siblings carry no linted extension. See: issue #928.",
         ),
         "markdown_srcs": attr.label_list(
             allow_files = [".md"],

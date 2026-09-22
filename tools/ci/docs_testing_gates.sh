@@ -160,12 +160,13 @@ else
   bad "flagship .bzl headers lost owning-contract links (want codegen plus adapters plus wrapper plus env, issue #926)"
 fi
 # Rust keeps only why-not-obvious notes with See:/Owning contract: links;
-# the audit owns the per-area keep/shrink/delete list.
-if grep -q -F -e 'docs/documentation/in-code-docs-audit.md' docs/AGENTS.md &&
-  [[ -f "docs/documentation/in-code-docs-audit.md" ]]; then
+# the #710 audit was genealogy-only and stays deleted per #982.
+if [[ ! -f "docs/documentation/in-code-docs-audit.md" ]] &&
+  ! grep -q -F -e 'docs/documentation/in-code-docs-audit.md' docs/AGENTS.md &&
+  ! grep -q -F -e '#710' docs/AGENTS.md; then
   ok
 else
-  bad "in-code-docs audit link lost (want docs/AGENTS.md plus docs/documentation/in-code-docs-audit.md, issue #926)"
+  bad "in-code-docs audit genealogy reappeared (want audit deleted per #982, issue #926)"
 fi
 
 # --- Item 4: markers-only Vale pin (prose passes, prose rules rejected) ---
