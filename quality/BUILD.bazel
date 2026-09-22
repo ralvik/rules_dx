@@ -3,6 +3,7 @@
 load("@rules_proto//proto:defs.bzl", "proto_library")
 load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 load(":curated_defaults_tests.bzl", "curated_defaults_unit_tests")
+load(":execution_requirements_tests.bzl", "execution_requirements_unit_tests")
 load(":fixtures.bzl", "real_source_target")
 load(":native_config.bzl", "vale_config")
 load(":native_config_tests.bzl", "native_config_unit_tests")
@@ -26,6 +27,7 @@ exports_files([
     "applicability.bzl",
     "aspects.bzl",
     "aspect_subject.bzl",
+    "execution_requirements.bzl",
     "fixtures.bzl",
     "lint_test.bzl",
     "native_config.bzl",
@@ -223,6 +225,8 @@ curated_defaults_unit_tests(name = "curated_defaults_unit")
 
 pipeline_unit_tests(name = "pipeline_unit")
 
+execution_requirements_unit_tests(name = "execution_requirements_unit")
+
 parity_unit_tests(name = "parity_unit")
 
 registry_unit_tests(name = "registry_unit")
@@ -241,6 +245,7 @@ test_suite(
     name = "all",
     tests = [
         ":curated_defaults_unit",
+        ":execution_requirements_unit",
         ":native_config_unit",
         ":parity_unit",
         ":pipeline_unit",
@@ -275,6 +280,8 @@ real_source_target(
         "aspects.bzl",
         "curated_defaults.bzl",
         "curated_defaults_tests.bzl",
+        "execution_requirements.bzl",
+        "execution_requirements_tests.bzl",
         "fixtures.bzl",
         "lint_test.bzl",
         "native_config.bzl",

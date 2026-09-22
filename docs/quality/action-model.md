@@ -113,9 +113,12 @@ Each result is a single binary Protobuf message. Incremental processing occurs
 across independently completed action artifacts, not within one message.
 
 Hermetic actions are cacheable and local-only until remote is qualified:
-every Dx pipeline plus evaluator action carries `no-remote-exec`, so Bazel
-never schedules them on a remote executor (wrong-platform remote exec is
-rejected by construction) while local disk-cache reuse still applies.
+every Dx pipeline plus evaluator action carries `no-remote-exec` via the
+single `quality/execution_requirements.bzl` helper (`dx_execution_requirements`),
+so Bazel never schedules them on a remote executor (wrong-platform remote exec is
+rejected by construction) while local disk-cache reuse still applies. Enabling
+remote flips that helper plus the `dx_bep::remote` interface (`RemoteConfig`
+plus downloader), never every call site.
 Determinism claimed here is local per-cell determinism only, with no cross-cell
 union and no remote claim: per-host pinned binaries with no qualified remote
 platform; paid remote services stay unapproved per the testing README
@@ -129,7 +132,10 @@ Remote boundary: pipeline plus evaluator actions are safe to cache locally
 (deterministic inputs plus versioned result messages) but not safe to
 execute remotely today — tool artifacts are per-host pinned binaries with no
 matching remote execution platform qualified, and no remote cache or executor
-is wired. Qualification would require pinning toolchains/hubs as toolchain inputs with
+is wired. With remote cache or execution, the Bazel request downloads the
+requested output group; `dx` never implements a second remote-cache downloader
+(the local-only `dx_bep::remote` downloader interface stays the single seam).
+Qualification would require pinning toolchains/hubs as toolchain inputs with
 matching remote platforms, not loose file inputs; until then `no-remote-exec` stays
 fail-closed (the hermetic scratch in `quality/runner/src/real.rs` alone does not qualify
 remote). Local execution-log hit/miss is the delivered cache evidence; a warm

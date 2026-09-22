@@ -6,12 +6,20 @@ Fixture: `tools/ci/tests/fixtures/action_execution_cache/` via
 """
 
 # Dx quality actions stay local-only until remote is qualified: every
-# pipeline plus evaluator action carries no-remote-exec, never a bare
-# remote-executable shape and never a cache-disabling marker.
+# pipeline plus evaluator action carries no-remote-exec via the single
+# quality/execution_requirements.bzl helper, never a bare
+# remote-executable shape and never a cache-disabling marker. The
+# cli/bep/src/remote.rs interface (RemoteConfig plus LocalDownloader)
+# stays the local-only downloader seam.
 EXECUTION_REQUIREMENTS = '{"no-remote-exec": "1"}'
+EXECUTION_HELPER = "quality/execution_requirements.bzl"
+EXECUTION_HELPER_FN = "dx_execution_requirements()"
 EXECUTION_SYNTHETIC_SITES = 2
 EXECUTION_REAL_SITES = 1
 EXECUTION_FORBIDDEN = '"no-remote": "1"'
+REMOTE_INTERFACE = "cli/bep/src/remote.rs"
+REMOTE_CONFIG = "RemoteConfig"
+REMOTE_DOWNLOADER = "LocalDownloader"
 
 # Disk-cache keys stay exact-only: every Bazel-affecting lock/config is
 # hashed and no prefix fallback reuses a stale entry after a bust.
