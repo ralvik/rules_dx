@@ -25,7 +25,12 @@ create a second source of truth beside
 load("@gazelle//:def.bzl", "gazelle")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//visibility:private"])
+
+# Visibility policy (issue #928): this facade defaults private; every
+# consumer-facing target below carries an explicit public export so the
+# public surface never leaks via the package default. Guard:
+# `//tools/ci:dx_facade_qualification`.
 
 # Canonical public generation workflow: Rust-only repository default
 # with scoped traversal from resolved scope. Other languages use their
@@ -38,12 +43,14 @@ package(default_visibility = ["//visibility:public"])
 gazelle(
     name = "generate",
     gazelle = "//gazelle/rust:gazelle",
+    visibility = ["//visibility:public"],
 )
 
 gazelle(
     name = "generate_check",
     gazelle = "//gazelle/rust:gazelle",
     mode = "diff",
+    visibility = ["//visibility:public"],
 )
 
 # Canonical managed-environment bootstrap: installs the default
@@ -51,6 +58,7 @@ gazelle(
 alias(
     name = "env",
     actual = "//cli/env:env",
+    visibility = ["//visibility:public"],
 )
 
 # Canonical repository-wide codegen selection identity: bare
@@ -67,6 +75,7 @@ alias(
 filegroup(
     name = "codegen",
     srcs = [],
+    visibility = ["//visibility:public"],
 )
 
 # Accepted: empty `//dx:config` default, see the package
@@ -74,6 +83,7 @@ filegroup(
 filegroup(
     name = "config",
     srcs = [],
+    visibility = ["//visibility:public"],
 )
 
 real_source_target(

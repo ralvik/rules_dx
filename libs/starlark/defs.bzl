@@ -6,21 +6,28 @@ Contract: `docs/decisions/0009-starlark-testing.md`.
 load("//libs/starlark:canonical.bzl", "strip_canonical")
 
 DxSubjectInfo = provider(
-    doc = "Analysis observations a subject rule exposes to starlark_test.",
+    doc = "Analysis observations a subject rule exposes to starlark_test. " +
+          "Forgeable by construction (Starlark providers carry no origin): " +
+          "trust comes from the owning rule's analysis plus " +
+          "check_direct_sources validation, never from the provider alone. " +
+          "See issue #928.",
     fields = {
         "fields": "String-keyed, string-valued observations about the subject.",
     },
 )
 
 DxAspectInfo = provider(
-    doc = "Aspect observations derived without subject cooperation.",
+    doc = "Aspect observations derived without subject cooperation. " +
+          "Forgeable by construction like DxSubjectInfo; aspects read it " +
+          "best-effort. See issue #928.",
     fields = {
         "fields": "String-keyed, string-valued observations the aspect saw.",
     },
 )
 
 DxConfigInfo = provider(
-    doc = "Configuration observations a subject rule exposes to starlark_test.",
+    doc = "Configuration observations a subject rule exposes to starlark_test. " +
+          "Forgeable by construction like DxSubjectInfo. See issue #928.",
     fields = {
         "fields": "String-keyed, string-valued configuration observations.",
     },
@@ -143,6 +150,7 @@ def _shell_quote(s):
     return "'" + s.replace("'", "'\\''") + "'"
 
 def _parse_check(raw):
+    """Parses one JSON check record into a struct. See: `docs/testing/starlark.md#authoring`."""
     record = json.decode(raw)
     kind = record["kind"] if "kind" in record else "equal"
     if kind == "equal":
@@ -191,6 +199,7 @@ def _parse_check(raw):
         fail("starlark_test: unknown check kind '" + kind + "': " + raw)
 
 def _check_lines(checks):
+    """Renders one shell assertion per check record, in declaration order."""
     lines = []
     for raw in checks:
         check = _parse_check(raw)
@@ -319,6 +328,15 @@ _RUNNER_PRELUDE = [
     "check_file() {",
     '    label="$1"; short_path="$2"; ordinal="$3"; want="$4"',
     '    path="$TEST_SRCDIR/$TEST_WORKSPACE/$short_path"',
+    '    if [ ! -f "$path" ]; then',
+    '        case "$0" in',
+    '            */*) self_runfiles="$0.runfiles/$TEST_WORKSPACE/$short_path";;',
+    '            *) self_runfiles="$TEST_SRCDIR/$TEST_WORKSPACE/$short_path";;',
+    '        esac',
+    '        if [ -f "$self_runfiles" ]; then',
+    '            path="$self_runfiles"',
+    "        fi",
+    "    fi",
     '    if grep -q -F -e "$want" "$path"; then',
     '        echo "PASS: file $label contains substring $ordinal"',
     "        pass_count=$((pass_count + 1))",
@@ -338,23 +356,37 @@ _RUNNER_EPILOGUE = [
 ]
 
 def _write_runner(ctx, body_lines, runfiles_files):
+    """Writes the executable runner and stages its runfiles closure.
+
+    The closure merges the direct files plus the transitive runfiles of
+    the file_checks targets, so `check_file` resolves staged inputs even
+    when they arrive via intermediaries. See issue #928.
+    """
     runner = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         runner,
         "\n".join(_RUNNER_PRELUDE + body_lines + _RUNNER_EPILOGUE) + "\n",
         is_executable = True,
     )
+    transitive = []
+    for target in ctx.attr.file_checks.keys():
+        transitive.append(target[DefaultInfo].default_runfiles.files)
     return [DefaultInfo(
         executable = runner,
-        runfiles = ctx.runfiles(files = runfiles_files),
+        runfiles = ctx.runfiles(
+            files = runfiles_files,
+            transitive_files = depset(transitive = transitive),
+        ),
     )]
 
 def _validate_common(mode, checks, subjects, file_checks):
+    """Fails analysis when a test declares no evidence in any channel."""
     if len(checks) == 0 and len(subjects) == 0 and len(file_checks) == 0:
         fail("starlark_test (" + mode + " mode): no evidence: " +
              "provide checks, subjects, or file_checks")
 
 def _file_check_files(file_checks):
+    """Collects the staged files behind the file_checks mapping."""
     files = []
     for target in file_checks.keys():
         target_files = target.files.to_list()
@@ -390,6 +422,15 @@ def _unit_test_impl(ctx):
     return _write_runner(ctx, body, files)
 
 def _observe_subjects(subjects):
+    """Renders one observation block per subject target.
+
+    Observes `DefaultInfo` files plus `DxSubjectInfo`/`DxAspectInfo`/
+    `DxConfigInfo` fields. `OutputGroupInfo[dx_results]` and
+    `InstrumentedFilesInfo` are observed via `_observe_output_groups`
+    when the test opts in with `observe_output_groups`; aspect subjects
+    additionally surface merged `dx_results` basenames through their own
+    `DxSubjectInfo` (`dx_count`/`dx_results`). See issue #928.
+    """
     lines = []
     for target in sorted(subjects, key = lambda t: str(t.label)):
         lines.append("subject " + _display_label(target.label))
@@ -410,12 +451,35 @@ def _observe_subjects(subjects):
                 lines.append("config_field " + key + "=" + config_fields[key])
     return lines
 
+def _observe_output_groups(subjects):
+    """Renders `dx_results` output-group plus instrumented-files lines.
+
+    Opt-in companion to `_observe_subjects` for execution/coverage
+    surfaces: one `output_group dx_results=` line per subject (basenames
+    or `(none)`) plus one `instrumented=` presence line. See issue #928.
+    """
+    lines = []
+    for target in sorted(subjects, key = lambda t: str(t.label)):
+        if OutputGroupInfo in target:
+            groups = target[OutputGroupInfo]
+            if "dx_results" in groups:
+                dx_files = sorted(groups["dx_results"].to_list(), key = lambda f: f.basename)
+                lines.append("output_group " + _display_label(target.label) + " dx_results=" + (",".join([f.basename for f in dx_files]) if len(dx_files) > 0 else "(none)"))
+            else:
+                lines.append("output_group " + _display_label(target.label) + " dx_results=(none)")
+        else:
+            lines.append("output_group " + _display_label(target.label) + " dx_results=(none)")
+        lines.append("instrumented " + _display_label(target.label) + "=" + str(InstrumentedFilesInfo in target))
+    return lines
+
 def _analysis_test_impl(ctx):
     _validate_common("analysis", ctx.attr.checks, ctx.attr.subjects, ctx.attr.file_checks)
     if len(ctx.attr.subjects) == 0:
         fail("starlark_test (analysis mode): subjects must be non-empty: " +
              "analysis tests observe subject targets")
     observed = _observe_subjects(ctx.attr.subjects)
+    if ctx.attr.observe_output_groups:
+        observed = observed + _observe_output_groups(ctx.attr.subjects)
     observations = ctx.actions.declare_file(ctx.label.name + "_observations.txt")
     ctx.actions.write(observations, "\n".join(observed) + "\n")
     body = _check_lines(ctx.attr.checks)
@@ -425,7 +489,9 @@ def _analysis_test_impl(ctx):
                     _shell_quote(ctx.attr.expected_observations.strip()) + " " +
                     _shell_quote("\n".join(observed)))
     body.append("echo '--- observations ---'")
-    body.append("cat \"$TEST_SRCDIR/$TEST_WORKSPACE/" + observations.short_path + "\"")
+    body.append("obs=\"$TEST_SRCDIR/$TEST_WORKSPACE/" + observations.short_path + "\"")
+    body.append("if [ ! -f \"$obs\" ]; then obs=\"$0.runfiles/$TEST_WORKSPACE/" + observations.short_path + "\"; fi")
+    body.append("cat \"$obs\"")
     files = _file_check_files(ctx.attr.file_checks)
     files.append(observations)
     return _write_runner(ctx, body, files)
@@ -454,7 +520,16 @@ _common_attrs = {
     "file_checks": attr.label_keyed_string_dict(
         allow_files = True,
         doc = "Maps file targets to required substrings, one per line; " +
-              "every line must be present in the file at execution time.",
+              "every line must be present in the file at execution time. " +
+              "Unbounded by design: any staged file (source or generated) " +
+              "may be asserted. See issue #928.",
+    ),
+    "observe_output_groups": attr.bool(
+        default = False,
+        doc = "Analysis-mode opt-in: also observe OutputGroupInfo[dx_results] " +
+              "basenames plus InstrumentedFilesInfo presence via " +
+              "_observe_output_groups. Defaults off so existing goldens stay " +
+              "stable; set to True to pin execution/coverage surfaces.",
     ),
     "subjects": attr.label_list(
         aspects = [dx_aspect_note],
@@ -466,24 +541,28 @@ _starlark_load_test = rule(
     implementation = _load_test_impl,
     test = True,
     attrs = _common_attrs,
+    doc = "Load-phase starlark_test: asserts values computed while test files load.",
 )
 
 _starlark_unit_test = rule(
     implementation = _unit_test_impl,
     test = True,
     attrs = _common_attrs,
+    doc = "Unit starlark_test: asserts pure function results without analysis subjects.",
 )
 
 _starlark_analysis_test = rule(
     implementation = _analysis_test_impl,
     test = True,
     attrs = _common_attrs,
+    doc = "Analysis starlark_test: observes subject providers plus optional output-group surfaces.",
 )
 
 _starlark_execution_test = rule(
     implementation = _execution_test_impl,
     test = True,
     attrs = _common_attrs,
+    doc = "Execution starlark_test: asserts on files read while the test runs.",
 )
 
 _MODES = {
@@ -493,13 +572,15 @@ _MODES = {
     "unit": _starlark_unit_test,
 }
 
-def starlark_test(name, mode, checks = [], subjects = [], expected_observations = "", file_checks = {}, **kwargs):
+def starlark_test(name, mode, checks = [], subjects = [], expected_observations = "", file_checks = {}, observe_output_groups = False, **kwargs):
     """Instantiates one test target in the given mode.
 
     One macro call is one addressable Bazel test target with one Bazel
     result; mismatches accumulate and report together in declaration order.
     `size` defaults to `small`; pass `tags = ["manual"]` for negative
-    demonstrations that must fail without breaking `//...` suites."""
+    demonstrations that must fail without breaking `//...` suites.
+    `observe_output_groups` opts analysis tests into `dx_results`
+    output-group plus instrumented-files observations (issue #928)."""
     if mode not in _MODES:
         fail("starlark_test: unknown mode '" + mode + "': want one of " +
              ", ".join(sorted(_MODES.keys())))
@@ -510,5 +591,6 @@ def starlark_test(name, mode, checks = [], subjects = [], expected_observations 
         subjects = subjects,
         expected_observations = expected_observations,
         file_checks = file_checks,
+        observe_output_groups = observe_output_groups,
         **kwargs
     )

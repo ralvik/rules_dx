@@ -6,7 +6,7 @@ Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs
 load("@crates//:crates.bzl", _aliases = "aliases", _crate_deps = "crate_deps")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_clippy_test = "rust_clippy_test", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test", _rustfmt_test = "rustfmt_test")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST")
 
 # RUST_EDITION is the single source of truth, defined in
@@ -171,7 +171,7 @@ def rust_test(
         name = name + "_upstream",
         **upstream_kwargs
     )
-    forward_kwargs = {}
+    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
     if "aspect_hints" in kwargs:
         # Lane A: hints ride the QualitySourcesInfo owner
         # where aspects visit, not only the private upstream.

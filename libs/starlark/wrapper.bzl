@@ -41,6 +41,39 @@ def dx_preserved_providers(upstream, required, what):
         out.append(upstream[provider])
     return out
 
+def dx_effective_visibility(visibility):
+    """Returns the explicit forwarder visibility for a public export.
+
+    Pass the caller's `visibility` through `dx_effective_visibility` when
+    the forwarder is a public export that must not inherit a public
+    package default implicitly; `None` becomes private so the export is
+    explicit at the call site instead of leaking via the package default.
+    `dx_wrap` itself inherits the package default (passthrough) so existing
+    fixtures keep their `//:__subpackages__` scope; public facades like
+    `//dx` and `//deploy/rules` pass explicit lists. See issue #928.
+    """
+    if visibility == None:
+        return ["//visibility:private"]
+    return visibility
+
+def dx_forwarded_test_kwargs(kwargs):
+    """Extracts the standard test attributes a test forwarder preserves.
+
+    `tags` (minus `manual`, so both the private upstream and the public
+    wrapper run under `//...`), `timeout`, `flaky`, `shard_count`, and
+    `size` ride the forwarder; remaining kwargs stay upstream-only. See
+    issue #928.
+    """
+    out = {}
+    if "tags" in kwargs and kwargs["tags"] != None:
+        kept = [t for t in kwargs["tags"] if t != "manual"]
+        if len(kept) > 0:
+            out["tags"] = kept
+    for key in ("timeout", "flaky", "shard_count", "size"):
+        if key in kwargs and kwargs[key] != None:
+            out[key] = kwargs[key]
+    return out
+
 def dx_quality_sources(files, specs, label):
     """Builds `QualitySourcesInfo` for direct wrapper sources."""
     buckets = {}
@@ -108,7 +141,14 @@ def dx_lcov_merger_attr():
     }
 
 def dx_forward_attrs(allow_files, srcs_doc, upstream_providers, upstream_doc, extra_attrs = None):
-    """Builds the common `srcs`/`upstream` attribute dict for forwarders."""
+    """Builds the common `srcs`/`upstream` attribute dict for forwarders.
+
+    `upstream` is a single same-package private label in the same
+    configuration, so it takes no `cfg` (no transition) and no
+    `allow_files` (a rule target, never a source file). The sealed
+    `providers` list is the fail-closed contract: Bazel rejects a wrong
+    upstream at analysis. See issue #928.
+    """
     upstream_attr_kwargs = {
         "doc": upstream_doc,
         "mandatory": True,
@@ -238,8 +278,14 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
  where quality aspects visit (lane A): the forwarder is the
     `QualitySourcesInfo` owner, so hints must reach it, not only the
     private upstream. `hdrs` (C/C++ headers) ride both shapes where the
-    forwarder owns them for `QualitySourcesInfo`. Remaining kwargs stay
-    upstream-only."""
+    forwarder owns them for `QualitySourcesInfo`. `tags` and `testonly`
+    ride the forwarder so lane-A filtering and test-only marking stay
+    honest on the visited target; `timeout`/`flaky`/`shard_count`/`size`
+    are test-rule built-ins and stay upstream-only through `dx_wrap`
+    (test forwarders use `dx_forwarded_test_kwargs`). The forwarder
+    defaults to private visibility when the caller passes none, so a
+    public package default never leaks the forwarder. Remaining kwargs
+    stay upstream-only. See issue #928."""
     hints = kwargs.get("aspect_hints", None)
     hdrs = kwargs.get("hdrs", None)
     upstream_rule(
@@ -253,6 +299,10 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
         forward_kwargs["aspect_hints"] = hints
     if hdrs != None:
         forward_kwargs["hdrs"] = hdrs
+    if kwargs.get("tags", None) != None:
+        forward_kwargs["tags"] = kwargs["tags"]
+    if kwargs.get("testonly", None) != None:
+        forward_kwargs["testonly"] = kwargs["testonly"]
     forward_rule(
         name = name,
         upstream = name + "_upstream",
