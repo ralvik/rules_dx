@@ -60,12 +60,12 @@ else
   bad "environment.md lost its PATH-tools-only plus EnvironmentInfo record"
 fi
 
-# Third-party language-integration plugins stay deferred past v1.
+# Third-party language-integration plugins stay out of scope.
 if grep -q -F -e 'third-party language-integration plugins' "$env_doc" &&
   grep -q -F -e 'not third-party environment plugins' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its deferred third-party plugin record"
+  bad "environment.md lost its out-of-scope third-party plugin record"
 fi
 
 # Public PATH-tool API stays pinned to the same validated constructors.

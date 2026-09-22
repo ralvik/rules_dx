@@ -1,6 +1,6 @@
 """Gallery lock wiring pins.
 
-Contract: `docs/product/support-matrix.md#additional-v1-foundations`,
+Contract: `docs/product/support-matrix.md#additional-foundations`,
 `docs/generation/powershell.md#evidence`.
 """
 

@@ -30,14 +30,14 @@ coverage rule.
 ## Consequences
 
 Rust-first dogfooding remains the delivery strategy. The support inventory and delivery gates
-distinguish required core/frameworks, admitted additional foundations, and approved deferrals,
+distinguish required core/frameworks and admitted additional foundations,
 without weakening independent quality-tool obligations.
 Remaining upstream selections, feasibility evidence, coverage instrumentation, and API choices remain open;
 this decision does not claim any implementation or approve an implementation milestone.
-The 2026-09-08 admit/defer/exclude dispositions are recorded in
+The 2026-09-08 admit/exclude dispositions are recorded in
 [ADR 0019](0019-first-release-additional-foundations.md).
 
-Blanket post-v1 language deferral and host-installed tools as a shortcut are rejected. Windows
+Blanket language deferral and host-installed tools as a shortcut are rejected. Windows
 retains hermetic acquisition under [ADR 0014](0014-tested-platform-release-stack.md#decision). Conflicts
 with existing generation or platform contracts require explicit decisions rather than hidden
 exceptions. There is no shipped implementation or compatibility migration at this design stage.

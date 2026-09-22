@@ -32,9 +32,7 @@ DX_ENV_PLAN_OUTPUT_GROUP = "dx_env_plans"
 # missing, or duplicate artifacts and never scans `bazel-out`.
 DX_ENV_SHARD_SUFFIX = ".dxenv.pb"
 
-# Admitted first-release language integrations, slice 1. Later 
-# slices extend this tuple only through recorded qualification: Rust
-# first, then the deferred Python/Node/future integrations.
+# Admitted language integrations: Rust first.
 DX_ENV_ADMITTED_INTEGRATIONS = (
     "rust",
 )
@@ -187,7 +185,7 @@ def env_plan_fingerprint(records):
     ])
 
 def env_plan_integration_error(integration):
-    """Validates one language integration against the slice-1 freeze."""
+    """Validates one language integration against the admitted set."""
     if integration in DX_ENV_ADMITTED_INTEGRATIONS:
         return ""
     return (
@@ -277,7 +275,7 @@ dx_env_shard = rule(
         ),
         "integration": attr.string(
             default = "rust",
-            doc = "Language integration class, e.g. 'rust'. Only the slice-1 freeze is admitted.",
+            doc = "Language integration class, e.g. 'rust'. Only admitted integrations are accepted.",
         ),
         "_writer": attr.label(
             default = "//env/env_shard:env_shard_writer",
@@ -407,7 +405,7 @@ rust_env_shard = rule(
         ),
         "integration": attr.string(
             default = "rust",
-            doc = "Language integration class. Only 'rust' is admitted under the slice-1 freeze.",
+            doc = "Language integration class. Only 'rust' is admitted.",
         ),
         "target": attr.label(
             mandatory = True,

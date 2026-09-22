@@ -117,7 +117,7 @@ an evidence-backed exclusion.
 - No `ruby/`, `powershell/`, or `swift/` foundation dirs, wrappers,
   Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps
   land here; admission is scope (`Planned`), not delivery. The
-  [support matrix](../product/support-matrix.md#additional-v1-foundations)
+  [support matrix](../product/support-matrix.md#additional-foundations)
   records the new dispositions; other docs link there instead of copying
   them.
 - Ruby track must qualify wrappers plus providers, Gazelle plus naming,

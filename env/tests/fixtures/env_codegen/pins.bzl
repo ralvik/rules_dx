@@ -6,10 +6,10 @@ Fixture: `env/tests/fixtures/env_codegen/` via
 `bazel run //tools/ci:env_codegen_qualification`.
 """
 
-# Public env contribution protocol stays deferred PATH-tools-only.
+# Public env contribution protocol stays PATH-tools-only.
 PROTOCOL_BOUNDARY = "PATH-tools-only"
 PROTOCOL_PROVIDER_NOTE = "EnvironmentInfo stays PATH-tool-only"
-PROTOCOL_DEFERRED_NOTE = "third-party language-integration plugins are deferred past v1"
+PROTOCOL_SCOPE_NOTE = "third-party language-integration plugins are out of scope"
 PROTOCOL_PUBLIC_API = "environment_tool(name, executable, bin_name)"
 PROTOCOL_PLUGIN_REJECTED = "not third-party environment plugins"
 

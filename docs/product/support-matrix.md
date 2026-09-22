@@ -85,13 +85,9 @@ remaining-required-platform,
 external-consumer, or trusted-builder release evidence; see
 [promotion checklist](promotion-checklist.md). `Planned: feasibility` means evaluation
 under [first-release admission](scope.md#first-release-admission):
-admit qualifying capabilities, or record an approved disposition. Additional foundations may be
-deferred when completion needs substantial infrastructure; required quality tools are independent.
+admit qualifying capabilities, or record an evidence-backed exclusion. Required quality tools are independent.
 Remaining upstream mappings are tracked in delivered work under closed #796-#800 (successors to closed #416-#420) with foundation mappings qualified seed-only under closed #476-#489.
-`Not planned` records an existing capability gap reassessed during delivery, not permission to defer a
-qualifying integration. `Deferred beyond v1` records an evidence-backed deferral of an additional
-foundation under [first-release admission](scope.md#first-release-admission); the row's quality-tool
-cells stay in force and are unaffected by the deferral. `External` identifies an
+`Not planned` records an evidence-backed exclusion reassessed during delivery. `External` identifies an
 existing Bazel/Bzlmod capability rather than a `rules_dx` support claim. `N/A` means the
 capability does not apply to that source family. The repository [README](../../README.md) owns the
 current project status; no cell is currently `Supported`. Status cells are owned by
@@ -117,7 +113,6 @@ ecosystem audit-tool or dependency-source claim beyond that contract.
 
 The following core and named framework foundations are required for v1 on every
 [required platform](../decisions/0014-tested-platform-release-stack.md#required-platforms).
-They are not eligible for the additional-foundation deferral policy.
 
 | Language | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Format | Lint | Typecheck | Audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -245,259 +240,30 @@ owned under #472 per the [native plan](../native-toolchains.md#qualification-que
 No `Supported` claim until platform plus consumer plus release evidence passes.
 
 Required platforms and the quality-tool baseline (minus excluded Swift) frame
-delivery of this inventory. Admitted additional foundations are tracked in
+delivery of this inventory. Additional foundations are tracked in
 delivered work under closed #796-#800 (successors to closed #416-#420) with foundation mappings
-qualified seed-only under closed #476-#489;
-remaining feasibility detail stays in the
-[feasibility review](#initial-feasibility-review) for qualification.
-Swift is an evidence-backed v1 exclusion, not a pending assessment. Effort
+qualified seed-only under closed #476-#489.
+Swift is out of scope: no hermetic toolchain over all required hosts. Effort
 is estimated from qualification evidence as
 each tracked item lands; no person-hour figures are frozen here.
 
-## Additional V1 Foundations
+## Additional Foundations
 
-Admit/defer/exclude outcomes are decided by
+Scope is decided by
 [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md), superseding
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md), with Ruby
-reconsideration decided by
-[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md), with PowerShell
-reconsideration decided by
-[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md), and
-summarized in [Admitted To V1](#admitted-to-v1) and
-[Deferred Beyond V1](#deferred-beyond-v1).
-The review below records upstream evidence only. Include complete low-cost
-upstream-backed foundations; substantial missing integration may justify an explicit approved
-deferral under the admission policy. Each foundation is tracked with applicable build, test, dependency, generation,
-environment, IDE, coverage, and quality cells with named upstreams and evidence. No row implies
-that a ruleset has already been selected or that every capability/platform is feasible.
-This is a minimum inventory, not an exhaustive list of eligible languages.
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md).
+Go, C/C++, Java, Kotlin, Scala, C#, F#, Ruby, and PowerShell application foundations are v1 scope.
+Exact versions, rulesets, adapter mappings, lock wiring, test runners, and quality tools are tracked in
+delivered work under closed #796-#800 (successors to closed #416-#420) with foundation mappings
+qualified seed-only under closed #476-#489 and pinned by `bazel run //tools/ci:foundation_maps`.
+Unresolved cells block qualification; moving a foundation out later requires a new evidence-backed
+decision. No `Supported` claim until platform plus consumer plus release evidence passes.
 
-### Admitted To V1
-
-Java, Kotlin, C#, F#, Go, C/C++, Scala, Ruby, and PowerShell application
-foundations are admitted to v1 scope by
-[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md) plus
-[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) plus
-[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md)), on the evidence in the
-[candidate review](#initial-feasibility-review): each has
-an active Bzlmod-published upstream ruleset with a concrete dependency-lock
-and toolchain story. Ruby (`rules_ruby` 0.28.0, RSpec via `rb_test`) stays
-a provisional upstream with lock plus platform qualification pending in
-the parallel Ruby track (issue #971). PowerShell (`rules_powershell`
-0.2.0, Pester 5.7.1 via `pwsh_test`) is delivered provisionally under
-issue #972 with wrappers plus env plan plus hello plus Pester plus
-Gallery-lock fixtures and `MODULE.bazel` deps; platform plus consumer
-plus release qualification stays pending. Their quality integration is v1 scope with the defaults in
-the [disposition table](#deferred-beyond-v1);
-exact versions, rule sets, and adapter mappings are tracked in
-qualified seed-only under closed #485-#489 with adapter delivery delivered under closed #796-#800 (successors to closed #416-#420). The managed Scala
-route decision was recorded 2026-09-13.
-Unresolved cells block qualification; moving an admitted foundation out later
-requires a new evidence-backed decision.
-
-Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#, Ruby, PowerShell) are delivered
-under closed #796-#800 (successors to closed #416-#420) with foundation mappings qualified
-seed-only under closed #476-#484 plus closed #485-#488: per-foundation exact upstream versions, rulesets,
-adapter mappings, lock wiring, test runners, and quality tools remain qualification work. Qualified mappings
-are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification in
-[Generation](../generation/README.md#language-mapping-qualification),
-[Environments](../environments/README.md#language-mapping-qualification),
-[Tools](../tools/README.md#language-mapping-qualification), and the
-[native plan](../native-toolchains.md#qualification-questions-and-delivery):
-wrappers preserving upstream providers plus `QualitySourcesInfo` (proven by
-`<lang>/rules/wrapper_tests.bzl` conformance over `<lang>/tests/fixtures/hello/`,
-mirroring the Rust `rust/rules/wrapper_tests.bzl` pattern), Gazelle extensions,
-env plans, hello builds, and lock authority (Maven `maven_install.json` plus fail-closed
-qualified seed-only under #481, Paket plus `paket.main` qualified seed-only
-under #482, Go `go.mod`/`go.sum` qualified seed-only under #483 with hello staying stdlib-only, C/C++ none), with test runners (JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under #476, xUnit v3 4.0.0
-mapping via xunit fixtures qualified seed-only under #477, `go test`
-qualified seed-only under #478, GoogleTest v1.18.0 plus C++17 floor
-qualified seed-only under #479, ScalaTest qualified seed-only under issue
-#480, plain `cc` executables, plain `csharp`/`fsharp` hello executables) and
-classification-only quality families. Dependency hygiene (lockfile-consistency plus
-declared-dependency usage with category, exception, and obsolete checks) is qualified for
-all admitted languages in `tools/depcheck/` (closed #22; remaining composition plus Layer-2 cells delivered under closed #796-#800, successors to closed #510)
-with native authorities (go.sum,
-`maven_install.json`, `paket.lock`, per-archive sha256) and focused fixtures. Remaining gaps
-(quality adapters qualified under closed #307 with
-deferred implementation
-owned by ADR 0019, C/C++ MSVC interop plus SDK licensing)
-stay owned under closed #476-#484 plus closed #485-#488 (JUnit 6.1.3 plus 5.14.x fallback
-qualified seed-only under #476 via `bazel run //tools/ci:junit_qualification`;
-xUnit v3 4.0.0 qualified seed-only under #477 via
-`bazel run //tools/ci:xunit_qualification`;
-`go test` qualified seed-only under #478 via
-`bazel run //tools/ci:gotest_qualification`;
-GoogleTest v1.18.0 plus C++17 floor qualified seed-only under #479 via
-`bazel run //tools/ci:googletest_qualification`;
-ScalaTest 3.2.20 qualified seed-only under #480 via
-`bazel run //tools/ci:scalatest_qualification`;
-Maven `maven_install.json` plus fail-closed repin qualified seed-only under #481 via
-`bazel run //tools/ci:maven_lock_qualification`;
-Paket files plus sha512 qualified seed-only under #482 via
-`bazel run //tools/ci:paket_qualification`;
-Go `go.mod`/`go.sum` qualified seed-only under #483 via
-`bazel run //tools/ci:godeps_qualification`).
-No `Supported` claim until platform plus consumer plus release
-evidence passes.
-
-### Deferred Beyond V1
-
-No application foundation is currently deferred beyond v1. Ruby and
-PowerShell application foundations were deferred beyond v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md), with
-evidence in the [candidate review](#initial-feasibility-review), and kept
-deferred by Ruby reconsideration under issue #777 per
-[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) plus
-PowerShell reconsideration under issue #778 per
-[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md); both
-are now admitted to v1 by
-[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) with
-provisional upstreams (`rules_ruby` 0.28.0 with RSpec via `rb_test`,
-`rules_powershell` 0.2.0 with Pester via `pwsh_test`) and lock plus
-platform qualification pending in parallel Ruby/PowerShell tracks.
-Admitted foundations' quality-tool cells (RuboCop, StandardRB,
-PSScriptAnalyzer) stay in force. The deferred/excluded record is decided by
-[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md), superseding
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md) plus
-[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) for Ruby plus
-[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md) for PowerShell (Ruby plus
-PowerShell admitted, Swift plus Bandit exclusion revoked for Bandit and re-evidenced for Swift, host-toolchain fallback never approved;
-Ruby reconsidered under #777 now admitted per ADR 0032, PowerShell reconsidered under #778 now admitted per ADR 0032).
-Qualified record is pinned by `bazel run //tools/ci:foundation_maps` with owning
-qualification in [Generation](../generation/README.md#language-mapping-qualification),
-[Environments](../environments/README.md#language-mapping-qualification),
-[Tools](../tools/README.md#language-mapping-qualification),
-[tool baseline](../tools/tool-baseline.md), [tool acquisition](../tools/tool-acquisition.md),
-and the parity gate (`quality/parity_tests.bzl`): `ruby/` foundation dirs,
-wrappers, Gazelle extension, env plans, hello builds, and `MODULE.bazel` deps
-delivered with `Gemfile.lock` fail-closed plus RSpec mapping (Ruby track);
-PowerShell foundation dirs, wrappers, env plan, hello plus Pester plus Gallery-lock fixtures, and `MODULE.bazel` deps land provisionally under issue #972 (no `gazelle/powershell/` per the explicitly scoped no-Gazelle alternative);
-no `swift/` foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps (exclusion re-evidenced by ADR 0032);
-`ruby`/`powershell` classes classified with no foundation adapter claim yet (`quality/adapters.bzl` plus
-`PARITY_DEFERRED` with ADR 0019, foundation admission by ADR 0032); retained cohorts (RuboCop/StandardRB via
-release-assembled Ruby closure, PSScriptAnalyzer via exact-module plus portable PowerShell
-runtime); Swift/SwiftFormat exclusion with host-toolchain fallback never approved plus Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801.
-Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
-library-API binding, and per-tool adapter mappings qualified under closed #420 with deferred
-implementation owned by ADR 0019; Ruby foundation delivered in the Ruby track,
-PowerShell foundation delivered provisionally under issue #972 with platform plus consumer plus release qualification pending,
-adapter execution under #800) stay decided by ADR 0032 (superseding ADR 0019 plus ADR 0030 for Ruby plus ADR 0031 for PowerShell). No `Supported` claim until platform plus
-consumer plus release evidence passes.
-
-| Language | Application foundation | Format | Lint, typecheck, or audit |
-| --- | --- | --- | --- |
-| Go | Planned | Planned: gofumpt | Planned: staticcheck, govet |
-| C and C++ | Planned | Planned: clang-format | Planned: clang-tidy, cppcheck |
-| Java | Planned | Planned: google-java-format | Planned: PMD, Checkstyle, SpotBugs, Error Prone |
-| Kotlin | Planned | Planned: ktfmt | Planned: ktlint, detekt |
-| Scala | Planned | Planned: scalafmt | Planned: scalafix |
-| C# | Planned | Planned: CSharpier | Planned: Roslyn CA analyzers (SDK) |
-| F# | Planned | Planned: Fantomas | Planned: FSharpLint |
-| Ruby | Planned (admitted to v1 per ADR 0032; RSpec via `rb_test`, `Gemfile.lock` fail-closed delivered in the Ruby track) | Planned: RuboCop, StandardRB | Planned: RuboCop, StandardRB |
-| PowerShell | Planned (admitted to v1 per ADR 0032; Pester 5.7.1 via `pwsh_test`, Gallery lock provisional under #972 with `third_party/powershell/PSGallery.lock.json`) | Planned: feasibility (no formatter selected; explicitly scoped gap) | Planned: PSScriptAnalyzer (exact-module plus portable pwsh route, console-parse vs library-API binding open under #800) |
-| Swift | Not planned (exclusion re-evidenced by ADR 0032 spike: no hermetic toolchain over all required hosts) | Not planned | Not planned |
-
-`Planned` in the table above means scope admitted to v1 by ADR 0032 (superseding ADR 0019) with no delivery
-claimed; delivery follows the [verification matrix](../testing/verification-matrix.md).
-Every cell in the table above stays `Planned` (or `Not planned`
-where marked); none is `Seed-host-delivered` or higher, even where the verification
-matrix shows `Delivered` for the capability: verification `Delivered` is seed-host
-layer evidence, not support-matrix promotion. Admitted `Format`/`Lint` cells map to `Layer-2 matrix Open (adapter-less)` (no adapter
-claims them yet; JVM delivered under closed #796, Native Layer-2 delivered under closed #798, and Scala + .NET delivered under closed #797), `Environment`/`IDE` dimensions map to `Env/codegen Open`,
-and per-language source audit lumped in the third column is distinct from ecosystem
-`Audit/update Delivered`.
-
-### Initial Feasibility Review
-
-The approved review order starts with Go and C/C++. C/C++ initially assesses Bazel-native
-projects; CMake/Meson integration is a separate review, not an automatic-migration promise.
-This prioritization admits or defers no foundation and changes no tracking dependencies.
-
-The following are upstream documentation/source observations, not executed qualification evidence.
-Status cells are owned by this matrix; provisional toolchain and backend
-choices are owned by the [native qualification plan](../native-toolchains.md). Bounded remediation is qualified seed-only under #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, Do not implement missing infra merely to fill cross-product with unbounded fork rejected); identified contract conflicts stay tracked there before affected implementation:
-
-- [rules_go](https://github.com/bazel-contrib/rules_go) and
-  [Gazelle](https://github.com/bazel-contrib/bazel-gazelle) offer SDK acquisition, package build/test,
-  module dependencies, and generation. The approved narrow Go exception preserves package-level
-  tests and declared platform/build constraints under the
-  [generation contract](../generation/common.md#ownership-and-naming); exact mappings remain open
-  (delivered under closed #798, successor to closed #510).
-  Source-only module identity, strict dependency resolution, and cgo/race scope are resolved
-  seed-only under closed #789 (`go/tests/fixtures/cgo/` plus `env/tests/fixtures/env_plugins_cgo/`
-  via `bazel run //tools/ci:env_plugins_cgo_qualification`); exact mappings remain open
-  under #798.
-- The documented [Go editor driver](https://github.com/bazel-contrib/rules_go/blob/v0.63.0/docs/editors.md)
-  invokes Bazel. That automatic integration is approved under
-  [environment refresh](../environments/environment.md#ownership-and-refresh), following the
-  cross-language automatic-first policy rather than building a static snapshot alternative.
-  Exact-target isolation, failure propagation, cgo IDE behavior, and every host workflow still need
-   qualification; upstream explicitly does not guarantee cgo completion (pure-Go boundary plus
-   explicit cgo exception pinned by `env/tests/fixtures/env_plugins_cgo/` via
-   `bazel run //tools/ci:env_plugins_cgo_qualification`, closed #587; cgo scope resolved
-   seed-only under closed #789 with `go/tests/fixtures/cgo/`).
-- [rules_cc](https://github.com/bazelbuild/rules_cc) supplies build rules, not a hermetic compiler
-  distribution. [hermetic-llvm v0.8.19](https://github.com/hermeticbuild/hermetic-llvm/tree/v0.8.19)
-  is the inspected release of the preferred Linux/macOS backend. Its released Windows route uses
-  MinGW-w64/UCRT, which does not satisfy the approved Windows baseline by itself. MSVC-compatible
-  interoperability and Windows coverage need qualification; Apple/Microsoft SDK acquisition rights
-  are qualified seed-only under #496 (`cc/tests/fixtures/acquisition_rights/pins.bzl` via
-  `bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately).
-  No host-installed SDK fallback is approved.
-- [gazelle_cc v0.6.0](https://github.com/EngFlow/gazelle_cc/tree/v0.6.0) and
-  [Hedron's compilation-command extractor](https://github.com/hedronvision/bazel-compile-commands-extractor)
-  are candidate generation/IDE building blocks, not conforming integrations yet. Strict include
-  resolution plus C++ module and PCH disposition qualified seed-only under #503
-  (`cc/tests/fixtures/strict_generation/pins.bzl` via
-  `bazel run //tools/ci:strict_generation_qualification`, loose generation rejected);
-  C++ exact-target snapshot with managed clangd/toolchain projections and selected-target context
-  qualified seed-only under #754 (`cc/tests/fixtures/cpp_snapshot/pins.bzl` via
-  `bazel run //tools/ci:cpp_snapshot_qualification`, infer compile commands from `CcInfo` plus
-  unrestricted query-driver plus workspace-writing refresh rejected).
-
-The [approved Windows baseline](../decisions/0014-tested-platform-release-stack.md#decision)
-requires MSVC compatibility and complete hermetic acquisition. The
-[native qualification plan](../native-toolchains.md) selects toolchains_msvc with clang-cl and
-Microsoft STL as the first Windows candidate; final adoption remains blocked. The following
-comparison is not support evidence:
-
-| Route | Compatibility and remaining evidence |
-| --- | --- |
-| Released MinGW-w64/UCRT with libc++ | Source-built dependency route, not sufficient for the approved MSVC-compatible baseline. Windows Bazel coverage remains unproven here. |
-| clang-cl with MSVC ABI | Distinguish libc++ from Microsoft STL. The inspected [hermetic-llvm main revision](https://github.com/hermeticbuild/hermetic-llvm/tree/65a1e017a2d629f6e0e6d3d8d2189f3561ba684b) uses libc++ and rejects MSVC-target coverage; it is not released v0.8.19 support or proof of Microsoft-STL binary interoperability. |
-| Actual MSVC compiler and Microsoft STL | [Bazel's documented route](https://bazel.build/configure/windows#build_cpp) uses installed tools and does not satisfy hermetic acquisition. A no-install upstream backend still needs exact identities, applicable licensing, Rust interoperability, and Bazel-owned coverage qualification. |
-
-[Clang's MSVC compatibility](https://clang.llvm.org/docs/MSVCCompatibility.html) and
-[Microsoft's binary compatibility rules](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017?view=msvc-170)
-do not promise universal interchangeability. Representative
-prebuilt MSVC C++ library interoperability fixtures with explicit STL, CRT, linker, and library
-combinations, including mixed Rust/C/C++ dependencies, are qualified seed-only under #498
-(`cc/tests/fixtures/prebuilt_interop/pins.bzl` via
-`bazel run //tools/ci:prebuilt_interop_qualification`, host-to-target plus target execution
-separately, compiler-target availability alone plus LLVM ancestry alone plus single-combo proof rejected).
-Direct SDK downloads, permission to use, and permission to redistribute are separate checks;
-the qualification plan records an upstream acceptance API, not a promised consumer setup command. The stack decision
-does not admit an additional foundation or approve implementation.
-
-The approved [Windows setup requirement](../decisions/0014-tested-platform-release-stack.md#decision)
-allows explicit Microsoft EULA acknowledgement, as required by the inspected toolchains_msvc and
-windows_support routes. This removes the prior setup-policy conflict, not the remaining transport,
-corpus, or coverage qualification gaps. Automatic acceptance is not approved; acknowledgement UX is
-qualified seed-only under #818 (`cc/tests/fixtures/windows_eula/pins.bzl` via
-`bazel run //tools/ci:windows_eula_qualification`, missing-ack fails before fetch with an actionable
-error, unrelated-workflows-green);
-acquisition rights are qualified seed-only under #496
-(`cc/tests/fixtures/acquisition_rights/pins.bzl` via
-`bazel run //tools/ci:acquisition_rights_qualification`, usage vs redistribution reviewed separately,
-official download not permission, assume rights rejected); prebuilt interop is qualified seed-only
-under #498 (`cc/tests/fixtures/prebuilt_interop/pins.bzl` via
-`bazel run //tools/ci:prebuilt_interop_qualification`, single-combo proof rejected).
+Out of scope: Swift (no hermetic toolchain over all required hosts).
 
 ### Native Toolchain Alternatives
 
-The review prioritizes existing upstream capability and minimal project-owned integration over a
+This plan prioritizes existing upstream capability and minimal project-owned integration over a
 universal compiler distribution. Linux cross-builds are the first priority, not a mandate to build
 every target from every host. The [approved stack](../decisions/0014-tested-platform-release-stack.md#decision)
 requires glibc and static-musl Linux profiles; runtime floors are qualified seed-only under #500 (`cc/tests/fixtures/deployment_floors/pins.bzl` via `bazel run //tools/ci:deployment_floors_qualification`, unpinned floors rejected) and qualified routes are qualified seed-only under #504 (`cc/tests/fixtures/cross_routes/pins.bzl` via `bazel run //tools/ci:cross_routes_qualification`, not a mandate to build every target from every host; corpus qualified seed-only under #499) and bounded remediation is qualified seed-only under #505 (`cc/tests/fixtures/remediation_bounds/pins.bzl` via `bazel run //tools/ci:remediation_bounds_qualification`, Do not implement missing infra merely to fill cross-product with unbounded fork rejected) with backends provisional and no `Supported` claim.

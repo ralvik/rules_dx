@@ -64,7 +64,7 @@ deferral removes no baseline tool.
 - No `ruby/` foundation dirs, wrappers, Gazelle extensions, env plans,
   hello builds, or `MODULE.bazel` deps; `ruby` class stays classified
   with no adapter claim (`quality/adapters.bzl` plus `PARITY_DEFERRED`).
-- The [support matrix](../product/support-matrix.md#deferred-beyond-v1)
+- The [support matrix](../product/support-matrix.md#additional-foundations)
   records this reconsideration; other docs link there instead of copying it.
 - Future admission must qualify wrappers plus providers, Gazelle plus
   naming, env plans, hello builds, `Gemfile.lock` fail-closed plus

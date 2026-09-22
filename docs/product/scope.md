@@ -61,10 +61,8 @@ Windows native toolchains retain hermetic acquisition and MSVC compatibility und
 Build Tools or host SDK exception is approved.
 
 Additional complete foundations belong in v1 when existing upstream rules permit low-cost hermetic
-integration. When completion requires substantial missing infrastructure, an additional foundation
-may be explicitly deferred beyond v1 with evidence and a recorded decision rather than delaying the core
-indefinitely. This exception does not apply to the required core/framework set or reduce the broad
-quality-tool baseline. A language's foundation deferral is not permission to omit its required tools.
+integration. This does not reduce the broad quality-tool baseline. A language's foundation status
+is not permission to omit its required tools.
 
 The [support matrix](support-matrix.md) is the minimum candidate inventory. Its
 [minimal core](support-matrix.md#minimal-required-core) records the
@@ -79,18 +77,14 @@ existing feature exclusions, additional test runners, framework adapters, plugin
 ecosystems, and codegen pairs. Apply the foundation admission rule above separately from tool and
 workflow obligations; an unreviewed entry is not an exclusion. Freeze a reviewed release inventory
 rather than claim support for an unbounded set of
-unnamed tools. Newly identified candidates require an explicit disposition, not automatic deferral.
+unnamed tools. Newly identified candidates require an explicit disposition.
 
-Each candidate must become required v1 scope, a recorded additional-foundation deferral, or an
-evidence-backed recorded exclusion. No individual foundation is deferred by this policy alone.
-There is no post-v1 bucket for workflow scope: delivered work under closed #462,
-delivered work under closed #463, and
-delivered work under closed #787 and closed #788 (successors to closed #506) are v1 scope per the sole repository maintainer decision tracked in GitHub issues.
+Each candidate must become required v1 scope or an evidence-backed recorded exclusion.
 Record missing upstream rules, non-hermetic acquisition, unsupported platform requirements, or
 substantial integration effort precisely, including concrete gaps and ongoing maintenance ownership.
 Scheduling preference and omission from the original plan are not feasibility failures.
 Unresolved required cells block qualification; do not silently downgrade
-them to optional or post-v1. Existing platform, laziness, generation, and public API contracts remain
+them to optional. Existing platform, laziness, generation, and public API contracts remain
 in force. If a viable upstream integration conflicts with one, stop that slice and present the
 evidence, alternatives, compatibility impact, and blocked work for a contract decision.
 
