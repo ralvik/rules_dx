@@ -13,6 +13,7 @@ bazel run --noshow_progress //tools/ci:examples_laziness
 bazel run --noshow_progress //tools/ci:examples_laziness_query
 bazel run --noshow_progress //tools/ci:examples_laziness_aquery
 bazel run --noshow_progress //tools/ci:examples_laziness_runtime
+bazel run --noshow_progress //tools/ci:laziness_analysis_guard
 bazel run --noshow_progress //tools/ci:quality_cache_aquery
 bazel run --noshow_progress //tools/ci:action_execution_cache_qualification
 bazel run --noshow_progress //tools/ci:depcheck_contract

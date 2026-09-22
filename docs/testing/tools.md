@@ -103,6 +103,13 @@ A consolidated release archive replaces a private package graph only when reason
 shows a material benefit and the full capability suite remains equivalent, per
 [ADR 0022](../decisions/0022-no-benchmarking.md).
 
+Continuous analysis shape is guarded seed-only by
+`bazel run //tools/ci:laziness_analysis_guard` with pins in
+`tools/ci/tests/fixtures/laziness_analysis/pins.bzl`: configured-target and
+action counts hold zero delta across the ten single-foundation adopt-*
+consumers, fetch bases stay subset of the per-consumer allowlist, and
+analysis time stays within budget (counts hard fail, time rerun-legitimate).
+
 Configuration tests prove all supported foundations are automatically available from one
 `rules_dx` dependency. Explicit generation creates relevant initial target declarations from
 supported sources alone; manifests remain authoritative for project and dependency metadata.
