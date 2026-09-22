@@ -15,7 +15,10 @@
 #     `requires-python` plus lower bounds; exact pins live in `uv.lock`.
 #   Vale style: `quality/corpus_styles/Dx/Markers.yml` owns the Dx.Markers
 #     rule; the `quality/testdata` copy stays byte-identical (StylesPath
-#     differs per package, so label sharing cannot apply).
+#     differs per package, so label sharing cannot apply). The root
+#     `.vale.ini` editor-discovery shim mirrors the corpus binding
+#     (`StylesPath` points at `quality/corpus_styles`); Bazel keeps
+#     binding `quality/corpus_vale.ini` explicitly.
 #
 # Every other copy below must equal its canonical source or this fails, so
 # a version bump means: bump the canonical file once, then update the
@@ -24,7 +27,7 @@
 # Usage: config_consistency.sh <biome_json> <biome_fixture> <update_py>
 #   <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace>
 #   <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers>
-#   <corpus_ini> <fixture_ini>
+#   <corpus_ini> <fixture_ini> <root_vale_ini>
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
@@ -34,21 +37,22 @@ dx_bootstrap "tools/sh/guards.sh"
 
 dx_test_init
 
-biome_json="${1:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-biome_fixture="${2:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-update_py="${3:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-ruff_toml="${4:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-ruff_fixture="${5:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-root_pkg="${6:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-js_pkg="${7:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-root_workspace="${8:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-js_workspace="${9:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-pyproject="${10:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-uv_lock="${11:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-corpus_markers="${12:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-fixture_markers="${13:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-corpus_ini="${14:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
-fixture_ini="${15:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini>}"
+biome_json="${1:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+biome_fixture="${2:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+update_py="${3:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+ruff_toml="${4:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+ruff_fixture="${5:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+root_pkg="${6:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+js_pkg="${7:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+root_workspace="${8:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+js_workspace="${9:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+pyproject="${10:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+uv_lock="${11:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+corpus_markers="${12:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+fixture_markers="${13:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+corpus_ini="${14:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+fixture_ini="${15:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
+root_vale_ini="${16:?usage: config_consistency.sh <biome_json> <biome_fixture> <update_py> <ruff_toml> <ruff_fixture> <root_pkg> <js_pkg> <root_workspace> <js_workspace> <pyproject> <uv_lock> <corpus_markers> <fixture_markers> <corpus_ini> <fixture_ini> <root_vale_ini>}"
 
 # --- Biome canonical: TOOLS[biome] owns the $schema version ---
 biome_version="$(grep -A2 -F -e '"biome": {' "$update_py" | grep -o -E -e '"upstream_version": "[^"]+"' | head -1 | cut -d'"' -f4 || true)"
@@ -131,5 +135,9 @@ for f in "$corpus_ini" "$fixture_ini"; do
   dx_guards_contains "$f" "$f lost the Vale BasedOnStyles binding (want BasedOnStyles = Dx, issue #912)" \
     'BasedOnStyles = Dx'
 done
+dx_guards_contains "$root_vale_ini" "$root_vale_ini drifted from the corpus Vale policy (want the Dx binding plus suggestion floor plus quality/corpus_styles, issue #912)" \
+  'BasedOnStyles = Dx' \
+  'MinAlertLevel = suggestion' \
+  'StylesPath = quality/corpus_styles'
 
 dx_test_summary "config consistency"

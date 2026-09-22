@@ -198,8 +198,10 @@ def add_a():
             "$(rootpath //quality/testdata:styles/Dx/Markers.yml)",
             "$(rootpath //quality:corpus_vale.ini)",
             "$(rootpath //quality/testdata:vale_test.ini)",
+            "$(rootpath //:.vale.ini)",
         ],
         data = [
+            "//:.vale.ini",
             "//:biome.json",
             "//:package.json",
             "//:pnpm-workspace.yaml",

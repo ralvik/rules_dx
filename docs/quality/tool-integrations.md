@@ -189,7 +189,10 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
    wont-fix (issues #589 and #665, native-config owns policy with no hidden preset). Own-tree strict
    (issue #614) adds the required `[*] BasedOnStyles = Dx` binding so markers enforce
    (without it Vale reports `{}`); the `quality/testdata` fixture mirrors the corpus
-   style via `styles/Dx/Markers.yml`.
+   style via `styles/Dx/Markers.yml`. Editors discover the corpus policy through the
+   root `.vale.ini` shim (same `Dx.Markers` binding, `StylesPath` pointing at
+   `quality/corpus_styles`); direct CLI runs outside editors can pass
+   `--config quality/corpus_vale.ini` explicitly.
 - **Biome:** qualify `lint --reporter=json --colors=off --error-on-warnings --vcs-enabled=false
   --config-path=<dir>` and `format --reporter=json --colors=off --config-path=<dir>` over the pinned
   2.5.12 standalone artifact (`@dx_tools//:biome`). Direct probes show exit `0` when clean and `1`
