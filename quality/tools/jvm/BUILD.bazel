@@ -6,6 +6,7 @@ Contract: `docs/tools/tool-acquisition.md#first-release-tool-routing`,
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_import", "java_library")
 load("//quality:fixtures.bzl", "real_source_target")
+load(":metadata_tests.bzl", "jvm_metadata_tests")
 
 package(default_visibility = ["//:__subpackages__"])
 
@@ -83,7 +84,15 @@ real_source_target(
     starlark_srcs = [
         "BUILD.bazel",
         "extension.bzl",
+        "metadata_tests.bzl",
         "repos.bzl",
     ],
     tags = ["corpus"],
+)
+
+jvm_metadata_tests(name = "metadata")
+
+test_suite(
+    name = "all",
+    tests = [":metadata"],
 )

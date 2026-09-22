@@ -522,7 +522,7 @@ use_repo(
 # What is lost: real-daemon exit 3, real Buildifier rewrite.
 
 # JVM quality-tool acquisition (issue #796). Repos owned by `//quality/tools/jvm:repos.bzl`
-# (verified against metadata by `//tools/ci:pin_consistency_test`); the list
+# (verified by `//quality/tools/jvm:metadata` plus `//tools/ci:pin_consistency_test`); the list
 # below must match `JVM_TOOL_REPOS` (`//tools/ci:pin_consistency_test` fails
 # on drift). One lazy repository per tool from checked-in metadata (see
 # `//quality/tools/jvm:extension.bzl`); no per-platform matrix or hub: JVM
