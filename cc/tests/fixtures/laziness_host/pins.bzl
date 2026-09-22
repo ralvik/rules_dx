@@ -31,7 +31,6 @@ CONSUMER_HOSTS = (
     "linux_x86_64_musl",
     "linux_arm64_musl",
     "macos_arm64",
-    "macos_x86_64",
     "windows_x86_64",
 )
 CONSUMER_ADOPT = (

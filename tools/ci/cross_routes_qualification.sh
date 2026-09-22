@@ -8,8 +8,8 @@
 # - first cohort: Linux x86_64 plus Linux arm64 execution each building
 #   Linux x86_64 and arm64 glibc plus static musl; Linux cross is the
 #   first priority, not a mandate to build every target from every host.
-# - native rows: five native workflows qualified under issues
-# //// with per-host runners plus cache scopes on
+# - native rows: four native workflows qualified under issues
+# #410/#411/#412/#414 with per-host runners plus cache scopes on
 #   the pinned upstream toolchains; backends stay provisional.
 # - musl closures: Linux same-arch static musl qualified under issue
 # with exec-platform tools for scripts and target musl libs for
@@ -19,9 +19,9 @@
 #   stay in the first cohort with matching native target execution plus
 #   separate cache and remote evidence; cross-building alone is
 #   insufficient.
-# - optional expansion: macOS arm64 to Linux profiles then macOS x86_64
-#   only if bounded upstream configuration suffices; expand only after
-#   the initial cohort passes.
+# - optional expansion: macOS arm64 to Linux profiles
+#   only if bounded upstream configuration suffices (macOS x86_64 Not
+#   planned per #976); expand only after the initial cohort passes.
 # - excluded: Linux/macOS-to-Windows, Linux/Windows-to-macOS,
 #   Windows-to-Linux, Windows arm64 stay outside the initial cohort,
 #   not impossibility claims; all-cross mandate rejected.

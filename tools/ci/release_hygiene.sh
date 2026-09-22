@@ -15,8 +15,9 @@
 # tags, SECURITY.md reporting link + enabled record, publish dry-run
 # dispatch-only with a default-closed approve gate, no-secrets minimal
 # permissions plus no secrets usage, RUNNER_TEMP staging plus a
-# clean-checkout proof, explicit release matrix (all five qualified with
-# per-host evidence under issue #815), SBOM/BCR deferrals to tooling, signing-first +
+# clean-checkout proof, explicit release matrix (all four qualified with
+# per-host evidence under issue #815; macOS x86_64 Not planned per #976),
+# SBOM/BCR deferrals to tooling, signing-first +
 # GHCR-separate notes, checkout SHA pin, typed approve plus
 # non-cancelling concurrency, least-privilege no-packages-write,
 # no-secrets usage, and sole-tracker deletion plus reporting-enabled

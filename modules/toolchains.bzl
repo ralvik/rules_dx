@@ -32,10 +32,10 @@ GO_SDK_SDKS = {
 }
 
 # Standalone quality-tool hosts (see //quality/artifacts:extension.bzl).
+# macOS x86_64 is Not planned per #976 with no artifact.
 DX_TOOL_PLATFORMS = [
     "linux_x86_64",
     "linux_arm64",
     "macos_arm64",
-    "macos_x86_64",
     "windows_x86_64",
 ]

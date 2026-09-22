@@ -12,7 +12,7 @@ sole maintainer owns every row until delegation.
 Non-Linux runs wont-fix plus linux/arm64 boot wont-fix plus arm64
 prebuilt variant wont-fix: scaffold devcontainer.json arch-independent,
 amd64-only seed slice pins the amd64 Bazelisk launcher, natively
-qualified per #410 plus #411 plus #412 plus #413 plus #414 not container
+qualified per #410 plus #411 plus #412 plus #414 not container
 boot; no multi-platform container support claimed.
 Qualified locally or on demand with customer flows only: bazel run
 //tools/ci:devcontainer_boot_qualification (static pins builds nothing

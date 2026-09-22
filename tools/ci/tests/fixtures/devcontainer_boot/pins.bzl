@@ -25,7 +25,7 @@ WONTFIX_ARM64_BOOT = "linux/arm64 boot wont-fix"
 WONTFIX_ARM64_VARIANT = "arm64 prebuilt variant wont-fix"
 SCAFFOLD_ARCH = "scaffold devcontainer.json arch-independent"
 SEED_SLICE = "amd64-only seed slice pins the amd64 Bazelisk launcher"
-NATIVE_ONLY = "natively qualified per #410 plus #411 plus #412 plus #413 plus #414 not container boot"
+NATIVE_ONLY = "natively qualified per #410 plus #411 plus #412 plus #414 not container boot"
 
 # Customer-flows-only qualification (static harness plus on-demand local boot).
 LOCAL_ON_DEMAND = "qualified locally or on demand with customer flows only"

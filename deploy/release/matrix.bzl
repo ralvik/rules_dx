@@ -5,11 +5,12 @@ Contract: `docs/deploy/release-runbook.md`.
 
 # (name, os, cpu, status, notes). Status is one of
 # `qualified-seed-built-here` or `qualified-host-evidence`.
+# macOS x86_64 is Not planned, never planned for support (issue #976);
+# it carries no matrix cell.
 RELEASE_MATRIX = [
     ("dx-linux-x86_64", "linux", "x86_64", "qualified-seed-built-here", "Seed host; built + verified in publish dry-run"),
     ("dx-linux-arm64", "linux", "arm64", "qualified-host-evidence", "Required (ADR 0014); Platform-qualified plus per-host sbom-provenance (See: docs/product/support-matrix.md)"),
     ("dx-macos-arm64", "macos", "arm64", "qualified-host-evidence", "Required (ADR 0014); Platform-qualified plus per-host sbom-provenance (See: docs/product/support-matrix.md)"),
-    ("dx-macos-x86_64", "macos", "x86_64", "qualified-host-evidence", "Best-effort (ADR 0014); Platform-qualified, release evidence exempt non-blocking (See: docs/product/support-matrix.md)"),
     ("dx-windows-x86_64", "windows", "x86_64", "qualified-host-evidence", "Required (ADR 0014); Platform-qualified plus per-host sbom-provenance (See: docs/product/support-matrix.md)"),
 ]
 
