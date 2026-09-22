@@ -24,6 +24,30 @@ TypeScript uses `strict = true` in `tsconfig.json`; `ts_project`
 fails on type errors and Biome findings are errors via
 `--fail_on warning`.
 
+Adapter families use check-mode plus `--fail_on warning` (issue #1056).
+
+Ruby uses `rubocop --format json` check-only with no `--fail-level`
+weakening; `convention`/`refactor` map to warning so any offense fails
+via `--fail_on warning`. Format diffs fail via `standardrb --check`.
+PowerShell uses `Invoke-ScriptAnalyzer` console text with no `-Severity`
+filter; every finding is a warning so any finding fails via
+`--fail_on warning` (`psscriptanalyzer`).
+Shell uses `shellcheck --format=gcc` with no `-S` filter; warnings fail
+via `--fail_on warning` (`shellcheck`). Format diffs fail via
+`shfmt -d` (`shfmt`).
+CUE uses `cue fmt --check --diff`; any diff fails (`cue`).
+QML uses `qmlformat --check`; any unformatted path fails (`qmlformat`).
+`qmllint --json -` warnings fail via `--fail_on warning` (`qmllint`).
+Protobuf uses `buf lint --error-format=json`; every record is an error
+(`buf`). Format diffs fail via `buf format --diff --exit-code`.
+`keep_sorted` is check-only with no severity filter; every diagnostic
+is a warning so any finding fails via `--fail_on warning`.
+Error Prone uses `javac -Xplugin:ErrorProne` with default severities and
+no `-Werror` (preserves error/warning distinction); warnings fail via
+`--fail_on warning` (`error_prone`).
+`detekt` has no dispatched adapter yet so no strict pin; pending under
+the JVM qualification with no hidden preset.
+
 The gate is `bazel run //tools/ci:warnings_as_errors`.
 Violation fixtures live in `tools/ci/testdata/warnings/` as
 uncompiled data; the gate proves each fixture carries its warning

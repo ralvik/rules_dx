@@ -1,0 +1,3 @@
+# Warning fixture: unsorted block (keep-sorted).
+zebra
+apple

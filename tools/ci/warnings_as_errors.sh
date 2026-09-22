@@ -6,9 +6,16 @@
 # -Werror plus -Xlint:all; Kotlin uses warn=error; Scala uses
 # -Xfatal-warnings; C#/F# use treat_warnings_as_errors; Go uses go vet;
 # Python uses PYTHONWARNINGS=error plus Ruff; JS/TS use Biome plus tsc
-# strict. Fixtures in tools/ci/testdata/warnings/ carry one warning
-# pattern per language as uncompiled data; the gate proves each fixture
-# and each pin is present.
+# strict. Adapter families use check-mode plus --fail_on warning
+# (issue #1056): Ruby uses rubocop --format json plus standardrb --check;
+# PowerShell uses psscriptanalyzer text; Shell uses shellcheck
+# --format=gcc plus shfmt -d; CUE uses cue fmt --check --diff; QML uses
+# qmlformat --check plus qmllint --json -; Protobuf uses buf lint
+# --error-format=json plus buf format --diff --exit-code; keep_sorted is
+# check-only; Error Prone uses -Xplugin:ErrorProne; detekt stays pending
+# with no strict pin. Fixtures in tools/ci/testdata/warnings/ carry one
+# warning pattern per language as uncompiled data; the gate proves each
+# fixture and each pin is present.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:warnings_as_errors`,
 # following //tools/ci:build_hygiene.
@@ -102,5 +109,78 @@ dx_guard_contains "$fixtures/scala_unused.scala" 'val unused' "warning fixture l
 dx_guard_contains "$fixtures/csharp_unreachable.cs" 'int unused' "warning fixture lost pattern (want csharp int unused, issue #455)"
 dx_guard_contains "$fixtures/fsharp_unused.fs" 'let unused' "warning fixture lost pattern (want fsharp let unused, issue #455)"
 dx_guard_contains "$fixtures/cc_unused.cc" 'int unused' "warning fixture lost pattern (want cc int unused, issue #455)"
+
+# Adapter families use check-mode plus evaluator --fail_on warning
+# (issue #1056): lint warnings fail at warning threshold, format diffs
+# fail independently of severity.
+dx_guards_contains config/BUILD.bazel "evaluator threshold drifted (want fail_on warning default, issue #1056)" \
+  'fail_on' \
+  'build_setting_default = "warning"'
+dx_guard_contains quality/aspects.bzl '--fail_on' "quality aspects lost evaluator threshold (want --fail_on, issue #1056)"
+
+# Adapter dispatch owns the missing families (detekt stays pending with
+# no adapter, so it is absent here and recorded pending in the doc).
+dx_guards_contains quality/adapters.bzl "adapter dispatch drifted (want ruby/powershell/shell/cue/qml/protobuf/text families, issue #1056)" \
+  'rubocop' \
+  'standardrb' \
+  'psscriptanalyzer' \
+  'shellcheck' \
+  'shfmt' \
+  'cue' \
+  'buf' \
+  'qmlformat' \
+  'qmllint' \
+  'keep_sorted'
+
+# Adapter check invocations stay strict check-mode (issue #1056).
+dx_guards_contains quality/adapter/src/commands.rs "adapter check invocations drifted (want ruby/powershell/shell/cue/qml/buf/keep_sorted/error_prone checks, issue #1056)" \
+  'rubocop_check' \
+  'standardrb_check' \
+  'psscriptanalyzer_check' \
+  'shellcheck_check' \
+  'shfmt_check' \
+  'cue_check' \
+  'buf_lint_check' \
+  'buf_format_check' \
+  'qmlformat_check' \
+  'qmllint_check' \
+  'keep_sorted_check' \
+  'error_prone_check'
+dx_guards_contains quality/adapter/src/commands.rs "adapter strict flags drifted (want check-mode pins, issue #1056)" \
+  '"--format", "json"' \
+  '"--format=gcc"' \
+  '"--error-format=json"' \
+  '"--exit-code"' \
+  '"--json", "-"' \
+  '"fmt", "--check", "--diff"' \
+  '-Xplugin:ErrorProne'
+
+# Doc owns the adapter-family pin table plus detekt pending record.
+dx_guards_contains "$doc" "docs/quality/warnings-as-errors.md lost its adapter-family pins (want rubocop plus standardrb plus psscriptanalyzer plus shellcheck plus shfmt plus cue plus buf plus qml plus keep_sorted plus error_prone plus detekt pending, issue #1056)" \
+  'rubocop' \
+  'standardrb' \
+  'psscriptanalyzer' \
+  'shellcheck' \
+  'shfmt' \
+  'cue' \
+  'buf' \
+  'qmlformat' \
+  'qmllint' \
+  'keep_sorted' \
+  'error_prone' \
+  'detekt' \
+  '--fail_on warning' \
+  'issue #1056'
+
+# Adapter violation fixtures: one warning pattern per family as
+# uncompiled data (detekt stays pending with no fixture).
+dx_guard_contains "$fixtures/ruby_offense.rb" "puts 'hello'" "warning fixture lost pattern (want ruby puts single quotes, issue #1056)"
+dx_guard_contains "$fixtures/shell_unquoted.sh" 'echo $unquoted' "warning fixture lost pattern (want shell unquoted var, issue #1056)"
+dx_guard_contains "$fixtures/powershell_writehost.ps1" 'Write-Host' "warning fixture lost pattern (want powershell Write-Host, issue #1056)"
+dx_guard_contains "$fixtures/cue_badfmt.cue" 'value:"hello"' "warning fixture lost pattern (want cue missing space, issue #1056)"
+dx_guard_contains "$fixtures/qml_unqualified.qml" 'greet: foo' "warning fixture lost pattern (want qml unqualified, issue #1056)"
+dx_guard_contains "$fixtures/proto_mismatch.proto" 'package foo' "warning fixture lost pattern (want proto package foo, issue #1056)"
+dx_guard_contains "$fixtures/keep_sorted_unsorted.txt" 'zebra' "warning fixture lost pattern (want keep_sorted zebra, issue #1056)"
+dx_guard_contains "$fixtures/error_prone_deadexception.java" 'new IllegalArgumentException' "warning fixture lost pattern (want error_prone DeadException, issue #1056)"
 
 dx_test_summary "warnings-as-errors harness"
