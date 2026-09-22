@@ -174,3 +174,51 @@ def aspect_direct_maps(direct_sources, what):
                 fail(what + ": duplicate source path '" + f.short_path + "' across classes; one target/capability pipeline needs one owner per path")
             path_to_file[f.short_path] = f
     return (sorted(direct_files.keys()), direct_files, direct_paths, path_to_file)
+
+def filter_pipeline_by_tools(resolved, allowed_tools):
+    """Keeps only stages whose tool is in `allowed_tools` (See: quality-sources.md#adapter-applicability)."""
+    allow = {tool: True for tool in allowed_tools}
+    return [stage for stage in resolved if stage["tool"] in allow]
+
+def drop_pipeline_tool(resolved, tool):
+    """Drops one target-coupled tool from resolved stages (See: tool-integrations.md)."""
+    return [stage for stage in resolved if stage["tool"] != tool]
+
+def ordered_pipeline_paths(resolved):
+    """Unions resolved stage sources into sorted workspace paths (See: action-model.md#outputs-remote-cache-and-execution)."""
+    union = {}
+    for stage in resolved:
+        for path in stage["sources"]:
+            union[path] = True
+    return sorted(union.keys())
+
+def pipeline_inputs_for_paths(ordered_paths, path_to_file):
+    """Maps ordered workspace paths to action input files (See: action-model.md#outputs-remote-cache-and-execution)."""
+    return [path_to_file[path] for path in ordered_paths if path in path_to_file]
+
+def stage_flag(stage):
+    """Renders one resolved stage as a `--stage` flag value (See: action-model.md#deterministic-arguments)."""
+    return stage["tool"] + ";" + ",".join(stage["classes"]) + ";" + ",".join(stage["sources"])
+
+def prune_tool_generated_sources(resolved, generated_paths, tool):
+    """Drops generated paths from one tool's stages, omitting emptied stages (See: tool-integrations.md)."""
+    kept = []
+    for stage in resolved:
+        if stage["tool"] != tool:
+            kept.append(stage)
+            continue
+        sources = [p for p in stage["sources"] if p not in generated_paths]
+        if len(sources) > 0:
+            pruned = dict(stage)
+            pruned["sources"] = sources
+            kept.append(pruned)
+    return kept
+
+def generated_source_paths(direct_files):
+    """Collects non-source (`is_source == False`) workspace paths (See: tool-integrations.md)."""
+    generated = {}
+    for class_id in direct_files:
+        for f in direct_files[class_id]:
+            if not f.is_source:
+                generated[f.short_path] = True
+    return generated

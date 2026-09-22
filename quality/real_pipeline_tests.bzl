@@ -5,7 +5,7 @@ Contract: `docs/quality/tool-integrations.md`.
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "real_supported_classes")
-load(":pipeline.bzl", "authorize_classes", "pipeline_stages", "resolve_pipeline")
+load(":pipeline.bzl", "authorize_classes", "drop_pipeline_tool", "filter_pipeline_by_tools", "ordered_pipeline_paths", "pipeline_stages", "prune_tool_generated_sources", "resolve_pipeline", "stage_flag")
 load(":real_aspects.bzl", "real_allowed_tools_error")
 
 _LINT_SELECTIONS = {
@@ -472,6 +472,60 @@ def real_pipeline_unit_tests(name):
                 "aspect shards stay registry subsets",
                 real_allowed_tools_error(),
                 "",
+            ),
+            expect_equal(
+                "filter_pipeline_by_tools scopes shards to allowed tools",
+                filter_pipeline_by_tools(
+                    [
+                        {"classes": ["starlark"], "sources": ["BUILD.bazel"], "tool": "buildifier"},
+                        {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "clippy"},
+                    ],
+                    ["buildifier"],
+                ),
+                [
+                    {"classes": ["starlark"], "sources": ["BUILD.bazel"], "tool": "buildifier"},
+                ],
+            ),
+            expect_equal(
+                "drop_pipeline_tool drops target-coupled tsc",
+                drop_pipeline_tool(
+                    [
+                        {"classes": ["tsx", "typescript"], "sources": ["src/main.ts"], "tool": "tsc"},
+                        {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "rustc"},
+                    ],
+                    "tsc",
+                ),
+                [
+                    {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "rustc"},
+                ],
+            ),
+            expect_equal(
+                "ordered_pipeline_paths unions real stage sources",
+                ordered_pipeline_paths([
+                    {"classes": ["rust"], "sources": ["src/main.rs", "src/lib.rs"], "tool": "clippy"},
+                    {"classes": ["starlark"], "sources": ["BUILD.bazel", "src/lib.rs"], "tool": "buildifier"},
+                ]),
+                ["BUILD.bazel", "src/lib.rs", "src/main.rs"],
+            ),
+            expect_equal(
+                "stage_flag renders real stages deterministically",
+                stage_flag({"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "clippy"}),
+                "clippy;rust;src/lib.rs",
+            ),
+            expect_equal(
+                "prune_tool_generated_sources keeps non-target tools untouched",
+                prune_tool_generated_sources(
+                    [
+                        {"classes": ["rust"], "sources": ["src/gen.rs", "src/lib.rs"], "tool": "rustfmt"},
+                        {"classes": ["rust"], "sources": ["src/gen.rs"], "tool": "clippy"},
+                    ],
+                    {"src/gen.rs": True},
+                    "rustfmt",
+                ),
+                [
+                    {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "rustfmt"},
+                    {"classes": ["rust"], "sources": ["src/gen.rs"], "tool": "clippy"},
+                ],
             ),
         ],
     )
