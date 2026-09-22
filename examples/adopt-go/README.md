@@ -5,11 +5,11 @@ platform-selected sources plus package-level tests (internal `TestMain` and
 shared helper coexisting with the external `greet_test` package in one
 `go_test` via `embed`), and a stdlib-only `solo` package. The tree arrived
 with no `MODULE.bazel` and no `BUILD` files; the `*/BUILD.bazel` files are
-generator-owned (`//gazelle/go:gazelle` output, see below).
+generator-owned (`dx generate` output).
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-go/...
-bazel run //gazelle/go:gazelle -- update examples/adopt-go/greet examples/adopt-go/solo
+bazel run //cli/cli:dx -- generate //examples/adopt-go/...
 bazel build //examples/adopt-go/...
 bazel test //examples/adopt-go/...
 ```
@@ -32,6 +32,5 @@ and coverage (`InstrumentedFilesInfo`) flow through the shared wrappers.
 Build covers 6 targets; both tests pass (`greet_test`, `solo_test`).
 
 Scope notes: cross-package Go imports via full module paths resolve only
-through an exact `# gazelle:resolve` mapping today. `dx generate` runs the
-Rust extension only; regenerate with the per-language command above until
-the dx wiring lands.
+through an exact `# gazelle:resolve` mapping today. Regeneration is the
+composed `dx generate` run.

@@ -4,12 +4,12 @@ Foreign C++ tree adopted without upstream changes: a `greet` package with
 a self-owned quoted-include edge (`greet.cc` -> `helper.h`, no Bazel edge
 leaves the package) plus a stdlib-only `solo` package. The tree arrived
 with no `MODULE.bazel` and no `BUILD` files; the `*/BUILD.bazel` files are
-generator-owned (`//gazelle/cc:gazelle` output, see below) plus handwritten
+generator-owned (`dx generate` output) plus handwritten
 `cc_test` owners.
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-cpp/...
-bazel run //gazelle/cc:gazelle -- update examples/adopt-cpp/greet examples/adopt-cpp/solo
+bazel run //cli/cli:dx -- generate //examples/adopt-cpp/...
 bazel build //examples/adopt-cpp/...
 bazel test //examples/adopt-cpp/...
 ```
@@ -32,5 +32,5 @@ the shared wrappers. Build covers 11 targets; both tests pass (`greet_test`,
 `pure_test`).
 
 Scope notes: cross-package quoted includes resolve only through an exact
-`# gazelle:resolve` mapping today. `dx generate` runs the Rust extension only; regenerate with
-the per-language command above until the dx wiring lands.
+`# gazelle:resolve` mapping today. Regeneration is the composed
+`dx generate` run.

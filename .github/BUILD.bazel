@@ -27,6 +27,7 @@ real_source_target(
         "ISSUE_TEMPLATE/bug_report.md",
         "ISSUE_TEMPLATE/feature_proposal.md",
         "PULL_REQUEST_TEMPLATE.md",
+        "workflows/README.md",
     ],
     tags = ["corpus"],
 )

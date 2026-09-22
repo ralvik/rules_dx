@@ -3,6 +3,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 python_test(
     name = "login_test",
+    testonly = True,
     srcs = ["login_test.py"],
     # User-owned runtime edges: see app/BUILD.bazel.
     dep_group = "hello",
@@ -16,12 +17,14 @@ python_test(
 
 python_library(
     name = "logins",
+    testonly = True,
     srcs = ["logins.py"],
     imports = ["."],
 )
 
 python_library(
     name = "test_login",
+    testonly = True,
     srcs = ["test_login.py"],
     imports = ["."],
     deps = [":logins"],

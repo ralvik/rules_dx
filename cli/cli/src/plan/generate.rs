@@ -30,7 +30,7 @@ pub const GENERATE_CHECK_TARGET: &str = "//dx:generate_check";
 
 /// Private protocol environment the execution wrapper sets on the
 /// Gazelle run (WP1, dispatch). Names mirror the extension
-/// side (`gazelle/rust/manifest.go`); the CLI never reads them back.
+/// side (`gazelle/dispatch/manifest.go`); the CLI never reads them back.
 pub const GENERATE_ENV_INTENDED: &str = "DX_GENERATE_INTENDED";
 /// JSON list of `{"element","dirs"}` scope elements, see
 /// [`generate_scope_json`].

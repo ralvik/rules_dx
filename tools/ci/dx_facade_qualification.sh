@@ -8,8 +8,9 @@
 # owners (`//quality:policy.bzl` for `//quality:sources.bzl` for
 # `//generation:codegen.bzl` plus `//cli/codegen` for, `//cli/roots`
 # for the `//...` baseline). Only `//dx:generate` and `//dx:env` are
-# executable workflows; `//dx:generate` is Rust-only until canonical
-# composition lands. Docs assert the same Accepted state.
+# executable workflows; `//dx:generate` is the composed multi-language
+# default (`//gazelle/dispatch:gazelle` wiring every first-party
+# extension plus the dispatch witness). Docs assert the same Accepted state.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:dx_facade_qualification`,
 # following //tools/ci:backlog_contracts.
@@ -146,14 +147,25 @@ else
   bad "docs/environments/codegen.md lost its #506 plus //dx:codegen record"
 fi
 
-# The canonical generate twins stay Rust-only with diff-only on the check
-# twin: widening to another extension without this harness moving would
-# silently re-promise repo-wide execution.
-if grep -q -F -e 'gazelle = "//gazelle/rust:gazelle"' dx/BUILD.bazel &&
+# The canonical generate twins stay composed with diff-only on the check
+# twin: narrowing to a single extension without this harness moving would
+# silently break the repo-wide promise.
+if grep -q -F -e 'gazelle = "//gazelle/dispatch:gazelle"' dx/BUILD.bazel &&
   grep -E -e 'name = "generate_check"' -A3 dx/BUILD.bazel | grep -q -F -e 'mode = "diff"'; then
   ok
 else
-  bad "dx/BUILD.bazel lost its Rust-only //dx:generate twins with diff-only check"
+  bad "dx/BUILD.bazel lost its composed //dx:generate twins with diff-only check"
+fi
+
+# The composed binary wires every first-party extension plus the dispatch
+# witness last, so one traversal refreshes the whole workspace.
+if grep -q -F -e '"//gazelle/rust",' gazelle/dispatch/BUILD.bazel &&
+  grep -q -F -e '"//gazelle/python",' gazelle/dispatch/BUILD.bazel &&
+  grep -q -F -e '"//gazelle/go",' gazelle/dispatch/BUILD.bazel &&
+  grep -q -F -e '":dispatch",' gazelle/dispatch/BUILD.bazel; then
+  ok
+else
+  bad "gazelle/dispatch/BUILD.bazel lost its composed multi-language wiring"
 fi
 
 # Per-language Gazelle binaries stay composable into the facade: every
@@ -169,14 +181,13 @@ else
   bad "per-language gazelle_binary lost its //dx:__pkg__ visibility for canonical composition"
 fi
 
-# The facade docstring records the Rust-only generate scope, not a
-# repo-wide multi-language promise.
-if grep -q -F -e 'Rust-only repository default' dx/BUILD.bazel &&
-  grep -q -F -e 'per-language `//gazelle/<lang>:gazelle`' dx/BUILD.bazel &&
+# The facade docstring records the composed repo-wide generate scope.
+if grep -q -F -e 'composed repository default' dx/BUILD.bazel &&
+  grep -q -F -e '//gazelle/dispatch:gazelle' dx/BUILD.bazel &&
   grep -q -F -e '//tools/ci:dx_facade_qualification' dx/BUILD.bazel; then
   ok
 else
-  bad "dx/BUILD.bazel lost its Rust-only generate record with per-language pointer"
+  bad "dx/BUILD.bazel lost its composed generate record"
 fi
 
 # Architecture owns the 34-crate inventory (27 cli plus 5 quality plus 2
@@ -198,16 +209,15 @@ else
   bad "docs/architecture/README.md lost its executable-vs-reservation facade record"
 fi
 
-# Architecture and the generate contract record the Rust-only canonical
-# wiring with the per-language escape hatch (repo-wide promise stays
-# durable in scope).
-if grep -q -F -e 'Same Rust-only Gazelle wiring' docs/architecture/README.md &&
-  grep -q -F -e 'per-language `//gazelle/<lang>:gazelle`' docs/architecture/README.md &&
-  grep -q -F -e 'Provisional: the canonical target currently' docs/cli/commands/generate.md &&
-  grep -q -F -e 'per-language `//gazelle/<lang>:gazelle`' docs/cli/commands/generate.md; then
+# Architecture and the generate contract record the composed canonical
+# wiring (repo-wide promise from scope holds).
+if grep -q -F -e 'Composed multi-language Gazelle wiring' docs/architecture/README.md &&
+  grep -q -F -e '//gazelle/dispatch:gazelle' docs/architecture/README.md &&
+  grep -q -F -e 'composed repository default' docs/cli/commands/generate.md &&
+  grep -q -F -e '//gazelle/dispatch:gazelle' docs/cli/commands/generate.md; then
   ok
 else
-  bad "generate docs lost their Rust-only canonical record with per-language pointer"
+  bad "generate docs lost their composed canonical record"
 fi
 
 dx_test_summary "dx facade qualification harness"

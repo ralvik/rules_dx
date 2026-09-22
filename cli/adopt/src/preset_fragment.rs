@@ -54,7 +54,7 @@ const BUILD_PROFILES: [&str; 5] = [
 pub fn render_preset_fragment() -> String {
     let mut lines = vec![
         "# Vendored Bazel execution preset -- GENERATED, do not edit.".to_owned(),
-        "# Regenerate: `bazel run //tools/bazelrc:preset.update`.".to_owned(),
+        "# Regenerate: `bazel run //tools/bazelrc:preset_update`.".to_owned(),
     ];
     lines.extend(UPSTREAM_FLAGS.iter().map(|s| (*s).to_owned()));
     lines.push("# Owned extra_presets group: coverage.".to_owned());
@@ -265,7 +265,7 @@ mod tests {
     fn fragment_matches_preset_inventory() {
         let rendered = render_preset_fragment();
         assert!(rendered.contains("GENERATED, do not edit"));
-        assert!(rendered.contains("# Regenerate: `bazel run //tools/bazelrc:preset.update`."));
+        assert!(rendered.contains("# Regenerate: `bazel run //tools/bazelrc:preset_update`."));
         assert!(!rendered.contains("Version-matched to Bazel"));
         assert!(!rendered.contains("Consumer refresh:"));
         assert!(!rendered.contains("Upstream-derived flags"));

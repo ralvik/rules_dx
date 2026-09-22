@@ -6,11 +6,11 @@
 repository-wide operation and additionally accepts an explicit v1 scope of zero or more
 paths, labels, or target patterns selecting the Gazelle subtree to refresh, or `--here`
 (`--cwd` alias) for the current directory tree. With no scope
-it refreshes the repository. Provisional: the canonical target currently
-wires the Rust extension only (`//gazelle/rust:gazelle`); other languages
-use their per-language `//gazelle/<lang>:gazelle` binary until canonical
-composition lands. The repo-wide promise in [scope](../../product/scope.md)
-stays durable. It may create or modify Gazelle-maintained `BUILD` and `BUILD.bazel` files
+it refreshes the repository. Accepted: the canonical target is the
+composed repository default (`//gazelle/dispatch:gazelle` wiring every
+first-party extension plus the dispatch witness last), so one traversal
+refreshes the whole workspace. The repo-wide promise in [scope](../../product/scope.md)
+stays delivered. It may create or modify Gazelle-maintained `BUILD` and `BUILD.bazel` files
 within the selected scope. Exact scope syntax and scoped freshness semantics are
 implemented as specified below and pinned by resolver-mapping and scope-edge fixtures.
 

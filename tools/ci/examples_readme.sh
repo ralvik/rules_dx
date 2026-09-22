@@ -119,12 +119,11 @@ check_target_count "examples/adopt-fsharp" "11"
 check_target_count "examples/adopt-java" "11"
 check_target_count "examples/adopt-kotlin" "11"
 check_target_count "examples/adopt-scala" "11"
-check_target_count "examples/adopt-js-ts" "28"
-check_target_count "examples/adopt-polyglot" "25"
+check_target_count "examples/adopt-js-ts" "42"
+check_target_count "examples/adopt-polyglot" "45"
 
 # Generator command shape stays pinned per workspace family (issue #926):
-# Rust-family workspaces regenerate via `dx generate`, Gazelle-family
-# workspaces via per-language `gazelle update`, polyglot via both.
+# every adopt-* workspace regenerates via the composed `dx generate`.
 check_generator() {
   local dir="$1" want="$2"
   if grep -q -F -e "$want" "$dir/README.md"; then
@@ -134,16 +133,15 @@ check_generator() {
   fi
 }
 check_generator "examples/adopt-rust" "dx -- generate //examples/adopt-rust/"
-check_generator "examples/adopt-python" "//gazelle/python:gazelle"
-check_generator "examples/adopt-go" "//gazelle/go:gazelle"
-check_generator "examples/adopt-cpp" "//gazelle/cc:gazelle"
-check_generator "examples/adopt-csharp" "//gazelle/csharp:gazelle"
-check_generator "examples/adopt-fsharp" "//gazelle/fsharp:gazelle"
-check_generator "examples/adopt-java" "//gazelle/java:gazelle"
-check_generator "examples/adopt-kotlin" "//gazelle/kotlin:gazelle"
-check_generator "examples/adopt-scala" "//gazelle/scala:gazelle"
-check_generator "examples/adopt-js-ts" "//gazelle/javascript:gazelle"
-check_generator "examples/adopt-js-ts" "//gazelle/typescript:gazelle"
+check_generator "examples/adopt-python" "dx -- generate //examples/adopt-python/"
+check_generator "examples/adopt-go" "dx -- generate //examples/adopt-go/"
+check_generator "examples/adopt-cpp" "dx -- generate //examples/adopt-cpp/"
+check_generator "examples/adopt-csharp" "dx -- generate //examples/adopt-csharp/"
+check_generator "examples/adopt-fsharp" "dx -- generate //examples/adopt-fsharp/"
+check_generator "examples/adopt-java" "dx -- generate //examples/adopt-java/"
+check_generator "examples/adopt-kotlin" "dx -- generate //examples/adopt-kotlin/"
+check_generator "examples/adopt-scala" "dx -- generate //examples/adopt-scala/"
+check_generator "examples/adopt-js-ts" "dx -- generate //examples/adopt-js-ts/"
 check_generator "examples/adopt-polyglot" "dx -- generate //examples/adopt-polyglot/"
 
 dx_test_summary "examples readme audit"

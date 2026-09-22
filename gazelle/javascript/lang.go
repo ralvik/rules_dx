@@ -503,3 +503,31 @@ func formatMatches(matches []resolve.FindResult) string {
 	sort.Strings(labels)
 	return fmt.Sprintf("[%s]", strings.Join(labels, ", "))
 }
+
+// CollectUsedIgnores reports used dx_ignore_import entries visible in c
+// as (path, value) pairs for the composed `//dx:generate` witness.
+// See: docs/cli/commands/generate.md.
+func CollectUsedIgnores(c *config.Config) [][2]string {
+	raw, ok := c.Exts[languageName]
+	if !ok || raw == nil {
+		return nil
+	}
+	cfg, ok := raw.(*javascriptConfig)
+	if !ok || cfg == nil {
+		return nil
+	}
+	seen := map[[2]string]bool{}
+	var out [][2]string
+	for _, ig := range cfg.ignores {
+		if ig == nil || !ig.used {
+			continue
+		}
+		key := [2]string{ig.path, ig.value}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, key)
+	}
+	return out
+}

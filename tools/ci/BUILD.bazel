@@ -11,9 +11,6 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//:__subpackages__"])
-
-
 # Single target list (issue #915): ~160 sh_binary/sh_test targets live in
 # four size shards (ci_targets_a/b/c/d.bzl, ~40 each) so files stay
 # reviewable; this BUILD file is the only call site (add_a/b/c/d below).
@@ -24,9 +21,14 @@ load(":ci_targets_b.bzl", "add_b")
 load(":ci_targets_c.bzl", "add_c")
 load(":ci_targets_d.bzl", "add_d")
 
+package(default_visibility = ["//:__subpackages__"])
+
 add_a()
+
 add_b()
+
 add_c()
+
 add_d()
 
 filegroup(

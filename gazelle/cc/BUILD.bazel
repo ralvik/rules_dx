@@ -15,6 +15,7 @@ go_library(
         "parser.go",
     ],
     importpath = "github.com/ralvik/rules_dx/gazelle/cc",
+    visibility = ["//gazelle/dispatch:__pkg__"],
     deps = [
         "@gazelle//config",
         "@gazelle//language",

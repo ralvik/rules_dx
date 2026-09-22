@@ -8,9 +8,9 @@ package(default_visibility = ["//visibility:public"])
 
 kt_kotlinc_options(
     name = "warnings_as_errors",
-    warn = "error",
-    language_version = "2.2",
     api_version = "2.2",
+    language_version = "2.2",
+    warn = "error",
 )
 
 exports_files([

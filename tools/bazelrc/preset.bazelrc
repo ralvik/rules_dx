@@ -1,5 +1,5 @@
 # Vendored Bazel execution preset -- GENERATED, do not edit.
-# Regenerate: `bazel run //tools/bazelrc:preset.update`.
+# Regenerate: `bazel run //tools/bazelrc:preset_update`.
 common --enable_bzlmod
 build --verbose_failures
 test --test_output=errors

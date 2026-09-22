@@ -1,5 +1,7 @@
 """Starlark framework conformance tests (ADR 0009)."""
 
+load("//libs/starlark/tests/fixtures/starlark_futures:aspect_subjects.bzl", "aspect_group", "aspect_leaf")
+load("//libs/starlark/tests/fixtures/starlark_futures:config_subjects.bzl", "config_group", "config_leaf")
 load("//quality:fixtures.bzl", "real_source_target")
 load(":action_tests.bzl", "action_unit_tests")
 load(":analysis_tests.bzl", "subject_analysis_tests")
@@ -13,8 +15,6 @@ load(":output_group_tests.bzl", "output_group_unit_tests")
 load(":subject.bzl", "example_subject")
 load(":toolchain_tests.bzl", "toolchain_unit_tests")
 load(":wrapper_tests.bzl", "wrapper_optional_forward_tests")
-load("//libs/starlark/tests/fixtures/starlark_futures:aspect_subjects.bzl", "aspect_group", "aspect_leaf")
-load("//libs/starlark/tests/fixtures/starlark_futures:config_subjects.bzl", "config_group", "config_leaf")
 
 example_subject(
     name = "subject_under_test",
@@ -30,11 +30,11 @@ aspect_leaf(
 
 aspect_group(
     name = "aspect_group_under_test",
+    note = "group-note",
     deps = [
         ":aspect_leaf_under_test",
         ":subject_under_test",
     ],
-    note = "group-note",
 )
 
 config_leaf(
@@ -49,11 +49,11 @@ config_leaf(
 config_group(
     name = "config_group_under_test",
     testonly = True,
-    deps = [":config_leaf_under_test"],
     note = select({
         "//libs/starlark/tests/fixtures/starlark_futures:is_flipped": "flipped-note",
         "//conditions:default": "plain-note",
     }),
+    deps = [":config_leaf_under_test"],
 )
 
 arithmetic_unit_tests(name = "arithmetic_unit")

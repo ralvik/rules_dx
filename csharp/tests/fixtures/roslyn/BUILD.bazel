@@ -1,3 +1,5 @@
+load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
+
 """Roslyn per-TFM-RID SARIF aggregation fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
@@ -23,4 +25,10 @@ real_source_target(
         "pins.bzl",
     ],
     tags = ["corpus"],
+)
+
+csharp_library(
+    name = "roslyn",
+    testonly = True,
+    srcs = ["Sample.cs"],
 )

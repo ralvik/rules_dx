@@ -178,8 +178,8 @@ the inventory in `tools/bazelrc/src/lib.rs` (mirrored in
 byte-identity):
 
 ```sh
-bazel run //tools/bazelrc:preset.update -- --verify-only
-bazel run //tools/bazelrc:preset.update
+bazel run //tools/bazelrc:preset_update -- --verify-only
+bazel run //tools/bazelrc:preset_update
 bazel run //cli/cli:dx -- update --check
 bazel run //cli/cli:dx -- update go
 ```

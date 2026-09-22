@@ -13,9 +13,11 @@
 # This harness machine-checks the static half:
 #  - no prohibited installer command appears in tool-implementation code
 #    (quality/, tools/, language foundations, dx/, cli/);
-#  - each single-foundation adopt-* example loads only its own
-#    foundation wrapper (plus fixtures/ecosystem locks), never another
-#    foundation's wrapper, so unused foundations contribute no targets.
+#  - each adopt-* example loads only its own foundation wrapper(s)
+#    (plus fixtures/ecosystem locks), never another foundation's
+#    wrapper, so unused foundations contribute no targets. adopt-js-ts
+#    additionally loads vue: its foreign tree arrived with a Vue SFC
+#    the composed generation owns.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:examples_laziness`,
 # following //tools/ci:examples_readme.
@@ -64,8 +66,8 @@ else
   bad "prohibited installer invocation in tool code: $(echo "$hits" | head -n 5)"
 fi
 
-# Unused-foundation zero-work, static half: each single-foundation
-# example must load exactly its own foundation wrapper(s).
+# Unused-foundation zero-work, static half: each example must load
+# exactly its own foundation wrapper(s).
 check_isolation() { # dir, want-foundation-list...
   local dir="$1"
   shift
@@ -81,7 +83,7 @@ check_isolation() { # dir, want-foundation-list...
 
 check_isolation examples/adopt-rust rust
 check_isolation examples/adopt-python python
-check_isolation examples/adopt-js-ts javascript typescript
+check_isolation examples/adopt-js-ts javascript typescript vue
 check_isolation examples/adopt-go go
 check_isolation examples/adopt-cpp cc
 check_isolation examples/adopt-java java

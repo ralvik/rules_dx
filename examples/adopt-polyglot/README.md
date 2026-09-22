@@ -5,13 +5,10 @@ Foreign mixed-language tree adopted without upstream changes: a Python
 and a TypeScript `frontend` package side by side under one root carrying
 all three manifests (`Cargo.toml`, `package.json`, `pyproject.toml`). The
 tree arrived with no `MODULE.bazel` and no `BUILD` files; the
-`*/BUILD.bazel` files are generator-owned (see below).
+`*/BUILD.bazel` files are generator-owned (`dx generate` output).
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-polyglot/...
-bazel run //gazelle/python:gazelle -- update examples/adopt-polyglot/pytools
-bazel run //gazelle/javascript:gazelle -- update examples/adopt-polyglot/widgets
-bazel run //gazelle/typescript:gazelle -- update examples/adopt-polyglot/frontend
 bazel run //cli/cli:dx -- generate //examples/adopt-polyglot/...
 bazel build //examples/adopt-polyglot/...
 bazel test //examples/adopt-polyglot/...
@@ -21,12 +18,12 @@ Evidence: `dx init` writes nothing inside the tree (absent-only). Each
 extension claims only its own sources: the Python, JS, and TS BUILD files
 hold one rule per own-language source (tests as `*_test` wrappers) with
 same-package local edges, and
-the single scoped `dx generate` run emits the Rust crate plus `native_test`
-without touching the other packages. `dx generate --check` passes scoped,
+the single scoped `dx generate` run emits all four packages in one
+composed traversal. `dx generate --check` passes scoped,
 per-package `bazel build` selects only that package closure, and
 regeneration is a no-op in every language (user-owned runtime edges
 survive: pytest `# keep` deps, tsc `transpiler`/`tsconfig`/`declaration`,
-Jest `config` plus ESM `node_options`). Build covers 44 targets; all 4
+Jest `config` plus ESM `node_options`). Build covers 45 targets; all 4
 runnable tests pass (`shapes_test`, `widgets_test`, `totals_test`,
 `native_test`).
 
@@ -34,6 +31,5 @@ Scope notes: TypeScript tests run via `typescript_test` over the
 tsc-compiled output (execution reuses the Jest wiring). Module stems must stay
 unique per language across the repo: reusing `adopt-js-ts` stems first
 failed closed with an actionable ambiguous-import diagnostic, and the tree
-uses distinct `sums`/`totals` stems instead. Python/JS/TS are not wired
-into `dx generate` yet (that target runs the Rust extension only); use the
-per-language commands above until the dx wiring lands.
+uses distinct `sums`/`totals` stems instead. Regeneration is the single
+composed `dx generate` run.

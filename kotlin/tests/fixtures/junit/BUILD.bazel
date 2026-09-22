@@ -26,16 +26,16 @@ kt_jvm_test(
     ],
     main_class = "org.junit.platform.console.ConsoleLauncher",
     test_class = "hello.HelloJupiterTest",
-    deps = [
-        "//kotlin/tests/fixtures/hello:hello_lib",
-        "@maven//:org_junit_jupiter_junit_jupiter_api",
-        "@maven//:org_junit_jupiter_junit_jupiter_params",
-    ],
     runtime_deps = [
         "@maven//:org_junit_jupiter_junit_jupiter_engine",
         "@maven//:org_junit_platform_junit_platform_console",
         "@maven//:org_junit_platform_junit_platform_engine",
         "@maven//:org_junit_platform_junit_platform_launcher",
+    ],
+    deps = [
+        "//kotlin/tests/fixtures/hello:hello_lib",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@maven//:org_junit_jupiter_junit_jupiter_params",
     ],
 )
 

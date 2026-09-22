@@ -11,6 +11,7 @@ package(
 
 typescript_project(
     name = "helper",
+    testonly = True,
     srcs = ["helper.ts"],
     declaration = True,
     transpiler = "tsc",
@@ -19,6 +20,7 @@ typescript_project(
 
 typescript_project(
     name = "main",
+    testonly = True,
     srcs = ["main.ts"],
     declaration = True,
     transpiler = "tsc",
@@ -32,6 +34,7 @@ typescript_project(
 # `main.ts` entry.
 javascript_binary(
     name = "main_bin",
+    testonly = True,
     data = [":main"],
     entry_point = "main.js",
 )

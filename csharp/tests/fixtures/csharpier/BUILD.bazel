@@ -1,3 +1,5 @@
+load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
+
 """CSharpier format fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
@@ -21,4 +23,10 @@ real_source_target(
         "pins.bzl",
     ],
     tags = ["corpus"],
+)
+
+csharp_library(
+    name = "csharpier",
+    testonly = True,
+    srcs = ["Sample.cs"],
 )

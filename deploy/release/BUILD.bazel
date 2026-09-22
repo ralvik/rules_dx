@@ -262,11 +262,11 @@ signed_release(
 filegroup(
     name = "release_artifacts",
     srcs = [
+        ":notice_demo",
+        ":sbom_demo",
         "//:audit_curator",
         "//cli/cli:dx",
         "//cli/cli:man_pages",
-        ":notice_demo",
-        ":sbom_demo",
     ],
 )
 
