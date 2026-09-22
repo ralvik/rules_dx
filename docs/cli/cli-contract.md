@@ -305,8 +305,8 @@ date calendar via `chrono`, scratch via `tempfile`, dir sizing and walks via
 hand-rolled with owned reasons: atomic write plus lock via
 `std::fs::File::try_lock` plus `tempfile`, path-ladder classifier,
 LCOV ignore scanner with inventory plus verdict, SPDX lattice plus date shape gate
-plus scratch discipline wrappers; upstream re-evaluation on new crate versions
-plus any future migration stays owned gap).
+plus scratch discipline wrappers; upstream re-evaluation plus any future migration
+follows the [helper upstream policy](helper-upstream-policy.md) under issue #973).
 
 Date engine stays `chrono` under issue #398
 (`bazel run //tools/ci:helper_qualification`; `jiff 0.2` spike rejected:

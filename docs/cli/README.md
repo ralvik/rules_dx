@@ -3,6 +3,7 @@
 Contracts for the `dx` command surface and its user-facing protocols:
 
 - [CLI Contract](cli-contract.md): shared invocation, process, and launcher behavior.
+- [Helper Upstream Policy](helper-upstream-policy.md): re-evaluation triggers, adopt-vs-keep criteria, and per-item verdicts for hand-rolled helpers.
 - [Command Reference](commands/README.md): behavior of each command.
 - [Target Resolution](target-resolution.md): path and label normalization through Bazel.
 - [Output Protocol](output-protocol.md): text, diff, NDJSON, streams, and errors.
