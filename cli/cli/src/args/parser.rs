@@ -55,7 +55,42 @@ fn decode_scope(value: &OsStr) -> Result<String, ArgsError> {
 /// directly: `workspace` plus `targets` travel as `OsString` in the
 /// grammar and decode here, with non-UTF8 bytes failing as
 /// `InvalidScope` (lossy) instead of panicking in `std::env::args`.
+///
+/// Flag-only entry point: env and file defaults are empty, so existing
+/// callers and tests stay hermetic. The binary uses [`parse_with`] with
+/// the real environment plus `.dx/config.toml` file defaults.
+/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
+    parse_with(args, &|_| None, &super::FileDefaults::default())
+}
+
+/// Loads file-layer defaults for an invocation starting at `start`.
+/// Missing files yield empty defaults; unreadable or invalid files fail
+/// with the display message for the binary usage error (exit 2).
+/// Values are never logged.
+/// See: `docs/cli/cli-contract.md#invocation-defaults`.
+pub fn load_file_defaults(start: &std::path::Path) -> Result<super::FileDefaults, String> {
+    match dx_adopt::defaults::load_defaults(start) {
+        Ok((defaults, _)) => Ok(defaults),
+        Err(error) => Err(error.to_string()),
+    }
+}
+
+/// Parses with invocation defaults applied.
+///
+/// Precedence is flag over env over file over built-in defaults for the
+/// global options `workspace`, `output`, `verbose`, `quiet`, `dry-run`,
+/// and `fail-on` (env: `DX_WORKSPACE`, `DX_OUTPUT`, `DX_VERBOSE`,
+/// `DX_QUIET`, `DX_DRY_RUN`, `DX_FAIL_ON`; file: `.dx/config.toml` or
+/// `.dx/config` `[dx]` table). Bool flags are opt-in: an explicit flag
+/// wins, otherwise env wins over file. Values are never logged; only the
+/// resolved mode affects execution.
+/// See: `docs/cli/cli-contract.md#invocation-defaults`.
+pub fn parse_with<S: AsRef<OsStr>>(
+    args: &[S],
+    env_get: &dyn Fn(&str) -> Option<String>,
+    file: &super::FileDefaults,
+) -> Result<Invocation, ArgsError> {
     // `dx help [command]` verb redirect (See:
     // `docs/cli/cli-contract.md#invocation-shape`): handled before the
     // grammar so `help` never reaches the `ValueEnum` positional.
@@ -91,7 +126,7 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
     } = cli;
     // `workspace` plus `targets` decode here: non-UTF8 bytes fail as
     // `InvalidScope` with a lossy rendering (exit 2), never a panic.
-    let workspace = match workspace_os {
+    let flag_workspace = match workspace_os {
         Some(value) => Some(decode_scope(value.as_os_str())?),
         None => None,
     };
@@ -99,11 +134,35 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
     for scope in &targets_os {
         targets.push(decode_scope(scope.as_os_str())?);
     }
-    if workspace.as_deref().is_some_and(str::is_empty) {
+    if flag_workspace.as_deref().is_some_and(str::is_empty) {
         return Err(ArgsError::MissingValue {
             option: "--workspace".to_owned(),
         });
     }
+    // Invocation defaults: flag over env over file over built-in.
+    // Resolved values are never logged; only the parsed mode flows on.
+    // See: `docs/cli/cli-contract.md#invocation-defaults`.
+    use dx_adopt::defaults as invocation_defaults;
+    let workspace = invocation_defaults::resolve_workspace(
+        flag_workspace,
+        invocation_defaults::env_string(env_get, invocation_defaults::DX_WORKSPACE_ENV),
+        file.workspace.clone(),
+    );
+    let dry_run = invocation_defaults::resolve_bool(
+        dry_run,
+        invocation_defaults::env_bool(env_get, invocation_defaults::DX_DRY_RUN_ENV),
+        file.dry_run,
+    );
+    let quiet = invocation_defaults::resolve_bool(
+        quiet,
+        invocation_defaults::env_bool(env_get, invocation_defaults::DX_QUIET_ENV),
+        file.quiet,
+    );
+    let verbose = invocation_defaults::resolve_bool(
+        verbose,
+        invocation_defaults::env_bool(env_get, invocation_defaults::DX_VERBOSE_ENV),
+        file.verbose,
+    );
     if pin.as_deref().is_some_and(str::is_empty) {
         return Err(ArgsError::MissingValue {
             option: "--pin".to_owned(),
@@ -119,8 +178,18 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
             option: "--to".to_owned(),
         });
     }
-    let output_name = output.unwrap_or_else(|| "text".to_owned());
-    let fail_on_name = fail_on.unwrap_or_else(|| "warning".to_owned());
+    let output_name = invocation_defaults::resolve_string(
+        output,
+        invocation_defaults::env_string(env_get, invocation_defaults::DX_OUTPUT_ENV),
+        file.output.clone(),
+        "text",
+    );
+    let fail_on_name = invocation_defaults::resolve_string(
+        fail_on,
+        invocation_defaults::env_string(env_get, invocation_defaults::DX_FAIL_ON_ENV),
+        file.fail_on.clone(),
+        "warning",
+    );
     let mut reports = Vec::new();
     for value in &report {
         reports.push(parse_report(value)?);
@@ -969,6 +1038,9 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
     })
 }
 
+#[cfg(test)]
+#[path = "defaults_tests.rs"]
+mod defaults_tests;
 #[cfg(test)]
 #[path = "parser_tests_a.rs"]
 mod parser_tests_a;

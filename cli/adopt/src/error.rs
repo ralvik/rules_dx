@@ -107,6 +107,9 @@ pub enum AdoptError {
     /// Failed to render hook timings via the TOML crate.
     #[error("render timings: {detail}")]
     RenderTimings { detail: String },
+    /// Invocation-defaults file is unreadable or not valid TOML.
+    #[error("invalid invocation defaults: {detail}")]
+    InvalidDefaults { detail: String },
 }
 
 #[cfg(test)]

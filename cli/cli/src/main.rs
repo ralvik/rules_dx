@@ -19,7 +19,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicU32, Ordering};
 
-use dx_cli::args::parse;
+use dx_cli::args::{load_file_defaults, parse_with};
 use dx_cli::plan::create_run_temp_dir;
 use dx_cli::{execute, Env, ProcessQueryRunner};
 use dx_output::{command_finished, error_event, write_event, FinishedCounts, OutputMode};
@@ -256,7 +256,18 @@ fn run() -> i32 {
         }
         return code;
     }
-    let mut invocation = match parse(&args) {
+    // Invocation defaults: flag over env over file over built-in.
+    // The file is `.dx/config.toml` (alias `.dx/config`) found walking up
+    // from the workspace start; values are never logged, only the resolved
+    // mode flows on. See: `docs/cli/cli-contract.md#invocation-defaults`.
+    let defaults_cwd = std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
+    let defaults_start = dx_process::workspace_start(&defaults_cwd);
+    let file_defaults = match load_file_defaults(&defaults_start) {
+        Ok(defaults) => defaults,
+        Err(detail) => return usage_error(&detail),
+    };
+    let env_get = |name: &str| std::env::var(name).ok();
+    let mut invocation = match parse_with(&args, &env_get, &file_defaults) {
         Ok(invocation) => invocation,
         Err(dx_cli::args::ArgsError::Help { text }) => {
             // `--help`/`-h`: human text on stdout, exit 0,

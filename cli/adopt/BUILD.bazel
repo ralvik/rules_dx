@@ -14,6 +14,7 @@ dx_rust_crate(
     package_name = "cli/dx_adopt",
     srcs = [
         "src/completion.rs",
+        "src/defaults.rs",
         "src/error.rs",
         "src/hooks.rs",
         "src/inspect.rs",
