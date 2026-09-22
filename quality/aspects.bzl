@@ -9,7 +9,7 @@ load(
     "SYNTHETIC_ADAPTERS",
     "SYNTHETIC_CLASS_TO_FAMILY",
 )
-load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "resolve_pipeline")
+load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "ordered_pipeline_paths", "pipeline_inputs_for_paths", "resolve_pipeline", "stage_flag")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
@@ -36,22 +36,15 @@ def _quality_pipeline_action(target, ctx, capability):
 
     out = ctx.actions.declare_file(target.label.name + "-" + capability + ".pb")
 
-    union = {}
-    for stage in resolved:
-        for path in stage["sources"]:
-            union[path] = True
-    ordered_paths = sorted(union.keys())
-    inputs = [path_to_file[path] for path in ordered_paths if path in path_to_file]
+    ordered_paths = ordered_pipeline_paths(resolved)
+    inputs = pipeline_inputs_for_paths(ordered_paths, path_to_file)
 
     args = ctx.actions.args()
     args.add("--producer", str(target.label))
     args.add("--capability", capability)
     args.add("--output", out.path)
     for stage in resolved:
-        args.add(
-            "--stage",
-            stage["tool"] + ";" + ",".join(stage["classes"]) + ";" + ",".join(stage["sources"]),
-        )
+        args.add("--stage", stage_flag(stage))
     for ws_path in ordered_paths:
         f = path_to_file.get(ws_path)
         if f != None:
@@ -90,17 +83,22 @@ def _quality_pipeline_action(target, ctx, capability):
     )
     return [OutputGroupInfo(dx_results = depset([out, marker]))]
 
-def _lint_impl(target, ctx):
-    return _quality_pipeline_action(target, ctx, "lint")
+def _make_synthetic_impl(capability):
+    """Makes one capability impl over the shared pipeline action (See: quality-sources.md#adapter-applicability)."""
+    def _impl(target, ctx):
+        return _quality_pipeline_action(target, ctx, capability)
+    return _impl
 
-def _format_impl(target, ctx):
-    return _quality_pipeline_action(target, ctx, "format")
+# Single table-driven capability set: one impl per capability over the
+# shared action above; adding a capability edits this table only.
+_SYNTHETIC_CAPABILITIES = ["lint", "format", "typecheck", "audit"]
 
-def _typecheck_impl(target, ctx):
-    return _quality_pipeline_action(target, ctx, "typecheck")
-
-def _audit_impl(target, ctx):
-    return _quality_pipeline_action(target, ctx, "audit")
+_SYNTHETIC_DOCS = {
+    "audit": "Registers independent audit actions in dx_results.",
+    "format": "Registers the exact-input format pipeline action in dx_results.",
+    "lint": "Registers the exact-input lint pipeline action in dx_results.",
+    "typecheck": "Registers the exact-input typecheck pipeline action in dx_results.",
+}
 
 _COMMON_ATTRS = {
     "_evaluator": attr.label(
@@ -134,30 +132,20 @@ _COMMON_ATTRS = {
     ),
 }
 
-lint_aspect = aspect(
-    implementation = _lint_impl,
-    attr_aspects = [],
-    attrs = _COMMON_ATTRS,
-    doc = "Registers the exact-input lint pipeline action in dx_results.",
-)
+_SYNTHETIC_ASPECTS = {
+    capability: aspect(
+        implementation = _make_synthetic_impl(capability),
+        attr_aspects = [],
+        attrs = _COMMON_ATTRS,
+        doc = _SYNTHETIC_DOCS[capability],
+    )
+    for capability in _SYNTHETIC_CAPABILITIES
+}
 
-format_aspect = aspect(
-    implementation = _format_impl,
-    attr_aspects = [],
-    attrs = _COMMON_ATTRS,
-    doc = "Registers the exact-input format pipeline action in dx_results.",
-)
+lint_aspect = _SYNTHETIC_ASPECTS["lint"]
 
-typecheck_aspect = aspect(
-    implementation = _typecheck_impl,
-    attr_aspects = [],
-    attrs = _COMMON_ATTRS,
-    doc = "Registers the exact-input typecheck pipeline action in dx_results.",
-)
+format_aspect = _SYNTHETIC_ASPECTS["format"]
 
-audit_aspect = aspect(
-    implementation = _audit_impl,
-    attr_aspects = [],
-    attrs = _COMMON_ATTRS,
-    doc = "Registers independent audit actions in dx_results.",
-)
+typecheck_aspect = _SYNTHETIC_ASPECTS["typecheck"]
+
+audit_aspect = _SYNTHETIC_ASPECTS["audit"]

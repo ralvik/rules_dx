@@ -13,13 +13,13 @@ load(
 )
 load("//quality:native_config.bzl", "DxNativeConfigInfo", "collect_native_configs")
 load("//quality:parity_tests.bzl", "deferred_pipeline_error")
-load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "resolve_pipeline")
+load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "drop_pipeline_tool", "filter_pipeline_by_tools", "generated_source_paths", "ordered_pipeline_paths", "pipeline_inputs_for_paths", "prune_tool_generated_sources", "resolve_pipeline", "stage_flag")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 load("//rust/rules:edition.bzl", "RUST_EDITION")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
-# Cold-server laziness: the shared aspect no longer resolves every
+# Cold-server laziness: the shared implementation no longer resolves every
 # ecosystem on every visit. Each aspect declares only its own tool labels
 # and filters the resolved pipeline to `allowed_tools`; `select()` and
 # toolchain indirection cannot do this (all branches resolve), only separate
@@ -27,23 +27,55 @@ load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_t
 # repo-owned markdown; JS/Python/Rust/JVM families are additive opt-ins.
 # Every entry below stays a subset of the single-sourced registry
 # (See: //quality:registry.bzl); adding a tool edits the registry data
-# plus the owning aspect shard here, never a parallel allowlist.
+# plus the single per-tool table below, never a parallel allowlist.
 # JVM tools run as `java_binary` wrappers over the complete upstream
 # artifacts plus the shared managed JDK (remotejdk_21 via
 # `--java_runtime_version`); SpotBugs is target-coupled (needs the
 # authoritative `JavaInfo` classes, dropped for provider-less targets
 # like tsc without `TsConfigInfo`).
-_CORE_LINT_TOOLS = ["biome", "buildifier", "markdown_check", "ruff", "taplo", "vale"]
-_CORE_FORMAT_TOOLS = ["biome", "buildifier", "ruff", "taplo"]
-_CORE_TYPECHECK_TOOLS = ["ty"]
-_JS_LINT_TOOLS = ["eslint"]
-_JS_FORMAT_TOOLS = ["prettier"]
-_PY_LINT_TOOLS = ["flake8", "pydoclint", "pylint"]
-_RUST_LINT_TOOLS = ["clippy"]
-_RUST_FORMAT_TOOLS = ["rustfmt"]
-_RUST_TYPECHECK_TOOLS = ["rustc"]
-_JVM_LINT_TOOLS = ["checkstyle", "ktlint", "pmd", "spotbugs"]
-_JVM_FORMAT_TOOLS = ["google_java_format", "ktfmt"]
+#
+# Single per-tool capability table: one row per wired tool with its
+# capabilities and owning shard. Shard `allowed_tools` lists below derive
+# from this table, so capability x ecosystem wiring edits one table only.
+_REAL_TOOL_TABLE = {
+    "biome": {"capabilities": ["format", "lint"], "shard": "core"},
+    "buildifier": {"capabilities": ["format", "lint"], "shard": "core"},
+    "checkstyle": {"capabilities": ["lint"], "shard": "jvm"},
+    "clippy": {"capabilities": ["lint"], "shard": "rust"},
+    "eslint": {"capabilities": ["lint"], "shard": "js"},
+    "flake8": {"capabilities": ["lint"], "shard": "py"},
+    "google_java_format": {"capabilities": ["format"], "shard": "jvm"},
+    "ktfmt": {"capabilities": ["format"], "shard": "jvm"},
+    "ktlint": {"capabilities": ["lint"], "shard": "jvm"},
+    "markdown_check": {"capabilities": ["lint"], "shard": "core"},
+    "pmd": {"capabilities": ["lint"], "shard": "jvm"},
+    "prettier": {"capabilities": ["format"], "shard": "js"},
+    "pydoclint": {"capabilities": ["lint"], "shard": "py"},
+    "pylint": {"capabilities": ["lint"], "shard": "py"},
+    "ruff": {"capabilities": ["format", "lint"], "shard": "core"},
+    "rustc": {"capabilities": ["typecheck"], "shard": "rust"},
+    "rustfmt": {"capabilities": ["format"], "shard": "rust"},
+    "spotbugs": {"capabilities": ["lint"], "shard": "jvm"},
+    "taplo": {"capabilities": ["format", "lint"], "shard": "core"},
+    "ty": {"capabilities": ["typecheck"], "shard": "core"},
+    "vale": {"capabilities": ["lint"], "shard": "core"},
+}
+
+def _shard_tools(shard, capability):
+    """Lists wired tools for one shard/capability from the per-tool table (See: registry.bzl)."""
+    return sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == shard and capability in _REAL_TOOL_TABLE[tool]["capabilities"]])
+
+_CORE_LINT_TOOLS = _shard_tools("core", "lint")
+_CORE_FORMAT_TOOLS = _shard_tools("core", "format")
+_CORE_TYPECHECK_TOOLS = _shard_tools("core", "typecheck")
+_JS_LINT_TOOLS = _shard_tools("js", "lint")
+_JS_FORMAT_TOOLS = _shard_tools("js", "format")
+_PY_LINT_TOOLS = _shard_tools("py", "lint")
+_RUST_LINT_TOOLS = _shard_tools("rust", "lint")
+_RUST_FORMAT_TOOLS = _shard_tools("rust", "format")
+_RUST_TYPECHECK_TOOLS = _shard_tools("rust", "typecheck")
+_JVM_LINT_TOOLS = _shard_tools("jvm", "lint")
+_JVM_FORMAT_TOOLS = _shard_tools("jvm", "format")
 
 def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain):
     if QualitySourcesInfo not in target:
@@ -72,7 +104,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         if err != "":
             fail("real_aspect (" + str(target.label) + "): " + err)
         return []
-    resolved = [stage for stage in resolved if stage["tool"] in allowed_tools]
+    resolved = filter_pipeline_by_tools(resolved, allowed_tools)
     if len(resolved) == 0:
         return []
 
@@ -89,7 +121,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     # context). Drop tsc here so `dx typecheck --check //...` stays green
     # while TS type safety is proven by the build plus test checks.
     if "tsc" in [stage["tool"] for stage in resolved]:
-        resolved = [stage for stage in resolved if stage["tool"] != "tsc"]
+        resolved = drop_pipeline_tool(resolved, "tsc")
         if len(resolved) == 0:
             return []
 
@@ -102,7 +134,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     # keep their SpotBugs stage with the compiled closure as inputs.
     if "spotbugs" in [stage["tool"] for stage in resolved]:
         if JavaInfo not in target:
-            resolved = [stage for stage in resolved if stage["tool"] != "spotbugs"]
+            resolved = drop_pipeline_tool(resolved, "spotbugs")
             if len(resolved) == 0:
                 return []
 
@@ -123,23 +155,9 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             rustfmt_edition = target[_rust_common.test_crate_info].crate.edition
         else:
             rustfmt_edition = RUST_EDITION
-        generated = {}
-        for class_id in direct_files:
-            for f in direct_files[class_id]:
-                if not f.is_source:
-                    generated[f.short_path] = True
+        generated = generated_source_paths(direct_files)
         if len(generated) > 0:
-            kept = []
-            for stage in resolved:
-                if stage["tool"] == "rustfmt":
-                    sources = [p for p in stage["sources"] if p not in generated]
-                    if len(sources) > 0:
-                        pruned = dict(stage)
-                        pruned["sources"] = sources
-                        kept.append(pruned)
-                else:
-                    kept.append(stage)
-            resolved = kept
+            resolved = prune_tool_generated_sources(resolved, generated, "rustfmt")
 
     # Delegated Clippy: this aspect requires the upstream
     # `rust_clippy_aspect`, which emits the authoritative
@@ -240,12 +258,8 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
 
     out = ctx.actions.declare_file(target.label.name + "-real-" + capability + output_suffix + ".pb")
 
-    union = {}
-    for stage in resolved:
-        for path in stage["sources"]:
-            union[path] = True
-    ordered_paths = sorted(union.keys())
-    inputs = [path_to_file[path] for path in ordered_paths if path in path_to_file]
+    ordered_paths = ordered_pipeline_paths(resolved)
+    inputs = pipeline_inputs_for_paths(ordered_paths, path_to_file)
 
     # Markdown link-resolution siblings: unclassified files declared via
     # `markdown_siblings` on the visited rule. Only collected when a
@@ -277,10 +291,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     args.add("--capability", capability)
     args.add("--output", out.path)
     for stage in resolved:
-        args.add(
-            "--stage",
-            stage["tool"] + ";" + ",".join(stage["classes"]) + ";" + ",".join(stage["sources"]),
-        )
+        args.add("--stage", stage_flag(stage))
     for ws_path in ordered_paths:
         f = path_to_file.get(ws_path)
         if f != None:
@@ -433,38 +444,11 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
 
     return [OutputGroupInfo(dx_results = depset([out]))]
 
-def _real_lint_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "lint", _CORE_LINT_TOOLS, "", False)
-
-def _real_format_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "format", _CORE_FORMAT_TOOLS, "", False)
-
-def _real_typecheck_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "typecheck", _CORE_TYPECHECK_TOOLS, "", False)
-
-def _real_js_lint_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "lint", _JS_LINT_TOOLS, "-js", False)
-
-def _real_js_format_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "format", _JS_FORMAT_TOOLS, "-js", False)
-
-def _real_python_lint_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "lint", _PY_LINT_TOOLS, "-py", False)
-
-def _real_jvm_lint_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "lint", _JVM_LINT_TOOLS, "-jvm", False)
-
-def _real_jvm_format_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "format", _JVM_FORMAT_TOOLS, "-jvm", False)
-
-def _real_rust_lint_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "lint", _RUST_LINT_TOOLS, "-rust", True)
-
-def _real_rust_format_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "format", _RUST_FORMAT_TOOLS, "-rust", True)
-
-def _real_rust_typecheck_impl(target, ctx):
-    return _real_pipeline_action(target, ctx, "typecheck", _RUST_TYPECHECK_TOOLS, "-rust", True)
+def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain):
+    """Makes one shard impl over the shared real pipeline action (See: quality-sources.md#adapter-applicability)."""
+    def _impl(target, ctx):
+        return _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain)
+    return _impl
 
 def real_allowed_tools_error():
     """Validates aspect shards stay registry subsets (See: //quality:registry.bzl)."""
@@ -477,6 +461,12 @@ def real_allowed_tools_error():
     for tool in allowed:
         if tool not in REAL_ADAPTERS:
             return "real aspects: allowed tool '" + tool + "' is outside REAL_ADAPTERS"
+    for tool in _REAL_TOOL_TABLE:
+        if tool not in REAL_ADAPTERS:
+            return "real aspects: table tool '" + tool + "' is outside REAL_ADAPTERS"
+        for capability in _REAL_TOOL_TABLE[tool]["capabilities"]:
+            if capability not in REAL_ADAPTERS[tool]:
+                return "real aspects: table tool '" + tool + "' names unwired capability '" + capability + "'"
     return ""
 
 _REAL_BASE_ATTRS = {
@@ -494,44 +484,112 @@ _REAL_BASE_ATTRS = {
     ),
 }
 
-_REAL_CORE_ATTRS = _REAL_BASE_ATTRS | {
-    "_biome": attr.label(
+# Single per-tool attr table: one label per wired tool; shard attr sets
+# derive from the per-tool table above, so adding a tool edits one row.
+_REAL_TOOL_ATTR_DEFS = {
+    "biome": attr.label(
         default = "@dx_tools//:biome",
         allow_single_file = True,
         cfg = "exec",
         doc = "Pinned Biome standalone artifact for JavaScript/TypeScript/JSON pipelines.",
     ),
-    "_buildifier": attr.label(
+    "buildifier": attr.label(
         default = "@dx_tools//:buildifier",
         allow_single_file = True,
         cfg = "exec",
         doc = "Pinned Buildifier artifact for Starlark pipelines.",
     ),
-    "_markdown_check": attr.label(
+    "checkstyle": attr.label(
+        default = "//quality/tools/jvm:checkstyle",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned Checkstyle java_binary wrapper for Java lint.",
+    ),
+    "eslint": attr.label(
+        default = "//quality/tools/javascript/bin:eslint",
+        cfg = "exec",
+        executable = True,
+        doc = "Private ESLint js_binary wrapper for JavaScript lint opt-ins.",
+    ),
+    "flake8": attr.label(
+        default = "//quality/tools/python:flake8",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned flake8 launcher (stub plus runfiles closure) for Python lint opt-ins.",
+    ),
+    "google_java_format": attr.label(
+        default = "//quality/tools/jvm:google_java_format",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned google-java-format java_binary wrapper for Java format.",
+    ),
+    "ktfmt": attr.label(
+        default = "//quality/tools/jvm:ktfmt",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned ktfmt java_binary wrapper for Kotlin format.",
+    ),
+    "ktlint": attr.label(
+        default = "//quality/tools/jvm:ktlint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned ktlint java_binary wrapper for Kotlin lint (fixes via --format).",
+    ),
+    "markdown_check": attr.label(
         default = "//quality/markdown:quality_markdown",
         allow_single_file = True,
         cfg = "exec",
         doc = "Repo-owned Markdown link/structure checker for Markdown pipelines.",
     ),
-    "_ruff": attr.label(
+    "pmd": attr.label(
+        default = "//quality/tools/jvm:pmd",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned PMD java_binary wrapper for Java lint.",
+    ),
+    "prettier": attr.label(
+        default = "//quality/tools/javascript/bin:prettier",
+        cfg = "exec",
+        executable = True,
+        doc = "Private Prettier js_binary wrapper for JavaScript/JSON format.",
+    ),
+    "pydoclint": attr.label(
+        default = "//quality/tools/python:pydoclint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned pydoclint launcher (stub plus runfiles closure) for Python pipelines.",
+    ),
+    "pylint": attr.label(
+        default = "//quality/tools/python:pylint",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned pylint launcher (stub plus runfiles closure) for Python lint opt-ins.",
+    ),
+    "ruff": attr.label(
         default = "@dx_tools//:ruff",
         allow_single_file = True,
         cfg = "exec",
         doc = "Pinned Ruff artifact for Python pipelines.",
     ),
-    "_taplo": attr.label(
+    "spotbugs": attr.label(
+        default = "//quality/tools/jvm:spotbugs",
+        cfg = "exec",
+        executable = True,
+        doc = "Pinned SpotBugs java_binary wrapper for Java lint (target-coupled via JavaInfo).",
+    ),
+    "taplo": attr.label(
         default = "@dx_tools//:taplo",
         allow_single_file = True,
         cfg = "exec",
         doc = "Pinned Taplo artifact for TOML pipelines.",
     ),
-    "_ty": attr.label(
+    "ty": attr.label(
         default = "@dx_tools//:ty",
         allow_single_file = True,
         cfg = "exec",
         doc = "Pinned Ty artifact for Python pipelines.",
     ),
-    "_vale": attr.label(
+    "vale": attr.label(
         default = "@dx_tools//:vale",
         allow_single_file = True,
         cfg = "exec",
@@ -539,166 +597,80 @@ _REAL_CORE_ATTRS = _REAL_BASE_ATTRS | {
     ),
 }
 
-_REAL_JS_LINT_ATTRS = _REAL_BASE_ATTRS | {
-    "_eslint": attr.label(
-        default = "//quality/tools/javascript/bin:eslint",
-        cfg = "exec",
-        executable = True,
-        doc = "Private ESLint js_binary wrapper for JavaScript lint opt-ins.",
-    ),
-}
+def _real_attrs_for(tools):
+    """Builds one shard attr set from the per-tool attr table (See: registry.bzl)."""
+    return _REAL_BASE_ATTRS | {"_" + tool: _REAL_TOOL_ATTR_DEFS[tool] for tool in tools}
 
-_REAL_JS_FORMAT_ATTRS = _REAL_BASE_ATTRS | {
-    "_prettier": attr.label(
-        default = "//quality/tools/javascript/bin:prettier",
-        cfg = "exec",
-        executable = True,
-        doc = "Private Prettier js_binary wrapper for JavaScript/JSON format.",
-    ),
-}
-
-_REAL_JVM_LINT_ATTRS = _REAL_BASE_ATTRS | {
-    "_checkstyle": attr.label(
-        default = "//quality/tools/jvm:checkstyle",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned Checkstyle java_binary wrapper for Java lint.",
-    ),
-    "_ktlint": attr.label(
-        default = "//quality/tools/jvm:ktlint",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned ktlint java_binary wrapper for Kotlin lint (fixes via --format).",
-    ),
-    "_pmd": attr.label(
-        default = "//quality/tools/jvm:pmd",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned PMD java_binary wrapper for Java lint.",
-    ),
-    "_spotbugs": attr.label(
-        default = "//quality/tools/jvm:spotbugs",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned SpotBugs java_binary wrapper for Java lint (target-coupled via JavaInfo).",
-    ),
-}
-
-_REAL_JVM_FORMAT_ATTRS = _REAL_BASE_ATTRS | {
-    "_google_java_format": attr.label(
-        default = "//quality/tools/jvm:google_java_format",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned google-java-format java_binary wrapper for Java format.",
-    ),
-    "_ktfmt": attr.label(
-        default = "//quality/tools/jvm:ktfmt",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned ktfmt java_binary wrapper for Kotlin format.",
-    ),
-}
-
-_REAL_PY_LINT_ATTRS = _REAL_BASE_ATTRS | {
-    "_flake8": attr.label(
-        default = "//quality/tools/python:flake8",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned flake8 launcher (stub plus runfiles closure) for Python lint opt-ins.",
-    ),
-    "_pydoclint": attr.label(
-        default = "//quality/tools/python:pydoclint",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned pydoclint launcher (stub plus runfiles closure) for Python pipelines.",
-    ),
-    "_pylint": attr.label(
-        default = "//quality/tools/python:pylint",
-        cfg = "exec",
-        executable = True,
-        doc = "Pinned pylint launcher (stub plus runfiles closure) for Python lint opt-ins.",
-    ),
-}
-
+_REAL_CORE_ATTRS = _real_attrs_for(sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == "core"]))
+_REAL_JS_LINT_ATTRS = _real_attrs_for(_JS_LINT_TOOLS)
+_REAL_JS_FORMAT_ATTRS = _real_attrs_for(_JS_FORMAT_TOOLS)
+_REAL_JVM_LINT_ATTRS = _real_attrs_for(_JVM_LINT_TOOLS)
+_REAL_JVM_FORMAT_ATTRS = _real_attrs_for(_JVM_FORMAT_TOOLS)
+_REAL_PY_LINT_ATTRS = _real_attrs_for(_PY_LINT_TOOLS)
 _REAL_RUST_ATTRS = _REAL_BASE_ATTRS
 
-real_lint_aspect = aspect(
-    implementation = _real_lint_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_CORE_ATTRS,
-    doc = "Registers the exact-input real lint pipeline action in dx_results.",
-)
+# Single table-driven shard set: one row per aspect with its capability,
+# tools, output suffix, rust-toolchain need, attrs, and doc. Adding a
+# shard edits this table only; impls and aspect objects derive below.
+_REAL_SHARDS = {
+    "real_format": {"attrs": _REAL_CORE_ATTRS, "capability": "format", "doc": "Registers the exact-input real format pipeline action in dx_results.", "has_rust": False, "suffix": "", "tools": _CORE_FORMAT_TOOLS},
+    "real_js_format": {"attrs": _REAL_JS_FORMAT_ATTRS, "capability": "format", "doc": "Additive JavaScript/JSON format family aspect (Prettier).", "has_rust": False, "suffix": "-js", "tools": _JS_FORMAT_TOOLS},
+    "real_js_lint": {"attrs": _REAL_JS_LINT_ATTRS, "capability": "lint", "doc": "Additive JavaScript lint family aspect (ESLint opt-in).", "has_rust": False, "suffix": "-js", "tools": _JS_LINT_TOOLS},
+    "real_jvm_format": {"attrs": _REAL_JVM_FORMAT_ATTRS, "capability": "format", "doc": "Additive JVM format family aspect (google-java-format/ktfmt).", "has_rust": False, "suffix": "-jvm", "tools": _JVM_FORMAT_TOOLS},
+    "real_jvm_lint": {"attrs": _REAL_JVM_LINT_ATTRS, "capability": "lint", "doc": "Additive JVM lint family aspect (Checkstyle/Pmd/SpotBugs/ktlint; SpotBugs target-coupled via JavaInfo).", "has_rust": False, "suffix": "-jvm", "tools": _JVM_LINT_TOOLS},
+    "real_lint": {"attrs": _REAL_CORE_ATTRS, "capability": "lint", "doc": "Registers the exact-input real lint pipeline action in dx_results.", "has_rust": False, "suffix": "", "tools": _CORE_LINT_TOOLS},
+    "real_python_lint": {"attrs": _REAL_PY_LINT_ATTRS, "capability": "lint", "doc": "Additive Python lint family aspect (flake8/pylint/pydoclint).", "has_rust": False, "suffix": "-py", "tools": _PY_LINT_TOOLS},
+    "real_rust_format": {"attrs": _REAL_RUST_ATTRS, "capability": "format", "doc": "Additive Rust format family aspect (toolchain rustfmt).", "has_rust": True, "suffix": "-rust", "tools": _RUST_FORMAT_TOOLS},
+    "real_rust_lint": {"attrs": _REAL_RUST_ATTRS, "capability": "lint", "doc": "Additive Rust lint family aspect (delegated Clippy).", "has_rust": True, "suffix": "-rust", "tools": _RUST_LINT_TOOLS},
+    "real_rust_typecheck": {"attrs": _REAL_RUST_ATTRS, "capability": "typecheck", "doc": "Additive Rust typecheck family aspect (delegated rustc).", "has_rust": True, "suffix": "-rust", "tools": _RUST_TYPECHECK_TOOLS},
+    "real_typecheck": {"attrs": _REAL_CORE_ATTRS, "capability": "typecheck", "doc": "Registers the exact-input real typecheck pipeline action in dx_results.", "has_rust": False, "suffix": "", "tools": _CORE_TYPECHECK_TOOLS},
+}
 
-real_format_aspect = aspect(
-    implementation = _real_format_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_CORE_ATTRS,
-    doc = "Registers the exact-input real format pipeline action in dx_results.",
-)
+def _make_real_aspect(shard_name):
+    """Builds one shard aspect from the shard table (See: tool-integrations.md)."""
+    shard = _REAL_SHARDS[shard_name]
+    if shard["has_rust"] and shard_name == "real_rust_lint":
+        return aspect(
+            implementation = _make_real_impl(shard["capability"], shard["tools"], shard["suffix"], shard["has_rust"]),
+            attr_aspects = ["aspect_hints"],
+            attrs = shard["attrs"],
+            toolchains = rust_toolchain_toolchains(),
+            requires = [rust_clippy_aspect],
+            doc = shard["doc"],
+        )
+    if shard["has_rust"]:
+        return aspect(
+            implementation = _make_real_impl(shard["capability"], shard["tools"], shard["suffix"], shard["has_rust"]),
+            attr_aspects = ["aspect_hints"],
+            attrs = shard["attrs"],
+            toolchains = rust_toolchain_toolchains(),
+            doc = shard["doc"],
+        )
+    return aspect(
+        implementation = _make_real_impl(shard["capability"], shard["tools"], shard["suffix"], shard["has_rust"]),
+        attr_aspects = ["aspect_hints"],
+        attrs = shard["attrs"],
+        doc = shard["doc"],
+    )
 
-real_typecheck_aspect = aspect(
-    implementation = _real_typecheck_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_CORE_ATTRS,
-    doc = "Registers the exact-input real typecheck pipeline action in dx_results.",
-)
+real_lint_aspect = _make_real_aspect("real_lint")
 
-real_js_lint_aspect = aspect(
-    implementation = _real_js_lint_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_JS_LINT_ATTRS,
-    doc = "Additive JavaScript lint family aspect (ESLint opt-in).",
-)
+real_format_aspect = _make_real_aspect("real_format")
 
-real_js_format_aspect = aspect(
-    implementation = _real_js_format_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_JS_FORMAT_ATTRS,
-    doc = "Additive JavaScript/JSON format family aspect (Prettier).",
-)
+real_typecheck_aspect = _make_real_aspect("real_typecheck")
 
-real_python_lint_aspect = aspect(
-    implementation = _real_python_lint_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_PY_LINT_ATTRS,
-    doc = "Additive Python lint family aspect (flake8/pylint/pydoclint).",
-)
+real_js_lint_aspect = _make_real_aspect("real_js_lint")
 
-real_jvm_lint_aspect = aspect(
-    implementation = _real_jvm_lint_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_JVM_LINT_ATTRS,
-    doc = "Additive JVM lint family aspect (Checkstyle/Pmd/SpotBugs/ktlint; SpotBugs target-coupled via JavaInfo).",
-)
+real_js_format_aspect = _make_real_aspect("real_js_format")
 
-real_jvm_format_aspect = aspect(
-    implementation = _real_jvm_format_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_JVM_FORMAT_ATTRS,
-    doc = "Additive JVM format family aspect (google-java-format/ktfmt).",
-)
+real_python_lint_aspect = _make_real_aspect("real_python_lint")
 
-real_rust_lint_aspect = aspect(
-    implementation = _real_rust_lint_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_RUST_ATTRS,
-    toolchains = rust_toolchain_toolchains(),
-    requires = [rust_clippy_aspect],
-    doc = "Additive Rust lint family aspect (delegated Clippy).",
-)
+real_jvm_lint_aspect = _make_real_aspect("real_jvm_lint")
 
-real_rust_format_aspect = aspect(
-    implementation = _real_rust_format_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_RUST_ATTRS,
-    toolchains = rust_toolchain_toolchains(),
-    doc = "Additive Rust format family aspect (toolchain rustfmt).",
-)
+real_jvm_format_aspect = _make_real_aspect("real_jvm_format")
 
-real_rust_typecheck_aspect = aspect(
-    implementation = _real_rust_typecheck_impl,
-    attr_aspects = ["aspect_hints"],
-    attrs = _REAL_RUST_ATTRS,
-    toolchains = rust_toolchain_toolchains(),
-    doc = "Additive Rust typecheck family aspect (delegated rustc).",
-)
+real_rust_lint_aspect = _make_real_aspect("real_rust_lint")
+
+real_rust_format_aspect = _make_real_aspect("real_rust_format")
+
+real_rust_typecheck_aspect = _make_real_aspect("real_rust_typecheck")

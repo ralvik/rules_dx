@@ -5,7 +5,7 @@ Contract: `docs/quality/quality-sources.md#adapter-applicability`.
 
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_equal", "expect_false", "expect_match", "expect_true", "starlark_test")
 load(":adapters.bzl", "SYNTHETIC_ADAPTERS", "SYNTHETIC_CLASS_TO_FAMILY", "adapter_supported_classes")
-load(":pipeline.bzl", "authorize_classes", "depset_subject_paths", "file_subject_paths", "pipeline_stages", "resolve_pipeline", "runfiles_subject_paths", "stage_sources", "target_subject_classes")
+load(":pipeline.bzl", "authorize_classes", "depset_subject_paths", "drop_pipeline_tool", "file_subject_paths", "filter_pipeline_by_tools", "ordered_pipeline_paths", "pipeline_stages", "prune_tool_generated_sources", "resolve_pipeline", "runfiles_subject_paths", "stage_flag", "stage_sources", "target_subject_classes")
 
 _LINT_SELECTIONS = {
     "python": ["lint-a"],
@@ -221,6 +221,60 @@ def pipeline_unit_tests(name):
                 "runfiles report mentions the helper without pinning full list",
                 str(runfiles_subject_paths(["src/a.rs"], ["runfiles/helper.py"])),
                 "helper.py",
+            ),
+            expect_equal(
+                "filter_pipeline_by_tools keeps only allowed tools",
+                filter_pipeline_by_tools(
+                    [
+                        {"classes": ["python", "rust"], "sources": ["src/main.py"], "tool": "lint-a"},
+                        {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "lint-b"},
+                    ],
+                    ["lint-a"],
+                ),
+                [
+                    {"classes": ["python", "rust"], "sources": ["src/main.py"], "tool": "lint-a"},
+                ],
+            ),
+            expect_equal(
+                "drop_pipeline_tool drops the target-coupled tool",
+                drop_pipeline_tool(
+                    [
+                        {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "lint-a"},
+                        {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "lint-b"},
+                    ],
+                    "lint-b",
+                ),
+                [
+                    {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "lint-a"},
+                ],
+            ),
+            expect_equal(
+                "ordered_pipeline_paths unions and sorts stage sources",
+                ordered_pipeline_paths([
+                    {"classes": ["rust"], "sources": ["src/main.rs", "src/lib.rs"], "tool": "lint-b"},
+                    {"classes": ["python", "rust"], "sources": ["src/lib.rs", "src/main.py"], "tool": "lint-a"},
+                ]),
+                ["src/lib.rs", "src/main.py", "src/main.rs"],
+            ),
+            expect_equal(
+                "stage_flag renders the deterministic --stage value",
+                stage_flag({"classes": ["python", "rust"], "sources": ["src/lib.rs", "src/main.py"], "tool": "lint-a"}),
+                "lint-a;python,rust;src/lib.rs,src/main.py",
+            ),
+            expect_equal(
+                "prune_tool_generated_sources drops generated paths and emptied stages",
+                prune_tool_generated_sources(
+                    [
+                        {"classes": ["rust"], "sources": ["src/gen.rs", "src/lib.rs"], "tool": "fmt-a"},
+                        {"classes": ["rust"], "sources": ["src/gen.rs"], "tool": "lint-b"},
+                    ],
+                    {"src/gen.rs": True},
+                    "fmt-a",
+                ),
+                [
+                    {"classes": ["rust"], "sources": ["src/lib.rs"], "tool": "fmt-a"},
+                    {"classes": ["rust"], "sources": ["src/gen.rs"], "tool": "lint-b"},
+                ],
             ),
         ],
     )
