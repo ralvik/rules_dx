@@ -1,3 +1,4 @@
+# Snapshot of the tools/coverage/cells.bzl registry; scope follows the seed cell.
 # Linux arm64 static-musl cell exact-gate inventory (issue #411; registry issue #507).
 #
 # Same first-party code as the seed cell, so the exact-gate scope matches

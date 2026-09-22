@@ -6,41 +6,29 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary")
+load(":cells.bzl", "INVENTORY_FILES", "coverage_cells")
+load(":cells_tests.bzl", "coverage_cells_tests")
 
 package(default_visibility = ["//:__subpackages__"])
 
 # Cell registry plus per-cell inventories (issue #915): referenced by
 # cells.txt rows and gated by coverage_bin; exported here so Bazel
 # consumers depend on labels instead of reaching into the source tree.
-exports_files([
-    "arm64-inventory.txt",
-    "cells.txt",
-    "macos-arm64-inventory.txt",
-    "macos-x86_64-inventory.txt",
-    "musl-arm64-inventory.txt",
-    "musl-x86_64-inventory.txt",
-    "seed-inventory.txt",
-    "windows-x86_64-inventory.txt",
-])
+# The file list is owned by cells.bzl (COVERAGE_CELLS registry).
+exports_files(INVENTORY_FILES)
 
-filegroup(
-    name = "cell_inventories",
-    srcs = [
-        "arm64-inventory.txt",
-        "cells.txt",
-        "macos-arm64-inventory.txt",
-        "macos-x86_64-inventory.txt",
-        "musl-arm64-inventory.txt",
-        "musl-x86_64-inventory.txt",
-        "seed-inventory.txt",
-        "windows-x86_64-inventory.txt",
-    ],
-)
+coverage_cells(name = "cell_inventories")
+
+coverage_cells_tests(name = "cells")
 
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",
-    starlark_srcs = ["BUILD.bazel"],
+    starlark_srcs = [
+        "BUILD.bazel",
+        "cells.bzl",
+        "cells_tests.bzl",
+    ],
     tags = ["corpus"],
 )
 

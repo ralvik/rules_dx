@@ -494,3 +494,196 @@ fn cc_missing_sha256_fails() {
     assert_eq!(code, 1);
     assert!(err.contains("missing sha256"));
 }
+
+fn write_workspace_locks(dir: &Path, stale_cargo: bool) {
+    write_file(&dir.join("Cargo.toml"), "[dependencies]\nanyhow = \"1\"\n");
+    write_file(
+        &dir.join("Cargo.lock"),
+        if stale_cargo {
+            "[[package]]\nname = \"anyhow\"\nversion = \"0.9.0\"\n"
+        } else {
+            "[[package]]\nname = \"anyhow\"\nversion = \"1.0.0\"\n"
+        },
+    );
+    write_file(
+        &dir.join("pyproject.toml"),
+        "[project]\nname = \"x\"\nversion = \"0.1.0\"\ndependencies = [\"anyhow>=1\"]\n",
+    );
+    write_file(
+        &dir.join("uv.lock"),
+        "[[package]]\nname = \"anyhow\"\nversion = \"1.0.0\"\n",
+    );
+    write_file(
+        &dir.join("package.json"),
+        "{\"dependencies\": {\"left-pad\": \"^1.0.0\"}}",
+    );
+    write_file(
+        &dir.join("pnpm-lock.yaml"),
+        "packages:\n  left-pad@1.0.0:\n    resolution: {integrity: sha512-x}\n",
+    );
+    write_file(
+        &dir.join("go.mod"),
+        "module example.com/x\n\ngo 1.24\n\nrequire github.com/google/go-cmp v0.5.0\n",
+    );
+    write_file(
+        &dir.join("go.sum"),
+        "github.com/google/go-cmp v0.5.0 h1:abc=\ngithub.com/google/go-cmp v0.5.0/go.mod h1:def=\n",
+    );
+    write_file(
+        &dir.join("pins.bzl"),
+        "MAVEN_ARTIFACTS = [\n    \"junit:junit:4.13.2\",\n]\n",
+    );
+    write_file(
+        &dir.join("maven_install.json"),
+        "{\"artifacts\": {\"junit:junit\": {\"version\": \"4.13.2\"}}}",
+    );
+    write_file(
+        &dir.join("paket.dependencies"),
+        "source https://nuget.org/api/v2\nnuget FSharp.Core 10.1.201\n",
+    );
+    write_file(
+        &dir.join("paket.lock"),
+        "NUGET\n  remote: https://nuget.org/api/v2\n    FSharp.Core (10.1.201)\n",
+    );
+}
+
+fn locks_case(dir: &Path, stale_cargo: bool) -> (Vec<PathBuf>, i32) {
+    write_workspace_locks(dir, stale_cargo);
+    let owned = [
+        dir.join("Cargo.toml"),
+        dir.join("Cargo.lock"),
+        dir.join("pyproject.toml"),
+        dir.join("uv.lock"),
+        dir.join("package.json"),
+        dir.join("pnpm-lock.yaml"),
+        dir.join("go.mod"),
+        dir.join("go.sum"),
+        dir.join("pins.bzl"),
+        dir.join("maven_install.json"),
+        dir.join("paket.dependencies"),
+        dir.join("paket.lock"),
+    ]
+    .into_iter()
+    .collect::<Vec<_>>();
+    let locks = WorkspaceLocks {
+        cargo_manifest: &owned[0],
+        cargo_lock: &owned[1],
+        uv_manifest: &owned[2],
+        uv_lock: &owned[3],
+        pnpm_manifest: &owned[4],
+        pnpm_lock: &owned[5],
+        go_manifest: &owned[6],
+        go_lock: &owned[7],
+        maven_artifacts: &owned[8],
+        maven_lock: &owned[9],
+        paket_manifest: &owned[10],
+        paket_lock: &owned[11],
+    };
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_locks(&locks, &mut out, &mut err);
+    (owned, code)
+}
+
+#[test]
+fn maven_artifacts_list_parses_coordinates() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(
+        &dir.path().join("pins.bzl"),
+        "RULES_JVM_EXTERNAL_VERSION = \"7.1\"\nMAVEN_LOCK_FILE = \"//third_party/jvm:maven_install.json\"\nMAVEN_REPIN = \"REPIN=1 bazel run @maven//:pin\"\nMAVEN_ARTIFACTS = [\n    \"junit:junit:4.13.2\",\n    \"org.junit.jupiter:junit-jupiter-api:6.1.3\",\n]\n",
+    );
+    let deps = parse_maven_artifacts_list(&dir.path().join("pins.bzl")).expect("coords");
+    assert_eq!(deps.len(), 2);
+    assert_eq!(deps["junit:junit"].spec, "4.13.2");
+    assert_eq!(deps["org.junit.jupiter:junit-jupiter-api"].spec, "6.1.3");
+}
+
+#[test]
+fn maven_artifacts_list_rejects_empty() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(&dir.path().join("pins.bzl"), "MAVEN_ARTIFACTS = []\n");
+    assert!(parse_maven_artifacts_list(&dir.path().join("pins.bzl")).is_err());
+}
+
+#[test]
+fn locks_all_clean_passes() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let (_owned, code) = locks_case(dir.path(), false);
+    assert_eq!(code, 0);
+}
+
+#[test]
+fn locks_stale_dialect_fails() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let (_owned, code) = locks_case(dir.path(), true);
+    assert_eq!(code, 1);
+}
+
+#[test]
+fn locks_missing_file_is_actionable() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_workspace_locks(dir.path(), false);
+    let missing = dir.path().join("MISSING.lock");
+    let uv_manifest = dir.path().join("pyproject.toml");
+    let uv_lock = dir.path().join("uv.lock");
+    let pnpm_manifest = dir.path().join("package.json");
+    let pnpm_lock = dir.path().join("pnpm-lock.yaml");
+    let go_manifest = dir.path().join("go.mod");
+    let go_lock = dir.path().join("go.sum");
+    let maven_artifacts = dir.path().join("pins.bzl");
+    let maven_lock = dir.path().join("maven_install.json");
+    let paket_manifest = dir.path().join("paket.dependencies");
+    let paket_lock = dir.path().join("paket.lock");
+    let cargo_manifest = dir.path().join("Cargo.toml");
+    let locks = WorkspaceLocks {
+        cargo_manifest: &cargo_manifest,
+        cargo_lock: &missing,
+        uv_manifest: &uv_manifest,
+        uv_lock: &uv_lock,
+        pnpm_manifest: &pnpm_manifest,
+        pnpm_lock: &pnpm_lock,
+        go_manifest: &go_manifest,
+        go_lock: &go_lock,
+        maven_artifacts: &maven_artifacts,
+        maven_lock: &maven_lock,
+        paket_manifest: &paket_manifest,
+        paket_lock: &paket_lock,
+    };
+    let mut out = String::new();
+    let mut err = String::new();
+    assert_eq!(cmd_locks(&locks, &mut out, &mut err), 2);
+    assert!(err.contains("lock missing"));
+}
+
+#[test]
+fn dotnet_lock_ignores_nested_constraints() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(
+        &dir.path().join("paket.dependencies"),
+        "source https://nuget.org/api/v2\nnuget xunit.v3 4.0.0\nnuget xunit.analyzers 2.0.0\n",
+    );
+    write_file(
+        &dir.path().join("paket.lock"),
+        "NUGET\n  remote: https://nuget.org/api/v2\n    xunit.analyzers (2.0)\n    xunit.v3 (4.0)\n      xunit.analyzers (>= 2.0)\n",
+    );
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_consistency(
+        Ecosystem::Csharp,
+        &dir.path().join("paket.dependencies"),
+        &dir.path().join("paket.lock"),
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 0, "{err}");
+}
+
+#[test]
+fn versions_equal_pads_trailing_zeros() {
+    assert!(versions_equal("4.0.0", "4.0"));
+    assert!(versions_equal("2.0", "2.0.0"));
+    assert!(versions_equal("1.0.0", "1.0.0"));
+    assert!(!versions_equal("4.0.0", "4.1"));
+    assert!(!versions_equal("1.0.0-alpha", "1.0.0"));
+    assert!(versions_equal("1.0.0+build", "1.0.0+build"));
+}

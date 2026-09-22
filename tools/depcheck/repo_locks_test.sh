@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Workspace lock pin-consistency via depcheck (all six dialects).
+#
+# `depcheck locks` owns pin consistency for cargo, uv, pnpm, go, maven,
+# and paket in one offline, non-mutating invocation; repinning stays with
+# `bazel run //tools:repin-all` (see docs/tools/tool-acquisition.md).
+#
+# Usage: repo_locks_test.sh <depcheck> <cargo-manifest> <cargo-lock>
+#   <uv-manifest> <uv-lock> <pnpm-manifest> <pnpm-lock> <go-manifest>
+#   <go-lock> <maven-artifacts> <maven-lock> <paket-manifest> <paket-lock>
+set -euo pipefail
+
+# Shared workspace + runfiles helpers.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
+dx_bootstrap "tools/sh/lib.sh"
+
+dx_test_init
+
+depcheck="${1:?usage: repo_locks_test.sh <depcheck> <cargo-manifest> <cargo-lock> <uv-manifest> <uv-lock> <pnpm-manifest> <pnpm-lock> <go-manifest> <go-lock> <maven-artifacts> <maven-lock> <paket-manifest> <paket-lock>}"
+
+if "$depcheck" locks \
+  --cargo-manifest "${2:?usage}" --cargo-lock "${3:?usage}" \
+  --uv-manifest "${4:?usage}" --uv-lock "${5:?usage}" \
+  --pnpm-manifest "${6:?usage}" --pnpm-lock "${7:?usage}" \
+  --go-manifest "${8:?usage}" --go-lock "${9:?usage}" \
+  --maven-artifacts "${10:?usage}" --maven-lock "${11:?usage}" \
+  --paket-manifest "${12:?usage}" --paket-lock "${13:?usage}"; then
+  ok "all six workspace locks consistent"
+else
+  bad "workspace locks inconsistent (repin with bazel run //tools:repin-all)"
+fi
+
+dx_test_summary "repo locks"

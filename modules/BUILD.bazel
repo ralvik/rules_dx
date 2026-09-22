@@ -1,0 +1,30 @@
+"""Bzlmod split inventory (single source for MODULE pins). Contract: docs/decisions/0019-first-release-additional-foundations.md."""
+
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files([
+    "rust.bzl",
+    "python.bzl",
+    "js.bzl",
+    "java-scala-kotlin.bzl",
+    "dotnet.bzl",
+    "npm-uv-crates.bzl",
+    "toolchains.bzl",
+])
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = [
+        "BUILD.bazel",
+        "dotnet.bzl",
+        "java-scala-kotlin.bzl",
+        "js.bzl",
+        "npm-uv-crates.bzl",
+        "python.bzl",
+        "rust.bzl",
+        "toolchains.bzl",
+    ],
+    tags = ["corpus"],
+)

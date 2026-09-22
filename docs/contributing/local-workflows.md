@@ -167,7 +167,8 @@ project overrides stay explicit and `user.bazelrc` stays last).
 `preset.update_test` pins the Bazel pin, the dx stamp, and the inventory
 in `bazel test //...`; `dx update` regenerates the consumer fragment
 atomically and `--check` gates staleness (exit `0` clean / `1` stale).
-Owned build profiles (`dx_debug`/`dx_dev`/`dx_release`) are reviewed the
+Owned build profiles (`dx_debug`/`dx_dev`/`dx_release` plus provisional
+`dx_dev_remote`/`dx_toolchain`) are reviewed the
 same way; see [ADR 0021](../decisions/0021-build-profiles.md). Coverage
 flags carry no ambient host path: `GENERATE_LLVM_LCOV=1` plus
 toolchain-provided gcov/llvm-cov per host (see

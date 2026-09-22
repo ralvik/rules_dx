@@ -2,6 +2,8 @@
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
+load(":extension.bzl", "TOOL_ARTIFACTS")
+load(":repos.bzl", "DX_TOOL_HUB", "DX_TOOL_REPOS")
 load(":biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
 load(":biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
 load(":biome.macos_arm64.bzl", _biome_macos_arm64 = "ARTIFACT")
@@ -463,6 +465,13 @@ def metadata_tests(name):
         "vale.exe",
         "24ca0647d8b929d786cc371848fe1153e605361cd7dffa4badac9cdf33f99487",
     )
+    # use_repo inventory (see repos.bzl): derived repo names must equal the
+    # checked-in list, so adding a tool means metadata plus inventory together.
+    derived_repos = sorted(["dx_%s_%s_%s" % (artifact["tool"], artifact["os"], artifact["cpu"]) for artifact in TOOL_ARTIFACTS])
+    checks.append(expect_equal("dx tool repo count", len(DX_TOOL_REPOS), 35))
+    checks.append(expect_equal("dx tool repos match metadata", DX_TOOL_REPOS, derived_repos))
+    checks.append(expect_equal("dx tool repos sorted", DX_TOOL_REPOS, sorted(DX_TOOL_REPOS)))
+    checks.append(expect_equal("dx tool hub", DX_TOOL_HUB, "dx_tools"))
     starlark_test(
         name = name,
         mode = "load",

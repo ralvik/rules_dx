@@ -77,6 +77,8 @@ exports_files([
     # test's runfiles so jest's ESM detection resolves first-party .js
     # as ESM (see //javascript/rules:defs.bzl).
     "package.json",
+    # Authoritative pnpm lock for //tools/depcheck:repo_locks_test.
+    "pnpm-lock.yaml",
     # Single-source config inputs for //tools/ci:config_consistency_test
     # (issue #912): canonical Biome/Ruff plus pnpm workspace.
     "biome.json",

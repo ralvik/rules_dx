@@ -46,11 +46,16 @@ const COVERAGE_FLAGS: [&str; 4] = [
 ];
 
 /// Owned build profiles (stable `dx_*` configs over `compilation_mode`).
+/// `dx_dev_remote` reserves the remote-execution lane and `dx_toolchain`
+/// the toolchain-resolution lane; both share the dev mode until executor
+/// plus toolchain flags qualify, so selecting them equals `dx_dev` today.
 /// See: `docs/decisions/0021-build-profiles.md`.
-const BUILD_PROFILES: [&str; 3] = [
+const BUILD_PROFILES: [&str; 5] = [
     "build:dx_debug --compilation_mode=dbg",
     "build:dx_dev --compilation_mode=fastbuild",
     "build:dx_release --compilation_mode=opt",
+    "build:dx_dev_remote --compilation_mode=fastbuild",
+    "build:dx_toolchain --compilation_mode=fastbuild",
 ];
 
 /// Renders the fragment byte-identical to the retired Python generator.
@@ -304,13 +309,13 @@ mod tests {
         assert_eq!(PRESET_DX_VERSION, "0.0.0");
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
         assert_eq!(COVERAGE_FLAGS.len(), 4);
-        assert_eq!(BUILD_PROFILES.len(), 3);
+        assert_eq!(BUILD_PROFILES.len(), 5);
     }
 
     #[test]
     fn fragment_bytes_match_retired_python() {
         let rendered = render_fragment();
-        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset.update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\n";
+        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset.update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
         assert_eq!(rendered, expected);
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));
@@ -329,7 +334,9 @@ mod tests {
         let flags = rendered_flag_lines(&rendered);
         assert!(flags.contains("common --enable_bzlmod"));
         assert!(flags.contains("build:dx_dev --compilation_mode=fastbuild"));
-        assert_eq!(flags.len(), 10);
+        assert!(flags.contains("build:dx_dev_remote --compilation_mode=fastbuild"));
+        assert!(flags.contains("build:dx_toolchain --compilation_mode=fastbuild"));
+        assert_eq!(flags.len(), 12);
         assert!(!flags.iter().any(|line| line.starts_with('#')));
         assert!(!flags.iter().any(String::is_empty));
     }

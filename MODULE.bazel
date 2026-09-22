@@ -1,5 +1,12 @@
 """rules_dx: Bazel-first developer platform."""
 
+# Bzlmod split inventory: per-ecosystem pins plus manifest groups live in
+# `//modules/*.bzl` (single source; see `//modules:BUILD.bazel`). This root
+# module keeps only `bazel_dep` plus extension use plus `use_repo`
+# re-exports; `//tools/ci:pin_consistency_test` fails on drift between the
+# wrappers and the pins below. (`load` is not permitted in MODULE.bazel
+# files, so the wrappers mirror rather than supply these literals.)
+
 module(
     name = "rules_dx",
     # 0.0.0: no releases are cut from this repository; consumers pin
@@ -30,7 +37,7 @@ bazel_dep(name = "googletest", version = "1.18.0")
 bazel_dep(name = "rules_python", version = "1.9.0")
 
 # Go toolchain for the first-party Rust Gazelle extension
-# (ADR 0015). Pinned from the Bazel Central Registry; versions verified
+# (ADR 0015). Pins owned by `//modules:toolchains.bzl`. Pinned from the Bazel Central Registry; versions verified
 # against Bazel 9.2.0 on the seed host.
 bazel_dep(name = "rules_go", version = "0.63.0")
 bazel_dep(name = "gazelle", version = "0.52.2")
@@ -59,7 +66,7 @@ go_sdk.download(version = "1.26.6")
 # graph (see the root-module warning that proposed it).
 bazel_dep(name = "platforms", version = "1.1.0")
 
-# Explicit direct deps (versions match the transitive pins above
+# Explicit direct deps (see `//modules:toolchains.bzl`; versions match the transitive pins above
 # where they overlap, so MVS keeps the executed tree). `protobuf`/`protoc`
 # itself stays transitive via rules_proto/rules_rust_prost (it resolves above
 # their declared minimums, so a root pin would only add a direct-dep warning).
@@ -67,14 +74,14 @@ bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_proto", version = "7.1.0")
 bazel_dep(name = "rules_rust_prost", version = "0.74.0")
 
-# Pinned Java foundation (ADR 0019). Latest stable
+# Pinned Java foundation (ADR 0019). Pins owned by `//modules:java-scala-kotlin.bzl`. Latest stable
 # per ADR 0008 currency (9.7.0, Bazel >=7.0.0; verified against Bazel 9.2.0
 # on the seed host). Remote-JDK toolchain configs register through the
 # upstream module; per-platform JDK acquisition selection stays open under
 # ADR 0019 (the hermetic `--java_runtime_version` route from the support matrix).
 bazel_dep(name = "rules_java", version = "9.7.0")
 
-# Pinned Kotlin foundation (ADR 0019). 2.4.10 is the
+# Pinned Kotlin foundation (ADR 0019). Pins owned by `//modules:java-scala-kotlin.bzl`. 2.4.10 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.1 per upstream);
 # verified against Bazel 9.2.0 on the seed host. Builds on the same JVM
 # toolchain and Maven-lock story as Java; kotlinc acquisition and worker
@@ -82,7 +89,7 @@ bazel_dep(name = "rules_java", version = "9.7.0")
 bazel_dep(name = "rules_kotlin", version = "2.4.10")
 
 # Pinned Scala foundation, managed route (ADR 0019;
-# ADR 0019 route decision). 7.3.0 is the latest stable in the Bazel Central
+# ADR 0019 route decision). Pins owned by `//modules:java-scala-kotlin.bzl`. 7.3.0 is the latest stable in the Bazel Central
 # Registry (Bazel >=7.1 per upstream); verified against Bazel 9.2.0 on the
 # seed host. Scala 2.13.18 is the default toolchain version (latest 2.13.x
 # in the upstream-supported list); Coursier-fetched toolchains share Java's
@@ -98,7 +105,7 @@ scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_dep
 scala_deps.scala()
 scala_deps.scalatest()
 
-# Pinned .NET foundation (ADR 0019). 0.22.1 is the
+# Pinned .NET foundation (ADR 0019). Pins owned by `//modules:dotnet.bzl`. 0.22.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=9.0.0 per upstream;
 # verified against Bazel 9.2.0 on the seed host). One ruleset covers both
 # admitted .NET languages (csharp_* plus fsharp_* targets) with SDK
@@ -117,7 +124,7 @@ dotnet = use_extension("@rules_dotnet//dotnet:extensions.bzl", "dotnet")
 dotnet.toolchain(dotnet_version = "10.0.201")
 use_repo(dotnet, "dotnet_toolchains")
 
-# Pinned NuGet resolver (ADR 0019). Single
+# Pinned NuGet resolver (ADR 0019). Pins owned by `//modules:dotnet.bzl`. Single
 # shared Paket lock for the admitted .NET foundations (C#, F#) per the
 # support matrix: `paket.dependencies` plus `paket.lock` via `paket2bazel`
 # into the `paket.main` hub carrying per-package sha512 (qualified seed-only
@@ -135,7 +142,7 @@ use_repo(dotnet, "dotnet_toolchains")
 dotnet_nuget = use_extension("//third_party/dotnet/deps:paket.main_extension.bzl", "main_extension")
 use_repo(dotnet_nuget, "paket.main")
 
-# Pinned Maven resolver (ADR 0019). 7.1 is the
+# Pinned Maven resolver (ADR 0019). Pins owned by `//modules:java-scala-kotlin.bzl`. 7.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.0.0; verified
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted
 # JVM foundations (Java, Kotlin, Scala managed route) per the support
@@ -177,7 +184,7 @@ maven.install(
 )
 use_repo(maven, "maven")
 
-# Pinned Python foundation (ADR 0010). Exact 2.x prerelease is an
+# Pinned Python foundation (ADR 0010). Pins owned by `//modules:python.bzl`. Exact 2.x prerelease is an
 # explicit exception to ADR 0008 until a compatible stable 2.x exists.
 # Bump selector: latest stable 2.x in the Bazel Central Registry;
 # recheck on every dependency-currency pass (see
@@ -185,7 +192,7 @@ use_repo(maven, "maven")
 # #916 with stable-watch plus lock/uv/groups/providers re-qualification).
 bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")
 
-# Pinned JavaScript/TypeScript foundation (ADR 0013). Exact
+# Pinned JavaScript/TypeScript foundation (ADR 0013). Pins owned by `//modules:js.bzl`. Exact
 # latest-stable per selection policy; versions verified against Bazel 9.2.0
 # on the seed host (all require Bazel >=7.6.0/>=7.0.0).
 bazel_dep(name = "aspect_rules_js", version = "3.4.1")
@@ -207,7 +214,7 @@ pnpm = use_extension("@aspect_rules_js//npm:extensions.bzl", "pnpm")
 use_repo(pnpm, "pnpm")
 
 # Authoritative pnpm graph (jest + framework runtimes; see
-# docs/tools/tool-acquisition.md). The lock is generated with the
+# docs/tools/tool-acquisition.md, `//modules:js.bzl`, `//modules:npm-uv-crates.bzl`). The lock is generated with the
 # Bazel-pinned pnpm (`BAZEL_BINDIR=. bazel-bin/.../pnpm install
 # --lockfile-only`); builds never invoke the package manager.
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
@@ -245,7 +252,8 @@ register_toolchains("@python_interpreters//:all")
 python = use_extension("@rules_python//python/extensions:python.bzl", "python")
 python.toolchain(python_version = "3.12")
 
-# Authoritative uv graph for the Python hello fixture. Source-only
+# Authoritative uv graph for the Python hello fixture (see `//modules:python.bzl`,
+# `//modules:npm-uv-crates.bzl`). Source-only
 # local graphs remain possible without this metadata; the hello test closure
 # uses it for pytest/coverage.
 uv = use_extension("@aspect_rules_py//uv:extensions.bzl", "uv")
@@ -267,6 +275,7 @@ uv.project(
 )
 use_repo(uv, "pypi")
 
+# Pinned Rust toolchain plus crate hub (see `//modules:rust.bzl`).
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
@@ -311,14 +320,13 @@ crate.from_cargo(
     name = "crates",
     cargo_lockfile = "//rust/tests/fixtures/hello:Cargo.lock",
     lockfile = "//:cargo-bazel-lock.json",
+    # Manifest groups owned by `//modules:rust.bzl` (fixtures plus cli plus
+    # deploy plus shard writers plus shared, mirrored here because MODULE
+    # files cannot load wrappers; `//tools/ci:pin_consistency_test` fails
+    # when the mirror drifts). The hub stays single while one Cargo
+    # workspace lock covers every manifest.
     manifests = [
         "//rust/tests/fixtures/hello:Cargo.toml",
-        "//generation/result:Cargo.toml",
-        "//quality/adapter:Cargo.toml",
-        "//quality/evaluator:Cargo.toml",
-        "//quality/markdown:Cargo.toml",
-        "//quality/result:Cargo.toml",
-        "//quality/runner:Cargo.toml",
         "//cli/process:Cargo.toml",
         "//cli/apply:Cargo.toml",
         "//cli/atomic_fs:Cargo.toml",
@@ -345,20 +353,29 @@ crate.from_cargo(
         "//cli/update:Cargo.toml",
         "//cli/bump:Cargo.toml",
         "//cli/ci:Cargo.toml",
-        "//env/env_shard:Cargo.toml",
-        "//generation/codegen_shard:Cargo.toml",
-        "//docs/ir/ir:Cargo.toml",
-        "//docs/adapters:Cargo.toml",
         "//deploy/rules:Cargo.toml",
         "//deploy/release:Cargo.toml",
         "//deploy/install:Cargo.toml",
+        "//env/env_shard:Cargo.toml",
+        "//generation/codegen_shard:Cargo.toml",
+        "//generation/result:Cargo.toml",
+        "//quality/adapter:Cargo.toml",
+        "//quality/evaluator:Cargo.toml",
+        "//quality/markdown:Cargo.toml",
+        "//quality/result:Cargo.toml",
+        "//quality/runner:Cargo.toml",
+        "//docs/ir/ir:Cargo.toml",
+        "//docs/adapters:Cargo.toml",
         "//tools/bazelrc:Cargo.toml",
         "//tools/depcheck:Cargo.toml",
     ],
 )
 use_repo(crate, "crates")
 
-# Standalone quality-tool acquisition. One lazy repository
+# Standalone quality-tool acquisition. Repos owned by `//quality/artifacts:repos.bzl`
+# (verified against metadata by `//quality/artifacts:metadata`); the list
+# below must match `DX_TOOL_REPOS` (`//tools/ci:pin_consistency_test` fails
+# on drift). One lazy repository
 # per tool/platform from generated checked-in metadata, plus an
 # execution-platform hub. Registration fetches nothing; each repository
 # downloads only when an action needs its artifact. Five hosts
@@ -420,7 +437,7 @@ use_repo(
 # plus `dx_dev` wiring is covered by the adopt-rust smoke in normal CI.
 # What is lost: real-daemon exit 3, real Buildifier rewrite.
 
-# JVM quality-tool acquisition (issue #796). Complete-upstream-artifact
+# JVM quality-tool acquisition (issue #796). Pins owned by `//modules:java-scala-kotlin.bzl`. Complete-upstream-artifact
 # plus shared-JDK route: single-JAR tools via http_file, binary
 # distributions via http_archive with a lib-closure build file. Each
 # repository downloads only when an action needs its artifact. Versions

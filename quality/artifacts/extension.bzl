@@ -75,6 +75,9 @@ _ARTIFACTS = [
     _vale_windows_x86_64,
 ]
 
+# Public aggregate for verified inventories (see repos.bzl, metadata_tests.bzl).
+TOOL_ARTIFACTS = _ARTIFACTS
+
 _PLATFORMS = [
     "linux_x86_64",
     "linux_arm64",

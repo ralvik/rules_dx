@@ -514,6 +514,10 @@ plus `uv.lock`; JavaScript/TypeScript `package.json` plus `pnpm-lock.yaml` plus 
 declared; Go `go.mod` plus `go.sum`; Java/Kotlin/Scala `jvm_deps.toml` plus `maven_install.json`;
 C# `paket.dependencies` plus `paket.lock`; F# same via paket route; C/C++ `cc_deps.toml` plus
 per-archive sha256. Audit curator inputs follow the same declared-inputs rule via closed #812.
+Workspace pin consistency for all six managed dialects (cargo, uv, pnpm, go, maven,
+paket) is owned by `depcheck locks` and pinned by `//tools/depcheck:repo_locks_test`;
+repinning stays with `bazel run //tools:repin-all` (see
+[Tool Acquisition](../tools/tool-acquisition.md#repinning)).
 Run the generated tests through both `bazel test //...` and bare `dx test`, proving each check is
 included without opt-in, propagates failures, and is independently runnable by label. Verify no
 default `manual` exclusion hides either check and unrelated foundations remain inactive.

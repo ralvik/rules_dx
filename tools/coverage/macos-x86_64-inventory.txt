@@ -1,3 +1,4 @@
+# Snapshot of the tools/coverage/cells.bzl registry; scope follows the seed cell.
 # macOS x86_64 best-effort cell exact-gate inventory (issue #413; registry issue #507).
 #
 # Same first-party code as the seed cell, so the exact-gate scope matches

@@ -38,6 +38,33 @@ enum Command {
         #[arg(long)]
         exceptions: Option<PathBuf>,
     },
+    /// Verify all six workspace locks in one invocation (see `//tools:repin-all`).
+    Locks {
+        #[arg(long)]
+        cargo_manifest: PathBuf,
+        #[arg(long)]
+        cargo_lock: PathBuf,
+        #[arg(long)]
+        uv_manifest: PathBuf,
+        #[arg(long)]
+        uv_lock: PathBuf,
+        #[arg(long)]
+        pnpm_manifest: PathBuf,
+        #[arg(long)]
+        pnpm_lock: PathBuf,
+        #[arg(long)]
+        go_manifest: PathBuf,
+        #[arg(long)]
+        go_lock: PathBuf,
+        #[arg(long)]
+        maven_artifacts: PathBuf,
+        #[arg(long)]
+        maven_lock: PathBuf,
+        #[arg(long)]
+        paket_manifest: PathBuf,
+        #[arg(long)]
+        paket_lock: PathBuf,
+    },
 }
 
 fn parse_eco(text: &str) -> Result<String, String> {
@@ -100,6 +127,48 @@ fn run() -> i32 {
                 &manifest,
                 &sources,
                 exceptions.as_deref(),
+                &mut out,
+                &mut err,
+            );
+            if !out.is_empty() {
+                print!("{out}");
+            }
+            if !err.is_empty() {
+                eprint!("{err}");
+            }
+            code
+        }
+        Command::Locks {
+            cargo_manifest,
+            cargo_lock,
+            uv_manifest,
+            uv_lock,
+            pnpm_manifest,
+            pnpm_lock,
+            go_manifest,
+            go_lock,
+            maven_artifacts,
+            maven_lock,
+            paket_manifest,
+            paket_lock,
+        } => {
+            let mut out = String::new();
+            let mut err = String::new();
+            let code = dx_depcheck::cmd_locks(
+                &dx_depcheck::WorkspaceLocks {
+                    cargo_manifest: &cargo_manifest,
+                    cargo_lock: &cargo_lock,
+                    uv_manifest: &uv_manifest,
+                    uv_lock: &uv_lock,
+                    pnpm_manifest: &pnpm_manifest,
+                    pnpm_lock: &pnpm_lock,
+                    go_manifest: &go_manifest,
+                    go_lock: &go_lock,
+                    maven_artifacts: &maven_artifacts,
+                    maven_lock: &maven_lock,
+                    paket_manifest: &paket_manifest,
+                    paket_lock: &paket_lock,
+                },
                 &mut out,
                 &mut err,
             );
