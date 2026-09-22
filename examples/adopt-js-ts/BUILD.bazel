@@ -24,3 +24,12 @@ real_source_target(
     json_srcs = ["package.json"],
     tags = ["corpus"],
 )
+
+# Per-adopt arrival lock (issue #1077): foreign pnpm-lock.yaml resolved from
+# this tree's package.json (`pnpm install --lockfile-only`); the Bazel graph
+# keeps using the shared root pnpm hub, this pair proves foreign consistency
+# plus fail-closed repin via //tools/depcheck:adopt_locks_test.
+exports_files([
+    "package.json",
+    "pnpm-lock.yaml",
+])

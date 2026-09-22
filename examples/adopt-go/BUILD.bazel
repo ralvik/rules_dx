@@ -18,3 +18,12 @@ real_source_target(
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )
+
+# Per-adopt arrival lock (issue #1077): foreign go.mod plus go.sum; the Bazel
+# graph keeps using the shared third_party/go go_deps hub, this pair proves
+# foreign consistency plus fail-closed repin via
+# //tools/depcheck:adopt_locks_test.
+exports_files([
+    "go.mod",
+    "go.sum",
+])

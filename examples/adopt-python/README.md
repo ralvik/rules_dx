@@ -19,12 +19,13 @@ emits one `python_library` per `.py`, links same-package basename imports
 (`:envelopes` -> `:handlers`, tests -> siblings), drops stdlib imports
 (`json`, `dataclasses`, `math`, `hashlib`) with no edges, and classifies only
 `*_test.py` as `python_test`. The three tests carry user-owned runtime edges
-(`dep_group = "hello"` plus `# keep` `@pypi//pytest` / `@pypi//coverage`,
-entries precedent: no separate lock) because the wrapper runs pytest; those
-lines survive regeneration. Build covers 15 targets; all 3 tests pass
-(`handlers_test`, `pure_test`, `login_test`).
+(`dep_group = "hello"` plus `# keep` `@pypi//pytest` / `@pypi//coverage`)
+because the wrapper runs pytest; those lines survive regeneration. The
+foreign arrival lock `uv.lock` (`uv lock` from this tree's `pyproject.toml`;
+the Bazel graph keeps using the shared hello uv hub) proves foreign
+consistency plus fail-closed repin. Build covers 15 targets; all 3 tests
+pass (`handlers_test`, `pure_test`, `login_test`).
 
 Scope notes: the root `pyproject.toml` pins the manifest shape (extras and
-dependency groups) but generation does not enforce lock scope yet, so the
-example reuses the hello uv graph. Regeneration is the composed
-`dx generate` run.
+dependency groups, `httpx==0.28.1` plus `pytest==8.3.4`) with the foreign
+arrival lock `uv.lock`. Regeneration is the composed `dx generate` run.

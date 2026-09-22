@@ -31,8 +31,10 @@ precedent: cross-project `.js`-suffixed imports need declarations), plus
 covers 42 targets; the 2 tests pass (`greet_test`, `app_test`).
 
 Scope notes: the root `package.json` pins the workspace shape (npm
-workspaces, `devDependencies` jest, `optionalDependencies` fsevents) but the
-graph here is fully local, so generation needs no lockfile scope.
-Regeneration is the composed `dx generate` run.
+workspaces, `devDependencies` jest 30.2.0, `optionalDependencies` fsevents
+2.3.3) with the foreign arrival lock `pnpm-lock.yaml` (`pnpm install
+--lockfile-only`; the Bazel graph keeps using the shared root pnpm hub).
+The import graph here is fully local, so generation needs no lockfile scope
+beyond the runner pins. Regeneration is the composed `dx generate` run.
 TypeScript tests run via `typescript_test` over the tsc-compiled output
 (execution reuses the Jest wiring, entries reuse the JS binary wrappers).
