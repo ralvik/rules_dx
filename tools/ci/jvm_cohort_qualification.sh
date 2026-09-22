@@ -9,7 +9,8 @@
 #   binary distributions, ktfmt with-deps JAR, ktlint CLI all JAR over
 #   one managed JDK cohort; no Maven-module reconstruction, no
 #   installer/solver/compiler on the consumer path), digests pinned in
-#   MODULE.bazel plus java_binary wrappers in quality/tools/jvm/,
+#   quality/tools/jvm/repos.bzl via the jvm_tools extension plus
+#   java_binary wrappers in quality/tools/jvm/,
 #   REAL_ADAPTERS claims java/kotlin via google_java_format, checkstyle,
 #   pmd, spotbugs, ktfmt, ktlint (detekt pending plus Error Prone
 #   itemized open work, never silently dropped), SARIF plus
@@ -140,7 +141,7 @@ else
 fi
 
 # Tool acquisition keeps initial artifact research rows for the cohort
-# with byte-identity risk explicit (digests now pinned in MODULE.bazel).
+# with byte-identity risk explicit (digests now pinned in quality/tools/jvm/repos.bzl).
 jvm_research=""
 for tool in '| google-java-format |' '| Checkstyle |' '| PMD |' '| SpotBugs |' '| ktfmt |' '| ktlint |' '| detekt |' '| Error Prone |'; do
   grep -q -F -e "$tool" "$acquisition" || jvm_research="$jvm_research $tool:missing"
@@ -157,7 +158,8 @@ fi
 # javac-diagnostic parsing itemized as open work (never silently
 # dropped), versions qualified under #485 with digests pinned.
 if grep -q -F -e '**JVM cohort (#796' "$integrations" &&
-  grep -q -F -e 'digests pinned in `MODULE.bazel`' "$integrations" &&
+  grep -q -F -e 'digests pinned in' "$integrations" &&
+  grep -q -F -e '`quality/tools/jvm/repos.bzl`' "$integrations" &&
   grep -q -F -e 'adapters delivered under #796' "$integrations" &&
   grep -q -F -e 'Error Prone has no' "$integrations" &&
   grep -q -F -e 'itemized here, not silently dropped' "$integrations"; then

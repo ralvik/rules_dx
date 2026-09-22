@@ -222,6 +222,21 @@ probing. Adding `rules_dx` makes every supported foundation available but must
 not eagerly activate its operational payload. An applicable action fetches
 only its selected execution-platform runtime/application closure.
 
+## Module Acquisition
+
+`MODULE.bazel` keeps only `bazel_dep` plus extension use plus `use_repo`
+re-exports; per-ecosystem pins live in `//modules/*.bzl` (single source).
+Both quality-tool families use the same lazy-hub idiom: `dx_tools`
+(`//quality/artifacts:extension.bzl` plus `repos.bzl`) and `jvm_tools`
+(`//quality/tools/jvm:extension.bzl` plus `repos.bzl`) create one lazy
+repository per tool from checked-in metadata, and `//tools/ci:pin_consistency_test`
+fails on drift. JVM tools need no per-platform matrix or hub: they are
+platform-independent single artifacts run over the shared JDK. Rust crate
+manifests live in `//modules:rust.bzl` groups mirrored in `MODULE.bazel`
+`crate.from_cargo`; `bazel run //tools/ci:rust_manifests_qualification`
+fails when a first-party `Cargo.toml` is missing from the wrapper or when
+the wrapper is missing from `cargo-bazel-lock.json`.
+
 ## Release And Update Policy
 
 Each adapter initially selects the latest stable upstream release available

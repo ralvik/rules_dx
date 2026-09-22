@@ -249,7 +249,8 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   check/diff mode; PMD, Checkstyle, SpotBugs, and detekt are check-only with the provisional
    sandbox-apply-and-diff fix flow. Versions qualified seed-only under issue #485
   (`java/tests/fixtures/jvm_quality/pins.bzl` via `bazel run //tools/ci:jvm_quality_qualification`
-  over upstream built-in defaults with no hidden preset); digests pinned in `MODULE.bazel`
+  over upstream built-in defaults with no hidden preset); digests pinned in
+  `quality/tools/jvm/repos.bzl` via the `jvm_tools` extension
   (`jvm_google_java_format`, `jvm_checkstyle`, `jvm_pmd_dist`, `jvm_spotbugs_dist`,
   `jvm_ktfmt`, `jvm_ktlint`) plus `java_binary` wrappers in `quality/tools/jvm/`;
   adapters delivered under #796 (successor to closed #416)

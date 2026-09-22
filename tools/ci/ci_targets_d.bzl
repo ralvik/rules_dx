@@ -398,6 +398,16 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Rust manifest discovery plus generation check (issue #1038); see tools/ci/rust_manifests_qualification.sh.
+    sh_binary(
+        name = "rust_manifests_qualification",
+        srcs = ["rust_manifests_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Strict generation harness; see docs/native-toolchains.md#qualification-questions-and-delivery.
     sh_binary(
         name = "strict_generation_qualification",

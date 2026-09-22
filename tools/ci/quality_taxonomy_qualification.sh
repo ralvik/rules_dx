@@ -25,7 +25,7 @@
 #   json5/jsonc stay owned under ADR 0019.
 # - promotion (issue #802): deferred delivery linked to #796 plus #797
 #   plus #798 plus #799 plus #800, digest policy with JVM digests pinned
-#   in MODULE.bazel plus standalone per-host digests in quality/artifacts
+#   in quality/tools/jvm/repos.bzl plus standalone per-host digests in quality/artifacts
 #   plus rule-sets qualified under #485-489, per-platform plus consumer
 #   plus release evidence linked (per-host artifacts plus coverage cells
 #   plus CI matrix plus refusal, adopt workspaces plus reusable-consumer
@@ -148,7 +148,7 @@ fi
 
 # Pins record the promotion evidence (digest policy plus platform plus
 # consumer plus release linkage under #802).
-if grep -q -F -e 'digest policy with JVM digests pinned in MODULE.bazel' "$pins" &&
+if grep -q -F -e 'digest policy with JVM digests pinned in quality/tools/jvm/repos.bzl' "$pins" &&
   grep -q -F -e 'standalone per-host digests in quality/artifacts' "$pins" &&
   grep -q -F -e 'rule-sets qualified under 485 through 489' "$pins" &&
   grep -q -F -e 'platform evidence with per-host artifacts plus coverage cells plus CI matrix plus unsupported_platform refusal' "$pins" &&
@@ -334,22 +334,24 @@ else
   bad "parsers plus native plus aspects plus policy lost their taxonomy execution"
 fi
 
-# Digest policy: JVM digests pinned in MODULE.bazel plus standalone
-# per-host digests in quality/artifacts plus rule-sets qualified under
-# #485-489 with digest self-reference policy owned by tool-acquisition
+# Digest policy: JVM digests pinned in quality/tools/jvm/repos.bzl plus
+# standalone per-host digests in quality/artifacts plus rule-sets qualified
+# under #485-489 with digest self-reference policy owned by tool-acquisition
 # (issue #802 promotion, still seed-only).
-if grep -q -F -e 'name = "jvm_google_java_format"' "$module" &&
-  grep -q -F -e 'name = "jvm_checkstyle"' "$module" &&
-  grep -q -F -e 'name = "jvm_ktfmt"' "$module" &&
-  grep -q -F -e 'name = "jvm_ktlint"' "$module" &&
-  grep -q -F -e 'sha256' "$module" &&
+jvm_repos="quality/tools/jvm/repos.bzl"
+if grep -q -F -e '"jvm_google_java_format"' "$jvm_repos" &&
+  grep -q -F -e '"jvm_checkstyle"' "$jvm_repos" &&
+  grep -q -F -e '"jvm_ktfmt"' "$jvm_repos" &&
+  grep -q -F -e '"jvm_ktlint"' "$jvm_repos" &&
+  grep -q -F -e 'sha256' "$jvm_repos" &&
   [[ -f "quality/artifacts/ruff.linux_x86_64.bzl" && -f "quality/artifacts/biome.linux_x86_64.bzl" && -f "quality/artifacts/buildifier.linux_x86_64.bzl" ]] &&
   grep -q -F -e 'sha256' quality/artifacts/ruff.linux_x86_64.bzl &&
-  grep -q -F -e 'digests pinned in `MODULE.bazel`' "$integrations" &&
-  grep -q -F -e 'avoids digest self-reference' "$acquisition"; then
+  grep -q -F -e 'digests pinned in' "$integrations" &&
+  grep -q -F -e '`quality/tools/jvm/repos.bzl`' "$integrations" &&
+  grep -q -F -e 'the digest is the trust anchor' "$acquisition"; then
   ok
 else
-  bad "taxonomy lost its digest policy (want JVM MODULE.bazel plus standalone per-host digests plus self-reference policy under issue #802)"
+  bad "taxonomy lost its digest policy (want JVM repos.bzl plus standalone per-host digests plus self-reference policy under issue #802)"
 fi
 
 # Platform evidence linkage: per-host artifacts plus coverage cells plus CI
