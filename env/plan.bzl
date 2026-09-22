@@ -5,6 +5,18 @@ Contract: `docs/environments/environment.md`, `docs/environments/managed-state.m
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
+load(
+    "//libs/starlark:plan_shard.bzl",
+    "plan_shard_aspect_inputs",
+    "plan_shard_conflict_error",
+    "plan_shard_edge_targets",
+    "plan_shard_exec_matches",
+    "plan_shard_fingerprint",
+    "plan_shard_merge_records",
+    "plan_shard_record_error",
+    "plan_shard_subject_files",
+    "plan_shard_subject_records",
+)
 
 DxEnvPlanInfo = provider(
     doc = "Normalized environment plan records: direct plus transitive collection.",
@@ -90,31 +102,35 @@ def env_plan_record(producer, integration, entries):
         producer = producer,
     )
 
+def _env_plan_entry_error(entry):
+    error = env_plan_key_error(entry.key)
+    if error != "":
+        return error
+    error = env_plan_value_error(entry.value)
+    if error != "":
+        return error
+    return env_plan_exec_error(entry.exec_path)
+
+def _env_plan_owner_of(record):
+    return (record.producer, record.integration)
+
+def _env_plan_claim_key(entry):
+    return entry.key
+
 def env_plan_record_error(record):
     """Validates one contributor record."""
-    if record.producer == "":
-        return "invalid env plan record: producer must be a non-empty label"
-    if not (record.producer.startswith("//") or record.producer.startswith("@")):
-        return "invalid env plan record '" + record.producer + "': producer must be a label in observation rendering"
+    second_error = ""
     if record.integration == "":
-        return "invalid env plan record '" + record.producer + "': integration must be a non-empty language class"
-    if len(record.entries) == 0:
-        return "invalid env plan record '" + record.producer + "': entries must be non-empty (targets with no contribution carry no record)"
-    seen = {}
-    for entry in record.entries:
-        error = env_plan_key_error(entry.key)
-        if error != "":
-            return "invalid env plan record '" + record.producer + "': " + error
-        error = env_plan_value_error(entry.value)
-        if error != "":
-            return "invalid env plan record '" + record.producer + "': " + error
-        error = env_plan_exec_error(entry.exec_path)
-        if error != "":
-            return "invalid env plan record '" + record.producer + "': " + error
-        if entry.key in seen:
-            return "invalid env plan record '" + record.producer + "': duplicate key '" + entry.key + "'"
-        seen[entry.key] = True
-    return ""
+        second_error = "integration must be a non-empty language class"
+    return plan_shard_record_error(
+        record.producer,
+        "env plan",
+        second_error,
+        record.entries,
+        _env_plan_entry_error,
+        _env_plan_claim_key,
+        "key",
+    )
 
 def _env_plan_entry_key(entry):
     return (entry.key, entry.value, entry.exec_path)
@@ -125,23 +141,28 @@ def env_plan_conflict_error(records):
     Byte-identical duplicates (same producer, integration, key, value,
     and exec path) merge silently. Any other second claim on one key
     fails, listing every claimant: no traversal-order winner is accepted."""
-    claimants_by_key = {}
-    for record in records:
-        for entry in record.entries:
-            key = (record.producer, record.integration) + _env_plan_entry_key(entry)
-            keys = claimants_by_key.setdefault(entry.key, {})
-            keys[key] = True
-    conflicts = []
-    for key in sorted(claimants_by_key.keys()):
-        claims = sorted(claimants_by_key[key].keys())
-        if len(claims) > 1:
-            conflicts.append(
-                "identity key '" + key + "' claimed by " +
-                ", ".join([claim[0] for claim in claims]),
-            )
-    if not conflicts:
-        return ""
-    return "env plan conflict: " + "; ".join(conflicts)
+    return plan_shard_conflict_error(
+        records,
+        _env_plan_owner_of,
+        _env_plan_entry_key,
+        _env_plan_claim_key,
+        "env plan conflict",
+        "identity key",
+    )
+
+def _env_plan_encode_record(record):
+    return {
+        "entries": [
+            {
+                "exec_path": entry.exec_path,
+                "key": entry.key,
+                "value": entry.value,
+            }
+            for entry in record.entries
+        ],
+        "integration": record.integration,
+        "producer": record.producer,
+    }
 
 def env_plan_merge_records(records):
     """Merges records into deterministic normalized order.
@@ -150,39 +171,16 @@ def env_plan_merge_records(records):
     by (producer, integration) with entries sorted by (key, value, exec
     path). The rendering is the normalized complete-plan form the CLI
     hashes."""
-    entries_by_owner = {}
-    for record in records:
-        owner = (record.producer, record.integration)
-        owned = entries_by_owner.setdefault(owner, {})
-        for entry in record.entries:
-            owned[_env_plan_entry_key(entry)] = entry
-    merged = []
-    for owner in sorted(entries_by_owner.keys()):
-        entries = [
-            entries_by_owner[owner][key]
-            for key in sorted(entries_by_owner[owner].keys())
-        ]
-        merged.append(env_plan_record(owner[0], owner[1], entries))
-    return merged
+    return plan_shard_merge_records(
+        records,
+        _env_plan_owner_of,
+        _env_plan_entry_key,
+        env_plan_record,
+    )
 
 def env_plan_fingerprint(records):
     """Renders the normalized complete-plan hash input."""
-    merged = env_plan_merge_records(records)
-    return json.encode([
-        {
-            "entries": [
-                {
-                    "exec_path": entry.exec_path,
-                    "key": entry.key,
-                    "value": entry.value,
-                }
-                for entry in record.entries
-            ],
-            "integration": record.integration,
-            "producer": record.producer,
-        }
-        for record in merged
-    ])
+    return plan_shard_fingerprint(records, env_plan_merge_records, _env_plan_encode_record)
 
 def env_plan_integration_error(integration):
     """Validates one language integration against the admitted set."""
@@ -247,7 +245,7 @@ def _exec_matches(file_path, exec_path):
     Suffix matching (on "/" boundaries, plus exact equality) lets one
     identity input resolve under different output bases without scanning
     `bazel-out`."""
-    return file_path == exec_path or file_path.endswith("/" + exec_path)
+    return plan_shard_exec_matches(file_path, exec_path)
 
 def _dx_env_shard_impl(ctx):
     producer = display_label(ctx.label)
@@ -288,12 +286,7 @@ dx_env_shard = rule(
 )
 
 def _edge_targets(rule_attr, name):
-    value = getattr(rule_attr, name, [])
-    if value == None:
-        return []
-    if type(value) == "Target":
-        return [value]
-    return value
+    return plan_shard_edge_targets(rule_attr, name)
 
 # Narrow traversal edges for the collecting aspect: the shard rule's own
 # `deps` and the Rust adapter's `target` edge. No `data`, `srcs`,
@@ -302,31 +295,20 @@ def _edge_targets(rule_attr, name):
 _ENV_PLAN_ASPECT_ATTRS = ["deps", "target"]
 
 def _dx_env_plan_aspect_impl(target, ctx):
-    direct_records = []
-    direct_files = []
-    if DxEnvPlanInfo in target:
-        direct_records = target[DxEnvPlanInfo].direct
-    if OutputGroupInfo in target:
-        groups = target[OutputGroupInfo]
-        if DX_ENV_PLAN_OUTPUT_GROUP in groups:
-            direct_files = groups[DX_ENV_PLAN_OUTPUT_GROUP].to_list()
-    transitive_records = []
-    transitive_files = []
-    for name in _ENV_PLAN_ASPECT_ATTRS:
-        for dep in _edge_targets(ctx.rule.attr, name):
-            if DxEnvPlanCollectedInfo in dep:
-                transitive_records.append(dep[DxEnvPlanCollectedInfo].records)
-            if OutputGroupInfo in dep:
-                groups = dep[OutputGroupInfo]
-                if DX_ENV_PLAN_OUTPUT_GROUP in groups:
-                    transitive_files.append(groups[DX_ENV_PLAN_OUTPUT_GROUP])
-    merged_records = depset(direct_records, transitive = transitive_records)
-    conflict = env_plan_conflict_error(merged_records.to_list())
+    inputs = plan_shard_aspect_inputs(
+        target,
+        ctx,
+        DxEnvPlanInfo,
+        DxEnvPlanCollectedInfo,
+        DX_ENV_PLAN_OUTPUT_GROUP,
+        _ENV_PLAN_ASPECT_ATTRS,
+    )
+    conflict = env_plan_conflict_error(inputs.merged_records.to_list())
     if conflict != "":
         fail("dx_env_plan_aspect on " + display_label(target.label) + ": " + conflict)
     return [
-        DxEnvPlanCollectedInfo(records = merged_records),
-        OutputGroupInfo(dx_env_plans = depset(direct_files, transitive = transitive_files)),
+        DxEnvPlanCollectedInfo(records = inputs.merged_records),
+        OutputGroupInfo(dx_env_plans = depset(inputs.direct_files, transitive = inputs.transitive_files)),
     ]
 
 dx_env_plan_aspect = aspect(
@@ -423,19 +405,8 @@ rust_env_shard = rule(
 
 def _env_plan_subject_impl(ctx):
     target = ctx.attr.target
-    records = []
-    if DxEnvPlanCollectedInfo in target:
-        records = target[DxEnvPlanCollectedInfo].records.to_list()
-    elif DxEnvPlanInfo in target:
-        records = target[DxEnvPlanInfo].transitive.to_list()
-    shard_files = []
-    if OutputGroupInfo in target:
-        groups = target[OutputGroupInfo]
-        if DX_ENV_PLAN_OUTPUT_GROUP in groups:
-            shard_files = sorted(
-                groups[DX_ENV_PLAN_OUTPUT_GROUP].to_list(),
-                key = lambda f: f.basename,
-            )
+    records = plan_shard_subject_records(target, DxEnvPlanInfo, DxEnvPlanCollectedInfo)
+    shard_files = plan_shard_subject_files(target, DX_ENV_PLAN_OUTPUT_GROUP)
     plan = {
         "files": ",".join([f.basename for f in shard_files]),
         "fingerprint": env_plan_fingerprint(records),

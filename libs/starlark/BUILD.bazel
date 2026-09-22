@@ -7,6 +7,7 @@ exports_files([
     "canonical.bzl",
     "defs.bzl",
     "failure_test.bzl",
+    "plan_shard.bzl",
     "wrapper.bzl",
 ])
 
@@ -28,6 +29,7 @@ real_source_target(
         "canonical.bzl",
         "defs.bzl",
         "failure_test.bzl",
+        "plan_shard.bzl",
         "wrapper.bzl",
     ],
     tags = ["corpus"],
