@@ -49,8 +49,8 @@ contract="docs/cli/target-resolution.md"
 native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 rust_env="docs/environments/rust.md"
-env_readme="docs/environments/README.md"
-gen_readme="docs/generation/README.md"
+env_readme="docs/environments/foundation-qualification.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
@@ -157,7 +157,7 @@ if grep -q -F -e 'issue #475' "$env_readme" &&
   grep -q -F -e 'exact_target_qualification' "$env_readme"; then
   ok
 else
-  bad "docs/environments/README.md lost its qualified exact-target record under issue #475"
+  bad "docs/environments/foundation-qualification.md lost its qualified exact-target record under issue #475"
 fi
 
 # Generation README pins the qualified discovery alongside the other gaps.
@@ -166,7 +166,7 @@ if grep -q -F -e 'issue #475' "$gen_readme" &&
   grep -q -F -e 'exact_target_qualification' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified exact-target record under issue #475"
+  bad "docs/generation/foundation-qualification.md lost its qualified exact-target record under issue #475"
 fi
 
 # IDE acquisition still proves the TARGETS interfaces (exact flow endpoint).

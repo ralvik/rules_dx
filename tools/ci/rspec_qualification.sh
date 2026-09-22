@@ -32,7 +32,7 @@ spec="ruby/tests/fixtures/rspec/greeter_spec.rb"
 wrapper="ruby/rules/defs.bzl"
 module="MODULE.bazel"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 
 if [[ -f "$pins" && -f "$rspec_build" && -f "$hello_build" && -f "$spec" ]]; then
   ok

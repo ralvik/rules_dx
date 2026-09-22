@@ -53,7 +53,7 @@ codec_build="docs/ir/ir/BUILD.bazel"
 planning="cli/docgen/src/lib.rs"
 planning_build="cli/docgen/BUILD.bazel"
 schema="cli/schema/src/lib.rs"
-readme="docs/documentation/README.md"
+readme="docs/documentation/delivery.md"
 docir="docs/documentation/doc-ir.md"
 site="docs/documentation/site.md"
 stub="docs/cli/commands/docs.md"
@@ -392,7 +392,7 @@ if grep -q -F -e 'Docs pipeline gaps stay open under' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process' "$readme"; then
   ok
 else
-  bad "documentation README lost its #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered list"
+  bad "documentation delivery lost its #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered list"
 fi
 
 # Planned work lives in GitHub issues only (docs/roadmap.md removed under #981);
@@ -435,7 +435,7 @@ fi
 
 # Backlog guards still track the docs-pipeline gap.
 if grep -q -F -e 'docs-pipeline gaps stay tracked' "$backlog_guards" &&
-  grep -q -F -e "documentation README lost its #581 docs-pipeline tracker record" "$backlog_guards"; then
+  grep -q -F -e "documentation delivery lost its #581 docs-pipeline tracker record" "$backlog_guards"; then
   ok
 else
   bad "backlog automation guards lost their #581 tracker"

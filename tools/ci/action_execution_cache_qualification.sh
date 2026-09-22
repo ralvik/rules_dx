@@ -38,9 +38,9 @@ real="quality/real_aspects.bzl"
 ci=".github/workflows/ci.yml"
 bump=".github/workflows/bump.yml"
 cache_action=".github/actions/restore-bazel-cache/action.yml"
-workflows_readme=".github/workflows/README.md"
+workflows_readme="docs/testing/workflow-notes.md"
 action_model="docs/quality/action-model.md"
-testing_readme="docs/testing/README.md"
+testing_readme="docs/testing/strategy-details.md"
 test_matrix="docs/testing/github-ci.md"
 pins="tools/ci/tests/fixtures/action_execution_cache/pins.bzl"
 pins_build="tools/ci/tests/fixtures/action_execution_cache/BUILD.bazel"
@@ -119,7 +119,7 @@ if grep -q -F -e 'exact key only, bust starts cold' "$cache_action" &&
   grep -q -F -e 'exact key only with no prefix fallback' "$workflows_readme"; then
   ok
 else
-  bad "restore-bazel-cache plus ci.yml plus workflows README lost the exact-key-only single-source record"
+  bad "restore-bazel-cache plus ci.yml plus workflow notes lost the exact-key-only single-source record"
 fi
 
 # Cache keys stay comprehensive across locks plus configs plus toolchains

@@ -64,7 +64,7 @@ pins_expected="rust/tests/fixtures/cargo_metadata/cargo_metadata.expected"
 native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 contract="docs/generation/rust.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
@@ -184,7 +184,7 @@ if grep -q -F -e 'issue #502' "$gen_readme" &&
   grep -q -F -e 'cargo_metadata_qualification' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified cargo metadata record under issue #502"
+  bad "docs/generation/foundation-qualification.md lost its qualified cargo metadata record under issue #502"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

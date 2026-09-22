@@ -41,7 +41,7 @@ lang="gazelle/go/lang.go"
 lang_test="gazelle/go/lang_test.go"
 module="MODULE.bazel"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
@@ -159,7 +159,7 @@ if grep -q -F -e 'qualified seed-only under issue #478' "$gen_readme" &&
   grep -q -F -e 'issue #478' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified Go test record under issue #478"
+  bad "docs/generation/foundation-qualification.md lost its qualified Go test record under issue #478"
 fi
 
 # Verification matrix owns the qualified seed-only record under.

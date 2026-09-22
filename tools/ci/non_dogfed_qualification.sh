@@ -31,7 +31,7 @@ plan="tools/ci/non_dogfed_paths.sh"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
-testing_readme="docs/testing/README.md"
+testing_readme="docs/testing/strategy-details.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
@@ -139,7 +139,7 @@ if grep -q -F -e 'bazel run //tools/ci:non_dogfed_paths' "$testing_readme" &&
   grep -q -F -e 'hermetic pins under `bazel test //...`' "$testing_readme"; then
   ok
 else
-  bad "docs/testing/README.md lost its non-dogfed explicit-path plus qualification record (issue #508)"
+  bad "docs/testing/strategy-details.md lost its non-dogfed explicit-path plus qualification record (issue #508)"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

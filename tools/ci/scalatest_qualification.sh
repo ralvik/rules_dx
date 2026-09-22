@@ -40,7 +40,7 @@ hello_test="scala/tests/fixtures/hello/HelloTest.scala"
 wrapper="scala/rules/defs.bzl"
 module="MODULE.bazel"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
@@ -154,7 +154,7 @@ if grep -q -F -e 'qualified seed-only under issue #480' "$gen_readme" &&
   grep -q -F -e 'issue #480' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified ScalaTest record under issue #480"
+  bad "docs/generation/foundation-qualification.md lost its qualified ScalaTest record under issue #480"
 fi
 
 # Verification matrix owns the qualified seed-only record under.

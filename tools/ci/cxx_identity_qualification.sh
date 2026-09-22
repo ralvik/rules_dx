@@ -41,7 +41,7 @@ dx_test_init
 verify="docs/testing/verification-matrix.md"
 verify_remaining="docs/testing/verification-matrix-remaining.md"
 gen_rust="docs/generation/rust.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 ci=".github/workflows/ci.yml"

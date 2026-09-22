@@ -29,7 +29,7 @@ dx_test_init
 
 adr="docs/decisions/0023-rust-libraries-internal.md"
 adr_index="docs/decisions/README.md"
-arch="docs/architecture/README.md"
+arch="docs/architecture/facade.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 
@@ -67,7 +67,7 @@ if grep -q -F -e '### Rust Library Boundary (Issue #469)' "$arch" &&
   grep -q -F -e 'only' "$arch"; then
   ok
 else
-  bad "architecture lost its Rust library boundary section with ADR 0023 plus guard under #469"
+  bad "facade lost its Rust library boundary section with ADR 0023 plus guard under #469"
 fi
 
 # Inventory holds: 27 cli/* plus 5 quality/* plus 2 generation/* Cargo manifests.

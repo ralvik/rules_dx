@@ -279,8 +279,8 @@ else
 fi
 
 # Testing README acceptance evidence blocks Supported without full cells.
-if grep -q -F -e '**Supported** evidence links every required adapter' docs/testing/README.md &&
-  grep -q -F -e 'A missing cell remains an explicit gap and blocks that support' docs/testing/README.md; then
+if grep -q -F -e '**Supported** evidence links every required adapter' docs/testing/strategy-details.md &&
+  grep -q -F -e 'A missing cell remains an explicit gap and blocks that support' docs/testing/strategy-details.md; then
   ok
 else
   bad "testing README lost its Supported-evidence blocking contract"

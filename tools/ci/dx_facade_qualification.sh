@@ -123,12 +123,12 @@ else
 fi
 
 # Architecture facade twins read Accepted with the owning guard.
-if grep -q -F -e 'Accepted (issue #423' docs/architecture/README.md &&
-  grep -q -F -e '//tools/ci:dx_facade_qualification' docs/architecture/README.md &&
-  ! grep -E -e '`//dx:(codegen|config)`.*Provisional' docs/architecture/README.md | grep -q .; then
+if grep -q -F -e 'Accepted (issue #423' docs/architecture/facade.md &&
+  grep -q -F -e '//tools/ci:dx_facade_qualification' docs/architecture/facade.md &&
+  ! grep -E -e '`//dx:(codegen|config)`.*Provisional' docs/architecture/facade.md | grep -q .; then
   ok
 else
-  bad "docs/architecture/README.md facade rows must read Accepted (issue #423)"
+  bad "docs/architecture/facade.md facade rows must read Accepted (issue #423)"
 fi
 
 # ADR 0011 keeps the / ownership record with the resolution.
@@ -193,26 +193,26 @@ fi
 # Architecture owns the 34-crate inventory (27 cli plus 5 quality plus 2
 # generation) with the binaries-only boundary: the old 27-crate line
 # silently dropped the quality/generation owners.
-if grep -q -F -e '34 crates: 27 under `cli/` plus 5' docs/architecture/README.md &&
-  grep -q -F -e 'under `quality/` plus 2' docs/architecture/README.md; then
+if grep -q -F -e '34 crates: 27 under `cli/` plus 5' docs/architecture/facade.md &&
+  grep -q -F -e 'under `quality/` plus 2' docs/architecture/facade.md; then
   ok
 else
-  bad "docs/architecture/README.md lost its 34-crate inventory record"
+  bad "docs/architecture/facade.md lost its 34-crate inventory record"
 fi
 
 # Architecture distinguishes executable workflows from empty reservations:
 # only generate/env execute, codegen/config reserve.
-if grep -q -F -e 'Only `//dx:generate` and `//dx:env` are' docs/architecture/README.md &&
-  grep -q -F -e 'not executable targets' docs/architecture/README.md; then
+if grep -q -F -e 'Only `//dx:generate` and `//dx:env` are' docs/architecture/facade.md &&
+  grep -q -F -e 'not executable targets' docs/architecture/facade.md; then
   ok
 else
-  bad "docs/architecture/README.md lost its executable-vs-reservation facade record"
+  bad "docs/architecture/facade.md lost its executable-vs-reservation facade record"
 fi
 
 # Architecture and the generate contract record the composed canonical
 # wiring (repo-wide promise from scope holds).
-if grep -q -F -e 'Composed multi-language Gazelle wiring' docs/architecture/README.md &&
-  grep -q -F -e '//gazelle/dispatch:gazelle' docs/architecture/README.md &&
+if grep -q -F -e 'Composed multi-language Gazelle wiring' docs/architecture/facade.md &&
+  grep -q -F -e '//gazelle/dispatch:gazelle' docs/architecture/facade.md &&
   grep -q -F -e 'composed repository default' docs/cli/commands/generate.md &&
   grep -q -F -e '//gazelle/dispatch:gazelle' docs/cli/commands/generate.md; then
   ok

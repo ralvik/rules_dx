@@ -45,7 +45,7 @@ pins="tools/coverage/tests/fixtures/per_cell/pins.bzl"
 pins_build="tools/coverage/tests/fixtures/per_cell/BUILD.bazel"
 per_cell_expected="tools/coverage/tests/fixtures/per_cell/per_cell.expected"
 codecov_remote_expected="tools/coverage/tests/fixtures/per_cell/codecov_remote.expected"
-testing_readme="docs/testing/README.md"
+testing_readme="docs/testing/strategy-details.md"
 github_ci="docs/github-ci.md"
 build_coverage_doc="docs/cli/commands/build-test-coverage.md"
 verify="docs/testing/verification-matrix.md"
@@ -113,7 +113,7 @@ fi
 # No cross-cell union: renderer, workflows, and docs keep cells separate.
 if grep -q -F -e 'no cross-cell union' tools/coverage/coverage_comment.sh &&
   grep -q -F -e 'no union' .github/workflows/reusable-consumer.yml &&
-  grep -q -F -e 'no cross-cell union' docs/testing/README.md; then
+  grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else
   bad "per-cell no-union record lost (renderer, consumer workflow, or testing README)"
@@ -212,8 +212,8 @@ else
 fi
 
 # Testing README records the Starlark route as investigated plus fallback.
-if grep -q -F -e 'Empirical Starlark feasibility evidence ran against the pinned Bazel' docs/testing/README.md &&
-  grep -q -F -e 'behavioral matrix' docs/testing/README.md; then
+if grep -q -F -e 'Empirical Starlark feasibility evidence ran against the pinned Bazel' docs/testing/strategy-details.md &&
+  grep -q -F -e 'behavioral matrix' docs/testing/strategy-details.md; then
   ok
 else
   bad "testing README lost its Starlark feasibility plus fallback record"
@@ -232,8 +232,8 @@ else
 fi
 
 # Docs select first-party with Codecov at most opt-in and no activation.
-if grep -q -F -e 'Codecov stays at most opt-in' docs/testing/README.md &&
-  grep -q -F -e 'No Codecov account' docs/testing/README.md &&
+if grep -q -F -e 'Codecov stays at most opt-in' docs/testing/strategy-details.md &&
+  grep -q -F -e 'No Codecov account' docs/testing/strategy-details.md &&
   grep -q -F -e 'Codecov stays opt-in only' docs/github-ci.md; then
   ok
 else
@@ -254,10 +254,10 @@ else
 fi
 
 # Free-tier quotas stay recorded in the infrastructure budget.
-if grep -q -F -e 'standard GitHub-hosted runners is free' docs/testing/README.md &&
-  grep -q -F -e '10 GB' docs/testing/README.md &&
-  grep -q -F -e '500 MB' docs/testing/README.md &&
-  grep -q -F -e 'Larger runners are always charged' docs/testing/README.md; then
+if grep -q -F -e 'standard GitHub-hosted runners is free' docs/testing/strategy-details.md &&
+  grep -q -F -e '10 GB' docs/testing/strategy-details.md &&
+  grep -q -F -e '500 MB' docs/testing/strategy-details.md &&
+  grep -q -F -e 'Larger runners are always charged' docs/testing/strategy-details.md; then
   ok
 else
   bad "testing README lost its free-tier quota record (runners, cache, artifact)"
@@ -281,8 +281,8 @@ else
 fi
 
 # Remote Tests section states the local-only else branch explicitly.
-if grep -q -F -e 'locally sandbox-tested but remote behavior remains unverified' docs/testing/README.md &&
-  grep -q -F -e 'hermeticity is' docs/testing/README.md; then
+if grep -q -F -e 'locally sandbox-tested but remote behavior remains unverified' docs/testing/strategy-details.md &&
+  grep -q -F -e 'hermeticity is' docs/testing/strategy-details.md; then
   ok
 else
   bad "testing README lost its locally-tested-only remote record"
