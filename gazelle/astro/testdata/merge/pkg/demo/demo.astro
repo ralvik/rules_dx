@@ -1,0 +1,14 @@
+---
+import helper from "./helper.astro";
+import fs from "fs";
+
+const greeting = helper(fs.sep);
+---
+
+<div class="demo">{greeting}</div>
+
+<style>
+  .demo {
+    color: black;
+  }
+</style>

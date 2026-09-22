@@ -1,0 +1,24 @@
+load("@rules_dx//scala/rules:defs.bzl", "scala_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+scala_library(
+    name = "demo",
+    srcs = [
+        "Demo.scala",
+        "Helper.scala",
+        "extra/Kept.scala",  # keep
+    ],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

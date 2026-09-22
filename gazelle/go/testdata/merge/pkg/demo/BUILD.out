@@ -1,0 +1,30 @@
+load("@rules_dx//go/rules:defs.bzl", "go_library", "go_test")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+go_library(
+    name = "demo",
+    srcs = [
+        "demo.go",
+        "extra/kept.go",  # keep
+        "helper.go",
+    ],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "demo_test",
+    srcs = ["demo_test.go"],
+    embed = [":demo"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

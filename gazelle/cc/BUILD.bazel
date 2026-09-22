@@ -61,7 +61,11 @@ go_test(
 
 real_source_target(
     name = "corpus_markdown",
-    markdown_siblings = ["testdata/source_only/README.md"],
+    markdown_siblings = [
+        "testdata/entries/README.md",
+        "testdata/merge/README.md",
+        "testdata/source_only/README.md",
+    ],
     tags = ["corpus"],
 )
 

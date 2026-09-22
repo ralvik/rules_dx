@@ -1,4 +1,4 @@
-# Source-Only Kotlin Generation
+# Source-Only Scala Generation
 
 Verifies conventional package-level library generation without
 authoritative manifests or generated sidecars.

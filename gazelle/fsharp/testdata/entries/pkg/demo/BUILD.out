@@ -1,0 +1,15 @@
+load("@rules_dx//fsharp/rules:defs.bzl", "fsharp_library")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+fsharp_library(
+    name = "demo",
+    srcs = [
+        "Helper.fs",
+        "Main.fs",
+    ],
+)

@@ -1,0 +1,25 @@
+load("@rules_dx//vue/rules:defs.bzl", "vue_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+vue_library(
+    name = "demo",
+    srcs = ["old.vue"],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+vue_library(
+    name = "gone",
+    srcs = ["gone.vue"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

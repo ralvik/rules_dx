@@ -41,7 +41,8 @@ also prove that lint and test do not duplicate `tsc` actions.
 - Verify each supported source-only language package receives its conventional initial targets,
   repeated generation is idempotent, and existing hand-written/generated targets use normal
   Gazelle merge behavior.
-- Verify first-party Python, JavaScript, TypeScript, and Rust extensions against golden and
+- Verify first-party Python, JavaScript, TypeScript, Rust, Go, Java, Kotlin, Scala, C#,
+  F#, C/C++, Vue, Svelte, Astro, and MDX extensions against golden and
   semantic fixtures covering source grouping, local/import resolution, wrapper kinds, naming,
   tests/binaries, mixed-language packages, deterministic ordering, and package boundaries.
 - Verify all first-party extensions use Gazelle desired/empty-rule and merge APIs with explicit

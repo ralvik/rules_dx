@@ -1,0 +1,28 @@
+load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+csharp_library(
+    name = "demo",
+    srcs = [
+        "Old.cs",
+        "extra/Kept.cs",  # keep
+    ],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+csharp_library(
+    name = "gone",
+    srcs = ["Gone.cs"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

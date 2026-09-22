@@ -1,0 +1,24 @@
+load("@rules_dx//astro/rules:defs.bzl", "astro_library")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+astro_library(
+    name = "helper",
+    srcs = ["helper.astro"],
+)
+
+astro_library(
+    name = "helper_test",
+    srcs = ["helper_test.astro"],
+    deps = [":helper"],
+)
+
+astro_library(
+    name = "main",
+    srcs = ["main.astro"],
+    deps = [":helper"],
+)
