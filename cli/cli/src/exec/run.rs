@@ -627,6 +627,7 @@ mod tests {
             dry_run,
             quiet: false,
             verbose: false,
+            log_level: None,
             output,
             reports,
             fail_on: dx_output::Threshold::Warning,

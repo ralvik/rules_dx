@@ -51,6 +51,8 @@ pub enum ArgsError {
     BadOutput { value: String },
     #[error("unknown --fail-on {value:?}: want info|warning|error")]
     BadFailOn { value: String },
+    #[error("unknown --log-level {value:?}: want error|warn|info|debug|trace")]
+    BadLogLevel { value: String },
     #[error("invalid --min-coverage {value:?}: want an integer 0-100")]
     BadMinCoverage { value: String },
     #[error("malformed --report {value:?}: want <format>=<destination>")]
@@ -60,6 +62,8 @@ pub enum ArgsError {
     UnknownShell { shell: String },
     #[error("options --debug and --release are mutually exclusive")]
     ConflictingProfiles,
+    #[error("options --verbose and --log-level are mutually exclusive")]
+    ConflictingVerboseLogLevel,
     #[error("option \"--here/--cwd\" cannot be combined with explicit scopes")]
     ConflictingHere,
     #[error(
@@ -150,5 +154,13 @@ mod tests {
             }
         )
         .contains("sarif"));
+        assert!(format!(
+            "{}",
+            ArgsError::BadLogLevel {
+                value: "verbose".to_owned(),
+            }
+        )
+        .contains("verbose"));
+        assert!(format!("{}", ArgsError::ConflictingVerboseLogLevel).contains("--log-level"));
     }
 }

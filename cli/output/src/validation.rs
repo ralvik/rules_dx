@@ -24,6 +24,8 @@ pub enum OutputError {
     BadSeverity { value: String },
     #[error("invalid threshold {value:?}")]
     BadThreshold { value: String },
+    #[error("invalid log level {value:?}: want error|warn|info|debug|trace")]
+    BadLogLevel { value: String },
     #[error("invalid path {path:?}: {reason}")]
     BadPath { path: String, reason: &'static str },
     #[error("invalid digest for {field} {value:?}")]

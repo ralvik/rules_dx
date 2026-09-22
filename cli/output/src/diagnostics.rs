@@ -5,6 +5,53 @@
 pub const DEFAULT_LOG_FILTER: &str = "warn";
 pub const VERBOSE_LOG_FILTER: &str = "info";
 
+/// Structured diagnostic level for `--log-level` (See: `docs/cli/output-protocol.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+pub enum LogLevel {
+    Error,
+    Warn,
+    Info,
+    Debug,
+    Trace,
+}
+
+impl LogLevel {
+    /// Canonical lowercase spelling (`error|warn|info|debug|trace`).
+    pub fn name(self) -> &'static str {
+        match self {
+            LogLevel::Error => "error",
+            LogLevel::Warn => "warn",
+            LogLevel::Info => "info",
+            LogLevel::Debug => "debug",
+            LogLevel::Trace => "trace",
+        }
+    }
+
+    /// Tracing filter for the level (same spelling as [`LogLevel::name`]).
+    pub fn filter(self) -> &'static str {
+        self.name()
+    }
+
+    /// Parses one `--log-level` spelling, case-sensitively.
+    pub fn parse(text: &str) -> Result<Self, crate::OutputError> {
+        use clap::ValueEnum;
+        Self::from_str(text, false).map_err(|_| crate::OutputError::BadLogLevel {
+            value: text.to_owned(),
+        })
+    }
+}
+
+/// Resolves the default tracing filter: explicit `--log-level` wins,
+/// else `info` under `--verbose`, else `warn`. `RUST_LOG` still
+/// overrides the result inside [`init_diagnostics_with_level`].
+pub fn resolve_log_filter(verbose: bool, level: Option<LogLevel>) -> &'static str {
+    match level {
+        Some(level) => level.filter(),
+        None if verbose => VERBOSE_LOG_FILTER,
+        None => DEFAULT_LOG_FILTER,
+    }
+}
+
 /// Initialises structured diagnostics via `tracing-subscriber`.
 ///
 /// Idempotent (`try_init` errors are ignored so tests and repeated calls do
@@ -14,12 +61,17 @@ pub const VERBOSE_LOG_FILTER: &str = "info";
 /// [`color_enabled`] (TTY-aware, `NO_COLOR` respected); default runs emit
 /// nothing, keeping output byte-identical.
 pub fn init_diagnostics(verbose: bool) {
+    init_diagnostics_with_level(verbose, None);
+}
+
+/// Initialises diagnostics with an explicit `--log-level` override.
+///
+/// Same contract as [`init_diagnostics`], except the default filter comes
+/// from [`resolve_log_filter`] (`--log-level` over `--verbose` over `warn`);
+/// `RUST_LOG` still wins when set.
+pub fn init_diagnostics_with_level(verbose: bool, level: Option<LogLevel>) {
     use tracing_subscriber::{fmt, EnvFilter};
-    let default = if verbose {
-        VERBOSE_LOG_FILTER
-    } else {
-        DEFAULT_LOG_FILTER
-    };
+    let default = resolve_log_filter(verbose, level);
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default));
     let ansi = color_enabled();
     let _ = fmt()
@@ -27,7 +79,7 @@ pub fn init_diagnostics(verbose: bool) {
         .with_writer(std::io::stderr)
         .with_ansi(ansi)
         .try_init();
-    tracing::debug!(verbose, "dx diagnostics initialised");
+    tracing::debug!(verbose, ?level, "dx diagnostics initialised");
 }
 
 /// Pure color gate for tests: no color without a TTY or when `NO_COLOR` is
@@ -90,6 +142,30 @@ mod tests {
     fn diagnostics_filters_have_expected_spelling() {
         assert_eq!(DEFAULT_LOG_FILTER, "warn");
         assert_eq!(VERBOSE_LOG_FILTER, "info");
+    }
+
+    #[test]
+    fn diagnostics_log_levels_parse_and_resolve() {
+        assert_eq!(LogLevel::parse("error").expect("error"), LogLevel::Error);
+        assert_eq!(LogLevel::parse("warn").expect("warn"), LogLevel::Warn);
+        assert_eq!(LogLevel::parse("info").expect("info"), LogLevel::Info);
+        assert_eq!(LogLevel::parse("debug").expect("debug"), LogLevel::Debug);
+        assert_eq!(LogLevel::parse("trace").expect("trace"), LogLevel::Trace);
+        assert!(LogLevel::parse("WARN").is_err());
+        assert!(LogLevel::parse("verbose").is_err());
+        assert_eq!(LogLevel::Debug.name(), "debug");
+        assert_eq!(LogLevel::Trace.filter(), "trace");
+        assert_eq!(resolve_log_filter(false, None), "warn");
+        assert_eq!(resolve_log_filter(true, None), "info");
+        assert_eq!(resolve_log_filter(false, Some(LogLevel::Debug)), "debug");
+        assert_eq!(resolve_log_filter(true, Some(LogLevel::Trace)), "trace");
+    }
+
+    #[test]
+    fn diagnostics_leveled_init_is_idempotent() {
+        init_diagnostics_with_level(false, None);
+        init_diagnostics_with_level(true, None);
+        init_diagnostics_with_level(false, Some(LogLevel::Debug));
     }
 
     #[test]

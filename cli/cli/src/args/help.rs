@@ -177,6 +177,22 @@ pub(crate) fn render_top_help() -> String {
     }
     out.push('\n');
     out.push_str(&Cli::command().render_long_help().to_string());
+    out.push_str(&render_env_help());
+    out
+}
+
+/// Renders the environment-variable section for top-level and per-command
+/// help (See: `docs/cli/output-protocol.md`).
+fn render_env_help() -> String {
+    let mut out = String::new();
+    out.push_str("\nEnvironment:\n");
+    out.push_str("  RUST_LOG=<filter>\n");
+    out.push_str("      Override --verbose/-v and --log-level with a tracing filter (e.g. RUST_LOG=debug).\n");
+    out.push_str("  NO_COLOR=<any>\n");
+    out.push_str("      Disable styled human output when present (any value, per the spec).\n");
+    out.push_str("  BUILD_WORKSPACE_DIRECTORY=<dir>\n");
+    out.push_str("      Workspace start under `bazel run`; falls back to the current directory.\n");
+    out.push_str("  See docs/cli/output-protocol.md and docs/cli/cli-contract.md.\n");
     out
 }
 
@@ -386,7 +402,11 @@ mod tests {
                 "--workspace",
                 "--output",
                 "--fail-on",
+                "--log-level",
                 "Exit codes",
+                "RUST_LOG",
+                "NO_COLOR",
+                "BUILD_WORKSPACE_DIRECTORY",
             ] {
                 assert!(text.contains(needle), "{flag}: missing {needle:?}");
             }
@@ -428,6 +448,10 @@ mod tests {
                 "Scopes:",
                 "Exit codes:",
                 "Output:",
+                "Environment:",
+                "RUST_LOG",
+                "NO_COLOR",
+                "BUILD_WORKSPACE_DIRECTORY",
                 "--workspace",
             ] {
                 assert!(text.contains(needle), "{argv:?}: missing {needle:?}");
@@ -560,6 +584,28 @@ mod tests {
             text.contains("bash|zsh|fish|powershell"),
             "top help must list completion shells:\n{text}"
         );
+    }
+
+    #[test]
+    fn top_help_documents_verbosity_and_environment() {
+        let text = match parse(&args(&["--help"])) {
+            Err(ArgsError::Help { text }) => text,
+            other => panic!("want Help, got {other:?}"),
+        };
+        for needle in [
+            "--log-level",
+            "--verbose",
+            "-v",
+            "RUST_LOG",
+            "NO_COLOR",
+            "BUILD_WORKSPACE_DIRECTORY",
+            "Environment:",
+        ] {
+            assert!(
+                text.contains(needle),
+                "top help missing verbosity/env {needle:?}:\n{text}"
+            );
+        }
     }
 
     #[test]
