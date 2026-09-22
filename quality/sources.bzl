@@ -8,7 +8,7 @@ QualitySourcesInfo = provider(
           "Forgeable by construction (Starlark providers carry no origin): " +
           "trust comes from `check_direct_sources` shape validation at " +
           "construction plus aspect-time ownership checks, never from the " +
-          "provider alone. See issue #928.",
+          "provider alone. See: issue #928.",
     fields = {
         "direct_sources": (
             "Dict[str, depset[File]]: semantic file-class ID to directly " +

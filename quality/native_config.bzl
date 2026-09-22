@@ -8,7 +8,7 @@ DxNativeConfigInfo = provider(
           "Forgeable by construction (Starlark providers carry no origin): " +
           "trust comes from the typed constructor's extension/source checks " +
           "plus aspect-time binding, never from the provider alone. " +
-          "See issue #928.",
+          "See: issue #928.",
     fields = {
         "closure": "depset[File]: config plus every data file the tool reaches.",
         "config": "File: the tool-owned config file passed to the adapter.",
@@ -156,7 +156,7 @@ def _make_native_config_rule(tool_id, doc):
             "data": attr.label_list(
                 allow_files = True,
                 default = [],
-                doc = "Checked-in data files the config reaches (Vale styles). Unbounded by design: closures span ini/yml and other tool-owned data. See issue #928.",
+                doc = "Checked-in data files the config reaches (Vale styles). Unbounded by design: closures span ini/yml and other tool-owned data. See: issue #928.",
             ),
             "src": attr.label(
                 allow_single_file = True,
