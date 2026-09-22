@@ -568,10 +568,19 @@ fn managed_commands_parse_repo_and_exact_scopes() {
     }
     // Scope rules are the shared setup scope rules: multiple
     // positionals, patterns, and non-labels fail before execution.
+    // `MultipleTargets` reports the second positional via `get`
+    // (fail-closed, never direct indexing).
     assert_eq!(
         parse(&args(&["codegen", "//a:one", "//b:two"])),
         Err(ArgsError::UnsupportedOption {
             command: "codegen",
+            option: "//b:two".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["setup", "//a:one", "//b:two"])),
+        Err(ArgsError::UnsupportedOption {
+            command: "setup",
             option: "//b:two".to_owned(),
         })
     );
