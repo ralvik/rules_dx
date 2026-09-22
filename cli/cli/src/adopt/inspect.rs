@@ -103,9 +103,18 @@ fn execute_why(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
-    // Argument parsing guarantees exactly `<file> <label>`.
-    let file = &invocation.targets[0];
-    let label = &invocation.targets[1];
+    // Parsing guarantees exactly `<file> <label>`, but `execute` is also
+    // reachable with a hand-built `Invocation`: fail closed via `get`
+    // instead of panicking on direct indexing.
+    let Some(file) = invocation.targets.first() else {
+        return pre_exec(err, "why needs exactly <file> <label>");
+    };
+    let Some(label) = invocation.targets.get(1) else {
+        return pre_exec(err, "why needs exactly <file> <label>");
+    };
+    if invocation.targets.len() != 2 {
+        return pre_exec(err, "why needs exactly <file> <label>");
+    }
     // Dry-run plans without launching: validate both plan shapes, then
     // print the would-run summary (the `somepath` leg needs the resolved
     // owner, so live resolution is skipped).
@@ -397,5 +406,49 @@ mod tests {
             .expect("out")
             .contains("would run bazel"));
         assert_eq!(runner.calls.borrow().len(), 0);
+    }
+
+    #[test]
+    fn why_malformed_invocation_fails_closed_without_panic() {
+        // `execute` is reachable with a hand-built `Invocation`: malformed
+        // `why` targets must fail pre-exec (exit 2) instead of panicking
+        // on direct indexing.
+        let base = invocation(&["why", "src/lib.rs", "//app:server"]);
+        for targets in [
+            Vec::new(),
+            vec!["only-one".to_owned()],
+            vec![
+                "src/lib.rs".to_owned(),
+                "//app:server".to_owned(),
+                "//extra:lib".to_owned(),
+            ],
+        ] {
+            let mut bad = base.clone();
+            bad.targets = targets;
+            let runner = ScriptedQuery::with(&["//owner:lib\n"]);
+            let scratch = dx_test_scratch::scratch("dx-adopt-inspect-why-malformed-");
+            let root = scratch.path().to_path_buf();
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let code = execute_adoption(
+                &bad,
+                AdoptEnv {
+                    workspace: &root,
+                    query_runner: &runner,
+                    runner: &NullRunner,
+                    out: &mut out,
+                    err: &mut err,
+                },
+            );
+            assert_eq!(code, 2, "targets: {:?}", bad.targets);
+            assert!(
+                String::from_utf8(err)
+                    .expect("err")
+                    .contains("why needs exactly"),
+                "targets: {:?}",
+                bad.targets
+            );
+            assert_eq!(runner.calls.borrow().len(), 0);
+        }
     }
 }

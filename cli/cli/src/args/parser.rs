@@ -247,11 +247,14 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         }
         if let Err(error) = dx_setup::resolve_scope(&targets) {
             return Err(match error {
-                dx_setup::ScopeError::MultipleTargets { .. } => ArgsError::UnsupportedOption {
+                dx_setup::ScopeError::MultipleTargets { count } => ArgsError::UnsupportedOption {
                     command: command.name(),
-                    // `MultipleTargets` guarantees at least two
-                    // positionals, so the second one exists.
-                    option: targets[1].clone(),
+                    // The library owns the count: fail closed via `get`
+                    // instead of panicking on direct indexing.
+                    option: targets
+                        .get(1)
+                        .cloned()
+                        .unwrap_or(format!("<{count} targets>")),
                 },
                 dx_setup::ScopeError::TargetPattern { value }
                 | dx_setup::ScopeError::NotTargetLabel { value } => scope_error(&value),
