@@ -30,6 +30,13 @@ pub trait Fs {
     fn is_file(&self, path: &Path) -> bool;
     /// Reads `path` as UTF-8 text.
     fn read_text(&self, path: &Path) -> io::Result<String>;
+    /// I/O hint when `dir/MODULE.bazel` exists but is not a usable file
+    /// (broken symlink, directory, permission). `None` when healthy or
+    /// absent. See: `docs/cli/cli-contract.md`.
+    fn broken_marker_hint(&self, dir: &Path) -> Option<String> {
+        let _ = dir;
+        None
+    }
 }
 
 /// Real filesystem implementation used by the CLI binary.
@@ -42,6 +49,20 @@ impl Fs for RealFs {
 
     fn read_text(&self, path: &Path) -> io::Result<String> {
         std::fs::read_to_string(path)
+    }
+
+    fn broken_marker_hint(&self, dir: &Path) -> Option<String> {
+        let marker = dir.join("MODULE.bazel");
+        if self.is_file(&marker) {
+            return None;
+        }
+        if std::fs::symlink_metadata(&marker).is_err() {
+            return None;
+        }
+        match std::fs::metadata(&marker) {
+            Ok(_) => Some("symlink target is not a regular file".to_owned()),
+            Err(err) => Some(err.to_string()),
+        }
     }
 }
 
@@ -72,6 +93,25 @@ pub enum DiscoverError {
         /// The rejected override directory.
         path: PathBuf,
     },
+    /// An explicit `--workspace` marker exists but is unreadable
+    /// (broken symlink, directory, permission). Distinct from
+    /// `InvalidOverride` so dangling links carry an I/O hint.
+    #[error("workspace_unreadable: --workspace {path} MODULE.bazel is unreadable ({reason}); check the symlink target or permissions", path = path.display())]
+    UnreadableOverride {
+        /// The rejected override directory (display path, not canonicalized).
+        path: PathBuf,
+        /// OS-reported reason.
+        reason: String,
+    },
+    /// An ancestor `MODULE.bazel` exists but is unreadable. Distinct
+    /// from `NotFound` so dangling links do not walk past silently.
+    #[error("workspace_unreadable: {path}/MODULE.bazel is unreadable ({reason}); check the symlink target or permissions", path = path.display())]
+    UnreadableMarker {
+        /// Directory holding the unreadable marker.
+        path: PathBuf,
+        /// OS-reported reason.
+        reason: String,
+    },
 }
 
 fn has_module(fs: &dyn Fs, dir: &Path) -> bool {
@@ -80,6 +120,55 @@ fn has_module(fs: &dyn Fs, dir: &Path) -> bool {
 
 fn legacy_marker(fs: &dyn Fs, dir: &Path) -> bool {
     fs.is_file(&dir.join("WORKSPACE")) || fs.is_file(&dir.join("WORKSPACE.bazel"))
+}
+
+/// Expands a leading `~` or `~/` via `HOME` (`USERPROFILE` fallback).
+/// `~user` stays literal; non-UTF8 stays literal.
+/// See: `docs/cli/cli-contract.md`.
+pub fn expand_tilde(path: &Path) -> PathBuf {
+    let Some(text) = path.to_str() else {
+        return path.to_path_buf();
+    };
+    let is_bare = text == "~";
+    let is_home_prefixed = text.starts_with("~/") || text.starts_with("~\\");
+    if !is_bare && !is_home_prefixed {
+        return path.to_path_buf();
+    }
+    let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) else {
+        return path.to_path_buf();
+    };
+    if is_bare {
+        return PathBuf::from(home);
+    }
+    PathBuf::from(home).join(&text[2..])
+}
+
+/// Canonicalizes when the path exists; otherwise keeps the input so
+/// callers preserve the display path for messages.
+/// See: `docs/cli/cli-contract.md`.
+pub fn canonicalize_or_keep(path: &Path) -> PathBuf {
+    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+/// Display path for a `--workspace` override: tilde-expanded and absolute
+/// via `base` when relative. The effective path is
+/// `canonicalize_or_keep` of this display path.
+/// See: `docs/cli/cli-contract.md`.
+pub fn resolve_override_display(raw: &Path, base: &Path) -> PathBuf {
+    let expanded = expand_tilde(raw);
+    if expanded.is_absolute() {
+        expanded
+    } else {
+        base.join(expanded)
+    }
+}
+
+/// Effective plus display paths for a `--workspace` override.
+/// See: `docs/cli/cli-contract.md`.
+pub fn resolve_override_effective(raw: &Path, base: &Path) -> (PathBuf, PathBuf) {
+    let display = resolve_override_display(raw, base);
+    let effective = canonicalize_or_keep(&display);
+    (effective, display)
 }
 
 /// Discovers the Bazel workspace root.
@@ -97,6 +186,12 @@ pub fn discover(
         if has_module(fs, dir) {
             return Ok(dir.to_path_buf());
         }
+        if let Some(reason) = fs.broken_marker_hint(dir) {
+            return Err(DiscoverError::UnreadableOverride {
+                path: dir.to_path_buf(),
+                reason,
+            });
+        }
         if legacy_marker(fs, dir) {
             return Err(DiscoverError::UnsupportedLegacy {
                 dir: dir.to_path_buf(),
@@ -113,6 +208,12 @@ pub fn discover(
         if has_module(fs, dir) {
             return Ok(dir.to_path_buf());
         }
+        if let Some(reason) = fs.broken_marker_hint(dir) {
+            return Err(DiscoverError::UnreadableMarker {
+                path: dir.to_path_buf(),
+                reason,
+            });
+        }
         if legacy.is_none() && legacy_marker(fs, dir) {
             legacy = Some(dir.to_path_buf());
         }
@@ -124,8 +225,36 @@ pub fn discover(
 }
 
 /// Discovers the workspace using the real filesystem.
+///
+/// Tilde-expands the override, resolves relative overrides via `start`,
+/// and canonicalizes (`./`, `../`, trailing slash, symlinks) while keeping
+/// the display path for errors. See: `docs/cli/cli-contract.md`.
 pub fn discover_real(start: &Path, override_dir: Option<&Path>) -> Result<PathBuf, DiscoverError> {
-    discover(start, override_dir, &RealFs)
+    let effective_start = canonicalize_or_keep(start);
+    if let Some(raw) = override_dir {
+        let (effective, display) = resolve_override_effective(raw, &effective_start);
+        match discover(&effective_start, Some(&effective), &RealFs) {
+            Ok(workspace) => Ok(workspace),
+            Err(DiscoverError::InvalidOverride { .. }) => {
+                Err(DiscoverError::InvalidOverride { path: display })
+            }
+            Err(DiscoverError::UnsupportedLegacy { .. }) => {
+                Err(DiscoverError::UnsupportedLegacy { dir: display })
+            }
+            Err(DiscoverError::UnreadableOverride { reason, .. }) => {
+                Err(DiscoverError::UnreadableOverride {
+                    path: display,
+                    reason,
+                })
+            }
+            Err(err) => Err(err),
+        }
+    } else {
+        match discover(&effective_start, None, &RealFs) {
+            Ok(workspace) => Ok(canonicalize_or_keep(&workspace)),
+            Err(err) => Err(err),
+        }
+    }
 }
 
 /// Workspace start directory for `bazel run`.
@@ -139,10 +268,11 @@ pub fn discover_real(start: &Path, override_dir: Option<&Path>) -> Result<PathBu
 /// Single-sources the `BUILD_WORKSPACE_DIRECTORY || cwd` probe repeated in
 /// the `dx` and `env` binaries; shell drivers use `tools/sh/lib.sh`.
 pub fn workspace_start(cwd: &Path) -> PathBuf {
-    std::env::var_os("BUILD_WORKSPACE_DIRECTORY")
+    let dir = std::env::var_os("BUILD_WORKSPACE_DIRECTORY")
         .map(PathBuf::from)
         .filter(|dir| dir.is_absolute())
-        .unwrap_or_else(|| cwd.to_path_buf())
+        .unwrap_or_else(|| cwd.to_path_buf());
+    canonicalize_or_keep(&dir)
 }
 
 /// Reports whether a `CI` value counts as CI for the local-only gate.

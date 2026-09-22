@@ -340,7 +340,10 @@ fn run() -> i32 {
                     .workspace
                     .as_deref()
                     .map(Path::new)
-                    .map(Path::to_path_buf)
+                    .map(|raw| {
+                        let display = dx_process::resolve_override_display(raw, &start);
+                        dx_process::canonicalize_or_keep(&display)
+                    })
                     .unwrap_or(start)
             } else {
                 let _ = writeln!(io::stderr(), "dx: cannot resolve workspace: {error}");
