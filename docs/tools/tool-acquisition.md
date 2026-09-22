@@ -534,9 +534,30 @@ actions without mutable CLI state.
 Fetch robustness: maintainer fetches (`quality/artifacts/update.py`) are https-only with
 retries plus backoff, and published checksums files are a cross-check only — the trust
 anchor is the checked-in digest plus `--verify-only`, never first-seen bytes. Consumer
-fetches verify both layers: `ctx.download` checks the outer asset digest and the extension
-re-hashes the extracted executable against the recorded inner digest, so a substituted
-archive member fails the fetch instead of reaching the build.
+fetches verify both layers: `ctx.download` checks the outer asset digest with an explicit
+`canonical_id` plus Bazel retry and the extension re-hashes the extracted executable
+against the recorded inner digest, so a substituted archive member fails the fetch instead
+of reaching the build. One pinned upstream URL per tool/platform is intentional: the
+checked-in digest is the trust anchor and the URL is availability only. Gzip single-file
+extracts get one deterministic `chmod 755` because gzip stores no unix mode; tar.gz members
+already carry `0o755` so no host chmod runs.
+
+Go SDK 1.26.6 pins per-platform archives plus sha256 in `MODULE.bazel` `go_sdk.download`
+`sdks` (mirrored from `modules/toolchains.bzl` `GO_SDK_SDKS`, sourced from the go.dev index).
+The sha is the trust anchor; the single `dl.google.com` origin is availability only with
+Bazel retry, and pinning avoids the index fetch so lockfile facts cover airgapped builds
+with a warm download cache.
+
+TypeScript 5.9.3 pins its SRI in `MODULE.bazel` `typescript.deps` `integrity` (mirrored from
+`modules/js.bzl` `TYPESCRIPT_INTEGRITY`, sourced from the aspect_rules_ts `TOOL_VERSIONS`
+entry). The SRI is the trust anchor; the single `registry.npmjs.org` origin is availability
+only.
+
+Maven keeps two repository origins with the GCS Central mirror first plus the pinned
+`maven_install.json` lock with `fail_if_repin_required`. Lock hashes pin identity while the
+dual origins pin availability. With unchanged inputs Bazel reuses already-fetched Maven
+inputs with no new fetch; see the offline reuse note in
+[Offline/Airgap Bootstrap](../deploy/offline-bootstrap.md#offline-setup-env-and-codegen).
 
 ## Provenance Profile Research
 

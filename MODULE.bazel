@@ -58,8 +58,23 @@ go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 # Pinned Go toolchain (ADR 0019). The SDK is the toolchain floor;
 # `third_party/go/go.mod` carries the language floor (`go 1.24.12`).
 # The SDK minor must stay >= the go.mod minor (see
-# `//tools/ci:pin_consistency_test`, issue #912).
-go_sdk.download(version = "1.26.6")
+# `//tools/ci:pin_consistency_test`, issue #912). `sdks` pins the exact
+# per-platform archives plus sha256 from https://go.dev/dl/?mode=json for
+# 1.26.6 (mirrors `//modules:toolchains.bzl` `GO_SDK_SDKS`; the sha is the
+# trust anchor, the single dl.google.com URL is availability only). Pinning
+# avoids the go.dev index fetch and lets lockfile facts cover airgapped
+# builds with a warm download cache; Bazel's downloader retries the fetch.
+go_sdk.download(
+    version = "1.26.6",
+    sdks = {
+        "darwin_amd64": ["go1.26.6.darwin-amd64.tar.gz", "08b65a63f244115121ced6c3b55ad38d801a7442acad5c949a17aad84ae6d684"],
+        "darwin_arm64": ["go1.26.6.darwin-arm64.tar.gz", "2dc95ce4675829f2df0e86b28bcef3283635902062a5f0580ca659bf570f3204"],
+        "linux_amd64": ["go1.26.6.linux-amd64.tar.gz", "708effb774be8237570d0add163225abbdfaf4fca28b2611df167beba4feef89"],
+        "linux_arm64": ["go1.26.6.linux-arm64.tar.gz", "d0507e9e9d7fe012aae570108cbd76c15de879e17130ab8cb90d4d7445cb1f2e"],
+        "windows_amd64": ["go1.26.6.windows-amd64.zip", "5b6c5b556525810463b5c897b50dc7a82d6a3dc0bfaf55d990a7e9f31d6b2318"],
+        "windows_arm64": ["go1.26.6.windows-arm64.zip", "06dbe785743d534ef8a469dad88adf7f1b2b438507ccfef9b98e7cf8c97b4b68"],
+    },
+)
 
 # Direct dep so MODULE tags can name execution-platform
 # constraints. 1.1.0 is the MVS-selected version already in the executed
@@ -201,10 +216,16 @@ bazel_dep(name = "aspect_rules_jest", version = "0.26.0")
 
 # TypeScript toolchain (ADR 0012 release-default). 5.9.3 is
 # the latest stable 5.x in TOOL_VERSIONS of aspect_rules_ts 3.10.0; 6.x is
-# the native preview and stays out. Integrity resolves from the mirrored
-# TOOL_VERSIONS entry, so no manual integrity is pinned here.
+# the native preview and stays out. Integrity is pinned here from the
+# mirrored TOOL_VERSIONS entry (mirrors `//modules:js.bzl`
+# `TYPESCRIPT_INTEGRITY`), so the SRI is visible in-repo instead of only
+# inside the ruleset; the single registry.npmjs.org origin stays the
+# availability point with the SRI as the trust anchor.
 typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript")
-typescript.deps(version = "5.9.3")
+typescript.deps(
+    version = "5.9.3",
+    integrity = "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+)
 use_repo(typescript, "npm_typescript")
 
 # Pnpm toolchain for the authoritative JS/TS package graph

@@ -61,7 +61,12 @@ normal first complete initialization stays `dx setup`, as specified in
 [Environment, Codegen, And Setup](../cli/commands/environment-codegen-setup.md).
 Offline changes none of their selection, validation, or atomic-commit
 semantics; with unchanged inputs Bazel reuses its already-fetched
-modules and toolchains and starts no new fetch. `--dry-run` plans the
+modules and toolchains and starts no new fetch. Maven follows the same
+reuse: the dual origins plus the pinned `maven_install.json` lock pin
+identity and availability on first fetch, and with unchanged inputs Bazel
+reuses the already-fetched `@maven` inputs with no new fetch. No separate
+Maven vendoring bundle is operated; full airgap vendoring stays an owned
+gap. `--dry-run` plans the
 request and exits `0` without launching, which is the network-disabled
 proof used by the qualification harness below.
 

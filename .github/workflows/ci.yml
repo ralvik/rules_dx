@@ -71,15 +71,19 @@ jobs:
     # workflow_dispatch dry-run, never built or verified on push, with no
     # attestation. This job builds //deploy/release:sbom_demo plus verifies
     # via //deploy/release:dx_release_tools_test on every push/PR (seed host),
-    # stages SPDX-2.3 + SLSA v1 under RUNNER_TEMP, and uploads as a CI
-    # artifact for inspection. Real Sigstore plus GitHub attestation stays
-    # owner-gated human-run via //deploy/release:signing_demo (fork-safe:
+    # stages SPDX-2.3 + SLSA v1 under RUNNER_TEMP with a digests plus origin
+    # bind, and uploads as a CI artifact for inspection. Push-to-main runs
+    # additionally attest the staged pair via actions/attest (Sigstore,
+    # fork-safe: PRs never attest, publishes nothing). Real release signing
+    # stays owner-gated human-run via //deploy/release:signing_demo (fork-safe:
     # CI never signs PR code, publishes nothing).
     needs: [build]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
+      attestations: write
     steps:
       - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
@@ -103,6 +107,8 @@ jobs:
           grep -q -F '"spdxVersion": "SPDX-2.3"' "$stage/sbom_demo.spdx.json"
           grep -q -F '"predicateType": "https://slsa.dev/provenance/v1"' "$stage/sbom_demo.provenance.json"
           grep -q -F '"_type": "https://in-toto.io/Statement/v1"' "$stage/sbom_demo.provenance.json"
+          printf '%s %s %s %s\n' "${GITHUB_REPOSITORY}" "${GITHUB_SHA}" "${GITHUB_RUN_ID}" "${GITHUB_REF}" > "$stage/origin.txt"
+          cat "$stage/origin.txt"
           python3 - "$stage" <<'EOF'
           import hashlib
           import pathlib
@@ -123,11 +129,17 @@ jobs:
           path: ${{ runner.temp }}/sbom
           if-no-files-found: error
           retention-days: 7
+      - name: Attest SBOM + provenance (push to main only, fork-safe)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-path: '${{ runner.temp }}/sbom/*.json'
+          show-summary: true
       - name: Write job summary
         if: always()
         run: |
           echo "### sbom — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Commands: bazel build //deploy/release:sbom_demo; bazel test //deploy/release:dx_release_tools_test; stage SPDX-2.3 + SLSA v1 under RUNNER_TEMP/sbom and upload as sbom-provenance (seed host, publishes nothing; attestation stays owner-gated human-run via //deploy/release:signing_demo, issue #612)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Commands: bazel build //deploy/release:sbom_demo; bazel test //deploy/release:dx_release_tools_test; stage SPDX-2.3 + SLSA v1 under RUNNER_TEMP/sbom with digests plus origin bind and upload as sbom-provenance (seed host, publishes nothing; push-to-main additionally attests via actions/attest, PRs never attest; release signing stays owner-gated human-run via //deploy/release:signing_demo, issue #612)." >> "$GITHUB_STEP_SUMMARY"
   sbom-arm64:
     name: sbom-arm64 (SBOM + provenance build/verify/upload, linux arm64)
     # Per-host release evidence for Linux arm64 glibc (issue #803):
