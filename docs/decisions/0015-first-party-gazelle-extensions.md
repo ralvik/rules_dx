@@ -99,7 +99,7 @@ lives in [Rust Generation](../generation/rust.md),
 current detailed behavior without turning provisional implementation APIs into accepted ADR surface.
 
 Exact wrapper/provider mappings, parser recognizers, transport schemas, and upstream integration
-choices remain in Open Decisions, including the open decisions tracked in the issue tracker.
+choices remain in Open Decisions, including the open decisions tracked in issue #916.
 This ADR does not resolve those choices. In particular, Rust's first implementation must prove its
 exact public mappings before they become supported API or justify abstraction.
 

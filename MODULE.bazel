@@ -181,7 +181,8 @@ use_repo(maven, "maven")
 # explicit exception to ADR 0008 until a compatible stable 2.x exists.
 # Bump selector: latest stable 2.x in the Bazel Central Registry;
 # recheck on every dependency-currency pass (see
-# `//tools/ci:pin_consistency_test`, issue #912).
+# `//tools/ci:pin_consistency_test`, issue #912; retirement owned by issue
+# #916 with stable-watch plus lock/uv/groups/providers re-qualification).
 bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")
 
 # Pinned JavaScript/TypeScript foundation (ADR 0013). Exact

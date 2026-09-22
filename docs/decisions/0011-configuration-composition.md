@@ -32,13 +32,19 @@ without replacing the canonical policy target. External aspects select that poli
 explicit label setting rather than embedding a consumer-repository label.
 
 The exact aggregate provider constructor, fields, exports, and label-setting binding remain governed
-by open decisions (see the issue tracker). This ADR accepts typed composition and one canonical
+by open decisions (see issue #916, the single retirement tracker for the five
+provisional exceptions; guard `//tools/ci:dx_facade_qualification`, issue #423).
+This ADR accepts typed composition and one canonical
 workspace policy, not a provisional Starlark API shape. The freeze
 implements the schema and validation in `quality/policy.bzl`
 (`quality_family`, `workspace_policy`) and `quality/sources.bzl`
 (`QualitySourcesInfo`); the in-repo `//dx:config` default stays an empty
 filegroup that fails fast until a consumer binds its typed policy, per
-issue #423 (guard `//tools/ci:dx_facade_qualification`).
+issue #423 (guard `//tools/ci:dx_facade_qualification`). The empty default
+preserves the one-dependency surface and ADR 0014 no-enable-list rule: the
+consumer adds only `rules_dx`, foundations stay lazy, and analysis fails fast
+only when quality is used without a bound policy. Retirement owned by
+issue #916.
 
 Supported application foundations and quality policy families are available by default but remain
 lazy. Declared target providers and semantic source classes activate applicable behavior. Typed
@@ -92,7 +98,8 @@ it does not select capabilities, tools, native configs, or action granularity. B
 supported adapters publish equivalent canonical source facts.
 
 The provider's exact constructor, load label, field representation, class registry, and validation
-surface remain governed by open decisions (see the issue tracker). The durable contract and current
+surface remain governed by open decisions (see issue #916, the single retirement
+tracker; guard `//tools/ci:dx_facade_qualification`, issue #423). The durable contract and current
 candidate details live in
 [Quality Sources and Applicability](../quality/quality-sources.md). The
 freeze implements the construction shape and known-ID validation in
@@ -143,7 +150,13 @@ in [Common Generation Contract](../generation/common.md), with language detail i
 - First-party and third-party PATH tools compose through one validated public concept; persistent
   environments do not acquire a premature universal API.
 - Exact provider and constructor APIs are not implied by this accepted record and must be resolved in
-  the linked open decisions before publication.
+  the linked open decisions before publication. Config-API freeze plus
+  default-policy evolution are owned by issue #916 as the single retirement
+  tracker: the freeze implements the construction shape and known-ID validation
+  in `quality/sources.bzl` with ownership and admissibility validated by the
+  consuming aspect (guard `//tools/ci:dx_facade_qualification`); ship gates are
+  fixture evidence plus consumer and platform evidence per ADR 0008/0014 before
+  any `Supported` claim.
 
 ## Rejected Alternatives
 

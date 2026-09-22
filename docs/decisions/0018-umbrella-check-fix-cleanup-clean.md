@@ -71,10 +71,10 @@ graph, or mutation semantics:
 - `--dry-run` lists reclaimable generations and links without deleting.
 
 NDJSON parent framing and report merging are qualified under resolved
-the issue tracker. The `--bazel` flag shape, dry-run, refusal, and
-commit-lock mechanics are frozen under the issue tracker (see the [check/fix/clean
+issue #916. The `--bazel` flag shape, dry-run, refusal, and
+commit-lock mechanics are frozen under issue #916 (see the [check/fix/clean
 contract](../cli/commands/check-fix-clean.md#dx-clean)); process-scan
-in-use detection and reclaimable-bytes reporting were pending under the issue tracker
+in-use detection and reclaimable-bytes reporting were pending under issue #916
 at decision time (see the status update below).
 
 Status update: since implemented and covered by unit tests —
@@ -94,7 +94,7 @@ lock correctness stays pending per the managed-state contract.
 - CI continues to use each explicit `--check`; the umbrella never changes
   check selection, platform mapping, or aggregate status.
 - `dx watch` may wrap `check` and `fix` like any other iteration command
-  once the issue tracker mechanics freeze; it gains no daemon.
+  once the issue #916 mechanics freeze; it gains no daemon.
 - Managed-state retention tests prove current-pointer preservation, refusal
   of unmanaged state, and stale-link recovery through explicit workflows.
 

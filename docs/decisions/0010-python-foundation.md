@@ -36,7 +36,14 @@ Using a 2.x prerelease is an explicit exception to
 prerelease identity is not pinned by this record; it is pending qualification and the
 required consumer and platform evidence. The selected
 release must pass the required consumer and platform evidence before shipping. A compatible stable
-release replaces the prerelease after passing the same evidence. Upstream gaps require remediation
+release replaces the prerelease after passing the same evidence. Stable-watch
+plus repin qualification are owned by issue #916 as the single retirement
+tracker for the five provisional exceptions: the bump selector is the latest
+stable 2.x in the Bazel Central Registry, rechecked on every
+dependency-currency pass (see `//tools/ci:pin_consistency_test`); a stable
+replacement requires the same consumer and platform evidence plus
+lock/uv/groups/providers re-qualification per ADR 0008/0014 before ship.
+Upstream gaps require remediation
 toward complete core Python support on every required platform, not permanent scope reduction.
 The affected capability continues to fail closed and cannot ship as supported until conformance
 passes. An alternative upstream requires explicit contract/API review and approval before adoption;
@@ -49,7 +56,7 @@ unstable upstream symbols into `rules_dx` compatibility promises. Advanced consu
 and load upstream APIs directly outside that wrapper contract.
 
 Exact wrapper, provider, pytest, coverage, interpreter, and platform mappings remain evidence-gated
-in Open Decisions. The detailed verification contract is under
+in Open Decisions, with prerelease retirement owned by issue #916. The detailed verification contract is under
 [Testing](../testing/).
 
 ### Generation And Ownership
@@ -76,7 +83,7 @@ standard-library graphs remain possible without ecosystem metadata.
 The shared strict-resolution, literal/computed reference, resource, executable-entry, and Gazelle
 merge rules are owned by the [generation contracts](../generation/). Exact recognizers and upstream
 mappings that have not yet passed fixtures remain unresolved in
-Open Decisions, not accepted implementation detail in this record.
+Open Decisions (retirement owned by issue #916), not accepted implementation detail in this record.
 
 ### Environment Direction
 
@@ -94,7 +101,8 @@ repository defaults derive from authoritative configured graph facts rather than
 The canonical layout, graph projection, dependency materialization, conflict handling, identity,
 atomic selection, retention, and safety contracts are owned by
 [Environments](../environments/). Exact Python provider and `.venv` mappings, including typed IDE
-group configuration, remain unresolved in Open Decisions.
+group configuration, remain unresolved in Open Decisions (retirement owned by
+issue #916).
 
 Python is a later concrete environment projection. It does not define a generic environment API for
 Rust, Node, or future languages, and `rules_dx` does not create parallel per-language environment
@@ -131,7 +139,10 @@ mere presence of this accepted decision.
 - `rules_dx` owns a smaller wrapper and generation compatibility surface rather than a Python rules
   ecosystem.
 - The prerelease exception creates an explicit release gate and an upgrade obligation when a stable
-  compatible 2.x release becomes available.
+  compatible 2.x release becomes available. Retirement owned by issue #916:
+  stable-watch plus repin qualification (lock/uv/groups/providers) with
+  fixture evidence plus consumer and platform evidence per ADR 0008/0014 before
+  ship.
 - Strict dependency authority prevents successful generation of guessed or incomplete external
   dependency graphs.
 - Stable single ownership supports reusable libraries, isolated tests, thin executable entries, and

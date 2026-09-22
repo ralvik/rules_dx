@@ -51,7 +51,7 @@ for `rustdoc -Z unstable-options --output-format json`. Upstream documents JSON 
 does not provide the selected machine-input contract. This exception is limited to documentation
 extraction and does not change the normal application compiler or quality-tool selection.
 
-the issue tracker must qualify the extractor against each supported target compiler configuration and its dependency
+Issue #916 must qualify the extractor against each supported target compiler configuration and its dependency
 metadata. Where compiler versions cannot share artifacts, extraction must obtain compatible declared
 inputs through the qualified Bazel route; an ambient compiler or silent semantic fallback is not
 permitted. Incompatibility blocks the affected integration rather than changing the application pin.

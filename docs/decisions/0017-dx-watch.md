@@ -2,7 +2,8 @@
 
 ## Status
 
-Provisional.
+Provisional. Retirement owned by issue #916 (single tracker for the five
+provisional exceptions: watch, naming, config API, py prerelease, rust fork).
 
 ## Context
 
@@ -16,9 +17,9 @@ a workflow automatic.
 
 Upstream `ibazel` (`bazelbuild/bazel-watcher`) covers `build`/`test`/`run` on
 explicit labels only. It cannot reuse `dx` file-to-owner resolution
-(the issue tracker), all-direct-owners quality selection
+(issue #916), all-direct-owners quality selection
 ([Target Resolution](../cli/target-resolution.md)), single-runnable enforcement
-(the issue tracker), or `lint`/`typecheck`/`format` converge-and-apply
+(issue #916), or `lint`/`typecheck`/`format` converge-and-apply
 semantics ([Output Protocol](../cli/output-protocol.md)). Users requested an
 inner loop for `build`, `test`, `run`, `lint`, `typecheck`, and `format`
 including file scope.
@@ -43,8 +44,12 @@ graph, cache, resolver, daemon, remote execution, or deployment mechanism.
 - Signals and TTY handling follow the [CLI contract](../cli/cli-contract.md#exit-status).
   Interruption terminates the active child before the watcher.
 - Filesystem observation covers workspace source inputs only and ignores
-  `bazel-*` outputs, `.dx` managed state, and ignored local overlays. Exact
-  debounce, ignore set, and restart policy are qualified under the issue tracker.
+  `bazel-*` outputs, `.dx` managed state, and ignored local overlays. Debounce,
+  ignore set, and restart policy are frozen as implemented in
+  [dx watch](../cli/commands/watch.md) and owned for retirement by issue #916:
+  200 ms debounce (`WATCH_DEBOUNCE_MS` in `cli/adopt/src/watch.rs`),
+  `bazel-*`/`.dx`/`dx.local.toml` ignores, per-iteration re-resolution with
+  restart, and local-only `CI=true` refusal.
 
 ## Consequences
 
@@ -54,9 +59,16 @@ graph, cache, resolver, daemon, remote execution, or deployment mechanism.
 - `dx run` under `watch` re-enforces single-runnable selection per iteration.
 - Quality iterations reuse convergence, atomic apply, and `--fail-on` without
   new mutation semantics.
-- `the issue tracker` target resolution must land before `watch` implementation.
+- Target resolution in [Target Resolution](../cli/target-resolution.md) has
+  landed and `watch` reuses it verbatim; retirement owned by issue #916.
 - Tests cover scope kinds, pass-to-fail-to-recover cycles, ambiguous runnables,
-  signal forwarding, and debounce behavior per the issue tracker.
+  signal forwarding, and debounce behavior per issue #916.
+- Retirement is owned by issue #916 as the single tracker for all five
+  provisional exceptions: accept with the frozen debounce/ignore/restart above
+  or demote per the automatic-workflow policy. Ship gates are fixture evidence
+  (`cli_execution_gaps` plus `plan_watch` fixtures via
+  `bazel run //tools/ci:cli_execution_gaps_qualification`) plus consumer and
+  platform evidence per ADR 0008/0014 before any `Supported` claim.
 
 ## Rejected Alternatives
 
