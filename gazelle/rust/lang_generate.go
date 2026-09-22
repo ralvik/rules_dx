@@ -445,11 +445,11 @@ func sourceFiles(dir, rel string) ([]string, error) {
 			}
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".rs") {
 				local, relErr := filepath.Rel(dir, name)
-				// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+				// LCOV_EXCL_START - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 				if relErr != nil {
 					return relErr
 				}
-				// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+				// LCOV_EXCL_STOP - reason: end defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 				files = append(files, path.Join(rel, filepath.ToSlash(local)))
 			}
 			return nil

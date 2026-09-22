@@ -21,7 +21,7 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 use std::path::PathBuf;
 
 use clap::{error::ErrorKind, Parser};
@@ -169,7 +169,7 @@ fn run(args: &[String]) -> Result<(), EnvShardError> {
             .ok_or_else(|| EnvShardError::Usage { message: usage() })?,
         entries: cli.entry,
     };
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     let bytes = encode_validated(&shard).map_err(|error| EnvShardError::Codec {
         detail: error.to_string(),
     })?;

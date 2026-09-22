@@ -117,6 +117,7 @@ bazel run --noshow_progress //tools/ci:prebuilt_interop_qualification
 bazel run --noshow_progress //tools/ci:linux_corpus_qualification
 bazel run --noshow_progress //tools/ci:deployment_floors_qualification
 bazel run --noshow_progress //tools/ci:lcov_accounting_qualification
+bazel run --noshow_progress //tools/ci:coverage_excludes_qualification
 bazel run --noshow_progress //tools/ci:cargo_metadata_qualification
 bazel run --noshow_progress //tools/ci:strict_generation_qualification
 bazel run --noshow_progress //tools/ci:cross_routes_qualification

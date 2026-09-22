@@ -398,7 +398,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Rust manifest discovery plus generation check (issue #1038); see tools/ci/rust_manifests_qualification.sh.
+    # Rust manifest discovery plus generation check (See: tools/ci/rust_manifests_qualification.sh, issue #1038).
     sh_binary(
         name = "rust_manifests_qualification",
         srcs = ["rust_manifests_qualification.sh"],

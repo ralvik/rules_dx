@@ -54,16 +54,18 @@ TOOL_PAIRING_NOTE = "Rust/Clang raw-profile compatibility is the upgrade gate; l
 
 # Native ignores plus denominator validation: `LCOV_EXCL_LINE` for one
 # line plus `LCOV_EXCL_START`/`LCOV_EXCL_STOP` for a range, each with a
-# nearby `reason:` on the same or previous line (see
-# `docs/testing/README.md#coverage`). Valid ignores exclude their lines
-# from the denominator; missing reasons plus malformed directives fail.
-# A target with no executable lines is listed as no-code, never an
-# implicit pass; an empty denominator is never a pass.
+# specific nearby `reason:` plus `issue:` on the same or previous line (see
+# `docs/testing/strategy-details.md#coverage`, issue #1055). Valid ignores
+# exclude their lines from the denominator; missing reasons, bare policy:
+# without reason: plus issue:, missing issue: tracking, plus malformed
+# directives fail. A target with no executable lines is listed as no-code,
+# never an implicit pass; an empty denominator is never a pass.
 NATIVE_IGNORE_LINE = "LCOV_EXCL_LINE"
 NATIVE_IGNORE_START = "LCOV_EXCL_START"
 NATIVE_IGNORE_STOP = "LCOV_EXCL_STOP"
 NATIVE_IGNORE_REASON = "reason:"
-NATIVE_IGNORE_NOTE = "valid ignores exclude their executable lines from the denominator with a nearby reason"
+NATIVE_IGNORE_ISSUE = "issue:"
+NATIVE_IGNORE_NOTE = "valid ignores exclude their executable lines from the denominator with a nearby specific reason plus issue tracking"
 DENOMINATOR_NOTE = "Non-ignored eligible sources absent from reports or never executed remain in the denominator"
 
 # Rejected substitutes per the issue alternatives: unaccounted lines plus

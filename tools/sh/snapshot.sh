@@ -125,9 +125,9 @@ snapshot_canonical_json_diff() {
   local expected="$1" actual="$2" workspace_rel="${3:-}"
   local tmp
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/snapshot.XXXXXX")"
-  # LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+  # LCOV_EXCL_START - reason: trap cleanup, issue: 1055, policy: docs/testing/strategy-details.md#coverage
   trap 'rm -rf "$tmp"' RETURN
-  # LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+  # LCOV_EXCL_STOP - reason: end trap cleanup, issue: 1055, policy: docs/testing/strategy-details.md#coverage
   if ! python3 -c 'import json,sys; json.load(open(sys.argv[1])); json.load(open(sys.argv[2]))' "$expected" "$actual"; then
     echo "snapshot FAIL: non-JSON input ($expected vs $actual)" >&2
     return 1

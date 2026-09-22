@@ -37,8 +37,10 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
 /// are honored for the covered languages (`.rs`, `.go`, `.py`, `.js`,
 /// `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`, JVM
 /// `.java`/`.kt`/`.scala`, .NET `.cs`/`.fs`/`.fsi`, plus C/C++ `.c`/`.cc`/`.cpp`/`.cxx`/`.h`/`.hh`/`.hpp`/`.hxx`
-///) through the shared `dx_lcov` scanner (a
-/// `policy:` comment stays required (see the marker syntax in `docs/testing/README.md#coverage`). Sources that fail to load count raw: Bazel may
+///) through the shared `dx_lcov` scanner (a specific `reason:` plus
+/// `issue:` tracking comment stays required (see the marker syntax in
+/// `docs/testing/strategy-details.md#coverage`). Sources that fail to load
+/// count raw: Bazel may
 /// instrument generated or external files outside the workspace.
 /// Records outside the covered languages have no marker language and count
 /// raw. Invalid markers fail the computation.
@@ -130,7 +132,7 @@ mod tests {
     #[test]
     fn coverage_rate_honors_exclusion_markers() {
         let documents = ["SF:src/a.rs\nDA:1,1\nDA:2,0\nDA:3,0\nend_of_record\n"];
-        let source = "fn a() {}\n// LCOV_EXCL_LINE - reason: generated.\nfn c() {}\n";
+        let source = "fn a() {}\n// LCOV_EXCL_LINE - reason: generated, issue: 1055.\nfn c() {}\n";
         assert_eq!(rate(&documents, &[("src/a.rs", source)]), Ok((1, 2)));
     }
 
@@ -177,7 +179,7 @@ mod tests {
     #[test]
     fn coverage_rate_honors_wrapped_lang_markers() {
         let documents = ["SF:src/A.java\nDA:1,1\nDA:2,0\nDA:3,0\nend_of_record\n"];
-        let source = "public class A {\n// LCOV_EXCL_LINE - reason: generated.\n}\n";
+        let source = "public class A {\n// LCOV_EXCL_LINE - reason: generated, issue: 1055.\n}\n";
         assert_eq!(rate(&documents, &[("src/A.java", source)]), Ok((1, 2)));
     }
 

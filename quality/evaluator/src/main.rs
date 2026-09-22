@@ -16,7 +16,7 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 use clap::{error::ErrorKind, Parser};
 use quality_evaluator::{evaluate, parse_threshold, Threshold};
 use quality_result::decode_validated;
@@ -142,7 +142,7 @@ fn run() -> Result<(), String> {
     let result_path = cli.result.ok_or("--result is required")?;
     let threshold = cli.fail_on.ok_or("--fail_on is required")?;
     let output = cli.output.ok_or("--output is required")?;
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     let bytes =
         std::fs::read(&result_path).map_err(|e| format!("cannot read {result_path:?}: {e}"))?;
     let result =

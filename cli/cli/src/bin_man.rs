@@ -15,7 +15,7 @@
 use std::io::Write;
 use std::path::PathBuf;
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin man shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 fn main() {
     // Structured diagnostics: build-step failures report via
     // `tracing::error!` with the legacy message text; init is idempotent
@@ -28,7 +28,7 @@ fn main() {
             tracing::error!("usage: dx_man <output-file>");
             std::process::exit(2);
         });
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin man shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     let man = clap_mangen::Man::new(dx_cli::args::cli_command()).section("1");
     let mut buffer = Vec::new();
     man.render(&mut buffer).unwrap_or_else(|error| {

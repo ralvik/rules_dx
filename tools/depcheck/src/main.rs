@@ -13,7 +13,7 @@
     )
 )]
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -107,7 +107,7 @@ fn unknown_ecosystem(ecosystem: &str) -> i32 {
 
 fn run() -> i32 {
     let cli = Cli::parse();
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     match cli.cmd {
         Command::Consistency {
             ecosystem,

@@ -347,7 +347,7 @@ mod tests {
             "pub fn classify(n: u32) -> u32 {".to_string(),
             "    if n == 0 {".to_string(),
             format!(
-                "        return 0; // {} - reason: fixture defensive branch.",
+                "        return 0; // {} - reason: fixture defensive branch, issue: 1055.",
                 marker("_LINE")
             ),
             "    }".to_string(),
@@ -388,7 +388,7 @@ mod tests {
             "def classify(n):".to_string(),
             "    if n == 0:".to_string(),
             format!(
-                "        return 0  # {} - reason: fixture defensive branch.",
+                "        return 0  # {} - reason: fixture defensive branch, issue: 1055.",
                 marker("_LINE")
             ),
             "    return n".to_string(),
@@ -456,7 +456,7 @@ mod tests {
         let source = file_lines(&[
             "export function f() {".to_string(),
             format!(
-                "  return 0; // {} - reason: fixture defensive branch.",
+                "  return 0; // {} - reason: fixture defensive branch, issue: 1055.",
                 marker("_LINE")
             ),
             "}".to_string(),
@@ -570,9 +570,9 @@ mod tests {
     #[test]
     fn fully_ignored_zero_da_file_passes_with_zero_counts() {
         let source = file_lines(&[
-            format!("// {} - reason: shim.", marker("_START")),
+            format!("// {} - reason: shim, issue: 1055.", marker("_START")),
             "fn main() {}".to_string(),
-            format!("// {} - reason: shim end.", marker("_STOP")),
+            format!("// {} - reason: shim end, issue: 1055.", marker("_STOP")),
         ]);
         let live = file_lines(&["fn f() {}".to_string()]);
         let files = BTreeMap::from([("shim.rs", source), ("elf.rs", live)]);
@@ -592,9 +592,9 @@ mod tests {
     #[test]
     fn empty_denominator_is_never_a_pass() {
         let source = file_lines(&[
-            format!("// {} - reason: shim.", marker("_START")),
+            format!("// {} - reason: shim, issue: 1055.", marker("_START")),
             "fn main() {}".to_string(),
-            format!("// {} - reason: shim end.", marker("_STOP")),
+            format!("// {} - reason: shim end, issue: 1055.", marker("_STOP")),
         ]);
         let files = BTreeMap::from([("shim.rs", source)]);
         let mut report = BTreeMap::new();
@@ -769,7 +769,7 @@ mod tests {
 
     #[test]
     fn invalid_source_markers_fail_evaluation() {
-        let source = file_lines(&[format!("// {} - reason: stray stop.", marker("_STOP"))]);
+        let source = file_lines(&[format!("// {} - reason: stray stop, issue: 1055.", marker("_STOP"))]);
         let files = BTreeMap::from([("elf.rs", source)]);
         let verdict = evaluate(
             &eligible_inventory(&["elf.rs"]),
@@ -834,7 +834,7 @@ mod tests {
         let source = file_lines(&[
             "public class Elf {".to_string(),
             format!(
-                "  int f() {{ return 0; }} // {} - reason: fixture defensive branch.",
+                "  int f() {{ return 0; }} // {} - reason: fixture defensive branch, issue: 1055.",
                 marker("_LINE")
             ),
             "}".to_string(),
@@ -886,7 +886,7 @@ mod tests {
         let source = file_lines(&[
             "public static class Elf {".to_string(),
             format!(
-                "  public static int F() => 0; // {} - reason: fixture defensive branch.",
+                "  public static int F() => 0; // {} - reason: fixture defensive branch, issue: 1055.",
                 marker("_LINE")
             ),
             "}".to_string(),

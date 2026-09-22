@@ -110,7 +110,7 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                     phase.name()
                 ));
                 let Some(capture_text) = capture.to_str() else {
-                    return pre_exec(err, "temporary report path is not UTF-8"); // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                    return pre_exec(err, "temporary report path is not UTF-8"); // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                 };
                 phase_reports.push(ReportRequest {
                     format: request.format.clone(),
@@ -203,13 +203,13 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                 continue;
             }
             let Some(capture) = &phase.sarif_capture else {
-                continue; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             };
             let Ok(bytes) = std::fs::read(capture) else {
-                continue; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             };
             let Ok(document) = serde_json::from_slice::<Value>(&bytes) else {
-                continue; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             };
             if runs.is_empty() {
                 if let Some(value) = document.get("$schema") {

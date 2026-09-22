@@ -197,7 +197,7 @@ impl Scratch {
             // always has a parent, so this only fires on a future
             // resolve/materialize divergence (fail closed, never panic).
             let parent = absolute.parent().ok_or_else(|| {
-                // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+                // LCOV_EXCL_LINE - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                 io::Error::new(
                     io::ErrorKind::InvalidInput,
                     format!("scratch path has no parent: {}", absolute.display()),

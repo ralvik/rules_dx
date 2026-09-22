@@ -13,7 +13,7 @@
 // strip the `:dx_lcov` dep the binary links.
 use dx_lcov::run;
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     std::process::exit(run(
@@ -24,4 +24,4 @@ fn main() {
         &mut |line| println!("{line}"),
     ));
 }
-// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage

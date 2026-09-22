@@ -213,7 +213,7 @@ pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> 
         }
         let head = &original[cursor..start];
         if std::str::from_utf8(head).is_err() {
-            return None; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+            return None; // LCOV_EXCL_LINE - reason: utf8 slice of valid text, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         }
         if std::str::from_utf8(replacement).is_err() {
             return None;
@@ -224,7 +224,7 @@ pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> 
     }
     let tail = &original[cursor..];
     if std::str::from_utf8(tail).is_err() {
-        return None; // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        return None; // LCOV_EXCL_LINE - reason: utf8 slice of valid text, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     }
     candidate.extend_from_slice(tail);
     Some(candidate)

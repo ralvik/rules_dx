@@ -32,7 +32,7 @@ pub trait QueryRunner {
 
 /// Production query runner: spawns the launcher with piped stdio and
 /// waits for completion.
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: prod spawn, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 pub struct ProcessQueryRunner;
 
 impl QueryRunner for ProcessQueryRunner {
@@ -54,7 +54,7 @@ impl QueryRunner for ProcessQueryRunner {
         })
     }
 }
-// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_STOP - reason: end prod spawn, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 
 /// Test-only query runner that fails on any call: directory and label
 /// scopes must resolve without touching Bazel.
@@ -63,7 +63,7 @@ impl QueryRunner for ProcessQueryRunner {
 /// previously copy-pasted as five private `NeverQuery` structs with
 /// drifting panic messages plus five `LCOV_EXCL` pairs. See:
 /// `docs/testing/README.md#coverage`.
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: test guard, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 #[cfg(test)]
 pub struct NeverQuery;
 
@@ -73,7 +73,7 @@ impl QueryRunner for NeverQuery {
         panic!("resolve tests must not run queries");
     }
 }
-// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_STOP - reason: end test guard, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 
 /// Resolved scope: exact Bazel targets plus the summary scope.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -20,7 +20,7 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -131,7 +131,7 @@ fn run() -> i32 {
             Err(_) => return usage_error("--lock-timeout-ms must be a non-negative integer"),
         },
     };
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     // Workspace start: single-sourced via
     // `dx_process::workspace_start` (shell: `tools/sh/lib.sh`).
     // An explicit `--workspace` still wins.

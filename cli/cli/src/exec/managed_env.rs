@@ -36,12 +36,12 @@ pub(crate) fn collect_managed_env(bep: &Path) -> Result<ManagedEnvCollection, (S
         )
     })?;
     let projection = dx_env_plan::plan_projection(&plan.records, &outputs).map_err(|err| {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid env plan: {err}"),
         )
-        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     })?;
     Ok((outputs, plan, projection))
 }
@@ -51,14 +51,14 @@ pub(crate) fn collect_managed_env(bep: &Path) -> Result<ManagedEnvCollection, (S
 /// selection with a real immutable identity, per
 /// `docs/environments/managed-state.md`.
 pub(crate) fn empty_env_id() -> Result<dx_setup::GenerationId, (String, String)> {
-    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     dx_setup::GenerationId::new(&dx_env_plan::plan_hex("[]")).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid empty env plan digest: {err}"),
         )
     })
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
 /// Rejects env keys that are not safe single-path filenames before any
@@ -198,12 +198,12 @@ pub(crate) fn stage_env_side(
     projection: &[dx_env_plan::ProjectionEntry],
 ) -> Result<dx_setup::GenerationId, (String, String)> {
     let id = dx_setup::GenerationId::new(&plan.hex()).map_err(|err| {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid env plan digest: {err}"),
         )
-        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     })?;
     stage_env_generation(workspace, &id, projection)?;
     Ok(id)

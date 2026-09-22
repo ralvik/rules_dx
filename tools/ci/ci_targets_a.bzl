@@ -258,6 +258,16 @@ def add_a():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # LCOV excludes-budget harness (See: tools/ci/coverage_excludes_qualification.sh, issue #1055).
+    sh_binary(
+        name = "coverage_excludes_qualification",
+        srcs = ["coverage_excludes_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Coverage-report guards; see tools/ci/coverage_report_guards.sh.
     sh_binary(
         name = "coverage_report_guards",

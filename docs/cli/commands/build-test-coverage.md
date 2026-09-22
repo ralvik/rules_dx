@@ -91,7 +91,7 @@ the live NDJSON or stderr diagnostic while available validated records remain va
 `dx coverage --min-coverage <percent>` additionally enforces a line-coverage
 threshold over the collected LCOV: covered over eligible executable lines must
 reach the integer percent, else the command exits 1. `LCOV_EXCL_*` source
-markers (with a nearby `reason:` comment, line comments outside string literals only; block comments and raw strings stay wont-fix per issue #589, see [Testing Strategy](../../testing/README.md#coverage)) exclude lines from the denominator;
+markers (with a nearby specific `reason:` plus `issue:` comment, line comments outside string literals only; block comments and raw strings stay wont-fix per issue #589, budgeted with expiry in `tools/coverage/excludes-budget.txt` per issue #1055, see [Testing Strategy](../../testing/strategy-details.md#coverage)) exclude lines from the denominator;
 sources that fail to load and non-Rust/Go records count raw. Without the flag,
 coverage collects and reports with no threshold verdict. The threshold is a
 configurable requirement for users per-cell: each required

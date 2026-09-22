@@ -1,4 +1,4 @@
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 //! `dx_apply`: validated, consensus-gated file mutations for the `dx` CLI.
 //!
 //! Contract: `docs/architecture/README.md`.
@@ -34,4 +34,4 @@ pub use envelope::{
     FileOperation, ENVELOPE_VERSION,
 };
 pub use validators::{validate, ValidationError, BLOCKED_EXTENSIONS, MAX_OPERATION_BYTES};
-// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_STOP - reason: end re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage

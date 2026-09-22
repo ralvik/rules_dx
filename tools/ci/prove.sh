@@ -4,6 +4,7 @@ set -euo pipefail
 
 bazel run --noshow_progress //tools/ci:target_tags
 bazel run --noshow_progress //tools/ci:coverage_cell
+bazel run --noshow_progress //tools/ci:coverage_excludes_qualification
 bazel run --noshow_progress //tools/ci:coverage_spill
 bazel run --noshow_progress //tools/ci:coverage_qualification
 bazel run --noshow_progress //tools/ci:musl_qualification

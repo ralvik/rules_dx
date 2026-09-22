@@ -40,7 +40,7 @@
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -414,7 +414,7 @@ fn run() -> Result<(), RunnerError> {
     for spec in &cli.upstream_diagnostics {
         upstream.push(parse_upstream_diagnostics(spec)?);
     }
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     let mut files = Vec::with_capacity(sources.len());
     for (workspace, exec) in &sources {
         let bytes = std::fs::read(exec).map_err(|e| RunnerError::UnreadableSource {

@@ -39,12 +39,12 @@ pub(crate) fn collect_managed_codegen(
         )
     })?;
     let projection = dx_codegen::plan_projection(&plan.records, &outputs).map_err(|err| {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid codegen plan: {err}"),
         )
-        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     })?;
     Ok((outputs, plan, projection))
 }
@@ -52,14 +52,14 @@ pub(crate) fn collect_managed_codegen(
 /// Managed empty generated-code identity, mirroring
 /// [`empty_env_id`](super::managed_env::empty_env_id).
 pub(crate) fn empty_generated_id() -> Result<dx_setup::GenerationId, (String, String)> {
-    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     dx_setup::GenerationId::new(&dx_codegen::plan_hex("[]")).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid empty codegen plan digest: {err}"),
         )
     })
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
 /// Rejects workspace-absolute, escaping, or empty logical paths before
@@ -218,12 +218,12 @@ pub(crate) fn stage_codegen_side(
     projection: &[dx_codegen::ProjectionEntry],
 ) -> Result<dx_setup::GenerationId, (String, String)> {
     let id = dx_setup::GenerationId::new(&plan.hex()).map_err(|err| {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid codegen plan digest: {err}"),
         )
-        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     })?;
     stage_codegen_generation(workspace, &id, projection)?;
     Ok(id)

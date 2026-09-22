@@ -19,8 +19,9 @@
 #   Rust 1.98.0 with LLVM 22.1.8 baseline vs 23.1.0 target; unpinned
 #   LLVM rejected).
 # - native ignores plus denominator: `LCOV_EXCL_LINE`/`START`/`STOP`
-#   each with a nearby `reason:`; valid ignores leave the denominator,
-#   missing reasons plus malformed directives fail, absent plus never-
+#   each with a nearby specific `reason:` plus `issue:` (issue #1055);
+#   valid ignores leave the denominator, missing reasons plus bare policy:
+#   plus missing issue: plus malformed directives fail, absent plus never-
 #   executed eligible sources stay in the denominator, empty denominator
 #   never passes.
 # - no ignored collection failures: missing reports plus incomplete
@@ -114,6 +115,7 @@ if grep -q -F -e 'NATIVE_IGNORE_LINE = "LCOV_EXCL_LINE"' "$pins" &&
   grep -q -F -e 'NATIVE_IGNORE_START = "LCOV_EXCL_START"' "$pins" &&
   grep -q -F -e 'NATIVE_IGNORE_STOP = "LCOV_EXCL_STOP"' "$pins" &&
   grep -q -F -e 'NATIVE_IGNORE_REASON = "reason:"' "$pins" &&
+  grep -q -F -e 'NATIVE_IGNORE_ISSUE = "issue:"' "$pins" &&
   grep -q -F -e 'remain in the denominator' "$pins"; then
   ok
 else

@@ -68,12 +68,12 @@ pub(crate) fn render_diff_patch(
         };
         let candidate_text = match String::from_utf8(candidate) {
             Ok(text) => text,
-            // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+            // LCOV_EXCL_START - reason: utf8 candidate, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             Err(_) => {
                 return Err(PatchError::NonUtf8Candidate {
                     path: change.path.clone(),
                 });
-            } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+            } // LCOV_EXCL_STOP - reason: end utf8 candidate, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         };
         owned.push((
             change.path.clone(),
