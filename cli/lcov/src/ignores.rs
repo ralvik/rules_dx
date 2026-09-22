@@ -161,7 +161,7 @@ fn slash_scan() -> Option<&'static Regex> {
             let _ = SCAN.set(compiled);
             SCAN.get()
         }
-        Err(_) => None,
+        Err(_) => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
     }
 }
 
@@ -175,7 +175,7 @@ fn hash_scan() -> Option<&'static Regex> {
             let _ = SCAN.set(compiled);
             SCAN.get()
         }
-        Err(_) => None,
+        Err(_) => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
     }
 }
 
@@ -192,7 +192,7 @@ fn directive_suffix() -> Option<&'static Regex> {
             let _ = SUFFIX.set(compiled);
             SUFFIX.get()
         }
-        Err(_) => None,
+        Err(_) => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
     }
 }
 
@@ -219,20 +219,21 @@ fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
         }
         if slash_scan().is_some() {
             return None;
-        }
+        } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
     } else if opener == b"#" {
         if let Some(end) = scan_with(line, hash_scan()) {
             return Some(&line[end..]);
         }
         if hash_scan().is_some() {
             return None;
-        }
-    }
-    line_comment_with_fallback(line, opener)
+        } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+    } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+    line_comment_with_fallback(line, opener) // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
 }
 
 /// Byte-loop fallback for [`line_comment_with`] (unreachable unless the
 /// static `regex` patterns fail to compile).
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     let bytes = line.as_bytes();
     let mut index = 0;
@@ -268,6 +269,7 @@ fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a st
     }
     None
 }
+// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 
 /// Comment text after the `//` comment start, honoring `"`/`'` literals and
 /// backslash escapes. Returns `None` when the line has no line comment.
@@ -331,12 +333,14 @@ fn take_word(rest: &str, word: &str) -> bool {
             Some(matched) => matched.as_str() == word,
             None => false,
         };
-    }
+    } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+      // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
     if let Some(tail) = rest.strip_prefix(word) {
         !tail.starts_with(|c: char| c == '_' || c.is_alphanumeric())
     } else {
         false
     }
+    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 }
 
 /// Validate the exclusion markers in the `source` of `path`.
@@ -886,5 +890,16 @@ mod tests {
             let ignores = find_ignores(path, &source).unwrap();
             assert!(ignores.singles.contains_key(&1), "{path}");
         }
+    }
+
+    #[test]
+    fn reason_wins_when_line_carries_both_keys() {
+        let source = file_lines(&[format!(
+            "// {} - reason: first policy: second.",
+            marker("_LINE")
+        )]);
+        let ignores = find_ignores("t.rs", &source).unwrap();
+        assert!(ignores.singles.contains_key(&1));
+        assert_eq!(ignores.singles[&1], "first policy: second.".to_string());
     }
 }

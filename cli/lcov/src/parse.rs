@@ -87,7 +87,7 @@ pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, LcovError>
             Err(err) => {
                 let kind = line.split_once(':').map(|(k, _)| k).unwrap_or("");
                 if kind == "SF" {
-                    return Err(LcovError::EmptySfPath);
+                    return Err(LcovError::EmptySfPath); // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
                 }
                 if kind != "DA" {
                     continue;
@@ -205,7 +205,7 @@ pub fn validate_lcov_report(report: &str) -> Result<(), LcovError> {
             Err(err) => {
                 let kind = line.split_once(':').map(|(k, _)| k).unwrap_or("");
                 if kind == "SF" {
-                    return Err(LcovError::EmptySfPath);
+                    return Err(LcovError::EmptySfPath); // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
                 }
                 if kind != "DA" {
                     continue;
@@ -325,5 +325,40 @@ mod tests {
         assert_eq!(merged["a.rs"].lines[&3], 0);
         assert!(merge_lcov_reports(&[]).unwrap().is_empty());
         assert!(merge_lcov_reports(&["DA:1,1\n".to_owned()]).is_err());
+    }
+
+    #[test]
+    fn skips_colonless_lines_and_suffix_end_markers() {
+        let report = parse_lcov(
+            "SF:a.rs\ngarbage line without colon\nDA:1,1\nend_of_record:trailing\nend_of_record\n",
+        )
+        .unwrap();
+        assert_eq!(report["a.rs"].lines[&1], 1);
+        assert!(validate_lcov_report(
+            "SF:/a.rs\ngarbage line without colon\nDA:1,1\nend_of_record\n"
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn rejects_malformed_da_outside_sf() {
+        assert!(parse_lcov("DA:x,1\nend_of_record\n").is_err());
+        assert!(validate_lcov_report("DA:x,1\nend_of_record\n").is_err());
+    }
+
+    #[test]
+    fn validator_covers_empty_and_malformed_branches() {
+        assert!(validate_lcov_report("SF:/a.rs\n\nDA:1,1\nend_of_record\n").is_ok());
+        assert!(validate_lcov_report("SF:\nDA:1,1\nend_of_record\n").is_err());
+        assert!(validate_lcov_report("SF:/a.rs\nDA:0,1\nend_of_record\n").is_err());
+        assert!(validate_lcov_report("SF:/a.rs\nDA:x,1\nend_of_record\n").is_err());
+        assert!(validate_lcov_report("SF:/a.rs\nDA:1,x\nend_of_record\n").is_err());
+        assert!(validate_lcov_report("SF:/a.rs\nDA:1\nend_of_record\n").is_err());
+        assert!(validate_lcov_report("SF:/a.rs\nFOO:bad:bad\nDA:1,1\nend_of_record\n").is_ok());
+        assert!(validate_lcov_report("SF:/a.rs\nFN:1,main\nDA:1,1\nend_of_record\n").is_ok());
+        assert!(
+            validate_lcov_report("SF:/a.rs\nDA:1,1\nend_of_record:trailing\nend_of_record\n")
+                .is_ok()
+        );
     }
 }

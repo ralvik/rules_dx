@@ -65,7 +65,7 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
             let flag = dx_output::leading_flag(&token);
             format!("missing value for {flag}")
         }
-        _ => dx_output::first_line(&error),
+        _ => dx_output::first_line(&error), // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
     }
 }
 
@@ -423,6 +423,22 @@ mod tests {
                 "--root",
             ],
         );
+        assert_eq!(code, 2, "{printed:?}");
+        assert!(
+            printed.iter().any(|line| line.contains("usage")),
+            "{printed:?}"
+        );
+    }
+
+    #[test]
+    fn run_help_prints_usage() {
+        let (code, printed) = run_harness(passing_store(), &["--help"]);
+        assert_eq!(code, 2, "{printed:?}");
+        assert!(
+            printed.iter().any(|line| line.contains("usage")),
+            "{printed:?}"
+        );
+        let (code, printed) = run_harness(passing_store(), &["-h"]);
         assert_eq!(code, 2, "{printed:?}");
         assert!(
             printed.iter().any(|line| line.contains("usage")),

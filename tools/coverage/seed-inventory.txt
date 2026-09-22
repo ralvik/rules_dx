@@ -21,4 +21,6 @@ eligible cli/lcov/src/inventory.rs
 eligible cli/lcov/src/parse.rs
 eligible cli/lcov/src/run.rs
 eligible cli/lcov/src/verdict.rs
+eligible quality/evaluator/src/lib.rs
+eligible quality/evaluator/src/main.rs
 eligible tools/coverage/src/main.rs
