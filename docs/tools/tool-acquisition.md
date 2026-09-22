@@ -226,12 +226,22 @@ only its selected execution-platform runtime/application closure.
 
 `MODULE.bazel` keeps only `bazel_dep` plus extension use plus `use_repo`
 re-exports; per-ecosystem pins live in `//modules/*.bzl` (single source).
-Both quality-tool families use the same lazy-hub idiom: `dx_tools`
+Both quality-tool families use the same lazy idiom: `dx_tools`
 (`//quality/artifacts:extension.bzl` plus `repos.bzl`) and `jvm_tools`
 (`//quality/tools/jvm:extension.bzl` plus `repos.bzl`) create one lazy
 repository per tool from checked-in metadata, and `//tools/ci:pin_consistency_test`
-fails on drift. JVM tools need no per-platform matrix or hub: they are
-platform-independent single artifacts run over the shared JDK. Rust crate
+fails on drift. `dx_tools` adds a per-platform matrix plus execution-platform
+hub: one repository per tool/platform with `select()` consumption.
+JVM tools are exempt from the matrix plus hub: they are
+platform-independent single artifacts (single JARs plus binary distributions)
+run over the shared JDK via `java_binary` wrappers in `//quality/tools/jvm`,
+so one lazy repository per tool suffices and `select()` would add indirection
+with no platform variance. Unified version/digest metadata still holds:
+versions mirror `//modules:java-scala-kotlin.bzl` `JVM_TOOL_VERSIONS` and
+digests stay single-sourced in `//quality/tools/jvm:repos.bzl` (pinned by
+`//quality/tools/jvm:metadata` plus `pin_consistency_test`). The `java_binary`
+runfiles merging in `//quality:real_aspects` is inherent to managed-JDK
+wrappers (same as the Python/Node launchers), not a missing hub. Rust crate
 manifests live in `//modules:rust.bzl` groups mirrored in `MODULE.bazel`
 `crate.from_cargo`; `bazel run //tools/ci:rust_manifests_qualification`
 fails when a first-party `Cargo.toml` is missing from the wrapper or when

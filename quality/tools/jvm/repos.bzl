@@ -3,8 +3,9 @@
 # Checked-in inventory of the `jvm_tools` extension repos re-exported by the
 # root MODULE.bazel `use_repo` block. Single source for the JVM
 # complete-upstream-artifact plus shared-JDK route (see extension.bzl);
-# `//tools/ci:pin_consistency_test` fails when MODULE.bazel drifts from
-# this list. Unlike `dx_tools` there is no per-platform matrix and no hub:
+# `//quality/tools/jvm:metadata` fails when this list drifts from the
+# `JVM_TOOLS` keys, and `//tools/ci:pin_consistency_test` fails when
+# MODULE.bazel drifts from this list. Unlike `dx_tools` there is no per-platform matrix and no hub:
 # each tool is a single platform-independent JAR or binary distribution
 # run over the shared JDK, so one repository per tool suffices and
 # registration fetches nothing; each repository downloads only when an
