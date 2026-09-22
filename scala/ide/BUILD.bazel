@@ -1,0 +1,36 @@
+"""Upstream Scala IDE tool acquisition.
+
+The Scala environment contract reuses the pinned JVM toolchain shared with
+Java; this package pins its acquisition.
+"""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//:__subpackages__"])
+
+sh_test(
+    name = "ide_acquisition_test",
+    size = "small",
+    timeout = "short",
+    srcs = ["ide_acquisition_test.sh"],
+    args = select({
+        "@platforms//cpu:arm64": ["$(rootpath @@rules_java++toolchains+remotejdk21_linux_aarch64//:bin/java)"],
+        "//conditions:default": ["$(rootpath @@rules_java++toolchains+remotejdk21_linux//:bin/java)"],
+    }),
+    data = select({
+        "@platforms//cpu:arm64": ["@@rules_java++toolchains+remotejdk21_linux_aarch64//:bin/java"],
+        "//conditions:default": ["@@rules_java++toolchains+remotejdk21_linux//:bin/java"],
+    }) + [
+        "//tools/sh:bootstrap",
+        "//tools/sh:lib",
+    ],
+    tags = ["no-coverage"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

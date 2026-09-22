@@ -1,0 +1,39 @@
+"""Upstream C/C++ IDE tool acquisition.
+
+The environment contract reuses the pinned C++ toolchain compiler for
+action-derived compile commands plus managed clangd; this package pins the
+compiler acquisition. Host-native clangd resolution stays open under the
+native plan.
+"""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//cc/rules:defs.bzl", "cc_binary")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//:__subpackages__"])
+
+cc_binary(
+    name = "version",
+    srcs = ["version.cc"],
+)
+
+sh_test(
+    name = "ide_acquisition_test",
+    size = "small",
+    timeout = "short",
+    srcs = ["ide_acquisition_test.sh"],
+    args = ["$(rootpath :version)"],
+    data = [
+        ":version",
+        "//tools/sh:bootstrap",
+        "//tools/sh:lib",
+    ],
+    tags = ["no-coverage"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

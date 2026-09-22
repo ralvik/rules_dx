@@ -1,0 +1,37 @@
+"""Upstream PowerShell IDE tool acquisition.
+
+The environment contract reuses the pinned portable pwsh toolchain; this
+package pins its acquisition via a wrapper-built version entry point.
+"""
+
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//powershell/rules:defs.bzl", "pwsh_binary")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//:__subpackages__"])
+
+pwsh_binary(
+    name = "version",
+    srcs = ["Version.ps1"],
+)
+
+sh_test(
+    name = "ide_acquisition_test",
+    size = "small",
+    timeout = "short",
+    srcs = ["ide_acquisition_test.sh"],
+    args = ["$(rootpath :version)"],
+    data = [
+        ":version",
+        "//tools/sh:bootstrap",
+        "//tools/sh:lib",
+    ],
+    tags = ["no-coverage"],
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
