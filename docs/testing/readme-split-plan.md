@@ -5,7 +5,7 @@ named contracts, not READMEs.
 
 ## Completed (pinned by `bazel run //tools/ci:docs_testing_gates`)
 
-- `docs/testing/README.md` (40 lines): goals plus links only; layers, coverage,
+- `docs/testing/README.md` (43 lines): goals plus links only; layers, coverage,
   infrastructure, and evidence live in `docs/testing/strategy-details.md` plus the
   per-matrix pages (`cli.md`, `github-ci.md`, `generation.md`, `environments.md`, `tools.md`).
 - `docs/architecture/README.md` (44 lines): overview plus principles plus flow only;
