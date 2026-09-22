@@ -47,7 +47,12 @@ DxNativeConfigInfo = provider(
 # remaining cohort tools (cue, jsonnetfmt, pkl, modfmt, terraform,
 # yamlfmt, keep_sorted, shfmt, shellcheck, rubocop, standardrb,
 # psscriptanalyzer) take no typed config by design (whole-file rewrite
-# or check-only with upstream defaults, no hidden preset).
+# or check-only with upstream defaults, no hidden preset). Clippy plus
+# rustc likewise take no typed config: the upstream rust_clippy_aspect plus
+# the Rust rules own their invocations and read clippy.toml via their own
+# label flags (See: quality/real_aspects.bzl, clippy_delegated/the
+# rustc-owned compilation); dx never spawns them with a hinted config, so
+# no native_config entry exists by design.
 # See `docs/quality/tool-integrations.md`.
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",

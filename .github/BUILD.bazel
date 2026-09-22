@@ -5,10 +5,15 @@ load("//quality:fixtures.bzl", "real_source_target")
 package(default_visibility = ["//:__subpackages__"])
 
 # Consumer CI template harness (issue #99); see //tools/ci:consumer_scheduling_test.
-# ci.yml stays out (no quality class); publish-dry-run.yml is a link sibling (issue #12).
+# All workflows are exported (issue #915): reusable callers plus the
+# self-called ci/bump/ghcr routes share one export list.
 exports_files([
+    "workflows/bump.yml",
+    "workflows/ci.yml",
+    "workflows/ghcr.yml",
     "workflows/publish-dry-run.yml",
     "workflows/reusable-consumer.yml",
+    "workflows/reusable-docs.yml",
 ])
 
 real_source_target(

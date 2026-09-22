@@ -96,6 +96,10 @@ workspace_policy(
 # the source classes. Like the synthetic fixture policy, this is a
 # fixture, not curated defaults: the family taxonomy is frozen in
 # quality/adapters.bzl and curated defaults in quality/curated_defaults.bzl.
+# family_id overlap with the synthetic policy above is intentional
+# (issue #915): each workspace_policy resolves its own families, so the
+# synthetic rust/python families never merge with the real ones; the
+# shared ids prove multi-policy aggregation, not a collision.
 # This policy is also the canonical
 # workspace policy — every repository corpus target is checked under it
 # (fixtures keep it too), so dogfood findings reproduce under one policy.

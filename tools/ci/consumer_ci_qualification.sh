@@ -163,15 +163,17 @@ else
   bad "caller template lost SHA pin, platforms, parallel, or version match ($caller_version vs $module_version)"
 fi
 
-# Hygiene: SHA pins with tag comments, single setup-bazelisk, no inline install.
-actions_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40}' "$workflow" "$caller" | wc -l)"
-commented_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+' "$workflow" "$caller" | wc -l)"
+# Hygiene: SHA pins with tag comments, single setup-checkout-bazelisk bootstrap, no inline install.
+# The no-secrets checkout pin lives once in the bootstrap composite (issue #915),
+# so pin counting covers the workflow plus the composite.
+actions_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40}' "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml | wc -l)"
+commented_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+' "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml | wc -l)"
 if [[ "$actions_pins" -gt "0" && "$actions_pins" == "$commented_pins" ]] &&
-  [[ "$(grep -c -F -e './.github/actions/setup-bazelisk' "$workflow")" -ge "9" ]] &&
-  ! grep -e 'setup-bazelisk' "$workflow" | grep -v -F -e './.github/actions/setup-bazelisk' | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
+  [[ "$(grep -c -F -e './.github/actions/setup-checkout-bazelisk' "$workflow")" -ge "9" ]] &&
+  ! grep -F -e './.github/actions/setup-bazelisk' "$workflow" | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
   ok
 else
-  bad "hygiene lost (SHA plus tag comments or single setup-bazelisk path)"
+  bad "hygiene lost (SHA plus tag comments or single setup-checkout-bazelisk bootstrap path)"
 fi
 
 # Concurrency cancels superseded PR runs without deleting history.
@@ -183,14 +185,16 @@ else
   bad "concurrency supersession record lost (group plus cancel-in-progress)"
 fi
 
-# Permissions stay least-privilege with fork-safe checkout.
+# Permissions stay least-privilege with fork-safe checkout (no-secrets
+# checkout lives once in the setup-checkout-bazelisk composite).
 if grep -q -F -e 'contents: read' "$workflow" &&
   grep -q -F -e 'checks: write' "$workflow" &&
   grep -q -F -e 'pull-requests: write' "$workflow" &&
-  [[ "$(grep -c -F -e 'persist-credentials: false' "$workflow")" -ge "9" ]]; then
+  grep -q -F -e 'persist-credentials: false' .github/actions/setup-checkout-bazelisk/action.yml &&
+  [[ "$(grep -c -F -e './.github/actions/setup-checkout-bazelisk' "$workflow")" -ge "9" ]]; then
   ok
 else
-  bad "permissions lost least-privilege plus persist-credentials record"
+  bad "permissions lost least-privilege plus no-secrets bootstrap record"
 fi
 
 # Coverage stays per-cell no-union with Codecov opt-in only.

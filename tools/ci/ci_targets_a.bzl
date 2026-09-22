@@ -67,10 +67,12 @@ def add_a():
             "$(rootpath //.github:workflows/reusable-consumer.yml)",
             "$(rootpath //examples:consumer-ci/caller.yml)",
             "$(rootpath //:MODULE.bazel)",
+            "$(rootpath //.github/actions/setup-checkout-bazelisk:action.yml)",
         ],
         data = [
             "//:MODULE.bazel",
             "//.github:workflows/reusable-consumer.yml",
+            "//.github/actions/setup-checkout-bazelisk:action.yml",
             "//examples:consumer-ci/caller.yml",
             "//tools/sh:bootstrap",
             "//tools/sh:lib",
