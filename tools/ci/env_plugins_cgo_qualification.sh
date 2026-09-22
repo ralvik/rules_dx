@@ -47,7 +47,6 @@ expected="env/tests/fixtures/env_plugins_cgo/env_plugins_cgo.expected"
 fixture_build="env/tests/fixtures/env_plugins_cgo/BUILD.bazel"
 build="tools/ci/ci_targets_c.bzl"
 ci="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 
 # Plugin model stays Not planned with no v1 plugin model or extension point.
 if grep -q -F -e 'Not planned: third-party language-integration plugins' "$env_doc" &&
@@ -192,14 +191,12 @@ else
   bad "env_plugins_cgo.expected lost its decision plus boundary plus honesty lines under #587"
 fi
 
-# Docs plus build plus CI plus matrix own the qualified seed-only record under.
+# Docs plus build plus CI own the qualified seed-only record under.
 if grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/pins.bzl' "$env_doc" &&
   grep -q -F -e 'qualified seed-only' "$env_doc" &&
   grep -q -F -e 'issue #587' "$env_doc" &&
   grep -q -F -e 'env_plugins_cgo_qualification' "$build" &&
-  grep -q -F -e 'env_plugins_cgo_qualification' "$ci" &&
-  grep -q -F -e 'env_plugins_cgo_qualification' "$verify" &&
-  grep -q -F -e '#587' "$verify"; then
+  grep -q -F -e 'env_plugins_cgo_qualification' "$ci"; then
   ok
 else
   bad "docs/build/CI/matrix lost the #587 qualified seed-only wiring"

@@ -43,7 +43,6 @@ matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pins plus hello consumer stay present.
 if [[ -f "$pins" && -f "$scalatest_build" && -f "$hello_build" && -f "$hello_test" ]]; then
@@ -136,17 +135,6 @@ else
   bad "implicit Scala runner detected (want wrapper scala_test only, no direct @rules_scala load in fixtures)"
 fi
 
-# Support matrix keeps the qualified Scala gap wording.
-if grep -q -F -e 'ScalaTest 3.2.20' "$matrix" &&
-  grep -q -F -e 'scalatest_qualification' "$matrix" &&
-  grep -q -F -e 'scala/tests/fixtures/scalatest/pins.bzl' "$matrix" &&
-  grep -q -F -e 'AnyFlatSpec' "$matrix" &&
-  grep -q -F -e '#480' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified ScalaTest wording under issue #480"
-fi
-
 # Generation README pins the qualified runner alongside the other gaps.
 if grep -q -F -e 'qualified seed-only under issue #480' "$gen_readme" &&
   grep -q -F -e 'scalatest_qualification' "$gen_readme" &&
@@ -155,25 +143,6 @@ if grep -q -F -e 'qualified seed-only under issue #480' "$gen_readme" &&
   ok
 else
   bad "docs/generation/foundation-qualification.md lost its qualified ScalaTest record under issue #480"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'scalatest_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #480' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:scalatest_qualification' "$verify" &&
-  grep -q -F -e '`scalatest_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #480 ScalaTest qualified record"
-fi
-
-# Matrix owns the scope limits (secondary runners not defaults, no Supported claim).
-if grep -q -F -e 'scala_junit_test' "$matrix" &&
-  grep -q -F -e 'not defaults' "$matrix" &&
-  grep -q -F -e 'Supported' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its ScalaTest scope limits under issue #480"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

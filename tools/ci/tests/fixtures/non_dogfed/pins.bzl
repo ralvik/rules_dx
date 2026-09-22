@@ -1,4 +1,4 @@
-"""Non-dogfed e2e plus negative pins. Contract: `docs/testing/verification-matrix.md#layers`, `docs/testing/README.md#end-to-end-tests`. Fixture: `tools/ci/tests/fixtures/non_dogfed/` via `bazel run //tools/ci:non_dogfed_qualification`.
+"""Non-dogfed e2e plus negative pins. Contract: `docs/testing/strategy-details.md`, `docs/testing/cli.md#end-to-end-tests`. Fixture: `tools/ci/tests/fixtures/non_dogfed/` via `bazel run //tools/ci:non_dogfed_qualification`.
 """
 # E2E drivers deleted: no nested workspace, no second Bazel, no manual drivers. Term e2e throughout, never integration for drivers.
 E2E_NO_WORKSPACE = "no integration/ workspace"

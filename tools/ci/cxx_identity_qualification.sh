@@ -38,8 +38,6 @@ dx_cd_workspace
 
 dx_test_init
 
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 gen_rust="docs/generation/rust.md"
 gen_readme="docs/generation/foundation-qualification.md"
 native="docs/native-toolchains.md"
@@ -57,29 +55,6 @@ if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
   bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
-fi
-
-# Remaining matrix owns the qualified seed-only record under.
-if grep -q -F -e 'cxx_identity_qualification' "$verify_remaining" &&
-  grep -q -F -e 'qualified seed-only under #474' "$verify_remaining" &&
-  grep -q -F -e 'bazel run //tools/ci:cxx_identity_qualification' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #474 CXX identity qualified record"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness.
-if grep -q -F -e ':cxx_identity_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix dogfood-freshness lost :cxx_identity_qualification"
-fi
-
-# Verification matrix Green lists the harness count.
-if grep -q -F -e '`cxx_identity_qualification` 18/18' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost cxx_identity_qualification 18/18"
 fi
 
 # BUILD owns the harness target.
@@ -167,15 +142,6 @@ if grep -q -F -e '#474' "$native" &&
   ok
 else
   bad "native-toolchains lost its #474 CXX identity qualification with cxx_identity fixture"
-fi
-
-# Support matrix keeps the CXX identity line decided under with no Supported claim.
-if grep -q -F -e 'CXX graph identity decided' "$matrix" &&
-  grep -q -F -e '#474' "$matrix" &&
-  ! grep -q -E -e '^\| .* \| Supported' "$matrix"; then
-  ok
-else
-  bad "support-matrix lost its decided #474 CXX identity line (want decided plus #474, no Supported)"
 fi
 
 # Live proof: the bridge composition builds (Rust lib plus C++ lib).

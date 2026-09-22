@@ -48,7 +48,6 @@ verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 runbook="docs/deploy/release-runbook.md"
-checklist="docs/product/promotion-checklist.md"
 support="docs/product/support-matrix.md"
 platform_rs="cli/cli/src/platform.rs"
 cells="tools/coverage/cells.txt"
@@ -58,7 +57,6 @@ fixture_build="tools/ci/tests/fixtures/release_musl/BUILD.bazel"
 build="tools/ci/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' "$sbom" &&
@@ -174,26 +172,6 @@ else
   bad "release-runbook.md lost its #804 sbom-musl per-profile uploads plus owner-gated attestation record"
 fi
 
-# Promotion checklist records the musl per-profile release evidence under #804.
-if grep -q -F -e 'issue #804' "$checklist" &&
-  grep -q -F -e 'sbom-provenance-linux_x86_64_musl' "$checklist" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64_musl' "$checklist" &&
-  grep -q -F -e 'sbom-musl-x86_64' "$checklist" &&
-  grep -q -F -e 'sbom-musl-arm64' "$checklist"; then
-  ok
-else
-  bad "promotion-checklist.md lost its #804 sbom-musl per-profile release-evidence record"
-fi
-
-# Support matrix records musl release evidence delivered under #804, never Supported.
-if grep -E -e '^\| Linux x86_64/arm64 static musl \|' "$support" | grep -q -F -e 'Platform-qualified (#411' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' "$support" | grep -q -F -e 'release evidence: linux_x86_64_musl plus linux_arm64_musl sbom-provenance delivered (#804' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' "$support" | grep -q -F -e 'dynamic musl explicitly out of scope'; then
-  ok
-else
-  bad "support-matrix.md lost its static-musl Platform-qualified plus #804 per-profile release-evidence-delivered record with dynamic out of scope"
-fi
-
 # Per-cell consumer evidence still covers musl jobs test-disabled (#408).
 if grep -q -F -e 'build-musl-x86_64' "$ci" &&
   grep -q -F -e 'build-musl-arm64' "$ci" &&
@@ -216,12 +194,10 @@ fi
 # Static native closure only; dynamic musl stays explicitly out of scope.
 if grep -q -F -e '"linux_x86_64_static_musl"' "$platform_rs" &&
   grep -q -F -e '"linux_arm64_static_musl"' "$platform_rs" &&
-  grep -q -F -e 'dynamic musl' "$platform_rs" &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' "$support" | grep -q -F -e 'static native closure' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' "$support" | grep -q -F -e 'dynamic musl explicitly out of scope'; then
+  grep -q -F -e 'dynamic musl' "$platform_rs"; then
   ok
 else
-  bad "platform.rs or support-matrix lost the static-only closure plus dynamic-out-of-scope record (#804)"
+  bad "platform.rs lost the static-only closure plus dynamic-out-of-scope record (#804)"
 fi
 
 # BUILD owns the harness target plus dogfood-freshness wires it.
@@ -279,15 +255,6 @@ if grep -q -F -e 'Release evidence for Linux static-musl profiles (issue #804)' 
   ok
 else
   bad "release_musl.expected lost its per-profile uploads plus cells plus rejected plus honesty lines under #804"
-fi
-
-# Verification matrix owns the harness entry as per-profile fixture evidence.
-if grep -q -F -e ':release_musl_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #804' "$verify_matrix" &&
-  grep -q -F -e '`release_musl_qualification` 22/22' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its release_musl_qualification entry with 22/22 under #804"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

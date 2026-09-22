@@ -48,7 +48,6 @@ schema="cli/schema/src/lib.rs"
 finalize="cli/cli/src/finalize.rs"
 targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 
 # Protocol owns the 1.1 envelope with correlation plus current 1.1 version.
 if grep -q -F -e '`correlation`' "$protocol" &&
@@ -192,14 +191,6 @@ if grep -q -F -e 'name = "correlation_manifest_qualification"' "$targets" &&
   ok
 else
   bad "tools/ci targets or dogfood lost the correlation_manifest_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':correlation_manifest_qualification' "$verify" &&
-  grep -q -F -e 'issue #811' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its correlation_manifest_qualification entry under #811"
 fi
 
 dx_test_summary "correlation manifest qualification harness"

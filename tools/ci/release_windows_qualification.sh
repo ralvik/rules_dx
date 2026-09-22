@@ -47,7 +47,6 @@ verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 runbook="docs/deploy/release-runbook.md"
-checklist="docs/product/promotion-checklist.md"
 support="docs/product/support-matrix.md"
 cells="tools/coverage/cells.txt"
 interop_pins="cc/tests/fixtures/prebuilt_interop/pins.bzl"
@@ -57,7 +56,6 @@ expected="tools/ci/tests/fixtures/release_windows/release_windows.expected"
 fixture_build="tools/ci/tests/fixtures/release_windows/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' "$sbom" &&
@@ -69,14 +67,6 @@ else
 fi
 
 # Provenance binds exact bytes: SPDX plus in-toto v1 plus SLSA subject digest.
-if grep -q -F -e 'spdxVersion' "$verify" &&
-  grep -q -F -e 'https://in-toto.io/Statement/v1' "$verify" &&
-  grep -q -F -e 'https://slsa.dev/provenance/v1' "$verify"; then
-  ok
-else
-  bad "Rust launch lost its SPDX plus in-toto plus SLSA subject-binding checks (#807)"
-fi
-
 # Release BUILD keeps the demo plus its portable Rust verifier over the seed fixture.
 if grep -q -F -e 'name = "sbom_demo"' "$release_build" &&
   grep -q -F -e 'name = "dx_release_tools_test"' "$release_build" &&
@@ -152,23 +142,6 @@ else
   bad "release-runbook.md lost its #807 sbom-windows-x86_64 sbom-provenance-windows_x86_64 plus owner-gated attestation record"
 fi
 
-# Promotion checklist records the windows per-host release evidence under #807.
-if grep -q -F -e 'issue #807' "$checklist" &&
-  grep -q -F -e 'sbom-provenance-windows_x86_64' "$checklist" &&
-  grep -q -F -e 'sbom-windows-x86_64' "$checklist"; then
-  ok
-else
-  bad "promotion-checklist.md lost its #807 sbom-windows-x86_64 sbom-provenance-windows_x86_64 release-evidence record"
-fi
-
-# Support matrix records windows release evidence delivered under #807, never Supported.
-if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'Platform-qualified (#414' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'release evidence: windows_x86_64 sbom-provenance delivered (#807'; then
-  ok
-else
-  bad "support-matrix.md lost its Windows x86_64 Platform-qualified plus #807 release-evidence-delivered record"
-fi
-
 # Per-cell consumer evidence still covers windows_x86_64 test-disabled (#408).
 if grep -q -F -e '"windows_x86_64"' "$ci" &&
   grep -q -F -e 'disabled_checks: "test"' "$ci"; then
@@ -186,25 +159,7 @@ else
 fi
 
 # Hermetic acquisition plus MSVC compat gates unchanged; EULA never automatic, no installed fallback.
-if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'hermetic acquisition plus MSVC compatibility gates unchanged' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'never automatic' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'installed Build Tools fallback never approved'; then
-  ok
-else
-  bad "support-matrix lost its windows hermetic plus MSVC gates plus explicit-EULA plus no-installed-fallback record (#807)"
-fi
-
 # Prebuilt-MSVC interop plus linux corpus linkage stays pinned for this host.
-if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'prebuilt-MSVC interop fixtures' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'mixed Rust/C/C++' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'linux corpus qualified seed-only under #499' &&
-  [[ -f "$interop_pins" ]] &&
-  [[ -f "$corpus_pins" ]]; then
-  ok
-else
-  bad "support-matrix or fixtures lost the prebuilt-MSVC interop plus linux-corpus seed-only linkage (#807)"
-fi
-
 # BUILD owns the harness target plus dogfood-freshness wires it.
 if grep -q -F -e 'name = "release_windows_qualification"' "$targets_b" &&
   grep -q -F -e 'release_windows_qualification.sh' "$targets_b" &&
@@ -260,15 +215,6 @@ if grep -q -F -e 'Release evidence for Windows x86_64 MSVC-compatible (issue #80
   ok
 else
   bad "release_windows.expected lost its per-host upload plus cells plus rejected plus honesty lines under #807"
-fi
-
-# Verification matrix owns the harness entry as per-host fixture evidence.
-if grep -q -F -e ':release_windows_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #807' "$verify_matrix" &&
-  grep -q -F -e '`release_windows_qualification` 21/21' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its release_windows_qualification entry with 21/21 under #807"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

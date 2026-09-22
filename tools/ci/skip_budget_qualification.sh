@@ -40,8 +40,6 @@ build="tools/ci/ci_targets_b.bzl"
 prove="tools/ci/prove.sh"
 dogfood="tools/ci/dogfood_freshness.sh"
 tools_doc="docs/testing/tools.md"
-checklist="docs/product/promotion-checklist.md"
-verify="docs/testing/verification-matrix.md"
 dx_mkscratch skip_scratch
 
 # Budgets: per-host skip caps. Linux cells must run with 0 skips; each
@@ -155,30 +153,6 @@ fi
 
 # Promotion checklist wires the budget as platform evidence per cell,
 # so a silent skip never promotes.
-if grep -q -F -e 'skip budget' "$checklist" &&
-  grep -q -F -e 'issue #769' "$checklist" &&
-  grep -q -F -e 'bazel run //tools/ci:skip_budget_qualification' "$checklist"; then
-  ok
-else
-  bad "promotion-checklist.md lost its issue #769 skip-budget platform-evidence wiring"
-fi
-
-# Verification matrix owns the harness entry in the prove battery.
-if grep -q -F -e ':skip_budget_qualification' "$verify" &&
-  grep -q -F -e 'issue #769' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:skip_budget_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its skip_budget_qualification battery entry under #769"
-fi
-
-# Verification matrix Green lists this harness count.
-if grep -q -F -e '`skip_budget_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md Green lost skip_budget_qualification 16/16"
-fi
-
 # BUILD owns the harness target.
 if grep -q -F -e 'name = "skip_budget_qualification"' "$build" &&
   grep -q -F -e 'skip_budget_qualification.sh' "$build"; then

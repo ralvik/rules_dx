@@ -42,7 +42,6 @@ expected="tools/ci/tests/fixtures/review_threads/review_threads.expected"
 fixture_build="tools/ci/tests/fixtures/review_threads/BUILD.bazel"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Contract freezes the numeric limit at 50 with fixture plus qualification proof.
 if grep -q -F -e 'frozen at 50 open integration-owned threads' "$contract" &&
@@ -192,14 +191,6 @@ if grep -q -F -e 'name = "review_threads_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the review_threads_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':review_threads_qualification' "$verify" &&
-  grep -q -F -e 'issue #592' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its review_threads_qualification entry under #592"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

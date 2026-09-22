@@ -35,7 +35,7 @@ Preserve canonical workspace configuration and module-matched CLI bootstrap. Doc
 prerequisite consumer Bazel setup, permissions, and required repository settings separately
 from the caller file: a template cannot configure those settings by itself. This
 repository's own review routing is owned via `CODEOWNERS` (sole maintainer
-owns every row per the support-matrix core section until delegation, issue
+owns every row per the [support matrix](product/support-matrix.md) until delegation, issue
 #424). The integration does not manage consumer repository governance or
 prescribe consumer CODEOWNERS/reviewer policies.
 This repository's [first-party coverage selection](testing/README.md#github-coverage-reporting) does not

@@ -39,7 +39,6 @@ ci=".github/workflows/ci.yml"
 ci_notes="docs/testing/workflow-notes.md"
 test_matrix="docs/testing/github-ci.md"
 testing_readme="docs/testing/strategy-details.md"
-verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 prove="tools/ci/prove.sh"
@@ -175,16 +174,6 @@ if grep -q -F -e 'github-ci.md' "$testing_readme" &&
   ok
 else
   bad "docs/testing/strategy-details.md lost its flakiness link to github-ci.md"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'flakiness_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #619' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:flakiness_qualification' "$verify" &&
-  grep -q -F -e '`flakiness_qualification` 19/19' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #619 flakiness qualified record"
 fi
 
 # Target lives in the sharded list (issue #915) plus CI wires it in

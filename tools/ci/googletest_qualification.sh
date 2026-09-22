@@ -40,7 +40,6 @@ test="cc/tests/fixtures/googletest/greeter_test.cc"
 module="MODULE.bazel"
 matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
-verify="docs/testing/verification-matrix.md"
 ci=".github/workflows/ci.yml"
 tools_build="tools/ci/BUILD.bazel"
 defs="cc/rules/defs.bzl"
@@ -137,16 +136,6 @@ else
   bad "cc wrapper lost its #479 qualified GoogleTest mapping record"
 fi
 
-# Support matrix keeps the qualified GoogleTest gap wording.
-if grep -q -F -e 'GoogleTest v1.18.0 qualified (issue #479' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/googletest/' "$matrix" &&
-  grep -q -F -e 'googletest_qualification' "$matrix" &&
-  grep -q -F -e '#479' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified GoogleTest gap wording under issue #479"
-fi
-
 # Generation README pins the qualified runner alongside the other gaps.
 if grep -q -F -e 'qualified GoogleTest v1.18.0' "$gen_readme" &&
   grep -q -F -e 'cc/tests/fixtures/googletest/' "$gen_readme" &&
@@ -155,16 +144,6 @@ if grep -q -F -e 'qualified GoogleTest v1.18.0' "$gen_readme" &&
   ok
 else
   bad "docs/generation/foundation-qualification.md lost its qualified GoogleTest record under issue #479"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'googletest_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #479' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:googletest_qualification' "$verify" &&
-  grep -q -F -e '`googletest_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #479 GoogleTest qualified record"
 fi
 
 # BUILD owns the harness target.

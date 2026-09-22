@@ -44,7 +44,6 @@ verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 runbook="docs/deploy/release-runbook.md"
-checklist="docs/product/promotion-checklist.md"
 support="docs/product/support-matrix.md"
 platform_rs="cli/cli/src/platform.rs"
 cells="tools/coverage/cells.txt"
@@ -54,7 +53,6 @@ fixture_build="tools/ci/tests/fixtures/release_macos_arm64/BUILD.bazel"
 build="tools/ci/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' "$sbom" &&
@@ -148,23 +146,6 @@ else
   bad "release-runbook.md lost its #805 sbom-macos-arm64 sbom-provenance-macos_arm64 plus owner-gated attestation record"
 fi
 
-# Promotion checklist records the macos arm64 per-host release evidence under #805.
-if grep -q -F -e 'issue #805' "$checklist" &&
-  grep -q -F -e 'sbom-provenance-macos_arm64' "$checklist" &&
-  grep -q -F -e 'sbom-macos-arm64' "$checklist"; then
-  ok
-else
-  bad "promotion-checklist.md lost its #805 sbom-macos-arm64 sbom-provenance-macos_arm64 release-evidence record"
-fi
-
-# Support matrix records macos arm64 release evidence delivered under #805, never Supported.
-if grep -E -e '^\| macOS arm64 \|' "$support" | grep -q -F -e 'Platform-qualified (#412' &&
-  grep -E -e '^\| macOS arm64 \|' "$support" | grep -q -F -e 'release evidence: macos_arm64 sbom-provenance delivered (#805'; then
-  ok
-else
-  bad "support-matrix.md lost its macOS arm64 Platform-qualified plus #805 release-evidence-delivered record"
-fi
-
 # Per-cell consumer evidence still covers macos_arm64 test-disabled (#408).
 if grep -q -F -e '"macos_arm64"' "$ci" &&
   grep -q -F -e 'disabled_checks: "test"' "$ci"; then
@@ -182,14 +163,11 @@ else
 fi
 
 # Pinned acquired SDK with provisional Apple-SDK backend; host-installed fallback never approved.
-if grep -E -e '^\| macOS arm64 \|' "$support" | grep -q -F -e 'hermetic-llvm Apple-SDK backend provisional' &&
-  grep -E -e '^\| macOS arm64 \|' "$support" | grep -q -F -e 'host-installed SDK fallback never approved' &&
-  grep -E -e '^\| macOS arm64 \|' "$support" | grep -q -F -e 'pinned acquired SDK' &&
-  grep -q -F -e 'host-installed SDK fallback never approved' "$platform_rs" &&
+if grep -q -F -e 'host-installed SDK fallback never approved' "$platform_rs" &&
   grep -q -F -e 'backend stays provisional' "$platform_rs"; then
   ok
 else
-  bad "support-matrix or platform.rs lost the pinned acquired SDK plus provisional backend plus no-host-fallback record (#805)"
+  bad "platform.rs lost the pinned acquired SDK plus provisional backend plus no-host-fallback record (#805)"
 fi
 
 # BUILD owns the harness target plus dogfood-freshness wires it.
@@ -245,15 +223,6 @@ if grep -q -F -e 'Release evidence for macOS arm64 (issue #805)' "$expected" &&
   ok
 else
   bad "release_macos_arm64.expected lost its per-host upload plus cells plus rejected plus honesty lines under #805"
-fi
-
-# Verification matrix owns the harness entry as per-host fixture evidence.
-if grep -q -F -e ':release_macos_arm64_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #805' "$verify_matrix" &&
-  grep -q -F -e '`release_macos_arm64_qualification` 20/20' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its release_macos_arm64_qualification entry with 20/20 under #805"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

@@ -2,7 +2,7 @@
 
 Accepted. Owns the trigger, adopt-vs-keep criteria, and per-item verdicts for the hand-rolled helper decisions qualified under #315/#395.
 
-The gap previously claimed as untracked re-evaluation in the [CLI contract](cli-contract.md#implementation-hygiene) and in [remaining reds](../testing/verification-matrix-remaining.md) now points here. Enforcement is `bazel run //tools/ci:helper_qualification`.
+The gap previously claimed as untracked re-evaluation in the [CLI contract](cli-contract.md#implementation-hygiene) now points here. Enforcement is `bazel run //tools/ci:helper_qualification`.
 
 ## Triggers
 

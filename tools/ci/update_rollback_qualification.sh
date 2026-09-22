@@ -44,8 +44,6 @@ exec_update="cli/cli/src/exec/update.rs"
 exec_tests_b="cli/cli/src/exec/update_tests_b.rs"
 targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 
 # Recovery module owns the per-set boundary with no automatic rollback.
 if grep -q -F -e 'per-set commit' "$recovery" &&
@@ -192,16 +190,6 @@ if grep -q -F -e 'name = "update_rollback_qualification"' "$targets" &&
   ok
 else
   bad "tools/ci targets or dogfood lost the update_rollback_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':update_rollback_qualification' "$verify" &&
-  grep -q -F -e 'issue #772' "$verify" &&
-  grep -q -F -e ':update_rollback_qualification' "$verify_remaining" &&
-  grep -q -F -e 'issue #772' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix.md lost its update_rollback_qualification entry under #772"
 fi
 
 dx_test_summary "update rollback qualification harness"

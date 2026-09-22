@@ -37,7 +37,6 @@ dx_cd_workspace
 dx_test_init
 
 contract="docs/cli/cli-contract.md"
-verify="docs/testing/verification-matrix.md"
 
 # Contract owns the qualified seed-only record under.
 if grep -q -F -e 'qualified seed-only under issue #316' "$contract" &&
@@ -253,15 +252,6 @@ if grep -q -F -e 'fn usage' generation/codegen_shard/src/main.rs &&
   ok
 else
   bad "shard writers/evaluator lost a usage-routing or value-parser pin"
-fi
-
-# Verification matrix keeps the qualified record with owned gaps.
-if grep -q -F -e 'clap_tokenizer_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #316' "$verify" &&
-  grep -q -F -e 'strict clap' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #316 clap-tokenizer qualification record"
 fi
 
 dx_test_summary "clap-tokenizer qualification harness"

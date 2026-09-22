@@ -76,7 +76,6 @@ matrix_tests="libs/starlark/tests/matrix_tests.bzl"
 fixture_build="libs/starlark/tests/fixtures/starlark_futures/BUILD.bazel"
 build="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 
 # Docs decide the nine futures under with ADR plus fixtures plus qualification.
 if grep -q -F -e 'Decided under closed #588 plus #790 plus #791 plus #792 plus #793 plus #794 plus #795' "$doc" &&
@@ -576,20 +575,6 @@ if grep -q -F -e 'name = "starlark_futures_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the starlark_futures_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':starlark_futures_qualification' "$verify" &&
-  grep -q -F -e 'closed #588' "$verify" &&
-  grep -q -F -e '#790' "$verify" &&
-  grep -q -F -e '#791' "$verify" &&
-  grep -q -F -e '#792' "$verify" &&
-  grep -q -F -e '#793' "$verify" &&
-  grep -q -F -e '#794' "$verify" &&
-  grep -q -F -e '#795' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its starlark_futures_qualification entry under #588 plus #790 plus #791 plus #792 plus #793 plus #794 plus #795"
 fi
 
 dx_test_summary "starlark futures qualification harness"

@@ -49,7 +49,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair stays present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -159,32 +158,12 @@ else
   bad "docs/native-toolchains.md lost its qualified rights-review record with fixtures under issue #496"
 fi
 
-# Support matrix owns the qualified rights-review record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #496' "$matrix" &&
-  grep -q -F -e 'acquisition_rights_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/acquisition_rights/pins.bzl' "$matrix" &&
-  grep -q -F -e 'usage vs redistribution reviewed separately' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified rights-review record under issue #496"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "acquisition_rights_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:acquisition_rights_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the acquisition_rights_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'acquisition_rights_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #496' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:acquisition_rights_qualification' "$verify" &&
-  grep -q -F -e '`acquisition_rights_qualification` 15/15' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #496 rights-review qualified record"
 fi
 
 # Live proof: missing acceptance leaves unrelated workflows green (the seed

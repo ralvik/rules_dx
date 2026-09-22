@@ -43,7 +43,6 @@ bump_workflow=".github/workflows/bump.yml"
 request="cli/bump/src/request.rs"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # GHA owns the upstream-client contract with no custom HTTP under #640.
 if grep -q -F -e 'never custom HTTP' "$gha" &&
@@ -195,15 +194,13 @@ else
   bad "bump.yml lost its tag auto-resolution via gh api under #640"
 fi
 
-# BUILD owns the harness target plus CI wires it plus matrix records seed-only evidence.
+# BUILD owns the harness target plus CI wires it records seed-only evidence.
 if grep -q -F -e 'name = "bump_gha_qualification"' "$build" &&
   grep -q -F -e 'bump_gha_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_gha_qualification' "$ci" &&
-  grep -q -F -e ':bump_gha_qualification' "$verify" &&
-  grep -q -F -e 'issue #640' "$verify"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_gha_qualification' "$ci"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml or verification-matrix lost the bump_gha_qualification wiring (want target plus dogfood-freshness plus matrix)"
+  bad "tools/ci/BUILD.bazel or ci.yml lost the bump_gha_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "bump gha qualification harness"

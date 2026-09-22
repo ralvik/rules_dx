@@ -51,7 +51,6 @@ outcome="cli/update/src/outcome.rs"
 reports_facade="cli/cli/src/reports.rs"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Contract owns the pinned record with fixtures plus qualification.
 if grep -q -F -e 'pinned under issue #590' "$contract" &&
@@ -214,14 +213,6 @@ if grep -q -F -e 'name = "cli_execution_gaps_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the cli_execution_gaps_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':cli_execution_gaps_qualification' "$verify" &&
-  grep -q -F -e 'issue #590' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its cli_execution_gaps_qualification entry under #590"
 fi
 
 dx_test_summary "cli execution gaps qualification harness"

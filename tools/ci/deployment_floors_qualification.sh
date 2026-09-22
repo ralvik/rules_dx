@@ -54,7 +54,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$floors_expected" && -f "$oldest" && -f "$current" && -f "$loaders" && -f "$frameworks" ]]; then
@@ -158,32 +157,12 @@ else
   bad "docs/native-toolchains.md lost its qualified floors record with fixtures under issue #500"
 fi
 
-# Support matrix owns the qualified floors record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #500' "$matrix" &&
-  grep -q -F -e 'deployment_floors_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/deployment_floors/pins.bzl' "$matrix" &&
-  grep -q -F -e 'unpinned floors rejected' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified floors record under issue #500"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "deployment_floors_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:deployment_floors_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the deployment_floors_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'deployment_floors_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #500' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:deployment_floors_qualification' "$verify" &&
-  grep -q -F -e '`deployment_floors_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #500 floors qualified record"
 fi
 
 # Fixture floors.expected plus oldest/current separation covers every floor with split runs.

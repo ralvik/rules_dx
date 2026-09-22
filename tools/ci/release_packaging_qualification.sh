@@ -49,7 +49,6 @@ expected="tools/ci/tests/fixtures/release_packaging/release_packaging.expected"
 fixture_build="tools/ci/tests/fixtures/release_packaging/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # Packaged unit aggregates curator plus binary plus man page plus NOTICE plus SBOM.
 if grep -q -F -e 'name = "release_artifacts"' "$release_build" &&
@@ -221,14 +220,6 @@ if grep -q -F -e 'name = "release_packaging_qualification"' "$targets_b" &&
   ok
 else
   bad "tools/ci/ci_targets_b.bzl or dogfood_freshness.sh lost the release_packaging_qualification wiring (want target plus freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':release_packaging_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #813' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its release_packaging_qualification entry under #813"
 fi
 
 # Live proof: the packaged unit builds green on the seed host.

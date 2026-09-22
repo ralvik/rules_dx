@@ -52,8 +52,6 @@ action_doc="docs/quality/action-model.md"
 python_adr="docs/decisions/0010-python-foundation.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 promotion="docs/product/promotion-checklist.md"
 adopt="examples/adopt-python"
 
@@ -144,26 +142,6 @@ else
   bad "adapters.bzl lost its ruff audit claim over python plus python_stub under issue #801"
 fi
 
-# Support matrix owns the #801 Python audit selection record.
-if grep -q -F -e 'qualified seed-only under issue #801' "$support" &&
-  grep -q -F -e 'python_audit_qualification' "$support" &&
-  grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$support" &&
-  grep -q -F -e 'Bandit excluded' "$support" &&
-  grep -q -F -e 'Ruff S' "$support"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its #801 Python audit selection record with fixtures plus qualification"
-fi
-
-# Support matrix keeps taxonomy-only with no Python audit ownership.
-if grep -q -F -e 'closed #512 stays taxonomy-only' "$support" &&
-  grep -q -F -e 'qualified seed-only under closed #512' "$support" &&
-  grep -q -F -e 'quality_taxonomy_qualification' "$support"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its #512 taxonomy-only split record"
-fi
-
 # Tool baseline owns the #801 selection record with Bandit honesty.
 if grep -q -F -e 'issue #801' "$baseline" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$baseline" &&
@@ -194,31 +172,6 @@ if grep -q -F -e 'issue #801' "$python_adr" &&
   ok
 else
   bad "docs/decisions/0010-python-foundation.md lost its #801 source-audit selection record"
-fi
-
-# Verification matrix owns the qualified seed-only record under #801.
-if grep -q -F -e 'python_audit_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under issue #801' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$verify" &&
-  grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$verify" &&
-  grep -q -F -e '`python_audit_qualification` 24/24' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #801 python audit qualified record"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness.
-if grep -q -F -e ':python_audit_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix dogfood-freshness lost :python_audit_qualification"
-fi
-
-# Verification matrix Green lists the harness count.
-if grep -q -F -e '`python_audit_qualification` 24/24' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost python_audit_qualification 24/24"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
@@ -272,13 +225,6 @@ else
 fi
 
 # Verification-remaining mirrors the #801 record.
-if grep -q -F -e 'python_audit_qualification' "$verify_remaining" &&
-  grep -q -F -e 'under issue #801' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #801 python audit record"
-fi
-
 # Live proof: the fixture build stays green on the seed host.
 if bazel build //python/tests/fixtures/python_audit/... --noshow_progress >/dev/null 2>&1; then
   ok

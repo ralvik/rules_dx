@@ -45,7 +45,6 @@ module="MODULE.bazel"
 ci=".github/workflows/ci.yml"
 contract="docs/github-ci.md"
 matrix="docs/testing/github-ci.md"
-verify="docs/testing/verification-matrix.md"
 automation="docs/contributing/automation.md"
 bump_workflow=".github/workflows/bump.yml"
 migrate_rs="cli/adopt/src/migrate.rs"
@@ -403,14 +402,12 @@ else
   bad "dx migrate plus dx run gap lost its delivered owner"
 fi
 
-# Verification matrix keeps no Supported claim with consumer honesty.
-# The dogfood self-call stays test-disabled per Phase 1 
+# Consumer honesty: dogfood self-call stays test-disabled per Phase 1
 # (coverage superset); the starter caller stays all-nine.
-if ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q . &&
-  grep -q -F -e 'self-call test-disabled' "$matrix"; then
+if grep -q -F -e 'self-call test-disabled' "$matrix"; then
   ok
 else
-  bad "verification matrix lost its no-Supported plus consumer-honesty gate"
+  bad "consumer honesty lost (want self-call test-disabled, issue #509)"
 fi
 
 # Fixture files stay present.
@@ -585,17 +582,6 @@ if bazel build //tools/ci/tests/fixtures/consumer_ci/... --noshow_progress >/dev
   ok
 else
   bad "consumer-CI fixture failed to build (want green on the seed host, issue #509)"
-fi
-
-# Verification matrix owns the qualified record under.
-if grep -q -F -e 'Consumer-CI per-gap decisions with fixture evidence' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #509' "$verify" &&
-  grep -q -F -e 'tools/ci/tests/fixtures/consumer_ci/pins.bzl' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:consumer_ci_qualification' "$verify" &&
-  grep -q -F -e '`consumer_ci_qualification` 43/43' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #509 per-gap qualified record with 43/43"
 fi
 
 dx_test_summary "consumer CI qualification harness"

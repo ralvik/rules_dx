@@ -48,7 +48,6 @@ codecov_remote_expected="tools/coverage/tests/fixtures/per_cell/codecov_remote.e
 testing_readme="docs/testing/strategy-details.md"
 github_ci="docs/github-ci.md"
 build_coverage_doc="docs/cli/commands/build-test-coverage.md"
-verify="docs/testing/verification-matrix.md"
 
 # Per-cell registry exists with exactly six qualified rows (seed x86_64
 # plus arm64 native plus two static-musl profiles under
@@ -441,17 +440,6 @@ if bazel build //tools/coverage/tests/fixtures/per_cell/... --noshow_progress >/
   ok
 else
   bad "per-cell coverage fixture failed to build (want green on the seed host, issue #507)"
-fi
-
-# Verification matrix owns the qualified record under.
-if grep -q -F -e 'Per-cell non-seed coverage plus Codecov opt-in plus remote evidence' "$verify" &&
-  grep -q -F -e 'qualified under #507' "$verify" &&
-  grep -q -F -e 'tools/coverage/tests/fixtures/per_cell/pins.bzl' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:coverage_qualification' "$verify" &&
-  grep -q -F -e '`coverage_qualification` 33/33' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #507 per-cell coverage qualified record with 33/33"
 fi
 
 dx_test_summary "coverage qualification harness"

@@ -236,16 +236,6 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Promotion-checklist harness; see docs/product/promotion-checklist.md.
-    sh_binary(
-        name = "promotion_checklist_qualification",
-        srcs = ["promotion_checklist_qualification.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
-        # Bash-only harness is Linux-only (shell contract).
-        target_compatible_with = ["@platforms//os:linux"],
-    )
-
     # SBOM-upload harness; see docs/deploy/release-runbook.md.
     sh_binary(
         name = "sbom_upload_qualification",
@@ -316,7 +306,7 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Hermetic CLI-contract coverage; see docs/testing/verification-matrix.md.
+    # Hermetic CLI-contract coverage; see docs/product/support-matrix.md for status.
 
     # Coverage-spill containment harness; see tools/ci/coverage_spill.sh.
     sh_binary(

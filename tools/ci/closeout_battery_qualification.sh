@@ -9,9 +9,8 @@
 #   devcontainer-check plus docs-ci plus dogfood, with per-host
 #   build/test/coverage jobs) plus the docs gate (docs-ci self-call over
 #   `//docs/...` via the reusable-docs check-only contract);
-# - wiring: verification-matrix delivered records, BUILD
-#   target, dogfood-freshness step, Battery accepted record with full-tree
-#   green owned by CI via this harness;
+# - wiring: BUILD target, dogfood-freshness step, Battery accepted record
+#   with full-tree green owned by CI via this harness;
 # - open owned gaps: platform plus consumer plus release evidence, full
 #   rebuild green owned by CI jobs (not re-claimed here), exact per-host
 #   green beyond static pins, no Supported claim.
@@ -29,7 +28,6 @@ dx_cd_workspace
 
 dx_test_init
 
-verify="docs/testing/verification-matrix.md"
 testing_readme="docs/testing/strategy-details.md"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
@@ -42,27 +40,13 @@ else
   bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'closeout_battery_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #467' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:closeout_battery_qualification' "$verify"; then
+# Status lives in the short support matrix; per-cell dumps are deleted under #988.
+if [[ ! -f "docs/testing/verification-matrix.md" ]] &&
+  [[ ! -f "docs/testing/verification-matrix-remaining.md" ]] &&
+  [[ ! -f "docs/product/promotion-checklist.md" ]]; then
   ok
 else
-  bad "verification-matrix lost its #467 close-out battery qualified record"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness.
-if grep -q -F -e ':closeout_battery_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix dogfood-freshness lost :closeout_battery_qualification"
-fi
-
-# Verification matrix Green lists the harness count.
-if grep -q -F -e '`closeout_battery_qualification` 24/24' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost closeout_battery_qualification 24/24"
+  bad "status dumps still exist (merged into docs/product/support-matrix.md under #988)"
 fi
 
 # BUILD owns the harness target.
@@ -81,29 +65,26 @@ fi
 
 # Build battery: full build plus the adopt-rust dx_dev smoke.
 if grep -q -F -e 'bazel build --noshow_progress //...' "$ci" &&
-  grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev' "$ci" &&
-  grep -q -F -e '`build`: `bazel build //...`' "$verify"; then
+  grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev' "$ci"; then
   ok
 else
-  bad "build battery lost (want bazel build //... plus dx_dev smoke in ci.yml and Battery)"
+  bad "build battery lost (want bazel build //... plus dx_dev smoke in ci.yml)"
 fi
 
 # Test battery: full test with hermetic CLI-contract pins, no manual.
 # Tuned bounded flaky retries plus per-test timeout cap.
-if grep -q -F -e 'bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...' "$ci" &&
-  grep -q -F -e '- `test`: `bazel test --flaky_test_attempts=3 --test_timeout=300 //...`' "$verify"; then
+if grep -q -F -e 'bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...' "$ci"; then
   ok
 else
-  bad "test battery lost (want bazel test //... in ci.yml and Battery)"
+  bad "test battery lost (want bazel test //... in ci.yml)"
 fi
 
 # Coverage battery: seed gate plus report guards.
 if grep -q -F -e 'coverage --min-coverage 97 //...' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_report_guards' "$ci" &&
-  grep -q -F -e '- `coverage`:' "$verify"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_report_guards' "$ci"; then
   ok
 else
-  bad "coverage battery lost (want dx coverage gate plus report guards in ci.yml and Battery)"
+  bad "coverage battery lost (want dx coverage gate plus report guards in ci.yml)"
 fi
 
 # Prove battery: the twelve prove harnesses stay wired.
@@ -118,22 +99,20 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:target_tags' "$ci" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:release_hygiene' "$ci" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:release_policy' "$ci" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:publish_trust' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' "$ci" &&
-  grep -q -F -e '- `prove`:' "$verify"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' "$ci"; then
   ok
 else
-  bad "prove battery lost (want twelve prove harnesses in ci.yml and Battery)"
+  bad "prove battery lost (want twelve prove harnesses in ci.yml)"
 fi
 
 # Dogfood core: freshness plus ownership audits.
 if grep -q -F -e 'generate --check //...' "$ci" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:corpus_audit' "$ci" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:code_ownership' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_paths' "$ci" &&
-  grep -q -F -e '- `dogfood-freshness`:' "$verify"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_paths' "$ci"; then
   ok
 else
-  bad "dogfood core lost (want generate --check plus corpus/code/non-dogfed in ci.yml and Battery)"
+  bad "dogfood core lost (want generate --check plus corpus/code/non-dogfed in ci.yml)"
 fi
 
 # Dogfood extended: qualification sweep stays wired.
@@ -181,9 +160,7 @@ else
 fi
 
 # Host matrix stays pinned by ci_matrix_qualification.
-if grep -q -F -e 'ci_matrix_qualification' "$verify" &&
-  grep -q -F -e 'issue #415' "$verify" &&
-  grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
+if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
   grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
   grep -q -F -e 'runs-on: macos-14' "$ci" &&
   ! grep -q -F -e 'runs-on: macos-15-intel' "$ci" &&
@@ -194,15 +171,12 @@ else
 fi
 
 # Battery documents the tail jobs: devcontainer plus docs-ci plus dogfood.
-if grep -q -F -e 'devcontainer-check' "$verify" &&
-  grep -q -F -e 'docs-ci' "$verify" &&
-  grep -q -F -e 'dogfood (test-disabled self-call' "$verify" &&
-  grep -q -F -e 'devcontainer-check' "$ci" &&
+if grep -q -F -e 'devcontainer-check' "$ci" &&
   grep -q -F -e 'docs-ci (self-call reusable docs workflow)' "$ci" &&
   grep -q -F -e 'dogfood (self-call reusable consumer workflow)' "$ci"; then
   ok
 else
-  bad "Battery lost its devcontainer/docs-ci/dogfood tail (verify plus ci.yml)"
+  bad "Battery lost its devcontainer/docs-ci/dogfood tail (ci.yml)"
 fi
 
 # Docs gate: docs-ci self-call over //docs/... with publish only on main.
@@ -252,45 +226,13 @@ else
   bad "devcontainer-check lost its parity plus definition-shape wiring"
 fi
 
-# Full-tree green ownership: CI owns build/test green via this harness;
-# no full rebuild is re-claimed here (static pins only).
-if grep -q -F -e 'Full `build`/`test` green is owned by CI on this tree via' "$verify" &&
-  grep -q -F -e 'closeout_battery_qualification' "$verify" &&
-  grep -q -F -e 'issue #467' "$verify"; then
+# Testing strategy points to the short support matrix plus issues.
+if grep -q -F -e 'support-matrix' "$testing_readme" &&
+  grep -q -F -e 'GitHub issues' "$testing_readme" &&
+  ! grep -q -F -e 'verification-matrix' "$testing_readme"; then
   ok
 else
-  bad "Battery lost its full build/test green CI ownership via closeout_battery_qualification (#467)"
-fi
-
-# Testing README keeps the close-out battery tracker pointer.
-if grep -q -F -e 'close-out battery' "$testing_readme" &&
-  grep -q -F -e 'verification-matrix' "$testing_readme"; then
-  ok
-else
-  bad "testing README lost its close-out battery tracker pointer"
-fi
-
-# Remaining reds stay owned gaps, not green claims.
-if grep -q -F -e 'Remaining reds stay owned gaps' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its Remaining reds owned-gaps record"
-fi
-
-# Consumer aggregate stays stable: disabled-as-skipped green, else fail.
-if grep -q -F -e 'consumer aggregate' "$verify" &&
-  grep -q -F -e 'disabled-as-skipped' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its consumer aggregate stable-identity record"
-fi
-
-# No Supported claim for the battery: Platform-qualified only, release open.
-if grep -q -F -e 'No cell here is a `Supported` claim' "$verify" &&
-  grep -q -F -e 'No cell is `Supported`' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its no-Supported gate (battery never Supported)"
+  bad "testing strategy lost its support-matrix plus issues pointer (#988)"
 fi
 
 dx_test_summary "close-out battery qualification harness"

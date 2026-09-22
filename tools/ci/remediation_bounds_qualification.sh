@@ -58,7 +58,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$bounds" && -f "$defects" && -f "$owners" ]]; then
@@ -192,32 +191,12 @@ else
   bad "docs/native-toolchains.md lost its qualified bounded-remediation record with fixtures under issue #505"
 fi
 
-# Support matrix owns the qualified bounded-remediation record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #505' "$matrix" &&
-  grep -q -F -e 'remediation_bounds_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/remediation_bounds/pins.bzl' "$matrix" &&
-  grep -q -F -e 'Do not implement missing infra merely to fill cross-product' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified bounded-remediation record under issue #505"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "remediation_bounds_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:remediation_bounds_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the remediation_bounds_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'remediation_bounds_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #505' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:remediation_bounds_qualification' "$verify" &&
-  grep -q -F -e '`remediation_bounds_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #505 bounded remediation qualified record"
 fi
 
 # Live proof: the seed hello plus the fixture corpus build green on the

@@ -46,8 +46,6 @@ curated="quality/curated_defaults.bzl"
 matrix="quality/testdata/runner_matrix_cases.bzl"
 sources="quality/sources.bzl"
 support="docs/product/support-matrix.md"
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 framework="docs/generation/framework-adapters.md"
 testing_doc="docs/quality/quality-testing.md"
 depcheck_build="tools/depcheck/BUILD.bazel"
@@ -219,8 +217,7 @@ if [[ -z "$depcheck_missing" ]] &&
   grep -q -F -e 'name = "depcheck_test"' "$depcheck_build" &&
   grep -q -F -e 'name = "depcheck"' "$depcheck_build" &&
   grep -q -F -e 'rust_test(' "$depcheck_build" &&
-  [[ ! -d "tools/depcheck/testdata/vue" && ! -d "tools/depcheck/testdata/svelte" && ! -d "tools/depcheck/testdata/astro" && ! -d "tools/depcheck/testdata/mdx" ]] &&
-  grep -q -F -e 'framework-composition depcheck stays with the JS/TS pnpm route' "$verify"; then
+  [[ ! -d "tools/depcheck/testdata/vue" && ! -d "tools/depcheck/testdata/svelte" && ! -d "tools/depcheck/testdata/astro" && ! -d "tools/depcheck/testdata/mdx" ]]; then
   ok
 else
   bad "depcheck fixtures drifted:$depcheck_missing (want 11 langs plus pnpm route with no framework dirs)"
@@ -269,22 +266,6 @@ fi
 
 # Verification-matrix-remaining owns the qualified seed-only record under
 # closed #510.
-if grep -q -F -e 'layer2_opens_qualification' "$verify_remaining" &&
-  grep -q -F -e 'qualified seed-only under closed #510' "$verify_remaining" &&
-  grep -q -F -e 'bazel run //tools/ci:layer2_opens_qualification' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its closed-#510 qualified record"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness plus Green.
-if grep -q -F -e ':layer2_opens_qualification' "$verify" &&
-  grep -q -F -e '`layer2_opens_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its layer2-opens dogfood plus Green record"
-fi
-
 # Targets own the harness plus dogfood wires it.
 if grep -q -F -e 'name = "layer2_opens_qualification"' "$targets" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:layer2_opens_qualification' "$dogfood"; then

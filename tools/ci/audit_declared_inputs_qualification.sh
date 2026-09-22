@@ -45,7 +45,6 @@ fixture_build="cli/audit/tests/fixtures/declared_inputs/BUILD.bazel"
 notice_rule="deploy/release/notice.bzl"
 audit_doc="docs/cli/commands/audit-update-bazel.md"
 testing="docs/testing/cli.md"
-verify="docs/testing/verification-matrix.md"
 build="tools/ci/ci_targets_c.bzl"
 ci="tools/ci/dogfood_freshness.sh"
 
@@ -185,14 +184,6 @@ if grep -q -F -e 'name = "audit_declared_inputs_qualification"' "$build" &&
   ok
 else
   bad "tools/ci wiring lost the audit_declared_inputs_qualification target plus dogfood-freshness under #812"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':audit_declared_inputs_qualification' "$verify" &&
-  grep -q -F -e 'issue #812' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its audit_declared_inputs_qualification entry under #812"
 fi
 
 dx_test_summary "audit declared inputs qualification harness"

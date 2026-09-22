@@ -46,7 +46,6 @@ env_doc="docs/environments/environment.md"
 managed="docs/environments/managed-state.md"
 codegen_doc="docs/environments/codegen.md"
 node_doc="docs/environments/node.md"
-matrix="docs/testing/verification-matrix.md"
 pins="env/tests/fixtures/env_codegen/pins.bzl"
 pins_build="env/tests/fixtures/env_codegen/BUILD.bazel"
 expected="env/tests/fixtures/env_codegen/env_codegen.expected"
@@ -261,14 +260,6 @@ else
   bad "environment.md lost its owned-gap list under #506"
 fi
 
-# Verification matrix keeps Env/codegen Open with no Supported claim.
-if grep -q -F -e '| Open | Open |' "$matrix" &&
-  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q .; then
-  ok
-else
-  bad "verification-matrix lost its Env/codegen Open plus no-Supported gate"
-fi
-
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" && -f "$roots_bep" ]]; then
   ok
@@ -425,17 +416,14 @@ fi
 if [[ -f "tools/ci/deployment_floors_qualification.sh" ]] &&
   [[ -f "tools/ci/cross_routes_qualification.sh" ]] &&
   [[ -f "tools/ci/skip_budget_qualification.sh" ]] &&
-  [[ -f "tools/ci/coverage_qualification.sh" ]] &&
-  grep -q -F -e 'deployment_floors_qualification' docs/product/promotion-checklist.md &&
-  grep -q -F -e 'cross_routes_qualification' docs/product/promotion-checklist.md; then
+  [[ -f "tools/ci/coverage_qualification.sh" ]]; then
   ok
 else
   bad "platform floors plus routes plus skip plus coverage linkage lost (issue #787)"
 fi
 
 # Provisional backends stay provisional, never a qualified claim.
-if grep -q -F -e 'provisional-backend exception' docs/product/support-matrix.md &&
-  grep -q -F -e 'backends stay provisional' "$expected" &&
+if grep -q -F -e 'backends stay provisional' "$expected" &&
   grep -q -F -e 'provisional' cli/cli/src/platform.rs; then
   ok
 else
@@ -446,8 +434,7 @@ fi
 if [[ -d "examples/adopt-rust" ]] &&
   [[ -d "examples/adopt-python" ]] &&
   [[ -d "examples/adopt-js-ts" ]] &&
-  [[ -f ".github/workflows/reusable-consumer.yml" ]] &&
-  grep -q -F -e 'adopt-rust' "$matrix"; then
+  [[ -f ".github/workflows/reusable-consumer.yml" ]]; then
   ok
 else
   bad "adopt plus reusable-consumer proof lost (issue #787)"
@@ -477,7 +464,6 @@ fi
 # Release hygiene plus gate stay linked with no Supported claim.
 if grep -q -F -e 'version = "0.0.0"' MODULE.bazel &&
   [[ -z "$(git tag --list 'v*' || true)" ]] &&
-  grep -q -F -e 'bazel run //tools/ci:supported_evidence_gate' docs/product/promotion-checklist.md &&
   [[ -f "tools/ci/supported_evidence_gate.sh" ]] &&
   ! grep -E -e '^\|.*\| *`?Supported`? *\|' docs/product/support-matrix.md | grep -q .; then
   ok
@@ -582,16 +568,6 @@ if bazel build //generation:codegen_shard_alpha //generation:codegen_shard_beta 
   ok
 else
   bad "admitted-pair fixtures failed to build (want green protobuf/rust fixtures, issue #788)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'env_codegen_qualification' "$matrix" &&
-  grep -q -F -e 'qualified seed-only under closed #506' "$matrix" &&
-  grep -q -F -e 'bazel run //tools/ci:env_codegen_qualification' "$matrix" &&
-  grep -q -F -e '`env_codegen_qualification` 52/52' "$matrix"; then
-  ok
-else
-  bad "verification-matrix lost its #506 plus #787 plus #788 env codegen qualified record with 52/52"
 fi
 
 dx_test_summary "env/codegen qualification harness"

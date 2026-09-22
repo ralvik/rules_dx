@@ -69,19 +69,6 @@ else
   bad "adopt status lost the macos_arm64 qualified detail without macos_x86_64 (issue #412 plus #976; windows_x86_64 may append under #414)"
 fi
 
-# Support matrix keeps macOS arm64 (required) Platform-qualified with
-# arm64 release delivered under #805; macOS x86_64 is Not planned.
-# Windows x86_64 stays qualified.
-if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#412' &&
-  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved' &&
-  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: macos_arm64 sbom-provenance delivered (#805' &&
-  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Not planned' &&
-  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'unsupported_platform'; then
-  ok
-else
-  bad "support-matrix lost the macOS arm64 Platform-qualified plus x86_64 Not-planned records (issue #412 plus #976 with #805 arm64 release delivered)"
-fi
-
 # ADR 0014 keeps macOS arm64 required and records macOS x86_64 Not planned.
 # Exact pins, hosts, floors, and SDK/CRT identities stay owned.
 if grep -q -F -e '| macOS arm64 | Required' docs/decisions/0014-tested-platform-release-stack.md &&
@@ -164,17 +151,6 @@ if ! grep -rn -F -e 'host-installed SDK' --exclude='macos_qualification.sh' docs
   ok
 else
   bad "a host-installed SDK fallback claim appeared (stays never approved, issue #412)"
-fi
-
-# No Supported claim for macOS: Platform-qualified only, arm64 per-host
-# release delivered; x86_64 is Not planned, never Supported.
-if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified' &&
-  ! grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Supported' &&
-  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Not planned' &&
-  ! grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Supported'; then
-  ok
-else
-  bad "macos rows lost their Platform-qualified plus Not-planned (never Supported) records"
 fi
 
 dx_test_summary "macos arm64 qualification harness"

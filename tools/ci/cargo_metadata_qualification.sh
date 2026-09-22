@@ -67,7 +67,6 @@ contract="docs/generation/rust.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 cargo_go="gazelle/rust/cargo.go"
 lang_go="gazelle/rust/lang.go"
 
@@ -160,15 +159,6 @@ else
   bad "docs/native-toolchains.md lost its qualified cargo metadata record with fixtures under issue #502"
 fi
 
-# Support matrix owns the qualified metadata record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #502' "$matrix" &&
-  grep -q -F -e 'cargo_metadata_qualification' "$matrix" &&
-  grep -q -F -e 'rust/tests/fixtures/cargo_metadata/pins.bzl' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified cargo metadata record under issue #502"
-fi
-
 # Generation contract owns the qualified metadata record with fixtures.
 if grep -q -F -e 'qualified seed-only under issue #502' "$contract" &&
   grep -q -F -e 'cargo_metadata_qualification' "$contract" &&
@@ -193,16 +183,6 @@ if grep -q -F -e 'name = "cargo_metadata_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the cargo_metadata_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'cargo_metadata_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #502' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:cargo_metadata_qualification' "$verify" &&
-  grep -q -F -e '`cargo_metadata_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #502 cargo metadata qualified record"
 fi
 
 # Fixture Cargo plus expected cover every generated target shape.

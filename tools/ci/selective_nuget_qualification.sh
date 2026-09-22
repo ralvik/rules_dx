@@ -42,7 +42,6 @@ bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Backend keeps the approved NuGet full regen (never a dx lockfile).
 if grep -q -F -e '(SetId::NuGet, SetRequest::Full)' "$backend" &&
@@ -175,14 +174,6 @@ if grep -q -F -e 'name = "selective_nuget_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the selective_nuget_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':selective_nuget_qualification' "$verify" &&
-  grep -q -F -e 'issue #635' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its selective_nuget_qualification entry under #635"
 fi
 
 # Backend keeps the never-names-a-dx-lockfile invariant on the NuGet path.

@@ -43,7 +43,6 @@ cells="tools/coverage/cells.txt"
 matrix="docs/product/support-matrix.md"
 contract="docs/github-ci.md"
 test_matrix="docs/testing/github-ci.md"
-verify="docs/testing/verification-matrix.md"
 testing_readme="docs/testing/strategy-details.md"
 
 # ci.yml header records the host matrix with the closed
@@ -234,7 +233,6 @@ fi
 # (Windows joins).
 if grep -q -F -e 'issue #415' "$contract" &&
   grep -q -F -e 'issue #415' "$test_matrix" &&
-  grep -q -F -e 'issue #415' "$verify" &&
   grep -q -F -e 'consumer self-call: test-disabled' "$matrix"; then
   ok
 else

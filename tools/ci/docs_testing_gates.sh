@@ -209,7 +209,6 @@ fi
 
 # --- Item 7: dogfood-freshness parity (sh == Battery == ci.yml step) ---
 dogfood="tools/ci/dogfood_freshness.sh"
-battery="docs/testing/verification-matrix.md"
 ci=".github/workflows/ci.yml"
 if [[ -f "$dogfood" ]]; then
   ok
@@ -238,13 +237,6 @@ if grep -q -F -e '//tools/ci:docs_testing_gates' "$dogfood" &&
   ok
 else
   bad "dogfood-freshness lost the #926 gates (want //tools/ci:docs_testing_gates plus //tools/ci:examples_consumer_gates, issue #926)"
-fi
-# Battery matrix owns the same harness names (no Battery/dogfood drift).
-if grep -q -F -e 'docs_testing_gates' "$battery" &&
-  grep -q -F -e 'examples_consumer_gates' "$battery"; then
-  ok
-else
-  bad "verification-matrix Battery lost the #926 gates (want docs_testing_gates plus examples_consumer_gates, issue #926)"
 fi
 # CI runs the battery through the Bazel-owned target, never direct sh.
 if grep -q -F -e 'bazel run --noshow_progress //tools/ci:dogfood_freshness' "$ci" &&

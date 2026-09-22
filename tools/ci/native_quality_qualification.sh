@@ -54,7 +54,6 @@ integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
 targets="tools/ci/ci_targets_d.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -147,15 +146,6 @@ fi
 
 # Support matrix keeps the qualified native coverage rows with the #798
 # delivery record; digests stay owned.
-if grep -q -F -e '| Go | Planned | Planned: gofumpt | Planned: staticcheck, govet |' "$support" &&
-  grep -q -F -e '| C and C++ | Planned | Planned: clang-format | Planned: clang-tidy, cppcheck |' "$support" &&
-  grep -q -F -e 'Native Layer-2' "$support" &&
-  grep -q -F -e 'delivered under #798' "$support"; then
-  ok
-else
-  bad "support-matrix lost its qualified native coverage rows plus #798 delivery record"
-fi
-
 # Support matrix resolves the SA-only versus default-checks conflict as
 # upstream built-in defaults (SA-only shortcut rejected without qualification).
 if grep -q -F -e 'SA`-only shortcut is rejected without qualification' "$acquisition" &&
@@ -220,14 +210,6 @@ if grep -q -F -e 'defines no hidden rule' "$native_doc" &&
   ok
 else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
-fi
-
-# Verification matrix owns the battery plus Green record for the harness.
-if grep -q -F -e ':native_quality_qualification' "$verify" &&
-  grep -q -F -e '`native_quality_qualification` 17/17' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its native quality battery plus Green record"
 fi
 
 # Targets own the harness plus dogfood wires it.

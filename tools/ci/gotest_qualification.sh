@@ -44,7 +44,6 @@ matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pins plus hello consumer stay present.
 if [[ -f "$pins" && -f "$gotest_build" && -f "$hello_build" && -f "$hello_test" ]]; then
@@ -144,15 +143,6 @@ else
   bad "implicit Go runner detected (want wrapper go_test only, no direct @rules_go load in fixtures)"
 fi
 
-# Support matrix keeps the qualified Go gap wording.
-if grep -q -F -e 'go test` qualified seed-only under issue #478' "$matrix" &&
-  grep -q -F -e 'gotest_qualification' "$matrix" &&
-  grep -q -F -e '#478' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified Go test wording under issue #478"
-fi
-
 # Generation README pins the qualified runner alongside the other gaps.
 if grep -q -F -e 'qualified seed-only under issue #478' "$gen_readme" &&
   grep -q -F -e 'gotest_qualification' "$gen_readme" &&
@@ -160,16 +150,6 @@ if grep -q -F -e 'qualified seed-only under issue #478' "$gen_readme" &&
   ok
 else
   bad "docs/generation/foundation-qualification.md lost its qualified Go test record under issue #478"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'gotest_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #478' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:gotest_qualification' "$verify" &&
-  grep -q -F -e '`gotest_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #478 Go test qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

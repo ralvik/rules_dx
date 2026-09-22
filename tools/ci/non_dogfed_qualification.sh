@@ -30,7 +30,6 @@ expected="tools/ci/tests/fixtures/non_dogfed/non_dogfed.expected"
 plan="tools/ci/non_dogfed_paths.sh"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 testing_readme="docs/testing/strategy-details.md"
 
 # Fixture files stay present.
@@ -123,16 +122,6 @@ else
   bad "tools/ci/non_dogfed_paths.sh lost its four-cohort plan record under issue #508"
 fi
 
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'qualified seed-only under #508' "$verify" &&
-  grep -q -F -e 'non_dogfed_qualification' "$verify" &&
-  grep -q -F -e 'tools/ci/tests/fixtures/non_dogfed/pins.bzl' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:non_dogfed_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #508 qualified seed-only record with fixtures"
-fi
-
 # Testing README keeps the explicit-path record with the qualification pin.
 if grep -q -F -e 'bazel run //tools/ci:non_dogfed_paths' "$testing_readme" &&
   grep -q -F -e 'bazel run //tools/ci:non_dogfed_qualification' "$testing_readme" &&
@@ -150,18 +139,10 @@ else
   bad "tools/ci/BUILD.bazel or ci.yml lost the non_dogfed_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# Verification matrix Green lists the harness count.
-if grep -q -F -e '`non_dogfed_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost non_dogfed_qualification 16/16"
-fi
-
-# Term e2e throughout: no integration-drivers prose in the new pins plus plan plus matrix record.
+# Term e2e throughout: no integration-drivers prose in the new pins plus plan.
 if grep -q -F -e 'Term e2e throughout' "$expected" &&
   grep -q -F -e 'replaces nested E2E' "$plan" &&
-  ! grep -q -F -e 'integration drivers' "$plan" &&
-  grep -q -F -e 'E2E' "$verify"; then
+  ! grep -q -F -e 'integration drivers' "$plan"; then
   ok
 else
   bad "e2e term drifted (want e2e throughout with no integration-drivers prose, issue #508)"

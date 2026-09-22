@@ -43,7 +43,6 @@ command_doc="docs/cli/commands/audit-update-bazel.md"
 adr="docs/decisions/0024-selective-update.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pins stay present with the Maven wont-fix disposition under #634.
 if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" ]] &&
@@ -170,15 +169,6 @@ if grep -q -F -e '| maven | Wont-fix' "$command_doc" &&
   ok
 else
   bad "audit-update-bazel.md lost its Maven row plus per-artifact note with fixture under #634"
-fi
-
-# Verification matrix owns the qualified seed-only record under #634.
-if grep -q -F -e 'selective_maven_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #634' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:selective_maven_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #634 Maven selective qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

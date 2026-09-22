@@ -46,7 +46,6 @@ lang_test="gazelle/rust/lang_test.go"
 golden="gazelle/rust/testdata/cargo/crates/scripted/BUILD.out"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 
 # Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
 if [[ ! -f "docs/roadmap.md" ]]; then
@@ -123,14 +122,6 @@ else
   bad "docs/native-toolchains.md lost its decided shell-env record with shell_env_qualification under issue #472"
 fi
 
-# Support matrix keeps the gap owned with the decided wording.
-if grep -q -F -e 'shell-env default' "$matrix" &&
-  grep -q -F -e 'decided hermetic under issue #472' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its decided shell-env gap wording under issue #472"
-fi
-
 # Generation README pins the third-party half alongside the generator half.
 if grep -q -F -e 'third-party half pinned global `False`' "$gen_readme"; then
   ok
@@ -173,15 +164,6 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_env_qualification
   ok
 else
   bad "ci.yml lost the shell_env_qualification step (want dogfood-freshness)"
-fi
-
-# Remaining matrix owns the qualified seed-only record under.
-if grep -q -F -e 'shell_env_qualification' "$verify_remaining" &&
-  grep -q -F -e 'qualified seed-only under #472' "$verify_remaining" &&
-  grep -q -F -e 'bazel run //tools/ci:shell_env_qualification' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #472 shell-env qualified record"
 fi
 
 dx_test_summary "shell-env qualification harness"

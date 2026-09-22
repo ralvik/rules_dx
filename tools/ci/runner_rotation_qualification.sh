@@ -40,7 +40,6 @@ fixture_build="tools/ci/tests/fixtures/runner_rotation/BUILD.bazel"
 contract="docs/github-ci.md"
 native="docs/native-toolchains.md"
 test_matrix="docs/testing/github-ci.md"
-verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 floors="cc/tests/fixtures/deployment_floors/pins.bzl"
@@ -174,15 +173,13 @@ else
   bad "testing/github-ci.md lost its #642 rotation on-demand qualification record"
 fi
 
-# BUILD owns the harness target plus CI wires it plus matrix records seed-only evidence.
+# BUILD owns the harness target plus CI wires it records seed-only evidence.
 if grep -q -F -e 'name = "runner_rotation_qualification"' "$build" &&
   grep -q -F -e 'runner_rotation_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:runner_rotation_qualification' "$ci" &&
-  grep -q -F -e ':runner_rotation_qualification' "$verify" &&
-  grep -q -F -e 'issue #642' "$verify"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:runner_rotation_qualification' "$ci"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml or verification-matrix lost the runner_rotation_qualification wiring (want target plus dogfood-freshness plus matrix)"
+  bad "tools/ci/BUILD.bazel or ci.yml lost the runner_rotation_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # As-built runners plus caches stay pinned with no paid runner, and floors keep SDK identities.

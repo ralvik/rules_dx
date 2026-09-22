@@ -2,7 +2,7 @@
 //! WP2 API/support/registry freeze; WP5 artifact-identity/packaging boundary,
 //! reproducibility and verification binding; WP4/WP6/WP7 evidence inventory,
 //! coverage gate, consumer-CI requalification, publication handoff).
-//! Contract: `docs/product/promotion-checklist.md`.
+//! Contract: `docs/product/support-matrix.md`.
 //!
 //! Publication-input verification (destinations, credential
 //! scopes, digest/policy match) and post-publication discipline (no silent

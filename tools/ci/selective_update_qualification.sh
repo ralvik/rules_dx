@@ -42,7 +42,6 @@ bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # ADR 0024 exists and stays Accepted under.
 if [[ -f "$adr" ]] &&

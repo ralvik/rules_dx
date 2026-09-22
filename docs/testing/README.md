@@ -33,7 +33,7 @@ to the authoritative product contracts that its tests exercise.
 Layer, coverage, infrastructure, and evidence contracts live in [Strategy Details](strategy-details.md).
 
 - [CLI](cli.md), [GitHub CI](github-ci.md), [Generation](generation.md), [Environments](environments.md), [Tools](tools.md), [Quality Workflow](../quality/quality-testing.md)
-- [Starlark Testing](starlark.md), [Verification Matrix](verification-matrix.md)
+- [Starlark Testing](starlark.md)
 
 ```sh
 bazel test //...

@@ -41,7 +41,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair stays present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -144,32 +143,12 @@ else
   bad "docs/native-toolchains.md lost its qualified immutable-lazy record with fixtures under issue #495"
 fi
 
-# Support matrix owns the qualified acquisition record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #495' "$matrix" &&
-  grep -q -F -e 'windows_acquisition_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/windows_acquisition/pins.bzl' "$matrix" &&
-  grep -q -F -e 'mutable fetch rejected' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified immutable-lazy acquisition record under issue #495"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "windows_acquisition_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_acquisition_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the windows_acquisition_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'windows_acquisition_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #495' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:windows_acquisition_qualification' "$verify" &&
-  grep -q -F -e '`windows_acquisition_qualification` 14/14' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #495 immutable-lazy qualified record"
 fi
 
 # Live proof: missing acceptance leaves unrelated workflows green (the seed

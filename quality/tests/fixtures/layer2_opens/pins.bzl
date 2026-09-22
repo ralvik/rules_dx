@@ -1,6 +1,6 @@
 """Layer-2 adapter-less plus composition plus depcheck opens pins.
 
-Contract: `docs/testing/verification-matrix.md`, `docs/product/support-matrix.md#minimal-required-core`,
+Contract: `docs/product/support-matrix.md`,
 `docs/generation/framework-adapters.md#framework-mapping-qualification`, `docs/quality/quality-testing.md`.
 Fixture: `quality/tests/fixtures/layer2_opens/` via
 `bazel run //tools/ci:layer2_opens_qualification`.

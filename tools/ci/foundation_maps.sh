@@ -483,7 +483,6 @@ grep -q -F -e 'cargo_lockfile = "//rust/tests/fixtures/hello:Cargo.lock"' MODULE
 grep -q -F -e 'lockfile = "//:cargo-bazel-lock.json"' MODULE.bazel || rust470_fail="$rust470_fail module:crate-lockfile"
 grep -q -F -e 'Language Mapping Qualification' docs/generation/foundation-qualification.md || rust470_fail="$rust470_fail docs:generation"
 grep -q -F -e 'Language Mapping Qualification' docs/environments/foundation-qualification.md || rust470_fail="$rust470_fail docs:environments"
-grep -q -F -e '#470' docs/product/support-matrix.md || rust470_fail="$rust470_fail docs:matrix"
 grep -q -F -e '#470' docs/native-toolchains.md || rust470_fail="$rust470_fail docs:native"
 if [[ -z "$rust470_fail" ]]; then
   ok
@@ -511,7 +510,6 @@ grep -q -F -e 'scala_scalacopts_with_werror' scala/rules/wrapper_tests.bzl || wr
 grep -q -F -e 'csharp_tfm_with_defaults' csharp/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail csharp:helper"
 grep -q -F -e 'fsharp_tfm_with_defaults' fsharp/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail fsharp:helper"
 grep -q -F -e 'cc_copts_with_werror' cc/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail cc:helper"
-grep -q -F -e 'wrapper_tests' docs/product/support-matrix.md || wrap948_fail="$wrap948_fail docs:matrix"
 if [[ -z "$wrap948_fail" ]]; then
   ok
 else
@@ -561,15 +559,9 @@ else
   bad "required-core quality mappings drifted:$quality_fail"
 fi
 
-# -: required-core native gaps stay owned (no Supported claim; docs own
-# the five gaps; matrix tracks them under - plus).
+# -: required-core native gaps stay owned (no Supported claim; detail lives
+# in owning issues).
 gaps_fail=""
-grep -q -F -e 'kept CC opt-out linker' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:cc-optout"
-grep -q -F -e 'shell-env default' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:shell-env"
-grep -q -F -e 'bindgen LLVM-22-vs-23' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:bindgen"
-grep -q -F -e 'CXX graph identity' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:cxx"
-grep -q -F -e 'exact-target discovery' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:exact-target"
-grep -q -F -e '#470' docs/product/support-matrix.md || gaps_fail="$gaps_fail matrix:tracking"
 grep -q -F -e '#471' docs/native-toolchains.md || gaps_fail="$gaps_fail native:tracking"
 grep -q -F -e 'Can the kept CC opt-out execute successfully?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:cc-optout"
 grep -q -F -e 'Can third-party scripts retain a declared hermetic closure?' docs/native-toolchains.md || gaps_fail="$gaps_fail native:shell-env"
@@ -594,7 +586,6 @@ grep -q -F -e 'go_test' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$run
 grep -q -F -e 'embed' go/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail go:embed"
 grep -q -F -e 'cc_test' cc/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail cc:kind"
 grep -q -F -e 'assert' cc/tests/fixtures/hello/hello_test.cc || runner_fail="$runner_fail cc:plain"
-grep -q -F -e 'GoogleTest v1.18.0' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:gtest"
 grep -q -F -e 'java_test' java/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail java:kind"
 grep -q -F -e 'test_class' java/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail java:class"
 grep -q -F -e 'org.junit.Test' java/tests/fixtures/hello/HelloTest.java || runner_fail="$runner_fail java:junit4"
@@ -602,20 +593,16 @@ grep -q -F -e 'kotlin_test' kotlin/tests/fixtures/hello/BUILD.bazel || runner_fa
 grep -q -F -e '@maven//:junit_junit' kotlin/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail kotlin:maven"
 grep -q -F -e 'org.junit.Test' kotlin/tests/fixtures/hello/HelloTest.kt || runner_fail="$runner_fail kotlin:junit4"
 grep -q -F -e 'junit:junit:4.13.2' MODULE.bazel || runner_fail="$runner_fail module:junit4"
-grep -q -F -e '6.1.3' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:junit6"
 grep -q -F -e 'scala_test' scala/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail scala:kind"
 grep -q -F -e 'AnyFlatSpec' scala/tests/fixtures/hello/HelloTest.scala || runner_fail="$runner_fail scala:scalatest"
-grep -q -F -e 'ScalaTest 3.2.20' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:scalatest"
 grep -q -F -e 'scala_version = "2.13.18"' MODULE.bazel || runner_fail="$runner_fail module:scala-version"
 grep -q -F -e 'SCALATEST_VERSION = "3.2.20"' scala/tests/fixtures/scalatest/pins.bzl || runner_fail="$runner_fail scala:pin"
 grep -q -F -e 'scala_test' scala/tests/fixtures/scalatest/pins.bzl || runner_fail="$runner_fail scala:map"
-grep -q -F -e 'scalatest_qualification' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:scalatest-qual"
 grep -q -F -e 'scalatest_qualification' docs/generation/foundation-qualification.md || runner_fail="$runner_fail gen:scalatest-qual"
 grep -q -F -e 'csharp_test' csharp/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail csharp:kind"
 grep -q -F -e 'static int Main' csharp/tests/fixtures/hello/HelloTest.cs || runner_fail="$runner_fail csharp:plain"
 grep -q -F -e 'fsharp_test' fsharp/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail fsharp:kind"
 grep -q -F -e 'EntryPoint' fsharp/tests/fixtures/hello/HelloTest.fs || runner_fail="$runner_fail fsharp:plain"
-grep -q -F -e 'xUnit v3 4.0.0' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:xunit"
 grep -q -F -e 'xUnit' csharp/rules/defs.bzl || runner_fail="$runner_fail csharp:open"
 grep -q -F -e 'xUnit' fsharp/rules/defs.bzl || runner_fail="$runner_fail fsharp:open"
 grep -q -F -e 'nuget xunit.v3 4.0.0' third_party/dotnet/paket.dependencies || runner_fail="$runner_fail paket:xunit"
@@ -641,7 +628,6 @@ grep -q -F -e 'static_assert(__cplusplus >= 201703L' cc/tests/fixtures/googletes
 grep -q -F -e 'std::optional' cc/tests/fixtures/googletest/greeter.h || runner_fail="$runner_fail gtest:optional"
 grep -q -F -e 'ruby_test' ruby/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail ruby:kind"
 grep -q -F -e 'Hello.hello' ruby/tests/fixtures/hello/hello_test.rb || runner_fail="$runner_fail ruby:plain"
-grep -q -F -e 'RSpec via `rb_test`' docs/product/support-matrix.md || runner_fail="$runner_fail matrix:rspec"
 grep -q -F -e 'RSPEC_VERSION = "3.13.0"' ruby/tests/fixtures/rspec/pins.bzl || runner_fail="$runner_fail rspec:pin"
 grep -q -F -e 'ruby_test' ruby/tests/fixtures/rspec/BUILD.bazel || runner_fail="$runner_fail rspec:kind"
 grep -q -F -e '@bundle//bin:rspec' ruby/tests/fixtures/rspec/BUILD.bazel || runner_fail="$runner_fail rspec:dep"
@@ -668,19 +654,15 @@ grep -q -F -e 'paket.main' MODULE.bazel || lock304_fail="$lock304_fail module:pa
 grep -q -F -e 'lock_file = "//third_party/jvm:maven_install.json"' MODULE.bazel || lock304_fail="$lock304_fail module:maven"
 grep -q -F -e 'FSHARP_CORE_VERSION = "10.1.201"' csharp/tests/fixtures/paket/pins.bzl || lock304_fail="$lock304_fail paket:pin"
 grep -q -F -e 'packages.lock.json rejected' csharp/tests/fixtures/paket/pins.bzl || lock304_fail="$lock304_fail paket:rejected"
-grep -q -F -e 'paket_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:paket-qual"
 grep -q -F -e 'paket_qualification' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:paket-qual"
 grep -q -F -e 'RULES_JVM_EXTERNAL_VERSION = "7.1"' third_party/jvm/pins.bzl || lock304_fail="$lock304_fail maven:pin"
 grep -q -F -e 'fail_if_repin_required = True' MODULE.bazel || lock304_fail="$lock304_fail maven:fail-closed"
-grep -q -F -e 'maven_lock_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail maven:matrix"
 grep -q -F -e 'maven_lock_qualification' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail maven:gen"
 grep -q -F -e 'CC_HASH_ATTR = "sha256"' cc/tests/fixtures/hermetic/pins.bzl || lock304_fail="$lock304_fail cc:pin"
 grep -q -F -e 'system packages rejected' cc/tests/fixtures/hermetic/pins.bzl || lock304_fail="$lock304_fail cc:rejected"
-grep -q -F -e 'cc_hermetic_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:cc-qual"
 grep -q -F -e 'cc_hermetic_qualification' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:cc-qual"
 grep -q -F -e 'GO_CMP_VERSION = "v0.6.0"' go/tests/fixtures/godeps/pins.bzl || lock304_fail="$lock304_fail godeps:pin"
 grep -q -F -e 'hand module tags rejected' go/tests/fixtures/godeps/pins.bzl || lock304_fail="$lock304_fail godeps:rejected"
-grep -q -F -e 'godeps_qualification' docs/product/support-matrix.md || lock304_fail="$lock304_fail matrix:godeps-qual"
 grep -q -F -e 'godeps_qualification' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:godeps-qual"
 grep -q -F -e 'RSPEC_VERSION = "3.13.0"' ruby/tests/fixtures/rspec/pins.bzl || lock304_fail="$lock304_fail rspec:pin"
 grep -q -F -e 'git gems rejected' ruby/tests/fixtures/gems/pins.bzl || lock304_fail="$lock304_fail gems:rejected"
@@ -753,13 +735,6 @@ grep -q -F -e 'no adapter claims csharp yet' quality/adapters.bzl || class304_fa
 grep -q -F -e 'no adapter claims fsharp yet' quality/adapters.bzl || class304_fail="$class304_fail fsharp:open"
 grep -q -F -e '#476-#484' docs/tools/foundation-qualification.md || class304_fail="$class304_fail tools:tracking"
 grep -q -F -e 'issue #307' docs/tools/foundation-qualification.md || class304_fail="$class304_fail tools:adapter-tracking"
-grep -q -F -e 'gofumpt' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:gofumpt"
-grep -q -F -e 'clang-format' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:clang-format"
-grep -q -F -e 'google-java-format' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:gjf"
-grep -q -F -e 'ktfmt' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:ktfmt"
-grep -q -F -e 'scalafmt' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:scalafmt"
-grep -q -F -e 'CSharpier' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:csharpier"
-grep -q -F -e 'Fantomas' docs/product/support-matrix.md || class304_fail="$class304_fail matrix:fantomas"
 if [[ -z "$class304_fail" ]]; then
   ok
 else
@@ -769,11 +744,9 @@ fi
 # -: admitted foundations stay owned (docs track -; C/C++ MSVC block
 # owned with no Supported claim).
 own304_fail=""
-grep -q -F -e '#476-#484' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:tracking"
 grep -q -F -e '#476-#484' docs/generation/foundation-qualification.md || own304_fail="$own304_fail gen:tracking"
 grep -q -F -e '#476-#484' docs/environments/foundation-qualification.md || own304_fail="$own304_fail env:tracking"
 grep -q -F -e '#476-#484' docs/native-toolchains.md || own304_fail="$own304_fail native:tracking"
-grep -q -F -e 'MSVC interop' docs/product/support-matrix.md || own304_fail="$own304_fail matrix:msvc"
 grep -q -F -e 'MSVC interop' docs/native-toolchains.md || own304_fail="$own304_fail native:msvc"
 grep -q -F -e 'SDK licensing' docs/native-toolchains.md || own304_fail="$own304_fail native:sdk"
 if grep -q -E -e '^\| .* \| Supported' docs/product/support-matrix.md; then
@@ -817,7 +790,6 @@ if grep -q -i -F -e 'swift' MODULE.bazel; then
 fi
 grep -q -F -e 'no `swift/`' docs/generation/foundation-qualification.md || abs305_fail="$abs305_fail gen:absence"
 grep -q -F -e 'no `swift/`' docs/environments/foundation-qualification.md || abs305_fail="$abs305_fail env:absence"
-grep -q -F -e 'no `swift/`' docs/product/support-matrix.md || abs305_fail="$abs305_fail matrix:absence"
 if [[ -z "$abs305_fail" ]]; then
   ok
 else
@@ -865,8 +837,6 @@ grep -q -F -e 'Decided route: PSScriptAnalyzer takes the' docs/tools/tool-acquis
 grep -q -F -e 'Swift, including SwiftFormat, is excluded from v1 by' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:swift"
 grep -q -F -e 'that route is forbidden' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:host-forbidden"
 grep -q -F -e 'Bandit excluded from v1 by' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:bandit"
-grep -q -F -e 'Bandit excluded from v1 by' docs/product/support-matrix.md || cohort305_fail="$cohort305_fail matrix:bandit"
-grep -q -F -e 'host-toolchain fallback never approved' docs/product/support-matrix.md || cohort305_fail="$cohort305_fail matrix:host-fallback"
 grep -q -F -e 'retained RuboCop/StandardRB plus' docs/tools/foundation-qualification.md || cohort305_fail="$cohort305_fail tools:retained"
 grep -q -F -e 'Swift/SwiftFormat stay excluded' docs/tools/foundation-qualification.md || cohort305_fail="$cohort305_fail tools:excluded"
 if [[ -z "$cohort305_fail" ]]; then
@@ -879,18 +849,14 @@ fi
 # ADR 0032; remaining gaps owned with no Supported claim; reconsideration
 # needs a new decision).
 own305_fail=""
-grep -q -F -e 'decided by' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:tracking"
 grep -q -F -e 'decided by [ADR 0032]' docs/generation/foundation-qualification.md || own305_fail="$own305_fail gen:tracking"
 grep -q -F -e 'decided by [ADR 0032]' docs/environments/foundation-qualification.md || own305_fail="$own305_fail env:tracking"
 grep -q -F -e 'decided by [ADR 0032]' docs/tools/foundation-qualification.md || own305_fail="$own305_fail tools:tracking"
-grep -q -F -e 'exclusion re-evidenced by ADR 0032' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:swift-tracking"
 grep -q -F -e 'Bundle contents, lock inputs' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-gaps"
 grep -q -F -e 'console-parse versus library-API' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-gaps"
 grep -q -F -e 'no adapter claims `ruby` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-open"
 grep -q -F -e 'no adapter claims `powershell` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-open"
 grep -q -F -e 'issue #307' docs/tools/foundation-qualification.md || own305_fail="$own305_fail tools:adapter-tracking"
-grep -q -F -e 'requires a new scope decision' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:reconsider"
-grep -q -F -e 'No `Supported` claim until platform plus' docs/product/support-matrix.md || own305_fail="$own305_fail matrix:supported-gate"
 if grep -q -E -e '^\| .* \| Supported' docs/product/support-matrix.md; then
   own305_fail="$own305_fail unexpected-supported"
 fi

@@ -8,7 +8,7 @@ Superseded by
 [ADR 0032](0032-ruby-powershell-bandit-swift.md), which admits the Ruby
 and PowerShell foundations to v1, re-selects Bandit, and re-evidences
 the Swift/SwiftFormat exclusion. This record below is historical; the
-[support matrix](../product/support-matrix.md#additional-foundations)
+[support matrix](../product/support-matrix.md)
 owns current dispositions.
 
 ## Context
@@ -29,7 +29,7 @@ The following dispositions are v1 scope decisions under the admission policy:
 - Admitted to v1: Java, Kotlin, C#, F#, Go, C/C++, and Scala application
   foundations. Each has an active Bzlmod-published upstream ruleset with a
   concrete dependency-lock and toolchain story, documented in the
-  [support matrix](../product/support-matrix.md#additional-foundations).
+  [support matrix](../product/support-matrix.md).
   Provisional upstreams, exact versions, mappings, and adapter work stay under
   ADR 0019/qualification; this record freezes only the admit outcome.
 - Deferred beyond v1: Ruby and PowerShell application foundations. Ruby's

@@ -43,7 +43,6 @@ expected="tools/ci/tests/fixtures/devcontainer_boot/devcontainer_boot.expected"
 fixture_build="tools/ci/tests/fixtures/devcontainer_boot/BUILD.bazel"
 contract="docs/contributing/devcontainer.md"
 test_matrix="docs/testing/github-ci.md"
-verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 dockerfile=".devcontainer/Dockerfile.prebuilt"
@@ -165,15 +164,13 @@ else
   bad "testing/github-ci.md lost its #648 devcontainer boot manual on-demand qualification record"
 fi
 
-# BUILD owns the harness target plus CI wires it plus matrix records seed-only evidence.
+# BUILD owns the harness target plus CI wires it records seed-only evidence.
 if grep -q -F -e 'name = "devcontainer_boot_qualification"' "$build" &&
   grep -q -F -e 'devcontainer_boot_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:devcontainer_boot_qualification' "$ci" &&
-  grep -q -F -e ':devcontainer_boot_qualification' "$verify" &&
-  grep -q -F -e 'issue #648' "$verify"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:devcontainer_boot_qualification' "$ci"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml or verification-matrix lost the devcontainer_boot_qualification wiring (want target plus audit step plus matrix)"
+  bad "tools/ci/BUILD.bazel or ci.yml lost the devcontainer_boot_qualification wiring (want target plus audit step)"
 fi
 
 # As-built shape stays check-only with no boot job in CI.

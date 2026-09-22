@@ -34,8 +34,6 @@ dx_cd_workspace
 
 dx_test_init
 
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 runner_doc="docs/quality/runner-matrix.md"
 targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
@@ -52,29 +50,6 @@ if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
   bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
-fi
-
-# Remaining matrix owns the qualified seed-only record under.
-if grep -q -F -e 'parser_sample_qualification' "$verify_remaining" &&
-  grep -q -F -e 'qualified seed-only under #465' "$verify_remaining" &&
-  grep -q -F -e 'bazel run //tools/ci:parser_sample_qualification' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #465 parser-sample qualified record"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness.
-if grep -q -F -e ':parser_sample_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix dogfood-freshness lost :parser_sample_qualification"
-fi
-
-# Verification matrix Green lists the harness count.
-if grep -q -F -e '`parser_sample_qualification` 61/61' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost parser_sample_qualification 23/23"
 fi
 
 # Targets own the harness plus dogfood wires it.

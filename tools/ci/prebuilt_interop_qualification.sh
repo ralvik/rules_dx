@@ -51,7 +51,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$interop_h" && -f "$interop_cc" && -f "$interop_test" ]]; then
@@ -159,32 +158,12 @@ else
   bad "docs/native-toolchains.md lost its qualified interop record with fixtures under issue #498"
 fi
 
-# Support matrix owns the qualified interop record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #498' "$matrix" &&
-  grep -q -F -e 'prebuilt_interop_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/prebuilt_interop/pins.bzl' "$matrix" &&
-  grep -q -F -e 'single-combo proof rejected' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified interop record under issue #498"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "prebuilt_interop_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:prebuilt_interop_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the prebuilt_interop_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'prebuilt_interop_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #498' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:prebuilt_interop_qualification' "$verify" &&
-  grep -q -F -e '`prebuilt_interop_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #498 interop qualified record"
 fi
 
 # Live proof: the interop lib builds on the seed host.

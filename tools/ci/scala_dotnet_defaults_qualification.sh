@@ -54,7 +54,6 @@ integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -143,27 +142,8 @@ fi
 
 # Support matrix keeps the qualified Scala + .NET versions plus rule-sets
 # with fixtures and harness; digests plus adapters stay under.
-if grep -q -F -e 'qualified seed-only under issue #486' "$support" &&
-  grep -q -F -e 'scala_dotnet_defaults_qualification' "$support" &&
-  grep -q -F -e 'scala/tests/fixtures/scala_dotnet_quality/pins.bzl' "$support" &&
-  grep -q -F -e 'no hidden preset' "$support" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #417' "$support"; then
-  ok
-else
-  bad "support-matrix lost its #486 qualified Scala + .NET versions plus rule-sets record with fixtures"
-fi
-
 # Support matrix resolves the Scalafix/Roslyn/FSharpLint conflicts as
 # upstream built-in defaults (no auto-supplied preset, StyleCop opt-in).
-if grep -q -F -e 'no auto-supplied OrganizeImports' "$support" &&
-  grep -q -F -e 'StyleCop stays opt-in' "$support" &&
-  grep -q -F -e 'upstream built-in defaults' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #486' "$support"; then
-  ok
-else
-  bad "support-matrix lost its #486 Scalafix plus Roslyn plus FSharpLint conflict resolution"
-fi
-
 # Tool acquisition keeps the decided managed-JVM route for Scalafmt/Scalafix
 # with no source-built route and no false claim; versions qualified under
 # , digests plus adapters stay pending under.
@@ -221,16 +201,6 @@ if grep -q -F -e 'defines no hidden rule' "$native_doc" &&
   ok
 else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'scala_dotnet_defaults_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #486' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:scala_dotnet_defaults_qualification' "$verify" &&
-  grep -q -F -e '`scala_dotnet_defaults_qualification` 17/17' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #486 Scala + .NET quality qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

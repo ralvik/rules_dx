@@ -48,7 +48,6 @@ real_rs="quality/runner/src/real.rs"
 commands="quality/adapter/src/commands.rs"
 integrations="docs/quality/tool-integrations.md"
 runner_doc="docs/quality/runner-matrix.md"
-verify="docs/testing/verification-matrix.md"
 targets="tools/ci/ci_targets_d.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
 
@@ -190,24 +189,6 @@ if grep -q -F -e 'adapters `clang_format` (format `c`' "$integrations" &&
   ok
 else
   bad "tool-integrations lost its native adapter claims under issue #798"
-fi
-
-# Verification matrix flips the two Layer-2 cells to Delivered.
-if grep -q -F -e '| Go | Delivered (code ownership) | Delivered |' "$verify" &&
-  grep -q -F -e '| C++ | Delivered (code ownership) | Delivered |' "$verify" &&
-  grep -q -F -e 'Native Layer-2 delivered' "$verify" &&
-  grep -q -F -e 'under #798' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its native Layer-2 Delivered flip under issue #798"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness plus Green.
-if grep -q -F -e ':native_adapters_qualification' "$verify" &&
-  grep -q -F -e '`native_adapters_qualification` 19/19' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #798 adapters harness record (want dogfood plus Green 19/19)"
 fi
 
 # Targets own the harness plus dogfood wires it.

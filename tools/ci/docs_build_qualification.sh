@@ -35,9 +35,7 @@ reusable=".github/workflows/reusable-docs.yml"
 ci=".github/workflows/ci.yml"
 checker="quality/markdown/src/check.rs"
 checker_build="quality/markdown/BUILD.bazel"
-checklist="docs/product/promotion-checklist.md"
 matrix="docs/product/support-matrix.md"
-verify="docs/testing/verification-matrix.md"
 runbook="docs/deploy/release-runbook.md"
 
 # Build-check-serve doc exists with the accepted workflow.
@@ -174,30 +172,16 @@ else
   bad "reusable-docs lost its check-only plus clean-checkout plus no-rendered-site record"
 fi
 
-# Cross-domain link guard (issue #932): the promotion checklist links,
-# not copies, the owning contracts, so status plus evidence plus human-run
-# path each resolve to one owner.
-if grep -q -F -e "Link, don't copy" "$checklist" &&
-  grep -q -F -e '(support-matrix.md' "$checklist" &&
-  grep -q -F -e '(../testing/verification-matrix.md)' "$checklist" &&
-  grep -q -F -e '(../deploy/release-runbook.md)' "$checklist"; then
-  ok
-else
-  bad "promotion-checklist lost its Link-don't-copy cross-contract links (want support-matrix plus verification-matrix plus release-runbook, issue #932)"
-fi
-
-# Matrix/runbook anchors stay resolvable (issue #932): the link targets
-# above plus the verification-matrix application-foundations anchor exist,
-# so the markdown missing-file-target/missing-anchor checker would pass
-# on the promotion path.
+# Cross-domain link guard (issue #932): status plus evidence plus human-run
+# path each resolve to one owner. Matrix/runbook anchors stay resolvable:
+# the support-matrix lifecycle plus runbook support-matrix link exist,
+# and no dead promotion-checklist link remains.
 if grep -q -F -e '## Status Lifecycle' "$matrix" &&
-  grep -q -F -e '## Application Foundations' "$matrix" &&
-  grep -q -F -e '(support-matrix.md#status-lifecycle)' "$checklist" &&
-  grep -q -F -e '(../product/support-matrix.md' "$verify" &&
-  grep -q -F -e '(../product/promotion-checklist.md)' "$runbook"; then
+  grep -q -F -e '(../product/support-matrix.md' "$runbook" &&
+  ! grep -q -F -e 'promotion-checklist' "$runbook"; then
   ok
 else
-  bad "support-matrix/verification-matrix/release-runbook cross anchors drifted (want status-lifecycle plus application-foundations plus checklist/runbook links, issue #932)"
+  bad "support-matrix/runbook cross anchors drifted (want status-lifecycle plus support-matrix link, no promotion-checklist, issue #932)"
 fi
 
 # Checker owns the link finding kinds the guard above relies on.

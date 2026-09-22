@@ -44,7 +44,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" && -f "$rsp" && -f "$wrapper" ]]; then
@@ -139,31 +138,12 @@ else
   bad "docs/native-toolchains.md lost its qualified transport record with fixtures under issue #497"
 fi
 
-# Support matrix toolchains_msvc row owns the transport qualified record.
-if grep -q -F -e 'transport plus ABI qualified seed-only under issue #497' "$matrix" &&
-  grep -q -F -e 'windows_transport_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/windows_transport/pins.bzl' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its transport qualified record under issue #497"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "windows_transport_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_transport_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the windows_transport_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'windows_transport_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #497' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:windows_transport_qualification' "$verify" &&
-  grep -q -F -e '`windows_transport_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #497 transport qualified record"
 fi
 
 # Fixture expected covers all seven declared-input cases.

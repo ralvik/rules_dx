@@ -47,7 +47,6 @@ native="quality/native_config.bzl"
 curated="quality/curated_defaults.bzl"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 root_ruff="ruff.toml"
 root_biome="biome.json"
 
@@ -187,16 +186,6 @@ if grep -q -F -e 'select = ["E4", "E7", "E9", "F"]' "$root_ruff" &&
   ok
 else
   bad "root ruff.toml or biome.json drifted (want loose E4/E7/E9/F plus {} unchanged, issue #615)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'strict_preset_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #615' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:strict_preset_qualification' "$verify" &&
-  grep -q -F -e '`strict_preset_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #615 strict preset qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
