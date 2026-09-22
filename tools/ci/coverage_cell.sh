@@ -55,12 +55,13 @@ fi
 # Real scoped coverage for the seed inventory scope, then the real gate.
 # The gate library lives at //cli/lcov:dx_lcov since the promotion;
 # the thin binary shim stays at //tools/coverage:coverage_bin. Both scopes
-# are covered together so the inventory (library + shim) matches Bazel.
-bazel coverage --noshow_progress //cli/lcov/... //tools/coverage/... \
+# plus the qualified evaluator crate (issue #1054) are covered together so
+# the inventory (library + shim + evaluator) matches Bazel.
+bazel coverage --noshow_progress //cli/lcov/... //tools/coverage/... //quality/evaluator/... \
   --combined_report=lcov \
-  --instrumentation_filter='^//(cli/lcov|tools/coverage)' >/dev/null 2>&1
-bazel query 'kind("source file", deps(//cli/lcov/... + //tools/coverage/...))' 2>/dev/null |
-  grep -E '^//(cli/lcov|tools/coverage)[:/].*\.rs$' |
+  --instrumentation_filter='^//(cli/lcov|tools/coverage|quality/evaluator)' >/dev/null 2>&1
+bazel query 'kind("source file", deps(//cli/lcov/... + //tools/coverage/... + //quality/evaluator/...))' 2>/dev/null |
+  grep -E '^//(cli/lcov|tools/coverage|quality/evaluator)[:/].*\.rs$' |
   sed -e 's|^//||' -e 's|:|/|' |
   LC_ALL=C sort -u >"$scratch/sources.txt"
 gate_rc=0

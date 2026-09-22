@@ -549,11 +549,11 @@ jobs:
           set -euo pipefail
           export LLVM_PROFILE_FILE="${RUNNER_TEMP:-/tmp}/profraw_%m_%p.profraw"
           bazel build --noshow_progress //tools/coverage:coverage_bin //tools/coverage:coverage_comment >/dev/null 2>&1
-          bazel coverage --noshow_progress //cli/lcov/... //tools/coverage/... \
+          bazel coverage --noshow_progress //cli/lcov/... //tools/coverage/... //quality/evaluator/... \
             --combined_report=lcov \
-            --instrumentation_filter='^//(cli/lcov|tools/coverage)' >/dev/null 2>&1 || true
-          bazel query 'kind("source file", deps(//cli/lcov/... + //tools/coverage/...))' 2>/dev/null \
-            | grep -E '^//(cli/lcov|tools/coverage)[:/].*\.rs$' \
+            --instrumentation_filter='^//(cli/lcov|tools/coverage|quality/evaluator)' >/dev/null 2>&1 || true
+          bazel query 'kind("source file", deps(//cli/lcov/... + //tools/coverage/... + //quality/evaluator/...))' 2>/dev/null \
+            | grep -E '^//(cli/lcov|tools/coverage|quality/evaluator)[:/].*\.rs$' \
             | sed -e 's|^//||' -e 's|:|/|' \
             | LC_ALL=C sort -u > "${RUNNER_TEMP:-/tmp}/seed_sources.txt"
           set +e
