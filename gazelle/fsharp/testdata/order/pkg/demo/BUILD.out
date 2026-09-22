@@ -10,7 +10,8 @@ fsharp_library(
     name = "demo",
     # do not sort: F# compile order, dependencies first
     srcs = [
-        "Helper.fs",
-        "Main.fs",
+        "C.fs",
+        "B.fs",
+        "A.fs",
     ],
 )

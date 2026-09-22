@@ -15,6 +15,7 @@ import (
 	"github.com/bazelbuild/bazel-gazelle/language"
 	"github.com/bazelbuild/bazel-gazelle/repo"
 	"github.com/bazelbuild/bazel-gazelle/resolve"
+	bzl "github.com/bazelbuild/buildtools/build"
 )
 
 const languageName = "fsharp"
@@ -185,6 +186,7 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 
 	packages := make(map[string]bool)
 	seen := make(map[string]bool)
+	contents := make(map[string][]byte, len(sources))
 	var imports []string
 	for _, src := range sources {
 		content, err := os.ReadFile(filepath.Join(args.Dir, src))
@@ -192,6 +194,7 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 			l.fail("fsharp: %s: read %s: %v", args.Rel, src, err)
 			continue
 		}
+		contents[src] = content
 		if DefinesMain(content) {
 			l.fail("fsharp: %s: %s defines main; thin fsharp_binary entries stay handwritten, so split main-bearing sources into their own directory before adopting generation", args.Rel, src)
 			continue
@@ -224,6 +227,12 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 	}
 	sort.Strings(imports)
 
+	ordered, err := orderSourcesByDependency(sources, contents)
+	if err != nil {
+		l.fail("fsharp: %s: %v", args.Rel, err)
+		return language.GenerateResult{}
+	}
+
 	if err := checkClaims(args.File, args.OtherGen, []Claimant{{Name: name, Source: args.Rel, Kind: LibraryKind}}); err != nil {
 		l.fail("fsharp: %s: %v", args.Rel, err)
 		return language.GenerateResult{}
@@ -231,7 +240,15 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 
 	result := language.GenerateResult{}
 	r := rule.NewRule(LibraryKind, name)
-	r.SetAttr("srcs", sources)
+	// F# compile order is significant: keep dependency order instead of the
+	// default alphabetical srcs sorting (deps stay sorted). UnsortedStrings
+	// skips Gazelle merge/write sorting and the do-not-sort comment skips
+	// buildtools Rewrite sorting on Format.
+	r.SetSortedAttrs([]string{"deps"})
+	r.SetAttr("srcs", rule.UnsortedStrings(ordered))
+	if comments := r.AttrComments("srcs"); comments != nil {
+		comments.Before = append(comments.Before, bzl.Comment{Token: "# do not sort: F# compile order, dependencies first"})
+	}
 	result.Gen = append(result.Gen, r)
 	result.Imports = append(result.Imports, targetImports{imports: imports})
 	if isFixturePath(args.Rel) {
@@ -240,6 +257,73 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 		}
 	}
 	return mergeStale(args.File, result)
+}
+
+// orderSourcesByDependency returns sources in F# compile order:
+// dependencies first, alphabetical tie-break. An intra-package edge exists
+// when one source's non-stdlib `open` normalizes to a sibling's simple
+// identity (basename without extension). Same-namespace uses without an
+// `open` have no edge and keep alphabetical order, so owners still list
+// those dependencies first by hand. Cycles fail closed.
+func orderSourcesByDependency(sources []string, contents map[string][]byte) ([]string, error) {
+	identityToSrc := make(map[string]string, len(sources))
+	for _, src := range sources {
+		id := ClassIdentity(src)
+		if _, ok := identityToSrc[id]; !ok {
+			identityToSrc[id] = src
+		}
+	}
+	deps := make(map[string]map[string]bool, len(sources))
+	for _, src := range sources {
+		deps[src] = make(map[string]bool)
+		content, ok := contents[src]
+		if !ok {
+			continue
+		}
+		for _, imp := range ParseImports(content) {
+			if IsStdLib(imp) {
+				continue
+			}
+			if depSrc, ok := identityToSrc[imp]; ok && depSrc != src {
+				deps[src][depSrc] = true
+			}
+		}
+	}
+	remaining := make(map[string]bool, len(sources))
+	for _, src := range sources {
+		remaining[src] = true
+	}
+	emitted := make(map[string]bool, len(sources))
+	ordered := make([]string, 0, len(sources))
+	for len(remaining) > 0 {
+		var ready []string
+		for src := range remaining {
+			blocked := false
+			for dep := range deps[src] {
+				if !emitted[dep] {
+					blocked = true
+					break
+				}
+			}
+			if !blocked {
+				ready = append(ready, src)
+			}
+		}
+		if len(ready) == 0 {
+			cycle := make([]string, 0, len(remaining))
+			for src := range remaining {
+				cycle = append(cycle, src)
+			}
+			sort.Strings(cycle)
+			return nil, fmt.Errorf("cyclic F# compile order among %s; split the directory or order sources by hand", strings.Join(cycle, ", "))
+		}
+		sort.Strings(ready)
+		next := ready[0]
+		ordered = append(ordered, next)
+		emitted[next] = true
+		delete(remaining, next)
+	}
+	return ordered, nil
 }
 
 // checkClaims fails closed on same-package normalized-name collisions: a

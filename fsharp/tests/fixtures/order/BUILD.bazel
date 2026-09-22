@@ -1,0 +1,37 @@
+"""F# compile-order fixture; multi-file library with dependency-first srcs."""
+
+load("//fsharp/rules:defs.bzl", "fsharp_library", "fsharp_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+# F# compile order is significant: Helper.fs provides Helper.suffix for
+# Demo.fs, so the dependency sorts first (alphabetical Demo.fs first would
+# not compile, unlike C# where order is irrelevant).
+fsharp_library(
+    name = "order_lib",
+    srcs = [
+        "Helper.fs",
+        "Demo.fs",
+    ],
+    deps = ["@paket.main//fsharp.core"],
+)
+
+fsharp_test(
+    name = "order_test",
+    srcs = ["OrderTest.fs"],
+    deps = [
+        ":order_lib",
+        "@paket.main//fsharp.core",
+    ],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

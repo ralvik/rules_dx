@@ -7,10 +7,11 @@ filegroup(
 
 fsharp_library(
     name = "demo",
+    # do not sort: F# compile order, dependencies first
     srcs = [
+        "extra/Kept.fs",  # keep
         "Demo.fs",
         "Helper.fs",
-        "extra/Kept.fs",  # keep
     ],
     data = ["README.txt"],
     tags = ["manual"],

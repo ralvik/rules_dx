@@ -100,11 +100,17 @@ def _fsharp_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap_binary(name, _fsharp_binary, _fsharp_binary_forward, srcs, visibility = visibility, upstream_kwargs = _fsharp_with_tfm(kwargs), **kwargs)
 
 def fsharp_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `fsharp_library`."""
+    """Experimental minimal wrapper over `fsharp_library`.
+
+    `srcs` order is significant: F# compiles topologically, so list
+    dependencies first (unlike `csharp_library`, where order is irrelevant)."""
     _fsharp_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def fsharp_binary(name, srcs = None, visibility = None, **kwargs):
     """Experimental minimal wrapper over `fsharp_binary`.
+
+    `srcs` order is significant: F# compiles topologically, so list
+    dependencies first and any `[<EntryPoint>]` file last.
 
     An ordinary binary owns its `srcs` plus `deps` on a wrapper library;
     the entry point follows the F# `[<EntryPoint>] let main` convention (no
@@ -115,6 +121,9 @@ def fsharp_binary(name, srcs = None, visibility = None, **kwargs):
 
 def fsharp_test(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `fsharp_test`.
+
+    `srcs` order is significant: F# compiles topologically, so list
+    dependencies first and any `[<EntryPoint>]` file last.
 
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner via

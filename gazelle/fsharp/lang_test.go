@@ -14,6 +14,7 @@ import (
 	"github.com/bazelbuild/bazel-gazelle/config"
 	"github.com/bazelbuild/bazel-gazelle/language"
 	"github.com/bazelbuild/bazel-gazelle/resolve"
+	bzl "github.com/bazelbuild/buildtools/build"
 )
 
 func writeFixture(t *testing.T, root, name, content string) {
@@ -63,6 +64,89 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 	got := result.Imports[0].(targetImports)
 	if strings.Join(got.imports, ",") != "Widget" {
 		t.Errorf("library imports = %+v, want [Widget]", got.imports)
+	}
+}
+
+func TestGenerateDependencyOrder(t *testing.T) {
+	regular := []string{"Demo.fs", "Helper.fs"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/Demo.fs":   "namespace Demo\n\nopen Helper\n\ntype Demo = class end\n",
+		"pkg/demo/Helper.fs": "namespace Demo\n\nopen System.Collections.Generic\n\ntype Helper = class end\n",
+	}, regular)
+	if len(result.Gen) != 1 {
+		t.Fatalf("generated %d rules, want 1", len(result.Gen))
+	}
+	if got := strings.Join(result.Gen[0].AttrStrings("srcs"), ","); got != "Helper.fs,Demo.fs" {
+		t.Errorf("library srcs = %q, want Helper.fs,Demo.fs (dependency first)", got)
+	}
+}
+
+func TestGenerateChainOrder(t *testing.T) {
+	regular := []string{"A.fs", "B.fs", "C.fs"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/A.fs": "namespace Demo\n\nopen B\n\ntype A = class end\n",
+		"pkg/demo/B.fs": "namespace Demo\n\nopen C\n\ntype B = class end\n",
+		"pkg/demo/C.fs": "namespace Demo\n\ntype C = class end\n",
+	}, regular)
+	if len(result.Gen) != 1 {
+		t.Fatalf("generated %d rules, want 1", len(result.Gen))
+	}
+	if got := strings.Join(result.Gen[0].AttrStrings("srcs"), ","); got != "C.fs,B.fs,A.fs" {
+		t.Errorf("library srcs = %q, want C.fs,B.fs,A.fs (chain dependency order)", got)
+	}
+}
+
+func TestGenerateCycleFails(t *testing.T) {
+	regular := []string{"A.fs", "B.fs"}
+	result := generateFixture(t, map[string]string{
+		"pkg/demo/A.fs": "namespace Demo\n\nopen B\n\ntype A = class end\n",
+		"pkg/demo/B.fs": "namespace Demo\n\nopen A\n\ntype B = class end\n",
+	}, regular)
+	if len(result.Gen) != 0 {
+		t.Fatalf("generated %d rules for a cycle, want 0 with a recorded failure", len(result.Gen))
+	}
+}
+
+func TestOrderSourcesByDependencyUnit(t *testing.T) {
+	ordered, err := orderSourcesByDependency(
+		[]string{"Demo.fs", "Helper.fs"},
+		map[string][]byte{
+			"Demo.fs":   []byte("namespace Demo\n\nopen Helper\n"),
+			"Helper.fs": []byte("namespace Demo\n"),
+		},
+	)
+	if err != nil || strings.Join(ordered, ",") != "Helper.fs,Demo.fs" {
+		t.Errorf("orderSourcesByDependency = %v, %v; want Helper.fs,Demo.fs", ordered, err)
+	}
+	if _, err := orderSourcesByDependency(
+		[]string{"A.fs", "B.fs"},
+		map[string][]byte{
+			"A.fs": []byte("namespace Demo\n\nopen B\n"),
+			"B.fs": []byte("namespace Demo\n\nopen A\n"),
+		},
+	); err == nil {
+		t.Error("orderSourcesByDependency succeeded on a cycle, want failure")
+	}
+}
+
+func TestDoNotSortPreservesCompileOrder(t *testing.T) {
+	f := rule.EmptyFile("BUILD.bazel", "pkg/demo")
+	r := rule.NewRule(LibraryKind, "demo")
+	r.SetSortedAttrs([]string{"deps"})
+	r.SetAttr("srcs", rule.UnsortedStrings([]string{"C.fs", "B.fs", "A.fs"}))
+	if comments := r.AttrComments("srcs"); comments != nil {
+		comments.Before = append(comments.Before, bzl.Comment{Token: "# do not sort: F# compile order, dependencies first"})
+	}
+	r.Insert(f)
+	out := string(f.Format())
+	if !strings.Contains(out, "do not sort") {
+		t.Errorf("formatted output missing do-not-sort comment:\n%s", out)
+	}
+	cIdx := strings.Index(out, "\"C.fs\"")
+	bIdx := strings.Index(out, "\"B.fs\"")
+	aIdx := strings.Index(out, "\"A.fs\"")
+	if cIdx < 0 || bIdx < 0 || aIdx < 0 || !(cIdx < bIdx && bIdx < aIdx) {
+		t.Errorf("formatted order wrong, want C,B,A with do-not-sort in:\n%s", out)
 	}
 }
 

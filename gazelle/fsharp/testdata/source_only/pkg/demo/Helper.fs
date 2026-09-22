@@ -2,4 +2,5 @@ namespace Demo
 
 open System.Collections.Generic
 
-type Helper = class end
+type Helper =
+    static member Suffix() = " world"

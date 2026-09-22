@@ -8,8 +8,9 @@ filegroup(
 
 fsharp_library(
     name = "demo",
+    # do not sort: F# compile order, dependencies first
     srcs = [
-        "Demo.fs",
         "Helper.fs",
+        "Demo.fs",
     ],
 )

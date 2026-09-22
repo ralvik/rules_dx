@@ -18,6 +18,7 @@ go_library(
     importpath = "github.com/ralvik/rules_dx/gazelle/fsharp",
     visibility = ["//gazelle/dispatch:__pkg__"],
     deps = [
+        "@com_github_bazelbuild_buildtools//build",
         "@gazelle//config",
         "@gazelle//language",
         "@gazelle//repo",
@@ -58,7 +59,10 @@ go_test(
     ],
     embed = [":fsharp"],
     pure = "on",
-    deps = ["@gazelle//v2/merger"],
+    deps = [
+        "@com_github_bazelbuild_buildtools//build",
+        "@gazelle//v2/merger",
+    ],
 )
 
 real_source_target(
@@ -67,6 +71,7 @@ real_source_target(
     markdown_srcs = [
         "testdata/entries/README.md",
         "testdata/merge/README.md",
+        "testdata/order/README.md",
         "testdata/source_only/README.md",
     ],
     tags = ["corpus"],
