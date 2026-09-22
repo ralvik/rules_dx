@@ -2,7 +2,7 @@
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load("//libs/starlark:wrapper.bzl", "dx_binary_forward_kwargs", "dx_missing_optional_names", "dx_optional_forward_warning", "dx_test_forward_kwargs", "dx_test_upstream_kwargs")
+load("//libs/starlark:wrapper.bzl", "dx_binary_forward_kwargs", "dx_missing_optional_names", "dx_optional_forward_warning", "dx_symlink_executable_name", "dx_test_forward_kwargs", "dx_test_upstream_kwargs")
 
 def wrapper_optional_forward_tests(name):
     starlark_test(
@@ -144,6 +144,32 @@ def wrapper_shape_kwargs_tests(name):
                 "test forward drops non-test attrs",
                 dx_test_forward_kwargs({"copts": ["-Werror"]}),
                 {},
+            ),
+        ],
+    )
+
+def wrapper_symlink_naming_tests(name):
+    starlark_test(
+        name = name,
+        mode = "unit",
+        checks = [
+            expect_equal(
+                "posix keeps the forwarder name",
+                dx_symlink_executable_name("hello", False),
+                "hello",
+            ),
+            expect_equal(
+                "windows appends the executable suffix",
+                dx_symlink_executable_name("hello", True),
+                "hello.exe",
+            ),
+            expect_equal(
+                "dotted names keep their stem on both platforms",
+                [
+                    dx_symlink_executable_name("my-tool.cli", False),
+                    dx_symlink_executable_name("my-tool.cli", True),
+                ],
+                ["my-tool.cli", "my-tool.cli.exe"],
             ),
         ],
     )

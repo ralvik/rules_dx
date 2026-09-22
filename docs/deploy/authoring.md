@@ -491,15 +491,15 @@ accepted). Deploy targets live next to the artifact they promote.
 ## Custom deployers (accepted)
 
 User-defined rules join `dx deploy` by returning `DxDeployInfo` with an
-executable `DefaultInfo`, without depending on the wrapper:
+executable `DefaultInfo`, symlinking via the shared helper:
 
 ```starlark
 load("@rules_dx//deploy/rules:defs.bzl", "DxDeployInfo")
+load("@rules_dx//libs/starlark:wrapper.bzl", "dx_symlink_executable", "dx_symlink_windows_attr")
 
 def _my_deploy_impl(ctx):
     exe = ctx.attr.deploy[DefaultInfo].files_to_run.executable
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
+    link = dx_symlink_executable(ctx, exe)
     return [
         DefaultInfo(executable = link),
         DxDeployInfo(app = ctx.attr.app.label, profile = "release"),
@@ -511,6 +511,6 @@ my_deploy = rule(
     attrs = {
         "app": attr.label(mandatory = True),
         "deploy": attr.label(executable = True, cfg = "target", mandatory = True),
-    },
+    } | dx_symlink_windows_attr(),
 )
 ```

@@ -6,7 +6,7 @@ Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo", _ts_project = "ts_project")
-load("//libs/starlark:wrapper.bzl", "dx_forward_attrs", "dx_forwarded_optional", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_quality_sources", "dx_symlink_default_info", "dx_test_forward_kwargs", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_forward_attrs", "dx_forwarded_optional", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_quality_sources", "dx_symlink_default_info", "dx_symlink_windows_attr", "dx_test_forward_kwargs", "dx_wrap")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_TS_PROJECT_PROVIDES = [
@@ -125,7 +125,7 @@ _typescript_test = rule(
                       "mirrored from the upstream jest_test (TESTBRIDGE_TEST_ONLY " +
                       "is always added for sharding/--test_filter).",
             ),
-        } | dx_lcov_merger_attr(),
+        } | dx_lcov_merger_attr() | dx_symlink_windows_attr(),
     ),
     doc = "Test forwarder for typescript_test: symlinks the upstream jest launcher.",
 )
