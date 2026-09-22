@@ -146,11 +146,23 @@ else
   bad "allow(unused_imports) reappeared (want per-use scoping or deletion, issue #955)"
 fi
 
-# clippy.toml stays the single source of truth and points at this pin.
+# clippy.toml stays the lint-intent log pointing at this pin (issue #1073):
+# enforcement lives in .bazelrc plus per-crate denies plus this pin, never
+# in clippy.toml tables (Clippy rejects `[lints]` as unknown).
 if grep -q -F -e 'clippy_deny_pin' clippy.toml; then
   ok
 else
-  bad "clippy.toml lost its clippy_deny_pin pointer (want single source of truth plus CI pin, issue #955)"
+  bad "clippy.toml lost its clippy_deny_pin pointer (want intent log plus CI pin, issue #955)"
+fi
+if grep -q -F -e 'lint-intent log' clippy.toml; then
+  ok
+else
+  bad "clippy.toml lost its intent-log header (want lint-intent log, not enforcement; enforcement lives in .bazelrc plus per-crate denies plus this pin, issue #1073)"
+fi
+if grep -q -F -e 'single source of truth' clippy.toml; then
+  bad "clippy.toml reclaims single-source authority (want lint-intent log, not enforcement, issue #1073)"
+else
+  ok
 fi
 
 dx_test_summary "clippy deny pin (issues #955, #999)"

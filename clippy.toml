@@ -1,10 +1,13 @@
-# Clippy single source of truth.
+# Clippy lint-intent log (not enforcement, issue #1073).
 #
 # Warnings are already errors via
 # `--@rules_rust//rust/settings:extra_rustc_flags=--deny=warnings` in
 # `.bazelrc`; third-party `crate_universe` targets stay green
-# via per-target `--cap-lints=allow`. This file documents lint intent, it
-# does not yet enforce new lints globally: `clippy::unwrap_used` /
+# via per-target `--cap-lints=allow`. This file documents lint intent only
+# and intentionally carries zero TOML tables: `clippy.toml` cannot
+# allow/deny lints and Clippy rejects an empty `[lints]` table as an
+# unknown field, so enforcement stays per-crate plus the CI pin below.
+# It does not yet enforce new lints globally: `clippy::unwrap_used` /
 # `clippy::expect_used` plus `clippy::unreachable` / `clippy::todo` deny
 # outside `#[cfg(test)]` rolls out per crate in
 # / as each crate's non-test code goes `expect`/`unwrap`/`unreachable`/`todo`-free, via
