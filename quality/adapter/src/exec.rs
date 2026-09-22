@@ -3,8 +3,8 @@
 //! Tools never observe the real workspace: the adapter materializes the
 //! exact input bytes plus native-closure files into a fresh scratch
 //! directory, then spawns the tool with an empty-derived environment
-//! (no `PATH`, no inherited config variables) and a pinned working
-//! directory. Native-closure entries follow the portable
+//! (no `PATH`, no inherited config variables, pinned `LANG`/`TZ`)
+//! and a pinned working directory. Native-closure entries follow the portable
 //! route: symlinked where the platform allows and copied otherwise, so
 //! Windows works without privileges. The copy fallback is intentional
 //! (tools only read these entries); `materialize_copies_closure_entry_
@@ -323,16 +323,22 @@ pub struct ChildOutput {
 }
 
 /// Builds the hermetic child environment: exactly one `TMPDIR` (the
-/// scratch root) plus caller extras (such as `LD_LIBRARY_PATH` for
-/// toolchain binaries). `PATH` is never set; every argv element is
-/// absolute, so tools cannot observe or depend on ambient lookup.
-/// Extras naming `TMPDIR` are dropped: the scratch root owns temp
-/// files and is never shadowable by tool configuration.
+/// scratch root) plus pinned `LANG=C.UTF-8` and `TZ=UTC` plus caller
+/// extras (such as `LD_LIBRARY_PATH` for toolchain binaries). `PATH`
+/// is never set; every argv element is absolute, so tools cannot
+/// observe or depend on ambient lookup. The locale/time pin keeps
+/// locale/time-sensitive tools (prettier, buf, clang-format, vale)
+/// deterministic across runners (See: `docs/testing/tools.md`).
+/// Extras naming `TMPDIR`, `LANG`, or `TZ` are dropped: the scratch
+/// root owns temp files and the pinned locale/timezone own
+/// determinism, never shadowable by tool configuration.
 pub fn hermetic_env(tmpdir: &Path, extra: &[(&str, &str)]) -> Vec<(String, String)> {
-    let mut env = Vec::with_capacity(1 + extra.len());
+    let mut env = Vec::with_capacity(3 + extra.len());
     env.push(("TMPDIR".to_owned(), tmpdir.to_string_lossy().into_owned()));
+    env.push(("LANG".to_owned(), "C.UTF-8".to_owned()));
+    env.push(("TZ".to_owned(), "UTC".to_owned()));
     for (key, value) in extra {
-        if *key != "TMPDIR" {
+        if *key != "TMPDIR" && *key != "LANG" && *key != "TZ" {
             env.push((key.to_string(), value.to_string()));
         }
     }
@@ -682,6 +688,8 @@ mod tests {
             env,
             vec![
                 ("TMPDIR".to_owned(), "/tmp/dx".to_owned()),
+                ("LANG".to_owned(), "C.UTF-8".to_owned()),
+                ("TZ".to_owned(), "UTC".to_owned()),
                 ("LD_LIBRARY_PATH".to_owned(), "/lib".to_owned()),
             ]
         );
@@ -700,6 +708,31 @@ mod tests {
         );
         assert_eq!(env[0], ("TMPDIR".to_owned(), "/tmp/dx".to_owned()));
         assert!(env.contains(&("LD_LIBRARY_PATH".to_owned(), "/lib".to_owned())));
+    }
+
+    #[test]
+    fn hermetic_env_pins_locale_and_time() {
+        let env = hermetic_env(
+            Path::new("/tmp/dx"),
+            &[
+                ("LANG", "de_DE.UTF-8"),
+                ("TZ", "Europe/Berlin"),
+                ("LC_ALL", "de_DE.UTF-8"),
+            ],
+        );
+        assert_eq!(
+            env.iter().filter(|(key, _)| key == "LANG").count(),
+            1,
+            "exactly one LANG"
+        );
+        assert_eq!(
+            env.iter().filter(|(key, _)| key == "TZ").count(),
+            1,
+            "exactly one TZ"
+        );
+        assert!(env.contains(&("LANG".to_owned(), "C.UTF-8".to_owned())));
+        assert!(env.contains(&("TZ".to_owned(), "UTC".to_owned())));
+        assert!(env.contains(&("LC_ALL".to_owned(), "de_DE.UTF-8".to_owned())));
     }
 
     #[test]

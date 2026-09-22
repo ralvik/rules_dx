@@ -65,7 +65,10 @@ cannot pass this proof is delayed explicitly rather than given a non-hermetic fa
 
 The [initial artifact candidates](../tools/tool-acquisition.md#initial-artifact-research) require
 actual-byte checksum checks, archive member and executable-mode checks, changed-release-byte
-rejection, empty-PATH execution, runtime/ABI inspection (especially Vale Linux), and each required
+rejection, empty-PATH execution with pinned `LANG=C.UTF-8` plus `TZ=UTC`
+(`quality/adapter/src/exec.rs` `hermetic_env`, keeping locale/time-sensitive
+tools such as prettier, buf, clang-format, and vale deterministic),
+runtime/ABI inspection (especially Vale Linux), and each required
 platform. Upstream build recipes alone do not prove the published artifact's properties.
 
 The [provenance profile candidates](../tools/tool-acquisition.md#provenance-profile-research) require
@@ -218,6 +221,14 @@ PowerShell port stays wont-fix under issue #750 (same bash-only reason:
 Windows quals run via `shell: bash` with portable forms, per-OS shells
 would double the harness for no product gain).
 `//tools/ci:shell_contract` machine-checks this contract.
+
+Runner-tool versions are pinned as floors and asserted via `tool --version`
+guards where workflows use them (issue #1061): python3 3.9+, gh 2.0+,
+jq 1.6+, curl 7.0+. `ci.yml` SBOM digest steps assert python3, the
+coverage publish step asserts gh plus jq, `reusable-consumer.yml` asserts
+the same pair in its gate plus publish steps, `ghcr.yml` asserts curl
+before the cosign fetch, and `setup-bazelisk` asserts its hashing fallback
+(sha256sum/shasum/python3) before checksumming.
 
 Per-host skip budget (issue #769): the bash harness stays Linux-only per
 the shell contract above, so non-Linux `test //...` cells skip honestly

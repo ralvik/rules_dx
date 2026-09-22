@@ -206,7 +206,8 @@ pub struct RealBackend {
 }
 
 /// Production spawner: one absolute tool binary with a cleared
-/// environment. `PATH` is never set; see `exec::hermetic_env`.
+/// environment. `PATH` is never set and `LANG`/`TZ` stay pinned for
+/// determinism; see `exec::hermetic_env`.
 pub fn real_spawn(
     argv: &[OsString],
     cwd: &Path,
