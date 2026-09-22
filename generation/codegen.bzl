@@ -4,6 +4,18 @@ Contract: `docs/environments/codegen.md`, `docs/product/scope.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
+load(
+    "//libs/starlark:plan_shard.bzl",
+    "plan_shard_aspect_inputs",
+    "plan_shard_conflict_error",
+    "plan_shard_edge_targets",
+    "plan_shard_exec_matches",
+    "plan_shard_fingerprint",
+    "plan_shard_merge_records",
+    "plan_shard_record_error",
+    "plan_shard_subject_files",
+    "plan_shard_subject_records",
+)
 
 DxCodegenPlanInfo = provider(
     doc = "Normalized codegen plan records: direct plus transitive collection.",
@@ -69,34 +81,38 @@ def codegen_record(producer, language, entries):
         producer = producer,
     )
 
+def _codegen_entry_error(entry):
+    error = codegen_path_error(entry.logical_path)
+    if error != "":
+        return error
+    error = codegen_path_error(entry.import_root)
+    if error != "":
+        return error
+    error = codegen_exec_error(entry.exec_path)
+    if error != "":
+        return error
+    return codegen_replaces_error(entry.logical_path, entry.exec_path, entry.replaces)
+
+def _codegen_owner_of(record):
+    return (record.producer, record.language)
+
+def _codegen_claim_key(entry):
+    return entry.logical_path
+
 def codegen_record_error(record):
     """Validates one contributor record."""
-    if record.producer == "":
-        return "invalid codegen record: producer must be a non-empty label"
-    if not (record.producer.startswith("//") or record.producer.startswith("@")):
-        return "invalid codegen record '" + record.producer + "': producer must be a label in observation rendering"
+    second_error = ""
     if record.language == "":
-        return "invalid codegen record '" + record.producer + "': language must be a non-empty file class"
-    if len(record.entries) == 0:
-        return "invalid codegen record '" + record.producer + "': entries must be non-empty (targets with no contribution carry no record)"
-    seen = {}
-    for entry in record.entries:
-        error = codegen_path_error(entry.logical_path)
-        if error != "":
-            return "invalid codegen record '" + record.producer + "': " + error
-        error = codegen_path_error(entry.import_root)
-        if error != "":
-            return "invalid codegen record '" + record.producer + "': " + error
-        error = codegen_exec_error(entry.exec_path)
-        if error != "":
-            return "invalid codegen record '" + record.producer + "': " + error
-        error = codegen_replaces_error(entry.logical_path, entry.exec_path, entry.replaces)
-        if error != "":
-            return "invalid codegen record '" + record.producer + "': " + error
-        if entry.logical_path in seen:
-            return "invalid codegen record '" + record.producer + "': duplicate logical path '" + entry.logical_path + "'"
-        seen[entry.logical_path] = True
-    return ""
+        second_error = "language must be a non-empty file class"
+    return plan_shard_record_error(
+        record.producer,
+        "codegen",
+        second_error,
+        record.entries,
+        _codegen_entry_error,
+        _codegen_claim_key,
+        "logical path",
+    )
 
 def codegen_exec_error(path):
     """Validates one BEP-matching exec-path suffix.
@@ -144,23 +160,31 @@ def codegen_conflict_error(records):
     namespace, exec path, and replaces) merge silently. Any other
     second claim on one logical path fails, listing every claimant:
     no traversal-order winner is accepted."""
-    claimants_by_path = {}
-    for record in records:
-        for entry in record.entries:
-            key = (record.producer, record.language) + _codegen_entry_key(entry)
-            paths = claimants_by_path.setdefault(entry.logical_path, {})
-            paths[key] = True
-    conflicts = []
-    for path in sorted(claimants_by_path.keys()):
-        claims = sorted(claimants_by_path[path].keys())
-        if len(claims) > 1:
-            conflicts.append(
-                "logical path '" + path + "' claimed by " +
-                ", ".join([claim[0] for claim in claims]),
-            )
-    if not conflicts:
-        return ""
-    return "codegen path conflict: " + "; ".join(conflicts)
+    return plan_shard_conflict_error(
+        records,
+        _codegen_owner_of,
+        _codegen_entry_key,
+        _codegen_claim_key,
+        "codegen path conflict",
+        "logical path",
+    )
+
+def _codegen_encode_record(record):
+    return {
+        "entries": [
+            {
+                "exec_path": entry.exec_path,
+                "import_root": entry.import_root,
+                "logical_path": entry.logical_path,
+                "namespace": entry.namespace,
+                "read_only": entry.read_only,
+                "replaces": entry.replaces,
+            }
+            for entry in record.entries
+        ],
+        "language": record.language,
+        "producer": record.producer,
+    }
 
 def codegen_merge_records(records):
     """Merges records into deterministic normalized order.
@@ -171,20 +195,12 @@ def codegen_merge_records(records):
     normalized complete-plan form the CLI hashes; repository roots emit
     no second closure manifest, so shared closures serialize once per
     record, not once per selected root."""
-    entries_by_owner = {}
-    for record in records:
-        owner = (record.producer, record.language)
-        owned = entries_by_owner.setdefault(owner, {})
-        for entry in record.entries:
-            owned[_codegen_entry_key(entry)] = entry
-    merged = []
-    for owner in sorted(entries_by_owner.keys()):
-        entries = [
-            entries_by_owner[owner][key]
-            for key in sorted(entries_by_owner[owner].keys())
-        ]
-        merged.append(codegen_record(owner[0], owner[1], entries))
-    return merged
+    return plan_shard_merge_records(
+        records,
+        _codegen_owner_of,
+        _codegen_entry_key,
+        codegen_record,
+    )
 
 def codegen_merge_schema_error(records, merged):
     """Validates merged is the normalized form of records.
@@ -239,25 +255,7 @@ def codegen_merge_schema_error(records, merged):
 
 def codegen_plan_fingerprint(records):
     """Renders the normalized complete-plan hash input."""
-    merged = codegen_merge_records(records)
-    return json.encode([
-        {
-            "entries": [
-                {
-                    "exec_path": entry.exec_path,
-                    "import_root": entry.import_root,
-                    "logical_path": entry.logical_path,
-                    "namespace": entry.namespace,
-                    "read_only": entry.read_only,
-                    "replaces": entry.replaces,
-                }
-                for entry in record.entries
-            ],
-            "language": record.language,
-            "producer": record.producer,
-        }
-        for record in merged
-    ])
+    return plan_shard_fingerprint(records, codegen_merge_records, _codegen_encode_record)
 
 def codegen_fingerprint_schema_error(fingerprint):
     """Validates a plan fingerprint JSON shape.
@@ -421,7 +419,7 @@ def _exec_matches(file_path, exec_path):
     Suffix matching (on "/" boundaries, plus exact equality) lets one
     logical entry resolve under different output bases without scanning
     `bazel-out`."""
-    return file_path == exec_path or file_path.endswith("/" + exec_path)
+    return plan_shard_exec_matches(file_path, exec_path)
 
 def _dx_codegen_shard_impl(ctx):
     producer = display_label(ctx.label)
@@ -466,12 +464,7 @@ dx_codegen_shard = rule(
 )
 
 def _edge_targets(rule_attr, name):
-    value = getattr(rule_attr, name, [])
-    if value == None:
-        return []
-    if type(value) == "Target":
-        return [value]
-    return value
+    return plan_shard_edge_targets(rule_attr, name)
 
 # Narrow traversal edges for the collecting aspect: the shard rule's own
 # `deps`, the prost library's `proto` edge, and the prost adapter's
@@ -480,31 +473,20 @@ def _edge_targets(rule_attr, name):
 _CODEGEN_ASPECT_ATTRS = ["deps", "proto", "proto_rs"]
 
 def _dx_codegen_plan_aspect_impl(target, ctx):
-    direct_records = []
-    direct_files = []
-    if DxCodegenPlanInfo in target:
-        direct_records = target[DxCodegenPlanInfo].direct
-    if OutputGroupInfo in target:
-        groups = target[OutputGroupInfo]
-        if DX_CODEGEN_PLAN_OUTPUT_GROUP in groups:
-            direct_files = groups[DX_CODEGEN_PLAN_OUTPUT_GROUP].to_list()
-    transitive_records = []
-    transitive_files = []
-    for name in _CODEGEN_ASPECT_ATTRS:
-        for dep in _edge_targets(ctx.rule.attr, name):
-            if DxCodegenPlanCollectedInfo in dep:
-                transitive_records.append(dep[DxCodegenPlanCollectedInfo].records)
-            if OutputGroupInfo in dep:
-                groups = dep[OutputGroupInfo]
-                if DX_CODEGEN_PLAN_OUTPUT_GROUP in groups:
-                    transitive_files.append(groups[DX_CODEGEN_PLAN_OUTPUT_GROUP])
-    merged_records = depset(direct_records, transitive = transitive_records)
-    conflict = codegen_conflict_error(merged_records.to_list())
+    inputs = plan_shard_aspect_inputs(
+        target,
+        ctx,
+        DxCodegenPlanInfo,
+        DxCodegenPlanCollectedInfo,
+        DX_CODEGEN_PLAN_OUTPUT_GROUP,
+        _CODEGEN_ASPECT_ATTRS,
+    )
+    conflict = codegen_conflict_error(inputs.merged_records.to_list())
     if conflict != "":
         fail("dx_codegen_plan_aspect on " + display_label(target.label) + ": " + conflict)
     return [
-        DxCodegenPlanCollectedInfo(records = merged_records),
-        OutputGroupInfo(dx_codegen_plans = depset(direct_files, transitive = transitive_files)),
+        DxCodegenPlanCollectedInfo(records = inputs.merged_records),
+        OutputGroupInfo(dx_codegen_plans = depset(inputs.direct_files, transitive = inputs.transitive_files)),
     ]
 
 dx_codegen_plan_aspect = aspect(
@@ -611,19 +593,8 @@ prost_codegen_shard = rule(
 
 def _codegen_plan_subject_impl(ctx):
     target = ctx.attr.target
-    records = []
-    if DxCodegenPlanCollectedInfo in target:
-        records = target[DxCodegenPlanCollectedInfo].records.to_list()
-    elif DxCodegenPlanInfo in target:
-        records = target[DxCodegenPlanInfo].transitive.to_list()
-    shard_files = []
-    if OutputGroupInfo in target:
-        groups = target[OutputGroupInfo]
-        if DX_CODEGEN_PLAN_OUTPUT_GROUP in groups:
-            shard_files = sorted(
-                groups[DX_CODEGEN_PLAN_OUTPUT_GROUP].to_list(),
-                key = lambda f: f.basename,
-            )
+    records = plan_shard_subject_records(target, DxCodegenPlanInfo, DxCodegenPlanCollectedInfo)
+    shard_files = plan_shard_subject_files(target, DX_CODEGEN_PLAN_OUTPUT_GROUP)
     plan = {
         "files": ",".join([f.basename for f in shard_files]),
         "fingerprint": codegen_plan_fingerprint(records),
