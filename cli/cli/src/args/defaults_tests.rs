@@ -3,7 +3,7 @@
 
 use super::super::{Command, FileDefaults};
 use super::parse_with;
-use dx_output::{OutputMode, Threshold};
+use dx_output::{ColorMode, OutputMode, Threshold};
 
 fn args(words: &[&str]) -> Vec<String> {
     words.iter().map(ToString::to_string).collect()
@@ -30,6 +30,7 @@ fn file_with(
         workspace: workspace.map(ToString::to_string),
         output: output.map(ToString::to_string),
         verbose,
+        color: None,
         quiet,
         dry_run,
         fail_on: fail_on.map(ToString::to_string),
@@ -43,6 +44,7 @@ fn flag_only_parses_with_builtin_defaults() {
     assert_eq!(got.command, Command::Lint);
     assert_eq!(got.workspace, None);
     assert!(!got.verbose);
+    assert_eq!(got.color, ColorMode::Auto);
     assert!(!got.quiet);
     assert!(!got.dry_run);
     assert_eq!(got.output, OutputMode::Text { quiet: false });
@@ -153,6 +155,13 @@ fn invalid_env_and_file_values_fail_closed() {
             value: "never".to_owned(),
         })
     );
+    let env = env_of(&[("DX_COLOR", "bright")]);
+    assert_eq!(
+        parse_with(&args(&["lint"]), &env, &FileDefaults::default()),
+        Err(ArgsError::BadColor {
+            value: "bright".to_owned(),
+        })
+    );
     let file = file_with(None, Some("yaml"), None, None, None, None);
     assert_eq!(
         parse_with(&args(&["lint"]), &env_of(&[]), &file),
@@ -166,6 +175,29 @@ fn invalid_env_and_file_values_fail_closed() {
         parse_with(&args(&["lint"]), &env, &FileDefaults::default()).expect("empty env absent");
     assert_eq!(got.workspace, None);
     assert_eq!(got.output, OutputMode::Text { quiet: false });
+}
+
+#[test]
+fn color_flag_env_file_precedence() {
+    // Flag wins over env and file.
+    let mut file = FileDefaults::default();
+    file.color = Some("never".to_owned());
+    let env = env_of(&[("DX_COLOR", "always")]);
+    let got = parse_with(&args(&["lint", "--color=never"]), &env, &file).expect("flag wins");
+    assert_eq!(got.color, ColorMode::Never);
+    // Env wins over file.
+    let got = parse_with(&args(&["lint"]), &env, &file).expect("env wins");
+    assert_eq!(got.color, ColorMode::Always);
+    // File supplies the default when flag and env are absent.
+    let got = parse_with(&args(&["lint"]), &env_of(&[]), &file).expect("file wins");
+    assert_eq!(got.color, ColorMode::Never);
+    // Invalid flag values fail closed.
+    assert!(parse_with(
+        &args(&["lint", "--color=bright"]),
+        &env_of(&[]),
+        &FileDefaults::default()
+    )
+    .is_err());
 }
 
 #[test]

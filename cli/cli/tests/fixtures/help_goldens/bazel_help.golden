@@ -78,6 +78,9 @@ Options:
   -v, --verbose
           Enable structured diagnostics on stderr via tracing. Default stays byte-identical; `--verbose` adds info-level logs. Orthogonal to `--quiet` (summaries vs logs). Short `-v`; conflicts with `--log-level` (See: `docs/cli/output-protocol.md`)
 
+      --color <COLOR>
+          Select color output for logs and human status (`auto|always|never`). `auto` stays byte-identical plain unless a TTY without `NO_COLOR`; `always` forces color, `never` stays plain. See: `docs/cli/cli-contract.md`
+
       --log-level <LEVEL>
           Select the structured diagnostic level on stderr via tracing. Default stays byte-identical (`warn`); `--verbose`/`-v` is `info`. `RUST_LOG` overrides when set (See: `docs/cli/output-protocol.md`)
 
@@ -131,6 +134,12 @@ Options:
       --port <PORT>
           Preview port for `dx docs --serve` (docs only; requires `--serve`). See: `docs/cli/commands/docs.md`
 
+      --host <HOST>
+          Preview bind host for `dx docs --serve` (docs only; requires `--serve`). Defaults to `127.0.0.1`. See: `docs/cli/commands/docs.md`
+
+      --open
+          Open the preview URL in a browser after building (docs only; requires `--serve`). See: `docs/cli/commands/docs.md`
+
       --offline
           Force cache-only operation without network fetches (audit/update/bump only; `--frozen` alias). See: `docs/deploy/offline-bootstrap.md`
           
@@ -146,7 +155,7 @@ Environment:
   RUST_LOG=<filter>
       Override --verbose/-v and --log-level with a tracing filter (e.g. RUST_LOG=debug).
   NO_COLOR=<any>
-      Disable styled human output when present (any value, per the spec).
+      Disable styled human output when present (any value, per the spec); `--color=always` forces color, `--color=never` stays plain.
   BUILD_WORKSPACE_DIRECTORY=<dir>
       Workspace start under `bazel run`; falls back to the current directory.
   See docs/cli/output-protocol.md and docs/cli/cli-contract.md.

@@ -11,6 +11,8 @@ pub const DX_WORKSPACE_ENV: &str = "DX_WORKSPACE";
 pub const DX_OUTPUT_ENV: &str = "DX_OUTPUT";
 /// Env var enabling verbose diagnostics when `--verbose` is absent.
 pub const DX_VERBOSE_ENV: &str = "DX_VERBOSE";
+/// Env var selecting the color mode when `--color` is absent.
+pub const DX_COLOR_ENV: &str = "DX_COLOR";
 /// Env var suppressing operation summaries when `--quiet` is absent.
 pub const DX_QUIET_ENV: &str = "DX_QUIET";
 /// Env var enabling dry-run planning when `--dry-run` is absent.
@@ -33,6 +35,8 @@ pub struct FileDefaults {
     pub output: Option<String>,
     /// Verbose default when neither flag nor env enables it.
     pub verbose: Option<bool>,
+    /// Color mode name when no flag or env selects one.
+    pub color: Option<String>,
     /// Quiet default when neither flag nor env enables it.
     pub quiet: Option<bool>,
     /// Dry-run default when neither flag nor env enables it.
@@ -110,6 +114,8 @@ struct DxTable {
     #[serde(default)]
     verbose: Option<bool>,
     #[serde(default)]
+    color: Option<String>,
+    #[serde(default)]
     quiet: Option<bool>,
     #[serde(default, alias = "dry-run")]
     dry_run: Option<bool>,
@@ -127,6 +133,8 @@ struct ConfigFile {
     output: Option<String>,
     #[serde(default)]
     verbose: Option<bool>,
+    #[serde(default)]
+    color: Option<String>,
     #[serde(default)]
     quiet: Option<bool>,
     #[serde(default, alias = "dry-run")]
@@ -155,6 +163,7 @@ pub fn parse_file_text(text: &str) -> Result<FileDefaults, super::AdoptError> {
         workspace: non_empty(table.workspace.or(parsed.workspace)),
         output: non_empty(table.output.or(parsed.output)),
         verbose: table.verbose.or(parsed.verbose),
+        color: non_empty(table.color.or(parsed.color)),
         quiet: table.quiet.or(parsed.quiet),
         dry_run: table.dry_run.or(parsed.dry_run),
         fail_on: non_empty(table.fail_on.or(parsed.fail_on)),
@@ -283,12 +292,13 @@ mod tests {
     #[test]
     fn file_parses_dx_table_with_top_level_alias() {
         let parsed = parse_file_text(
-            "[dx]\nworkspace = \"/repo\"\noutput = \"json\"\nverbose = true\nquiet = false\ndry_run = true\nfail_on = \"error\"\n",
+            "[dx]\nworkspace = \"/repo\"\noutput = \"json\"\nverbose = true\ncolor = \"never\"\nquiet = false\ndry_run = true\nfail_on = \"error\"\n",
         )
         .expect("dx table parses");
         assert_eq!(parsed.workspace, Some("/repo".to_owned()));
         assert_eq!(parsed.output, Some("json".to_owned()));
         assert_eq!(parsed.verbose, Some(true));
+        assert_eq!(parsed.color, Some("never".to_owned()));
         assert_eq!(parsed.quiet, Some(false));
         assert_eq!(parsed.dry_run, Some(true));
         assert_eq!(parsed.fail_on, Some("error".to_owned()));
@@ -298,6 +308,9 @@ mod tests {
         let both =
             parse_file_text("output = \"text\"\n[dx]\noutput = \"json\"\n").expect("table wins");
         assert_eq!(both.output, Some("json".to_owned()));
+        let both_color =
+            parse_file_text("color = \"never\"\n[dx]\ncolor = \"always\"\n").expect("table wins");
+        assert_eq!(both_color.color, Some("always".to_owned()));
         let empty = parse_file_text("").expect("empty parses");
         assert_eq!(empty, FileDefaults::default());
         assert!(parse_file_text("not toml = [").is_err());
@@ -310,9 +323,10 @@ mod tests {
             .expect("hyphen aliases parse");
         assert_eq!(parsed.dry_run, Some(true));
         assert_eq!(parsed.fail_on, Some("info".to_owned()));
-        let parsed = parse_file_text("workspace = \"\"\noutput = \"\"\n").expect("empty parses");
+        let parsed = parse_file_text("workspace = \"\"\noutput = \"\"\ncolor = \"\"\n").expect("empty parses");
         assert_eq!(parsed.workspace, None);
         assert_eq!(parsed.output, None);
+        assert_eq!(parsed.color, None);
     }
 
     #[test]

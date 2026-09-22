@@ -437,6 +437,24 @@ pub fn port_without_serve_allowed() -> bool {
     false
 }
 
+/// `--host` only refines `--serve`; a host flag without serve selects no
+/// preview and is rejected rather than silently ignored.
+pub fn host_without_serve_allowed() -> bool {
+    false
+}
+
+/// `--open` only refines `--serve`; an open flag without serve selects no
+/// preview and is rejected rather than silently ignored.
+pub fn open_without_serve_allowed() -> bool {
+    false
+}
+
+/// Preview ports are 1-65535; `0` is rejected rather than silently
+/// selecting an ephemeral port.
+pub fn port_zero_allowed() -> bool {
+    false
+}
+
 /// Failures name the affected (language, package) unit.
 pub fn failure_names_unit() -> bool {
     true
@@ -731,6 +749,9 @@ mod tests {
         assert!(!serve_is_build_action());
         assert!(!serve_caches_own_outputs());
         assert!(!port_without_serve_allowed());
+        assert!(!host_without_serve_allowed());
+        assert!(!open_without_serve_allowed());
+        assert!(!port_zero_allowed());
     }
 
     #[test]

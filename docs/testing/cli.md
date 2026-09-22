@@ -74,7 +74,7 @@ execution, events and revisions, reporting, fork security, merge gating, and qua
   fail-closed until the first manifest lands under issue #462 with upgrade scope under issue #671). `new` is absent-only
   per-language scaffolding and `upgrade` is the one-shot pin plus migrate plus setup composition
   (see [new/upgrade](../cli/commands/new-upgrade.md)). `docs` is the implemented
-  docs site surface (`--check` validation-only, `--serve`/`--port` preview,
+  docs site surface (`--check` validation-only, `--serve`/`--port`/`--host`/`--open` preview,
   see [dx docs](../cli/commands/docs.md)). Compare the final registry
   with the qualified [command reference](../cli/commands/README.md), not an earlier partial CLI.
   Pinned by `bazel run //tools/ci:cli_contract_qualification` plus
@@ -141,8 +141,8 @@ delivered work under closed #511; successful updates must not
 - Verify docs check selects extraction and shared validation without rendering, while normal
   build validates then renders. Both reject invalid IR, unresolved links, and missing API references;
   renderer failures are covered by full-build fixtures, not claimed as check-mode coverage.
-  Verify `dx docs --serve` previews the last build locally with `--port` requiring
-  `--serve` (default 8000), and bare scope selects the repository docs site.
+  Verify `dx docs --serve` previews the last build locally with `--port`/`--host`/`--open` requiring
+  `--serve` (default 8000/`127.0.0.1`; `--port 0` rejected; bind failures report `serve_failed`), and bare scope selects the repository docs site.
 - Verify `--output diff` is supported by exactly those six commands, reserves stdout for a
   complete unified patch, suppresses `dx` summaries and normalized diagnostics, leaves raw
   child output and operational errors on stderr, and does not alter check, mutation, or exit

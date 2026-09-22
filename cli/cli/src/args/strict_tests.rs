@@ -89,6 +89,18 @@ fn strict_missing_values_fail_with_bare_flag() {
         })
     );
     assert_eq!(
+        parse(&args(&["docs", "--host"])),
+        Err(ArgsError::MissingValue {
+            option: "--host".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--color"])),
+        Err(ArgsError::MissingValue {
+            option: "--color".to_owned(),
+        })
+    );
+    assert_eq!(
         parse(&args(&["migrate", "--from", "--to=2.0.0"])),
         Err(ArgsError::MissingValue {
             option: "--from".to_owned(),
@@ -150,6 +162,18 @@ fn strict_bad_values_fail_with_contract_shapes() {
         parse(&args(&["coverage", "--min-coverage=101"])),
         Err(ArgsError::BadMinCoverage {
             value: "101".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--color=bright"])),
+        Err(ArgsError::BadColor {
+            value: "bright".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["docs", "--serve", "--port=0"])),
+        Err(ArgsError::MissingValue {
+            option: "--port".to_owned(),
         })
     );
 }
@@ -298,6 +322,8 @@ fn strict_help_is_generated_from_the_same_grammar() {
         "dry-run",
         "quiet",
         "verbose",
+        "color",
+        "host",
         "log-level",
     ] {
         assert!(
@@ -340,6 +366,8 @@ fn strict_known_flags_on_wrong_commands_fail_as_unsupported() {
         vec!["build", "--serve"],
         vec!["lint", "--serve"],
         vec!["build", "--port=8080"],
+        vec!["build", "--host=example.test"],
+        vec!["build", "--open"],
         vec!["lint", "--min-coverage=80"],
         vec!["build", "--check"],
         vec!["lint", "--bazel"],

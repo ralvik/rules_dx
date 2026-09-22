@@ -341,7 +341,7 @@ fi
 # invocation under #786 (successor to closed #581); placeholder removal
 # stays recorded behind ADR 0020.
 if grep -q -F -e 'Implementation status: delivered.' "$stub" &&
-  grep -q -F -e 'dx docs [--check] [--serve [--port <n>]]' "$stub" &&
+  grep -q -F -e 'dx docs [--check] [--serve' "$stub" &&
   grep -q -F -e 'Delivered under #786 (successor to closed #581' "$stub" &&
   grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" &&
   grep -q -F -e 'Reintroducing the command alongside real extraction/validation' "$adr20" &&
@@ -1227,8 +1227,8 @@ fi
 # resolution with bare repository selection.
 if grep -q -F -e 'if command == Command::Docs' cli/cli/src/args/parser.rs &&
   grep -q -F -e 'port.is_some() && !serve' cli/cli/src/args/parser.rs &&
-  grep -q -F -e 'Per-command flags: --check/--serve/--port (docs only' cli/cli/src/args/help.rs &&
-  grep -q -F -e 'Usage: dx [global-options] docs [--check] [--serve [--port <n>]]' cli/cli/src/args/help.rs &&
+  grep -q -F -e 'Per-command flags: --check/--serve/--port/--host/--open (docs only' cli/cli/src/args/help.rs &&
+  grep -q -F -e 'Usage: dx [global-options] docs [--check] [--serve' cli/cli/src/args/help.rs &&
   grep -q -F -e 'Bare scope selects the repository docs site' cli/cli/src/args/help.rs &&
   grep -q -F -e 'check_flag_selects_validation_only' cli/docgen/src/lib.rs &&
   grep -q -F -e 'serve_previews_without_caching_and_port_requires_serve' cli/docgen/src/lib.rs &&

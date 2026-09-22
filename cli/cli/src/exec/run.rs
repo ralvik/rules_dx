@@ -628,6 +628,7 @@ mod tests {
             quiet: false,
             verbose: false,
             log_level: None,
+            color: dx_output::ColorMode::Auto,
             output,
             reports,
             fail_on: dx_output::Threshold::Warning,
@@ -643,6 +644,8 @@ mod tests {
             here: false,
             serve: false,
             port: None,
+            host: None,
+            open: false,
             offline: false,
         }
     }

@@ -49,6 +49,7 @@ Global options:
 | `--quiet` | Suppress `dx` operation/planning output while preserving subprocess diagnostics |
 | `--verbose` (`-v` alias) | Enable info-level structured diagnostics on stderr via tracing; orthogonal to `--quiet` (summaries vs logs); default stays byte-identical (`warn` only, `RUST_LOG` overrides); conflicts with `--log-level` |
 | `--log-level error\|warn\|info\|debug\|trace` | Select the structured diagnostic level on stderr; `RUST_LOG` overrides when set; conflicts with `--verbose` |
+| `--color auto\|always\|never` | Select color for logs and human status on stderr (`auto` stays plain unless a TTY without `NO_COLOR`; `always` forces color, `never` stays plain) |
 | `--output text\|diff\|json` | Select concise text, complete unified patches, or versioned machine-readable events (per-command support in [Output Protocol](output-protocol.md); unsupported modes fail fast, never silently ignored) |
 | `--report <format>=<destination>` | Write a supported standard report to a file or `-` for stdout; repeatable |
 | `--fail-on info\|warning\|error` | Lowest diagnostic severity that makes a quality command fail |
@@ -139,7 +140,8 @@ fails when its result proposes any replacement, independently of diagnostic seve
 
 Global options accept flag over env over file over built-in defaults:
 `--workspace` (`DX_WORKSPACE`), `--output` (`DX_OUTPUT`),
-`--verbose` (`DX_VERBOSE`), `--quiet` (`DX_QUIET`),
+`--verbose` (`DX_VERBOSE`), `--color` (`DX_COLOR`),
+`--quiet` (`DX_QUIET`),
 `--dry-run` (`DX_DRY_RUN`), `--fail-on` (`DX_FAIL_ON`).
 Bool env spellings are truthy `1|true|yes|y|on` (case-insensitive);
 any other present value counts as disabled so `DX_VERBOSE=0`
@@ -154,6 +156,7 @@ found by walking up from the workspace start; nearest wins and
 workspace = "/repo"
 output = "json"
 verbose = false
+color = "auto"
 quiet = false
 dry_run = false
 fail_on = "warning"

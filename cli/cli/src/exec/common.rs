@@ -263,7 +263,7 @@ pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [per-command-flags] [scope ...] [-- command-options...] (see `dx help <command>` or `dx <command> --help`; no dx doctor, use `dx status`)"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--color auto|always|never] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [per-command-flags] [scope ...] [-- command-options...] (see `dx help <command>` or `dx <command> --help`; no dx doctor, use `dx status`)"
     );
     pre_exec_code()
 }

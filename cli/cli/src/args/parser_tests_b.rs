@@ -532,6 +532,8 @@ fn docs_check_serve_port_parse() {
     assert!(!got.check);
     assert!(!got.serve);
     assert_eq!(got.port, None);
+    assert_eq!(got.host, None);
+    assert!(!got.open);
     let got = parse(&args(&["docs", "--check"])).expect("check parses");
     assert!(got.check);
     let got = parse(&args(&["docs", "--serve"])).expect("serve parses");
@@ -544,14 +546,27 @@ fn docs_check_serve_port_parse() {
     assert!(got.check);
     assert!(got.serve);
     assert_eq!(got.port, Some(9000));
+    let got = parse(&args(&["docs", "--serve", "--host=example.test"])).expect("host parses");
+    assert_eq!(got.host, Some("example.test".to_owned()));
+    let got = parse(&args(&["docs", "--serve", "--host", "example.test"])).expect("split host");
+    assert_eq!(got.host, Some("example.test".to_owned()));
+    let got = parse(&args(&["docs", "--serve", "--open"])).expect("open parses");
+    assert!(got.open);
     for words in [
         vec!["docs", "--port=8080"],
         vec!["docs", "--port"],
         vec!["docs", "--port=notanumber"],
         vec!["docs", "--port="],
+        vec!["docs", "--port=0"],
+        vec!["docs", "--host=example.test"],
+        vec!["docs", "--host"],
+        vec!["docs", "--host="],
+        vec!["docs", "--open"],
         vec!["build", "--serve"],
         vec!["lint", "--serve"],
         vec!["build", "--port=8080"],
+        vec!["build", "--host=example.test"],
+        vec!["build", "--open"],
         vec!["docs", "--fail-on=error"],
         vec!["docs", "--report=sarif=out.sarif"],
         vec!["docs", "--pin=0.1.0"],
@@ -568,6 +583,29 @@ fn docs_check_serve_port_parse() {
             "words: {words:?}"
         );
     }
+}
+
+#[test]
+fn color_parses_globally_with_bad_values_rejected() {
+    use dx_output::ColorMode;
+    let got = parse(&args(&["lint"])).expect("default color");
+    assert_eq!(got.color, ColorMode::Auto);
+    let got = parse(&args(&["lint", "--color=never"])).expect("never parses");
+    assert_eq!(got.color, ColorMode::Never);
+    let got = parse(&args(&["--color=always", "lint"])).expect("global position");
+    assert_eq!(got.color, ColorMode::Always);
+    assert_eq!(
+        parse(&args(&["lint", "--color=bright"])),
+        Err(ArgsError::BadColor {
+            value: "bright".to_owned(),
+        })
+    );
+    assert_eq!(
+        parse(&args(&["lint", "--color"])),
+        Err(ArgsError::MissingValue {
+            option: "--color".to_owned(),
+        })
+    );
 }
 
 #[test]

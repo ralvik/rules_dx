@@ -53,6 +53,8 @@ pub enum ArgsError {
     BadFailOn { value: String },
     #[error("unknown --log-level {value:?}: want error|warn|info|debug|trace")]
     BadLogLevel { value: String },
+    #[error("unknown --color {value:?}: want auto|always|never")]
+    BadColor { value: String },
     #[error("invalid --min-coverage {value:?}: want an integer 0-100")]
     BadMinCoverage { value: String },
     #[error("malformed --report {value:?}: want <format>=<destination>")]
@@ -162,5 +164,12 @@ mod tests {
         )
         .contains("verbose"));
         assert!(format!("{}", ArgsError::ConflictingVerboseLogLevel).contains("--log-level"));
+        assert!(format!(
+            "{}",
+            ArgsError::BadColor {
+                value: "bright".to_owned(),
+            }
+        )
+        .contains("bright"));
     }
 }
