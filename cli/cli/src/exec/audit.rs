@@ -3,6 +3,7 @@
 use super::common::*;
 use crate::args::{Command, Invocation};
 use crate::reports::{plan_reports, Destination};
+use dx_apply::{FileSystem, RealFileSystem};
 use dx_output::{
     command_finished, command_started, error_event, notice_event, report_event, write_event,
     DiagnosticEvent, FinishedCounts, NoticeEvent, OutputMode, Severity, Snapshot, Threshold,
@@ -19,14 +20,134 @@ fn today_utc() -> String {
     chrono::Utc::now().format("%Y-%m-%d").to_string()
 }
 
-fn resolve_audit_sets(scopes: &[String]) -> Result<Vec<dx_update::sets::SetId>, String> {
+/// Audit input failure.
+///
+/// Typed audit-input failure with source chaining for the I/O legs:
+/// `Display` keeps the historical operational details byte-identical
+/// while callers gain matchable structure instead of `String` plumbing.
+/// Advisory prefixes stay pinned to
+/// `dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED`.
+/// See: `docs/cli/commands/audit-update-bazel.md#dx-audit`.
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum AuditError {
+    /// No owning dependency set for the scope.
+    #[error(
+        "no owning dependency set for {scope:?} (python and non-dependency paths are out of V1 audit scope)"
+    )]
+    NoOwningSet { scope: String },
+    /// A workspace file could not be read.
+    #[error("could not read {rel}: {error}")]
+    Read {
+        rel: String,
+        #[source]
+        error: std::io::Error,
+    },
+    /// A workspace file is not valid UTF-8.
+    #[error("could not read {rel}: not valid UTF-8")]
+    NotUtf8 { rel: String },
+    /// Advisory source has no supported set.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: unsupported set"
+    )]
+    AdvisoryUnsupported { set: String },
+    /// Advisory snapshot is missing.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: missing {rel} (refresh via {upstream}, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+    )]
+    AdvisoryMissing {
+        set: String,
+        rel: String,
+        upstream: String,
+    },
+    /// Advisory snapshot could not be read.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: could not read {rel}: {error}"
+    )]
+    AdvisoryRead {
+        set: String,
+        rel: String,
+        #[source]
+        error: std::io::Error,
+    },
+    /// Advisory snapshot is not valid UTF-8.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: {rel} is not valid UTF-8"
+    )]
+    AdvisoryUtf8 { set: String, rel: String },
+    /// Advisory snapshot is empty.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: empty {rel}"
+    )]
+    AdvisoryEmpty { set: String, rel: String },
+    /// Advisory identity sidecar is missing.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: missing {meta_rel}"
+    )]
+    AdvisoryMissingMeta { set: String, meta_rel: String },
+    /// Advisory identity sidecar could not be read.
+    #[error("advisory_refresh_failed: could not obtain current advisory data for {set}: {source}")]
+    AdvisoryMeta {
+        set: String,
+        #[source]
+        source: Box<AuditError>,
+    },
+    /// Advisory identity does not parse.
+    #[error("advisory_refresh_failed: could not obtain current advisory data for {set}: {detail}")]
+    AdvisoryIdentity { set: String, detail: String },
+    /// Advisory identity is invalid.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: invalid advisory identity: {error}"
+    )]
+    AdvisorySnapshotInvalid {
+        set: String,
+        #[source]
+        error: dx_audit::advisory::SnapshotProblem,
+    },
+    /// Advisory identity names the wrong set.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: identity set {actual:?} does not match"
+    )]
+    AdvisorySetMismatch { set: String, actual: String },
+    /// Advisory snapshot is stale.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: stale snapshot {retrieved_at} (want {today}; refresh via {upstream}, or re-copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+    )]
+    AdvisoryStale {
+        set: String,
+        retrieved_at: String,
+        today: String,
+        upstream: String,
+    },
+    /// Advisory identity digest does not match the snapshot bytes.
+    #[error(
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: identity sha256 does not match {rel}"
+    )]
+    AdvisoryShaMismatch { set: String, rel: String },
+    /// Advisory snapshot does not parse.
+    #[error("advisory_refresh_failed: could not obtain current advisory data for {set}: {detail}")]
+    AdvisoryParse { set: String, detail: String },
+    /// A required lockfile is missing.
+    #[error("could not read {rel}: no such file")]
+    LockMissing { rel: String },
+    /// A lockfile does not parse.
+    #[error("could not parse {rel}: {detail}")]
+    LockParse { rel: String, detail: String },
+    /// The committed license policy does not parse.
+    #[error("invalid licenses.toml: {error}")]
+    LicenseInvalid {
+        #[source]
+        error: dx_audit::license_policy::PolicyProblem,
+    },
+}
+
+fn resolve_audit_sets(scopes: &[String]) -> Result<Vec<dx_update::sets::SetId>, AuditError> {
     let mut union: BTreeSet<dx_update::sets::SetId> = BTreeSet::new();
     for scope in scopes {
         let owners = dx_update::selector::owning_sets(scope);
         if owners.is_empty() {
-            return Err(format!(
-                "no owning dependency set for {scope:?} (python and non-dependency paths are out of V1 audit scope)"
-            ));
+            return Err(AuditError::NoOwningSet {
+                scope: scope.clone(),
+            });
         }
         for set in owners {
             union.insert(set);
@@ -41,11 +162,16 @@ fn resolve_audit_sets(scopes: &[String]) -> Result<Vec<dx_update::sets::SetId>, 
     Ok(ordered)
 }
 
-fn read_workspace_text(workspace: &Path, rel: &str) -> Result<String, String> {
+fn read_workspace_text(workspace: &Path, rel: &str) -> Result<String, AuditError> {
     match std::fs::read(workspace.join(rel)) {
-        Err(error) => Err(format!("could not read {rel}: {error}")),
+        Err(error) => Err(AuditError::Read {
+            rel: rel.to_owned(),
+            error,
+        }),
         Ok(bytes) => match String::from_utf8(bytes) {
-            Err(_) => Err(format!("could not read {rel}: not valid UTF-8")),
+            Err(_) => Err(AuditError::NotUtf8 {
+                rel: rel.to_owned(),
+            }),
             Ok(text) => Ok(text),
         },
     }
@@ -63,7 +189,7 @@ fn load_advisories(
     workspace: &Path,
     set: dx_update::sets::SetId,
     today: &str,
-) -> Result<Vec<dx_audit::vuln::Advisory>, String> {
+) -> Result<Vec<dx_audit::vuln::Advisory>, AuditError> {
     // Issue #628 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): never empty clean. A missing, empty, invalid, or stale
     // snapshot fails with `advisory_refresh_failed`, never a clean result
     // and never a stale fallback. Snapshots refresh automatically via
@@ -74,122 +200,142 @@ fn load_advisories(
     // (See: `docs/deploy/offline-bootstrap.md#vendored-advisory-mirror`);
     // mirror snapshots keep the same sha256 plus same-day freshness gates.
     // Live CLI performs no network fetch and no lockfile upload.
-    let code = dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED;
-    let source = dx_audit::advisory::advisory_source(set.name()).ok_or_else(|| {
-        format!(
-            "{code}: could not obtain current advisory data for {}: unsupported set",
-            set.name()
-        )
-    })?;
+    let set_name = set.name().to_owned();
+    let source = dx_audit::advisory::advisory_source(set.name())
+        .ok_or_else(|| AuditError::AdvisoryUnsupported {
+            set: set_name.clone(),
+        })?
+        .to_owned();
     let rel = advisory_path(set);
     let full = workspace.join(&rel);
-    if !full.is_file() {
-        return Err(format!(
-            "{code}: could not obtain current advisory data for {}: missing {rel} (refresh via {source}, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)",
-            set.name()
-        ));
-    }
-    let bytes = std::fs::read(&full).map_err(|error| {
-        format!(
-            "{code}: could not obtain current advisory data for {}: could not read {rel}: {error}",
-            set.name()
-        )
-    })?;
-    let text = String::from_utf8(bytes.clone()).map_err(|_| {
-        format!(
-            "{code}: could not obtain current advisory data for {}: {rel} is not valid UTF-8",
-            set.name()
-        )
-    })?;
+    // No `is_file` pre-check: read directly so a disappearing snapshot
+    // cannot slip between check and read. Missing maps to the refresh
+    // hint, other I/O keeps its source.
+    let bytes = match std::fs::read(&full) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(AuditError::AdvisoryMissing {
+                set: set_name.clone(),
+                rel: rel.clone(),
+                upstream: source.clone(),
+            });
+        }
+        Err(error) => {
+            return Err(AuditError::AdvisoryRead {
+                set: set_name.clone(),
+                rel: rel.clone(),
+                error,
+            });
+        }
+        Ok(bytes) => bytes,
+    };
+    let text = match String::from_utf8(bytes.clone()) {
+        Err(_) => {
+            return Err(AuditError::AdvisoryUtf8 {
+                set: set_name.clone(),
+                rel: rel.clone(),
+            });
+        }
+        Ok(text) => text,
+    };
     if text.trim().is_empty() {
-        return Err(format!(
-            "{code}: could not obtain current advisory data for {}: empty {rel}",
-            set.name()
-        ));
+        return Err(AuditError::AdvisoryEmpty {
+            set: set_name.clone(),
+            rel: rel.clone(),
+        });
     }
     let meta_rel = advisory_identity_path(set);
-    if !workspace.join(&meta_rel).is_file() {
-        return Err(format!(
-            "{code}: could not obtain current advisory data for {}: missing {meta_rel}",
-            set.name()
-        ));
-    }
-    let meta_text = read_workspace_text(workspace, &meta_rel).map_err(|detail| {
-        format!(
-            "{code}: could not obtain current advisory data for {}: {detail}",
-            set.name()
-        )
-    })?;
+    // Same direct-read discipline for the identity sidecar: missing maps
+    // to the missing-identity hint, every other read failure keeps its
+    // source under the advisory prefix.
+    let meta_text = match read_workspace_text(workspace, &meta_rel) {
+        Err(AuditError::Read { rel, error }) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(AuditError::AdvisoryMissingMeta {
+                set: set_name.clone(),
+                meta_rel: rel,
+            });
+        }
+        Err(other) => {
+            return Err(AuditError::AdvisoryMeta {
+                set: set_name.clone(),
+                source: Box::new(other),
+            });
+        }
+        Ok(text) => text,
+    };
     let snapshot = dx_audit::advisory::parse_identity(&meta_text).map_err(|detail| {
-        format!(
-            "{code}: could not obtain current advisory data for {}: {detail}",
-            set.name()
-        )
+        AuditError::AdvisoryIdentity {
+            set: set_name.clone(),
+            detail,
+        }
     })?;
     dx_audit::advisory::validate_snapshot(&snapshot).map_err(|error| {
-        format!(
-            "{code}: could not obtain current advisory data for {}: invalid advisory identity: {error}",
-            set.name()
-        )
+        AuditError::AdvisorySnapshotInvalid {
+            set: set_name.clone(),
+            error,
+        }
     })?;
     if snapshot.set != set.name() {
-        return Err(format!(
-            "{code}: could not obtain current advisory data for {}: identity set {:?} does not match",
-            set.name(),
-            snapshot.set
-        ));
+        return Err(AuditError::AdvisorySetMismatch {
+            set: set_name.clone(),
+            actual: snapshot.set.clone(),
+        });
     }
     if dx_audit::advisory::freshness(&snapshot, today) != dx_audit::advisory::Freshness::Fresh {
-        return Err(format!(
-            "{code}: could not obtain current advisory data for {}: stale snapshot {} (want {today}; refresh via {source}, or re-copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)",
-            set.name(),
-            snapshot.retrieved_at
-        ));
+        return Err(AuditError::AdvisoryStale {
+            set: set_name.clone(),
+            retrieved_at: snapshot.retrieved_at.clone(),
+            today: today.to_owned(),
+            upstream: source.clone(),
+        });
     }
     if !dx_audit::advisory::identity_matches_bytes(&snapshot, &bytes) {
-        return Err(format!(
-            "{code}: could not obtain current advisory data for {}: identity sha256 does not match {rel}",
-            set.name()
-        ));
+        return Err(AuditError::AdvisoryShaMismatch {
+            set: set_name.clone(),
+            rel: rel.clone(),
+        });
     }
-    dx_audit::vuln::parse_snapshot(&text).map_err(|detail| {
-        format!(
-            "{code}: could not obtain current advisory data for {}: {detail}",
-            set.name()
-        )
+    dx_audit::vuln::parse_snapshot(&text).map_err(|detail| AuditError::AdvisoryParse {
+        set: set_name.clone(),
+        detail,
     })
 }
 
 fn lock_texts_for_set(
     workspace: &Path,
     set: dx_update::sets::SetId,
-) -> Result<Vec<(String, String)>, String> {
+) -> Result<Vec<(String, String)>, AuditError> {
     let mut out = Vec::new();
     let mut missing: Vec<String> = Vec::new();
     for rel in dx_audit::backend::vuln_locks(set.name()) {
-        let full = workspace.join(rel);
-        if !full.is_file() {
-            // Npm owns three competing lock shapes; a workspace carries
-            // whichever its package manager writes. Absent shapes are
-            // skipped so a pnpm-only workspace never fails for a missing
-            // sibling lock; every other set keeps required-lock behavior.
-            if set == dx_update::sets::SetId::Npm {
-                missing.push((*rel).to_owned());
-                continue;
+        // No `is_file` pre-check: read directly so a disappearing lock
+        // cannot slip between check and read. Only `NotFound` skips an
+        // npm sibling; every other I/O failure stays fail-closed.
+        match read_workspace_text(workspace, rel) {
+            Ok(text) => out.push(((*rel).to_owned(), text)),
+            Err(AuditError::Read {
+                rel: missing_rel,
+                error,
+            }) if error.kind() == std::io::ErrorKind::NotFound => {
+                // Npm owns three competing lock shapes; a workspace carries
+                // whichever its package manager writes. Absent shapes are
+                // skipped so a pnpm-only workspace never fails for a missing
+                // sibling lock; every other set keeps required-lock behavior.
+                if set == dx_update::sets::SetId::Npm {
+                    missing.push(missing_rel);
+                    continue;
+                }
+                return Err(AuditError::LockMissing { rel: missing_rel });
             }
-            return Err(format!("could not read {rel}: no such file"));
+            Err(other) => return Err(other),
         }
-        let text = read_workspace_text(workspace, rel)?;
-        out.push(((*rel).to_owned(), text));
     }
     if out.is_empty() && set == dx_update::sets::SetId::Npm {
-        return Err(format!(
-            "could not read {}: no such file",
-            missing
+        return Err(AuditError::LockMissing {
+            rel: missing
                 .first()
                 .cloned()
-                .unwrap_or_else(|| "pnpm-lock.yaml".to_owned())
-        ));
+                .unwrap_or_else(|| "pnpm-lock.yaml".to_owned()),
+        });
     }
     Ok(out)
 }
@@ -197,7 +343,7 @@ fn lock_texts_for_set(
 fn parse_locked_for_set(
     set: dx_update::sets::SetId,
     locks: &[(String, String)],
-) -> Result<Vec<dx_audit::vuln::LockedPackage>, String> {
+) -> Result<Vec<dx_audit::vuln::LockedPackage>, AuditError> {
     let mut all = Vec::new();
     for (rel, text) in locks {
         let mut packages = match set {
@@ -211,7 +357,10 @@ fn parse_locked_for_set(
             dx_update::sets::SetId::NuGet => dx_audit::locks::parse_paket_lock(text),
             dx_update::sets::SetId::Go => dx_audit::locks::parse_go_mod(text),
         }
-        .map_err(|detail| format!("could not parse {rel}: {detail}"))?;
+        .map_err(|detail| AuditError::LockParse {
+            rel: rel.clone(),
+            detail,
+        })?;
         all.append(&mut packages);
     }
     all.sort_by(|a, b| (&a.set, &a.name, &a.version).cmp(&(&b.set, &b.name, &b.version)));
@@ -259,22 +408,23 @@ fn default_license_policy() -> dx_audit::license_policy::LicensePolicy {
 
 fn load_license_policy(
     workspace: &Path,
-) -> Result<dx_audit::license_policy::LicensePolicy, String> {
+) -> Result<dx_audit::license_policy::LicensePolicy, AuditError> {
     let rel = "licenses.toml";
-    let full = workspace.join(rel);
-    if !full.is_file() {
+    // No `is_file` pre-check: read directly so a disappearing policy
+    // cannot slip between check and read. Missing or empty means the
+    // built-in default; every other failure keeps its source.
+    let text = match read_workspace_text(workspace, rel) {
+        Err(AuditError::Read { error, .. }) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Ok(default_license_policy());
+        }
+        Err(other) => return Err(other),
+        Ok(text) => text,
+    };
+    if text.trim().is_empty() {
         return Ok(default_license_policy());
     }
-    match read_workspace_text(workspace, rel) {
-        Err(detail) => Err(detail),
-        Ok(text) => {
-            if text.trim().is_empty() {
-                return Ok(default_license_policy());
-            }
-            dx_audit::license_policy::load_licenses_toml(&text)
-                .map_err(|error| format!("invalid licenses.toml: {error}"))
-        }
-    }
+    dx_audit::license_policy::load_licenses_toml(&text)
+        .map_err(|error| AuditError::LicenseInvalid { error })
 }
 
 fn tier_for_roots(
@@ -524,8 +674,8 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
             continue;
         }
         let locks = match lock_texts_for_set(workspace, *set) {
-            Err(detail) => {
-                let message = format!("failed to assess {}: {detail}", set.name());
+            Err(error) => {
+                let message = format!("failed to assess {}: {error}", set.name());
                 if incomplete.is_none() {
                     incomplete = Some(message.clone());
                 }
@@ -534,18 +684,18 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
             Ok(locks) => locks,
         };
         let packages = match parse_locked_for_set(*set, &locks) {
-            Err(detail) => {
+            Err(error) => {
                 if incomplete.is_none() {
-                    incomplete = Some(detail.clone());
+                    incomplete = Some(error.to_string());
                 }
                 continue;
             }
             Ok(packages) => packages,
         };
         let advisories = match load_advisories(workspace, *set, today) {
-            Err(detail) => {
+            Err(error) => {
                 if incomplete.is_none() {
-                    incomplete = Some(format!("failed to assess {}: {detail}", set.name()));
+                    incomplete = Some(format!("failed to assess {}: {error}", set.name()));
                 }
                 continue;
             }
@@ -697,7 +847,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
     let sets = match resolve_audit_sets(&effective) {
         Ok(sets) => sets,
-        Err(detail) => return pre_exec(err, &detail),
+        Err(error) => return pre_exec(err, &error.to_string()),
     };
     if invocation.output == OutputMode::Json {
         if let Ok(event) = command_started(invocation.command.name(), false, "default") {
@@ -757,6 +907,11 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     let report = dx_audit::outcome::AuditReport::aggregate(outcomes);
     let exit = dx_audit::outcome::exit_code(&report);
     let sarif_complete = !any_incomplete && report.incomplete().is_empty();
+    // Single atomic write path (See: `cli/atomic_fs/src/lib.rs`): file
+    // reports stage via an OS-random sibling plus rename so a crash never
+    // leaves a partial SARIF/SPDX behind. A missing parent still fails
+    // closed with `report_failed` instead of creating directories.
+    let fs = RealFileSystem;
     let mut reports_ok = true;
     for planned in &planned_reports {
         let name = planned.format.name();
@@ -794,11 +949,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                     let parent_ok = target
                         .parent()
                         .is_none_or(|parent| parent.as_os_str().is_empty() || parent.is_dir());
-                    if !parent_ok {
-                        false
-                    } else {
-                        std::fs::write(&target, document.as_bytes()).is_ok()
-                    }
+                    parent_ok && fs.write_atomic(&target, document.as_bytes()).is_ok()
                 }
             };
             if !written {
@@ -853,11 +1004,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                     let parent_ok = target
                         .parent()
                         .is_none_or(|parent| parent.as_os_str().is_empty() || parent.is_dir());
-                    if !parent_ok {
-                        false
-                    } else {
-                        std::fs::write(&target, document.as_bytes()).is_ok()
-                    }
+                    parent_ok && fs.write_atomic(&target, document.as_bytes()).is_ok()
                 }
             };
             if !written {

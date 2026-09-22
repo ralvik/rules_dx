@@ -10,12 +10,12 @@ pub(super) fn run_license(
     today: &str,
 ) -> LicenseResult {
     let policy = match load_license_policy(workspace) {
-        Err(detail) => {
+        Err(error) => {
             return LicenseResult {
                 status: dx_audit::outcome::FamilyStatus::Incomplete,
                 packages: Vec::new(),
                 diagnostics: Vec::new(),
-                detail: detail.clone(),
+                detail: error.to_string(),
             };
         }
         Ok(policy) => policy,
@@ -68,18 +68,18 @@ pub(super) fn run_license(
             continue;
         }
         let locks = match lock_texts_for_set(workspace, *set) {
-            Err(detail) => {
+            Err(error) => {
                 if incomplete.is_none() {
-                    incomplete = Some(format!("failed to assess {}: {detail}", set.name()));
+                    incomplete = Some(format!("failed to assess {}: {error}", set.name()));
                 }
                 continue;
             }
             Ok(locks) => locks,
         };
         let locked = match parse_locked_for_set(*set, &locks) {
-            Err(detail) => {
+            Err(error) => {
                 if incomplete.is_none() {
-                    incomplete = Some(detail.clone());
+                    incomplete = Some(error.to_string());
                 }
                 continue;
             }

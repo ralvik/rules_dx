@@ -624,3 +624,282 @@ fn audit_partial_reports_are_not_authoritative() {
     assert_eq!(finished["results_complete"], serde_json::json!(false));
     assert_eq!(finished["exit_code"], serde_json::json!(1));
 }
+
+#[test]
+fn audit_errors_stay_typed_with_stable_display() {
+    // Issue #1005: the six audit-input helpers return `AuditError`
+    // instead of `String` plumbing. Displays stay byte-identical so
+    // `audit_failed` diagnostics never drift, while I/O legs keep
+    // their source for `Error::source`.
+    use super::AuditError;
+    use std::error::Error as _;
+    assert_eq!(
+        AuditError::NoOwningSet {
+            scope: "python/tests/fixtures/hello/hello.py".to_owned(),
+        }
+        .to_string(),
+        "no owning dependency set for \"python/tests/fixtures/hello/hello.py\" (python and non-dependency paths are out of V1 audit scope)"
+    );
+    let read = AuditError::Read {
+        rel: "pnpm-lock.yaml".to_owned(),
+        error: std::io::Error::new(std::io::ErrorKind::NotFound, "boom"),
+    };
+    assert_eq!(read.to_string(), "could not read pnpm-lock.yaml: boom");
+    assert!(read.source().is_some());
+    assert_eq!(
+        AuditError::NotUtf8 {
+            rel: "pnpm-lock.yaml".to_owned(),
+        }
+        .to_string(),
+        "could not read pnpm-lock.yaml: not valid UTF-8"
+    );
+    assert_eq!(
+        AuditError::AdvisoryUnsupported {
+            set: "cargo".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: unsupported set"
+    );
+    assert_eq!(
+        AuditError::AdvisoryMissing {
+            set: "cargo".to_owned(),
+            rel: ".dx/advisory/cargo.json".to_owned(),
+            upstream: "https://example.invalid/cargo.zip".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: missing .dx/advisory/cargo.json (refresh via https://example.invalid/cargo.zip, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+    );
+    let snapshot_read = AuditError::AdvisoryRead {
+        set: "cargo".to_owned(),
+        rel: ".dx/advisory/cargo.json".to_owned(),
+        error: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied"),
+    };
+    assert_eq!(
+        snapshot_read.to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: could not read .dx/advisory/cargo.json: denied"
+    );
+    assert!(snapshot_read.source().is_some());
+    assert_eq!(
+        AuditError::AdvisoryUtf8 {
+            set: "cargo".to_owned(),
+            rel: ".dx/advisory/cargo.json".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: .dx/advisory/cargo.json is not valid UTF-8"
+    );
+    assert_eq!(
+        AuditError::AdvisoryEmpty {
+            set: "cargo".to_owned(),
+            rel: ".dx/advisory/cargo.json".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: empty .dx/advisory/cargo.json"
+    );
+    assert_eq!(
+        AuditError::AdvisoryMissingMeta {
+            set: "cargo".to_owned(),
+            meta_rel: ".dx/advisory/cargo.meta.json".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: missing .dx/advisory/cargo.meta.json"
+    );
+    let meta_wrapped = AuditError::AdvisoryMeta {
+        set: "cargo".to_owned(),
+        source: Box::new(AuditError::NotUtf8 {
+            rel: ".dx/advisory/cargo.meta.json".to_owned(),
+        }),
+    };
+    assert_eq!(
+        meta_wrapped.to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: could not read .dx/advisory/cargo.meta.json: not valid UTF-8"
+    );
+    assert!(meta_wrapped.source().is_some());
+    assert_eq!(
+        AuditError::AdvisoryIdentity {
+            set: "cargo".to_owned(),
+            detail: "invalid advisory identity: boom".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: invalid advisory identity: boom"
+    );
+    assert_eq!(
+        AuditError::AdvisorySetMismatch {
+            set: "cargo".to_owned(),
+            actual: "npm".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: identity set \"npm\" does not match"
+    );
+    assert_eq!(
+        AuditError::AdvisoryStale {
+            set: "cargo".to_owned(),
+            retrieved_at: "2000-01-01".to_owned(),
+            today: "2026-09-22".to_owned(),
+            upstream: "https://example.invalid/cargo.zip".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: stale snapshot 2000-01-01 (want 2026-09-22; refresh via https://example.invalid/cargo.zip, or re-copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+    );
+    assert_eq!(
+        AuditError::AdvisoryShaMismatch {
+            set: "cargo".to_owned(),
+            rel: ".dx/advisory/cargo.json".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: identity sha256 does not match .dx/advisory/cargo.json"
+    );
+    assert_eq!(
+        AuditError::AdvisoryParse {
+            set: "cargo".to_owned(),
+            detail: "boom".to_owned(),
+        }
+        .to_string(),
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: boom"
+    );
+    assert_eq!(
+        AuditError::LockMissing {
+            rel: "pnpm-lock.yaml".to_owned(),
+        }
+        .to_string(),
+        "could not read pnpm-lock.yaml: no such file"
+    );
+    assert_eq!(
+        AuditError::LockParse {
+            rel: "pnpm-lock.yaml".to_owned(),
+            detail: "boom".to_owned(),
+        }
+        .to_string(),
+        "could not parse pnpm-lock.yaml: boom"
+    );
+    // Unowned scopes fail typed, never `String` plumbing.
+    let unowned = super::resolve_audit_sets(&["python/tests/fixtures/hello/hello.py".to_owned()])
+        .expect_err("unowned scope fails");
+    assert!(matches!(unowned, AuditError::NoOwningSet { .. }));
+    assert!(unowned.to_string().contains("no owning dependency set"));
+    // Missing advisory snapshots fail typed with the refresh hint.
+    let harness = Harness::new("audit-typed-missing");
+    let missing = super::load_advisories(
+        &harness.workspace,
+        dx_update::sets::SetId::Cargo,
+        "2026-09-22",
+    )
+    .expect_err("missing snapshot fails");
+    assert!(matches!(missing, AuditError::AdvisoryMissing { .. }));
+    assert!(missing.to_string().contains("advisory_refresh_failed"));
+    // Missing required locks fail typed.
+    let lock_missing = super::lock_texts_for_set(&harness.workspace, dx_update::sets::SetId::Cargo)
+        .expect_err("missing lock fails");
+    assert!(matches!(lock_missing, AuditError::LockMissing { .. }));
+}
+
+#[test]
+fn audit_sarif_spdx_write_failures_are_fail_closed() {
+    // Issue #1005: SARIF/SPDX file writes go through the atomic path
+    // and fail closed with `report_failed` (exit 1) instead of
+    // silently losing the report. A missing parent never creates
+    // directories.
+    use crate::args::parse;
+    use crate::exec::{execute, Env};
+    for (format, path) in [
+        ("sarif", "missing-dir/out.sarif"),
+        ("spdx", "missing-dir/out.spdx.json"),
+    ] {
+        let runner = AuditRunner::clean();
+        let harness = Harness::new(&format!("audit-report-fail-{format}"));
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.lock",
+            "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+        );
+        harness.write_source(
+            "cargo-bazel-lock.json",
+            r#"{"packages": {"serde 1.0.100": {"license": "MIT"}}}"#,
+        );
+        harness.write_source(
+            "licenses.toml",
+            "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
+        );
+        let invocation = parse(&[
+            "audit".to_owned(),
+            "license".to_owned(),
+            "//rust/tests/fixtures/hello:hello".to_owned(),
+            format!("--report={format}={path}"),
+        ])
+        .expect("parse");
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = execute(
+            &invocation,
+            Env {
+                workspace: &harness.workspace,
+                runner: &runner,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        let out_text = String::from_utf8(out).expect("stdout");
+        let err_text = String::from_utf8(err).expect("stderr");
+        assert_eq!(code, 1, "{out_text}{err_text} {format}");
+        assert!(err_text.contains("report_failed"), "{err_text} {format}");
+        assert!(
+            !harness.workspace.join("missing-dir").exists(),
+            "missing parent is never created: {format}"
+        );
+    }
+}
+
+#[test]
+fn audit_report_write_failure_json_reports_error_event() {
+    // JSON report-write failures emit the `report_failed` error event
+    // plus `command_finished` with `results_complete=false`.
+    use crate::args::parse;
+    use crate::exec::{execute, Env};
+    let runner = AuditRunner::clean();
+    let harness = Harness::new("audit-report-fail-json");
+    harness.write_source(
+        "rust/tests/fixtures/hello/Cargo.lock",
+        "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
+    );
+    harness.write_source(
+        "cargo-bazel-lock.json",
+        r#"{"packages": {"serde 1.0.100": {"license": "MIT"}}}"#,
+    );
+    harness.write_source(
+        "licenses.toml",
+        "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
+    );
+    let invocation = parse(&[
+        "audit".to_owned(),
+        "license".to_owned(),
+        "//rust/tests/fixtures/hello:hello".to_owned(),
+        "--report=sarif=missing-dir/out.sarif".to_owned(),
+        "--output=json".to_owned(),
+    ])
+    .expect("parse");
+    let mut out = Vec::new();
+    let mut err = Vec::new();
+    let code = execute(
+        &invocation,
+        Env {
+            workspace: &harness.workspace,
+            runner: &runner,
+            query_runner: &harness.query,
+            temp_dir: &harness.temp,
+            pid: std::process::id(),
+            nonce: 0,
+            out: &mut out,
+            err: &mut err,
+            ci: false,
+        },
+    );
+    let out_text = String::from_utf8(out).expect("stdout");
+    let err_text = String::from_utf8(err).expect("stderr");
+    assert_eq!(code, 1, "{out_text}{err_text}");
+    assert!(out_text.contains("report_failed"), "{out_text}");
+    assert!(out_text.contains("command_finished"), "{out_text}");
+    assert!(out_text.contains("results_complete"), "{out_text}");
+}
