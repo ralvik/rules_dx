@@ -106,6 +106,15 @@ pub(super) fn assert_hermetic(env: &[(String, String)]) {
         !env.iter().any(|(key, _)| key == "PATH"),
         "PATH is never set"
     );
+    assert!(
+        env.iter()
+            .any(|(key, value)| key == "LANG" && value == "C.UTF-8"),
+        "LANG is pinned to C.UTF-8"
+    );
+    assert!(
+        env.iter().any(|(key, value)| key == "TZ" && value == "UTC"),
+        "TZ is pinned to UTC"
+    );
 }
 
 pub(super) fn last_file(argv: &[OsString]) -> String {

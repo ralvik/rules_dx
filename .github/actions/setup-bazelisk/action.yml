@@ -112,9 +112,22 @@ runs:
           elif command -v shasum >/dev/null 2>&1; then
             shasum -a 256 "$1" | cut -d' ' -f1
           else
+            python3 --version
+            python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'
             python3 -c 'import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], "rb").read()).hexdigest())' "$1"
           fi
         }
+        # Version-assert the selected hashing tool before checksumming
+        # (issue #1061): the python3 fallback carries the 3.9+ floor,
+        # sha256sum/shasum log their versions for provenance.
+        if command -v sha256sum >/dev/null 2>&1; then
+          sha256sum --version | head -n 1
+        elif command -v shasum >/dev/null 2>&1; then
+          shasum --version | head -n 1
+        else
+          python3 --version
+          python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'
+        fi
         got="$(sha_of "$tmp_file")"
         if [[ "$got" != "$want" ]]; then
           echo "setup-bazelisk: checksum mismatch for $asset: got $got, want $want" >&2
