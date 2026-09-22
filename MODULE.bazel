@@ -113,8 +113,9 @@ bazel_dep(name = "rules_kotlin", version = "2.4.10")
 # ADR 0019 route decision). Pins owned by `//modules:java-scala-kotlin.bzl`. 7.3.0 is the latest stable in the Bazel Central
 # Registry (Bazel >=7.1 per upstream); verified against Bazel 9.2.0 on the
 # seed host. Scala 2.13.18 is the default toolchain version (latest 2.13.x
-# in the upstream-supported list); Coursier-fetched toolchains share Java's
-# Maven-lock story, so no new Maven lock members land here. Scalafix
+# in the upstream-supported list); the Coursier toolchain stays for the
+# runner classpath while ScalaTest 3.2.20 is declared in the shared Maven
+# lock below (issue #1080). Scalafix
 # semantic rules need semanticdb plus classpath wiring (open under ADR 0019).
 bazel_dep(name = "rules_scala", version = "7.3.0")
 
@@ -166,17 +167,21 @@ use_repo(dotnet_nuget, "paket.main")
 # Pinned Maven resolver (ADR 0019). Pins owned by `//modules:java-scala-kotlin.bzl`. 7.1 is the
 # latest stable in the Bazel Central Registry (Bazel >=7.0.0; verified
 # against Bazel 9.2.0 on the seed host). Single shared lock for the admitted
-# JVM foundations (Java, Kotlin, Scala managed route) per the support
+# JVM foundations (Java, Kotlin, Scala) per the support
 # matrix: `maven_install.json` plus fail-closed repin checking (qualified
 # seed-only via `bazel run //tools/ci:maven_lock_qualification`
-# with `third_party/jvm/pins.bzl` plus the Java/Kotlin `@maven` fixtures;
+# with `third_party/jvm/pins.bzl` plus the Java/Kotlin/Scala `@maven` fixtures;
 # non-fail-closed rejected). JUnit 4.13.2
 # seed (latest 4.x; hamcrest-core 1.3 arrives transitively) plus JUnit 6.1.3
 # Jupiter/Platform/Vintage line (qualified seed-only; JDK 17+
 # per the JUnit 6 baseline, remotejdk_21 on the seed host); the 5.14.x fallback
 # line (Jupiter 5.14.4 plus Platform 1.14.4 for JDK <17) stays pinned in
 # `java/tests/fixtures/junit/pins.bzl` and is selected by swapping the same
-# coordinates, never by floating the runner. Repository order lists the GCS
+# coordinates, never by floating the runner. ScalaTest 3.2.20 (Scalactic
+# 3.2.20 companion) is declared here so the Scala `scala_test` hello closure
+# resolves via the same fail-closed lock (issue #1080); the Coursier
+# `scala_deps.scalatest()` toolchain stays for the runner classpath while the
+# explicit `@maven` consumer dep is the lock-authority proof. Repository order lists the GCS
 # Maven Central mirror first: this host's egress proxy serves it while
 # repo1.maven.org answers Cloudflare challenges; the pinned lock hashes make
 # the order irrelevant to artifact identity.
@@ -194,6 +199,22 @@ maven.install(
         "org.junit.platform:junit-platform-launcher:6.1.3",
         "org.junit.platform:junit-platform-console:6.1.3",
         "org.junit.vintage:junit-vintage-engine:6.1.3",
+        "org.scalactic:scalactic_2.13:3.2.20",
+        "org.scalatest:scalatest_2.13:3.2.20",
+        "org.scalatest:scalatest-compatible:3.2.20",
+        "org.scalatest:scalatest-core_2.13:3.2.20",
+        "org.scalatest:scalatest-diagrams_2.13:3.2.20",
+        "org.scalatest:scalatest-featurespec_2.13:3.2.20",
+        "org.scalatest:scalatest-flatspec_2.13:3.2.20",
+        "org.scalatest:scalatest-freespec_2.13:3.2.20",
+        "org.scalatest:scalatest-funspec_2.13:3.2.20",
+        "org.scalatest:scalatest-funsuite_2.13:3.2.20",
+        "org.scalatest:scalatest-matchers-core_2.13:3.2.20",
+        "org.scalatest:scalatest-mustmatchers_2.13:3.2.20",
+        "org.scalatest:scalatest-propspec_2.13:3.2.20",
+        "org.scalatest:scalatest-refspec_2.13:3.2.20",
+        "org.scalatest:scalatest-shouldmatchers_2.13:3.2.20",
+        "org.scalatest:scalatest-wordspec_2.13:3.2.20",
     ],
     fail_if_repin_required = True,
     known_contributing_modules = ["protobuf"],

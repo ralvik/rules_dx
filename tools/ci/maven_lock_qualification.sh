@@ -6,8 +6,8 @@
 # - pinned: rules_jvm_external 7.1 in MODULE.bazel (Bazel >=7.0.0; verified
 #   against Bazel 9.2.0 on the seed host) recorded in
 #   `third_party/jvm/pins.bzl`; single shared lock for the admitted JVM
-#   foundations (Java, Kotlin, Scala managed route shares Java's story, no
-#   second lock).
+#   foundations (Java, Kotlin, Scala via explicit `@maven` deps, issue #1080;
+#   no second lock).
 # - wiring: `maven.install` with `lock_file =
 #   "//third_party/jvm:maven_install.json"` plus `fail_if_repin_required =
 #   True`; the GCS Maven Central mirror lists first (this host's egress
@@ -19,7 +19,9 @@
 # - fixtures: fail-closed consumers over the shared `@maven` hub are the
 #   JUnit fixtures (`java/tests/fixtures/junit/` plus
 #   `kotlin/tests/fixtures/junit/` Jupiter console-launcher pair over the
-#   6.1.3 line, JUnit 4.13.2 seeds via Vintage in the hello fixtures).
+#   6.1.3 line, JUnit 4.13.2 seeds via Vintage in the hello fixtures) plus
+#   the Scala hello `scala_test` over ScalaTest 3.2.20 via explicit `@maven`
+#   deps (issue #1080).
 #   Non-fail-closed (lock without `fail_if_repin_required`, floating
 #   coordinates, hand-edited lock) stays rejected.
 # - open owned gaps: platform plus consumer plus release evidence, no
@@ -48,6 +50,7 @@ java_build="java/tests/fixtures/junit/BUILD.bazel"
 kotlin_build="kotlin/tests/fixtures/junit/BUILD.bazel"
 java_hello="java/tests/fixtures/hello/BUILD.bazel"
 kotlin_hello="kotlin/tests/fixtures/hello/BUILD.bazel"
+scala_hello="scala/tests/fixtures/hello/BUILD.bazel"
 matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
@@ -83,6 +86,15 @@ else
   bad "pins.bzl lost its artifact plus repo plus consumer plus rejected wiring under issue #481"
 fi
 
+# Pins record the ScalaTest 3.2.20 line plus Scala seed consumer (issue #1080).
+if grep -q -F -e 'org.scalatest:scalatest_2.13:3.2.20' "$pins" &&
+  grep -q -F -e 'org.scalactic:scalactic_2.13:3.2.20' "$pins" &&
+  grep -q -F -e '//scala/tests/fixtures/hello:hello_test' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its ScalaTest 3.2.20 plus Scala seed consumer wiring under issue #1080"
+fi
+
 # MODULE pins the 7.1 resolver line.
 if grep -q -F -e 'bazel_dep(name = "rules_jvm_external", version = "7.1")' "$module" &&
   grep -q -F -e 'issue #481' "$module"; then
@@ -103,6 +115,15 @@ else
   bad "MODULE.bazel lost its lock_file plus fail_if_repin_required plus mirror plus artifact wiring under issue #481"
 fi
 
+# MODULE declares the ScalaTest 3.2.20 line via the shared lock (issue #1080).
+if grep -q -F -e 'org.scalatest:scalatest_2.13:3.2.20' "$module" &&
+  grep -q -F -e 'org.scalactic:scalactic_2.13:3.2.20' "$module" &&
+  grep -q -F -e 'issue #1080' "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost its ScalaTest 3.2.20 lock declaration under issue #1080"
+fi
+
 # Lock records the resolved 6.1.3 line plus 4.13.2 seed plus leaves.
 if grep -q -F -e '"org.junit.jupiter:junit-jupiter-api"' "$lock" &&
   grep -q -F -e '"version": "6.1.3"' "$lock" &&
@@ -115,6 +136,16 @@ if grep -q -F -e '"org.junit.jupiter:junit-jupiter-api"' "$lock" &&
   ok
 else
   bad "maven_install.json lost its resolved 6.1.3 plus 4.13.2 seed plus leaves plus input/resolved hashes under issue #481"
+fi
+
+# Lock records the resolved ScalaTest 3.2.20 line (issue #1080).
+if grep -q -F -e '"org.scalatest:scalatest_2.13"' "$lock" &&
+  grep -q -F -e '"version": "3.2.20"' "$lock" &&
+  grep -q -F -e '"org.scalactic:scalactic_2.13"' "$lock" &&
+  grep -q -F -e '"org.scalatest:scalatest-flatspec_2.13"' "$lock"; then
+  ok
+else
+  bad "maven_install.json lost its resolved ScalaTest 3.2.20 line under issue #1080"
 fi
 
 # Every lock entry carries its sha256 so the downloader verifies each artifact.
@@ -165,6 +196,17 @@ else
   bad "kotlin fixtures lost their @maven fail-closed consumer shape under issue #481"
 fi
 
+# Scala hello stays a fail-closed consumer over the shared @maven hub
+# (explicit ScalaTest deps, issue #1080; the Coursier runner classpath stays
+# while the lock is the authority).
+if grep -q -F -e '@maven//:org_scalatest_scalatest_2_13' "$scala_hello" &&
+  grep -q -F -e '@maven//:org_scalatest_scalatest_flatspec_2_13' "$scala_hello" &&
+  grep -q -F -e '@maven//:org_scalactic_scalactic_2_13' "$scala_hello"; then
+  ok
+else
+  bad "scala fixture lost its @maven fail-closed consumer shape under issue #1080"
+fi
+
 # Non-fail-closed stays rejected: fail flag never off, lock never hand-edited.
 if grep -q -F -e 'fail_if_repin_required = True' "$module" &&
   ! grep -q -F -e 'fail_if_repin_required = False' "$module" &&
@@ -192,10 +234,10 @@ else
 fi
 
 # Live proof: the fail-closed @maven consumers execute green on the seed host.
-if bazel test //java/tests/fixtures/junit:hello_jupiter_test //kotlin/tests/fixtures/junit:hello_jupiter_test //java/tests/fixtures/hello:hello_test //kotlin/tests/fixtures/hello:hello_test --noshow_progress >/dev/null 2>&1; then
+if bazel test //java/tests/fixtures/junit:hello_jupiter_test //kotlin/tests/fixtures/junit:hello_jupiter_test //java/tests/fixtures/hello:hello_test //kotlin/tests/fixtures/hello:hello_test //scala/tests/fixtures/hello:hello_test --noshow_progress >/dev/null 2>&1; then
   ok
 else
-  bad "maven live proof failed (want Jupiter plus JUnit 4 seeds green over the fail-closed lock)"
+  bad "maven live proof failed (want Jupiter plus JUnit 4 seeds plus Scala hello green over the fail-closed lock)"
 fi
 
 dx_test_summary "maven lock qualification harness"

@@ -24,7 +24,12 @@ scala_binary(
 scala_test(
     name = "hello_test",
     srcs = ["HelloTest.scala"],
-    deps = [":hello_lib"],
+    deps = [
+        ":hello_lib",
+        "@maven//:org_scalactic_scalactic_2_13",
+        "@maven//:org_scalatest_scalatest_2_13",
+        "@maven//:org_scalatest_scalatest_flatspec_2_13",
+    ],
 )
 
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
