@@ -56,5 +56,11 @@ pub use completion::{render_completion, COMPLETION_SHELLS};
 pub use error::ArgsError;
 pub use grammar::cli_command;
 pub use invocation::{apply_here, here_scope, Invocation, ReportRequest};
-pub use parser::parse;
+pub use parser::{load_file_defaults, parse, parse_with};
 pub use profile::{resolve_profile, Profile, DX_PROFILE_ENV};
+
+/// File-layer invocation defaults (`.dx/config.toml`).
+/// Re-exported so the binary loads defaults through `dx_cli` without a
+/// direct `dx_adopt` edge; values are never logged.
+/// See: `docs/cli/cli-contract.md#invocation-defaults`.
+pub use dx_adopt::defaults::FileDefaults;

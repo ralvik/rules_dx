@@ -28,6 +28,7 @@ rust_library(
         "src/args/command.rs",
         "src/args/complete.rs",
         "src/args/completion.rs",
+        "src/args/defaults_tests.rs",
         "src/args/error.rs",
         "src/args/grammar.rs",
         "src/args/help.rs",

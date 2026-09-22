@@ -134,6 +134,40 @@ Each result is evaluated independently; `--keep_going` is recommended when CI wa
 Bazel to continue unrelated evaluator actions after a policy failure. An evaluator also
 fails when its result proposes any replacement, independently of diagnostic severity.
 
+### Invocation Defaults
+
+Global options accept flag over env over file over built-in defaults:
+`--workspace` (`DX_WORKSPACE`), `--output` (`DX_OUTPUT`),
+`--verbose` (`DX_VERBOSE`), `--quiet` (`DX_QUIET`),
+`--dry-run` (`DX_DRY_RUN`), `--fail-on` (`DX_FAIL_ON`).
+Bool env spellings are truthy `1|true|yes|y|on` (case-insensitive);
+any other present value counts as disabled so `DX_VERBOSE=0`
+disables a file default. Empty env strings count as absent.
+
+The file layer is `.dx/config.toml` (alias `.dx/config`, same TOML)
+found by walking up from the workspace start; nearest wins and
+`.dx/config.toml` wins over `.dx/config` side by side:
+
+```toml
+[dx]
+workspace = "/repo"
+output = "json"
+verbose = false
+quiet = false
+dry_run = false
+fail_on = "warning"
+```
+
+Top-level keys are accepted as an alias; `[dx]` wins on conflict.
+Unknown keys are ignored; wrong TOML types and unreadable files fail
+closed (exit 2). `.dx` stays in the watch ignore set, so defaults
+never re-trigger the loop.
+
+Security: resolved values are never logged. Summaries, tracing fields,
+and NDJSON carry only modes and counts, never paths, option values, or
+env/file contents; invalid values are echoed only in the usage error
+for that flag.
+
 ## Workspace Discovery
 
 Starting from the working directory, `dx` walks ancestors looking for a supported

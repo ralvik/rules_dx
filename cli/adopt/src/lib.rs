@@ -19,6 +19,7 @@
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod completion;
+pub mod defaults;
 pub mod error;
 pub mod hooks;
 pub mod inspect;
@@ -33,6 +34,11 @@ pub mod version;
 pub mod watch;
 
 pub use completion::{completion_source_is_single, ALL_COMMANDS, SUPPORTED_SHELLS};
+pub use defaults::{
+    env_bool, env_string, find_config, is_truthy, load_defaults, parse_file_text, resolve_bool,
+    resolve_string, resolve_workspace, FileDefaults, CONFIG_REL, CONFIG_TOML_REL, DX_DRY_RUN_ENV,
+    DX_FAIL_ON_ENV, DX_OUTPUT_ENV, DX_QUIET_ENV, DX_VERBOSE_ENV, DX_WORKSPACE_ENV,
+};
 pub use error::AdoptError;
 pub use hooks::{
     checks_for_trigger, default_hooks_config, hook_check_timed_out, hook_git_is_hermetic,
