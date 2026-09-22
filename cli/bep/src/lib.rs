@@ -24,15 +24,22 @@
 //! plus the collected result bytes. Returned records sort by label bytes
 //! and artifacts sort by path bytes, so consensus never depends on BEP
 //! arrival order.
+//!
+//! Remote/cache enabling flips one [`remote::RemoteConfig`] plus one
+//! [`remote::Downloader`] impl, never every call site; the local-only
+//! [`remote::LocalDownloader`] stays the default until remote qualifies.
+//! See: `docs/quality/action-model.md#outputs-remote-cache-and-execution`.
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod outputs;
+pub mod remote;
 pub mod test_outputs;
 
 pub use outputs::collect;
+pub use remote::{Downloader, LocalDownloader, RemoteConfig, UNWIRED_REMOTE_FLAGS};
 pub use test_outputs::{collect_test_outputs, TestOutputFile};
 
 use std::path::{Path, PathBuf};

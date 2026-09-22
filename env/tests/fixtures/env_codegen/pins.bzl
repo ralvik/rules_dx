@@ -76,10 +76,14 @@ IDE_GO_DRIVER = "GOPACKAGESDRIVER"
 IDE_NO_MUTATION = "do not mutate the selected environment"
 
 # BEP stays one stream with private output groups and no second downloader.
+# The cli/bep/src/remote.rs interface (LocalDownloader) stays the single
+# local-only downloader seam.
 BEP_ONE_STREAM = "one BEP stream"
 BEP_ENV_GROUP = "dx_env_plans"
 BEP_CODEGEN_GROUP = "dx_codegen_plans"
 BEP_NO_SECOND_DOWNLOADER = "never implements a second remote-cache downloader"
+BEP_REMOTE_INTERFACE = "cli/bep/src/remote.rs"
+BEP_LOCAL_DOWNLOADER = "LocalDownloader"
 BEP_ENV_SUFFIX = ".dxenv.pb"
 BEP_CODEGEN_SUFFIX = ".dxcodegen.pb"
 

@@ -1,5 +1,5 @@
 {
-  "checksum": "03c79f442921fdf46051aae5bb204047c4b4ee971fa3a67e7d10fa8f9dec4b25",
+  "checksum": "f663f863aa252e3df93f42e248a586fc7c28c131887280d26e0d83b64c252a42",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -2564,6 +2564,10 @@
           {
             "id": "serde_json 1.0.151",
             "target": "serde_json"
+          },
+          {
+            "id": "tempfile 3.27.0",
+            "target": "tempfile"
           },
           {
             "id": "thiserror 2.0.20",

@@ -9,6 +9,7 @@ load(
     "SYNTHETIC_ADAPTERS",
     "SYNTHETIC_CLASS_TO_FAMILY",
 )
+load("//quality:execution_requirements.bzl", "dx_execution_requirements")
 load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "ordered_pipeline_paths", "pipeline_inputs_for_paths", "resolve_pipeline", "stage_flag")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
@@ -55,8 +56,8 @@ def _quality_pipeline_action(target, ctx, capability):
         inputs = depset(inputs),
         outputs = [out],
         arguments = [args],
-        # Local-only until remote qualified (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
-        execution_requirements = {"no-remote-exec": "1"},
+        # Local-only via the shared helper (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
+        execution_requirements = dx_execution_requirements(),
         mnemonic = "DxQuality" + capability.capitalize(),
         progress_message = "Dx quality " + capability + " %{label}",
     )
@@ -76,8 +77,8 @@ def _quality_pipeline_action(target, ctx, capability):
         inputs = depset([out]),
         outputs = [marker],
         arguments = [eval_args],
-        # Local-only until remote qualified (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
-        execution_requirements = {"no-remote-exec": "1"},
+        # Local-only via the shared helper (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
+        execution_requirements = dx_execution_requirements(),
         mnemonic = "DxQualityEval",
         progress_message = "Dx quality evaluate " + capability + " %{label}",
     )

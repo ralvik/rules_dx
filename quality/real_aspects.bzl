@@ -11,6 +11,7 @@ load(
     "REAL_ADAPTERS",
     "REAL_CLASS_TO_FAMILY",
 )
+load("//quality:execution_requirements.bzl", "dx_execution_requirements")
 load("//quality:native_config.bzl", "DxNativeConfigInfo", "collect_native_configs")
 load("//quality:parity_tests.bzl", "deferred_pipeline_error")
 load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "drop_pipeline_tool", "filter_pipeline_by_tools", "generated_source_paths", "ordered_pipeline_paths", "pipeline_inputs_for_paths", "prune_tool_generated_sources", "resolve_pipeline", "stage_flag")
@@ -436,8 +437,8 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         tools = run_tools,
         outputs = [out],
         arguments = [args],
-        # Local-only until remote qualified (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
-        execution_requirements = {"no-remote-exec": "1"},
+        # Local-only via the shared helper (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
+        execution_requirements = dx_execution_requirements(),
         mnemonic = "DxRealQuality" + capability.capitalize(),
         progress_message = "Dx real quality " + capability + " %{label}",
     )

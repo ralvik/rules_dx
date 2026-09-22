@@ -5,8 +5,11 @@
 # disk cache delivered here, without claiming remote execution or remote
 # cache support:
 # - delivered: every Dx pipeline plus evaluator action carries
-#   `no-remote-exec` (locally cacheable, never remotely executed until
+#   `no-remote-exec` via the single `quality/execution_requirements.bzl`
+#   helper (locally cacheable, never remotely executed until
 #   remote is qualified); no cache-disabling `no-remote` marker appears;
+#   the `cli/bep` remote/downloader interface (`RemoteConfig` plus
+#   `LocalDownloader`) stays local-only;
 # - disk cache: keys hash every Bazel-affecting lock/config with exact-key
 #   hits only (a bust starts cold, no stale prefix reuse) across per-host
 #   scopes; reusable-consumer stays cache-free;
@@ -37,6 +40,8 @@ dx_bash_pin
 
 synthetic="quality/aspects.bzl"
 real="quality/real_aspects.bzl"
+helper="quality/execution_requirements.bzl"
+remote="cli/bep/src/remote.rs"
 ci=".github/workflows/ci.yml"
 bump=".github/workflows/bump.yml"
 cache_action=".github/actions/restore-bazel-cache/action.yml"
@@ -48,20 +53,54 @@ pins="tools/ci/tests/fixtures/action_execution_cache/pins.bzl"
 pins_build="tools/ci/tests/fixtures/action_execution_cache/BUILD.bazel"
 expected="tools/ci/tests/fixtures/action_execution_cache/action_execution_cache.expected"
 
-# Synthetic pipeline plus evaluator actions carry the local-only marker.
-if grep -q -F -e 'execution_requirements = {"no-remote-exec": "1"}' "$synthetic" &&
-  [[ "$(grep -c -F -e 'execution_requirements = {"no-remote-exec": "1"}' "$synthetic")" == "2" ]]; then
+# Helper owns the local-only marker: the single enablement point for
+# remote qualification (issue #1041).
+if [[ -f "$helper" ]] &&
+  grep -q -F -e 'def dx_execution_requirements' "$helper" &&
+  grep -q -F -e 'no-remote-exec' "$helper"; then
   ok
 else
-  bad "aspects.bzl lost its two no-remote-exec markers (pipeline plus evaluator)"
+  bad "execution_requirements.bzl lost its dx_execution_requirements helper with the no-remote-exec marker"
 fi
 
-# Real pipeline action carries the local-only marker.
-if grep -q -F -e 'execution_requirements = {"no-remote-exec": "1"}' "$real" &&
-  [[ "$(grep -c -F -e 'execution_requirements = {"no-remote-exec": "1"}' "$real")" == "1" ]]; then
+# Synthetic pipeline plus evaluator actions use the helper (two call sites).
+if grep -q -F -e 'execution_requirements.bzl' "$synthetic" &&
+  grep -q -F -e 'dx_execution_requirements()' "$synthetic" &&
+  [[ "$(grep -c -F -e 'dx_execution_requirements()' "$synthetic")" == "2" ]]; then
   ok
 else
-  bad "real_aspects.bzl lost its no-remote-exec marker (real pipeline)"
+  bad "aspects.bzl lost its two dx_execution_requirements() call sites (pipeline plus evaluator)"
+fi
+
+# Real pipeline action uses the helper (one call site).
+if grep -q -F -e 'execution_requirements.bzl' "$real" &&
+  grep -q -F -e 'dx_execution_requirements()' "$real" &&
+  [[ "$(grep -c -F -e 'dx_execution_requirements()' "$real")" == "1" ]]; then
+  ok
+else
+  bad "real_aspects.bzl lost its dx_execution_requirements() call site (real pipeline)"
+fi
+
+# No copy-pasted literal outside the helper: enabling remote flips one place.
+if ! grep -q -F -e '{"no-remote-exec": "1"}' "$synthetic" &&
+  ! grep -q -F -e '{"no-remote-exec": "1"}' "$real"; then
+  ok
+else
+  bad "quality aspects regained a copy-pasted no-remote-exec literal (want the helper only)"
+fi
+
+# BEP/remote-downloader interface stays local-only (issue #1041): the single
+# RemoteConfig plus downloader seam whose impl stays local-only.
+if [[ -f "$remote" ]] &&
+  grep -q -F -e 'RemoteConfig' "$remote" &&
+  grep -q -F -e 'LocalDownloader' "$remote" &&
+  grep -q -F -e 'is_local_only' "$remote" &&
+  grep -q -F -e 'UNWIRED_REMOTE_FLAGS' "$remote" &&
+  grep -q -F -e 'pub mod remote' cli/bep/src/lib.rs &&
+  grep -q -F -e 'src/remote.rs' cli/bep/BUILD.bazel; then
+  ok
+else
+  bad "cli/bep lost its remote/downloader interface (want RemoteConfig plus LocalDownloader, local-only)"
 fi
 
 # No cache-disabling marker: actions stay locally cacheable.
@@ -92,11 +131,13 @@ else
 fi
 
 # Capability isolation holds with the marker: lint vs format keys differ.
+# Keys are attributed by mnemonic, not by output order: aquery may list
+# both capability actions in either order.
 real_format="$(bazel aquery '//quality/testdata:fixture_real_python' \
   --aspects=//quality:real_aspects.bzl%real_format_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
-lint_key="$(printf '%s' "$real_lint" | grep 'ActionKey:' | head -1 || true)"
-format_key="$(printf '%s' "$real_format" | grep 'ActionKey:' | head -1 || true)"
+lint_key="$(printf '%s' "$real_lint" | awk '/Mnemonic: DxRealQualityLint/{want=1} want && /ActionKey:/{print; exit}' || true)"
+format_key="$(printf '%s' "$real_format" | awk '/Mnemonic: DxRealQualityFormat/{want=1} want && /ActionKey:/{print; exit}' || true)"
 if [[ -n "$lint_key" && -n "$format_key" && "$lint_key" != "$format_key" ]]; then
   ok
 else
@@ -189,11 +230,14 @@ else
   bad "a remote cache/executor flag appeared (local-only execution)"
 fi
 
-# Action model owns the remote boundary: what is safe vs local-only.
+# Action model owns the remote boundary: what is safe vs local-only, with
+# the helper plus downloader interface as the single enablement points.
 if grep -q -F -e 'no-remote-exec' "$action_model" &&
   grep -q -F -e 'local-only' "$action_model" &&
   grep -q -F -e 'remote' "$action_model" &&
-  grep -q -F -e 'local per-cell determinism' "$action_model"; then
+  grep -q -F -e 'local per-cell determinism' "$action_model" &&
+  grep -q -F -e 'execution_requirements.bzl' "$action_model" &&
+  grep -q -F -e 'dx_bep::remote' "$action_model"; then
   ok
 else
   bad "action-model lost its local-only remote-boundary record with the no-remote-exec marker"
@@ -210,9 +254,11 @@ else
   bad "testing README or github-ci matrix lost the exact-key plus local-only remote record"
 fi
 
-# Fixture files stay present with the marker plus cache pins.
+# Fixture files stay present with the marker plus helper/interface plus cache pins.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]] &&
   grep -q -F -e 'no-remote-exec' "$pins" &&
+  grep -q -F -e 'execution_requirements.bzl' "$pins" &&
+  grep -q -F -e 'cli/bep/src/remote.rs' "$pins" &&
   grep -q -F -e 'exact key only, bust starts cold' "$pins" &&
   grep -q -F -e 'bazel-seed-' "$pins"; then
   ok

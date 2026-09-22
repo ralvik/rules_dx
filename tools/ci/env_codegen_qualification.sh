@@ -247,9 +247,11 @@ else
   bad "node.md lost its pnpm-selected without-second-resolution record"
 fi
 
-# CLI never implements a second remote-cache downloader.
+# CLI never implements a second remote-cache downloader: the local-only
+# dx_bep::remote interface stays the single seam.
 if grep -q -F -e 'never' "$codegen_doc" &&
-  grep -q -F -e 'second remote-cache downloader' "$codegen_doc"; then
+  grep -q -F -e 'second remote-cache downloader' "$codegen_doc" &&
+  grep -q -F -e 'dx_bep::remote' "$codegen_doc"; then
   ok
 else
   bad "codegen.md lost its no-second-downloader record"
@@ -303,6 +305,8 @@ if grep -q -F -e 'IDE_SEPARATE_BASE = "Use a separate IDE output base"' "$pins" 
   grep -q -F -e 'BEP_ONE_STREAM = "one BEP stream"' "$pins" &&
   grep -q -F -e 'BEP_ENV_GROUP = "dx_env_plans"' "$pins" &&
   grep -q -F -e 'BEP_CODEGEN_GROUP = "dx_codegen_plans"' "$pins" &&
+  grep -q -F -e 'BEP_NO_SECOND_DOWNLOADER' "$pins" &&
+  grep -q -F -e 'BEP_REMOTE_INTERFACE = "cli/bep/src/remote.rs"' "$pins" &&
   grep -q -F -e 'PROJECTION_SYMLINK_ONLY = "symlink-only"' "$pins" &&
   grep -q -F -e 'PROJECTION_NO_PNPM_INSTALL' "$pins"; then
   ok

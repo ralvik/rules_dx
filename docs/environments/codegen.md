@@ -111,7 +111,8 @@ artifact, ensuring generator actions execute and remote outputs materialize
 locally. The CLI recognizes shards only among BEP-reported files and rejects
 missing, duplicate, or unreported artifacts without scanning `bazel-out`.
 With remote cache or execution, the Bazel request downloads the requested
-output group; `dx` never implements a second remote-cache downloader.
+output group; `dx` never implements a second remote-cache downloader (the
+local-only `dx_bep::remote` downloader interface stays the single seam).
 
 ## Filesystem Projection
 
@@ -141,6 +142,8 @@ re-read under the commit lock; there is no multi-workspace coordination.
 Interruption preserves the prior pointer, and Bazel owns mid-action state.
 Remote materialization is Bazel-owned download of the requested output group
 with fail-closed local collection; remote cache and execution stay unwired.
+Enabling them flips the `dx_bep::remote` interface (`RemoteConfig` plus
+downloader), never every call site.
 Reuse certifies per-workspace against the current BEP result only; Bazel
 stays authoritative for freshness. Root selection stays on the frozen `//...`
 baseline.

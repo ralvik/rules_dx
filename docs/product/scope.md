@@ -20,6 +20,8 @@ execution. Remote execution and remote cache remain unqualified: pipeline plus
 evaluator actions are local-only until remote is qualified (see
 [Remote Tests](../testing/README.md#remote-tests) and the
 [remote boundary](../quality/action-model.md#outputs-remote-cache-and-execution)).
+The single `quality/execution_requirements.bzl` helper plus the `dx_bep::remote`
+interface own that boundary.
 Determinism claimed here is local per-cell determinism only, with no cross-cell
 union and no remote claim.
 
