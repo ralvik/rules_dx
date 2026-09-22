@@ -13,10 +13,10 @@ Delivered: native widen-one-requirement loop (issue #260) as the first-party app
 resolver-owned locks; Bazel and GitHub Actions verify file-only. The loop runs
 one dep per PR, never batch: discover outdated via the upstream registry
 clients (stable only, prerelease follows upstream, transitives stay
-resolver-governed; planned in `dx_bump::discovery`, issue #639, fixtures in
+resolver-governed; implemented in `dx_bump::discovery` (closed #639), fixtures in
 `cli/bump/tests/fixtures/bump_discovery/`) → auto-resolve GitHub Actions tags
 to SHA via the upstream GitHub releases client (`gh api`, never custom HTTP;
-planned in `dx_bump::gha`, issue #640, fixtures in
+implemented in `dx_bump::gha` (closed #640), fixtures in
 `cli/bump/tests/fixtures/bump_gha/`; manual SHA only rejected) → widen one → update → verify (regen evidence,
 `preset.update --verify-only` flag-diff, `bazel build //...`,
 `bazel test //...`, coverage/dogfood) → if green open one PR, if red discard

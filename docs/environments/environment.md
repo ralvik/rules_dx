@@ -30,8 +30,8 @@ targets, not application arguments for environment tools.
 ## Language Composition
 
 Each approved language owns its canonical storage, native layout, and
-conventional facades. Python may expose `.venv`; Node, Rust, and future
-integrations retain their ecosystem-native shapes.
+conventional facades. Python may expose `.venv`; Node and Rust retain their
+ecosystem-native shapes.
 
 A target-scoped invocation updates only integrations represented in the
 selected target closure. Previously selected integrations absent from that
@@ -173,7 +173,7 @@ For Go, reuse the upstream `GOPACKAGESDRIVER` integration rather than a
 static package snapshot. Editor requests may trigger Bazel queries/builds;
 propagate failures rather than reporting a successful incomplete graph. The
 supported boundary is pure-Go packages; cgo completion is the explicit
-exception with gaps recorded rather than generic IDE parity claimed.
+exception (issue #789) with gaps recorded rather than generic IDE parity claimed.
 
 `bazel clean`, output-base changes, or removed outputs can invalidate links.
 Recovery for missing tools and facades remains `dx env` or bootstrap

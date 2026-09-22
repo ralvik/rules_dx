@@ -227,7 +227,7 @@ plus 127 `sh_binary` plus 162 Linux-only labels, machine-checked by
 scope with 0 skips; each non-Linux cell skips at most the pinned inventory.
 Growing the Linux-only harness beyond the budget fails qualification and
 must bump the budget plus this inventory in the same reviewed PR. Porting
-the harness (hermetic py_binary/Rust or POSIX fixtures) stays future work;
+the harness (hermetic py_binary/Rust or POSIX fixtures) is not planned;
 coverage cells gate Rust code unaffected by sh skips with no union.
 
 ### Real runs vs skips

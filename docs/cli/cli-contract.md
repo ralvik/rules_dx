@@ -86,8 +86,9 @@ precedence. `dx bazel` has no protected flags and forwards arguments unchanged.
 
 Workflow commands use Bazel startup options that disable system and home rc files
 while retaining the discovered workspace's committed `.bazelrc`. They do not load
-ignored `user.bazelrc` or user-specified implicit rc files. An explicit future rc
-option requires a separate contract; it is not inferred from the environment.
+ignored `user.bazelrc` or user-specified implicit rc files. An explicit rc
+option is unsupported; one would require a separate contract and is never
+inferred from the environment.
 `dx bazel` preserves Bazel's normal rc discovery because it is the transparent
 escape hatch.
 
@@ -211,7 +212,7 @@ aspect, toolchain, dependency, compiler, and canonical repository labels are int
 implementation details and are omitted. If Bazel fails while processing an external
 repository, its detailed diagnostic remains on stderr while NDJSON emits a stable generic
 operational code such as `bazel_failed`, without copying the external label into
-structured context. A future command that intentionally accepts external scopes requires
+structured context. No command accepts external scopes; one that did would require
 an explicit label-representation contract.
 
 ## Exit Status
@@ -322,8 +323,7 @@ runner, markdown, plus the dx CLI tokenizer preserve legacy hand-loop strings
 via `disable_help_flag` plus `allow_hyphen_values` plus
 `invalid_token`/`parse_error` mapping for unknown-flag phrasing, hyphen-value
 consumption, attached `=value` whole-token echo, and value-parser rejections;
-migrate to strict clap parsing with auto help stays owned gap for any future
-migration).
+strict clap parsing with auto help delivered under closed #810 below).
 
 Strict clap parsing with auto help for the `dx` CLI surface (qualified seed-only under issue #810)
 (`bazel run //tools/ci:cli_strict_qualification`; fixtures in

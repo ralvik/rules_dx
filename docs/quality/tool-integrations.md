@@ -224,7 +224,7 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   `js_run_binary`). Direct probes show parser inference for `.js/.jsx/.ts/.tsx/.json`, `[warn]`
   plus exit `1` on differences, and in-place `--write`. The `editorconfig` package is absent from
   the runfiles forest, so `.editorconfig` files are currently inert; `--no-editorconfig` stays
-  mandatory so a future dependency addition cannot change formatting.
+  mandatory so formatting stays independent of dependency changes.
 - **tsc:** qualify the pinned 5.9.3 compiler (`@npm_typescript//:tsc`) as a target-coupled typecheck
   adapter only: it never runs as a bare file invocation and requires the authoritative
   `typescript_project` context (`TsConfigInfo`). Bare-file use would lose tsconfig and declaration

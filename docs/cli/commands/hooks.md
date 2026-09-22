@@ -101,8 +101,8 @@ baseline and may add checks (for example, enabling affected tests) or locally re
 them; a present overlay field replaces the baseline field, absent fields inherit.
 Local relaxation affects only that machine; it cannot weaken the shared gate.
 `dx hooks status` always shows the effective merged result, so what runs is never a
-mystery. One overlay file absorbs future local-only settings; no per-feature local
-files are added.
+mystery. All local-only settings live in this one overlay file; no per-feature local
+files exist.
 
 Choice in either layer covers which hermetic checks run, never how tools resolve:
 selection cannot punch a hole in hermeticity.

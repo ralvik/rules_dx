@@ -485,7 +485,7 @@ Update emits per-set `notice`/`error` events plus an optional `update_recovery` 
 as its complete v1.0 event contract: exactly one terminal per-set event for every selected set (`update_set_success` notice, `update_failed`
 error, or `update_set_blocked` notice for unattempted dependents) in sorted set order, then
 an `update_recovery` warning notice on failure carrying the idempotent retry plus manual
-restore (planned in `dx_update::recovery`), then
+restore (via `dx_update::recovery`, closed #772), then
 exactly one `command_finished`. Live execution carries `results_complete=true` when every
 selected set reached such a terminal report, including runs with failures; dry-run, `--check`,
 and initialization failure omit it. Atomicity is per set, never repository-wide: each success commits its
@@ -493,7 +493,7 @@ set immediately with no automatic rollback. Backends that provide no committed-c
 Git scan, BUILD parse, or rerun is rejected because the protocol already forbids it.
 
 Minor 1.1 adds the backend committed-change manifest (`dx_update::manifest`, validated
-against `dx_update::sets::SetId::locks`): each validated file
+against `dx_update::sets::SetId::locks`, closed #811): each validated file
 change projects to one `change` (single full-file spanning edit: `0..old_len`
 replacement for `modify` with its pre-commit digest, `0..0` insertion for `create`)
 followed by its terminal `applied` `mutation`, grouped under the same
