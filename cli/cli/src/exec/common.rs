@@ -222,10 +222,14 @@ pub(crate) fn text_diagnostic(diagnostic: &DiagnosticEvent) -> String {
 
 /// Pre-execution usage failure: stderr only, exit code 2.
 pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
+    // Single-sourced fallback registry (See: `docs/cli/commands/README.md`):
+    // the command list renders from `Command::pipe_list` so `--help`/grammar
+    // drift fails the `fallback_usage_registry_is_single_sourced` fixture.
+    let commands = crate::args::Command::pipe_list();
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
         err,
-        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel> [--check] [scope ...] [-- command-options...]"
+        "usage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [--check] [scope ...] [-- command-options...]"
     );
     pre_exec_code()
 }

@@ -180,9 +180,13 @@ impl Runner for BinaryRunner {
 }
 
 fn usage_error(message: &str) -> i32 {
+    // Single-sourced fallback registry (See: `docs/cli/commands/README.md`):
+    // shares `Command::pipe_list` with `exec/common.rs::pre_exec` and
+    // `args/error.rs` so drift fails the registry fixture.
+    let commands = dx_cli::args::Command::pipe_list();
     let _ = writeln!(
         io::stderr(),
-        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel> [--check] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; default never touches Bazel outputs; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test|deploy --debug|--release; version --check|--pin|--rollback; docs --check|--serve|--port. fix applies without rerun (run `dx check` to validate). see `dx <command> --help`."
+        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [--check] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; default never touches Bazel outputs; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test|deploy --debug|--release; version --check|--pin|--rollback; docs --check|--serve|--port. fix applies without rerun (run `dx check` to validate). see `dx <command> --help`."
     );
     pre_exec_code()
 }

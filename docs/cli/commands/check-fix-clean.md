@@ -125,8 +125,23 @@ Active means observed live by the process scan: `dx clean` inspects the
 live `/proc` for processes whose working directory or open files sit
 under the workspace `.dx` roots, and observed setup and generation hexes
 never prune. Only numeric process directories are inspected, so a missing
-`/proc` (non-Linux hosts) scans empty rather than failing;
-over-retention is the only failure direction. Reclaimable bytes are
+`/proc` (non-Linux hosts, including macOS and Windows) scans empty rather than failing;
+over-retention is the only failure direction. macOS and Windows always
+over-retain: there is no `lsof`/handle fallback (portable-fallback spike
+rejected in `cli/clean/src/live.rs`: new dep plus lockfile churn plus
+supply-chain review for zero prune-decision change, since over-retention
+is already safe). Per-process failures fail open to over-retention: an
+unreadable `cwd`/`fd` entry (exited process, foreign owner, `EACCES`,
+dangling link) contributes nothing and never aborts the sweep, so
+`EACCES` silently pins nothing beyond the observed set. TOCTOU: the
+planning scan is best-effort; apply runs under the shared workspace
+commit lock, re-reads the current selection under the lock, and skips
+entries that became current or referenced (missing entries are
+idempotent), but does not re-scan `/proc` under the lock. A process that
+starts between the planning scan and the lock is therefore missed and its
+hex may prune: accepted, since the lock guards the current pointer (never
+uninstalled mid-commit) and over-retention remains the only failure
+direction for observed processes. Reclaimable bytes are
 measured over the planned prune set before any lock or deletion:
 symlinks and metadata count, link targets (Bazel outputs) never do, and
 vanished entries measure zero. The apply summary reports only the bytes

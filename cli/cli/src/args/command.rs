@@ -48,6 +48,62 @@ pub enum Command {
 }
 
 impl Command {
+    /// Pipe-joined command list for fallback usage lines.
+    ///
+    /// Single source for the hand-rendered fallbacks in
+    /// `cli/cli/src/main.rs::usage_error` and `exec/common.rs::pre_exec`
+    /// so `--help`/grammar drift fails tests, not users.
+    /// See: `docs/cli/commands/README.md`.
+    pub fn pipe_list() -> String {
+        use clap::ValueEnum;
+        Self::value_variants()
+            .iter()
+            .map(|command| command.name())
+            .collect::<Vec<_>>()
+            .join("|")
+    }
+
+    /// Scope policy for the scope-defaults matrix.
+    ///
+    /// Single source for `docs/cli/commands/README.md#scope-defaults`:
+    /// `default-//...` selects `//...` when no scope is supplied;
+    /// `default-repo` runs repository-wide; `default-repo|exact-label`
+    /// runs repository-wide or one exact label; `require*` fails without
+    /// the named positionals; `selector-default-all` takes dependency-set
+    /// selectors (default all); `reject` fails on any scope; `optional-name`
+    /// takes an optional single name; `passthrough` forwards verbatim.
+    /// See: `docs/cli/commands/README.md`.
+    pub fn scope_policy(self) -> &'static str {
+        match self {
+            Command::Audit
+            | Command::Lint
+            | Command::Typecheck
+            | Command::Format
+            | Command::Build
+            | Command::Test
+            | Command::Coverage
+            | Command::Check
+            | Command::Fix
+            | Command::Migrate => "default-//...",
+            Command::Generate | Command::Docs => "default-repo",
+            Command::Codegen | Command::Env | Command::Setup => "default-repo|exact-label",
+            Command::Deploy => "require-label",
+            Command::Update => "selector-default-all",
+            Command::Bump => "require-selector+version",
+            Command::Run
+            | Command::Hooks
+            | Command::Watch
+            | Command::Owners
+            | Command::Deps
+            | Command::Completion
+            | Command::New => "require",
+            Command::Why => "require-file+label",
+            Command::Clean | Command::Status | Command::Version | Command::Upgrade => "reject",
+            Command::Init => "optional-name",
+            Command::Bazel => "passthrough",
+        }
+    }
+
     /// Stable command name used in summaries and `command_started`.
     pub fn name(self) -> &'static str {
         match self {
@@ -590,5 +646,140 @@ mod tests {
         assert!(!Command::Update.supports_diff());
         assert!(!Command::Bump.supports_diff());
         assert!(!Command::Migrate.supports_diff());
+    }
+
+    #[test]
+    fn fallback_usage_registry_is_single_sourced() {
+        // See: `docs/cli/commands/README.md`.
+        use clap::ValueEnum;
+        let list = Command::pipe_list();
+        assert_eq!(
+            Command::value_variants().len(),
+            32,
+            "registry width changed; update scope matrix plus fallbacks"
+        );
+        let missing_text = super::super::error::ArgsError::MissingCommand.to_string();
+        let unknown_text = super::super::error::ArgsError::UnknownCommand {
+            command: "bogus".to_owned(),
+            suggestion: None,
+        }
+        .to_string();
+        assert!(
+            missing_text.contains(&list),
+            "ArgsError::MissingCommand drifted from pipe_list: {missing_text}"
+        );
+        assert!(
+            unknown_text.contains(&list),
+            "ArgsError::UnknownCommand drifted from pipe_list: {unknown_text}"
+        );
+        assert_eq!(
+            list,
+            "audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel",
+            "pipe_list order must match declaration order"
+        );
+    }
+
+    #[test]
+    fn scope_defaults_partition_covers_all_commands() {
+        // See: `docs/cli/commands/README.md#scope-defaults`.
+        use clap::ValueEnum;
+        assert_eq!(Command::value_variants().len(), 32);
+        for command in Command::value_variants() {
+            let policy = command.scope_policy();
+            assert!(
+                [
+                    "default-//...",
+                    "default-repo",
+                    "default-repo|exact-label",
+                    "require",
+                    "require-file+label",
+                    "require-label",
+                    "require-selector+version",
+                    "selector-default-all",
+                    "reject",
+                    "optional-name",
+                    "passthrough",
+                ]
+                .contains(&policy),
+                "{command:?} has unknown scope policy {policy}"
+            );
+            if command.supports_here() {
+                assert!(
+                    policy.starts_with("default-"),
+                    "{command:?} supports --here so policy must be default-*: {policy}"
+                );
+            }
+            if command.is_managed() {
+                assert_eq!(
+                    policy, "default-repo|exact-label",
+                    "{command:?} managed policy must stay exact-label"
+                );
+            }
+            if command.is_adoption()
+                && matches!(
+                    command,
+                    Command::Status | Command::Version | Command::Upgrade | Command::Completion
+                )
+            {
+                assert!(
+                    policy == "reject" || policy == "require",
+                    "{command:?} adoption scope must be reject/require: {policy}"
+                );
+            }
+        }
+        assert_eq!(Command::Run.scope_policy(), "require");
+        assert_eq!(Command::Deploy.scope_policy(), "require-label");
+        assert_eq!(Command::Clean.scope_policy(), "reject");
+        assert_eq!(Command::Bump.scope_policy(), "require-selector+version");
+        assert_eq!(Command::Update.scope_policy(), "selector-default-all");
+        assert_eq!(Command::Migrate.scope_policy(), "default-//...");
+        assert_eq!(Command::Bazel.scope_policy(), "passthrough");
+    }
+
+    #[test]
+    fn value_sets_and_man_parity_are_pinned() {
+        use clap::ValueEnum;
+        // See: `docs/cli/commands/completion.md`.        // Value sets stay parse-time validated (not shell-completed, since
+        // the grammar uses `String`): the error texts name the sets, and
+        // the shell list stays exact. `man/dx.1` renders from the same
+        // `cli_command` grammar as `--help`, so parity holds by
+        // construction and is pinned here.
+        let bad_output = super::super::error::ArgsError::BadOutput {
+            value: "yaml".to_owned(),
+        }
+        .to_string();
+        assert!(
+            bad_output.contains("text|diff|json"),
+            "output value set drifted: {bad_output}"
+        );
+        let bad_fail = super::super::error::ArgsError::BadFailOn {
+            value: "never".to_owned(),
+        }
+        .to_string();
+        assert!(
+            bad_fail.contains("info|warning|error"),
+            "fail-on value set drifted: {bad_fail}"
+        );
+        assert_eq!(
+            super::super::completion::COMPLETION_SHELLS,
+            &["bash", "zsh", "fish", "powershell"],
+            "shell value set changed; update docs plus fixtures"
+        );
+        let man = clap_mangen::Man::new(super::super::grammar::cli_command());
+        let mut buffer = Vec::new();
+        man.render(&mut buffer).expect("man renders");
+        let text = String::from_utf8(buffer).expect("man utf8");
+        for command in Command::value_variants() {
+            assert!(
+                text.contains(command.name()),
+                "man missing command {}",
+                command.name()
+            );
+        }
+        // Man escapes dashes (`\-\-output`), so assert the stems plus the
+        // alias token: same grammar as `--help`, parity by construction.
+        for stem in ["output", "fail", "here", "cwd"] {
+            assert!(text.contains(stem), "man missing flag stem {stem}");
+        }
     }
 }

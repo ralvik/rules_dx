@@ -687,11 +687,29 @@ next dep. One dep per PR with an automerge on/off toggle only: when on,
 auto-merge solely on the full required-check set; when off, leave PRs open.
 No grouping, schedule, or dashboard knobs. Runner is the scheduled
 `bump.yml` workflow with `GITHUB_TOKEN`, concurrency control so N open PRs do
-not stampede CI; scheduled runs without inputs enumerate outdated via the
+not stampede CI (`concurrency: group: bump-widen-one-${{ github.ref }}`,
+`cancel-in-progress: false`: runs queue, never cancel); scheduled runs without inputs enumerate outdated via the
 upstream clients above (manual selector only rejected, issue #639);
 failures never retry-until-green; fork-safety and the human
 merge path from the [automation policy](../../contributing/automation.md)
-preserved.
+preserved (fork PRs plan only, never push or open PRs with write
+credentials; bot PRs are reviewed and merged by hand, never pushed to
+`main`).
+
+Runner contract (`bump.yml`, the only runner): CLI vs runner tree policy
+is explicit. `dx bump` itself never checks a dirty tree: it rewrites the
+working copy directly (no refusal, no clean requirement); the caller owns
+tree state. The runner starts from a clean checkout and, after every dep
+(`always()` step), discards via `git reset --hard HEAD` plus `git clean
+-fd` plus `checkout main`, so the next dep starts clean: dirty state is
+discarded, never refused. Red runs record in workflow logs plus the job
+summary (`bump widen-one — <status>` in `$GITHUB_STEP_SUMMARY`, retained
+as run evidence); there is no separate record file. Evidence retention is
+the verification output in run logs (regen, flag-diff, `bazel build
+//...`, `bazel test //...` with CI flags, coverage seed gate, dogfood).
+Automerge input shape is the `workflow_dispatch` boolean `automerge`
+(default `false`): `true` runs `gh pr merge --auto --squash` on the full
+required-check set only; `false` leaves the PR open for human merge.
 
 `dx bump` is mutating without confirmation like `dx update`. `--dry-run`
 plans the widen plus the automatic refresh and exits `0` without touching
