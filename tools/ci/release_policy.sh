@@ -30,8 +30,8 @@
 #   real_* or real_clean subject plus a native-config binding.
 #
 # Minor-addition compat-qual/notes/override evidence lives with the
-# proposing change (CHANGELOG + prior-set override fixture); with no
-# release cut (CHANGELOG: no release has been cut,) there are
+# proposing change (prior-set override fixture); with no
+# release cut (MODULE at 0.0.0, no cell Supported,) there are
 # no pending minor additions to qualify, so the harness pins the
 # no-removal/no-formatter-change half plus the parity-evidence half.
 #
@@ -95,30 +95,29 @@ else
   bad "FORMAT_FROZEN drifted: formatter-set changes require a major release"
 fi
 
-# Atomic version flip (issue #931): a MODULE.bazel version bump must land
-# with a CHANGELOG SemVer entry plus removal of the no-release marker in
-# the same reviewed PR. At 0.0.0 (no releases cut) the marker must exist;
-# after the first SemVer flip the marker must be gone and the changelog
-# must name the new version. Either half alone fails closed.
+# Atomic version (issue #931, CHANGELOG deleted per #983): at 0.0.0
+# (no releases cut) CHANGELOG.md stays deleted with status in
+# docs/product/support-matrix.md and planned work in issues; a recreated
+# CHANGELOG at a bumped version must name the new version without the
+# no-release marker. Either half alone fails closed.
 module_version="$(grep -o -E -e '^    version = "[^"]+"' MODULE.bazel | head -1 | cut -d'"' -f2 || true)"
 if [[ -z "$module_version" ]]; then
   bad "MODULE.bazel lost its version pin (want single-version atomic, issue #931)"
 elif [[ "$module_version" == "0.0.0" ]]; then
-  if grep -q -F -e 'No release has been cut' "$changelog"; then
+  if [[ ! -e "$changelog" ]]; then
     ok
   else
-    bad "CHANGELOG.md lost the no-release-cut policy marker (want marker at 0.0.0, issue #931)"
+    bad "CHANGELOG.md reappeared (deleted per #983; status lives in docs/product/support-matrix.md)"
   fi
 else
-  if grep -q -F -e 'No release has been cut' "$changelog"; then
-    bad "CHANGELOG.md still carries the no-release marker with MODULE.bazel at $module_version (want atomic SemVer entry plus marker removal, issue #931)"
-  else
+  if [[ ! -e "$changelog" ]]; then
     ok
-  fi
-  if grep -q -F -e "$module_version" "$changelog" && grep -q -E -e '^## ' "$changelog"; then
+  elif grep -q -F -e 'No release has been cut' "$changelog"; then
+    bad "CHANGELOG.md still carries the no-release marker with MODULE.bazel at $module_version (recreate only at the release gate per #983)"
+  elif grep -q -F -e "$module_version" "$changelog" && grep -q -E -e '^## ' "$changelog"; then
     ok
   else
-    bad "CHANGELOG.md lost its SemVer entry for MODULE.bazel $module_version (want atomic entry plus marker removal, issue #931)"
+    bad "CHANGELOG.md lost its SemVer entry for MODULE.bazel $module_version (recreate only at the release gate per #983)"
   fi
 fi
 
@@ -205,8 +204,19 @@ else
   ok
 fi
 
-# Negative: version bump without atomic CHANGELOG entry fails (issue #931).
-# Simulate MODULE at 0.1.0 with the 0.0.0 marker still present plus no
+# Negative: CHANGELOG reappearance at 0.0.0 fails (deleted per #983).
+# Simulate MODULE at 0.0.0 with a CHANGELOG present: the 0.0.0 branch must
+# require absence.
+printf '    version = "0.0.0",\n' >"$scratch/unbumped-module.bazel"
+printf '# Changelog\n\nNo release has been cut yet.\n\n## Unreleased\n' >"$scratch/reappeared-changelog.md"
+scratch_unbumped_ver="$(grep -o -E -e 'version = "[^"]+"' "$scratch/unbumped-module.bazel" | head -1 | cut -d'"' -f2 || true)"
+if [[ "$scratch_unbumped_ver" == "0.0.0" ]] && [[ -e "$scratch/reappeared-changelog.md" ]]; then
+  ok
+else
+  bad "reappeared-changelog negative did not fail: scratch must show 0.0.0 plus CHANGELOG present"
+fi
+# Negative: stale no-release marker after a bump fails.
+# Simulate MODULE at 0.1.0 with the marker still present plus no
 # version entry: both halves must reject.
 printf '    version = "0.1.0",\n' >"$scratch/bumped-module.bazel"
 printf '# Changelog\n\nNo release has been cut yet.\n\n## Unreleased\n' >"$scratch/bumped-changelog.md"
@@ -216,13 +226,11 @@ if [[ "$scratch_ver" == "0.1.0" ]] && grep -q -F -e 'No release has been cut' "$
 else
   bad "bump-without-changelog negative did not fail: scratch must show marker-present plus entry-missing"
 fi
-# Negative: CHANGELOG SemVer entry without the MODULE bump fails.
-# Simulate 0.0.0 module with a version entry: the 0.0.0 branch must still
-# require the marker path, so a stray entry alone cannot pass as atomic.
-printf '    version = "0.0.0",\n' >"$scratch/unbumped-module.bazel"
-printf '# Changelog\n\n## [0.1.0] - 2026-01-01\n' >"$scratch/stray-changelog.md"
-if grep -q -F -e 'No release has been cut' "$scratch/stray-changelog.md"; then
-  bad "changelog-without-bump negative did not fail: stray entry must not carry the marker"
+# Negative: recreated CHANGELOG without the bumped version entry fails.
+# Simulate 0.1.0 module with a CHANGELOG missing the version entry.
+printf '# Changelog\n\n## [0.2.0] - 2026-01-01\n' >"$scratch/stray-changelog.md"
+if grep -q -F -e '0.1.0' "$scratch/stray-changelog.md"; then
+  bad "changelog-without-version negative did not fail: stray entry must miss the bumped version"
 else
   ok
 fi

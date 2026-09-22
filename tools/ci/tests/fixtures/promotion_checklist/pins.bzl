@@ -14,7 +14,7 @@ TAG_HARNESSES = "bazel run //tools/ci:release_hygiene plus bazel run //tools/ci:
 
 # Versioning: SemVer bump reviewed PR, tag pre-pushed approval, never creates tags.
 VERSION_BUMP = "bumps MODULE.bazel from 0.0.0 to SemVer in a reviewed PR"
-VERSION_NO_RELEASE_CUT = "No release has been cut"
+VERSION_NO_RELEASE_CUT = "no cell is Supported and no release is cut until then"
 VERSION_TAG_PREPUSHED = "tag is pushed beforehand with owner approval"
 VERSION_VERIFY_TAG = "--verify-tag everywhere, never creates or pushes tags"
 VERSION_SINGLE_PIN = "Single-version dx == module pin"

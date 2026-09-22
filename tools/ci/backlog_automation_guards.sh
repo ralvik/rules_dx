@@ -242,10 +242,10 @@ fi
 
 # Mxx/Oxx de-milestoning stays clean plus Stage-N (cross-links hygiene,
 # no duplicate guard there): no new milestone specs, register entries, or Stage-N
-# close-out labels outside the curated CHANGELOG.md delivery-record note (which lives in
+# close-out labels (delivery history lives only in
 # git history; see `git log --all --oneline` for the Mxx/Oxx entries).
-if git grep -n -E -e '\bM[0-9]{2}[a-z]?\b|\bO[0-9]{1,2}\b|\bStage[ -][0-9]' -- ':!CHANGELOG.md' ':!pnpm-lock.yaml' ':!*.lock' 2>/dev/null | grep -q .; then
-  bad "new Mxx/Oxx/Stage-N milestone references appeared (use ADR/contract/issue tracker; history lives in CHANGELOG.md plus git log)"
+if git grep -n -E -e '\bM[0-9]{2}[a-z]?\b|\bO[0-9]{1,2}\b|\bStage[ -][0-9]' -- ':!pnpm-lock.yaml' ':!*.lock' 2>/dev/null | grep -q .; then
+  bad "new Mxx/Oxx/Stage-N milestone references appeared (use ADR/contract/issue tracker; history lives in git log)"
 else
   ok
 fi

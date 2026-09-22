@@ -52,7 +52,6 @@ For supported platforms and foundations, see the
 - [Documentation index](docs/README.md)
 - [Architecture](docs/architecture/README.md)
 - [Decision records](docs/decisions/README.md)
-- [Changelog](CHANGELOG.md)
 
 ## Contributing
 
