@@ -26,6 +26,12 @@ version. The capability provides:
   Toolchain, output-group, registered-action subjects remain provisional
   pending concrete use cases; this record does not claim them.
   Aspect subjects graduated under #791; configuration subjects graduated under #793.
+  Targets, files, depsets, and runfiles have a concrete custom-rule use case
+  (QualitySourcesInfo testing for ADR 0002/0011) proven by pure subject
+  helpers in `quality/pipeline.bzl` (`target_subject_classes`,
+  `file_subject_paths`, `depset_subject_paths`, `runfiles_subject_paths`)
+  via `//quality:pipeline_unit`; direct Bazel subject observation stays
+  deferred and analysis observes provider fields plus output basenames.
 - Ordinary Bazel test protocol behavior, logs, and standard test outputs suitable
   for Bazel, BEP, and CI collection.
 - Small fixture helpers without mocking or reimplementing Bazel semantics.
@@ -51,13 +57,15 @@ The qualified `expect` surface is five constructors, `expect_equal`,
 `expect_true`, `expect_false`, `expect_contains`, `expect_match`, plus the
 `DxSubjectInfo` provider plus the `DxAspectInfo` provider with the
 `dx_aspect_note` observation aspect plus the `DxConfigInfo` provider with
-`config_flip_transition` for analysis observations. Broader subjects
+`config_flip_transition` for analysis observations, plus the pure
+target/file/depset/runfiles subject helpers in `quality/pipeline.bzl` for
+custom-rule QualitySourcesInfo testing. Broader direct subjects
 (targets, actions, files, depsets, runfiles) remain provisional pending
-concrete use cases; do not treat them as available API through this
-record. The matcher set graduated under #790; no larger matcher library
-is claimed. The aspect-subject set graduated under #791; the
-configuration-subject set graduated under #793; toolchain plus
-output-group plus action subjects stay deferred.
+concrete use cases; do not treat direct observation as available API
+through this record. The matcher set graduated under #790; no larger
+matcher library is claimed. The aspect-subject set graduated under #791;
+the configuration-subject set graduated under #793; toolchain plus
+output-group plus action direct subjects stay deferred.
 
 Expected-failure tests identify the required failure phase (`load`, `unit`,
 `analysis`, or `execution`) and one or more diagnostic substrings. The

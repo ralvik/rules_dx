@@ -1,9 +1,9 @@
 """Unit tests for pipeline construction (WP2a).
 """
 
-load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_contains", "expect_equal", "expect_false", "expect_match", "expect_true", "starlark_test")
 load(":adapters.bzl", "SYNTHETIC_ADAPTERS", "SYNTHETIC_CLASS_TO_FAMILY", "adapter_supported_classes")
-load(":pipeline.bzl", "authorize_classes", "pipeline_stages", "resolve_pipeline", "stage_sources")
+load(":pipeline.bzl", "authorize_classes", "depset_subject_paths", "file_subject_paths", "pipeline_stages", "resolve_pipeline", "runfiles_subject_paths", "stage_sources", "target_subject_classes")
 
 _LINT_SELECTIONS = {
     "python": ["lint-a"],
@@ -181,6 +181,44 @@ def pipeline_unit_tests(name):
                     SYNTHETIC_ADAPTERS,
                 ),
                 [],
+            ),
+            expect_equal(
+                "target subjects canonicalize regardless of declaration order",
+                target_subject_classes(["rust", "python", "rust"]),
+                ["python", "rust"],
+            ),
+            expect_equal(
+                "file subjects union and sort direct sources",
+                file_subject_paths(_DIRECT_SOURCES),
+                ["src/lib.rs", "src/main.py", "src/main.rs"],
+            ),
+            expect_equal(
+                "depset subjects union list doubles without duplication",
+                depset_subject_paths([["src/a.rs", "src/b.rs"], ["src/b.rs", "src/c.rs"]]),
+                ["src/a.rs", "src/b.rs", "src/c.rs"],
+            ),
+            expect_equal(
+                "runfiles subjects drop shadows of checked sources",
+                runfiles_subject_paths(["src/a.rs"], ["src/a.rs", "runfiles/helper.py"]),
+                ["runfiles/helper.py", "src/a.rs"],
+            ),
+            expect_true(
+                "target subjects keep rust",
+                "rust" in target_subject_classes(["python", "rust"]),
+            ),
+            expect_false(
+                "target subjects drop no rust when absent",
+                "rust" in target_subject_classes(["python"]),
+            ),
+            expect_contains(
+                "file subjects contain the rust lib",
+                file_subject_paths(_DIRECT_SOURCES),
+                "src/lib.rs",
+            ),
+            expect_match(
+                "runfiles report mentions the helper without pinning full list",
+                str(runfiles_subject_paths(["src/a.rs"], ["runfiles/helper.py"])),
+                "helper.py",
             ),
         ],
     )

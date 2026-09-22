@@ -508,6 +508,12 @@ required-core plus admitted offline routes are qualified through the Bazel sandb
 `requires-network` tag, declared inputs only, no undeclared cache, stdlib-only checker with no
 registry code; admitted authorities: go.sum, maven_install.json with fail-closed repin, paket.lock
 via paket2bazel, cc sha256 per http_archive), pinned by `bazel test //tools/depcheck/...`.
+Per-ecosystem offline closure as declared Bazel inputs (missing fails actionably, never skips):
+Rust `Cargo.toml` plus `Cargo.lock` plus cargo metadata as declared; Python `pyproject.toml`
+plus `uv.lock`; JavaScript/TypeScript `package.json` plus `pnpm-lock.yaml` plus pnpm store as
+declared; Go `go.mod` plus `go.sum`; Java/Kotlin/Scala `jvm_deps.toml` plus `maven_install.json`;
+C# `paket.dependencies` plus `paket.lock`; F# same via paket route; C/C++ `cc_deps.toml` plus
+per-archive sha256. Audit curator inputs follow the same declared-inputs rule via closed #812.
 Run the generated tests through both `bazel test //...` and bare `dx test`, proving each check is
 included without opt-in, propagates failures, and is independently runnable by label. Verify no
 default `manual` exclusion hides either check and unrelated foundations remain inactive.

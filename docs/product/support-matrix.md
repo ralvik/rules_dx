@@ -102,6 +102,10 @@ cell of `Not planned` or `Planned: audit tools (open work)` is consistent with a
 ecosystem `Audit/update` cell: Rust, JavaScript, TypeScript, Vue, Svelte, Astro, and MDX
 source audit is `Not planned` while ecosystem audit/update is delivered repo-wide, and Python
 source-audit tooling is qualified seed-only under closed #801 (successor to closed #613; Ruff S selected, Bandit excluded) while ecosystem audit/update wiring is delivered.
+Source-`Audit` `Not planned` is the evidence-backed recorded exclusion for v1: no qualified
+standalone source-audit tool meets hermetic acquisition plus pinned defaults for Rust,
+JavaScript, TypeScript, Vue, Svelte, Astro, or MDX, and ecosystem `dx audit` covers
+dependency vulnerabilities, so only Python Ruff S is admitted as source audit.
 Python source-audit tooling is tracked under closed #801 with fixture evidence in
 `python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`;
 closed #512 stays taxonomy-only and owns no Python audit tool.

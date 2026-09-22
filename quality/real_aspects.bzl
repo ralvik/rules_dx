@@ -12,6 +12,7 @@ load(
     "REAL_CLASS_TO_FAMILY",
 )
 load("//quality:native_config.bzl", "DxNativeConfigInfo", "collect_native_configs")
+load("//quality:parity_tests.bzl", "deferred_pipeline_error")
 load("//quality:pipeline.bzl", "aspect_capability_blocked", "aspect_direct_maps", "aspect_family_selections", "resolve_pipeline")
 load("//quality:policy.bzl", "QualityPolicyInfo")
 load("//quality:sources.bzl", "QualitySourcesInfo")
@@ -63,6 +64,13 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         REAL_ADAPTERS,
     )
     if len(resolved) == 0:
+        # Fail-closed deferred: a target with deferred-class sources and no
+        # pipeline must not stay green. Fail with the owning decision plus
+        # frozen route so `dx status` surfaces the honest red via the failed
+        # action; genuinely sourceless or non-deferred targets stay green.
+        err = deferred_pipeline_error(target_classes, capability)
+        if err != "":
+            fail("real_aspect (" + str(target.label) + "): " + err)
         return []
     resolved = [stage for stage in resolved if stage["tool"] in allowed_tools]
     if len(resolved) == 0:

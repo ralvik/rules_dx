@@ -35,6 +35,16 @@ impl super::RealBackend {
         text: &str,
         capability: &str,
     ) -> Result<String, RunnerError> {
+        // Audit and typecheck capabilities are check-only by construction:
+        // audit reports findings without rewriting (Ruff S check path),
+        // and typecheck rides authoritative upstream diagnostics. Short-
+        // circuit here so convergence needs exactly one round and no fix
+        // scratch spawns, independent of the per-tool check-only list.
+        // See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+        if capability == "audit" || capability == "typecheck" {
+            self.tool(tool_id)?;
+            return Ok(text.to_owned());
+        }
         let tool = self.tool(tool_id)?;
         match tool_id {
             "rustfmt" | "buildifier" | "taplo" | "google_java_format" | "ktfmt" => {
