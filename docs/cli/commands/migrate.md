@@ -49,7 +49,7 @@ notice plus `command_finished`. `--output diff`, `--check`,
 | Invocation | Exit | Meaning |
 | --- | --- | --- |
 | `--dry-run` plan (valid upgrade pair) | `0` | `migrate_planned` notice, no writes |
-| live, valid pair, manifest present | `0` | rewrites applied (future; today no manifests exist) |
+| live, valid pair, manifest present | `0` | rewrites applied (no manifests exist yet; live delivery owned under #462) |
 | live, valid pair, no manifest yet | `1` | `migrate_failed`, no writes |
 | missing/invalid `--from`/`--to`, downgrade/equal | `2` | usage error, before any write |
 

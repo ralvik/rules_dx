@@ -71,8 +71,7 @@ V1 does not emit SARIF `fixes`. SARIF fixes belong to one result and should cont
 minimal replacements that resolve that result. The v1 internal protocol guarantees whether a
 diagnostic is resolved by the complete same-file candidate but does not expose a minimal
 diagnostic-specific edit subset. File-level exact edits remain available through NDJSON
-`change` events and diff output. A future association may map guaranteed result-specific edits
-to SARIF `fixes` without changing the current-result policy.
+`change` events and diff output.
 
 When collection is partial, SARIF retains validated findings and records an unsuccessful
 invocation in affected tool runs. A failure not attributable to an emitted tool run adds

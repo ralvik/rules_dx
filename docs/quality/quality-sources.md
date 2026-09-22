@@ -201,7 +201,7 @@ For example, `.h` alone cannot decide
 | `pkl` | `.pkl` | Pkl owner. |
 | `protobuf` | `.proto` | Protobuf owner. |
 | `qml` | `.qml` | QML owner. |
-| `ruby` | `.rb` | Ruby owner (foundation deferred per ADR 0019). |
+| `ruby` | `.rb` | Ruby owner (foundation admitted by ADR 0032, delivered in the Ruby track). |
 | `rust` | `.rs` | Rust owner. |
 | `shell` | `.sh`, `.bash` | Extensionless requires shell rule/provider evidence. |
 | `sql` | `.sql` | SQL owner. |

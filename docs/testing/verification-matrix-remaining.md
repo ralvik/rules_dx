@@ -714,7 +714,7 @@ Remaining reds stay owned gaps, not green claims:
   `cli/bump/tests/fixtures/bump_gha/pins.bzl` plus
   `bump_gha.expected`; `bump_gha_qualification` 16/16;
   tags auto-resolve to SHA via the upstream GitHub releases client
-  (`gh api`, never custom HTTP; planned in `dx_bump::gha`), shapes via
+  (`gh api`, never custom HTTP; implemented in `dx_bump::gha`, closed #640), shapes via
   `version::parse` (GitTag plus 40/64-char GitCommit), one tag per run with
   unknown tags failing closed and never an invented SHA, direct tags need SHA
   resolution before the file edit, manual SHA only plus custom HTTP plus
@@ -768,8 +768,8 @@ Remaining reds stay owned gaps, not green claims:
   `cli/update/tests/fixtures/update_rollback/pins.bzl` plus
   `update_rollback.expected`; `update_rollback_qualification` 16/16;
   per-set commit boundary never repository-wide with no automatic rollback,
-  idempotent retry plus manual `git checkout` restore planned in
-  `dx_update::recovery`, `update_recovery` notice plus text hint with no
+  idempotent retry plus manual `git checkout` restore via
+  `dx_update::recovery` (closed #772), `update_recovery` notice plus text hint with no
   silent partial success, interrupted runs keep preceding per-set events true
   with defined retry for unattempted sets; update-only, no resolver change;
   platform plus consumer plus release evidence stays owned gap; no Supported claim).
