@@ -203,7 +203,7 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: --bazel (also run `bazel clean` after pruning; default never touches Bazel outputs; distinct from `dx bazel`, which forwards raw args; --output text|json only, diff has no patch)."
         }
         Command::Owners | Command::Deps | Command::Why => {
-            "Per-command flags: --configured (use `bazel cquery` instead of `bazel query`; distinct from `dx clean --bazel`, which forwards `bazel clean`)."
+            "Per-command flags: --configured (use `bazel cquery` instead of `bazel query`; distinct from `dx clean --bazel`, which forwards `bazel clean`; --output text|json only, diff has no patch; JSON reuses the status envelope with one status event per label)."
         }
         Command::Coverage => {
             "Per-command flags: --min-coverage <0-100> (coverage only; collects without enforcing when absent)."
@@ -212,7 +212,7 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: --debug | --release (build/run/test/deploy only; mutually exclusive; bare invocation means dev, except deploy means release)."
         }
         Command::Version => {
-            "Per-command flags: --check (drift check), --pin <version>, --rollback (version only; --pin and --rollback conflict)."
+            "Per-command flags: --check (drift check), --pin <version>, --rollback (version only; --pin and --rollback conflict; --output text|json only, diff has no patch; JSON reuses the status envelope)."
         }
         Command::Migrate => {
             "Per-command flags: --from <version> --to <version> (migrate only; both Cargo semver, upgrade-only gate)."

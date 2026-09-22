@@ -304,7 +304,8 @@ fn output_contract_has_no_silent_ignore() {
     // the flag, print text anyway) is never allowed.
     //
     // JSON-capable: quality, generate, workflow build/test/coverage/run,
-    // umbrellas, audit, update, managed, clean, status, docs.
+    // umbrellas, audit, update, managed, clean, status, version,
+    // owners/deps/why, docs.
     for command in [
         "lint",
         "typecheck",
@@ -356,6 +357,18 @@ fn output_contract_has_no_silent_ignore() {
     let got = parse(&args(&["status", "--output=json"])).expect("status json");
     assert_eq!(got.output, OutputMode::Json);
     assert!(Command::Status.supports_json());
+    let got = parse(&args(&["version", "--output=json"])).expect("version json");
+    assert_eq!(got.output, OutputMode::Json);
+    assert!(Command::Version.supports_json());
+    let got = parse(&args(&["owners", "//a:one", "--output=json"])).expect("owners json");
+    assert_eq!(got.output, OutputMode::Json);
+    assert!(Command::Owners.supports_json());
+    let got = parse(&args(&["deps", "//a:one", "--output=json"])).expect("deps json");
+    assert_eq!(got.output, OutputMode::Json);
+    assert!(Command::Deps.supports_json());
+    let got = parse(&args(&["why", "src/main.rs", "//a:one", "--output=json"])).expect("why json");
+    assert_eq!(got.output, OutputMode::Json);
+    assert!(Command::Why.supports_json());
     // Diff-capable: patch producers only.
     for command in ["lint", "typecheck", "format", "generate", "check", "fix"] {
         let got = parse(&args(&[command, "--output=diff"])).expect("diff capable");
@@ -379,11 +392,11 @@ fn output_contract_has_no_silent_ignore() {
         vec!["new", "rust", "--output=json"],
         vec!["new", "rust", "demo", "--output=diff"],
         vec!["hooks", "status", "--output=json"],
-        vec!["version", "--output=json"],
         vec!["watch", "test", "--output=json"],
-        vec!["owners", "//a:one", "--output=json"],
+        vec!["version", "--output=diff"],
+        vec!["owners", "//a:one", "--output=diff"],
         vec!["deps", "//a:one", "--output=diff"],
-        vec!["why", "src/main.rs", "//a:one", "--output=json"],
+        vec!["why", "src/main.rs", "//a:one", "--output=diff"],
         vec!["completion", "bash", "--output=json"],
     ] {
         assert!(
@@ -404,6 +417,10 @@ fn output_contract_has_no_silent_ignore() {
         vec!["audit", "--output=diff"],
         vec!["update", "--output=diff"],
         vec!["status", "--output=diff"],
+        vec!["version", "--output=diff"],
+        vec!["owners", "//a:one", "--output=diff"],
+        vec!["deps", "//a:one", "--output=diff"],
+        vec!["why", "src/main.rs", "//a:one", "--output=diff"],
         vec!["clean", "--output=diff"],
         vec!["codegen", "--output=diff"],
         vec!["env", "--output=diff"],

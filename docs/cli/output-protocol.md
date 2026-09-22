@@ -60,13 +60,15 @@ stream per event (`write_event`), never buffer-then-dump, so there is no measura
 overhead vs text mode on large result sets.
 JSON-capable commands (accepted): lint, typecheck, format, generate, build, test,
 coverage, run, check, fix, audit, update, bump, migrate, clean, codegen, env, setup,
-status. `update` JSON covers dry-run planning
+status, version, owners, deps, why. `update` JSON covers dry-run planning
 (`command_started` / `command_finished`) and live execution per-set `notice`/`error`
 events plus `command_finished`; `bump` and `migrate` follow the same dry-run plus live
 `notice`/`error` frame; `audit` JSON covers dry-run planning plus live per-family
 `notice`/`error` events plus `command_finished`; `status` JSON covers dry-run planning
 plus live per-check `status` events plus `command_finished` (see [Status](#status));
-managed (`codegen`/`env`/`setup`) JSON covers dry-run planning (`command_started`,
+`version` plus `owners`/`deps`/`why` JSON reuse the status envelope (dry-run planning
+plus live per-version or per-label `status` events plus `command_finished`, see
+[Status](#status)); managed (`codegen`/`env`/`setup`) JSON covers dry-run planning (`command_started`,
 one `collect` `operation` with explicit scope when present, `command_finished`) plus
 live `selection` and `command_finished`; `clean` JSON covers dry-run planning
 (`command_started`, one `collect` `operation`, per-entry `clean_planned` notices,
@@ -76,7 +78,7 @@ execution order and `command_finished` (see [Operation](#operation)).
 Text-only commands (reject `--output=json` pre-exec, exit 2): `bazel`, `deploy`
 (each sequential child owns the terminal in turn,
 see [dx run](commands/build-test-coverage.md#dx-run) and [dx deploy](commands/build-test-coverage.md#dx-deploy)); init, hooks,
-version, watch, owners, deps, why, completion (local helpers, thin query lines, or shell
+watch, completion (local helpers or shell
 scripts — automation uses `generate --check`, Bazel query, or `status --output=json`).
 Silent ignore is never allowed: unsupported modes fail fast with `UnsupportedOption`.
 Generate uses its structured Gazelle result manifest in text, diff, and JSON modes. The manifest
@@ -611,6 +613,18 @@ preceding `operation` event, check `dx status` for toolchain/platform/pin, and
 rerun the Bazel verb directly for `aquery`/sandbox/cache introspection outside
 the `dx` API (raw BEP is never part of this API).
 
+`dx version --output=json` reuses this envelope: `command_started`, then one
+`status` event per version (`binary`, `module`, `pin`; `pin` only for
+`--check`/`--pin`/`--rollback`), then an optional `status_pin_mismatch`
+`error` on drift or unreadable pin, then `command_finished` with only
+`exit_code`. `dx owners|deps|why --output=json` reuses it the same way:
+`command_started`, then one `status` event per sorted deduplicated label
+(`name` is the command, `detail` is the label, `hint` is the requesting scope,
+or `<file> -> <label>` for `why`), then an optional `error`
+(`bazel_failed` with `phase: query`, `no_owner`, or `invalid_result`), then
+`command_finished` with only `exit_code`. Dry-run for all four emits only
+`command_started` (`dry_run=true`) plus `command_finished`.
+
 ```json
 {"schema":{"major":1,"minor":0},"event":"status","name":"pin","status":"ok","detail":"dx 0.0.0 vs module 0.0.0","hint":"dx version --pin 0.0.0"}
 ```
@@ -814,6 +828,9 @@ order, then an optional `status_pin_mismatch` `error` when any check reports
 `error` or the pin cannot be read (missing or unreadable pins emit no
 `status` events), then exactly one `command_finished`; it emits no `change`,
 `mutation`, `diagnostic`, `operation`, `notice`, `report`, or `selection` events.
+Version plus owners/deps/why reuse this order with per-version or per-label
+`status` events and their own optional `error` (`status_pin_mismatch`,
+`bazel_failed`, `no_owner`, or `invalid_result`).
 
 An operational `error` is emitted after all durable output derived safely from the failed phase and
 before `command_finished`. For partial quality collection, validated diagnostics with truthful
@@ -855,6 +872,7 @@ executing plan. It emits no `diagnostic`, `change`, `mutation`, `report`, `selec
 `status` event for a workflow it did not execute, except clean dry-run per-entry
 `clean_planned` notices which describe the plan without deleting. Resolution errors and `command_finished` behave normally.
 `status` dry-run emits only `command_started` (`dry_run=true`) plus `command_finished`.
+Version plus owners/deps/why dry-run emit the same lifecycle-only pair.
 Managed dry-run emits `command_started` plus the `collect` `operation` with no
 `selection`; run dry-run emits `command_started` plus one `execute` `operation` per
 target.

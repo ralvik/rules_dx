@@ -29,6 +29,14 @@ Failures are operational (exit 1): `query failed` when Bazel fails,
 `no owner for <file>` when `why` finds no depth-1 owner. Usage errors
 (bad scope, wrong arity, unsupported flags) exit `2`.
 
+`--output=json` reuses the status envelope (see the
+[output protocol](../output-protocol.md#status)): `command_started`, then one
+`status` event per label (`name` is the command, `detail` is the label,
+`hint` is the requesting scope, or `<file> -> <label>` for `why`), then an
+optional `error` (`bazel_failed` with `phase: query`, `no_owner`, or
+`invalid_result`), then `command_finished` with only `exit_code`.
+`--output=diff` is rejected pre-exec (exit 2).
+
 Expressions are `kind('rule', rdeps(//..., <scope>, 1))` for `owners`,
 `deps(<scope>)` for `deps`, and `somepath(<owner>, <label>)` for `why`;
 the verb and expression stay separate argv elements and are never

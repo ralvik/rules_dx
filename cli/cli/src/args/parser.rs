@@ -867,12 +867,13 @@ pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
     // `supports_diff` gate so no command silently ignores a machine-output
     // request. Commands with their own output arm above (clean, managed,
     // update, `bazel`, `run`/`deploy`) already returned the same error;
-    // this gate owns adoption/inspect (only `status` plus `upgrade`
-    // support JSON, none supports diff), `audit` diff, and workflow
-    // `build`/`test`/`coverage` diff. Quality, generate, umbrellas,
-    // `audit`/`update`/`bump`/`migrate`/`upgrade` JSON, workflow
-    // `build`/`test`/`coverage`/`run` JSON, managed/clean JSON, and
-    // `status` JSON pass through to streaming NDJSON execution.
+    // this gate owns adoption/inspect (only `status` plus `version` plus
+    // `owners`/`deps`/`why` plus `upgrade` support JSON, none supports
+    // diff), `audit` diff, and workflow `build`/`test`/`coverage` diff.
+    // Quality, generate, umbrellas, `audit`/`update`/`bump`/`migrate`/
+    // `upgrade` JSON, workflow `build`/`test`/`coverage`/`run` JSON,
+    // managed/clean JSON, and `status`/`version`/inspect JSON pass through
+    // to streaming NDJSON execution.
     if output_name == "json" && !command.supports_json() {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
