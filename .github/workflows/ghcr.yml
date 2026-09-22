@@ -116,18 +116,19 @@ jobs:
           fi
           echo "digest pin (never latest): $ref"
           # Pinned cosign fetch (no sigstore/* action, plain curl like
-          # Bazelisk): version-pinned with a pre-pinned COSIGN_SHA256 const,
-          # retried https-only curl, plus checksum verification against the published
-          # release checksums before any sign runs. The pre-pinned
-          # COSIGN_SHA256 is the trust anchor: cosign_checksums.txt arrives
-          # over the same channel, so it is a cross-check only, never the
-          # authority (fail-closed on mismatch either way).
+          # Bazelisk): version plus linux-amd64 sha pinned out-of-band,
+          # retried https-only curl, verified before use before any sign
+          # runs. The pre-pinned COSIGN_SHA256_LINUX_AMD64 is the trust
+          # anchor (canonical `SIGNING_COSIGN_SHA256_LINUX_AMD64` in
+          # deploy/release/signing.bzl, issue #1058): cosign_checksums.txt
+          # arrives over the same channel, so it is a cross-check only,
+          # never the authority (fail-closed on mismatch either way).
           COSIGN_VERSION="v2.4.1"
-          COSIGN_SHA256="8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"
+          COSIGN_SHA256_LINUX_AMD64="8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"
           curl -fsSL --proto '=https' --tlsv1.2 --retry 3 --retry-delay 2 -o /tmp/cosign "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64"
           curl -fsSL --proto '=https' --tlsv1.2 --retry 3 --retry-delay 2 -o /tmp/cosign_checksums "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign_checksums.txt"
+          echo "${COSIGN_SHA256_LINUX_AMD64}  /tmp/cosign" | sha256sum -c -
           (cd /tmp && grep -F "cosign-linux-amd64" cosign_checksums | sha256sum -c -)
-          echo "${COSIGN_SHA256}  /tmp/cosign" | sha256sum -c -
           install -m755 /tmp/cosign /tmp/cosign-bin
           rm /tmp/cosign /tmp/cosign_checksums
           echo "signing: cosign sign <digest> on the #311 trust root (https://tuf-repo-cdn.sigstore.dev) for $ref plus gh attestation create (owner-approved human-run path, see docs/deploy/release-runbook.md)."

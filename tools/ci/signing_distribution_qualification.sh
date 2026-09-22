@@ -55,24 +55,26 @@ else
   bad "signing.bzl lost its cosign-version plus bundle-media pins (#459)"
 fi
 
-# Signing validators stay wired: cosign plus bundle-media plus identity plus bundle names.
+# Signing validators stay wired: cosign plus sha plus bundle-media plus identity plus bundle names.
 if grep -q -F -e 'def signing_cosign_error' deploy/release/signing.bzl &&
+  grep -q -F -e 'def signing_cosign_sha_error' deploy/release/signing.bzl &&
   grep -q -F -e 'def signing_bundle_media_error' deploy/release/signing.bzl &&
   grep -q -F -e 'def signing_identity_error' deploy/release/signing.bzl &&
   grep -q -F -e 'def signing_bundle_names' deploy/release/signing.bzl; then
   ok
 else
-  bad "signing.bzl lost its cosign/media/identity/names validators (#459)"
+  bad "signing.bzl lost its cosign/sha/media/identity/names validators (#459 plus issue #1058)"
 fi
 
 # Signing unit tests pin the new stack pins plus negatives.
 if grep -q -F -e 'SIGNING_COSIGN_VERSION' deploy/release/signing_tests.bzl &&
-  grep -q -F -e 'SIGNING_BUNDLE_MEDIA_TYPE' deploy/release/signing_tests.bzl &&
+  grep -q -F -e 'SIGNING_COSIGN_SHA256_LINUX_AMD64' deploy/release/signing_tests.bzl &&
   grep -q -F -e 'signing_cosign_error' deploy/release/signing_tests.bzl &&
+  grep -q -F -e 'signing_cosign_sha_error' deploy/release/signing_tests.bzl &&
   grep -q -F -e 'signing_bundle_media_error' deploy/release/signing_tests.bzl; then
   ok
 else
-  bad "signing_tests.bzl lost its cosign plus bundle-media pin coverage (#459)"
+  bad "signing_tests.bzl lost its cosign plus sha plus bundle-media pin coverage (#459 plus issue #1058)"
 fi
 
 # Signing program keeps the selected stack: sign-blob --bundle plus attestation.
@@ -118,6 +120,17 @@ if grep -q -F -e 'COSIGN_VERSION="v2.4.1"' .github/workflows/ghcr.yml &&
   ok
 else
   bad "cosign v2.4.1 pin drifted across signing.bzl plus ghcr.yml plus Rust launch (#459)"
+fi
+
+# Cosign sha stays single-sourced like Bazelisk (issue #1058): signing.bzl
+# owns SIGNING_COSIGN_SHA256_LINUX_AMD64, ghcr.yml tracks it as
+# COSIGN_SHA256_LINUX_AMD64 and verifies before use.
+if grep -q -F -e 'SIGNING_COSIGN_SHA256_LINUX_AMD64 = "8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"' deploy/release/signing.bzl &&
+  grep -q -F -e 'COSIGN_SHA256_LINUX_AMD64="8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"' .github/workflows/ghcr.yml &&
+  grep -q -F -e 'COSIGN_SHA256_LINUX_AMD64}  /tmp/cosign' .github/workflows/ghcr.yml; then
+  ok
+else
+  bad "cosign sha drifted across signing.bzl plus ghcr.yml (want single-sourced linux-amd64 sha verified before use, issue #1058)"
 fi
 
 # Install verifier keeps distribution verification: bundle-required plus no checksum fallback.
@@ -206,12 +219,13 @@ fi
 
 # GHCR keeps the same stack: pinned cosign fetch plus trust root plus digest-pin never latest.
 if grep -q -F -e 'COSIGN_VERSION=' .github/workflows/ghcr.yml &&
+  grep -q -F -e 'COSIGN_SHA256_LINUX_AMD64=' .github/workflows/ghcr.yml &&
   grep -q -F -e 'cosign_checksums' .github/workflows/ghcr.yml &&
   grep -q -F -e '#311 trust root' .github/workflows/ghcr.yml &&
   grep -q -F -e 'never latest' .github/workflows/ghcr.yml; then
   ok
 else
-  bad "ghcr.yml lost its pinned cosign plus trust-root plus never-latest record (#459)"
+  bad "ghcr.yml lost its pinned cosign plus trust-root plus never-latest record (#459 plus issue #1058)"
 fi
 
 # Publish dry-run exercises the qualified path: signing plus SBOM plus verifier plus release tests.

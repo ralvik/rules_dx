@@ -72,7 +72,8 @@ Signing stack + distribution qualified under issue #459 (live successor
 to closed #311/#26/#78 for signing + distribution; decision: keep
 Sigstore keyless `cosign sign-blob --bundle` + GitHub attestations, no
 stack change): cosign v2.4.1 pinned per `deploy/release/signing.bzl`
-`SIGNING_COSIGN_VERSION` (checksum-verified fetch per `ghcr.yml`),
+`SIGNING_COSIGN_VERSION` plus linux-amd64 sha per
+`SIGNING_COSIGN_SHA256_LINUX_AMD64` (checksum-verified fetch per `ghcr.yml`),
 bundle media type `application/vnd.dev.sigstore.bundle.v0.3+json` per
 `SIGNING_BUNDLE_MEDIA_TYPE`, TUF trust root
 `https://tuf-repo-cdn.sigstore.dev` plus GitHub OIDC issuer, SPDX 2.3

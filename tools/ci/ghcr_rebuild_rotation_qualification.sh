@@ -83,13 +83,15 @@ fi
 
 # Pins record the Cosign single source plus TUF trust root.
 if grep -q -F -e 'v2.4.1 checksum-verified fetch' "$pins" &&
-  grep -q -F -e 'single-sourced SIGNING_COSIGN_VERSION plus ghcr.yml plus Rust launch' "$pins" &&
+  grep -q -F -e '8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b' "$pins" &&
+  grep -q -F -e 'single-sourced SIGNING_COSIGN_VERSION plus SIGNING_COSIGN_SHA256_LINUX_AMD64 plus ghcr.yml plus Rust launch' "$pins" &&
+  grep -q -F -e 'SIGNING_COSIGN_SHA256_LINUX_AMD64' "$pins" &&
   grep -q -F -e 'https://tuf-repo-cdn.sigstore.dev' "$pins" &&
   grep -q -F -e 'https://token.actions.githubusercontent.com' "$pins" &&
   grep -q -F -e 'application/vnd.dev.sigstore.bundle.v0.3+json' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its Cosign plus TUF trust pins (v2.4.1 plus single-sourced plus root plus issuer plus media, issue #647)"
+  bad "pins.bzl lost its Cosign plus TUF trust pins (v2.4.1 plus sha plus single-sourced plus root plus issuer plus media, issue #647 plus issue #1058)"
 fi
 
 # Pins record manual on-demand cadence plus owner plus triggers.
@@ -200,13 +202,15 @@ if grep -q -E -e '^FROM [^ ]+@sha256:[0-9a-f]{64}' "$dockerfile" &&
   grep -q -F -e 'sha256sum -c' "$dockerfile" &&
   grep -q -F -e 'default: "1.29.0"' "$action" &&
   grep -q -F -e 'COSIGN_VERSION="v2.4.1"' "$ghcr" &&
+  grep -q -F -e 'COSIGN_SHA256_LINUX_AMD64="8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"' "$ghcr" &&
   grep -q -F -e 'SIGNING_COSIGN_VERSION = "v2.4.1"' "$signing" &&
+  grep -q -F -e 'SIGNING_COSIGN_SHA256_LINUX_AMD64 = "8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"' "$signing" &&
   grep -q -F -e 'v2.4.1' "$sign_deploy" &&
   grep -q -F -e 'SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"' "$signing" &&
   ! grep -q -E -e '^  (push|schedule):' "$ghcr"; then
   ok
 else
-  bad "as-built base plus Bazelisk plus Cosign plus TUF pins drifted or ghcr.yml gained a push/schedule trigger (want digest plus 9.2.0 plus 1.29.0 plus v2.4.1 plus trust root plus no push/schedule, issue #647)"
+  bad "as-built base plus Bazelisk plus Cosign plus TUF pins drifted or ghcr.yml gained a push/schedule trigger (want digest plus 9.2.0 plus 1.29.0 plus v2.4.1 plus sha plus trust root plus no push/schedule, issue #647 plus issue #1058)"
 fi
 
 # Live proof: customer build flow only, no push, no schedule, no new job.
