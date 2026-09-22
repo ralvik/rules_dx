@@ -1,9 +1,9 @@
 """Seed TypeScript project; consumer of typescript_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
-load("//javascript/rules:defs.bzl", "javascript_binary", "javascript_test")
+load("//javascript/rules:defs.bzl", "javascript_binary")
 load("//quality:fixtures.bzl", "real_source_target")
-load("//typescript/rules:defs.bzl", "typescript_project")
+load("//typescript/rules:defs.bzl", "typescript_project", "typescript_test")
 
 package(
     default_testonly = True,
@@ -31,17 +31,20 @@ javascript_binary(
     entry_point = "main.js",
 )
 
-# Seed Jest test over the tsc-compiled output (static-import coverage of
-# TypeScript sources needs the transform slice). Matches the
-# //javascript/tests/fixtures/hello:hello_test precedent; the `*_test.js` naming needs
-# the local jest config (same as //javascript/tests/fixtures/entries:helper_test).
-javascript_test(
+# Seed Jest test over the tsc-compiled output via typescript_test.
+# Matches the //javascript/tests/fixtures/hello:hello_test precedent; the
+# compiled `*_test.js` naming needs the local jest config (same as
+# //javascript/tests/fixtures/entries:helper_test).
+typescript_test(
     name = "hello_test",
-    srcs = ["hello_test.js"],
+    srcs = ["hello_test.ts"],
     config = "jest.config.cjs",
-    data = [":hello_lib"],
+    declaration = True,
+    deps = [":hello_lib"],
     node_modules = "//:node_modules",
     node_options = ["--experimental-vm-modules"],
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
 )
 
 # Hello smoke test; no-coverage process-spawning, see build-conventions.

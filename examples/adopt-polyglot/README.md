@@ -19,17 +19,19 @@ bazel test //examples/adopt-polyglot/...
 
 Evidence: `dx init` writes nothing inside the tree (absent-only). Each
 extension claims only its own sources: the Python, JS, and TS BUILD files
-hold one rule per own-language source with same-package local edges, and
+hold one rule per own-language source (tests as `*_test` wrappers) with
+same-package local edges, and
 the single scoped `dx generate` run emits the Rust crate plus `native_test`
 without touching the other packages. `dx generate --check` passes scoped,
 per-package `bazel build` selects only that package closure, and
 regeneration is a no-op in every language (user-owned runtime edges
 survive: pytest `# keep` deps, tsc `transpiler`/`tsconfig`/`declaration`,
-Jest `config` plus ESM `node_options`). Build covers 25 targets; all 3
-runnable tests pass (`shapes_test`, `widgets_test`, `native_test`).
+Jest `config` plus ESM `node_options`). Build covers 44 targets; all 4
+runnable tests pass (`shapes_test`, `widgets_test`, `totals_test`,
+`native_test`).
 
-Scope notes: TypeScript has no separate test wrapper yet, so
-`totals_test.ts` is a `typescript_project` leaf. Module stems must stay
+Scope notes: TypeScript tests run via `typescript_test` over the
+tsc-compiled output (execution reuses the Jest wiring). Module stems must stay
 unique per language across the repo: reusing `adopt-js-ts` stems first
 failed closed with an actionable ambiguous-import diagnostic, and the tree
 uses distinct `sums`/`totals` stems instead. Python/JS/TS are not wired

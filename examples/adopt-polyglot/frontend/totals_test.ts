@@ -1,3 +1,10 @@
 import { total } from "./totals.js";
 
-export const checkTotal = total([1, 2, 3]) === 6;
+declare function test(name: string, fn: () => void): void;
+declare const expect: {
+  (actual: unknown): { toBe(expected: unknown): void };
+};
+
+test("totals small lists", () => {
+  expect(total([1, 2, 3])).toBe(6);
+});
