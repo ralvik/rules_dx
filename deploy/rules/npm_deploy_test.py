@@ -3,6 +3,7 @@
 import hashlib
 import json
 import os
+import stat
 import tarfile
 import tempfile
 import unittest
@@ -61,6 +62,26 @@ class PackFeedTest(unittest.TestCase):
             with open(tgz, "rb") as f1, open(tgz2, "rb") as f2:
                 self.assertEqual(f1.read(), f2.read())
             self.assertEqual(digest, digest2)
+
+
+class NpmrcSecretsTest(unittest.TestCase):
+    def test_npmrc_line_carries_registry_token(self):
+        self.assertEqual(
+            npm_deploy.npmrc_line("registry.npmjs.org", "tok"),
+            "//registry.npmjs.org/:_authToken=tok\n",
+        )
+
+    def test_npmrc_file_is_owner_only(self):
+        path = npm_deploy.write_npmrc("registry.npmjs.org", "tok")
+        try:
+            mode = stat.S_IMODE(os.stat(path).st_mode)
+            self.assertEqual(mode, 0o600)
+            with open(path, encoding="utf-8") as f:
+                self.assertEqual(
+                    f.read(), "//registry.npmjs.org/:_authToken=tok\n"
+                )
+        finally:
+            os.unlink(path)
 
 
 if __name__ == "__main__":

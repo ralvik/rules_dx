@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Local vendor builder plus gated crates.io uploader for `crates_deploy`.
 
-Hermetic default builds a local vendor directory (`vendor/` plus a file
-registry) and verifies bytes via sha256; the live `cargo publish` path
-runs only with explicit env plus owner approval and never by default.
-Used as an `expand_template` template per deploy instance (placeholders
-below) and as a `py_library` for `py_test`.
-"""
+ Hermetic default builds a local vendor directory (`vendor/` plus a file
+ registry) and verifies bytes via sha256; the live `cargo publish` path
+ runs only with explicit env plus owner approval and never by default.
+ The live child inherits a minimal environment (PATH/HOME plus the
+ registry token only), never the full parent env. Single-string registry
+ tokens are the only supported credential: prefer short-lived tokens and
+ rotate them per release; OIDC-based publish stays an owned gap until
+ tooled. Used as an `expand_template` template per deploy instance
+ (placeholders below) and as a `py_library` for `py_test`.
+ """
 
 import hashlib
 import json
@@ -127,6 +131,33 @@ def build_vendor(crate_files, outdir, crate_name, version):
     return house
 
 
+def minimal_publish_env(extra):
+    """Builds the minimal child environment for a registry publisher.
+
+    Carries locale/PATH/HOME/TMP plus exactly the credential entries in
+    `extra`; every other parent variable (ambient secrets, proxies,
+    configuration overrides) is dropped. Mirrors
+    `pypi_deploy.minimal_upload_env` so the two uploaders stay in sync.
+    """
+    keep = (
+        "HOME",
+        "LANG",
+        "LC_ALL",
+        "PATH",
+        "TMPDIR",
+        "USER",
+        "LOGNAME",
+        "SystemRoot",
+        "SystemDrive",
+        "PATHEXT",
+        "CARGO_HOME",
+        "RUSTUP_HOME",
+    )
+    env = {key: os.environ[key] for key in keep if key in os.environ}
+    env.update(extra)
+    return env
+
+
 def live_publish(crate_files, token):
     """Publishes staged crate sources via cargo publish without dirty trees."""
     if os.environ.get("CRATES_ALLOW_DIRTY") == "1":
@@ -141,8 +172,7 @@ def live_publish(crate_files, token):
         raise RuntimeError(
             "crates publish: staged crate has no Cargo.toml (need one among crate sources)"
         )
-    env = dict(os.environ)
-    env["CARGO_REGISTRY_TOKEN"] = token
+    env = minimal_publish_env({"CARGO_REGISTRY_TOKEN": token})
     cmd = ["cargo", "publish", "--manifest-path", manifest]
     subprocess.run(cmd, env=env, check=True)
 

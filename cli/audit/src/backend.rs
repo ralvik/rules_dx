@@ -122,6 +122,12 @@ pub enum BackendError {
 /// the caller parses for findings-versus-error triage; `config` pins
 /// `--config` explicitly instead of relying on discovery order.
 /// `temp_dir` becomes the sole `TMPDIR` entry (See: [`crate::secrets::hermetic_env`]).
+///
+/// Trust boundary: `config` is accepted only as the workspace-committed
+/// file the caller resolved (see [`crate::secrets::CONFIG_DISCOVERY_ORDER`]);
+/// ambient `GITLEAKS_CONFIG` values never reach the child, and an
+/// attacker-controlled config can disable rules, so callers warn when a
+/// non-default config is selected.
 pub fn plan_secrets(
     tool: &str,
     report_path: &str,

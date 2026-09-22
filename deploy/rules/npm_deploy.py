@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Local npm feed deployer for `npm_deploy`.
 
-Verifies the hermetic pack tarball against its feed JSON, copies both
-to the output directory, and assembles a folder feed. Live `npm
-publish --access public --provenance` runs only with explicit env plus
-owner approval; the default publishes nothing and needs no network.
+ Verifies the hermetic pack tarball against its feed JSON, copies both
+ to the output directory, and assembles a folder feed. Live `npm
+ publish --access public --provenance` runs only with explicit env plus
+ owner approval; the default publishes nothing and needs no network.
+ The bearer token is written to a 0600 `.npmrc` that is unlinked after
+ the run; single-string tokens are the only supported credential
+ (prefer short-lived granular tokens rotated per release; OIDC stays
+ an owned gap until tooled).
 
-Usage: npm_deploy.py [outdir]
-"""
+ Usage: npm_deploy.py [outdir]
+ """
 
 import hashlib
 import json
@@ -120,6 +124,22 @@ def verify_pack(tgz_path, feed_path):
     return feed
 
 
+def npmrc_line(host, token):
+    """Renders the single auth line for a registry host `.npmrc`."""
+    return "//" + host + "/:_authToken=" + token + "\n"
+
+
+def write_npmrc(host, token):
+    """Writes a 0600 `.npmrc` carrying the bearer token, returning its path."""
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".npmrc", delete=False, encoding="utf-8"
+    ) as tmp:
+        tmp.write(npmrc_line(host, token))
+        npmrc = tmp.name
+    os.chmod(npmrc, 0o600)
+    return npmrc
+
+
 def _live_publish(tgz_path, feed):
     token = os.environ.get("NPM_TOKEN", "")
     if not token:
@@ -156,11 +176,7 @@ def _live_publish(tgz_path, feed):
     if not host:
         print("npm_deploy: invalid registry '" + registry + "'", file=sys.stderr)
         return 1
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".npmrc", delete=False, encoding="utf-8"
-    ) as tmp:
-        tmp.write("//" + host + "/:_authToken=" + token + "\n")
-        npmrc = tmp.name
+    npmrc = write_npmrc(host, token)
     try:
         result = subprocess.run(cmd + ["--userconfig", npmrc])
         return result.returncode

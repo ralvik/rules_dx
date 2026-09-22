@@ -72,7 +72,7 @@ def _signing_launcher_impl(ctx):
                 fail("signed_release " + str(ctx.label) + ": rlocation '" + rloc +
                      "' is not launcher-safe")
         asset_rlocs.append(rloc)
-    for value in [ctx.attr.identity, ctx.attr.issuer]:
+    for value in [ctx.attr.identity, ctx.attr.issuer, ctx.attr.cosign_version]:
         for banned in ["\"", "\\", "\n"]:
             if banned in value:
                 fail("signed_release " + str(ctx.label) + ": value '" + value +
@@ -86,6 +86,7 @@ def _signing_launcher_impl(ctx):
 fn run() -> i32 {
     const IDENTITY: &str = \"""" + ctx.attr.identity + """\";
     const ISSUER: &str = \"""" + ctx.attr.issuer + """\";
+    const EXPECT_COSIGN: &str = \"""" + ctx.attr.cosign_version + """\";
     const ASSET_RLOCS: &[&str] = &[""" + rloc_list + """];
     if std::env::args_os().len() > 1 {
         eprintln!("signing: this deploy target takes no extra args; artifacts are pinned at analysis time");
@@ -114,6 +115,21 @@ fn run() -> i32 {
             dir.join("cosign").is_file() || dir.join("cosign.exe").is_file()
         })
     });
+    if !dry && cosign_present {
+        match std::process::Command::new("cosign").arg("version").output() {
+            Ok(output) => {
+                let text = String::from_utf8_lossy(&output.stdout).into_owned() + &String::from_utf8_lossy(&output.stderr);
+                if !output.status.success() || !text.contains(EXPECT_COSIGN) {
+                    eprintln!("signing: cosign version must be {EXPECT_COSIGN} (pinned per deploy/release/signing.bzl SIGNING_COSIGN_VERSION); refusing to sign");
+                    return 1;
+                }
+            }
+            Err(error) => {
+                eprintln!("signing: cannot run 'cosign version': {error}");
+                return 1;
+            }
+        }
+    }
     match dx_release_tools::signing_run(IDENTITY, ISSUER, &assets, dry, cosign_present) {
         Ok(text) => {
             print!("{text}");
@@ -136,12 +152,13 @@ _signing_launcher = rule(
     implementation = _signing_launcher_impl,
     attrs = {
         "artifacts": attr.label_list(mandatory = True),
+        "cosign_version": attr.string(mandatory = True),
         "identity": attr.string(mandatory = True),
         "issuer": attr.string(mandatory = True),
     },
 )
 
-def signed_release(name, artifacts, identity, issuer = "https://token.actions.githubusercontent.com", profile = "release"):
+def signed_release(name, artifacts, identity, issuer = "https://token.actions.githubusercontent.com", profile = "release", cosign_version = SIGNING_COSIGN_VERSION):
     """Creates an owner-gated signing deploy target for pinned artifacts.
 
     Creates `<name>_launcher` (generated Rust launcher resolving inputs
@@ -151,10 +168,17 @@ def signed_release(name, artifacts, identity, issuer = "https://token.actions.gi
     Run with `RELEASE_SIGN_DRY_RUN=1 bazel run :<name>` to print the
     would-run `cosign sign-blob` + `gh attestation` commands (what CI
     exercises, publishes nothing). Real signing needs the tag pushed
-    beforehand, explicit owner approval, and OIDC identity per the runbook."""
+    beforehand, explicit owner approval, and OIDC identity per the runbook.
+    `cosign_version` defaults to the pinned `SIGNING_COSIGN_VERSION`;
+    drift fails at analysis time, and the launcher re-checks
+    `cosign version` at run time before any live sign (bundle verify
+    follows every sign in `signing_run`)."""
     err = signing_identity_error(identity, issuer)
     if err != "":
         fail(err + " (in " + native.package_name() + ":" + name + ")")
+    version_err = signing_cosign_error(cosign_version)
+    if version_err != "":
+        fail(version_err + " (in " + native.package_name() + ":" + name + ")")
     if len(artifacts) == 0:
         fail("signed_release " + native.package_name() + ":" + name + ": need at least one artifact")
     program_target = name + "_program"
@@ -162,6 +186,7 @@ def signed_release(name, artifacts, identity, issuer = "https://token.actions.gi
     _signing_launcher(
         name = launcher_target,
         artifacts = artifacts,
+        cosign_version = cosign_version,
         identity = identity,
         issuer = issuer,
     )

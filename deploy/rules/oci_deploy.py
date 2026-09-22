@@ -3,11 +3,14 @@
 
 Hermetic default builds a local OCI image-layout directory
 (`oci-layout`, `index.json`, `blobs/sha256/`) from the pinned image tar
-and verifies bytes via sha256 with no daemon; the live push path runs
-only with explicit env plus owner approval and never by default. Used as
-an `expand_template` template per deploy instance (placeholders below)
-and as a `py_library` for `py_test`.
-"""
+ and verifies bytes via sha256 with no daemon; the live push path runs
+ only with explicit env plus owner approval and never by default. Registry
+ credentials are single-string user/token pairs from the environment:
+ prefer short-lived tokens rotated per release and revoke them after the
+ push; OIDC-based registry login stays an owned gap until tooled. Used as
+ an `expand_template` template per deploy instance (placeholders below)
+ and as a `py_library` for `py_test`.
+ """
 
 import hashlib
 import json

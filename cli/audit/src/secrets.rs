@@ -170,6 +170,12 @@ pub const CONFIG_FLAG: &str = "--config";
 /// here so the future adapter cannot invent a second mechanism. The
 /// explicit flag wins; built-in defaults apply only when every earlier
 /// source is absent.
+///
+/// Trust boundary: any selected config can disable rules, so ambient
+/// sources are untrusted input. The hermetic child inherits no
+/// `GITLEAKS_CONFIG`/`GITLEAKS_CONFIG_TOML` (see [`hermetic_env`]); the
+/// only honored file is the workspace-committed `.gitleaks.toml`, used
+/// with an explicit scan-time warning because it carries no hash pin.
 pub const CONFIG_DISCOVERY_ORDER: &[&str] = &[
     "--config flag",
     "GITLEAKS_CONFIG",

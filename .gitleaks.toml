@@ -1,6 +1,13 @@
 [extend]
 useDefault = true
 
+# Owner: rules_dx maintainers. Review: quarterly with the pinned Gitleaks
+# version bump (see quality/artifacts/update.py TOOLS[gitleaks]); drop this
+# entry if the prose moves or the false positive disappears. Scope is
+# narrowed to docs prose paths plus match-level targeting so source files
+# never benefit from it.
 [allowlist]
 description = "docs SBOM prose is not a secret (generic-api-key false positive on 'SBOM/provenance')"
 regexes = ["SBOM/provenance"]
+paths = ["docs/.*\\.md$"]
+regexTarget = "match"

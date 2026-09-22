@@ -9,11 +9,15 @@ Usage (maintainer only; requires network plus file/readelf/objdump/tar):
     bazel run //quality/artifacts:update
     bazel run //quality/artifacts:update -- --verify-only   # reject changed bytes
 
-Byte-identity policy: a versioned release URL does not guarantee immutable
-bytes. Vale publishes a checksums file, which this generator verifies. Buildifier,
-Taplo, and Biome publish no asset digests, so their checked-in digests are
-the maintainer-established byte identity: regeneration fails when upstream
-bytes change instead of silently recording new content.
+ Byte-identity policy: a versioned release URL does not guarantee immutable
+ bytes. Vale publishes a checksums file, which this generator verifies. Buildifier,
+ Taplo, and Biome publish no asset digests, so their checked-in digests are
+ the maintainer-established byte identity: regeneration fails when upstream
+ bytes change instead of silently recording new content. Published
+ checksums files arrive over the same channel as the asset, so they are a
+ cross-check only: the trust anchor is the checked-in digest plus
+ `--verify-only`, never first-seen bytes. Fetches are https-only with
+ retries plus backoff (see FETCH_RETRIES).
 
 Platform bounds: Linux artifacts record observed ELF linkage,
 interpreter, shared libraries, and GNU ABI floors via readelf/objdump.
@@ -32,10 +36,21 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
+import urllib.parse
 import urllib.request
 import zipfile
 
 SCHEMA_VERSION = 1
+
+# Fetch robustness (issue #924): every upstream fetch is https-only with
+# retries plus backoff. Published checksums files arrive over the same
+# channel, so they are a cross-check only: the trust anchor is the
+# checked-in digest (regeneration fails on upstream byte change, and
+# `--verify-only` rejects drift), never the first-seen bytes.
+FETCH_RETRIES = 3
+FETCH_TIMEOUT = 300
+FETCH_BACKOFF_SECONDS = 2
 
 # Canonical tool versions (issue #912): TOOLS[biome] upstream_version owns
 # the `$schema` pin in both `biome.json` files (root plus
@@ -434,10 +449,25 @@ def _run(argv):
 
 
 def _download(url, path):
-    request = urllib.request.Request(url, headers={"User-Agent": "rules_dx-artifact-update"})
-    with urllib.request.urlopen(request, timeout=300) as response, open(path, "wb") as out:
-        for chunk in iter(lambda: response.read(65536), b""):
-            out.write(chunk)
+    scheme = urllib.parse.urlparse(url).scheme
+    if scheme != "https":
+        sys.exit("update: refusing non-https fetch for %r" % url)
+    last_error = None
+    for attempt in range(1, FETCH_RETRIES + 1):
+        try:
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "rules_dx-artifact-update"}
+            )
+            with urllib.request.urlopen(request, timeout=FETCH_TIMEOUT) as response, open(path, "wb") as out:
+                for chunk in iter(lambda: response.read(65536), b""):
+                    out.write(chunk)
+            return
+        except Exception as error:  # noqa: BLE001 - retry-then-fail with the last error
+            last_error = error
+            if attempt < FETCH_RETRIES:
+                time.sleep(FETCH_BACKOFF_SECONDS * attempt)
+    sys.exit("update: download failed after %d attempts for %r: %s"
+             % (FETCH_RETRIES, url, last_error))
 
 
 def _sha256(path):

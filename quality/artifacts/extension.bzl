@@ -1,4 +1,10 @@
 """Standalone quality-tool acquisition (WP1).
+
+Contract: `docs/tools/tool-acquisition.md` (checksummed-artifact route).
+Outer `sha256` is verified by `ctx.download`; the extracted executable is
+re-hashed against the recorded `executable_sha256` (inner digest) before
+the repo is exposed, so a tampered archive member fails closed at fetch
+time instead of shipping a substituted binary.
 """
 
 load("//quality/artifacts:biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
@@ -89,6 +95,36 @@ _PLATFORMS = [
 def _repo_name(artifact):
     return "dx_%s_%s_%s" % (artifact["tool"], artifact["os"], artifact["cpu"])
 
+def _sha256_of(ctx, path):
+    """Returns the sha256 hex of one repo-relative file, or "" when unavailable.
+
+    Tries the host hashers in portability order (sha256sum, shasum,
+    python3), mirroring `.github/actions/setup-bazelisk`; the caller
+    fails closed on "" so an unhashable fetch never ships silently.
+    """
+    for argv in (
+        ["sha256sum", path],
+        ["shasum", "-a", "256", path],
+        ["python3", "-c", "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], 'rb').read()).hexdigest())", path],
+    ):
+        result = ctx.execute(argv)
+        if result.return_code == 0:
+            return result.stdout.split(" ")[0].split("\n")[0]
+    return ""
+
+def _verify_executable_sha256(ctx, executable, want):
+    """Fails closed unless the extracted executable matches its inner digest."""
+    if want == None or want == "":
+        fail("standalone tool repo: missing executable_sha256 for '" + executable +
+             "' (regenerate metadata with //quality/artifacts:update)")
+    got = _sha256_of(ctx, executable)
+    if got == "":
+        fail("standalone tool repo: cannot hash '" + executable +
+             "' (need sha256sum, shasum, or python3 on PATH to verify the inner digest)")
+    if got != want:
+        fail("standalone tool repo: executable sha256 mismatch for '" + executable +
+             "': got " + got + ", want " + want)
+
 def _standalone_tool_repo_impl(ctx):
     kind = ctx.attr.archive_format
     if kind == "none":
@@ -136,6 +172,12 @@ def _standalone_tool_repo_impl(ctx):
         ctx.extract(ctx.attr.asset)
     else:
         fail("unsupported archive format: " + kind)
+    # Inner-digest enforcement. See: `docs/tools/tool-acquisition.md`
+    # (checksummed-artifact route): the outer sha256 above verifies the
+    # downloaded asset; this re-hashes the extracted executable against
+    # the recorded inner digest, so a substituted archive member fails
+    # the fetch instead of reaching the build.
+    _verify_executable_sha256(ctx, ctx.attr.executable, ctx.attr.executable_sha256)
     ctx.file("BUILD.bazel", "\n".join([
         "filegroup(",
         '    name = "tool",',
@@ -151,6 +193,7 @@ _standalone_tool_repo = repository_rule(
         "archive_format": attr.string(mandatory = True),
         "asset": attr.string(mandatory = True),
         "executable": attr.string(mandatory = True),
+        "executable_sha256": attr.string(mandatory = True),
         "sha256": attr.string(mandatory = True),
         "url": attr.string(mandatory = True),
     },
@@ -272,6 +315,7 @@ def _dx_tools_impl(ctx):
             asset = artifact["url"].split("/")[-1],
             archive_format = artifact["archive"]["format"],
             executable = artifact["executable"],
+            executable_sha256 = artifact["executable_sha256"],
         )
         platform = artifact["os"] + "_" + artifact["cpu"]
         by_tool.setdefault(artifact["tool"], {})[platform] = name

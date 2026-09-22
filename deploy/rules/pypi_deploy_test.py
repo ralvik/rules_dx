@@ -6,7 +6,7 @@ import os
 import tempfile
 import unittest
 
-from pypi_deploy import build_wheelhouse
+from pypi_deploy import build_wheelhouse, minimal_upload_env
 
 
 def _sha256(path):
@@ -61,6 +61,21 @@ class WheelhouseTest(unittest.TestCase):
             with open(index, encoding="utf-8") as f:
                 body = f.read()
             self.assertIn(os.path.basename(wheel), body)
+
+
+class MinimalEnvTest(unittest.TestCase):
+    def test_drops_ambient_secrets_keeps_credentials(self):
+        os.environ["PYPI_MINIMAL_ENV_PROBE"] = "ambient-secret"
+        try:
+            env = minimal_upload_env(
+                {"TWINE_USERNAME": "__token__", "TWINE_PASSWORD": "tok"}
+            )
+        finally:
+            del os.environ["PYPI_MINIMAL_ENV_PROBE"]
+        self.assertNotIn("PYPI_MINIMAL_ENV_PROBE", env)
+        self.assertEqual(env["TWINE_USERNAME"], "__token__")
+        self.assertEqual(env["TWINE_PASSWORD"], "tok")
+        self.assertIn("PATH", env)
 
 
 if __name__ == "__main__":
