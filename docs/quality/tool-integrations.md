@@ -209,8 +209,12 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   only: `biome.jsonc` is wont-fix (issue #589, pinned by `quality/native_config_tests.bzl`;
   see [Native Configuration](native-configuration.md#dedicated-configs)). Own-tree strict
   (issue #614) pins `recommended` plus `style/useTemplate` as error with tab formatting in
-  workspace `biome.json` (mirrored in `quality/testdata/biome_cfg/biome.json`); consumers
-  keep upstream defaults unless they opt into strict (see issue #615).
+  workspace `biome.json` (mirrored in `quality/testdata/biome_cfg/biome.json`); editor
+  excludes (issue #1072) live there too as `files.includes` with `**` plus
+  Bazel-mirroring ignores (`!**/node_modules`, force-ignore `!!` for `bazel-*`,
+  `dist`, `release`, caches, and `.opencode`) so editors skip build outputs;
+  Biome v2 removed `files.ignore`, so `includes` negations are the mechanism.
+  Consumers keep upstream defaults unless they opt into strict (see issue #615).
 - **ESLint:** qualify `-c <checked-in flat config> -f json [--fix-dry-run]` over the pinned 10.10.0
   private Node graph (`//quality/tools/javascript/bin:eslint`, launched via `js_run_binary` so
   `BAZEL_BINDIR` is set). Direct probes show JSON results `[{filePath, messages[{ruleId, severity

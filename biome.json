@@ -1,5 +1,20 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.12/schema.json",
+  "files": {
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!!**/.cache",
+      "!!**/.direnv",
+      "!!**/.tmp",
+      "!!**/__pycache__",
+      "!!**/.ruff_cache",
+      "!!**/.opencode",
+      "!!**/bazel-*",
+      "!!**/dist",
+      "!!**/release"
+    ]
+  },
   "linter": {
     "enabled": true,
     "rules": {

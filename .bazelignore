@@ -17,3 +17,6 @@ bazel-*
 # Parity notes (mirrors .gitignore): .ruff_cache is the Ruff cache dir;
 # bazel-* covers output symlinks (git: /bazel-*); .opencode/ is agent-local
 # whole-dir state (git: .opencode/).
+# Editor parity (issue #1072): biome.json files.includes mirrors these
+# disposable dirs for editors (Biome v2 uses includes negations: regular
+# !**/node_modules plus force-ignore !! for build outputs/caches/state).
