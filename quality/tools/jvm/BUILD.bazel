@@ -1,14 +1,7 @@
 """Complete-upstream-artifact plus shared-JDK JVM tool wrappers.
 
-Contract: `docs/tools/tool-acquisition.md#decided-route`,
+Contract: `docs/tools/tool-acquisition.md#first-release-tool-routing`,
 `docs/quality/tool-integrations.md#jvm-cohort`.
-
-Each tool resolves to its upstream-tested complete CLI distribution
-sharing the one managed JDK cohort (`--java_runtime_version=remotejdk_21`
-in `.bazelrc`); no tool is reconstructed from Maven modules and no
-consumer runs an installer, solver, or compiler. Versions qualified
-seed-only under issue #485
-(`java/tests/fixtures/jvm_quality/pins.bzl`); digests pinned here.
 """
 
 load("@rules_java//java:defs.bzl", "java_binary", "java_import", "java_library")
