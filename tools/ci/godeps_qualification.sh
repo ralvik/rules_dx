@@ -49,7 +49,6 @@ lock="MODULE.bazel.lock"
 common="docs/generation/common.md"
 matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
-verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 checker="tools/depcheck/src/lib.rs"
@@ -152,15 +151,6 @@ else
   bad "generation lost its consumes-never-writes proof (want common contract plus no lock refs in gazelle/go)"
 fi
 
-# Support matrix owns the qualified lock with fixtures and harness.
-if grep -q -F -e 'qualified seed-only under issue #483' "$matrix" &&
-  grep -q -F -e 'godeps_qualification' "$matrix" &&
-  grep -q -F -e 'go/tests/fixtures/godeps/pins.bzl' "$matrix"; then
-  ok
-else
-  bad "support-matrix lost its #483 qualified Go from_file lock record with fixtures"
-fi
-
 # Generation README owns the qualified lock alongside the other gaps.
 if grep -q -F -e 'qualified seed-only under issue #483' "$gen_readme" &&
   grep -q -F -e 'godeps_qualification' "$gen_readme" &&
@@ -168,16 +158,6 @@ if grep -q -F -e 'qualified seed-only under issue #483' "$gen_readme" &&
   ok
 else
   bad "generation README lost its #483 qualified Go from_file lock record"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'godeps_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #483' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:godeps_qualification' "$verify" &&
-  grep -q -F -e '`godeps_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #483 Go from_file lock qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

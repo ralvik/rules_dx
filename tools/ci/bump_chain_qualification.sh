@@ -48,7 +48,6 @@ bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 targets_c="tools/ci/ci_targets_c.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 
 # Bump lib owns the automatic chaining contract (never a manual second step).
 if grep -q -F -e 'chains automatically' "$bump_lib" &&
@@ -259,14 +258,6 @@ if grep -q -F -e 'name = "bump_chain_qualification"' "$targets_c" &&
   ok
 else
   bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the bump_chain_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':bump_chain_qualification' "$verify" &&
-  grep -q -F -e 'issue #638' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its bump_chain_qualification entry under #638"
 fi
 
 dx_test_summary "bump chain qualification harness"

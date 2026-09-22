@@ -180,14 +180,6 @@ fi
 
 # Support matrix keeps the file-family record with protobuf/qml delivered
 # under #799, never double-claimed.
-if grep -q -F -e '`protobuf`/`qml` adapters delivered under #799' "$support" &&
-  grep -q -F -e 'never double-claimed' "$support" &&
-  grep -q -F -e 'file_family_defaults_qualification' "$support"; then
-  ok
-else
-  bad "support-matrix lost its structured protobuf/qml delivered record under #799"
-fi
-
 # Tool baseline keeps the Protocol Buffer/QML coverage rows (integration inventory,
 # not a support claim).
 if grep -q -F -e '| Protocol Buffer | buf format | buf lint |' "$baseline" &&

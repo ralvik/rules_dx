@@ -55,8 +55,6 @@ matrix="docs/product/support-matrix.md"
 remediation="cc/tests/fixtures/remediation_bounds/pins.bzl"
 build="tools/ci/ci_targets_d.bzl"
 ci="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix-remaining.md"
-verify_green="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$fixture_build" && -f "$snapshot" && -f "$targets" ]]; then
@@ -150,15 +148,6 @@ else
   bad "docs/native-toolchains.md lost its qualified C++ snapshot record with fixtures plus pins under issue #754"
 fi
 
-# Support matrix owns the qualified C++ snapshot record with no Supported claim.
-if grep -q -F -e 'cpp_snapshot_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/cpp_snapshot/pins.bzl' "$matrix" &&
-  grep -q -F -e '#754' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified C++ snapshot record under issue #754"
-fi
-
 # Remediation bounds no longer leaves the C++ snapshot open under #475 alone.
 if grep -q -F -e 'issue #754' "$remediation" &&
   grep -q -F -e 'IDE snapshot adaptation with action-derived commands plus managed clangd plus generated-output materialization plus multi-context headers' "$remediation"; then
@@ -179,16 +168,6 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:cpp_snapshot_qualificat
   ok
 else
   bad "dogfood_freshness.sh lost the cpp_snapshot_qualification step (want dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record.
-if grep -q -F -e 'cpp_snapshot_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #754' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:cpp_snapshot_qualification' "$verify" &&
-  grep -q -F -e '`cpp_snapshot_qualification` 17/17' "$verify_green"; then
-  ok
-else
-  bad "verification-matrix lost its #754 C++ snapshot qualified record"
 fi
 
 # Live proof: exact isolation holds (lib source to lib only, bin source to bin only).

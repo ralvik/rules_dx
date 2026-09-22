@@ -68,16 +68,6 @@ else
   bad "adopt status lost the static-musl qualified detail (issue #411)"
 fi
 
-# Support matrix flips the two static profiles only; dynamic stays out.
-# Per-profile release evidence delivered under #804.
-if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#411' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'dynamic musl explicitly out of scope' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: linux_x86_64_musl plus linux_arm64_musl sbom-provenance delivered (#804'; then
-  ok
-else
-  bad "support-matrix lost the static-musl Platform-qualified record (issue #411 plus #804 release evidence delivered)"
-fi
-
 # ADR 0014 keeps static musl required and records the qualification.
 if grep -q -F -e 'Dynamic musl is not an initial requirement' docs/decisions/0014-tested-platform-release-stack.md &&
   grep -q -F -e 'static musl qualified under issue #411' docs/decisions/0014-tested-platform-release-stack.md; then
@@ -138,19 +128,11 @@ fi
 # No dynamic-musl support claim anywhere.
 # (Self-excluded: this script names the banned form in its own pattern.)
 if ! grep -rn -F -e 'dynamic musl qualified' --exclude='musl_qualification.sh' docs/ cli/ tools/ .github/ 2>/dev/null | grep -q . &&
-  grep -q -F -e 'dynamic musl explicitly out of scope' docs/product/support-matrix.md &&
+  grep -q -F -e 'Dynamic musl explicitly out of scope' docs/product/support-matrix.md &&
   grep -q -F -e 'Dynamic musl is not an initial requirement' docs/decisions/0014-tested-platform-release-stack.md; then
   ok
 else
   bad "a dynamic-musl support claim appeared (stays explicitly out of scope, issue #411)"
-fi
-
-# No Supported claim for musl: Platform-qualified only, per-profile release delivered.
-if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified' &&
-  ! grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Supported'; then
-  ok
-else
-  bad "musl row lost its Platform-qualified (never Supported) record"
 fi
 
 dx_test_summary "static-musl qualification harness"

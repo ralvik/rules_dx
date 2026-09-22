@@ -71,7 +71,7 @@ deferral removes no baseline tool.
   plans, hello builds, or `MODULE.bazel` deps; `powershell` class stays
   classified with no adapter claim (`quality/adapters.bzl` plus
   `PARITY_DEFERRED`).
-- The [support matrix](../product/support-matrix.md#additional-foundations)
+- The [support matrix](../product/support-matrix.md)
   records this reconsideration; other docs link there instead of copying it.
 - Future admission must qualify wrappers plus providers, Gazelle plus
   naming, env plans, hello builds, Gallery/PSResource lock fail-closed

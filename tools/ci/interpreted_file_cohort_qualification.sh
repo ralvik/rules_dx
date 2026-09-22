@@ -229,23 +229,6 @@ fi
 # Support matrix keeps the cohort routes plus qualified file-family defaults
 # plus adapter-input notes plus cohort tracking, all citing 
 # for adapters/digests without approving hidden presets or claiming support.
-if grep -q -F -e 'release-assembled Ruby closure route (issue #420' "$support" &&
-  grep -q -F -e 'portable-PowerShell-runtime route (issue #420' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
-  grep -q -F -e 'quality/tests/fixtures/file_family_quality/pins.bzl' "$support" &&
-  grep -q -F -e 'tracked' "$support" &&
-  grep -q -F -e 'under issue #420' "$support" &&
-  grep -q -F -e 'owned by issue #420' "$support" &&
-  grep -q -F -e 'itemized under issue #420' "$support" &&
-  grep -q -F -e 'stay open' "$support" &&
-  grep -q -F -e '(issue #420)' "$support" &&
-  grep -q -F -e 'to issue' "$support" &&
-  grep -q -F -e '#420' "$support"; then
-  ok
-else
-  bad "support-matrix lost its interpreted/file-family routes, qualified defaults, adapter notes, or #420 cohort tracking"
-fi
-
 # Tool baseline keeps the Ruby/PowerShell/file-family coverage rows
 # (integration inventory, not a support claim).
 baseline_missing=""

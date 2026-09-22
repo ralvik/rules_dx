@@ -21,7 +21,7 @@
 # BCR submission, GHCR route, consumer verification) remain open gaps
 # tracked in their owning issues.
 # This harness machine-checks the gate statically on a clean tree:
-# no Supported status cell exists in either matrix, every Delivered claim
+# no Supported status cell exists in the matrix, every Delivered claim
 # has a backing harness/workspace, and no Open gap is falsely claimed as
 # landed. Functional checks only (table-cell validation, file existence,
 # workflow/config pins, code symbols), no tracker-sentence greps.
@@ -64,69 +64,20 @@ fi
 
 # Support-matrix records seed-delivered vs unqualified (platform evidence).
 if grep -q -F -e 'Seed-host-delivered' docs/product/support-matrix.md &&
-  grep -q -F -e 'Unqualified: clean `unsupported_platform` refusal' docs/product/support-matrix.md; then
+  grep -q -F -e 'unsupported_platform' docs/product/support-matrix.md; then
   ok
 else
   bad "support-matrix lost its seed-delivered vs unqualified platform record"
 fi
 
-# Linux arm64 native is Platform-qualified, never Supported
-# without a release cut and never back to unqualified refusal.
-# Per-host release evidence landed under #803 (arm64 sbom-provenance).
-if grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#410' &&
-  grep -E -e '^\| Linux arm64 glibc \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: linux_arm64 sbom-provenance delivered (#803'; then
+# Per-host and per-cell pins live in owning issues, not in the matrix.
+# The matrix keeps only supported-today plus out-of-scope plus issues pointer.
+if grep -q -F -e 'Tracking lives in GitHub issues' docs/product/support-matrix.md &&
+  grep -q -F -e 'Dynamic musl explicitly out of scope' docs/product/support-matrix.md &&
+  grep -q -F -e 'Not planned' docs/product/support-matrix.md; then
   ok
 else
-  bad "support-matrix lost the Linux arm64 Platform-qualified record (issue #410 plus #803 release evidence delivered)"
-fi
-
-# Linux static-musl profiles are Platform-qualified, never
-# Supported without a release cut and never back to unqualified
-# refusal. Dynamic musl stays explicitly out of scope.
-# Per-profile release evidence landed under #804 (musl sbom-provenance).
-if grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#411' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: linux_x86_64_musl plus linux_arm64_musl sbom-provenance delivered (#804' &&
-  grep -E -e '^\| Linux x86_64/arm64 static musl \|' docs/product/support-matrix.md | grep -q -F -e 'dynamic musl explicitly out of scope'; then
-  ok
-else
-  bad "support-matrix lost the static-musl Platform-qualified record (issue #411 plus #804 release evidence delivered, dynamic out of scope)"
-fi
-
-# macOS arm64 native is Platform-qualified, never Supported
-# without a release cut and never back to unqualified refusal.
-# Host-installed SDK fallback stays never approved.
-# Per-host release evidence landed under #805 (macos arm64 sbom-provenance).
-if grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#412' &&
-  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: macos_arm64 sbom-provenance delivered (#805' &&
-  grep -E -e '^\| macOS arm64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved'; then
-  ok
-else
-  bad "support-matrix lost the macOS arm64 Platform-qualified record (issue #412 plus #805 release evidence delivered, no host fallback)"
-fi
-
-# macOS x86_64 is Not planned and never planned for support (issue #976),
-# never Supported, never Platform-qualified. No CI, coverage, or artifact
-# footprint; clean `unsupported_platform` refusal.
-if grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Not planned' &&
-  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'unsupported_platform' &&
-  ! grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified' &&
-  ! grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Supported'; then
-  ok
-else
-  bad "support-matrix lost the macOS x86_64 Not-planned record (issue #976, never Platform-qualified, never Supported)"
-fi
-
-# Windows x86_64 MSVC-compatible native is Platform-qualified, never
-# Supported without a release cut and never back to unqualified refusal.
-# Installed Build Tools fallback stays never approved; explicit EULA
-# acceptance stays never automatic.
-# Per-host release evidence landed under #807 (windows sbom-provenance).
-if grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#414' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence: windows_x86_64 sbom-provenance delivered (#807' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' docs/product/support-matrix.md | grep -q -F -e 'never automatic'; then
-  ok
-else
-  bad "support-matrix lost the Windows x86_64 Platform-qualified record (issue #414 plus #807 release evidence delivered, explicit EULA never automatic)"
+  bad "support-matrix lost its issues-pointer plus out-of-scope record"
 fi
 
 # No Supported status cell in support-matrix tables (promotion gate core).
@@ -135,25 +86,6 @@ if ! grep -E -e '^\|.*\| *`?Supported`? *\|' docs/product/support-matrix.md | gr
   ok
 else
   bad "a Supported status cell appeared in support-matrix tables without evidence"
-fi
-
-# No Supported status cell in verification-matrix tables.
-if ! grep -E -e '^\|.*\| *`?Supported`? *\|' docs/testing/verification-matrix.md | grep -q .; then
-  ok
-else
-  bad "a Supported status cell appeared in verification-matrix tables without evidence"
-fi
-
-# Verification-matrix vocabulary stays Delivered/Open/Planning only
-# (no silent new status that implies support; no Perf Tracked per ADR 0022).
-# Audit plus update are Delivered.
-if grep -q -F -e '| Rust | Delivered' docs/testing/verification-matrix.md &&
-  grep -q -F -e '| Go | Delivered (code ownership) | Open (adapter-less)' docs/testing/verification-matrix.md &&
-  grep -q -F -e '| Delivered | Open | Open |' docs/testing/verification-matrix.md &&
-  ! grep -q -F -e 'Tracked' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix status vocabulary drifted (want Delivered/Open/Planning only with audit/update Delivered, no Tracked per ADR 0022)"
 fi
 
 # Corpus dogfood Delivered has backing harnesses + CI wiring.
@@ -196,16 +128,13 @@ fi
 
 # CLI-contract Delivered (replaces nested E2E): hermetic pins
 # under `bazel test //...` plus the adopt-rust dx_dev smoke in normal CI.
-# What is lost (real-daemon exit 3, real Buildifier rewrite, full consumer
-# wiring now smoke-only) is recorded in docs/testing/verification-matrix.md.
 if [[ ! -d "integration" ]] &&
   [[ ! -f "tools/ci/e2e.sh" ]] &&
   [[ -f "cli/cli/src/exec/test_support.rs" ]] &&
-  grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev' .github/workflows/ci.yml &&
-  grep -q -F -e 'real-daemon exit 3' docs/testing/verification-matrix.md; then
+  grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev' .github/workflows/ci.yml; then
   ok
 else
-  bad "CLI-contract Delivered lacks hermetic pins + adopt-rust smoke + loss record (issue #407)"
+  bad "CLI-contract Delivered lacks hermetic pins + adopt-rust smoke (issue #407)"
 fi
 
 # No standing benchmarks per ADR 0022; the Perf column is removed from
@@ -284,20 +213,6 @@ if grep -q -F -e '**Supported** evidence links every required adapter' docs/test
   ok
 else
   bad "testing README lost its Supported-evidence blocking contract"
-fi
-
-# Gate enforces the per-cell promotion checklist (process #808): the
-# checklist owns tag hygiene, versioning, and platform plus consumer plus
-# release evidence per cell, and this gate is its enforcement point. Every
-# required host landed under closed #803 plus #804 plus #805 plus #807
-# (macOS x86_64 Not planned per #976, no #806 exempt).
-if grep -q -F -e 'bazel run //tools/ci:supported_evidence_gate' docs/product/promotion-checklist.md &&
-  grep -q -F -e 'promotion-checklist.md' docs/product/support-matrix.md &&
-  grep -q -F -e 'closed #803 plus #804 plus #805 plus #807' docs/product/promotion-checklist.md &&
-  ! grep -q -F -e 'best-effort macOS x86_64 exempt' docs/product/promotion-checklist.md; then
-  ok
-else
-  bad "promotion checklist lost its supported_evidence_gate enforcement with closed #803-#805 plus #807 (x86_64 Not planned per #976)"
 fi
 
 dx_test_summary "supported evidence gate harness"

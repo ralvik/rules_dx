@@ -46,7 +46,6 @@ preset_build="BUILD.bazel"
 module="MODULE.bazel"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 testing="docs/testing/cli.md"
 
 # Fixture files stay present.
@@ -170,18 +169,6 @@ else
   bad "nested-Bazel harness reappeared (integration/ plus e2e drivers plus second Bazel stay rejected under #645)"
 fi
 
-# Verification matrix owns the per-loss wont-fix record with fixtures plus qualification.
-if grep -q -F -e 'qualified seed-only under #645' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:layer4_loss_qualification' "$verify" &&
-  grep -q -F -e 'cli/cli/tests/fixtures/layer4_loss/' "$verify" &&
-  grep -q -F -e 'real-daemon exit 3' "$verify" &&
-  grep -q -F -e 'real Buildifier rewrite' "$verify" &&
-  grep -q -F -e 'smoke-only' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its #645 per-loss wont-fix record with fixtures plus qualification"
-fi
-
 # Testing CLI owns the per-loss record with fixtures plus qualification.
 if grep -q -F -e 'issue #645' "$testing" &&
   grep -q -F -e 'cli/cli/tests/fixtures/layer4_loss/' "$testing" &&
@@ -199,14 +186,6 @@ if grep -q -F -e 'name = "layer4_loss_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the layer4_loss_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix Green plus dogfood lists the harness count.
-if grep -q -F -e ':layer4_loss_qualification' "$verify" &&
-  grep -q -F -e '`layer4_loss_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost layer4_loss_qualification 16/16"
 fi
 
 dx_test_summary "layer-4 loss qualification harness"

@@ -43,7 +43,6 @@ real_rs="quality/runner/src/real.rs"
 commands="quality/adapter/src/commands.rs"
 integrations="docs/quality/tool-integrations.md"
 runner_doc="docs/quality/runner-matrix.md"
-verify="docs/testing/verification-matrix.md"
 targets="tools/ci/ci_targets_d.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
 
@@ -159,14 +158,6 @@ if grep -q -F -e 'adapters `buf` (format plus lint `protobuf`)' "$integrations" 
   ok
 else
   bad "tool-integrations lost its Structured adapter claims under issue #799"
-fi
-
-# Verification matrix owns the harness in dogfood-freshness plus Green.
-if grep -q -F -e ':structured_adapters_qualification' "$verify" &&
-  grep -q -F -e '`structured_adapters_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #799 adapters harness record (want dogfood plus Green 16/16)"
 fi
 
 # Targets own the harness plus dogfood wires it.

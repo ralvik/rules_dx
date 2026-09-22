@@ -51,7 +51,6 @@ matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Pins fixture stays present as the single hash-authority owner.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -168,15 +167,6 @@ else
   if [[ "$code" == "1" ]]; then ok; else bad "depcheck cc hash-less exit=$code want 1"; fi
 fi
 
-# Support matrix owns the qualified hash wiring with fixtures and harness.
-if grep -q -F -e 'qualified seed-only under issue #484' "$matrix" &&
-  grep -q -F -e 'cc_hermetic_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/hermetic/pins.bzl' "$matrix"; then
-  ok
-else
-  bad "support-matrix lost its #484 qualified C/C++ hash record with fixtures"
-fi
-
 # Generation README owns the qualified hash record alongside the other gaps.
 if grep -q -F -e 'qualified seed-only under issue #484' "$gen_readme" &&
   grep -q -F -e 'cc_hermetic_qualification' "$gen_readme" &&
@@ -184,16 +174,6 @@ if grep -q -F -e 'qualified seed-only under issue #484' "$gen_readme" &&
   ok
 else
   bad "generation README lost its #484 qualified C/C++ hash record"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'cc_hermetic_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #484' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:cc_hermetic_qualification' "$verify" &&
-  grep -q -F -e '`cc_hermetic_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #484 C/C++ hash qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

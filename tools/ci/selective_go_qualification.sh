@@ -44,7 +44,6 @@ bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 module_lock="third_party/go/go.mod"
 
 # Backend keeps the Go full intentional no-op (never a dx lockfile).
@@ -192,14 +191,6 @@ if grep -q -F -e 'name = "selective_go_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the selective_go_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':selective_go_qualification' "$verify" &&
-  grep -q -F -e 'issue #636' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its selective_go_qualification entry under #636"
 fi
 
 dx_test_summary "selective go qualification harness"

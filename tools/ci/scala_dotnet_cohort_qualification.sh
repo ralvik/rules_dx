@@ -176,20 +176,6 @@ fi
 # defaults plus adapter-input notes plus cohort tracking, all
 # citing for adapters/digests without approving hidden presets or
 # claiming support.
-if grep -q -F -e 'take the managed JVM route (issue #417' "$support" &&
-  grep -q -F -e 'shared-.NET-runtime route (issue #417' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #486' "$support" &&
-  grep -q -F -e 'no auto-supplied OrganizeImports' "$support" &&
-  grep -q -F -e 'upstream built-in defaults' "$support" &&
-  grep -q -F -e 'owned by issue #417.' "$support" &&
-  grep -q -F -e 'itemized under issue #417' "$support" &&
-  grep -q -F -e '(issue #417)' "$support" &&
-  grep -q -F -e 'to issue #417;' "$support"; then
-  ok
-else
-  bad "support-matrix lost its Scala + .NET routes, qualified defaults, adapter notes, or #417 cohort tracking"
-fi
-
 # Tool baseline keeps the Scala/C#/F# coverage rows (integration inventory,
 # not a support claim).
 if grep -q -F -e '| Scala | scalafmt | scalafix |' "$baseline" &&

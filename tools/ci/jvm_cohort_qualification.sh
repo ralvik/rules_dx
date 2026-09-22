@@ -166,15 +166,6 @@ fi
 
 # Support matrix keeps the JVM rows plus the delivered Layer-2 mapping
 # (Java/Kotlin stay Planned per the lifecycle; verification Delivered is
-# seed-host layer evidence, never promotion).
-if grep -q -F -e '| Java | Planned | Planned: google-java-format | Planned: PMD, Checkstyle, SpotBugs' "$support" &&
-  grep -q -F -e '| Kotlin | Planned | Planned: ktfmt | Planned: ktlint' "$support" &&
-  grep -q -F -e 'JVM delivered under #796' "$support"; then
-  ok
-else
-  bad "support-matrix lost its delivered JVM rows under #796"
-fi
-
 # Tool baseline keeps the Java/Kotlin coverage rows (integration inventory,
 # not a support claim).
 if grep -q -F -e '| Java | google-java-format | PMD, Checkstyle, SpotBugs |' "$baseline" &&

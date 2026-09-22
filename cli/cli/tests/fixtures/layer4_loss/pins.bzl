@@ -1,6 +1,6 @@
 """Layer-4 loss restore-or-wont-fix fixture.
 
-Contract: `docs/testing/verification-matrix.md#layers`,
+Contract: `docs/product/support-matrix.md`,
 `docs/testing/cli.md#end-to-end-tests`.
 Fixture: `cli/cli/tests/fixtures/layer4_loss/` via
 `bazel run //tools/ci:layer4_loss_qualification`.

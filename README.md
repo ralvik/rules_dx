@@ -1,6 +1,6 @@
 # rules_dx
 
-Pre-release. See the [support matrix](docs/product/support-matrix.md#unqualified-platforms) for current platform status.
+Pre-release. See the [support matrix](docs/product/support-matrix.md) for current status.
 
 `rules_dx` is an opinionated Bazel developer platform designed to provide a tested release stack,
 lazy application foundations, Bazel-owned quality workflows, and a thin `dx` CLI. The product aims

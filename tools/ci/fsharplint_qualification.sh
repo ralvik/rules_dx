@@ -62,7 +62,6 @@ integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$sample_src" && -f "$standard_sample" && -f "$msbuild_sample" && -f "$sample_conf" ]]; then
@@ -188,31 +187,12 @@ fi
 
 # Support matrix records the decision in adapter-input notes plus wire
 # formats plus fix modes plus open risks, with fixtures and no Supported claim.
-if grep -q -F -e 'decided under issue #493' "$support" &&
-  grep -q -F -e 'fsharp/tests/fixtures/fsharplint/' "$support" &&
-  grep -q -F -e 'console-parse is rejected' "$support" &&
-  grep -q -F -e 'FSharpLint.Application.Lint' "$support" &&
-  grep -q -F -e 'no adapter claims' "$support"; then
-  ok
-else
-  bad "support-matrix lost its FSharpLint #493 decision with fixtures in adapter notes plus wire formats plus open risks"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "fsharplint_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:fsharplint_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the fsharplint_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified record under.
-if grep -q -F -e 'fsharplint_qualification' "$verify" &&
-  grep -q -F -e 'issue #493' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:fsharplint_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #493 FSharpLint wiring qualified record"
 fi
 
 # Live proof: F# foundation fixture stays green on the seed host

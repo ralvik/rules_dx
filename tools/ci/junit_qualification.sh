@@ -47,7 +47,6 @@ matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$java_build" && -f "$java_test" && -f "$kotlin_build" && -f "$kotlin_test" ]]; then
@@ -159,16 +158,6 @@ else
   bad "unpinned JUnit runner detected (floating version or head; want pins.bzl pins only)"
 fi
 
-# Support matrix keeps the qualified JUnit gap wording.
-if grep -q -F -e 'JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under issue #476' "$matrix" &&
-  grep -q -F -e 'junit_qualification' "$matrix" &&
-  grep -q -F -e 'JUnit 6.1.3 primary' "$matrix" &&
-  grep -q -F -e '#476' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified JUnit gap wording under issue #476"
-fi
-
 # Generation README pins the qualified runner alongside the other gaps.
 if grep -q -F -e 'qualified JUnit 6.1.3 Jupiter' "$gen_readme" &&
   grep -q -F -e 'junit_qualification' "$gen_readme" &&
@@ -176,16 +165,6 @@ if grep -q -F -e 'qualified JUnit 6.1.3 Jupiter' "$gen_readme" &&
   ok
 else
   bad "docs/generation/foundation-qualification.md lost its qualified JUnit record under issue #476"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'junit_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #476' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:junit_qualification' "$verify" &&
-  grep -q -F -e '`junit_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #476 JUnit qualified record"
 fi
 
 # BUILD owns the harness target.

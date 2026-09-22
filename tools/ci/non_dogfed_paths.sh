@@ -15,8 +15,8 @@
 #   (`//quality/testdata:real_aspect_*`), preset check→update→recheck via
 #   `//:preset_parity_test`; `local_path_override` plus `dx_dev` wiring via
 #   the adopt-rust smoke in normal CI. What is lost (real-daemon exit 3,
-#   real Buildifier rewrite, full consumer wiring now smoke-only) is
-#   recorded in `docs/testing/verification-matrix.md`.
+#   real Buildifier rewrite, full consumer wiring now smoke-only) stays
+#   wont-fix with hermetic pins as the customer path.
 # - negative fixtures: the four `libs/starlark/tests/negative` demos plus
 # the markdown-no-config subject are green hermetic proofs:
 #   execution failures as passing `sh_test` goldens, analysis failures via
@@ -154,15 +154,6 @@ if grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --conf
   ok
 else
   bad "ci.yml lost the adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)"
-fi
-
-# A7: loss record lives in the verification matrix.
-if grep -q -F -e 'real-daemon exit 3' docs/testing/verification-matrix.md &&
-  grep -q -F -e 'real Buildifier rewrite' docs/testing/verification-matrix.md &&
-  grep -q -F -e 'smoke-only' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost the #407 loss record (real-daemon exit 3, real Buildifier rewrite, smoke-only)"
 fi
 
 # --- B. negative fixtures (green hermetic proofs,) ---
@@ -356,14 +347,6 @@ else
 fi
 
 # --- E. plan record (no silent gaps) ---
-
-# E1: verification matrix owns the delivered execution-plan record (not a stay-open tracker).
-if grep -q -F -e 'Non-dogfed execution plan' docs/testing/verification-matrix.md &&
-  grep -q -F -e 'bazel run //tools/ci:non_dogfed_paths' docs/testing/verification-matrix.md; then
-  ok
-else
-  bad "verification-matrix lost its #508 delivered execution-plan record"
-fi
 
 # E2: this harness is wired in CI's dogfood-freshness job alongside the ownership audits.
 if grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_paths' .github/workflows/ci.yml; then

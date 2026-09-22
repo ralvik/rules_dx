@@ -21,7 +21,7 @@ The reorganization is complete with no successor: `dx/` Rust to `cli/`, document
 issue #469 (see [ADR 0023](../decisions/0023-rust-libraries-internal.md)).
 The e2e suite naming resolved
 hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
-`bazel test //...` (see the [verification matrix](../testing/verification-matrix.md)).
+`bazel test //...`.
 
 | Facade label | Actual owner | Status |
 | --- | --- | --- |

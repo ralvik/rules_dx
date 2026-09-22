@@ -1,7 +1,7 @@
 # Architecture
 
 Status: quality-core plus Rust, Python, JavaScript, and TypeScript foundations on delivered layers only.
-See the [support matrix](../product/support-matrix.md) for qualified hosts and layers.
+See the [support matrix](../product/support-matrix.md) for current status.
 
 `rules_dx` is a Bazel module and developer workflow layer that makes the Bazel graph the common
 source of truth for local development, coding agents, and CI. Detailed contracts live in the

@@ -56,7 +56,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$sqlite_h" && -f "$sqlite_c" && -f "$openssl_h" && -f "$openssl_c" && -f "$ring_h" && -f "$ring_c" && -f "$corpus_test" ]]; then
@@ -158,32 +157,12 @@ else
   bad "docs/native-toolchains.md lost its qualified corpus record with fixtures under issue #499"
 fi
 
-# Support matrix owns the qualified corpus record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #499' "$matrix" &&
-  grep -q -F -e 'linux_corpus_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/linux_corpus/pins.bzl' "$matrix" &&
-  grep -q -F -e 'single-crate proof rejected' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified corpus record under issue #499"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "linux_corpus_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:linux_corpus_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the linux_corpus_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'linux_corpus_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #499' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:linux_corpus_qualification' "$verify" &&
-  grep -q -F -e '`linux_corpus_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #499 linux corpus qualified record"
 fi
 
 # Live proof: the corpus lib builds on the seed host.

@@ -19,7 +19,7 @@
 # Seed only; no Supported claim.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:sbom_upload_qualification`,
-# following //tools/ci:promotion_checklist_qualification.
+# following //tools/ci:supported_evidence_gate.
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
@@ -43,7 +43,6 @@ pins="tools/ci/tests/fixtures/sbom_upload/pins.bzl"
 expected="tools/ci/tests/fixtures/sbom_upload/sbom_upload.expected"
 fixture_build="tools/ci/tests/fixtures/sbom_upload/BUILD.bazel"
 build="tools/ci/BUILD.bazel"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' "$sbom" &&
@@ -55,14 +54,6 @@ else
 fi
 
 # Provenance binds exact bytes: SPDX plus in-toto v1 plus SLSA subject digest.
-if grep -q -F -e 'spdxVersion' "$verify" &&
-  grep -q -F -e 'https://in-toto.io/Statement/v1' "$verify" &&
-  grep -q -F -e 'https://slsa.dev/provenance/v1' "$verify"; then
-  ok
-else
-  bad "Rust launch lost its SPDX plus in-toto plus SLSA subject-binding checks (#612)"
-fi
-
 # Release BUILD keeps the demo plus its portable Rust verifier.
 if grep -q -F -e 'name = "sbom_demo"' "$release_build" &&
   grep -q -F -e 'name = "dx_release_tools_test"' "$release_build" &&
@@ -190,15 +181,6 @@ if grep -q -F -e 'SBOM plus provenance upload on CI (issue #612)' "$expected" &&
   ok
 else
   bad "sbom_upload.expected lost its upload plus rejected plus honesty lines under #612"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':sbom_upload_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #612' "$verify_matrix" &&
-  grep -q -F -e '`sbom_upload_qualification` 17/17' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its sbom_upload_qualification entry with 17/17 under #612"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

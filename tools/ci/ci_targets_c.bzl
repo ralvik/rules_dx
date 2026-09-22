@@ -171,7 +171,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Hello-smoke-as-test harness; see docs/testing/verification-matrix.md.
+    # Hello-smoke-as-test harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "hello_smoke_qualification",
         srcs = ["hello_smoke_qualification.sh"],
@@ -181,7 +181,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Parser-sample backfill harness; see docs/testing/verification-matrix.md.
+    # Parser-sample backfill harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "parser_sample_qualification",
         srcs = ["parser_sample_qualification.sh"],
@@ -191,7 +191,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Close-out battery plus docs-gate harness; see docs/testing/verification-matrix.md.
+    # Close-out battery plus docs-gate harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "closeout_battery_qualification",
         srcs = ["closeout_battery_qualification.sh"],
@@ -201,7 +201,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Rustfmt crate-edition harness; see docs/testing/verification-matrix.md.
+    # Rustfmt crate-edition harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "rustfmt_edition_qualification",
         srcs = ["rustfmt_edition_qualification.sh"],
@@ -381,7 +381,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Layer-4 loss restore-or-wont-fix harness; see docs/testing/verification-matrix.md#layers.
+    # Layer-4 loss restore-or-wont-fix harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "layer4_loss_qualification",
         srcs = ["layer4_loss_qualification.sh"],
@@ -391,7 +391,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # CC opt-out linker harness; see docs/testing/verification-matrix.md.
+    # CC opt-out linker harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "cc_optout_qualification",
         srcs = ["cc_optout_qualification.sh"],

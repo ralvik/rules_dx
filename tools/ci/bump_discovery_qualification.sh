@@ -42,7 +42,6 @@ automation="docs/contributing/automation.md"
 bump_workflow=".github/workflows/bump.yml"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Discovery owns the upstream-client contract with no custom HTTP under #639.
 if grep -q -F -e 'never custom HTTP' "$discovery" &&
@@ -205,15 +204,13 @@ else
   bad "bump.yml lost its outdated enumeration via upstream clients under #639"
 fi
 
-# BUILD owns the harness target plus CI wires it plus matrix records seed-only evidence.
+# BUILD owns the harness target plus CI wires it records seed-only evidence.
 if grep -q -F -e 'name = "bump_discovery_qualification"' "$build" &&
   grep -q -F -e 'bump_discovery_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_discovery_qualification' "$ci" &&
-  grep -q -F -e ':bump_discovery_qualification' "$verify" &&
-  grep -q -F -e 'issue #639' "$verify"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_discovery_qualification' "$ci"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml or verification-matrix lost the bump_discovery_qualification wiring (want target plus dogfood-freshness plus matrix)"
+  bad "tools/ci/BUILD.bazel or ci.yml lost the bump_discovery_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "bump discovery qualification harness"

@@ -203,15 +203,6 @@ fi
 
 # Support matrix keeps the native coverage rows plus the #798 delivery
 # record without claiming support.
-if grep -q -F -e '| Go | Planned | Planned: gofumpt | Planned: staticcheck, govet |' "$support" &&
-  grep -q -F -e '| C and C++ | Planned | Planned: clang-format | Planned: clang-tidy, cppcheck |' "$support" &&
-  grep -q -F -e 'Native Layer-2' "$support" &&
-  grep -q -F -e 'delivered under #798' "$support"; then
-  ok
-else
-  bad "support-matrix lost its native coverage rows or #798 delivery record"
-fi
-
 # Tool baseline keeps the Go/C/C++ coverage rows (integration inventory,
 # not a support claim).
 if grep -q -F -e '| C and C++ | clang-format | clang-tidy, cppcheck |' "$baseline" &&

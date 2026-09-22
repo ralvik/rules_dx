@@ -176,15 +176,6 @@ else
   bad "csharp/fsharp wrappers lost their qualified mapping record"
 fi
 
-# Support matrix owns the qualified runner with fixtures and no unpinned claim.
-if grep -q -F -e 'xUnit v3 4.0.0 qualified' "$matrix" &&
-  grep -q -F -e 'issue #477' "$matrix" &&
-  grep -q -F -e 'bazel run //tools/ci:xunit_qualification' "$matrix"; then
-  ok
-else
-  bad "support-matrix lost its #477 qualified xUnit record with fixtures"
-fi
-
 # Generation README owns the qualified mapping with the harness.
 if grep -q -F -e 'qualified under issue #477' "$gen_readme" &&
   grep -q -F -e 'csharp/tests/fixtures/xunit/' "$gen_readme" &&

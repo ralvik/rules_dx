@@ -53,7 +53,6 @@ env_readme="docs/environments/foundation-qualification.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 classify="cli/cli/src/resolve/classify.rs"
 query="cli/cli/src/resolve/query.rs"
 entry="cli/cli/src/resolve/entry.rs"
@@ -132,16 +131,6 @@ else
   bad "docs/native-toolchains.md lost its qualified exact-target record with fixtures plus pins under issue #475"
 fi
 
-# Support matrix keeps the gap owned with the qualified wording.
-if grep -q -F -e 'exact-target discovery' "$matrix" &&
-  grep -q -F -e 'qualified seed-only under issue #475' "$matrix" &&
-  grep -q -F -e '#475' "$matrix" &&
-  grep -q -F -e 'exact_target_qualification' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified exact-target gap wording under issue #475"
-fi
-
 # Rust environment keeps the focused vs exact-target distinction.
 if grep -q -F -e 'exact-target' "$rust_env" &&
   grep -q -F -e 'issue #475' "$rust_env" &&
@@ -190,16 +179,6 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:exact_target_qualificat
   ok
 else
   bad "ci.yml lost the exact_target_qualification step (want dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'exact_target_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #475' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:exact_target_qualification' "$verify" &&
-  grep -q -F -e '`exact_target_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #475 exact-target qualified record"
 fi
 
 # Live proof: exact isolation holds (lib vs bin), not package-wide :all.

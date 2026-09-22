@@ -37,7 +37,6 @@ dx_test_init
 
 contract="docs/cli/cli-contract.md"
 testing="docs/testing/cli.md"
-verify="docs/testing/verification-matrix.md"
 strict_pins="cli/cli/tests/fixtures/strict_parsing/pins.bzl"
 strict_expected="cli/cli/tests/fixtures/strict_parsing/strict_parsing.expected"
 strict_build="cli/cli/tests/fixtures/strict_parsing/BUILD.bazel"
@@ -212,14 +211,6 @@ if grep -q -F -e 'name = "cli_strict_qualification"' "$build" &&
   ok
 else
   bad "tools/ci wiring lost the cli_strict_qualification target plus dogfood-freshness under #810"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':cli_strict_qualification' "$verify" &&
-  grep -q -F -e 'issue #810' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its cli_strict_qualification entry under #810"
 fi
 
 dx_test_summary "cli strict plus help-goldens qualification harness"

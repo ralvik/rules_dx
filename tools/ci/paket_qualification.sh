@@ -53,7 +53,6 @@ fs_xunit="fsharp/tests/fixtures/xunit/BUILD.bazel"
 common="docs/generation/common.md"
 matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
-verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 checker="tools/depcheck/src/lib.rs"
@@ -178,16 +177,6 @@ if grep -q -F -e 'qualified seed-only under issue #482' "$gen_readme" &&
   ok
 else
   bad "generation README lost its #482 qualified Paket lock record"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'paket_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #482' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:paket_qualification' "$verify" &&
-  grep -q -F -e '`paket_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #482 Paket lock qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

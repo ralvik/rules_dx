@@ -50,7 +50,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$accounting_h" && -f "$accounting_cc" && -f "$accounting_test" ]]; then
@@ -151,31 +150,12 @@ else
   bad "docs/native-toolchains.md lost its qualified accounting record with fixtures under issue #501"
 fi
 
-# Support matrix owns the qualified accounting record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #501' "$matrix" &&
-  grep -q -F -e 'lcov_accounting_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/lcov_accounting/pins.bzl' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified accounting record under issue #501"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "lcov_accounting_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:lcov_accounting_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the lcov_accounting_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'lcov_accounting_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #501' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:lcov_accounting_qualification' "$verify" &&
-  grep -q -F -e '`lcov_accounting_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #501 lcov accounting qualified record"
 fi
 
 # Live proof: the accounting lib builds on the seed host.

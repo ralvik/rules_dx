@@ -52,7 +52,6 @@ expected="tools/ci/tests/fixtures/offline_airgap/offline_airgap.expected"
 fixture_build="tools/ci/tests/fixtures/offline_airgap/BUILD.bazel"
 fixture_bundle="tools/ci/tests/fixtures/offline_airgap/bundle"
 targets="tools/ci/ci_targets_c.bzl"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # Contract owns the vendored bundle with checksum-before-install.
 if grep -q -F -e '## Vendored bundle' "$contract" &&
@@ -278,15 +277,6 @@ if grep -q -F -e 'name = "offline_airgap_qualification"' "$targets" &&
   ok
 else
   bad "tools/ci/ci_targets_c.bzl lost the offline_airgap_qualification wiring (want target, #774)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':offline_airgap_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #774' "$verify_matrix" &&
-  grep -q -F -e '`offline_airgap_qualification` 22/22' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its offline_airgap_qualification entry with 22/22 under #774"
 fi
 
 dx_test_summary "offline airgap bootstrap harness"

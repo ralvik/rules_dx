@@ -64,9 +64,7 @@ Additional complete foundations belong in v1 when existing upstream rules permit
 integration. This does not reduce the broad quality-tool baseline. A language's foundation status
 is not permission to omit its required tools.
 
-The [support matrix](support-matrix.md) is the minimum candidate inventory. Its
-[minimal core](support-matrix.md#minimal-required-core) records the
-required set, provisional upstreams, owning trackers, and roles.
+The [support matrix](support-matrix.md) is the minimum candidate inventory.
 Review the wider upstream ecosystem and record each named capability's
 rules/tools, acquisition route, public providers, dependency authority, applicable platforms,
 integration effort, contract compatibility, evidence, and delivery owner, tracked in
@@ -116,7 +114,7 @@ delivery ownership are tracked per candidate under
 plus upgrade tracking, and complete-workflow evidence in
 `cc/tests/fixtures/remediation_bounds/` via
 `bazel run //tools/ci:remediation_bounds_qualification`. Per-foundation effort
-and ownership follow the [minimal core](support-matrix.md#minimal-required-core)
+and ownership follow the [support matrix](support-matrix.md)
 (sole maintainer owns every row until delegated; effort estimated from
 qualification evidence as each tracked item lands) with foundation mappings
 qualified seed-only under closed #470-#489 and adapters delivered

@@ -30,8 +30,6 @@ dx_cd_workspace
 
 dx_test_init
 
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 runner_doc="docs/quality/runner-matrix.md"
 integrations="docs/quality/tool-integrations.md"
 ci=".github/workflows/ci.yml"
@@ -45,29 +43,6 @@ if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
   bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
-fi
-
-# Remaining matrix owns the qualified seed-only record under.
-if grep -q -F -e 'rustfmt_edition_qualification' "$verify_remaining" &&
-  grep -q -F -e 'qualified seed-only under #468' "$verify_remaining" &&
-  grep -q -F -e 'bazel run //tools/ci:rustfmt_edition_qualification' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #468 rustfmt-edition qualified record"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness.
-if grep -q -F -e ':rustfmt_edition_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix dogfood-freshness lost :rustfmt_edition_qualification"
-fi
-
-# Verification matrix Green lists the harness count.
-if grep -q -F -e '`rustfmt_edition_qualification` 20/20' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost rustfmt_edition_qualification 20/20"
 fi
 
 # BUILD owns the harness target.

@@ -34,8 +34,6 @@ dx_cd_workspace
 
 dx_test_init
 
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 gen_rust="docs/generation/rust.md"
 gen_readme="docs/generation/foundation-qualification.md"
 native="docs/native-toolchains.md"
@@ -52,29 +50,6 @@ if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
   bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
-fi
-
-# Remaining matrix owns the qualified seed-only record under.
-if grep -q -F -e 'cc_optout_qualification' "$verify_remaining" &&
-  grep -q -F -e 'qualified seed-only under #471' "$verify_remaining" &&
-  grep -q -F -e 'bazel run //tools/ci:cc_optout_qualification' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #471 CC opt-out qualified record"
-fi
-
-# Verification matrix lists the harness in dogfood-freshness.
-if grep -q -F -e ':cc_optout_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix dogfood-freshness lost :cc_optout_qualification"
-fi
-
-# Verification matrix Green lists the harness count.
-if grep -q -F -e '`cc_optout_qualification` 18/18' "$verify"; then
-  ok
-else
-  bad "verification-matrix Green lost cc_optout_qualification 18/18"
 fi
 
 # BUILD owns the harness target.
@@ -139,15 +114,6 @@ if grep -q -F -e '#471' "$native" &&
   ok
 else
   bad "native-toolchains lost its #471 opt-out qualification with cc_optout fixture"
-fi
-
-# Support matrix keeps the CC opt-out line owned under with no Supported claim.
-if grep -q -F -e 'kept CC opt-out linker' "$matrix" &&
-  grep -q -F -e '#471' "$matrix" &&
-  ! grep -q -E -e '^\| .* \| Supported' "$matrix"; then
-  ok
-else
-  bad "support-matrix lost its owned #471 CC opt-out line (want kept opt-out plus #471, no Supported)"
 fi
 
 # Gazelle default stays hermetic on (opt-out is explicit keep only).

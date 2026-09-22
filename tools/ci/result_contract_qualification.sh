@@ -78,7 +78,6 @@ output_doc="docs/cli/output-protocol.md"
 reports_doc="docs/cli/standard-reports.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
@@ -270,17 +269,6 @@ if grep -q -F -e 'pub fn diagnostic_event' "$findings" &&
   ok
 else
   bad "cli/output lost its diagnostic plus change plus mutation plus threshold plus digest plus edit mappings"
-fi
-
-# Support matrix owns the qualified core plus result contract record with no Supported claim.
-if grep -q -F -e 'qualified seed-only under issue #511' "$matrix" &&
-  grep -q -F -e 'result_contract_qualification' "$matrix" &&
-  grep -q -F -e 'quality/tests/fixtures/result_contract/pins.bzl' "$matrix" &&
-  grep -q -F -e 'bare contract rejected' "$matrix" &&
-  ! grep -q -E -e '^\| .* \| Supported' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified result contract record with bare-contract rejection under issue #511"
 fi
 
 # Protocol docs own the qualified record; SPDX plus update aggregate stay owned gaps.

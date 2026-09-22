@@ -17,7 +17,7 @@ def add_a():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Green hermetic negative proofs; see docs/testing/verification-matrix.md.
+    # Green hermetic negative proofs; see docs/product/support-matrix.md for status.
 
     # Consumer CI template harness (item 1); see tools/ci/consumer_scheduling_test.sh.
     sh_test(

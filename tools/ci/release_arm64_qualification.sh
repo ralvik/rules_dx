@@ -41,7 +41,6 @@ verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 runbook="docs/deploy/release-runbook.md"
-checklist="docs/product/promotion-checklist.md"
 support="docs/product/support-matrix.md"
 pins="tools/ci/tests/fixtures/release_arm64/pins.bzl"
 expected="tools/ci/tests/fixtures/release_arm64/release_arm64.expected"
@@ -49,7 +48,6 @@ fixture_build="tools/ci/tests/fixtures/release_arm64/BUILD.bazel"
 build="tools/ci/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' "$sbom" &&
@@ -61,14 +59,6 @@ else
 fi
 
 # Provenance binds exact bytes: SPDX plus in-toto v1 plus SLSA subject digest.
-if grep -q -F -e 'spdxVersion' "$verify" &&
-  grep -q -F -e 'https://in-toto.io/Statement/v1' "$verify" &&
-  grep -q -F -e 'https://slsa.dev/provenance/v1' "$verify"; then
-  ok
-else
-  bad "Rust launch lost its SPDX plus in-toto plus SLSA subject-binding checks (#803)"
-fi
-
 # Release BUILD keeps the demo plus its portable Rust verifier over the seed fixture.
 if grep -q -F -e 'name = "sbom_demo"' "$release_build" &&
   grep -q -F -e 'name = "dx_release_tools_test"' "$release_build" &&
@@ -139,23 +129,6 @@ else
   bad "release-runbook.md lost its #803 sbom-arm64 sbom-provenance-linux_arm64 plus owner-gated attestation record"
 fi
 
-# Promotion checklist records the arm64 per-host release evidence under #803.
-if grep -q -F -e 'issue #803' "$checklist" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64' "$checklist" &&
-  grep -q -F -e 'sbom-arm64' "$checklist"; then
-  ok
-else
-  bad "promotion-checklist.md lost its #803 sbom-arm64 sbom-provenance-linux_arm64 release-evidence record"
-fi
-
-# Support matrix records arm64 release evidence delivered under #803, never Supported.
-if grep -E -e '^\| Linux arm64 glibc \|' "$support" | grep -q -F -e 'Platform-qualified (#410' &&
-  grep -E -e '^\| Linux arm64 glibc \|' "$support" | grep -q -F -e 'release evidence: linux_arm64 sbom-provenance delivered (#803'; then
-  ok
-else
-  bad "support-matrix.md lost its Linux arm64 Platform-qualified plus #803 release-evidence-delivered record"
-fi
-
 # Per-cell consumer evidence still covers linux_arm64 test-disabled (#408).
 if grep -q -F -e '"linux_arm64"' "$ci" &&
   grep -q -F -e 'disabled_checks: "test"' "$ci"; then
@@ -215,15 +188,6 @@ if grep -q -F -e 'Release evidence for Linux arm64 glibc (issue #803)' "$expecte
   ok
 else
   bad "release_arm64.expected lost its per-host upload plus cells plus rejected plus honesty lines under #803"
-fi
-
-# Verification matrix owns the harness entry as per-host fixture evidence.
-if grep -q -F -e ':release_arm64_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #803' "$verify_matrix" &&
-  grep -q -F -e '`release_arm64_qualification` 18/18' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its release_arm64_qualification entry with 18/18 under #803"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

@@ -24,8 +24,7 @@ Allowed ref: `Corpus: BUILD ownership; see this doc.`
 
 Process-spawning tests carry `tags = ["no-coverage"]` and stay out of the
 coverage denominator via `test_tag_filters=-no-coverage`. See
-[testing strategy](../testing/README.md#coverage) and the
-[verification matrix](../testing/verification-matrix.md#layers).
+[testing strategy](../testing/README.md#coverage).
 
 Allowed ref: `No-coverage: process-spawning test; see this doc.`
 

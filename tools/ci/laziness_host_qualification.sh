@@ -48,7 +48,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 targets_d="tools/ci/ci_targets_d.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 laziness_query="tools/ci/examples_laziness_query.sh"
 
 # Fixture set stays present.
@@ -184,16 +183,6 @@ else
   bad "docs/native-toolchains.md lost its qualified per-host laziness record with fixtures under issue #917"
 fi
 
-# Support matrix owns the provisional-qualifier lifecycle with per-host exception rows.
-if grep -q -F -e 'never shares its status with a provisional backend' "$matrix" &&
-  grep -q -F -e 'provisional-backend exception' "$matrix" &&
-  grep -q -F -e 'provisional backend stays an exception' "$matrix" &&
-  grep -q -F -e 'backends provisional and no `Supported` claim' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its provisional-qualifier lifecycle plus exception rows (want backend adoption boundary, issue #917)"
-fi
-
 # Consumer-graph proof rides the per-foundation laziness slices still wired in CI.
 if grep -q -F -e 'adopt-rust' "$laziness_query" &&
   grep -q -F -e 'forbidden marker' "$laziness_query" &&
@@ -211,15 +200,6 @@ if grep -q -F -e 'name = "laziness_host_qualification"' "$targets_d" &&
   ok
 else
   bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the laziness_host_qualification wiring (want target plus freshness)"
-fi
-
-# Verification matrix owns the harness entry as qualified fixture evidence.
-if grep -q -F -e ':laziness_host_qualification' "$verify" &&
-  grep -q -F -e 'issue #917' "$verify" &&
-  grep -q -F -e '`laziness_host_qualification` 18/18' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its laziness_host_qualification entry with 18/18 under #917"
 fi
 
 # Live proof: missing acceptance leaves unrelated workflows green (the seed

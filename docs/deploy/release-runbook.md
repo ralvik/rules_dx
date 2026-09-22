@@ -37,7 +37,7 @@ Build each qualified cell with `bazel build //cli/cli:dx
 No cell is `Supported` yet; what
 evidence promotes a cell to `Supported` (tag hygiene, versioning, platform
 plus consumer plus release evidence) is owned by the
-[promotion checklist](../product/promotion-checklist.md), qualified seed-only
+[support matrix](../product/support-matrix.md#status-lifecycle), tracked
 under issue #611.
 
 ## Packaging

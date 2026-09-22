@@ -54,7 +54,6 @@ disposition="cc/tests/fixtures/strict_generation/disposition.txt"
 native="docs/native-toolchains.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$strict_h" && -f "$strict_cc" && -f "$strict_test" && -f "$includes_expected" && -f "$resolution" && -f "$disposition" ]]; then
@@ -188,16 +187,6 @@ if grep -q -F -e 'qualified seed-only under issue #503' "$native" &&
   ok
 else
   bad "docs/native-toolchains.md lost its qualified strict-generation record with fixtures under issue #503"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'strict_generation_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #503' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:strict_generation_qualification' "$verify" &&
-  grep -q -F -e '`strict_generation_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #503 strict generation qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

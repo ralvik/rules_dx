@@ -76,8 +76,8 @@ End-to-end suites use the real Bazel launcher and external consumer fixtures. Th
 [Tools](tools.md), and [Quality Workflow](../quality/quality-testing.md) matrices
 define their required behavior and evidence. Flakiness plus timeout tuning lives in [GitHub CI](github-ci.md).
 
-Tests cover only implemented commands. The as-built per-language x per-layer
-status lives in the [verification matrix](verification-matrix.md).
+Tests cover only implemented commands. Open work is tracked in GitHub issues;
+the [support matrix](../product/support-matrix.md) stays the status source.
 
 Non-dogfed paths never run under the standard dogfood gates by design; each has
 an explicit execution path: CLI-contract via hermetic pins under

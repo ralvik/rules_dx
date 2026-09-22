@@ -45,7 +45,6 @@ contract="docs/generation/rust.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins plus fixture BUILD stay present.
 if [[ -f "$header" && -f "$expected" && -f "$pins" && -f "$fixture_build" ]]; then
@@ -154,15 +153,6 @@ else
   bad "docs/native-toolchains.md lost its qualified bindgen record with fixtures plus pins under issue #473"
 fi
 
-# Support matrix keeps the gap owned with the qualified wording.
-if grep -q -F -e 'bindgen LLVM-22-vs-23' "$matrix" &&
-  grep -q -F -e 'qualified under issue' "$matrix" &&
-  grep -q -F -e '#473' "$matrix"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified bindgen gap wording under issue #473"
-fi
-
 # Contract doc owns the binding-generation routes plus fixture proof.
 if grep -q -F -e '## Binding Generation' "$contract" &&
   grep -q -F -e 'qualified under issue #473' "$contract" &&
@@ -196,16 +186,6 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:bindgen_qualification' 
   ok
 else
   bad "ci.yml lost the bindgen_qualification step (want dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'bindgen_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #473' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:bindgen_qualification' "$verify" &&
-  grep -q -F -e '`bindgen_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #473 bindgen qualified record"
 fi
 
 # Live proof: the fixture header is well-formed C both LLVM parsers must accept.

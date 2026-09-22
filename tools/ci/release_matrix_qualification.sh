@@ -49,14 +49,12 @@ dryrun=".github/workflows/publish-dry-run.yml"
 authoring="docs/deploy/authoring.md"
 runbook="docs/deploy/release-runbook.md"
 support="docs/product/support-matrix.md"
-checklist="docs/product/promotion-checklist.md"
 cli_build="cli/cli/BUILD.bazel"
 pins="tools/ci/tests/fixtures/release_matrix/pins.bzl"
 expected="tools/ci/tests/fixtures/release_matrix/release_matrix.expected"
 fixture_build="tools/ci/tests/fixtures/release_matrix/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify_matrix="docs/testing/verification-matrix.md"
 
 # Matrix keeps the frozen five-cell order with the seed first.
 if grep -q -F -e 'dx-linux-x86_64' "$matrix" &&
@@ -140,25 +138,6 @@ else
   bad "cli/cli/BUILD.bazel lost its wider-matrix qualified record (#815)"
 fi
 
-# Support matrix still owns Platform-qualified plus per-host release evidence, never Supported.
-if grep -E -e '^\| Linux arm64 glibc \|' "$support" | grep -q -F -e 'Platform-qualified (#410' &&
-  grep -E -e '^\| macOS arm64 \|' "$support" | grep -q -F -e 'Platform-qualified (#412' &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$support" | grep -q -F -e 'Platform-qualified (#414' &&
-  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
-  ok
-else
-  bad "support-matrix.md lost its Platform-qualified per-host records or gained a Supported cell (#815)"
-fi
-
-# Promotion checklist still owns the per-cell bar with per-host release evidence landed.
-if grep -q -F -e 'closed #803 plus #804 plus #805 plus #807' "$checklist" &&
-  grep -q -F -e 'closed #806 moot' "$checklist" &&
-  grep -q -F -e 'no Supported claim' "$checklist"; then
-  ok
-else
-  bad "promotion-checklist.md lost its closed #803-#807 plus #806-moot plus no-Supported record (#815)"
-fi
-
 # Draft-only ceiling unchanged: no draft opt-out, draft-only flags, placeholder tag.
 if ! grep -rn -F -e 'draft = False' --include='BUILD.bazel' . | head -n 5 | grep -q . &&
   grep -q -F -e '"--draft", "--verify-tag"' deploy/rules/github_deploy.py &&
@@ -231,15 +210,6 @@ if grep -q -F -e 'Release matrix follow-ups qualified (issue #815)' "$expected" 
   ok
 else
   bad "release_matrix.expected lost its qualified-matrix plus per-host-evidence plus ceiling lines under #815"
-fi
-
-# Verification matrix owns the harness entry as per-host fixture evidence.
-if grep -q -F -e ':release_matrix_qualification' "$verify_matrix" &&
-  grep -q -F -e 'issue #815' "$verify_matrix" &&
-  grep -q -F -e '`release_matrix_qualification` 20/20' "$verify_matrix"; then
-  ok
-else
-  bad "verification-matrix.md lost its release_matrix_qualification entry with 20/20 under #815"
 fi
 
 dx_test_summary "release matrix follow-ups harness"

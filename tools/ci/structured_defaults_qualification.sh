@@ -58,7 +58,6 @@ integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
 build="tools/ci/ci_targets_d.bzl"
 ci="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -141,25 +140,8 @@ fi
 
 # Support matrix keeps the qualified structured versions plus rule-sets
 # with fixtures and harness; adapters delivered under #799.
-if grep -q -F -e 'qualified seed-only under issue #488' "$support" &&
-  grep -q -F -e 'structured_defaults_qualification' "$support" &&
-  grep -q -F -e 'quality/tests/fixtures/structured_quality/pins.bzl' "$support" &&
-  grep -q -F -e 'no hidden preset' "$support" &&
-  grep -q -F -e '`protobuf`/`qml` adapters delivered under #799' "$support"; then
-  ok
-else
-  bad "support-matrix lost its #488 qualified structured versions plus rule-sets record with fixtures plus #799 delivery"
-fi
-
 # Support matrix records protobuf/qml delivered under #799, never
 # double-claimed.
-if grep -q -F -e '`protobuf`/`qml` adapters delivered under #799' "$support" &&
-  grep -q -F -e 'never double-claimed' "$support"; then
-  ok
-else
-  bad "support-matrix lost its #799 protobuf/qml delivered record"
-fi
-
 # Tool acquisition keeps the decided checksummed buf route with no
 # target-compiler context plus execution-platform laziness, delivered
 # under #799; versions qualified under #488.
@@ -215,14 +197,6 @@ if grep -q -F -e 'defines no hidden rule' "$native_doc" &&
   ok
 else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
-fi
-
-# Verification matrix owns the harness in battery plus Green.
-if grep -q -F -e ':structured_defaults_qualification' "$verify" &&
-  grep -q -F -e '`structured_defaults_qualification` 17/17' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #488 structured quality harness record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

@@ -289,8 +289,8 @@ rewrite static clean-tree guards as `rust_test` with no product gain while
 re-opening #323/#450/#653/#654; POSIX-only still forks with fewer helpers;
 per-OS shells double the harness. Incremental per-tool Rust-ify stays allowed
 where a product CLI already owns the behavior, never a harness-wide
-migration. `.shellcheckrc` stays `shell=bash`, the support-matrix plus
-verification-matrix shell rows and the ci.yml prove `shell contract` step
+migration. `.shellcheckrc` stays `shell=bash`, the support-matrix status
+plus the ci.yml prove `shell contract` step
 stay as-is; `//tools/ci:shell_contract` owns this rule.
 
 Guard maintenance owns shared helpers plus snapshot versus grep policy under

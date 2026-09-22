@@ -239,7 +239,4 @@ dx_guard_contains tools/ci/ci_targets_b.bzl 'name = "product_runtime_guards"' "t
 # Wiring: dogfood-freshness runs the gate.
 dx_guard_contains tools/ci/dogfood_freshness.sh '//tools/ci:product_runtime_guards' "CI lost the product gate (want dogfood_freshness product_runtime_guards)"
 
-# Wiring: verification matrix lists the gate.
-dx_guard_contains docs/testing/verification-matrix.md 'product_runtime_guards' "verification matrix lost product_runtime_guards (want dogfood-freshness entry)"
-
 dx_test_summary "product runtime guards harness"

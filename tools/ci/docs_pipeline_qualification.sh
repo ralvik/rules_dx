@@ -397,30 +397,12 @@ fi
 
 # Planned work lives in GitHub issues only (docs/roadmap.md removed under #981);
 # the adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift
-# delivered record lives in the documentation README plus verification matrix.
+# delivered record lives in the documentation README.
 if [[ ! -f "docs/roadmap.md" ]] &&
-  grep -q -F -e 'per-release pin-bump plus drift process delivered seed-only under #785' "$readme" &&
-  grep -q -F -e 'no working site claimed' "$matrix"; then
+  grep -q -F -e 'per-release pin-bump plus drift process delivered seed-only under #785' "$readme"; then
   ok
 else
   bad "docs/roadmap.md still exists or the #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered list lost its owner"
-fi
-
-# Verification matrix keeps Docs with no Supported claim and no
-# working site, with adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift
-# delivered and no open implementation tracker.
-if grep -q -F -e 'Docs under no open implementation tracker' "$matrix" &&
-  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift green' "$matrix" &&
-  grep -q -F -e 'docs_pipeline_qualification` 84/84' "$matrix" &&
-  grep -q -F -e 'full pipeline delivered seed-only under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785' "$matrix" &&
-  grep -q -F -e 'guide-step CI wiring delivered seed-only under #783' "$matrix" &&
-  grep -q -F -e 'qualified seed-only under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785' "$matrix" &&
-  grep -q -F -e 'no working site claimed' "$matrix" &&
-  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$matrix" | grep -q . &&
-  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q .; then
-  ok
-else
-  bad "verification matrix lost its Docs plus #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered plus no-Supported gate"
 fi
 
 # Functional: schema major pins agree (proto v1, codec example, shared helper).

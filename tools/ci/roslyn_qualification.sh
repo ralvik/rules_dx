@@ -59,7 +59,6 @@ integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture set stays present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$sample_src" && -f "$pivot_net8" && -f "$pivot_net10" && -f "$aggregated" ]]; then
@@ -207,31 +206,12 @@ fi
 
 # Support matrix records the decision in adapter-input notes plus wire
 # formats plus open risks, with fixtures and no Supported claim.
-if grep -q -F -e 'decided under issue #492' "$support" &&
-  grep -q -F -e 'csharp/tests/fixtures/roslyn/' "$support" &&
-  grep -q -F -e 'single-SARIF assumption is rejected' "$support" &&
-  grep -q -F -e 'concatenate' "$support" &&
-  grep -q -F -e 'no adapter claims' "$support"; then
-  ok
-else
-  bad "support-matrix lost its Roslyn #492 decision with fixtures in adapter notes plus wire formats plus open risks"
-fi
-
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.
 if grep -q -F -e 'name = "roslyn_qualification"' "$build" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:roslyn_qualification' "$ci"; then
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the roslyn_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified record under.
-if grep -q -F -e 'roslyn_qualification' "$verify" &&
-  grep -q -F -e 'issue #492' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:roslyn_qualification' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #492 Roslyn wiring qualified record"
 fi
 
 # Live proof: C# foundation fixture stays green on the seed host

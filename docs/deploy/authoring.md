@@ -140,7 +140,7 @@ x86_64 qualified-built-here; Linux arm64 plus macOS arm64 plus macOS
 x86_64 best-effort plus Windows x86_64 qualified with per-host evidence
 under issue #815: Platform-qualified per the [support matrix](../product/support-matrix.md)
 plus per-host `sbom-provenance` release evidence per the
-[promotion checklist](../product/promotion-checklist.md), best-effort
+[support matrix](../product/support-matrix.md#status-lifecycle), best-effort
 macOS x86_64 exempt non-blocking). Draft-only ceiling enforced, owner approval required.
 
 ## Path E: `pypi_deploy` (accepted)

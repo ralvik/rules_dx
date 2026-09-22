@@ -52,7 +52,6 @@ integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -138,23 +137,6 @@ else
   bad "curated or matrix lost delivered JVM families under #796"
 fi
 
-# Support matrix keeps the delivered JVM rows under #796.
-if grep -q -F -e '| Java | Planned | Planned: google-java-format' "$support" &&
-  grep -q -F -e '| Kotlin | Planned | Planned: ktfmt' "$support" &&
-  grep -q -F -e 'JVM delivered under #796' "$support"; then
-  ok
-else
-  bad "support-matrix lost its delivered JVM rows under #796"
-fi
-
-# Support matrix keeps upstream-defaults honesty plus delivered mapping.
-if grep -q -F -e 'upstream built-in defaults' "$support" &&
-  grep -q -F -e 'JVM delivered under #796' "$support"; then
-  ok
-else
-  bad "support-matrix lost its defaults honesty under #796"
-fi
-
 # Tool acquisition keeps the decided shared-JDK route with no Maven
 # reconstruction and no false claim; versions qualified under, digests
 # plus adapters stay pending under.
@@ -195,15 +177,6 @@ if grep -q -F -e 'defines no hidden rule' "$native_doc" &&
   ok
 else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
-fi
-
-# Verification matrix owns the delivered JVM Layer-2 plus the quality harness record.
-if grep -q -F -e '| Java | Delivered (code ownership) | Delivered |' "$verify" &&
-  grep -q -F -e '| Kotlin | Delivered (code ownership) | Delivered |' "$verify" &&
-  grep -q -F -e '`jvm_quality_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its delivered JVM Layer-2 under #796"
 fi
 
 # CI targets own the harness (split targets file, no behavior change).

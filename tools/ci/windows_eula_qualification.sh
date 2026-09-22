@@ -47,7 +47,6 @@ native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 targets_d="tools/ci/ci_targets_d.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 release_pins="tools/ci/tests/fixtures/release_windows/pins.bzl"
 
 # Fixture set stays present.
@@ -174,16 +173,6 @@ else
   bad "docs/native-toolchains.md lost its qualified EULA-UX record with fixtures under issue #818"
 fi
 
-# Support matrix owns the qualified EULA-UX record with #807 release linkage and no Supported claim.
-if grep -q -F -e 'qualified seed-only under #818' "$matrix" &&
-  grep -q -F -e 'windows_eula_qualification' "$matrix" &&
-  grep -q -F -e 'cc/tests/fixtures/windows_eula/pins.bzl' "$matrix" &&
-  grep -E -e '^\| Windows x86_64 MSVC-compatible \|' "$matrix" | grep -q -F -e 'release evidence: windows_x86_64 sbom-provenance delivered (#807'; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified EULA-UX record with #807 linkage under issue #818"
-fi
-
 # BUILD owns the harness target plus dogfood-freshness wires it.
 if grep -q -F -e 'name = "windows_eula_qualification"' "$targets_d" &&
   grep -q -F -e 'windows_eula_qualification.sh' "$targets_d" &&
@@ -191,15 +180,6 @@ if grep -q -F -e 'name = "windows_eula_qualification"' "$targets_d" &&
   ok
 else
   bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the windows_eula_qualification wiring (want target plus freshness)"
-fi
-
-# Verification matrix owns the harness entry as qualified fixture evidence.
-if grep -q -F -e ':windows_eula_qualification' "$verify" &&
-  grep -q -F -e 'issue #818' "$verify" &&
-  grep -q -F -e '`windows_eula_qualification` 19/19' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its windows_eula_qualification entry with 19/19 under #818"
 fi
 
 # Live proof: missing acknowledgement fails before restricted acquisition

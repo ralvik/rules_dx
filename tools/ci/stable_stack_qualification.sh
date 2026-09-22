@@ -57,7 +57,6 @@ stack="libs/testing/tested_stack.bzl"
 native="docs/native-toolchains.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair stays present.
 if [[ -f "$pins" && -f "$fixture_build" ]]; then
@@ -194,16 +193,6 @@ if grep -q -F -e 'name = "stable_stack_qualification"' "$build" &&
   ok
 else
   bad "tools/ci/BUILD.bazel or ci.yml lost the stable_stack_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the qualified seed-only record under.
-if grep -q -F -e 'stable_stack_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under issue #494' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:stable_stack_qualification' "$verify" &&
-  grep -q -F -e '`stable_stack_qualification` 16/16' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #494 stable-stack qualified record"
 fi
 
 # Live proof: the as-built stack composes (Rust plus C++ hello builds green on the seed host).

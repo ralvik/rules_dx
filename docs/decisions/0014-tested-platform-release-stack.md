@@ -110,8 +110,8 @@ by issues #410-#412 plus #414, not pinned here.
 Prioritize Linux cross-builds and admit additional routes where upstream integration
 keeps maintenance bounded, rather than requiring every host-to-target combination. Required native
 platform workflows remain unchanged; cross-building and target execution require separate evidence.
-The [feasibility review](../product/support-matrix.md#native-toolchain-alternatives) records the
-alternatives and gaps. This selects a design direction, not exact release pins, complete C/C++
+The [support matrix](../product/support-matrix.md) records the
+current status. This selects a design direction, not exact release pins, complete C/C++
 foundation admission, verified support, or an implementation milestone.
 
 The normal consumer adds only the `rules_dx` module dependency. Every supported application

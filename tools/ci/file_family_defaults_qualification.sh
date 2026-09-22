@@ -67,7 +67,6 @@ integrations="docs/quality/tool-integrations.md"
 native_doc="docs/quality/native-configuration.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture pair plus pins stay present.
 if [[ -f "$pins" && -f "$pins_build" ]]; then
@@ -178,30 +177,9 @@ fi
 
 # Support matrix keeps the qualified file-family versions plus rule-sets
 # with fixtures and harness; digests plus adapters stay under.
-if grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
-  grep -q -F -e 'resolved seed-only under issue #582' "$support" &&
-  grep -q -F -e 'file_family_defaults_qualification' "$support" &&
-  grep -q -F -e 'quality/tests/fixtures/file_family_quality/pins.bzl' "$support" &&
-  grep -q -F -e 'no hidden preset' "$support" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #420' "$support"; then
-  ok
-else
-  bad "support-matrix lost its #489 plus #582 qualified file-family versions plus rule-sets record with fixtures"
-fi
-
 # Support matrix resolves the rule-selection plus config-discovery plus
 # suffix-inference conflicts as upstream built-in defaults with registry
 # applicability (no auto-supplied preset, never suffix-inferred).
-if grep -q -F -e 'suffix inference rejected' "$support" &&
-  grep -q -F -e 'upstream built-in defaults' "$support" &&
-  grep -q -F -e 'no auto-supplied' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
-  grep -q -F -e 'resolved seed-only under issue #582' "$support"; then
-  ok
-else
-  bad "support-matrix lost its #489 plus #582 rule-selection plus suffix-inference conflict resolution"
-fi
-
 # Tool acquisition keeps the frozen standalone route with no separate
 # ambient resolution and no false claim; versions qualified under with
 # modfmt resolved under, digests plus adapters stay pending under.
@@ -266,17 +244,6 @@ if grep -q -F -e 'defines no hidden rule' "$native_doc" &&
   ok
 else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
-fi
-
-# Verification matrix owns the qualified seed-only record under plus.
-if grep -q -F -e 'file_family_defaults_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #489' "$verify" &&
-  grep -q -F -e 'resolved seed-only under #582' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:file_family_defaults_qualification' "$verify" &&
-  grep -q -F -e '`file_family_defaults_qualification` 17/17' "$verify"; then
-  ok
-else
-  bad "verification-matrix lost its #489 plus #582 file-family quality qualified record"
 fi
 
 # BUILD owns the harness target plus CI wires it in dogfood-freshness.

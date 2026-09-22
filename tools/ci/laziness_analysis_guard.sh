@@ -54,7 +54,6 @@ expected="tools/ci/tests/fixtures/laziness_analysis/laziness_analysis.expected"
 ci_targets="tools/ci/ci_targets_a.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
 tools_doc="docs/testing/tools.md"
-verify="docs/testing/verification-matrix.md"
 
 # Fixture files stay present with the four metric pins.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]] &&
@@ -114,12 +113,6 @@ if grep -q -F -e 'laziness_analysis_guard' "$tools_doc" &&
 else
   bad "docs/testing/tools.md lost its laziness_analysis_guard link"
 fi
-if grep -q -F -e 'laziness_analysis_guard' "$verify"; then
-  ok
-else
-  bad "docs/testing/verification-matrix.md lost its laziness_analysis_guard battery entry"
-fi
-
 # Single-source pin readers (pins.bzl is valid Python for exec).
 pin_cquery() {
   python3 -c "ns={}; exec(open('$pins').read(), ns); print(ns['CQUERY_EXPECTED']['$1'])"

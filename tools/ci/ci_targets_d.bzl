@@ -28,7 +28,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # CXX graph identity harness; see docs/testing/verification-matrix.md.
+    # CXX graph identity harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "cxx_identity_qualification",
         srcs = ["cxx_identity_qualification.sh"],
@@ -428,7 +428,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Layer-2 adapter-less plus composition plus depcheck harness; see docs/testing/verification-matrix.md.
+    # Layer-2 adapter-less plus composition plus depcheck harness; see docs/product/support-matrix.md for status.
     sh_binary(
         name = "layer2_opens_qualification",
         srcs = ["layer2_opens_qualification.sh"],

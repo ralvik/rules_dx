@@ -44,7 +44,6 @@ exec_update="cli/cli/src/exec/update.rs"
 exec_tests="cli/cli/src/exec/update_tests_b.rs"
 targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
 
 # Protocol owns the v1.0 wont-fix history with resolver-owned backends.
 if grep -q -F -e 'absence of file events was wont-fix' "$protocol" &&
@@ -196,14 +195,6 @@ if grep -q -F -e 'name = "update_events_qualification"' "$targets" &&
   ok
 else
   bad "tools/ci targets or dogfood lost the update_events_qualification wiring (want target plus dogfood-freshness)"
-fi
-
-# Verification matrix owns the harness entry as seed-only fixture evidence.
-if grep -q -F -e ':update_events_qualification' "$verify" &&
-  grep -q -F -e 'issue #586' "$verify"; then
-  ok
-else
-  bad "verification-matrix.md lost its update_events_qualification entry under #586"
 fi
 
 dx_test_summary "update events qualification harness"

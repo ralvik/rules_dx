@@ -76,15 +76,12 @@ integrations="docs/quality/tool-integrations.md"
 testing_doc="docs/quality/quality-testing.md"
 action_doc="docs/quality/action-model.md"
 support="docs/product/support-matrix.md"
-promotion="docs/product/promotion-checklist.md"
 acquisition="docs/tools/tool-acquisition.md"
 module="MODULE.bazel"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 targets="tools/ci/ci_targets_d.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
-verify="docs/testing/verification-matrix.md"
-verify_remaining="docs/testing/verification-matrix-remaining.md"
 
 # Fixture files stay present.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]]; then
@@ -243,16 +240,6 @@ fi
 # Deferred delivery linkage: cohort harnesses own #796 plus #797 plus #798
 # plus #799 plus #800 (issue #802 promotion, still seed-only). Verify text
 # is split across lines in the matrix, so match line-safe fragments.
-if [[ -f "tools/ci/jvm_cohort_qualification.sh" && -f "tools/ci/scala_dotnet_adapters_qualification.sh" && -f "tools/ci/native_adapters_qualification.sh" && -f "tools/ci/structured_adapters_qualification.sh" && -f "tools/ci/file_family_adapters_qualification.sh" ]] &&
-  grep -q -F -e 'JVM delivered under #796' "$verify" &&
-  grep -q -F -e 'Scala/.NET Layer-2 delivered under #797' "$verify" &&
-  grep -q -F -e 'Native Layer-2 delivered' "$verify" &&
-  grep -q -F -e 'under #798 plus Structured Protobuf/QML delivered under #799' "$verify"; then
-  ok
-else
-  bad "taxonomy lost its #796 plus #797 plus #798 plus #799 plus #800 deferred-delivery linkage under issue #802"
-fi
-
 # Registry stays single-sourced with versioned v1 schemas.
 if grep -q -F -e 'Single-sourced versioned registry queries' "$registry" &&
   grep -q -F -e 'REGISTRY_SCHEMA_VERSION = 1' "$registry" &&
@@ -377,36 +364,20 @@ fi
 # Consumer evidence linkage: adopt workspaces plus reusable workflow
 # (issue #802 promotion, still seed-only).
 if [[ -d "examples/adopt-rust" && -d "examples/adopt-python" ]] &&
-  [[ -f ".github/workflows/reusable-consumer.yml" ]] &&
-  grep -q -F -e 'adopt-rust' "$verify"; then
+  [[ -f ".github/workflows/reusable-consumer.yml" ]]; then
   ok
 else
   bad "taxonomy lost its consumer evidence linkage (want adopt plus reusable-consumer under issue #802)"
 fi
 
-# Release evidence linkage: promotion checklist plus SBOM plus signing plus
+# Release evidence linkage: SBOM plus signing plus
 # supported gate with no Supported claim (issue #802 promotion).
-if grep -q -F -e 'Promotion Checklist' "$promotion" &&
-  grep -q -F -e 'bazel run //tools/ci:supported_evidence_gate' "$promotion" &&
-  [[ -f "tools/ci/supported_evidence_gate.sh" ]] &&
+if [[ -f "tools/ci/supported_evidence_gate.sh" ]] &&
   grep -q -F -e 'sbom-provenance' "$ci" &&
   ! grep -q -E -e '^\| .* \| Supported' "$support"; then
   ok
 else
-  bad "taxonomy lost its release evidence linkage (want checklist plus SBOM plus gate with no Supported under issue #802)"
-fi
-
-# Support matrix owns the qualified taxonomy record with honest gaps
-# plus the #802 promotion linkage.
-if grep -q -F -e 'qualified seed-only under closed #512' "$support" &&
-  grep -q -F -e 'quality_taxonomy_qualification' "$support" &&
-  grep -q -F -e 'quality/tests/fixtures/quality_taxonomy/pins.bzl' "$support" &&
-  grep -q -F -e 'taxonomy doc only rejected' "$support" &&
-  grep -q -F -e 'promotion gaps linked under #802' "$support" &&
-  ! grep -q -E -e '^\| .* \| Supported' "$support"; then
-  ok
-else
-  bad "docs/product/support-matrix.md lost its qualified taxonomy record with doc-only rejection plus #802 linkage under closed #512"
+  bad "taxonomy lost its release evidence linkage (want SBOM plus gate with no Supported under issue #802)"
 fi
 
 # Quality docs own the qualified record; audit stays explicit.
@@ -423,19 +394,6 @@ if grep -q -F -e 'qualified seed-only under issue #512' "$sources_doc" &&
   ok
 else
   bad "quality docs lost their qualified taxonomy record plus Bandit honesty plus #802 linkage under issue #512"
-fi
-
-# Verification matrix owns the qualified seed-only record plus #802
-# promotion linkage.
-if grep -q -F -e 'quality_taxonomy_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under closed #512' "$verify" &&
-  grep -q -F -e 'bazel run //tools/ci:quality_taxonomy_qualification' "$verify" &&
-  grep -q -F -e '`quality_taxonomy_qualification` 25/25' "$verify" &&
-  grep -q -F -e 'promotion gaps #802' "$verify" &&
-  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q .; then
-  ok
-else
-  bad "verification-matrix lost its #512 qualified taxonomy record plus #802 linkage or gained Supported"
 fi
 
 # Targets own the harness plus dogfood wires it.
@@ -460,14 +418,6 @@ if grep -q -F -e 'qualified seed-only under issue #512' "$expected" &&
   ok
 else
   bad "quality_taxonomy.expected lost taxonomy coverage (want qualified plus doc-only plus 47 plus 8 plus 39 plus 53 plus Bandit plus owned gap plus #802, issue #512)"
-fi
-
-# Verification-remaining mirrors the #802 promotion record.
-if grep -q -F -e 'quality_taxonomy_qualification' "$verify_remaining" &&
-  grep -q -F -e '#802' "$verify_remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #802 taxonomy promotion record"
 fi
 
 # Live proof: quality suites plus the fixture build stay green.

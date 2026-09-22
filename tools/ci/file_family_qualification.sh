@@ -42,68 +42,9 @@ native="quality/native_config.bzl"
 matrix="quality/testdata/runner_matrix_cases.bzl"
 subjects="quality/testdata/BUILD.bazel"
 aspects="quality/real_aspects.bzl"
-verify="docs/testing/verification-matrix.md"
 
 # Support matrix owns the Quality And File Families section with the
 # qualified seed-only record under.
-if grep -q -F -e '## Quality And File Families' "$support" &&
-  grep -q -F -e 'qualified seed-only under issue #489' "$support" &&
-  grep -q -F -e 'bazel run //tools/ci:file_family_qualification' "$support"; then
-  ok
-else
-  bad "support-matrix lost its Quality And File Families qualified record under #489"
-fi
-
-# Support matrix keeps every file-family row from the issue scope.
-if grep -q -F -e '| CSS, Less, SCSS |' "$support" &&
-  grep -q -F -e '| HTML templates |' "$support" &&
-  grep -q -F -e '| Protocol Buffer |' "$support" &&
-  grep -q -F -e '| Starlark |' "$support" &&
-  grep -q -F -e '| TOML |' "$support" &&
-  grep -q -F -e '| YAML |' "$support" &&
-  grep -q -F -e '| Language-independent text |' "$support" &&
-  grep -q -F -e '| Shell |' "$support"; then
-  ok
-else
-  bad "support-matrix lost a file-family row (CSS/templates/protobuf/starlark/toml/yaml/text/shell)"
-fi
-
-# Support matrix keeps the feasibility rows for cue/jsonnet/pkl/qml/terraform.
-if grep -q -F -e '| CUE |' "$support" &&
-  grep -q -F -e '| Jsonnet |' "$support" &&
-  grep -q -F -e '| Pkl |' "$support" &&
-  grep -q -F -e '| QML |' "$support" &&
-  grep -q -F -e '| Terraform |' "$support" &&
-  grep -q -F -e 'Planned: feasibility' "$support"; then
-  ok
-else
-  bad "support-matrix lost a feasibility row (cue/jsonnet/pkl/qml/terraform)"
-fi
-
-# Support matrix names the intended per-family tools without claiming Supported.
-if grep -q -F -e 'Planned: Prettier and Stylelint' "$support" &&
-  grep -q -F -e 'Planned: djlint' "$support" &&
-  grep -q -F -e 'Planned: buf format and lint' "$support" &&
-  grep -q -F -e 'Planned: Buildifier' "$support" &&
-  grep -q -F -e 'Planned: Taplo format and lint' "$support" &&
-  grep -q -F -e 'Planned: yamlfmt and yamllint' "$support" &&
-  grep -q -F -e 'Planned: keep-sorted' "$support" &&
-  grep -q -F -e 'Planned: shfmt and ShellCheck' "$support"; then
-  ok
-else
-  bad "support-matrix lost a per-family tool cell (prettier/stylelint/djlint/buf/buildifier/taplo/yaml/keep-sorted/shfmt)"
-fi
-
-# Support matrix keeps no Supported claim and owns N/A applicability honesty.
-if ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$support" | grep -q . &&
-  grep -q -F -e 'no cell is currently' "$support" &&
-  grep -q -F -e 'Applicability verification' "$support" &&
-  grep -q -F -e 'rather than inferred from a file suffix' "$support"; then
-  ok
-else
-  bad "support-matrix lost its no-Supported plus applicability-verification record"
-fi
-
 # Tool baseline owns the matching file-family rows.
 if grep -q -F -e '| CSS, Less, SCSS | Prettier | Stylelint |' "$baseline" &&
   grep -q -F -e '| HTML templates | djlint |' "$baseline" &&
@@ -291,24 +232,7 @@ else
   bad "real_aspects lost its file-family stage wiring"
 fi
 
-# Verification matrix keeps the qualified record with no Supported claim.
-if grep -q -F -e 'file_family_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #489' "$verify" &&
-  ! grep -E -e '^\|.*\| *`?Supported`? *\|' "$verify" | grep -q .; then
-  ok
-else
-  bad "verification-matrix lost its #489 qualified record or gained Supported"
-fi
-
 # Owned gaps stay explicit: adapter execution plus pins plus platform/consumer/release.
-if grep -q -F -e 'adapter execution' "$support" &&
-  grep -q -F -e 'exact pins' "$support" &&
-  grep -q -F -e 'platform plus consumer plus release' "$support"; then
-  ok
-else
-  bad "support-matrix lost its file-family owned-gap honesty"
-fi
-
 # Functional: parity gate shape still fails closed on drift.
 if grep -q -F -e 'REAL_ADAPTERS = {' "$adapters" &&
   grep -q -F -e 'REAL_CLASS_TO_FAMILY = {' "$adapters" &&
