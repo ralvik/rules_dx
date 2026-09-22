@@ -13,7 +13,9 @@ header closure and source/test split, emitting `CcEnvPlanInfo` plus
 a JSON plan. It never scans the checkout or reconstructs toolchain metadata.
 Pinned by `cc/env/plan_tests.bzl` and exercised by `cc/env:hello_lib_plan`,
 `cc/env:hello_plan`, and `cc/env:hello_test_plan` over the hello library,
-binary, and test.
+binary, and test, plus `cc/env:hello_c_lib_plan` and
+`cc/env:hello_c_test_plan` over the C hello library and test
+(`hello.c` plus `hello_c_test` with `hello_c.h` header ownership).
 
 ## Toolchain
 
