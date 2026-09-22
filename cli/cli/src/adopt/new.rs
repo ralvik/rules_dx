@@ -10,6 +10,7 @@
 use std::io::Write;
 
 use crate::args::Invocation;
+use crate::exec::common::check_stdout_write;
 
 use super::{operational, summaries_suppressed};
 use dx_process::pre_exec_code;
@@ -42,7 +43,11 @@ pub(crate) fn execute_new(
             match dx_adopt::plan_new_files(language, name) {
                 Ok(files) => {
                     for file in files {
-                        let _ = writeln!(out, "would write {}", file.path);
+                        if let Err(exit) =
+                            check_stdout_write(writeln!(out, "would write {}", file.path))
+                        {
+                            return exit;
+                        }
                     }
                 }
                 Err(error) => return operational(out, err, &error.to_string()),
@@ -59,7 +64,9 @@ pub(crate) fn execute_new(
                 if let Some(path) = entry.strip_prefix("refused:") {
                     let _ = writeln!(err, "dx: {path} (absent-only, left untouched)");
                 } else if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "wrote {entry}");
+                    if let Err(exit) = check_stdout_write(writeln!(out, "wrote {entry}")) {
+                        return exit;
+                    }
                 }
             }
             0

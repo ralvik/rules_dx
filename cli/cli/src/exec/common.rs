@@ -12,9 +12,35 @@ use dx_output::{
     command_finished, write_event, ChangeEvent, ChangeKind, DiagnosticEvent, FinishedCounts,
     OutputMode,
 };
-use dx_process::{operational_code, pre_exec_code, Runner};
+use dx_process::{broken_pipe_code, operational_code, pre_exec_code, stdout_io_code, Runner};
 use std::io::{self, Write};
 use std::path::Path;
+
+/// Maps stdout `write_event` failure to `141` on `EPIPE`, else operational.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
+pub(crate) fn stdout_output_code(error: &dx_output::OutputError) -> i32 {
+    if error.is_broken_pipe() {
+        broken_pipe_code()
+    } else {
+        operational_code()
+    }
+}
+
+/// Checks one stdout `write_event`: `Ok` continues, `Err` is the exit code.
+pub(crate) fn emit_event(out: &mut dyn Write, event: &serde_json::Value) -> Result<(), i32> {
+    write_event(out, event).map_err(|error| stdout_output_code(&error))
+}
+
+/// Checks one stdout text write (`writeln!`/`write!`/`write_all`).
+pub(crate) fn check_stdout_write(result: io::Result<()>) -> Result<(), i32> {
+    result.map_err(|error| stdout_io_code(&error))
+}
+
+/// Checks `out.flush()`: `141` on `EPIPE`, else operational.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
+pub(crate) fn flush_out(out: &mut dyn Write) -> Result<(), i32> {
+    out.flush().map_err(|error| stdout_io_code(&error))
+}
 
 /// Stable per-file reason: the workspace source changed or vanished
 /// after analysis, so recorded byte ranges no longer apply.
@@ -238,6 +264,8 @@ pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
 
 /// Operational failure after planning: stderr diagnostic, JSON
 /// `error` and `command_finished` events in JSON mode, exit code 1.
+/// Stdout truncation fails with `141` on `EPIPE`, else operational.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub(crate) fn operational(
     invocation: &Invocation,
     out: &mut dyn Write,
@@ -248,7 +276,9 @@ pub(crate) fn operational(
     let _ = writeln!(err, "dx: {code}: {message}");
     if invocation.output == OutputMode::Json {
         if let Ok(event) = dx_output::error_event(code, message, None, None, None) {
-            let _ = write_event(out, &event);
+            if let Err(exit) = emit_event(out, &event) {
+                return exit;
+            }
         }
         let finished = command_finished(
             operational_code(),
@@ -257,7 +287,9 @@ pub(crate) fn operational(
                 ..FinishedCounts::default()
             },
         );
-        let _ = write_event(out, &finished);
+        if let Err(exit) = emit_event(out, &finished) {
+            return exit;
+        }
     }
     operational_code()
 }
@@ -372,5 +404,74 @@ mod tests {
         };
         let other_event = change_event_for(&other).expect("other event");
         assert_ne!(first.path, other_event.path);
+    }
+
+    struct BrokenPipeWriter;
+
+    impl Write for BrokenPipeWriter {
+        fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"))
+        }
+    }
+
+    struct FailingWriter;
+
+    impl Write for FailingWriter {
+        fn write(&mut self, _buf: &[u8]) -> io::Result<usize> {
+            Err(io::Error::new(io::ErrorKind::Other, "boom"))
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::new(io::ErrorKind::Other, "boom"))
+        }
+    }
+
+    #[test]
+    fn stdout_helpers_map_broken_pipe_to_141() {
+        // See: `docs/cli/output-protocol.md#exit-codes`.
+        assert_eq!(dx_process::broken_pipe_code(), 128 + 13);
+        let broken = io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe");
+        assert_eq!(stdout_io_code(&broken), 128 + 13);
+        let other = io::Error::new(io::ErrorKind::Other, "boom");
+        assert_eq!(stdout_io_code(&other), operational_code());
+        let broken_out = dx_output::OutputError::Io("Broken pipe (os error 32)".to_owned());
+        assert!(broken_out.is_broken_pipe());
+        assert_eq!(stdout_output_code(&broken_out), 128 + 13);
+        let other_out = dx_output::OutputError::Io("boom".to_owned());
+        assert!(!other_out.is_broken_pipe());
+        assert_eq!(stdout_output_code(&other_out), operational_code());
+    }
+
+    #[test]
+    fn emit_event_and_flush_fail_with_broken_pipe_code() {
+        let event = command_finished(0, &FinishedCounts::default());
+        assert_eq!(emit_event(&mut BrokenPipeWriter, &event), Err(128 + 13));
+        assert_eq!(emit_event(&mut FailingWriter, &event), Err(1));
+        assert_eq!(flush_out(&mut BrokenPipeWriter), Err(128 + 13));
+        assert_eq!(flush_out(&mut FailingWriter), Err(1));
+        assert!(check_stdout_write(Err(io::Error::new(
+            io::ErrorKind::BrokenPipe,
+            "broken pipe"
+        )))
+        .is_err());
+    }
+
+    #[test]
+    fn operational_returns_broken_pipe_on_truncated_stdout() {
+        use crate::args::parse;
+        let invocation = parse(&["status".to_owned(), "--output=json".to_owned()]).expect("parse");
+        let mut err = Vec::new();
+        let code = operational(
+            &invocation,
+            &mut BrokenPipeWriter,
+            &mut err,
+            "launch_failed",
+            "boom",
+        );
+        assert_eq!(code, 128 + 13);
     }
 }

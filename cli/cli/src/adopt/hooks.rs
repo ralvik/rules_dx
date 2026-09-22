@@ -10,6 +10,8 @@ use std::io::Write;
 use std::time::Instant;
 
 use crate::args::Invocation;
+use crate::exec::common::check_stdout_write;
+
 use crate::resolve::{QueryResult, QueryRunner};
 
 use super::{operational, pre_exec, summaries_suppressed};
@@ -31,9 +33,21 @@ pub(crate) fn execute_hooks(
         "install" => {
             if invocation.dry_run {
                 if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "would install .git/hooks/pre-commit");
-                    let _ = writeln!(out, "would install .git/hooks/pre-push");
-                    let _ = writeln!(out, "would install dx.local.toml");
+                    if let Err(exit) =
+                        check_stdout_write(writeln!(out, "would install .git/hooks/pre-commit"))
+                    {
+                        return exit;
+                    }
+                    if let Err(exit) =
+                        check_stdout_write(writeln!(out, "would install .git/hooks/pre-push"))
+                    {
+                        return exit;
+                    }
+                    if let Err(exit) =
+                        check_stdout_write(writeln!(out, "would install dx.local.toml"))
+                    {
+                        return exit;
+                    }
                 }
                 return 0;
             }
@@ -41,7 +55,10 @@ pub(crate) fn execute_hooks(
                 Ok(installed) => {
                     if !summaries_suppressed(invocation) {
                         for path in installed {
-                            let _ = writeln!(out, "installed {path}");
+                            if let Err(exit) = check_stdout_write(writeln!(out, "installed {path}"))
+                            {
+                                return exit;
+                            }
                         }
                     }
                     0
@@ -52,8 +69,16 @@ pub(crate) fn execute_hooks(
         "uninstall" => {
             if invocation.dry_run {
                 if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "would remove .git/hooks/pre-commit");
-                    let _ = writeln!(out, "would remove .git/hooks/pre-push");
+                    if let Err(exit) =
+                        check_stdout_write(writeln!(out, "would remove .git/hooks/pre-commit"))
+                    {
+                        return exit;
+                    }
+                    if let Err(exit) =
+                        check_stdout_write(writeln!(out, "would remove .git/hooks/pre-push"))
+                    {
+                        return exit;
+                    }
                 }
                 return 0;
             }
@@ -61,7 +86,9 @@ pub(crate) fn execute_hooks(
                 Ok(removed) => {
                     if !summaries_suppressed(invocation) {
                         for path in removed {
-                            let _ = writeln!(out, "removed {path}");
+                            if let Err(exit) = check_stdout_write(writeln!(out, "removed {path}")) {
+                                return exit;
+                            }
                         }
                     }
                     0
@@ -90,7 +117,9 @@ fn execute_status(
 ) -> i32 {
     if invocation.dry_run {
         if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "would show hooks status");
+            if let Err(exit) = check_stdout_write(writeln!(out, "would show hooks status")) {
+                return exit;
+            }
         }
         return 0;
     }
@@ -143,7 +172,9 @@ fn execute_status(
         "absent (no dx.local.toml)".to_owned()
     };
     let view = dx_adopt::render_hooks_status_merged(&merged, &timings, &baseline_src, &overlay_src);
-    let _ = write!(out, "{view}");
+    if let Err(exit) = check_stdout_write(write!(out, "{view}")) {
+        return exit;
+    }
     0
 }
 
@@ -163,7 +194,9 @@ fn execute_run(
     }
     if invocation.dry_run {
         if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "would run {trigger}");
+            if let Err(exit) = check_stdout_write(writeln!(out, "would run {trigger}")) {
+                return exit;
+            }
         }
         return 0;
     }
@@ -192,7 +225,11 @@ fn execute_run(
     let checks = dx_adopt::checks_for_trigger(&config, trigger);
     if checks.is_empty() {
         if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "ran {trigger}: ok (no checks configured)");
+            if let Err(exit) =
+                check_stdout_write(writeln!(out, "ran {trigger}: ok (no checks configured)"))
+            {
+                return exit;
+            }
         }
         return 0;
     }
@@ -202,7 +239,11 @@ fn execute_run(
     };
     if staged.is_empty() {
         if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "ran {trigger}: ok (no staged files)");
+            if let Err(exit) =
+                check_stdout_write(writeln!(out, "ran {trigger}: ok (no staged files)"))
+            {
+                return exit;
+            }
         }
         return 0;
     }
@@ -212,7 +253,11 @@ fn execute_run(
     };
     if targets.is_empty() {
         if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "ran {trigger}: ok (no affected targets)");
+            if let Err(exit) =
+                check_stdout_write(writeln!(out, "ran {trigger}: ok (no affected targets)"))
+            {
+                return exit;
+            }
         }
         return 0;
     }

@@ -27,6 +27,7 @@ mod watch;
 use std::io::Write;
 
 use crate::args::{Command, Invocation};
+use crate::exec::common::flush_out;
 use crate::resolve::QueryRunner;
 use dx_output::OutputMode;
 use dx_process::{operational_code, pre_exec_code};
@@ -47,7 +48,11 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
 
 fn operational(out: &mut dyn Write, err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
-    let _ = out.flush();
+    // Stdout truncation fails with `141` on `EPIPE`, else operational.
+    // See: `docs/cli/output-protocol.md#exit-codes`.
+    if let Err(exit) = flush_out(out) {
+        return exit;
+    }
     operational_code()
 }
 

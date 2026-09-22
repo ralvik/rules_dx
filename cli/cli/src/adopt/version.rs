@@ -7,6 +7,7 @@
 use std::io::Write;
 
 use crate::args::Invocation;
+use crate::exec::common::check_stdout_write;
 use dx_process::operational_code;
 
 use super::{operational, pre_exec, summaries_suppressed};
@@ -59,13 +60,20 @@ pub(crate) fn execute_version(
         }
         if invocation.dry_run {
             if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "would pin {previous} (rollback)");
+                if let Err(exit) =
+                    check_stdout_write(writeln!(out, "would pin {previous} (rollback)"))
+                {
+                    return exit;
+                }
             }
             return 0;
         }
         return match dx_adopt::write_version_pin(workspace, previous) {
             Ok(()) => {
-                let _ = writeln!(out, "pinned {previous} (rollback)");
+                if let Err(exit) = check_stdout_write(writeln!(out, "pinned {previous} (rollback)"))
+                {
+                    return exit;
+                }
                 0
             }
             Err(error) => operational(out, err, &error.to_string()),
@@ -81,13 +89,17 @@ pub(crate) fn execute_version(
         }
         if invocation.dry_run {
             if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "would pin {pin}");
+                if let Err(exit) = check_stdout_write(writeln!(out, "would pin {pin}")) {
+                    return exit;
+                }
             }
             return 0;
         }
         return match dx_adopt::write_version_pin(workspace, pin) {
             Ok(()) => {
-                let _ = writeln!(out, "pinned {pin}");
+                if let Err(exit) = check_stdout_write(writeln!(out, "pinned {pin}")) {
+                    return exit;
+                }
                 0
             }
             Err(error) => operational(out, err, &error.to_string()),
@@ -96,9 +108,13 @@ pub(crate) fn execute_version(
     if invocation.dry_run {
         if !summaries_suppressed(invocation) {
             if invocation.check {
-                let _ = writeln!(out, "would check version pin");
+                if let Err(exit) = check_stdout_write(writeln!(out, "would check version pin")) {
+                    return exit;
+                }
             } else {
-                let _ = writeln!(out, "would report version");
+                if let Err(exit) = check_stdout_write(writeln!(out, "would report version")) {
+                    return exit;
+                }
             }
         }
         return 0;
@@ -112,7 +128,9 @@ pub(crate) fn execute_version(
     };
     if invocation.check {
         if dx_adopt::version_pin_matches_module(&current, dx_adopt::MODULE_VERSION) {
-            let _ = writeln!(out, "version ok: {current}");
+            if let Err(exit) = check_stdout_write(writeln!(out, "version ok: {current}")) {
+                return exit;
+            }
             0
         } else {
             let _ = writeln!(
@@ -123,9 +141,17 @@ pub(crate) fn execute_version(
             operational_code()
         }
     } else {
-        let _ = writeln!(out, "dx {}", dx_adopt::DX_VERSION);
-        let _ = writeln!(out, "rules_dx {}", dx_adopt::MODULE_VERSION);
-        let _ = writeln!(out, "pin {current}");
+        if let Err(exit) = check_stdout_write(writeln!(out, "dx {}", dx_adopt::DX_VERSION)) {
+            return exit;
+        }
+        if let Err(exit) =
+            check_stdout_write(writeln!(out, "rules_dx {}", dx_adopt::MODULE_VERSION))
+        {
+            return exit;
+        }
+        if let Err(exit) = check_stdout_write(writeln!(out, "pin {current}")) {
+            return exit;
+        }
         0
     }
 }

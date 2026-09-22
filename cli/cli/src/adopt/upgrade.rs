@@ -10,9 +10,11 @@
 use std::io::Write;
 
 use crate::args::Invocation;
+use crate::exec::common::{check_stdout_write, emit_event};
+
 use dx_output::{
-    command_finished, command_started, error_event, notice_event, write_event, FinishedCounts,
-    NoticeEvent, OutputMode,
+    command_finished, command_started, error_event, notice_event, FinishedCounts, NoticeEvent,
+    OutputMode,
 };
 use dx_process::operational_code;
 
@@ -49,7 +51,9 @@ pub(crate) fn execute_upgrade(
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
-                let _ = write_event(out, &event);
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
             }
             if let Ok(event) = notice_event(&NoticeEvent {
                 level: "info".to_owned(),
@@ -61,12 +65,18 @@ pub(crate) fn execute_upgrade(
                 language: None,
                 import: None,
             }) {
-                let _ = write_event(out, &event);
+                if let Err(exit) = emit_event(out, &event) {
+                    return exit;
+                }
             }
             let finished = command_finished(0, &FinishedCounts::default());
-            let _ = write_event(out, &finished);
+            if let Err(exit) = emit_event(out, &finished) {
+                return exit;
+            }
         } else if !summaries_suppressed(invocation) {
-            let _ = writeln!(out, "{summary}");
+            if let Err(exit) = check_stdout_write(writeln!(out, "{summary}")) {
+                return exit;
+            }
         }
         return 0;
     }
@@ -80,11 +90,15 @@ pub(crate) fn execute_upgrade(
     );
     if invocation.output == OutputMode::Json {
         if let Ok(event) = command_started(invocation.command.name(), false, "default") {
-            let _ = write_event(out, &event);
+            if let Err(exit) = emit_event(out, &event) {
+                return exit;
+            }
         }
         let _ = writeln!(err, "dx: upgrade_failed: {message}");
         if let Ok(event) = error_event("upgrade_failed", &message, None, None, None) {
-            let _ = write_event(out, &event);
+            if let Err(exit) = emit_event(out, &event) {
+                return exit;
+            }
         }
         let finished = command_finished(
             operational_code(),
@@ -93,11 +107,15 @@ pub(crate) fn execute_upgrade(
                 ..FinishedCounts::default()
             },
         );
-        let _ = write_event(out, &finished);
+        if let Err(exit) = emit_event(out, &finished) {
+            return exit;
+        }
         return operational_code();
     }
     if verbose {
-        let _ = writeln!(out, "{live_summary}");
+        if let Err(exit) = check_stdout_write(writeln!(out, "{live_summary}")) {
+            return exit;
+        }
     }
     operational(out, err, &format!("upgrade_failed: {message}"))
 }

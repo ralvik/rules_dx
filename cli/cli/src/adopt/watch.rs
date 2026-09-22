@@ -8,6 +8,7 @@
 use std::io::Write;
 
 use crate::args::Invocation;
+use crate::exec::common::check_stdout_write;
 
 use super::{pre_exec, summaries_suppressed};
 
@@ -29,20 +30,30 @@ pub(crate) fn execute_watch(
         Ok(plan) => {
             if invocation.dry_run {
                 if !summaries_suppressed(invocation) {
-                    let _ = writeln!(out, "would {plan}");
+                    if let Err(exit) = check_stdout_write(writeln!(out, "would {plan}")) {
+                        return exit;
+                    }
                 }
                 return 0;
             }
             // Single delivered iteration: re-resolve scope each loop in the
             // real binary (loop omitted under test via DX_WATCH_ONCE).
             if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "{plan} scope={}", invocation.targets.join(" "));
+                if let Err(exit) = check_stdout_write(writeln!(
+                    out,
+                    "{plan} scope={}",
+                    invocation.targets.join(" ")
+                )) {
+                    return exit;
+                }
             }
             if std::env::var("DX_WATCH_ONCE").is_ok() {
                 return 0;
             }
             if !summaries_suppressed(invocation) {
-                let _ = writeln!(out, "watching (Ctrl-C to stop)");
+                if let Err(exit) = check_stdout_write(writeln!(out, "watching (Ctrl-C to stop)")) {
+                    return exit;
+                }
             }
             0
         }

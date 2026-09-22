@@ -23,7 +23,30 @@ use dx_cli::args::parse;
 use dx_cli::plan::create_run_temp_dir;
 use dx_cli::{execute, Env, ProcessQueryRunner};
 use dx_output::{command_finished, error_event, write_event, FinishedCounts, OutputMode};
-use dx_process::{discover_real, operational_code, pre_exec_code, ChildStatus, Runner};
+use dx_process::{
+    broken_pipe_code, discover_real, operational_code, pre_exec_code, stdout_io_code, ChildStatus,
+    Runner,
+};
+
+/// Maps stdout `write_event` failure to `141` on `EPIPE`, else operational.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
+fn stdout_output_code(error: &dx_output::OutputError) -> i32 {
+    if error.is_broken_pipe() {
+        broken_pipe_code()
+    } else {
+        operational_code()
+    }
+}
+
+/// Checks one stdout `write_event`; returns the exit code on failure.
+fn emit_event(out: &mut dyn Write, event: &serde_json::Value) -> Result<(), i32> {
+    write_event(out, event).map_err(|error| stdout_output_code(&error))
+}
+
+/// Checks `out.flush()`; `141` on `EPIPE`, else operational.
+fn flush_out(out: &mut dyn Write) -> Result<(), i32> {
+    out.flush().map_err(|error| stdout_io_code(&error))
+}
 
 /// Active Bazel child for signal forwarding; see `forward_to_child`.
 static CHILD_PID: AtomicU32 = AtomicU32::new(0);
@@ -223,7 +246,14 @@ fn run() -> i32 {
         let stdout = io::stdout();
         let mut out = stdout.lock();
         let code = dx_cli::args::run_complete(&args[1..], &cwd, &mut out);
-        let _ = out.flush();
+        // Completion candidates truncate like any stdout: `EPIPE` is `141`.
+        // See: `docs/cli/output-protocol.md#exit-codes`.
+        if code != 0 {
+            return code;
+        }
+        if let Err(exit) = flush_out(&mut out) {
+            return exit;
+        }
         return code;
     }
     let mut invocation = match parse(&args) {
@@ -233,8 +263,12 @@ fn run() -> i32 {
             // deliberately outside machine-output guarantees (no NDJSON).
             let stdout = io::stdout();
             let mut out = stdout.lock();
-            let _ = write!(out, "{text}");
-            let _ = out.flush();
+            if let Err(error) = write!(out, "{text}") {
+                return stdout_io_code(&error);
+            }
+            if let Err(exit) = flush_out(&mut out) {
+                return exit;
+            }
             return 0;
         }
         Err(error) => return usage_error(&error.to_string()),
@@ -261,9 +295,11 @@ fn run() -> i32 {
         let _ = writeln!(err, "dx: {message}");
         if invocation.output == OutputMode::Json {
             if let Ok(event) = error_event("unsupported_platform", &message, None, None, None) {
-                let _ = write_event(&mut out, &event);
+                if let Err(exit) = emit_event(&mut out, &event) {
+                    return exit;
+                }
             }
-            let _ = write_event(
+            if let Err(exit) = emit_event(
                 &mut out,
                 &command_finished(
                     operational_code(),
@@ -272,9 +308,13 @@ fn run() -> i32 {
                         ..FinishedCounts::default()
                     },
                 ),
-            );
+            ) {
+                return exit;
+            }
         }
-        let _ = out.flush();
+        if let Err(exit) = flush_out(&mut out) {
+            return exit;
+        }
         return operational_code();
     }
     let cwd = match std::env::current_dir() {
@@ -348,9 +388,11 @@ fn run() -> i32 {
             let _ = writeln!(err, "dx: {message}");
             if invocation.output == OutputMode::Json {
                 if let Ok(event) = error_event("version_skew", &message, None, None, None) {
-                    let _ = write_event(&mut out, &event);
+                    if let Err(exit) = emit_event(&mut out, &event) {
+                        return exit;
+                    }
                 }
-                let _ = write_event(
+                if let Err(exit) = emit_event(
                     &mut out,
                     &command_finished(
                         operational_code(),
@@ -359,9 +401,13 @@ fn run() -> i32 {
                             ..FinishedCounts::default()
                         },
                     ),
-                );
+                ) {
+                    return exit;
+                }
             }
-            let _ = out.flush();
+            if let Err(exit) = flush_out(&mut out) {
+                return exit;
+            }
             return operational_code();
         }
     }
@@ -408,7 +454,18 @@ fn run() -> i32 {
             ci: dx_process::is_ci(),
         },
     );
-    let _ = out.flush();
+    // Truncated stdout overrides the command code: NDJSON consumers
+    // distinguish truncation (`141`) from success. See output protocol.
+    if let Err(exit) = flush_out(&mut out) {
+        let temp_display = temp_dir.path().display().to_string();
+        if let Err(error) = temp_dir.close() {
+            let _ = writeln!(
+                io::stderr(),
+                "dx: warning: cannot remove temporary directory {temp_display}: {error}",
+            );
+        }
+        return exit;
+    }
     // Cleanup failure is a warning, not silent: a stale `dx-run-*`
     // directory otherwise accumulates with no signal to the operator.
     // `TempDir::close` removes explicitly so the warning survives;

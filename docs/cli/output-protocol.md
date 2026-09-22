@@ -876,6 +876,8 @@ Bazel is the failing operation. Quality commands may return `1` after a successf
 invocation when normalized findings cross `--fail-on` or check mode proposes changes.
 For multiple selected update sets, any failed set makes the overall command fail; aggregate
 exit-code selection is specified in the [update contract](commands/audit-update-bazel.md#dx-update) rather than the first-failure rule above.
+Truncated stdout (`EPIPE`, e.g. `dx status | head -1`) exits `141` (`128+13`); other stdout
+write failures exit `1` so NDJSON consumers distinguish truncation.
 
 On Unix, `dx` forwards an interrupting signal and re-raises it after safe cleanup so shell
 signal semantics are preserved; no `command_finished` event is promised after signal

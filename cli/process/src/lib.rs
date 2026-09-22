@@ -450,6 +450,9 @@ pub const EXIT_SUCCESS: i32 = 0;
 pub const EXIT_OPERATIONAL: i32 = 1;
 /// Pre-execution usage, workspace, scope, or owner failure exit code.
 pub const EXIT_PRE_EXEC: i32 = 2;
+/// Truncated-stdout exit code: shell `128+SIGPIPE(13)` convention.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
+pub const EXIT_BROKEN_PIPE: i32 = 128 + 13;
 
 /// Exit code for CLI-detected pre-execution failures.
 pub fn pre_exec_code() -> i32 {
@@ -459,6 +462,27 @@ pub fn pre_exec_code() -> i32 {
 /// Exit code for quality-policy and operational failures.
 pub fn operational_code() -> i32 {
     EXIT_OPERATIONAL
+}
+
+/// Exit code for truncated stdout (`EPIPE`): shell `128+13`.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
+pub fn broken_pipe_code() -> i32 {
+    EXIT_BROKEN_PIPE
+}
+
+/// True when a stdout `io::Error` is `EPIPE`.
+pub fn is_broken_pipe_io(error: &io::Error) -> bool {
+    error.kind() == io::ErrorKind::BrokenPipe
+}
+
+/// Maps a stdout write/flush failure to `141` on `EPIPE`, else operational.
+/// See: `docs/cli/output-protocol.md#exit-codes`.
+pub fn stdout_io_code(error: &io::Error) -> i32 {
+    if is_broken_pipe_io(error) {
+        EXIT_BROKEN_PIPE
+    } else {
+        EXIT_OPERATIONAL
+    }
 }
 
 /// Preserves a required Bazel subprocess exit code.
