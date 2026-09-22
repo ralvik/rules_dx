@@ -3,7 +3,7 @@
 `rules_dx` is designed as an opinionated Bazel developer platform with a tested release stack, lazy
 application foundations, Bazel-owned quality workflows, and a thin `dx` CLI.
 
-Current project status is published in the repository [README](../../README.md).
+Current project status is published in the [support matrix](support-matrix.md).
 
 - [Scope](scope.md) defines the repository evidence, product boundary, initial command evaluation,
   constraints, and greenfield risks.
