@@ -28,7 +28,7 @@ rust_library(
             "sha2",
         ],
         package_name = "deploy/dx_install_tools",
-    ),
+    ) + ["//cli/process:dx_process"],
 )
 
 rust_binary(

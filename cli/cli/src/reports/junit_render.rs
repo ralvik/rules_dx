@@ -78,7 +78,7 @@ fn junit_status(case: &JunitCase) -> quick_junit::TestCaseStatus {
 /// and shards stay separate cases with zero-based suffixes. Root and
 /// suite `tests`, `failures`, `errors`, `skipped`, and `time` counts
 /// are aggregated by `quick-junit` from the normalized cases.
-pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
+pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> Result<String, super::ReportError> {
     let mut ordered: Vec<(String, Vec<JunitCase>)> = suites.to_vec();
     for (_, cases) in &mut ordered {
         cases.sort_by(|a, b| {
@@ -118,12 +118,14 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> String {
         report.add_test_suite(suite);
     }
     report.set_time(total_time);
-    // Keep: `quick-junit` renders via `Display`, not `serde_json::Serialize`,
-    // so the JSON owner cannot cover it.
+    // Keep: `quick-junit` renders via its own serializer, not
+    // `serde_json::Serialize`, so the JSON owner cannot cover it.
     // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
     report
         .to_string()
-        .unwrap_or_else(|err| unreachable!("junit report serialization is infallible: {err:?}"))
+        .map_err(|err| super::ReportError::JunitRender {
+            detail: err.to_string(),
+        })
 }
 
 /// Renders one partial-infrastructure suite for JUnit collection that
@@ -200,7 +202,8 @@ mod tests {
                 shard: 0,
                 attempt: 0,
             }],
-        )]);
+        )])
+        .expect("render junit");
         assert!(doc.contains("&amp;"), "{doc}");
         assert!(doc.contains("&lt;"), "{doc}");
         // Failure-first precedence: a case carrying both failure and
@@ -218,7 +221,8 @@ mod tests {
                 }),
                 ..junit_case("both")
             }],
-        )]);
+        )])
+        .expect("render junit");
         assert!(doc.contains("<failure"), "{doc}");
         let (_label, cases) = junit_infrastructure_case("detail");
         assert_eq!(cases[0].name, "incomplete_results");
@@ -259,7 +263,7 @@ mod tests {
                 ],
             ),
         ];
-        let doc = render_junit(&suites);
+        let doc = render_junit(&suites).expect("render junit");
         // Golden pilot: full-document insta snapshot replaces
         // the contains-asserts so render changes review as one diff.
         // Under Bazel snapshots never self-update (read-only sources):
@@ -311,7 +315,8 @@ mod tests {
                 shard: 0,
                 attempt: 0,
             }],
-        )]);
+        )])
+        .expect("render junit");
         // Writer escaping for attributes and text.
         assert!(doc.contains("&amp;"), "{doc}");
         assert!(doc.contains("&lt;"), "{doc}");

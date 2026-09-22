@@ -5,14 +5,23 @@
 //! Why `serde_json` pretty plus ASCII escape: Python `json.dumps(indent=2,
 //! sort_keys=True)` sorts keys and escapes non-ASCII (`ensure_ascii`); the
 //! default `serde_json` map orders identically while raw UTF-8 would drift,
-//! so non-ASCII is re-escaped to `\uXXXX` after pretty-printing.
+//! so non-ASCII is re-escaped to `\uXXXX` after pretty-printing via the
+//! single owner `dx_fingerprint::{ensure_ascii,to_json_ascii_pretty}`.
 //! See: `deploy/release/sbom.bzl` (genrule `tools`).
 //! Why streaming SHA-256: artifacts hash in 1 MiB chunks like `hashlib`.
 //! See: `cli/digest/src/lib.rs` (SHA-256 shim).
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::io;
 use std::path::Path;
@@ -47,33 +56,16 @@ fn sha256_file(path: &Path) -> io::Result<String> {
     Ok(hex::encode(hasher.finalize()))
 }
 
-/// Re-escapes non-ASCII as `\uXXXX` (surrogate pairs above U+FFFF).
-fn ensure_ascii(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    for c in text.chars() {
-        let code = c as u32;
-        if code < 0x80 {
-            out.push(c);
-        } else if code <= 0xFFFF {
-            out.push_str(&format!("\\u{code:04x}"));
-        } else {
-            let v = code - 0x10000;
-            let high = 0xD800 + (v >> 10);
-            let low = 0xDC00 + (v & 0x3FF);
-            out.push_str(&format!("\\u{high:04x}\\u{low:04x}"));
-        }
-    }
-    out
-}
-
-/// Renders `value` exactly like Python `json.dumps(indent=2, sort_keys=True)`.
+/// Renders `value` exactly like Python `json.dumps(indent=2, sort_keys=True,
+/// ensure_ascii=True)`.
+///
+/// Delegates to the single ASCII-JSON owner
+/// (`dx_fingerprint::to_json_ascii_pretty`) so the escape rule cannot drift;
+/// the theoretical pretty-serialization failure (maps with non-string keys,
+/// which this schema never has) yields an empty document like before.
+/// See: `cli/fingerprint/src/lib.rs` (`to_json_ascii_pretty`).
 fn render_pretty(value: &serde_json::Value) -> String {
-    // Only fails on maps with non-string keys, which this schema never has.
-    // See: `serde_json::to_string_pretty` (infallible for `json!` values).
-    match serde_json::to_string_pretty(value) {
-        Ok(pretty) => ensure_ascii(&pretty) + "\n",
-        Err(_) => String::new(),
-    }
+    dx_fingerprint::to_json_ascii_pretty(value).unwrap_or_default()
 }
 
 /// Shared thin-binary helpers (issue #914): every `bin_*_gen` shim
@@ -418,12 +410,13 @@ fn signing_bundle_for(asset: &str) -> String {
 /// `cosign verify-blob --bundle` per bundle. Any failure stops before
 /// publish; nothing is printed as signed until verify passes.
 fn signing_live(identity: &str, issuer: &str, assets: &[String]) -> Result<String, String> {
-    let version_out = std::process::Command::new("cosign")
-        .arg("version")
-        .output()
-        .map_err(|error| {
-            format!("signing: cannot run 'cosign version' (is cosign on PATH?): {error}")
-        })?;
+    // Thin argv configs over the single spawn owner; no direct `Command`.
+    // See: `cli/process/src/lib.rs` (`dx_process::spawn_output`).
+    let version_argv = vec!["cosign".to_owned(), "version".to_owned()];
+    let version_out =
+        dx_process::spawn_output(&version_argv, std::path::Path::new("."), &[], false).map_err(
+            |error| format!("signing: cannot run 'cosign version' (is cosign on PATH?): {error}"),
+        )?;
     let version_text = String::from_utf8_lossy(&version_out.stdout).into_owned()
         + &String::from_utf8_lossy(&version_out.stderr);
     if !version_out.status.success() || !signing_version_ok(&version_text) {
@@ -439,22 +432,20 @@ fn signing_live(identity: &str, issuer: &str, assets: &[String]) -> Result<Strin
     for asset in assets {
         let bundle = signing_bundle_for(asset);
         let sign_argv = signing_sign_argv(asset, &bundle, identity, issuer);
-        let sign_status = std::process::Command::new(&sign_argv[0])
-            .args(&sign_argv[1..])
-            .status()
+        let sign_out = dx_process::spawn_output(&sign_argv, std::path::Path::new("."), &[], false)
             .map_err(|error| format!("signing: cannot run '{}': {error}", sign_argv.join(" ")))?;
-        if !sign_status.success() {
+        if !sign_out.status.success() {
             return Err(format!(
                 "signing: '{}' failed for {asset}; publishing nothing",
                 sign_argv.join(" ")
             ));
         }
         let verify_argv = signing_verify_argv(asset, &bundle, identity, issuer);
-        let verify_status = std::process::Command::new(&verify_argv[0])
-            .args(&verify_argv[1..])
-            .status()
-            .map_err(|error| format!("signing: cannot run '{}': {error}", verify_argv.join(" ")))?;
-        if !verify_status.success() {
+        let verify_out =
+            dx_process::spawn_output(&verify_argv, std::path::Path::new("."), &[], false).map_err(
+                |error| format!("signing: cannot run '{}': {error}", verify_argv.join(" ")),
+            )?;
+        if !verify_out.status.success() {
             return Err(format!(
                 "signing: '{}' failed for {asset}; bundle rejected, publishing nothing",
                 verify_argv.join(" ")
@@ -955,6 +946,14 @@ mod tests {
         // Astral plane renders as a surrogate pair like Python.
         let astral = render_bcr_source("rules_dx\u{1F600}", "1.2.3");
         assert!(astral.contains("\\ud83d\\ude00"));
+        // Single owner: the SBOM pretty path delegates to
+        // `dx_fingerprint::to_json_ascii_pretty`, so the central escape rule
+        // matches the release bytes byte-for-byte.
+        assert_eq!(dx_fingerprint::ensure_ascii("caf\u{e9}"), "caf\\u00e9");
+        let value = serde_json::json!({"name": "caf\u{e9}"});
+        let central = dx_fingerprint::to_json_ascii_pretty(&value).expect("central pretty");
+        assert!(central.contains("caf\\u00e9"));
+        assert_eq!(render_pretty(&value), central);
     }
 
     #[test]

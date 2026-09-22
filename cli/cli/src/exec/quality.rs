@@ -166,8 +166,8 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.output == OutputMode::Diff {
         match render_diff_patch(&sources, &collected.changes) {
             Ok(rendered) => patch = rendered,
-            Err(detail) => {
-                return operational(invocation, out, err, CODE_DIFF_FAILED, &detail);
+            Err(error) => {
+                return operational(invocation, out, err, CODE_DIFF_FAILED, &error.to_string());
             }
         }
     }

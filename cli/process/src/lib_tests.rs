@@ -746,3 +746,21 @@ fn gitleaks_tool_defaults_to_absent() {
     };
     assert!(runner.gitleaks_tool().is_none());
 }
+
+#[test]
+fn spawn_success_reports_status_without_triplication() {
+    // Single owner parity: `spawn_success` matches the legacy
+    // `Command::new(...).output().is_ok_and(success)` shape verifiers used.
+    assert!(spawn_success(&["/bin/true".to_owned()]));
+    assert!(!spawn_success(&["/bin/false".to_owned()]));
+    assert!(!spawn_success(&[]));
+    assert!(!spawn_success(&["/nonexistent-dx-tool".to_owned()]));
+}
+
+#[test]
+fn exe_available_covers_help_file_and_path() {
+    // `--help` success, file probe, and `PATH` search in one owner.
+    assert!(exe_available("/bin/true"));
+    assert!(!exe_available("/nonexistent-dx-tool-xyz"));
+    assert!(!exe_available(""));
+}

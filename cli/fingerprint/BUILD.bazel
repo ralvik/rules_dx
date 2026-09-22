@@ -6,6 +6,7 @@ load("//rust/rules:defs.bzl", "dx_rust_crate")
 package(default_visibility = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
+    "//deploy:__subpackages__",
     "//quality:__subpackages__",
 ])
 
@@ -18,6 +19,7 @@ dx_rust_crate(
     deps = [
         "serde",
         "serde_json",
+        "thiserror",
     ],
 )
 

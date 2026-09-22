@@ -389,7 +389,7 @@ fn merge_groups_by_owner_and_sorts_entries() {
 #[test]
 fn fingerprint_matches_starlark_rendering() {
     assert_eq!(
-        fingerprint(&[record_b(), record_a(), record_a()]),
+        fingerprint(&[record_b(), record_a(), record_a()]).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"\",\"key\":\"runtime\",\"value\":\"stable-x86_64\"}],\"integration\":\"rust\",\"producer\":\"//env:alpha\"},\
          {\"entries\":[{\"exec_path\":\"\",\"key\":\"abi\",\"value\":\"gnu\"}],\"integration\":\"rust\",\"producer\":\"//env:beta\"}]"
     );
@@ -398,7 +398,7 @@ fn fingerprint_matches_starlark_rendering() {
             "//env:a",
             "rust",
             vec![entry_with_exec("runtime", "stable", "out/rustc")]
-        )]),
+        )]).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"out/rustc\",\"key\":\"runtime\",\"value\":\"stable\"}],\"integration\":\"rust\",\"producer\":\"//env:a\"}]"
     );
 }
@@ -414,7 +414,7 @@ fn fingerprint_matches_chain_fixture() {
         ),
     ];
     assert_eq!(
-        fingerprint(&records),
+        fingerprint(&records).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"\",\"key\":\"runtime\",\"value\":\"stable-x86_64\"}],\"integration\":\"rust\",\"producer\":\"//env:env_shard_alpha\"},\
          {\"entries\":[{\"exec_path\":\"\",\"key\":\"abi\",\"value\":\"gnu\"}],\"integration\":\"rust\",\"producer\":\"//env:env_shard_beta\"}]"
     );
@@ -431,7 +431,7 @@ fn fingerprint_escapes_quotes_newlines_and_controls() {
             exec_path: "out\\bin".to_owned(),
         }],
     }];
-    let rendered = fingerprint(&records);
+    let rendered = fingerprint(&records).expect("fingerprint");
     assert!(rendered.contains("\\\""), "{rendered}");
     assert!(rendered.contains("\\n"), "{rendered}");
     assert!(rendered.contains("\\\\"), "{rendered}");
@@ -500,7 +500,10 @@ fn collect_plan_merges_hashes_and_sorts_deterministically() {
     assert_eq!(first, second);
     assert_eq!(first.records.len(), 2);
     assert_eq!(first.records[0].producer, "//env:alpha");
-    assert_eq!(first.fingerprint, fingerprint(&first.records));
+    assert_eq!(
+        first.fingerprint,
+        fingerprint(&first.records).expect("fingerprint")
+    );
     assert_eq!(first.digest, plan_digest(&first.fingerprint));
     assert_eq!(first.hex(), plan_hex(&first.fingerprint));
     assert_eq!(first.hex().len(), 64);

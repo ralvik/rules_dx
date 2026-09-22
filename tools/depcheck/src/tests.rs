@@ -687,3 +687,31 @@ fn versions_equal_pads_trailing_zeros() {
     assert!(!versions_equal("1.0.0-alpha", "1.0.0"));
     assert!(versions_equal("1.0.0+build", "1.0.0+build"));
 }
+
+#[test]
+fn typed_errors_keep_display_and_source_chain() {
+    // Typed errors keep the historical `unreadable <kind>` display strings
+    // (CLI diagnostics stay stable) while chaining the underlying cause.
+    use super::DepcheckError;
+    let dir = tempfile::tempdir().expect("scratch");
+    let missing = dir.path().join("missing.toml");
+    let err = super::parse_rust_manifest(&missing).expect_err("missing manifest");
+    assert!(err.to_string().contains("unreadable manifest"), "{err}");
+    assert!(std::error::Error::source(&err).is_some(), "chains io cause");
+    let bad = dir.path().join("bad.toml");
+    write_file(&bad, "not = [valid");
+    let err = super::parse_rust_manifest(&bad).expect_err("bad toml");
+    assert!(err.to_string().contains("unreadable manifest"), "{err}");
+    assert!(
+        std::error::Error::source(&err).is_some(),
+        "chains toml cause"
+    );
+    assert_eq!(
+        DepcheckError::JvmEntry.to_string(),
+        "jvm dep entry without group/artifact"
+    );
+    assert_eq!(
+        DepcheckError::NoMavenCoords.to_string(),
+        "unreadable manifest: no maven coordinates"
+    );
+}

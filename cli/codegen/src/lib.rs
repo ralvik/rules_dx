@@ -30,7 +30,15 @@
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -90,6 +98,11 @@ pub fn expansion_expression(schema: &str) -> String {
 /// backslashes and quotes. Single owner for Bazel query string literals;
 /// the scope resolver delegates here so expansion and ownership
 /// expressions stay stable and inspectable.
+///
+/// Labels never contain control characters (alphabet `[A-Za-z0-9/_:.\-@]`
+/// plus `"`/`\` in pathological tests): for that alphabet the hand
+/// escaper matches `serde_json::to_string` byte-for-byte (pinned by
+/// `quote_matches_json_for_label_alphabet`).
 /// See: `docs/cli/target-resolution.md` (query safety).
 pub fn quote_label(label: &str) -> String {
     let mut quoted = String::with_capacity(label.len() + 2);
@@ -267,6 +280,9 @@ pub enum CollectError {
     /// A BEP-reported non-shard artifact is claimed by no entry.
     #[error("unreported artifact {path:?}: claimed by no entry")]
     UnreportedArtifact { path: String },
+    /// The normalized fingerprint view failed to serialize as JSON.
+    #[error("{0}")]
+    Fingerprint(#[from] dx_fingerprint::FingerprintError),
 }
 
 /// Reports whether a BEP-reported artifact path is a plan shard, by
@@ -520,7 +536,7 @@ struct FingerprintRecord<'a> {
 /// keys on language plus logical path, import root, namespace; env on
 /// integration plus key/value).
 /// See: `cli/env_plan/src/lib.rs` (`fingerprint`).
-pub fn fingerprint(records: &[CodegenRecord]) -> String {
+pub fn fingerprint(records: &[CodegenRecord]) -> Result<String, dx_fingerprint::FingerprintError> {
     let merged = merge_records(records);
     let view: Vec<FingerprintRecord<'_>> = merged
         .iter()
@@ -584,7 +600,7 @@ pub fn collect_plan(outputs: &[TargetOutput]) -> Result<CollectedPlan, CollectEr
         return Err(CollectError::Conflict(conflict));
     }
     let merged = merge_records(&records);
-    let rendered = fingerprint(&merged);
+    let rendered = fingerprint(&merged)?;
     let digest = digest(rendered.as_bytes());
     Ok(CollectedPlan {
         records: merged,

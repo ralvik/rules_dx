@@ -41,18 +41,48 @@ impl FileSystem for RealFileSystem {
     }
 }
 
+/// Post-write hook failure.
+///
+/// Typed hook detail (thiserror) with source chaining at the trait
+/// boundary: `Display` keeps the historical hook string so
+/// [`ApplyError::Hook`] stays byte-identical while callers gain matchable
+/// structure instead of `String` plumbing.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("{message}")]
+pub struct HookError {
+    message: String,
+}
+
+impl HookError {
+    /// Creates a hook failure with the hook-provided detail.
+    pub fn new(message: String) -> Self {
+        Self { message }
+    }
+
+    /// The hook-provided detail.
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+impl From<String> for HookError {
+    fn from(message: String) -> Self {
+        Self { message }
+    }
+}
+
 /// Post-write hook seam (formatters, linters). The no-op implementation
 /// always succeeds.
 pub trait HookRunner {
     /// Runs after `path` was written; `Err` aborts the apply.
-    fn run(&self, path: &Path) -> Result<(), String>;
+    fn run(&self, path: &Path) -> Result<(), HookError>;
 }
 
 /// Hook runner that runs nothing.
 pub struct NoHooks;
 
 impl HookRunner for NoHooks {
-    fn run(&self, _path: &Path) -> Result<(), String> {
+    fn run(&self, _path: &Path) -> Result<(), HookError> {
         Ok(())
     }
 }
@@ -112,9 +142,9 @@ pub fn apply_envelope(
                 path: op.path.clone(),
                 message: err.to_string(),
             })?;
-        hooks.run(&path).map_err(|message| ApplyError::Hook {
+        hooks.run(&path).map_err(|error| ApplyError::Hook {
             path: op.path.clone(),
-            message,
+            message: error.message().to_owned(),
         })?;
         applied.push(AppliedFile {
             path: op.path.clone(),
@@ -164,8 +194,8 @@ mod tests {
     struct FailHooks;
 
     impl HookRunner for FailHooks {
-        fn run(&self, _path: &Path) -> Result<(), String> {
-            Err("hook exploded".to_owned())
+        fn run(&self, _path: &Path) -> Result<(), HookError> {
+            Err(HookError::new("hook exploded".to_owned()))
         }
     }
 
@@ -301,6 +331,15 @@ mod tests {
                 path: "a.txt".to_owned(),
                 message: "hook exploded".to_owned(),
             }
+        );
+        // Typed hook detail keeps the display string (no `String` plumbing).
+        assert_eq!(
+            HookError::new("hook exploded".to_owned()).to_string(),
+            "hook exploded"
+        );
+        assert_eq!(
+            HookError::from("hook exploded".to_owned()).message(),
+            "hook exploded"
         );
     }
 

@@ -9,7 +9,15 @@
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::ffi::OsStr;
 use std::io;
@@ -595,6 +603,37 @@ pub fn spawn_output(
     }
     command.envs(env.iter().copied());
     command.output()
+}
+
+/// Single spawn-success owner: runs `argv` with inherited stdio context
+/// and reports success (`Ok` plus exit success). `Err` and non-zero exits
+/// both report `false` so verifiers (`cosign verify-blob`, `gh attestation
+/// verify`, `have --help` probes) stay thin argv configs instead of
+/// repeating `Command::new(...).output().is_ok_and(...)` triplication.
+/// See: `deploy/install/src/lib.rs` (`SystemVerifier`),
+/// `deploy/release/src/lib.rs` (`signing_live`).
+pub fn spawn_success(argv: &[String]) -> bool {
+    let (binary, args) = match argv.split_first() {
+        Some(pair) => pair,
+        None => return false,
+    };
+    Command::new(OsStr::new(binary))
+        .args(args)
+        .output()
+        .is_ok_and(|out| out.status.success())
+}
+
+/// Single executable-availability owner: reports whether `bin` resolves
+/// (`--help` succeeds, is a file, or is on `PATH` with optional `.exe`
+/// suffix). Verifiers delegate here so the `PATH` search cannot drift.
+/// See: `deploy/install/src/lib.rs` (`SystemVerifier::have`).
+pub fn exe_available(bin: &str) -> bool {
+    spawn_success(&[bin.to_owned(), "--help".to_owned()])
+        || Path::new(bin).is_file()
+        || std::env::var_os("PATH").is_some_and(|paths| {
+            std::env::split_paths(&paths)
+                .any(|dir| dir.join(bin).is_file() || dir.join(format!("{bin}.exe")).is_file())
+        })
 }
 
 /// Real runner that spawns the process directly. Argument vectors are

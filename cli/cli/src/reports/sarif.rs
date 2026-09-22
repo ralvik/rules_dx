@@ -248,9 +248,9 @@ pub fn render_sarif(
         .runs(runs)
         .version(serde_json::Value::String("2.1.0".to_owned()))
         .build();
-    // Single owner for infallible string-only JSON shapes.
+    // Single owner for string-only JSON shapes (typed, no `unreachable!`).
     // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
-    Ok(dx_fingerprint::to_json(&document))
+    Ok(dx_fingerprint::to_json(&document)?)
 }
 
 #[cfg(test)]

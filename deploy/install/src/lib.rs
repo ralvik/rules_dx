@@ -5,7 +5,15 @@
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -170,6 +178,43 @@ pub fn parse_args(argv: &[String]) -> Result<VerifyArgs, ArgsError> {
     Ok(args)
 }
 
+/// Builds the `cosign verify-blob` argv for one subject (pure,
+/// unit-tested; [`SystemVerifier::cosign_verify`] executes it via the
+/// single spawn owner).
+pub fn cosign_argv(
+    cosign: &str,
+    bundle: &Path,
+    identity: &str,
+    issuer: &str,
+    subject: &Path,
+) -> Vec<String> {
+    vec![
+        cosign.to_owned(),
+        "verify-blob".to_owned(),
+        "--bundle".to_owned(),
+        bundle.to_string_lossy().into_owned(),
+        "--certificate-identity".to_owned(),
+        identity.to_owned(),
+        "--certificate-issuer".to_owned(),
+        issuer.to_owned(),
+        subject.to_string_lossy().into_owned(),
+    ]
+}
+
+/// Builds the `gh attestation verify` argv for one subject (pure,
+/// unit-tested; [`SystemVerifier::gh_verify`] executes it via the single
+/// spawn owner).
+pub fn gh_argv(gh: &str, subject: &Path, owner: &str) -> Vec<String> {
+    vec![
+        gh.to_owned(),
+        "attestation".to_owned(),
+        "verify".to_owned(),
+        subject.to_string_lossy().into_owned(),
+        "--owner".to_owned(),
+        owner.to_owned(),
+    ]
+}
+
 /// Filesystem plus subprocess seam for unit tests.
 pub trait Verifier {
     /// Reports whether `path` is a non-empty regular file.
@@ -221,32 +266,15 @@ impl Verifier for SystemVerifier {
         issuer: &str,
         subject: &Path,
     ) -> bool {
-        std::process::Command::new(cosign)
-            .args([
-                "verify-blob",
-                "--bundle",
-                &bundle.to_string_lossy(),
-                "--certificate-identity",
-                identity,
-                "--certificate-issuer",
-                issuer,
-                &subject.to_string_lossy(),
-            ])
-            .output()
-            .is_ok_and(|out| out.status.success())
+        // Thin config over the single spawn owner; no direct `Command`.
+        // See: `cli/process/src/lib.rs` (`dx_process::spawn_success`).
+        dx_process::spawn_success(&cosign_argv(cosign, bundle, identity, issuer, subject))
     }
 
     fn gh_verify(&self, gh: &str, subject: &Path, owner: &str) -> bool {
-        std::process::Command::new(gh)
-            .args([
-                "attestation",
-                "verify",
-                &subject.to_string_lossy(),
-                "--owner",
-                owner,
-            ])
-            .output()
-            .is_ok_and(|out| out.status.success())
+        // Thin config over the single spawn owner.
+        // See: `cli/process/src/lib.rs` (`dx_process::spawn_success`).
+        dx_process::spawn_success(&gh_argv(gh, subject, owner))
     }
 
     fn cosign_bin(&self) -> String {
@@ -258,18 +286,9 @@ impl Verifier for SystemVerifier {
     }
 
     fn have(&self, bin: &str) -> bool {
-        std::process::Command::new(bin)
-            .arg("--help")
-            .output()
-            .is_ok_and(|out| out.status.success())
-            || Path::new(bin).is_file()
-            || {
-                std::env::var_os("PATH").is_some_and(|paths| {
-                    std::env::split_paths(&paths).any(|dir| {
-                        dir.join(bin).is_file() || dir.join(format!("{bin}.exe")).is_file()
-                    })
-                })
-            }
+        // Thin config over the single exe-availability owner.
+        // See: `cli/process/src/lib.rs` (`dx_process::exe_available`).
+        dx_process::exe_available(bin)
     }
 
     fn sha256_file(&self, path: &Path) -> io::Result<String> {
@@ -661,6 +680,39 @@ mod tests {
             format!("bundle-for-{digest}").as_bytes(),
         );
         fake
+    }
+
+    #[test]
+    fn verifier_argv_are_thin_configs_over_spawn_owner() {
+        // Thin-config parity: the argv builders carry the exact
+        // `cosign verify-blob` / `gh attestation verify` shapes the
+        // `SystemVerifier` executes via `dx_process::spawn_success`, so the
+        // spawn triplication cannot drift.
+        // See: `cli/process/src/lib.rs` (`dx_process::spawn_success`).
+        assert_eq!(
+            cosign_argv(
+                "cosign",
+                std::path::Path::new("/u"),
+                "ID",
+                "ISS",
+                std::path::Path::new("/b"),
+            ),
+            vec![
+                "cosign",
+                "verify-blob",
+                "--bundle",
+                "/u",
+                "--certificate-identity",
+                "ID",
+                "--certificate-issuer",
+                "ISS",
+                "/b",
+            ]
+        );
+        assert_eq!(
+            gh_argv("gh", std::path::Path::new("/b"), "owner",),
+            vec!["gh", "attestation", "verify", "/b", "--owner", "owner",]
+        );
     }
 
     #[test]

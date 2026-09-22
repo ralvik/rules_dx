@@ -13,10 +13,77 @@
 //! as a single native binary with no interpreter startup.
 //! See: `tools/depcheck/BUILD.bazel` (rust targets).
 
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+
+/// Dependency-check failure.
+///
+/// Typed dependency-check failure (thiserror) with source chaining for
+/// the I/O, TOML, JSON, and regex legs: `Display` keeps the historical
+/// `unreadable <kind>: <detail>` strings byte-identical so CLI
+/// diagnostics stay stable while callers gain matchable structure
+/// instead of `String` plumbing.
+#[derive(Debug, thiserror::Error)]
+pub enum DepcheckError {
+    /// A manifest file could not be read.
+    #[error("unreadable manifest: {0}")]
+    ManifestIo(#[source] std::io::Error),
+    /// A manifest file is not valid TOML.
+    #[error("unreadable manifest: {0}")]
+    ManifestToml(#[source] toml::de::Error),
+    /// A manifest file is not valid JSON.
+    #[error("unreadable manifest: {0}")]
+    ManifestJson(#[source] serde_json::Error),
+    /// A manifest pattern failed to compile.
+    #[error("unreadable manifest: {0}")]
+    ManifestRegex(#[source] regex::Error),
+    /// A lock file could not be read.
+    #[error("unreadable lock: {0}")]
+    LockIo(#[source] std::io::Error),
+    /// A lock file is not valid TOML.
+    #[error("unreadable lock: {0}")]
+    LockToml(#[source] toml::de::Error),
+    /// A lock file is not valid JSON.
+    #[error("unreadable lock: {0}")]
+    LockJson(#[source] serde_json::Error),
+    /// A lock pattern failed to compile.
+    #[error("unreadable lock: {0}")]
+    LockRegex(#[source] regex::Error),
+    /// An exceptions file could not be read.
+    #[error("unreadable exceptions: {0}")]
+    ExceptionsIo(#[source] std::io::Error),
+    /// An exceptions file is not valid TOML.
+    #[error("unreadable exceptions: {0}")]
+    ExceptionsToml(#[source] toml::de::Error),
+    /// A source-usage pattern failed to compile.
+    #[error("unreadable sources: {0}")]
+    SourcesRegex(#[source] regex::Error),
+    /// A JVM manifest entry has no group/artifact.
+    #[error("jvm dep entry without group/artifact")]
+    JvmEntry,
+    /// A CC manifest entry has no name.
+    #[error("cc dep entry without name")]
+    CcEntry,
+    /// An exceptions entry has no dependency name.
+    #[error("exception entry without dependency")]
+    ExceptionEntry,
+    /// The exceptions file does not exist.
+    #[error("exceptions file missing: {0}")]
+    ExceptionsMissing(String),
+    /// A Maven artifacts list holds no coordinates.
+    #[error("unreadable manifest: no maven coordinates")]
+    NoMavenCoords,
+}
 
 /// Dependency declaration from a manifest.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -291,13 +358,13 @@ fn toml_bool(value: &toml::Value) -> bool {
     value.as_bool().unwrap_or(false)
 }
 
-fn parse_toml_file(path: &Path) -> Result<toml::Value, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
-    toml::from_str(&text).map_err(|e| format!("unreadable manifest: {e}"))
+fn parse_toml_file(path: &Path) -> Result<toml::Value, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
+    toml::from_str(&text).map_err(DepcheckError::ManifestToml)
 }
 
 /// Parse Rust `Cargo.toml` declarations.
-pub fn parse_rust_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
+pub fn parse_rust_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let data = parse_toml_file(path)?;
     let mut deps = BTreeMap::new();
     for (cat, key) in [
@@ -379,9 +446,9 @@ pub fn parse_rust_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Str
 }
 
 /// Parse Rust `Cargo.lock` packages.
-pub fn parse_rust_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
-    let data: toml::Value = toml::from_str(&text).map_err(|e| format!("unreadable lock: {e}"))?;
+pub fn parse_rust_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
+    let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::LockToml)?;
     let mut pkgs = BTreeMap::new();
     if let Some(list) = data.get("package").and_then(|v| v.as_array()) {
         for item in list {
@@ -452,7 +519,7 @@ fn python_raw_name(item: &str) -> Option<(String, String)> {
 }
 
 /// Parse Python `pyproject.toml` declarations.
-pub fn parse_python_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
+pub fn parse_python_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let data = parse_toml_file(path)?;
     let mut deps = BTreeMap::new();
     if let Some(proj) = data.get("project").and_then(|v| v.as_table()) {
@@ -538,9 +605,9 @@ pub fn parse_python_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, S
 }
 
 /// Parse Python `uv.lock` packages.
-pub fn parse_python_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
-    let data: toml::Value = toml::from_str(&text).map_err(|e| format!("unreadable lock: {e}"))?;
+pub fn parse_python_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
+    let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::LockToml)?;
     let mut pkgs = BTreeMap::new();
     if let Some(list) = data.get("package").and_then(|v| v.as_array()) {
         for item in list {
@@ -556,7 +623,7 @@ pub fn parse_python_lock(path: &Path) -> Result<BTreeMap<String, String>, String
     }
     if pkgs.is_empty() {
         let re = regex::Regex::new(r#"name\s*=\s*"([^"]+)"\s*\n\s*version\s*=\s*"([^"]+)""#)
-            .map_err(|e| format!("unreadable lock: {e}"))?;
+            .map_err(DepcheckError::LockRegex)?;
         for caps in re.captures_iter(&text) {
             pkgs.insert(normalize_py(&caps[1]), caps[2].to_owned());
         }
@@ -565,10 +632,10 @@ pub fn parse_python_lock(path: &Path) -> Result<BTreeMap<String, String>, String
 }
 
 /// Parse JS/TS `package.json` declarations.
-pub fn parse_js_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
+pub fn parse_js_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let data: serde_json::Value =
-        serde_json::from_str(&text).map_err(|e| format!("unreadable manifest: {e}"))?;
+        serde_json::from_str(&text).map_err(DepcheckError::ManifestJson)?;
     let mut deps = BTreeMap::new();
     if let Some(map) = data.get("dependencies").and_then(|v| v.as_object()) {
         for (name, spec) in map {
@@ -638,10 +705,9 @@ pub fn parse_js_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Strin
 }
 
 /// Minimal `pnpm-lock.yaml` parser for fixtures (no yaml dep).
-pub fn parse_pnpm_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
-    let section_re =
-        regex::Regex::new(r"^\S+:\s*$").map_err(|e| format!("unreadable lock: {e}"))?;
+pub fn parse_pnpm_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
+    let section_re = regex::Regex::new(r"^\S+:\s*$").map_err(DepcheckError::LockRegex)?;
     let mut pkgs = BTreeMap::new();
     let mut in_packages = false;
     for line in text.lines() {
@@ -700,20 +766,19 @@ pub fn parse_pnpm_lock(path: &Path) -> Result<BTreeMap<String, String>, String> 
 }
 
 /// Parse `go.mod` requires (fixture subset with depcheck markers).
-pub fn parse_go_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
+pub fn parse_go_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let mut deps = BTreeMap::new();
     let mut in_require = false;
     let single_re = regex::Regex::new(r"^require\s+(\S+)\s+(\S+)(.*)$")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
-    let block_re = regex::Regex::new(r"^(\S+)\s+(\S+)(.*)$")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
-    let optional_re = regex::Regex::new(r"(?i)//\s*optional\b")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
-    let platform_re = regex::Regex::new(r"(?i)//\s*platform\b")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
-    let test_re =
-        regex::Regex::new(r"(?i)//\s*test\b").map_err(|e| format!("unreadable manifest: {e}"))?;
+        .map_err(DepcheckError::ManifestRegex)?;
+    let block_re =
+        regex::Regex::new(r"^(\S+)\s+(\S+)(.*)$").map_err(DepcheckError::ManifestRegex)?;
+    let optional_re =
+        regex::Regex::new(r"(?i)//\s*optional\b").map_err(DepcheckError::ManifestRegex)?;
+    let platform_re =
+        regex::Regex::new(r"(?i)//\s*platform\b").map_err(DepcheckError::ManifestRegex)?;
+    let test_re = regex::Regex::new(r"(?i)//\s*test\b").map_err(DepcheckError::ManifestRegex)?;
     for rawline in text.lines() {
         let line = rawline.trim().to_owned();
         if line.is_empty() {
@@ -788,8 +853,8 @@ pub fn parse_go_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Strin
 }
 
 /// Parse `go.sum` (native lock).
-pub fn parse_go_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
+pub fn parse_go_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let mut pkgs = BTreeMap::new();
     for line in text.lines() {
         let line = line.trim();
@@ -812,10 +877,9 @@ pub fn parse_go_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
 }
 
 /// Parse `jvm_deps.toml` fixture manifest.
-pub fn parse_jvm_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
-    let data: toml::Value =
-        toml::from_str(&text).map_err(|e| format!("unreadable manifest: {e}"))?;
+pub fn parse_jvm_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
+    let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::ManifestToml)?;
     let mut deps = BTreeMap::new();
     let items = data
         .get("dep")
@@ -842,7 +906,7 @@ pub fn parse_jvm_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Stri
             .trim()
             .to_owned();
         if grp.is_empty() || art.is_empty() {
-            return Err("jvm dep entry without group/artifact".to_owned());
+            return Err(DepcheckError::JvmEntry);
         }
         let scope = item
             .get("scope")
@@ -873,10 +937,9 @@ pub fn parse_jvm_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Stri
 }
 
 /// Parse `maven_install.json` (native lock).
-pub fn parse_jvm_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
-    let data: serde_json::Value =
-        serde_json::from_str(&text).map_err(|e| format!("unreadable lock: {e}"))?;
+pub fn parse_jvm_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
+    let data: serde_json::Value = serde_json::from_str(&text).map_err(DepcheckError::LockJson)?;
     let mut pkgs = BTreeMap::new();
     if let Some(arts) = data.get("artifacts").and_then(|v| v.as_object()) {
         for (coord, info) in arts {
@@ -892,18 +955,18 @@ pub fn parse_jvm_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
 }
 
 /// Parse `paket.dependencies` (native Paket subset).
-pub fn parse_dotnet_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
+pub fn parse_dotnet_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let mut deps = BTreeMap::new();
     let mut group = "Main".to_owned();
-    let group_re = regex::Regex::new(r"(?i)^group\s+(\S+)")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
+    let group_re =
+        regex::Regex::new(r"(?i)^group\s+(\S+)").map_err(DepcheckError::ManifestRegex)?;
     let nuget_re = regex::Regex::new(r"(?i)^nuget\s+(\S+)\s+(\S+)(.*)$")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
-    let optional_re = regex::Regex::new(r"(?i)//\s*optional\b")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
-    let platform_re = regex::Regex::new(r"(?i)//\s*platform\b")
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
+        .map_err(DepcheckError::ManifestRegex)?;
+    let optional_re =
+        regex::Regex::new(r"(?i)//\s*optional\b").map_err(DepcheckError::ManifestRegex)?;
+    let platform_re =
+        regex::Regex::new(r"(?i)//\s*platform\b").map_err(DepcheckError::ManifestRegex)?;
     for rawline in text.lines() {
         let line = rawline.trim();
         if line.is_empty() || line.starts_with('#') || line.starts_with("//") {
@@ -945,10 +1008,10 @@ pub fn parse_dotnet_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, S
 }
 
 /// Parse `paket.lock` (native; top-level entries only, never nested constraints).
-pub fn parse_dotnet_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
+pub fn parse_dotnet_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let re = regex::Regex::new(r"^    ([A-Za-z0-9_.\-]+) \(([^)]+)\)")
-        .map_err(|e| format!("unreadable lock: {e}"))?;
+        .map_err(DepcheckError::LockRegex)?;
     let mut pkgs = BTreeMap::new();
     for line in text.lines() {
         if let Some(caps) = re.captures(line) {
@@ -959,10 +1022,9 @@ pub fn parse_dotnet_lock(path: &Path) -> Result<BTreeMap<String, String>, String
 }
 
 /// Parse `cc_deps.toml` fixture manifest (sha256 authority).
-pub fn parse_cc_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
-    let data: toml::Value =
-        toml::from_str(&text).map_err(|e| format!("unreadable manifest: {e}"))?;
+pub fn parse_cc_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
+    let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::ManifestToml)?;
     let mut deps = BTreeMap::new();
     let items = data
         .get("dep")
@@ -989,7 +1051,7 @@ pub fn parse_cc_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Strin
             .trim()
             .to_owned();
         if name.is_empty() {
-            return Err("cc dep entry without name".to_owned());
+            return Err(DepcheckError::CcEntry);
         }
         let scope = item
             .get("scope")
@@ -1019,10 +1081,9 @@ pub fn parse_cc_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Strin
 }
 
 /// Parse `cc_lock.json`.
-pub fn parse_cc_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
-    let data: serde_json::Value =
-        serde_json::from_str(&text).map_err(|e| format!("unreadable lock: {e}"))?;
+pub fn parse_cc_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
+    let data: serde_json::Value = serde_json::from_str(&text).map_err(DepcheckError::LockJson)?;
     let mut pkgs = BTreeMap::new();
     if let Some(map) = data.get("packages").and_then(|v| v.as_object()) {
         for (name, info) in map {
@@ -1060,16 +1121,15 @@ pub fn parse_cc_lock_sha(path: &Path) -> BTreeMap<String, String> {
 }
 
 /// Parse `depcheck_exceptions.toml` (raw key uses lower plus dash-to-underscore).
-pub fn parse_exceptions(path: Option<&Path>) -> Result<BTreeMap<String, Exception>, String> {
+pub fn parse_exceptions(path: Option<&Path>) -> Result<BTreeMap<String, Exception>, DepcheckError> {
     let Some(path) = path else {
         return Ok(BTreeMap::new());
     };
     if !path.exists() {
-        return Err(format!("exceptions file missing: {}", path.display()));
+        return Err(DepcheckError::ExceptionsMissing(path.display().to_string()));
     }
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable exceptions: {e}"))?;
-    let data: toml::Value =
-        toml::from_str(&text).map_err(|e| format!("unreadable exceptions: {e}"))?;
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ExceptionsIo)?;
+    let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::ExceptionsToml)?;
     let mut out = BTreeMap::new();
     let items = data
         .get("exception")
@@ -1090,7 +1150,7 @@ pub fn parse_exceptions(path: Option<&Path>) -> Result<BTreeMap<String, Exceptio
             .trim()
             .to_owned();
         if name.is_empty() {
-            return Err("exception entry without dependency".to_owned());
+            return Err(DepcheckError::ExceptionEntry);
         }
         out.insert(
             name.to_lowercase().replace('-', "_"),
@@ -1216,7 +1276,7 @@ pub fn find_usages(
     eco: Ecosystem,
     sources_root: &Path,
     dep_names: &[String],
-) -> Result<BTreeMap<String, Usage>, String> {
+) -> Result<BTreeMap<String, Usage>, DepcheckError> {
     let mut out: BTreeMap<String, Usage> = dep_names
         .iter()
         .map(|k| (k.clone(), Usage::default()))
@@ -1318,7 +1378,7 @@ pub fn find_usages(
             } else {
                 regex::Regex::new(&pat)
             }
-            .map_err(|e| format!("unreadable sources: {e}"))?;
+            .map_err(DepcheckError::SourcesRegex)?;
             compiled.push(re);
         }
         for (path, text) in &texts {
@@ -1339,7 +1399,10 @@ pub fn find_usages(
     Ok(out)
 }
 
-fn load_manifest(eco: Ecosystem, manifest: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
+fn load_manifest(
+    eco: Ecosystem,
+    manifest: &Path,
+) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     match eco {
         Ecosystem::Rust => parse_rust_manifest(manifest),
         Ecosystem::Python => parse_python_manifest(manifest),
@@ -1351,7 +1414,7 @@ fn load_manifest(eco: Ecosystem, manifest: &Path) -> Result<BTreeMap<String, Dep
     }
 }
 
-fn load_lock(eco: Ecosystem, lock: &Path) -> Result<BTreeMap<String, String>, String> {
+fn load_lock(eco: Ecosystem, lock: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     match eco {
         Ecosystem::Rust => parse_rust_lock(lock),
         Ecosystem::Python => parse_python_lock(lock),
@@ -1482,10 +1545,10 @@ fn check_maps(
 }
 
 /// Parse the `MAVEN_ARTIFACTS` coordinate list (see `third_party/jvm/pins.bzl`).
-pub fn parse_maven_artifacts_list(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
+pub fn parse_maven_artifacts_list(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
+    let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let re = regex::Regex::new(r#""([^":\s]+:[^":\s]+:[^":\s]+)""#)
-        .map_err(|e| format!("unreadable manifest: {e}"))?;
+        .map_err(DepcheckError::ManifestRegex)?;
     let mut deps = BTreeMap::new();
     for caps in re.captures_iter(&text) {
         let coord = caps[1].to_owned();
@@ -1512,7 +1575,7 @@ pub fn parse_maven_artifacts_list(path: &Path) -> Result<BTreeMap<String, DepInf
         );
     }
     if deps.is_empty() {
-        return Err("unreadable manifest: no maven coordinates".to_owned());
+        return Err(DepcheckError::NoMavenCoords);
     }
     Ok(deps)
 }

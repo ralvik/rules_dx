@@ -104,4 +104,18 @@ pub enum ReportError {
     /// complete LCOV document.
     #[error("invalid Bazel combined LCOV tracefile: {detail}")]
     InvalidLcov { detail: String },
+    /// An output-mode conflict outside the two known shapes.
+    ///
+    /// `check_output_conflict` only returns `SecondStdoutReport` and
+    /// `ConflictingStdoutReport`; any other [`dx_output::OutputError`]
+    /// reaching the planner is a wiring error that fails closed here
+    /// instead of trapping via `unreachable!`.
+    #[error("unexpected output conflict: {detail}")]
+    UnexpectedOutputConflict { detail: String },
+    /// A fingerprint or SARIF JSON view failed to serialize.
+    #[error("{0}")]
+    Fingerprint(#[from] dx_fingerprint::FingerprintError),
+    /// A JUnit document failed to serialize via `quick-junit`.
+    #[error("junit report serialization failed: {detail}")]
+    JunitRender { detail: String },
 }
