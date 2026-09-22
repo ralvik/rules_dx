@@ -57,7 +57,7 @@ identities per generated target and does not derive `select()` or feature semant
 Go is a narrow exception for declared Go build constraints and platform source selection:
 preserve upstream Go/Gazelle platform-aware source and dependency semantics. This does not
 permit interpreting arbitrary runtime conditions, inferring resources, or weakening strict resolution.
-Exact recognizers and provider mappings are implemented in the Go Gazelle extension and pinned by its fixtures.
+Exact recognizers and provider mappings are owned by the [Go contract](go.md) and implemented in the Go Gazelle extension and pinned by its fixtures.
 
 The ignore directive has the exact form
 `# gazelle:dx_ignore_import <source-language> [<import-language>] <import-string>`.
@@ -80,7 +80,7 @@ crate, or framework container.
 Every recognized test source receives its own independently runnable target; generation does not
 replace these with an implicit package, crate, or runner aggregate. Go instead preserves native
 package-level test targets, including shared test helpers and `TestMain`; internal/external
-test-package mappings are implemented in the Go Gazelle extension and pinned by its fixtures.
+test-package mappings are owned by the [Go contract](go.md) and implemented in the Go Gazelle extension and pinned by its fixtures.
 
 Basename-derived names preserve ASCII letters, digits, and internal underscores, replace each run of
 all other characters with one underscore, trim edge underscores, and reject an empty result.

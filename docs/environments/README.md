@@ -10,6 +10,17 @@ Developer environment and generated-source projection contracts:
 - [Rust Environment](rust.md): Rust toolchain, source, and rust-analyzer projection.
 - [Node Environment](node.md): pnpm importer and managed `node_modules` projection.
 - [Python Environment](python-environment.md): later concrete `.venv` projection.
+- [Go Environment](go.md): focused `go_env_plan` over wrapper direct sources.
+- [Java Environment](java.md): focused `java_env_plan` over wrapper direct sources.
+- [Kotlin Environment](kotlin.md): focused `kotlin_env_plan` over wrapper direct sources.
+- [Scala Environment](scala.md): focused `scala_env_plan` over wrapper direct sources.
+- [C# Environment](csharp.md): focused `csharp_env_plan` over wrapper direct sources.
+- [F# Environment](fsharp.md): focused `fsharp_env_plan` over wrapper direct sources.
+- [C/C++ Environment](cc.md): focused `cc_env_plan` over wrapper direct sources.
+- [Vue Environment](vue.md): focused `vue_env_plan` over `JsInfo` plus direct sources.
+- [Svelte Environment](svelte.md): focused `svelte_env_plan` over `JsInfo` plus direct sources.
+- [Astro Environment](astro.md): focused `astro_env_plan` over `JsInfo` plus direct sources.
+- [MDX Environment](mdx.md): focused `mdx_env_plan` over `JsInfo` plus direct sources.
 
 The delivery order is dogfood-first: PATH/environment bootstrap precedes the Rust language
 foundation, and Python follows as a later language projection.
@@ -23,7 +34,11 @@ Every implemented foundation (`rust`, `python`, `javascript`, `typescript`, `go`
 plan via `<lang>/env/plan.bzl`, pinned by `<lang>/env/plan_tests.bzl` and exercised
 by `<lang>/tests/fixtures/hello/`. Rust, Node, and Python projections are further defined in
 [Rust Environment](rust.md), [Node Environment](node.md), and
-[Python Environment](python-environment.md). Additional toolchains use the default
+[Python Environment](python-environment.md). Go, Java, Kotlin, Scala, C#, F#,
+and C/C++ plans are owned by [Go](go.md), [Java](java.md),
+[Kotlin](kotlin.md), [Scala](scala.md), [C#](csharp.md), [F#](fsharp.md), and
+[C/C++](cc.md); Vue, Svelte, Astro, and MDX plans are owned by [Vue](vue.md),
+[Svelte](svelte.md), [Astro](astro.md), and [MDX](mdx.md). Additional toolchains use the default
 upstream toolchain now; per-platform acquisition stays open under the native plan.
 Ruby and PowerShell have no environment mapping: deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md).

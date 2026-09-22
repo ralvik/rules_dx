@@ -10,6 +10,14 @@ ADRs explain why the contracts exist; the test matrix defines the required evide
 - [Rust](rust.md): crate and Cargo discovery, tests, examples, benchmarks, and build scripts.
 - [Python](python.md): runtime sources, stubs, tests, and uv-backed dependency scope.
 - [JavaScript and TypeScript](javascript-typescript.md): core extensions, pnpm scope, and tests.
+- [Go](go.md): package-level libraries and tests with the build-constraint exception.
+- [Java](java.md): directory libraries over the shared Maven scope.
+- [Kotlin](kotlin.md): directory libraries over the shared Maven scope.
+- [Scala](scala.md): directory libraries over the shared Maven scope.
+- [C#](csharp.md): directory libraries over the Paket scope.
+- [F#](fsharp.md): directory libraries over the Paket scope.
+- [C/C++](cc.md): directory libraries with sources plus headers and no lockfile.
+- [Mixed ownership](mixed.md): disjoint v1 container partition.
 - [Framework adapters](framework-adapters.md): Vue, Svelte, Astro, and MDX container boundaries.
 
 ## Related Authorities

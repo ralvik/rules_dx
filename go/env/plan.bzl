@@ -1,6 +1,6 @@
 """Focused Go environment plan (WP2).
 
-Contract: `docs/environments/environment.md`.
+Contract: `docs/environments/go.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
