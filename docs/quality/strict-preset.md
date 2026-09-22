@@ -30,11 +30,13 @@ notes, and a tested preservation override.
 
 Without an applicable native config, each tool runs its pinned upstream
 built-in defaults with only transport and hermetic settings added by the
-adapter. The repository's own loose pins are not consumer defaults: the
-root `ruff.toml` (`E4`, `E7`, `E9`, `F`) and the empty `biome.json` are
-this workspace's checked-in policy, proven to match upstream
-config-free behavior by the no-config golden tests in
-[Quality Workflow Testing](quality-testing.md#configured-policy).
+adapter, per [Native Configuration](native-configuration.md#authority).
+The repository's own checked-in configs are not consumer defaults: the
+workspace [`ruff.toml`](../../ruff.toml) and [`biome.json`](../../biome.json)
+carry own-tree policy per
+[Native Configuration](native-configuration.md#dedicated-configs), not the
+loose default. Config-free behavior is proven by the no-config golden
+tests in [Quality Workflow Testing](quality-testing.md#configured-policy).
 
 ## Strict Examples
 
