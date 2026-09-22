@@ -35,15 +35,18 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 # dx qualified hosts: macos/aarch64 joins the Linux pair; macOS x86_64 is
 # Not planned (issue #976) and stays refused. Windows x86_64 joins under
-# , Windows arm64 stays refused.
-if grep -A8 -e 'pub fn qualified_hosts' cli/cli/src/platform.rs | grep -q -F -e '("macos", "aarch64")' &&
-  ! grep -A8 -e 'pub fn qualified_hosts' cli/cli/src/platform.rs | grep -q -F -e '("macos", "x86_64")' &&
+# , Windows arm64 stays refused
+# (hermetic context search, issue #1006).
+if dx_context_contains cli/cli/src/platform.rs 'pub fn qualified_hosts' -A 8 '("macos", "aarch64")' &&
+  ! dx_context_contains cli/cli/src/platform.rs 'pub fn qualified_hosts' -A 8 '("macos", "x86_64")' &&
   grep -q -F -e 'qualified_hosts' cli/cli/src/platform.rs &&
   grep -q -F -e 'macos_arm64_host_is_qualified' cli/cli/src/platform.rs &&
   grep -q -F -e 'macos_x86_64_is_refused_not_planned' cli/cli/src/platform.rs &&
-  grep -A8 -e 'pub fn qualified_hosts' cli/cli/src/platform.rs | grep -q -F -e '("windows", "x86_64")'; then
+  dx_context_contains cli/cli/src/platform.rs 'pub fn qualified_hosts' -A 8 '("windows", "x86_64")'; then
   ok
 else
   bad "platform.rs lost the macos/aarch64 qualified-host entry with macOS x86_64 refused (issue #412 plus #976; windows x86_64 qualified under #414, windows arm64 stays refused)"
@@ -135,9 +138,10 @@ fi
 
 # Apple-SDK handling leaks no secrets and needs no interactive acceptance:
 # no secret env, no EULA-accept variable, no interactive prompt in the
-# macOS job family or the qualification docs.
-if ! grep -A20 -e 'build-macos-arm64' .github/workflows/ci.yml | grep -E -e 'secrets\.|GH_TOKEN|EULA_ACCEPT|accept.*license' | grep -q . &&
-  ! grep -rn -F -e 'xcode-select --install' --include='*.yml' .github/ 2>/dev/null | grep -q .; then
+# macOS job family or the qualification docs
+# (hermetic context plus tree search, issue #1006).
+if DX_CONTEXT_RE=1 dx_context_absent .github/workflows/ci.yml 'build-macos-arm64' -A 20 'secrets\.|GH_TOKEN|EULA_ACCEPT|accept.*license' &&
+  dx_tree_absent --include='*.yml' 'xcode-select --install' -- .github/; then
   ok
 else
   bad "macos jobs leak secrets or require interactive Apple-SDK acceptance (issue #412)"
@@ -146,8 +150,9 @@ fi
 # No host-installed SDK fallback claim anywhere: the only allowed mentions
 # deny it on the same line (`never approved`, `never-approved`, or an
 # explicit `no`/`No` denial such as `no host-installed SDK fallback`).
-# (Self-excluded: this script names the banned form in its own pattern.)
-if ! grep -rn -F -e 'host-installed SDK' --exclude='macos_qualification.sh' docs/ cli/ tools/ .github/ 2>/dev/null | grep -v -F -e 'never approved' | grep -v -F -e 'never-approved' | grep -v -F -e 'no host-installed SDK fallback' | grep -v -F -e 'No host-installed SDK fallback' | grep -q .; then
+# (Self-excluded: this script names the banned form in its own pattern.
+# Hermetic tree search with allow-strings, issue #1006.)
+if dx_tree_absent --exclude='macos_qualification.sh' --allow='never approved' --allow='never-approved' --allow='no host-installed SDK fallback' --allow='No host-installed SDK fallback' 'host-installed SDK' -- docs/ cli/ tools/ .github/; then
   ok
 else
   bad "a host-installed SDK fallback claim appeared (stays never approved, issue #412)"

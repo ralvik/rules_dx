@@ -43,6 +43,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 # dx qualified hosts: windows/x86_64 joins the seed plus arm64 plus macos
 # pair; macos x86_64 plus windows arm64 stay refused
 # windows_x86_64 only).
@@ -73,9 +75,9 @@ else
 fi
 
 # ADR 0014 keeps Windows x86_64 required and records the qualification.
-# Exact pins, hosts, floors, and SDK/CRT identities stay owned.
-if grep -q -F -e '| Windows x86_64 MSVC-compatible | Required' docs/decisions/0014-tested-platform-release-stack.md &&
-  grep -q -F -e 'Windows x86_64 MSVC-compatible is qualified' docs/decisions/0014-tested-platform-release-stack.md; then
+# Exact pins, hosts, floors, and SDK/CRT identities stay owned
+# (hermetic fixed-string pins, issue #1006).
+if dx_grep_contains docs/decisions/0014-tested-platform-release-stack.md '| Windows x86_64 MSVC-compatible | Required' 'Windows x86_64 MSVC-compatible is qualified'; then
   ok
 else
   bad "ADR 0014 lost the Windows x86_64 required plus qualified record (issue #414)"
@@ -133,9 +135,10 @@ fi
 # variable assignment, no auto-accept flag, no secrets in the Windows jobs;
 # merely adding the module fetches no restricted payloads (no toolchains_msvc
 # dep wired as a release backend).
-if ! grep -A30 -e 'build-windows-x86_64' .github/workflows/ci.yml | grep -E -e 'EULA_ACCEPT|ACCEPT.*EULA|/accept.*eula' | grep -q . &&
-  ! grep -rn -F -e 'BAZEL_TOOLCHAINS_MSVC_ACCEPT' --include='*.yml' .github/ 2>/dev/null | grep -v -F -e 'windows_qualification.sh' | grep -q . &&
-  ! grep -A30 -e 'build-windows-x86_64' .github/workflows/ci.yml | grep -E -e 'secrets\.' | grep -q .; then
+# Hermetic context search: host grep -A separators diverge (issue #1006).
+if DX_CONTEXT_RE=1 dx_context_absent .github/workflows/ci.yml 'build-windows-x86_64' -A 30 'EULA_ACCEPT|ACCEPT.*EULA|/accept.*eula' &&
+  dx_tree_absent --include='*.yml' --exclude='windows_qualification.sh' 'BAZEL_TOOLCHAINS_MSVC_ACCEPT' -- .github/ &&
+  DX_CONTEXT_RE=1 dx_context_absent .github/workflows/ci.yml 'build-windows-x86_64' -A 30 'secrets\.'; then
   ok
 else
   bad "windows jobs auto-accept the Microsoft EULA or leak secrets (explicit acceptance only, issue #414)"
@@ -145,8 +148,9 @@ fi
 # deny it on the same line (`never approved`, `never-approved`, or an
 # explicit `no`/`No` denial) or record it as a rejected alternative
 # (`Rejected`).
-# (Self-excluded: this script names the banned form in its own pattern.)
-if ! grep -rn -F -e 'Installed Build Tools' --exclude='windows_qualification.sh' docs/ cli/ tools/ .github/ 2>/dev/null | grep -v -F -e 'never approved' | grep -v -F -e 'never-approved' | grep -v -F -e 'no installed' | grep -v -F -e 'No installed' | grep -v -F -e 'Rejected' | grep -v -F -e 'rejected' | grep -q .; then
+# (Self-excluded: this script names the banned form in its own pattern.
+# Hermetic tree search with allow-strings, issue #1006.)
+if dx_tree_absent --exclude='windows_qualification.sh' --allow='never approved' --allow='never-approved' --allow='no installed' --allow='No installed' --allow='Rejected' --allow='rejected' 'Installed Build Tools' -- docs/ cli/ tools/ .github/; then
   ok
 else
   bad "an installed Build Tools fallback claim appeared (stays never approved, issue #414)"

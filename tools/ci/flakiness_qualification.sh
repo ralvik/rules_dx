@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 ci=".github/workflows/ci.yml"
 ci_notes="docs/testing/workflow-notes.md"
 test_matrix="docs/testing/github-ci.md"
@@ -82,26 +84,28 @@ else
   bad "a bare bazel test without --flaky_test_attempts plus --test_timeout survives (long-timeouts-only rejected, issue #619)"
 fi
 
-# Seed test plus coverage stay tuned to 45 minutes (not blanket 60/90).
-if grep -A3 -e '^  test:' "$ci" | grep -q -F -e 'timeout-minutes: 45' &&
-  grep -A3 -e '^  coverage:' "$ci" | grep -q -F -e 'timeout-minutes: 45'; then
+# Seed test plus coverage stay tuned to 45 minutes (not blanket 60/90)
+# (hermetic context search, issue #1006).
+if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test:' -A 3 'timeout-minutes: 45' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage:' -A 3 'timeout-minutes: 45'; then
   ok
 else
   bad "seed test/coverage lost their tuned 45-minute timeouts (issue #619)"
 fi
 
 # Per-host test plus coverage stay capped at 60 minutes; no blanket 90
-# remains anywhere in the workflow (macOS x86_64 removed per #976).
-if grep -A3 -e '^  test-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  coverage-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  coverage-musl-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  coverage-musl-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  test-macos-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  coverage-macos-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
+# remains anywhere in the workflow (macOS x86_64 removed per #976)
+# (hermetic context search, issue #1006).
+if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test-arm64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-arm64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-musl-x86_64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-musl-arm64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test-macos-arm64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-macos-arm64:' -A 3 'timeout-minutes: 60' &&
   ! grep -q -F -e 'test-macos-x86_64' "$ci" &&
   ! grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
-  grep -A3 -e '^  test-windows-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  coverage-windows-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test-windows-x86_64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-windows-x86_64:' -A 3 'timeout-minutes: 60' &&
   ! grep -q -F -e 'timeout-minutes: 90' "$ci"; then
   ok
 else
@@ -109,13 +113,14 @@ else
 fi
 
 # Builds stay 30/60: seed plus sbom plus prove plus dogfood-freshness fast,
-# per-host builds bounded, no blanket long timeout.
-if grep -A3 -e '^  build:' "$ci" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A3 -e '^  prove:' "$ci" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A3 -e '^  dogfood-freshness:' "$ci" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A3 -e '^  build-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  build-macos-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  build-windows-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60'; then
+# per-host builds bounded, no blanket long timeout
+# (hermetic context search, issue #1006).
+if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  build:' -A 3 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  prove:' -A 3 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  dogfood-freshness:' -A 3 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  build-arm64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  build-macos-arm64:' -A 3 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  build-windows-x86_64:' -A 3 'timeout-minutes: 60'; then
   ok
 else
   bad "build timeouts drifted (want seed/prove/dogfood 30 plus per-host builds 60, issue #619)"
@@ -208,17 +213,17 @@ fi
 # platforms-gate 5, six Linux-once checks 30, three per-platform checks 60,
 # aggregate dx-ci 10; no blanket 90.
 reusable=".github/workflows/reusable-consumer.yml"
-if grep -A5 -e 'platforms-gate:' "$reusable" | grep -q -F -e 'timeout-minutes: 5' &&
-  grep -A5 -e '^  lint:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A5 -e '^  typecheck:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A5 -e '^  format:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A5 -e '^  generate:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A5 -e '^  security-audit:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A5 -e '^  license-audit:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
-  grep -A5 -e '^  test:' "$reusable" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A5 -e '^  build:' "$reusable" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A5 -e '^  coverage:' "$reusable" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A5 -e '^  dx-ci:' "$reusable" | grep -q -F -e 'timeout-minutes: 10' &&
+if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" 'platforms-gate:' -A 5 'timeout-minutes: 5' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  lint:' -A 5 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  typecheck:' -A 5 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  format:' -A 5 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  generate:' -A 5 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  security-audit:' -A 5 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  license-audit:' -A 5 'timeout-minutes: 30' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  test:' -A 5 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  build:' -A 5 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  coverage:' -A 5 'timeout-minutes: 60' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$reusable" '^  dx-ci:' -A 5 'timeout-minutes: 10' &&
   ! grep -q -F -e 'timeout-minutes: 90' "$reusable"; then
   ok
 else

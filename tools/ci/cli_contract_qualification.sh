@@ -33,6 +33,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 contract="docs/cli/cli-contract.md"
 testing="docs/testing/cli.md"
 reference="docs/cli/commands/README.md"

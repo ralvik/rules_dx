@@ -40,6 +40,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 release_build="deploy/release/BUILD.bazel"
 dryrun=".github/workflows/publish-dry-run.yml"
 driver="deploy/release/src/lib.rs"

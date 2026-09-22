@@ -32,6 +32,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/googletest/pins.bzl"
 build="cc/tests/fixtures/googletest/BUILD.bazel"
 header="cc/tests/fixtures/googletest/greeter.h"
@@ -121,8 +123,9 @@ fi
 
 # Unpinned runner stays rejected: no head or floating googletest dep lands
 # (exact 1.18.0 only; the qualified "living at head rejected" record in
-# pins/wrapper/docs is the rejection, not a head dep).
-if ! grep -R --include='*.bzl' --include='BUILD.bazel' -E -e 'googletest[^"]*(head|master|latest|1\.\+)' -- cc third_party MODULE.bazel 2>/dev/null | grep -q .; then
+# pins/wrapper/docs is the rejection, not a head dep)
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
+if DX_TREE_RE=1 dx_tree_absent --include='*.bzl' --include='BUILD.bazel' 'googletest[^"]*(head|master|latest|1\.\+)' -- cc third_party MODULE.bazel; then
   ok
 else
   bad "unpinned GoogleTest runner detected (head or floating; want exact 1.18.0 only)"

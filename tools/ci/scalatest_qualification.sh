@@ -33,6 +33,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="scala/tests/fixtures/scalatest/pins.bzl"
 scalatest_build="scala/tests/fixtures/scalatest/BUILD.bazel"
 hello_build="scala/tests/fixtures/hello/BUILD.bazel"
@@ -128,8 +130,9 @@ else
   bad "scala/tests/fixtures/hello/HelloTest.scala lost its AnyFlatSpec shape under issue #480"
 fi
 
-# Implicit runner stays rejected: fixtures never load upstream scala_test directly.
-if ! grep -R --include='BUILD.bazel' -F -e '@rules_scala//scala:scala.bzl' -- scala/tests/fixtures 2>/dev/null | grep -q .; then
+# Implicit runner stays rejected: fixtures never load upstream scala_test directly
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
+if dx_tree_absent --include='BUILD.bazel' '@rules_scala//scala:scala.bzl' -- scala/tests/fixtures; then
   ok
 else
   bad "implicit Scala runner detected (want wrapper scala_test only, no direct @rules_scala load in fixtures)"

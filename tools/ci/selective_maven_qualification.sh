@@ -31,6 +31,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cli/update/tests/fixtures/selective_maven/pins.bzl"
 expected="cli/update/tests/fixtures/selective_maven/selective_maven.expected"
 fixture_build="cli/update/tests/fixtures/selective_maven/BUILD.bazel"

@@ -36,6 +36,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 contract="docs/cli/cli-contract.md"
 
 # Contract owns the qualified seed-only record under.

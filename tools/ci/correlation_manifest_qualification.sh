@@ -34,6 +34,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 protocol="docs/cli/output-protocol.md"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 pins="cli/update/tests/fixtures/correlation_manifest/pins.bzl"

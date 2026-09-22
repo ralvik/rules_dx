@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 ci=".github/workflows/ci.yml"
 build="tools/ci/ci_targets_b.bzl"
 prove="tools/ci/prove.sh"
@@ -97,8 +99,9 @@ else
 fi
 
 # Total Linux-only labels stay within budget (shell contract keeps the
-# lower bound; this budget keeps the upper bound).
-labels="$(grep -r -F -e 'target_compatible_with = ["@platforms//os:linux"]' --include='BUILD.bazel' --include='*.bzl' . 2>/dev/null | wc -l | tr -d ' ')"
+# lower bound; this budget keeps the upper bound)
+# (hermetic line count: BSD grep lacks --include, issue #1006).
+labels="$(dx_hermetic_grep tree-count --fixed --include 'BUILD.bazel' --include '*.bzl' --roots . -- 'target_compatible_with = ["@platforms//os:linux"]')"
 if [[ "$labels" -le "$labels_budget" ]]; then
   ok
 else

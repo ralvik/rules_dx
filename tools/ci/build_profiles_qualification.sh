@@ -37,6 +37,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 command_doc="docs/cli/commands/build-test-coverage.md"
 authoring="docs/deploy/authoring.md"
 testing="docs/testing/cli.md"

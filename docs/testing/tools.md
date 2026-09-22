@@ -314,7 +314,14 @@ sentences/symbols must hold in a known file. Use regex rows
 (`dx_guard_re_*` with `grep -E -e`) only for shapes (SHA pins, version
 alternatives, anchors). Use tree rows only when the location is unknown
 (repo-wide absence with an `--include` glob); prefer single-file pins
-otherwise.
+otherwise. Host grep/sed variance is hermetic under issue #1006:
+recursive (`-r`/`-R` with `--include`/`--exclude`, BSD lacks them), `-A`
+windows, `-o` extraction, and `sed` field extraction go through
+`tools/sh/hermetic_grep.py` (pure-stdlib python3, Bazel-tested via
+`//tools/sh:hermetic_grep_test`) via `tools/sh/lib.sh` (`dx_tree_*`,
+`dx_context_*`, `dx_extract_*`, `dx_grep_*`); plain single-file POSIX
+`grep -q -F/-E` pins stay allowed. Every qualification driver logs the
+bash floor via `dx_bash_pin` (3.2+, same bash on Linux/macOS/Windows).
 
 Runfiles and workspace-root probing is consolidated under issue #319 (one shared
 `tools/sh/lib.sh` `dx_workspace_root`/`dx_runfiles_root`/`dx_resolve_runfile`

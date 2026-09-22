@@ -30,6 +30,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 contract="docs/cli/cli-contract.md"
 policy="docs/cli/helper-upstream-policy.md"
 remaining="docs/testing/verification-matrix-remaining.md"
@@ -75,11 +77,12 @@ else
   bad "atomic_fs lost its stays-hand-rolled reason"
 fi
 
-# Atomic Cargo/BUILD pins tempfile with no fs2/fslock/atomic-write-file.
-if grep -q -F -e 'tempfile = "3"' cli/atomic_fs/Cargo.toml &&
-  ! grep -E -e 'fs2|fslock|atomic-write' cli/atomic_fs/Cargo.toml | grep -q . &&
-  grep -q -F -e '"tempfile"' cli/atomic_fs/BUILD.bazel &&
-  ! grep -E -e 'fs2|fslock|atomic-write' cli/atomic_fs/BUILD.bazel | grep -q .; then
+# Atomic Cargo/BUILD pins tempfile with no fs2/fslock/atomic-write-file
+# (hermetic pins, issue #1006).
+if dx_grep_contains cli/atomic_fs/Cargo.toml 'tempfile = "3"' &&
+  dx_grep_re_absent cli/atomic_fs/Cargo.toml 'fs2|fslock|atomic-write' &&
+  dx_grep_contains cli/atomic_fs/BUILD.bazel '"tempfile"' &&
+  dx_grep_re_absent cli/atomic_fs/BUILD.bazel 'fs2|fslock|atomic-write'; then
   ok
 else
   bad "atomic_fs Cargo/BUILD lost its tempfile-only pin"
@@ -148,17 +151,16 @@ else
 fi
 
 # LCOV Cargo pins lcov plus thiserror with lcov::Record plus reason: evidence,
-# and cli/cli reuses dx_lcov instead of a second hand parser.
-if grep -q -F -e 'lcov = "0.8"' cli/lcov/Cargo.toml &&
-  grep -q -F -e 'thiserror = "2"' cli/lcov/Cargo.toml &&
-  ! grep -F -e 'cargo-llvm' cli/lcov/Cargo.toml | grep -q . &&
-  grep -q -F -e '"lcov"' cli/lcov/BUILD.bazel &&
-  grep -q -F -e 'lcov::Record' cli/lcov/src/parse.rs &&
-  grep -q -F -e 'validate_lcov_report' cli/lcov/src/parse.rs &&
-  ! grep -F -e 'strip_prefix("SF:")' cli/lcov/src/parse.rs | grep -q . &&
-  ! grep -F -e 'strip_prefix("SF:")' cli/cli/src/reports/lcov.rs | grep -q . &&
-  grep -q -F -e 'validate_lcov_report' cli/cli/src/reports/lcov.rs &&
-  grep -q -F -e 'reason:' cli/lcov/src/ignores.rs; then
+# and cli/cli reuses dx_lcov instead of a second hand parser
+# (hermetic pins, issue #1006).
+if dx_grep_contains cli/lcov/Cargo.toml 'lcov = "0.8"' 'thiserror = "2"' &&
+  dx_grep_absent cli/lcov/Cargo.toml 'cargo-llvm' &&
+  dx_grep_contains cli/lcov/BUILD.bazel '"lcov"' &&
+  dx_grep_contains cli/lcov/src/parse.rs 'lcov::Record' 'validate_lcov_report' &&
+  dx_grep_absent cli/lcov/src/parse.rs 'strip_prefix("SF:")' &&
+  dx_grep_absent cli/cli/src/reports/lcov.rs 'strip_prefix("SF:")' &&
+  dx_grep_contains cli/cli/src/reports/lcov.rs 'validate_lcov_report' &&
+  dx_grep_contains cli/lcov/src/ignores.rs 'reason:'; then
   ok
 else
   bad "lcov lost its lcov-crate adopted evidence or kept a second hand parser"

@@ -38,6 +38,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="third_party/jvm/pins.bzl"
 jvm_build="third_party/jvm/BUILD.bazel"
 module="MODULE.bazel"

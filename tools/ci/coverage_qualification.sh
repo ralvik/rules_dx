@@ -39,6 +39,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 cells="tools/coverage/cells.txt"
 seed_inventory="tools/coverage/seed-inventory.txt"
 pins="tools/coverage/tests/fixtures/per_cell/pins.bzl"
@@ -221,10 +223,11 @@ fi
 # Codecov stays opt-in only: no activation, no upload wiring anywhere.
 # (Self-excluded: this script names the banned forms in its own patterns;
 # the pins fixture records the same banned forms as pins, so its
-# path is filtered out and only real wiring can fail this check.)
-if ! grep -rn -F -e 'codecov-action' .github/workflows/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e 'CODECOV_TOKEN' --exclude='coverage_qualification.sh' .github/workflows/ tools/ cli/ 2>/dev/null | grep -v -F -e 'tools/coverage/tests/fixtures/per_cell/' | grep -q . &&
-  ! grep -rn -F -e 'codecov upload' --exclude='coverage_qualification.sh' .github/workflows/ tools/ 2>/dev/null | grep -v -F -e 'tools/coverage/tests/fixtures/per_cell/' | grep -q .; then
+# path is filtered out and only real wiring can fail this check)
+# (hermetic tree search: BSD grep lacks --exclude, issue #1006).
+if dx_tree_absent 'codecov-action' -- .github/workflows/ &&
+  dx_tree_absent --exclude='coverage_qualification.sh' --allow='tools/coverage/tests/fixtures/per_cell/' 'CODECOV_TOKEN' -- .github/workflows/ tools/ cli/ &&
+  dx_tree_absent --exclude='coverage_qualification.sh' --allow='tools/coverage/tests/fixtures/per_cell/' 'codecov upload' -- .github/workflows/ tools/; then
   ok
 else
   bad "Codecov upload wiring appeared (action, token, or upload step)"
@@ -242,8 +245,9 @@ fi
 # Free-tier qualification: only standard runners, no paid services.
 # windows-latest is qualified (standard free runner with
 # a per-host cache scope); macos-latest stays banned (unpinned), as do
-# self-hosted/larger (paid).
-if ! grep -rn -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' .github/workflows/ 2>/dev/null | grep -q . &&
+# self-hosted/larger (paid)
+# (hermetic tree search: host grep -rn variance, issue #1006).
+if DX_TREE_RE=1 dx_tree_absent 'runs-on:.*(self-hosted|larger|macos-latest)' -- .github/workflows/ &&
   grep -q -F -e 'runs-on: ubuntu-latest' .github/workflows/ci.yml &&
   grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
   grep -q -F -e 'actions/cache' .github/actions/restore-bazel-cache/action.yml; then
@@ -262,10 +266,11 @@ else
   bad "testing README lost its free-tier quota record (runners, cache, artifact)"
 fi
 
-# No remote execution or cache flags in owned config or workflows.
-if ! grep -rn -F -e '--remote_cache' .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e '--remote_executor' .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e '--bes_backend' .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ 2>/dev/null | grep -q .; then
+# No remote execution or cache flags in owned config or workflows
+# (hermetic tree search: BSD grep lacks --exclude-dir, issue #1006).
+if dx_tree_absent '--remote_cache' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
+  dx_tree_absent '--remote_executor' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
+  dx_tree_absent '--bes_backend' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/; then
   ok
 else
   bad "a remote cache/executor flag appeared (local-only execution)"
@@ -287,9 +292,10 @@ else
   bad "testing README lost its locally-tested-only remote record"
 fi
 
-# No remote-correctness claim may appear in docs.
-if ! grep -rn -F -e 'remote-cache correctness' docs/ 2>/dev/null | grep -v -F -e 'Remote cache tests are required' | grep -q . &&
-  ! grep -rn -F -e 'remotely executable' docs/ 2>/dev/null | grep -v -F -e 'required before declaring' | grep -v -F -e 'when a' | grep -q .; then
+# No remote-correctness claim may appear in docs
+# (hermetic tree search: host grep -rn variance, issue #1006).
+if dx_tree_absent --allow='Remote cache tests are required' 'remote-cache correctness' -- docs/ &&
+  dx_tree_absent --allow='required before declaring' --allow='when a' 'remotely executable' -- docs/; then
   ok
 else
   bad "docs claim remote correctness that has no remote evidence"

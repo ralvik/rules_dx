@@ -38,6 +38,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 contract="docs/deploy/offline-bootstrap.md"
 script="deploy/offline/bootstrap-offline.sh"
 advisory="cli/audit/src/advisory.rs"

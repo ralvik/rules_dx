@@ -62,14 +62,48 @@
 # (; snapshot stays for golden bytes)
 #   dx_expect_absent <file> <lit>...
 #                                guard pin: fixed-string literals absent
+#   dx_python3                  prints `python3` else `python`
+#                                (Windows `shell: bash` ships only `python`)
+#   dx_hermetic_grep <args>     hermetic grep/sed-extract via
+#                                `tools/sh/hermetic_grep.py` (pure-stdlib
+#                                python3, identical Linux/macOS/Windows;
+#                                issue #1006)
+#   dx_grep_contains <file> <lit>...
+#                                hermetic fixed-string present (all must match)
+#   dx_grep_absent <file> <lit>...
+#                                hermetic fixed-string absent (none may match)
+#   dx_grep_re_contains <file> <re>...
+#                                hermetic regex present
+#   dx_grep_re_absent <file> <re>...
+#                                hermetic regex absent
+#   dx_tree_contains [opts] PATTERN... -- ROOTS...
+#                                hermetic tree fixed-string present
+#                                (opts: --include=G --exclude=SELF
+#                                --allow=LIT --allow-path=SUB;
+#                                DX_TREE_RE=1 for regex)
+#   dx_tree_absent [opts] PATTERN... -- ROOTS...
+#                                hermetic tree fixed-string absent
+#   dx_context_contains FILE ANCHOR -A N PATTERN...
+#                                hermetic `grep -A` window present
+#                                (DX_CONTEXT_ANCHOR_RE=1, DX_CONTEXT_RE=1)
+#   dx_context_absent FILE ANCHOR -A N PATTERN...
+#                                hermetic `grep -A` window absent
+#   dx_extract_quoted <file> <lit>
+#                                prints first `"..."` value on the first
+#                                line containing lit (hermetic
+#                                `grep -F | sed 's/.*= "//...'`)
+#   dx_extract_re <file> <re>   prints the first regex match
+#                                (hermetic `grep -o -E | head -1`)
+#   dx_bash_pin                 logs the bash version and fails closed
+#                                below the 3.2+ floor (issue #1006)
 #
 #
 # `dx_resolve_runfile` prefers the standard `runfiles.bash` `rlocation`
 # when available and falls back to manual `TEST_SRCDIR` / `RUNFILES_DIR` /
 # `bazel-bin` probing for `bazel run` invocations plus `git` / cwd for
 # direct execution. Drivers must not reimplement workspace, runfiles,
-# counter, scratch, realpath, hash, timing, sed, or guard-pin probing;
-# extend this file instead.
+# counter, scratch, realpath, hash, timing, sed, grep, or guard-pin
+# probing; extend this file instead.
 #
 # Bash-only Linux harness: sourced by `sh_binary` /
 # `sh_test` drivers carrying `target_compatible_with =
@@ -443,6 +477,229 @@ dx_replace() {
   local expr="$1" file="$2" tmp
   tmp="$file.tmp"
   sed -e "$expr" "$file" >"$tmp" && mv "$tmp" "$file"
+}
+
+# Hermetic grep plus field extraction (issue #1006): BSD `grep` lacks
+# GNU `--include`/`--exclude-dir`, `-A` separators plus `-o` quirks
+# diverge, and `sed` BRE drifts, so the divergent single-file/tree/
+# context/extract operations go through `tools/sh/hermetic_grep.py`
+# (pure-stdlib python3, identical on Linux/macOS/Windows) instead of
+# host `grep`/`sed`. Plain POSIX `grep -q -F/-E` single-file pins stay
+# allowed (variance-free), but drivers should prefer these wrappers so
+# qualification never branches on host grep. `dx_python3` probes
+# `python3` then `python` (Windows `shell: bash` ships only `python`).
+dx_python3() {
+  if command -v python3 >/dev/null 2>&1; then
+    printf '%s\n' "python3"
+  else
+    printf '%s\n' "python"
+  fi
+}
+
+dx_hermetic_grep_py() {
+  local cand
+  if [[ -n "${RUNFILES_DIR:-}" ]]; then
+    for cand in "$RUNFILES_DIR/_main/tools/sh/hermetic_grep.py" "$RUNFILES_DIR/tools/sh/hermetic_grep.py"; do
+      if [[ -f "$cand" ]]; then
+        printf '%s\n' "$cand"
+        return 0
+      fi
+    done
+  fi
+  if [[ -n "${TEST_SRCDIR:-}" ]]; then
+    for cand in "$TEST_SRCDIR/_main/tools/sh/hermetic_grep.py" "$TEST_SRCDIR/tools/sh/hermetic_grep.py"; do
+      if [[ -f "$cand" ]]; then
+        printf '%s\n' "$cand"
+        return 0
+      fi
+    done
+  fi
+  if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" && -f "${BUILD_WORKSPACE_DIRECTORY}/tools/sh/hermetic_grep.py" ]]; then
+    printf '%s\n' "${BUILD_WORKSPACE_DIRECTORY}/tools/sh/hermetic_grep.py"
+    return 0
+  fi
+  local top
+  if top="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+    if [[ -f "$top/tools/sh/hermetic_grep.py" ]]; then
+      printf '%s\n' "$top/tools/sh/hermetic_grep.py"
+      return 0
+    fi
+  fi
+  if [[ -f "tools/sh/hermetic_grep.py" ]]; then
+    printf '%s\n' "tools/sh/hermetic_grep.py"
+    return 0
+  fi
+  echo "dx_hermetic_grep: cannot locate tools/sh/hermetic_grep.py" >&2
+  return 1
+}
+
+dx_hermetic_grep() {
+  local py
+  py="$(dx_hermetic_grep_py)" || return 1
+  "$(dx_python3)" "$py" "$@"
+}
+
+# Single-file fixed-string pins (hermetic `grep -q -F`).
+dx_grep_contains() {
+  local file="$1"
+  shift
+  dx_hermetic_grep contains "$file" --fixed -- "$@"
+}
+
+dx_grep_absent() {
+  local file="$1"
+  shift
+  dx_hermetic_grep absent "$file" --fixed -- "$@"
+}
+
+# Single-file regex pins (hermetic `grep -q -E`).
+dx_grep_re_contains() {
+  local file="$1"
+  shift
+  dx_hermetic_grep contains "$file" --re -- "$@"
+}
+
+dx_grep_re_absent() {
+  local file="$1"
+  shift
+  dx_hermetic_grep absent "$file" --re -- "$@"
+}
+
+# Repo-tree pins (hermetic `grep -rn --include/--exclude` plus the
+# `| grep -v` allow chains; skips `bazel-*` plus `.git` like the guards).
+# Usage: dx_tree_contains [--include=G]... [--exclude=SELF]...
+#   [--allow=LIT]... [--allow-path=SUB]... PATTERN... -- ROOTS...
+# Patterns are fixed strings unless DX_TREE_RE=1.
+dx_tree_contains() {
+  local includes=() excludes=() allows=() allow_paths=() patterns=() roots=()
+  local in_roots=0 arg
+  for arg in "$@"; do
+    if [[ "$arg" == "--" && "$in_roots" == "0" ]]; then
+      in_roots=1
+      continue
+    fi
+    if [[ "$in_roots" == "1" ]]; then
+      roots+=("$arg")
+      continue
+    fi
+    case "$arg" in
+    --include=*) includes+=(--include "${arg#--include=}") ;;
+    --exclude=*) excludes+=(--exclude "${arg#--exclude=}") ;;
+    --allow=*) allows+=(--allow "${arg#--allow=}") ;;
+    --allow-path=*) allow_paths+=(--allow-path "${arg#--allow-path=}") ;;
+    *) patterns+=("$arg") ;;
+    esac
+  done
+  if [[ "${#roots[@]}" == "0" ]]; then
+    roots=(.)
+  fi
+  if [[ "${DX_TREE_RE:-0}" == "1" ]]; then
+    dx_hermetic_grep tree-contains --re "${includes[@]}" "${excludes[@]}" "${allows[@]}" "${allow_paths[@]}" --roots "${roots[@]}" -- "${patterns[@]}"
+  else
+    dx_hermetic_grep tree-contains --fixed "${includes[@]}" "${excludes[@]}" "${allows[@]}" "${allow_paths[@]}" --roots "${roots[@]}" -- "${patterns[@]}"
+  fi
+}
+
+dx_tree_absent() {
+  local includes=() excludes=() allows=() allow_paths=() patterns=() roots=()
+  local in_roots=0 arg
+  for arg in "$@"; do
+    if [[ "$arg" == "--" && "$in_roots" == "0" ]]; then
+      in_roots=1
+      continue
+    fi
+    if [[ "$in_roots" == "1" ]]; then
+      roots+=("$arg")
+      continue
+    fi
+    case "$arg" in
+    --include=*) includes+=(--include "${arg#--include=}") ;;
+    --exclude=*) excludes+=(--exclude "${arg#--exclude=}") ;;
+    --allow=*) allows+=(--allow "${arg#--allow=}") ;;
+    --allow-path=*) allow_paths+=(--allow-path "${arg#--allow-path=}") ;;
+    *) patterns+=("$arg") ;;
+    esac
+  done
+  if [[ "${#roots[@]}" == "0" ]]; then
+    roots=(.)
+  fi
+  if [[ "${DX_TREE_RE:-0}" == "1" ]]; then
+    dx_hermetic_grep tree-absent --re "${includes[@]}" "${excludes[@]}" "${allows[@]}" "${allow_paths[@]}" --roots "${roots[@]}" -- "${patterns[@]}"
+  else
+    dx_hermetic_grep tree-absent --fixed "${includes[@]}" "${excludes[@]}" "${allows[@]}" "${allow_paths[@]}" --roots "${roots[@]}" -- "${patterns[@]}"
+  fi
+}
+
+# Context pins (hermetic `grep -A N -e ANCHOR FILE | grep -q PATTERN`).
+# Usage: dx_context_contains FILE ANCHOR -A N PATTERN...
+# Anchor is fixed unless DX_CONTEXT_ANCHOR_RE=1; patterns are fixed
+# unless DX_CONTEXT_RE=1.
+dx_context_contains() {
+  local file="$1" anchor="$2"
+  shift 2
+  local after="" patterns=() arg
+  for arg in "$@"; do
+    case "$arg" in
+    -A) continue ;;
+    [0-9]*) after="$arg" ;;
+    *) patterns+=("$arg") ;;
+    esac
+  done
+  # Allow `-A N` as two words: re-parse when $3 was `-A`.
+  if [[ -z "$after" ]]; then
+    echo "dx_context_contains: want FILE ANCHOR -A N PATTERN..." >&2
+    return 2
+  fi
+  local anchor_flag="--anchor-fixed" mode_flag="--fixed"
+  [[ "${DX_CONTEXT_ANCHOR_RE:-0}" == "1" ]] && anchor_flag="--anchor-re"
+  [[ "${DX_CONTEXT_RE:-0}" == "1" ]] && mode_flag="--re"
+  # shellcheck disable=SC2086
+  dx_hermetic_grep context-contains "$file" "$anchor" -A "$after" $anchor_flag $mode_flag -- "${patterns[@]}"
+}
+
+dx_context_absent() {
+  local file="$1" anchor="$2"
+  shift 2
+  local after="" patterns=() arg
+  for arg in "$@"; do
+    case "$arg" in
+    -A) continue ;;
+    [0-9]*) after="$arg" ;;
+    *) patterns+=("$arg") ;;
+    esac
+  done
+  if [[ -z "$after" ]]; then
+    echo "dx_context_absent: want FILE ANCHOR -A N PATTERN..." >&2
+    return 2
+  fi
+  local anchor_flag="--anchor-fixed" mode_flag="--fixed"
+  [[ "${DX_CONTEXT_ANCHOR_RE:-0}" == "1" ]] && anchor_flag="--anchor-re"
+  [[ "${DX_CONTEXT_RE:-0}" == "1" ]] && mode_flag="--re"
+  # shellcheck disable=SC2086
+  dx_hermetic_grep context-absent "$file" "$anchor" -A "$after" $anchor_flag $mode_flag -- "${patterns[@]}"
+}
+
+# Field extraction (hermetic `grep -F ... | sed 's/.*= "//; s/";.*//'`).
+dx_extract_quoted() {
+  dx_hermetic_grep extract-quoted "$@"
+}
+
+# First-regex-match extraction (hermetic `grep -o -E -e RE | head -1`).
+dx_extract_re() {
+  dx_hermetic_grep extract-re "$@"
+}
+
+# Bash floor pin (issue #1006): harness floor stays bash 3.2+ with Linux
+# execution; macOS/Windows run the same bash with no behavior change.
+# Fails closed below the floor; drivers log the version for provenance.
+dx_bash_pin() {
+  local major="${BASH_VERSINFO[0]:-0}" minor="${BASH_VERSINFO[1]:-0}"
+  echo "bash ${BASH_VERSION:-unknown} (floor 3.2+, issue #1006)"
+  if [[ "$major" -gt 3 ]] || [[ "$major" == "3" && "$minor" -ge 2 ]]; then
+    return 0
+  fi
+  echo "FAIL: bash floor 3.2+ required, found ${BASH_VERSION:-unknown}" >&2
+  return 1
 }
 
 # Guard-maintenance pins: fixed-string contract checks so

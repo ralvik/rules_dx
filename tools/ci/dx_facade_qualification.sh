@@ -25,11 +25,14 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 # Both facade labels stay empty filegroups with no srcs: adding sources
 # would build a central eager dependency (codegen) or silently disable
-# every capability (config with empty families).
-if grep -E -e 'name = "codegen"' -A2 dx/BUILD.bazel | grep -q -F -e 'srcs = [],' &&
-  grep -E -e 'name = "config"' -A2 dx/BUILD.bazel | grep -q -F -e 'srcs = [],'; then
+# every capability (config with empty families)
+# (hermetic context search: host grep -A separators diverge, issue #1006).
+if dx_context_contains dx/BUILD.bazel 'name = "codegen"' -A 2 'srcs = [],' &&
+  dx_context_contains dx/BUILD.bazel 'name = "config"' -A 2 'srcs = [],'; then
   ok
 else
   bad "//dx:codegen and //dx:config must stay empty filegroups with srcs = []"
@@ -69,18 +72,19 @@ else
 fi
 
 # The env facade stays a bare alias to the installer binary (executable
-# workflow, not an empty reservation).
-if grep -E -e 'name = "env"' -A2 dx/BUILD.bazel | grep -q -F -e 'actual = "//cli/env:env"'; then
+# workflow, not an empty reservation; hermetic context search, #1006).
+if dx_context_contains dx/BUILD.bazel 'name = "env"' -A 2 'actual = "//cli/env:env"'; then
   ok
 else
   bad "//dx:env must stay an alias to //cli/env:env"
 fi
 
-# Rust and Starlark codegen constants still agree (frozen).
-rust_group="$(grep -F -e 'pub const OUTPUT_GROUP' cli/codegen/src/lib.rs | sed 's/.*= "//; s/";.*//')"
-bzl_group="$(grep -F -e 'DX_CODEGEN_PLAN_OUTPUT_GROUP = ' generation/codegen.bzl | head -n 1 | sed 's/.*= "//; s/".*//')"
-rust_suffix="$(grep -F -e 'pub const SHARD_SUFFIX' cli/codegen/src/lib.rs | sed 's/.*= "//; s/";.*//')"
-bzl_suffix="$(grep -F -e 'DX_CODEGEN_SHARD_SUFFIX = ' generation/codegen.bzl | head -n 1 | sed 's/.*= "//; s/".*//')"
+# Rust and Starlark codegen constants still agree (frozen;
+# hermetic field extraction, issue #1006).
+rust_group="$(dx_extract_quoted cli/codegen/src/lib.rs 'pub const OUTPUT_GROUP')"
+bzl_group="$(dx_extract_quoted generation/codegen.bzl 'DX_CODEGEN_PLAN_OUTPUT_GROUP = ')"
+rust_suffix="$(dx_extract_quoted cli/codegen/src/lib.rs 'pub const SHARD_SUFFIX')"
+bzl_suffix="$(dx_extract_quoted generation/codegen.bzl 'DX_CODEGEN_SHARD_SUFFIX = ')"
 if [[ -n "$rust_group" && "$rust_group" == "$bzl_group" && -n "$rust_suffix" && "$rust_suffix" == "$bzl_suffix" ]]; then
   ok
 else
@@ -149,9 +153,10 @@ fi
 
 # The canonical generate twins stay composed with diff-only on the check
 # twin: narrowing to a single extension without this harness moving would
-# silently break the repo-wide promise.
+# silently break the repo-wide promise
+# (hermetic context search: host grep -A separators diverge, issue #1006).
 if grep -q -F -e 'gazelle = "//gazelle/dispatch:gazelle"' dx/BUILD.bazel &&
-  grep -E -e 'name = "generate_check"' -A3 dx/BUILD.bazel | grep -q -F -e 'mode = "diff"'; then
+  dx_context_contains dx/BUILD.bazel 'name = "generate_check"' -A 3 'mode = "diff"'; then
   ok
 else
   bad "dx/BUILD.bazel lost its composed //dx:generate twins with diff-only check"
@@ -169,8 +174,9 @@ else
 fi
 
 # Per-language Gazelle binaries stay composable into the facade: every
-# first-party extension host keeps //dx visibility for canonical wiring.
-if ! grep -rl -e 'gazelle_binary' --include='BUILD.bazel' gazelle | while read -r f; do
+# first-party extension host keeps //dx visibility for canonical wiring
+# (hermetic file list: BSD grep lacks --include, issue #1006).
+if ! dx_hermetic_grep tree-list --fixed --include 'BUILD.bazel' --roots gazelle -- 'gazelle_binary' | while read -r f; do
   case "$f" in
     gazelle/mixed/BUILD.bazel) continue ;;
   esac

@@ -44,6 +44,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="quality/tests/fixtures/structured_quality/pins.bzl"
 pins_build="quality/tests/fixtures/structured_quality/BUILD.bazel"
 adapters="quality/adapters.bzl"

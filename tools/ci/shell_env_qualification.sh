@@ -34,6 +34,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 bazelrc=".bazelrc"
 module="MODULE.bazel"
 contract="docs/generation/rust.md"

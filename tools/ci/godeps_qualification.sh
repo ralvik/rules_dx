@@ -37,6 +37,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="go/tests/fixtures/godeps/pins.bzl"
 pins_build="go/tests/fixtures/godeps/BUILD.bazel"
 lib="go/tests/fixtures/godeps/godeps.go"
@@ -74,13 +76,14 @@ fi
 # Go version single-source (issue #1003): the SDK is the toolchain floor,
 # go.mod carries the language floor tracking gazelle 0.52.2's go 1.24.12
 # so the shared go_deps extension sees no version conflict; the SDK minor
-# stays >= the floor. Canonical pins live in modules/toolchains.bzl.
-pins_sdk="$(grep -o -E -e '^GO_SDK_VERSION = "[^"]+"' "$pins" | head -1 | cut -d'"' -f2 || true)"
-pins_floor="$(grep -o -E -e '^GO_LANGUAGE_FLOOR = "[^"]+"' "$pins" | head -1 | cut -d'"' -f2 || true)"
-gomod_directive="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$gomod" | head -1 | cut -d' ' -f2 || true)"
-wrapper_sdk="$(grep -o -E -e '^GO_SDK_VERSION = "[^"]+"' "$toolchains" | head -1 | cut -d'"' -f2 || true)"
-wrapper_floor="$(grep -o -E -e '^GO_LANGUAGE_FLOOR = "[^"]+"' "$toolchains" | head -1 | cut -d'"' -f2 || true)"
-module_sdk="$(sed -n '/go_sdk.download(/,/)/p' "$module" | grep -o -E -e 'version = "[^"]+"' | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+# stays >= the floor. Canonical pins live in modules/toolchains.bzl
+# (hermetic first-match extraction: host grep -o quirks diverge, #1006).
+pins_sdk="$(dx_extract_re "$pins" '^GO_SDK_VERSION = "[^"]+"' | cut -d'"' -f2 || true)"
+pins_floor="$(dx_extract_re "$pins" '^GO_LANGUAGE_FLOOR = "[^"]+"' | cut -d'"' -f2 || true)"
+gomod_directive="$(dx_extract_re "$gomod" '^go [0-9]+\.[0-9]+(\.[0-9]+)?' | cut -d' ' -f2 || true)"
+wrapper_sdk="$(dx_extract_re "$toolchains" '^GO_SDK_VERSION = "[^"]+"' | cut -d'"' -f2 || true)"
+wrapper_floor="$(dx_extract_re "$toolchains" '^GO_LANGUAGE_FLOOR = "[^"]+"' | cut -d'"' -f2 || true)"
+module_sdk="$(sed -n '/go_sdk.download(/,/)/p' "$module" | dx_hermetic_grep extract-re /dev/stdin 'version = "[^"]+"' | dx_hermetic_grep extract-re /dev/stdin '"[^"]+"$' | tr -d '"' || true)"
 if [[ -n "$pins_sdk" && "$pins_sdk" == "$wrapper_sdk" && "$pins_sdk" == "$module_sdk" ]]; then
   ok
 else
@@ -180,11 +183,12 @@ else
   bad "godeps fixtures lost their @com_github_google_go_cmp consumption plus resolve mapping under issue #483"
 fi
 
-# Generation consumes never writes: contract owns it, Gazelle never touches the lock files.
+# Generation consumes never writes: contract owns it, Gazelle never touches the lock files
+# (hermetic tree search, issue #1006).
 if grep -q -F -e 'or edits manifests or lockfiles' "$common" &&
-  ! grep -R --include='*.go' -F -e 'third_party/go/go.mod' -- gazelle/go 2>/dev/null | grep -q . &&
-  ! grep -R --include='*.go' -F -e 'third_party/go/go.sum' -- gazelle/go 2>/dev/null | grep -q . &&
-  ! grep -R --include='*.go' -F -e 'go_deps.module' -- gazelle/go 2>/dev/null | grep -q .; then
+  dx_tree_absent --include='*.go' 'third_party/go/go.mod' -- gazelle/go &&
+  dx_tree_absent --include='*.go' 'third_party/go/go.sum' -- gazelle/go &&
+  dx_tree_absent --include='*.go' 'go_deps.module' -- gazelle/go; then
   ok
 else
   bad "generation lost its consumes-never-writes proof (want common contract plus no lock refs in gazelle/go)"

@@ -31,6 +31,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 gha="cli/bump/src/gha.rs"
 bump_lib="cli/bump/src/lib.rs"
 bump_build="cli/bump/BUILD.bazel"

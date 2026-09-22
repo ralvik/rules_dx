@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 ci=".github/workflows/ci.yml"
 cache_action=".github/actions/restore-bazel-cache/action.yml"
 consumer=".github/workflows/reusable-consumer.yml"
@@ -125,11 +127,12 @@ else
 fi
 
 # Qualified-host expectation: four hosts qualified (Windows joins under
-# , macOS x86_64 Not planned per #976 with refusal).
+# , macOS x86_64 Not planned per #976 with refusal)
+# (hermetic context search, issue #1006).
 if grep -q -F -e '("linux", "x86_64")' "$platform" &&
   grep -q -F -e '("linux", "aarch64")' "$platform" &&
-  grep -A8 -e 'pub fn qualified_hosts' "$platform" | grep -q -F -e '("macos", "aarch64")' &&
-  ! grep -A8 -e 'pub fn qualified_hosts' "$platform" | grep -q -F -e '("macos", "x86_64")' &&
+  dx_context_contains "$platform" 'pub fn qualified_hosts' -A 8 '("macos", "aarch64")' &&
+  ! dx_context_contains "$platform" 'pub fn qualified_hosts' -A 8 '("macos", "x86_64")' &&
   grep -q -F -e '("windows", "x86_64")' "$platform" &&
   grep -q -F -e 'windows_x86_64_host_is_qualified' "$platform" &&
   grep -q -F -e 'qualified seed-linux_x86_64' "$cells" &&
@@ -188,19 +191,20 @@ else
 fi
 
 # Sharding policy: fast-fail needs chains per host family
-# plus prove/dogfood on the seed build.
-if grep -A3 -e '^  test:' "$ci" | grep -q -F -e 'needs: [build]' &&
-  grep -A3 -e '^  coverage:' "$ci" | grep -q -F -e 'needs: [build]' &&
-  grep -A3 -e '^  test-arm64:' "$ci" | grep -q -F -e 'needs: [build-arm64]' &&
-  grep -A3 -e '^  coverage-arm64:' "$ci" | grep -q -F -e 'needs: [build-arm64]' &&
-  grep -A3 -e '^  coverage-musl-x86_64:' "$ci" | grep -q -F -e 'needs: [build-musl-x86_64]' &&
-  grep -A3 -e '^  coverage-musl-arm64:' "$ci" | grep -q -F -e 'needs: [build-musl-arm64]' &&
-  grep -A3 -e '^  test-macos-arm64:' "$ci" | grep -q -F -e 'needs: [build-macos-arm64]' &&
-  grep -A3 -e '^  coverage-macos-arm64:' "$ci" | grep -q -F -e 'needs: [build-macos-arm64]' &&
-  grep -A3 -e '^  test-windows-x86_64:' "$ci" | grep -q -F -e 'needs: [build-windows-x86_64]' &&
-  grep -A3 -e '^  coverage-windows-x86_64:' "$ci" | grep -q -F -e 'needs: [build-windows-x86_64]' &&
-  grep -A3 -e '^  prove:' "$ci" | grep -q -F -e 'needs: [build]' &&
-  grep -A3 -e '^  dogfood-freshness:' "$ci" | grep -q -F -e 'needs: [build]'; then
+# plus prove/dogfood on the seed build
+# (hermetic context search: host grep -A separators diverge, issue #1006).
+if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test:' -A 3 'needs: [build]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage:' -A 3 'needs: [build]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test-arm64:' -A 3 'needs: [build-arm64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-arm64:' -A 3 'needs: [build-arm64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-musl-x86_64:' -A 3 'needs: [build-musl-x86_64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-musl-arm64:' -A 3 'needs: [build-musl-arm64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test-macos-arm64:' -A 3 'needs: [build-macos-arm64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-macos-arm64:' -A 3 'needs: [build-macos-arm64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  test-windows-x86_64:' -A 3 'needs: [build-windows-x86_64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-windows-x86_64:' -A 3 'needs: [build-windows-x86_64]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  prove:' -A 3 'needs: [build]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  dogfood-freshness:' -A 3 'needs: [build]'; then
   ok
 else
   bad "ci.yml lost its sharding fast-fail needs chains (issue #210)"
@@ -219,8 +223,9 @@ fi
 # No paid services: standard runners plus actions/cache only, with the
 # free-tier budget recorded in the testing README. windows-latest is a
 # standard free runner qualified; macos-latest stays
-# banned (unpinned), as do self-hosted/larger (paid).
-if ! grep -rn -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' .github/workflows/ 2>/dev/null | grep -q . &&
+# banned (unpinned), as do self-hosted/larger (paid)
+# (hermetic tree search: host grep -rn variance, issue #1006).
+if DX_TREE_RE=1 dx_tree_absent 'runs-on:.*(self-hosted|larger|macos-latest)' -- .github/workflows/ &&
   grep -q -F -e 'runs-on: windows-latest' "$ci" &&
   grep -q -F -e 'standard GitHub-hosted runners is free' "$testing_readme"; then
   ok

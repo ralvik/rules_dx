@@ -29,6 +29,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="quality/tests/fixtures/strict_preset/pins.bzl"
 pins_build="quality/tests/fixtures/strict_preset/BUILD.bazel"
 ruff_loose="quality/tests/fixtures/strict_preset/ruff_loose.toml"

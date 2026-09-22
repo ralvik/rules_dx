@@ -25,6 +25,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="ruby/tests/fixtures/rspec/pins.bzl"
 rspec_build="ruby/tests/fixtures/rspec/BUILD.bazel"
 hello_build="ruby/tests/fixtures/hello/BUILD.bazel"

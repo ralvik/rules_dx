@@ -39,6 +39,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 workflow=".github/workflows/reusable-consumer.yml"
 caller="examples/consumer-ci/caller.yml"
 module="MODULE.bazel"
@@ -103,11 +105,11 @@ else
 fi
 
 # Scheduling isolation as-built: per-platform jobs wait on the gate,
-# Linux-once jobs never do.
-if grep -A3 -e '^  test:' "$workflow" | grep -q -F -e 'needs: [platforms-gate]' &&
-  grep -A3 -e '^  build:' "$workflow" | grep -q -F -e 'needs: [platforms-gate]' &&
-  grep -A3 -e '^  coverage:' "$workflow" | grep -q -F -e 'needs: [platforms-gate]' &&
-  ! grep -A3 -e '^  lint:' "$workflow" | grep -q -F -e 'needs:'; then
+# Linux-once jobs never do (hermetic context search, issue #1006).
+if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$workflow" '^  test:' -A 3 'needs: [platforms-gate]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$workflow" '^  build:' -A 3 'needs: [platforms-gate]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$workflow" '^  coverage:' -A 3 'needs: [platforms-gate]' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_absent "$workflow" '^  lint:' -A 3 'needs:'; then
   ok
 else
   bad "scheduling isolation lost (per-platform gate edge or Linux-once independence)"
@@ -126,9 +128,10 @@ else
   bad "reusable-consumer lost a disabled_checks guard"
 fi
 
-# Stable aggregate: needs gate plus nine, always(), disabled-as-skipped green.
+# Stable aggregate: needs gate plus nine, always(), disabled-as-skipped green
+# (hermetic context search, issue #1006).
 if grep -q -F -e 'needs: [platforms-gate, lint, typecheck, format, generate, security-audit, license-audit, test, build, coverage]' "$workflow" &&
-  grep -A3 -e '^  dx-ci:' "$workflow" | grep -q -F -e 'if: ${{ always() }}' &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$workflow" '^  dx-ci:' -A 3 'if: ${{ always() }}' &&
   grep -q -F -e 'failing checks' "$workflow" &&
   grep -q -F -e 'Disabled checks report skipped and stay green' "$workflow"; then
   ok
@@ -148,9 +151,10 @@ else
   bad "consumer fixture harnesses missing (scheduling/aggregate/guards/pins)"
 fi
 
-# Caller template: full-SHA pin, explicit platforms, parallel, version match.
-caller_version="$(grep -o -E -e 'rules_dx_version: "[^"]+"' "$caller" | head -n 1 | cut -d'"' -f2)"
-module_version="$(awk '/^module\(/,/^\)/' "$module" | grep -o -E -e 'version = "[^"]+"' | head -n 1 | cut -d'"' -f2)"
+# Caller template: full-SHA pin, explicit platforms, parallel, version match
+# (hermetic first-match extraction, issue #1006).
+caller_version="$(dx_extract_re "$caller" 'rules_dx_version: "[^"]+"' | cut -d'"' -f2)"
+module_version="$(awk '/^module\(/,/^\)/' "$module" | dx_hermetic_grep extract-re /dev/stdin 'version = "[^"]+"' | cut -d'"' -f2)"
 if [[ "$(grep -c -E -e 'uses: rules_dx/\.github/workflows/reusable-consumer\.yml@[0-9a-f]{40}' "$caller")" == "1" ]] &&
   grep -q -F -e "platforms: '[\"linux_x86_64\"]'" "$caller" &&
   grep -q -F -e 'scheduling_mode: "parallel"' "$caller" &&
@@ -162,9 +166,10 @@ fi
 
 # Hygiene: SHA pins with tag comments, single setup-checkout-bazelisk bootstrap, no inline install.
 # The no-secrets checkout pin lives once in the bootstrap composite (issue #915),
-# so pin counting covers the workflow plus the composite.
-actions_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40}' "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml | wc -l)"
-commented_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+' "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml | wc -l)"
+# so pin counting covers the workflow plus the composite
+# (hermetic match count: host grep -o quirks diverge, issue #1006).
+actions_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40}')"
+commented_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+')"
 if [[ "$actions_pins" -gt "0" && "$actions_pins" == "$commented_pins" ]] &&
   [[ "$(grep -c -F -e './.github/actions/setup-checkout-bazelisk' "$workflow")" -ge "9" ]] &&
   ! grep -F -e './.github/actions/setup-bazelisk' "$workflow" | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
@@ -268,12 +273,13 @@ else
   bad "functional aggregate proof failed (all-ok/one-fail/disabled-skip)"
 fi
 
-# Native widen-one loop stays delivered as the sole updater.
+# Native widen-one loop stays delivered as the sole updater
+# (hermetic tree search, issue #1006).
 if grep -q -F -e 'BumpSet::Bazel' cli/bump/src/sets.rs &&
   grep -q -F -e 'sole updater' "$automation" &&
   grep -q -F -e 'native-only' "$automation" &&
   [[ -f "$bump_workflow" ]] &&
-  grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . &&
+  dx_tree_contains --include='*.rs' '"bump"' -- cli/ &&
   grep -q -F -e 'dx bump' "$automation" &&
   [[ -f "tools/ci/widen_update_loop.sh" ]]; then
   ok
@@ -355,13 +361,14 @@ else
   bad "thread identity/ordering/limits gap lost its owner"
 fi
 
-# Fork/untrusted/sensitive/retries/Code-Scanning stays owned open.
+# Fork/untrusted/sensitive/retries/Code-Scanning stays owned open
+# (hermetic single-file pin: host grep -rn variance, issue #1006).
 if grep -q -F -e 'Qualify fork roles/settings, untrusted artifact' "$contract" &&
   grep -q -F -e 'sensitive-content handling, bounded transport retries' "$contract" &&
   grep -q -F -e 'opt-in Code Scanning publication' "$contract" &&
   grep -q -F -e 'fork, untrusted, sensitive, retries, Code-Scanning qualification' "$matrix" &&
   grep -q -F -e 'code_scanning_opt_in' "$workflow" &&
-  ! grep -rn -F -e 'upload-sarif' .github/workflows/reusable-consumer.yml 2>/dev/null | grep -q .; then
+  dx_grep_absent .github/workflows/reusable-consumer.yml 'upload-sarif'; then
   ok
 else
   bad "fork/untrusted/sensitive/retries/Code-Scanning gap lost its owner"

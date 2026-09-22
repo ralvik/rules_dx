@@ -39,6 +39,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="tools/ci/tests/fixtures/ghcr_rebuild_rotation/pins.bzl"
 expected="tools/ci/tests/fixtures/ghcr_rebuild_rotation/ghcr_rebuild_rotation.expected"
 fixture_build="tools/ci/tests/fixtures/ghcr_rebuild_rotation/BUILD.bazel"

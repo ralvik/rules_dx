@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 header="rust/tests/fixtures/bindgen/bindgen.h"
 expected="rust/tests/fixtures/bindgen/bindgen.expected"
 pins="rust/tests/fixtures/bindgen/pins.bzl"
@@ -132,10 +134,11 @@ fi
 
 # Unpinned LLVM stays rejected: no floating version override or dep lands.
 # (This harness plus the pins.bzl doc comment name the rejected form, so
-# they are excluded from the scan; only build inputs count.)
+# they are excluded from the scan; only build inputs count)
+# (hermetic tree search: BSD grep lacks --include/--exclude, issue #1006).
 if ! grep -q -F -e 'llvm.version(' MODULE.bazel .bazelrc 2>/dev/null &&
   ! grep -q -F -e 'bazel_dep(name = "llvm"' MODULE.bazel &&
-  ! grep -R --include='*.bzl' --include='BUILD.bazel' --exclude='bindgen_qualification.sh' --exclude='pins.bzl' -F -e 'llvm.version(' -- rust cc tools third_party 2>/dev/null | grep -q .; then
+  dx_tree_absent --include='*.bzl' --include='BUILD.bazel' --exclude='bindgen_qualification.sh' --exclude='pins.bzl' 'llvm.version(' -- rust cc tools third_party; then
   ok
 else
   bad "unpinned LLVM detected (llvm.version override or MODULE llvm dep; want pins.bzl pins only)"

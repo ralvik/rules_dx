@@ -27,6 +27,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 adr="docs/decisions/0023-rust-libraries-internal.md"
 adr_index="docs/decisions/README.md"
 arch="docs/architecture/facade.md"
@@ -101,8 +103,10 @@ else
 fi
 
 # Public Rust boundary stays binaries-only: explicit public visibility only
-# in cli/cli plus cli/env (entry points, Cargo exports, man pages).
-explicit_public_files="$(grep -rl -e '^[[:space:]]*visibility = \["//visibility:public"\]' --include='BUILD.bazel' . 2>/dev/null | sed -e 's|^\./||' | sort | tr '\n' ' ' | sed -e 's/ $//')"
+# in cli/cli plus cli/env (entry points, Cargo exports, man pages)
+# (hermetic file list: BSD grep lacks --include; BRE class spelled as
+# Python `\s`, issue #1006).
+explicit_public_files="$(dx_hermetic_grep tree-list --re --include 'BUILD.bazel' --roots . -- '^\s*visibility = \["//visibility:public"\]' 2>/dev/null | sed -e 's|^\./||' | sort | tr '\n' ' ' | sed -e 's/ $//')"
 if [[ "$explicit_public_files" == "cli/cli/BUILD.bazel cli/env/BUILD.bazel" ]]; then
   ok
 else
@@ -110,8 +114,9 @@ else
 fi
 
 # No Rust library package defaults to public (crate directories only; the
-# quality/ plus generation/ roots stay public Starlark API per visibility).
-public_defaults="$((grep -rl -F -e 'package(default_visibility = ["//visibility:public"])' --include='BUILD.bazel' cli libs quality/adapter quality/evaluator quality/markdown quality/result quality/runner generation/result generation/codegen_shard 2>/dev/null || true) | tr '\n' ' ' | sed -e 's/ $//')"
+# quality/ plus generation/ roots stay public Starlark API per visibility)
+# (hermetic file list, issue #1006).
+public_defaults="$(dx_hermetic_grep tree-list --fixed --include 'BUILD.bazel' --roots cli libs quality/adapter quality/evaluator quality/markdown quality/result quality/runner generation/result generation/codegen_shard -- 'package(default_visibility = ["//visibility:public"])' 2>/dev/null | tr '\n' ' ' | sed -e 's/ $//')"
 if [[ -z "$public_defaults" ]]; then
   ok
 else

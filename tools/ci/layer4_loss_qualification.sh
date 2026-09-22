@@ -34,6 +34,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cli/cli/tests/fixtures/layer4_loss/pins.bzl"
 expected="cli/cli/tests/fixtures/layer4_loss/layer4_loss.expected"
 fixture_build="cli/cli/tests/fixtures/layer4_loss/BUILD.bazel"

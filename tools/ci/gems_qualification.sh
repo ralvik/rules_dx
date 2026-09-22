@@ -29,6 +29,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="ruby/tests/fixtures/gems/pins.bzl"
 pins_build="ruby/tests/fixtures/gems/BUILD.bazel"
 gemfile="third_party/ruby/Gemfile"

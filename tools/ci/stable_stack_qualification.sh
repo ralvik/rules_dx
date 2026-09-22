@@ -47,6 +47,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="rust/tests/fixtures/stable_stack/pins.bzl"
 fixture_build="rust/tests/fixtures/stable_stack/BUILD.bazel"
 module="MODULE.bazel"
@@ -158,8 +160,9 @@ else
   bad "MODULE.bazel.lock lost its committed fail-closed record (want tracked $lock)"
 fi
 
-# Unpinned LLVM stays rejected: no floating version override lands outside pins plus harness.
-if ! grep -R --include='*.bzl' --include='BUILD.bazel' --exclude='stable_stack_qualification.sh' --exclude='pins.bzl' -F -e 'llvm.version(' -- rust cc tools third_party 2>/dev/null | grep -q .; then
+# Unpinned LLVM stays rejected: no floating version override lands outside pins plus harness
+# (hermetic tree search: BSD grep lacks --include/--exclude, issue #1006).
+if dx_tree_absent --include='*.bzl' --include='BUILD.bazel' --exclude='stable_stack_qualification.sh' --exclude='pins.bzl' 'llvm.version(' -- rust cc tools third_party; then
   ok
 else
   bad "unpinned LLVM detected (llvm.version override; want pins.bzl pins only)"

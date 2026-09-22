@@ -44,6 +44,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="fsharp/tests/fixtures/fsharplint/pins.bzl"
 pins_build="fsharp/tests/fixtures/fsharplint/BUILD.bazel"
 sample_src="fsharp/tests/fixtures/fsharplint/Sample.fs"

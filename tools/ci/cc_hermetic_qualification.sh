@@ -33,6 +33,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/hermetic/pins.bzl"
 pins_build="cc/tests/fixtures/hermetic/BUILD.bazel"
 hello_build="cc/tests/fixtures/hello/BUILD.bazel"
@@ -116,15 +118,17 @@ else
   bad "MODULE.bazel.lock lost its committed fail-closed record (want tracked $lock)"
 fi
 
-# System packages stay rejected: no host package or local-config wiring in cc sources.
-if ! grep -R --include='*.bzl' --include='BUILD.bazel' --include='*.go' -E -e 'apt-get|apt_install|system_package|/usr/include|/usr/lib|local_repository|cc_configure|brew install' -- cc gazelle/cc 2>/dev/null | grep -q .; then
+# System packages stay rejected: no host package or local-config wiring in cc sources
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
+if DX_TREE_RE=1 dx_tree_absent --include='*.bzl' --include='BUILD.bazel' --include='*.go' 'apt-get|apt_install|system_package|/usr/include|/usr/lib|local_repository|cc_configure|brew install' -- cc gazelle/cc; then
   ok
 else
   bad "system package wiring detected in cc sources (want hermetic only, no host apt/brew or /usr or local config)"
 fi
 
-# Fixtures stay hermetic: no absolute system includes in cc fixture sources.
-if ! grep -R --include='*.cc' --include='*.h' -E -e '#\s*include\s+[<"]/usr' -- cc/tests/fixtures 2>/dev/null | grep -q .; then
+# Fixtures stay hermetic: no absolute system includes in cc fixture sources
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
+if DX_TREE_RE=1 dx_tree_absent --include='*.cc' --include='*.h' '#\s*include\s+[<"]/usr' -- cc/tests/fixtures; then
   ok
 else
   bad "absolute system include detected in cc fixtures (want hermetic sources only)"

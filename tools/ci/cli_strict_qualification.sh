@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 contract="docs/cli/cli-contract.md"
 testing="docs/testing/cli.md"
 strict_pins="cli/cli/tests/fixtures/strict_parsing/pins.bzl"

@@ -34,6 +34,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="tools/ci/tests/fixtures/runner_rotation/pins.bzl"
 expected="tools/ci/tests/fixtures/runner_rotation/runner_rotation.expected"
 fixture_build="tools/ci/tests/fixtures/runner_rotation/BUILD.bazel"

@@ -57,6 +57,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="rust/tests/fixtures/cargo_metadata/pins.bzl"
 pins_build="rust/tests/fixtures/cargo_metadata/BUILD.bazel"
 pins_manifest="rust/tests/fixtures/cargo_metadata/Cargo.toml"

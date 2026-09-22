@@ -41,6 +41,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 matrix="deploy/release/matrix.bzl"
 tests="deploy/release/matrix_tests.bzl"
 ci=".github/workflows/ci.yml"
@@ -139,8 +141,9 @@ else
   bad "cli/cli/BUILD.bazel lost its wider-matrix qualified record (#815)"
 fi
 
-# Draft-only ceiling unchanged: no draft opt-out, draft-only flags, placeholder tag.
-if ! grep -rn -F -e 'draft = False' --include='BUILD.bazel' . | head -n 5 | grep -q . &&
+# Draft-only ceiling unchanged: no draft opt-out, draft-only flags, placeholder tag
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
+if dx_tree_absent --include='BUILD.bazel' 'draft = False' -- . &&
   grep -q -F -e '"--draft", "--verify-tag"' deploy/rules/github_deploy.py &&
   grep -q -F -e 'v0.0.0-dryrun' "$dryrun"; then
   ok

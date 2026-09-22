@@ -34,6 +34,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 migrate_rs="cli/adopt/src/migrate.rs"
 migrate_exec="cli/cli/src/exec/migrate.rs"
 bump_exec="cli/cli/src/exec/bump.rs"

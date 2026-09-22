@@ -26,12 +26,14 @@
 # explicitly); `dx_guard_*` fixed-string pins are for doc/code contract
 # sentences/symbols (a few literals per file, fail-closed, no refresh, one
 # `ok`/`bad` per row or per batch with file:pattern plus reason context).
-# Prefer fixed-string (`grep -F -e`) for contract sentences/symbols; use
-# the `_re` regex forms (`grep -E -e`) only for shapes (SHA pins, version
+# Prefer fixed-string (`--fixed`) for contract sentences/symbols; use
+# the `_re` regex forms only for shapes (SHA pins, version
 # alternatives, anchors). Prefer single-file pins when the location is
 # known; use the `tree` forms only for repo-wide presence/absence with an
-# `--include` glob (they skip `bazel-*` plus `.git`). Drivers must not
-# reimplement guard rows; extend this file instead.
+# `--include` glob (they skip `bazel-*` plus `.git`). Matching is hermetic
+# (`tools/sh/hermetic_grep.py` via `tools/sh/lib.sh`, issue #1006), never
+# host `grep`. Drivers must not reimplement guard rows; extend this file
+# instead.
 #
 # Provides (all always return 0 so the harness collects every failure):
 #   dx_guard_file <file> <reason>
@@ -64,7 +66,10 @@ set -euo pipefail
 
 # Guard-maintenance table rows: one ok/bad per row with file:pattern plus
 # reason context, always returning 0 so the harness collects every failure
-# before `dx_test_summary`.
+# before `dx_test_summary`. Matching goes through the hermetic grep helper
+# (`tools/sh/hermetic_grep.py` via `tools/sh/lib.sh` `dx_hermetic_grep`,
+# issue #1006) so guard rows never branch on host BSD/GNU grep variance;
+# drivers must source `tools/sh/lib.sh` before this file (see header).
 
 dx_guard_file() {
   local file="$1" reason="$2"
@@ -82,7 +87,7 @@ dx_guard_contains() {
     bad "missing file $file ($reason; want literal: $lit)"
     return 0
   fi
-  if grep -q -F -e "$lit" -- "$file"; then
+  if dx_hermetic_grep contains "$file" --fixed -- "$lit" >/dev/null 2>&1; then
     ok
   else
     bad "$file missing literal [$lit] ($reason)"
@@ -96,7 +101,7 @@ dx_guard_absent() {
     bad "missing file $file ($reason; want absence of: $lit)"
     return 0
   fi
-  if grep -q -F -e "$lit" -- "$file"; then
+  if dx_hermetic_grep contains "$file" --fixed -- "$lit" >/dev/null 2>&1; then
     bad "$file must not contain [$lit] ($reason)"
   else
     ok
@@ -110,7 +115,7 @@ dx_guard_re_contains() {
     bad "missing file $file ($reason; want pattern: $re)"
     return 0
   fi
-  if grep -q -E -e "$re" -- "$file"; then
+  if dx_hermetic_grep contains "$file" --re -- "$re" >/dev/null 2>&1; then
     ok
   else
     bad "$file missing pattern [$re] ($reason)"
@@ -124,7 +129,7 @@ dx_guard_re_absent() {
     bad "missing file $file ($reason; want absence of pattern: $re)"
     return 0
   fi
-  if grep -q -E -e "$re" -- "$file"; then
+  if dx_hermetic_grep contains "$file" --re -- "$re" >/dev/null 2>&1; then
     bad "$file must not match [$re] ($reason)"
   else
     ok
@@ -144,7 +149,7 @@ dx_guards_contains() {
     return 0
   fi
   for lit in "$@"; do
-    if ! grep -q -F -e "$lit" -- "$file"; then
+    if ! dx_hermetic_grep contains "$file" --fixed -- "$lit" >/dev/null 2>&1; then
       missing="$missing [$lit]"
     fi
   done
@@ -165,7 +170,7 @@ dx_guards_absent() {
     return 0
   fi
   for lit in "$@"; do
-    if grep -q -F -e "$lit" -- "$file"; then
+    if dx_hermetic_grep contains "$file" --fixed -- "$lit" >/dev/null 2>&1; then
       present="$present [$lit]"
     fi
   done
@@ -186,7 +191,7 @@ dx_guards_re_contains() {
     return 0
   fi
   for re in "$@"; do
-    if ! grep -q -E -e "$re" -- "$file"; then
+    if ! dx_hermetic_grep contains "$file" --re -- "$re" >/dev/null 2>&1; then
       missing="$missing [$re]"
     fi
   done
@@ -207,7 +212,7 @@ dx_guards_re_absent() {
     return 0
   fi
   for re in "$@"; do
-    if grep -q -E -e "$re" -- "$file"; then
+    if dx_hermetic_grep contains "$file" --re -- "$re" >/dev/null 2>&1; then
       present="$present [$re]"
     fi
   done
@@ -221,11 +226,11 @@ dx_guards_re_absent() {
 
 # Tree rows: repo-wide presence/absence with an `--include` glob, skipping
 # `bazel-*` plus `.git` outputs. Prefer single-file pins when the location
-# is known.
+# is known. Matching is hermetic via `dx_hermetic_grep` (issue #1006).
 
 dx_guard_tree_contains() {
   local include="$1" lit="$2" reason="$3"
-  if grep -rn -F --include="$include" -e "$lit" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+  if dx_hermetic_grep tree-contains --fixed --include "$include" --roots . -- "$lit" >/dev/null 2>&1; then
     ok
   else
     bad "tree missing literal [$lit] in $include ($reason)"
@@ -235,7 +240,7 @@ dx_guard_tree_contains() {
 
 dx_guard_tree_absent() {
   local include="$1" lit="$2" reason="$3"
-  if grep -rn -F --include="$include" -e "$lit" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+  if dx_hermetic_grep tree-contains --fixed --include "$include" --roots . -- "$lit" >/dev/null 2>&1; then
     bad "tree must not contain [$lit] in $include ($reason)"
   else
     ok
@@ -245,7 +250,7 @@ dx_guard_tree_absent() {
 
 dx_guard_tree_contains_re() {
   local include="$1" re="$2" reason="$3"
-  if grep -rn -E --include="$include" -e "$re" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+  if dx_hermetic_grep tree-contains --re --include "$include" --roots . -- "$re" >/dev/null 2>&1; then
     ok
   else
     bad "tree missing pattern [$re] in $include ($reason)"
@@ -255,7 +260,7 @@ dx_guard_tree_contains_re() {
 
 dx_guard_tree_absent_re() {
   local include="$1" re="$2" reason="$3"
-  if grep -rn -E --include="$include" -e "$re" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+  if dx_hermetic_grep tree-contains --re --include "$include" --roots . -- "$re" >/dev/null 2>&1; then
     bad "tree must not match [$re] in $include ($reason)"
   else
     ok
@@ -268,7 +273,7 @@ dx_guards_tree_contains() {
   shift 2
   local missing="" lit
   for lit in "$@"; do
-    if ! grep -rn -F --include="$include" -e "$lit" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+    if ! dx_hermetic_grep tree-contains --fixed --include "$include" --roots . -- "$lit" >/dev/null 2>&1; then
       missing="$missing [$lit]"
     fi
   done
@@ -285,7 +290,7 @@ dx_guards_tree_absent() {
   shift 2
   local present="" lit
   for lit in "$@"; do
-    if grep -rn -F --include="$include" -e "$lit" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+    if dx_hermetic_grep tree-contains --fixed --include "$include" --roots . -- "$lit" >/dev/null 2>&1; then
       present="$present [$lit]"
     fi
   done
@@ -302,7 +307,7 @@ dx_guards_tree_contains_re() {
   shift 2
   local missing="" re
   for re in "$@"; do
-    if ! grep -rn -E --include="$include" -e "$re" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+    if ! dx_hermetic_grep tree-contains --re --include "$include" --roots . -- "$re" >/dev/null 2>&1; then
       missing="$missing [$re]"
     fi
   done
@@ -319,7 +324,7 @@ dx_guards_tree_absent_re() {
   shift 2
   local present="" re
   for re in "$@"; do
-    if grep -rn -E --include="$include" -e "$re" --exclude-dir='bazel-*' --exclude-dir='.git' . >/dev/null 2>&1; then
+    if dx_hermetic_grep tree-contains --re --include "$include" --roots . -- "$re" >/dev/null 2>&1; then
       present="$present [$re]"
     fi
   done

@@ -39,6 +39,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="python/tests/fixtures/python_audit/pins.bzl"
 pins_build="python/tests/fixtures/python_audit/BUILD.bazel"
 expected="python/tests/fixtures/python_audit/python_audit.expected"

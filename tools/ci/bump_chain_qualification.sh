@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 adr="docs/decisions/0024-selective-update.md"
 pins="cli/bump/tests/fixtures/bump_chain/pins.bzl"
 expected="cli/bump/tests/fixtures/bump_chain/bump_chain.expected"

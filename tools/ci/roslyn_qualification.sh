@@ -41,6 +41,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="csharp/tests/fixtures/roslyn/pins.bzl"
 pins_build="csharp/tests/fixtures/roslyn/BUILD.bazel"
 sample_src="csharp/tests/fixtures/roslyn/Sample.cs"
