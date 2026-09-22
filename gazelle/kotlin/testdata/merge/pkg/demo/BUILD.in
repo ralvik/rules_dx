@@ -1,0 +1,28 @@
+load("@rules_dx//kotlin/rules:defs.bzl", "kotlin_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+kotlin_library(
+    name = "demo",
+    srcs = [
+        "Old.kt",
+        "extra/Kept.kt",  # keep
+    ],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+kotlin_library(
+    name = "gone",
+    srcs = ["Gone.kt"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

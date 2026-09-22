@@ -1,0 +1,26 @@
+load("@rules_dx//mdx/rules:defs.bzl", "mdx_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+mdx_library(
+    name = "demo",
+    srcs = ["demo.mdx"],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+    deps = [":helper"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)
+
+mdx_library(
+    name = "helper",
+    srcs = ["helper.mdx"],
+)

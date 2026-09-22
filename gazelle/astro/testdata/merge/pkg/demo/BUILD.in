@@ -1,0 +1,25 @@
+load("@rules_dx//astro/rules:defs.bzl", "astro_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+astro_library(
+    name = "demo",
+    srcs = ["old.astro"],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+astro_library(
+    name = "gone",
+    srcs = ["gone.astro"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

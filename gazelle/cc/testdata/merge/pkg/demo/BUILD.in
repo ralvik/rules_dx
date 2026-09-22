@@ -1,0 +1,30 @@
+load("@rules_dx//cc/rules:defs.bzl", "cc_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+cc_library(
+    name = "demo",
+    srcs = [
+        "old.cc",
+        "extra/kept.cc",  # keep
+    ],
+    hdrs = ["old.h"],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "gone",
+    srcs = ["gone.cc"],
+    hdrs = ["gone.h"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

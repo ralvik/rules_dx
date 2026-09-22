@@ -1,0 +1,26 @@
+load("@rules_dx//svelte/rules:defs.bzl", "svelte_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+svelte_library(
+    name = "demo",
+    srcs = ["demo.svelte"],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+    deps = [":helper"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)
+
+svelte_library(
+    name = "helper",
+    srcs = ["helper.svelte"],
+)

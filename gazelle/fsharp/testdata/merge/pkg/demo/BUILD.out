@@ -1,0 +1,24 @@
+load("@rules_dx//fsharp/rules:defs.bzl", "fsharp_library")
+
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+fsharp_library(
+    name = "demo",
+    srcs = [
+        "Demo.fs",
+        "Helper.fs",
+        "extra/Kept.fs",  # keep
+    ],
+    data = ["README.txt"],
+    tags = ["manual"],
+    visibility = ["//visibility:public"],
+)
+
+# keep
+filegroup(
+    name = "retained",
+    srcs = ["removed.txt"],
+)

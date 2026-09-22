@@ -1,0 +1,24 @@
+load("@rules_dx//vue/rules:defs.bzl", "vue_library")
+
+# A user-owned rule must survive generation unchanged.
+filegroup(
+    name = "assets",
+    srcs = ["README.txt"],
+)
+
+vue_library(
+    name = "helper",
+    srcs = ["helper.vue"],
+)
+
+vue_library(
+    name = "helper_test",
+    srcs = ["helper_test.vue"],
+    deps = [":helper"],
+)
+
+vue_library(
+    name = "main",
+    srcs = ["main.vue"],
+    deps = [":helper"],
+)

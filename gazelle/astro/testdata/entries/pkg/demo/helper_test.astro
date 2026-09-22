@@ -1,0 +1,13 @@
+---
+import helper from "./helper.astro";
+
+const greeting = helper("x");
+---
+
+<div class="helper-test">{greeting}</div>
+
+<style>
+  .helper-test {
+    color: black;
+  }
+</style>
