@@ -8,10 +8,12 @@ installation, selection, and retention follow
 ## Focused Plan
 
 The `go_env_plan` rule in `go/env/plan.bzl` plans one `go_*` wrapper target
-from its `QualitySourcesInfo` direct sources, emitting `GoEnvPlanInfo` plus
-a JSON plan. It never scans the checkout or reconstructs module metadata.
-Pinned by `go/env/plan_tests.bzl` and exercised by `go/env:hello_lib_plan`
-over `//go/tests/fixtures/hello:hello_lib`.
+from its `QualitySourcesInfo` direct sources plus the `GoArchive`
+transitive source closure and source/test split, emitting `GoEnvPlanInfo`
+plus a JSON plan. It never scans the checkout or reconstructs module
+metadata. Pinned by `go/env/plan_tests.bzl` and exercised by
+`go/env:hello_lib_plan`, `go/env:hello_plan`, and `go/env:hello_test_plan`
+over the hello library, binary, and test.
 
 ## Toolchain And IDE
 

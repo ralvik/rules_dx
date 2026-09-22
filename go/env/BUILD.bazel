@@ -2,7 +2,7 @@
 
 Each `go_env_plan` reads the analyzed authoritative providers of one
 `go_*` wrapper: `QualitySourcesInfo` for direct sources plus the
-preserved `GoInfo`/`GoArchive` toolchain closure by reference.
+preserved `GoArchive` transitive source closure and source/test split.
 Focused-target only; repository/root/exact-target orchestration remains.
 """
 
@@ -18,10 +18,24 @@ go_env_plan(
     target = "//go/tests/fixtures/hello:hello_lib",
 )
 
+go_env_plan(
+    name = "hello_plan",
+    testonly = True,
+    target = "//go/tests/fixtures/hello:hello",
+)
+
+go_env_plan(
+    name = "hello_test_plan",
+    testonly = True,
+    target = "//go/tests/fixtures/hello:hello_test",
+)
+
 env_plan_tests(
     name = "env_plan_tests",
     subjects = [
         ":hello_lib_plan",
+        ":hello_plan",
+        ":hello_test_plan",
     ],
 )
 

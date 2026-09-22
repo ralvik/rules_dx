@@ -8,11 +8,12 @@ installation, selection, and retention follow
 ## Focused Plan
 
 The `csharp_env_plan` rule in `csharp/env/plan.bzl` plans one `csharp_*`
-wrapper target from its `QualitySourcesInfo` direct sources, emitting
+wrapper target from its `QualitySourcesInfo` direct sources plus the
+`DotnetAssembly*` transitive closure and source/test split, emitting
 `CSharpEnvPlanInfo` plus a JSON plan. It never scans the checkout or
 reconstructs Paket metadata. Pinned by `csharp/env/plan_tests.bzl` and
-exercised by `csharp/env:hello_lib_plan` over
-`//csharp/tests/fixtures/hello:hello_lib`.
+exercised by `csharp/env:hello_lib_plan`, `csharp/env:hello_plan`, and
+`csharp/env:hello_test_plan` over the hello library, binary, and test.
 
 ## Toolchain
 

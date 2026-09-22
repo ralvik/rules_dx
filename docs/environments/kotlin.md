@@ -8,11 +8,12 @@ identity, installation, selection, and retention follow
 ## Focused Plan
 
 The `kotlin_env_plan` rule in `kotlin/env/plan.bzl` plans one `kotlin_*`
-wrapper target from its `QualitySourcesInfo` direct sources, emitting
+wrapper target from its `QualitySourcesInfo` direct sources plus the
+`JavaInfo` transitive source-jar closure and source/test split, emitting
 `KotlinEnvPlanInfo` plus a JSON plan. It never scans the checkout or
 reconstructs Maven metadata. Pinned by `kotlin/env/plan_tests.bzl` and
-exercised by `kotlin/env:hello_lib_plan` over
-`//kotlin/tests/fixtures/hello:hello_lib`.
+exercised by `kotlin/env:hello_lib_plan`, `kotlin/env:hello_plan`, and
+`kotlin/env:hello_test_plan` over the hello library, binary, and test.
 
 ## Toolchain
 

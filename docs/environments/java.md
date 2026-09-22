@@ -8,11 +8,12 @@ installation, selection, and retention follow
 ## Focused Plan
 
 The `java_env_plan` rule in `java/env/plan.bzl` plans one `java_*` wrapper
-target from its `QualitySourcesInfo` direct sources, emitting
+target from its `QualitySourcesInfo` direct sources plus the `JavaInfo`
+transitive source-jar closure and source/test split, emitting
 `JavaEnvPlanInfo` plus a JSON plan. It never scans the checkout or
 reconstructs Maven metadata. Pinned by `java/env/plan_tests.bzl` and
-exercised by `java/env:hello_lib_plan` over
-`//java/tests/fixtures/hello:hello_lib`.
+exercised by `java/env:hello_lib_plan`, `java/env:hello_plan`, and
+`java/env:hello_test_plan` over the hello library, binary, and test.
 
 ## Toolchain
 
