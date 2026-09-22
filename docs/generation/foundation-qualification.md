@@ -91,7 +91,7 @@ pinned (`go_test` over `go test` with package-level `embed`, qualified seed-only
 `scala_test` over ScalaTest, qualified seed-only under issue #480
 (`scala/tests/fixtures/scalatest/pins.bzl` plus the hello `AnyFlatSpec`
 fixture via `bazel run //tools/ci:scalatest_qualification`; unpinned runner
-rejected),
+rejected; ScalaTest 3.2.20 hello deps via the shared Maven lock, issue #1080),
 `java_test`/`kotlin_test` over the JUnit 4 seed plus the qualified JUnit 6.1.3 Jupiter
 upgrade with 5.14.x fallback (`execute --select-class` console-launcher fixtures in
 `java/tests/fixtures/junit/` plus `kotlin/tests/fixtures/junit/` via
@@ -113,7 +113,8 @@ seed-only under issue #484 via `bazel run //tools/ci:cc_hermetic_qualification`
 with `cc/tests/fixtures/hermetic/`).
 The qualified Maven maven_install.json plus fail-closed repin is pinned under issue #481
 (single shared lock via `lock_file` plus `fail_if_repin_required` in `third_party/jvm/pins.bzl`
-over the shared `@maven` hub, proven by the Java/Kotlin Jupiter plus seed fixtures via
+over the shared `@maven` hub, proven by the Java/Kotlin Jupiter plus seed fixtures plus the
+Scala hello ScalaTest fixture (issue #1080) via
 `bazel run //tools/ci:maven_lock_qualification`; non-fail-closed rejected).
 The xUnit v3 4.0.0 runner mapping is qualified under issue #477 (plain
 `csharp_test`/`fsharp_test` with `[Fact]`/`[Theory]` sources plus checked-in

@@ -15,6 +15,22 @@
     "org.junit.platform:junit-platform-engine": 315805044,
     "org.junit.platform:junit-platform-launcher": 1718633558,
     "org.junit.vintage:junit-vintage-engine": -1212812984,
+    "org.scalactic:scalactic_2.13": 2098629600,
+    "org.scalatest:scalatest-compatible": 1338267964,
+    "org.scalatest:scalatest-core_2.13": -1134327214,
+    "org.scalatest:scalatest-diagrams_2.13": -326680909,
+    "org.scalatest:scalatest-featurespec_2.13": 1621252068,
+    "org.scalatest:scalatest-flatspec_2.13": 872705895,
+    "org.scalatest:scalatest-freespec_2.13": 1308361434,
+    "org.scalatest:scalatest-funspec_2.13": -272513043,
+    "org.scalatest:scalatest-funsuite_2.13": 420315020,
+    "org.scalatest:scalatest-matchers-core_2.13": 12812446,
+    "org.scalatest:scalatest-mustmatchers_2.13": -2113024195,
+    "org.scalatest:scalatest-propspec_2.13": 1890832977,
+    "org.scalatest:scalatest-refspec_2.13": -735555327,
+    "org.scalatest:scalatest-shouldmatchers_2.13": -1209746201,
+    "org.scalatest:scalatest-wordspec_2.13": -1396359048,
+    "org.scalatest:scalatest_2.13": -1799781888,
     "repositories": 736830508
   },
   "__RESOLVED_ARTIFACTS_HASH": {
@@ -40,7 +56,26 @@
     "org.junit.platform:junit-platform-reporting": -668997287,
     "org.junit.vintage:junit-vintage-engine": 1629613315,
     "org.opentest4j.reporting:open-test-reporting-tooling-spi": -1725000643,
-    "org.opentest4j:opentest4j": -1711174392
+    "org.opentest4j:opentest4j": -1711174392,
+    "org.scala-lang.modules:scala-xml_2.13": 1165836426,
+    "org.scala-lang:scala-library": -48171973,
+    "org.scala-lang:scala-reflect": 10941165,
+    "org.scalactic:scalactic_2.13": 1326315825,
+    "org.scalatest:scalatest-compatible": 861355270,
+    "org.scalatest:scalatest-core_2.13": 2105970795,
+    "org.scalatest:scalatest-diagrams_2.13": -461844068,
+    "org.scalatest:scalatest-featurespec_2.13": -430806824,
+    "org.scalatest:scalatest-flatspec_2.13": -493019388,
+    "org.scalatest:scalatest-freespec_2.13": -1117813494,
+    "org.scalatest:scalatest-funspec_2.13": -1137403284,
+    "org.scalatest:scalatest-funsuite_2.13": 1656186101,
+    "org.scalatest:scalatest-matchers-core_2.13": 1970646071,
+    "org.scalatest:scalatest-mustmatchers_2.13": -1020653003,
+    "org.scalatest:scalatest-propspec_2.13": 736040714,
+    "org.scalatest:scalatest-refspec_2.13": 1228476170,
+    "org.scalatest:scalatest-shouldmatchers_2.13": 872525628,
+    "org.scalatest:scalatest-wordspec_2.13": 1970620516,
+    "org.scalatest:scalatest_2.13": 1653561738
   },
   "conflict_resolution": {
     "com.google.errorprone:error_prone_annotations:2.5.1": "com.google.errorprone:error_prone_annotations:2.18.0"
@@ -183,6 +218,120 @@
         "jar": "48e2df636cab6563ced64dcdff8abb2355627cb236ef0bf37598682ddf742f1b"
       },
       "version": "1.3.0"
+    },
+    "org.scala-lang.modules:scala-xml_2.13": {
+      "shasums": {
+        "jar": "d122cbf93115ee714570de6a9c18e53001fedb474911d4cb5091758ee51f053a"
+      },
+      "version": "2.1.0"
+    },
+    "org.scala-lang:scala-library": {
+      "shasums": {
+        "jar": "e6ca607c3fce03e8fa38af3374ce1f8bb098e316e8bf6f6d27331360feddb1c1"
+      },
+      "version": "2.13.10"
+    },
+    "org.scala-lang:scala-reflect": {
+      "shasums": {
+        "jar": "62bd7a7198193c5373a992c122990279e413af3307162472a5d3cbb8ecadb35e"
+      },
+      "version": "2.13.10"
+    },
+    "org.scalactic:scalactic_2.13": {
+      "shasums": {
+        "jar": "b564916c28af4e104c0e5614a3d1b2304e12563ef19c802c25975ee1ce03baba"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-compatible": {
+      "shasums": {
+        "jar": "a95bdbf29e793d667f7515e302fac571f99a899127b8520125f552b09712755d"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-core_2.13": {
+      "shasums": {
+        "jar": "b629a27969d099efc4522cc701b7e4964350f9f7f5c34c60ebab27433a4b4936"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-diagrams_2.13": {
+      "shasums": {
+        "jar": "53e3ad1ad3b3978e8739c07a584e2b4669adbee1c479d330e3c2310e50b49c92"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-featurespec_2.13": {
+      "shasums": {
+        "jar": "561018cb09c7464eb510823e51e28ceb761921dd12b5027d7532306bb5990b8c"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-flatspec_2.13": {
+      "shasums": {
+        "jar": "a3f1f5db218ae952a2d85a734bee595febd3e9c84756556a6a15cdae5146667f"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-freespec_2.13": {
+      "shasums": {
+        "jar": "bf3ad933488b0c1657548d3329120a67f61588712e174abd614e1f6b9024bfec"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-funspec_2.13": {
+      "shasums": {
+        "jar": "36c889dd4a11acbacf73e98999dc98eff8da513076f3537a22e473c2ff5d86f9"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-funsuite_2.13": {
+      "shasums": {
+        "jar": "35cf862b0329c3b13424ae4ce39fa18d0d8d0ce656b13ee36817aeb3291ea7fb"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-matchers-core_2.13": {
+      "shasums": {
+        "jar": "0b301f7f2a1c1a99bb61007984cabb91c40bc4c58de181e21ecdf685619116a5"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-mustmatchers_2.13": {
+      "shasums": {
+        "jar": "e6e6850b65389e6eaa7daeae160a1d5f8e407e3bbb47d2047a338a985e916919"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-propspec_2.13": {
+      "shasums": {
+        "jar": "a40402797eab95a27976f83cfcd848320c649f03e88b6c6332e473f8bd96f3d8"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-refspec_2.13": {
+      "shasums": {
+        "jar": "88c66623b0258c9e0096ce9dc592d41110c456fede1359781bdd9f80becbde33"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-shouldmatchers_2.13": {
+      "shasums": {
+        "jar": "657426bf0b5e4db26d9670270b24a5b26c8a57236f2849b541c86aa1c052b995"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest-wordspec_2.13": {
+      "shasums": {
+        "jar": "78db34f235d0d15f3a478bcbfb3a48d4646f8ae5c5caff4a32a605946cf09343"
+      },
+      "version": "3.2.20"
+    },
+    "org.scalatest:scalatest_2.13": {
+      "shasums": {
+        "jar": "c89f72c8689b71c18c465d3f7ebb9c2e95fc2abfda7457ea1efc06b82de5ed4b"
+      },
+      "version": "3.2.20"
     }
   },
   "dependencies": {
@@ -248,6 +397,100 @@
     ],
     "org.opentest4j.reporting:open-test-reporting-tooling-spi": [
       "org.apiguardian:apiguardian-api"
+    ],
+    "org.scala-lang.modules:scala-xml_2.13": [
+      "org.scala-lang:scala-library"
+    ],
+    "org.scala-lang:scala-reflect": [
+      "org.scala-lang:scala-library"
+    ],
+    "org.scalactic:scalactic_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect"
+    ],
+    "org.scalatest:scalatest-core_2.13": [
+      "org.scala-lang.modules:scala-xml_2.13",
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalactic:scalactic_2.13",
+      "org.scalatest:scalatest-compatible"
+    ],
+    "org.scalatest:scalatest-diagrams_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-featurespec_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-flatspec_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-freespec_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-funspec_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-funsuite_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-matchers-core_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-mustmatchers_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-matchers-core_2.13"
+    ],
+    "org.scalatest:scalatest-propspec_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-refspec_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest-shouldmatchers_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-matchers-core_2.13"
+    ],
+    "org.scalatest:scalatest-wordspec_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13"
+    ],
+    "org.scalatest:scalatest_2.13": [
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalatest:scalatest-core_2.13",
+      "org.scalatest:scalatest-diagrams_2.13",
+      "org.scalatest:scalatest-featurespec_2.13",
+      "org.scalatest:scalatest-flatspec_2.13",
+      "org.scalatest:scalatest-freespec_2.13",
+      "org.scalatest:scalatest-funspec_2.13",
+      "org.scalatest:scalatest-funsuite_2.13",
+      "org.scalatest:scalatest-matchers-core_2.13",
+      "org.scalatest:scalatest-mustmatchers_2.13",
+      "org.scalatest:scalatest-propspec_2.13",
+      "org.scalatest:scalatest-refspec_2.13",
+      "org.scalatest:scalatest-shouldmatchers_2.13",
+      "org.scalatest:scalatest-wordspec_2.13"
     ]
   },
   "packages": {
@@ -465,6 +708,123 @@
     ],
     "org.opentest4j:opentest4j": [
       "org.opentest4j"
+    ],
+    "org.scala-lang.modules:scala-xml_2.13": [
+      "scala.xml",
+      "scala.xml.dtd",
+      "scala.xml.dtd.impl",
+      "scala.xml.factory",
+      "scala.xml.include",
+      "scala.xml.include.sax",
+      "scala.xml.parsing",
+      "scala.xml.transform"
+    ],
+    "org.scala-lang:scala-library": [
+      "scala",
+      "scala.annotation",
+      "scala.annotation.meta",
+      "scala.annotation.unchecked",
+      "scala.beans",
+      "scala.collection",
+      "scala.collection.concurrent",
+      "scala.collection.convert",
+      "scala.collection.convert.impl",
+      "scala.collection.generic",
+      "scala.collection.immutable",
+      "scala.collection.mutable",
+      "scala.compat",
+      "scala.concurrent",
+      "scala.concurrent.duration",
+      "scala.concurrent.impl",
+      "scala.io",
+      "scala.jdk",
+      "scala.jdk.javaapi",
+      "scala.math",
+      "scala.ref",
+      "scala.reflect",
+      "scala.reflect.macros.internal",
+      "scala.runtime",
+      "scala.sys",
+      "scala.sys.process",
+      "scala.util",
+      "scala.util.control",
+      "scala.util.hashing",
+      "scala.util.matching"
+    ],
+    "org.scala-lang:scala-reflect": [
+      "scala.reflect.api",
+      "scala.reflect.internal",
+      "scala.reflect.internal.annotations",
+      "scala.reflect.internal.pickling",
+      "scala.reflect.internal.settings",
+      "scala.reflect.internal.tpe",
+      "scala.reflect.internal.transform",
+      "scala.reflect.internal.util",
+      "scala.reflect.io",
+      "scala.reflect.macros",
+      "scala.reflect.macros.blackbox",
+      "scala.reflect.macros.whitebox",
+      "scala.reflect.runtime"
+    ],
+    "org.scalactic:scalactic_2.13": [
+      "org.scalactic",
+      "org.scalactic.anyvals",
+      "org.scalactic.exceptions",
+      "org.scalactic.source"
+    ],
+    "org.scalatest:scalatest-compatible": [
+      "org.scalatest.compatible"
+    ],
+    "org.scalatest:scalatest-core_2.13": [
+      "org.scalatest",
+      "org.scalatest.concurrent",
+      "org.scalatest.enablers",
+      "org.scalatest.events",
+      "org.scalatest.exceptions",
+      "org.scalatest.fixture",
+      "org.scalatest.prop",
+      "org.scalatest.tagobjects",
+      "org.scalatest.tags",
+      "org.scalatest.time",
+      "org.scalatest.tools",
+      "org.scalatest.verbs"
+    ],
+    "org.scalatest:scalatest-diagrams_2.13": [
+      "org.scalatest.diagrams"
+    ],
+    "org.scalatest:scalatest-featurespec_2.13": [
+      "org.scalatest.featurespec"
+    ],
+    "org.scalatest:scalatest-flatspec_2.13": [
+      "org.scalatest.flatspec"
+    ],
+    "org.scalatest:scalatest-freespec_2.13": [
+      "org.scalatest.freespec"
+    ],
+    "org.scalatest:scalatest-funspec_2.13": [
+      "org.scalatest.funspec"
+    ],
+    "org.scalatest:scalatest-funsuite_2.13": [
+      "org.scalatest.funsuite"
+    ],
+    "org.scalatest:scalatest-matchers-core_2.13": [
+      "org.scalatest.matchers",
+      "org.scalatest.matchers.dsl"
+    ],
+    "org.scalatest:scalatest-mustmatchers_2.13": [
+      "org.scalatest.matchers.must"
+    ],
+    "org.scalatest:scalatest-propspec_2.13": [
+      "org.scalatest.propspec"
+    ],
+    "org.scalatest:scalatest-refspec_2.13": [
+      "org.scalatest.refspec"
+    ],
+    "org.scalatest:scalatest-shouldmatchers_2.13": [
+      "org.scalatest.matchers.should"
+    ],
+    "org.scalatest:scalatest-wordspec_2.13": [
+      "org.scalatest.wordspec"
     ]
   },
   "repositories": {
@@ -491,7 +851,26 @@
       "org.junit.platform:junit-platform-reporting",
       "org.junit.vintage:junit-vintage-engine",
       "org.opentest4j.reporting:open-test-reporting-tooling-spi",
-      "org.opentest4j:opentest4j"
+      "org.opentest4j:opentest4j",
+      "org.scala-lang.modules:scala-xml_2.13",
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalactic:scalactic_2.13",
+      "org.scalatest:scalatest-compatible",
+      "org.scalatest:scalatest-core_2.13",
+      "org.scalatest:scalatest-diagrams_2.13",
+      "org.scalatest:scalatest-featurespec_2.13",
+      "org.scalatest:scalatest-flatspec_2.13",
+      "org.scalatest:scalatest-freespec_2.13",
+      "org.scalatest:scalatest-funspec_2.13",
+      "org.scalatest:scalatest-funsuite_2.13",
+      "org.scalatest:scalatest-matchers-core_2.13",
+      "org.scalatest:scalatest-mustmatchers_2.13",
+      "org.scalatest:scalatest-propspec_2.13",
+      "org.scalatest:scalatest-refspec_2.13",
+      "org.scalatest:scalatest-shouldmatchers_2.13",
+      "org.scalatest:scalatest-wordspec_2.13",
+      "org.scalatest:scalatest_2.13"
     ],
     "https://repo1.maven.org/maven2/": [
       "com.google.code.findbugs:jsr305",
@@ -516,7 +895,26 @@
       "org.junit.platform:junit-platform-reporting",
       "org.junit.vintage:junit-vintage-engine",
       "org.opentest4j.reporting:open-test-reporting-tooling-spi",
-      "org.opentest4j:opentest4j"
+      "org.opentest4j:opentest4j",
+      "org.scala-lang.modules:scala-xml_2.13",
+      "org.scala-lang:scala-library",
+      "org.scala-lang:scala-reflect",
+      "org.scalactic:scalactic_2.13",
+      "org.scalatest:scalatest-compatible",
+      "org.scalatest:scalatest-core_2.13",
+      "org.scalatest:scalatest-diagrams_2.13",
+      "org.scalatest:scalatest-featurespec_2.13",
+      "org.scalatest:scalatest-flatspec_2.13",
+      "org.scalatest:scalatest-freespec_2.13",
+      "org.scalatest:scalatest-funspec_2.13",
+      "org.scalatest:scalatest-funsuite_2.13",
+      "org.scalatest:scalatest-matchers-core_2.13",
+      "org.scalatest:scalatest-mustmatchers_2.13",
+      "org.scalatest:scalatest-propspec_2.13",
+      "org.scalatest:scalatest-refspec_2.13",
+      "org.scalatest:scalatest-shouldmatchers_2.13",
+      "org.scalatest:scalatest-wordspec_2.13",
+      "org.scalatest:scalatest_2.13"
     ]
   },
   "services": {

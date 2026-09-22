@@ -595,6 +595,8 @@ grep -q -F -e 'org.junit.Test' kotlin/tests/fixtures/hello/HelloTest.kt || runne
 grep -q -F -e 'junit:junit:4.13.2' MODULE.bazel || runner_fail="$runner_fail module:junit4"
 grep -q -F -e 'scala_test' scala/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail scala:kind"
 grep -q -F -e 'AnyFlatSpec' scala/tests/fixtures/hello/HelloTest.scala || runner_fail="$runner_fail scala:scalatest"
+grep -q -F -e '@maven//:org_scalatest_scalatest_2_13' scala/tests/fixtures/hello/BUILD.bazel || runner_fail="$runner_fail scala:maven"
+grep -q -F -e 'org.scalatest:scalatest_2.13:3.2.20' MODULE.bazel || runner_fail="$runner_fail module:scalatest"
 grep -q -F -e 'scala_version = "2.13.18"' MODULE.bazel || runner_fail="$runner_fail module:scala-version"
 grep -q -F -e 'SCALATEST_VERSION = "3.2.20"' scala/tests/fixtures/scalatest/pins.bzl || runner_fail="$runner_fail scala:pin"
 grep -q -F -e 'scala_test' scala/tests/fixtures/scalatest/pins.bzl || runner_fail="$runner_fail scala:map"

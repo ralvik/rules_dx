@@ -14,9 +14,11 @@ SCALA_VERSION = "2.13.18"
 SCALATEST_VERSION = "3.2.20"
 SCALACTIC_VERSION = "3.2.20"
 
-# Managed-route Maven coordinates resolved by rules_scala Coursier for 2.13
+# Maven-lock coordinates declared in MODULE.bazel plus maven_install.json
 # (single version per the ScalaTest 3.2.20 release; covers 2.10-2.13 and 3.x
-# per the release notes).
+# per the release notes; the Coursier `scala_deps.scalatest()` runner
+# classpath stays while the hello closure's explicit `@maven` deps are the
+# fail-closed lock authority, issue #1080).
 SCALATEST_ARTIFACTS = [
     "org.scalactic:scalactic_2.13:3.2.20",
     "org.scalatest:scalatest_2.13:3.2.20",
@@ -44,9 +46,11 @@ SCALATEST_KIND = "scala_test"
 SCALATEST_RUNNER = "ScalaTest"
 SCALATEST_SUITE = "org.scalatest.flatspec.AnyFlatSpec"
 
-# Live proof target (wrapper consumer over the managed route).
+# Live proof target (wrapper consumer with explicit @maven deps over the lock).
 SCALATEST_FIXTURE_LABEL = "//scala/tests/fixtures/hello:hello_test"
 SCALATEST_FIXTURE_SUITE = "hello.HelloTest"
+SCALATEST_MAVEN_LABEL = "@maven//:org_scalatest_scalatest_2_13"
+SCALATEST_MAVEN_LOCK = "//third_party/jvm:maven_install.json"
 
 # Rejected: unpinned runner (floating version, living at head, implicit).
 SCALATEST_REJECTED = "unpinned runner rejected: no floating version or head"

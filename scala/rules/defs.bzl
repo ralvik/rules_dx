@@ -122,7 +122,9 @@ def scala_test(name, srcs, visibility = None, **kwargs):
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. The library under test stays its ordinary owner via
     `deps`; test sources are never the library's sources. Uses Bazel's
-    standard test and coverage protocols over the bundled ScalaTest
- toolchain (ScalaTest 3.2.20 via the managed Coursier route,;
-    no Maven lock members needed for the hello closure)."""
+    standard test and coverage protocols over the ScalaTest 3.2.20 toolchain
+    (Coursier `scala_deps.scalatest()` runner classpath) with the hello
+    closure's ScalaTest deps declared via the shared Maven lock
+    (`@maven//:org_scalatest_scalatest_2_13` plus companions in
+    `//third_party/jvm:maven_install.json`, fail-closed)."""
     dx_wrap_test(name, _scala_test, _scala_forward_test, srcs, visibility = visibility, upstream_kwargs = _scala_with_werror(kwargs), **kwargs)

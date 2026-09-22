@@ -6,8 +6,9 @@
 # - pinned: rules_scala 7.3.0 plus Scala 2.13.18 plus ScalaTest 3.2.20
 #   (Scalactic 3.2.20 companion) in `scala/tests/fixtures/scalatest/pins.bzl`;
 #   MODULE.bazel pins the ruleset plus toolchain plus `scala_deps.scalatest()`
-#   managed Coursier route (no `maven_install.json` members, no separate
-#   ecosystem lock -- same shape as the Go stdlib-only closure).
+#   runner classpath, with the hello closure's ScalaTest deps declared via
+#   the shared Maven lock `//third_party/jvm:maven_install.json` (fail-closed,
+#   issue #1080; no separate ecosystem lock).
 # - runner: `scala_test` runs suites written using the `scalatest` library
 #   (rule implementation is ScalaTest-wired); test sources are the test's
 #   direct sources for QualitySourcesInfo, the library stays its ordinary
@@ -41,6 +42,8 @@ hello_build="scala/tests/fixtures/hello/BUILD.bazel"
 hello_test="scala/tests/fixtures/hello/HelloTest.scala"
 wrapper="scala/rules/defs.bzl"
 module="MODULE.bazel"
+jvm_pins="third_party/jvm/pins.bzl"
+jvm_lock="third_party/jvm/maven_install.json"
 matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
@@ -74,6 +77,14 @@ else
   bad "pins.bzl lost its 3.2.20 coordinates plus scala_test mapping under issue #480"
 fi
 
+# Pins record the Maven lock authority for the hello closure (issue #1080).
+if grep -q -F -e 'SCALATEST_MAVEN_LABEL = "@maven//:org_scalatest_scalatest_2_13"' "$pins" &&
+  grep -q -F -e 'SCALATEST_MAVEN_LOCK = "//third_party/jvm:maven_install.json"' "$pins"; then
+  ok
+else
+  bad "pins.bzl lost its Maven lock authority wiring under issue #1080"
+fi
+
 # Pins record the live fixture label plus rejected unpinned runner.
 if grep -q -F -e '//scala/tests/fixtures/hello:hello_test' "$pins" &&
   grep -q -F -e 'unpinned runner rejected' "$pins"; then
@@ -89,6 +100,25 @@ if grep -q -F -e 'bazel_dep(name = "rules_scala", version = "7.3.0")' "$module" 
   ok
 else
   bad "MODULE.bazel lost its rules_scala 7.3.0 plus Scala 2.13.18 plus scalatest route under issue #480"
+fi
+
+# MODULE declares ScalaTest via the shared Maven lock (issue #1080).
+if grep -q -F -e 'org.scalatest:scalatest_2.13:3.2.20' "$module" &&
+  grep -q -F -e 'lock_file = "//third_party/jvm:maven_install.json"' "$module" &&
+  grep -q -F -e 'fail_if_repin_required = True' "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost its ScalaTest Maven lock declaration under issue #1080"
+fi
+
+# Shared lock records ScalaTest plus hello proves the fail-closed consumer.
+if grep -q -F -e '"org.scalatest:scalatest_2.13"' "$jvm_lock" &&
+  grep -q -F -e '"version": "3.2.20"' "$jvm_lock" &&
+  grep -q -F -e 'org.scalatest:scalatest_2.13:3.2.20' "$jvm_pins" &&
+  grep -q -F -e '@maven//:org_scalatest_scalatest_2_13' "$hello_build"; then
+  ok
+else
+  bad "shared Maven lock lost its ScalaTest authority plus hello consumer under issue #1080"
 fi
 
 # Wrapper preserves upstream providers plus QualitySourcesInfo with a scala_test def.
@@ -115,7 +145,8 @@ fi
 if grep -q -F -e 'scala/rules:defs.bzl' "$hello_build" &&
   grep -q -F -e 'scala_test' "$hello_build" &&
   grep -q -F -e 'HelloTest.scala' "$hello_build" &&
-  grep -q -F -e ':hello_lib' "$hello_build"; then
+  grep -q -F -e ':hello_lib' "$hello_build" &&
+  grep -q -F -e '@maven//:org_scalatest_scalatest_2_13' "$hello_build"; then
   ok
 else
   bad "scala/tests/fixtures/hello lost its wrapper scala_test consumer shape under issue #480"
