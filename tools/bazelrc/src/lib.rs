@@ -26,7 +26,7 @@ pub const PRESET_DX_VERSION: &str = "0.0.0";
 /// Why `enable_bzlmod` stays explicit: Bzlmod is default since Bazel 7,
 /// so the flag is a no-op on the canonical 9.2.0 (see `.bazelversion`);
 /// it is retained so the Bzlmod selection stays visible instead of
-/// relying on an implicit default (issue #912).
+/// relying on an implicit default (See: `docs/contributing/local-workflows.md`, issue #912).
 const UPSTREAM_FLAGS: [&str; 3] = [
     "common --enable_bzlmod",
     "build --verbose_failures",
@@ -127,7 +127,7 @@ pub fn source_dir(workspace: &Path) -> PathBuf {
     workspace.join("tools/bazelrc")
 }
 
-/// Shared thin-binary helpers (issue #914): the `preset.update` shim
+/// Shared thin-binary helpers (See: `docs/contributing/local-workflows.md`, issue #914): the `preset.update` shim
 /// reports usage and failures through these so `eprintln!` plus exit
 /// codes stay single-sourced. See: `docs/contributing/local-workflows.md`.
 pub fn bin_usage() -> i32 {

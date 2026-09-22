@@ -1043,7 +1043,7 @@ jobs:
         with:
           prefix: bazel-dogfood-
       - name: Run dogfood-freshness battery (tools, freshness, audits)
-        run: tools/ci/dogfood_freshness.sh
+        run: bazel run --noshow_progress //tools/ci:dogfood_freshness
       - name: Write job summary
         if: always()
         run: |

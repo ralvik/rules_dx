@@ -225,7 +225,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Scala plus .NET adapters harness (issue #797); see docs/quality/tool-integrations.md#initial-adapter-qualification.
+    # Scala plus .NET adapters harness (See: docs/quality/tool-integrations.md#initial-adapter-qualification, issue #797);
     sh_binary(
         name = "scala_dotnet_adapters_qualification",
         srcs = ["scala_dotnet_adapters_qualification.sh"],
@@ -235,7 +235,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Native adapters harness (issue #798); see docs/quality/tool-integrations.md#initial-adapter-qualification.
+    # Native adapters harness (See: docs/quality/tool-integrations.md#initial-adapter-qualification, issue #798);
     sh_binary(
         name = "native_adapters_qualification",
         srcs = ["native_adapters_qualification.sh"],
@@ -245,7 +245,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Structured adapters harness (issue #799); see docs/quality/tool-integrations.md#initial-adapter-qualification.
+    # Structured adapters harness (See: docs/quality/tool-integrations.md#initial-adapter-qualification, issue #799);
     sh_binary(
         name = "structured_adapters_qualification",
         srcs = ["structured_adapters_qualification.sh"],
@@ -255,7 +255,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Interpreted/file-family adapters harness (issue #800); see docs/quality/tool-integrations.md#initial-adapter-qualification.
+    # Interpreted/file-family adapters harness (See: docs/quality/tool-integrations.md#initial-adapter-qualification, issue #800);
     sh_binary(
         name = "file_family_adapters_qualification",
         srcs = ["file_family_adapters_qualification.sh"],
@@ -461,6 +461,43 @@ def add_d():
         srcs = ["docs_build_qualification.sh"],
         data = ["//tools/sh:bootstrap",
 "//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
+    # Dogfood-freshness battery as a Bazel-owned target (See: tools/ci/dogfood_freshness.sh, issue #926): the
+    # CI dogfood step runs `bazel run //tools/ci:dogfood_freshness`, never
+    # direct sh, so the battery itself is versioned and reviewable.
+    sh_binary(
+        name = "dogfood_freshness",
+        srcs = ["dogfood_freshness.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
+    # Docs/testing gates for issue #926 (See: tools/ci/docs_testing_gates.sh, issue #926; items 1,2,3,4,7,8-env).
+    sh_binary(
+        name = "docs_testing_gates",
+        srcs = ["docs_testing_gates.sh"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
+    # Examples/consumer gates for issue #926 (See: tools/ci/examples_consumer_gates.sh, issue #926; items 6,8-negative,9).
+    sh_binary(
+        name = "examples_consumer_gates",
+        srcs = ["examples_consumer_gates.sh"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+            "//tools/sh:snapshot",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )

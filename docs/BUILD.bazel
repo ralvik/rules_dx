@@ -117,6 +117,7 @@ real_source_target(
         "quality/tool-integrations.md",
         "roadmap.md",
         "testing/README.md",
+        "testing/readme-split-plan.md",
         "testing/cli.md",
         "testing/environments.md",
         "testing/generation.md",

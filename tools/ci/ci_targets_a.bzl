@@ -155,7 +155,7 @@ def add_a():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Config single-source consistency (issue #912); see tools/ci/config_consistency.sh.
+    # Config single-source consistency (See: tools/ci/config_consistency.sh, issue #912);
     sh_test(
         name = "config_consistency_test",
         srcs = ["config_consistency.sh"],
