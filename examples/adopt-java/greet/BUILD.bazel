@@ -5,6 +5,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
+# gazelle:resolve java ImmutableList @maven//:com_google_guava_guava
+
 # Handwritten: the generator never emits java_test; test-owned `*Test.java`
 # stays out of the generated library and this rule survives regeneration.
 java_test(
@@ -18,8 +20,10 @@ java_library(
     name = "greet",
     srcs = [
         "Greet.java",
+        "Guava.java",
         "Helper.java",
     ],
+    deps = ["@maven//:com_google_guava_guava"],
 )
 
 real_source_target(

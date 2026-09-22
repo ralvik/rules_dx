@@ -23,12 +23,15 @@ including every source (`greet_linux.go` with `//go:build linux` alongside
 toolchain select per platform; generation never emits `select()`. The
 `importpath` comes from the enclosing `go.mod` (`example.com/adopt-go` plus
 the subpath), so the libraries link with their upstream module identity.
+The `greet` library carries one pinned module dep (`github.com/google/go-cmp
+v0.6.0` via `go.mod` plus `go.sum` plus `@com_github_google_go_cmp//cmp:cmp`
+through an exact `# gazelle:resolve` mapping); `Diff`/`Equal` plus
+`TestDiffEqual` prove build and test over the lock. Depcheck `locks`
+consistency (`go.mod` require matches `go.sum`), quality (`QualitySourcesInfo`),
+and coverage (`InstrumentedFilesInfo`) flow through the shared wrappers.
 Build covers 6 targets; both tests pass (`greet_test`, `solo_test`).
 
-Scope notes: the `go.mod` pins the module shape but the graph here is fully
-local stdlib-only, so generation needs no lockfile scope. Cross-package Go
-imports via full module paths resolve only through an exact
-`# gazelle:resolve` mapping today; the external test stays stdlib-only for
-that reason (the internal test exercises the library directly). `dx generate`
-runs the Rust extension only; regenerate with the per-language command above
-until the dx wiring lands.
+Scope notes: cross-package Go imports via full module paths resolve only
+through an exact `# gazelle:resolve` mapping today. `dx generate` runs the
+Rust extension only; regenerate with the per-language command above until
+the dx wiring lands.

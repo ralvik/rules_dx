@@ -16,4 +16,9 @@ public class GreetTest {
   public void testSuffix() {
     assertEquals(" world", Helper.suffix());
   }
+
+  @Test
+  public void testGuavaJoin() {
+    assertEquals("hello,world", Guava.join());
+  }
 }

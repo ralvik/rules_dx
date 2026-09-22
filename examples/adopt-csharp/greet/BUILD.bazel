@@ -10,7 +10,10 @@ package(default_visibility = ["//:__subpackages__"])
 csharp_test(
     name = "greet_test",
     srcs = ["GreetTest.cs"],
-    deps = [":greet"],
+    deps = [
+        ":greet",
+        "@paket.main//xunit.v3.assert",
+    ],
 )
 
 csharp_library(

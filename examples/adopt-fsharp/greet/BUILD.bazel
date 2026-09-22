@@ -22,6 +22,7 @@ fsharp_library(
         "Greet.fs",
         "Helper.fs",
     ],
+    deps = ["@paket.main//fsharp.core"],  # keep
 )
 
 real_source_target(

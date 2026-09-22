@@ -16,4 +16,9 @@ class GreetTest {
   fun testSuffix() {
     assertEquals(" world", Helper.suffix())
   }
+
+  @Test
+  fun testGuavaJoin() {
+    assertEquals("hello,world", Guava.join())
+  }
 }

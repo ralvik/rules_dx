@@ -5,6 +5,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
+# gazelle:resolve scala ImmutableList @maven//:com_google_guava_guava
+
 # Handwritten: the generator never emits scala_test; test-owned `*Test.scala`
 # stays out of the generated library and this rule survives regeneration.
 scala_test(
@@ -17,8 +19,10 @@ scala_library(
     name = "greet",
     srcs = [
         "Greet.scala",
+        "Guava.scala",
         "Helper.scala",
     ],
+    deps = ["@maven//:com_google_guava_guava"],
 )
 
 real_source_target(

@@ -1,9 +1,12 @@
-// Foreign sbt layout marker: adopted without upstream changes. The Scala
-// Gazelle extension reads only `.scala` sources; this file records the
-// foreign sbt coordinates without participating in Bazel resolution
-// (Coursier-backed lock resolution stays open under #7).
+// Foreign sbt layout marker: one pinned module dep (guava 32.0.1-jre,
+// matching third_party/jvm/maven_install.json plus @maven hub). The Scala
+// Gazelle extension reads only `.scala` sources; generation resolves the
+// `ImmutableList` import below through an exact `# gazelle:resolve`
+// mapping and never writes this file.
 ThisBuild / scalaVersion := "2.13.18"
 ThisBuild / organization := "example.com"
 lazy val root = (project in file(".")).aggregate(greet, solo)
-lazy val greet = project
+lazy val greet = project.settings(
+  libraryDependencies += "com.google.guava" % "guava" % "32.0.1-jre"
+)
 lazy val solo = project

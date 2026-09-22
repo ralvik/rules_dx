@@ -20,13 +20,15 @@ basename) with `srcs` as the sorted non-test sources; `*Test.scala` files
 stay out of the library and are owned by handwritten `scala_test` targets
 that survive regeneration. Scala/JDK imports (`scala.*`, `java.*`) never
 produce edges; the pinned `rules_scala` toolchain stays authoritative at
-execution time with no ambient SDK discovery. Build covers 11 targets; both
-tests pass (`greet_test`, `pure_test`).
+execution time with no ambient SDK discovery. The `greet` library carries one
+pinned module dep (`com.google.guava:guava:32.0.1-jre` via `build.sbt` plus
+`third_party/jvm/maven_install.json` plus `@maven//:com_google_guava_guava`
+through an exact `# gazelle:resolve` mapping); `Guava.join` plus the
+`Guava.join` spec prove build and test over the lock. Depcheck `locks`
+consistency, quality (`QualitySourcesInfo`), and coverage
+(`InstrumentedFilesInfo`) flow through the shared wrappers. Build covers 11
+targets; both tests pass (`greet_test`, `pure_test`).
 
-Scope notes: the tree is fully local with a `build.sbt` recording the
-foreign sbt coordinates but no ecosystem lockfile in the Bazel graph
-(Coursier-backed lock resolution per the support matrix stays open under
-#7). Cross-package Scala imports resolve only through an exact
-`# gazelle:resolve` mapping today; both packages stay self-contained for that
-reason. `dx generate` runs the Rust extension only; regenerate with the
+Scope notes: cross-package Scala imports resolve only through an exact
+`# gazelle:resolve` mapping today. `dx generate` runs the Rust extension only; regenerate with the
 per-language command above until the dx wiring lands.
