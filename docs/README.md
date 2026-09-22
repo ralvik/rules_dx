@@ -25,7 +25,7 @@ command and language guides below.
 - [Quality](quality/README.md): sources, action model, integrations, protocol, tests.
 - [Tools](tools/README.md): acquisition policy and first-release baseline.
 - [Testing](testing/README.md): behavior, hermeticity, cache, platform, consumer evidence.
-- [Documentation domain](documentation/README.md): documentation IR, site build, and CLI surface.
+- [Documentation domain](documentation/README.md): documentation IR, fixture-scale site execution delivered seed-only with no published site, and CLI surface.
 - [Deploy](deploy/README.md): `dx deploy` dispatch and release path.
 - [Decision records](decisions/README.md): accepted, provisional, superseded, and rejected decisions.
   Authoring rules live in [decision instructions](decisions/AGENTS.md).
