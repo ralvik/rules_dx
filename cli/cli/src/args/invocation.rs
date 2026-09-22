@@ -350,13 +350,12 @@ mod tests {
         // selects the directory tree, never the no-flag default.
         let mut bare = invocation_for(Command::Lint, &[]);
         bare.here = false;
-        let resolved = apply_here(
-            &bare,
-            workspace,
-            std::path::Path::new("/ws/cli/cli"),
-        )
-        .expect("passthrough");
-        assert!(resolved.targets.is_empty(), "bare subdir must stay empty (=//...)");
+        let resolved =
+            apply_here(&bare, workspace, std::path::Path::new("/ws/cli/cli")).expect("passthrough");
+        assert!(
+            resolved.targets.is_empty(),
+            "bare subdir must stay empty (=//...)"
+        );
         // `--cwd` is the same flag as `--here` (visible alias).
         let aliased = crate::args::parse(
             &["lint", "--cwd"]

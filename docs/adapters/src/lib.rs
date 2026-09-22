@@ -157,17 +157,30 @@ fn kind_of(name: &str) -> i32 {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn make_symbol(
-    language: &str,
-    package: &str,
-    qualified: &str,
-    kind_name: &str,
+/// Grouped `make_symbol` inputs so the 8-value symbol constructor takes
+/// one params struct instead of eight positionals.
+struct SymbolSpec<'a> {
+    language: &'a str,
+    package: &'a str,
+    qualified: &'a str,
+    kind_name: &'a str,
     signature: String,
     doc: String,
     file: String,
     line: u64,
-) -> Result<Symbol, AdapterError> {
+}
+
+fn make_symbol(spec: SymbolSpec<'_>) -> Result<Symbol, AdapterError> {
+    let SymbolSpec {
+        language,
+        package,
+        qualified,
+        kind_name,
+        signature,
+        doc,
+        file,
+        line,
+    } = spec;
     let id = symbol_id(language, package, qualified)?;
     Ok(Symbol {
         id,
@@ -524,16 +537,16 @@ pub fn normalize_java(input: &str, package: &str) -> Result<DocIr, AdapterError>
             .get("line")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(1);
-        symbols.push(make_symbol(
-            "java",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "java",
             package,
-            &qualified,
-            &kind.to_lowercase(),
-            format!("{kind} {qualified}"),
+            qualified: &qualified,
+            kind_name: &kind.to_lowercase(),
+            signature: format!("{kind} {qualified}"),
             doc,
             file,
             line,
-        )?);
+        })?);
     }
     shard("java", package, symbols)
 }
@@ -577,16 +590,16 @@ pub fn normalize_kotlin(input: &str, package: &str) -> Result<DocIr, AdapterErro
             .get("line")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(1);
-        symbols.push(make_symbol(
-            "kotlin",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "kotlin",
             package,
-            &qualified,
-            &kind.to_lowercase(),
-            format!("{kind} {qualified}"),
+            qualified: &qualified,
+            kind_name: &kind.to_lowercase(),
+            signature: format!("{kind} {qualified}"),
             doc,
             file,
             line,
-        )?);
+        })?);
     }
     shard("kotlin", package, symbols)
 }
@@ -622,16 +635,16 @@ pub fn normalize_go(input: &str, package: &str) -> Result<DocIr, AdapterError> {
         let doc = text(func.get("doc").unwrap_or(&serde_json::Value::Null));
         let pos = text(func.get("pos").unwrap_or(&serde_json::Value::Null));
         let (file, line) = split_pos(&pos);
-        symbols.push(make_symbol(
-            "go",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "go",
             package,
-            &name,
-            "function",
-            format!("func {name}"),
+            qualified: &name,
+            kind_name: "function",
+            signature: format!("func {name}"),
             doc,
             file,
             line,
-        )?);
+        })?);
     }
     shard("go", package, symbols)
 }
@@ -671,16 +684,16 @@ pub fn normalize_cpp(input: &str, package: &str) -> Result<DocIr, AdapterError> 
         let brief = tag_text(&member, "briefdescription").unwrap_or_default();
         let file = location_file(&member).unwrap_or_default();
         let line = location_line(&member).unwrap_or(1);
-        symbols.push(make_symbol(
-            "cpp",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "cpp",
             package,
-            &name,
-            &kind,
-            format!("{kind} {name}"),
-            brief,
+            qualified: &name,
+            kind_name: &kind,
+            signature: format!("{kind} {name}"),
+            doc: brief,
             file,
             line,
-        )?);
+        })?);
     }
     shard("cpp", package, symbols)
 }
@@ -769,16 +782,16 @@ pub fn normalize_csharp(input: &str, package: &str) -> Result<DocIr, AdapterErro
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(1);
         let doc = docs.get(&id).map(text).unwrap_or_default();
-        symbols.push(make_symbol(
-            "csharp",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "csharp",
             package,
-            &name,
-            &kind.to_lowercase(),
-            format!("{kind} {name}"),
+            qualified: &name,
+            kind_name: &kind.to_lowercase(),
+            signature: format!("{kind} {name}"),
             doc,
             file,
             line,
-        )?);
+        })?);
         let _ = id;
     }
     shard("csharp", package, symbols)
@@ -825,16 +838,16 @@ pub fn normalize_fsharp(input: &str, package: &str) -> Result<DocIr, AdapterErro
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(1);
         let doc = docs.get(&signature).map(text).unwrap_or_default();
-        symbols.push(make_symbol(
-            "fsharp",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "fsharp",
             package,
-            &name,
-            &kind.to_lowercase(),
-            format!("{kind} {name}"),
+            qualified: &name,
+            kind_name: &kind.to_lowercase(),
+            signature: format!("{kind} {name}"),
             doc,
             file,
             line,
-        )?);
+        })?);
     }
     shard("fsharp", package, symbols)
 }
@@ -878,16 +891,16 @@ pub fn normalize_vue(input: &str, package: &str) -> Result<DocIr, AdapterError> 
                 .unwrap_or(&serde_json::Value::Null),
         );
         let file = text(component.get("file").unwrap_or(&serde_json::Value::Null));
-        symbols.push(make_symbol(
-            "vue",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "vue",
             package,
-            &export,
-            "class",
-            format!("component {export}"),
-            description,
+            qualified: &export,
+            kind_name: "class",
+            signature: format!("component {export}"),
+            doc: description,
             file,
-            1,
-        )?);
+            line: 1,
+        })?);
         for prop in component
             .get("props")
             .and_then(serde_json::Value::as_array)
@@ -896,16 +909,16 @@ pub fn normalize_vue(input: &str, package: &str) -> Result<DocIr, AdapterError> 
         {
             let name = text(prop.get("name").unwrap_or(&serde_json::Value::Null));
             let doc = text(prop.get("description").unwrap_or(&serde_json::Value::Null));
-            symbols.push(make_symbol(
-                "vue",
+            symbols.push(make_symbol(SymbolSpec {
+                language: "vue",
                 package,
-                &format!("{export}.{name}"),
-                "property",
-                format!("prop {name}"),
+                qualified: &format!("{export}.{name}"),
+                kind_name: "property",
+                signature: format!("prop {name}"),
                 doc,
-                String::new(),
-                1,
-            )?);
+                file: String::new(),
+                line: 1,
+            })?);
         }
     }
     shard("vue", package, symbols)
@@ -938,16 +951,16 @@ pub fn normalize_svelte(input: &str, package: &str) -> Result<DocIr, AdapterErro
                 .unwrap_or(&serde_json::Value::Null),
         );
         let file = text(component.get("file").unwrap_or(&serde_json::Value::Null));
-        symbols.push(make_symbol(
-            "svelte",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "svelte",
             package,
-            &name,
-            "class",
-            format!("component {name}"),
+            qualified: &name,
+            kind_name: "class",
+            signature: format!("component {name}"),
             doc,
             file,
-            1,
-        )?);
+            line: 1,
+        })?);
         for prop in component
             .get("props")
             .and_then(serde_json::Value::as_array)
@@ -956,16 +969,16 @@ pub fn normalize_svelte(input: &str, package: &str) -> Result<DocIr, AdapterErro
         {
             let prop_name = text(prop.get("name").unwrap_or(&serde_json::Value::Null));
             let prop_doc = text(prop.get("description").unwrap_or(&serde_json::Value::Null));
-            symbols.push(make_symbol(
-                "svelte",
+            symbols.push(make_symbol(SymbolSpec {
+                language: "svelte",
                 package,
-                &format!("{name}.{prop_name}"),
-                "property",
-                format!("prop {prop_name}"),
-                prop_doc,
-                String::new(),
-                1,
-            )?);
+                qualified: &format!("{name}.{prop_name}"),
+                kind_name: "property",
+                signature: format!("prop {prop_name}"),
+                doc: prop_doc,
+                file: String::new(),
+                line: 1,
+            })?);
         }
     }
     shard("svelte", package, symbols)
@@ -1018,16 +1031,16 @@ pub fn normalize_scala(input: &str, package: &str) -> Result<DocIr, AdapterError
             .get("line")
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(1);
-        symbols.push(make_symbol(
-            "scala",
+        symbols.push(make_symbol(SymbolSpec {
+            language: "scala",
             package,
-            &qualified,
-            &kind.to_lowercase(),
-            format!("{kind} {qualified}"),
+            qualified: &qualified,
+            kind_name: &kind.to_lowercase(),
+            signature: format!("{kind} {qualified}"),
             doc,
             file,
             line,
-        )?);
+        })?);
     }
     shard("scala", package, symbols)
 }

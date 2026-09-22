@@ -7,8 +7,7 @@ int Add(int a, int b);
 // IsPositive reports whether value is positive.
 bool IsPositive(int value);
 
-// ClampNegative maps negatives to -1; the defensive return stays
-// LCOV-ignored in accounting.cc with a nearby reason.
+// ClampNegative maps negatives to -1; fully covered by the fixture test.
 int ClampNegative(int value);
 
 // Double is header-executable: its LCOV DA lives on the header.

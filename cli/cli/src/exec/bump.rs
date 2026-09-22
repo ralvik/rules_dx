@@ -261,17 +261,17 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
             if request.version.is_semver() {
                 refreshed_message.push_str(&format!("; {}", dx_bump::generic_major_bump_hint()));
             }
-            emit_bump_refreshed(
+            emit_bump_refreshed(BumpRefreshedNotice {
                 invocation,
                 out,
                 err,
-                &request,
+                request: &request,
                 manifest,
-                &widened_message,
-                &refreshed_message,
-                update_set.name(),
+                widened_message: &widened_message,
+                refreshed_message: &refreshed_message,
+                set_name: update_set.name(),
                 verbose,
-            );
+            });
             0
         }
         dx_update::backend::BackendPlan::Run { argv, env: extra } => {
@@ -307,7 +307,17 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
                                 dx_bump::generic_major_bump_hint()
                             ));
                         }
-                        emit_bump_refreshed(invocation, out, err, &request, manifest, &widened_message, &refreshed_message, update_set.name(), verbose);
+                        emit_bump_refreshed(BumpRefreshedNotice {
+                            invocation,
+                            out,
+                            err,
+                            request: &request,
+                            manifest,
+                            widened_message: &widened_message,
+                            refreshed_message: &refreshed_message,
+                            set_name: update_set.name(),
+                            verbose,
+                        });
                         0
                     }
                     Some(code) => bump_refresh_failed(
@@ -337,18 +347,33 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
 }
 
 /// Emits the widen-plus-refresh success notices (text plus JSON).
-#[allow(clippy::too_many_arguments)]
-fn emit_bump_refreshed(
-    invocation: &Invocation,
-    out: &mut dyn std::io::Write,
-    err: &mut dyn std::io::Write,
-    request: &dx_bump::BumpRequest,
-    manifest: &str,
-    widened_message: &str,
-    refreshed_message: &str,
-    set_name: &str,
+///
+/// Grouped as one params struct so the 9-value widen/refresh notice takes
+/// one argument instead of nine positionals (see `TestReportsRequest`).
+struct BumpRefreshedNotice<'a> {
+    invocation: &'a Invocation,
+    out: &'a mut dyn std::io::Write,
+    err: &'a mut dyn std::io::Write,
+    request: &'a dx_bump::BumpRequest,
+    manifest: &'a str,
+    widened_message: &'a str,
+    refreshed_message: &'a str,
+    set_name: &'a str,
     verbose: bool,
-) {
+}
+
+fn emit_bump_refreshed(notice: BumpRefreshedNotice<'_>) {
+    let BumpRefreshedNotice {
+        invocation,
+        out,
+        err,
+        request,
+        manifest,
+        widened_message,
+        refreshed_message,
+        set_name,
+        verbose,
+    } = notice;
     let _ = err;
     if invocation.output == OutputMode::Json {
         if let Ok(event) = notice_event(&NoticeEvent {

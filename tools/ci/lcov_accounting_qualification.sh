@@ -185,17 +185,18 @@ else
   bad "lcov accounting lib failed to build (want accounting green on the seed host, issue #501)"
 fi
 
-# Live proof: the accounting test passes (covered plus defensive-ignore shapes).
+# Live proof: the accounting test passes (fully covered with no ignores).
 if bazel test //cc/tests/fixtures/lcov_accounting:accounting_test --noshow_progress >/dev/null 2>&1; then
   ok
 else
-  bad "lcov accounting test failed (want covered plus defensive-ignore green, issue #501)"
+  bad "lcov accounting test failed (want fully covered green, issue #501)"
 fi
 
 # Live proof: accounting gates end to end with no ignored collection failures.
-# The real C/C++-only report passes with its valid ignore; synthetic
-# Rust-only plus C/C++-only plus missed-line plus missing-report shapes
-# prove denominator effects without weakening the gate.
+# The real C/C++-only report passes fully covered with no ignores (the former
+# defensive `ClampNegative` branch is exercised by the fixture test, issue
+# #955); synthetic Rust-only plus C/C++-only plus missed-line plus
+# missing-report shapes prove denominator effects without weakening the gate.
 check_bin="bazel-bin/tools/coverage/coverage_bin"
 if [[ ! -x "$check_bin" ]]; then
   bazel build --noshow_progress //tools/coverage:coverage_bin >/dev/null 2>&1
@@ -226,7 +227,7 @@ cc_missed_out="$("$check_bin" --report "$scratch/cc-missed.lcov" --inventory "$s
 missing_rc=0
 missing_out="$("$check_bin" --report "$scratch/absent.lcov" --inventory "$scratch/real-inventory.txt" --sources "$scratch/real-sources.txt" --root . 2>&1)" || missing_rc=$?
 if [[ "$real_rc" == "0" ]] && echo "$real_out" | grep -q 'coverage gate: PASS' &&
-  echo "$real_out" | grep -q '1 ignored' &&
+  echo "$real_out" | grep -q '0 ignored' &&
   [[ "$missed_rc" == "1" ]] && echo "$missed_out" | grep -q 'uncovered:' &&
   [[ "$cc_missed_rc" == "1" ]] && echo "$cc_missed_out" | grep -q 'uncovered: cc/tests/fixtures/lcov_accounting/accounting.cc:1' &&
   [[ "$missing_rc" == "1" ]] && echo "$missing_out" | grep -q 'missing report file'; then

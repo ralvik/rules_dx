@@ -14,7 +14,7 @@ bool IsPositive(int value) {
 
 int ClampNegative(int value) {
   if (value < 0) {
-    return -1;  // LCOV_EXCL_LINE - reason: defensive fixture branch never exercised.
+    return -1;
   }
   return value;
 }

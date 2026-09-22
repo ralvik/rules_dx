@@ -520,8 +520,7 @@ mod tests {
         let scratch = dx_test_scratch::scratch("dx-resolve-run-test-dedup-");
         let workspace = scratch.path().to_path_buf();
         let query = FakeQuery::new(vec![FakeQuery::ok("//a:bin\n//a:other\n")]);
-        let got = resolve_run(&scopes(&["//a:bin", "//a/..."]), &workspace, &query)
-            .expect("dedup");
+        let got = resolve_run(&scopes(&["//a:bin", "//a/..."]), &workspace, &query).expect("dedup");
         assert_eq!(got, scopes(&["//a:bin", "//a:other"]));
     }
 

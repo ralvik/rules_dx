@@ -65,8 +65,6 @@ use crate::{
     FileInput, QualityResult, RunnerError, StageSpec,
 };
 use quality_result::proto::Diagnostic;
-#[allow(unused_imports)]
-use quality_result::MAX_COMPLETED_ROUNDS;
 
 /// Real tool IDs for the initial adapters plus the rustc
 /// typecheck adapter, the Python adapters (Ruff, Ty, pydoclint,
