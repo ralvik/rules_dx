@@ -30,6 +30,15 @@ pub mod real;
 /// Synthetic tool IDs executed by this runner (WP2 adapters).
 pub const SYNTHETIC_TOOLS: &[&str] = &["fmt-a", "lint-a", "lint-b"];
 
+/// Fixed per-capability round cap: ten complete cross-tool rounds for every
+/// capability (lint, typecheck, format, audit), per ADR 0003 fixed policy.
+/// The cap is per-result (per target/capability pipeline), not workspace or
+/// target configuration, and contributes to the action key.
+/// See: `docs/decisions/0003-action-granularity.md`.
+pub fn max_rounds_for_capability(_capability: &str) -> u32 {
+    MAX_COMPLETED_ROUNDS
+}
+
 /// One ordered pipeline stage: tool identity plus its fixed source subset.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StageSpec {
@@ -184,13 +193,14 @@ fn run_convergence(
         if !changed {
             return Ok((current, completed_rounds, Convergence::Stable));
         }
-        // Applies may move individual files yet return the map to its
-        // round-start state (e.g. two formatters undoing each other), so
-        // stability compares round-end to round-start identity, exactly
-        // like the old full-map equality but over 32-byte digests.
+        // A full round whose end bytes equal its start after intermediate
+        // changes (e.g. two formatters undoing each other) is period-1
+        // oscillation, not stability: the next round would repeat the same
+        // fighting work, and only STABLE may carry replacements.
+        // See: `docs/quality/quality-testing.md#determinism`.
         let id = state_digest(&current);
         if id == prev_id {
-            return Ok((current, completed_rounds, Convergence::Stable));
+            return Ok((current, completed_rounds, Convergence::Oscillation));
         }
         if !seen.insert(id) {
             return Ok((current, completed_rounds, Convergence::Oscillation));
@@ -211,14 +221,28 @@ fn snapshot(files: &BTreeMap<String, String>) -> Vec<FileSnapshot> {
 }
 
 fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
+    // Full sort key (path,start,end,severity,tool,rule,message) keeps the
+    // order total across concurrent adapters sharing one range.
+    // See: `docs/quality/quality-result-protocol.md#diagnostics`.
     diagnostics.sort_by(|a, b| {
-        (&a.path, a.start_byte, a.end_byte, &a.tool_id, &a.message).cmp(&(
-            &b.path,
-            b.start_byte,
-            b.end_byte,
-            &b.tool_id,
-            &b.message,
-        ))
+        (
+            &a.path,
+            a.start_byte,
+            a.end_byte,
+            a.severity,
+            &a.tool_id,
+            &a.rule_id,
+            &a.message,
+        )
+            .cmp(&(
+                &b.path,
+                b.start_byte,
+                b.end_byte,
+                b.severity,
+                &b.tool_id,
+                &b.rule_id,
+                &b.message,
+            ))
     });
 }
 
@@ -397,7 +421,7 @@ pub fn run_pipeline(
     let (terminal, completed_rounds, convergence) = run_convergence(
         &initial,
         stages,
-        MAX_COMPLETED_ROUNDS,
+        max_rounds_for_capability(capability),
         |tool, _path, text| Ok(apply_synthetic(tool, text)),
     )?;
     let mut terminal_diagnostics = Vec::new();
