@@ -113,6 +113,8 @@ filegroup(
 # Preset parity fixture; see preset_parity_test.sh.
 sh_test(
     name = "preset_parity_test",
+    size = "small",
+    timeout = "short",
     srcs = ["preset_parity_test.sh"],
     args = [
         "$(rootpath //tools/bazelrc:preset.bazelrc)",

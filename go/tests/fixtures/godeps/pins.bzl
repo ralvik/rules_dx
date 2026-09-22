@@ -45,3 +45,9 @@ GODEPS_GENERATION = "consumes never writes"
 # Rejected: hand-written go_deps.module tags (Gazelle documents from_file
 # as preferred); go.work for single-module layouts.
 GODEPS_REJECTED = "hand module tags rejected: from_file preferred; go.work only for multi-module"
+
+# Currency recheck (issue #932): directives below were verified current on
+# this date (go language floor plus SDK plus buildtools per ADR 0008
+# latest-stable). Refresh the date with each dependency-currency pass;
+# pin_consistency.sh fails when absent or stale.
+GODEPS_CURRENCY_RECHECK = "2026-09-22"

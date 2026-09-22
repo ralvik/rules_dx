@@ -9,6 +9,10 @@
 # - timeouts tuned: seed test/coverage at 45 minutes, per-host test/coverage
 #   at 60 minutes, no blanket 90-minute timeouts remain; builds stay 30/60;
 #   long-timeouts-only stays rejected;
+# - reusable parity (issue #932): reusable-consumer.yml timeouts stay pinned
+#   (gate 5, Linux-once 30, per-platform 60, aggregate 10, no 90) with every
+#   job bounded; per-target `size` plus `timeout` on every sh_test keeps the
+#   global cap from masking slowness;
 # - sharding proof: per-host/per-stage job sharding stays pinned (seed plus
 # arm64 plus musl pair plus macos pair plus windows,) with
 #   fast-fail needs chains plus per-job summaries, no `strategy.matrix`;
@@ -32,20 +36,24 @@ dx_cd_workspace
 dx_test_init
 
 ci=".github/workflows/ci.yml"
+ci_notes=".github/workflows/README.md"
 test_matrix="docs/testing/github-ci.md"
 testing_readme="docs/testing/README.md"
 verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
+targets_b="tools/ci/ci_targets_b.bzl"
+prove="tools/ci/prove.sh"
 starlark="docs/testing/starlark.md"
 
 # Header records the flakiness plus timeout tuning with the
-# rejected long-timeouts-only alternative.
-if grep -q -F -e 'Flakiness plus timeout tuning (issue #619' "$ci" &&
-  grep -q -F -e '--flaky_test_attempts=3 --test_timeout=300' "$ci" &&
-  grep -q -F -e 'long-timeouts-only stays rejected' "$ci"; then
+# rejected long-timeouts-only alternative (lives in the workflow notes
+# since the #915 header split; ci.yml carries no header comments).
+if grep -q -F -e 'Flakiness plus timeout tuning (issue #619' "$ci_notes" &&
+  grep -q -F -e '--flaky_test_attempts=3 --test_timeout=300' "$ci_notes" &&
+  grep -q -F -e 'long-timeouts-only stays rejected' "$ci_notes"; then
   ok
 else
-  bad "ci.yml header lost the issue #619 flakiness plus timeout tuning record with rejected long-timeouts-only"
+  bad "workflow notes lost the issue #619 flakiness plus timeout tuning record with rejected long-timeouts-only"
 fi
 
 # Every direct bazel test invocation carries bounded flaky retries.
@@ -172,18 +180,19 @@ fi
 if grep -q -F -e 'flakiness_qualification' "$verify" &&
   grep -q -F -e 'qualified seed-only under #619' "$verify" &&
   grep -q -F -e 'bazel run //tools/ci:flakiness_qualification' "$verify" &&
-  grep -q -F -e '`flakiness_qualification` 16/16' "$verify"; then
+  grep -q -F -e '`flakiness_qualification` 19/19' "$verify"; then
   ok
 else
   bad "verification-matrix lost its #619 flakiness qualified record"
 fi
 
-# BUILD owns the harness target plus CI wires it in prove plus dogfood-freshness.
-if grep -q -F -e 'name = "flakiness_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:flakiness_qualification' "$ci"; then
+# Target lives in the sharded list (issue #915) plus CI wires it in
+# prove plus dogfood-freshness.
+if grep -q -F -e 'name = "flakiness_qualification"' "$targets_b" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:flakiness_qualification' "$prove"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the flakiness_qualification wiring (want target plus prove plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_b.bzl or prove.sh lost the flakiness_qualification wiring (want target plus prove plus dogfood-freshness)"
 fi
 
 # Retry-until-green stays rejected: bounded attempts only, reruns preserve
@@ -201,7 +210,77 @@ if grep -q -F -e 'CI only' "$test_matrix" &&
   grep -q -F -e 'no Supported claim' "$test_matrix"; then
   ok
 else
-  bad "test matrix lost its CI-only plus no-Supported honesty for issue #619"
+  bad "test matrix lost its CI-only plus no-Supported honesty (issue #619)"
+fi
+
+# Reusable consumer timeouts stay pinned (issue #932): the reusable template
+# drifts without a guard because the checks above assert ci.yml only.
+# platforms-gate 5, six Linux-once checks 30, three per-platform checks 60,
+# aggregate dx-ci 10; no blanket 90.
+reusable=".github/workflows/reusable-consumer.yml"
+if grep -A5 -e 'platforms-gate:' "$reusable" | grep -q -F -e 'timeout-minutes: 5' &&
+  grep -A5 -e '^  lint:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
+  grep -A5 -e '^  typecheck:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
+  grep -A5 -e '^  format:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
+  grep -A5 -e '^  generate:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
+  grep -A5 -e '^  security-audit:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
+  grep -A5 -e '^  license-audit:' "$reusable" | grep -q -F -e 'timeout-minutes: 30' &&
+  grep -A5 -e '^  test:' "$reusable" | grep -q -F -e 'timeout-minutes: 60' &&
+  grep -A5 -e '^  build:' "$reusable" | grep -q -F -e 'timeout-minutes: 60' &&
+  grep -A5 -e '^  coverage:' "$reusable" | grep -q -F -e 'timeout-minutes: 60' &&
+  grep -A5 -e '^  dx-ci:' "$reusable" | grep -q -F -e 'timeout-minutes: 10' &&
+  ! grep -q -F -e 'timeout-minutes: 90' "$reusable"; then
+  ok
+else
+  bad "reusable-consumer.yml timeouts drifted (want gate 5 plus Linux-once 30 plus per-platform 60 plus aggregate 10 with no 90, issue #932)"
+fi
+
+# Every reusable job carries an explicit timeout: no job without one.
+if ! python3 -c "
+import re, sys
+text = open('.github/workflows/reusable-consumer.yml').read()
+jobs = re.findall(r'^  ([a-z-]+):\s*\n', text, re.M)
+missing = []
+for job in jobs:
+    block = re.search(r'^  ' + job + r':\s*\n(.*?)(?=^  [a-z-]+:|\Z)', text, re.M | re.S)
+    body = block.group(1) if block else ''
+    if 'timeout-minutes:' not in body:
+        missing.append(job)
+if missing:
+    print('missing timeout: ' + ','.join(missing))
+    sys.exit(1)
+"; then
+  bad "a reusable-consumer.yml job lost its timeout-minutes (every job stays bounded, issue #932)"
+else
+  ok
+fi
+
+# Per-target timeouts: every sh_test carries explicit size plus timeout
+# (issue #932) so the global --test_timeout=300 cap never masks slowness.
+# Small grep harnesses use short; drivers running nested Bazel use moderate.
+if python3 -c "
+import pathlib, re, sys
+roots = list(pathlib.Path('.').rglob('BUILD.bazel')) + list(pathlib.Path('tools/ci').glob('*.bzl')) + [pathlib.Path('libs/starlark/tests/negative/negative_tests.bzl')]
+bad = []
+for f in roots:
+    if '.git/' in str(f):
+        continue
+    text = f.read_text(errors='ignore')
+    parts = re.split(r'(sh_test\(\n)', text)
+    for idx in range(1, len(parts), 2):
+        chunk = parts[idx+1] if idx+1 < len(parts) else ''
+        m = re.search(r'\n[ ]{0,8}\)\n', '\n' + chunk)
+        block = chunk[:m.end()] if m else chunk[:1500]
+        if not ('size =' in block and 'timeout =' in block):
+            name = re.search(r'name = \"([^\"]+)\"', block)
+            bad.append(str(f) + ':' + (name.group(1) if name else '?'))
+if bad:
+    print('\n'.join(bad))
+    sys.exit(1)
+"; then
+  ok
+else
+  bad "an sh_test lost its explicit size plus timeout (want per-target timeouts everywhere, issue #932)"
 fi
 
 dx_test_summary "ci flakiness plus timeout tuning harness"

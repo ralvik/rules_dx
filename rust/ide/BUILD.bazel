@@ -12,6 +12,8 @@ package(default_visibility = ["//:__subpackages__"])
 
 sh_test(
     name = "ide_acquisition_test",
+    size = "small",
+    timeout = "short",
     srcs = ["ide_acquisition_test.sh"],
     args = [
         "$(rootpath @rules_rust//tools/rust_analyzer:gen_rust_project)",

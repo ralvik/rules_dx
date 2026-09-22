@@ -647,6 +647,49 @@ else
   bad "admitted lock wiring drifted:$lock304_fail"
 fi
 
+# Lock currency recheck (issue #932): directives stay in parity with a
+# dated verification, not just existence. Go SDK minor stays >= every
+# go.mod directive in the tree (third_party floor plus examples); the
+# buildtools require entry matches the godeps pin; Paket/Maven coordinates
+# match their pins; each currency recheck date stays present and valid.
+currency_fail=""
+sdk_minor="$(grep -o -E -e 'go_sdk\.download\(version = "[^"]+"' MODULE.bazel | head -1 | grep -o -E -e '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+sdk_mm="$(echo "$sdk_minor" | cut -d. -f1,2)"
+for gomod in third_party/go/go.mod examples/adopt-go/go.mod; do
+  directive="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$gomod" 2>/dev/null | head -1 | cut -d' ' -f2 || true)"
+  if [[ -z "$directive" ]]; then
+    currency_fail="$currency_fail $gomod:missing-directive"
+    continue
+  fi
+  d_mm="$(echo "$directive" | cut -d. -f1,2)"
+  s_maj="${sdk_mm%%.*}"; s_min="${sdk_mm#*.}"
+  d_maj="${d_mm%%.*}"; d_min="${d_mm#*.}"
+  if [[ "$s_maj" -gt "$d_maj" ]] || { [[ "$s_maj" == "$d_maj" ]] && [[ "$s_min" -ge "$d_min" ]]; }; then
+    true
+  else
+    currency_fail="$currency_fail $gomod:directive-$directive-ahead-of-sdk-$sdk_minor"
+  fi
+done
+buildtools_gomod="$(grep -o -E -e 'buildtools v[^ ]+' third_party/go/go.mod | head -1 | cut -d' ' -f2 || true)"
+buildtools_pin="$(grep -o -E -e '^BUILDTOOLS_VERSION = "[^"]+"' go/tests/fixtures/godeps/pins.bzl | head -1 | cut -d'"' -f2 || true)"
+[[ -n "$buildtools_gomod" && "$buildtools_gomod" == "$buildtools_pin" ]] || currency_fail="$currency_fail buildtools:$buildtools_gomod-vs-$buildtools_pin"
+fsharp_gomod="$(grep -o -E -e 'nuget FSharp.Core [^ ]+' third_party/dotnet/paket.dependencies | head -1 | awk '{print $3}' || true)"
+fsharp_pin="$(grep -o -E -e '^FSHARP_CORE_VERSION = "[^"]+"' csharp/tests/fixtures/paket/pins.bzl | head -1 | cut -d'"' -f2 || true)"
+[[ -n "$fsharp_gomod" && "$fsharp_gomod" == "$fsharp_pin" ]] || currency_fail="$currency_fail fsharp:$fsharp_gomod-vs-$fsharp_pin"
+for pinfile in go/tests/fixtures/godeps/pins.bzl third_party/jvm/pins.bzl csharp/tests/fixtures/paket/pins.bzl; do
+  date="$(grep -o -E -e '_CURRENCY_RECHECK = "[^"]+"' "$pinfile" | head -1 | cut -d'"' -f2 || true)"
+  if [[ "$date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && [[ "$date" > "2026-01-01" ]] && [[ "$date" < "2027-06-01" ]]; then
+    true
+  else
+    currency_fail="$currency_fail $pinfile:recheck-$date"
+  fi
+done
+if [[ -z "$currency_fail" ]]; then
+  ok
+else
+  bad "lock currency drifted:$currency_fail"
+fi
+
 # -: admitted quality classification stays pinned (families exist,
 # no adapter claims admitted classes yet; adapter side qualified under 
 # with deferred ADR 0019 routes).

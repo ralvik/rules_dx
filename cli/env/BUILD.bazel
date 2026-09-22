@@ -139,6 +139,8 @@ exports_files(
 # No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "bootstrap_test",
+    size = "small",
+    timeout = "short",
     srcs = ["bootstrap_test.sh"],
     args = ["$(rootpath :env)"],
     data = [

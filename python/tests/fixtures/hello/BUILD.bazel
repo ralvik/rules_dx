@@ -62,6 +62,8 @@ exports_files([
 # Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
+    size = "small",
+    timeout = "short",
     srcs = ["hello_output_test.sh"],
     args = ["$(rootpath :hello)"],
     data = [

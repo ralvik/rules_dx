@@ -226,7 +226,9 @@ GHCR container storage/bandwidth is currently free for public repos (at least on
 CI flakiness plus timeout tuning stays bounded and local-only (issue #619,
 `bazel run //tools/ci:flakiness_qualification`): direct `bazel test` carries
 `--flaky_test_attempts=3 --test_timeout=300`, GitHub timeouts stay tuned (seed test/coverage 45,
-per-host test/coverage 60, builds 30/60, no blanket 90), sharding stays per-host/per-stage
+per-host test/coverage 60, builds 30/60, no blanket 90), reusable-consumer
+timeouts stay pinned plus every `sh_test` carries per-target size/timeout
+(issue #932), sharding stays per-host/per-stage
 with ordinary Bazel intra-job sharding and no `strategy.matrix`.
 
 ## Remote Tests

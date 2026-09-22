@@ -235,6 +235,8 @@ rust_test(
 # Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
+    size = "small",
+    timeout = "short",
     srcs = ["hello_output_test.sh"],
     args = ["$(rootpath :hello)"],
     data = [
@@ -259,6 +261,8 @@ archive_deploy(
 # Release checksum on the app binary; no-coverage, see build-conventions.
 sh_test(
     name = "release_verify",
+    size = "small",
+    timeout = "short",
     srcs = ["//deploy/rules:archive_verify.sh"],
     args = [
         "$(rootpath :release_archive)",

@@ -30,11 +30,15 @@ dx_test_init
 doc="docs/documentation/build-check-serve.md"
 readme="docs/documentation/README.md"
 corpus="docs/BUILD.bazel"
-build="tools/ci/BUILD.bazel"
+build="tools/ci/ci_targets_d.bzl"
 reusable=".github/workflows/reusable-docs.yml"
 ci=".github/workflows/ci.yml"
-checker="quality/markdown/src/lib.rs"
+checker="quality/markdown/src/check.rs"
 checker_build="quality/markdown/BUILD.bazel"
+checklist="docs/product/promotion-checklist.md"
+matrix="docs/product/support-matrix.md"
+verify="docs/testing/verification-matrix.md"
+runbook="docs/deploy/release-runbook.md"
 
 # Build-check-serve doc exists with the accepted workflow.
 if [[ -f "$doc" ]] &&
@@ -168,6 +172,40 @@ if grep -q -F -e 'is pure check-only' "$reusable" &&
   ok
 else
   bad "reusable-docs lost its check-only plus clean-checkout plus no-rendered-site record"
+fi
+
+# Cross-domain link guard (issue #932): the promotion checklist links,
+# not copies, the owning contracts, so status plus evidence plus human-run
+# path each resolve to one owner.
+if grep -q -F -e "Link, don't copy" "$checklist" &&
+  grep -q -F -e '(support-matrix.md' "$checklist" &&
+  grep -q -F -e '(../testing/verification-matrix.md)' "$checklist" &&
+  grep -q -F -e '(../deploy/release-runbook.md)' "$checklist"; then
+  ok
+else
+  bad "promotion-checklist lost its Link-don't-copy cross-contract links (want support-matrix plus verification-matrix plus release-runbook, issue #932)"
+fi
+
+# Matrix/runbook anchors stay resolvable (issue #932): the link targets
+# above plus the verification-matrix application-foundations anchor exist,
+# so the markdown missing-file-target/missing-anchor checker would pass
+# on the promotion path.
+if grep -q -F -e '## Status Lifecycle' "$matrix" &&
+  grep -q -F -e '## Application Foundations' "$matrix" &&
+  grep -q -F -e '(support-matrix.md#status-lifecycle)' "$checklist" &&
+  grep -q -F -e '(../product/support-matrix.md' "$verify" &&
+  grep -q -F -e '(../product/promotion-checklist.md)' "$runbook"; then
+  ok
+else
+  bad "support-matrix/verification-matrix/release-runbook cross anchors drifted (want status-lifecycle plus application-foundations plus checklist/runbook links, issue #932)"
+fi
+
+# Checker owns the link finding kinds the guard above relies on.
+if grep -q -F -e 'MissingFileTarget => "missing-file-target"' "$checker" &&
+  grep -q -F -e 'MissingAnchor => "missing-anchor"' "$checker"; then
+  ok
+else
+  bad "markdown checker lost its missing-file-target/missing-anchor finding kinds (issue #932 link guard needs them)"
 fi
 
 dx_test_summary "docs build qualification harness"

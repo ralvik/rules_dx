@@ -19,6 +19,8 @@ def add_a():
     # Consumer CI template harness (item 1); see tools/ci/consumer_scheduling_test.sh.
     sh_test(
         name = "consumer_scheduling_test",
+        size = "small",
+        timeout = "short",
         srcs = ["consumer_scheduling_test.sh"],
         args = ["$(rootpath //.github:workflows/reusable-consumer.yml)"],
         data = [
@@ -32,6 +34,8 @@ def add_a():
 
     sh_test(
         name = "consumer_aggregate_test",
+        size = "small",
+        timeout = "short",
         srcs = ["consumer_aggregate_test.sh"],
         args = ["$(rootpath //.github:workflows/reusable-consumer.yml)"],
         data = [
@@ -45,6 +49,8 @@ def add_a():
 
     sh_test(
         name = "consumer_guards_test",
+        size = "small",
+        timeout = "short",
         srcs = ["consumer_guards_test.sh"],
         args = [
             "$(rootpath //.github:workflows/reusable-consumer.yml)",
@@ -62,6 +68,8 @@ def add_a():
 
     sh_test(
         name = "consumer_pins_test",
+        size = "small",
+        timeout = "short",
         srcs = ["consumer_pins_test.sh"],
         args = [
             "$(rootpath //.github:workflows/reusable-consumer.yml)",
@@ -84,6 +92,8 @@ def add_a():
     # Example caller pin-sync harness; see tools/ci/examples_pins_test.sh.
     sh_test(
         name = "examples_pins_test",
+        size = "small",
+        timeout = "short",
         srcs = ["examples_pins_test.sh"],
         args = [
             "$(rootpath //examples:consumer-ci/caller.yml)",
@@ -104,6 +114,8 @@ def add_a():
     # Pin single-source consistency; see tools/ci/pin_consistency.sh.
     sh_test(
         name = "pin_consistency_test",
+        size = "small",
+        timeout = "short",
         srcs = ["pin_consistency.sh"],
         args = [
             "$(rootpath //:.bazelversion)",
@@ -162,6 +174,8 @@ def add_a():
     # Config single-source consistency (See: tools/ci/config_consistency.sh, issue #912);
     sh_test(
         name = "config_consistency_test",
+        size = "small",
+        timeout = "short",
         srcs = ["config_consistency.sh"],
         args = [
             "$(rootpath //:biome.json)",
@@ -207,6 +221,8 @@ def add_a():
     # Ignore-list parity; see tools/ci/ignore_parity.sh.
     sh_test(
         name = "ignore_parity_test",
+        size = "small",
+        timeout = "short",
         srcs = ["ignore_parity.sh"],
         args = [
             "$(rootpath //:.gitignore)",

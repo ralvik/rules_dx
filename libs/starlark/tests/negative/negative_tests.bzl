@@ -17,6 +17,7 @@ def failing_check_demo(name):
         srcs = ["failing_check_test.sh"],
         data = ["//tools/sh:lib"],
         size = "small",
+        timeout = "short",
         target_compatible_with = ["@platforms//os:linux"],
     )
 
@@ -29,6 +30,7 @@ def missing_observation_demo(name):
             ":negative_subject",
         ],
         size = "small",
+        timeout = "short",
         target_compatible_with = ["@platforms//os:linux"],
     )
 
@@ -41,6 +43,7 @@ def missing_fragment_demo(name):
             ":present_fixture.txt",
         ],
         size = "small",
+        timeout = "short",
         target_compatible_with = ["@platforms//os:linux"],
     )
 
