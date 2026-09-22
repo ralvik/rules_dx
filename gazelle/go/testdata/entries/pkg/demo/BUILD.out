@@ -12,6 +12,7 @@ go_library(
         "helper.go",
         "main.go",
     ],
+    importpath = "example.com/entries/pkg/demo",
 )
 
 go_test(
