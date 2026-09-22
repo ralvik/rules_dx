@@ -402,9 +402,10 @@ fn run() -> i32 {
             out: &mut out,
             err: &mut err,
             // The local-only `dx run` gate reads the launch
-            // environment once here; execution below takes the bit
-            // by value so tests stay hermetic.
-            ci: std::env::var("CI").is_ok_and(|value| value == "true"),
+            // environment once here via the shared owner; execution
+            // below takes the bit by value so tests stay hermetic.
+            // See: `docs/cli/commands/watch.md`.
+            ci: dx_process::is_ci(),
         },
     );
     let _ = out.flush();

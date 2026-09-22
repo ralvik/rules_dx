@@ -585,6 +585,33 @@ fn exit_mapping_preserves_subprocess_codes() {
 }
 
 #[test]
+fn ci_gate_matrix_is_single_sourced() {
+    // Local-only `dx run`/`dx watch` refusal shares one owner
+    // (`is_ci` over `is_ci_value`): only `CI=true` refuses, every
+    // other shape proceeds. Issue #1046.
+    assert!(is_ci_value(Some("true")));
+    for allowed in [
+        None,
+        Some(""),
+        Some("1"),
+        Some("yes"),
+        Some("false"),
+        Some("0"),
+        Some("True"),
+        Some("TRUE"),
+    ] {
+        assert!(!is_ci_value(allowed), "{allowed:?} must not count as CI");
+    }
+    // The env probe delegates to the same owner so `run` and `watch`
+    // cannot diverge again.
+    assert_eq!(
+        is_ci(),
+        is_ci_value(std::env::var("CI").ok().as_deref()),
+        "is_ci must delegate to is_ci_value"
+    );
+}
+
+#[test]
 fn dry_run_never_executes_final_workflows() {
     assert!(dry_run_allows(false, false));
     assert!(!dry_run_allows(false, true));

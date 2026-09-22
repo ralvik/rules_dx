@@ -145,6 +145,19 @@ pub fn workspace_start(cwd: &Path) -> PathBuf {
         .unwrap_or_else(|| cwd.to_path_buf())
 }
 
+/// Reports whether a `CI` value counts as CI for the local-only gate.
+/// Single owner for the `CI=true` refusal shared by `dx run` and `dx watch`.
+/// See: `docs/cli/commands/watch.md`.
+pub fn is_ci_value(value: Option<&str>) -> bool {
+    value.is_some_and(|value| value == "true")
+}
+
+/// Reads the launch `CI` environment once for the local-only gate.
+/// See: `docs/cli/commands/watch.md`.
+pub fn is_ci() -> bool {
+    is_ci_value(std::env::var("CI").ok().as_deref())
+}
+
 /// Launcher selection failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LauncherError {
