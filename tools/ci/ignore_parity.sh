@@ -5,7 +5,10 @@
 # are listed in one but not the other: spills stay unignored by Bazel or leak
 # into `git status`. `.opencode/` scope plus `node_modules/` plus `.ruff_cache/`
 # plus `bazel-*` must stay mirrored with the local-only contracts documented
-# in-file, so this fails on drift.
+# in-file, so this fails on drift. File singletons (`*.profraw`, `*.profdata`,
+# `opencode.json`) have no `.bazelignore` form and stay Bazel-visible by
+# design; `.gitignore` plus scratch containment plus no BUILD glob owns them
+# (issue #1002), so this also fails when that defense-in-depth drifts.
 #
 # Usage: ignore_parity.sh <gitignore> <bazelignore> <bazelrc> <local_workflows>
 set -euo pipefail
@@ -39,13 +42,21 @@ dx_guards_contains "$gitignore" ".gitignore lost the user.bazelrc local-only con
   'user.bazelrc' \
   'local-only overlay' \
   'bcr.bazel.build'
+dx_guards_contains "$gitignore" ".gitignore lost the coverage-spill defense-in-depth (want *.profraw plus *.profdata, issue #1002)" \
+  '*.profraw' \
+  '*.profdata'
 
-# .bazelignore mirrors the same disposable directories (file patterns have no
-# form here; only directories are listed).
+# .bazelignore mirrors the same disposable directories (file singletons have
+# no form here; only directories are listed, issue #1002).
 dx_guards_contains "$bazelignore" ".bazelignore lost disposable-tree entries (want node_modules plus ruff cache plus bazel outputs, issue #911)" \
   'node_modules' \
   '.ruff_cache' \
   'bazel-*'
+dx_guards_contains "$bazelignore" ".bazelignore lost the file-singleton record (want profraw plus profdata plus opencode.json plus no-form note, issue #1002)" \
+  '*.profraw' \
+  '*.profdata' \
+  'opencode.json' \
+  'no .bazelignore form'
 dx_guards_contains "$bazelignore" ".bazelignore lost the .opencode whole-dir scope (want .opencode with parity note, issue #911)" \
   '.opencode/' \
   'Parity notes'
@@ -68,25 +79,29 @@ dx_guards_contains "$local_workflows" "local-workflows.md lost the user.bazelrc 
   'user.bazelrc' \
   'bcr.bazel.build'
 
-# Tracked-tree guard (workspace only): none of the ignored trees may be
-# committed. Skipped under `bazel test` sandbox here (no git checkout there);
-# enforced on a clean tree via direct execution plus `bazel run`.
+# Tracked-tree guard (workspace only): none of the ignored trees or file
+# singletons may be committed. Skipped under `bazel test` sandbox here (no
+# git checkout there); enforced on a clean tree via direct execution plus
+# `bazel run`.
 if ws="$(git rev-parse --show-toplevel 2>/dev/null)"; then
   if [[ -z "$(git -C "$ws" ls-files | grep -E '(^|/)(node_modules|\.ruff_cache|\.opencode|\.cache)/' || true)" ]] &&
     [[ -z "$(git -C "$ws" ls-files | grep -E '^(dist|release)/' || true)" ]] &&
-    [[ -z "$(git -C "$ws" ls-files | grep -E '(^|/)(opencode\.json|user\.bazelrc)$' || true)" ]]; then
+    [[ -z "$(git -C "$ws" ls-files | grep -E '(^|/)(opencode\.json|user\.bazelrc)$' || true)" ]] &&
+    [[ -z "$(git -C "$ws" ls-files | grep -E '\.(profraw|profdata)$' || true)" ]]; then
     ok
   else
-    bad "ignored trees are tracked (want no node_modules/.ruff_cache/.opencode/.cache plus root dist/release plus opencode.json/user.bazelrc in git ls-files, issue #911)"
+    bad "ignored trees are tracked (want no node_modules/.ruff_cache/.opencode/.cache plus root dist/release plus opencode.json/user.bazelrc plus no profraw/profdata in git ls-files, issue #1002)"
   fi
   if git -C "$ws" check-ignore -q "node_modules/foo" &&
     git -C "$ws" check-ignore -q ".ruff_cache/foo" &&
     git -C "$ws" check-ignore -q ".opencode/foo" &&
     git -C "$ws" check-ignore -q "opencode.json" &&
-    git -C "$ws" check-ignore -q "user.bazelrc"; then
+    git -C "$ws" check-ignore -q "user.bazelrc" &&
+    git -C "$ws" check-ignore -q "default_123.profraw" &&
+    git -C "$ws" check-ignore -q "default_123.profdata"; then
     ok
   else
-    bad "git check-ignore misses an ignored path (want node_modules plus .ruff_cache plus .opencode plus opencode.json plus user.bazelrc ignored, issue #911)"
+    bad "git check-ignore misses an ignored path (want node_modules plus .ruff_cache plus .opencode plus opencode.json plus user.bazelrc plus profraw/profdata ignored, issue #1002)"
   fi
 else
   ok

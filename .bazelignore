@@ -2,8 +2,10 @@ node_modules
 quality/tools/javascript/node_modules
 .opencode/
 # Disposable trees also gitignored (.gitignore): keep Bazel from watching
-# or querying them (issue #953). File patterns (*.profraw, *.pyc, ...) have
-# no .bazelignore form; only directories are listed here.
+# or querying them (issue #953). File singletons (*.profraw, *.profdata,
+# opencode.json, *.pyc, ...) have no .bazelignore form — only directories
+# are listed here; they stay Bazel-visible by design and are contained via
+# .gitignore plus LLVM_PROFILE_FILE scratch plus no BUILD glob (issue #1002).
 .cache
 .direnv
 .tmp
