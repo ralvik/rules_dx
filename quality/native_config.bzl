@@ -4,7 +4,11 @@ Contract: `docs/quality/native-configuration.md`.
 """
 
 DxNativeConfigInfo = provider(
-    doc = "One tool-owned native config file plus its checked-in closure.",
+    doc = "One tool-owned native config file plus its checked-in closure. " +
+          "Forgeable by construction (Starlark providers carry no origin): " +
+          "trust comes from the typed constructor's extension/source checks " +
+          "plus aspect-time binding, never from the provider alone. " +
+          "See issue #928.",
     fields = {
         "closure": "depset[File]: config plus every data file the tool reaches.",
         "config": "File: the tool-owned config file passed to the adapter.",
@@ -152,14 +156,17 @@ def _make_native_config_rule(tool_id, doc):
             "data": attr.label_list(
                 allow_files = True,
                 default = [],
-                doc = "Checked-in data files the config reaches (Vale styles).",
+                doc = "Checked-in data files the config reaches (Vale styles). Unbounded by design: closures span ini/yml and other tool-owned data. See issue #928.",
             ),
             "src": attr.label(
                 allow_single_file = True,
                 doc = "Checked-in tool-owned config file.",
                 mandatory = True,
             ),
-            "_tool_id": attr.string(default = tool_id),
+            "_tool_id": attr.string(
+                default = tool_id,
+                doc = "Stable built-in tool identifier selecting the required config extension.",
+            ),
         },
         doc = doc,
     )

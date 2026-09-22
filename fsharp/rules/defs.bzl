@@ -4,8 +4,12 @@ Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_dotnet//dotnet:defs.bzl", _fsharp_binary = "fsharp_binary", _fsharp_library = "fsharp_library", _fsharp_test = "fsharp_test")
+# Intentional upstream-private load (issue #928): the .NET assembly
+# providers live only under @rules_dotnet//dotnet/private, so the wrapper
+# must load them there; the sealed `upstream_providers` plus
+# `required_providers` below keep the boundary fail-closed.
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_FSHARP_LIBRARY_PROVIDES = [
@@ -94,12 +98,17 @@ def _fsharp_wrap_binary(name, srcs, visibility = None, **kwargs):
         visibility = ["//visibility:private"],
         **upstream_kwargs
     )
+    forward_kwargs = {}
+    if "tags" in kwargs:
+        forward_kwargs["tags"] = kwargs["tags"]
+    if "aspect_hints" in kwargs:
+        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
     _fsharp_binary_forward(
         name = name,
         upstream = name + "_upstream",
         srcs = srcs,
         visibility = visibility,
-        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
+        **forward_kwargs
     )
 
 def fsharp_library(name, srcs, visibility = None, **kwargs):
@@ -146,11 +155,14 @@ def fsharp_test(name, srcs, visibility = None, **kwargs):
         name = name + "_upstream",
         **upstream_kwargs
     )
+    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
+    if "aspect_hints" in kwargs:
+        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
     _fsharp_forward_test(
         name = name,
         testonly = True,
         upstream = name + "_upstream",
         srcs = test_srcs,
         visibility = visibility,
-        **({"aspect_hints": kwargs["aspect_hints"]} if "aspect_hints" in kwargs else {})
+        **forward_kwargs
     )

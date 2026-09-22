@@ -14,6 +14,13 @@ def lint_test(name, srcs, expected_observations, **kwargs):
     against `expected_observations`. Only golden-mismatch fails; the
     fixture itself never fails the build.
 
+    The `//quality/testdata:real_aspect_subject.bzl` load is intentional:
+    this harness lives in `//quality` and the testdata package scopes its
+    visibility to `//quality`, so no cross-boundary private load occurs
+    (unlike upstream `@rules_dotnet//dotnet/private`, which is the only
+    location of the .NET assembly providers and is therefore intentional
+    in the C#/F# wrappers). See issue #928.
+
     For dirty (expected-failure) coverage, prefer the matrix
     (`runner_matrix_cases.bzl`): provider-less bytes with `print_result`
     goldens, both `*_pass`/`*_fail` green. This macro is for clean

@@ -2,6 +2,7 @@
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:wrapper.bzl", "dx_effective_visibility", "dx_forwarded_test_kwargs")
 load("//quality:sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "RUST")
 
 def dx_wrapper_registry_tests(name):
@@ -11,6 +12,11 @@ def dx_wrapper_registry_tests(name):
         checks = [
             expect_equal("RUST class id", RUST, "rust"),
             expect_equal("rust is a known class", RUST in KNOWN_SEMANTIC_FILE_CLASSES, True),
+            expect_equal("forwarder defaults to private", dx_effective_visibility(None), ["//visibility:private"]),
+            expect_equal("explicit visibility wins", dx_effective_visibility(["//visibility:public"]), ["//visibility:public"]),
+            expect_equal("test kwargs strip manual", dx_forwarded_test_kwargs({"tags": ["manual", "cpu:4"]}), {"tags": ["cpu:4"]}),
+            expect_equal("test kwargs forward timeout/flaky", dx_forwarded_test_kwargs({"timeout": "short", "flaky": True}), {"timeout": "short", "flaky": True}),
+            expect_equal("test kwargs empty stays empty", dx_forwarded_test_kwargs({}), {}),
         ],
     )
 
@@ -48,6 +54,11 @@ field upstream_has_quality_sources=False
 field wrapper=//rust/tests/fixtures/hello:hello_cdylib
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
+aspect_field aspect_seen=True
+aspect_field field_count=29
+aspect_field has_subject=True
+aspect_field subject_label=//rust/tests/fixtures/hello:hello_cdylib_subject
+aspect_field transitive_count=0
 subject //rust/tests/fixtures/hello:hello_derive_subject
 file hello_derive_subject.txt
 field cargo_tool=cargo
@@ -77,6 +88,11 @@ field upstream_has_quality_sources=False
 field wrapper=//rust/tests/fixtures/hello:hello_derive
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
+aspect_field aspect_seen=True
+aspect_field field_count=27
+aspect_field has_subject=True
+aspect_field subject_label=//rust/tests/fixtures/hello:hello_derive_subject
+aspect_field transitive_count=0
 subject //rust/tests/fixtures/hello:hello_lib_subject
 file hello_lib_subject.txt
 field cargo_tool=cargo
@@ -106,6 +122,11 @@ field upstream_has_quality_sources=False
 field wrapper=//rust/tests/fixtures/hello:hello_lib
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
+aspect_field aspect_seen=True
+aspect_field field_count=27
+aspect_field has_subject=True
+aspect_field subject_label=//rust/tests/fixtures/hello:hello_lib_subject
+aspect_field transitive_count=0
 subject //rust/tests/fixtures/hello:hello_staticlib_subject
 file hello_staticlib_subject.txt
 field cargo_tool=cargo
@@ -137,6 +158,11 @@ field upstream_has_quality_sources=False
 field wrapper=//rust/tests/fixtures/hello:hello_staticlib
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
+aspect_field aspect_seen=True
+aspect_field field_count=29
+aspect_field has_subject=True
+aspect_field subject_label=//rust/tests/fixtures/hello:hello_staticlib_subject
+aspect_field transitive_count=0
 subject //rust/tests/fixtures/hello:hello_subject
 file hello_subject.txt
 field cargo_tool=cargo
@@ -166,6 +192,11 @@ field upstream_has_quality_sources=False
 field wrapper=//rust/tests/fixtures/hello:hello
 field wrapper_has_instrumented_files=True
 field wrapper_has_quality_sources=True
+aspect_field aspect_seen=True
+aspect_field field_count=27
+aspect_field has_subject=True
+aspect_field subject_label=//rust/tests/fixtures/hello:hello_subject
+aspect_field transitive_count=0
 subject //rust/tests/fixtures/hello:hello_test_subject
 file hello_test_subject.txt
 field cargo_tool=cargo
@@ -194,7 +225,12 @@ field upstream_has_instrumented_files=True
 field upstream_has_quality_sources=False
 field wrapper=//rust/tests/fixtures/hello:hello_test
 field wrapper_has_instrumented_files=True
-field wrapper_has_quality_sources=True"""
+field wrapper_has_quality_sources=True
+aspect_field aspect_seen=True
+aspect_field field_count=27
+aspect_field has_subject=True
+aspect_field subject_label=//rust/tests/fixtures/hello:hello_test_subject
+aspect_field transitive_count=0"""
 
 def dx_wrapper_conformance_tests(name, subjects):
     starlark_test(
