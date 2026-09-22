@@ -13,8 +13,9 @@
 # - date engine stays chrono under (jiff 0.2 spike rejected: trivial
 #   day-granularity gates need no tzdb, heavier bundle/tree plus mechanical
 #   churn for a pre-1.0 single-owner crate; re-evaluate on jiff 1.0);
-# - open owned gap: upstream re-evaluation on new crate versions plus any
-#   future migration.
+# - upstream re-evaluation policy owned under #973
+#   (see docs/cli/helper-upstream-policy.md): triggers, adopt-vs-keep
+#   criteria, per-item final verdicts, migration rule.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:helper_qualification`,
 # following //tools/ci:file_family_qualification.
@@ -30,7 +31,8 @@ dx_cd_workspace
 dx_test_init
 
 contract="docs/cli/cli-contract.md"
-verify="docs/testing/verification-matrix.md"
+policy="docs/cli/helper-upstream-policy.md"
+remaining="docs/testing/verification-matrix-remaining.md"
 
 # Contract owns the qualified seed-only record under /.
 if grep -q -F -e 'qualified seed-only under issues #315/#395' "$contract" &&
@@ -294,9 +296,9 @@ else
 fi
 
 # Verification matrix keeps the qualified record with owned gaps.
-if grep -q -F -e 'helper_qualification' "$verify" &&
-  grep -q -F -e 'qualified seed-only under #315' "$verify" &&
-  grep -q -F -e 'upstream' "$verify"; then
+if grep -q -F -e 'helper_qualification' "$remaining" &&
+  grep -q -F -e 'qualified seed-only under #315' "$remaining" &&
+  grep -q -F -e 'upstream' "$remaining"; then
   ok
 else
   bad "verification-matrix lost its #315 helper qualification record"
@@ -306,11 +308,60 @@ fi
 if grep -q -F -e '#398' "$contract" &&
   grep -q -F -e 'jiff' "$contract" &&
   grep -q -F -e 'helper_qualification' "$contract" &&
-  grep -q -F -e '#398' "$verify" &&
-  grep -q -F -e 'jiff' "$verify"; then
+  grep -q -F -e '#398' "$remaining" &&
+  grep -q -F -e 'jiff' "$remaining"; then
   ok
 else
   bad "contract/matrix lost its #398 jiff-rejection record"
+fi
+
+# Upstream re-evaluation policy owned under #973: triggers plus watcher.
+if grep -q -F -e 'native bump loop' "$policy" &&
+  grep -q -F -e 'New stable major' "$policy" &&
+  grep -q -F -e 'Advisory' "$policy" &&
+  grep -q -F -e 'MSRV' "$policy" &&
+  grep -q -F -e 'Explicit migration proposal' "$policy"; then
+  ok
+else
+  bad "helper upstream policy lost its trigger plus watcher record"
+fi
+
+# Adopt-vs-keep criteria generalize the atomic_fs precedent.
+if grep -q -F -e 'cli/atomic_fs' "$policy" &&
+  grep -q -F -e 'Behavior gain' "$policy" &&
+  grep -q -F -e 'Supply-chain proportionality' "$policy" &&
+  grep -q -F -e 'Semantic fit' "$policy" &&
+  grep -q -F -e 'Contract preservation' "$policy"; then
+  ok
+else
+  bad "helper upstream policy lost its adopt-vs-keep criteria"
+fi
+
+# Per stays-hand-rolled item verdicts are final with jiff 1.0 owned separately.
+if grep -q -F -e 'Atomic write plus lock' "$policy" &&
+  grep -q -F -e 'Path ladder' "$policy" &&
+  grep -q -F -e 'LCOV scanner' "$policy" &&
+  grep -q -F -e 'SPDX lattice' "$policy" &&
+  grep -q -F -e 'Date shape gate' "$policy" &&
+  grep -q -F -e 'jiff 1.0' "$policy"; then
+  ok
+else
+  bad "helper upstream policy lost its per-item final verdicts"
+fi
+
+# Contract plus remaining point the gap at the policy under #973.
+if grep -q -F -e 'helper-upstream-policy' "$contract" &&
+  grep -q -F -e '#973' "$contract"; then
+  ok
+else
+  bad "cli-contract lost its #973 helper policy pointer"
+fi
+
+if grep -q -F -e 'helper-upstream-policy' "$remaining" &&
+  grep -q -F -e '#973' "$remaining"; then
+  ok
+else
+  bad "verification-matrix-remaining lost its #973 helper policy pointer"
 fi
 
 dx_test_summary "helper qualification harness"

@@ -85,7 +85,8 @@ Remaining reds stay owned gaps, not green claims:
   hex/blake3/sha2, diff via similar, SPDX parse via spdx, date calendar via
   chrono, scratch via tempfile, dir sizing and walks via walkdir/ignore/globset,
   LCOV `SF`/`DA` parsing via lcov with stays-hand-rolled atomic lock, path ladder,
-  LCOV ignore scanner reasons; upstream re-evaluation plus any future migration stays owned gap).
+  LCOV ignore scanner reasons; upstream re-evaluation plus any future migration
+  follows the helper upstream policy under #973, see `docs/cli/helper-upstream-policy.md`).
 - Date engine stays `chrono` with fixture evidence qualified seed-only under #398
   (`bazel run //tools/ci:helper_qualification`; `jiff 0.2` spike rejected:
   trivial day-granularity gates need no `tzdb`, heavier bundle/tree plus
