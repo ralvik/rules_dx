@@ -1,4 +1,5 @@
 load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 """Roslyn per-TFM-RID SARIF aggregation fixture."""
 
@@ -31,4 +32,52 @@ csharp_library(
     name = "roslyn",
     testonly = True,
     srcs = ["Sample.cs"],
+)
+
+# Explicit per-TFM pivots: the wrapper defaults to single-TFM net10.0, so
+# multi-pivot consumers declare one csharp_library per TFM. The net8.0 pivot
+# carries the shared CA1822 finding; the net10.0 pivot additionally compiles
+# the `#if NET10_0` block with the TFM-specific CA1303. RID stays
+# host-driven upstream (see pins.bzl); aggregation is a union over the
+# per-pivot SARIFs, never a pick-one.
+csharp_library(
+    name = "roslyn_net8",
+    testonly = True,
+    srcs = ["Sample.cs"],
+    target_frameworks = ["net8.0"],
+)
+
+csharp_library(
+    name = "roslyn_net10",
+    testonly = True,
+    srcs = ["Sample.cs"],
+    target_frameworks = ["net10.0"],
+)
+
+# Aggregation wiring: the per-pivot SARIFs plus the concatenated aggregate
+# prove deterministic pivot order with per-pivot provenance and union
+# semantics (see pins.bzl). Depends on the pivot libraries so the pivots
+# stay green alongside the SARIF proof.
+sh_test(
+    name = "roslyn_aggregation_test",
+    size = "small",
+    timeout = "short",
+    srcs = ["roslyn_aggregation_test.sh"],
+    args = [
+        "$(rootpath :net8.sarif)",
+        "$(rootpath :net10.sarif)",
+        "$(rootpath :aggregated.sarif)",
+    ],
+    data = [
+        ":aggregated.sarif",
+        ":net8.sarif",
+        ":net10.sarif",
+        ":roslyn_net8",
+        ":roslyn_net10",
+        "//tools/sh:bootstrap",
+        "//tools/sh:lib",
+    ],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
 )

@@ -84,7 +84,10 @@ def csharp_tfm_with_defaults(kwargs):
     """Returns kwargs defaulting target_frameworks plus warnings-as-errors.
 
     Caller-provided values win; only missing keys get defaults.
-    See: docs/testing/generation.md."""
+    The default is single-TFM (`net10.0`); multi-pivot consumers declare
+    one `csharp_library` per TFM and aggregate per-pivot SARIFs in
+    deterministic pivot order.
+    See: docs/testing/generation.md, csharp/tests/fixtures/roslyn/pins.bzl."""
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("target_frameworks", ["net10.0"])
     upstream_kwargs.setdefault("treat_warnings_as_errors", True)
@@ -100,7 +103,10 @@ def _csharp_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap_binary(name, _csharp_binary, _csharp_binary_forward, srcs, visibility = visibility, upstream_kwargs = _csharp_with_tfm(kwargs), **kwargs)
 
 def csharp_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `csharp_library`."""
+    """Experimental minimal wrapper over `csharp_library`.
+
+    Defaults to single-TFM `net10.0`; pass explicit `target_frameworks`
+    for any other pivot (one library per TFM, see the roslyn fixture)."""
     _csharp_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def csharp_binary(name, srcs = None, visibility = None, **kwargs):
