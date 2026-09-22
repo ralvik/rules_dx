@@ -66,10 +66,11 @@ pub enum Error {
 }
 
 fn check_path(producer: &str, path: &str) -> Result<(), Error> {
-    // Uses `dx_path::classify` for ladder order; EmptyComponent is
-    // intentionally allowed to preserve parity with Starlark
-    // `codegen_path_error`, which only rejects empty/absolute/backslash/dot
-    // segments (slice 3).
+    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
+    // EmptyComponent is intentionally allowed to preserve parity with
+    // Starlark `codegen_path_error`, which only rejects
+    // empty/absolute/backslash/dot segments; messages mirror
+    // `//generation:codegen.bzl` verbatim and are pinned by tests below.
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("must be a non-empty workspace-relative path"),
@@ -357,6 +358,62 @@ mod tests {
         let mut ok = sample();
         ok.entries[0].exec_path = "result_proto.lib.rs".into();
         assert!(validate(&ok).is_ok());
+    }
+
+    #[test]
+    fn path_messages_are_pinned_to_dx_path_ladder() {
+        // Thin wrapper over `dx_path::classify`: exact messages (mirroring
+        // `//generation:codegen.bzl`) plus ladder order are pinned so
+        // order/message drift fails here. EmptyComponent stays allowed
+        // (Starlark parity).
+        for (path, reason) in [
+            ("", "must be a non-empty workspace-relative path"),
+            ("/src/a.rs", "must not be absolute"),
+            ("src\\a.rs", "must not contain '\\'"),
+            ("src/./a.rs", "must not contain '.' or '..' segments"),
+            ("src/../a.rs", "must not contain '.' or '..' segments"),
+        ] {
+            let mut shard = sample();
+            shard.entries[0].logical_path = path.into();
+            assert_eq!(
+                validate(&shard),
+                Err(Error::BadPath {
+                    producer: "//gen:alpha".into(),
+                    path: path.into(),
+                    reason,
+                }),
+                "logical path {path:?}"
+            );
+        }
+        // Empty-component paths pass through (intentional parity gap).
+        let mut allowed = sample();
+        allowed.entries[0].logical_path = "a//b".into();
+        allowed.entries[0].import_root = "src".into();
+        assert!(
+            validate(&allowed).is_ok(),
+            "empty-component stays allowed for Starlark parity"
+        );
+        // Ladder order: absolute beats backslash/dot; backslash beats dot.
+        let mut ordered = sample();
+        ordered.entries[0].logical_path = "/src/./a.rs".into();
+        assert_eq!(
+            validate(&ordered),
+            Err(Error::BadPath {
+                producer: "//gen:alpha".into(),
+                path: "/src/./a.rs".into(),
+                reason: "must not be absolute",
+            })
+        );
+        let mut ordered = sample();
+        ordered.entries[0].logical_path = "src\\/./a.rs".into();
+        assert_eq!(
+            validate(&ordered),
+            Err(Error::BadPath {
+                producer: "//gen:alpha".into(),
+                path: "src\\/./a.rs".into(),
+                reason: "must not contain '\\'",
+            })
+        );
     }
 
     #[test]

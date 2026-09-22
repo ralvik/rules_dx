@@ -90,9 +90,9 @@ pub fn digest(bytes: &[u8]) -> [u8; DIGEST_LEN] {
 }
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
-    // Ladder order mirrors `dx_path::classify`; Dot/DotDot share the
-    // historical "dot component" message, so adoption is behavior-preserving
-    // (slice 2).
+    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
+    // Dot/DotDot share the historical "dot component" message, so adoption
+    // stays behavior-preserving; pinned tests below prove the mapping.
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
@@ -535,6 +535,63 @@ mod tests {
             Error::DuplicateFile {
                 path: "pkg/BUILD.bazel".into(),
             },
+        );
+    }
+
+    #[test]
+    fn path_messages_are_pinned_to_dx_path_ladder() {
+        // Thin wrapper over `dx_path::classify`: exact messages plus ladder
+        // order (first problem wins) are pinned so drift fails here.
+        // Dot/DotDot intentionally share one message (historical compat).
+        for (path, reason) in [
+            ("", "path must be non-empty"),
+            ("/BUILD", "path must be workspace-relative"),
+            ("a\\BUILD", "path must use forward slashes"),
+            ("a//BUILD", "path must have no empty component"),
+            ("trailing/", "path must have no empty component"),
+            ("a/./BUILD", "path must have no dot component"),
+            (".", "path must have no dot component"),
+            ("a/../BUILD", "path must have no dot component"),
+            ("..", "path must have no dot component"),
+        ] {
+            let mut manifest = sample(Mode::Check);
+            manifest.files[0].path = path.into();
+            // `pkg/BUILD.bazel` shape is bypassed by testing the ignored
+            // path instead for non-BUILD basenames; here paths already end
+            // in BUILD so `BadPath` fires before `BadBuildBasename`.
+            // For `.`/`..` etc. the path check still fires first.
+            assert_eq!(
+                validate(&manifest),
+                Err(Error::BadPath {
+                    at: "file".into(),
+                    path: path.to_owned(),
+                    reason,
+                }),
+                "path: {path:?}"
+            );
+        }
+        // Ladder order: absolute beats empty-component, dot beats dot-dot
+        // (both map to the shared dot message, but the winning rung is
+        // still order-determined).
+        let mut manifest = sample(Mode::Check);
+        manifest.files[0].path = "/a//BUILD".into();
+        assert_eq!(
+            validate(&manifest),
+            Err(Error::BadPath {
+                at: "file".into(),
+                path: "/a//BUILD".into(),
+                reason: "path must be workspace-relative",
+            })
+        );
+        let mut manifest = sample(Mode::Check);
+        manifest.files[0].path = "a\\//BUILD".into();
+        assert_eq!(
+            validate(&manifest),
+            Err(Error::BadPath {
+                at: "file".into(),
+                path: "a\\//BUILD".into(),
+                reason: "path must use forward slashes",
+            })
         );
     }
 

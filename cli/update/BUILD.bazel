@@ -25,6 +25,9 @@ dx_rust_crate(
         "src/semantics.rs",
         "src/sets.rs",
     ],
+    extra_deps = [
+        "//cli/path:dx_path",
+    ],
     deps = [
         "regex",
         "thiserror",

@@ -61,25 +61,15 @@ pub enum OutputError {
 /// the main workspace. Mirrors the result-protocol path rules so JSON-shape
 /// failures surface before diff output or mutation planning.
 pub fn check_path(path: &str) -> Result<(), OutputError> {
-    // Ladder order and messages mirror `dx_path::classify` one-to-one;
-    // only the error payload stays crate-local (slice 5).
-    let reason = match dx_path::classify(path) {
-        None => None,
-        Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
-        Some(dx_path::PathProblem::Absolute) => {
-            Some("path must be workspace-relative, not absolute")
-        }
-        Some(dx_path::PathProblem::Backslash) => Some("path must use forward slashes"),
-        Some(dx_path::PathProblem::EmptyComponent) => Some("path must have no empty component"),
-        Some(dx_path::PathProblem::Dot) => Some("path must have no '.' component"),
-        Some(dx_path::PathProblem::DotDot) => Some("path must have no '..' component"),
-    };
-    match reason {
+    // Thin wrapper around `dx_path`: ladder order and canonical messages
+    // live in `dx_path::PathProblem::reason` (sole owner); only the error
+    // payload stays crate-local.
+    match dx_path::reject_reason(path) {
+        None => Ok(()),
         Some(reason) => Err(OutputError::BadPath {
             path: path.to_owned(),
             reason,
         }),
-        None => Ok(()),
     }
 }
 
@@ -176,6 +166,47 @@ mod tests {
         assert!(check_path("a//b").is_err());
         assert!(check_path("./a").is_err());
         assert!(check_path("a/../b").is_err());
+    }
+
+    #[test]
+    fn path_messages_are_pinned_to_dx_path_ladder() {
+        // Thin wrapper over `dx_path::reject_reason`: exact messages plus
+        // ladder order (first problem wins) are pinned so order/message
+        // drift fails here, not silently downstream.
+        for (path, reason) in [
+            ("", "path must be non-empty"),
+            ("/abs", "path must be workspace-relative, not absolute"),
+            ("a\\b", "path must use forward slashes"),
+            ("a//b", "path must have no empty component"),
+            ("trailing/", "path must have no empty component"),
+            ("./a", "path must have no '.' component"),
+            (".", "path must have no '.' component"),
+            ("a/../b", "path must have no '..' component"),
+            ("..", "path must have no '..' component"),
+        ] {
+            assert_eq!(
+                check_path(path),
+                Err(OutputError::BadPath {
+                    path: path.to_owned(),
+                    reason,
+                }),
+                "path: {path:?}"
+            );
+        }
+        assert_eq!(
+            check_path("/a//b"),
+            Err(OutputError::BadPath {
+                path: "/a//b".to_owned(),
+                reason: "path must be workspace-relative, not absolute",
+            })
+        );
+        assert_eq!(
+            check_path("a/./../b"),
+            Err(OutputError::BadPath {
+                path: "a/./../b".to_owned(),
+                reason: "path must have no '.' component",
+            })
+        );
     }
 
     #[test]
