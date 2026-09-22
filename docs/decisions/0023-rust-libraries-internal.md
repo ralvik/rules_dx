@@ -6,7 +6,7 @@ Accepted.
 
 ## Context
 
-`docs/roadmap.md` carried the bare line `Rust library extraction` with no
+`Rust library extraction` was the bare planning line tracked in GitHub issues with no
 owner, while `cli/*` crates plus `quality/runner` plus `libs/` boundaries
 stayed unclear under issue #469.
 
@@ -29,7 +29,7 @@ The public boundary is binaries plus Starlark, never Rust libraries: only
 `//tools/ci:visibility_guards`); every `cli/*` library is scoped to `//cli`
 plus narrow named consumers, and `quality/*` plus `generation/*` libraries
 stay scoped to their owners. The module remains one Bzlmod release unit
-(see [ADR 0004](./0004-naming.md)), and the roadmap carries no publication
+(see [ADR 0004](./0004-naming.md)), and there is no publication
 pressure. No external Rust consumer exists.
 
 ## Decision
@@ -51,10 +51,10 @@ only with a concrete cross-package caller (see
 - All Rust `Cargo.toml` versions stay `0.0.0`; no publish metadata is added.
 - `cli/*`, `quality/*`, and `generation/*` library visibilities stay
   scoped; only the two binaries keep explicit public visibility.
-- The roadmap entry resolves to this decided record under issue #469.
+- The planning entry resolves to this decided record under issue #469.
 - Guard `//tools/ci:rust_library_qualification` pins the inventory,
   the binaries-only boundary, the `libs/` Starlark-only fact, and the
-  roadmap plus architecture links.
+  issue plus architecture links.
 
 ## Rejected Alternatives
 
@@ -64,5 +64,5 @@ only with a concrete cross-package caller (see
   release unit with no publication pressure.
 - Split repositories per crate family: rejected, same absence of caller plus
   breaks the dogfood path that validates the quality core on this tree.
-- Silent monolith (leave the roadmap line bare): rejected per issue #469,
-  the roadmap promises an explicit outcome.
+- Silent monolith (leave the planning line bare): rejected per issue #469,
+  the tracker promises an explicit outcome.

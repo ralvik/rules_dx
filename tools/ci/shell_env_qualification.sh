@@ -47,13 +47,12 @@ golden="gazelle/rust/testdata/cargo/crates/scripted/BUILD.out"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify_remaining="docs/testing/verification-matrix-remaining.md"
-roadmap="docs/roadmap.md"
 
-# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
-if grep -q -F -e 'Shell-env default vs annotation extension Seed-host-delivered (closed #472' "$roadmap"; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
-  bad "roadmap lost its shell-env Seed-host-delivered record under closed #472"
+  bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
 # Global hermetic default stays pinned False in.bazelrc.

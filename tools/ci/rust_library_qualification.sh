@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Rust library extraction qualification harness.
 #
-# docs/roadmap.md carried the bare line `Rust library extraction` with no
+# The `Rust library extraction` planning line tracked in GitHub issues with no
 # owner, while cli/* crates plus quality/runner plus libs/ boundaries stayed
 # unclear. This harness pins the decided internal-only outcome:
 # - decided: 34 internal Rust crates stay internal (27 cli/* plus 5
@@ -12,7 +12,7 @@
 # - consumer migration: none (consumers use the binaries plus the //dx
 #   Starlark facade, never the libraries directly);
 # - canonical record: ADR 0023 plus the architecture boundary section plus
-#   the roadmap decided line.
+#   the GitHub issue #469 decided line.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:rust_library_qualification`,
 # following //tools/ci:closeout_battery_qualification.
@@ -27,19 +27,17 @@ dx_cd_workspace
 
 dx_test_init
 
-roadmap="docs/roadmap.md"
 adr="docs/decisions/0023-rust-libraries-internal.md"
 adr_index="docs/decisions/README.md"
 arch="docs/architecture/README.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 
-# Roadmap owns the decided internal-only record under.
-if grep -q -F -e 'Rust library extraction decided internal-only under issue #469' "$roadmap" &&
-  grep -q -F -e 'ADR 0023' "$roadmap"; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
-  bad "roadmap lost its Rust library decided internal-only record under #469 with ADR 0023"
+  bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
 # ADR 0023 exists and stays Accepted with inventory plus boundary plus wont-extract.

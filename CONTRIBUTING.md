@@ -13,8 +13,7 @@ for current checks and tooling gaps. After the green build, run the
 
 ## Delivery Flow
 
-Planned work is listed in the
-[roadmap](docs/roadmap.md). A failed feasibility gate blocks affected scope
+Planned work lives in GitHub issues only. A failed feasibility gate blocks affected scope
 until a scope or design decision resolves it. Record decisions in the owning
 ADR or domain contract.
 

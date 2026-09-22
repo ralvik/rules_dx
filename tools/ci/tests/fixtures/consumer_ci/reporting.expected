@@ -58,7 +58,7 @@ Tag hygiene is as-built: version 0.0.0 with no v* tags, /dist/ plus
 with no publication pressure. Release inputs are reviewed pins only:
 the caller pins reusable-consumer.yml at a full 40-hex SHA that must
 match the consumer MODULE.bazel pin, with no silent upgrades. Tag
-hygiene and release-input gaps stay recorded in the roadmap. Native-bot
+hygiene and release-input gaps stay tracked in GitHub issues. Native-bot
 follow-ups stay sole updater plus native-only with no third-party
 updater retained (issue #461).
 

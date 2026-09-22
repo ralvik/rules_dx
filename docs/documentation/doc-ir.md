@@ -283,4 +283,4 @@ Per-release pin-bump plus drift process delivered seed-only under #785
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction delivered under #786.
+Tracking lives in GitHub issues. IR and adapters: #779 (delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction delivered under #786.

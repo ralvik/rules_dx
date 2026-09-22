@@ -170,7 +170,7 @@ Tests cover only implemented commands. The
 complete end-to-end matrix is required before API stabilization. The
 as-built per-language x per-layer status lives in the
 [verification matrix](verification-matrix.md) (accepted; close-out battery
-tracked in the roadmap).
+tracked in GitHub issues).
 
 Non-dogfed paths never run under the standard dogfood gates by design;
 each has an explicit execution path pinned by

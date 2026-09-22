@@ -342,7 +342,7 @@ reopen the accepted policies above. Resolve them before affected implementation:
 
 Consumer-CI qualification, release qualification, and publication of qualified
 identities are delivered tracks. Track resolved work in
-[roadmap](roadmap.md) and delivered work under closed #509 and prove the contract
+GitHub issues and delivered work under closed #509 and prove the contract
 through the [consumer CI test matrix](testing/github-ci.md). The qualification
 track stays owned under closed #509. Review-thread limit plus accounting frozen at 50 open
 threads under closed #592 (`tools/ci/tests/fixtures/review_threads/pins.bzl` plus

@@ -50,4 +50,4 @@ The wiring is pinned by `bazel run //tools/ci:docs_build_qualification`.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Build workflow: #620. Pipeline gaps: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Command surface delivered under #786 (see [`dx docs`](../cli/commands/docs.md)).
+Tracking lives in GitHub issues. Build workflow: #620. Pipeline gaps: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Command surface delivered under #786 (see [`dx docs`](../cli/commands/docs.md)).

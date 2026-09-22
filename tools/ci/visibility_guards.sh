@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Visibility hardening guard.
 #
-# docs/roadmap.md lists visibility hardening with no open owner, only
-# scattered default_visibility. Public is external API only; everything
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+# Public is external API only; everything
 # else is repo-internal or narrower. See
 # docs/contributing/build-conventions.md#visibility.
 #

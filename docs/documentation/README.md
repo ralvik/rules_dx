@@ -75,4 +75,4 @@ no published site exists today.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction: #786 (delivered). Build workflow: #620.
+Tracking lives in GitHub issues. Docs pipeline: #779 (adapters delivered) plus #780 (site delivered) plus #781 (rebuild delivered) plus #782 (link completeness delivered) plus #783 (guide-step wiring delivered) plus #784 (timing delivered) plus #785 (drift delivered). Reintroduction: #786 (delivered). Build workflow: #620.

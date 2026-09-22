@@ -12,8 +12,8 @@ surface by [ADR 0020](0020-remove-dx-docs-placeholder.md), and for the
 Remaining invocation, scope, output, and workflow-composition constraints stand.
 
 Historical note: `Oxx`/`Mxx` identifiers below predate the GitHub-issues work
-register and are not normative. Planned work lives in GitHub issues and [roadmap](../roadmap.md) (see
-delivered work under closed #453-#512 and [roadmap](../roadmap.md)). Read `frozen Oxx`
+register and are not normative. Planned work lives in GitHub issues (see
+delivered work under closed #453-#512). Read `frozen Oxx`
 phrases as pointers to the linked live contracts, not as placeholders.
 
 ## Context
@@ -39,7 +39,7 @@ The command surface is:
 - `dx format` for mutating formatting, with non-mutating `--check`.
 - `dx build` for Bazel builds.
 - `dx docs` was removed by [ADR 0020](0020-remove-dx-docs-placeholder.md); see
-  that record and open work under [roadmap](../roadmap.md).
+  that record and open work in GitHub issues.
   No `dx docs` surface is selected.
 - `dx update` for authoritative dependency-update workflows.
 - `dx generate` for the mutating repository-defined Gazelle workflow, with non-mutating

@@ -85,7 +85,7 @@ Each candidate must become required v1 scope, a recorded additional-foundation d
 evidence-backed recorded exclusion. No individual foundation is deferred by this policy alone.
 There is no post-v1 bucket for workflow scope: delivered work under closed #462,
 delivered work under closed #463, and
-delivered work under closed #787 and closed #788 (successors to closed #506) are v1 scope per the sole repository maintainer decision in [roadmap](../roadmap.md).
+delivered work under closed #787 and closed #788 (successors to closed #506) are v1 scope per the sole repository maintainer decision tracked in GitHub issues.
 Record missing upstream rules, non-hermetic acquisition, unsupported platform requirements, or
 substantial integration effort precisely, including concrete gaps and ongoing maintenance ownership.
 Scheduling preference and omission from the original plan are not feasibility failures.
@@ -327,4 +327,4 @@ retired them live only in git history.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Depcheck: closed #22. Codegen: closed #787, closed #788. Adapters: closed #796-#800. Docs reintroduction: closed #786.
+Tracking lives in GitHub issues. Depcheck: closed #22. Codegen: closed #787, closed #788. Adapters: closed #796-#800. Docs reintroduction: closed #786.

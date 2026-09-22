@@ -252,10 +252,10 @@ fi
 
 # bare open/planned work stays owned (same family as / guards):
 # every `open work` or `planned work` line in docs/ must name its owner on the
-# same line via `issue(s) #` or `roadmap` (owner plus ADR/contract/issue link
-# or roadmap entry,; no new Mxx/Oxx).
-if git grep -n -i -E -e 'open work|planned work' -- docs/ 2>/dev/null | grep -v -E -e 'issues? #' | grep -v -i -e 'roadmap' | grep -q .; then
-  bad "bare open/planned work appeared (name owner plus ADR/contract/issue link or roadmap entry on the same line, issue #446)"
+# same line via `issue(s) #` or `GitHub issues` (owner plus ADR/contract/issue link,
+# no new Mxx/Oxx). Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if git grep -n -i -E -e 'open work|planned work' -- docs/ 2>/dev/null | grep -v -E -e 'issues? #' | grep -v -i -e 'GitHub issues' | grep -q .; then
+  bad "bare open/planned work appeared (name owner plus ADR/contract/issue link on the same line, issue #446)"
 else
   ok
 fi

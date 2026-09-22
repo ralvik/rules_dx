@@ -245,7 +245,7 @@ a universal language abstraction: shared Gazelle mechanics are extracted only wh
 implementations demonstrate real reuse. This sequence preserves the accepted foundation decisions
 while avoiding speculative cross-language APIs.
 
-The delivery order is tracked in [roadmap](../roadmap.md) and
+The delivery order is tracked in GitHub issues and
 delivered work under closed #470-#505. Foundation constraints are recorded in
 [ADR 0010](../decisions/0010-python-foundation.md),
 [ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md), and
@@ -260,4 +260,4 @@ directly through Bazel; ownership is inspectable through query interfaces.
 Command, output, and report behavior is authoritative under [CLI](../cli/);
 quality evidence under [Quality](../quality/). Known design conflicts and
 their last-agreed resolutions live in the [contradiction catalog](contradiction-catalog.md).
-Open work lives in [roadmap](../roadmap.md) and delivered work under closed #470-#512.
+Open work lives in GitHub issues and delivered work under closed #470-#512.

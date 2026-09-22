@@ -59,7 +59,6 @@ site="docs/documentation/site.md"
 stub="docs/cli/commands/docs.md"
 adr20="docs/decisions/0020-remove-dx-docs-placeholder.md"
 scope="docs/product/scope.md"
-roadmap="docs/roadmap.md"
 matrix="docs/testing/verification-matrix.md"
 support="docs/product/support-matrix.md"
 cli_errors="cli/cli/src/args/error.rs"
@@ -303,7 +302,7 @@ if grep -q -F -e 'guide-step CI wiring delivered seed-only under #783' "$site" &
   grep -q -F -e 'drift process delivered seed-only under #785' "$site" &&
   grep -q -F -e 'guide-step CI wiring delivered seed-only under #783' "$matrix" &&
   grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$matrix" &&
-  grep -q -F -e 'guide prose with' "$roadmap"; then
+  grep -q -F -e 'guide prose with guide-step CI wiring delivered seed-only under #783' "$readme"; then
   ok
 else
   bad "guide-step CI wiring plus first-hour timing plus drift delivery lost its owner (#783/#784/#785)"
@@ -396,19 +395,15 @@ else
   bad "documentation README lost its #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered list"
 fi
 
-# Roadmap keeps adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift
-# delivered with no execution gaps remaining.
-if grep -q -F -e 'adapter runs delivered under #779 plus renderer/site execution' "$roadmap" &&
-  grep -q -F -e 'delivered under #780 plus rebuild proof delivered under #781' "$roadmap" &&
-  grep -q -F -e 'completeness delivered under #782' "$roadmap" &&
-  grep -q -F -e 'guide-step CI wiring delivered seed-only under #783' "$roadmap" &&
-  grep -q -F -e 'timing proof delivered seed-only under #784' "$roadmap" &&
-  grep -q -F -e 'drift process delivered' "$roadmap" &&
-  grep -q -F -e 'No execution gaps remain' "$roadmap" &&
-  grep -q -F -e 'no working site claimed' "$roadmap"; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981);
+# the adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift
+# delivered record lives in the documentation README plus verification matrix.
+if [[ ! -f "docs/roadmap.md" ]] &&
+  grep -q -F -e 'per-release pin-bump plus drift process delivered seed-only under #785' "$readme" &&
+  grep -q -F -e 'no working site claimed' "$matrix"; then
   ok
 else
-  bad "roadmap lost its #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered list"
+  bad "docs/roadmap.md still exists or the #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered list lost its owner"
 fi
 
 # Verification matrix keeps Docs with no Supported claim and no
@@ -453,8 +448,7 @@ if grep -q -F -e 'live successor to closed #421' "$readme" &&
   grep -q -F -e 'live successor to closed #421' "$docir" &&
   grep -q -F -e 'live successor to closed #421' "$site" &&
   grep -q -F -e 'live successor to closed #421' "$stub" &&
-  grep -q -F -e 'live successor to closed #421' "$scope" &&
-  grep -q -F -e 'live successor to closed #421' "$roadmap"; then
+  grep -q -F -e 'live successor to closed #421' "$scope"; then
   ok
 else
   bad "docs pipeline tracker lost its #581 live-successor-to-closed-#421 lineage"

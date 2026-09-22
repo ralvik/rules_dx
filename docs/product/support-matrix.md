@@ -98,7 +98,7 @@ this matrix, and promotion to `Supported` requires release evidence.
 `Audit` means per-language source audit over declared source owners, distinct from the
 verification-matrix `Audit/update` column which records repo-wide `dx audit`/`dx update`
 live execution (ecosystem resolvers, advisory matching, secrets wiring). A source-`Audit`
-cell of `Not planned` or `Planned: audit tools (open work)` is consistent with a `Delivered`
+cell of `Not planned` or `Planned: audit tools` is consistent with a `Delivered`
 ecosystem `Audit/update` cell: Rust, JavaScript, TypeScript, Vue, Svelte, Astro, and MDX
 source audit is `Not planned` while ecosystem audit/update is delivered repo-wide, and Python
 source-audit tooling is qualified seed-only under closed #801 (successor to closed #613; Ruff S selected, Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801) while ecosystem audit/update wiring is delivered.
@@ -513,4 +513,4 @@ The following are source/documentation observations; no builds were executed:
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Platform hosts: closed #410, closed #411, closed #412, closed #413, closed #414. Release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot, process closed #808. Foundation mappings: closed #470-#489, closed #796-#800. See the roadmap for the full list.
+Tracking lives in GitHub issues; this support matrix stays the status source. Platform hosts: closed #410, closed #411, closed #412, closed #413, closed #414. Release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot, process closed #808. Foundation mappings: closed #470-#489, closed #796-#800.

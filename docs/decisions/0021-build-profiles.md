@@ -55,7 +55,7 @@ Two provisional lanes reserve stable names without changing behavior:
 Selecting either lane equals `dx_dev` today. Both are additive only; no
 existing invocation changes meaning, and the CLI surface is unchanged (no
 new `--remote`/`--toolchain` flags; Bazel-level lanes only). Executor plus
-toolchain flag qualification stays open work linked from the roadmap, not
+toolchain flag qualification stays open work tracked in GitHub issues, not
 claimed here.
 
 ## Consequences
