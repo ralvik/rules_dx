@@ -187,7 +187,7 @@ fi
 # schema marker with query helpers, so additions edit registry data plus
 # compat, never a parallel allowlist.
 version_clean=1
-for spec in "SOURCES_REGISTRY_SCHEMA_VERSION = 1:quality/sources.bzl" "ADAPTER_REGISTRY_SCHEMA_VERSION = 1:quality/adapters.bzl" "CURATED_SCHEMA_VERSION = 1:quality/curated_defaults.bzl" "PARITY_SCHEMA_VERSION = 1:quality/parity_tests.bzl" "REGISTRY_SCHEMA_VERSION = 1:quality/registry.bzl" "CODEGEN_SCHEMA_VERSION = 1:generation/codegen.bzl" "TAG_SCHEMA_VERSION = 1:deploy/rules/github.bzl"; do
+for spec in "SOURCES_REGISTRY_SCHEMA_VERSION = 1:quality/sources.bzl" "ADAPTER_REGISTRY_SCHEMA_VERSION = 1:quality/adapters.bzl" "CURATED_SCHEMA_VERSION = 1:quality/curated_defaults.bzl" "PARITY_SCHEMA_VERSION = 1:quality/parity_tests.bzl" "WRAPPER_SCHEMA_VERSION = 1:quality/wrapper_owners.bzl" "REGISTRY_SCHEMA_VERSION = 1:quality/registry.bzl" "CODEGEN_SCHEMA_VERSION = 1:generation/codegen.bzl" "TAG_SCHEMA_VERSION = 1:deploy/rules/github.bzl"; do
   marker="${spec%%:*}"
   file="${spec##*:}"
   if grep -q -F -e "$marker" "$file"; then
@@ -203,11 +203,12 @@ if grep -q -F -e 'def registry_schema_error' quality/registry.bzl &&
   grep -q -F -e 'def adapter_registry_schema_error' quality/adapters.bzl &&
   grep -q -F -e 'def curated_schema_error' quality/curated_defaults.bzl &&
   grep -q -F -e 'def parity_schema_error' quality/parity_tests.bzl &&
+  grep -q -F -e 'def wrapper_schema_error' quality/wrapper_owners.bzl &&
   grep -q -F -e 'def codegen_schema_error' generation/codegen.bzl &&
   grep -q -F -e 'def tag_schema_error' deploy/rules/github.bzl; then
   ok
 else
-  bad "versioned registry query helpers missing (registry/sources/adapter/curated/parity/codegen/tag schema errors, issue #321)"
+  bad "versioned registry query helpers missing (registry/sources/adapter/curated/parity/wrapper/codegen/tag schema errors, issue #321)"
 fi
 if grep -q -F -e 'LICENSE_POLICY_SCHEMA_VERSION' cli/audit/src/license_policy.rs &&
   grep -q -F -e 'EXCEPTION_SCHEMA_VERSION' cli/audit/src/exception.rs; then

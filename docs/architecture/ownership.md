@@ -35,7 +35,7 @@ config/               # public workspace policy provider (@rules_dx//config)
 quality/              # aspects, QualitySourcesInfo, result protocol, runners
 generation/           # first-party Gazelle extensions + manifest transport
 env/                  # environment projections (//dx:env etc.; codegen collector lives in generation/ plus cli/codegen behind //dx:codegen)
-cc/ go/ java/ javascript/ typescript/ python/ rust/ kotlin/ scala/ csharp/ fsharp/ astro/ mdx/ svelte/ vue/  # language and file-family foundations (wrappers, toolchains, providers)
+cc/ go/ java/ javascript/ typescript/ python/ rust/ kotlin/ scala/ csharp/ fsharp/ astro/ mdx/ svelte/ vue/ ruby/ powershell/  # language and file-family foundations (wrappers, toolchains, providers)
 cli/                  # dx CLI Rust implementation (libs visible to //cli only; tools //cli/cli:dx, //cli/env:env)
 dx/                   # consumer facade, Starlark-only (//dx:generate, //dx:env, //dx:codegen, //dx:config)
 tools/                # internal acquisition, adapters, metadata (not public)

@@ -36,9 +36,9 @@ quality_source_target = rule(
 )
 
 def _real_source_target_impl(ctx):
-    # File-family classes without dedicated wrappers (cue/jsonnet/pkl/css
-    # and kin, plus go_module) stay fixture- and matrix-owned ad-hoc
-    # (See: docs/quality/quality-sources.md): this rule covers the
+    # File-family families without dedicated wrappers stay fixture- and
+    # matrix-owned ad-hoc (See: docs/quality/quality-sources.md; Owning
+    # contract: quality/wrapper_owners.bzl): this rule covers the
     # aspect-wired core, runner matrices cover the rest, never a second
     # wrapper allowlist. `cuda` is wrapper-owned via `cc_*` (See:
     # cc/rules/defs.bzl), not fixture-owned here.

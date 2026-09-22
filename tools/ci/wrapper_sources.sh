@@ -215,4 +215,60 @@ else
   bad "ownership-audit split drifted (code vs corpus scopes)"
 fi
 
+# Wrapper ownership for the framework/file-family long tail: every taxonomy
+# family carries a wrapper owner label or the explicit "other" uncovered
+# verdict in quality/wrapper_owners.bzl, so no file family rots without a
+# conformance path. Owned labels must exist and advertise QualitySourcesInfo;
+# shared cuda ownership must be real in the cc wrapper.
+dx_mkscratch wrapper_scratch
+sed -n '/^REAL_CLASS_TO_FAMILY = {/,/^}/p' quality/adapters.bzl |
+  grep -o -E '"[a-z0-9_]+": "[a-z0-9_]+"' |
+  sed 's/.*": "//; s/"//' |
+  LC_ALL=C sort -u >"$wrapper_scratch/taxonomy_families.txt"
+sed -n '/^WRAPPER_OWNERS = {/,/^}/p' quality/wrapper_owners.bzl |
+  grep -o -E '"[a-z0-9_]+":' |
+  tr -d '":' |
+  LC_ALL=C sort -u >"$wrapper_scratch/owner_families.txt"
+if
+  missing="$(comm -23 "$wrapper_scratch/taxonomy_families.txt" "$wrapper_scratch/owner_families.txt")"
+  [[ -z "$missing" ]]
+then
+  ok
+else
+  bad "wrapper owners miss taxonomy families: $(echo "$missing" | tr '\n' ' ')"
+fi
+if
+  extra="$(comm -13 "$wrapper_scratch/taxonomy_families.txt" "$wrapper_scratch/owner_families.txt")"
+  [[ -z "$extra" ]]
+then
+  ok
+else
+  bad "wrapper owners name families outside the taxonomy: $(echo "$extra" | tr '\n' ' ')"
+fi
+owner_fail=""
+while read -r line; do
+  family="$(echo "$line" | sed 's/.*"\([a-z0-9_]*\)".*/\1/')"
+  owner="$(echo "$line" | sed 's/.*": "//; s/"//' | cut -d'"' -f1)"
+  if [[ "$owner" == "other" ]]; then
+    continue
+  fi
+  path="$(echo "$owner" | sed 's|^//||; s|:|/|')"
+  if [[ ! -f "$path" ]]; then
+    owner_fail="$owner_fail $family:missing-$owner"
+  elif ! grep -q -F -e 'QualitySourcesInfo' "$path"; then
+    owner_fail="$owner_fail $family:no-quality-sources"
+  fi
+done < <(sed -n '/^WRAPPER_OWNERS = {/,/^}/p' quality/wrapper_owners.bzl | grep -o -E '"[a-z0-9_]+": "(//[^"]+|other)"')
+if [[ -z "$owner_fail" ]]; then
+  ok
+else
+  bad "wrapper owner labels drifted:$owner_fail"
+fi
+if grep -q -F -e '"cuda": "//cc/rules:defs.bzl"' quality/wrapper_owners.bzl &&
+  grep -q -F -e '"cuda"' cc/rules/defs.bzl; then
+  ok
+else
+  bad "shared cuda wrapper ownership drifted (want cc wrapper owning cuda)"
+fi
+
 dx_test_summary "wrapper sources harness"
