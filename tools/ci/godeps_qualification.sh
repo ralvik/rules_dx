@@ -45,6 +45,7 @@ gomod="third_party/go/go.mod"
 gosum="third_party/go/go.sum"
 gomod_build="third_party/go/BUILD.bazel"
 module="MODULE.bazel"
+toolchains="modules/toolchains.bzl"
 lock="MODULE.bazel.lock"
 common="docs/generation/common.md"
 matrix="docs/product/support-matrix.md"
@@ -63,10 +64,48 @@ fi
 # Pins record the ruleset plus toolchain plus gazelle identities.
 if grep -q -F -e 'RULES_GO_VERSION = "0.63.0"' "$pins" &&
   grep -q -F -e 'GO_SDK_VERSION = "1.26.6"' "$pins" &&
+  grep -q -F -e 'GO_LANGUAGE_FLOOR = "1.24.12"' "$pins" &&
   grep -q -F -e 'GAZELLE_VERSION = "0.52.2"' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its rules_go plus Go SDK plus gazelle pins under issue #483"
+  bad "pins.bzl lost its rules_go plus Go SDK plus language floor plus gazelle pins under issue #483"
+fi
+
+# Go version single-source (issue #1003): the SDK is the toolchain floor,
+# go.mod carries the language floor tracking gazelle 0.52.2's go 1.24.12
+# so the shared go_deps extension sees no version conflict; the SDK minor
+# stays >= the floor. Canonical pins live in modules/toolchains.bzl.
+pins_sdk="$(grep -o -E -e '^GO_SDK_VERSION = "[^"]+"' "$pins" | head -1 | cut -d'"' -f2 || true)"
+pins_floor="$(grep -o -E -e '^GO_LANGUAGE_FLOOR = "[^"]+"' "$pins" | head -1 | cut -d'"' -f2 || true)"
+gomod_directive="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$gomod" | head -1 | cut -d' ' -f2 || true)"
+wrapper_sdk="$(grep -o -E -e '^GO_SDK_VERSION = "[^"]+"' "$toolchains" | head -1 | cut -d'"' -f2 || true)"
+wrapper_floor="$(grep -o -E -e '^GO_LANGUAGE_FLOOR = "[^"]+"' "$toolchains" | head -1 | cut -d'"' -f2 || true)"
+module_sdk="$(sed -n '/go_sdk.download(/,/)/p' "$module" | grep -o -E -e 'version = "[^"]+"' | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+if [[ -n "$pins_sdk" && "$pins_sdk" == "$wrapper_sdk" && "$pins_sdk" == "$module_sdk" ]]; then
+  ok
+else
+  bad "Go SDK drifts (pins $pins_sdk vs wrapper $wrapper_sdk vs MODULE $module_sdk; want single-source 1.26.6, issue #1003)"
+fi
+if [[ -n "$pins_floor" && "$pins_floor" == "$wrapper_floor" && "$pins_floor" == "$gomod_directive" ]]; then
+  ok
+else
+  bad "Go language floor drifts (pins $pins_floor vs wrapper $wrapper_floor vs go.mod $gomod_directive; want single-source 1.24.12, issue #1003)"
+fi
+if [[ "$gomod_directive" == "1.24.12" ]]; then
+  ok
+else
+  bad "third_party/go/go.mod go directive is $gomod_directive, want 1.24.12 tracking gazelle 0.52.2 (issue #1003)"
+fi
+if [[ -n "$pins_sdk" && -n "$pins_floor" ]]; then
+  sdk_mm="$(echo "$pins_sdk" | cut -d. -f1,2)"
+  floor_mm="$(echo "$pins_floor" | cut -d. -f1,2)"
+  s_maj="${sdk_mm%%.*}"; s_min="${sdk_mm#*.}"
+  f_maj="${floor_mm%%.*}"; f_min="${floor_mm#*.}"
+  if [[ "$s_maj" -gt "$f_maj" ]] || { [[ "$s_maj" == "$f_maj" ]] && [[ "$s_min" -ge "$f_min" ]]; }; then
+    ok
+  else
+    bad "Go SDK $pins_sdk predates language floor $pins_floor (want SDK minor >= floor, issue #1003)"
+  fi
 fi
 
 # Pins record the from_file wiring plus single-module go.work rule.

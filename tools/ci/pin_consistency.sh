@@ -20,9 +20,12 @@
 #   Tool repos: `quality/artifacts/repos.bzl` owns the `dx_tools`
 #     `use_repo` inventory; `//quality/artifacts:metadata` proves it
 #     against metadata and this test proves MODULE.bazel against it.
-#   Go toolchain: `MODULE.bazel` `go_sdk.download` owns the toolchain floor;
-#     `third_party/go/go.mod` carries the language floor (SDK minor must stay
-#     >= go.mod minor, issue #912).
+#   Go toolchain: `modules/toolchains.bzl` `GO_SDK_VERSION` owns the
+#     toolchain floor (MODULE.bazel `go_sdk.download` mirrors it);
+#     `GO_LANGUAGE_FLOOR` owns the language floor
+#     (`third_party/go/go.mod` `go` directive mirrors it and tracks
+#     gazelle 0.52.2). SDK minor must stay >= go.mod minor
+#     (issues #912, #1003).
 #   pnpm version: root `package.json` `packageManager` owns the pnpm pin;
 #     `quality/tools/javascript/package.json` must match and `MODULE.bazel`
 #     resolves the toolchain from the root pin (issue #912).
