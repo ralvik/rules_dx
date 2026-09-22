@@ -1,6 +1,5 @@
 //! Managed `.dx/bin` bootstrap tests (split from `lib.rs`).
 //! Originally the inline `mod tests` of `lib.rs`.
-#![allow(unused_imports)]
 
 use super::*;
 

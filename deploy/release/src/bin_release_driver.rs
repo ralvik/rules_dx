@@ -40,10 +40,7 @@ fn run(argv: &[String]) -> i32 {
             print!("{text}");
             0
         }
-        Err(diagnostic) => {
-            eprintln!("{diagnostic}");
-            1
-        }
+        Err(diagnostic) => dx_release_tools::bin_error(diagnostic),
     }
 }
 

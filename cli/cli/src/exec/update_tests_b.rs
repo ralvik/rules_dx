@@ -1,10 +1,8 @@
 //! Split from `update.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::super::test_support::*;
 use super::update_tests_a::*;
-use super::*;
 
 #[test]
 fn check_clean_passes_without_launching() {

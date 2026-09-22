@@ -1,6 +1,5 @@
 //! Split from `locks.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::*;
 

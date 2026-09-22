@@ -1,6 +1,5 @@
 //! Split from `vuln.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::*;
 

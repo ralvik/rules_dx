@@ -35,6 +35,8 @@ pub(crate) use packages::PackageCache;
 pub(crate) use query::{ownership_set_expression, quote_set, run_label_query};
 pub use run_deploy::{check_deployable, resolve_deploy, resolve_run, DeployInfo};
 pub use test_map::map_owners_to_tests;
+#[cfg(test)]
+pub(crate) use types::NeverQuery;
 pub use types::{ProcessQueryRunner, QueryResult, QueryRunner, ResolveError, ResolvedScope};
 
 #[cfg(test)]
@@ -43,17 +45,7 @@ mod tests {
     use std::io;
     use std::path::Path;
 
-    /// Query runner that fails the test on any call: directory scopes
-    /// must resolve without touching Bazel.
-    struct NeverQuery;
-
-    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
-    impl QueryRunner for NeverQuery {
-        fn run_query(&self, _argv: &[String], _cwd: &Path) -> io::Result<QueryResult> {
-            panic!("directory and label scopes must not run queries");
-        }
-    }
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // Shared test guard: `super::NeverQuery` (see `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

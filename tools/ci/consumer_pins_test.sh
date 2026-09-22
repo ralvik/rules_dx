@@ -90,7 +90,9 @@ fi
 # Coverage threshold fragment: extract the DX_MIN_COVERAGE block from
 # the coverage job (anchored to the `run: |` indent so the range cannot
 # bleed into the following steps) and execute it over a value matrix.
-awk '/^          extra=""$/,/^          fi$/ {sub(/^          /, ""); print}' "$workflow" >"$scratch/threshold.sh"
+# Array form (issue #914): `extra` is an argv array, probed via
+# `${extra[*]}` (space-joined) so empty stays zero words.
+awk '/^          extra=\(\)$/,/^          fi$/ {sub(/^          /, ""); print}' "$workflow" >"$scratch/threshold.sh"
 grep -q 'DX_MIN_COVERAGE' "$scratch/threshold.sh" || {
   echo "threshold extraction missed the block" >&2
   exit 1
@@ -104,7 +106,7 @@ threshold() { # value-or-unset, want_extra, want_exit
   local script="$scratch/run_threshold.sh"
   {
     cat "$scratch/threshold.sh"
-    echo 'printf "%s:%s" "$extra" "$?"'
+    echo 'printf "%s:%s" "${extra[*]}" "$?"'
   } >"$script"
   local out rc=0
   if [[ "$value" == "UNSET" ]]; then

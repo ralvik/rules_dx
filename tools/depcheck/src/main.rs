@@ -53,6 +53,14 @@ fn parse_eco(text: &str) -> Result<String, String> {
     }
 }
 
+/// Shared unknown-ecosystem failure (issue #914): both subcommands
+/// reject unparsed ecosystems identically instead of copy-pasting the
+/// `eprintln!` plus exit code.
+fn unknown_ecosystem(ecosystem: &str) -> i32 {
+    eprintln!("depcheck: ERROR: unknown ecosystem: {ecosystem}");
+    2
+}
+
 fn run() -> i32 {
     let cli = Cli::parse();
     // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
@@ -63,8 +71,7 @@ fn run() -> i32 {
             lock,
         } => {
             let Some(eco) = dx_depcheck::Ecosystem::parse(&ecosystem) else {
-                eprintln!("depcheck: ERROR: unknown ecosystem: {ecosystem}");
-                return 2;
+                return unknown_ecosystem(&ecosystem);
             };
             let mut out = String::new();
             let mut err = String::new();
@@ -84,8 +91,7 @@ fn run() -> i32 {
             exceptions,
         } => {
             let Some(eco) = dx_depcheck::Ecosystem::parse(&ecosystem) else {
-                eprintln!("depcheck: ERROR: unknown ecosystem: {ecosystem}");
-                return 2;
+                return unknown_ecosystem(&ecosystem);
             };
             let mut out = String::new();
             let mut err = String::new();

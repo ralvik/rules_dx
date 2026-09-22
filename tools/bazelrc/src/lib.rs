@@ -122,6 +122,23 @@ pub fn source_dir(workspace: &Path) -> PathBuf {
     workspace.join("tools/bazelrc")
 }
 
+/// Shared thin-binary helpers (issue #914): the `preset.update` shim
+/// reports usage and failures through these so `eprintln!` plus exit
+/// codes stay single-sourced. See: `docs/contributing/local-workflows.md`.
+pub fn bin_usage() -> i32 {
+    eprintln!("usage: preset.update [--verify-only]");
+    1
+}
+
+/// Reports a failed `preset.update` operation to stderr. Returns the
+/// process exit code (1). Callers pass the full message: `PresetError`
+/// already carries its `preset.update:` prefix, while I/O failures are
+/// formatted with one by the caller.
+pub fn bin_cannot(error: impl std::fmt::Display) -> i32 {
+    eprintln!("{error}");
+    1
+}
+
 /// Workspace root for the update binary.
 ///
 /// Under `bazel run` the workspace comes from

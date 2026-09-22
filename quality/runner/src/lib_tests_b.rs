@@ -1,9 +1,8 @@
 //! Split from `lib.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::*;
-use quality_result::{decode_validated, encode_validated, validate};
+use quality_result::{assert_all_equal, encode_validated, validate};
 
 fn stage(tool: &str, classes: &[&str], sources: &[&str]) -> StageSpec {
     StageSpec {
@@ -181,9 +180,7 @@ fn mutation_outcome_depends_on_bytes_not_git_status() {
         assert!(validate(&result).is_ok(), "{status}");
         manifests.push(encode_validated(&result).unwrap());
     }
-    for other in manifests.iter().skip(1) {
-        assert_eq!(&manifests[0], other);
-    }
+    assert_all_equal(&manifests);
     // Same simulated status with different bytes diverges.
     let clean = vec![file("src/lib.rs", "GOOD\n")];
     let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();
@@ -304,9 +301,7 @@ fn env_permutations_do_not_alter_pipeline_outputs() {
         assert!(validate(&result).is_ok());
         manifests.push(encode_validated(&result).unwrap());
     }
-    for other in manifests.iter().skip(1) {
-        assert_eq!(&manifests[0], other);
-    }
+    assert_all_equal(&manifests);
     // Same simulated env with different bytes diverges.
     let clean = vec![file("src/lib.rs", "GOOD\n")];
     let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();
@@ -343,9 +338,7 @@ fn checkout_paths_do_not_alter_pipeline_outputs() {
         assert!(validate(&result).is_ok());
         manifests.push(encode_validated(&result).unwrap());
     }
-    for other in manifests.iter().skip(1) {
-        assert_eq!(&manifests[0], other);
-    }
+    assert_all_equal(&manifests);
     // Same simulated checkout with different bytes diverges.
     let clean = vec![file("src/lib.rs", "GOOD\n")];
     let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();

@@ -4,6 +4,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 exports_files([
     "behavioral_matrix.md",
+    "canonical.bzl",
     "defs.bzl",
     "failure_test.bzl",
     "wrapper.bzl",
@@ -24,6 +25,7 @@ real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
         "BUILD.bazel",
+        "canonical.bzl",
         "defs.bzl",
         "failure_test.bzl",
         "wrapper.bzl",

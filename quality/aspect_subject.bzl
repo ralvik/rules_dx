@@ -2,14 +2,12 @@
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:canonical.bzl", "strip_canonical")
 load("//quality:aspects.bzl", "audit_aspect", "format_aspect", "lint_aspect", "typecheck_aspect")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def _label_text(label):
-    text = str(label)
-    if text.startswith("@@"):  # buildifier: disable=canonical-repository
-        return text[2:]
-    return text
+    return strip_canonical(str(label))
 
 def _aspect_subject_impl(ctx):
     target = ctx.attr.target

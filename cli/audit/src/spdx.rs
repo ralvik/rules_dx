@@ -270,6 +270,12 @@ pub fn spdx_package(
 mod tests {
     use super::*;
 
+    /// Test-only SPDX document namespace (issue #914): `invalid.test`
+    /// (RFC 2606) can never resolve, so it cannot be copied into a real
+    /// SLSA builder ID, unlike `example.com`. Go `example.com/hello`
+    /// purl fixtures below stay: they are package names, not namespaces.
+    const TEST_NAMESPACE: &str = "https://invalid.test/dx-audit-1";
+
     #[test]
     fn package_urls_follow_purl_shapes() {
         assert_eq!(
@@ -412,12 +418,7 @@ mod tests {
             "SPDXRef-Package-1".to_owned(),
             "SPDXRef-Package-2".to_owned(),
         )];
-        let text = render_spdx(
-            &roots,
-            &packages,
-            &contains,
-            "https://example.com/dx-audit-1",
-        );
+        let text = render_spdx(&roots, &packages, &contains, TEST_NAMESPACE);
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
         assert_eq!(value["spdxVersion"], serde_json::json!("SPDX-2.3"));
         assert_eq!(value["dataLicense"], serde_json::json!("CC0-1.0"));
@@ -475,7 +476,7 @@ mod tests {
             spdx_package("cargo", "serde", "1.0.100", "MIT", 1),
             spdx_package("go", "example.com/hello", "1.0.0", "NOASSERTION", 3),
         ];
-        let text = render_spdx(&roots, &packages, &[], "https://example.com/dx-audit-1");
+        let text = render_spdx(&roots, &packages, &[], TEST_NAMESPACE);
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
         // Envelope: exactly one document per invocation, never per
         // package/set/root.
@@ -485,7 +486,7 @@ mod tests {
         assert_eq!(value["name"], serde_json::json!("dx-audit-license"));
         assert_eq!(
             value["documentNamespace"],
-            serde_json::json!("https://example.com/dx-audit-1")
+            serde_json::json!(TEST_NAMESPACE)
         );
         // Packages sorted by ID for determinism with the full V1 field
         // set: concluded/declared, NOASSERTION copyright, single purl ref.

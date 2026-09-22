@@ -1,9 +1,8 @@
 //! Split from `lib.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::*;
-use quality_result::{decode_validated, encode_validated, validate};
+use quality_result::{assert_all_equal, decode_validated, encode_validated, validate};
 
 fn stage(tool: &str, classes: &[&str], sources: &[&str]) -> StageSpec {
     StageSpec {
@@ -186,9 +185,7 @@ fn file_modes_do_not_alter_pipeline_outputs() {
         assert!(validate(&result).is_ok());
         manifests.push(encode_validated(&result).unwrap());
     }
-    for other in manifests.iter().skip(1) {
-        assert_eq!(&manifests[0], other);
-    }
+    assert_all_equal(&manifests);
     let clean = vec![file("src/lib.rs", "GOOD\n")];
     let clean_result = run_pipeline("//quality:test", "lint", &stages, &clean).unwrap();
     assert!(clean_result.replacements.is_empty());

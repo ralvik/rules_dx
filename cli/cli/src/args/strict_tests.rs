@@ -7,13 +7,8 @@
 //! consumed as option values, `dx bazel` tails forward verbatim,
 //! and `--help`/`-h` render from the same grammar that parses.
 
-#![allow(unused_imports)]
-
-use super::*;
-
-use super::super::{ArgsError, Command, ReportRequest};
+use super::super::{ArgsError, Command};
 use super::parse;
-use dx_output::{OutputMode, Threshold};
 
 fn args(words: &[&str]) -> Vec<String> {
     words.iter().map(ToString::to_string).collect()
@@ -249,7 +244,7 @@ fn strict_no_help_verb_help_is_flag_only() {
 
 #[test]
 fn strict_help_is_generated_from_the_same_grammar() {
-    use clap::{CommandFactory, ValueEnum};
+    use clap::ValueEnum;
     let text = match parse(&args(&["--help"])) {
         Err(ArgsError::Help { text }) => text,
         other => panic!("want Help, got {other:?}"),

@@ -1,6 +1,5 @@
 //! Bump widen planning tests (split from `request.rs`).
 //! Originally the inline `mod tests` of `request.rs`.
-#![allow(unused_imports)]
 
 use super::*;
 

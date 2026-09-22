@@ -4,13 +4,11 @@
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
+load("//libs/starlark:canonical.bzl", "strip_canonical")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def _label_text(label):
-    text = str(label)
-    if text.startswith("@@"):  # buildifier: disable=canonical-repository
-        return text[2:]
-    return text
+    return strip_canonical(str(label))
 
 def _sorted_basenames(files):
     return sorted([f.basename for f in files])
