@@ -34,13 +34,13 @@ dx_bash_pin
 
 contract="docs/cli/cli-contract.md"
 policy="docs/cli/helper-upstream-policy.md"
-remaining="docs/testing/verification-matrix-remaining.md"
 
-# Contract owns the qualified seed-only record under /.
+# Contract owns the qualified seed-only record under #315/#395 with future migration owned under #973.
 if grep -q -F -e 'qualified seed-only under issues #315/#395' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:helper_qualification' "$contract" &&
   grep -q -F -e 'upstream' "$contract" &&
-  grep -q -F -e 'stays owned gap' "$contract"; then
+  grep -q -F -e 'helper-upstream-policy' "$contract" &&
+  grep -q -F -e '#973' "$contract"; then
   ok
 else
   bad "cli-contract lost its qualified seed-only record under #315/#395"
@@ -297,24 +297,14 @@ else
   bad "audit lost its SPDX fail-closed plus leap-day evidence"
 fi
 
-# Verification matrix keeps the qualified record with owned gaps.
-if grep -q -F -e 'helper_qualification' "$remaining" &&
-  grep -q -F -e 'qualified seed-only under #315' "$remaining" &&
-  grep -q -F -e 'upstream' "$remaining"; then
-  ok
-else
-  bad "verification-matrix lost its #315 helper qualification record"
-fi
-
-# Contract plus matrix own the chrono-keep record.
+# Contract plus policy own the chrono-keep record (verification-matrix-remaining deleted under #988).
 if grep -q -F -e '#398' "$contract" &&
   grep -q -F -e 'jiff' "$contract" &&
   grep -q -F -e 'helper_qualification' "$contract" &&
-  grep -q -F -e '#398' "$remaining" &&
-  grep -q -F -e 'jiff' "$remaining"; then
+  grep -q -F -e 'jiff 1.0' "$policy"; then
   ok
 else
-  bad "contract/matrix lost its #398 jiff-rejection record"
+  bad "contract/policy lost its #398 jiff-rejection record"
 fi
 
 # Upstream re-evaluation policy owned under #973: triggers plus watcher.
@@ -351,19 +341,12 @@ else
   bad "helper upstream policy lost its per-item final verdicts"
 fi
 
-# Contract plus remaining point the gap at the policy under #973.
+# Contract points the gap at the policy under #973 (verification-matrix-remaining deleted under #988).
 if grep -q -F -e 'helper-upstream-policy' "$contract" &&
   grep -q -F -e '#973' "$contract"; then
   ok
 else
   bad "cli-contract lost its #973 helper policy pointer"
-fi
-
-if grep -q -F -e 'helper-upstream-policy' "$remaining" &&
-  grep -q -F -e '#973' "$remaining"; then
-  ok
-else
-  bad "verification-matrix-remaining lost its #973 helper policy pointer"
 fi
 
 dx_test_summary "helper qualification harness"
