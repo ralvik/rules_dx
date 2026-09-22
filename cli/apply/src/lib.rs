@@ -9,7 +9,15 @@
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 pub mod applier;
 pub mod consensus;
@@ -17,8 +25,8 @@ pub mod envelope;
 pub mod validators;
 
 pub use applier::{
-    apply_envelope, AppliedFile, ApplyError, ApplyReport, FileSystem, HookRunner, NoHooks,
-    RealFileSystem,
+    apply_envelope, AppliedFile, ApplyError, ApplyReport, FileSystem, HookError, HookRunner,
+    NoHooks, RealFileSystem,
 };
 pub use consensus::{merge, ConsensusError};
 pub use envelope::{

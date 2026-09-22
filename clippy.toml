@@ -5,12 +5,13 @@
 # `.bazelrc`; third-party `crate_universe` targets stay green
 # via per-target `--cap-lints=allow`. This file documents lint intent, it
 # does not yet enforce new lints globally: `clippy::unwrap_used` /
-# `clippy::expect_used` deny outside `#[cfg(test)]` rolls out per crate in
-# / as each crate's non-test code goes `expect`/`unwrap`-free, via
-# `#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]`
+# `clippy::expect_used` plus `clippy::unreachable` / `clippy::todo` deny
+# outside `#[cfg(test)]` rolls out per crate in
+# / as each crate's non-test code goes `expect`/`unwrap`/`unreachable`/`todo`-free, via
+# `#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used, clippy::unreachable, clippy::todo))]`
 # at the crate root (`cfg_attr(not(test))` keeps `rust_test` bodies
 # ergonomic). All `cli/*` crates now carry the deny (verified zero
-# `.expect(`/`.unwrap(` in non-test code via `rg` before the `#[cfg(test)]`
+# `.expect(`/`.unwrap(`/`unreachable!`/`todo!` in non-test code via `rg` before the `#[cfg(test)]`
 # marker, with `exec/test_support.rs` exempt as `#[cfg(test)]`-only):
 # `dx_digest`, `dx_diff`, `dx_bep`, `dx_atomic_fs`, `dx_fingerprint`,
 # `dx_path`, `dx_schema`, `dx_proto_validate`, `dx_qualification`,
@@ -20,12 +21,15 @@
 # `dx_roots`, `dx_setup`, `dx_update`, and test-only `dx_test_scratch`.
 # Beyond `cli/*` (backfill checklist, same `rg` proof):
 # `quality_adapter`, `quality_evaluator` (+ binary), `quality_markdown`
-# (+ binary; sole non-test `.expect` on `FindingLine` serialization now
-# `unreachable!`), `quality_result` (+ `print_result` binary),
+# (+ binary; `FindingLine` serialization now typed via `dx_fingerprint`),
+# `quality_result` (+ `print_result` binary),
 # `quality_runner` (+ binary), `env_shard` (+ writer binary),
 # `codegen_shard` (+ writer binary), `generation_result`,
 # `documentation_ir`, and `coverage_bin` all carry the deny.
 # Adding the deny to a crate with
 # remaining infallible paths (e.g. `dx_cli reports`/`finalize` before
 # 1302877/b2c0c13) turns those paths red, so extend the pilot list only
-# after the backfill for that crate lands.
+# after the backfill for that crate lands. Issue #927 backfilled the
+# remaining `unreachable!` sites (`dx_fingerprint`, `dx_cli` planning and
+# JUnit rendering, `dx_test_scratch`) into typed errors, so the
+# `unreachable`/`todo` deny now rolls with the `expect`/`unwrap` deny.

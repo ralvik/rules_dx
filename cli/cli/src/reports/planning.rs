@@ -79,7 +79,9 @@ fn stdout_conflict(error: OutputError) -> ReportError {
         OutputError::ConflictingStdoutReport { mode } => {
             ReportError::StdoutReportConflictsMode { mode }
         }
-        unexpected => unreachable!("unexpected output conflict: {unexpected:?}"), // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        unexpected => ReportError::UnexpectedOutputConflict {
+            detail: unexpected.to_string(),
+        },
     }
 }
 
@@ -377,6 +379,51 @@ mod tests {
             }
         )
         .contains("boom"));
+        assert!(format!(
+            "{}",
+            ReportError::UnexpectedOutputConflict {
+                detail: "unknown output mode \"xml\"".to_owned(),
+            }
+        )
+        .contains("unexpected output conflict"));
+        assert!(format!(
+            "{}",
+            ReportError::JunitRender {
+                detail: "boom".to_owned(),
+            }
+        )
+        .contains("junit report serialization failed"));
+        assert!(format!(
+            "{}",
+            ReportError::Fingerprint(dx_fingerprint::FingerprintError::Json {
+                detail: "boom".to_owned(),
+            })
+        )
+        .contains("fingerprint JSON serializes"));
+    }
+
+    #[test]
+    fn unexpected_output_conflicts_fail_closed_typed() {
+        // `check_output_conflict` only returns the two known shapes, so any
+        // other `OutputError` (e.g. a future mode) maps to the typed
+        // `UnexpectedOutputConflict` instead of trapping.
+        assert_eq!(
+            stdout_conflict(OutputError::UnknownOutputMode {
+                value: "xml".to_owned(),
+            }),
+            ReportError::UnexpectedOutputConflict {
+                detail: "unknown output mode \"xml\"".to_owned(),
+            }
+        );
+        assert_eq!(
+            stdout_conflict(OutputError::BadDigest {
+                field: "d",
+                value: "zz".to_owned(),
+            }),
+            ReportError::UnexpectedOutputConflict {
+                detail: "invalid digest for d \"zz\"".to_owned(),
+            }
+        );
     }
 
     #[test]

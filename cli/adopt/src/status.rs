@@ -39,8 +39,10 @@ pub fn render_status_text(checks: &[StatusCheck]) -> String {
 
 /// Render legacy JSON payload (single object, not the NDJSON envelope).
 /// See: `docs/cli/output-protocol.md#status` for the CLI envelope.
-pub fn render_status_json(checks: &[StatusCheck]) -> String {
-    // Single owner for infallible string-only JSON shapes.
+pub fn render_status_json(
+    checks: &[StatusCheck],
+) -> Result<String, dx_fingerprint::FingerprintError> {
+    // Single owner for string-only JSON shapes (typed, no `unreachable!`).
     // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
     dx_fingerprint::to_json(&StatusPayload { checks })
 }
@@ -126,7 +128,7 @@ mod tests {
             "{}",
             tools.detail
         );
-        let json = render_status_json(&checks);
+        let json = render_status_json(&checks).expect("status json");
         // Golden pilot: full-payload insta snapshot replaces
         // the contains-asserts; a MODULE_VERSION bump intentionally
         // updates this snapshot alongside the pin contract.
@@ -141,7 +143,7 @@ mod tests {
             detail: "line1\nline2\u{1}".to_owned(),
             hint: "back\\slash".to_owned(),
         }];
-        let json = render_status_json(&checks);
+        let json = render_status_json(&checks).expect("status json");
         assert!(json.contains("\\\""), "{json}");
         assert!(json.contains("\\n"), "{json}");
         assert!(json.contains("\\\\"), "{json}");

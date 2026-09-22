@@ -10,39 +10,69 @@ use super::common::{apply_to_bytes, FileChange, SourceRead};
 use dx_diff::{render_patch, FilePatch, PatchKind};
 use std::collections::BTreeMap;
 
+/// Diff-patch rendering failure.
+///
+/// Typed rendering failure (thiserror) with source chaining for the
+/// `dx_diff` renderer: `Display` keeps the historical operational detail
+/// for `diff_failed` byte-identical while callers gain matchable
+/// structure instead of `String` plumbing.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub(crate) enum PatchError {
+    /// No verified source bytes for the changed path.
+    #[error("cannot render patch without verified source for {path}")]
+    MissingSource { path: String },
+    /// The verified source bytes are not UTF-8 text.
+    #[error("source for {path} is not UTF-8 text")]
+    NonUtf8Source { path: String },
+    /// The recorded edits do not apply to the verified source.
+    #[error("cannot apply recorded edits for {path}")]
+    Unappliable { path: String },
+    /// The rendered candidate bytes are not UTF-8 text.
+    #[error("candidate for {path} is not UTF-8 text")]
+    NonUtf8Candidate { path: String },
+    /// The unified-patch renderer failed.
+    #[error("failed to render patch: {detail}")]
+    Render { detail: String },
+}
+
 /// Renders the unified patch for `collected.changes` against verified
-/// `sources`. Returns the rendered patch, or the operational detail
+/// `sources`. Returns the rendered patch, or the typed [`PatchError`]
 /// for `diff_failed` when a source is missing, non-UTF-8, unappliable,
 /// or unrenderable.
 pub(crate) fn render_diff_patch(
     sources: &BTreeMap<String, SourceRead>,
     changes: &[FileChange],
-) -> Result<String, String> {
+) -> Result<String, PatchError> {
     let mut owned: Vec<(String, String, String)> = Vec::with_capacity(changes.len());
     for change in changes {
         let original = match sources.get(&change.path) {
             Some(SourceRead::Bytes(bytes)) => bytes,
             _ => {
-                return Err(format!(
-                    "cannot render patch without verified source for {}",
-                    change.path
-                ));
+                return Err(PatchError::MissingSource {
+                    path: change.path.clone(),
+                });
             }
         };
         let original_text = match std::str::from_utf8(original) {
             Ok(text) => text,
             Err(_) => {
-                return Err(format!("source for {} is not UTF-8 text", change.path));
+                return Err(PatchError::NonUtf8Source {
+                    path: change.path.clone(),
+                });
             }
         };
         let Some(candidate) = apply_to_bytes(original, &change.edits) else {
-            return Err(format!("cannot apply recorded edits for {}", change.path));
+            return Err(PatchError::Unappliable {
+                path: change.path.clone(),
+            });
         };
         let candidate_text = match String::from_utf8(candidate) {
             Ok(text) => text,
             // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
             Err(_) => {
-                return Err(format!("candidate for {} is not UTF-8 text", change.path));
+                return Err(PatchError::NonUtf8Candidate {
+                    path: change.path.clone(),
+                });
             } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
         };
         owned.push((
@@ -60,16 +90,15 @@ pub(crate) fn render_diff_patch(
             candidate,
         })
         .collect();
-    match render_patch(&patches) {
-        Ok(rendered) => Ok(rendered),
-        Err(error) => Err(format!("failed to render patch: {error}")),
-    }
+    render_patch(&patches).map_err(|error| PatchError::Render {
+        detail: error.to_string(),
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::super::common::{FileChange, SourceRead};
-    use super::render_diff_patch;
+    use super::{render_diff_patch, PatchError};
     use std::collections::BTreeMap;
 
     #[test]
@@ -104,5 +133,51 @@ mod tests {
         assert!(first.contains("+++ b/src/a.py"));
         assert!(first.contains("line TWO"));
         assert!(first.contains(&"x".repeat(10_000)));
+    }
+
+    #[test]
+    fn patch_errors_stay_typed_with_stable_display() {
+        // Typed errors keep the historical `diff_failed` detail strings.
+        assert_eq!(
+            PatchError::MissingSource {
+                path: "src/a.py".to_owned(),
+            }
+            .to_string(),
+            "cannot render patch without verified source for src/a.py"
+        );
+        assert_eq!(
+            PatchError::NonUtf8Source {
+                path: "src/a.py".to_owned(),
+            }
+            .to_string(),
+            "source for src/a.py is not UTF-8 text"
+        );
+        assert_eq!(
+            PatchError::Unappliable {
+                path: "src/a.py".to_owned(),
+            }
+            .to_string(),
+            "cannot apply recorded edits for src/a.py"
+        );
+        assert_eq!(
+            PatchError::Render {
+                detail: "boom".to_owned(),
+            }
+            .to_string(),
+            "failed to render patch: boom"
+        );
+        // Missing source fails typed (not `String` plumbing).
+        let sources = BTreeMap::new();
+        let changes = vec![FileChange {
+            path: "src/missing.py".to_owned(),
+            original_digest: dx_digest::blake3(b"x"),
+            edits: vec![],
+        }];
+        assert_eq!(
+            render_diff_patch(&sources, &changes).expect_err("missing source"),
+            PatchError::MissingSource {
+                path: "src/missing.py".to_owned(),
+            }
+        );
     }
 }

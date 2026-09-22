@@ -3,7 +3,15 @@
 //! Owning contract: `docs/quality/quality-testing.md` (CLI args, exit codes,
 //! offline/no-network, category/exception/obsolete semantics).
 
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 use clap::{Parser, Subcommand};

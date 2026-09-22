@@ -33,7 +33,15 @@
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
@@ -199,6 +207,9 @@ pub enum CollectError {
     /// A BEP-reported non-shard artifact is claimed by no entry.
     #[error("unreported artifact {path:?}: claimed by no entry")]
     UnreportedArtifact { path: String },
+    /// The normalized fingerprint view failed to serialize as JSON.
+    #[error("{0}")]
+    Fingerprint(#[from] dx_fingerprint::FingerprintError),
 }
 
 /// Reports whether a BEP-reported artifact path is a plan shard, by
@@ -428,7 +439,7 @@ struct FingerprintRecord<'a> {
 /// keys on integration plus key/value; codegen on language plus
 /// logical path, import root, namespace).
 /// See: `cli/codegen/src/lib.rs` (`fingerprint`).
-pub fn fingerprint(records: &[EnvRecord]) -> String {
+pub fn fingerprint(records: &[EnvRecord]) -> Result<String, dx_fingerprint::FingerprintError> {
     let merged = merge_records(records);
     let view: Vec<FingerprintRecord<'_>> = merged
         .iter()
@@ -489,7 +500,7 @@ pub fn collect_plan(outputs: &[TargetOutput]) -> Result<CollectedPlan, CollectEr
         return Err(CollectError::Conflict(conflict));
     }
     let merged = merge_records(&records);
-    let rendered = fingerprint(&merged);
+    let rendered = fingerprint(&merged)?;
     let digest = digest(rendered.as_bytes());
     Ok(CollectedPlan {
         records: merged,

@@ -23,9 +23,17 @@
 //! call sites name one prefix-plus-auto-clean path instead of repeating the
 //! builder chain.
 
-// Infallible paths must not `expect`/`unwrap` outside tests
+// Infallible paths must not `expect`/`unwrap`/`unreachable`/`todo` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 /// Scratch-directory handle; re-exported so tests name the type without
 /// depending on `tempfile` directly.
@@ -34,13 +42,16 @@ pub use tempfile::TempDir;
 /// Creates a unique `prefix`-prefixed scratch directory under the ambient
 /// temp base.
 ///
-/// Creation failure (missing temp base) is unreachable in test
-/// environments; the fallback names the invariant instead of `expect`.
+/// Creation failure (missing temp base) aborts the test process with the
+/// OS detail: scratch creation is test-only setup (never prod workflow
+/// logic), so a typed `Result` would only push `expect` into every test
+/// body. The `panic!` names the invariant instead of `unreachable!` so
+/// the `unreachable`/`todo` deny stays green.
 pub fn scratch(prefix: &str) -> TempDir {
     tempfile::Builder::new()
         .prefix(prefix)
         .tempdir()
-        .unwrap_or_else(|err| unreachable!("test scratch creates: {err:?}"))
+        .unwrap_or_else(|err| panic!("test scratch creates {prefix:?}: {err}"))
 }
 
 #[cfg(test)]

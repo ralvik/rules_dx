@@ -167,8 +167,24 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
     let fs = RealFileSystem;
     let mut reports_ok = true;
     for planned in planned_reports {
-        let document = match verb {
-            WorkflowVerb::Test => Some(render_junit(&suites)),
+        let document: Option<String> = match verb {
+            WorkflowVerb::Test => match render_junit(&suites) {
+                Ok(document) => Some(document),
+                Err(error) => {
+                    reports_ok = false;
+                    let detail =
+                        format!("failed to render {} report: {error}", planned.format.name());
+                    let _ = writeln!(err, "dx: report_failed: {detail}");
+                    if invocation.output == OutputMode::Json {
+                        if let Ok(event) =
+                            dx_output::error_event(CODE_REPORT_FAILED, &detail, None, None, None)
+                        {
+                            let _ = write_event(out, &event);
+                        }
+                    }
+                    continue;
+                }
+            },
             WorkflowVerb::Coverage => {
                 if lcov_documents.is_empty() {
                     None

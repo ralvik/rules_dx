@@ -155,6 +155,27 @@ fn expansion_expression_queries_shard_rdeps() {
 }
 
 #[test]
+fn quote_matches_json_for_label_alphabet() {
+    // Single-owner parity: for the Bazel label alphabet (plus
+    // backslash/quote in pathological tests) the hand escaper matches
+    // `serde_json::to_string` byte-for-byte, so the query literal stays
+    // canonical JSON quoting without a second escaper.
+    // See: `cli/cli/src/resolve/query.rs` (`quote_label` delegates here).
+    for label in [
+        "//generation:result_proto",
+        "@repo//pkg:schema",
+        "//pkg:a\"b\\c",
+        "//a:b-c_d.e/f@g",
+    ] {
+        assert_eq!(
+            quote_label(label),
+            serde_json::to_string(label).expect("label quotes"),
+            "parity for {label:?}"
+        );
+    }
+}
+
+#[test]
 fn expand_roots_unions_schema_with_projections() {
     // Empty projections keep the single label (bare schema with no
     // consumers selects its own empty closure, never a failure).
@@ -485,7 +506,7 @@ fn merge_groups_by_owner_and_sorts_entries() {
 #[test]
 fn fingerprint_matches_starlark_rendering() {
     assert_eq!(
-        fingerprint(&[record_b(), record_a(), record_a()]),
+        fingerprint(&[record_b(), record_a(), record_a()]).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:alpha\"},\
          {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"src\",\"logical_path\":\"src/beta.rs\",\"namespace\":\"beta\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:beta\"}]"
     );
@@ -494,7 +515,7 @@ fn fingerprint_matches_starlark_rendering() {
             "//gen:a",
             "rust",
             vec![entry_with_exec("a", "b", "", "out/a.rs")]
-        )]),
+        )]).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]"
     );
     assert_eq!(
@@ -502,7 +523,7 @@ fn fingerprint_matches_starlark_rendering() {
             "//gen:a",
             "rust",
             vec![entry_with_replaces("a", "b", "", "out/a.rs", "a")]
-        )]),
+        )]).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"out/a.rs\",\"import_root\":\"b\",\"logical_path\":\"a\",\"namespace\":\"\",\"read_only\":true,\"replaces\":\"a\"}],\"language\":\"rust\",\"producer\":\"//gen:a\"}]"
     );
 }
@@ -522,7 +543,7 @@ fn fingerprint_matches_chain_fixture() {
         ),
     ];
     assert_eq!(
-        fingerprint(&records),
+        fingerprint(&records).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/alpha.rs\",\"namespace\":\"alpha\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_alpha\"},\
          {\"entries\":[{\"exec_path\":\"\",\"import_root\":\"gen\",\"logical_path\":\"gen/beta.rs\",\"namespace\":\"beta\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//generation:codegen_shard_beta\"}]"
     );
@@ -541,7 +562,7 @@ fn fingerprint_matches_prost_fixture() {
         )],
     )];
     assert_eq!(
-        fingerprint(&records),
+        fingerprint(&records).expect("fingerprint"),
         "[{\"entries\":[{\"exec_path\":\"result_proto.lib.rs\",\"import_root\":\"gen\",\"logical_path\":\"gen/prost_result.rs\",\"namespace\":\"result\",\"read_only\":true,\"replaces\":\"\"}],\"language\":\"rust\",\"producer\":\"//generation:codegen_prost_fixture\"}]"
     );
 }
@@ -559,7 +580,7 @@ fn fingerprint_escapes_quotes_newlines_and_controls() {
             replaces: String::new(),
         }],
     }];
-    let rendered = fingerprint(&records);
+    let rendered = fingerprint(&records).expect("fingerprint");
     // serde_json escaping: quote, newline, backslash, and <0x20.
     assert!(rendered.contains("\\\""), "{rendered}");
     assert!(rendered.contains("\\n"), "{rendered}");
@@ -662,12 +683,14 @@ fn replaces_binds_into_merge_conflict_and_fingerprint() {
         "//gen:a",
         "rust",
         vec![entry_with_exec("a", "b", "", "out/a.rs")],
-    )]);
+    )])
+    .expect("fingerprint");
     let replaced = fingerprint(&[record(
         "//gen:a",
         "rust",
         vec![entry_with_replaces("a", "b", "", "out/a.rs", "a")],
-    )]);
+    )])
+    .expect("fingerprint");
     assert_ne!(plain, replaced);
     assert!(replaced.contains("\"replaces\":\"a\""), "{replaced}");
 }
@@ -756,7 +779,10 @@ fn collect_plan_merges_hashes_and_sorts_deterministically() {
     assert_eq!(first, second);
     assert_eq!(first.records.len(), 2);
     assert_eq!(first.records[0].producer, "//gen:alpha");
-    assert_eq!(first.fingerprint, fingerprint(&first.records));
+    assert_eq!(
+        first.fingerprint,
+        fingerprint(&first.records).expect("fingerprint")
+    );
     assert_eq!(first.digest, plan_digest(&first.fingerprint));
     assert_eq!(first.hex(), plan_hex(&first.fingerprint));
     assert_eq!(first.hex().len(), 64);

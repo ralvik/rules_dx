@@ -561,11 +561,12 @@ pub fn run_cli(
                 kind: kind_id(finding.kind),
                 message: finding.message.as_str(),
             };
-            print_out(
-                // Single owner for infallible string-only JSON shapes.
+            match dx_fingerprint::to_json(&line) {
+                // Single owner for string-only JSON shapes (typed, no `unreachable!`).
                 // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
-                &dx_fingerprint::to_json(&line),
-            );
+                Ok(rendered) => print_out(&rendered),
+                Err(error) => print_err(&error.to_string()),
+            }
         }
         for remote in &outcome.skipped_remotes {
             if !seen_remotes.iter().any(|seen| seen == remote) {

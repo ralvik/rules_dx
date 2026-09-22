@@ -23,7 +23,15 @@
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
-#![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
+#![cfg_attr(
+    not(test),
+    deny(
+        clippy::expect_used,
+        clippy::unwrap_used,
+        clippy::unreachable,
+        clippy::todo
+    )
+)]
 
 // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 use std::path::PathBuf;
@@ -36,6 +44,30 @@ use codegen_shard::{
 
 fn usage() -> String {
     "usage: codegen_shard_writer --producer LABEL --language LANG --entry LOGICAL|ROOT|NAMESPACE[|EXEC] [--entry ...] --output OUT".into()
+}
+
+/// Writer failure.
+///
+/// Typed writer failure (thiserror) with source chaining for the codec
+/// and I/O legs: `Display` keeps the frozen legacy strings
+/// (`bad --entry …`, usage-routed, codec/IO detail) byte-identical while
+/// callers gain matchable structure instead of `String` plumbing.
+#[derive(Debug, thiserror::Error)]
+pub enum WriterError {
+    /// A `--entry` value with the wrong `|` shape.
+    #[error("bad --entry {raw:?}: want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH[|REPLACES]]")]
+    BadEntry { raw: String },
+    /// Usage-routed tokenizing failure (unknown argument, missing value,
+    /// or missing required scalar): the message already carries the
+    /// legacy `usage()` line.
+    #[error("{0}")]
+    Usage(String),
+    /// The shard codec rejected the assembled record.
+    #[error("{0}")]
+    Codec(#[source] codegen_shard::Error),
+    /// The validated bytes failed to write to the output path.
+    #[error("{0}")]
+    Io(#[source] std::io::Error),
 }
 
 /// `argv` tokenizer (frozen legacy contract).
@@ -70,7 +102,7 @@ fn invalid_token(error: &clap::Error) -> String {
 /// (a present flag with no consumable value), and [`ErrorKind::ValueValidation`]
 /// (a `--entry` value rejected by [`parse_entry_value`], the only custom value
 /// parser). No other parser, conflict, or count error can fire.
-fn parse_error(error: clap::Error, args: &[String]) -> String {
+fn parse_error(error: clap::Error, args: &[String]) -> WriterError {
     let token = invalid_token(&error);
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
@@ -78,10 +110,10 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
         // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
-            format!("unknown argument {echoed:?}\n{}", usage())
+            WriterError::Usage(format!("unknown argument {echoed:?}\n{}", usage()))
         }
         // The legacy loop reports a bare usage line here too.
-        ErrorKind::InvalidValue => usage(),
+        ErrorKind::InvalidValue => WriterError::Usage(usage()),
         ErrorKind::ValueValidation => {
             // Only `--entry` carries a custom value parser, so any
             // validation failure is a rejected entry: report the legacy
@@ -90,10 +122,10 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
             let raw = rejected_value(&error).unwrap_or_default();
             match parse_entry_value(&raw) {
                 Err(legacy) => legacy,
-                Ok(_) => dx_output::first_line(&error),
+                Ok(_) => WriterError::Usage(dx_output::first_line(&error)),
             }
         }
-        _ => dx_output::first_line(&error),
+        _ => WriterError::Usage(dx_output::first_line(&error)),
     }
 }
 
@@ -104,7 +136,7 @@ fn rejected_value(error: &clap::Error) -> Option<String> {
     dx_output::rejected_value(error)
 }
 
-fn parse_args(args: &[String]) -> Result<Cli, String> {
+fn parse_args(args: &[String]) -> Result<Cli, WriterError> {
     Cli::try_parse_from(
         std::iter::once("codegen_shard_writer").chain(args.iter().map(|arg| arg as &str)),
     )
@@ -115,7 +147,7 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
 /// `LOGICAL|ROOT|NAMESPACE[|EXEC[|REPLACES]]` shape, so tokenizing accepts
 /// exactly 3-5 `|`-separated parts and rejections already carry the legacy
 /// `bad --entry …` text that [`parse_error`] recovers from the error context.
-fn parse_entry_value(raw: &str) -> Result<DxCodegenEntry, String> {
+fn parse_entry_value(raw: &str) -> Result<DxCodegenEntry, WriterError> {
     let parts: Vec<&str> = raw.split('|').collect();
     match parts.len() {
         3 => Ok(DxCodegenEntry {
@@ -142,26 +174,27 @@ fn parse_entry_value(raw: &str) -> Result<DxCodegenEntry, String> {
             exec_path: parts[3].into(),
             replaces: parts[4].into(),
         }),
-        _ => Err(format!(
-            "bad --entry {raw:?}: want LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH[|REPLACES]]"
-        )),
+        _ => Err(WriterError::BadEntry {
+            raw: raw.to_owned(),
+        }),
     }
 }
 
-fn run(args: &[String]) -> Result<(), String> {
+fn run(args: &[String]) -> Result<(), WriterError> {
     let cli = parse_args(args)?;
     let output = cli.output.map(PathBuf::from);
     let shard = DxCodegenShard {
-        producer: cli.producer.ok_or_else(usage)?,
-        language: cli.language.ok_or_else(usage)?,
+        producer: cli.producer.ok_or_else(|| WriterError::Usage(usage()))?,
+        language: cli.language.ok_or_else(|| WriterError::Usage(usage()))?,
         entries: cli.entry,
     };
     // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
-    let bytes = encode_validated(&shard).map_err(|error| error.to_string())?;
+    let bytes = encode_validated(&shard).map_err(WriterError::Codec)?;
     // Read back before writing so a codec regression fails the action
     // instead of emitting bytes the CLI would reject.
-    decode_validated(&bytes).map_err(|error| error.to_string())?;
-    std::fs::write(output.ok_or_else(usage)?, bytes).map_err(|error| error.to_string())
+    decode_validated(&bytes).map_err(WriterError::Codec)?;
+    std::fs::write(output.ok_or_else(|| WriterError::Usage(usage()))?, bytes)
+        .map_err(WriterError::Io)
 }
 
 fn main() {
