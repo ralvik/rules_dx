@@ -274,6 +274,17 @@ the whole table and stops at the first failure.
 | go | `third_party/go/go.mod` | `third_party/go/go.sum` | Intentional no-op (pinned module lock tracks Gazelle; widen via `dx bump`) |
 | uv | `python/tests/fixtures/hello/pyproject.toml` | `python/tests/fixtures/hello/uv.lock` | `uv lock` in `python/tests/fixtures/hello` |
 | uv tools | `quality/tools/python/pyproject.toml` | `quality/tools/python/uv.lock` | `uv lock` in `quality/tools/python` |
+| npm adopt | `examples/adopt-js-ts/package.json` | `examples/adopt-js-ts/pnpm-lock.yaml` | `pnpm --dir examples/adopt-js-ts install --lockfile-only` |
+| npm adopt polyglot | `examples/adopt-polyglot/package.json` | `examples/adopt-polyglot/pnpm-lock.yaml` | `pnpm --dir examples/adopt-polyglot install --lockfile-only` |
+| uv adopt | `examples/adopt-python/pyproject.toml` | `examples/adopt-python/uv.lock` | `uv lock --directory examples/adopt-python` |
+| uv adopt polyglot | `examples/adopt-polyglot/pyproject.toml` | `examples/adopt-polyglot/uv.lock` | `uv lock --directory examples/adopt-polyglot` |
+
+Per-adopt arrival locks are foreign files: the Bazel graph keeps using the
+shared hubs (root pnpm, hello uv) while each arrival pair proves foreign
+consistency plus fail-closed repin via `bazel test
+//tools/depcheck:adopt_locks_test` and `bazel run
+//tools/ci:adopt_locks_qualification` (issue #1077). A stale arrival lock
+fails; repin with its row command, never by hand.
 
 An update must run the affected capability suite on every required platform
 and may not silently change delivery class, runtime compatibility, or curated

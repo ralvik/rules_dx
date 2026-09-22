@@ -148,6 +148,17 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Per-adopt consumer lock authority harness (issue #1077); see
+    # docs/tools/tool-acquisition.md#repinning.
+    sh_binary(
+        name = "adopt_locks_qualification",
+        srcs = ["adopt_locks_qualification.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # RSpec runner harness; see docs/product/support-matrix.md#provisional-default-test-runners.
     sh_binary(
         name = "rspec_qualification",

@@ -33,3 +33,17 @@ real_source_target(
     json_srcs = ["package.json"],
     tags = ["corpus"],
 )
+
+# Per-adopt arrival locks (issue #1077): foreign pnpm-lock.yaml (`pnpm
+# install --lockfile-only`) plus uv.lock (`uv lock`) resolved from this
+# tree's manifests; the Bazel graph keeps using the shared root pnpm plus
+# hello uv hubs, these pairs prove foreign consistency plus fail-closed
+# repin via //tools/depcheck:adopt_locks_test.
+exports_files([
+    "Cargo.lock",
+    "Cargo.toml",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pyproject.toml",
+    "uv.lock",
+])

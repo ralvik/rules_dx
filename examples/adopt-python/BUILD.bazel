@@ -24,3 +24,12 @@ real_source_target(
     tags = ["corpus"],
     toml_srcs = ["pyproject.toml"],
 )
+
+# Per-adopt arrival lock (issue #1077): foreign uv.lock resolved from this
+# tree's pyproject.toml (`uv lock`); the Bazel graph keeps using the shared
+# hello uv hub, this pair proves foreign consistency plus fail-closed repin
+# via //tools/depcheck:adopt_locks_test.
+exports_files([
+    "pyproject.toml",
+    "uv.lock",
+])

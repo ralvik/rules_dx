@@ -23,9 +23,12 @@ composed traversal. `dx generate --check` passes scoped,
 per-package `bazel build` selects only that package closure, and
 regeneration is a no-op in every language (user-owned runtime edges
 survive: pytest `# keep` deps, tsc `transpiler`/`tsconfig`/`declaration`,
-Jest `config` plus ESM `node_options`). Build covers 45 targets; all 4
-runnable tests pass (`shapes_test`, `widgets_test`, `totals_test`,
-`native_test`).
+Jest `config` plus ESM `node_options`). The foreign arrival locks
+`pnpm-lock.yaml` (`pnpm install --lockfile-only`) plus `uv.lock` (`uv lock`)
+plus `Cargo.lock` prove foreign consistency plus fail-closed repin (the
+Bazel graph keeps using the shared root pnpm plus hello uv hubs). Build
+covers 45 targets; all 4 runnable tests pass (`shapes_test`, `widgets_test`,
+`totals_test`, `native_test`).
 
 Scope notes: TypeScript tests run via `typescript_test` over the
 tsc-compiled output (execution reuses the Jest wiring). Module stems must stay

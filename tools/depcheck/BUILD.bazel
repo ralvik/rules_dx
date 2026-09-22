@@ -163,6 +163,59 @@ sh_test(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
+# Per-adopt consumer lock consistency (issue #1077): each adopt-* arrival
+# manifest plus lock pair proves foreign consistency offline via `depcheck
+# consistency` with stale plus missing negative controls; repinning stays
+# with the per-adopt commands in docs/tools/tool-acquisition.md#repinning.
+sh_test(
+    name = "adopt_locks_test",
+    size = "small",
+    timeout = "short",
+    srcs = ["adopt_locks_test.sh"],
+    args = [
+        "$(rootpath :depcheck)",
+        "$(rootpath //examples/adopt-go:go.mod)",
+        "$(rootpath //examples/adopt-go:go.sum)",
+        "$(rootpath //examples/adopt-ruby:Gemfile)",
+        "$(rootpath //examples/adopt-ruby:Gemfile.lock)",
+        "$(rootpath //examples/adopt-rust:Cargo.toml)",
+        "$(rootpath //examples/adopt-rust:Cargo.lock)",
+        "$(rootpath //examples/adopt-js-ts:package.json)",
+        "$(rootpath //examples/adopt-js-ts:pnpm-lock.yaml)",
+        "$(rootpath //examples/adopt-python:pyproject.toml)",
+        "$(rootpath //examples/adopt-python:uv.lock)",
+        "$(rootpath //examples/adopt-polyglot:package.json)",
+        "$(rootpath //examples/adopt-polyglot:pnpm-lock.yaml)",
+        "$(rootpath //examples/adopt-polyglot:pyproject.toml)",
+        "$(rootpath //examples/adopt-polyglot:uv.lock)",
+        "$(rootpath //examples/adopt-polyglot:Cargo.toml)",
+        "$(rootpath //examples/adopt-polyglot:Cargo.lock)",
+    ],
+    data = [
+        "//examples/adopt-go:go.mod",
+        "//examples/adopt-go:go.sum",
+        "//examples/adopt-js-ts:package.json",
+        "//examples/adopt-js-ts:pnpm-lock.yaml",
+        "//examples/adopt-polyglot:Cargo.lock",
+        "//examples/adopt-polyglot:Cargo.toml",
+        "//examples/adopt-polyglot:package.json",
+        "//examples/adopt-polyglot:pnpm-lock.yaml",
+        "//examples/adopt-polyglot:pyproject.toml",
+        "//examples/adopt-polyglot:uv.lock",
+        "//examples/adopt-python:pyproject.toml",
+        "//examples/adopt-python:uv.lock",
+        "//examples/adopt-ruby:Gemfile",
+        "//examples/adopt-ruby:Gemfile.lock",
+        "//examples/adopt-rust:Cargo.lock",
+        "//examples/adopt-rust:Cargo.toml",
+        "//tools/sh:bootstrap",
+        "//tools/sh:lib",
+        ":depcheck",
+    ],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
 filegroup(
     name = "rust_testdata",
     srcs = glob(["testdata/rust/**"]),

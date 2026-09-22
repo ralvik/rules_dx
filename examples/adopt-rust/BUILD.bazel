@@ -24,3 +24,12 @@ real_source_target(
     tags = ["corpus"],
     toml_srcs = ["Cargo.toml"],
 )
+
+# Per-adopt arrival lock (issue #1077): foreign Cargo workspace plus
+# Cargo.lock (path crates only, no third-party scope); this pair proves
+# foreign consistency plus fail-closed repin via
+# //tools/depcheck:adopt_locks_test.
+exports_files([
+    "Cargo.lock",
+    "Cargo.toml",
+])
