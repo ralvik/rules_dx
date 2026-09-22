@@ -10,12 +10,14 @@ package(
 
 python_library(
     name = "helper",
+    testonly = True,
     srcs = ["helper.py"],
     imports = ["."],
 )
 
 python_library(
     name = "main",
+    testonly = True,
     srcs = ["main.py"],
     imports = ["."],
     deps = [":helper"],
@@ -23,6 +25,7 @@ python_library(
 
 python_binary(
     name = "main_bin",
+    testonly = True,
     imports = ["."],
     main = "main.py",
     deps = [":main"],
@@ -30,15 +33,12 @@ python_binary(
 
 python_test(
     name = "helper_test",
+    testonly = True,
     srcs = ["helper_test.py"],
     # Reuses the hello uv graph (single pypi hub); no separate lock.
     dep_group = "hello",
     imports = ["."],
-    deps = [
-        ":helper",
-        "@pypi//coverage",
-        "@pypi//pytest",
-    ],
+    deps = [":helper"],
 )
 
 real_source_target(

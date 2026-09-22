@@ -142,6 +142,10 @@ execution deferred. No report-only status remains per ADR 0022 (no standing benc
 | C++ | Delivered (code ownership) | Delivered | Delivered | Delivered (`adopt-cpp`) | Delivered (contract) | Delivered (`tools/depcheck`) | Delivered | Open | Open |
 | Vue/Svelte/Astro/MDX | Delivered (code ownership) | Open (regions) | Delivered | Open (composition) | Delivered (contract) | Open | Delivered | Open | Open |
 
+Repo-wide `//dx:generate` composition is Delivered via `//gazelle/dispatch:gazelle`
+(all first-party extensions plus the dispatch witness), guarded by
+`//tools/ci:dx_facade_qualification` and proved by dogfood `dx generate --check //...`.
+
 `Audit/update Delivered` above is ecosystem live execution delivered repo-wide; it stays
 consistent with per-language source-`Audit` scope in the support matrix (`Not planned` for
 Rust, JavaScript, TypeScript, Vue, Svelte, Astro, MDX; Python source-audit tooling qualified

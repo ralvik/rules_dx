@@ -1,3 +1,5 @@
+load("@rules_dx//python/rules:defs.bzl", "python_library")
+
 """Python source-audit split fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
@@ -22,4 +24,18 @@ real_source_target(
         "pins.bzl",
     ],
     tags = ["corpus"],
+)
+
+python_library(
+    name = "Sample_audit_clean",
+    testonly = True,
+    srcs = ["Sample_audit_clean.py"],
+    imports = ["."],
+)
+
+python_library(
+    name = "Sample_audit_dirty",
+    testonly = True,
+    srcs = ["Sample_audit_dirty.py"],
+    imports = ["."],
 )

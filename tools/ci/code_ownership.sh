@@ -15,11 +15,10 @@
 #
 # Declared generated-file exclusion list (each entry names its
 # generator, per): foreign-tree arrival files under
-# examples/adopt-js-ts/ that the Gazelle JS/TS extensions correctly
-# classify as inert (no targets, see examples/adopt-js-ts/README.md).
-# Framework SFC and sourcemap/typings arrivals stay inert until the
-# framework quality regions land and TS declaration handling is
-# qualified. If an excluded file gains a target, this harness
+# examples/adopt-js-ts/ that the composed `//dx:generate` correctly
+# classifies as inert (no targets, see examples/adopt-js-ts/README.md).
+# Sourcemap/typings arrivals stay inert until TS declaration handling
+# is qualified. If an excluded file gains a target, this harness
 # fails asking to drop the exclusion (stale exclusions never linger).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:code_ownership`,
@@ -39,19 +38,31 @@ dx_mkscratch scratch
 # checked-in code source must ride a normal `//...` target; the former
 # `.bazelignore` exclusion plus shell-copy staging are deleted.
 
-# Declared exclusions, one per line: foreign-tree inert arrivals.
-# Generators: //gazelle/javascript:gazelle and
-# //gazelle/typescript:gazelle emit no targets for these classes
-# (inert by design per examples/adopt-js-ts/README.md); the .js.map
-# bytes are tsc sourcemap arrivals, the .vue file is a framework SFC
-# arrival pending the composition regions, and the.d.ts files are
-# typings arrivals pending qualified TS declaration handling.
+# Declared exclusions, one per line: foreign-tree inert arrivals plus
+# go-mod-less lint subjects.
+# Generators: the composed `//dx:generate` emits no targets for these
+# classes (inert by design per examples/adopt-js-ts/README.md); the
+# .js.map bytes are tsc sourcemap arrivals and the.d.ts files are
+# typings arrivals pending qualified TS declaration handling. The former
+# framework SFC arrival (`widget.vue`) is owned by the composed Vue
+# extension since composition landed, so it left this list.
+# The bare `Sample.go` lint subjects carry no go.mod, so no valid
+# `go_library` can own them; adapter unit tests consume them via the
+# source-tree path, never a Bazel target. The cppcheck `Sample.c` and
+# scalafix `Sample.scala` subjects are intentionally uncompilable, so
+# no compiled target can own them either; their quality harnesses
+# consume them the same way.
 cat >"$scratch/excluded.txt" <<'EOF'
 examples/adopt-js-ts/app/greet.js.map
 examples/adopt-js-ts/app/types.d.ts
-examples/adopt-js-ts/app/widget.vue
 examples/adopt-js-ts/web/app.js.map
 examples/adopt-js-ts/web/types.d.ts
+go/tests/fixtures/errcheck/Sample.go
+go/tests/fixtures/gofumpt/Sample.go
+go/tests/fixtures/govet/Sample.go
+go/tests/fixtures/staticcheck/Sample.go
+cc/tests/fixtures/cppcheck/Sample.c
+scala/tests/fixtures/scalafix/Sample.scala
 EOF
 
 git ls-files |
@@ -90,4 +101,4 @@ if [[ "$uncovered" -ne 0 ]]; then
   cat "$scratch/uncovered.txt"
   exit 1
 fi
-echo "code ownership audit: all code sources ride normal targets (5 inert adopt-js-ts arrivals excluded with generators)"
+echo "code ownership audit: all code sources ride normal targets (4 inert adopt-js-ts arrivals plus 6 harness-consumed lint subjects excluded with generators)"

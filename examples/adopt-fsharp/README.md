@@ -4,12 +4,12 @@ Foreign SDK-style tree adopted without upstream changes: a `greet` package
 with a self-owned helper edge (`Greet.fs` + `Helper.fs`, no Bazel edge
 leaves the package) plus a stdlib-only `solo` package. The tree arrived with
 no `MODULE.bazel` and no `BUILD` files; the `*/BUILD.bazel` files are
-generator-owned (`//gazelle/fsharp:gazelle` output, see below) plus
+generator-owned (`dx generate` output) plus
 handwritten `fsharp_test` owners.
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-fsharp/...
-bazel run //gazelle/fsharp:gazelle -- update examples/adopt-fsharp/greet examples/adopt-fsharp/solo
+bazel run //cli/cli:dx -- generate //examples/adopt-fsharp/...
 bazel build //examples/adopt-fsharp/...
 bazel test //examples/adopt-fsharp/...
 ```
@@ -30,5 +30,5 @@ the shared wrappers. Build covers 11 targets; both tests pass (`greet_test`,
 `pure_test`).
 
 Scope notes: cross-package F# imports resolve only through an exact
-`# gazelle:resolve` mapping today. `dx generate` runs the Rust extension only; regenerate with the per-language command above until the dx
-wiring lands.
+`# gazelle:resolve` mapping today. Regeneration is the composed
+`dx generate` run.

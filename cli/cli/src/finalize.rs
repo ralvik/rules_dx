@@ -1,6 +1,6 @@
 //! Intended-manifest finalizer (WP1).
 //!
-//! The Gazelle extension ([`gazelle/rust/manifest.go`](../../gazelle/rust/manifest.go))
+//! The Gazelle extension ([`gazelle/dispatch/manifest.go`](../../gazelle/dispatch/manifest.go))
 //! witnesses the *intended* file contents for a `//dx:generate` run as JSON on
 //! `DX_GENERATE_INTENDED` (candidate bytes, original bytes, and byte-offset
 //! edits, all base64) plus `DX_GENERATE_SCOPE` and `DX_GENERATE_MODE`.

@@ -42,6 +42,150 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # go/tests/fixtures/cgo holds the handwritten cgo scope fixture with
 # `import "C"`; generation fails closed on cgo, so Gazelle never owns it.
 # gazelle:exclude go/tests/fixtures/cgo
+# cc/tests/fixtures/hello holds the handwritten thin-binary fixture with
+# `main.cc`; thin cc_binary entries stay handwritten, so Gazelle never
+# owns it.
+# gazelle:exclude cc/tests/fixtures/hello
+# gazelle/cc/testdata holds the cc generation-test corpus with
+# intentionally ambiguous basenames; Gazelle never owns the golden tree.
+# gazelle:exclude gazelle/cc/testdata
+# rust/tests/fixtures/cxx_identity holds the handwritten mixed Rust/C++
+# bridge fixture; the generated cc_library name collides with the
+# handwritten rust_library by design, so Gazelle never owns it.
+# gazelle:exclude rust/tests/fixtures/cxx_identity
+# csharp/tests/fixtures/hello holds the handwritten thin-binary fixture
+# with `Program.cs`; thin csharp_binary entries stay handwritten, so
+# Gazelle never owns it.
+# gazelle:exclude csharp/tests/fixtures/hello
+# csharp/tests/fixtures/xunit holds the handwritten entry-point fixture
+# with an intentional duplicate namespace; Gazelle never owns it.
+# gazelle:exclude csharp/tests/fixtures/xunit
+# tools/ci/testdata/warnings holds per-language unused-code linter
+# subjects with no BUILD file; Gazelle never owns the corpus.
+# gazelle:exclude tools/ci/testdata/warnings
+# fsharp/tests/fixtures/hello holds the handwritten thin-binary fixture
+# with `Program.fs`; thin fsharp_binary entries stay handwritten, so
+# Gazelle never owns it.
+# gazelle:exclude fsharp/tests/fixtures/hello
+# fsharp/tests/fixtures/xunit holds the handwritten entry-point
+# fixture; Gazelle never owns it.
+# gazelle:exclude fsharp/tests/fixtures/xunit
+# gazelle holds the extension implementations themselves: handwritten
+# Go with framework imports that resolve via MODULE, not a go.mod, so
+# strict generation fails closed and Gazelle never owns them.
+# gazelle:exclude gazelle
+# astro/tests/fixtures/hello holds the handwritten render fixture;
+# the helper edge stays handwritten, so Gazelle never owns it.
+# gazelle:exclude astro/tests/fixtures/hello
+# examples/mixed/hello is the documented non-consumer
+# framework-composition fixture with handwritten owners; Gazelle never
+# owns it.
+# gazelle:exclude examples/mixed/hello
+# go/tests/fixtures/hello holds the handwritten thin-binary fixture
+# with package main; thin go_binary entries stay handwritten, so
+# Gazelle never owns it.
+# gazelle:exclude go/tests/fixtures/hello
+# java/tests/fixtures/hello holds the handwritten thin-binary fixture
+# with `Main.java`; thin java_binary entries stay handwritten, so
+# Gazelle never owns it.
+# gazelle:exclude java/tests/fixtures/hello
+# kotlin/tests/fixtures/hello holds the handwritten thin-binary fixture
+# with `Main.kt`; thin binary entries stay handwritten, so Gazelle never
+# owns it.
+# gazelle:exclude kotlin/tests/fixtures/hello
+# scala/tests/fixtures/hello holds the handwritten thin-binary fixture
+# with `Main.scala`; thin binary entries stay handwritten, so Gazelle
+# never owns it.
+# gazelle:exclude scala/tests/fixtures/hello
+# python/tests/fixtures/hello holds the handwritten entry-point fixture
+# with `main.py`; thin binary entries stay handwritten, so Gazelle never
+# owns it.
+# gazelle:exclude python/tests/fixtures/hello
+# javascript/tests/fixtures/hello holds the handwritten entry-point
+# fixture with `main.js`; thin binary entries stay handwritten, so
+# Gazelle never owns it.
+# gazelle:exclude javascript/tests/fixtures/hello
+# typescript/tests/fixtures/hello holds the handwritten entry-point
+# fixture with `main.ts`; thin binary entries stay handwritten, so
+# Gazelle never owns it.
+# gazelle:exclude typescript/tests/fixtures/hello
+# javascript/tests/fixtures/entries holds the handwritten entry-point
+# ownership fixture; its `helper` stem collides repo-wide by design, so
+# Gazelle never owns it.
+# gazelle:exclude javascript/tests/fixtures/entries
+# mdx/tests/fixtures/hello holds the handwritten render fixture with a
+# compiler import strict generation rejects; Gazelle never owns it.
+# gazelle:exclude mdx/tests/fixtures/hello
+# svelte/tests/fixtures/hello holds the handwritten render fixture with
+# a compiler import strict generation rejects; Gazelle never owns it.
+# gazelle:exclude svelte/tests/fixtures/hello
+# vue/tests/fixtures/hello holds the handwritten render fixture with a
+# compiler import strict generation rejects; Gazelle never owns it.
+# gazelle:exclude vue/tests/fixtures/hello
+# deploy/rules holds handwritten deploy tooling with upstream py_test
+# owners; the generated python_test kinds collide by design, so Gazelle
+# never owns it.
+# gazelle:exclude deploy/rules
+# quality/artifacts holds handwritten tool manifests with an upstream
+# py_binary owner; Gazelle never owns it.
+# gazelle:exclude quality/artifacts
+# quality/tools/python holds handwritten tool entry points with upstream
+# owners over wheel-only deps; Gazelle never owns it.
+# gazelle:exclude quality/tools/python
+# tools/depcheck is a curated package owned by the depcheck contract
+# (ADR 0027): handwritten lib/binary/test split with a pending
+# Cargo-name alignment, so Gazelle never owns it.
+# gazelle:exclude tools/depcheck
+# go/tests/fixtures/errcheck holds bare lint subjects with no go.mod;
+# importpath is underivable, so Gazelle never owns it.
+# gazelle:exclude go/tests/fixtures/errcheck
+# go/tests/fixtures/gofumpt holds bare format subjects with no go.mod;
+# Gazelle never owns it.
+# gazelle:exclude go/tests/fixtures/gofumpt
+# go/tests/fixtures/govet holds bare lint subjects with no go.mod;
+# Gazelle never owns it.
+# gazelle:exclude go/tests/fixtures/govet
+# go/tests/fixtures/staticcheck holds bare lint subjects with no go.mod;
+# Gazelle never owns it.
+# gazelle:exclude go/tests/fixtures/staticcheck
+# go/tests/fixtures/godeps holds the curated dependency fixture with a
+# handwritten importpath; Gazelle never owns it.
+# gazelle:exclude go/tests/fixtures/godeps
+# rust/tests/fixtures/hello holds curated edition/binary fixtures owned
+# by the rustfmt-edition qualification; Gazelle never owns it.
+# gazelle:exclude rust/tests/fixtures/hello
+# rust/tests/fixtures/bindgen holds the curated header fixture with a
+# pinned non-basename library; Gazelle never owns it.
+# gazelle:exclude rust/tests/fixtures/bindgen
+# cc/tests/fixtures/googletest holds the curated C++17-floor fixture;
+# Gazelle never owns it.
+# gazelle:exclude cc/tests/fixtures/googletest
+# cc/tests/fixtures/lcov_accounting holds the curated accounting
+# fixture; Gazelle never owns it.
+# gazelle:exclude cc/tests/fixtures/lcov_accounting
+# cc/tests/fixtures/linux_corpus holds the curated corpus fixture;
+# Gazelle never owns it.
+# gazelle:exclude cc/tests/fixtures/linux_corpus
+# cc/tests/fixtures/prebuilt_interop holds the curated interop fixture;
+# Gazelle never owns it.
+# gazelle:exclude cc/tests/fixtures/prebuilt_interop
+# cc/tests/fixtures/strict_generation holds the curated strictness
+# fixture; Gazelle never owns it.
+# gazelle:exclude cc/tests/fixtures/strict_generation
+# cc/tests/fixtures/cppcheck holds an intentionally uncompilable
+# static-analysis subject; Gazelle never owns it.
+# gazelle:exclude cc/tests/fixtures/cppcheck
+# scala/tests/fixtures/scalafix holds an intentionally uncompilable
+# rewrite subject; Gazelle never owns it.
+# gazelle:exclude scala/tests/fixtures/scalafix
+# rust/tests/fixtures/cargo_metadata holds Cargo manifests with
+# intentionally missing roots for missing-file diagnostics; Gazelle never
+# owns it.
+# gazelle:exclude rust/tests/fixtures/cargo_metadata
+# quality/tests/fixtures/strict_preset holds lint subjects owned via
+# corpus targets; the shared stem collides across extensions by design,
+# so Gazelle never owns it.
+# gazelle:exclude quality/tests/fixtures/strict_preset
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")

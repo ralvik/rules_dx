@@ -153,7 +153,7 @@ hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
 
 | Facade label | Actual owner | Status |
 | --- | --- | --- |
-| `//dx:generate` / `//dx:generate_check` | Same Rust-only Gazelle wiring (`//gazelle/rust:gazelle`, `mode=diff` only on the check twin, `dx/BUILD.bazel`); other languages via per-language `//gazelle/<lang>:gazelle` until canonical composition. See [`dx generate`](../cli/commands/generate.md). | Accepted (Rust-only provisional; repo-wide promise in [scope](../product/scope.md) stays durable) |
+| `//dx:generate` / `//dx:generate_check` | Composed multi-language Gazelle wiring (`//gazelle/dispatch:gazelle` with every first-party extension plus the dispatch witness last, `mode=diff` only on the check twin, `dx/BUILD.bazel`). See [`dx generate`](../cli/commands/generate.md). | Accepted (repo-wide promise in [scope](../product/scope.md) delivered) |
 | `//dx:env` | Alias to `//cli/env:env` installer binary (`dx/BUILD.bazel`) | Accepted |
 | `//dx:codegen` | Empty filegroup reserving the CLI selection identity; real plan collector is the `dx_codegen_plan_aspect` plus `dx_codegen_plans` output group (frozen), effective roots on the frozen `//...` baseline (closed #506; successors closed #787 and #788) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |
 | `//dx:config` | Empty filegroup default for the `//config:workspace` label flag, failing fast until a consumer binds its typed workspace policy; typed per-family sections frozen in `//quality:policy.bzl` (issue #916) and `//quality:sources.bzl` (issue #916) | Accepted (issue #423; guard `//tools/ci:dx_facade_qualification`) |

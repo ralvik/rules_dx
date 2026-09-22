@@ -5,12 +5,11 @@ same-package local edge (`envelopes` -> `handlers`), a manifest-free `solo`
 directory (stdlib-only), and a conventional `tests/` directory proving the
 `_test`-suffix / `test_`-prefix classification negatives (`test_login.py` and
 `test_helpers.py` stay libraries). The tree arrived with no `MODULE.bazel` and
-no `BUILD` files; the `*/BUILD.bazel` files are generator-owned
-(`//gazelle/python:gazelle` output, see below).
+no `BUILD` files; the `*/BUILD.bazel` files are generator-owned (`dx generate` output).
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-python/...
-bazel run //gazelle/python:gazelle -- update examples/adopt-python/app examples/adopt-python/solo examples/adopt-python/tests
+bazel run //cli/cli:dx -- generate //examples/adopt-python/...
 bazel build //examples/adopt-python/...
 bazel test //examples/adopt-python/...
 ```
@@ -27,6 +26,5 @@ lines survive regeneration. Build covers 15 targets; all 3 tests pass
 
 Scope notes: the root `pyproject.toml` pins the manifest shape (extras and
 dependency groups) but generation does not enforce lock scope yet, so the
-example reuses the hello uv graph. Python is not wired into `dx generate`
-yet (that target runs the Rust extension only); regenerate with the
-`//gazelle/python:gazelle` command above until the dx wiring lands.
+example reuses the hello uv graph. Regeneration is the composed
+`dx generate` run.

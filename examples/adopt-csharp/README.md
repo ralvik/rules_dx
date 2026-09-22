@@ -4,12 +4,12 @@ Foreign SDK-style tree adopted without upstream changes: a `greet` package
 with a self-owned helper edge (`Greet.cs` + `Helper.cs`, no Bazel edge
 leaves the package) plus a stdlib-only `solo` package. The tree arrived with
 no `MODULE.bazel` and no `BUILD` files; the `*/BUILD.bazel` files are
-generator-owned (`//gazelle/csharp:gazelle` output, see below) plus
+generator-owned (`dx generate` output) plus
 handwritten `csharp_test` owners.
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-csharp/...
-bazel run //gazelle/csharp:gazelle -- update examples/adopt-csharp/greet examples/adopt-csharp/solo
+bazel run //cli/cli:dx -- generate //examples/adopt-csharp/...
 bazel build //examples/adopt-csharp/...
 bazel test //examples/adopt-csharp/...
 ```
@@ -26,9 +26,9 @@ dep (`xunit.v3.assert 4.0.0` via `adopt-csharp.csproj` plus
 `Assert.Equal` in both mains proves build and test over the lock without MTP
 shims so the plain `Main` stays generation-stable. Depcheck `locks`
 consistency, quality (`QualitySourcesInfo`), and coverage
-(`InstrumentedFilesInfo`) flow through the shared wrappers. Build covers 11
-targets; both tests pass (`greet_test`, `pure_test`).
+(`InstrumentedFilesInfo`) flow through the shared wrappers.
+Build covers 11 targets; both tests pass (`greet_test`, `pure_test`).
 
 Scope notes: cross-package C# imports resolve only through an exact
-`# gazelle:resolve` mapping today. `dx generate` runs the Rust extension only; regenerate with the per-language command above until the dx
-wiring lands.
+`# gazelle:resolve` mapping today. Regeneration is the composed
+`dx generate` run.

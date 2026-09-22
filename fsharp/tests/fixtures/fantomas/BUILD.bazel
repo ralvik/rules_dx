@@ -1,3 +1,5 @@
+load("@rules_dx//fsharp/rules:defs.bzl", "fsharp_library")
+
 """Fantomas format fixture."""
 
 load("//quality:fixtures.bzl", "real_source_target")
@@ -21,4 +23,10 @@ real_source_target(
         "pins.bzl",
     ],
     tags = ["corpus"],
+)
+
+fsharp_library(
+    name = "fantomas",
+    testonly = True,
+    srcs = ["Sample.fs"],
 )

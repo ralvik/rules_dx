@@ -26,7 +26,7 @@ The as-built product inventory is the hermetic tools
 `deploy/release:sbom_spdx_gen`/`sbom_prov_gen`/`bcr_source_gen`/`release_driver`
 as Rust `rust_binary`, `deploy/install:dx_verify` as Rust `rust_binary`
 per [ADR 0029](./0029-deploy-release-rust.md),
-`tools/bazelrc:preset.update` as Rust `rust_binary`,
+`tools/bazelrc:preset_update` as Rust `rust_binary`,
 `tools/depcheck:depcheck` as Rust `rust_binary` (per
 [ADR 0027](./0027-depcheck-rust.md)),
 `quality/artifacts:update`), the per-instance deploy launcher `py_binary`

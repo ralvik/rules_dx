@@ -42,7 +42,7 @@ dx_test_init
 # byte-identity golden, this table owns the contract sentences.
 dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
   'GENERATED, do not edit' \
-  'Regenerate: `bazel run //tools/bazelrc:preset.update`' \
+  'Regenerate: `bazel run //tools/bazelrc:preset_update`' \
   'common --enable_bzlmod' \
   'build --verbose_failures' \
   'test --test_output=errors' \

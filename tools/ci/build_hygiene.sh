@@ -79,7 +79,7 @@ dx_guard_absent quality/artifacts/update.py 'Release: %s' "quality/artifacts gen
 dx_guards_contains tools/bazelrc/preset.bazelrc "preset.bazelrc lost minimal GENERATED header (want GENERATED plus regenerate only, issue #427)" \
   'GENERATED, do not edit' \
   'Regenerate:' \
-  'preset.update'
+  'preset_update'
 dx_guards_absent tools/bazelrc/preset.bazelrc "preset.bazelrc lost minimal GENERATED header (want no Version-matched/Consumer-refresh/Upstream-derived prose, issue #427)" \
   'Version-matched to Bazel' \
   'Consumer refresh:' \

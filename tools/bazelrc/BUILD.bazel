@@ -10,18 +10,13 @@ package(default_visibility = ["//:__subpackages__"])
 rust_library(
     name = "dx_preset",
     srcs = ["src/lib.rs"],
+    aliases = aliases(
+        package_name = "tools/dx_preset",
+        normal = True,
+    ),
     crate_name = "dx_preset",
     crate_root = "src/lib.rs",
     edition = "2021",
-)
-
-rust_binary(
-    name = "preset.update",
-    srcs = ["src/bin_preset_update.rs"],
-    crate_name = "preset_update",
-    crate_root = "src/bin_preset_update.rs",
-    edition = "2021",
-    deps = [":dx_preset"],
 )
 
 rust_test(
@@ -44,7 +39,7 @@ rustfmt_test(
     size = "small",
     targets = [
         ":dx_preset",
-        ":preset.update",
+        ":preset_update",
     ],
 )
 
@@ -53,7 +48,7 @@ rust_clippy_test(
     size = "small",
     targets = [
         ":dx_preset",
-        ":preset.update",
+        ":preset_update",
     ],
 )
 
@@ -63,11 +58,11 @@ exports_files([
     "src/lib.rs",
 ])
 
-preset_update_tests(name = "preset.update_test")
+preset_update_tests(name = "preset_update_test")
 
 test_suite(
     name = "all",
-    tests = [":preset.update_test"],
+    tests = [":preset_update_test"],
 )
 
 real_source_target(
@@ -83,4 +78,17 @@ real_source_target(
     name = "corpus_toml",
     tags = ["corpus"],
     toml_srcs = ["Cargo.toml"],
+)
+
+rust_binary(
+    name = "preset_update",
+    srcs = ["src/bin_preset_update.rs"],
+    aliases = aliases(
+        package_name = "tools/dx_preset",
+        normal = True,
+    ),
+    crate_name = "preset_update",
+    crate_root = "src/bin_preset_update.rs",
+    edition = "2021",
+    deps = [":dx_preset"],
 )

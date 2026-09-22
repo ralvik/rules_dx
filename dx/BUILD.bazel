@@ -32,23 +32,24 @@ package(default_visibility = ["//visibility:private"])
 # public surface never leaks via the package default. Guard:
 # `//tools/ci:dx_facade_qualification`.
 
-# Canonical public generation workflow: Rust-only repository default
-# with scoped traversal from resolved scope. Other languages use their
-# per-language `//gazelle/<lang>:gazelle` binary until canonical composition
-# lands. Contract: `docs/cli/commands/generate.md`. The check
-# twin shares the Rust wiring with upstream `-mode diff` encoded in
+# Canonical public generation workflow: composed repository default
+# with scoped traversal from resolved scope. The composed binary runs
+# every first-party extension plus the dispatch witness last, so one
+# traversal refreshes the whole workspace. Contract:
+# `docs/cli/commands/generate.md`. The check
+# twin shares the composed wiring with upstream `-mode diff` encoded in
 # canonical-target wiring (dispatch): same rewrite and intended
 # manifest, no workspace writes, nonzero exit on changes. Guard:
 # `//tools/ci:dx_facade_qualification`.
 gazelle(
     name = "generate",
-    gazelle = "//gazelle/rust:gazelle",
+    gazelle = "//gazelle/dispatch:gazelle",
     visibility = ["//visibility:public"],
 )
 
 gazelle(
     name = "generate_check",
-    gazelle = "//gazelle/rust:gazelle",
+    gazelle = "//gazelle/dispatch:gazelle",
     mode = "diff",
     visibility = ["//visibility:public"],
 )

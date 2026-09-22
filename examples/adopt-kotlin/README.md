@@ -4,12 +4,12 @@ Foreign Maven-layout tree adopted without upstream changes: a `greet`
 package with a self-owned helper edge (`Greet.kt` + `Helper.kt`, no Bazel
 edge leaves the package) plus a stdlib-only `solo` package. The tree
 arrived with no `MODULE.bazel` and no `BUILD` files; the `*/BUILD.bazel`
-files are generator-owned (`//gazelle/kotlin:gazelle` output, see below)
+files are generator-owned (`dx generate` output)
 plus handwritten `kotlin_test` owners.
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-kotlin/...
-bazel run //gazelle/kotlin:gazelle -- update examples/adopt-kotlin/greet examples/adopt-kotlin/solo
+bazel run //cli/cli:dx -- generate //examples/adopt-kotlin/...
 bazel build //examples/adopt-kotlin/...
 bazel test //examples/adopt-kotlin/...
 ```
@@ -26,9 +26,9 @@ SDK discovery. The `greet` library carries one pinned module dep
 through an exact `# gazelle:resolve` mapping); `Guava.join` plus
 `testGuavaJoin` prove build and test over the lock. Depcheck `locks`
 consistency, quality (`QualitySourcesInfo`), and coverage
-(`InstrumentedFilesInfo`) flow through the shared wrappers. Build covers 11
-targets; both tests pass (`greet_test`, `pure_test`).
+(`InstrumentedFilesInfo`) flow through the shared wrappers.
+Build covers 11 targets; both tests pass (`greet_test`, `pure_test`).
 
 Scope notes: cross-package Kotlin imports resolve only through an exact
-`# gazelle:resolve` mapping today. `dx generate` runs the Rust extension only; regenerate with the per-language command above until the dx
-wiring lands.
+`# gazelle:resolve` mapping today. Regeneration is the composed
+`dx generate` run.

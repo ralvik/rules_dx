@@ -1,4 +1,4 @@
-//! Preset update binary for `bazel run //tools/bazelrc:preset.update`.
+//! Preset update binary for `bazel run //tools/bazelrc:preset_update`.
 //!
 //! Owning contract: `docs/contributing/local-workflows.md` (preset update loop).
 

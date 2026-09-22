@@ -62,7 +62,7 @@ const BUILD_PROFILES: [&str; 5] = [
 pub fn render_fragment() -> String {
     let mut lines = vec![
         "# Vendored Bazel execution preset -- GENERATED, do not edit.".to_owned(),
-        "# Regenerate: `bazel run //tools/bazelrc:preset.update`.".to_owned(),
+        "# Regenerate: `bazel run //tools/bazelrc:preset_update`.".to_owned(),
     ];
     lines.extend(UPSTREAM_FLAGS.iter().map(|flag| (*flag).to_owned()));
     lines.push("# Owned extra_presets group: coverage.".to_owned());
@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn fragment_bytes_match_retired_python() {
         let rendered = render_fragment();
-        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset.update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
+        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
         assert_eq!(rendered, expected);
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));
