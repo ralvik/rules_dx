@@ -274,9 +274,11 @@ pub fn label_candidates_from_workspace(
 /// Strips flags (plus their values) from already-typed words so the
 /// first remaining bare word is the command; mirrors the
 /// [`super::help::help_command_in`] skipping so `dx --workspace DIR
-/// build` completes like `dx build`.
-fn bare_words<'a>(prior_all: &'a [String]) -> Vec<&'a str> {
-    let mut bare: Vec<&'a str> = Vec::new();
+/// build` completes like `dx build`. Non-UTF8 words stay opaque and are
+/// skipped as bare lossy entries so completion never panics and always
+/// exits `0`.
+fn bare_words(prior_all: &[String]) -> Vec<String> {
+    let mut bare: Vec<String> = Vec::new();
     let mut index = 0;
     while index < prior_all.len() {
         let word = prior_all[index].as_str();
@@ -295,7 +297,7 @@ fn bare_words<'a>(prior_all: &'a [String]) -> Vec<&'a str> {
             index += 1;
             continue;
         }
-        bare.push(word);
+        bare.push(word.to_owned());
         index += 1;
     }
     bare
@@ -304,20 +306,30 @@ fn bare_words<'a>(prior_all: &'a [String]) -> Vec<&'a str> {
 /// Runs the hidden `dx __complete <typed...> <current>` callback:
 /// prints one candidate per line on stdout, always exits `0` with no
 /// stderr so completion never breaks typing. `cwd` anchors workspace
-/// discovery; discovery failure falls back to `cwd` itself.
-pub fn run_complete(words: &[String], cwd: &Path, out: &mut dyn Write) -> i32 {
-    let current: &str = words.last().map(String::as_str).unwrap_or("");
-    let prior_all: &[String] = if words.is_empty() {
+/// discovery; discovery failure falls back to `cwd` itself. Accepts
+/// `OsStr` elements via `args_os` so non-UTF8 typing never panics;
+/// values decode lossy for candidate matching.
+pub fn run_complete<S: AsRef<std::ffi::OsStr>>(
+    words: &[S],
+    cwd: &Path,
+    out: &mut dyn Write,
+) -> i32 {
+    let owned: Vec<String> = words
+        .iter()
+        .map(|word| word.as_ref().to_string_lossy().into_owned())
+        .collect();
+    let current: &str = owned.last().map(String::as_str).unwrap_or("");
+    let prior_all: &[String] = if owned.is_empty() {
         &[]
     } else {
-        &words[..words.len() - 1]
+        &owned[..owned.len() - 1]
     };
     let bare = bare_words(prior_all);
     let command = bare.first().and_then(|word| Command::parse(word));
     let mut candidates: Vec<String> = match command {
         None => top_candidates(current),
         Some(cmd) => {
-            let scopes: Vec<String> = bare[1..].iter().map(ToString::to_string).collect();
+            let scopes: Vec<String> = bare[1..].to_vec();
             let (fixed, allow_labels) = slot_candidates(cmd, &scopes, current);
             let mut merged = fixed;
             if allow_labels {

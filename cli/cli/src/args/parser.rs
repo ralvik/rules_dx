@@ -18,6 +18,8 @@
 //! can coexist without a namespace collision; the domain is the `parse`
 //! half of the `args→command/parse/suggest/help/completion` split.
 
+use std::ffi::OsStr;
+
 use dx_output::{OutputMode, Threshold};
 
 use super::command::Command;
@@ -28,6 +30,18 @@ use super::{ArgsError, Invocation};
 pub use super::grammar::cli_command;
 pub(crate) use super::grammar::Cli;
 
+/// Decodes one `OsString` scope path as UTF-8; non-UTF8 bytes fail as
+/// `InvalidScope` with a lossy rendering so `args_os` inputs never panic
+/// and still exit `2` per the CLI contract. See: `docs/cli/cli-contract.md`.
+fn decode_scope(value: &OsStr) -> Result<String, ArgsError> {
+    match value.to_str() {
+        Some(text) => Ok(text.to_owned()),
+        None => Err(ArgsError::InvalidScope {
+            scope: value.to_string_lossy().into_owned(),
+        }),
+    }
+}
+
 /// Parses a full `dx` command line without the executable name.
 ///
 /// Global options may appear before or after the command; the first
@@ -36,7 +50,12 @@ pub(crate) use super::grammar::Cli;
 /// directory paths resolved through Bazel during execution; only
 /// package-relative labels and empty scopes fail here. Arguments after
 /// the first bare `--` forward to Bazel as command options verbatim.
-pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
+///
+/// Takes `AsRef<OsStr>` elements so the binary can pass `args_os`
+/// directly: `workspace` plus `targets` travel as `OsString` in the
+/// grammar and decode here, with non-UTF8 bytes failing as
+/// `InvalidScope` (lossy) instead of panicking in `std::env::args`.
+pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
     // `dx help [command]` verb redirect (See:
     // `docs/cli/cli-contract.md#invocation-shape`): handled before the
     // grammar so `help` never reaches the `ValueEnum` positional.
@@ -45,7 +64,7 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
     }
     let (cli, bazel_options) = tokenize(args)?;
     let Cli {
-        workspace,
+        workspace: workspace_os,
         dry_run,
         quiet,
         verbose,
@@ -66,9 +85,19 @@ pub fn parse(args: &[String]) -> Result<Invocation, ArgsError> {
         serve,
         port: port_name,
         command: command_name,
-        targets,
+        targets: targets_os,
         ..
     } = cli;
+    // `workspace` plus `targets` decode here: non-UTF8 bytes fail as
+    // `InvalidScope` with a lossy rendering (exit 2), never a panic.
+    let workspace = match workspace_os {
+        Some(value) => Some(decode_scope(value.as_os_str())?),
+        None => None,
+    };
+    let mut targets = Vec::with_capacity(targets_os.len());
+    for scope in &targets_os {
+        targets.push(decode_scope(scope.as_os_str())?);
+    }
     if workspace.as_deref().is_some_and(str::is_empty) {
         return Err(ArgsError::MissingValue {
             option: "--workspace".to_owned(),
