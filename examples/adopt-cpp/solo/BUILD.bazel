@@ -7,10 +7,15 @@ package(default_visibility = ["//:__subpackages__"])
 
 # Handwritten: the generator never emits cc_test; test-owned `*_test.cc`
 # stays out of the generated library and this rule survives regeneration.
+# GoogleTest v1.18.0 plus explicit -std=c++17 floor over the pinned hub.
 cc_test(
     name = "pure_test",
     srcs = ["pure_test.cc"],
-    deps = [":solo"],
+    copts = ["-std=c++17"],
+    deps = [
+        ":solo",
+        "@googletest//:gtest_main",
+    ],
 )
 
 cc_library(

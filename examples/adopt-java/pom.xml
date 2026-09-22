@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Foreign Maven layout marker: adopted without upstream changes. The
-     Java Gazelle extension reads only `.java` sources; this pom records
-     the foreign Maven coordinates without participating in Bazel
-     resolution (lock-scoped Maven resolution stays open under #7). -->
+<!-- Foreign Maven layout marker: one pinned module dep (guava 32.0.1-jre,
+     matching third_party/jvm/maven_install.json plus @maven hub). The Java
+     Gazelle extension reads only `.java` sources; generation resolves the
+     `ImmutableList` import below through an exact `# gazelle:resolve`
+     mapping and never writes this pom. -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -11,4 +12,11 @@
   <artifactId>adopt-java</artifactId>
   <version>0.1.0</version>
   <packaging>jar</packaging>
+  <dependencies>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>32.0.1-jre</version>
+    </dependency>
+  </dependencies>
 </project>

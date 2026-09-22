@@ -20,13 +20,15 @@ basename) with `srcs` as the sorted non-test sources; `*Test.cs` files stay
 out of the library and are owned by handwritten `csharp_test` targets that
 survive regeneration. SDK imports (`System.*`) never produce edges; the
 pinned `rules_dotnet` SDK stays authoritative at execution time with no
-ambient compiler discovery. Build covers 11 targets; both tests pass
-(`greet_test`, `pure_test`).
+ambient compiler discovery. Each handwritten test carries one pinned module
+dep (`xunit.v3.assert 4.0.0` via `adopt-csharp.csproj` plus
+`third_party/dotnet/paket.lock` plus `@paket.main//xunit.v3.assert`);
+`Assert.Equal` in both mains proves build and test over the lock without MTP
+shims so the plain `Main` stays generation-stable. Depcheck `locks`
+consistency, quality (`QualitySourcesInfo`), and coverage
+(`InstrumentedFilesInfo`) flow through the shared wrappers. Build covers 11
+targets; both tests pass (`greet_test`, `pure_test`).
 
-Scope notes: the tree is fully local with an SDK-style `.csproj` recording
-the foreign layout but no ecosystem lockfile in the Bazel graph (NuGet lock
-wiring per the support matrix stays open under #7). Cross-package C# imports
-resolve only through an exact `# gazelle:resolve` mapping today; both
-packages stay self-contained for that reason. `dx generate` runs the Rust
-extension only; regenerate with the per-language command above until the dx
+Scope notes: cross-package C# imports resolve only through an exact
+`# gazelle:resolve` mapping today. `dx generate` runs the Rust extension only; regenerate with the per-language command above until the dx
 wiring lands.

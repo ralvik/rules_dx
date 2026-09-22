@@ -5,6 +5,8 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
+# gazelle:resolve kotlin ImmutableList @maven//:com_google_guava_guava
+
 # Handwritten: the generator never emits kotlin_test; test-owned `*Test.kt`
 # stays out of the generated library and this rule survives regeneration.
 kotlin_test(
@@ -21,8 +23,10 @@ kotlin_library(
     name = "greet",
     srcs = [
         "Greet.kt",
+        "Guava.kt",
         "Helper.kt",
     ],
+    deps = ["@maven//:com_google_guava_guava"],
 )
 
 real_source_target(

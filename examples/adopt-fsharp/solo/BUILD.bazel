@@ -19,6 +19,7 @@ fsharp_test(
 fsharp_library(
     name = "solo",
     srcs = ["Pure.fs"],
+    deps = ["@paket.main//fsharp.core"],  # keep
 )
 
 real_source_target(

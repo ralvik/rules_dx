@@ -13,4 +13,8 @@ class GreetTest extends AnyFlatSpec {
   "Helper.suffix" should "return the suffix" in {
     assert(Helper.suffix() == " world")
   }
+
+  "Guava.join" should "join via the pinned guava dep" in {
+    assert(Guava.join() == "hello,world")
+  }
 }

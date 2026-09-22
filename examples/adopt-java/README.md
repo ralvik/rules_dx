@@ -20,13 +20,15 @@ basename) with `srcs` as the sorted non-test sources; `*Test.java` files
 stay out of the library and are owned by handwritten `java_test` targets
 that survive regeneration. JDK imports (`java.*`) never produce edges; the
 pinned `rules_java` toolchain stays authoritative at execution time with no
-ambient JDK discovery. Build covers 11 targets; both tests pass
-(`greet_test`, `pure_test`).
+ambient JDK discovery. The `greet` library carries one pinned module dep
+(`com.google.guava:guava:32.0.1-jre` via `pom.xml` plus
+`third_party/jvm/maven_install.json` plus `@maven//:com_google_guava_guava`
+through an exact `# gazelle:resolve` mapping); `Guava.join` plus
+`testGuavaJoin` prove build and test over the lock. Depcheck `locks`
+consistency, quality (`QualitySourcesInfo`), and coverage
+(`InstrumentedFilesInfo`) flow through the shared wrappers. Build covers 11
+targets; both tests pass (`greet_test`, `pure_test`).
 
-Scope notes: the tree is fully local with a `pom.xml` recording the foreign
-Maven coordinates but no ecosystem lockfile in the Bazel graph (Maven-lock
-resolution per the support matrix stays open under #7). Cross-package Java
-imports resolve only through an exact `# gazelle:resolve` mapping today;
-both packages stay self-contained for that reason. `dx generate` runs the
-Rust extension only; regenerate with the per-language command above until
+Scope notes: cross-package Java imports resolve only through an exact
+`# gazelle:resolve` mapping today. `dx generate` runs the Rust extension only; regenerate with the per-language command above until
 the dx wiring lands.

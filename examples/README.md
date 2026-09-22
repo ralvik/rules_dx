@@ -26,4 +26,4 @@ commands and expected evidence in its own `README.md`.
 composition fixture (Vue/Svelte/Astro/MDX over one shared helper, owned by
 the framework track), not an external-consumer workspace.
 
-Per-foundation external-consumer workspaces plus acquisition/laziness proof are delivered (seed host; platform and remote dimensions are tracked in the roadmap).
+Per-foundation external-consumer workspaces plus acquisition/laziness proof are delivered (seed host; platform and remote dimensions are tracked in the roadmap). Each `adopt-*` workspace records one pinned module dep with its manifest plus lock authority and the generate plus build plus test evidence in its own `README.md`.

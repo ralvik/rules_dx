@@ -1,10 +1,14 @@
-<!-- Foreign SDK-style project marker: adopted without upstream changes. The
-     C# Gazelle extension reads only `.cs` sources; this file records the
-     foreign SDK-style layout without participating in Bazel resolution
-     (NuGet lock wiring stays open under #7). -->
+<!-- Foreign SDK-style project marker: one pinned test dep (xunit.v3.assert
+     4.0.0, matching third_party/dotnet/paket.lock plus @paket.main hub).
+     The C# Gazelle extension reads only `.cs` sources; generation never
+     writes this file. Tests use Xunit.Assert without MTP shims so the plain
+     Main stays generation-stable. -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3.assert" Version="4.0.0" />
+  </ItemGroup>
 </Project>
