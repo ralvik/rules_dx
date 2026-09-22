@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Clippy deny pin for issue #955.
+# Clippy deny pin for issues #955, #999.
 #
 # Per-crate `deny(clippy::expect_used, clippy::unwrap_used, ...)` rolls out
 # per crate with no global enforcement: new crates could land without the
@@ -133,15 +133,12 @@ fi
 
 # Blanket allows stay out of first-party non-test code: params structs and
 # extraction replace `too_many_*`, per-use scoping replaces `unused_imports`.
-if ! grep -rn -F -e 'allow(clippy::too_many_arguments)' --include='*.rs' cli/ quality/ tools/ docs/ deploy/ env/ generation/ 2>/dev/null | grep -v -F -e 'testdata' | grep -q .; then
+# Single wildcard prefix covers every `too_many_*` lint plus combined
+# `allow(...)` lists (issues #955, #999).
+if ! grep -rn -F -e 'allow(clippy::too_many' --include='*.rs' cli/ quality/ tools/ docs/ deploy/ env/ generation/ 2>/dev/null | grep -v -F -e 'testdata' | grep -q .; then
   ok
 else
-  bad "allow(clippy::too_many_arguments) reappeared (want params struct, issue #955)"
-fi
-if ! grep -rn -F -e 'allow(clippy::too_many_lines)' --include='*.rs' cli/ quality/ tools/ docs/ deploy/ env/ generation/ 2>/dev/null | grep -v -F -e 'testdata' | grep -q .; then
-  ok
-else
-  bad "allow(clippy::too_many_lines) reappeared (want extraction, issue #955)"
+  bad "allow(clippy::too_many*) reappeared (want params struct/extraction, issues #955 #999)"
 fi
 if ! grep -rn -F -e 'allow(unused_imports)' --include='*.rs' cli/ quality/ tools/ docs/ deploy/ env/ generation/ 2>/dev/null | grep -v -F -e 'testdata' | grep -q .; then
   ok
@@ -156,4 +153,4 @@ else
   bad "clippy.toml lost its clippy_deny_pin pointer (want single source of truth plus CI pin, issue #955)"
 fi
 
-dx_test_summary "clippy deny pin (issue #955)"
+dx_test_summary "clippy deny pin (issues #955, #999)"
