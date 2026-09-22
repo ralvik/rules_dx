@@ -91,9 +91,9 @@ pub fn parse_envelope(json: &str) -> Result<Envelope, EnvelopeError> {
 
 /// Serializes an envelope to its canonical compact JSON form.
 pub fn emit_envelope(envelope: &Envelope) -> Result<String, EnvelopeError> {
-    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_START - reason: unreachable serialize, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     serde_json::to_string(envelope).map_err(|err| EnvelopeError::Unserializable(err.to_string()))
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end unreachable serialize, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
 /// Lowercase hex SHA-256 of `bytes` (frozen envelope contract:

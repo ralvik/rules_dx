@@ -33,7 +33,7 @@
     )
 )]
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 use std::path::PathBuf;
 
 use clap::{error::ErrorKind, Parser};
@@ -188,7 +188,7 @@ fn run(args: &[String]) -> Result<(), WriterError> {
         language: cli.language.ok_or_else(|| WriterError::Usage(usage()))?,
         entries: cli.entry,
     };
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     let bytes = encode_validated(&shard).map_err(WriterError::Codec)?;
     // Read back before writing so a codec regression fails the action
     // instead of emitting bytes the CLI would reject.

@@ -407,7 +407,7 @@ mod tests {
             Some(file_result::Change::Modification(_))
         ));
         let Some(file_result::Change::Modification(modification)) = &file.change else {
-            unreachable!("expected modification change"); // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+            unreachable!("expected modification change"); // LCOV_EXCL_LINE - reason: unreachable arm, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         };
         assert_eq!(modification.original_content, b"abc\n");
         assert_eq!(

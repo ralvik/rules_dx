@@ -14,7 +14,7 @@
     )
 )]
 
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 fn run(argv: &[String]) -> i32 {
     let args = match dx_install_tools::parse_args(argv) {
         Ok(args) => args,
@@ -42,4 +42,4 @@ fn run(argv: &[String]) -> i32 {
 fn main() {
     std::process::exit(run(&std::env::args().collect::<Vec<_>>()));
 }
-// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage

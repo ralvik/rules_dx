@@ -328,12 +328,12 @@ pub fn acquire_lock(dx_dir: &Path, timeout: Duration) -> Result<File, Error> {
     match dx_atomic_fs::lock_exclusive(&file, timeout) {
         Ok(()) => Ok(file),
         Err(std::fs::TryLockError::WouldBlock) => Err(Error::Busy { path: path.clone() }),
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         Err(e) => Err(Error::LockFailed {
             path: path.clone(),
             reason: format!("cannot lock commit lock: {e}"),
         }),
-        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     }
 }
 
@@ -462,13 +462,13 @@ fn read_current_identity(bin_dir: &Path) -> Result<Option<[u8; 32]>, Error> {
     let meta = match fs::symlink_metadata(bin_dir) {
         Ok(meta) => meta,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(None),
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         Err(e) => {
             return Err(Error::Unmanaged {
                 path: bin_dir.to_path_buf(),
                 detail: format!("cannot inspect installed tree: {e}"),
             });
-            // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+            // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         }
     };
     if meta.file_type().is_symlink() {
@@ -524,10 +524,10 @@ fn recover_crashed_swap(prev_dir: &Path, bin_dir: &Path) -> Result<(), Error> {
         return Ok(());
     }
     fs::rename(prev_dir, bin_dir).map_err(|e| Error::Install {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         reason: format!("cannot restore interrupted tree: {e}"),
     })?;
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     Ok(())
 }
 
@@ -544,22 +544,22 @@ fn stage_tree(
         })?;
     }
     fs::create_dir_all(stage_dir).map_err(|e| Error::Install {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         reason: format!("cannot create staging {}: {e}", stage_dir.display()),
     })?;
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     for (name, target) in staged {
         symlink_entry(target, &stage_dir.join(name)).map_err(|e| Error::Install {
             reason: format!("cannot stage host name '{name}': {e}"),
         })?;
     }
     fs::write(stage_dir.join(MARKER_FILE_NAME), encode_marker(identity)).map_err(|e| {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         Error::Install {
             reason: format!("cannot stage provenance marker: {e}"),
         }
     })?;
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     Ok(())
 }
 
@@ -568,16 +568,16 @@ fn stage_tree(
 fn commit_swap(bin_dir: &Path, prev_dir: &Path, stage_dir: &Path) -> Result<(), Error> {
     if bin_dir.exists() {
         fs::rename(bin_dir, prev_dir).map_err(|e| Error::Install {
-            // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+            // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             reason: format!("cannot retire current tree: {e}"),
         })?;
-        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     }
     fs::rename(stage_dir, bin_dir).map_err(|e| Error::Install {
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         reason: format!("cannot publish staged tree: {e}"),
     })?;
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     Ok(())
 }
 

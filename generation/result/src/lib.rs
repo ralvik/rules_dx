@@ -174,7 +174,7 @@ fn apply_modification(path: &str, modification: &Modification) -> Result<Vec<u8>
                 index,
             });
         }
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         let Ok(start) = usize::try_from(edit.start_byte) else {
             return Err(Error::EditOutOfBounds {
                 path: path.to_owned(),
@@ -187,7 +187,7 @@ fn apply_modification(path: &str, modification: &Modification) -> Result<Vec<u8>
                 index,
             });
         };
-        // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         if end > original.len() {
             return Err(Error::EditOutOfBounds {
                 path: path.to_owned(),

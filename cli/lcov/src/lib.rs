@@ -5,11 +5,11 @@
 //! Bazel-owned enforcement for the resolved coverage policy over the
 //! eligible scope. The gate parses the combined LCOV report from
 //! `bazel coverage --combined_report=lcov`, validates source-level exclusion
-//! markers carrying nearby `policy:` comments, reconciles the
-//! repository-owned inventory against Bazel-declared sources, and requires
-//! exact 100% covered-over-eligible executable lines. Only `DA` records
-//! define executable lines; blank and comment-only lines are not executable.
-//! Missing reports, unowned or absent sources, and any uncovered
+//! markers carrying nearby specific `reason:` plus `issue:` tracking,
+//! reconciles the repository-owned inventory against Bazel-declared sources,
+//! and requires exact 100% covered-over-eligible executable lines. Only `DA`
+//! records define executable lines; blank and comment-only lines are not
+//! executable. Missing reports, unowned or absent sources, and any uncovered
 //! non-excluded executable line fail the gate. Percentages are informational
 //! only and never decide the verdict.
 //!
@@ -21,10 +21,12 @@
 //! and backslash escapes). Markers inside block comments or raw strings
 //! stay wont-fix out of scope (gate-owned: line-comment
 //! textual scan only; no eligible source uses those shapes). The
-//! `reason:`/`policy:` lookup itself is a textual per-line match on the
-//! marker line or the line directly above it, and the reason text after
-//! the colon must be non-empty and short (at most `MAX_REASON_LEN` chars;
-//! full rationale lives once in `docs/testing/README.md#coverage`).
+//! `reason:` plus `issue:` lookup itself is a textual per-line match on the
+//! marker line or the line directly above it (split form allowed), and the
+//! reason text after the colon must be non-empty specific and short (at most
+//! `MAX_REASON_LEN` chars; full rationale lives once in
+//! `docs/testing/strategy-details.md#coverage`). Bare `policy:` pointers
+//! without `reason:` fail closed.
 //!
 //! Domain split: combined-LCOV parsing (`FileHits`,
 //! `parse_lcov`, `validate_lcov_report`) lives in the `parse` module,
@@ -42,7 +44,7 @@
 //! Dependency evaluation (parser adopted):
 //! the gate needs the combined-LCOV `SF`/`DA` union via the `lcov` crate
 //! plus per-extension comment-syntax marker scanning outside string literals
-//! with the nearby short `reason:`/`policy:` gate plus the repo inventory
+//! with the nearby short `reason:` plus `issue:` gate plus the repo inventory
 //! and the exact 100%
 //! eligible verdict. `cargo-llvm-cov` is a coverage-tool binary rather than
 //! a parser library, and the `lcov` crate provides none of the marker,
@@ -99,15 +101,29 @@ pub enum LcovError {
     /// Open `SF:` section never closes with `end_of_record`.
     #[error("LCOV SF record without end_of_record")]
     SfWithoutEndOfRecord,
-    /// Exclusion directive lacks a nearby non-empty `reason:`/`policy:`.
+    /// Exclusion directive lacks a nearby non-empty `reason:`.
     #[error("coverage ignore without nearby reason at {path}:{lineno}: {directive} requires a reason: comment on the same or previous line")]
     MissingReason {
         path: String,
         lineno: usize,
         directive: String,
     },
+    /// Exclusion carries only a bare `policy:` pointer without a specific `reason:`.
+    #[error("coverage ignore with bare policy at {path}:{lineno}: {directive} requires reason: plus issue: (bare policy: without reason: is rejected)")]
+    BarePolicyWithoutReason {
+        path: String,
+        lineno: usize,
+        directive: String,
+    },
+    /// Exclusion lacks nearby `issue:` tracking for budget/expiry review.
+    #[error("coverage ignore without issue tracking at {path}:{lineno}: {directive} requires issue: <number> on the same or previous line for budget/expiry review")]
+    MissingIssue {
+        path: String,
+        lineno: usize,
+        directive: String,
+    },
     /// Exclusion reason exceeds the short-reason cap (`MAX_REASON_LEN`).
-    #[error("coverage ignore reason too long at {path}:{lineno}: {directive} reason is {len} chars, max {max}; keep it short with a policy: docs/testing/README.md#coverage pointer")]
+    #[error("coverage ignore reason too long at {path}:{lineno}: {directive} reason is {len} chars, max {max}; keep reason: specific and short with issue: plus policy: docs/testing/strategy-details.md#coverage")]
     ReasonTooLong {
         path: String,
         lineno: usize,

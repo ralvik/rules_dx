@@ -229,7 +229,7 @@ fn main() {
 }
 
 fn run() -> i32 {
-    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_START - reason: thin run shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     // `args_os` keeps non-UTF8 bytes opaque so they fail as `InvalidScope`
     // (exit 2) instead of panicking in `args`; `workspace` plus `targets`
     // travel as `OsString` in the grammar for the same reason.
@@ -284,7 +284,7 @@ fn run() -> i32 {
         }
         Err(error) => return usage_error(&error.to_string()),
     };
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin run shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     // Structured diagnostics: tracing subscriber init is
     // idempotent and emits nothing by default, keeping runs byte-identical
     // unless `--verbose`/`--log-level` selects a level or `RUST_LOG`

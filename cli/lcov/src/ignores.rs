@@ -38,31 +38,20 @@ pub fn is_ignored(ignores: &Ignores, line: u32) -> bool {
     false
 }
 
-/// Short-reason cap for exclusion markers (`policy: docs/testing/README.md#coverage`).
+/// Short-reason cap for exclusion markers (`reason:` plus `issue:` plus `policy:`).
 ///
-/// Full rationale lives once in `docs/testing/README.md#coverage`; marker
-/// reasons stay short pointers so the coverage denominator is argued away
-/// nowhere. Paragraph-long reasons fail the gate via [`LcovError::ReasonTooLong`].
+/// Full rationale lives once in `docs/testing/strategy-details.md#coverage`;
+/// marker reasons stay short and specific so the coverage denominator is
+/// argued away nowhere. Paragraph-long reasons fail the gate via
+/// [`LcovError::ReasonTooLong`]. Bare `policy:` pointers without a specific
+/// `reason:` fail via [`LcovError::BarePolicyWithoutReason`]; reasons without
+/// `issue:` tracking fail via [`LcovError::MissingIssue`].
 pub const MAX_REASON_LEN: usize = 120;
 
-/// Non-empty reason text after `reason:` or `policy:` on `line`, if present.
-///
-/// Both keys are accepted: historical markers use `reason:`, while the
-/// short-reason policy (`docs/testing/README.md#coverage`) blesses the
-/// `policy:` pointer form. `reason:` wins when a line carries both.
-fn reason_value(line: &str) -> Option<String> {
-    let offset = match (line.find("reason:"), line.find("policy:")) {
-        (Some(left), Some(right)) => Some(left.min(right)),
-        (Some(left), None) => Some(left),
-        (None, Some(right)) => Some(right),
-        (None, None) => None,
-    }?;
-    let key_len = if line[offset..].starts_with("reason:") {
-        "reason:".len()
-    } else {
-        "policy:".len()
-    };
-    let value = line[offset + key_len..].trim().to_string();
+/// Non-empty value text after `key` (`reason:`/`policy:`/`issue:`) on `line`, if present.
+fn key_value(line: &str, key: &str) -> Option<String> {
+    let offset = line.find(key)?;
+    let value = line[offset + key.len()..].trim().to_string();
     if value.is_empty() {
         None
     } else {
@@ -70,19 +59,63 @@ fn reason_value(line: &str) -> Option<String> {
     }
 }
 
-/// Reason for `directive` at 1-based `lineno`: `reason:`/`policy:` with
-/// non-empty short text on the same line or the line directly above it.
+/// Non-empty reason text after `reason:` on `line`, if present.
+///
+/// Only `reason:` counts: a bare `policy:` pointer without a specific
+/// `reason:` is rejected (see [`LcovError::BarePolicyWithoutReason`]).
+fn reason_value(line: &str) -> Option<String> {
+    key_value(line, "reason:")
+}
+
+/// Non-empty issue tracking text after `issue:` on `line`, if present.
+///
+/// The value must reference the tracking issue number (contains a digit)
+/// so blanket excludes stay budgeted with expiry review (see
+/// `tools/coverage/excludes-budget.txt`).
+fn issue_value(line: &str) -> Option<String> {
+    let value = key_value(line, "issue:")?;
+    if value.chars().any(|c| c.is_ascii_digit()) {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+/// Whether `line` carries a `policy:` pointer (optional companion to `reason:`).
+fn has_policy(line: &str) -> bool {
+    line.contains("policy:")
+}
+
+/// Reason for `directive` at 1-based `lineno`: specific `reason:` plus
+/// `issue:` tracking on the same line or the line directly above it.
+///
+/// Both keys must appear across the two nearby lines (split form allowed:
+/// `reason:` on one line and `issue:` on the other). A bare `policy:`
+/// pointer without `reason:` fails closed; a specific `reason:` without
+/// `issue:` fails closed for budget/expiry review.
 fn nearby_reason(
     path: &str,
     directive: &str,
     lineno: usize,
     lines: &[&str],
 ) -> Result<String, LcovError> {
-    let reason = if let Some(reason) = reason_value(lines[lineno - 1]) {
+    let current = lines[lineno - 1];
+    let previous = if lineno >= 2 {
+        Some(lines[lineno - 2])
+    } else {
+        None
+    };
+    let reason = if let Some(reason) = reason_value(current) {
         reason
-    } else if lineno >= 2 {
-        if let Some(reason) = reason_value(lines[lineno - 2]) {
+    } else if let Some(prev) = previous {
+        if let Some(reason) = reason_value(prev) {
             reason
+        } else if has_policy(current) || has_policy(prev) {
+            return Err(LcovError::BarePolicyWithoutReason {
+                path: path.to_string(),
+                lineno,
+                directive: directive.to_string(),
+            });
         } else {
             return Err(LcovError::MissingReason {
                 path: path.to_string(),
@@ -90,6 +123,12 @@ fn nearby_reason(
                 directive: directive.to_string(),
             });
         }
+    } else if has_policy(current) {
+        return Err(LcovError::BarePolicyWithoutReason {
+            path: path.to_string(),
+            lineno,
+            directive: directive.to_string(),
+        });
     } else {
         return Err(LcovError::MissingReason {
             path: path.to_string(),
@@ -104,6 +143,15 @@ fn nearby_reason(
             directive: directive.to_string(),
             len: reason.len(),
             max: MAX_REASON_LEN,
+        });
+    }
+    let has_issue = issue_value(current).is_some()
+        || previous.is_some_and(|prev| issue_value(prev).is_some());
+    if !has_issue {
+        return Err(LcovError::MissingIssue {
+            path: path.to_string(),
+            lineno,
+            directive: directive.to_string(),
         });
     }
     Ok(reason)
@@ -345,15 +393,17 @@ fn take_word(rest: &str, word: &str) -> bool {
 
 /// Validate the exclusion markers in the `source` of `path`.
 ///
-/// Every LINE/START/STOP directive needs a nearby non-empty short
-/// (`MAX_REASON_LEN`) `reason:`/`policy:`; ranges
-/// must open and close exactly once; any other spelling of the marker prefix
-/// is an unrecognized directive and fails. Markers are honored only inside
-/// the extension-selected comment style (see [`comment_style`]) outside
-/// literals. Block comments (`/* ... */`) and raw strings (`r#"..."#`)
-/// stay wont-fix out of scope: the scan is line-comment
-/// textual only and no eligible source uses those shapes, so markers there
-/// are inert.
+/// Every LINE/START/STOP directive needs a nearby specific non-empty short
+/// (`MAX_REASON_LEN`) `reason:` plus `issue:` tracking on the same or
+/// previous line; bare `policy:` pointers without `reason:` fail via
+/// [`LcovError::BarePolicyWithoutReason`] and reasons without `issue:` fail
+/// via [`LcovError::MissingIssue`]. Ranges must open and close exactly once;
+/// any other spelling of the marker prefix is an unrecognized directive and
+/// fails. Markers are honored only inside the extension-selected comment
+/// style (see [`comment_style`]) outside literals. Block comments
+/// (`/* ... */`) and raw strings (`r#"..."#`) stay wont-fix out of scope:
+/// the scan is line-comment textual only and no eligible source uses those
+/// shapes, so markers there are inert.
 pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
     let lines: Vec<&str> = source.lines().collect();
     let mut ignores = Ignores::default();
@@ -430,7 +480,7 @@ mod tests {
     fn single_line_ignore_needs_same_line_reason() {
         let source = file_lines(&[
             "pub fn f() -> u32 {".to_string(),
-            format!("    // {} - reason: fixture.", marker("_LINE")),
+            format!("    // {} - reason: fixture, issue: 1055.", marker("_LINE")),
             "    1".to_string(),
             "}".to_string(),
         ]);
@@ -445,7 +495,7 @@ mod tests {
     #[test]
     fn single_line_ignore_accepts_previous_line_reason() {
         let source = file_lines(&[
-            "    // reason: fixture explains the next line.".to_string(),
+            "    // reason: fixture explains the next line, issue: 1055.".to_string(),
             format!("    // {}", marker("_LINE")),
             "    1".to_string(),
         ]);
@@ -456,7 +506,7 @@ mod tests {
     #[test]
     fn single_line_ignore_accepts_marker_at_end_of_line() {
         let source = file_lines(&[
-            "    // reason: fixture.".to_string(),
+            "    // reason: fixture, issue: 1055.".to_string(),
             format!("    // {}", marker("_LINE")),
             "    1".to_string(),
         ]);
@@ -511,9 +561,12 @@ mod tests {
     fn range_excludes_interior_and_boundaries() {
         let source = file_lines(&[
             "fn f() {".to_string(),
-            format!("    // {} - reason: range opens.", marker("_START")),
+            format!("    // {} - reason: range opens, issue: 1055.", marker("_START")),
             "    1".to_string(),
-            format!("    // {} - reason: range closes.", marker("_STOP")),
+            format!(
+                "    // {} - reason: range closes, issue: 1055.",
+                marker("_STOP")
+            ),
             "}".to_string(),
         ]);
         let ignores = find_ignores("t.rs", &source).unwrap();
@@ -528,7 +581,7 @@ mod tests {
     #[test]
     fn stop_without_reason_fails() {
         let source = file_lines(&[
-            format!("// {} - reason: opens.", marker("_START")),
+            format!("// {} - reason: opens, issue: 1055.", marker("_START")),
             "code();".to_string(),
             format!("// {}", marker("_STOP")),
         ]);
@@ -537,7 +590,10 @@ mod tests {
 
     #[test]
     fn stop_without_start_fails() {
-        let source = file_lines(&[format!("// {} - reason: stray stop.", marker("_STOP"))]);
+        let source = file_lines(&[format!(
+            "// {} - reason: stray stop, issue: 1055.",
+            marker("_STOP")
+        )]);
         let err = find_ignores("t.rs", &source).unwrap_err();
         assert!(err.to_string().contains("without START"), "{err}");
     }
@@ -545,10 +601,10 @@ mod tests {
     #[test]
     fn nested_start_fails() {
         let source = file_lines(&[
-            format!("// {} - reason: outer.", marker("_START")),
-            format!("// {} - reason: inner.", marker("_START")),
-            format!("// {} - reason: close.", marker("_STOP")),
-            format!("// {} - reason: close.", marker("_STOP")),
+            format!("// {} - reason: outer, issue: 1055.", marker("_START")),
+            format!("// {} - reason: inner, issue: 1055.", marker("_START")),
+            format!("// {} - reason: close, issue: 1055.", marker("_STOP")),
+            format!("// {} - reason: close, issue: 1055.", marker("_STOP")),
         ]);
         let err = find_ignores("t.rs", &source).unwrap_err();
         assert!(err.to_string().contains("nested"), "{err}");
@@ -558,7 +614,10 @@ mod tests {
     fn unclosed_start_fails() {
         let source = file_lines(&[
             "fn f() {".to_string(),
-            format!("    // {} - reason: never closed.", marker("_START")),
+            format!(
+                "    // {} - reason: never closed, issue: 1055.",
+                marker("_START")
+            ),
             "}".to_string(),
         ]);
         let err = find_ignores("t.rs", &source).unwrap_err();
@@ -611,7 +670,7 @@ mod tests {
     fn marker_after_string_state_is_recognized() {
         let source = file_lines(&[
             "let s = \"a\\\"b\";".to_string(),
-            format!("// {} - reason: after strings.", marker("_LINE")),
+            format!("// {} - reason: after strings, issue: 1055.", marker("_LINE")),
             "code();".to_string(),
         ]);
         let ignores = find_ignores("t.rs", &source).unwrap();
@@ -623,7 +682,7 @@ mod tests {
         let source = file_lines(&[
             "def f():".to_string(),
             format!(
-                "    pass  # {} - reason: fixture defensive line.",
+                "    pass  # {} - reason: fixture defensive line, issue: 1055.",
                 marker("_LINE")
             ),
             "    return 1".to_string(),
@@ -671,9 +730,12 @@ mod tests {
     fn hash_range_excludes_boundaries_for_starlark() {
         let source = file_lines(&[
             "def f():".to_string(),
-            format!("    # {} - reason: range opens.", marker("_START")),
+            format!("    # {} - reason: range opens, issue: 1055.", marker("_START")),
             "    pass".to_string(),
-            format!("    # {} - reason: range closes.", marker("_STOP")),
+            format!(
+                "    # {} - reason: range closes, issue: 1055.",
+                marker("_STOP")
+            ),
         ]);
         let ignores = find_ignores("t.bzl", &source).unwrap();
         assert_eq!(ignores.ranges.len(), 1);
@@ -687,7 +749,10 @@ mod tests {
     fn html_comment_markers_are_honored_for_markdown() {
         let source = file_lines(&[
             "# Title".to_string(),
-            format!("<!-- {} - reason: fixture prose. -->", marker("_LINE")),
+            format!(
+                "<!-- {} - reason: fixture prose, issue: 1055. -->",
+                marker("_LINE")
+            ),
             "Body.".to_string(),
         ]);
         let ignores = find_ignores("t.md", &source).unwrap();
@@ -697,7 +762,7 @@ mod tests {
     #[test]
     fn html_second_comment_on_line_keeps_separator() {
         let line = format!(
-            "prose <!-- dropped --> more <!-- {} - reason: second segment. -->",
+            "prose <!-- dropped --> more <!-- {} - reason: second segment, issue: 1055. -->",
             marker("_LINE")
         );
         let source = file_lines(&[line]);
@@ -708,7 +773,7 @@ mod tests {
     #[test]
     fn html_unterminated_comment_after_content_keeps_prefix() {
         let line = format!(
-            "prose <!-- dropped --> tail <!-- {} - reason: unterminated.",
+            "prose <!-- dropped --> tail <!-- {} - reason: unterminated, issue: 1055.",
             marker("_LINE")
         );
         let source = file_lines(&[line]);
@@ -729,7 +794,7 @@ mod tests {
         // `"//"` inside the string must not win; the trailing `// MARK`
         // outside the literal does.
         let line = format!(
-            "let s = \"code with // {} inside\"; // {} - reason: real.",
+            "let s = \"code with // {} inside\"; // {} - reason: real, issue: 1055.",
             marker("_LINE"),
             marker("_LINE")
         );
@@ -741,7 +806,10 @@ mod tests {
     #[test]
     fn regex_hash_scan_skips_char_literal_hash() {
         // `'#'` is a char literal; the later `# MARK` is the comment.
-        let line = format!("let c = '#'; # {} - reason: after char.", marker("_LINE"));
+        let line = format!(
+            "let c = '#'; # {} - reason: after char, issue: 1055.",
+            marker("_LINE")
+        );
         let source = file_lines(&[line]);
         let ignores = find_ignores("t.py", &source).unwrap();
         assert!(ignores.singles.contains_key(&1));
@@ -762,18 +830,18 @@ mod tests {
             let open = marker(suffix);
             let source = if suffix == "_STOP" {
                 file_lines(&[
-                    format!("// {} - reason: opens.", marker("_START")),
+                    format!("// {} - reason: opens, issue: 1055.", marker("_START")),
                     "code();".to_string(),
-                    format!("// {open} - reason: closes."),
+                    format!("// {open} - reason: closes, issue: 1055."),
                 ])
             } else if suffix == "_START" {
                 file_lines(&[
-                    format!("// {open} - reason: opens."),
+                    format!("// {open} - reason: opens, issue: 1055."),
                     "code();".to_string(),
-                    format!("// {} - reason: closes.", marker("_STOP")),
+                    format!("// {} - reason: closes, issue: 1055.", marker("_STOP")),
                 ])
             } else {
-                file_lines(&[format!("// {open} - reason: ok.")])
+                file_lines(&[format!("// {open} - reason: ok, issue: 1055.")])
             };
             assert!(find_ignores("t.rs", &source).is_ok(), "{suffix}");
         }
@@ -810,7 +878,7 @@ mod tests {
         let source = file_lines(&[
             "def f() -> int: ...".to_string(),
             format!(
-                "    pass  # {} - reason: fixture stub line.",
+                "    pass  # {} - reason: fixture stub line, issue: 1055.",
                 marker("_LINE")
             ),
         ]);
@@ -819,9 +887,49 @@ mod tests {
     }
 
     #[test]
-    fn policy_pointer_is_accepted_as_short_reason() {
+    fn bare_policy_without_reason_is_rejected() {
         let source = file_lines(&[format!(
-            "// {} - policy: docs/testing/README.md#coverage",
+            "// {} - policy: docs/testing/strategy-details.md#coverage",
+            marker("_LINE")
+        )]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(
+            err.to_string().contains("bare policy"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn bare_policy_on_previous_line_is_rejected() {
+        let source = file_lines(&[
+            "    // policy: docs/testing/strategy-details.md#coverage".to_string(),
+            format!("    // {}", marker("_LINE")),
+            "    1".to_string(),
+        ]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(
+            err.to_string().contains("bare policy"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn reason_without_issue_is_rejected() {
+        let source = file_lines(&[format!(
+            "// {} - reason: specific but untracked.",
+            marker("_LINE")
+        )]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(
+            err.to_string().contains("issue"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn reason_plus_issue_plus_policy_is_accepted() {
+        let source = file_lines(&[format!(
+            "// {} - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage",
             marker("_LINE")
         )]);
         let ignores = find_ignores("t.rs", &source).unwrap();
@@ -829,10 +937,10 @@ mod tests {
     }
 
     #[test]
-    fn policy_pointer_on_previous_line_is_accepted() {
+    fn split_reason_and_issue_across_lines_is_accepted() {
         let source = file_lines(&[
-            "    // policy: docs/testing/README.md#coverage".to_string(),
-            format!("    // {}", marker("_LINE")),
+            "    // reason: thin shim.".to_string(),
+            format!("    // {} - issue: 1055.", marker("_LINE")),
             "    1".to_string(),
         ]);
         let ignores = find_ignores("t.rs", &source).unwrap();
@@ -842,19 +950,22 @@ mod tests {
     #[test]
     fn long_reason_fails_for_single_line() {
         let long = "x".repeat(MAX_REASON_LEN + 1);
-        let source = file_lines(&[format!("// {} - reason: {long}", marker("_LINE"))]);
+        let source = file_lines(&[format!(
+            "// {} - reason: {long}, issue: 1055",
+            marker("_LINE")
+        )]);
         let err = find_ignores("t.rs", &source).unwrap_err();
         assert!(err.to_string().contains("too long"), "{err}");
         assert!(err.to_string().contains("t.rs:1"), "{err}");
     }
 
     #[test]
-    fn long_policy_reason_fails_for_range_start() {
+    fn long_reason_fails_for_range_start() {
         let long = "y".repeat(MAX_REASON_LEN + 40);
         let source = file_lines(&[
-            format!("// {} - policy: {long}", marker("_START")),
+            format!("// {} - reason: {long}, issue: 1055", marker("_START")),
             "code();".to_string(),
-            format!("// {} - reason: closes.", marker("_STOP")),
+            format!("// {} - reason: closes, issue: 1055.", marker("_STOP")),
         ]);
         let err = find_ignores("t.rs", &source).unwrap_err();
         assert!(err.to_string().contains("too long"), "{err}");
@@ -862,8 +973,12 @@ mod tests {
 
     #[test]
     fn max_length_reason_passes_at_boundary() {
-        let exact = "z".repeat(MAX_REASON_LEN);
-        let source = file_lines(&[format!("// {} - reason: {exact}", marker("_LINE"))]);
+        let suffix = ", issue: 1055";
+        let exact = "z".repeat(MAX_REASON_LEN - suffix.len());
+        let source = file_lines(&[format!(
+            "// {} - reason: {exact}{suffix}",
+            marker("_LINE")
+        )]);
         assert!(find_ignores("t.rs", &source)
             .unwrap()
             .singles
@@ -886,7 +1001,10 @@ mod tests {
             "t.java", "t.kt", "t.scala", "t.cs", "t.fs", "t.fsi", "t.mjs", "t.cjs", "t.mts",
             "t.cts",
         ] {
-            let source = file_lines(&[format!("// {} - reason: fixture.", marker("_LINE"))]);
+            let source = file_lines(&[format!(
+                "// {} - reason: fixture, issue: 1055.",
+                marker("_LINE")
+            )]);
             let ignores = find_ignores(path, &source).unwrap();
             assert!(ignores.singles.contains_key(&1), "{path}");
         }

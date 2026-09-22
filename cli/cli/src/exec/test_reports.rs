@@ -196,7 +196,7 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
                     Some(combined)
                 }
             }
-            _ => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+            _ => None, // LCOV_EXCL_LINE - reason: defensive arm, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         };
         let Some(document) = document else {
             reports_ok = false;

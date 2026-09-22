@@ -36,12 +36,17 @@ inventory. Run the gate with `dx coverage --min-coverage`; the flag is a
 user-facing threshold, not a second repo gate. Do not round a shortfall up to a pass.
 
 Use each coverage tool's native source-level ignore directives for code that
-cannot reasonably be covered. Each ignore needs a nearby short `policy:` reason
-plus reviewer approval in the owning PR. Valid ignores leave the denominator.
-Ignore syntax is `LCOV_EXCL_LINE` for one line and `LCOV_EXCL_START` /
-`LCOV_EXCL_STOP` for a range, each with a short `policy:` comment
-(`policy: docs/testing/README.md#coverage`, at most 120 chars) on the same or
-previous line. Markers live in line comments outside string literals only.
+cannot reasonably be covered. Each ignore needs a nearby specific short
+`reason:` plus `issue:` tracking plus reviewer approval in the owning PR.
+Valid ignores leave the denominator. Ignore syntax is `LCOV_EXCL_LINE` for one
+line and `LCOV_EXCL_START` / `LCOV_EXCL_STOP` for a range, each with
+`reason: <what/why>, issue: <number>, policy: docs/testing/strategy-details.md#coverage`
+(at most 120 chars) on the same or previous line (split form allowed).
+Bare `policy:` without `reason:` plus `issue:` fails the gate. Markers live in
+line comments outside string literals only. Excludes stay budgeted with expiry
+review in `tools/coverage/excludes-budget.txt` (60 ranges plus 28 singles,
+148 markers total, expires 2027-03-01, tracking issue #1055), enforced by
+`bazel run //tools/ci:coverage_excludes_qualification`.
 
 Non-ignored eligible sources absent from reports or never executed stay in the
 denominator as uncovered. Missing reports and incomplete instrumentation fail

@@ -163,7 +163,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     };
     let projected = match project(&manifest) {
         Ok(projected) => projected,
-        // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         Err(error) => {
             return operational(
                 invocation,
@@ -172,7 +172,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 CODE_INVALID_RESULT,
                 &format!("invalid generation manifest: {error}"),
             );
-        } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+        } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     };
     if invocation.output == OutputMode::Json {
         for file in projected.sorted_files() {
@@ -180,7 +180,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 Ok(event) => {
                     let _ = write_event(env.out, &event);
                 }
-                // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                 Err(error) => {
                     return operational(
                         invocation,
@@ -189,7 +189,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         CODE_INVALID_RESULT,
                         &format!("invalid change for output: {error}"),
                     );
-                } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             }
         }
         if !invocation.check {
@@ -199,7 +199,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                     Some(MutationOutcome::NotApplied) => {
                         (MutationOutcome::NotApplied, file.failure_code.as_deref())
                     }
-                    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                     None => {
                         return operational(
                             invocation,
@@ -208,13 +208,13 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                             CODE_INVALID_RESULT,
                             &format!("invalid mutation for output: {}", file.change.path),
                         );
-                    } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                 };
                 match mutation_event(&file.change.path, file.kind(), outcome, reason) {
                     Ok(event) => {
                         let _ = write_event(env.out, &event);
                     }
-                    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                     Err(error) => {
                         return operational(
                             invocation,
@@ -223,7 +223,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                             CODE_INVALID_RESULT,
                             &format!("invalid mutation for output: {error}"),
                         );
-                    } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                 }
             }
         }
@@ -232,7 +232,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 Ok(event) => {
                     let _ = write_event(env.out, &event);
                 }
-                // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
                 Err(error) => {
                     return operational(
                         invocation,
@@ -241,7 +241,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         CODE_INVALID_RESULT,
                         &format!("invalid notice for output: {error}"),
                     );
-                } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             }
         }
         let code = projected.exit_code(bazel_code);
@@ -258,7 +258,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
             Ok(patch) => {
                 env.out.write_all(patch.as_bytes()).ok();
             }
-            // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+            // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
             Err(error) => {
                 return operational(
                     invocation,
@@ -267,7 +267,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                     CODE_DIFF_FAILED,
                     &format!("failed to render generate patch: {error}"),
                 );
-            } // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+            } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         }
     } else {
         for line in text_lines(&projected) {

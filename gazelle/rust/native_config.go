@@ -404,7 +404,7 @@ func valeStylesData(repoRoot, dir, rel string, tool nativeTool) []string {
 		}
 		local, relErr := filepath.Rel(dir, name)
 		if relErr != nil {
-			return nil // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+			return nil // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 		}
 		slash := filepath.ToSlash(local)
 		if slash == ".." || strings.HasPrefix(slash, "../") {

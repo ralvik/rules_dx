@@ -19,7 +19,9 @@
 # - the real scoped `bazel coverage` report passes the real gate,
 # - mutated inputs fail closed (missing report, uninventoried source,
 #   undeclared eligible source, uncovered line with location,
-#   malformed exclusion directive, exclusion without nearby reason),
+#   malformed exclusion directive, exclusion without nearby reason,
+#   bare policy: without reason: plus issue: (issue #1055),
+#   reason: without issue: tracking),
 # - the //... rate flag stays present in CI as the user-facing configurable
 #   threshold; the single exact per-cell gate decides the repo verdict (issue #964).
 #
@@ -216,6 +218,38 @@ if [[ "$noreason_rc" == "1" ]] && echo "$noreason_out" | grep -q 'reason'; then
   ok
 else
   bad "reason-less exclusion did not fail closed: rc=$noreason_rc out=$noreason_out"
+fi
+
+# A bare policy: without reason: plus issue: fails closed (issue #1055).
+mkdir -p "$scratch/barepolicyroot"
+printf 'fn f() {}\n// LCOV_EXCL_LINE - policy: docs/testing/strategy-details.md#coverage\n' >"$scratch/barepolicyroot/bare.rs"
+printf 'SF:bare.rs\nDA:1,1\nend_of_record\n' >"$scratch/bare.lcov"
+printf 'eligible bare.rs\n' >"$scratch/bare-inventory.txt"
+printf 'bare.rs\n' >"$scratch/bare-sources.txt"
+bare_rc=0
+bare_out="$("$check_bin" --report "$scratch/bare.lcov" \
+  --inventory "$scratch/bare-inventory.txt" --sources "$scratch/bare-sources.txt" \
+  --root "$scratch/barepolicyroot" 2>&1)" || bare_rc=$?
+if [[ "$bare_rc" == "1" ]] && echo "$bare_out" | grep -q 'bare policy'; then
+  ok
+else
+  bad "bare-policy exclusion did not fail closed: rc=$bare_rc out=$bare_out"
+fi
+
+# A specific reason: without issue: tracking fails closed (issue #1055).
+mkdir -p "$scratch/noissueroot"
+printf 'fn f() {}\n// LCOV_EXCL_LINE - reason: defensive branch.\n' >"$scratch/noissueroot/noissue.rs"
+printf 'SF:noissue.rs\nDA:1,1\nend_of_record\n' >"$scratch/noissue.lcov"
+printf 'eligible noissue.rs\n' >"$scratch/noissue-inventory.txt"
+printf 'noissue.rs\n' >"$scratch/noissue-sources.txt"
+noissue_rc=0
+noissue_out="$("$check_bin" --report "$scratch/noissue.lcov" \
+  --inventory "$scratch/noissue-inventory.txt" --sources "$scratch/noissue-sources.txt" \
+  --root "$scratch/noissueroot" 2>&1)" || noissue_rc=$?
+if [[ "$noissue_rc" == "1" ]] && echo "$noissue_out" | grep -q 'issue'; then
+  ok
+else
+  bad "issue-less exclusion did not fail closed: rc=$noissue_rc out=$noissue_out"
 fi
 
 # The //... rate flag stays present in CI as the user-facing threshold; the exact gate decides.

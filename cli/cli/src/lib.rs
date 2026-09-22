@@ -1,4 +1,4 @@
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 //! `dx_cli`: quality command planning for the `dx` CLI.
 //!
 //! Contract: `docs/cli/cli-contract.md`.
@@ -48,4 +48,4 @@ pub use resolve::{
     expand_codegen_roots, map_owners_to_tests, resolve, resolve_for_test, resolve_run,
     ProcessQueryRunner, QueryResult, QueryRunner, ResolveError, ResolvedScope,
 };
-// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_STOP - reason: end re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage
