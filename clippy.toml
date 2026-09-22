@@ -33,3 +33,7 @@
 # remaining `unreachable!` sites (`dx_fingerprint`, `dx_cli` planning and
 # JUnit rendering, `dx_test_scratch`) into typed errors, so the
 # `unreachable`/`todo` deny now rolls with the `expect`/`unwrap` deny.
+# CI pin enumerating every crate root carrying the deny plus the
+# `too_many_*`/`unused_imports` blanket-allow ban lives in
+# `tools/ci/clippy_deny_pin.sh` (`bazel run //tools/ci:clippy_deny_pin`,
+# issue #955): new crates add their root there in the same PR.

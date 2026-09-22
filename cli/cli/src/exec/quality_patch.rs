@@ -160,6 +160,13 @@ mod tests {
             "cannot apply recorded edits for src/a.py"
         );
         assert_eq!(
+            PatchError::NonUtf8Candidate {
+                path: "src/a.py".to_owned(),
+            }
+            .to_string(),
+            "candidate for src/a.py is not UTF-8 text"
+        );
+        assert_eq!(
             PatchError::Render {
                 detail: "boom".to_owned(),
             }

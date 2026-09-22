@@ -180,6 +180,16 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Clippy deny pin enumerating crate roots; see tools/ci/clippy_deny_pin.sh.
+    sh_binary(
+        name = "clippy_deny_pin",
+        srcs = ["clippy_deny_pin.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Distribution/closeout guards; see tools/ci/distribution_closeout_guards.sh.
     sh_binary(
         name = "distribution_closeout_guards",

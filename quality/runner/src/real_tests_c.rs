@@ -5,6 +5,7 @@ use super::real_tests_a::*;
 use super::real_tests_b::*;
 use super::*;
 use quality_result::proto::Convergence;
+use quality_result::MAX_COMPLETED_ROUNDS;
 
 #[test]
 fn escaping_paths_fail_the_action() {

@@ -549,6 +549,10 @@ mod tests {
         let harness = Harness::new("cov-threshold-markers");
         let source = harness.workspace.join("src/lib.rs");
         std::fs::create_dir_all(source.parent().expect("parent")).expect("mkdir");
+        // Intentional bare marker as test data inside a string literal:
+        // inert for this file's own gate (line-comment scan skips string
+        // literals) but invalid for the loaded `src/lib.rs`, so the
+        // `--min-coverage` rate fails closed via `coverage_below_minimum`.
         std::fs::write(&source, "// LCOV_EXCL_LINE\nfn a() {}\n").expect("write");
         let uri = write_bep_artifact(
             &harness,

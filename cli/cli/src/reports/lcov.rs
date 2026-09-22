@@ -144,6 +144,8 @@ mod tests {
     #[test]
     fn coverage_rate_rejects_invalid_markers() {
         let documents = ["SF:src/a.rs\nDA:1,1\nend_of_record\n"];
+        // Intentional bare marker as test data inside a string literal:
+        // inert for this file's own gate, invalid for the rated source.
         let source = "// LCOV_EXCL_LINE\nfn a() {}\n";
         assert!(rate(&documents, &[("src/a.rs", source)]).is_err());
     }

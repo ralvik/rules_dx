@@ -1,4 +1,4 @@
-// LCOV accounting fixture test; covered plus defensive-ignore shapes.
+// LCOV accounting fixture test; fully covered with no ignores.
 #include <cassert>
 
 #include "cc/tests/fixtures/lcov_accounting/accounting.h"
@@ -12,5 +12,6 @@ int main() {
   assert(!IsPositive(0));
   assert(ClampNegative(5) == 5);
   assert(ClampNegative(0) == 0);
+  assert(ClampNegative(-3) == -1);
   return 0;
 }
