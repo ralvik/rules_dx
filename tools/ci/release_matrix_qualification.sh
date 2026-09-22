@@ -1,22 +1,21 @@
 #!/usr/bin/env bash
 # Release-matrix follow-up qualification harness for issue #815.
 #
-# Owns the flip of the four follow-up matrix cells from unqualified to
+# Owns the flip of the three follow-up matrix cells from unqualified to
 # qualified with per-host evidence, without claiming Supported and without
 # weakening the draft-only ceiling plus owner-approval gate:
-# - matrix shape: five cells frozen in `deploy/release/matrix.bzl`, seed
+# - matrix shape: four cells frozen in `deploy/release/matrix.bzl`, seed
 #   `dx-linux-x86_64` qualified-seed-built-here, Linux arm64 plus macOS
-#   arm64 plus macOS x86_64 best-effort plus Windows x86_64
-#   qualified-host-evidence, no `unqualified-per-issue-311` remains;
+#   arm64 plus Windows x86_64 qualified-host-evidence (macOS x86_64 Not
+#   planned per #976 with no cell), no `unqualified-per-issue-311` remains;
 #   `release_matrix_unqualified()` returns empty via the `qualified-` prefix;
 # - per-host evidence: Platform-qualified per the support matrix
 #   (Linux arm64 #410, static-musl profiles #411, macOS arm64 #412,
-#   macOS x86_64 best-effort #413, Windows x86_64 #414) plus per-host
-#   `sbom-provenance` release evidence (linux_arm64 #803, musl profiles
-#   #804, macos_arm64 #805, windows_x86_64 #807, best-effort macOS x86_64
-#   exempt non-blocking #806 moot, process #808);
+#   Windows x86_64 #414) plus per-host `sbom-provenance` release evidence
+#   (linux_arm64 #803, musl profiles #804, macos_arm64 #805,
+#   windows_x86_64 #807, process #808);
 # - workflow parity: `.github/workflows/publish-dry-run.yml` carries the
-#   same five-cell qualified matrix, stays seed-only build with non-seed
+#   same four-cell qualified matrix, stays seed-only build with non-seed
 #   cells human-run only, keeps `published: False` plus `submitted: False`;
 # - docs parity: `docs/deploy/authoring.md` plus
 #   `docs/deploy/release-runbook.md` plus `cli/cli/BUILD.bazel` record the
@@ -56,15 +55,15 @@ fixture_build="tools/ci/tests/fixtures/release_matrix/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
 freshness="tools/ci/dogfood_freshness.sh"
 
-# Matrix keeps the frozen five-cell order with the seed first.
+# Matrix keeps the frozen four-cell order with the seed first.
 if grep -q -F -e 'dx-linux-x86_64' "$matrix" &&
   grep -q -F -e 'dx-linux-arm64' "$matrix" &&
   grep -q -F -e 'dx-macos-arm64' "$matrix" &&
-  grep -q -F -e 'dx-macos-x86_64' "$matrix" &&
-  grep -q -F -e 'dx-windows-x86_64' "$matrix"; then
+  grep -q -F -e 'dx-windows-x86_64' "$matrix" &&
+  ! grep -q -F -e 'dx-macos-x86_64' "$matrix"; then
   ok
 else
-  bad "matrix.bzl lost its frozen five-cell order (want dx-linux-x86_64 plus dx-linux-arm64 plus dx-macos-arm64 plus dx-macos-x86_64 plus dx-windows-x86_64, #815)"
+  bad "matrix.bzl lost its frozen four-cell order (want dx-linux-x86_64 plus dx-linux-arm64 plus dx-macos-arm64 plus dx-windows-x86_64 with no dx-macos-x86_64, #815 plus #976)"
 fi
 
 # Seed cell stays qualified-built-here.
@@ -74,12 +73,13 @@ else
   bad "matrix.bzl lost its seed qualified-seed-built-here cell (#815)"
 fi
 
-# All four follow-ups are qualified with per-host evidence; no unqualified remains.
+# All three follow-ups are qualified with per-host evidence; no unqualified remains.
 if grep -q -F -e 'qualified-host-evidence' "$matrix" &&
-  ! grep -q -F -e 'unqualified-per-issue-311' "$matrix"; then
+  ! grep -q -F -e 'unqualified-per-issue-311' "$matrix" &&
+  ! grep -q -F -e 'dx-macos-x86_64' "$matrix"; then
   ok
 else
-  bad "matrix.bzl lost its four qualified-host-evidence cells or still carries unqualified-per-issue-311 (#815)"
+  bad "matrix.bzl lost its three qualified-host-evidence cells or still carries unqualified-per-issue-311 or dx-macos-x86_64 (#815 plus #976)"
 fi
 
 # Unqualified helper keys on the qualified- prefix, so the flipped matrix reports empty.
@@ -97,12 +97,13 @@ else
   bad "matrix_tests.bzl lost its qualified-host-evidence pins or still carries unqualified-per-issue-311 (#815)"
 fi
 
-# Workflow matrix mirrors matrix.bzl: five qualified cells, none unqualified.
+# Workflow matrix mirrors matrix.bzl: four qualified cells, none unqualified, no macOS x86_64.
 if grep -q -F -e '"status": "qualified-host-evidence"' "$dryrun" &&
-  ! grep -q -F -e 'unqualified-per-issue-311' "$dryrun"; then
+  ! grep -q -F -e 'unqualified-per-issue-311' "$dryrun" &&
+  ! grep -q -F -e 'dx-macos-x86_64' "$dryrun"; then
   ok
 else
-  bad "publish-dry-run.yml lost its qualified-host-evidence matrix or still carries unqualified-per-issue-311 (#815)"
+  bad "publish-dry-run.yml lost its qualified-host-evidence matrix or still carries unqualified-per-issue-311 or dx-macos-x86_64 (#815 plus #976)"
 fi
 
 # Workflow stays seed-only build with non-seed cells human-run only, publishing nothing.

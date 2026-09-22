@@ -154,13 +154,14 @@ else
   bad "Rust launch lost its SPDX plus in-toto plus SLSA subject-binding checks (#459)"
 fi
 
-# Release matrix stays frozen: five cells with the seed plus four follow-ups qualified.
+# Release matrix stays frozen: four cells with the seed plus three follow-ups qualified (macOS x86_64 Not planned per #976).
 if grep -q -F -e 'dx-linux-x86_64' deploy/release/matrix.bzl &&
   grep -q -F -e 'qualified-seed-built-here' deploy/release/matrix.bzl &&
-  grep -q -F -e 'qualified-host-evidence' deploy/release/matrix.bzl; then
+  grep -q -F -e 'qualified-host-evidence' deploy/release/matrix.bzl &&
+  ! grep -q -F -e 'dx-macos-x86_64' deploy/release/matrix.bzl; then
   ok
 else
-  bad "matrix.bzl lost its frozen five-cell plus qualified shape (#815)"
+  bad "matrix.bzl lost its frozen four-cell plus qualified shape (#815 plus #976)"
 fi
 
 # Distribution destinations stay pinned: BCR rules_dx plus GitHub Releases dx binaries.

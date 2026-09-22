@@ -147,8 +147,8 @@ fi
 
 # Seed-host standalone packaging stays wired; the wider matrix is frozen
 # in deploy/release/matrix.bzl with all cells qualified with per-host
-# evidence (seed plus four follow-ups, no platform claimed
-# qualified without host evidence).
+# evidence (seed plus three follow-ups, no platform claimed
+# qualified without host evidence; macOS x86_64 Not planned per #976).
 if grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel; then
   ok
 else
@@ -182,15 +182,18 @@ else
   bad "publish dry run lost the verifier-refusal exercised record (issue #78)"
 fi
 
-# Full matrix frozen per #815: five cells, seed plus four follow-ups
-# qualified with per-host evidence and owner-approval qualification.
+# Full matrix frozen per #815: four cells, seed plus three follow-ups
+# qualified with per-host evidence and owner-approval qualification
+# (macOS x86_64 Not planned per #976 with no cell).
 if [[ -f "deploy/release/matrix.bzl" ]] &&
   grep -q -F -e 'dx-linux-x86_64' deploy/release/matrix.bzl &&
   grep -q -F -e 'qualified-host-evidence' deploy/release/matrix.bzl &&
-  grep -q -F -e 'qualified-host-evidence' .github/workflows/publish-dry-run.yml; then
+  grep -q -F -e 'qualified-host-evidence' .github/workflows/publish-dry-run.yml &&
+  ! grep -q -F -e 'dx-macos-x86_64' deploy/release/matrix.bzl &&
+  ! grep -q -F -e 'dx-macos-x86_64' .github/workflows/publish-dry-run.yml; then
   ok
 else
-  bad "release matrix missing frozen five-cell qualified shape (deploy/release/matrix.bzl + workflow, #815)"
+  bad "release matrix missing frozen four-cell qualified shape (deploy/release/matrix.bzl + workflow, #815 plus #976)"
 fi
 
 # SBOM/provenance selected per: SPDX-2.3 + SLSA v1 wired in the

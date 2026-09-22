@@ -84,7 +84,7 @@ if grep -q -F -e 'non-Linux runs wont-fix' "$pins" &&
   grep -q -F -e 'arm64 prebuilt variant wont-fix' "$pins" &&
   grep -q -F -e 'scaffold devcontainer.json arch-independent' "$pins" &&
   grep -q -F -e 'amd64-only seed slice pins the amd64 Bazelisk launcher' "$pins" &&
-  grep -q -F -e 'natively qualified per #410 plus #411 plus #412 plus #413 plus #414 not container boot' "$pins"; then
+  grep -q -F -e 'natively qualified per #410 plus #411 plus #412 plus #414 not container boot' "$pins"; then
   ok
 else
   bad "pins.bzl lost its non-Linux/arm64 wont-fix scope (non-Linux plus arm64 boot plus arm64 variant plus arch-independent plus seed slice plus native-only, issue #648)"

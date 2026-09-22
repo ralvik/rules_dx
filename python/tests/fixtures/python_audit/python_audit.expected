@@ -16,7 +16,7 @@ Per-language source audit stays distinct from ecosystem dx audit plus
 dx update live execution delivered repo-wide. Leaving under taxonomy
 rejected with mismatched scope. Platform rides Ruff per-host
 artifacts (linux_x86_64 plus linux_arm64 plus macos_arm64 plus
-macos_x86_64 plus windows_x86_64); consumer rides adopt-python with
+windows_x86_64); consumer rides adopt-python with
 lazy opt-in; release rides promotion-checklist plus SBOM plus signing
 linkage. Future selection owned under #801; taxonomy #512 plus
 promotion #808 plus per-host #803 through #807 stay owned gaps;
