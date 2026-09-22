@@ -35,7 +35,6 @@ preserved.
 CI checks, a labeler, the caller pin-sync
 tests (delivered: `//tools/ci:examples_pins_test`,
 `//tools/ci:consumer_pins_test`),
-perf-baseline-bump PRs (open, tracked in GitHub issues),
 and native widen-one bump PRs (weekly, one dep per PR).
 
 Automation may open pull requests. Update-only auto-merge is allowed for
