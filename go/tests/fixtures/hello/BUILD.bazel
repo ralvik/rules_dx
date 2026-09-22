@@ -1,4 +1,8 @@
-"""Seed Go binary and library; consumer of go_* wrappers."""
+"""Seed Go binary and library; consumer of go_* wrappers.
+
+Covers the ordinary binary (srcs plus deps) and the thin entry shape
+(library owns package-main source with its importpath, binary embeds
+it with no srcs)."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//go/rules:defs.bzl", "go_binary", "go_library", "go_test")
@@ -22,6 +26,22 @@ go_binary(
     deps = [":hello_lib"],
 )
 
+# Thin entry shape: the library owns the package-main source with its
+# module importpath and the binary embeds it with no srcs. Same main.go
+# builds both ways; hello_output_test covers the ordinary shape and
+# hello_thin_output_test covers the thin shape.
+go_library(
+    name = "hello_main_lib",
+    srcs = ["main.go"],
+    importpath = "rules_dx/go/tests/fixtures/hello/main",
+    deps = [":hello_lib"],
+)
+
+go_binary(
+    name = "hello_thin",
+    embed = [":hello_main_lib"],
+)
+
 go_test(
     name = "hello_test",
     srcs = ["hello_test.go"],
@@ -38,6 +58,22 @@ sh_test(
     args = ["$(rootpath :hello)"],
     data = [
         ":hello",
+        "//tools/sh:bootstrap",
+        "//tools/sh:lib",
+    ],
+    tags = ["no-coverage"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+sh_test(
+    name = "hello_thin_output_test",
+    size = "small",
+    timeout = "short",
+    srcs = ["hello_output_test.sh"],
+    args = ["$(rootpath :hello_thin)"],
+    data = [
+        ":hello_thin",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],
