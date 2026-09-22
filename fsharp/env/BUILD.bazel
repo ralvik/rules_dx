@@ -2,7 +2,7 @@
 
 Each `fsharp_env_plan` reads the analyzed authoritative providers of one
 `fsharp_*` wrapper: `QualitySourcesInfo` for direct sources plus the
-preserved `DotnetAssembly*` toolchain closure by reference.
+preserved `DotnetAssembly*` transitive closure and source/test split.
 Focused-target only; repository/root/exact-target orchestration remains.
 """
 
@@ -18,10 +18,24 @@ fsharp_env_plan(
     target = "//fsharp/tests/fixtures/hello:hello_lib",
 )
 
+fsharp_env_plan(
+    name = "hello_plan",
+    testonly = True,
+    target = "//fsharp/tests/fixtures/hello:hello",
+)
+
+fsharp_env_plan(
+    name = "hello_test_plan",
+    testonly = True,
+    target = "//fsharp/tests/fixtures/hello:hello_test",
+)
+
 env_plan_tests(
     name = "env_plan_tests",
     subjects = [
         ":hello_lib_plan",
+        ":hello_plan",
+        ":hello_test_plan",
     ],
 )
 

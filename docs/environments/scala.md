@@ -8,11 +8,12 @@ identity, installation, selection, and retention follow
 ## Focused Plan
 
 The `scala_env_plan` rule in `scala/env/plan.bzl` plans one `scala_*`
-wrapper target from its `QualitySourcesInfo` direct sources, emitting
+wrapper target from its `QualitySourcesInfo` direct sources plus the
+`JavaInfo` transitive source-jar closure and source/test split, emitting
 `ScalaEnvPlanInfo` plus a JSON plan. It never scans the checkout or
 reconstructs Maven metadata. Pinned by `scala/env/plan_tests.bzl` and
-exercised by `scala/env:hello_lib_plan` over
-`//scala/tests/fixtures/hello:hello_lib`.
+exercised by `scala/env:hello_lib_plan`, `scala/env:hello_plan`, and
+`scala/env:hello_test_plan` over the hello library, binary, and test.
 
 ## Toolchain
 

@@ -8,11 +8,12 @@ installation, selection, and retention follow
 ## Focused Plan
 
 The `fsharp_env_plan` rule in `fsharp/env/plan.bzl` plans one `fsharp_*`
-wrapper target from its `QualitySourcesInfo` direct sources, emitting
+wrapper target from its `QualitySourcesInfo` direct sources plus the
+`DotnetAssembly*` transitive closure and source/test split, emitting
 `FSharpEnvPlanInfo` plus a JSON plan. It never scans the checkout or
 reconstructs Paket metadata. Pinned by `fsharp/env/plan_tests.bzl` and
-exercised by `fsharp/env:hello_lib_plan` over
-`//fsharp/tests/fixtures/hello:hello_lib`.
+exercised by `fsharp/env:hello_lib_plan`, `fsharp/env:hello_plan`, and
+`fsharp/env:hello_test_plan` over the hello library, binary, and test.
 
 ## Toolchain
 

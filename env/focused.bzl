@@ -87,6 +87,77 @@ def focused_python_plan(direct, transitive, imports, wheel_count, label):
         plan = plan,
     )
 
+def _focused_as_list(value):
+    """Returns the file list for a list or depset value."""
+    if type(value) == "depset":
+        return value.to_list()
+    return value
+
+def focused_transitive_basenames(files):
+    """Returns sorted basenames for a list or depset of files."""
+    seen = {}
+    for f in _focused_as_list(files):
+        seen[f.basename] = True
+    return sorted(seen.keys())
+
+def focused_go_transitive(transitive):
+    """Returns sorted basenames of `.go` sources in a GoArchive transitive closure."""
+    seen = {}
+    for archive in _focused_as_list(transitive):
+        for f in archive.srcs:
+            seen[f.basename] = True
+    return sorted(seen.keys())
+
+def focused_dotnet_transitive(refs, transitive_refs):
+    """Returns sorted basenames for own refs plus the transitive ref closure."""
+    seen = {}
+    for f in _focused_as_list(refs):
+        seen[f.basename] = True
+    for f in _focused_as_list(transitive_refs):
+        seen[f.basename] = True
+    return sorted(seen.keys())
+
+def focused_test_sources(basenames):
+    """Returns sorted test basenames from combined direct plus transitive lists.
+
+    Test shape is `Test` (JVM/Dotnet CamelCase) or `_test` (Go/CC snake_case
+    plus Bazel-derived jar/DLL names); `latest` plus `scalatest` stay source-side."""
+    seen = {}
+    for name in basenames:
+        if "Test" in name or "_test" in name:
+            seen[name] = True
+    return sorted(seen.keys())
+
+def focused_closure_plan(direct, transitive, label):
+    """Builds the closure plan dict plus typed source/test fields."""
+    tests = focused_test_sources(direct + transitive)
+    source_count = len(direct)
+    transitive_source_count = len(transitive)
+    test_source_count = len(tests)
+    has_sources = source_count > 0
+    has_tests = test_source_count > 0
+    plan = {
+        "direct_sources": ",".join(direct),
+        "has_sources": str(has_sources),
+        "has_tests": str(has_tests),
+        "source_count": str(source_count),
+        "target": label,
+        "test_source_count": str(test_source_count),
+        "test_sources": ",".join(tests),
+        "transitive_source_count": str(transitive_source_count),
+        "transitive_sources": ",".join(transitive),
+    }
+    return struct(
+        has_sources = has_sources,
+        has_tests = has_tests,
+        plan = plan,
+        source_count = source_count,
+        test_source_count = test_source_count,
+        test_sources = tests,
+        transitive_source_count = transitive_source_count,
+        transitive_sources = transitive,
+    )
+
 def focused_write_plan(ctx, plan):
     """Declares and writes the focused plan JSON output."""
     out = ctx.actions.declare_file(ctx.label.name + ".json")

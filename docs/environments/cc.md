@@ -8,10 +8,12 @@ identity, installation, selection, and retention follow
 ## Focused Plan
 
 The `cc_env_plan` rule in `cc/env/plan.bzl` plans one `cc_*` wrapper target
-from its `QualitySourcesInfo` direct sources, emitting `CcEnvPlanInfo` plus
+from its `QualitySourcesInfo` direct sources plus the `CcInfo` transitive
+header closure and source/test split, emitting `CcEnvPlanInfo` plus
 a JSON plan. It never scans the checkout or reconstructs toolchain metadata.
-Pinned by `cc/env/plan_tests.bzl` and exercised by `cc/env:hello_lib_plan`
-over `//cc/tests/fixtures/hello:hello_lib`.
+Pinned by `cc/env/plan_tests.bzl` and exercised by `cc/env:hello_lib_plan`,
+`cc/env:hello_plan`, and `cc/env:hello_test_plan` over the hello library,
+binary, and test.
 
 ## Toolchain
 
