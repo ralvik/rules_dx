@@ -1,9 +1,9 @@
 # Documentation Site Build
 
 `dx docs` builds the static documentation site from versioned documentation
-IR through Bazel-cached extraction, aggregation, and rendering. There is no
-committed IR and no published site claim. Open work is tracked in GitHub
-issues.
+IR through Bazel-cached extraction, aggregation, and rendering. Fixture-scale
+execution is delivered seed-only; there is no committed IR and no published site.
+Open work is tracked in GitHub issues.
 
 Run the fixture-scale site with `bazel build //docs/site:demo_site`.
 Validate without rendering with `dx docs --check`; normal build validates
