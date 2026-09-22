@@ -15,11 +15,20 @@
 //! attached `=value` echoes the whole token and missing values name the
 //! bare flag, pinned by strict fixtures plus help goldens.
 
+use std::ffi::{OsStr, OsString};
+
 use clap::Parser;
 
 use super::command::Command;
 use super::grammar::{Cli, VALUE_OPTIONS};
 use super::{help, suggest, ArgsError};
+
+/// Decodes one `argv` element as UTF-8 when possible; non-UTF8 bytes
+/// stay opaque (`None`) so they never classify as flags, values, or the
+/// `bazel`/`help` verbs and instead flow to the `InvalidScope` lossy path.
+fn arg_text(arg: &OsStr) -> Option<&str> {
+    arg.to_str()
+}
 
 /// Finds the `bazel` command word when it owns the tail: the first
 /// positional token, skipping value-option payloads exactly like the
@@ -33,19 +42,38 @@ use super::{help, suggest, ArgsError};
 /// grammar runs, deciding which prefix clap parses and which tail forwards
 /// verbatim. A `value_parser` runs inside parsing on one value and cannot
 /// own the tail, and the Bazel tail is foreign syntax by contract.
-fn split_bazel_verbatim(args: &[String]) -> Option<usize> {
+///
+/// Non-UTF8 elements never classify as flags, values, or the `bazel`
+/// verb: they stay opaque positionals so the later `OsString` conversion
+/// reports them as `InvalidScope` with a lossy rendering instead of
+/// panicking in `std::env::args`.
+fn split_bazel_verbatim<S: AsRef<OsStr>>(args: &[S]) -> Option<usize> {
     let mut index = 0;
     while index < args.len() {
-        let arg = &args[index];
+        let raw = args[index].as_ref();
+        // Opaque non-UTF8 positional: cannot be `--`, a flag, or `bazel`,
+        // so the verbatim split does not own the tail here; the full parse
+        // reports it as `InvalidScope`.
+        let arg = arg_text(raw)?;
         if arg == "--" {
             return None;
         }
         if arg.starts_with('-') {
-            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            let name = arg.split_once('=').map_or(arg, |(name, _)| name);
             if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
-                match args.get(index + 1) {
-                    Some(next) if !next.starts_with("--") && next != "--" => index += 2,
-                    _ => return None,
+                let next = args.get(index + 1)?;
+                let next_raw = next.as_ref();
+                // A value-option payload is any next token that is not a
+                // `--` flag: non-UTF8 bytes count as a payload (e.g.
+                // `--workspace <non-UTF8>`) so the flag still consumes them
+                // and the workspace conversion reports `InvalidScope`
+                // instead of `MissingValue`.
+                let is_flag = next_raw == OsStr::new("--")
+                    || next_raw.to_str().is_some_and(|text| text.starts_with("--"));
+                if !is_flag {
+                    index += 2;
+                } else {
+                    return None;
                 }
                 continue;
             }
@@ -81,8 +109,23 @@ fn invalid_value(error: &clap::Error) -> Option<String> {
 /// clap reports the bare flag name for `--flag=value` spellings, while
 /// the contract pins the whole token.
 /// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
-fn recover_token(args: &[String], token: Option<String>) -> String {
-    dx_output::recover_unknown_token(args, &token.unwrap_or_default())
+fn recover_token<S: AsRef<OsStr>>(args: &[S], token: Option<String>) -> String {
+    let token = token.unwrap_or_default();
+    // Compare lossy so non-UTF8 elements still recover deterministically;
+    // UTF-8 tokens compare exactly, non-UTF8 never spuriously matches.
+    for arg in args {
+        let text = arg.as_ref().to_string_lossy();
+        if text == token {
+            return text.into_owned();
+        }
+    }
+    for arg in args {
+        let text = arg.as_ref().to_string_lossy();
+        if text.starts_with(&format!("{token}=")) {
+            return text.into_owned();
+        }
+    }
+    token
 }
 
 /// Extracts the leading `--flag` from a clap missing-value render such
@@ -108,7 +151,7 @@ fn is_command_positional(token: &str) -> bool {
 /// unknown options, and missing option values stay missing values.
 /// `--help`/`-h` and `--version`/`-V` render from the same grammar
 ///  as [`ArgsError::Help`], never as usage errors.
-fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
+fn map_clap_error<S: AsRef<OsStr>>(args: &[S], error: &clap::Error) -> ArgsError {
     use clap::error::ErrorKind;
     match error.kind() {
         ErrorKind::DisplayHelp => {
@@ -189,33 +232,62 @@ fn map_clap_error(args: &[String], error: &clap::Error) -> ArgsError {
 }
 
 /// Runs the clap tokenizer over `args` (without the executable name).
-fn parse_tokens(args: &[String]) -> Result<Cli, ArgsError> {
-    Cli::try_parse_from(std::iter::once("dx".to_owned()).chain(args.iter().cloned()))
-        .map_err(|error| map_clap_error(args, &error))
+fn parse_tokens<S: AsRef<OsStr>>(args: &[S]) -> Result<Cli, ArgsError> {
+    Cli::try_parse_from(
+        std::iter::once(OsString::from("dx"))
+            .chain(args.iter().map(|arg| arg.as_ref().to_os_string())),
+    )
+    .map_err(|error| map_clap_error(args, &error))
 }
 
 /// Tokenizes `args` into the clap-classified [`Cli`] plus the verbatim
 /// Bazel tail. `dx bazel` owns every token after the command word, so
 /// its tail never reaches clap; every other shape parses whole.
-pub(crate) fn tokenize(args: &[String]) -> Result<(Cli, Vec<String>), ArgsError> {
+pub(crate) fn tokenize<S: AsRef<OsStr>>(args: &[S]) -> Result<(Cli, Vec<String>), ArgsError> {
     if let Some(at) = split_bazel_verbatim(args) {
         // The prefix holds flags only (the scan stops at the first
         // positional and bails at `--`), so no positionals are lost; the
         // command word itself is the `bazel` token the scan stopped at.
-        let mut cli = parse_tokens(&args[..at])?;
+        // The generic prefix borrows `S`; re-materialize it as owned
+        // `OsString` for the clap entry point.
+        let prefix: Vec<OsString> = args[..at]
+            .iter()
+            .map(|arg| arg.as_ref().to_os_string())
+            .collect();
+        let mut cli = parse_tokens(&prefix)?;
         cli.command = Some(Command::Bazel);
         // The first `--` still separates (it is dropped, the rest
         // forwards), exactly like the loop's separator check running
-        // before the verbatim arm did.
+        // before the verbatim arm did. Verbatim tails are Bazel-owned
+        // bytes: non-UTF8 elements fail as `InvalidScope` with a lossy
+        // rendering instead of panicking, preserving exit 2.
         let mut bazel_options = Vec::new();
         let mut tail = args[at + 1..].iter();
         for arg in tail.by_ref() {
-            if arg == "--" {
+            let raw = arg.as_ref();
+            if raw == OsStr::new("--") {
                 break;
             }
-            bazel_options.push(arg.clone());
+            match raw.to_str() {
+                Some(text) => bazel_options.push(text.to_owned()),
+                None => {
+                    return Err(ArgsError::InvalidScope {
+                        scope: raw.to_string_lossy().into_owned(),
+                    });
+                }
+            }
         }
-        bazel_options.extend(tail.cloned());
+        for arg in tail {
+            let raw = arg.as_ref();
+            match raw.to_str() {
+                Some(text) => bazel_options.push(text.to_owned()),
+                None => {
+                    return Err(ArgsError::InvalidScope {
+                        scope: raw.to_string_lossy().into_owned(),
+                    });
+                }
+            }
+        }
         return Ok((cli, bazel_options));
     }
     let mut cli = parse_tokens(args)?;

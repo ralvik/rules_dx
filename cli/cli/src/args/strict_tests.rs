@@ -383,3 +383,31 @@ fn strict_every_command_help_pins_usage_scopes_exits_output() {
     }
     assert_eq!(Command::value_variants().len(), 32);
 }
+
+#[cfg(unix)]
+#[test]
+fn strict_non_utf8_argv_fails_as_invalid_scope() {
+    // Non-UTF8 `argv` must not panic in `args()`: `args_os` plus `OsString`
+    // workspace/targets decode here, failing as `InvalidScope` with a lossy
+    // rendering (exit 2 per `docs/cli/cli-contract.md#exit-status`).
+    use std::ffi::OsString;
+    use std::os::unix::ffi::OsStringExt;
+    let raw = OsString::from_vec(vec![0xff]);
+    let lossy = raw.to_string_lossy().into_owned();
+    assert!(raw.to_str().is_none(), "fixture must be non-UTF8");
+    // Non-UTF8 scope positional.
+    let argv = vec![OsString::from("lint"), raw.clone()];
+    assert_eq!(
+        parse(&argv),
+        Err(ArgsError::InvalidScope {
+            scope: lossy.clone(),
+        })
+    );
+    // Non-UTF8 `--workspace` value.
+    let argv = vec![
+        OsString::from("--workspace"),
+        raw.clone(),
+        OsString::from("lint"),
+    ];
+    assert_eq!(parse(&argv), Err(ArgsError::InvalidScope { scope: lossy }));
+}

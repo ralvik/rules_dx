@@ -5,9 +5,31 @@
 //! [`render_command_help`]. Internal only (`pub(crate)`); the public
 //! `crate::args` surface is unchanged.
 
+use std::ffi::OsStr;
+
 use super::command::Command;
 use super::grammar::{Cli, VALUE_OPTIONS};
 use super::{suggest, ArgsError};
+
+/// Skips one value-option payload exactly like the verbatim splitter:
+/// a known `--flag` without `=` consumes the next token unless that next
+/// token is a `--` flag. Non-UTF8 next tokens count as payloads so
+/// `--workspace <non-UTF8>` still consumes them for command routing.
+fn skip_value_payload<S: AsRef<OsStr>>(args: &[S], index: usize) -> usize {
+    match args.get(index + 1) {
+        Some(next) => {
+            let raw = next.as_ref();
+            let is_flag =
+                raw == OsStr::new("--") || raw.to_str().is_some_and(|text| text.starts_with("--"));
+            if is_flag {
+                index + 1
+            } else {
+                index + 2
+            }
+        }
+        None => index + 1,
+    }
+}
 
 /// Finds the command word for `--help` routing: the first positional
 /// token that parses as [`Command`], skipping flag payloads exactly
@@ -17,21 +39,20 @@ use super::{suggest, ArgsError};
 ///
 /// Stays hand-rolled with [`super::split_bazel_verbatim`] (fallback):
 /// help routing inspects `argv` before the grammar runs, so it cannot
-/// itself be a `value_parser`.
-pub(crate) fn help_command_in(args: &[String]) -> Option<Command> {
+/// itself be a `value_parser`. Non-UTF8 elements stay opaque and never
+/// parse as a command, so they fall through to the `InvalidScope` path.
+pub(crate) fn help_command_in<S: AsRef<OsStr>>(args: &[S]) -> Option<Command> {
     let mut index = 0;
     while index < args.len() {
-        let arg = &args[index];
+        let raw = args[index].as_ref();
+        let arg = raw.to_str()?;
         if arg == "--" {
             return None;
         }
         if arg.starts_with('-') {
-            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            let name = arg.split_once('=').map_or(arg, |(name, _)| name);
             if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
-                match args.get(index + 1) {
-                    Some(next) if !next.starts_with("--") && next != "--" => index += 2,
-                    _ => index += 1,
-                }
+                index = skip_value_payload(args, index);
                 continue;
             }
             index += 1;
@@ -56,22 +77,23 @@ pub(crate) fn help_command_in(args: &[String]) -> Option<Command> {
 /// [`ArgsError::UnknownCommand`] with grammar-owned suggestions
 /// (excluded `doctor`/`configure` redirect to `status` via
 /// [`suggest::suggest_command`]). Returns `None` when the first
-/// positional is not `help` (normal parse path).
-pub(crate) fn help_verb_error_in(args: &[String]) -> Option<ArgsError> {
+/// positional is not `help` (normal parse path). Non-UTF8 elements stay
+/// opaque and never match the verb, so they fall through to parsing.
+pub(crate) fn help_verb_error_in<S: AsRef<OsStr>>(args: &[S]) -> Option<ArgsError> {
     let mut index = 0;
     let mut help_at: Option<usize> = None;
     while index < args.len() {
-        let arg = &args[index];
+        let raw = args[index].as_ref();
+        let Some(arg) = raw.to_str() else {
+            break;
+        };
         if arg == "--" {
             break;
         }
         if arg.starts_with('-') {
-            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            let name = arg.split_once('=').map_or(arg, |(name, _)| name);
             if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
-                match args.get(index + 1) {
-                    Some(next) if !next.starts_with("--") && next != "--" => index += 2,
-                    _ => index += 1,
-                }
+                index = skip_value_payload(args, index);
                 continue;
             }
             index += 1;
@@ -86,23 +108,27 @@ pub(crate) fn help_verb_error_in(args: &[String]) -> Option<ArgsError> {
     let mut target: Option<String> = None;
     let mut scan = help_at + 1;
     while scan < args.len() {
-        let arg = &args[scan];
+        let raw = args[scan].as_ref();
+        let Some(arg) = raw.to_str() else {
+            // Opaque non-UTF8 target cannot be a command word; surface it
+            // as an unknown command with its lossy rendering so typing
+            // never panics and help routing stays total.
+            target = Some(raw.to_string_lossy().into_owned());
+            break;
+        };
         if arg == "--" {
             break;
         }
         if arg.starts_with('-') {
-            let name = arg.split_once('=').map_or(arg.as_str(), |(name, _)| name);
+            let name = arg.split_once('=').map_or(arg, |(name, _)| name);
             if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
-                match args.get(scan + 1) {
-                    Some(next) if !next.starts_with("--") && next != "--" => scan += 2,
-                    _ => scan += 1,
-                }
+                scan = skip_value_payload(args, scan);
                 continue;
             }
             scan += 1;
             continue;
         }
-        target = Some(arg.clone());
+        target = Some(arg.to_owned());
         break;
     }
     match target {

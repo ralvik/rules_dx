@@ -10,6 +10,8 @@
 //! Named `grammar` (not `parse`) so the `parse` function keeps its name;
 //! the domain is the grammar half of the `args→command/parse/...` split.
 
+use std::ffi::OsString;
+
 use clap::Parser;
 
 use super::command::Command;
@@ -40,7 +42,7 @@ use super::command::Command;
 pub(crate) struct Cli {
     /// Override upward workspace discovery (find MODULE.bazel).
     #[arg(long, allow_negative_numbers = true, overrides_with = "workspace")]
-    pub(crate) workspace: Option<String>,
+    pub(crate) workspace: Option<OsString>,
     /// Resolve and summarize the plan without executing workflows/mutations.
     #[arg(long)]
     pub(crate) dry_run: bool,
@@ -114,7 +116,7 @@ pub(crate) struct Cli {
     #[arg(value_enum)]
     pub(crate) command: Option<Command>,
     /// Later positionals: explicit scopes/targets.
-    pub(crate) targets: Vec<String>,
+    pub(crate) targets: Vec<OsString>,
     /// Everything after the first bare `--`, forwarded verbatim.
     #[arg(last = true)]
     pub(crate) bazel_options: Vec<String>,

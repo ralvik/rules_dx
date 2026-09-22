@@ -207,16 +207,18 @@ fn main() {
 
 fn run() -> i32 {
     // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
-    let args: Vec<String> = std::env::args().skip(1).collect();
+    // `args_os` keeps non-UTF8 bytes opaque so they fail as `InvalidScope`
+    // (exit 2) instead of panicking in `args`; `workspace` plus `targets`
+    // travel as `OsString` in the grammar for the same reason.
+    let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
     // Hidden completion-time callback for the generated `dx completion`
     // scripts (See: `docs/cli/commands/completion.md`): answers scope
     // and task candidates without parsing, workspace gates, or Bazel so
     // completion stays fast and never breaks typing. Never a `Command`,
     // never in `--help` or usage.
-    if args
-        .first()
-        .is_some_and(|first| first.as_str() == dx_cli::args::COMPLETE_SUBCOMMAND)
-    {
+    if args.first().is_some_and(|first| {
+        first.as_os_str() == std::ffi::OsStr::new(dx_cli::args::COMPLETE_SUBCOMMAND)
+    }) {
         let cwd = std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
         let stdout = io::stdout();
         let mut out = stdout.lock();
