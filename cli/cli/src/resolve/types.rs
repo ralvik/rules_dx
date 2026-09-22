@@ -37,13 +37,16 @@ pub struct ProcessQueryRunner;
 
 impl QueryRunner for ProcessQueryRunner {
     fn run_query(&self, argv: &[String], cwd: &Path) -> io::Result<QueryResult> {
-        let (binary, args) = argv
-            .split_first()
-            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "query needs a binary"))?;
-        let output = std::process::Command::new(binary)
-            .args(args)
-            .current_dir(cwd)
-            .output()?;
+        // Single captured-spawn owner lives in `dx_process`; this maps
+        // its output onto the query seam so spawn logic cannot drift.
+        // See: `docs/cli/cli-contract.md` (process boundary).
+        let output = dx_process::spawn_output(argv, cwd, &[], false).map_err(|error| {
+            if error.kind() == io::ErrorKind::InvalidInput {
+                io::Error::new(io::ErrorKind::InvalidInput, "query needs a binary")
+            } else {
+                error
+            }
+        })?;
         Ok(QueryResult {
             code: output.status.code(),
             stdout: output.stdout,
