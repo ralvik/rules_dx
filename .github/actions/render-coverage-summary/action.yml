@@ -1,0 +1,53 @@
+# Shared per-cell coverage summary renderer for rules_dx CI jobs.
+#
+# Canonical single source for the per-cell step-summary block (issue #915):
+# previously each non-seed coverage job (arm64, musl-x86_64, musl-arm64,
+# macos-arm64, macos-x86_64, windows-x86_64) repeated a near-identical
+# shell block differing only by cell name plus log/rc filenames, so a
+# wording change meant N identical edits that could drift. Jobs now call
+# this one composite with `cell` plus `stem`; the verdict lands in the step
+# summary only, never merged across cells (no cross-cell union, no averaged
+# percentages, no rounding up; Codecov stays opt-in only).
+#
+# The seed cell keeps its own first-party block inline in ci.yml (it gates
+# the same LCOV through coverage_bin plus publishes the PR comment), so
+# this composite covers only the simple per-cell echo shape.
+name: render-coverage-summary
+description: Render the per-cell dx coverage verdict into the step summary.
+
+inputs:
+  cell:
+    description: "Cell label, e.g. 'arm64 linux_arm64'."
+    required: true
+  stem:
+    description: "Log/rc filename stem under RUNNER_TEMP, e.g. 'dx_coverage_arm64'."
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Render per-cell coverage summary
+      shell: bash
+      env:
+        CELL: ${{ inputs.cell }}
+        STEM: ${{ inputs.stem }}
+      run: |
+        set -euo pipefail
+        tmp_dir="${RUNNER_TEMP:-/tmp}"
+        log="$tmp_dir/$STEM.log"
+        rc_file="$tmp_dir/$STEM.rc"
+        dx_rc="$(cat "$rc_file" 2>/dev/null || echo unknown)"
+        dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "$log" 2>/dev/null | head -n 1 || true)"
+        if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
+        {
+          echo "<!-- dx-coverage-summary: $CELL -->"
+          echo "## Coverage summary — $CELL — $status"
+          echo ""
+          echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`$CELL\`."
+          echo ""
+          if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
+          echo "Gate exit: $dx_rc (summary never changes this outcome)."
+          echo ""
+          echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
+        } >> "$GITHUB_STEP_SUMMARY"
+        cat "$log" >> "$GITHUB_STEP_SUMMARY"

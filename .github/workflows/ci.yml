@@ -51,10 +51,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -84,10 +81,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -151,10 +145,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -219,10 +210,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -287,10 +275,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -356,10 +341,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -429,10 +411,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -489,10 +468,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -512,10 +488,7 @@ jobs:
     timeout-minutes: 45
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -541,10 +514,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -634,10 +604,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -657,10 +624,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -685,10 +649,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -701,28 +662,13 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.rc"
           exit $rc
       - name: Render arm64 per-cell summary (same scope, no union)
-        # Per-cell evidence without a cross-cell union (issue #410): the
-        # arm64 runner gates its own combined LCOV through the arm64 cell
-        # inventory; the verdict lands in the step summary only, never
-        # merged with the seed cell. Codecov stays opt-in only.
+        # Per-cell evidence with no cross-cell union (issue #410): rendered via
+        # ./.github/actions/render-coverage-summary with cell arm64 linux_arm64.
         if: always()
-        run: |
-          set -euo pipefail
-          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.rc" 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log" 2>/dev/null | head -n 1 || true)"
-          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
-          {
-            echo "<!-- dx-coverage-summary: arm64 linux_arm64 -->"
-            echo "## Coverage summary — arm64 linux_arm64 — $status"
-            echo ""
-            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`arm64 linux_arm64\`."
-            echo ""
-            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
-            echo "Gate exit: $dx_rc (summary never changes this outcome)."
-            echo ""
-            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.log" >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/render-coverage-summary
+        with:
+          cell: arm64 linux_arm64
+          stem: dx_coverage_arm64
       - name: Write job summary
         if: always()
         run: |
@@ -733,10 +679,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -755,10 +698,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -780,10 +720,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -796,29 +733,13 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc"
           exit $rc
       - name: Render musl x86_64 per-cell summary (same scope, no union)
-        # Per-cell evidence without a cross-cell union (issue #411): the
-        # musl runner gates its own combined LCOV through the musl x86_64
-        # cell inventory; the verdict lands in the step summary only, never
-        # merged with other cells. Codecov stays opt-in only. Dynamic musl
-        # has no cell and stays explicitly out of scope.
+        # Per-cell evidence with no cross-cell union (issue #411): rendered via
+        # ./.github/actions/render-coverage-summary with cell musl-x86_64 linux_x86_64_musl.
         if: always()
-        run: |
-          set -euo pipefail
-          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc" 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log" 2>/dev/null | head -n 1 || true)"
-          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
-          {
-            echo "<!-- dx-coverage-summary: musl-x86_64 linux_x86_64_musl -->"
-            echo "## Coverage summary — musl-x86_64 linux_x86_64_musl — $status"
-            echo ""
-            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`musl-x86_64 linux_x86_64_musl\`."
-            echo ""
-            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
-            echo "Gate exit: $dx_rc (summary never changes this outcome)."
-            echo ""
-            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log" >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/render-coverage-summary
+        with:
+          cell: musl-x86_64 linux_x86_64_musl
+          stem: dx_coverage_musl_x86
       - name: Write job summary
         if: always()
         run: |
@@ -832,10 +753,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -848,29 +766,13 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc"
           exit $rc
       - name: Render musl arm64 per-cell summary (same scope, no union)
-        # Per-cell evidence without a cross-cell union (issue #411): the
-        # musl runner gates its own combined LCOV through the musl arm64
-        # cell inventory; the verdict lands in the step summary only, never
-        # merged with other cells. Codecov stays opt-in only. Dynamic musl
-        # has no cell and stays explicitly out of scope.
+        # Per-cell evidence with no cross-cell union (issue #411): rendered via
+        # ./.github/actions/render-coverage-summary with cell musl-arm64 linux_arm64_musl.
         if: always()
-        run: |
-          set -euo pipefail
-          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc" 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log" 2>/dev/null | head -n 1 || true)"
-          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
-          {
-            echo "<!-- dx-coverage-summary: musl-arm64 linux_arm64_musl -->"
-            echo "## Coverage summary — musl-arm64 linux_arm64_musl — $status"
-            echo ""
-            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`musl-arm64 linux_arm64_musl\`."
-            echo ""
-            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
-            echo "Gate exit: $dx_rc (summary never changes this outcome)."
-            echo ""
-            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log" >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/render-coverage-summary
+        with:
+          cell: musl-arm64 linux_arm64_musl
+          stem: dx_coverage_musl_arm64
       - name: Write job summary
         if: always()
         run: |
@@ -881,10 +783,7 @@ jobs:
     timeout-minutes: 60
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -904,10 +803,7 @@ jobs:
     timeout-minutes: 60
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -932,10 +828,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -948,29 +841,13 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.rc"
           exit $rc
       - name: Render macos arm64 per-cell summary (same scope, no union)
-        # Per-cell evidence without a cross-cell union (issue #412): the
-        # macos-14 runner gates its own combined LCOV through the macos
-        # arm64 cell inventory; the verdict lands in the step summary only,
-        # never merged with other cells. Codecov stays opt-in only.
-        # Host-installed SDK fallback is never approved.
+        # Per-cell evidence with no cross-cell union (issue #412): rendered via
+        # ./.github/actions/render-coverage-summary with cell macos-arm64 macos_arm64.
         if: always()
-        run: |
-          set -euo pipefail
-          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.rc" 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log" 2>/dev/null | head -n 1 || true)"
-          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
-          {
-            echo "<!-- dx-coverage-summary: macos-arm64 macos_arm64 -->"
-            echo "## Coverage summary — macos-arm64 macos_arm64 — $status"
-            echo ""
-            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`macos-arm64 macos_arm64\`."
-            echo ""
-            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
-            echo "Gate exit: $dx_rc (summary never changes this outcome)."
-            echo ""
-            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.log" >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/render-coverage-summary
+        with:
+          cell: macos-arm64 macos_arm64
+          stem: dx_coverage_macos_arm64
       - name: Write job summary
         if: always()
         run: |
@@ -981,10 +858,7 @@ jobs:
     timeout-minutes: 60
     runs-on: macos-15-intel
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1004,10 +878,7 @@ jobs:
     timeout-minutes: 60
     runs-on: macos-15-intel
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1032,10 +903,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1048,30 +916,13 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.rc"
           exit $rc
       - name: Render macos x86_64 per-cell summary (same scope, no union)
-        # Per-cell evidence without a cross-cell union (issue #413
-        # best-effort, non-blocking): the macos-15-intel runner gates its
-        # own combined LCOV through the macos x86_64 cell inventory; the
-        # verdict lands in the step summary only, never merged with other
-        # cells. Codecov stays opt-in only. Gaps never block required-host
-        # release. Host-installed SDK fallback is never approved.
+        # Per-cell evidence with no cross-cell union (issue #413): rendered via
+        # ./.github/actions/render-coverage-summary with cell macos-x86_64 macos_x86_64.
         if: always()
-        run: |
-          set -euo pipefail
-          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.rc" 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log" 2>/dev/null | head -n 1 || true)"
-          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
-          {
-            echo "<!-- dx-coverage-summary: macos-x86_64 macos_x86_64 -->"
-            echo "## Coverage summary — macos-x86_64 macos_x86_64 — $status"
-            echo ""
-            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`macos-x86_64 macos_x86_64\`."
-            echo ""
-            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
-            echo "Gate exit: $dx_rc (summary never changes this outcome)."
-            echo ""
-            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log" >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/render-coverage-summary
+        with:
+          cell: macos-x86_64 macos_x86_64
+          stem: dx_coverage_macos_x86_64
       - name: Write job summary
         if: always()
         run: |
@@ -1085,10 +936,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1111,10 +959,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1142,10 +987,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1158,30 +1000,13 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.rc"
           exit $rc
       - name: Render windows x86_64 per-cell summary (same scope, no union)
-        # Per-cell evidence without a cross-cell union (issue #414): the
-        # windows-latest runner gates its own combined LCOV through the
-        # windows x86_64 cell inventory; the verdict lands in the step
-        # summary only, never merged with other cells. Codecov stays opt-in
-        # only. Installed Build Tools fallback is never approved; explicit
-        # EULA acceptance is never automatic.
+        # Per-cell evidence with no cross-cell union (issue #414): rendered via
+        # ./.github/actions/render-coverage-summary with cell windows-x86_64 windows_x86_64.
         if: always()
-        run: |
-          set -euo pipefail
-          dx_rc="$(cat "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.rc" 2>/dev/null || echo unknown)"
-          dx_line="$(grep -E -e 'coverage .*lines.*meets minimum|coverage_below_minimum' "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log" 2>/dev/null | head -n 1 || true)"
-          if [[ "$dx_rc" == "0" ]]; then status="PASS"; else status="FAIL"; fi
-          {
-            echo "<!-- dx-coverage-summary: windows-x86_64 windows_x86_64 -->"
-            echo "## Coverage summary — windows-x86_64 windows_x86_64 — $status"
-            echo ""
-            echo "Analyzed revision: \`${GITHUB_SHA}\` | Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID} | Cell: \`windows-x86_64 windows_x86_64\`."
-            echo ""
-            if [[ -n "$dx_line" ]]; then echo "$dx_line"; echo ""; fi
-            echo "Gate exit: $dx_rc (summary never changes this outcome)."
-            echo ""
-            echo "Scope: per-cell exact counts only; no cross-cell union, no averaged percentages, no rounding up. Codecov stays opt-in only, never required."
-          } >> "$GITHUB_STEP_SUMMARY"
-          cat "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.log" >> "$GITHUB_STEP_SUMMARY"
+        uses: ./.github/actions/render-coverage-summary
+        with:
+          cell: windows-x86_64 windows_x86_64
+          stem: dx_coverage_windows_x86_64
       - name: Write job summary
         if: always()
         run: |
@@ -1193,10 +1018,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1215,10 +1037,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1236,10 +1055,7 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: ./.github/actions/setup-checkout-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:

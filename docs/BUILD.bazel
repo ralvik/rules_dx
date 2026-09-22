@@ -48,6 +48,7 @@ real_source_target(
         "contributing/devcontainer.md",
         "contributing/diagnostics-versioning.md",
         "contributing/local-workflows.md",
+        "contributing/style.md",
         "decisions/0001-bazel-owns-execution.md",
         "decisions/0002-targets-not-files.md",
         "decisions/0003-action-granularity.md",

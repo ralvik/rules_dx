@@ -40,9 +40,12 @@ The following policy notes lived as header comments in `ci.yml`:
 # `//:biome_config`, `//:rustfmt_config`) through direct `aspect_hints`
 # on normal targets (issue #12, lane A).
 #
-# Hygiene (issue #80): Bazelisk installs go through the single
-# `.github/actions/setup-bazelisk` composite action; every third-party
-# action is pinned to a commit SHA with its tag in a trailing comment.
+# Hygiene (issue #80, deduped under #915): job bootstraps go through the
+# single `.github/actions/setup-checkout-bazelisk` composite (no-secrets
+# checkout plus pinned Bazelisk via `.github/actions/setup-bazelisk`);
+# every third-party action is pinned to a commit SHA with its tag in a
+# trailing comment. Docs-publish plus ghcr keep their inline checkout
+# (no Bazel there, so no installer).
 # Bazel disk-cache restores go through the single
 # `.github/actions/restore-bazel-cache` composite action (issue #953),
 # which uses actions/cache, free-tier eligible
@@ -61,6 +64,11 @@ The following policy notes lived as header comments in `ci.yml`:
 # never contain `user.bazelrc`
 # (gitignored local-only BCR mirror override), so every run resolves
 # the canonical BCR registry plus MODULE.bazel.lock.
+#
+# Per-cell coverage summaries render through the single
+# `.github/actions/render-coverage-summary` composite (issue #915: cell
+# plus stem inputs; no cross-cell union). The seed cell keeps its own
+# first-party block (coverage_bin gate plus PR comment).
 #
 # Sharding policy (issue #210): one logical stage per job for failure
 # attribution without log-grep forensics. Seed jobs stay on ubuntu-latest

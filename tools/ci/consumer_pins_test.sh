@@ -20,6 +20,7 @@ dx_bootstrap "tools/sh/lib.sh"
 workflow="$1"
 caller="$2"
 module="$3"
+bootstrap="$4"
 
 command -v python3 >/dev/null || {
   echo "python3 is required" >&2
@@ -38,29 +39,38 @@ else
 fi
 
 # No floating `uses: owner/repo@tag` anywhere in either file.
-if grep -E -e 'uses: [^ ]+@(v[0-9]|main|master|latest)' "$workflow" "$caller" >/dev/null; then
+if grep -E -e 'uses: [^ ]+@(v[0-9]|main|master|latest)' "$workflow" "$caller" "$bootstrap" >/dev/null; then
   bad "floating action tag found"
 else
   ok
 fi
 
 # Every actions/* pin carries a `# vN` tag comment; every pin is a full SHA.
-actions_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40}' "$workflow" "$caller" | wc -l)"
-commented_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+' "$workflow" "$caller" | wc -l)"
+# The no-secrets checkout pin lives once in the bootstrap composite (issue
+# #915), so pin counting covers the workflow plus caller plus composite.
+actions_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40}' "$workflow" "$caller" "$bootstrap" | wc -l)"
+commented_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+' "$workflow" "$caller" "$bootstrap" | wc -l)"
 if [[ "$actions_pins" -gt "0" && "$actions_pins" == "$commented_pins" ]]; then
   ok
 else
   bad "actions/* pins must be full SHAs with a # vN tag comment ($commented_pins/$actions_pins)"
 fi
 
-# Single-source Bazel setup: every non-comment setup-bazelisk mention is
-# a use of the in-repo action. (The action itself is the one installer;
-# its pinned BAZELISK_VERSION lives in .github/actions/setup-bazelisk/.)
-setup_uses="$(grep -c -F -e './.github/actions/setup-bazelisk' "$workflow" || true)"
-if [[ "$setup_uses" -ge "9" ]] && ! grep -e 'setup-bazelisk' "$workflow" | grep -v -F -e './.github/actions/setup-bazelisk' | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
+# Single-source job bootstrap (issue #915): every non-comment bootstrap
+# mention is a use of the in-repo setup-checkout-bazelisk composite
+# (no-secrets checkout plus pinned Bazelisk via setup-bazelisk/action.yml;
+# its pinned BAZELISK_VERSION lives in .github/actions/setup-bazelisk/).
+setup_uses="$(grep -c -F -e './.github/actions/setup-checkout-bazelisk' "$workflow" || true)"
+if [[ "$setup_uses" -ge "9" ]] && ! grep -e 'setup-bazelisk' "$workflow" | grep -v -E -e '^[[:space:]]*#' | grep -q . && ! grep -F -e './.github/actions/setup-bazelisk' "$workflow" | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
   ok
 else
-  bad "setup-bazelisk must be the only Bazel setup path (uses=$setup_uses)"
+  bad "setup-checkout-bazelisk must be the only job bootstrap path (uses=$setup_uses)"
+fi
+# No-secrets checkout lives once in the bootstrap composite.
+if grep -q -F -e 'persist-credentials: false' "$bootstrap"; then
+  ok
+else
+  bad "setup-checkout-bazelisk lost no-secrets checkout (persist-credentials: false)"
 fi
 if grep -i -h -E -e 'curl.*bazelisk|bazelisk.*(download|install)|npm i.*bazelisk' "$workflow" "$caller" | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
   bad "inline bazelisk install found outside the setup action"
@@ -131,8 +141,10 @@ threshold "80;evil" "dx-ci: invalid min_coverage '80;evil': want e.g. 80 or 80.5
 
 # Negative control: float one action pin to its tag (the realistic
 # regression: `uses: actions/checkout@v7`); the pin check must fail.
+# The checkout pin lives in the bootstrap composite (issue #915), so the
+# control mutates the composite.
 mutated="$scratch/mutated.yml"
-sed -E 's|@[0-9a-f]{40} # v([0-9]+)|@v\1|' "$workflow" >"$mutated"
+sed -E 's|@[0-9a-f]{40} # v([0-9]+)|@v\1|' "$bootstrap" >"$mutated"
 if grep -E -e 'uses: [^ ]+@(v[0-9]|main|master|latest)' "$mutated" >/dev/null; then
   ok
 else

@@ -58,11 +58,10 @@ rust_clippy_test(
 )
 
 exports_files([
+    "Cargo.toml",
     "preset.bazelrc",
     "src/lib.rs",
 ])
-
-exports_files(["Cargo.toml"])
 
 preset_update_tests(name = "preset.update_test")
 

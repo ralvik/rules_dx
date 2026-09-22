@@ -9,6 +9,34 @@ load("//rust/rules:defs.bzl", "rust_binary")
 
 package(default_visibility = ["//:__subpackages__"])
 
+# Cell registry plus per-cell inventories (issue #915): referenced by
+# cells.txt rows and gated by coverage_bin; exported here so Bazel
+# consumers depend on labels instead of reaching into the source tree.
+exports_files([
+    "arm64-inventory.txt",
+    "cells.txt",
+    "macos-arm64-inventory.txt",
+    "macos-x86_64-inventory.txt",
+    "musl-arm64-inventory.txt",
+    "musl-x86_64-inventory.txt",
+    "seed-inventory.txt",
+    "windows-x86_64-inventory.txt",
+])
+
+filegroup(
+    name = "cell_inventories",
+    srcs = [
+        "arm64-inventory.txt",
+        "cells.txt",
+        "macos-arm64-inventory.txt",
+        "macos-x86_64-inventory.txt",
+        "musl-arm64-inventory.txt",
+        "musl-x86_64-inventory.txt",
+        "seed-inventory.txt",
+        "windows-x86_64-inventory.txt",
+    ],
+)
+
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",
