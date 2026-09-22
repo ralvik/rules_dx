@@ -20,6 +20,7 @@ command and language guides below.
 ## Architecture And Contracts
 
 - [Architecture](architecture/README.md): component boundaries and dependency flow.
+- [Contradiction catalog](architecture/contradiction-catalog.md): which statement wins for each known design conflict.
 - [GitHub CI](github-ci.md): consumer CI execution and reporting.
 - [Quality](quality/README.md): sources, action model, integrations, protocol, tests.
 - [Tools](tools/README.md): acquisition policy and first-release baseline.
