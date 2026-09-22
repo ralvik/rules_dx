@@ -6,13 +6,16 @@ workspace-root probe plus runfiles `rlocation` usage
 repeated across every shell driver, plus the snapshot-testing workflow
 (`snapshot.sh`: byte-identical and canonical-JSON asserts with
 UPDATE_EXPECT refresh) plus the table-driven guard rows (`guards.sh`:
-`{file, must-contain|must-not-contain, reason/issue}` pins). Drivers
+`{file, must-contain|must-not-contain, reason/issue}` pins) plus the
+hermetic grep helper (`hermetic_grep.py`: pure-stdlib python3 replacing
+host BSD/GNU `grep`/`sed` variance, issue #1006). Drivers
 source `bootstrap.sh` once via a runfiles-first loader then call
 `dx_bootstrap` for `lib.sh` / `snapshot.sh` / `guards.sh`, and depend on
 `:bootstrap` plus `:lib` / `:snapshot` / `:guards` so the files
 ride their runfiles forest under `bazel test` / `bazel run`.
 """
 
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_shell//shell:sh_library.bzl", "sh_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
@@ -28,6 +31,7 @@ sh_library(
 sh_library(
     name = "lib",
     srcs = ["lib.sh"],
+    data = ["hermetic_grep.py"],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
     deps = [":bootstrap"],
@@ -44,6 +48,7 @@ sh_library(
 sh_library(
     name = "guards",
     srcs = ["guards.sh"],
+    data = ["hermetic_grep.py"],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
@@ -52,8 +57,40 @@ sh_library(
     ],
 )
 
+# Hermetic grep helper (issue #1006): pure-stdlib python3, no host
+# `grep`/`sed`, identical on Linux/macOS/Windows. Cross-platform on
+# purpose (no `target_compatible_with`): the `py_test` below must prove
+# the helper on every runner, and qualification drivers resolve the
+# script via runfiles (`dx_hermetic_grep_py`) on any host.
+py_library(
+    name = "hermetic_grep_lib",
+    srcs = ["hermetic_grep.py"],
+    imports = ["."],
+)
+
+py_binary(
+    name = "hermetic_grep",
+    srcs = ["hermetic_grep.py"],
+    main = "hermetic_grep.py",
+)
+
+py_test(
+    name = "hermetic_grep_test",
+    srcs = ["hermetic_grep_test.py"],
+    deps = [":hermetic_grep_lib"],
+)
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)
+
+real_source_target(
+    name = "corpus_python",
+    python_srcs = [
+        "hermetic_grep.py",
+        "hermetic_grep_test.py",
+    ],
     tags = ["corpus"],
 )

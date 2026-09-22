@@ -42,6 +42,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 adapters="quality/adapters.bzl"
 parity="quality/parity_tests.bzl"
 native="quality/native_config.bzl"

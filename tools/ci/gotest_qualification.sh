@@ -32,6 +32,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="go/tests/fixtures/gotest/pins.bzl"
 gotest_build="go/tests/fixtures/gotest/BUILD.bazel"
 hello_build="go/tests/fixtures/hello/BUILD.bazel"
@@ -136,8 +138,9 @@ else
   bad "gazelle/go/lang_test.go lost its package-level go_test embed proof under issue #478"
 fi
 
-# Implicit runner stays rejected: fixtures never load upstream go_test directly.
-if ! grep -R --include='BUILD.bazel' -F -e '@rules_go//go:def.bzl' -- go/tests/fixtures 2>/dev/null | grep -q .; then
+# Implicit runner stays rejected: fixtures never load upstream go_test directly
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
+if dx_tree_absent --include='BUILD.bazel' '@rules_go//go:def.bzl' -- go/tests/fixtures; then
   ok
 else
   bad "implicit Go runner detected (want wrapper go_test only, no direct @rules_go load in fixtures)"

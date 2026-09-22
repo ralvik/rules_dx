@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/windows_transport/pins.bzl"
 pins_build="cc/tests/fixtures/windows_transport/BUILD.bazel"
 expected="cc/tests/fixtures/windows_transport/transport.expected"

@@ -28,6 +28,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 # Rust musl std: both static triples resolve via extra_target_triples.
 # Bounded upstream maintenance: rules_rust ships musl std, no new backend.
 if grep -q -F -e 'extra_target_triples' MODULE.bazel &&
@@ -68,9 +70,9 @@ else
   bad "adopt status lost the static-musl qualified detail (issue #411)"
 fi
 
-# ADR 0014 keeps static musl required and records the qualification.
-if grep -q -F -e 'Dynamic musl is not an initial requirement' docs/decisions/0014-tested-platform-release-stack.md &&
-  grep -q -F -e 'static musl qualified under issue #411' docs/decisions/0014-tested-platform-release-stack.md; then
+# ADR 0014 keeps static musl required and records the qualification
+# (hermetic fixed-string pins, issue #1006).
+if dx_grep_contains docs/decisions/0014-tested-platform-release-stack.md 'Dynamic musl is not an initial requirement' 'static musl qualified under issue #411'; then
   ok
 else
   bad "ADR 0014 lost the static-musl required plus qualified record (issue #411)"
@@ -126,8 +128,9 @@ else
 fi
 
 # No dynamic-musl support claim anywhere.
-# (Self-excluded: this script names the banned form in its own pattern.)
-if ! grep -rn -F -e 'dynamic musl qualified' --exclude='musl_qualification.sh' docs/ cli/ tools/ .github/ 2>/dev/null | grep -q . &&
+# (Self-excluded: this script names the banned form in its own pattern.
+# Hermetic tree search: BSD grep lacks --exclude, issue #1006.)
+if dx_tree_absent --exclude='musl_qualification.sh' 'dynamic musl qualified' -- docs/ cli/ tools/ .github/ &&
   grep -q -F -e 'Dynamic musl explicitly out of scope' docs/product/support-matrix.md &&
   grep -q -F -e 'Dynamic musl is not an initial requirement' docs/decisions/0014-tested-platform-release-stack.md; then
   ok

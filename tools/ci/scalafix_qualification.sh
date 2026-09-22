@@ -38,6 +38,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="scala/tests/fixtures/scalafix/pins.bzl"
 pins_build="scala/tests/fixtures/scalafix/BUILD.bazel"
 lint_sample="scala/tests/fixtures/scalafix/console_lint.txt"

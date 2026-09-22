@@ -42,6 +42,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 env_doc="docs/environments/environment.md"
 managed="docs/environments/managed-state.md"
 codegen_doc="docs/environments/codegen.md"
@@ -95,9 +97,10 @@ else
   bad "managed-state.md lost its symlink-only plus no-fallback record"
 fi
 
-# CLI env implementation carries no junction/copy fallback.
-if ! grep -rn -F -e 'junction' cli/env/src/ 2>/dev/null | grep -q . &&
-  ! grep -rn -E -e 'copy.*fallback|fallback.*copy' cli/env/src/ 2>/dev/null | grep -q .; then
+# CLI env implementation carries no junction/copy fallback
+# (hermetic tree search: host grep -rn variance, issue #1006).
+if dx_tree_absent 'junction' -- cli/env/src/ &&
+  DX_TREE_RE=1 dx_tree_absent 'copy.*fallback|fallback.*copy' -- cli/env/src/; then
   ok
 else
   bad "cli/env/src gained a junction or copy fallback"
@@ -210,11 +213,12 @@ else
   bad "codegen collector frozen contracts lost (backlog_contracts plus consts)"
 fi
 
-# Functional: Rust and Starlark codegen constants still agree.
-rust_group="$(grep -F -e 'pub const OUTPUT_GROUP' cli/codegen/src/lib.rs | sed 's/.*= "//; s/";.*//')"
-bzl_group="$(grep -F -e 'DX_CODEGEN_PLAN_OUTPUT_GROUP = ' generation/codegen.bzl | head -n 1 | sed 's/.*= "//; s/".*//')"
-rust_suffix="$(grep -F -e 'pub const SHARD_SUFFIX' cli/codegen/src/lib.rs | sed 's/.*= "//; s/";.*//')"
-bzl_suffix="$(grep -F -e 'DX_CODEGEN_SHARD_SUFFIX = ' generation/codegen.bzl | head -n 1 | sed 's/.*= "//; s/".*//')"
+# Functional: Rust and Starlark codegen constants still agree
+# (hermetic field extraction: host sed BRE drifts, issue #1006).
+rust_group="$(dx_extract_quoted cli/codegen/src/lib.rs 'pub const OUTPUT_GROUP')"
+bzl_group="$(dx_extract_quoted generation/codegen.bzl 'DX_CODEGEN_PLAN_OUTPUT_GROUP = ')"
+rust_suffix="$(dx_extract_quoted cli/codegen/src/lib.rs 'pub const SHARD_SUFFIX')"
+bzl_suffix="$(dx_extract_quoted generation/codegen.bzl 'DX_CODEGEN_SHARD_SUFFIX = ')"
 if [[ -n "$rust_group" && "$rust_group" == "$bzl_group" && -n "$rust_suffix" && "$rust_suffix" == "$bzl_suffix" ]]; then
   ok
 else

@@ -45,6 +45,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/cpp_snapshot/pins.bzl"
 fixture_build="cc/tests/fixtures/cpp_snapshot/BUILD.bazel"
 snapshot="cc/tests/fixtures/cpp_snapshot/snapshot.expected"

@@ -32,6 +32,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 recovery="cli/update/src/recovery.rs"
 lib="cli/update/src/lib.rs"
 outcome="cli/update/src/outcome.rs"

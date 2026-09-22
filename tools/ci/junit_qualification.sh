@@ -36,6 +36,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="java/tests/fixtures/junit/pins.bzl"
 java_build="java/tests/fixtures/junit/BUILD.bazel"
 java_test="java/tests/fixtures/junit/HelloJupiterTest.java"
@@ -150,9 +152,10 @@ else
   bad "JUnit 4 seed lost its default-runner hello mapping under issue #476"
 fi
 
-# Unpinned runner stays rejected: no floating version or head dep lands.
+# Unpinned runner stays rejected: no floating version or head dep lands
+# (hermetic tree search: BSD grep lacks --include/--exclude, issue #1006).
 if ! grep -q -F -e 'junit:junit:4.+' "$module" &&
-  ! grep -R --include='*.bzl' --include='BUILD.bazel' --exclude='junit_qualification.sh' --exclude='pins.bzl' -F -e 'living at head' -- java kotlin third_party 2>/dev/null | grep -q .; then
+  dx_tree_absent --include='*.bzl' --include='BUILD.bazel' --exclude='junit_qualification.sh' --exclude='pins.bzl' 'living at head' -- java kotlin third_party; then
   ok
 else
   bad "unpinned JUnit runner detected (floating version or head; want pins.bzl pins only)"

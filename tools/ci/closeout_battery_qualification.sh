@@ -28,6 +28,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 testing_readme="docs/testing/strategy-details.md"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"

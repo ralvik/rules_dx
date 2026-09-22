@@ -34,6 +34,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 gen_rust="docs/generation/rust.md"
 gen_readme="docs/generation/foundation-qualification.md"
 native="docs/native-toolchains.md"

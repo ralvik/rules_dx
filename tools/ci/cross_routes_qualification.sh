@@ -50,6 +50,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/cross_routes/pins.bzl"
 pins_build="cc/tests/fixtures/cross_routes/BUILD.bazel"
 routes="cc/tests/fixtures/cross_routes/routes.expected"

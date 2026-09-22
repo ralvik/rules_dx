@@ -24,6 +24,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="tools/ci/tests/fixtures/non_dogfed/pins.bzl"
 pins_build="tools/ci/tests/fixtures/non_dogfed/BUILD.bazel"
 expected="tools/ci/tests/fixtures/non_dogfed/non_dogfed.expected"

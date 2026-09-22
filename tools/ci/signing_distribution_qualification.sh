@@ -29,6 +29,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 # Signing header owns the live-successor plus no-stack-change decision.
 if grep -q -F -e 'live successor' deploy/release/signing.bzl &&
   grep -q -F -e 'no stack change' deploy/release/signing.bzl; then

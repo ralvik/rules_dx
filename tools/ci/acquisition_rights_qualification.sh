@@ -41,6 +41,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/acquisition_rights/pins.bzl"
 pins_build="cc/tests/fixtures/acquisition_rights/BUILD.bazel"
 module="MODULE.bazel"
@@ -139,9 +141,10 @@ else
 fi
 
 # Rights proof: CI sets no EULA variable and leaks no secrets in the
-# Windows jobs; missing acceptance leaves unrelated workflows green.
-if ! grep -rn -F -e 'BAZEL_TOOLCHAINS_MSVC_ACCEPT' --include='*.yml' .github/ 2>/dev/null | grep -v -F -e 'acquisition_rights_qualification.sh' | grep -v -F -e 'windows_acquisition_qualification.sh' | grep -v -F -e 'windows_qualification.sh' | grep -q . &&
-  ! grep -A30 -e 'build-windows-x86_64' "$ci" | grep -E -e 'secrets\.' | grep -q .; then
+# Windows jobs; missing acceptance leaves unrelated workflows green
+# (hermetic tree plus context search, issue #1006).
+if dx_tree_absent --include='*.yml' --exclude='acquisition_rights_qualification.sh' --exclude='windows_acquisition_qualification.sh' --exclude='windows_qualification.sh' 'BAZEL_TOOLCHAINS_MSVC_ACCEPT' -- .github/ &&
+  DX_CONTEXT_RE=1 dx_context_absent "$ci" 'build-windows-x86_64' -A 30 'secrets\.'; then
   ok
 else
   bad "windows jobs set the EULA variable or leak secrets (want deliberate acceptance only, missing acceptance leaves unrelated workflows green, issue #496)"

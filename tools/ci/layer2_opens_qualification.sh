@@ -37,6 +37,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="quality/tests/fixtures/layer2_opens/pins.bzl"
 pins_build="quality/tests/fixtures/layer2_opens/BUILD.bazel"
 expected="quality/tests/fixtures/layer2_opens/layer2_opens.expected"

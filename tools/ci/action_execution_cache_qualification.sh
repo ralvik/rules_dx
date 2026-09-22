@@ -33,6 +33,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 synthetic="quality/aspects.bzl"
 real="quality/real_aspects.bzl"
 ci=".github/workflows/ci.yml"
@@ -125,8 +127,8 @@ fi
 # Single-source cache key (issue #1004): the functional hashFiles list lives
 # exactly once across owned workflows plus the shared restore action, so the
 # list cannot drift across jobs; invalidation behavior stays owned by the
-# composite.
-if [[ "$(grep -r -F -e "hashFiles('" .github/workflows .github/actions 2>/dev/null | wc -l | tr -d ' ')" == "1" ]] &&
+# composite (hermetic line count: BSD grep lacks --include, issue #1006).
+if [[ "$(dx_hermetic_grep tree-count --fixed --roots .github/workflows .github/actions -- "hashFiles('")" == "1" ]] &&
   grep -q -F -e "hashFiles('" "$cache_action" &&
   ! grep -q -F -e "hashFiles('" "$ci" &&
   ! grep -q -F -e "hashFiles('" "$bump"; then
@@ -177,10 +179,11 @@ else
   bad "quality_cache_aquery lost its local execution-log hit/miss half"
 fi
 
-# No remote flags in owned config or workflows (local-only execution).
-if ! grep -rn -F -e '--remote_cache' .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e '--remote_executor' .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ 2>/dev/null | grep -q . &&
-  ! grep -rn -F -e '--bes_backend' .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ 2>/dev/null | grep -q .; then
+# No remote flags in owned config or workflows (local-only execution;
+# hermetic tree search: BSD grep lacks --exclude-dir, issue #1006).
+if dx_tree_absent '--remote_cache' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
+  dx_tree_absent '--remote_executor' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
+  dx_tree_absent '--bes_backend' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/; then
   ok
 else
   bad "a remote cache/executor flag appeared (local-only execution)"

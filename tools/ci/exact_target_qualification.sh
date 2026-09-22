@@ -43,6 +43,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="rust/tests/fixtures/discovery/pins.bzl"
 fixture_build="rust/tests/fixtures/discovery/BUILD.bazel"
 contract="docs/cli/target-resolution.md"

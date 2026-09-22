@@ -43,6 +43,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/linux_corpus/pins.bzl"
 pins_build="cc/tests/fixtures/linux_corpus/BUILD.bazel"
 sqlite_h="cc/tests/fixtures/linux_corpus/sqlite.h"

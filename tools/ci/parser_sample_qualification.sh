@@ -34,6 +34,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 runner_doc="docs/quality/runner-matrix.md"
 targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"

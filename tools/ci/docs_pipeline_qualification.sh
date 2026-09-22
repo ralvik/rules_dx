@@ -47,6 +47,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 proto="docs/ir/doc_ir.proto"
 codec="docs/ir/ir/src/lib.rs"
 codec_build="docs/ir/ir/BUILD.bazel"
@@ -351,10 +353,11 @@ fi
 
 # CLI registry carries the Docs command with real extraction/validation:
 # the unknown-command surface lists docs and Command::Docs plus
-# execute_docs exist with the shared-graph mapping.
+# execute_docs exist with the shared-graph mapping
+# (hermetic tree search: host grep -rn variance, issue #1006).
 if grep -q -F -e 'completion|docs|bazel' "$cli_errors" &&
-  grep -rn -F -e 'Command::Docs' cli/cli/src/ 2>/dev/null | grep -q . &&
-  grep -rn -F -e 'execute_docs' cli/ 2>/dev/null | grep -q . &&
+  dx_tree_contains 'Command::Docs' -- cli/cli/src/ &&
+  dx_tree_contains 'execute_docs' -- cli/ &&
   grep -q -F -e 'pub fn plan_docs_mode' "$planning" &&
   grep -q -F -e 'pub fn plan_mode_actions' "$planning" &&
   grep -q -F -e 'Command::Docs => "docs"' cli/cli/src/args/command.rs; then
@@ -405,11 +408,12 @@ else
   bad "docs/roadmap.md still exists or the #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785 delivered list lost its owner"
 fi
 
-# Functional: schema major pins agree (proto v1, codec example, shared helper).
+# Functional: schema major pins agree (proto v1, codec example, shared helper)
+# (hermetic field extraction: host sed BRE drifts, issue #1006).
 if grep -q -F -e 'uint32 schema_major = 1;' "$proto" &&
   grep -q -F -e 'schema_major: 1,' "$codec" &&
   grep -q -F -e 'IrVersion { major: 1' "$planning" &&
-  [[ "$(grep -F -e 'pub const SCHEMA_MAJOR' "$schema" | sed 's/.*= //; s/;.*//')" == "1" ]]; then
+  [[ "$(dx_extract_re "$schema" '(?<== )[0-9]+')" == "1" ]]; then
   ok
 else
   bad "schema-major pins drifted across proto/codec/planning"

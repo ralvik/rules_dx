@@ -32,6 +32,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 adr="docs/decisions/0024-selective-update.md"
 pins="cli/update/tests/fixtures/selective_go/pins.bzl"
 expected="cli/update/tests/fixtures/selective_go/selective_go.expected"

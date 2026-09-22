@@ -41,6 +41,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/lcov_accounting/pins.bzl"
 pins_build="cc/tests/fixtures/lcov_accounting/BUILD.bazel"
 accounting_h="cc/tests/fixtures/lcov_accounting/accounting.h"

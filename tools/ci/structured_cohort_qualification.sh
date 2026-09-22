@@ -32,6 +32,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 support="docs/product/support-matrix.md"
 baseline="docs/tools/tool-baseline.md"
 acquisition="docs/tools/tool-acquisition.md"

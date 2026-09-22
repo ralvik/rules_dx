@@ -38,6 +38,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="java/tests/fixtures/jvm_quality/pins.bzl"
 pins_build="java/tests/fixtures/jvm_quality/BUILD.bazel"
 adapters="quality/adapters.bzl"

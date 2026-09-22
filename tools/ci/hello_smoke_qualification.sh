@@ -29,6 +29,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 

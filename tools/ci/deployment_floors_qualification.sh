@@ -43,6 +43,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/deployment_floors/pins.bzl"
 pins_build="cc/tests/fixtures/deployment_floors/BUILD.bazel"
 floors_expected="cc/tests/fixtures/deployment_floors/floors.expected"

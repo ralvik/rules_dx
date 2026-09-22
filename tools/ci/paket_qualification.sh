@@ -38,6 +38,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="csharp/tests/fixtures/paket/pins.bzl"
 pins_build="csharp/tests/fixtures/paket/BUILD.bazel"
 deps="third_party/dotnet/paket.dependencies"
@@ -141,11 +143,12 @@ else
   bad "hello/xunit fixtures lost their @paket.main hub consumption under issue #482"
 fi
 
-# Generation consumes never writes: contract owns it, Gazelle never touches Paket files.
+# Generation consumes never writes: contract owns it, Gazelle never touches Paket files
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
 if grep -q -F -e 'or edits manifests or lockfiles' "$common" &&
-  ! grep -R --include='*.go' -F -e 'paket.dependencies' -- gazelle/csharp gazelle/fsharp 2>/dev/null | grep -q . &&
-  ! grep -R --include='*.go' -F -e 'paket.lock' -- gazelle/csharp gazelle/fsharp 2>/dev/null | grep -q . &&
-  ! grep -R --include='*.go' -F -e 'paket2bazel' -- gazelle/csharp gazelle/fsharp 2>/dev/null | grep -q .; then
+  dx_tree_absent --include='*.go' 'paket.dependencies' -- gazelle/csharp gazelle/fsharp &&
+  dx_tree_absent --include='*.go' 'paket.lock' -- gazelle/csharp gazelle/fsharp &&
+  dx_tree_absent --include='*.go' 'paket2bazel' -- gazelle/csharp gazelle/fsharp; then
   ok
 else
   bad "generation lost its consumes-never-writes proof (want common contract plus no Paket refs in gazelle/csharp plus gazelle/fsharp)"

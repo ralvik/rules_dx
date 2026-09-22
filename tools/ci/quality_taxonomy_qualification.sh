@@ -56,6 +56,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="quality/tests/fixtures/quality_taxonomy/pins.bzl"
 pins_build="quality/tests/fixtures/quality_taxonomy/BUILD.bazel"
 expected="quality/tests/fixtures/quality_taxonomy/quality_taxonomy.expected"

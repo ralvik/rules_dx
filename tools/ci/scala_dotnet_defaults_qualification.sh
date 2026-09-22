@@ -40,6 +40,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="scala/tests/fixtures/scala_dotnet_quality/pins.bzl"
 pins_build="scala/tests/fixtures/scala_dotnet_quality/BUILD.bazel"
 adapters="quality/adapters.bzl"

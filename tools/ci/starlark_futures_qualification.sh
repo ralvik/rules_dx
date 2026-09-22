@@ -52,6 +52,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 doc="docs/testing/starlark.md"
 adr="docs/decisions/0009-starlark-testing.md"
 defs="libs/starlark/defs.bzl"

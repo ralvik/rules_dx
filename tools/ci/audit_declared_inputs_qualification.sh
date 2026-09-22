@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 root_build="BUILD.bazel"
 curator="cli/audit/src/curator.rs"
 audit_lib="cli/audit/src/lib.rs"

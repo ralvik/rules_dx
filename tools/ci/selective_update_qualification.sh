@@ -30,6 +30,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 adr="docs/decisions/0024-selective-update.md"
 adr_index="docs/decisions/README.md"
 pins="cli/update/tests/fixtures/selective_update/pins.bzl"

@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 contract="docs/github-ci.md"
 matrix="docs/testing/github-ci.md"
 pins="tools/ci/tests/fixtures/review_threads/pins.bzl"

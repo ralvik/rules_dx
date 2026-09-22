@@ -42,6 +42,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/prebuilt_interop/pins.bzl"
 pins_build="cc/tests/fixtures/prebuilt_interop/BUILD.bazel"
 interop_h="cc/tests/fixtures/prebuilt_interop/interop.h"

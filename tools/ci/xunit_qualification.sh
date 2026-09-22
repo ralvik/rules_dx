@@ -38,6 +38,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 deps="third_party/dotnet/paket.dependencies"
 lock="third_party/dotnet/paket.lock"
 hub="third_party/dotnet/deps/paket.main.bzl"

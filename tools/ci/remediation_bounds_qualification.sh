@@ -49,6 +49,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/remediation_bounds/pins.bzl"
 pins_build="cc/tests/fixtures/remediation_bounds/BUILD.bazel"
 bounds="cc/tests/fixtures/remediation_bounds/bounds.expected"

@@ -38,6 +38,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="tools/ci/tests/fixtures/devcontainer_boot/pins.bzl"
 expected="tools/ci/tests/fixtures/devcontainer_boot/devcontainer_boot.expected"
 fixture_build="tools/ci/tests/fixtures/devcontainer_boot/BUILD.bazel"

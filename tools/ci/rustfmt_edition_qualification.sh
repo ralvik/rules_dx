@@ -30,6 +30,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 runner_doc="docs/quality/runner-matrix.md"
 integrations="docs/quality/tool-integrations.md"
 ci=".github/workflows/ci.yml"

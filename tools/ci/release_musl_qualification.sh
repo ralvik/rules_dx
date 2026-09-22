@@ -43,6 +43,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 sbom="deploy/release/sbom.bzl"
 verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"

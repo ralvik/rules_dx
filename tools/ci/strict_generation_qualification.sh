@@ -43,6 +43,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/strict_generation/pins.bzl"
 pins_build="cc/tests/fixtures/strict_generation/BUILD.bazel"
 strict_h="cc/tests/fixtures/strict_generation/strict.h"

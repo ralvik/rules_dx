@@ -59,6 +59,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="quality/tests/fixtures/result_contract/pins.bzl"
 pins_build="quality/tests/fixtures/result_contract/BUILD.bazel"
 expected="quality/tests/fixtures/result_contract/result_contract.expected"

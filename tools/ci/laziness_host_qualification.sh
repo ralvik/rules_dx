@@ -35,6 +35,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 pins="cc/tests/fixtures/laziness_host/pins.bzl"
 pins_build="cc/tests/fixtures/laziness_host/BUILD.bazel"
 expected="cc/tests/fixtures/laziness_host/laziness_host.expected"
@@ -134,11 +136,12 @@ else
 fi
 
 # Symlink UX proof: the env installer probes before mutation with Developer
-# Mode guidance and carries no junction fallback.
+# Mode guidance and carries no junction fallback
+# (hermetic tree search: host grep -rn variance, issue #1006).
 if grep -q -F -e 'pub fn probe_symlink' "$env_lib" &&
   grep -q -F -e 'SymlinkUnsupported' "$env_lib" &&
   grep -q -F -e 'enable Developer Mode or grant SeBackupPrivilege' "$env_lib" &&
-  ! grep -rn -F -e 'junction' cli/env/src/ 2>/dev/null | grep -q .; then
+  dx_tree_absent 'junction' -- cli/env/src/; then
   ok
 else
   bad "cli/env/src lost its probe_symlink plus SymlinkUnsupported plus Developer-Mode guidance with no junction fallback under issue #917"

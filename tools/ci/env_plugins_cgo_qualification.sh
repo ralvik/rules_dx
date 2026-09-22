@@ -39,6 +39,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 env_doc="docs/environments/environment.md"
 testing_doc="docs/testing/environments.md"
 matrix_support="docs/product/support-matrix.md"

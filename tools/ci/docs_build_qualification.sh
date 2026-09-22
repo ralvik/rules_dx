@@ -27,6 +27,8 @@ dx_cd_workspace
 
 dx_test_init
 
+dx_bash_pin
+
 doc="docs/documentation/build-check-serve.md"
 readme="docs/documentation/README.md"
 corpus="docs/BUILD.bazel"
@@ -126,10 +128,11 @@ else
   bad "tools/ci/BUILD.bazel lost the docs_build_qualification target"
 fi
 
-# No new custom docs linter: no docs-owned Rust crate or Cargo manifest.
+# No new custom docs linter: no docs-owned Rust crate or Cargo manifest
+# (hermetic tree search: BSD grep lacks --include, issue #1006).
 if [[ ! -f "docs/Cargo.toml" ]] &&
   [[ ! -d "docs/checker" ]] &&
-  ! grep -rn -F -e 'docs_checker' --include='BUILD.bazel' . 2>/dev/null | grep -q .; then
+  dx_tree_absent --include='BUILD.bazel' 'docs_checker' -- .; then
   ok
 else
   bad "a custom docs linter appeared (want existing libs only, issue #620)"
