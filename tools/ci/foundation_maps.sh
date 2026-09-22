@@ -486,6 +486,33 @@ else
   bad "Rust provider/Gazelle/integration maps drifted:$rust470_fail"
 fi
 
+# Issue #948: admitted wrapper conformance stays pinned (unit contract tests
+# alongside each admitted wrapper, wired in rules/BUILD.bazel over the hello
+# wrapper-consumer fixtures, mirroring the Rust wrapper_tests pattern).
+wrap948_fail=""
+for lang in go java kotlin scala csharp fsharp cc; do
+  [[ -f "$lang/rules/wrapper_tests.bzl" ]] || wrap948_fail="$wrap948_fail $lang:file"
+  grep -q -F -e "${lang}_wrapper_contract_tests" "$lang/rules/wrapper_tests.bzl" 2>/dev/null || wrap948_fail="$wrap948_fail $lang:macro"
+  grep -q -F -e 'KNOWN_SEMANTIC_FILE_CLASSES' "$lang/rules/wrapper_tests.bzl" 2>/dev/null || wrap948_fail="$wrap948_fail $lang:class"
+  grep -q -F -e 'dx_forwarded_test_kwargs' "$lang/rules/wrapper_tests.bzl" 2>/dev/null || wrap948_fail="$wrap948_fail $lang:test-kwargs"
+  grep -q -F -e 'dx_effective_visibility' "$lang/rules/wrapper_tests.bzl" 2>/dev/null || wrap948_fail="$wrap948_fail $lang:visibility"
+  grep -q -F -e 'wrapper_contract_tests' "$lang/rules/BUILD.bazel" 2>/dev/null || wrap948_fail="$wrap948_fail $lang:build"
+  grep -q -F -e 'wrapper_tests.bzl' "$lang/rules/BUILD.bazel" 2>/dev/null || wrap948_fail="$wrap948_fail $lang:exports"
+done
+grep -q -F -e 'go_effective_srcs' go/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail go:helper"
+grep -q -F -e 'java_javacopts_with_werror' java/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail java:helper"
+grep -q -F -e 'kotlin_kotlinc_opts_with_werror' kotlin/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail kotlin:helper"
+grep -q -F -e 'scala_scalacopts_with_werror' scala/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail scala:helper"
+grep -q -F -e 'csharp_tfm_with_defaults' csharp/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail csharp:helper"
+grep -q -F -e 'fsharp_tfm_with_defaults' fsharp/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail fsharp:helper"
+grep -q -F -e 'cc_copts_with_werror' cc/rules/wrapper_tests.bzl || wrap948_fail="$wrap948_fail cc:helper"
+grep -q -F -e 'wrapper_tests' docs/product/support-matrix.md || wrap948_fail="$wrap948_fail docs:matrix"
+if [[ -z "$wrap948_fail" ]]; then
+  ok
+else
+  bad "admitted wrapper conformance drifted:$wrap948_fail"
+fi
+
 # -: Rust build-script hermetic defaults stay pinned (generation contract
 # plus Gazelle emission plus focused Go fixtures).
 script_fail=""

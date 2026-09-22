@@ -292,7 +292,9 @@ are pinned by `bazel run //tools/ci:foundation_maps` with owning qualification i
 [Environments](../environments/README.md#language-mapping-qualification),
 [Tools](../tools/README.md#language-mapping-qualification), and the
 [native plan](../native-toolchains.md#qualification-questions-and-delivery):
-wrappers preserving upstream providers plus `QualitySourcesInfo`, Gazelle extensions,
+wrappers preserving upstream providers plus `QualitySourcesInfo` (proven by
+`<lang>/rules/wrapper_tests.bzl` conformance over `<lang>/tests/fixtures/hello/`,
+mirroring the Rust `rust/rules/wrapper_tests.bzl` pattern), Gazelle extensions,
 env plans, hello builds, and lock authority (Maven `maven_install.json` plus fail-closed
 qualified seed-only under #481, Paket plus `paket.main` qualified seed-only
 under #482, Go `go.mod`/`go.sum` qualified seed-only under #483 with hello staying stdlib-only, C/C++ none), with test runners (JUnit 6.1.3 plus 5.14.x fallback qualified seed-only under #476, xUnit v3 4.0.0

@@ -96,13 +96,20 @@ _cc_forward_test = dx_executable_forward_rule(
     optional_providers = [CcInfo],
 )
 
-def _cc_with_werror(kwargs):
+def cc_copts_with_werror(kwargs):
+    """Returns kwargs with -Werror enforced on copts.
+
+    Existing flags are kept; a missing flag is appended.
+    See: docs/testing/generation.md."""
     upstream_kwargs = dict(kwargs)
     copts = list(upstream_kwargs.get("copts", []))
     if "-Werror" not in copts:
         copts = copts + ["-Werror"]
     upstream_kwargs["copts"] = copts
     return upstream_kwargs
+
+def _cc_with_werror(kwargs):
+    return cc_copts_with_werror(kwargs)
 
 def _cc_wrap_library(name, srcs, hdrs, visibility = None, **kwargs):
     dx_wrap(name, _cc_library, _cc_library_forward, srcs, hdrs = hdrs, visibility = visibility, **_cc_with_werror(kwargs))

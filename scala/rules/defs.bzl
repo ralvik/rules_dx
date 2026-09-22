@@ -77,13 +77,20 @@ _scala_forward_test = dx_executable_forward_rule(
     optional_providers = [JavaInfo],
 )
 
-def _scala_with_werror(kwargs):
+def scala_scalacopts_with_werror(kwargs):
+    """Returns kwargs with -Xfatal-warnings enforced on scalacopts.
+
+    Existing flags are kept; a missing flag is appended.
+    See: docs/testing/generation.md."""
     upstream_kwargs = dict(kwargs)
     scalacopts = list(upstream_kwargs.get("scalacopts", []))
     if "-Xfatal-warnings" not in scalacopts:
         scalacopts = scalacopts + ["-Xfatal-warnings"]
     upstream_kwargs["scalacopts"] = scalacopts
     return upstream_kwargs
+
+def _scala_with_werror(kwargs):
+    return scala_scalacopts_with_werror(kwargs)
 
 def _scala_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _scala_library, _scala_library_forward, srcs, visibility = visibility, **_scala_with_werror(kwargs))

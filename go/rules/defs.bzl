@@ -78,6 +78,13 @@ _go_forward_test = dx_executable_forward_rule(
     optional_providers = [_GoArchive],
 )
 
+def go_effective_srcs(srcs):
+    """Returns the effective direct sources for a go binary or test shape.
+
+    None becomes empty (thin entry shape owns no direct sources).
+    See: docs/quality/quality-sources.md."""
+    return srcs if srcs != None else []
+
 def _go_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _go_library, _go_library_forward, srcs, visibility = visibility, **kwargs)
 
@@ -120,7 +127,7 @@ def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs)
     source-derived dependencies in the thin shape; the thin binary
     reports no direct sources. Both shapes preserve the upstream
     providers and execution semantics."""
-    effective_srcs = srcs if srcs != None else []
+    effective_srcs = go_effective_srcs(srcs)
     if importpath != None:
         _go_wrap_binary(name, effective_srcs, visibility = visibility, importpath = importpath, **kwargs)
     else:
@@ -136,7 +143,7 @@ def go_test(name, srcs, visibility = None, **kwargs):
     test's direct sources. Uses `go test` and Bazel's standard test
     and coverage protocols. Handwritten tests may set upstream race
     scope (`race`, `pure`); generated tests never do."""
-    test_srcs = srcs if srcs != None else []
+    test_srcs = go_effective_srcs(srcs)
     upstream_kwargs = dict(kwargs)
 
     # The private upstream test stays an implementation detail via private
