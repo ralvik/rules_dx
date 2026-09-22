@@ -83,7 +83,7 @@ verification matrix shows `Delivered` for the capability: verification `Delivere
 seed-host layer evidence, not support-matrix promotion. No `Planned` cell implies
 remaining-required-platform,
 external-consumer, or trusted-builder release evidence; see
-`../../CHANGELOG.md`. `Planned: feasibility` means evaluation
+[promotion checklist](promotion-checklist.md). `Planned: feasibility` means evaluation
 under [first-release admission](scope.md#first-release-admission):
 admit qualifying capabilities, or record an approved disposition. Additional foundations may be
 deferred when completion needs substantial infrastructure; required quality tools are independent.

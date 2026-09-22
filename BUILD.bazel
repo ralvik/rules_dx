@@ -228,9 +228,6 @@ exports_files([
     "biome.json",
     "ruff.toml",
     "pnpm-workspace.yaml",
-    # Release notes: link-resolution sibling for //docs:corpus, never a
-    # checked source of this package.
-    "CHANGELOG.md",
     # Audit curator data as a declared Bazel input (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
     # `dx audit license` keeps reading the committed `licenses.toml` bytes;
     # exposing the same file as a target lets Bazel-owned analysis declare
@@ -312,7 +309,6 @@ real_source_target(
         "//docs:product/scope.md",
         "//docs:product/support-matrix.md",
         "//docs:testing/README.md",
-        "CHANGELOG.md",
         "LICENSE",
     ],
     markdown_srcs = [

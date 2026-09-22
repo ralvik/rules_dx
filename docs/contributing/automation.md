@@ -32,7 +32,7 @@ preserved.
 
 ## Allowed
 
-CI checks, a labeler, a changelog-presence check, the caller pin-sync
+CI checks, a labeler, the caller pin-sync
 tests (delivered: `//tools/ci:examples_pins_test`,
 `//tools/ci:consumer_pins_test`),
 perf-baseline-bump PRs (open, tracked in GitHub issues),

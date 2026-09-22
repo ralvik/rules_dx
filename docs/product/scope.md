@@ -5,7 +5,7 @@
 Early design started from a near-empty scaffold and recorded its starting
 inventory and greenfield risks here. That material now lives only in git
 history; the sections below describe the product as built. See
-`../../CHANGELOG.md` for release status.
+[support matrix](support-matrix.md) for release status.
 
 ## Product Boundary
 

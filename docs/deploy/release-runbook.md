@@ -12,8 +12,7 @@ publishes nothing either way; GHCR images ship from the separate
 ## Preconditions
 
 - Clean tree, module version bumped from `0.0.0` to SemVer in a reviewed
-  PR with an atomic `CHANGELOG.md` flip (SemVer entry plus marker removal,
-  issue #931; enforced by `release_policy` plus `release_hygiene`)
+  PR with owner approval (issue #931; enforced by `release_policy` plus `release_hygiene`)
   (consumers pin reviewed commits until then).
 - Tag already pushed to the remote beforehand with owner approval. No
   release program creates or pushes tags (`--verify-tag` everywhere);

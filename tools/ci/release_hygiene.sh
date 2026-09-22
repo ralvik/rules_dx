@@ -55,31 +55,31 @@ else
   bad "dist/ or release/ paths are committed: $(git ls-files | grep -E '^(dist|release)/' | head -n 5)"
 fi
 
-# Atomic version flip (issue #931): at 0.0.0 consumers pin reviewed
-# commits, never tags; after the first SemVer flip the new version must
-# land with a CHANGELOG SemVer entry plus marker removal in the same PR.
-# Either half alone fails closed (see release_policy.sh for the mirrored
-# gate).
+# Atomic version (issue #931, CHANGELOG deleted per #983): at 0.0.0 consumers pin
+# reviewed commits, never tags; CHANGELOG.md stays deleted with status in
+# docs/product/support-matrix.md and planned work in issues. A recreated
+# CHANGELOG at a bumped version must name the new version without the
+# no-release marker. Either half alone fails closed (see release_policy.sh
+# for the mirrored gate).
 dx_guard_re_contains MODULE.bazel '^module\(' "MODULE.bazel lost its module() header"
 hygiene_module_version="$(grep -o -E -e '^    version = "[^"]+"' MODULE.bazel | head -1 | cut -d'"' -f2 || true)"
 if [[ -z "$hygiene_module_version" ]]; then
   bad "MODULE.bazel lost its version pin (want single-version atomic, issue #931)"
 elif [[ "$hygiene_module_version" == "0.0.0" ]]; then
-  if grep -q -F -e 'No release has been cut' CHANGELOG.md; then
+  if [[ ! -e "CHANGELOG.md" ]]; then
     ok
   else
-    bad "CHANGELOG.md lost the no-release marker at 0.0.0 (want atomic flip, issue #931)"
+    bad "CHANGELOG.md reappeared (deleted per #983; status lives in docs/product/support-matrix.md)"
   fi
 else
-  if grep -q -F -e 'No release has been cut' CHANGELOG.md; then
-    bad "CHANGELOG.md still carries the no-release marker with MODULE.bazel at $hygiene_module_version (want atomic SemVer entry plus marker removal, issue #931)"
-  else
+  if [[ ! -e "CHANGELOG.md" ]]; then
     ok
-  fi
-  if grep -q -F -e "$hygiene_module_version" CHANGELOG.md && grep -q -E -e '^## ' CHANGELOG.md; then
+  elif grep -q -F -e 'No release has been cut' CHANGELOG.md; then
+    bad "CHANGELOG.md still carries the no-release marker with MODULE.bazel at $hygiene_module_version (recreate only at the release gate per #983)"
+  elif grep -q -F -e "$hygiene_module_version" CHANGELOG.md && grep -q -E -e '^## ' CHANGELOG.md; then
     ok
   else
-    bad "CHANGELOG.md lost its SemVer entry for MODULE.bazel $hygiene_module_version (want atomic entry plus marker removal, issue #931)"
+    bad "CHANGELOG.md lost its SemVer entry for MODULE.bazel $hygiene_module_version (recreate only at the release gate per #983)"
   fi
 fi
 
@@ -219,13 +219,12 @@ dx_guards_contains CONTRIBUTING.md "CONTRIBUTING.md lost the both-callers pin po
 dx_guard_contains "$dryrun" 'Any tag, registry submission, or release creation' "publish-dry-run.yml lost the no-tag/no-release/no-submission record (issue #5)"
 
 # Published bytes are never rebuilt or substituted silently
-# next-steps): the policy stays recorded in CONTRIBUTING.md plus
-# CHANGELOG.md, so the approval gate cannot be read as allowing a quiet
+# next-steps): the policy stays recorded in CONTRIBUTING.md (CHANGELOG.md
+# deleted per #983), so the approval gate cannot be read as allowing a quiet
 # byte swap after approval.
 dx_guards_contains CONTRIBUTING.md "CONTRIBUTING.md lost the never-rebuild-or-substitute record (issue #5)" \
   'never' \
   'rebuilt or substituted silently'
-dx_guard_contains CHANGELOG.md 'rebuilt or substituted silently' "CHANGELOG.md lost the never-rebuild-or-substitute record (issue #5)"
 
 # Byte identity stays fail-closed (never-rebuild mechanism):
 # the artifact generator rejects changed upstream bytes instead of
