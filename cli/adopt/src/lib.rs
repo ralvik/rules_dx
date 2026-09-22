@@ -71,6 +71,6 @@ pub use version::{
     DX_VERSION, MODULE_VERSION, PREVIOUS_VERSION,
 };
 pub use watch::{
-    coalesce_watch_paths, plan_watch, watch_for_change, watch_iteration_accepts,
+    coalesce_watch_paths, plan_watch, should_watch_path, watch_for_change, watch_iteration_accepts,
     WATCHABLE_COMMANDS, WATCH_DEBOUNCE_MS,
 };

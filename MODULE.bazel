@@ -199,12 +199,12 @@ maven.install(
 )
 use_repo(maven, "maven")
 
-# Pinned Python foundation (ADR 0010). Pins owned by `//modules:python.bzl`. Exact 2.x prerelease is an
-# explicit exception to ADR 0008 until a compatible stable 2.x exists.
+# Pinned Python foundation (ADR 0010). Pins owned by `//modules:python.bzl`. Exact 2.x prerelease is a
+# dated deferral per issue #961 and an explicit exception to ADR 0008 until a compatible stable 2.x exists.
 # Bump selector: latest stable 2.x in the Bazel Central Registry;
 # recheck on every dependency-currency pass (see
-# `//tools/ci:pin_consistency_test`, issue #912; retirement owned by issue
-# #916 with stable-watch plus lock/uv/groups/providers re-qualification).
+# `//tools/ci:pin_consistency_test`, issue #912; stable-watch plus
+# lock/uv/groups/providers re-qualification owned by issue #916).
 bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")
 
 # Pinned JavaScript/TypeScript foundation (ADR 0013). Pins owned by `//modules:js.bzl`. Exact

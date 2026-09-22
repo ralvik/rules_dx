@@ -24,7 +24,7 @@ validation and are not stable commitments.
 | [0014: Tested Platform Release Stack](0014-tested-platform-release-stack.md) | Accepted | — | Release platform |
 | [0015: First-Party Gazelle Extensions](0015-first-party-gazelle-extensions.md) | Accepted | — | Generation |
 | [0016: Broad First Release](0016-broad-first-release.md) | Accepted | — | V1 scope and project coverage |
-| [0017: dx Watch Loop](0017-dx-watch.md) | Provisional | — | CLI iteration |
+| [0017: dx Watch Loop](0017-dx-watch.md) | Accepted | 2026-09-22 | CLI iteration |
 | [0018: Umbrella Check/Fix And Managed-State Cleanup](0018-umbrella-check-fix-cleanup-clean.md) | Accepted | — | CLI surface |
 | [0019: First-Release Additional-Foundation Dispositions](0019-first-release-additional-foundations.md) | Superseded (Ruby/PowerShell admitted, Bandit re-selected, Swift exclusion re-evidenced by 0032) | 2026-09-08 | V1 scope dispositions |
 | [0020: Remove The `dx docs` Placeholder Command](0020-remove-dx-docs-placeholder.md) | Accepted | — | CLI surface |

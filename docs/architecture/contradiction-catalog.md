@@ -18,7 +18,7 @@ Related umbrellas stay owned by their split issues (#916-#922 plus #925 plus #93
 | C1 | Thin CLI vs Bazel authority | Second-graph / BUILD-probe / custom watcher-cache code and comments (pre-2026-09) | [Product Boundary](../product/scope.md#product-boundary) (2026-09-21, #959) + [ADR 0001](../decisions/0001-bazel-owns-execution.md#decision) (Accepted) + [Architecture](../architecture/README.md#component-flow) (2026-09-22, #936) | Fix code to match contract | #918, #919, #920, #922 |
 | C2 | One-dep lazy stack vs Bzlmod eager eval | One-dep implies zero module-resolution cost (older scope reading, pre-2026-09-21) | [Activation and Laziness](../architecture/README.md#activation-and-laziness) (2026-09-21, #959) + [ADR 0014](../decisions/0014-tested-platform-release-stack.md#decision) (Accepted fit 2026-09-21, #959) | Amend contract with dated fit; fix code to boundary | #917, #921, #930 |
 | C3 | Symlink-only `.dx` plus manual EULA vs hermetic no-prerequisite | No host-prerequisite hermetic reading (older scope/ADR 0014 reading, pre-2026-09-21) | [Managed State](../environments/managed-state.md#installation-and-ownership) (2026-09-21, #959) + [Scope](../product/scope.md#first-release-admission) (2026-09-21, #959) | Amend contract with dated fit; fix UX to fail closed | #917 |
-| C4 | Accepted-equals-durable vs provisional exceptions | [Decisions](../decisions/README.md) Accepted-holds-durable rule vs five provisional/pinned exceptions (watch, naming, config API, py prerelease, rust fork; pre-2026-09-22) | [ADR 0017](../decisions/0017-dx-watch.md) (Provisional, retirement owned by #916, 2026-09-22) plus #916 single-tracker accept-or-demote plan (2026-09-22) | Amend contracts with dated decisions; freeze or retire each | #916, #961 |
+| C4 | Accepted-equals-durable vs provisional exceptions | [Decisions](../decisions/README.md) Accepted-holds-durable rule vs five provisional/pinned exceptions (watch, naming, config API, py prerelease, rust fork; pre-2026-09-22) | [ADR 0017](../decisions/0017-dx-watch.md) (Accepted 2026-09-22, #961 keep-watch) plus #916 single-tracker plan for the remaining four (2026-09-22) plus #961 dated deferrals (2026-09-22) | Amend contracts with dated decisions; watch/naming/config durable, py/rust/currency dated deferrals | #916, #961 |
 | C5 | CLI surface: verb count, fix rerun, clean scope, docs, doctor | 29-verb thin reading plus `fix` rerun plus `clean` full plus `docs` placeholder plus `doctor` (pre-2026-09-21) | [Scope Initial Command Evaluation](../product/scope.md#initial-command-evaluation) Thin fit 32-verb (2026-09-22, #951) + [ADR 0006](../decisions/0006-cli-command-surface.md) (Superseded 2026-09-09) + [ADR 0018](../decisions/0018-umbrella-check-fix-cleanup-clean.md) (Accepted) + [ADR 0020](../decisions/0020-remove-dx-docs-placeholder.md) (Accepted) | Fix code to match contract | #962, #925 |
 | C6 | version/status/hooks local consts vs ask-Bazel | Ask-Bazel-for-everything reading of thin CLI (pre-2026-09-21) | [`dx status`/`version`](../cli/commands/status-version.md#dx-status) Accepted fit (2026-09-21, #963): static checks, one-const pin, live query open and never claimed | Amend contract with dated fit; no code change beyond fit | #925 |
 | C7 | No-remote-exec plus dual gates vs determinism/coverage goals | 97%/100% dual-gate plus remote-silence reading (pre-2026-09-21) | [Scope](../product/scope.md#product-boundary) local per-cell determinism only (2026-09-21, #964) + [Action Model](../quality/action-model.md#outputs-remote-cache-and-execution) (2026-09-21, #964) + [Testing](../testing/README.md#coverage) single exact gate (2026-09-21, #964) | Amend contract with dated fit; fix gates to single | #964, #919 |
@@ -88,16 +88,17 @@ pinned-fork exceptions with no retirement owner: watch
 prerelease ([ADR 0010](../decisions/0010-python-foundation.md)), Rust fork
 ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)).
 
-Winner: last-agreed single-tracker plan in #916 (2026-09-22): retirement owned
-by #916 for all five (accept with frozen semantics plus fixture/ship gates or
-demote with a dated deferral). Watch keeps its thin local-only exception in
-[scope](../product/scope.md#automatic-workflows) (2026-09-21) while staying
-Provisional in ADR 0017 pending that retirement.
+Winner: last-agreed keep-watch decision in issue #961 (2026-09-22): watch is
+Accepted durable in [ADR 0017](../decisions/0017-dx-watch.md) with its thin
+local-only exception in [scope](../product/scope.md#automatic-workflows);
+naming and config are Accepted durable in ADR 0004/0011; Python prerelease,
+Rust fork, and currency pins are dated deferrals with review. The #916
+single-tracker plan (2026-09-22) retains only the remaining four.
 
-Resolution: amend each contract with a dated accept-or-demote decision; freeze
-semantics or record deferral per the admission policy. Watch is Provisional
-with an accepted fit; the other four are Accepted records with provisional
-details flagged under #916. Owned by #916 with the keep-watch correction in issue #961 (open).
+Resolution: watch/naming/config amended to Accepted durable per #961; py/rust/currency
+record dated deferrals with stable-watch/upstreaming/release-gate review per
+the admission policy. Owned by #961 (closed by this catalog update); #916
+tracks the remaining four deferrals.
 
 ## C5: CLI surface
 

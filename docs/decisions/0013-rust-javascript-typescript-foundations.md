@@ -28,11 +28,11 @@ Rust uses an exact latest-stable `hermeticbuild/rules_rs` release and its pinned
 `rules_rust` stack as the preferred authority for toolchains, compilation, Cargo dependencies,
 providers, proc macros, build scripts, generated sources, and rust-analyzer integration.
 `rules_dx` does not implement another compiler rule, Cargo resolver, crate graph, linker model,
-build-script protocol, or proc-macro transition. Exact release and patched-commit identities
-are provisional pending ADR 0014 and issue #916 stack qualification (the single
-retirement tracker for the five provisional exceptions); `latest-stable` here states the
+build-script protocol, or proc-macro transition. Exact release and patched-commit
+identities are a dated provisional pick per issue #961 (2026-09-22), pending
+ADR 0014 and issue #916 stack qualification; `latest-stable` here states the
 selection policy, not a frozen pin. This record does not pin a version through prose.
-Patch inventory plus upstreaming plus upgrade are owned by issue #916: the
+Patch inventory plus upstreaming plus upgrade stay owned by issue #916: the
 pinned patched `rules_rust` commit `e9dd49f` under `rules_rs v0.0.109`
 (see [Native Toolchain Qualification](../native-toolchains.md#selected-qualification-stack))
 stays pinned reproducibly with prefer-upstreaming track until an upstream release
@@ -197,9 +197,9 @@ The required platform, consumer, remote, compatibility, and laziness evidence is
 - Upstream gaps require remediation through focused, tested, pinned patches, bounded integration, or
   an explicitly reviewed and approved alternative upstream. Unresolved gaps block conformance and
   support claims, not remediation; they do not authorize private graph coupling or a project-owned
-  replacement engine. Patch inventory plus upstreaming plus upgrade are owned by
-  issue #916 with fixture evidence plus consumer and platform evidence per ADR
-  0008/0014 before ship.
+  replacement engine. Patch inventory plus upstreaming plus upgrade are a dated
+  deferral per issue #961 (2026-09-22), owned by issue #916 with fixture
+  evidence plus consumer and platform evidence per ADR 0008/0014 before ship.
 
 ## Rejected Alternatives
 

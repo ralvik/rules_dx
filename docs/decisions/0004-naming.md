@@ -36,11 +36,11 @@ orchestrates the codegen and environment workflows and commits one shared select
 First-party generation names each per-source Python, JavaScript, and TypeScript library from the
 source basename without its final language extension, normalizing non-alphanumeric separators to
 underscores. The durable constraint is basename-only naming with fail-on-collision and no
-invented language affixes. The exact character mapping that follows is frozen as
-implemented in [Common Generation](../generation/common.md#ownership-and-naming)
-and `gazelle/*/naming.go` with `naming_test.go` fixtures; retirement owned by
-issue #916 as the single tracker for the five provisional exceptions (pairs
-covered by #788, mapping freeze here). For example, `app/models/user.py` generates `//app/models:user`, while
+invented language affixes. The exact character mapping that follows is accepted
+durable per issue #961 as implemented in
+[Common Generation](../generation/common.md#ownership-and-naming) and
+`gazelle/*/naming.go` with `naming_test.go` fixtures (pairs covered by #788,
+mapping freeze here). For example, `app/models/user.py` generates `//app/models:user`, while
 `app/models/user-profile.ts` generates `//app/models:user_profile`. The name does not include a
 language prefix or extension suffix. Multiple supported sources in one Bazel package that normalize
 to the same name fail generation with every claimant; extensions do not select one language or
@@ -98,11 +98,10 @@ collision with generated or handwritten targets fails without another affix.
 - Cargo package build scripts use `<Cargo-package-name>_build_script`.
 - Conventional source-only Rust crates derive their fallback name from the directory immediately
   above `src`, while Cargo-declared names remain authoritative.
-- Retirement is owned by issue #916 as the single tracker for the five
-  provisional exceptions: naming golden plus collision matrix per language are
-  frozen above; ship gates are fixture evidence (`gazelle/*/naming_test.go`
-  plus generation goldens) plus consumer and platform evidence per ADR
-  0008/0014 before any `Supported` claim.
+- Accepted durable per issue #961: naming golden plus collision matrix per
+  language are frozen above; ship gates stay fixture evidence
+  (`gazelle/*/naming_test.go` plus generation goldens) plus consumer and
+  platform evidence per ADR 0008/0014 before any `Supported` claim.
 
 ## Rejected Alternatives
 

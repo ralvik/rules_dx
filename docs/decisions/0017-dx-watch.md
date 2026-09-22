@@ -2,8 +2,10 @@
 
 ## Status
 
-Provisional. Retirement owned by issue #916 (single tracker for the five
-provisional exceptions: watch, naming, config API, py prerelease, rust fork).
+Date: 2026-09-22.
+
+Accepted. Thin local-only loop kept durable per issue #961 (keep-watch;
+issue #916 retires only the remaining four exceptions).
 
 ## Context
 
@@ -45,10 +47,11 @@ graph, cache, resolver, daemon, remote execution, or deployment mechanism.
   Interruption terminates the active child before the watcher.
 - Filesystem observation covers workspace source inputs only and ignores
   `bazel-*` outputs, `.dx` managed state, and ignored local overlays. Debounce,
-  ignore set, and restart policy are frozen as implemented in
-  [dx watch](../cli/commands/watch.md) and owned for retirement by issue #916:
+  ignore set, and restart policy are accepted durable per issue #961
+  (keep-watch) as implemented in [dx watch](../cli/commands/watch.md):
   200 ms debounce (`WATCH_DEBOUNCE_MS` in `cli/adopt/src/watch.rs`),
-  `bazel-*`/`.dx`/`dx.local.toml` ignores, per-iteration re-resolution with
+  `bazel-*`/`.dx`/`dx.local.toml` ignores (`should_watch_path` plus
+  `coalesce_watch_paths` filtering), per-iteration re-resolution with
   restart, and local-only `CI=true` refusal.
 
 ## Consequences
@@ -60,15 +63,16 @@ graph, cache, resolver, daemon, remote execution, or deployment mechanism.
 - Quality iterations reuse convergence, atomic apply, and `--fail-on` without
   new mutation semantics.
 - Target resolution in [Target Resolution](../cli/target-resolution.md) has
-  landed and `watch` reuses it verbatim; retirement owned by issue #916.
+  landed and `watch` reuses it verbatim.
 - Tests cover scope kinds, pass-to-fail-to-recover cycles, ambiguous runnables,
-  signal forwarding, and debounce behavior per issue #916.
-- Retirement is owned by issue #916 as the single tracker for all five
-  provisional exceptions: accept with the frozen debounce/ignore/restart above
-  or demote per the automatic-workflow policy. Ship gates are fixture evidence
-  (`cli_execution_gaps` plus `plan_watch` fixtures via
+  signal forwarding, debounce, and ignore filtering per the frozen shape
+  above.
+- Accepted durable per issue #961 (keep-watch): the frozen debounce/ignore/restart
+  above is the durable constraint, not a provisional pick. Ship gates stay
+  fixture evidence (`cli_execution_gaps` plus `plan_watch` fixtures via
   `bazel run //tools/ci:cli_execution_gaps_qualification`) plus consumer and
-  platform evidence per ADR 0008/0014 before any `Supported` claim.
+  platform evidence per ADR 0008/0014 before any `Supported` claim. Issue #916
+  tracks only the remaining four exceptions.
 
 ## Rejected Alternatives
 
