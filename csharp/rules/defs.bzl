@@ -9,7 +9,7 @@ load("@rules_dotnet//dotnet:defs.bzl", _csharp_binary = "csharp_binary", _csharp
 # must load them there; the sealed `upstream_providers` plus
 # `required_providers` below keep the boundary fail-closed.
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_CSHARP_LIBRARY_PROVIDES = [
@@ -97,26 +97,7 @@ def _csharp_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _csharp_library, _csharp_library_forward, srcs, visibility = visibility, **_csharp_with_tfm(kwargs))
 
 def _csharp_wrap_binary(name, srcs, visibility = None, **kwargs):
-    upstream_kwargs = _csharp_with_tfm(kwargs)
-    if len(srcs) > 0:
-        upstream_kwargs["srcs"] = srcs
-    _csharp_binary(
-        name = name + "_upstream",
-        visibility = ["//visibility:private"],
-        **upstream_kwargs
-    )
-    forward_kwargs = {}
-    if "tags" in kwargs:
-        forward_kwargs["tags"] = kwargs["tags"]
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _csharp_binary_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    dx_wrap_binary(name, _csharp_binary, _csharp_binary_forward, srcs, visibility = visibility, upstream_kwargs = _csharp_with_tfm(kwargs), **kwargs)
 
 def csharp_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `csharp_library`."""
@@ -143,33 +124,4 @@ def csharp_test(name, srcs, visibility = None, **kwargs):
     `[Fact]`/`[Theory]` sources plus checked-in MTP entry-point shims over
     the pinned `@paket.main//xunit.v3` closure; unpinned runner rejected).
     Uses Bazel's standard test and coverage protocols."""
-    test_srcs = srcs if srcs != None else []
-    upstream_kwargs = _csharp_with_tfm(kwargs)
-
-    # The private upstream test stays an implementation detail via private
-    # visibility; both it and the public wrapper run under `bazel test //...`
-    # (no manual; double-execution is the cost of green suites).
-    if "tags" in upstream_kwargs:
-        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
-        if len(kept) > 0:
-            upstream_kwargs["tags"] = kept
-        else:
-            upstream_kwargs.pop("tags")
-    upstream_kwargs["visibility"] = ["//visibility:private"]
-    if srcs != None:
-        upstream_kwargs["srcs"] = srcs
-    _csharp_test(
-        name = name + "_upstream",
-        **upstream_kwargs
-    )
-    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _csharp_forward_test(
-        name = name,
-        testonly = True,
-        upstream = name + "_upstream",
-        srcs = test_srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    dx_wrap_test(name, _csharp_test, _csharp_forward_test, srcs, visibility = visibility, upstream_kwargs = _csharp_with_tfm(kwargs), **kwargs)

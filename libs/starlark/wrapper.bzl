@@ -294,6 +294,108 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
     else:
         fail("dx_executable_forward_rule: unknown kind '" + kind + "': want \"executable\" or \"test\"")
 
+def dx_binary_forward_kwargs(kwargs):
+    """Returns the forwarder kwargs for one binary shape.
+
+    `tags` ride verbatim (binaries keep `manual` filtering on both
+    shapes) and `aspect_hints` ride the public forwarder where quality
+    aspects visit. Remaining kwargs stay upstream-only.
+    Contract: `docs/quality/quality-sources.md`."""
+    out = {}
+    if kwargs.get("tags", None) != None:
+        out["tags"] = kwargs["tags"]
+    if kwargs.get("aspect_hints", None) != None:
+        out["aspect_hints"] = kwargs["aspect_hints"]
+    return out
+
+def dx_test_upstream_kwargs(kwargs, srcs = None):
+    """Returns the private upstream kwargs for one test shape.
+
+    `manual` is stripped so both the private upstream and the public
+    wrapper run under `//...` (double-execution is the cost of green
+    suites); visibility is forced private; `srcs` is set when given.
+    Contract: `docs/quality/quality-sources.md`."""
+    out = dict(kwargs)
+    if "tags" in out:
+        kept = [t for t in out["tags"] if t != "manual"]
+        if len(kept) > 0:
+            out["tags"] = kept
+        else:
+            out.pop("tags")
+    out["visibility"] = ["//visibility:private"]
+    if srcs != None:
+        out["srcs"] = srcs
+    return out
+
+def dx_test_forward_kwargs(kwargs):
+    """Returns the forwarder kwargs for one test shape.
+
+    Standard test attributes via `dx_forwarded_test_kwargs` plus
+    `aspect_hints`, which ride the public forwarder where quality
+    aspects visit. Contract: `docs/quality/quality-sources.md`."""
+    out = dx_forwarded_test_kwargs(kwargs)
+    if kwargs.get("aspect_hints", None) != None:
+        out["aspect_hints"] = kwargs["aspect_hints"]
+    return out
+
+def dx_wrap_binary(name, upstream_rule, forward_rule, srcs, visibility = None, upstream_kwargs = None, **kwargs):
+    """Instantiates one private upstream binary plus its public forwarder.
+
+    `upstream_kwargs`, when given, is the transformed upstream-only base
+    (compiler flags, target frameworks, `main_class`); otherwise the
+    caller kwargs are the base. Upstream keeps `srcs` only when non-empty
+    so thin-entry shapes own no upstream sources, and stays private.
+    The forwarder owns `srcs` directly and takes `tags` plus
+    `aspect_hints` from the caller kwargs; remaining kwargs stay
+    upstream-only. Contract: `docs/quality/quality-sources.md`."""
+    effective = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
+    if len(srcs) > 0:
+        effective["srcs"] = srcs
+    elif "srcs" in effective:
+        effective.pop("srcs")
+    effective["visibility"] = ["//visibility:private"]
+    upstream_rule(
+        name = name + "_upstream",
+        **effective
+    )
+    forward_rule(
+        name = name,
+        upstream = name + "_upstream",
+        srcs = srcs,
+        visibility = visibility,
+        **dx_binary_forward_kwargs(kwargs)
+    )
+
+def dx_wrap_test(name, upstream_rule, forward_rule, srcs, visibility = None, upstream_kwargs = None, extra_forward_kwargs = None, **kwargs):
+    """Instantiates one private upstream test plus its public forwarder.
+
+    `upstream_kwargs`, when given, is the transformed upstream-only base
+    (compiler flags, `crate`, entry wiring); otherwise the caller kwargs
+    are the base. The upstream side strips `manual`, stays private, and
+    takes `srcs` when given. The forwarder takes the standard test
+    attributes plus `aspect_hints`, is marked `testonly`, and owns
+    `srcs` (empty when the wrapper owns no direct sources).
+    `extra_forward_kwargs` carries forwarder-only extras such as the
+    mirrored `env_inherit`. Contract: `docs/quality/quality-sources.md`."""
+    base = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
+    effective = dx_test_upstream_kwargs(base, srcs = srcs)
+    forward_srcs = srcs if srcs != None else []
+    forward_kwargs = dx_test_forward_kwargs(kwargs)
+    if extra_forward_kwargs:
+        forward_kwargs.update(extra_forward_kwargs)
+    upstream_rule(
+        name = name + "_upstream",
+        **effective
+    )
+    forward_rule(
+        name = name,
+        testonly = True,
+        upstream = name + "_upstream",
+        srcs = forward_srcs,
+        visibility = visibility,
+        **forward_kwargs
+    )
+
 def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs):
     """Instantiates one private upstream target plus its public forwarder.
 

@@ -6,7 +6,7 @@ Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo", _ts_project = "ts_project")
-load("//libs/starlark:wrapper.bzl", "dx_forward_attrs", "dx_forwarded_optional", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_quality_sources", "dx_symlink_default_info", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_forward_attrs", "dx_forwarded_optional", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_quality_sources", "dx_symlink_default_info", "dx_test_forward_kwargs", "dx_wrap")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_TS_PROJECT_PROVIDES = [
@@ -226,9 +226,7 @@ def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig
         visibility = ["//visibility:private"],
         **upstream_kwargs
     )
-    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
+    forward_kwargs = dx_test_forward_kwargs(kwargs)
     _typescript_test(
         name = name,
         upstream = name + "_upstream",

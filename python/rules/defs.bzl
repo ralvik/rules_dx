@@ -4,7 +4,7 @@ Contract: `docs/decisions/0010-python-foundation.md`, `docs/decisions/0012-langu
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo", _PyWheelsInfo = "PyWheelsInfo", _py_binary = "py_binary", _py_library = "py_library", _py_pytest_test = "py_pytest_test")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_library_forward_rule", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_PY_LIBRARY_PROVIDES = [
@@ -61,19 +61,7 @@ _python_forward_test = dx_executable_forward_rule(
     doc = "Test forwarder for python_test: symlinks the upstream pytest executable.",
     srcs_doc = "Direct Python test sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream py_pytest_test target whose providers are preserved.",
-    extra_attrs = {
-        "_lcov_merger": attr.label(
-            default = configuration_field(fragment = "coverage", name = "output_generator"),
-            executable = True,
-            cfg = "exec",
-            doc = "Coverage-report merger. Bazel's coverage runner passes " +
-                  "this magic attribute as LCOV_MERGER, which merges the " +
-                  "per-test staging report into coverage.dat; without it " +
-                  "the runner exits after touching an empty file even " +
-                  "though the test collected coverage. Same declaration as " +
-                  "upstream py_venv_exec_test.",
-        ),
-    },
+    extra_attrs = dx_lcov_merger_attr(),
 )
 
 def _python_wrap_library(name, srcs, visibility = None, **kwargs):
@@ -123,36 +111,7 @@ def python_test(name, srcs, visibility = None, **kwargs):
     QualitySourcesInfo. Imported non-test modules retain their ordinary
     library owners. Uses pytest and Bazel's standard test and coverage
     protocols per the Python generation contract."""
-    test_srcs = srcs if srcs != None else []
     rejection = python_test_rejection(kwargs)
     if rejection != None:
         fail(rejection)
-    upstream_kwargs = dict(kwargs)
-
-    # The private upstream test stays an implementation detail via private
-    # visibility; both it and the public wrapper run under `bazel test //...`
-    # (no manual; double-execution is the cost of green suites).
-    if "tags" in upstream_kwargs:
-        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
-        if len(kept) > 0:
-            upstream_kwargs["tags"] = kept
-        else:
-            upstream_kwargs.pop("tags")
-    upstream_kwargs["visibility"] = ["//visibility:private"]
-    if srcs != None:
-        upstream_kwargs["srcs"] = srcs
-    _py_pytest_test(
-        name = name + "_upstream",
-        **upstream_kwargs
-    )
-    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _python_forward_test(
-        name = name,
-        testonly = True,
-        upstream = name + "_upstream",
-        srcs = test_srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    dx_wrap_test(name, _py_pytest_test, _python_forward_test, srcs, visibility = visibility, **kwargs)

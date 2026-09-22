@@ -5,7 +5,7 @@ Upstream: rules_powershell 0.2.0 plus portable pwsh 7.5.4 (MODULE.bazel).
 """
 
 load("@rules_powershell//powershell:defs.bzl", _PwshInfo = "PwshInfo", _pwsh_binary = "pwsh_binary", _pwsh_library = "pwsh_library", _pwsh_test = "pwsh_test")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_POWERSHELL_LIBRARY_PROVIDES = [
@@ -93,26 +93,7 @@ def _pwsh_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _pwsh_library, _pwsh_library_forward, srcs, visibility = visibility, **kwargs)
 
 def _pwsh_wrap_binary(name, srcs, visibility = None, **kwargs):
-    upstream_kwargs = dict(kwargs)
-    if len(srcs) > 0:
-        upstream_kwargs["srcs"] = srcs
-    _pwsh_binary(
-        name = name + "_upstream",
-        visibility = ["//visibility:private"],
-        **upstream_kwargs
-    )
-    forward_kwargs = {}
-    if "tags" in kwargs:
-        forward_kwargs["tags"] = kwargs["tags"]
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _pwsh_binary_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    dx_wrap_binary(name, _pwsh_binary, _pwsh_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def pwsh_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `pwsh_library`.
@@ -132,10 +113,7 @@ def pwsh_binary(name, srcs = None, visibility = None, **kwargs):
     upstream providers and execution semantics over the portable `pwsh`
     runtime."""
     effective_srcs = powershell_effective_srcs(srcs)
-    if len(effective_srcs) > 0:
-        _pwsh_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
-    else:
-        _pwsh_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
+    _pwsh_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def pwsh_test(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `pwsh_test`.
@@ -147,34 +125,5 @@ def pwsh_test(name, srcs, visibility = None, **kwargs):
     Pester 5.7.1 mapping is qualified (`powershell/tests/fixtures/pester/`:
     `Describe`/`It` sources plus `Invoke-Pester` entry over the pinned
     Gallery lock; unpinned runner rejected). Uses Bazel's standard test
-    and coverage protocols over the portable `pwsh` runtime."""
-    test_srcs = powershell_effective_srcs(srcs)
-    upstream_kwargs = dict(kwargs)
-
-    # The private upstream test stays an implementation detail via private
-    # visibility; both it and the public wrapper run under `bazel test //...`
-    # (no manual; double-execution is the cost of green suites).
-    if "tags" in upstream_kwargs:
-        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
-        if len(kept) > 0:
-            upstream_kwargs["tags"] = kept
-        else:
-            upstream_kwargs.pop("tags")
-    upstream_kwargs["visibility"] = ["//visibility:private"]
-    if srcs != None:
-        upstream_kwargs["srcs"] = srcs
-    _pwsh_test(
-        name = name + "_upstream",
-        **upstream_kwargs
-    )
-    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _pwsh_forward_test(
-        name = name,
-        testonly = True,
-        upstream = name + "_upstream",
-        srcs = test_srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    and coverage     protocols over the portable `pwsh` runtime."""
+    dx_wrap_test(name, _pwsh_test, _pwsh_forward_test, srcs, visibility = visibility, **kwargs)

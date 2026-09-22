@@ -6,7 +6,7 @@ Upstream: rules_scala 7.3.0 plus Scala 2.13.18 plus ScalaTest 3.2.20 (MODULE.baz
 
 load("@rules_java//java:defs.bzl", "JavaInfo")
 load("@rules_scala//scala:scala.bzl", _scala_binary = "scala_binary", _scala_library = "scala_library", _scala_test = "scala_test")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _DX_SCALA_LIBRARY_PROVIDES = [
@@ -96,26 +96,7 @@ def _scala_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _scala_library, _scala_library_forward, srcs, visibility = visibility, **_scala_with_werror(kwargs))
 
 def _scala_wrap_binary(name, srcs, visibility = None, **kwargs):
-    upstream_kwargs = _scala_with_werror(kwargs)
-    if len(srcs) > 0:
-        upstream_kwargs["srcs"] = srcs
-    _scala_binary(
-        name = name + "_upstream",
-        visibility = ["//visibility:private"],
-        **upstream_kwargs
-    )
-    forward_kwargs = {}
-    if "tags" in kwargs:
-        forward_kwargs["tags"] = kwargs["tags"]
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _scala_binary_forward(
-        name = name,
-        upstream = name + "_upstream",
-        srcs = srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    dx_wrap_binary(name, _scala_binary, _scala_binary_forward, srcs, visibility = visibility, upstream_kwargs = _scala_with_werror(kwargs), **kwargs)
 
 def scala_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `scala_library`."""
@@ -144,33 +125,4 @@ def scala_test(name, srcs, visibility = None, **kwargs):
     standard test and coverage protocols over the bundled ScalaTest
  toolchain (ScalaTest 3.2.20 via the managed Coursier route,;
     no Maven lock members needed for the hello closure)."""
-    test_srcs = srcs if srcs != None else []
-    upstream_kwargs = _scala_with_werror(kwargs)
-
-    # The private upstream test stays an implementation detail via private
-    # visibility; both it and the public wrapper run under `bazel test //...`
-    # (no manual; double-execution is the cost of green suites).
-    if "tags" in upstream_kwargs:
-        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
-        if len(kept) > 0:
-            upstream_kwargs["tags"] = kept
-        else:
-            upstream_kwargs.pop("tags")
-    upstream_kwargs["visibility"] = ["//visibility:private"]
-    if srcs != None:
-        upstream_kwargs["srcs"] = srcs
-    _scala_test(
-        name = name + "_upstream",
-        **upstream_kwargs
-    )
-    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _scala_forward_test(
-        name = name,
-        testonly = True,
-        upstream = name + "_upstream",
-        srcs = test_srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    dx_wrap_test(name, _scala_test, _scala_forward_test, srcs, visibility = visibility, upstream_kwargs = _scala_with_werror(kwargs), **kwargs)

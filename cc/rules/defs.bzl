@@ -5,7 +5,7 @@ Contract: `docs/decisions/0019-first-release-additional-foundations.md`, `docs/q
 
 load("@rules_cc//cc:defs.bzl", _cc_binary = "cc_binary", _cc_library = "cc_library", _cc_test = "cc_test")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
-load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
+load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 _CC_SRCS = [".c", ".cc", ".cpp", ".cxx", ".cu"]
@@ -142,33 +142,4 @@ def cc_test(name, srcs, visibility = None, **kwargs):
     the pinned `@googletest//:gtest_main` with an explicit `-std=c++17`
     floor; living at head rejected). Uses Bazel's standard test and
     coverage protocols."""
-    test_srcs = srcs if srcs != None else []
-    upstream_kwargs = _cc_with_werror(kwargs)
-
-    # The private upstream test stays an implementation detail via private
-    # visibility; both it and the public wrapper run under `bazel test //...`
-    # (no manual; double-execution is the cost of green suites).
-    if "tags" in upstream_kwargs:
-        kept = [t for t in upstream_kwargs["tags"] if t != "manual"]
-        if len(kept) > 0:
-            upstream_kwargs["tags"] = kept
-        else:
-            upstream_kwargs.pop("tags")
-    upstream_kwargs["visibility"] = ["//visibility:private"]
-    if srcs != None:
-        upstream_kwargs["srcs"] = srcs
-    _cc_test(
-        name = name + "_upstream",
-        **upstream_kwargs
-    )
-    forward_kwargs = dx_forwarded_test_kwargs(kwargs)
-    if "aspect_hints" in kwargs:
-        forward_kwargs["aspect_hints"] = kwargs["aspect_hints"]
-    _cc_forward_test(
-        name = name,
-        testonly = True,
-        upstream = name + "_upstream",
-        srcs = test_srcs,
-        visibility = visibility,
-        **forward_kwargs
-    )
+    dx_wrap_test(name, _cc_test, _cc_forward_test, srcs, visibility = visibility, upstream_kwargs = _cc_with_werror(kwargs), **kwargs)
