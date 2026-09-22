@@ -87,6 +87,38 @@ def focused_python_plan(direct, transitive, imports, wheel_count, label):
         plan = plan,
     )
 
+def focused_venv_projection(target):
+    """Returns the materialized `.venv` projection from RunEnvironmentInfo.
+
+    Binaries and tests carry `VIRTUAL_ENV` naming the upstream `py_venv`
+    directory; libraries carry no RunEnvironmentInfo and project no venv."""
+    if RunEnvironmentInfo not in target:
+        return struct(has_venv = False, venv = "")
+    env = target[RunEnvironmentInfo].environment
+    if "VIRTUAL_ENV" not in env:
+        return struct(has_venv = False, venv = "")
+    return struct(has_venv = True, venv = env["VIRTUAL_ENV"])
+
+def focused_npm_store_projection(store_infos):
+    """Returns the materialized pnpm store projection counts.
+
+    `store_infos` is the `JsInfo.npm_package_store_infos` list; empty means
+    the closure carries no linked npm packages and the managed
+    `node_modules` facade stays empty without a second resolution."""
+    store_count = len(store_infos)
+    return struct(
+        has_store = store_count > 0,
+        store_count = store_count,
+    )
+
+def focused_tsconfig_projection(tsconfig_files):
+    """Returns the materialized `TsConfigInfo` projection names plus count."""
+    names = sorted([f.basename for f in tsconfig_files])
+    return struct(
+        tsconfig = ",".join(names),
+        tsconfig_count = len(names),
+    )
+
 def _focused_as_list(value):
     """Returns the file list for a list or depset value."""
     if type(value) == "depset":
