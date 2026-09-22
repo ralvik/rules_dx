@@ -202,6 +202,21 @@ pub fn hash_line(data: &[u8], basename: &str) -> String {
     format!("{}  {basename}\n", sha256_hex(data))
 }
 
+/// Shared thin-binary helpers (issue #914): every `bin_*` shim reports
+/// usage to stderr and returns 1 through these, so `eprintln!` + exit
+/// codes cannot drift between shims. See: `docs/deploy/authoring.md`.
+pub fn bin_usage(prog: &str, usage: &str) -> i32 {
+    eprintln!("usage: {prog} {usage}");
+    1
+}
+
+/// Reports `<prog>: cannot <action> <target>: <error>` to stderr for a
+/// failed thin-binary operation. Returns the process exit code (1).
+pub fn bin_cannot(prog: &str, action: &str, target: &Path, error: impl std::fmt::Display) -> i32 {
+    eprintln!("{prog}: cannot {action} {}: {error}", target.display());
+    1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

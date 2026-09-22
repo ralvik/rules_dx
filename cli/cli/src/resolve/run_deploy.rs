@@ -314,6 +314,7 @@ pub fn check_deployable(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::resolve::NeverQuery;
     use crate::resolve::QueryResult;
     use std::cell::RefCell;
     use std::io;
@@ -364,17 +365,7 @@ mod tests {
         }
     }
 
-    /// Query runner that fails the test on any call: label scopes
-    /// must resolve without touching Bazel.
-    struct NeverQuery;
-
-    // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
-    impl QueryRunner for NeverQuery {
-        fn run_query(&self, _argv: &[String], _cwd: &Path) -> io::Result<QueryResult> {
-            panic!("label scopes must not run queries");
-        }
-    }
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // Shared test guard: `crate::resolve::NeverQuery` (see `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

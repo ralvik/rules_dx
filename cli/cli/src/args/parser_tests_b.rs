@@ -1,12 +1,9 @@
 //! Invocation-parser tests (part 2/2) — split from `args/parser.rs` with no behavior change.
 //! Originally the inline `mod tests` of `parser.rs`.
-#![allow(unused_imports)]
 
-use super::*;
-
-use super::super::{ArgsError, Command, ReportRequest};
+use super::super::{ArgsError, Command};
 use super::parse;
-use dx_output::{OutputMode, Threshold};
+use dx_output::OutputMode;
 
 fn args(words: &[&str]) -> Vec<String> {
     words.iter().map(ToString::to_string).collect()

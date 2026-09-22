@@ -1,16 +1,10 @@
 //! Quality execution tests (part 2/3) — split from `exec/quality.rs` with no behavior change.
 //! Originally the inline `mod tests` of `quality.rs`.
-#![allow(unused_imports)]
-
-use super::*;
 
 use super::super::test_support::*;
-use crate::exec::{execute, Env};
 use dx_digest::blake3 as digest;
 use quality_result::proto;
 use quality_result::proto::FileSnapshot;
-use std::os::unix::ffi::OsStringExt;
-use std::path::PathBuf;
 
 #[test]
 fn json_mixed_applied_and_not_applied_fail_together() {

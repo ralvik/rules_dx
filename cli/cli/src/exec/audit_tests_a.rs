@@ -1,8 +1,5 @@
 //! Split from `audit.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
-
-use super::*;
 
 use super::super::test_support::*;
 use dx_process::{ChildStatus, Runner};

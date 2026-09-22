@@ -261,18 +261,18 @@ jobs:
           DX_MIN_COVERAGE: ${{ inputs.min_coverage }}
         run: |
           set +e
-          extra=""
+          extra=()
           if [ -n "$DX_MIN_COVERAGE" ]; then
             case "$DX_MIN_COVERAGE" in
               ''|*[!0-9.]*|*.*.*|.*|*.) echo "dx-ci: invalid min_coverage '$DX_MIN_COVERAGE': want e.g. 80 or 80.5" >&2; exit 1 ;;
             esac
-            extra="--min-coverage $DX_MIN_COVERAGE"
+            extra=(--min-coverage "$DX_MIN_COVERAGE")
           fi
-          # Unquoted on purpose: empty stays zero words, a validated numeric
-          # threshold stays one flag plus one value. Input travels via env and
-          # is numeric-validated above, never interpolated into the script.
-          # shellcheck disable=SC2086
-          bazel run @rules_dx//cli/cli:dx -- coverage $extra //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage.log
+          # Array on purpose (issue #914): empty stays zero words, a
+          # validated numeric threshold stays one flag plus one value.
+          # Input travels via env and is numeric-validated above, never
+          # interpolated into the script.
+          bazel run @rules_dx//cli/cli:dx -- coverage "${extra[@]}" //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage.log
           rc=${PIPESTATUS[0]}
           echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage.rc
           exit $rc

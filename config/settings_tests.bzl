@@ -2,7 +2,7 @@
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# buildifier: disable=canonical-repository  # observation pins Bazel's actual canonical rendering
+# buildifier: disable=canonical-repository  # issue #914: expected data pins Bazel's actual canonical rendering (not a probe; helper lives in //libs/starlark:canonical.bzl)
 EXPECTED_OBSERVATIONS = """subject //config:settings_under_test
 field fail_on=warning
 field validate=False

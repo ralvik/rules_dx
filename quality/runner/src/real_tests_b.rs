@@ -1,6 +1,5 @@
 //! Split from `real.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::real_tests_a::*;
 use super::*;

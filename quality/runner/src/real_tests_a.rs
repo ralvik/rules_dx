@@ -1,10 +1,7 @@
 //! Split from `real.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::*;
-use quality_result::encode_validated;
-use quality_result::proto::Convergence;
 
 pub(super) type Spawn = SpawnFn;
 

@@ -316,6 +316,22 @@ pub fn decode_validated(bytes: &[u8]) -> Result<QualityResult, Error> {
     dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
 
+/// Asserts every item equals the first; fails on empty.
+///
+/// Single shared helper for determinism batteries (issue #914):
+/// replaces the copy-pasted `for other in items.iter().skip(1)`
+/// loops, which panic on empty vectors with an indexing panic instead
+/// of an actionable assertion. See: `docs/quality/quality-testing.md`.
+pub fn assert_all_equal<T: PartialEq + std::fmt::Debug>(items: &[T]) {
+    assert!(
+        !items.is_empty(),
+        "assert_all_equal: want at least one item"
+    );
+    for other in items.iter().skip(1) {
+        assert_eq!(&items[0], other);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -76,6 +76,30 @@ fn render_pretty(value: &serde_json::Value) -> String {
     }
 }
 
+/// Shared thin-binary helpers (issue #914): every `bin_*_gen` shim
+/// reports usage and write failures through these, so `eprintln!` plus
+/// exit codes cannot drift between generators. See:
+/// `docs/deploy/release-runbook.md`.
+pub fn bin_usage(prog: &str, usage: &str) -> i32 {
+    eprintln!("usage: {prog} {usage}");
+    1
+}
+
+/// Reports `<prog>: cannot write <target>: <error>` to stderr for a
+/// failed thin-binary operation. Returns the process exit code (1).
+pub fn bin_cannot_write(prog: &str, target: &Path, error: impl std::fmt::Display) -> i32 {
+    eprintln!("{prog}: cannot write {}: {error}", target.display());
+    1
+}
+
+/// Reports a failed thin-binary diagnostic to stderr. Returns the
+/// process exit code (1). Shared with the human-run release driver so
+/// generator and driver shims render failures identically.
+pub fn bin_error(diagnostic: impl std::fmt::Display) -> i32 {
+    eprintln!("{diagnostic}");
+    1
+}
+
 /// Renders the SPDX 2.3 document bytes for one artifact.
 pub fn render_spdx(base: &str, digest: &str, package: &str, supplier: &str) -> String {
     render_pretty(&serde_json::json!({
@@ -672,6 +696,11 @@ pub fn notice_verify_files(
 mod tests {
     use super::*;
 
+    /// Test-only SLSA builder identity (issue #914): `invalid.test`
+    /// (RFC 2606) can never resolve, so it cannot be copied into a real
+    /// builder ID, unlike `example.com`.
+    const TEST_BUILDER_ID: &str = "https://invalid.test/builder";
+
     fn scratch_dir() -> tempfile::TempDir {
         tempfile::TempDir::new().expect("scratch")
     }
@@ -740,7 +769,7 @@ mod tests {
     fn provenance_bytes_match_python_golden() {
         // Golden from `sbom_prov_gen.py` over the same digest plus builder.
         let digest = "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
-        let text = render_provenance("artifact.bin", digest, "https://example.com/builder");
+        let text = render_provenance("artifact.bin", digest, TEST_BUILDER_ID);
         assert!(text.ends_with('\n'));
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
         assert_eq!(
@@ -761,7 +790,7 @@ mod tests {
         );
         assert_eq!(
             value["predicate"]["runDetails"]["builder"]["id"],
-            serde_json::json!("https://example.com/builder")
+            serde_json::json!(TEST_BUILDER_ID)
         );
         // Underscore key sorts first, matching `sort_keys=True`.
         let lines: Vec<&str> = text.lines().collect();
@@ -806,11 +835,11 @@ mod tests {
             render_spdx("artifact.bin", &digest, "dx", "rules_dx")
         );
         let prov_out = scratch.path().join("out.prov.json");
-        write_provenance(&src, &prov_out, "https://example.com/builder").expect("write prov");
+        write_provenance(&src, &prov_out, TEST_BUILDER_ID).expect("write prov");
         let prov_text = std::fs::read_to_string(&prov_out).expect("read prov");
         assert_eq!(
             prov_text,
-            render_provenance("artifact.bin", &digest, "https://example.com/builder")
+            render_provenance("artifact.bin", &digest, TEST_BUILDER_ID)
         );
         let bcr_out = scratch.path().join("out.source.json");
         write_bcr_source(&bcr_out, "rules_dx", "1.2.3").expect("write bcr");
@@ -900,7 +929,7 @@ mod tests {
         let spdx = scratch.path().join("artifact.spdx.json");
         write_spdx(&artifact, &spdx, "dx", "rules_dx").expect("spdx");
         let prov = scratch.path().join("artifact.prov.json");
-        write_provenance(&artifact, &prov, "https://example.com/builder").expect("prov");
+        write_provenance(&artifact, &prov, TEST_BUILDER_ID).expect("prov");
         let ok = sbom_verify_files(&artifact, &spdx, &prov).expect("verify");
         assert!(ok.contains("sbom OK: SPDX-2.3 + SLSA v1 bind"));
         assert!(ok.contains(&digest));

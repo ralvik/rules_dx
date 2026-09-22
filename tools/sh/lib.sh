@@ -36,6 +36,9 @@
 #   dx_mkscratch <var> [template]   portable `mktemp -d` with auto-cleanup on
 # EXIT (replaces per-file
 #                                `scratch=...; trap ...` copies)
+#   dx_mktemp_file <var> [template] portable `mktemp` file with
+#                                auto-cleanup on EXIT (e.g. execution-log
+#                                outputs; issue #914)
 #   dx_realpath <path>           portable realpath (`realpath` ->
 # `readlink -f` -> python3,;
 #                                `portable_realpath` stays as an alias)
@@ -96,7 +99,8 @@ set -euo pipefail
 # direct execution has no runfiles tree, so fall back to manual probing.
 if ! declare -F rlocation >/dev/null 2>&1; then
   _dx_runfiles_bash="bazel_tools/tools/bash/runfiles/runfiles.bash"
-  # shellcheck disable=SC1090
+  # SC1090 single-sourced in `.shellcheckrc` (runfiles layouts exist
+  # only under `bazel run` / `bazel test`, issue #319).
   source "${RUNFILES_DIR:-/dev/null}/$_dx_runfiles_bash" 2>/dev/null ||
     source "$(grep -sm1 "^$_dx_runfiles_bash " "${RUNFILES_MANIFEST_FILE:-/dev/null}" 2>/dev/null | cut -f2- -d' ')" 2>/dev/null ||
     source "$0.runfiles/$_dx_runfiles_bash" 2>/dev/null ||
@@ -273,7 +277,7 @@ _dx_cleanup_scratches() {
     return 0
   fi
   for d in "${_DX_SCRATCHES[@]}"; do
-    if [[ -n "$d" && -d "$d" ]]; then
+    if [[ -n "$d" && -e "$d" ]]; then
       rm -rf "$d"
     fi
   done
@@ -292,6 +296,29 @@ dx_mkscratch() {
     _DX_SCRATCH_TRAP_INSTALLED=1
   fi
   printf -v "$var" '%s' "$dir"
+}
+
+# Portable scratch files with EXIT auto-cleanup (issue #914): the file
+# counterpart of `dx_mkscratch` for harnesses needing a named temp file
+# (e.g. `--execution_log_json_file` outputs). Bare `mktemp` honors
+# TMPDIR (Bazel TEST_TMPDIR plus runner RUNNER_TEMP flow through it);
+# pass an explicit "${TMPDIR:-${RUNNER_TEMP:-/tmp}}/..." template when
+# the prefix must be pinned.
+# Usage (no command substitution so the EXIT trap lands in the caller):
+#   dx_mktemp_file exec_first "${TMPDIR:-${RUNNER_TEMP:-/tmp}}/quality_cache_exec_first.XXXXXX.json"
+dx_mktemp_file() {
+  local var="$1" template="${2:-}" file
+  if [[ -n "$template" ]]; then
+    file="$(mktemp "$template")"
+  else
+    file="$(mktemp)"
+  fi
+  _DX_SCRATCHES+=("$file")
+  if [[ "$_DX_SCRATCH_TRAP_INSTALLED" == "0" ]]; then
+    trap '_dx_cleanup_scratches' EXIT
+    _DX_SCRATCH_TRAP_INSTALLED=1
+  fi
+  printf -v "$var" '%s' "$file"
 }
 
 # Portable realpath: GNU `realpath` is absent on macOS;

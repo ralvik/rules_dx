@@ -9,16 +9,14 @@
 # custom `RF`/`MANIFEST`/`rloc()` probe.
 RUNFILES_BASH_INIT = """# --- begin runfiles.bash initialization v3 ---
 # Copy-pasted from the Bazel Bash runfiles library v3.
+# shellcheck disable=SC1090 (issue #914): single file-level pragma covers the
+# five runfiles-layout probes below, which only exist under `bazel run` /
+# `bazel test` (see `.shellcheckrc`, issue #319).
 set -uo pipefail; set +e; f=bazel_tools/tools/bash/runfiles/runfiles.bash
-# shellcheck disable=SC1090
 source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \\
-  # shellcheck disable=SC1090
   source "$(grep -sm1 "^$f " "${RUNFILES_MANIFEST_FILE:-/dev/null}" | cut -f2- -d' ')" 2>/dev/null || \\
-  # shellcheck disable=SC1090
   source "$0.runfiles/$f" 2>/dev/null || \\
-  # shellcheck disable=SC1090
   source "$(grep -sm1 "^$f " "$0.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \\
-  # shellcheck disable=SC1090
   source "$(grep -sm1 "^$f " "$0.exe.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \\
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
 # --- end runfiles.bash initialization v3 ---

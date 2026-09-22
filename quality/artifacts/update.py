@@ -656,6 +656,11 @@ def _collect(tool, platform_key, spec, workdir):
 def _emit(artifact, tool, platform_key):
     filename = "%s.%s.bzl" % (tool, platform_key)
     path = os.path.join(_source_dir(), filename)
+    # Single-sourced buildifier suppression (issue #914): ARTIFACT holds an
+    # SPDX `licenses` data key, not a rule attr, so buildifier's
+    # `attr-licenses` lint is a false positive on every generated file. The
+    # disable lives here once in the generator, never hand-edited per file;
+    # `--verify-only` rejects drift.
     content = (
         '"""%s standalone artifact metadata (%s) -- GENERATED, do not edit.\n'
         "\n"

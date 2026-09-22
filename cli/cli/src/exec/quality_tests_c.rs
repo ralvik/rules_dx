@@ -1,16 +1,11 @@
 //! Quality execution tests (part 3/3) — split from `exec/quality.rs` with no behavior change.
 //! Originally the inline `mod tests` of `quality.rs`.
-#![allow(unused_imports)]
-
-use super::*;
 
 use super::super::test_support::*;
-use crate::exec::{execute, Env};
 use dx_digest::blake3 as digest;
+use quality_result::assert_all_equal;
 use quality_result::proto;
 use quality_result::proto::FileSnapshot;
-use std::os::unix::ffi::OsStringExt;
-use std::path::PathBuf;
 
 #[test]
 fn json_clean_check_succeeds() {
@@ -563,9 +558,7 @@ fn default_apply_depends_on_bytes_not_git_status() {
         assert_eq!(change["path"], serde_json::json!("src/a.py"));
         digests.push(change["source_digest"].clone());
     }
-    for other in digests.iter().skip(1) {
-        assert_eq!(&digests[0], other);
-    }
+    assert_all_equal(&digests);
     // Bytes stay load-bearing under one git status: bytes changed after
     // analysis fail closed as stale_source regardless of git markers.
     let mut stale = Harness::new("git-status-stale");

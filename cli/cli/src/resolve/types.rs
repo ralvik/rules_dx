@@ -53,6 +53,25 @@ impl QueryRunner for ProcessQueryRunner {
 }
 // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
 
+/// Test-only query runner that fails on any call: directory and label
+/// scopes must resolve without touching Bazel.
+///
+/// Single shared guard for every `resolve` test module (issue #914):
+/// previously copy-pasted as five private `NeverQuery` structs with
+/// drifting panic messages plus five `LCOV_EXCL` pairs. See:
+/// `docs/testing/README.md#coverage`.
+// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+#[cfg(test)]
+pub struct NeverQuery;
+
+#[cfg(test)]
+impl QueryRunner for NeverQuery {
+    fn run_query(&self, _argv: &[String], _cwd: &Path) -> io::Result<QueryResult> {
+        panic!("resolve tests must not run queries");
+    }
+}
+// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+
 /// Resolved scope: exact Bazel targets plus the summary scope.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedScope {

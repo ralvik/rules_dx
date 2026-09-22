@@ -1,8 +1,5 @@
 //! Quality execution tests (part 1/3) — split from `exec/quality.rs` with no behavior change.
 //! Originally the inline `mod tests` of `quality.rs`.
-#![allow(unused_imports)]
-
-use super::*;
 
 use super::super::test_support::*;
 use crate::exec::{execute, Env};

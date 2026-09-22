@@ -1,11 +1,9 @@
 //! Split from `real.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::real_tests_a::*;
 use super::real_tests_b::*;
 use super::*;
-use quality_result::encode_validated;
 use quality_result::proto::Convergence;
 
 #[test]

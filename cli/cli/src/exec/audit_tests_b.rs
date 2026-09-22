@@ -1,10 +1,8 @@
 //! Split from `audit.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::super::test_support::*;
 use super::audit_tests_a::*;
-use super::*;
 
 #[test]
 fn audit_live_unowned_scope_fails_usage() {

@@ -116,9 +116,11 @@ snapshot_diff() {
 # Canonical-JSON snapshot assert: both files must parse as JSON; comparison
 # uses sorted keys and 2-space indent so key order and trailing-newline noise
 # do not fail the test. UPDATE_EXPECT refreshes with the canonical form.
-# Scratch discipline (issue #750): function-scoped tmp owns a RETURN trap
+# Scratch discipline (issues #750, #914): function-scoped tmp owns a RETURN trap
 # (not the EXIT-scoped dx_mkscratch in tools/sh/lib.sh, which would leak
 # across calls); mktemp honors TMPDIR with an explicit runner-temp fallback.
+# Raw `mktemp -d` is deliberate here: the EXIT wrapper cannot provide
+# function-scoped RETURN cleanup, so this is the one justified exception.
 snapshot_canonical_json_diff() {
   local expected="$1" actual="$2" workspace_rel="${3:-}"
   local tmp

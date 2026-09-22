@@ -9,24 +9,19 @@
 // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 use std::path::PathBuf;
 
-fn usage() -> i32 {
-    eprintln!("usage: notice_gen <manifest> <out> <root> <text> [<text> ...]");
-    1
-}
-
 fn run(argv: &[String]) -> i32 {
     if argv.len() < 5 {
-        return usage();
+        return dx_release_tools::bin_usage(
+            "notice_gen",
+            "<manifest> <out> <root> <text> [<text> ...]",
+        );
     }
     let manifest = PathBuf::from(&argv[1]);
     let dst = PathBuf::from(&argv[2]);
     let texts: Vec<PathBuf> = argv[4..].iter().map(PathBuf::from).collect();
     match dx_release_tools::write_notice(&manifest, &dst, &argv[3], &texts) {
         Ok(()) => 0,
-        Err(error) => {
-            eprintln!("notice_gen: cannot write {}: {error}", dst.display());
-            1
-        }
+        Err(error) => dx_release_tools::bin_cannot_write("notice_gen", &dst, error),
     }
 }
 

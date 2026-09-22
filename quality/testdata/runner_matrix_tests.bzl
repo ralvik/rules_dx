@@ -3,6 +3,7 @@
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
 load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
+load("//libs/starlark:canonical.bzl", "is_canonical", "strip_canonical")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _file_ref(ctx, f):
@@ -121,9 +122,9 @@ def _runner_matrix_test_impl(ctx):
     ]
     check_files = []
     producer = str(ctx.label)
-    if producer.startswith("@@//"):  # buildifier: disable=canonical-repository
+    if is_canonical(producer):
         # Canonical Bzlmod label: pin the human-readable main-repo form.
-        producer = "//" + producer[len("@@//"):]  # buildifier: disable=canonical-repository
+        producer = strip_canonical(producer)
     run = [_file_ref(ctx, runner)]
     run.append(shell.quote("--producer"))
     run.append(shell.quote(producer))

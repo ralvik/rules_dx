@@ -1,6 +1,5 @@
 //! Split from `lib.rs`. No behavior change.
 //! Originally the inline `mod tests`.
-#![allow(unused_imports)]
 
 use super::*;
 use quality_result::{decode_validated, encode_validated, validate};

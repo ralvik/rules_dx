@@ -9,23 +9,18 @@
 // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
 use std::path::Path;
 
-fn usage() -> i32 {
-    eprintln!("usage: sbom_spdx_gen <artifact> <out> <package> <supplier>");
-    1
-}
-
 fn run(argv: &[String]) -> i32 {
     if argv.len() != 5 {
-        return usage();
+        return dx_release_tools::bin_usage(
+            "sbom_spdx_gen",
+            "<artifact> <out> <package> <supplier>",
+        );
     }
     let src = Path::new(&argv[1]);
     let dst = Path::new(&argv[2]);
     match dx_release_tools::write_spdx(src, dst, &argv[3], &argv[4]) {
         Ok(()) => 0,
-        Err(error) => {
-            eprintln!("sbom_spdx_gen: cannot write {}: {error}", dst.display());
-            1
-        }
+        Err(error) => dx_release_tools::bin_cannot_write("sbom_spdx_gen", dst, error),
     }
 }
 

@@ -1,8 +1,5 @@
 //! Invocation-parser tests (part 1/2) — split from `args/parser.rs` with no behavior change.
 //! Originally the inline `mod tests` of `parser.rs`.
-#![allow(unused_imports)]
-
-use super::*;
 
 use super::super::{ArgsError, Command, ReportRequest};
 use super::parse;

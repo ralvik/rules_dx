@@ -3,6 +3,8 @@
 Contract: `docs/decisions/0009-starlark-testing.md`.
 """
 
+load("//libs/starlark:canonical.bzl", "strip_canonical")
+
 DxSubjectInfo = provider(
     doc = "Analysis observations a subject rule exposes to starlark_test.",
     fields = {
@@ -123,12 +125,10 @@ def _display_label(label):
 
     Strips one leading canonical-repository marker (two at-signs) from
     Bazel 9 rendering so observations stay readable; the stripped form is
- pinned to the supported Bazel and requalified on version bumps.
+    pinned to the supported Bazel and requalified on version bumps.
+    Single-sourced via `//libs/starlark:canonical.bzl` (issue #914).
     """
-    text = str(label)
-    if text.startswith("@@"):  # buildifier: disable=canonical-repository
-        return text[2:]
-    return text
+    return strip_canonical(str(label))
 
 def display_label(label):
     """Renders a label with the canonical-repository marker stripped.
