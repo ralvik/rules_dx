@@ -34,7 +34,6 @@ dx_cd_workspace
 
 dx_test_init
 
-roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
 verify_remaining="docs/testing/verification-matrix-remaining.md"
 runner_doc="docs/quality/runner-matrix.md"
@@ -48,11 +47,11 @@ matrix_cases="quality/testdata/runner_matrix_cases.bzl"
 real_rs="quality/runner/src/real.rs"
 real_tests_b="quality/runner/src/real_tests_b.rs"
 
-# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
-if grep -q -F -e 'parser-sample backfill Seed-host-delivered (closed #465' "$roadmap"; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
-  bad "roadmap lost its parser-sample Seed-host-delivered record under closed #465"
+  bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
 # Remaining matrix owns the qualified seed-only record under.

@@ -36,7 +36,6 @@ Maintainer planning and evidence. Not required for normal use.
 - [Verification matrix](testing/verification-matrix.md): as-built language x layer status.
 - [Native toolchains](native-toolchains.md): provisional C/C++/Rust stack and qualification plan.
 - [Documentation site build](documentation/site.md) and [documentation IR](documentation/doc-ir.md): planned site design, not a working site yet.
-- [Roadmap](roadmap.md): current tracks and priorities.
 - [Decision records](decisions/README.md): accepted, provisional, superseded, and rejected decisions.
   Authoring rules live in [decision instructions](decisions/AGENTS.md).
 
@@ -57,7 +56,6 @@ Maintainer planning and evidence. Not required for normal use.
 | Product scope and support matrix | Authoritative product boundary, repository evidence, and current support claims, subject to accepted decisions |
 | Design contracts and protocols | Authoritative component behavior within accepted product and decision constraints |
 | Provisional decisions and explicitly provisional design | Validation targets, not stable commitments |
-| Roadmap | Planned work with status and next steps; not normative behavior |
 | Agent instructions | Procedural instructions only; they do not define product semantics or architecture contracts |
 
 If authoritative documents conflict, stop affected work and resolve the documents rather than

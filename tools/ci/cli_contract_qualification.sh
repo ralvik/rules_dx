@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # CLI-contract registry plus behavior qualification harness.
 #
-# docs/roadmap.md lists cli-contract claims with only helper guards at
+# CLI-contract claims are owned here with helper guards at
 # tools/ci/helper_qualification.sh (seed-only record, adopted crates,
-# stays-hand-rolled owners) and no owner for the registry plus behavior
+# stays-hand-rolled owners) plus the registry plus behavior
 # pins. This harness owns that gap.
 #
 # Qualifies the as-built final registry plus mutating-vs-check semantics

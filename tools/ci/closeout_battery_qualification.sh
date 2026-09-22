@@ -9,7 +9,7 @@
 #   devcontainer-check plus docs-ci plus dogfood, with per-host
 #   build/test/coverage jobs) plus the docs gate (docs-ci self-call over
 #   `//docs/...` via the reusable-docs check-only contract);
-# - wiring: roadmap plus verification-matrix delivered records, BUILD
+# - wiring: verification-matrix delivered records, BUILD
 #   target, dogfood-freshness step, Battery accepted record with full-tree
 #   green owned by CI via this harness;
 # - open owned gaps: platform plus consumer plus release evidence, full
@@ -29,18 +29,17 @@ dx_cd_workspace
 
 dx_test_init
 
-roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
 testing_readme="docs/testing/README.md"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 reusable=".github/workflows/reusable-docs.yml"
 
-# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
-if grep -q -F -e 'close-out battery + docs Seed-host-delivered (closed #467' "$roadmap"; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
-  bad "roadmap lost its close-out battery Seed-host-delivered record under closed #467"
+  bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
 # Verification matrix owns the qualified seed-only record under.

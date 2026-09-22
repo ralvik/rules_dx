@@ -135,4 +135,4 @@ IR; it never parses rendered HTML.
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md). Site execution delivered under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; no execution gaps remain. Reintroduction delivered under #786.
+Tracking lives in GitHub issues. Site execution delivered under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; no execution gaps remain. Reintroduction delivered under #786.

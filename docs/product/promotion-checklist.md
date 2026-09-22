@@ -143,4 +143,4 @@ under closed #806 moot (process #808); remaining platform plus consumer plus rel
 
 ## Related issues
 
-Tracking lives in the [roadmap](../roadmap.md) and the [support matrix](support-matrix.md#status-lifecycle). Checklist: #611. Platform: #410-#414. Consumer: #408, #461. Release: #459, #460, #612. Per-host release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot. Process: #808. Gate: #301.
+Tracking lives in GitHub issues and the [support matrix](support-matrix.md#status-lifecycle). Checklist: #611. Platform: #410-#414. Consumer: #408, #461. Release: #459, #460, #612. Per-host release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot. Process: #808. Gate: #301.

@@ -38,7 +38,6 @@ dx_cd_workspace
 
 dx_test_init
 
-roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
 verify_remaining="docs/testing/verification-matrix-remaining.md"
 gen_rust="docs/generation/rust.md"
@@ -53,11 +52,11 @@ fixture_bridge="rust/tests/fixtures/cxx_identity/cxx_bridge.bzl"
 fixture_manifest="rust/tests/fixtures/cxx_identity/Cargo.toml"
 fixture_lib="rust/tests/fixtures/cxx_identity/src/lib.rs"
 
-# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
-if grep -q -F -e 'CXX graph identity decided Seed-host-delivered (closed #474' "$roadmap"; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
-  bad "roadmap lost its CXX graph identity Seed-host-delivered record under closed #474"
+  bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
 # Remaining matrix owns the qualified seed-only record under.

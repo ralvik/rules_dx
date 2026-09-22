@@ -2,7 +2,7 @@
 # Signing stack + distribution qualification harness (live
 # successor to closed // for signing + distribution).
 #
-# docs/roadmap.md lists signing stack + distribution with owners //
+# GitHub issues track signing stack + distribution with owners //
 # all closed and no open qualification. Decision: keep Sigstore
 # keyless `cosign sign-blob --bundle` + GitHub attestations as in
 # deploy/release/signing.bzl; no stack change.
@@ -239,12 +239,11 @@ else
   bad "tool-acquisition.md lost its selected-qualified plus provisional record (#459)"
 fi
 
-# Roadmap owns the title: signing stack plus distribution under.
-if grep -q -F -e 'signing stack + distribution' docs/roadmap.md &&
-  grep -q -F -e '(issue #459)' docs/roadmap.md; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
-  bad "roadmap.md lost its signing-stack-plus-distribution #459 owner"
+  bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
 dx_test_summary "signing stack plus distribution harness"

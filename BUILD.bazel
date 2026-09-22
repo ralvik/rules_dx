@@ -311,7 +311,6 @@ real_source_target(
         "//docs:product/README.md",
         "//docs:product/scope.md",
         "//docs:product/support-matrix.md",
-        "//docs:roadmap.md",
         "//docs:testing/README.md",
         "CHANGELOG.md",
         "LICENSE",

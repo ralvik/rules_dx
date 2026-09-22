@@ -118,7 +118,7 @@ profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
 x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
  native (issue #414). `Delivered` here is verification-layer evidence only, not
 support-matrix promotion: it never promotes a support-matrix `Planned` cell to
-`Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under its owning tracker with no
+`Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under its owning GitHub issues tracker with no
 implementation claimed here. Owning trackers for table `Open` cells: Docs under no open implementation tracker (successor to closed #581,
 live successor to closed #421; full pipeline delivered seed-only under #779 plus #780 plus #781 plus #782 plus #783 plus #784 plus #785; platform plus consumer plus release evidence stays owned gap under #808; no Supported claim); Env/codegen under #787 plus onboarding #788 (successors to closed #506); Layer-2
 adapter-less plus regions plus framework-composition Depcheck under #800 (successor to closed #420, delivery

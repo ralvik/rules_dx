@@ -4,7 +4,7 @@ Status: accepted triage index, docs-only. It records which statement wins for
 each known design conflict and points at the owning fix issue. It makes no
 code claim itself; code fixes land in the linked split issues.
 
-Rule (from issue #956): last-agreed ADR, scope edit, or roadmap decision wins;
+Rule (from issue #956): last-agreed ADR, scope edit, or GitHub issue decision wins;
 older text and stub code lose. Where dates tie, precedence is
 `scope.md` > `architecture/README.md` > ADR > domain doc > code comment >
 code behavior. Each resolution is either fix code to match the last-agreed

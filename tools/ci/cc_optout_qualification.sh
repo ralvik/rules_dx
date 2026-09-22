@@ -34,7 +34,6 @@ dx_cd_workspace
 
 dx_test_init
 
-roadmap="docs/roadmap.md"
 verify="docs/testing/verification-matrix.md"
 verify_remaining="docs/testing/verification-matrix-remaining.md"
 gen_rust="docs/generation/rust.md"
@@ -48,11 +47,11 @@ fixture_script="rust/tests/fixtures/cc_optout/build.rs"
 fixture_lib="rust/tests/fixtures/cc_optout/src/lib.rs"
 fixture_manifest="rust/tests/fixtures/cc_optout/Cargo.toml"
 
-# Roadmap owns the Seed-host-delivered history record under Cleanup-completed.
-if grep -q -F -e 'CC opt-out linker Seed-host-delivered (closed #471' "$roadmap"; then
+# Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).
+if [[ ! -f "docs/roadmap.md" ]]; then
   ok
 else
-  bad "roadmap lost its CC opt-out Seed-host-delivered record under closed #471"
+  bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
 # Remaining matrix owns the qualified seed-only record under.

@@ -47,7 +47,6 @@ contract="docs/github-ci.md"
 matrix="docs/testing/github-ci.md"
 verify="docs/testing/verification-matrix.md"
 automation="docs/contributing/automation.md"
-roadmap="docs/roadmap.md"
 bump_workflow=".github/workflows/bump.yml"
 migrate_rs="cli/adopt/src/migrate.rs"
 migrate_doc="docs/cli/commands/migrate.md"
@@ -378,9 +377,9 @@ else
   bad "github-ci contract/matrix lost its #509 qualification tracker record"
 fi
 
-# Tag hygiene plus release-input gaps stay owned open.
-if grep -q -F -e 'Tag hygiene and release-input gaps' "$roadmap" &&
-  grep -q -F -e 'tag hygiene plus release-input gaps' "$matrix"; then
+# Tag hygiene plus release-input gaps stay owned open in GitHub issues.
+if grep -q -F -e 'tag hygiene plus release-input gaps' "$matrix" &&
+  grep -q -F -e 'Tag hygiene and release-input gaps' "$pins"; then
   ok
 else
   bad "tag hygiene plus release-input gap lost its owner"
@@ -388,21 +387,18 @@ fi
 
 # Native-bot follow-ups stay owned open (native-only updater,).
 if grep -q -F -e 'native-bot follow-ups' "$matrix" &&
-  grep -q -F -e 'sole updater' "$automation" &&
-  grep -q -F -e 'sole updater' "$roadmap"; then
+  grep -q -F -e 'sole updater' "$automation"; then
   ok
 else
   bad "native-bot follow-up gap lost its owner"
 fi
 
 # dx migrate syntax plus manifest selection plus dx run multirun stay
-# delivered in the matrix and roadmap; neither may
+# delivered in the matrix; neither may
 # regress to the combined open record.
 if grep -q -F -e 'migrate syntax plus' "$matrix" &&
   grep -q -F -e 'issue #462' "$matrix" &&
-  grep -q -F -e 'issue #463' "$matrix" &&
-  grep -q -F -e 'V1 scope: `dx migrate` syntax + manifest selection delivered' "$roadmap" &&
-  grep -q -F -e 'delivered (issue #463' "$roadmap"; then
+  grep -q -F -e 'issue #463' "$matrix"; then
   ok
 else
   bad "dx migrate plus dx run gap lost its delivered owner"
