@@ -24,3 +24,16 @@ created. Published bytes are never rebuilt or substituted silently.
   entries). Per [CONTRIBUTING.md](CONTRIBUTING.md) and
   [docs/AGENTS.md](docs/AGENTS.md), no new `Mxx` specs or `Oxx` register entries
   are created; see the [roadmap](docs/roadmap.md).
+* Known issues: no cell is `Supported` yet; promotion needs platform plus
+  consumer plus release evidence per the
+  [support matrix](docs/product/support-matrix.md). Only the seed-host closure
+  is claimed as evidence here; external-consumer runs and trusted-builder
+  provenance remain owned gaps.
+* Deprecated: the JUnit Vintage runner (JUnit 4 on the Platform) stays only as
+  the deprecated seed path beside the Jupiter console-launcher shape (see
+  `java/tests/fixtures/junit/BUILD.bazel`); ESLint stylistic core rules (for
+  example `semi`, reported under `usedDeprecatedRules`) stay deprecated
+  upstream as moved to `@stylistic` (see
+  [tool integrations](docs/quality/tool-integrations.md)).
+* Upcoming: planned work is tracked in the [roadmap](docs/roadmap.md); no new
+  release outputs are claimed here until the release gate passes.
