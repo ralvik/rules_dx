@@ -258,4 +258,6 @@ Bazel selection, declared actions, normalized results, and optional mutation,
 without exposing unstable subprocess command lines as API. CI checks run
 directly through Bazel; ownership is inspectable through query interfaces.
 Command, output, and report behavior is authoritative under [CLI](../cli/);
-quality evidence under [Quality](../quality/). Open work lives in [roadmap](../roadmap.md) and delivered work under closed #470-#512.
+quality evidence under [Quality](../quality/). Known design conflicts and
+their last-agreed resolutions live in the [contradiction catalog](contradiction-catalog.md).
+Open work lives in [roadmap](../roadmap.md) and delivered work under closed #470-#512.
