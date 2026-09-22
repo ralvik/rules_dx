@@ -45,7 +45,7 @@ mod tests {
     use std::io;
     use std::path::Path;
 
-    // Shared test guard: `super::NeverQuery` (see `types.rs`, issue #914).
+    // Shared test guard: `super::NeverQuery` (See: `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

@@ -318,7 +318,7 @@ pub fn decode_validated(bytes: &[u8]) -> Result<QualityResult, Error> {
 
 /// Asserts every item equals the first; fails on empty.
 ///
-/// Single shared helper for determinism batteries (issue #914):
+/// Single shared helper for determinism batteries (See: `docs/quality/quality-testing.md`, issue #914):
 /// replaces the copy-pasted `for other in items.iter().skip(1)`
 /// loops, which panic on empty vectors with an indexing panic instead
 /// of an actionable assertion. See: `docs/quality/quality-testing.md`.

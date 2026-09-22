@@ -318,7 +318,7 @@ def add_c():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Atomic update rollback-plan harness (issue #772); see docs/cli/commands/audit-update-bazel.md#dx-update.
+    # Atomic update rollback-plan harness (See: docs/cli/commands/audit-update-bazel.md#dx-update, issue #772);
     sh_binary(
         name = "update_rollback_qualification",
         srcs = ["update_rollback_qualification.sh"],

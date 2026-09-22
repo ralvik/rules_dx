@@ -121,7 +121,7 @@ mod tests {
         }
     }
 
-    // Shared test guard: `crate::resolve::NeverQuery` (see `types.rs`, issue #914).
+    // Shared test guard: `crate::resolve::NeverQuery` (See: `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

@@ -270,7 +270,7 @@ pub fn spdx_package(
 mod tests {
     use super::*;
 
-    /// Test-only SPDX document namespace (issue #914): `invalid.test`
+    /// Test-only SPDX document namespace (See: `docs/testing/README.md`, issue #914): `invalid.test`
     /// (RFC 2606) can never resolve, so it cannot be copied into a real
     /// SLSA builder ID, unlike `example.com`. Go `example.com/hello`
     /// purl fixtures below stay: they are package names, not namespaces.

@@ -80,7 +80,7 @@ fn parse_eco(text: &str) -> Result<String, String> {
     }
 }
 
-/// Shared unknown-ecosystem failure (issue #914): both subcommands
+/// Shared unknown-ecosystem failure (See: `docs/quality/quality-testing.md`, issue #914): both subcommands
 /// reject unparsed ecosystems identically instead of copy-pasting the
 /// `eprintln!` plus exit code.
 fn unknown_ecosystem(ecosystem: &str) -> i32 {

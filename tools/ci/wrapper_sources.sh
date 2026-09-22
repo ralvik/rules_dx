@@ -153,10 +153,48 @@ else
 fi
 
 # Wrapper precision is pinned by wrapper tests alongside the wrappers.
-if [[ -f python/rules/wrapper_tests.bzl && -f javascript/rules/wrapper_tests.bzl && -f rust/rules/wrapper_tests.bzl ]]; then
+if [[ -f python/rules/wrapper_tests.bzl && -f javascript/rules/wrapper_tests.bzl && -f typescript/rules/wrapper_tests.bzl && -f rust/rules/wrapper_tests.bzl ]]; then
   ok
 else
-  bad "wrapper tests missing alongside language wrappers"
+  bad "wrapper tests missing alongside language wrappers (want python plus javascript plus typescript plus rust, issue #926)"
+fi
+
+# Per-wrapper contract negatives for all 15 (issue #926): bad srcs are
+# rejected by `allow_files`, bad providers by `required_providers` plus
+# sealed `upstream_providers`, bad source ownership by `quality_specs`,
+# and bad native policy by `aspect_hints`. These forward-rule params are
+# the fail-closed contract (Bazel rejects violations at analysis), so the
+# harness pins them for every language plus framework wrapper instead of
+# only checking presence plus hints.
+contract_missing=""
+for lang in rust python javascript typescript go java kotlin scala csharp fsharp cc vue svelte astro mdx; do
+  defs="$lang/rules/defs.bzl"
+  if ! grep -q -F -e 'allow_files' "$defs" ||
+    ! grep -q -F -e 'required_providers' "$defs" ||
+    ! grep -q -F -e 'upstream_providers' "$defs" ||
+    ! grep -q -F -e 'quality_specs' "$defs" ||
+    ! grep -q -F -e 'QualitySourcesInfo' "$defs" ||
+    ! grep -q -F -e 'aspect_hints' "$defs"; then
+    contract_missing="$contract_missing $lang"
+  fi
+done
+if [[ -z "$contract_missing" ]]; then
+  ok
+else
+  bad "wrapper contract negatives missing in:$contract_missing (want allow_files plus required_providers plus upstream_providers plus quality_specs plus QualitySourcesInfo plus aspect_hints for all 15, issue #926)"
+fi
+# Rejection helpers stay fail-closed where they exist (generic mains,
+# alternate drivers, bad srcs): python/javascript/typescript reject with
+# a message naming the owning contract, never silently accept.
+if grep -q -F -e 'python_test_rejection' python/rules/defs.bzl &&
+  grep -q -F -e 'javascript_test_rejection' javascript/rules/defs.bzl &&
+  grep -q -F -e 'typescript_srcs_rejection' typescript/rules/defs.bzl &&
+  grep -q -F -e 'fail(rejection)' python/rules/defs.bzl &&
+  grep -q -F -e 'fail(rejection)' javascript/rules/defs.bzl &&
+  grep -q -F -e 'fail(rejection)' typescript/rules/defs.bzl; then
+  ok
+else
+  bad "wrapper rejection helpers lost fail-closed wiring (want python plus javascript plus typescript rejections with fail, issue #926)"
 fi
 
 # Corpus stays for target-less files only: no code extensions ride

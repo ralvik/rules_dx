@@ -92,10 +92,58 @@ if grep -q -F -e 'mixed/hello' examples/README.md && ! grep -q -F -e '](mixed/' 
 else
   bad "examples/README.md must document mixed/hello as non-consumer without indexing it as an example"
 fi
-if grep -q -F -e ' mixed-framework package' examples/mixed/hello/BUILD.bazel; then
+if grep -q -F -e 'Mixed-framework package' examples/mixed/hello/BUILD.bazel; then
   ok
 else
   bad "examples/mixed/hello/BUILD.bazel lost the fixture disposition marker"
 fi
+
+# Per-workspace build target counts stay pinned (issue #926): the README
+# Evidence claim is the consumer contract, so count drift fails here
+# instead of silently teaching stale numbers.
+check_target_count() {
+  local dir="$1" want="$2"
+  if grep -q -F -e "Build covers $want targets" "$dir/README.md" ||
+    grep -q -F -e "covers $want targets" "$dir/README.md"; then
+    ok
+  else
+    bad "$dir/README.md lost its build-target pin (want $want targets, issue #926)"
+  fi
+}
+check_target_count "examples/adopt-python" "15"
+check_target_count "examples/adopt-rust" "14"
+check_target_count "examples/adopt-go" "6"
+check_target_count "examples/adopt-cpp" "11"
+check_target_count "examples/adopt-csharp" "11"
+check_target_count "examples/adopt-fsharp" "11"
+check_target_count "examples/adopt-java" "11"
+check_target_count "examples/adopt-kotlin" "11"
+check_target_count "examples/adopt-scala" "11"
+check_target_count "examples/adopt-js-ts" "28"
+check_target_count "examples/adopt-polyglot" "25"
+
+# Generator command shape stays pinned per workspace family (issue #926):
+# Rust-family workspaces regenerate via `dx generate`, Gazelle-family
+# workspaces via per-language `gazelle update`, polyglot via both.
+check_generator() {
+  local dir="$1" want="$2"
+  if grep -q -F -e "$want" "$dir/README.md"; then
+    ok
+  else
+    bad "$dir/README.md lost its generator pin (want $want, issue #926)"
+  fi
+}
+check_generator "examples/adopt-rust" "dx -- generate //examples/adopt-rust/"
+check_generator "examples/adopt-python" "//gazelle/python:gazelle"
+check_generator "examples/adopt-go" "//gazelle/go:gazelle"
+check_generator "examples/adopt-cpp" "//gazelle/cc:gazelle"
+check_generator "examples/adopt-csharp" "//gazelle/csharp:gazelle"
+check_generator "examples/adopt-fsharp" "//gazelle/fsharp:gazelle"
+check_generator "examples/adopt-java" "//gazelle/java:gazelle"
+check_generator "examples/adopt-kotlin" "//gazelle/kotlin:gazelle"
+check_generator "examples/adopt-scala" "//gazelle/scala:gazelle"
+check_generator "examples/adopt-js-ts" "//gazelle/javascript:gazelle"
+check_generator "examples/adopt-js-ts" "//gazelle/typescript:gazelle"
+check_generator "examples/adopt-polyglot" "dx -- generate //examples/adopt-polyglot/"
 
 dx_test_summary "examples readme audit"

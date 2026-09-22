@@ -59,7 +59,7 @@ impl QueryRunner for ProcessQueryRunner {
 /// Test-only query runner that fails on any call: directory and label
 /// scopes must resolve without touching Bazel.
 ///
-/// Single shared guard for every `resolve` test module (issue #914):
+/// Single shared guard for every `resolve` test module (See: `docs/testing/README.md#coverage`, issue #914):
 /// previously copy-pasted as five private `NeverQuery` structs with
 /// drifting panic messages plus five `LCOV_EXCL` pairs. See:
 /// `docs/testing/README.md#coverage`.

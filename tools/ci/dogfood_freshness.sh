@@ -126,4 +126,6 @@ bazel run --noshow_progress //tools/ci:result_contract_qualification
 bazel run --noshow_progress //tools/ci:quality_taxonomy_qualification
 bazel run --noshow_progress //tools/ci:python_audit_qualification
 bazel run --noshow_progress //tools/ci:strict_preset_qualification
+bazel run --noshow_progress //tools/ci:docs_testing_gates
+bazel run --noshow_progress //tools/ci:examples_consumer_gates
 bazel run --noshow_progress //tools/ci:flakiness_qualification
