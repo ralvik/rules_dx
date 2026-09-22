@@ -140,7 +140,7 @@ def _javascript_test_forward_impl(ctx):
     # NB: no explicit RunEnvironmentInfo forward: constructing
     # testing.TestEnvironment above already contributes the runtime
     # environment provider, and returning both conflicts.
-    return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo])
+    return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo], "javascript_*")
 
 _javascript_test = rule(
     implementation = _javascript_test_forward_impl,

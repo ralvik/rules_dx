@@ -20,14 +20,37 @@ def dx_forwarded_runtime_providers(upstream, what):
         out.append(upstream[RunEnvironmentInfo])
     return out
 
-def dx_forwarded_optional(upstream, providers):
-    """Forwards the upstream providers that are present (best-effort).
+def dx_missing_optional_names(requested_names, present_names):
+    """Returns the requested names absent from the present names. See issue #943."""
+    return [n for n in requested_names if n not in present_names]
 
-    Unlike `dx_forwarded_runtime_providers`, a missing provider is
-    silently skipped instead of failing. Used for the executable shapes
-    that mirror their upstream target's optional surfaces (Go archives,
+def dx_optional_forward_warning(what, upstream_label, requested_names, missing_names):
+    """Returns the skip warning for an optional forward, or None when nothing was skipped. See issue #943."""
+    if len(missing_names) == 0:
+        return None
+    forwarded = len(requested_names) - len(missing_names)
+    suffix = "; empty forward is expected when upstream omits the surface" if forwarded == 0 else ""
+    return what + ": upstream " + upstream_label + " omits optional provider(s) " + ", ".join(missing_names) + " (forwarded " + str(forwarded) + " of " + str(len(requested_names)) + ")" + suffix
+
+def dx_forwarded_optional(upstream, providers, what = "dx wrapper"):
+    """Forwards the upstream providers that are present, warning on each skip.
+
+    Unlike `dx_forwarded_runtime_providers`, a missing provider warns
+    instead of failing. Used for the executable shapes that mirror
+    their upstream target's optional surfaces (Go archives,
     CcInfo/JavaInfo on binaries, .NET assemblies, coverage metadata on
-    shapes whose upstream may omit it)."""
+    shapes whose upstream may omit it). Empty forward is expected when
+    upstream omits the surface. See issue #943."""
+    missing = [p for p in providers if p not in upstream]
+    if len(missing) > 0:
+        warning = dx_optional_forward_warning(
+            what,
+            str(upstream.label),
+            [str(p) for p in providers],
+            [str(p) for p in missing],
+        )
+        if warning != None:
+            print(warning)
     return [upstream[p] for p in providers if p in upstream]
 
 def dx_preserved_providers(upstream, required, what):
@@ -240,7 +263,7 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
         return (
             [dx_symlink_default_info(ctx, what)] +
             dx_preserved_providers(upstream, required_providers, what) +
-            dx_forwarded_optional(upstream, optional_providers) +
+            dx_forwarded_optional(upstream, optional_providers, what) +
             _dx_runtime_providers(ctx, upstream, what, runtime, extra_quality_attrs) +
             [dx_quality_sources(_dx_quality_files(ctx, extra_quality_attrs), quality_specs, str(ctx.label))]
         )
