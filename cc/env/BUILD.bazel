@@ -30,12 +30,26 @@ cc_env_plan(
     target = "//cc/tests/fixtures/hello:hello_test",
 )
 
+cc_env_plan(
+    name = "hello_c_lib_plan",
+    testonly = True,
+    target = "//cc/tests/fixtures/hello:hello_c_lib",
+)
+
+cc_env_plan(
+    name = "hello_c_test_plan",
+    testonly = True,
+    target = "//cc/tests/fixtures/hello:hello_c_test",
+)
+
 env_plan_tests(
     name = "env_plan_tests",
     subjects = [
         ":hello_lib_plan",
         ":hello_plan",
         ":hello_test_plan",
+        ":hello_c_lib_plan",
+        ":hello_c_test_plan",
     ],
 )
 

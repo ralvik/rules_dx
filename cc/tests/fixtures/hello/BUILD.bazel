@@ -27,6 +27,18 @@ cc_test(
     deps = [":hello_lib"],
 )
 
+cc_library(
+    name = "hello_c_lib",
+    srcs = ["hello.c"],
+    hdrs = ["hello_c.h"],
+)
+
+cc_test(
+    name = "hello_c_test",
+    srcs = ["hello_c_test.c"],
+    deps = [":hello_c_lib"],
+)
+
 # Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
