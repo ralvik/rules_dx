@@ -1,4 +1,4 @@
-# README Split Plan (Issues #926/#986)
+# README Split Plan (Issues #926/#986/#1074)
 
 Completed under #986. All indexes stay at or under 60 lines; details live in
 named contracts, not READMEs.
@@ -30,3 +30,14 @@ named contracts, not READMEs.
 
 New READMEs must stay at or under 60 lines. The allowlist stays empty; any
 over-limit README fails the gate with no grandfather entry.
+
+## Length Outliers (Issue #1074)
+
+- `docs/testing/verification-matrix.md` plus `verification-matrix-remaining.md`
+  merged into `docs/product/support-matrix.md` plus the per-matrix pages above
+  under #988; `docs/README.md` indexes via support-matrix plus testing README.
+- `docs/tools/tool-acquisition.md` plus `docs/native-toolchains.md` reduced to
+  focused contracts under #985; each stays one doc per fact with no split.
+- `docs/cli/output-protocol.md` stays one authoritative output-API contract;
+  section map lives in `docs/cli/README.md`, split rejected (qualification
+  harnesses pin its paths).
