@@ -35,11 +35,11 @@ are the answer, not a summary. `init`, `hooks install` / `uninstall` / `run`, `w
 and dry-run plans print summaries, so `--quiet` silences their stdout (refusals and
 errors stay on stderr).
 
-`--verbose` enables info-level structured diagnostics on stderr via tracing (`warn`
-by default, `info` under `--verbose`, `RUST_LOG` overrides when set). It is orthogonal
-to `--quiet` (summaries vs logs): `--quiet` plus `--verbose` means quiet summaries with
+`--verbose` (`-v`) and `--log-level error|warn|info|debug|trace` select structured diagnostics on stderr via tracing (`warn`
+by default, `info` under `--verbose`, explicit level under `--log-level`, `RUST_LOG` overrides when set). It is orthogonal
+to `--quiet` (summaries vs logs): `--quiet` plus `--verbose` (or `--log-level`) means quiet summaries with
 verbose logs. Diagnostics go to stderr so stdout stays machine-owned in every mode:
-`--verbose` combines with `--output text|diff|json` without changing stdout contracts,
+`--verbose` and `--log-level` combine with `--output text|diff|json` without changing stdout contracts,
 and default runs emit nothing extra, keeping output byte-identical.
 
 `--output diff` reserves stdout exclusively for complete UTF-8 unified diffs derived from

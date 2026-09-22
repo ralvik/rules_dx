@@ -217,7 +217,7 @@ fn usage_error(message: &str) -> i32 {
     let commands = dx_cli::args::Command::pipe_list();
     let _ = writeln!(
         io::stderr(),
-        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [per-command-flags] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; default never touches Bazel outputs; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test|deploy --debug|--release; version --check|--pin|--rollback; docs --check|--serve|--port; completion <bash|zsh|fish|powershell> [--check] (no shell with --check verifies all). --check is per-command only (quality/version/update/docs/completion/check|fix; status rejects --check; see `dx <command> --help`). fix applies without rerun (run `dx check` to validate). no dx doctor; use `dx status` for diagnostics. see `dx help <command>` or `dx <command> --help`."
+        "dx: {message}\nusage: dx [--workspace DIR] [--dry-run] [--quiet] [--verbose|-v] [--log-level error|warn|info|debug|trace] [--output text|diff|json] [--report <format>=<destination>]... [--fail-on info|warning|error] [--min-coverage 0-100 (coverage only)] <{commands}> [per-command-flags] [scope ...] [-- command-options...]\nper-command flags: clean --bazel (also run `bazel clean`; default never touches Bazel outputs; distinct from `dx bazel` passthrough); owners|deps|why --configured (cquery); coverage --min-coverage; build|run|test|deploy --debug|--release; version --check|--pin|--rollback; docs --check|--serve|--port; completion <bash|zsh|fish|powershell> [--check] (no shell with --check verifies all). --check is per-command only (quality/version/update/docs/completion/check|fix; status rejects --check; see `dx <command> --help`). fix applies without rerun (run `dx check` to validate). no dx doctor; use `dx status` for diagnostics. see `dx help <command>` or `dx <command> --help`."
     );
     pre_exec_code()
 }
@@ -287,8 +287,9 @@ fn run() -> i32 {
     // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
     // Structured diagnostics: tracing subscriber init is
     // idempotent and emits nothing by default, keeping runs byte-identical
-    // unless `--verbose` (info) or `RUST_LOG` overrides the filter.
-    dx_output::init_diagnostics(invocation.verbose);
+    // unless `--verbose`/`--log-level` selects a level or `RUST_LOG`
+    // overrides the filter (See: `docs/cli/output-protocol.md`).
+    dx_output::init_diagnostics_with_level(invocation.verbose, invocation.log_level);
     tracing::info!(
         command = invocation.command.name(),
         verbose = invocation.verbose,

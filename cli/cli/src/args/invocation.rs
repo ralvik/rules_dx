@@ -5,7 +5,7 @@
 //! ([`super::parser`]) constructs these; `super` re-exports them so
 //! `crate::args::{Invocation, ReportRequest}` paths are unchanged.
 
-use dx_output::{OutputMode, Threshold};
+use dx_output::{LogLevel, OutputMode, Threshold};
 
 use super::profile::{resolve_profile, Profile};
 use super::Command;
@@ -39,6 +39,10 @@ pub struct Invocation {
     /// stderr; orthogonal to `--quiet` (which suppresses human summaries).
     /// Default stays byte-identical (warn+error only).
     pub verbose: bool,
+    /// `--log-level error|warn|info|debug|trace`: explicit diagnostic
+    /// level on stderr; conflicts with `--verbose` (`-v` is `info`).
+    /// `RUST_LOG` overrides both when set.
+    pub log_level: Option<LogLevel>,
     pub output: OutputMode,
     pub reports: Vec<ReportRequest>,
     pub fail_on: Threshold,
@@ -232,6 +236,7 @@ mod tests {
             dry_run: false,
             quiet: false,
             verbose: false,
+            log_level: None,
             output: OutputMode::Text { quiet: false },
             reports: Vec::new(),
             fail_on: Threshold::Warning,

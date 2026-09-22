@@ -47,7 +47,8 @@ Global options:
 | `--workspace <path>` | Override upward workspace discovery |
 | `--dry-run` | Resolve and summarize a plan without executing workflows or mutations |
 | `--quiet` | Suppress `dx` operation/planning output while preserving subprocess diagnostics |
-| `--verbose` | Enable info-level structured diagnostics on stderr via tracing; orthogonal to `--quiet` (summaries vs logs); default stays byte-identical (`warn` only, `RUST_LOG` overrides) |
+| `--verbose` (`-v` alias) | Enable info-level structured diagnostics on stderr via tracing; orthogonal to `--quiet` (summaries vs logs); default stays byte-identical (`warn` only, `RUST_LOG` overrides); conflicts with `--log-level` |
+| `--log-level error\|warn\|info\|debug\|trace` | Select the structured diagnostic level on stderr; `RUST_LOG` overrides when set; conflicts with `--verbose` |
 | `--output text\|diff\|json` | Select concise text, complete unified patches, or versioned machine-readable events (per-command support in [Output Protocol](output-protocol.md); unsupported modes fail fast, never silently ignored) |
 | `--report <format>=<destination>` | Write a supported standard report to a file or `-` for stdout; repeatable |
 | `--fail-on info\|warning\|error` | Lowest diagnostic severity that makes a quality command fail |
@@ -226,10 +227,10 @@ Summaries may contain the `dx` command, workflow phase, resolved target count, a
 the scope is repository-wide or exact-target. They never contain executable argv,
 forwarded option names or values, environment values, request headers, endpoint user
 information, or a reconstructed shell command. `--quiet` suppresses these summaries but
-does not suppress Bazel or tool diagnostics. `--verbose` is orthogonal: it enables
-info-level tracing diagnostics on stderr without changing summaries, stdout ownership,
-or machine-output contracts. `--quiet` plus `--verbose` means quiet summaries with
-verbose logs; `--verbose` combines with `--output text|diff|json` with logs staying on
+does not suppress Bazel or tool diagnostics. `--verbose` and `--log-level` are orthogonal: they enable
+tracing diagnostics on stderr without changing summaries, stdout ownership,
+or machine-output contracts. `--quiet` plus `--verbose` (or `--log-level`) means quiet summaries with
+verbose logs; `--verbose` and `--log-level` combine with `--output text|diff|json` with logs staying on
 stderr so stdout stays machine-owned. `--dry-run` emits the same safe summaries
 without running final workflows; read-only resolution queries follow the exception under
 Workspace Discovery. The original argument vectors are passed directly to subprocesses

@@ -130,6 +130,7 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             dry_run: invocation.dry_run,
             quiet: invocation.quiet,
             verbose: invocation.verbose,
+            log_level: invocation.log_level,
             output: invocation.output,
             reports: phase_reports,
             fail_on: invocation.fail_on,

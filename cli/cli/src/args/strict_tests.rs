@@ -298,6 +298,7 @@ fn strict_help_is_generated_from_the_same_grammar() {
         "dry-run",
         "quiet",
         "verbose",
+        "log-level",
     ] {
         assert!(
             grammar
@@ -306,6 +307,14 @@ fn strict_help_is_generated_from_the_same_grammar() {
             "grammar missing --{long}"
         );
         assert!(text.contains(&format!("--{long}")), "help missing --{long}");
+    }
+    for needle in [
+        "RUST_LOG",
+        "NO_COLOR",
+        "BUILD_WORKSPACE_DIRECTORY",
+        "Environment:",
+    ] {
+        assert!(text.contains(needle), "top help missing env {needle:?}");
     }
     for argv in [vec!["lint", "--help"], vec!["status", "--help"]] {
         let text = match parse(&args(&argv)) {

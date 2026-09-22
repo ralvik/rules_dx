@@ -103,6 +103,7 @@ pub fn parse_with<S: AsRef<OsStr>>(
         dry_run,
         quiet,
         verbose,
+        log_level: log_level_name,
         output,
         report,
         fail_on,
@@ -190,6 +191,19 @@ pub fn parse_with<S: AsRef<OsStr>>(
         file.fail_on.clone(),
         "warning",
     );
+    let log_level = match log_level_name.as_deref() {
+        None => None,
+        Some(value) => {
+            Some(
+                dx_output::LogLevel::parse(value).map_err(|_| ArgsError::BadLogLevel {
+                    value: value.to_owned(),
+                })?,
+            )
+        }
+    };
+    if verbose && log_level.is_some() {
+        return Err(ArgsError::ConflictingVerboseLogLevel);
+    }
     let mut reports = Vec::new();
     for value in &report {
         reports.push(parse_report(value)?);
@@ -1019,6 +1033,7 @@ pub fn parse_with<S: AsRef<OsStr>>(
         dry_run,
         quiet,
         verbose,
+        log_level,
         output,
         reports,
         fail_on,

@@ -75,8 +75,11 @@ Options:
       --quiet
           Suppress dx operation summaries (tool diagnostics still print)
 
-      --verbose
-          Enable structured diagnostics on stderr via tracing. Default stays byte-identical; `--verbose` adds info-level logs. Orthogonal to `--quiet` (summaries vs logs)
+  -v, --verbose
+          Enable structured diagnostics on stderr via tracing. Default stays byte-identical; `--verbose` adds info-level logs. Orthogonal to `--quiet` (summaries vs logs). Short `-v`; conflicts with `--log-level` (See: `docs/cli/output-protocol.md`)
+
+      --log-level <LEVEL>
+          Select the structured diagnostic level on stderr via tracing. Default stays byte-identical (`warn`); `--verbose`/`-v` is `info`. `RUST_LOG` overrides when set (See: `docs/cli/output-protocol.md`)
 
       --output <OUTPUT>
           Select concise text, unified patches, or versioned NDJSON events
@@ -138,3 +141,12 @@ Options:
 
   -V, --version
           Print version
+
+Environment:
+  RUST_LOG=<filter>
+      Override --verbose/-v and --log-level with a tracing filter (e.g. RUST_LOG=debug).
+  NO_COLOR=<any>
+      Disable styled human output when present (any value, per the spec).
+  BUILD_WORKSPACE_DIRECTORY=<dir>
+      Workspace start under `bazel run`; falls back to the current directory.
+  See docs/cli/output-protocol.md and docs/cli/cli-contract.md.

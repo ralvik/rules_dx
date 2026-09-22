@@ -165,6 +165,7 @@ mod tests {
             "dry-run",
             "quiet",
             "verbose",
+            "log-level",
             "output",
             "report",
             "fail-on",

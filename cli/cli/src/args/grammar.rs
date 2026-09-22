@@ -52,8 +52,19 @@ pub(crate) struct Cli {
     /// Enable structured diagnostics on stderr via tracing.
     /// Default stays byte-identical; `--verbose` adds info-level logs.
     /// Orthogonal to `--quiet` (summaries vs logs).
-    #[arg(long)]
+    /// Short `-v`; conflicts with `--log-level` (See: `docs/cli/output-protocol.md`).
+    #[arg(long, short = 'v')]
     pub(crate) verbose: bool,
+    /// Select the structured diagnostic level on stderr via tracing.
+    /// Default stays byte-identical (`warn`); `--verbose`/`-v` is `info`.
+    /// `RUST_LOG` overrides when set (See: `docs/cli/output-protocol.md`).
+    #[arg(
+        long = "log-level",
+        value_name = "LEVEL",
+        allow_negative_numbers = true,
+        overrides_with = "log_level"
+    )]
+    pub(crate) log_level: Option<String>,
     /// Select concise text, unified patches, or versioned NDJSON events.
     #[arg(long, allow_negative_numbers = true, overrides_with = "output")]
     pub(crate) output: Option<String>,
@@ -148,4 +159,5 @@ pub(crate) const VALUE_OPTIONS: &[&str] = &[
     "--from",
     "--to",
     "--port",
+    "--log-level",
 ];
