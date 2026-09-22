@@ -12,6 +12,7 @@ load(":matrix_tests.bzl", "matrix_validation_tests")
 load(":output_group_tests.bzl", "output_group_unit_tests")
 load(":subject.bzl", "example_subject")
 load(":toolchain_tests.bzl", "toolchain_unit_tests")
+load(":wrapper_tests.bzl", "wrapper_optional_forward_tests")
 load("//libs/starlark/tests/fixtures/starlark_futures:aspect_subjects.bzl", "aspect_group", "aspect_leaf")
 load("//libs/starlark/tests/fixtures/starlark_futures:config_subjects.bzl", "config_group", "config_leaf")
 
@@ -77,6 +78,8 @@ output_group_unit_tests(name = "output_group_unit")
 
 matrix_validation_tests(name = "matrix_validation")
 
+wrapper_optional_forward_tests(name = "wrapper_optional_forward")
+
 test_suite(
     name = "all",
     tests = [
@@ -91,6 +94,7 @@ test_suite(
         ":output_group_unit",
         ":subject_analysis",
         ":toolchain_unit",
+        ":wrapper_optional_forward",
     ],
 )
 
@@ -111,6 +115,7 @@ real_source_target(
         "output_group_tests.bzl",
         "subject.bzl",
         "toolchain_tests.bzl",
+        "wrapper_tests.bzl",
     ],
     tags = ["corpus"],
 )
