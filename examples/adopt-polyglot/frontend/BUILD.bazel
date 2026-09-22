@@ -1,4 +1,4 @@
-load("@rules_dx//typescript/rules:defs.bzl", "typescript_project")
+load("@rules_dx//typescript/rules:defs.bzl", "typescript_project", "typescript_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 typescript_project(
@@ -18,10 +18,13 @@ typescript_project(
     deps = [":sums"],
 )
 
-typescript_project(
+typescript_test(
     name = "totals_test",
     srcs = ["totals_test.ts"],
+    config = "jest.config.cjs",
     declaration = True,
+    node_modules = "//:node_modules",
+    node_options = ["--experimental-vm-modules"],
     transpiler = "tsc",
     tsconfig = "tsconfig.json",
     deps = [":totals"],

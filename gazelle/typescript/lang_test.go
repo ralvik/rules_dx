@@ -66,8 +66,18 @@ func TestGenerateSourceOnlyPackage(t *testing.T) {
 		t.Fatalf("helper = %s(%s)", helper.Kind(), helper.Name())
 	}
 	test := result.Gen[2]
-	if test.Kind() != projectKind || test.Name() != "helper_test" {
+	if test.Kind() != testKind || test.Name() != "helper_test" {
 		t.Fatalf("test = %s(%s)", test.Kind(), test.Name())
+	}
+	if got := strings.Join(test.AttrStrings("srcs"), ","); got != "helper_test.mts" {
+		t.Errorf("test srcs = %q", got)
+	}
+	if got := test.AttrString("node_modules"); got != rootNodeModules {
+		t.Errorf("test node_modules = %q, want %q", got, rootNodeModules)
+	}
+	testImports := result.Imports[2].(targetImports)
+	if strings.Join(testImports.imports, ",") != "helper" {
+		t.Errorf("test imports = %+v, want [helper]", testImports)
 	}
 	demoImports := result.Imports[0].(targetImports)
 	if strings.Join(demoImports.imports, ",") != "helper" {
@@ -197,6 +207,13 @@ func TestGenerateEntryThinBinary(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing javascript_binary(main_bin) in %v", result.Gen)
 	}
+	testIdx, ok := byRule[testKind+"\x00helper_test"]
+	if !ok {
+		t.Fatalf("missing typescript_test(helper_test) in %v", result.Gen)
+	}
+	if got := result.Gen[testIdx].AttrString("node_modules"); got != rootNodeModules {
+		t.Errorf("test node_modules = %q, want %q", got, rootNodeModules)
+	}
 	lib := result.Gen[libIdx]
 	if got := strings.Join(lib.AttrStrings("srcs"), ","); got != "main.ts" {
 		t.Errorf("library srcs = %q, want main.ts", got)
@@ -322,6 +339,9 @@ func TestImportsIndexesNonTestOnly(t *testing.T) {
 	if got := lang.Imports(&config.Config{}, testRule, nil); got != nil {
 		t.Errorf("test imports = %+v, want nil", got)
 	}
+	if got := lang.Imports(&config.Config{}, rule.NewRule(testKind, "demo_test"), nil); got != nil {
+		t.Errorf("test-kind imports = %+v, want nil", got)
+	}
 	if got := lang.Imports(&config.Config{}, rule.NewRule(projectKind, "empty"), nil); got != nil {
 		t.Errorf("srcless imports = %+v, want nil", got)
 	}
@@ -329,7 +349,7 @@ func TestImportsIndexesNonTestOnly(t *testing.T) {
 
 func TestLanguageMetadata(t *testing.T) {
 	l := &typescriptLang{}
-	if l.Name() != "typescript" || len(l.Kinds()) != 2 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
+	if l.Name() != "typescript" || len(l.Kinds()) != 3 || l.CheckFlags(flag.NewFlagSet("test", flag.ContinueOnError), config.New()) != nil {
 		t.Fatal("invalid language metadata")
 	}
 	l.RegisterFlags(flag.NewFlagSet("test", flag.ContinueOnError), "update", config.New())
@@ -347,7 +367,7 @@ func TestLanguageMetadata(t *testing.T) {
 		}
 		return ""
 	})
-	if len(loads) != 2 || loads[0].Name != "@renamed_dx//typescript/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "typescript_project" {
+	if len(loads) != 2 || loads[0].Name != "@renamed_dx//typescript/rules:defs.bzl" || strings.Join(loads[0].Symbols, ",") != "typescript_project,typescript_test" {
 		t.Errorf("apparent loads = %+v", loads)
 	}
 	if loads[1].Name != "@renamed_dx//javascript/rules:defs.bzl" || strings.Join(loads[1].Symbols, ",") != "javascript_binary" {
@@ -391,7 +411,7 @@ func resolverIndex(lang *typescriptLang, entries ...struct {
 		}
 		r := rule.NewRule(projectKind, entry.name)
 		r.SetAttr("srcs", []string{entry.name + ext})
-		// Test projects are leaves: only index non-test sources.
+		// Test rules are leaves: only index non-test sources.
 		if IsTestFile(entry.name + ext) {
 			continue
 		}
@@ -594,6 +614,9 @@ func TestImportsNonProjectKind(t *testing.T) {
 func TestClaimKindFallback(t *testing.T) {
 	if got := claimKind(Claimant{Name: "x", Source: "x.ts"}); got != projectKind {
 		t.Errorf("fallback kind = %q, want %q", got, projectKind)
+	}
+	if got := claimKind(Claimant{Name: "a_test", Source: "a_test.ts"}); got != testKind {
+		t.Errorf("test kind = %q, want %q", got, testKind)
 	}
 	if got := claimKind(Claimant{Name: "x", Source: "x.ts", Kind: projectKind}); got != projectKind {
 		t.Errorf("explicit kind = %q, want %q", got, projectKind)

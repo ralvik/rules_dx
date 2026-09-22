@@ -20,15 +20,23 @@ import (
 const (
 	languageName = "typescript"
 	projectKind  = "typescript_project"
+	testKind     = "typescript_test"
 	// binaryKind is the reused JavaScript execution wrapper for recognized
 	// TypeScript entries. There is no `typescript_binary`: the thin binary
 	// executes the compiled output through the library's `JsInfo`
 	// (see typescript/tests/fixtures/hello).
 	binaryKind = "javascript_binary"
+	// rootNodeModules is the default importer facade for generated tests.
+	// Source-only tests still need a Jest runtime; the root importer proves
+	// the provider-derived layout first. Per-importer facades arrive with
+	// pnpm importer-scope resolution; the attribute stays mergeable so
+	// handwritten narrowing survives.
+	rootNodeModules = "//:node_modules"
 )
 
 var typescriptKinds = map[string]rule.KindInfo{
 	projectKind: projectKindInfo(),
+	testKind:    testKindInfo(),
 	binaryKind:  binaryKindInfo(),
 }
 
@@ -39,6 +47,20 @@ func projectKindInfo() rule.KindInfo {
 		MergeableAttrs: map[string]bool{
 			"srcs": true,
 			"deps": true,
+		},
+		ResolveAttrs: map[string]bool{"deps": true},
+	}
+}
+
+func testKindInfo() rule.KindInfo {
+	return rule.KindInfo{
+		MatchAttrs:    []string{"srcs"},
+		NonEmptyAttrs: map[string]bool{"srcs": true},
+		MergeableAttrs: map[string]bool{
+			"srcs":         true,
+			"deps":         true,
+			"data":         true,
+			"node_modules": true,
 		},
 		ResolveAttrs: map[string]bool{"deps": true},
 	}
@@ -160,13 +182,13 @@ func (l *typescriptLang) ApparentLoads(moduleToApparentName func(string) string)
 
 func typescriptLoads(rulesRepo string) []rule.LoadInfo {
 	return []rule.LoadInfo{
-		{Name: "@" + rulesRepo + "//typescript/rules:defs.bzl", Symbols: []string{projectKind}},
+		{Name: "@" + rulesRepo + "//typescript/rules:defs.bzl", Symbols: []string{projectKind, testKind}},
 		{Name: "@" + rulesRepo + "//javascript/rules:defs.bzl", Symbols: []string{binaryKind}},
 	}
 }
 
 // Imports indexes one reusable import identity per TypeScript source owned
-// by a non-test project rule: the exact module stem. Test projects are
+// by a non-test project rule: the exact module stem. Test rules are
 // leaves and provide nothing, so ordinary targets never depend on test-only
 // code. Thin binaries carry only entry metadata and provide nothing.
 func (*typescriptLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
@@ -264,7 +286,11 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 
 	claimants := make([]Claimant, 0, len(plans)*2)
 	for _, p := range plans {
-		claimants = append(claimants, Claimant{Name: p.name, Source: p.src, Kind: projectKind})
+		kind := projectKind
+		if p.test {
+			kind = testKind
+		}
+		claimants = append(claimants, Claimant{Name: p.name, Source: p.src, Kind: kind})
 		if p.entry {
 			claimants = append(claimants, Claimant{Name: EntryBinaryName(p.name), Source: p.src, Kind: binaryKind})
 		}
@@ -276,6 +302,14 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 
 	var result language.GenerateResult
 	for _, p := range plans {
+		if p.test {
+			r := rule.NewRule(testKind, p.name)
+			r.SetAttr("srcs", []string{p.src})
+			r.SetAttr("node_modules", rootNodeModules)
+			result.Gen = append(result.Gen, r)
+			result.Imports = append(result.Imports, targetImports{imports: append([]string(nil), p.imports...), local: p.local})
+			continue
+		}
 		r := rule.NewRule(projectKind, p.name)
 		r.SetAttr("srcs", []string{p.src})
 		result.Gen = append(result.Gen, r)
@@ -297,10 +331,14 @@ func (l *typescriptLang) generateRules(args language.GenerateArgs) language.Gene
 }
 
 // claimKind returns the generated rule kind for one claimant: the explicit
-// Kind when set (thin-binary claims), otherwise the single project kind.
+// Kind when set (thin-binary claims), otherwise inferred from the source
+// (test when IsTestFile, else project).
 func claimKind(c Claimant) string {
 	if c.Kind != "" {
 		return c.Kind
+	}
+	if IsTestFile(c.Source) {
+		return testKind
 	}
 	return projectKind
 }
