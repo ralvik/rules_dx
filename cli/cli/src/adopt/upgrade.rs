@@ -20,6 +20,17 @@ use dx_process::operational_code;
 
 use super::{operational, pre_exec, summaries_suppressed};
 
+/// Stable operational error code for live `dx upgrade` failures: no
+/// upgrade manifest exists yet (module at `0.0.0`, no releases cut), so
+/// live execution fails closed with no writes.
+// See: `docs/cli/output-protocol.md#operational-error`.
+pub(crate) const CODE_UPGRADE_FAILED: &str = "upgrade_failed";
+
+/// Stable notice code for `dx upgrade --dry-run` plans: the pin plus
+/// migrate plus setup composition without touching the tree.
+// See: `docs/cli/output-protocol.md#notice`.
+pub(crate) const NOTICE_UPGRADE_PLANNED: &str = "upgrade_planned";
+
 /// Runs `dx upgrade --from <version> --to <version>`: validates the pair
 /// through `dx_adopt::plan_upgrade` (Cargo-flavor semver, upgrade-only
 /// gate, migrate manifest selection), then fails closed because no
@@ -57,7 +68,7 @@ pub(crate) fn execute_upgrade(
             }
             if let Ok(event) = notice_event(&NoticeEvent {
                 level: "info".to_owned(),
-                code: "upgrade_planned".to_owned(),
+                code: NOTICE_UPGRADE_PLANNED.to_owned(),
                 message: summary,
                 related_command: Some("upgrade".to_owned()),
                 scope: Some(vec![plan.manifest.clone()]),
@@ -94,8 +105,8 @@ pub(crate) fn execute_upgrade(
                 return exit;
             }
         }
-        let _ = writeln!(err, "dx: upgrade_failed: {message}");
-        if let Ok(event) = error_event("upgrade_failed", &message, None, None, None) {
+        let _ = writeln!(err, "dx: {CODE_UPGRADE_FAILED}: {message}");
+        if let Ok(event) = error_event(CODE_UPGRADE_FAILED, &message, None, None, None) {
             if let Err(exit) = emit_event(out, &event) {
                 return exit;
             }
@@ -117,7 +128,7 @@ pub(crate) fn execute_upgrade(
             return exit;
         }
     }
-    operational(out, err, &format!("upgrade_failed: {message}"))
+    operational(out, err, &format!("{CODE_UPGRADE_FAILED}: {message}"))
 }
 
 #[cfg(test)]
@@ -223,6 +234,11 @@ mod tests {
         assert_eq!(kinds[0], "command_started");
         assert_eq!(kinds[kinds.len() - 1], "command_finished");
         assert!(kinds.contains(&"notice"), "{kinds:?}");
+        let notice = events
+            .iter()
+            .find(|event| event["event"] == serde_json::json!("notice"))
+            .expect("upgrade notice");
+        assert_eq!(notice["code"], serde_json::json!(NOTICE_UPGRADE_PLANNED));
         assert_eq!(
             events.last().expect("finished")["exit_code"],
             serde_json::json!(0)
@@ -248,7 +264,7 @@ mod tests {
         );
         assert_eq!(code, 1);
         let err_text = String::from_utf8(err).expect("err");
-        assert!(err_text.contains("upgrade_failed"), "{err_text}");
+        assert!(err_text.contains(CODE_UPGRADE_FAILED), "{err_text}");
         assert!(err_text.contains("migrate-v1-to-v2.json"), "{err_text}");
         assert!(
             err_text.contains("dx upgrade --from 1.2.3 --to 2.0.0"),
@@ -277,7 +293,7 @@ mod tests {
         assert_eq!(code, 1);
         assert!(String::from_utf8(err)
             .expect("err")
-            .contains("upgrade_failed"));
+            .contains(CODE_UPGRADE_FAILED));
         let text = String::from_utf8(out).expect("out");
         let events: Vec<serde_json::Value> = text
             .lines()
@@ -291,6 +307,20 @@ mod tests {
         assert_eq!(kinds[0], "command_started");
         assert!(kinds.contains(&"error"), "{kinds:?}");
         assert_eq!(kinds[kinds.len() - 1], "command_finished");
+        let error = events
+            .iter()
+            .find(|event| event["event"] == serde_json::json!("error"))
+            .expect("upgrade error");
+        assert_eq!(error["code"], serde_json::json!(CODE_UPGRADE_FAILED));
+    }
+
+    #[test]
+    fn upgrade_codes_are_stable_single_source() {
+        // Fixture pins the stable wire codes so output-protocol drift
+        // fails here, not in automation matching on `code`.
+        // See: `docs/cli/output-protocol.md#operational-error`.
+        assert_eq!(CODE_UPGRADE_FAILED, "upgrade_failed");
+        assert_eq!(NOTICE_UPGRADE_PLANNED, "upgrade_planned");
     }
 
     #[test]

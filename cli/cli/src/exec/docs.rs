@@ -27,6 +27,11 @@ const DOCS_BUILD_TARGET: &str = "//docs/site:demo_site";
 /// See: `docs/cli/commands/docs.md`.
 const DOCS_DEFAULT_PORT: u16 = 8000;
 
+/// Stable operational error code for `dx docs --serve` preview failures:
+/// the local preview server exited nonzero after a successful build.
+// See: `docs/cli/output-protocol.md#operational-error`.
+pub(crate) const CODE_SERVE_FAILED: &str = "serve_failed";
+
 /// Runs `dx docs [--check] [--serve [--port <n>]] [scope ...]`: resolves
 /// the scope through the shared workflow resolution (bare scope selects
 /// the repository docs site), builds the Bazel-cached extract to
@@ -204,7 +209,7 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
     if json {
         if serve_code != 0 {
             if let Ok(event) = error_event(
-                "serve_failed",
+                CODE_SERVE_FAILED,
                 &format!("Docs preview exited with {serve_code} (see stderr diagnostics)"),
                 None,
                 None,
@@ -224,6 +229,7 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::super::test_support::*;
+    use super::CODE_SERVE_FAILED;
 
     #[test]
     fn docs_check_builds_aggregate_without_render() {
@@ -298,5 +304,71 @@ mod tests {
         assert!(out.contains("bazel_failed"), "{out}");
         assert!(out.contains("docs/site:demo"), "{out}");
         assert!(out.contains("0.4.43"), "{out}");
+    }
+
+    #[test]
+    fn serve_failed_code_is_stable_single_source() {
+        // Fixture pins the stable wire code so output-protocol drift
+        // fails here, not in automation matching on `code`.
+        // See: `docs/cli/output-protocol.md#operational-error`.
+        assert_eq!(CODE_SERVE_FAILED, "serve_failed");
+    }
+
+    #[test]
+    fn docs_serve_failure_emits_serve_failed() {
+        use std::io;
+        struct ServeFailRunner;
+        impl dx_process::Runner for ServeFailRunner {
+            fn run(
+                &self,
+                argv: &[String],
+                _cwd: &std::path::Path,
+                _env: &[(&str, &str)],
+            ) -> io::Result<dx_process::ChildStatus> {
+                if argv.first().is_some_and(|first| first == "bazel") {
+                    Ok(dx_process::ChildStatus { code: Some(0) })
+                } else {
+                    Ok(dx_process::ChildStatus { code: Some(3) })
+                }
+            }
+        }
+        let harness = Harness::new("docs-serve-fail");
+        let inv = invocation(&["docs", "--serve", "--port=8080", "--output=json"]);
+        let runner = ServeFailRunner;
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = super::execute_docs(
+            &inv,
+            super::super::common::Env {
+                workspace: &harness.workspace,
+                runner: &runner,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 3, "{code}");
+        let text = String::from_utf8(out).expect("out");
+        let events: Vec<serde_json::Value> = text
+            .lines()
+            .map(serde_json::from_str)
+            .collect::<Result<_, _>>()
+            .expect("NDJSON");
+        let kinds: Vec<&str> = events
+            .iter()
+            .map(|event| event["event"].as_str().expect("event"))
+            .collect();
+        assert_eq!(kinds[0], "command_started");
+        assert!(kinds.contains(&"error"), "{kinds:?}");
+        assert_eq!(kinds[kinds.len() - 1], "command_finished");
+        let error = events
+            .iter()
+            .find(|event| event["event"] == serde_json::json!("error"))
+            .expect("serve error");
+        assert_eq!(error["code"], serde_json::json!(CODE_SERVE_FAILED));
     }
 }

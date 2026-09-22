@@ -359,7 +359,8 @@ language, and exact literal dependency reference accepted by `# gazelle:dx_ignor
 one notice. Ignored-import notices sort by path, language, and import bytes. Lifecycle notices are
 `bump_planned` (dry-run bump plan), `bump_widened` (committed bump widen, see
 [dx bump](commands/audit-update-bazel.md#dx-bump)), `migrate_planned` (dry-run migrate plan, see
-[dx migrate](commands/migrate.md)), `update_set_success` (per-set update success) and
+[dx migrate](commands/migrate.md)), `upgrade_planned` (dry-run upgrade plan, see
+[dx upgrade](commands/new-upgrade.md#dx-upgrade)), `update_set_success` (per-set update success) and
 `update_set_blocked` (unattempted dependent blocked by a failed update, see
 [dx update](commands/audit-update-bazel.md#dx-update)), `update_recovery` (failed-run retry
 plus manual restore hint, warning with `related_command: update` and retry sets as scope, see
@@ -641,6 +642,8 @@ invocation. Raw BEP is never part of this API.
 
 The documented list is derived from the code (single source):
 `../../cli/cli/src/exec/common.rs` (`CODE_*` including `bump_failed` and `migrate_failed`),
+`../../cli/cli/src/adopt/upgrade.rs` (`CODE_UPGRADE_FAILED` and `NOTICE_UPGRADE_PLANNED`),
+`../../cli/cli/src/exec/docs.rs` (`CODE_SERVE_FAILED`),
 `../../cli/cli/src/exec/run.rs` (`resolve_code` including `scope_error`),
 `../../cli/cli/src/exec/test_reports.rs` (`incomplete_results`),
 `../../cli/cli/src/resolve/types.rs` (`not_deployable`), `../../cli/cli/src/main.rs` with
@@ -649,7 +652,7 @@ The documented list is derived from the code (single source):
 `../../cli/cli/src/args/error.rs` with
 `../../cli/cli/src/args/completion.rs` (`unknown-shell`), and
 `../../cli/audit/src/advisory.rs` (`advisory_refresh_failed` detail inside `audit_failed`).
-Notices such as `migrate_planned` and `update_set_blocked` are [Notice](#notice) codes, not
+Notices such as `migrate_planned`, `upgrade_planned`, and `update_set_blocked` are [Notice](#notice) codes, not
 error codes.
 New `operational()` or `error_event()` call sites must reuse an existing code or add the new
 code here in the same change.
@@ -697,6 +700,8 @@ Stable codes are:
 | `update_failed` | Live update per-set failure (resolver reported failure, unsupported selection, launch failure, or signal) |
 | `bump_failed` | Live bump widen failure (missing, ambiguous, or unsupported manifest shape, or unreadable/unwritable manifest, see [dx bump](commands/audit-update-bazel.md#dx-bump)) |
 | `migrate_failed` | Live migrate failure (no migrate manifest exists yet, see [dx migrate](commands/migrate.md)) |
+| `upgrade_failed` | Live upgrade failure (no upgrade manifest exists yet, see [dx upgrade](commands/new-upgrade.md#dx-upgrade)) |
+| `serve_failed` | Docs preview failure (`dx docs --serve` preview server exited nonzero after a successful build, see [dx docs](commands/docs.md)) |
 | `unsupported_platform` | The selected workflow has no hermetic platform support |
 | `status_pin_mismatch` | `dx status` pin failure (check reported `error` — today pin mismatch — or the pin was missing/unreadable, see [status/version](commands/status-version.md)) |
 | `version_skew` | Drifted `.dx/version` pin refuses mutating or generating commands (see [status/version](commands/status-version.md)) |
