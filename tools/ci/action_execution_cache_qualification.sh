@@ -122,6 +122,19 @@ else
   bad "restore-bazel-cache plus ci.yml plus workflow notes lost the exact-key-only single-source record"
 fi
 
+# Single-source cache key (issue #1004): the functional hashFiles list lives
+# exactly once across owned workflows plus the shared restore action, so the
+# list cannot drift across jobs; invalidation behavior stays owned by the
+# composite.
+if [[ "$(grep -r -F -e "hashFiles('" .github/workflows .github/actions 2>/dev/null | wc -l | tr -d ' ')" == "1" ]] &&
+  grep -q -F -e "hashFiles('" "$cache_action" &&
+  ! grep -q -F -e "hashFiles('" "$ci" &&
+  ! grep -q -F -e "hashFiles('" "$bump"; then
+  ok
+else
+  bad "cache-key hashFiles list duplicated outside restore-bazel-cache (want single source in the composite, issue #1004)"
+fi
+
 # Cache keys stay comprehensive across locks plus configs plus toolchains
 # (single-sourced in the restore action, issue #953).
 if grep -q -F -e "MODULE.bazel.lock" "$cache_action" &&
