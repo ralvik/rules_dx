@@ -71,6 +71,26 @@ pub const DEVCONTAINER_JSON: &str = concat!(
     "}\n",
 );
 
+/// `dx init` direnv entry (absent-only single source).
+///
+/// Committed `.envrc` next to `MODULE.bazel`: `PATH_add` for `.dx/bin`
+/// only, `watch_file` on `.dx/bin`, missing-directory guard pointing at
+/// `dx env` regeneration. Never invokes Bazel and never exports beyond
+/// `PATH`, preserving the PATH-tools-only boundary; an existing unmanaged
+/// `.envrc` is refused via [`init_must_refuse`] (no `--force`).
+/// See: `docs/environments/environment.md#direnv-integration`.
+pub const ENVRC_CONTENT: &str = concat!(
+    "# Committed direnv entry scaffolded absent-only by `dx init`.\n",
+    "# See docs/environments/environment.md#direnv-integration.\n",
+    "# PATH-tools-only: adds managed `.dx/bin` to PATH, nothing else; never invokes Bazel.\n",
+    "if [ ! -d \".dx/bin\" ]; then\n",
+    "  echo \"dx: missing .dx/bin; run `dx env` or `bazel run //dx:env` to regenerate\" >&2\n",
+    "  return 1\n",
+    "fi\n",
+    "PATH_add .dx/bin\n",
+    "watch_file .dx/bin\n",
+);
+
 /// Editor disposition per language, following the automatic-first policy.
 ///
 /// Automatic Bazel-backed drivers stay preferred where the upstream
@@ -163,6 +183,10 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
             content: DEVCONTAINER_JSON.to_owned(),
         },
         ScaffoldFile {
+            path: ".envrc".to_owned(),
+            content: ENVRC_CONTENT.to_owned(),
+        },
+        ScaffoldFile {
             path: ".vscode/settings.json".to_owned(),
             content: "{\"rust-analyzer.check.command\":\"bazel\",\"python.defaultInterpreterPath\":\".dx/setups/current/.venv/bin/python\",\"typescript.tsdk\":\".dx/setups/current/node_modules/typescript/lib\",\"go.toolsManagement.checkForUpdates\":\"off\",\"clangd.path\":\".dx/bin/clangd\",\"clangd.arguments\":[\"--compile-commands-dir=.dx/setups/current\"],\"java.configuration.updateBuildConfiguration\":\"manual\",\"kotlin.languageServer.enabled\":true}\n"
                 .to_owned(),
@@ -246,14 +270,31 @@ mod tests {
     }
 
     #[test]
-    fn init_plans_eight_absent_only_files() {
+    fn init_plans_nine_absent_only_files() {
         let files = plan_init_files("demo");
-        assert_eq!(files.len(), 8);
+        assert_eq!(files.len(), 9);
         assert!(files.iter().any(|f| f.path == ".dx/version"));
         assert!(files
             .iter()
             .any(|f| f.path == ".devcontainer/devcontainer.json"));
         assert!(files.iter().any(|f| f.path == ".vscode/settings.json"));
+        assert!(files.iter().any(|f| f.path == ".envrc"));
+    }
+
+    #[test]
+    fn envrc_scaffold_is_path_only_with_watch_and_regeneration_guard() {
+        // See: `docs/environments/environment.md#direnv-integration`.
+        let files = plan_init_files("demo");
+        let envrc = files
+            .iter()
+            .find(|f| f.path == ".envrc")
+            .expect("envrc scaffold");
+        assert_eq!(envrc.content, super::ENVRC_CONTENT);
+        assert!(envrc.content.contains("PATH_add .dx/bin"));
+        assert!(envrc.content.contains("watch_file .dx/bin"));
+        assert!(envrc.content.contains("dx env"));
+        assert!(envrc.content.contains("bazel run //dx:env"));
+        assert!(envrc.content.contains("never invokes Bazel"));
     }
 
     #[test]

@@ -59,7 +59,7 @@ pub use preset_fragment::{
 };
 pub use scaffold::{
     absent_only_write_allowed, apply_init, editor_disposition, editor_language_supported,
-    init_must_refuse, plan_init_files, ScaffoldFile, DEVCONTAINER_JSON,
+    init_must_refuse, plan_init_files, ScaffoldFile, DEVCONTAINER_JSON, ENVRC_CONTENT,
 };
 pub use status::{default_status_checks, render_status_json, render_status_text, StatusCheck};
 pub use upgrade::{

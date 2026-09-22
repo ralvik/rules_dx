@@ -15,13 +15,16 @@ execution lands.
 CI caller template, hermetic hook installation, devcontainer, the single-version `dx`
 pin (the `dx` version equals the pinned `rules_dx` module version), the committed direnv `.envrc` defined in
 [Direnv Integration](../../environments/environment.md#direnv-integration), and generated
-VSCode configuration. The VSCode output is
+VSCode configuration. The `.envrc` follows the same absent-only rule
+as every other scaffolded file: an existing unmanaged copy is refused,
+never overwritten. The VSCode output is
 generated settings only (`.vscode/settings.json` pointing editor
 integrations at `.dx/setups/current` projections, checked-in native
 configs, and managed `.dx/bin` tools, plus `.vscode/extensions.json`
-recommendations covering the core plus admitted foundations; see
+recommendations covering the core plus admitted foundations, including
+Go plus TypeScript through `.dx` projections; see
 [new-upgrade](new-upgrade.md#editor-coverage)); no custom editor
-extension is installed. As a narrow exception to
+extension is installed and no `.idea/` or Neovim layout is generated. As a narrow exception to
 [workspace discovery](../cli-contract.md#workspace-discovery), init may bootstrap a new
 repository without an existing `MODULE.bazel`; ordinary commands still require it.
 Bootstrap writes are absent-only and do not inspect Git to classify files as tracked

@@ -118,7 +118,8 @@ without wall-time measurement per [ADR 0022](../decisions/0022-no-benchmarking.m
   `dx init` writes the committed `.envrc` absent-only and refuses an existing unmanaged
   `.envrc` without overwrite; the snippet adds `.dx/bin` to `PATH` only, watches `.dx/bin`,
   and errors with `dx env` or `bazel run //dx:env` guidance when the directory is missing
-  instead of invoking Bazel; `dx env` reports direnv hook and `PATH` status; no shell
+  instead of invoking Bazel; `dx env` plus `dx status` report no direnv hook or `PATH`
+  status (check with `direnv status` plus `echo $PATH`); no shell
   profile, registry, or global environment mutation occurs on any host.
 
 Environment configuration and public API conformance requirements are maintained in

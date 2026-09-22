@@ -40,11 +40,35 @@ corepack enable && corepack prepare pnpm@10.34.5 --activate
 # 3. Build and test (Bazelisk reads .bazelversion, no manual Bazel install):
 bazel build //...
 bazel test //...
+# 4. Verify the vendored preset is fresh (fails when stale, never refreshes):
+bazel run //cli/cli:dx -- update --check
 ```
+
+The `curl` plus checksum bootstrap above stays manual by contract:
+before Bazel runs there is no `dx` binary to bootstrap with, so no
+`dx bootstrap` command exists. The snapshot harness fails without
+`UPDATE_EXPECT` (CI sets no `UPDATE_EXPECT`); refreshes are explicit
+local runs reviewed before committing.
+
+Editor plus direnv plus hooks one-shot (after the green build):
+
+```sh
+bazel run //dx:env
+bazel run //cli/cli:dx -- setup
+bazel run //cli/cli:dx -- hooks install
+direnv allow  # optional; otherwise export `.dx/bin` manually
+```
+
+First-hour evidence is one-shot per [ADR 0022](../decisions/0022-no-benchmarking.md):
+see [First-Hour Timing](first-hour-timing.md) for the measured
+clone-to-green record plus methodology. No CI timing budget is enforced.
 
 Behind a proxy that returns 403 for `bcr.bazel.build`, create the
 gitignored `user.bazelrc` overlay (already `try-import`ed from
-`.bazelrc`; canonical lockfile URLs stay `bcr.bazel.build`):
+`.bazelrc`; canonical lockfile URLs stay `bcr.bazel.build`).
+The overlay stays manual per-person state by design and is never
+committed; `try-import` plus `.gitignore` are the drift guard, and
+`dx status` reports no proxy status:
 
 ```sh
 printf '%s\n' \

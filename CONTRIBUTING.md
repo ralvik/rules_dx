@@ -5,7 +5,10 @@ CLI executed through Bazel on the Linux x86_64 seed host.
 Authoritative product and design contracts live under `docs/`.
 
 Start with the [local workflow](docs/contributing/local-workflows.md#current-workflow)
-for current checks and tooling gaps. Agent procedure lives in the root
+for current checks and tooling gaps. After the green build, run the
+[editor plus direnv plus hooks one-shot](docs/contributing/local-workflows.md#bootstrap)
+(`dx setup`, `hooks install`, `direnv allow`); first-hour evidence lives in
+[First-Hour Timing](docs/contributing/first-hour-timing.md). Agent procedure lives in the root
 [AGENTS.md](AGENTS.md) and applicable scoped instructions.
 
 ## Delivery Flow
