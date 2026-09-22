@@ -61,10 +61,12 @@ use quality_adapter::parsers::{self, FileFinding, ParseError};
 use quality_adapter::place_finding;
 
 use crate::{
-    assemble, run_convergence, stage_subset, validate_request, FileInput, QualityResult,
-    RunnerError, StageSpec, MAX_COMPLETED_ROUNDS,
+    assemble, max_rounds_for_capability, run_convergence, stage_subset, validate_request,
+    FileInput, QualityResult, RunnerError, StageSpec,
 };
 use quality_result::proto::Diagnostic;
+#[allow(unused_imports)]
+use quality_result::MAX_COMPLETED_ROUNDS;
 
 /// Real tool IDs for the initial adapters plus the rustc
 /// typecheck adapter, the Python adapters (Ruff, Ty, pydoclint,
@@ -1724,22 +1726,32 @@ pub fn run_real_pipeline_with_resolve(
             &resolve_texts,
         )?);
     }
+    // One spawn per tool/stage holds: each diagnose stages its exact
+    // subset once and spawns once (delegated tools spawn zero), and the
+    // terminal pass is skipped when convergence left bytes untouched, so
+    // clean and check-only pipelines cost one diagnose per stage, not two.
+    // Audit/typecheck capabilities converge in one round via the shared
+    // per-capability cap.
     let (terminal, completed_rounds, convergence) = run_convergence(
         &initial,
         stages,
-        MAX_COMPLETED_ROUNDS,
+        max_rounds_for_capability(capability),
         |tool, path, text| backend.apply_fix(tool, path, text, capability),
     )?;
     let mut terminal_diagnostics = Vec::new();
-    for stage in stages {
-        let subset = stage_subset(stage, &terminal)?;
-        terminal_diagnostics.extend(backend.diagnose_with_resolve(
-            &stage.tool_id,
-            capability,
-            &subset,
-            &sibling_texts,
-            &resolve_texts,
-        )?);
+    if terminal == initial {
+        terminal_diagnostics = initial_diagnostics.clone();
+    } else {
+        for stage in stages {
+            let subset = stage_subset(stage, &terminal)?;
+            terminal_diagnostics.extend(backend.diagnose_with_resolve(
+                &stage.tool_id,
+                capability,
+                &subset,
+                &sibling_texts,
+                &resolve_texts,
+            )?);
+        }
     }
     assemble(
         producer,

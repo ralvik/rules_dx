@@ -257,7 +257,10 @@ pub(super) fn rustfmt_pipeline_fixes_dirty_files_to_stable() {
     assert!(result.terminal_diagnostics.is_empty());
     assert!(result.initial_diagnostics.iter().all(|d| d.fixable));
     assert_eq!(result.replacements.len(), 1);
-    assert_eq!(result.replacements[0].edits[0].replacement, b"x\ny");
+    // Byte-minimal: common "x" prefix stays out, so 1..6 rewrites to "\ny".
+    assert_eq!(result.replacements[0].edits[0].start_byte, 1);
+    assert_eq!(result.replacements[0].edits[0].end_byte, 6);
+    assert_eq!(result.replacements[0].edits[0].replacement, b"\ny");
     assert!(encode_validated(&result).is_ok());
 }
 

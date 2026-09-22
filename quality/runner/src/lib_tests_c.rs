@@ -104,12 +104,13 @@ fn newline_variants_yield_distinct_manifests() {
             digest(body.as_bytes())
         );
         assert_eq!(result.replacements[0].edits.len(), 1);
-        assert_eq!(result.replacements[0].edits[0].start_byte, 0);
-        assert_eq!(result.replacements[0].edits[0].end_byte, body.len() as u64);
-        assert_eq!(
-            result.replacements[0].edits[0].replacement,
-            terminals[index].as_bytes()
-        );
+        // Byte-minimal edit splices to the terminal body.
+        let edit = &result.replacements[0].edits[0];
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&body.as_bytes()[..edit.start_byte as usize]);
+        spliced.extend_from_slice(&edit.replacement);
+        spliced.extend_from_slice(&body.as_bytes()[edit.end_byte as usize..]);
+        assert_eq!(&spliced, terminals[index].as_bytes());
         assert!(validate(&result).is_ok());
         manifests.push(encode_validated(&result).unwrap());
     }
@@ -125,7 +126,7 @@ fn newline_variants_yield_distinct_manifests() {
 fn quality_originated_file_creates_emit_no_replacements() {
     // Apply-safety battery: `quality-testing.md` requires
     // quality-originated file creates to be rejected. The runner emits
-    // only whole-file candidates for paths in the original snapshot, so
+    // only minimal candidates for paths in the original snapshot, so
     // an extra terminal path must yield no replacement while the valid
     // stable sibling still emits exactly one bound to digest(original).
     let stages = vec![stage("lint-a", &["rust"], &["src/a.rs"])];
@@ -152,11 +153,8 @@ fn quality_originated_file_creates_emit_no_replacements() {
     );
     assert_eq!(result.replacements[0].edits.len(), 1);
     assert_eq!(result.replacements[0].edits[0].start_byte, 0);
-    assert_eq!(result.replacements[0].edits[0].end_byte, 4);
-    assert_eq!(
-        result.replacements[0].edits[0].replacement,
-        b"GOOD\n".to_vec()
-    );
+    assert_eq!(result.replacements[0].edits[0].end_byte, 2);
+    assert_eq!(result.replacements[0].edits[0].replacement, b"GOO".to_vec());
     assert!(validate(&result).is_ok());
 }
 
@@ -315,7 +313,7 @@ fn interruption_leaves_no_partially_written_file() {
     // Apply-safety battery: `quality-testing.md` requires
     // interruption to leave no partially written file and only complete
     // earlier path commits in deterministic path order. The runner emits
-    // one whole-file edit per stable changed file, so every prefix of
+    // one minimal edit per stable changed file, so every prefix of
     // the sorted replacements must leave each path fully original or
     // fully terminal, and the full prefix must equal the terminal map.
     let stages = vec![stage(
@@ -343,10 +341,16 @@ fn interruption_leaves_no_partially_written_file() {
     .unwrap();
     assert_eq!(result.replacements.len(), 3);
     for edits in &result.replacements {
-        let original = initial.get(&edits.path).expect("staged path");
         assert_eq!(edits.edits.len(), 1);
-        assert_eq!(edits.edits[0].start_byte, 0);
-        assert_eq!(edits.edits[0].end_byte, original.len() as u64);
+        // Minimal edit splices to the terminal body.
+        let original = initial.get(&edits.path).expect("staged path");
+        let terminal_body = terminal.get(&edits.path).expect("staged path");
+        let edit = &edits.edits[0];
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original.as_bytes()[..edit.start_byte as usize]);
+        spliced.extend_from_slice(&edit.replacement);
+        spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
+        assert_eq!(&spliced, terminal_body.as_bytes());
     }
     let paths: Vec<&str> = result
         .replacements
@@ -357,10 +361,13 @@ fn interruption_leaves_no_partially_written_file() {
     for prefix_len in 0..=result.replacements.len() {
         let mut state = initial.clone();
         for edits in result.replacements.iter().take(prefix_len) {
-            state.insert(
-                edits.path.clone(),
-                String::from_utf8(edits.edits[0].replacement.clone()).unwrap(),
-            );
+            let original = initial.get(&edits.path).expect("staged path");
+            let edit = &edits.edits[0];
+            let mut spliced = Vec::new();
+            spliced.extend_from_slice(&original.as_bytes()[..edit.start_byte as usize]);
+            spliced.extend_from_slice(&edit.replacement);
+            spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
+            state.insert(edits.path.clone(), String::from_utf8(spliced).unwrap());
         }
         for (path, body) in &state {
             let original = initial.get(path).expect("staged path");
@@ -370,10 +377,13 @@ fn interruption_leaves_no_partially_written_file() {
     }
     let mut full = initial.clone();
     for edits in &result.replacements {
-        full.insert(
-            edits.path.clone(),
-            String::from_utf8(edits.edits[0].replacement.clone()).unwrap(),
-        );
+        let original = initial.get(&edits.path).expect("staged path");
+        let edit = &edits.edits[0];
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original.as_bytes()[..edit.start_byte as usize]);
+        spliced.extend_from_slice(&edit.replacement);
+        spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
+        full.insert(edits.path.clone(), String::from_utf8(spliced).unwrap());
     }
     assert_eq!(full, terminal);
     assert!(validate(&result).is_ok());
@@ -557,4 +567,66 @@ fn each_stage_runs_once_per_round_without_hidden_passes() {
             "each staged (tool, path) runs once per round"
         );
     }
+}
+
+#[test]
+fn minimal_edits_trim_common_prefix_and_suffix() {
+    // Scale battery: replacements are byte-minimal single-hunk edits, not
+    // whole-file rewrites, so common prefix/suffix bytes stay out of the
+    // span while splicing still reproduces the terminal body.
+    let cases = vec![
+        ("BAD\n", "GOOD\n", 0, 2, "GOO"),
+        ("BAD BAD\n", "GOOD GOOD\n", 0, 6, "GOOD GOO"),
+        ("x  \n", "x\n", 1, 3, ""),
+        ("", "GOOD\n", 0, 0, "GOOD\n"),
+        ("BAD\n", "", 0, 4, ""),
+    ];
+    for (original, terminal_body, start, end, replacement) in cases {
+        let edit = minimal_edit(original, terminal_body);
+        assert_eq!(edit.start_byte, start, "{original:?}");
+        assert_eq!(edit.end_byte, end, "{original:?}");
+        assert_eq!(edit.replacement, replacement.as_bytes(), "{original:?}");
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original.as_bytes()[..edit.start_byte as usize]);
+        spliced.extend_from_slice(&edit.replacement);
+        spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
+        assert_eq!(&spliced, terminal_body.as_bytes(), "{original:?}");
+    }
+    // Multibyte boundaries never split: the changed middle stays on char
+    // boundaries while the shared multibyte prefix/suffix trims.
+    let edit = minimal_edit("héllo BAD 🌍\n", "héllo GOOD 🌍\n");
+    assert!("héllo BAD 🌍\n".is_char_boundary(edit.start_byte as usize));
+    assert!("héllo BAD 🌍\n".is_char_boundary(edit.end_byte as usize));
+    let mut spliced = Vec::new();
+    spliced.extend_from_slice(&"héllo BAD 🌍\n".as_bytes()[..edit.start_byte as usize]);
+    spliced.extend_from_slice(&edit.replacement);
+    spliced.extend_from_slice(&"héllo BAD 🌍\n".as_bytes()[edit.end_byte as usize..]);
+    assert_eq!(&spliced, "héllo GOOD 🌍\n".as_bytes());
+}
+
+#[test]
+fn per_capability_round_caps_short_circuit_check_only() {
+    // Scale battery: audit and typecheck capabilities are check-only, so
+    // they converge in exactly one round, while lint and format keep the
+    // full ten-round oscillation budget.
+    assert_eq!(max_rounds_for_capability("audit"), 1);
+    assert_eq!(max_rounds_for_capability("typecheck"), 1);
+    assert_eq!(max_rounds_for_capability("lint"), MAX_COMPLETED_ROUNDS);
+    assert_eq!(max_rounds_for_capability("format"), MAX_COMPLETED_ROUNDS);
+}
+
+#[test]
+fn unchanged_terminal_reuses_initial_diagnostics() {
+    // Scale battery: the terminal diagnose pass is skipped when
+    // convergence leaves bytes untouched, so clean and diagnostic-only
+    // pipelines cost one diagnose per stage, not two.
+    let stages = vec![stage("lint-b", &["rust"], &["src/lib.rs"])];
+    let files = vec![file("src/lib.rs", "ok FAIL end\n")];
+    let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
+    assert_eq!(result.convergence, Convergence::Stable as i32);
+    assert_eq!(result.completed_rounds, 1);
+    assert_eq!(result.initial_diagnostics, result.terminal_diagnostics);
+    assert_eq!(result.initial_diagnostics.len(), 1);
+    assert!(result.replacements.is_empty());
+    assert!(encode_validated(&result).is_ok());
 }

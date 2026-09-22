@@ -23,8 +23,8 @@ fn file(path: &str, body: &str) -> FileInput {
 fn assemble_covers_insertion_deletion_and_multibyte_boundaries() {
     // Apply-safety battery: `quality-testing.md` requires
     // insertion, deletion, multibyte source boundaries, and a
-    // formatter's full-file edit. The runner emits one whole-file edit
-    // per stable changed file, so each case must bind
+    // formatter's full-file edit. The runner emits one byte-minimal
+    // single-hunk edit per stable changed file, so each case must bind
     // digest(original), splice byte-for-byte to its terminal body on
     // char boundaries, and pass `validate` (single-edit shape is
     // trivially ordered and non-overlapping).
@@ -62,26 +62,21 @@ fn assemble_covers_insertion_deletion_and_multibyte_boundaries() {
             "{label}"
         );
         assert_eq!(edits.edits.len(), 1, "{label}");
-        assert_eq!(edits.edits[0].start_byte, 0, "{label}");
-        assert_eq!(edits.edits[0].end_byte, original.len() as u64, "{label}");
-        assert_eq!(
-            &edits.edits[0].replacement,
-            terminal_body.as_bytes(),
+        // Byte-minimal boundaries stay on char boundaries, so slicing
+        // never splits a multibyte sequence.
+        let edit = &edits.edits[0];
+        assert!(
+            original.is_char_boundary(edit.start_byte as usize),
             "{label}"
         );
-        // Whole-file boundaries are always char boundaries, so slicing
-        // never splits a multibyte sequence.
-        assert!(original.is_char_boundary(0), "{label}");
-        assert!(original.is_char_boundary(original.len()), "{label}");
-        let spliced = format!(
-            "{}{}",
-            &original[..edits.edits[0].start_byte as usize],
-            String::from_utf8_lossy(&edits.edits[0].replacement)
-        );
-        // Splice from the original prefix plus the replacement must
-        // equal the terminal body byte-for-byte (suffix is empty for
-        // whole-file edits).
-        assert_eq!(spliced.as_bytes(), terminal_body.as_bytes(), "{label}");
+        assert!(original.is_char_boundary(edit.end_byte as usize), "{label}");
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original.as_bytes()[..edit.start_byte as usize]);
+        spliced.extend_from_slice(&edit.replacement);
+        spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
+        // Prefix plus replacement plus suffix must equal the terminal
+        // body byte-for-byte.
+        assert_eq!(&spliced, terminal_body.as_bytes(), "{label}");
         assert!(quality_result::validate(&result).is_ok(), "{label}");
     }
 }
@@ -123,11 +118,10 @@ fn source_declaration_reorder_yields_identical_manifests() {
 fn stale_source_digest_mismatch_must_reject_write() {
     // Apply-safety battery: `quality-testing.md` requires
     // validating source digests before writing and rejecting stale
-    // outputs. Whole-file edits mask staleness on splice alone (empty
-    // prefix plus replacement always equals the terminal body), so the
-    // digest binding is the only guard: a concurrent current body with
-    // a different digest must reject even though naive application
-    // would still produce the terminal bytes.
+    // outputs. Minimal edits splice to the terminal body via prefix plus
+    // replacement plus suffix, so the digest binding is the only guard:
+    // a concurrent current body with a different digest must reject even
+    // though spliced application would still produce the terminal bytes.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let mut initial = BTreeMap::new();
     initial.insert("src/lib.rs".to_owned(), "BAD\n".to_owned());
@@ -148,8 +142,12 @@ fn stale_source_digest_mismatch_must_reject_write() {
     assert_eq!(edits.original_digest, digest("BAD\n".as_bytes()));
     let stale = "OTHER\n";
     assert_ne!(digest(stale.as_bytes()).to_vec(), edits.original_digest);
-    let naive = String::from_utf8_lossy(&edits.edits[0].replacement).into_owned();
-    assert_eq!(naive.as_bytes(), "GOOD\n".as_bytes());
+    let edit = &edits.edits[0];
+    let mut spliced = Vec::new();
+    spliced.extend_from_slice(&b"BAD\n"[..edit.start_byte as usize]);
+    spliced.extend_from_slice(&edit.replacement);
+    spliced.extend_from_slice(&b"BAD\n"[edit.end_byte as usize..]);
+    assert_eq!(&spliced, b"GOOD\n");
     assert!(quality_result::validate(&result).is_ok());
 }
 
@@ -208,14 +206,12 @@ fn identical_final_bytes_across_producer_identities() {
     assert_eq!(first.terminal_diagnostics, second.terminal_diagnostics);
     assert_eq!(first.replacements, second.replacements);
     assert_eq!(first.replacements.len(), 1);
-    assert_eq!(
-        first.replacements[0].edits[0].replacement,
-        b"GOOD\n".to_vec()
-    );
-    assert_eq!(
-        second.replacements[0].edits[0].replacement,
-        b"GOOD\n".to_vec()
-    );
+    // Byte-minimal: "BAD\n" to "GOOD\n" keeps the "D\n" suffix, so the
+    // replacement is "GOO" at 0..2.
+    assert_eq!(first.replacements[0].edits[0].start_byte, 0);
+    assert_eq!(first.replacements[0].edits[0].end_byte, 2);
+    assert_eq!(first.replacements[0].edits[0].replacement, b"GOO".to_vec());
+    assert_eq!(second.replacements[0].edits[0].replacement, b"GOO".to_vec());
     assert!(validate(&first).is_ok());
     assert!(validate(&second).is_ok());
 }
@@ -224,7 +220,7 @@ fn identical_final_bytes_across_producer_identities() {
 fn check_mode_must_fail_on_replacements_without_diagnostics() {
     // Apply-safety battery: `quality-testing.md` requires
     // check mode to fail on any proposed change independently of
-    // diagnostic severity. The formatter produces a whole-file
+    // diagnostic severity. The formatter produces a minimal
     // replacement with zero diagnostics, so a severity-only gate
     // would pass while a replacement-presence gate fails.
     let stages = vec![stage("fmt-a", &["python"], &["src/main.py"])];
@@ -234,7 +230,10 @@ fn check_mode_must_fail_on_replacements_without_diagnostics() {
     assert!(result.initial_diagnostics.is_empty());
     assert!(result.terminal_diagnostics.is_empty());
     assert_eq!(result.replacements.len(), 1);
-    assert_eq!(result.replacements[0].edits[0].replacement, b"x\n".to_vec());
+    // Byte-minimal: "x  \n" to "x\n" deletes the two spaces at 1..3.
+    assert_eq!(result.replacements[0].edits[0].start_byte, 1);
+    assert_eq!(result.replacements[0].edits[0].end_byte, 3);
+    assert!(result.replacements[0].edits[0].replacement.is_empty());
     // Replacement presence alone determines check failure.
     assert!(!result.replacements.is_empty());
     assert!(validate(&result).is_ok());
@@ -352,7 +351,7 @@ fn mixed_changed_and_unchanged_files_apply_independently() {
     // each selected file to apply atomically and independently after
     // complete result-envelope validation, with mixed applied and
     // not-applied outcomes together. One stable changed file must emit
-    // exactly one whole-file candidate while an unchanged sibling emits
+    // exactly one minimal candidate while an unchanged sibling emits
     // none, and the unchanged path must not block the valid candidate.
     let stages = vec![stage(
         "lint-a",
@@ -371,8 +370,8 @@ fn mixed_changed_and_unchanged_files_apply_independently() {
     assert_eq!(edits.original_digest, digest("BAD\n".as_bytes()));
     assert_eq!(edits.edits.len(), 1);
     assert_eq!(edits.edits[0].start_byte, 0);
-    assert_eq!(edits.edits[0].end_byte, "BAD\n".len() as u64);
-    assert_eq!(&edits.edits[0].replacement, b"GOOD\n");
+    assert_eq!(edits.edits[0].end_byte, 2);
+    assert_eq!(&edits.edits[0].replacement, b"GOO");
     assert!(validate(&result).is_ok());
 }
 
@@ -413,7 +412,7 @@ fn adjacent_edits_coalesce_to_single_whole_file_candidate() {
     // Apply-safety battery: `quality-testing.md` requires
     // coverage of adjacent edits alongside insertion, deletion, and
     // multibyte boundaries. Two adjacent BAD needles (0..3, 3..6) in
-    // one file must converge to a single whole-file candidate bound
+    // one file must converge to a single minimal candidate bound
     // to digest(original) that splices byte-for-byte to the terminal.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let files = vec![file("src/lib.rs", "BADBAD\n")];
@@ -430,10 +429,12 @@ fn adjacent_edits_coalesce_to_single_whole_file_candidate() {
     assert_eq!(edits.path, "src/lib.rs");
     assert_eq!(edits.original_digest, digest("BADBAD\n".as_bytes()));
     assert_eq!(edits.edits.len(), 1);
+    // Byte-minimal: common "D\n" suffix stays out, so 0..5 rewrites to
+    // "GOODGOO".
     assert_eq!(edits.edits[0].start_byte, 0);
-    assert_eq!(edits.edits[0].end_byte, "BADBAD\n".len() as u64);
-    assert_eq!(&edits.edits[0].replacement, b"GOODGOOD\n");
-    // Whole-file splice reproduces the terminal bytes exactly.
+    assert_eq!(edits.edits[0].end_byte, 5);
+    assert_eq!(&edits.edits[0].replacement, b"GOODGOO");
+    // Minimal splice reproduces the terminal bytes exactly.
     let original = "BADBAD\n".as_bytes();
     let replacement = &edits.edits[0].replacement;
     let mut spliced = Vec::new();
@@ -537,7 +538,7 @@ fn shared_source_across_owners_converges_without_duplication() {
     // relevant stage seeing the edit and no unrelated duplication.
     // `src/a.rs` is owned by both stages while `src/b.rs` has a
     // single owner; the shared file must emit exactly one
-    // whole-file candidate bound to digest(original) that splices
+    // minimal candidate bound to digest(original) that splices
     // byte-for-byte to the terminal.
     let files = vec![
         file("src/a.rs", "BAD shared\n"),
@@ -562,9 +563,11 @@ fn shared_source_across_owners_converges_without_duplication() {
         .expect("shared file candidate");
     assert_eq!(shared.original_digest, digest("BAD shared\n".as_bytes()));
     assert_eq!(shared.edits.len(), 1);
+    // Byte-minimal: common " shared\n" suffix stays out, so 0..2 rewrites
+    // to "GOO".
     assert_eq!(shared.edits[0].start_byte, 0);
-    assert_eq!(shared.edits[0].end_byte, "BAD shared\n".len() as u64);
-    assert_eq!(&shared.edits[0].replacement, b"GOOD shared\n");
+    assert_eq!(shared.edits[0].end_byte, 2);
+    assert_eq!(&shared.edits[0].replacement, b"GOO");
     let original = "BAD shared\n".as_bytes();
     let mut spliced = Vec::new();
     spliced.extend_from_slice(&original[..shared.edits[0].start_byte as usize]);
@@ -641,9 +644,11 @@ fn chained_mutating_stages_see_virtual_snapshot() {
     assert_eq!(edits.path, "src/lib.rs");
     assert_eq!(edits.original_digest, digest("BAD   \n".as_bytes()));
     assert_eq!(edits.edits.len(), 1);
+    // Byte-minimal: "BAD   \n" to "GOOD\n" keeps the trailing "\n", so
+    // 0..6 rewrites to "GOOD".
     assert_eq!(edits.edits[0].start_byte, 0);
-    assert_eq!(edits.edits[0].end_byte, "BAD   \n".len() as u64);
-    assert_eq!(&edits.edits[0].replacement, b"GOOD\n");
+    assert_eq!(edits.edits[0].end_byte, 6);
+    assert_eq!(&edits.edits[0].replacement, b"GOOD");
     let original = "BAD   \n".as_bytes();
     let mut spliced = Vec::new();
     spliced.extend_from_slice(&original[..edits.edits[0].start_byte as usize]);
@@ -668,7 +673,7 @@ fn per_stage_malformed_edits_rejected_by_validate_gate() {
     // each stage's byte-range edits to validate against its current
     // virtual snapshot before application, rejecting malformed,
     // overlapping, digest-mismatched, unsorted, or invalid output.
-    // The runner emits only single whole-file candidates, so any
+    // The runner emits only single minimal candidates, so any
     // per-stage shape violating ordering, no-op, or inverted rules
     // must fail `validate`, proving the gate blocks it from leaving
     // the action.
@@ -680,8 +685,8 @@ fn per_stage_malformed_edits_rejected_by_validate_gate() {
     let edits = &valid.replacements[0];
     assert_eq!(edits.edits.len(), 1);
     assert_eq!(edits.edits[0].start_byte, 0);
-    assert_eq!(edits.edits[0].end_byte, 4);
-    assert_eq!(&edits.edits[0].replacement, b"GOOD\n");
+    assert_eq!(edits.edits[0].end_byte, 2);
+    assert_eq!(&edits.edits[0].replacement, b"GOO");
     let mk = |edits: Vec<Edit>| {
         let mut mutated = valid.clone();
         mutated.replacements[0].edits = edits;

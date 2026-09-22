@@ -30,13 +30,19 @@ pub mod real;
 /// Synthetic tool IDs executed by this runner (WP2 adapters).
 pub const SYNTHETIC_TOOLS: &[&str] = &["fmt-a", "lint-a", "lint-b"];
 
-/// Fixed per-capability round cap: ten complete cross-tool rounds for every
-/// capability (lint, typecheck, format, audit), per ADR 0003 fixed policy.
-/// The cap is per-result (per target/capability pipeline), not workspace or
-/// target configuration, and contributes to the action key.
-/// See: `docs/decisions/0003-action-granularity.md`.
-pub fn max_rounds_for_capability(_capability: &str) -> u32 {
-    MAX_COMPLETED_ROUNDS
+/// Per-capability round cap per result (per target/capability pipeline),
+/// not workspace or target configuration, contributing to the action key.
+/// Audit and typecheck backends are check-only by construction (no fix
+/// command rewrites), so they converge in a single round; lint and format
+/// keep the full ten-round oscillation budget per the ADR 0003 fixed policy.
+/// See: `docs/decisions/0003-action-granularity.md`,
+/// `docs/quality/tool-integrations.md#initial-adapter-qualification`
+pub fn max_rounds_for_capability(capability: &str) -> u32 {
+    if capability == "audit" || capability == "typecheck" {
+        1
+    } else {
+        MAX_COMPLETED_ROUNDS
+    }
 }
 
 /// One ordered pipeline stage: tool identity plus its fixed source subset.
@@ -220,6 +226,43 @@ fn snapshot(files: &BTreeMap<String, String>) -> Vec<FileSnapshot> {
         .collect()
 }
 
+/// Derives one byte-minimal single-hunk edit from original to terminal
+/// bytes. Trims the longest common byte prefix and suffix snapped back
+/// to UTF-8 char boundaries, so whole-file replacements shrink to the
+/// changed middle (insertions, deletions, and single-span rewrites).
+/// Multi-hunk changes stay one spanning edit covering the outer
+/// divergence; callers needing per-hunk minimality split further.
+/// See: `docs/quality/quality-result-protocol.md`
+fn minimal_edit(original: &str, terminal: &str) -> Edit {
+    let orig = original.as_bytes();
+    let term = terminal.as_bytes();
+    let mut prefix = 0;
+    while prefix < orig.len() && prefix < term.len() && orig[prefix] == term[prefix] {
+        prefix += 1;
+    }
+    while prefix > 0 && !original.is_char_boundary(prefix) {
+        prefix -= 1;
+    }
+    let mut suffix = 0;
+    while suffix < orig.len() - prefix
+        && suffix < term.len() - prefix
+        && orig[orig.len() - 1 - suffix] == term[term.len() - 1 - suffix]
+    {
+        suffix += 1;
+    }
+    while suffix > 0
+        && (!original.is_char_boundary(orig.len() - suffix)
+            || !terminal.is_char_boundary(term.len() - suffix))
+    {
+        suffix -= 1;
+    }
+    Edit {
+        start_byte: prefix as u64,
+        end_byte: (orig.len() - suffix) as u64,
+        replacement: term[prefix..term.len() - suffix].to_vec(),
+    }
+}
+
 fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
     // Full sort key (path,start,end,severity,tool,rule,message) keeps the
     // order total across concurrent adapters sharing one range.
@@ -303,13 +346,14 @@ fn validate_request(
 }
 
 /// Assembles the normalized result from a converged run: sorted
-/// diagnostics, whole-file replacements for stable changed files, and
-/// fixability for initial findings that the terminal state resolves.
-/// Shared by synthetic and real pipelines so the semantics cannot drift.
-/// Diagnostics and outcome travel as pairs so the shared helper stays
-/// under the complexity budget without splitting its single purpose.
-/// Stage paths absent from either map fail with [`RunnerError::MissingFile`]
-/// instead of panicking, so validation drift surfaces as an action error.
+/// diagnostics, byte-minimal single-hunk replacements for stable changed
+/// files, and fixability for initial findings that the terminal state
+/// resolves. Shared by synthetic and real pipelines so the semantics
+/// cannot drift. Diagnostics and outcome travel as pairs so the shared
+/// helper stays under the complexity budget without splitting its single
+/// purpose. Stage paths absent from either map fail with
+/// [`RunnerError::MissingFile`] instead of panicking, so validation drift
+/// surfaces as an action error.
 fn assemble(
     producer: &str,
     capability_value: i32,
@@ -333,11 +377,7 @@ fn assemble(
             replacements.push(FileEdits {
                 path: path.clone(),
                 original_digest: digest(original.as_bytes()).to_vec(),
-                edits: vec![Edit {
-                    start_byte: 0,
-                    end_byte: original.len() as u64,
-                    replacement: terminal_body.as_bytes().to_vec(),
-                }],
+                edits: vec![minimal_edit(original, terminal_body)],
             });
         }
     }
@@ -418,6 +458,10 @@ pub fn run_pipeline(
     // The synthetic apply closure is infallible, but convergence still
     // reports `MissingFile` instead of panicking if stage/validation drift
     // ever desynchronizes the maps, so propagate rather than expect.
+    // Check-only capabilities (audit/typecheck) converge in one round;
+    // one spawn-equivalent per tool/stage holds because diagnostics walk
+    // the staged subset once per pass, and the terminal pass is skipped
+    // entirely when convergence left the bytes untouched.
     let (terminal, completed_rounds, convergence) = run_convergence(
         &initial,
         stages,
@@ -425,12 +469,16 @@ pub fn run_pipeline(
         |tool, _path, text| Ok(apply_synthetic(tool, text)),
     )?;
     let mut terminal_diagnostics = Vec::new();
-    for stage in stages {
-        for path in &stage.source_paths {
-            let body = terminal
-                .get(path)
-                .ok_or(RunnerError::MissingFile { path: path.clone() })?;
-            terminal_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
+    if terminal == initial {
+        terminal_diagnostics = initial_diagnostics.clone();
+    } else {
+        for stage in stages {
+            for path in &stage.source_paths {
+                let body = terminal
+                    .get(path)
+                    .ok_or(RunnerError::MissingFile { path: path.clone() })?;
+                terminal_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
+            }
         }
     }
     assemble(

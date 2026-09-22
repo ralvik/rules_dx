@@ -44,9 +44,11 @@ fn stable_fix_is_valid_and_deterministic() {
     let edits = &result.replacements[0];
     assert_eq!(edits.path, "src/lib.rs");
     assert_eq!(edits.edits.len(), 1);
+    // Byte-minimal single-hunk edit: common "D\n" suffix stays out of the
+    // span, so the replacement is "GOOD GOO" applied at 0..6.
     assert_eq!(edits.edits[0].start_byte, 0);
-    assert_eq!(edits.edits[0].end_byte, 8);
-    assert_eq!(edits.edits[0].replacement, b"GOOD GOOD\n");
+    assert_eq!(edits.edits[0].end_byte, 6);
+    assert_eq!(edits.edits[0].replacement, b"GOOD GOO");
     assert!(validate(&result).is_ok());
     let first = encode_validated(&result).unwrap();
     let rerun = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
@@ -80,7 +82,11 @@ fn format_trims_trailing_whitespace_idempotently() {
     assert_eq!(result.completed_rounds, 2);
     assert!(result.initial_diagnostics.is_empty());
     assert_eq!(result.replacements.len(), 1);
-    assert_eq!(result.replacements[0].edits[0].replacement, b"x\ny\nz\n");
+    // Byte-minimal: common "x" prefix and "\nz\n" suffix stay out; the
+    // middle 1..6 rewrites to "\ny".
+    assert_eq!(result.replacements[0].edits[0].start_byte, 1);
+    assert_eq!(result.replacements[0].edits[0].end_byte, 6);
+    assert_eq!(result.replacements[0].edits[0].replacement, b"\ny");
     assert!(encode_validated(&result).is_ok());
 }
 
@@ -92,7 +98,10 @@ fn format_trims_final_line_without_trailing_newline() {
     assert_eq!(result.convergence, Convergence::Stable as i32);
     assert_eq!(result.completed_rounds, 2);
     assert_eq!(result.replacements.len(), 1);
-    assert_eq!(result.replacements[0].edits[0].replacement, b"x\ny");
+    // Byte-minimal: common "x" prefix stays out; 1..7 rewrites to "\ny".
+    assert_eq!(result.replacements[0].edits[0].start_byte, 1);
+    assert_eq!(result.replacements[0].edits[0].end_byte, 7);
+    assert_eq!(result.replacements[0].edits[0].replacement, b"\ny");
     assert!(encode_validated(&result).is_ok());
 }
 
@@ -535,15 +544,17 @@ fn assemble_emits_replacements_only_when_stable() {
     assert_eq!(edits.path, "src/lib.rs");
     assert_eq!(edits.original_digest, digest("BAD\n".as_bytes()));
     assert_eq!(edits.edits.len(), 1);
+    // Byte-minimal: common "D\n" suffix stays out, so 0..2 rewrites to "GOO".
     assert_eq!(edits.edits[0].start_byte, 0);
-    assert_eq!(edits.edits[0].end_byte, 4);
-    // Whole-file edit applies cleanly: original spliced by the edit
+    assert_eq!(edits.edits[0].end_byte, 2);
+    // Minimal edit applies cleanly: prefix plus replacement plus suffix
     // yields exactly the terminal body (atomic per-file apply shape).
     let original = "BAD\n";
     let applied = format!(
-        "{}{}",
+        "{}{}{}",
         &original[..edits.edits[0].start_byte as usize],
-        String::from_utf8_lossy(&edits.edits[0].replacement)
+        String::from_utf8_lossy(&edits.edits[0].replacement),
+        &original[edits.edits[0].end_byte as usize..]
     );
     assert_eq!(applied, "GOOD\n");
 
@@ -729,9 +740,13 @@ fn assemble_replacements_follow_sorted_path_order_for_atomic_apply() {
         let terminal_body = terminal.get(&edits.path).expect("staged path");
         assert_eq!(edits.original_digest, digest(original.as_bytes()));
         assert_eq!(edits.edits.len(), 1);
-        assert_eq!(edits.edits[0].start_byte, 0);
-        assert_eq!(edits.edits[0].end_byte, original.len() as u64);
-        assert_eq!(&edits.edits[0].replacement, terminal_body.as_bytes());
+        // Byte-minimal single-hunk edit splices to the terminal body.
+        let edit = &edits.edits[0];
+        let mut spliced = Vec::new();
+        spliced.extend_from_slice(&original.as_bytes()[..edit.start_byte as usize]);
+        spliced.extend_from_slice(&edit.replacement);
+        spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
+        assert_eq!(&spliced, terminal_body.as_bytes());
     }
     // Interruption prefix property: any prefix of the ordered
     // replacements is exactly the set of complete earlier-path commits.

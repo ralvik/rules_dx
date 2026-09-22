@@ -109,6 +109,25 @@ def _malformed_deferrals():
             bad.append(class_id)
     return bad
 
+def deferred_pipeline_error(target_classes, capability):
+    """Returns a fail-closed error for deferred classes with sources.
+
+    When a target carries direct sources of a deferred class (no adapter
+    claims it) and the pipeline resolves empty, returning no action would
+    stay green and hide the gap. Callers fail with this message instead,
+    naming the owning decision plus frozen route per deferral, so `dx status`
+    surfaces the honest red via the failed action. Empty means no deferred
+    class present: genuinely no work, stay green.
+    """
+    deferred = sorted([c for c in target_classes if c in PARITY_DEFERRED])
+    if len(deferred) == 0:
+        return ""
+    details = []
+    for class_id in deferred:
+        entry = PARITY_DEFERRED[class_id]
+        details.append(class_id + " (" + entry[0] + ": " + entry[1] + ")")
+    return "deferred " + capability + " pipeline for " + ", ".join(details) + ": no adapter claims these classes; see docs/product/support-matrix.md"
+
 def parity_unit_tests(name):
     starlark_test(
         name = name,
@@ -153,6 +172,16 @@ def parity_unit_tests(name):
                 "deferred query matches the deferral registry",
                 deferred_classes(),
                 sorted(PARITY_DEFERRED.keys()),
+            ),
+            expect_equal(
+                "deferred pipeline error stays empty without deferred classes",
+                deferred_pipeline_error(["rust", "python"], "lint"),
+                "",
+            ),
+            expect_equal(
+                "deferred pipeline error names the deferral with owner and route",
+                deferred_pipeline_error(["rust", "vue"], "lint") != "",
+                True,
             ),
         ],
     )

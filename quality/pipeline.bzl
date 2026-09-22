@@ -89,6 +89,61 @@ def resolve_pipeline(target_classes, direct_sources, capability, family_selectio
             })
     return resolved
 
+def target_subject_classes(target_classes):
+    """Canonicalizes target classes for custom-rule subject assertions.
+
+    Sorts and dedupes the class list so custom rules testing
+    QualitySourcesInfo construction (ADR 0002/0011) can assert target
+    subjects deterministically regardless of declaration order.
+    """
+    seen = {}
+    for class_id in target_classes:
+        seen[class_id] = True
+    return sorted(seen.keys())
+
+def file_subject_paths(direct_sources):
+    """Unions direct-source paths for custom-rule file-subject assertions.
+
+    `direct_sources` maps class ID to path list (string test double for
+    the provider depsets). Output is sorted and deduplicated so custom
+    rules can assert file subjects without Bazel File objects.
+    """
+    seen = {}
+    for class_id in direct_sources.keys():
+        for path in direct_sources[class_id]:
+            seen[path] = True
+    return sorted(seen.keys())
+
+def depset_subject_paths(depset_lists):
+    """Unions depset test doubles for custom-rule depset assertions.
+
+    `depset_lists` is a list of path lists, each standing in for one
+    depset's `to_list()`. Output is sorted and deduplicated so custom
+    rules can assert depset unions without Bazel depset objects.
+    """
+    seen = {}
+    for paths in depset_lists:
+        for path in paths:
+            seen[path] = True
+    return sorted(seen.keys())
+
+def runfiles_subject_paths(checked_paths, runfiles_paths):
+    """Unions runfiles for custom-rule runfiles-subject assertions.
+
+    Checked sources win on shadow (mirroring the Markdown sibling rule),
+    so a runfiles path colliding with a checked path is dropped. Output
+    is sorted so custom rules can assert runfiles subjects
+    deterministically.
+    """
+    checked = {}
+    for path in checked_paths:
+        checked[path] = True
+    seen = dict(checked)
+    for path in runfiles_paths:
+        if path not in checked:
+            seen[path] = True
+    return sorted(seen.keys())
+
 def aspect_capability_blocked(rule_attr, capability):
     """Reports whether `no-<capability>` blocks the aspect (See: quality-sources.md#tags)."""
     return ("no-" + capability) in getattr(rule_attr, "tags", [])
