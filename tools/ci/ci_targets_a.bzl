@@ -409,4 +409,14 @@ def add_a():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
+    # Laziness analysis guard (zero-delta fetches/actions plus budget); see tools/ci/laziness_analysis_guard.sh.
+    sh_binary(
+        name = "laziness_analysis_guard",
+        srcs = ["laziness_analysis_guard.sh"],
+        data = ["//tools/sh:bootstrap",
+"//tools/sh:lib"],
+        # Bash-only harness is Linux-only (shell contract).
+        target_compatible_with = ["@platforms//os:linux"],
+    )
+
     # Registry-singularity harness; see tools/ci/registry_singularity.sh.

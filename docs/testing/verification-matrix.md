@@ -278,7 +278,12 @@ CI only, no Supported claim).
   `//tools/ci:corpus_audit`, `:code_ownership`, `:non_dogfed_paths`,
   `:non_dogfed_qualification` (e2e plus negatives pins plus fixture evidence, issue #508),
   examples READMEs and
-   laziness proofs, quality-cache aquery, action execution cache qualification
+   laziness proofs, laziness analysis guard
+  (`bazel run //tools/ci:laziness_analysis_guard` with
+  `tools/ci/tests/fixtures/laziness_analysis/pins.bzl` plus
+  `laziness_analysis.expected`; configured-target plus action zero-delta
+  plus fetch-subset plus analysis budgets across ten adopt-* consumers),
+  quality-cache aquery, action execution cache qualification
   (`bazel run //tools/ci:action_execution_cache_qualification` 16/16;
   no-remote-exec plus exact-key plus local aquery/execution-log, remote
   stays unverified), depcheck contract, audit/update
