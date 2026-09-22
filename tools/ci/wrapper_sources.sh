@@ -153,10 +153,10 @@ else
 fi
 
 # Wrapper precision is pinned by wrapper tests alongside the wrappers.
-if [[ -f python/rules/wrapper_tests.bzl && -f javascript/rules/wrapper_tests.bzl && -f typescript/rules/wrapper_tests.bzl && -f rust/rules/wrapper_tests.bzl ]]; then
+if [[ -f python/rules/wrapper_tests.bzl && -f javascript/rules/wrapper_tests.bzl && -f typescript/rules/wrapper_tests.bzl && -f rust/rules/wrapper_tests.bzl && -f go/rules/wrapper_tests.bzl && -f java/rules/wrapper_tests.bzl && -f kotlin/rules/wrapper_tests.bzl && -f scala/rules/wrapper_tests.bzl && -f csharp/rules/wrapper_tests.bzl && -f fsharp/rules/wrapper_tests.bzl && -f cc/rules/wrapper_tests.bzl ]]; then
   ok
 else
-  bad "wrapper tests missing alongside language wrappers (want python plus javascript plus typescript plus rust, issue #926)"
+  bad "wrapper tests missing alongside language wrappers (want python plus javascript plus typescript plus rust plus go plus java plus kotlin plus scala plus csharp plus fsharp plus cc, issue #926 plus issue #948)"
 fi
 
 # Per-wrapper contract negatives for all 15 (issue #926): bad srcs are

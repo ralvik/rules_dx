@@ -140,4 +140,9 @@ C/C++ sha256-integrity qualified seed-only under issue #484 via
 no `Supported` claim
 until platform plus consumer plus release evidence passes.
 
+Admitted wrapper conformance mirrors the Rust pattern above: each
+`<lang>/rules/wrapper_tests.bzl` pins provider, `QualitySourcesInfo`, and
+`aspect_hints` forwarding over its `<lang>/tests/fixtures/hello/` consumer;
+see the [support matrix](../product/support-matrix.md).
+
 Pinned by `bazel run //tools/ci:foundation_maps`.

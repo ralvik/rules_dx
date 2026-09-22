@@ -76,10 +76,17 @@ _kotlin_forward_test = dx_executable_forward_rule(
     optional_providers = [JavaInfo],
 )
 
-def _kotlin_with_werror(kwargs):
+def kotlin_kotlinc_opts_with_werror(kwargs):
+    """Returns kwargs defaulting kotlinc_opts to warnings_as_errors.
+
+    Caller-provided opts win; only a missing key gets the default.
+    See: docs/testing/generation.md."""
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("kotlinc_opts", "//kotlin/rules:warnings_as_errors")
     return upstream_kwargs
+
+def _kotlin_with_werror(kwargs):
+    return kotlin_kotlinc_opts_with_werror(kwargs)
 
 def _kotlin_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _kt_jvm_library, _kotlin_library_forward, srcs, visibility = visibility, **_kotlin_with_werror(kwargs))

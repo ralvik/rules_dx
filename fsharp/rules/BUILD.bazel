@@ -1,18 +1,24 @@
 """Experimental minimal F# wrappers (ADR 0019)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
+load(":wrapper_tests.bzl", "fsharp_wrapper_contract_tests")
 
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "defs.bzl",
+    "wrapper_tests.bzl",
 ])
+
+# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
+fsharp_wrapper_contract_tests(name = "wrapper_contract_tests")
 
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [
         "BUILD.bazel",
         "defs.bzl",
+        "wrapper_tests.bzl",
     ],
     tags = ["corpus"],
 )

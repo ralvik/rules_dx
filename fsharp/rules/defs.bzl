@@ -80,11 +80,18 @@ _fsharp_forward_test = dx_executable_forward_rule(
     runtime = "besteffort",
 )
 
-def _fsharp_with_tfm(kwargs):
+def fsharp_tfm_with_defaults(kwargs):
+    """Returns kwargs defaulting target_frameworks plus warnings-as-errors.
+
+    Caller-provided values win; only missing keys get defaults.
+    See: docs/testing/generation.md."""
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("target_frameworks", ["net10.0"])
     upstream_kwargs.setdefault("treat_warnings_as_errors", True)
     return upstream_kwargs
+
+def _fsharp_with_tfm(kwargs):
+    return fsharp_tfm_with_defaults(kwargs)
 
 def _fsharp_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _fsharp_library, _fsharp_library_forward, srcs, visibility = visibility, **_fsharp_with_tfm(kwargs))

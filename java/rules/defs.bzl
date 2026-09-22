@@ -73,7 +73,11 @@ _java_forward_test = dx_executable_forward_rule(
     optional_providers = [JavaInfo],
 )
 
-def _java_with_werror(kwargs):
+def java_javacopts_with_werror(kwargs):
+    """Returns kwargs with -Werror plus -Xlint:all enforced on javacopts.
+
+    Existing flags are kept; missing ones are appended.
+    See: docs/testing/generation.md."""
     upstream_kwargs = dict(kwargs)
     javacopts = list(upstream_kwargs.get("javacopts", []))
     for flag in ["-Werror", "-Xlint:all"]:
@@ -81,6 +85,9 @@ def _java_with_werror(kwargs):
             javacopts = javacopts + [flag]
     upstream_kwargs["javacopts"] = javacopts
     return upstream_kwargs
+
+def _java_with_werror(kwargs):
+    return java_javacopts_with_werror(kwargs)
 
 def _java_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _java_library, _java_library_forward, srcs, visibility = visibility, **_java_with_werror(kwargs))
