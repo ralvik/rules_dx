@@ -63,30 +63,30 @@ integrations="docs/quality/tool-integrations.md"
 # Parity deferrals name owner plus route for the remaining deferred set
 # (mirrors parity_tests.bzl unit gate so CI fails here too).
 # Scala/.NET classes delivered under #797 plus JVM classes under #796 plus
-# native classes under #798 plus Structured classes delivered under #799 plus
-# file-family classes delivered under #800.
+# native classes under #798 (including CUDA via clang-format) plus
+# Structured classes delivered under #799 plus file-family classes
+# delivered under #800.
 dx_guards_contains "$parity" "parity deferrals drifted (want class plus ADR 0019 owner plus shape)" \
   '"astro":' \
-  '"cuda":' \
   '"astro": ["ADR 0019"' \
-  '"cuda": ["ADR 0019"' \
   'PARITY_DEFERRED = {'
 dx_guards_contains "$adapters" "parity deferrals drifted (want adapter plus taxonomy shape)" \
   'REAL_ADAPTERS = {' \
   'REAL_CLASS_TO_FAMILY = {'
 
 # Every adapter-backed class has real subjects plus matrix evidence.
-# The thirty-eight backed classes: c, cpp, csharp, css, cue, fsharp, gherkin,
-# go, go_module, java, javascript, json, jsonnet, jsx, kotlin, less,
-# markdown, pkl, powershell, protobuf, python, python_stub, qml, ruby, rust,
-# scala, scss, shell, sql, starlark, terraform, text, toml, tsx, typescript,
-# xml, yaml, html_template. python_stub rides generated .pyi matrix cases;
-# scala/csharp/fsharp ride generated plus delegated matrix cases (issue #797);
-# java/kotlin ride real_source_target subjects plus JVM matrix cells (issue
-# #796); c/cpp/go ride generated plus delegated matrix cases (issue #798);
-# protobuf/qml ride generated plus delegated matrix cells (issue #799);
-# file-family rides generated plus delegated matrix cases (issue #800);
-# the rest ride real_source_target subjects.
+# The thirty-nine backed classes: c, cpp, cuda, csharp, css, cue, fsharp,
+# gherkin, go, go_module, java, javascript, json, jsonnet, jsx, kotlin,
+# less, markdown, pkl, powershell, protobuf, python, python_stub, qml,
+# ruby, rust, scala, scss, shell, sql, starlark, terraform, text, toml,
+# tsx, typescript, xml, yaml, html_template. python_stub rides generated
+# .pyi matrix cases; scala/csharp/fsharp ride generated plus delegated
+# matrix cases (issue #797); java/kotlin ride real_source_target subjects
+# plus JVM matrix cells (issue #796); c/cpp/cuda/go ride generated plus
+# delegated matrix cases (issue #798, cuda format via clang-format fake
+# double); protobuf/qml ride generated plus delegated matrix cells (issue
+# #799); file-family rides generated plus delegated matrix cases (issue
+# #800); the rest ride real_source_target subjects.
 dx_guards_contains "$subjects" "adapter-backed class evidence drifted (want subjects)" \
   'javascript' \
   'json' \

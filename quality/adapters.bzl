@@ -66,7 +66,7 @@ REAL_ADAPTERS = {
     },
     "buildifier": {"format": ["starlark"], "lint": ["starlark"]},
     "checkstyle": {"lint": ["java"]},
-    "clang_format": {"format": ["c", "cpp"]},
+    "clang_format": {"format": ["c", "cpp", "cuda"]},
     "clang_tidy": {"lint": ["c", "cpp"]},
     "clippy": {"lint": ["rust"]},
     "cppcheck": {"lint": ["c", "cpp"]},

@@ -585,10 +585,10 @@ Remaining reds stay owned gaps, not green claims:
   `quality_taxonomy.expected`; `quality_taxonomy_qualification` 25/25;
   47 classes each with exactly one owning family across 39 families with
   css/json/python/typescript/javascript/cc groupings, 10 curated families
-  with JVM java/kotlin delivered under #796 plus lazy defaults, 38 backed
+  with JVM java/kotlin delivered under #796 plus lazy defaults, 39 backed
   classes over 53 adapters with JVM plus Scala/.NET plus native plus
   structured plus file-family matrix plus parser plus checkstyle
-  native plus aspect plus policy execution, 9 deferred
+  native plus aspect plus policy execution, 8 deferred
   with ADR 0019 owner plus frozen route, curated audit empty with Bandit
   excluded plus secrets via Gitleaks, suffix rejected with cross-family
    union plus lazy plus no hidden preset; taxonomy doc only plus

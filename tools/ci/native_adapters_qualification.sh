@@ -3,7 +3,7 @@
 #
 # Qualifies the as-built native adapter delivery with fixture evidence
 # and owned gaps, without claiming Supported:
-# - delivered: seven adapters (`clang_format` format c plus cpp,
+# - delivered: seven adapters (`clang_format` format c plus cpp plus cuda,
 #   `clang_tidy` lint c plus cpp via delegated text diagnostics,
 #   `cppcheck` lint c plus cpp via delegated XML diagnostics, `gofumpt`
 #   format go, `staticcheck` lint go via delegated JSON diagnostics,
@@ -83,7 +83,7 @@ else
 fi
 
 # REAL_ADAPTERS claims all seven cohort tools with the right families.
-if grep -q -F -e '"clang_format": {"format": ["c", "cpp"]}' "$adapters" &&
+if grep -q -F -e '"clang_format": {"format": ["c", "cpp", "cuda"]}' "$adapters" &&
   grep -q -F -e '"clang_tidy": {"lint": ["c", "cpp"]}' "$adapters" &&
   grep -q -F -e '"cppcheck": {"lint": ["c", "cpp"]}' "$adapters" &&
   grep -q -F -e '"gofumpt": {"format": ["go"]}' "$adapters" &&
@@ -95,9 +95,10 @@ else
   bad "REAL_ADAPTERS lost a native cohort claim (want all seven under issue #798)"
 fi
 
-# Parity no longer defers the three delivered classes.
+# Parity no longer defers the four delivered classes (including CUDA).
 if ! grep -q -F -e '"c":' "$parity" &&
   ! grep -q -F -e '"cpp":' "$parity" &&
+  ! grep -q -F -e '"cuda":' "$parity" &&
   ! grep -q -F -e '"go":' "$parity"; then
   ok
 else

@@ -15,13 +15,13 @@
 #   clippy+rustfmt+rustc, starlark buildifier, toml taplo, typescript
 #   biome+tsc); audit stays empty with explicit disablement, Bandit
 #   excluded, secrets via Gitleaks separate.
-# - backed: 38 adapter-backed classes ride 53 real adapters with
+# - backed: 39 adapter-backed classes ride 53 real adapters with
 #   runner-matrix pass plus fail plus parser plus native-config plus
 #   aspect plus policy execution (JVM java/kotlin delivered under #796;
-#   Scala/C# plus F# under #797; C/C++ plus Go under #798; Protobuf/QML
-#   under #799; interpreted/file-family under #800).
-# - deferred: 9 classes with ADR 0019 owner plus frozen route, no
-#   double-claim, no undispositioned; framework regions plus cuda plus
+#   Scala/C# plus F# under #797; C/C++ plus CUDA plus Go under #798;
+#   Protobuf/QML under #799; interpreted/file-family under #800).
+# - deferred: 8 classes with ADR 0019 owner plus frozen route, no
+#   double-claim, no undispositioned; framework regions plus
 #   json5/jsonc stay owned under ADR 0019.
 # - promotion (issue #802): deferred delivery linked to #796 plus #797
 #   plus #798 plus #799 plus #800, digest policy with JVM digests pinned
@@ -109,7 +109,7 @@ else
 fi
 
 # Pins record the curated plus backed execution (10 curated with JVM
-# java/kotlin delivered under #796; 38 backed with 53 adapters covering
+# java/kotlin delivered under #796; 39 backed with 53 adapters covering
 # #796 plus #797 plus #798 plus #799 plus #800).
 if grep -q -F -e '10 curated families: java plus javascript plus json plus kotlin plus markdown plus python plus rust plus starlark plus toml plus typescript' "$pins" &&
   grep -q -F -e 'java family format google_java_format plus lint checkstyle plus pmd plus spotbugs' "$pins" &&
@@ -119,7 +119,7 @@ if grep -q -F -e '10 curated families: java plus javascript plus json plus kotli
   grep -q -F -e 'markdown family lint markdown_check plus vale' "$pins" &&
   grep -q -F -e 'python family lint pydoclint plus ruff plus format ruff plus typecheck ty' "$pins" &&
   grep -q -F -e 'rust family lint clippy plus format rustfmt plus typecheck rustc' "$pins" &&
-  grep -q -F -e '38 adapter-backed classes:' "$pins" &&
+  grep -q -F -e '39 adapter-backed classes:' "$pins" &&
   grep -q -F -e '53 real adapters:' "$pins"; then
   ok
 else
@@ -127,9 +127,9 @@ else
 fi
 
 # Pins record the deferred plus audit plus rejected plus owned gaps
-# (9 deferred; delivery owned under 796-800 plus ADR 0019 plus 307 with
+# (8 deferred; delivery owned under 796-800 plus ADR 0019 plus 307 with
 # promotion linked under #802).
-if grep -q -F -e '9 deferred classes with owner plus frozen route' "$pins" &&
+if grep -q -F -e '8 deferred classes with owner plus frozen route' "$pins" &&
   grep -q -F -e 'every deferral names ADR 0019 plus frozen delivery route' "$pins" &&
   grep -q -F -e 'no class is both adapter-backed and deferred' "$pins" &&
   grep -q -F -e 'curated audit stays empty with explicit disablement' "$pins" &&
@@ -208,12 +208,11 @@ fi
 
 # Parity deferrals stay owned with fail-closed gate shape.
 # Scala/.NET delivered under #797 plus JVM delivered under #796 plus native
-# delivered under #798 plus Structured delivered under #799 plus
-# interpreted/file-family delivered under #800, so the remaining deferred
-# are framework regions plus cuda plus json5/jsonc.
+# delivered under #798 (including CUDA via clang-format) plus Structured
+# delivered under #799 plus interpreted/file-family delivered under #800,
+# so the remaining deferred are framework regions plus json5/jsonc.
 if grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
   grep -q -F -e '"astro": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"cuda": ["ADR 0019"' "$parity" &&
   grep -q -F -e '"graphql": ["ADR 0019"' "$parity" &&
   grep -q -F -e 'no adapter class is unclassified' "$parity" &&
   grep -q -F -e 'no classified class lacks a disposition' "$parity" &&
@@ -452,15 +451,15 @@ fi
 if grep -q -F -e 'qualified seed-only under issue #512' "$expected" &&
   grep -q -F -e 'taxonomy doc only' "$expected" &&
   grep -q -F -e '47 classes' "$expected" &&
-  grep -q -F -e '9 deferred' "$expected" &&
-  grep -q -F -e '38 adapter-backed classes' "$expected" &&
+  grep -q -F -e '8 deferred' "$expected" &&
+  grep -q -F -e '39 adapter-backed classes' "$expected" &&
   grep -q -F -e '53 real adapters' "$expected" &&
   grep -q -F -e 'Bandit excluded' "$expected" &&
   grep -q -F -e 'owned gap' "$expected" &&
   grep -q -F -e 'under issue #802' "$expected"; then
   ok
 else
-  bad "quality_taxonomy.expected lost taxonomy coverage (want qualified plus doc-only plus 47 plus 9 plus 38 plus 53 plus Bandit plus owned gap plus #802, issue #512)"
+  bad "quality_taxonomy.expected lost taxonomy coverage (want qualified plus doc-only plus 47 plus 8 plus 39 plus 53 plus Bandit plus owned gap plus #802, issue #512)"
 fi
 
 # Verification-remaining mirrors the #802 promotion record.
