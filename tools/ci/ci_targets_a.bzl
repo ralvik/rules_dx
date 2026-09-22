@@ -126,6 +126,8 @@ def add_a():
             "$(rootpath //quality/artifacts:repos.bzl)",
             "$(rootpath //tools/bazelrc:preset.bazelrc)",
             "$(rootpath //:.bazelrc)",
+            "$(rootpath //cli/adopt:src/version.rs)",
+            "$(rootpath //.github:workflows/ghcr.yml)",
         ],
         data = [
             "//:.bazelversion",
@@ -133,7 +135,9 @@ def add_a():
             "//:MODULE.bazel",
             "//:package.json",
             "//.devcontainer:Dockerfile.prebuilt",
+            "//.github:workflows/ghcr.yml",
             "//.github/actions/setup-bazelisk:action.yml",
+            "//cli/adopt:src/version.rs",
             "//docs:contributing/local-workflows.md",
             "//libs/testing:tested_stack.bzl",
             "//modules:dotnet.bzl",

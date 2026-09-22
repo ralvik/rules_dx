@@ -216,7 +216,8 @@ impl BumpRequest {
 
     /// Human planning summary for `--dry-run` (never argv).
     /// Resolver sets chain automatically (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638); file-only sets
-    /// still need the flag-diff review plus build.
+    /// still need the flag-diff review plus build. Semver widens carry the
+    /// major-bump=>migrate hint (See: `docs/cli/commands/migrate.md`, issue #931).
     pub fn summary(&self) -> String {
         let through = if self.needs_update_refresh() {
             format!(
@@ -226,12 +227,45 @@ impl BumpRequest {
         } else {
             "then preset flag-diff review plus `bazel build //...`".to_owned()
         };
-        format!(
+        let base = format!(
             "Widen {} to {} in {} ({through})",
             self.selector,
             self.version.display(),
             self.target_manifest(),
-        )
+        );
+        if self.version.is_semver() {
+            format!("{base}; {}", version::generic_major_bump_hint())
+        } else {
+            base
+        }
+    }
+
+    /// Major-bump cross-command hint for a known old version.
+    /// See: `docs/cli/commands/migrate.md` (issue #931).
+    /// Returns the missing-manifest hint when `old` parses as semver and the
+    /// widen crosses a major version; otherwise None. Git shapes never hint.
+    pub fn major_bump_hint(&self, old: &str) -> Option<String> {
+        let new = match &self.version {
+            version::WidenVersion::Semver(new) => new,
+            _ => return None,
+        };
+        let old_trimmed = old.trim().strip_prefix('v').unwrap_or(old.trim());
+        let old_trimmed = old_trimmed.strip_prefix('=').unwrap_or(old_trimmed);
+        let old_trimmed = old_trimmed.strip_prefix('=').unwrap_or(old_trimmed);
+        let old_parsed: semver::Version = old_trimmed.trim().parse().ok()?;
+        if !version::is_major_bump(&old_parsed, new) {
+            return None;
+        }
+        let manifest = if new.major > old_parsed.major {
+            format!("migrate-v{}-to-v{}.json", old_parsed.major, new.major)
+        } else {
+            format!("migrate-v{old}-to-v{}.json", new)
+        };
+        Some(version::major_bump_migrate_hint(
+            &old_parsed.to_string(),
+            &new.to_string(),
+            &manifest,
+        ))
     }
 
     /// Plans the single-requirement file edit over injected manifest bytes.

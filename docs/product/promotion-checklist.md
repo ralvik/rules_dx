@@ -28,7 +28,9 @@ human-run path. Link, don't copy: pins below name the owning contract.
 
 ## Versioning
 
-- First release bumps `MODULE.bazel` from `0.0.0` to SemVer in a reviewed PR;
+- First release bumps `MODULE.bazel` from `0.0.0` to SemVer in a reviewed PR
+  with an atomic `CHANGELOG.md` flip (SemVer entry added plus `No release
+  has been cut` marker removed in the same PR, issue #931);
   `CHANGELOG.md` still records `No release has been cut` until then.
 - The tag is pushed to the remote beforehand with owner approval. No release
   program creates or pushes tags (`--verify-tag` everywhere); the human-run

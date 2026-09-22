@@ -671,6 +671,13 @@ verify file-only through `preset.update --verify-only` flag-diff review plus
 closed with nothing widened (exit `1`, `bump_failed`). Refresh failures keep
 the widen with no rollback and exit `1` with `update_failed`.
 
+Major bumps hint migrate (issue #931, fixtures in
+`cli/bump/tests/fixtures/bump_chain/`): semver widen plans print
+`if major bump, run dx migrate --from <old> --to <new>` with the
+missing-manifest mapping (`migrate_failed` exit `1` live without a manifest;
+missing `--from`/`--to` exit `2` `missing-versions`). See
+[`dx migrate`](migrate.md#manifest-selection).
+
 Loop (one dep per PR, never batch): discover outdated (stable only,
 prerelease follows upstream, transitives stay resolver-governed) via the
 upstream registry clients (BCR / crates.io / npm registry / Go proxy /

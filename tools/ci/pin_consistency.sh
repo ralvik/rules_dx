@@ -28,6 +28,12 @@
 #     resolves the toolchain from the root pin (issue #912).
 #   Python foundation: `MODULE.bazel` `aspect_rules_py` prerelease stays an
 #     ADR 0008 exception with an explicit bump selector (issue #912).
+#   Single version (issue #931): `MODULE.bazel` `version` owns the
+#     delivered `dx` == module pin; `cli/adopt/src/version.rs`
+#     (`DX_VERSION`, `MODULE_VERSION`, `PREVIOUS_VERSION`),
+#     `tools/bazelrc/src/lib.rs` (`PRESET_DX_VERSION`), and
+#     `.github/workflows/ghcr.yml` tag prefixes (`-ci-` plus `-sha-`)
+#     must equal it in the same reviewed PR.
 #
 # Every other pin below must equal its canonical source or this fails, so a
 # version bump means: bump the canonical file once, then update the tracked
@@ -37,7 +43,7 @@
 #   <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod>
 #   <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js>
 #   <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains>
-#   <repos_bzl> <preset_fragment> <root_bazelrc>
+#   <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
@@ -63,9 +69,11 @@ modules_jvm="${14:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs>
 modules_dotnet="${15:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
 modules_hubs="${16:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
 modules_toolchains="${17:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-repos_bzl="${18:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-preset_fragment="${19:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-root_bazelrc="${20:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+repos_bzl="${18:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+preset_fragment="${19:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+root_bazelrc="${20:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+version_rs="${21:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+ghcr_yml="${22:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
 
 # --- Bazel canonical ---
 bazel_pin="$(tr -d '[:space:]' <"$bazelversion")"
@@ -399,6 +407,52 @@ if [[ -n "$dx_ver" && "$dx_ver" == "$module_ver" ]]; then
   ok
 else
   bad "preset PRESET_DX_VERSION=$dx_ver drifts from MODULE.bazel version=$module_ver"
+fi
+
+# --- Single-version atomic (issue #931): MODULE == adopt DX/MODULE/PREVIOUS == preset == GHCR prefix ---
+adopt_dx="$(grep -o -E -e 'pub const DX_VERSION[^"]*"[^"]+"' "$version_rs" | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+adopt_module="$(grep -o -E -e 'pub const MODULE_VERSION[^"]*"[^"]+"' "$version_rs" | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+adopt_prev="$(grep -o -E -e 'pub const PREVIOUS_VERSION[^"]*"[^"]+"' "$version_rs" | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+if [[ -n "$adopt_dx" && "$adopt_dx" == "$module_ver" ]]; then
+  ok
+else
+  bad "adopt DX_VERSION=$adopt_dx drifts from MODULE.bazel version=$module_ver (want single-version atomic, issue #931)"
+fi
+if [[ -n "$adopt_module" && "$adopt_module" == "$module_ver" ]]; then
+  ok
+else
+  bad "adopt MODULE_VERSION=$adopt_module drifts from MODULE.bazel version=$module_ver (want single-version atomic, issue #931)"
+fi
+# PREVIOUS tracks the prior release: at 0.0.0 (no releases cut) it equals
+# the module pin so rollback correctly refuses; after the first SemVer flip
+# it must differ (previous release) while staying valid semver. Either way
+# it must be present and parse as semver, and a drift to non-semver fails.
+if [[ -z "$adopt_prev" ]]; then
+  bad "adopt PREVIOUS_VERSION is empty (want single-version atomic, issue #931)"
+elif [[ "$module_ver" == "0.0.0" ]]; then
+  if [[ "$adopt_prev" == "$module_ver" ]]; then
+    ok
+  else
+    bad "adopt PREVIOUS_VERSION=$adopt_prev drifts from MODULE.bazel version=$module_ver at 0.0.0 (want equal until first release, issue #931)"
+  fi
+else
+  if [[ "$adopt_prev" != "$module_ver" ]]; then
+    ok
+  else
+    bad "adopt PREVIOUS_VERSION=$adopt_prev equals MODULE.bazel version=$module_ver after first release (want previous release, issue #931)"
+  fi
+fi
+ghcr_ci_ver="$(grep -o -E -e 'devcontainer:[0-9]+\.[0-9]+\.[0-9]+-ci-' "$ghcr_yml" | head -1 | sed -E 's/.*devcontainer:([0-9]+\.[0-9]+\.[0-9]+)-ci-.*/\1/' || true)"
+ghcr_sha_ver="$(grep -o -E -e 'devcontainer:[0-9]+\.[0-9]+\.[0-9]+-sha-' "$ghcr_yml" | head -1 | sed -E 's/.*devcontainer:([0-9]+\.[0-9]+\.[0-9]+)-sha-.*/\1/' || true)"
+if [[ -n "$ghcr_ci_ver" && "$ghcr_ci_ver" == "$module_ver" ]]; then
+  ok
+else
+  bad "ghcr.yml ci tag prefix $ghcr_ci_ver drifts from MODULE.bazel version=$module_ver (want single-version atomic, issue #931)"
+fi
+if [[ -n "$ghcr_sha_ver" && "$ghcr_sha_ver" == "$module_ver" ]]; then
+  ok
+else
+  bad "ghcr.yml sha tag prefix $ghcr_sha_ver drifts from MODULE.bazel version=$module_ver (want single-version atomic, issue #931)"
 fi
 
 # --- Tested stack: full MODULE dep map must match ---

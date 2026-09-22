@@ -95,13 +95,31 @@ else
   bad "FORMAT_FROZEN drifted: formatter-set changes require a major release"
 fi
 
-# No release cut means no minor-addition compat evidence is pending; the
-# changelog still records the no-release policy so additions cannot slip
-# in without notes + override review.
-if grep -q -F -e 'No release has been cut' "$changelog"; then
-  ok
+# Atomic version flip (issue #931): a MODULE.bazel version bump must land
+# with a CHANGELOG SemVer entry plus removal of the no-release marker in
+# the same reviewed PR. At 0.0.0 (no releases cut) the marker must exist;
+# after the first SemVer flip the marker must be gone and the changelog
+# must name the new version. Either half alone fails closed.
+module_version="$(grep -o -E -e '^    version = "[^"]+"' MODULE.bazel | head -1 | cut -d'"' -f2 || true)"
+if [[ -z "$module_version" ]]; then
+  bad "MODULE.bazel lost its version pin (want single-version atomic, issue #931)"
+elif [[ "$module_version" == "0.0.0" ]]; then
+  if grep -q -F -e 'No release has been cut' "$changelog"; then
+    ok
+  else
+    bad "CHANGELOG.md lost the no-release-cut policy marker (want marker at 0.0.0, issue #931)"
+  fi
 else
-  bad "CHANGELOG.md lost the no-release-cut policy marker"
+  if grep -q -F -e 'No release has been cut' "$changelog"; then
+    bad "CHANGELOG.md still carries the no-release marker with MODULE.bazel at $module_version (want atomic SemVer entry plus marker removal, issue #931)"
+  else
+    ok
+  fi
+  if grep -q -F -e "$module_version" "$changelog" && grep -q -E -e '^## ' "$changelog"; then
+    ok
+  else
+    bad "CHANGELOG.md lost its SemVer entry for MODULE.bazel $module_version (want atomic entry plus marker removal, issue #931)"
+  fi
 fi
 
 # Parity: every adapter-backed class is classified, and every deferred
@@ -183,6 +201,28 @@ fi
 printf 'PARITY_DEFERRED = {\n    "go": ["", ""],\n}\n' >"$scratch/bad-parity.bzl"
 if grep -q -F -e '"go": ["ADR 0019"' "$scratch/bad-parity.bzl"; then
   bad "malformed-deferral negative did not fail"
+else
+  ok
+fi
+
+# Negative: version bump without atomic CHANGELOG entry fails (issue #931).
+# Simulate MODULE at 0.1.0 with the 0.0.0 marker still present plus no
+# version entry: both halves must reject.
+printf '    version = "0.1.0",\n' >"$scratch/bumped-module.bazel"
+printf '# Changelog\n\nNo release has been cut yet.\n\n## Unreleased\n' >"$scratch/bumped-changelog.md"
+scratch_ver="$(grep -o -E -e 'version = "[^"]+"' "$scratch/bumped-module.bazel" | head -1 | cut -d'"' -f2 || true)"
+if [[ "$scratch_ver" == "0.1.0" ]] && grep -q -F -e 'No release has been cut' "$scratch/bumped-changelog.md" && ! grep -q -F -e '0.1.0' "$scratch/bumped-changelog.md"; then
+  ok
+else
+  bad "bump-without-changelog negative did not fail: scratch must show marker-present plus entry-missing"
+fi
+# Negative: CHANGELOG SemVer entry without the MODULE bump fails.
+# Simulate 0.0.0 module with a version entry: the 0.0.0 branch must still
+# require the marker path, so a stray entry alone cannot pass as atomic.
+printf '    version = "0.0.0",\n' >"$scratch/unbumped-module.bazel"
+printf '# Changelog\n\n## [0.1.0] - 2026-01-01\n' >"$scratch/stray-changelog.md"
+if grep -q -F -e 'No release has been cut' "$scratch/stray-changelog.md"; then
+  bad "changelog-without-bump negative did not fail: stray entry must not carry the marker"
 else
   ok
 fi

@@ -47,6 +47,8 @@ dx_rust_crate(
     ],
 )
 
+exports_files(["src/version.rs"])
+
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = ["BUILD.bazel"],

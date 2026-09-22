@@ -109,6 +109,28 @@ pub fn compare(left: &semver::Version, right: &semver::Version) -> std::cmp::Ord
     left.cmp(right)
 }
 
+/// Whether a widen crosses a major version (new major exceeds old major).
+/// See: `docs/cli/commands/migrate.md` (issue #931 major-bump=>migrate hint).
+pub fn is_major_bump(from: &semver::Version, to: &semver::Version) -> bool {
+    to.major > from.major
+}
+
+/// Missing-manifest hint for major bumps.
+/// See: `docs/cli/commands/migrate.md` (issue #931).
+/// Live `dx migrate` without a manifest fails `migrate_failed` (exit 1);
+/// missing `--from`/`--to` fails pre-exec (exit 2, missing-versions).
+pub fn major_bump_migrate_hint(from: &str, to: &str, manifest: &str) -> String {
+    format!(
+        "major bump {from} -> {to} via {manifest}; no manifest yet => migrate_failed (exit 1); missing --from/--to => exit 2 (missing-versions)"
+    )
+}
+
+/// Generic major-bump hint for widen plans without a known old version.
+/// See: `docs/cli/commands/migrate.md` (issue #931).
+pub fn generic_major_bump_hint() -> &'static str {
+    "if major bump, run `dx migrate --from <old> --to <new>` (no manifest yet => migrate_failed exit 1; missing --from/--to => exit 2 missing-versions)"
+}
+
 /// Parses the operator-supplied new version for one set. Bazel, Cargo,
 /// npm, Go, Maven, and NuGet require exact stable semver (leading `v`/`=`
 /// stripped for ergonomics, e.g. `v1.2.3` means `1.2.3`); GitHub Actions
@@ -336,5 +358,25 @@ mod tests {
             .parse::<toml_edit::DocumentMut>()
             .expect("toml_edit");
         assert_eq!(doc["version"].as_str(), Some("1.2.3"));
+    }
+
+    #[test]
+    fn major_bump_hint_pins_exit_mapping() {
+        // See: `docs/cli/commands/migrate.md` (issue #931).
+        let old: semver::Version = "1.2.3".parse().expect("old");
+        let new: semver::Version = "2.0.0".parse().expect("new");
+        let minor: semver::Version = "1.3.0".parse().expect("minor");
+        assert!(is_major_bump(&old, &new));
+        assert!(!is_major_bump(&old, &minor));
+        assert!(!is_major_bump(&old, &old));
+        let hint = major_bump_migrate_hint("1.2.3", "2.0.0", "migrate-v1-to-v2.json");
+        assert!(hint.contains("major bump"), "{hint}");
+        assert!(hint.contains("migrate-v1-to-v2.json"), "{hint}");
+        assert!(hint.contains("migrate_failed"), "{hint}");
+        assert!(hint.contains("missing-versions"), "{hint}");
+        let generic = generic_major_bump_hint();
+        assert!(generic.contains("dx migrate --from"), "{generic}");
+        assert!(generic.contains("migrate_failed"), "{generic}");
+        assert!(generic.contains("missing-versions"), "{generic}");
     }
 }

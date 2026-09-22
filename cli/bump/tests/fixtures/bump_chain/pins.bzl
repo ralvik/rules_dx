@@ -40,6 +40,14 @@ BUMP_CHAIN_RUNNER = "runner.run"
 BUMP_CHAIN_FAILURE = "widen kept in manifest"
 BUMP_CHAIN_FAILURE_CODE = "update_failed"
 
+# Major-bump=>migrate hint (issue #931): semver widens carry the
+# missing-manifest hint with exit mapping; Git shapes never hint.
+BUMP_MAJOR_HINT = "major bump"
+BUMP_MAJOR_MIGRATE = "dx migrate --from <old> --to <new>"
+BUMP_MAJOR_MANIFEST = "migrate-v1-to-v2.json"
+BUMP_MAJOR_LIVE_CODE = "migrate_failed"
+BUMP_MAJOR_USAGE_CODE = "missing-versions"
+
 # Rejected routes (never pinned as supported here).
 REJECTED_MANUAL_SECOND_STEP = "manual second step rejected"
 REJECTED_PRIVATE_RESOLVER = "private resolver rejected"
