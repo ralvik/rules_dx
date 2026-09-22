@@ -1,5 +1,7 @@
 //! Real-tool finding model shared by the initial adapters.
 //!
+//! Contract: `docs/quality/tool-integrations.md`.
+//!
 //! Each adapter parses its tool's check output into [`Finding`] values over
 //! tool-native 1-based line/column positions, then [`place_finding`]
 //! converts those positions into the half-open UTF-8 byte ranges the frozen

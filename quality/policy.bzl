@@ -1,4 +1,4 @@
-"""Workspace quality-policy providers (freeze for).
+"""Workspace quality-policy providers (freeze).
 
 Contract: `docs/quality/tool-integrations.md`, `docs/decisions/0011-configuration-composition.md`.
 """

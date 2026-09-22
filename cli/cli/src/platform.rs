@@ -29,7 +29,7 @@
 /// host-installed SDK fallback (never approved). Exact pins, hosts,
 /// floors, and SDK/CRT identities stay owned per ADR 0014.
 ///
-/// macOS x86_64 is Not planned and never planned for support (issue #976):
+/// macOS x86_64 is Not planned and never planned for support (See: `docs/product/support-matrix.md`, issue #976):
 /// no CI, coverage, or artifact footprint is provisioned and `dx` refuses
 /// cleanly with `unsupported_platform`. The retired `macos-13` plus
 /// `macos-15-intel` runner history stays in docs only for rotation
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn macos_x86_64_is_refused_not_planned() {
-        // Not planned and never planned per issue #976: no CI/coverage
+        // Not planned and never planned per issue #976 (See: `docs/product/support-matrix.md`): no CI/coverage
         // footprint, clean refusal with the support-matrix pointer.
         let message = refusal("macos", "x86_64").expect("macOS x86_64 must be refused");
         assert!(message.starts_with("unsupported_platform"), "{message}");

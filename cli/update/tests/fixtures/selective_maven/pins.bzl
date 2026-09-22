@@ -1,18 +1,7 @@
 """Selective Maven `dx update` wont-fix fixture (issue #634).
 
-Contract: `docs/decisions/0024-selective-update.md`,
-`docs/cli/commands/audit-update-bazel.md#dx-update`.
-Fixture: `cli/update/tests/fixtures/selective_maven/` via
-`bazel run //tools/ci:selective_maven_qualification`.
-
-Maven per-artifact selective is wont-fix in V1: `rules_jvm_external`
-offers no per-artifact pin target, exact pins in `MODULE.bazel` stay
-constraints, and the whole-lock `REPIN=1 bazel run @maven//:pin`
-refresh is the only approved updater. `maven:group:artifact` parses
-but fails closed as `unsupported` with the `dx update maven` hint,
-never silently substituting a full update. Update-only; no lock
-format change. Seed only: platform plus consumer plus release
-evidence stays owned gap; no Supported claim.
+Contract: `docs/decisions/0024-selective-update.md`.
+Fixture: `cli/update/tests/fixtures/selective_maven/` via `bazel run //tools/ci:selective_maven_qualification`.
 """
 
 # Disposition for this set (wont-fix in V1).

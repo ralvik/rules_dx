@@ -1,14 +1,7 @@
 """Standalone quality-tool acquisition (WP1).
 
 Contract: `docs/tools/tool-acquisition.md` (checksummed-artifact route).
-Outer `sha256` is verified by `ctx.download` with an explicit
-`canonical_id` so the repository cache keys by checksum plus origin;
-the extracted executable is re-hashed against the recorded
-`executable_sha256` (inner digest) before the repo is exposed, so a
-tampered archive member fails closed at fetch time instead of shipping
-a substituted binary. One pinned upstream URL per tool/platform is
-intentional: the checked-in digest is the trust anchor, the URL is
-availability only, and Bazel's downloader retries the fetch.
+Outer plus inner digests fail closed at fetch time; URL is availability only.
 """
 
 load("//quality/artifacts:biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")

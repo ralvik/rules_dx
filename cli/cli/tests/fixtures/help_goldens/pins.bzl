@@ -1,15 +1,7 @@
 """Help-output goldens fixture for the `dx` CLI surface.
 
 Contract: `docs/cli/cli-contract.md#invocation-shape`.
-Fixture: `cli/cli/tests/fixtures/help_goldens/` via
-`bazel run //tools/ci:cli_strict_qualification`.
-Goldens: `top_help.golden` plus per-command goldens generated from the
-same `Cli` grammar that parses invocations (`dx --help` plus
-`dx <command> --help` plus `dx help [command]` verb redirect;
-`dx bazel --help` forwards verbatim so its golden rides
-`render_command_help`).
-Unit fixtures: `cli/cli/src/args/strict_tests.rs` plus
-`cli/cli/src/args/help.rs` help tests.
+Fixture: `cli/cli/tests/fixtures/help_goldens/` via `bazel run //tools/ci:cli_strict_qualification`.
 """
 
 # Goldens generated from the same grammar (never hand-maintained flag lists).

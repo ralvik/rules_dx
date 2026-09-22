@@ -5,7 +5,7 @@
 //! Bazel-owned enforcement for the resolved coverage policy over the
 //! eligible scope. The gate parses the combined LCOV report from
 //! `bazel coverage --combined_report=lcov`, validates source-level exclusion
-//! markers carrying nearby `reason:` comments, reconciles the
+//! markers carrying nearby `policy:` comments, reconciles the
 //! repository-owned inventory against Bazel-declared sources, and requires
 //! exact 100% covered-over-eligible executable lines. Only `DA` records
 //! define executable lines; blank and comment-only lines are not executable.

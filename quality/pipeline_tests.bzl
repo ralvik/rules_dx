@@ -1,4 +1,6 @@
 """Unit tests for pipeline construction (WP2a).
+
+Contract: `docs/quality/quality-sources.md#adapter-applicability`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_equal", "expect_false", "expect_match", "expect_true", "starlark_test")

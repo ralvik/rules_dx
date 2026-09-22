@@ -1,4 +1,6 @@
 """Unit tests for typed native-config validation (WP2).
+
+Contract: `docs/quality/native-configuration.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

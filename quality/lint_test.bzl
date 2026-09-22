@@ -1,4 +1,6 @@
 """Aspect-lint golden harness.
+
+Contract: `docs/quality/quality-testing.md`.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

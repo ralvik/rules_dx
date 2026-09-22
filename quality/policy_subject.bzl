@@ -1,4 +1,6 @@
 """Analysis subject exposing an aggregate workspace policy (WP1).
+
+Contract: `docs/quality/tool-integrations.md`, `docs/decisions/0011-configuration-composition.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")

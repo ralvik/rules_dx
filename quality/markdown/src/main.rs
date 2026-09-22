@@ -2,6 +2,8 @@
 //! Check semantics, JSON output, and exit codes live in the library and are
 //! unit-tested there.
 //!
+//! Contract: `docs/quality/tool-integrations.md`.
+//!
 //! Usage:
 //! ```text
 //! quality_markdown --source WS_PATH=EXEC_PATH [--source ...]

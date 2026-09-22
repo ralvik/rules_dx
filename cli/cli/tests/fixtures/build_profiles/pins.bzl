@@ -1,14 +1,7 @@
 """Build-profile flags plus DX_PROFILE forwarding fixture.
 
-Contract: `docs/cli/commands/build-test-coverage.md#build-profiles`,
-`docs/deploy/authoring.md`, `docs/decisions/0021-build-profiles.md`.
-Fixture: `cli/cli/tests/fixtures/build_profiles/` via
-`bazel run //tools/ci:build_profiles_qualification`.
-Unit fixtures: `cli/cli/src/args/profile.rs` (`profile_*`),
-`cli/cli/src/plan/workflow.rs` (`workflow_profile_*`),
-`cli/cli/src/plan/run_deploy.rs` (`run_profile_*`),
-`cli/cli/src/exec/deploy.rs` (`deploy_flag_over_attr_*`),
-`deploy/rules/deploy_tests.bzl`.
+Contract: `docs/cli/commands/build-test-coverage.md#build-profiles`.
+Fixture: `cli/cli/tests/fixtures/build_profiles/` via `bazel run //tools/ci:build_profiles_qualification`.
 """
 
 # Flags belong to build, run, test, and deploy only.

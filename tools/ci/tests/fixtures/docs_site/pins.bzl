@@ -1,19 +1,7 @@
-"""Docs site execution plus rebuild plus link-completeness plus guide plus timing plus drift pins (renderer plus site execution, mdBook).
+"""Docs site execution plus rebuild plus link pins (mdBook).
 
 Contract: `docs/documentation/site.md`.
-Fixture: `tools/ci/tests/fixtures/docs_site/` via
-`bazel run //tools/ci:docs_pipeline_qualification`.
-Execution: `//docs/site:demo_site` extract to aggregate to render over
-miniature inputs; generated IR stays in Bazel outputs, never beside
-sources; rebuild proof hashes two builds and diffs them; link/reference
-completeness proves prose plus API pages resolve all internal links with
-no dangling targets at the pre-render boundary; guide prose wires every
-guide step to CI execution with no unexecuted steps allowed; first-hour
-timing proves the built site/docs journey completes in the first hour as
-one-shot evidence per ADR 0022, never a standing benchmark; per-release
-pin-bump plus drift process keeps every pinned native input green plus
-reviewed with no IR snapshot update; seed-only,
-no Supported claim.
+Fixture: `tools/ci/tests/fixtures/docs_site/` via `bazel run //tools/ci:docs_pipeline_qualification`.
 """
 
 # Pinned renderer: mdBook is the decided renderer with no planned

@@ -1,4 +1,6 @@
-"""Unit tests for real-adapter pipeline construction (WP2, WP3, WP3).
+"""Unit tests for real-adapter pipeline construction (WP2, WP3).
+
+Contract: `docs/quality/tool-integrations.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

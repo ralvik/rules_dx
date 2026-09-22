@@ -1,14 +1,7 @@
 """Scala plus .NET cohort matrix cells (issue #797).
 
-Seed-only wiring proof: format cells run fake shell doubles
-(`fake_scalafmt.sh`, `fake_csharpier.sh`, `fake_fantomas.sh`) that mimic
-the real check/fix shapes over the BADFMT marker (real-tool behavior
-stays proven by the per-tool fixtures with recorded upstream samples);
-lint cells inject recorded callback/library/SARIF diagnostics
-byte-identical in shape to the parser unit samples (delegated, no spawn,
-like Clippy/rustc).
-
 Contract: `docs/quality/runner-matrix.md`.
+Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
 # Recorded Scalafix callback NDJSON for the lint-fail cell, shaped like

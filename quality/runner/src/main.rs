@@ -1,6 +1,8 @@
 //! Thin CLI shim over the runner library.
 //! All pipeline semantics live in the library and are unit-tested there.
 //!
+//! Contract: `docs/quality/quality-result-protocol.md`.
+//!
 //! Usage:
 //! ```text
 //! quality_runner --producer LABEL --capability CAP --output OUT.pb \

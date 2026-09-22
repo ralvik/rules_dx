@@ -1,4 +1,7 @@
-"""Split from `runner_matrix_cases.bzl`. No behavior change."""
+"""Matrix Python cases (split from `runner_matrix_cases.bzl`).
+
+Contract: `docs/quality/runner-matrix.md`.
+"""
 
 PYTHON_CASES = [
     {

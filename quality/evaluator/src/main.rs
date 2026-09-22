@@ -1,6 +1,8 @@
 //! Thin CLI shim over the evaluator library.
 //! Threshold semantics live in the library and are unit-tested there.
 //!
+//! Contract: `docs/cli/cli-contract.md`, `docs/quality/quality-result-protocol.md#execution-and-policy`.
+//!
 //! Usage:
 //! ```text
 //! quality_evaluator --result RESULT.pb --fail_on info|warning|error --output MARKER
