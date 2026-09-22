@@ -12,11 +12,7 @@
 ///
 /// The Linux x86_64 seed host plus Linux arm64 glibc native
 /// plus macOS arm64 native plus Windows x86_64 MSVC-compatible native are
-/// delivered. Provisional: extend this list as remaining ADR
-/// 0014 required-platform evidence lands (tracked in, closed,
-/// with per-host successors owning each host); the startup refusal below
-/// reads the same list, so support flips on automatically with the
-/// evidence entry.
+/// delivered (See: `docs/product/support-matrix.md`).
 ///
 /// Static-musl profiles share these OS/arch pairs: the two
 /// Linux hosts above run static-musl closures natively, so no new host
@@ -167,7 +163,7 @@ mod tests {
 
     #[test]
     fn dynamic_musl_is_explicitly_refused() {
-        // Dynamic musl stays explicitly out of scope per ADR 0014 (issue
+        // Dynamic musl stays explicitly out of scope per ADR 0014:
         // every dynamic spelling refuses with the static-only
         // pointer, never a silent fallback.
         for profile in [
