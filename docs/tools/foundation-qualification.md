@@ -25,10 +25,15 @@ fixture evidence (`quality/testdata/runner_matrix_cases.bzl` pass/fail plus fix/
 `quality/native_config.bzl` bindings or explicit config-free/delegated status,
 `quality/artifacts/metadata_tests.bzl` plus `update.py --verify-only`, `cli/qualification`
 single-correct-path plus SPDX/SLSA wire profiles; Buildifier/Taplo/Vale probes stay
-provisional) with deferred implementation owned by ADR 0019.
-Additional-language adapters (Java, Kotlin, Scala, C#, F#, C/C++, Go) have no
-claimed adapter yet; foundation-side classification stays owned under issues #476-#484 and
-per-tool qualification is qualified under issue #307 with deferred routes owned by ADR 0019.
+provisional) with only deferred-framework implementation owned by ADR 0019.
+Additional-language adapters are delivered as-built: JVM cohort (Java, Kotlin)
+delivered under #796, Scala/.NET cohort (Scala, C#, F#) delivered under #797,
+native cohort (C/C++, Go) delivered under #798, Structured cohort (Protobuf,
+QML) delivered under #799, file-family cohorts (including Ruby, PowerShell)
+delivered under #800; only ADR 0019 deferred-framework regions remain without
+an adapter claim (see `quality/parity_tests.bzl` `PARITY_DEFERRED`).
+Foundation-side classification stays owned under issues #476-#484 and
+per-tool qualification is qualified under issue #307.
 Ruby and PowerShell tool cohorts stay v1 scope; their foundations are admitted
 to v1 by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md)
 (superseding the [ADR 0019](../decisions/0019-first-release-additional-foundations.md)
@@ -42,9 +47,9 @@ Deferred/excluded tool record is decided by [ADR 0032](../decisions/0032-ruby-po
 retained RuboCop/StandardRB plus
 PSScriptAnalyzer cohorts keep their frozen routes in
 [Tool Acquisition](tool-acquisition.md#first-release-tool-routing) with `ruby`/`powershell`
-classes classified with `ruby` foundation delivered plus no foundation adapter
-claim yet (`quality/adapters.bzl` plus `quality/parity_tests.bzl`
-with ADR 0019, foundation admission by ADR 0032); Swift/SwiftFormat stay excluded with host-toolchain
+classes classified with adapters delivered under #800 (`quality/adapters.bzl`
+plus `quality/parity_tests.bzl` with ADR 0019 deferred-framework only,
+foundation admission by ADR 0032); Swift/SwiftFormat stay excluded with host-toolchain
 fallback never approved plus Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801.
 
 Pinned by `bazel run //tools/ci:foundation_maps`.
