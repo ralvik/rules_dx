@@ -16,7 +16,7 @@ _TESTED_DEPS = {
     "rules_python": "1.9.0",
     "rules_go": "0.63.0",
     "gazelle": "0.52.2",
-    "rules_shell": "0.6.1",
+    "rules_shell": "0.7.1",
     "platforms": "1.1.0",
     "bazel_skylib": "1.9.0",
     "rules_proto": "7.1.0",
@@ -31,6 +31,7 @@ _TESTED_DEPS = {
     "aspect_rules_js": "3.4.1",
     "aspect_rules_ts": "3.10.0",
     "aspect_rules_jest": "0.26.0",
+    "rules_powershell": "0.2.0",
 }
 
 def _tested_stack_impl(ctx):

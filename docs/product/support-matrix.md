@@ -280,10 +280,13 @@ foundations are admitted to v1 scope by
 [ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md)), on the evidence in the
 [candidate review](#initial-feasibility-review): each has
 an active Bzlmod-published upstream ruleset with a concrete dependency-lock
-and toolchain story. Ruby (`rules_ruby` 0.28.0, RSpec via `rb_test`) and
-PowerShell (`rules_powershell` 0.2.0, Pester via `pwsh_test`) are
-provisional upstreams with lock plus platform qualification pending in
-parallel Ruby/PowerShell tracks. Their quality integration is v1 scope with the defaults in
+and toolchain story. Ruby (`rules_ruby` 0.28.0, RSpec via `rb_test`) stays
+a provisional upstream with lock plus platform qualification pending in
+the parallel Ruby track (issue #971). PowerShell (`rules_powershell`
+0.2.0, Pester 5.7.1 via `pwsh_test`) is delivered provisionally under
+issue #972 with wrappers plus env plan plus hello plus Pester plus
+Gallery-lock fixtures and `MODULE.bazel` deps; platform plus consumer
+plus release qualification stays pending. Their quality integration is v1 scope with the defaults in
 the [disposition table](#deferred-beyond-v1);
 exact versions, rule sets, and adapter mappings are tracked in
 qualified seed-only under closed #485-#489 with adapter delivery delivered under closed #796-#800 (successors to closed #416-#420). The managed Scala
@@ -365,16 +368,17 @@ qualification in [Generation](../generation/README.md#language-mapping-qualifica
 [Environments](../environments/README.md#language-mapping-qualification),
 [Tools](../tools/README.md#language-mapping-qualification),
 [tool baseline](../tools/tool-baseline.md), [tool acquisition](../tools/tool-acquisition.md),
-and the parity gate (`quality/parity_tests.bzl`): no `ruby/`, `powershell/`, or `swift/`
-foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps yet (admission is scope, delivery pending in Ruby/PowerShell tracks);
+and the parity gate (`quality/parity_tests.bzl`): no `ruby/` or `swift/`
+foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps yet (Ruby admission is scope, delivery pending in the Ruby track issue #971);
+PowerShell foundation dirs, wrappers, env plan, hello plus Pester plus Gallery-lock fixtures, and `MODULE.bazel` deps land provisionally under issue #972 (admission is scope, qualification pending);
 `ruby`/`powershell` classes classified with no foundation adapter claim yet (`quality/adapters.bzl` plus
 `PARITY_DEFERRED` with ADR 0019, foundation admission by ADR 0032); retained cohorts (RuboCop/StandardRB via
 release-assembled Ruby closure, PSScriptAnalyzer via exact-module plus portable PowerShell
 runtime); Swift/SwiftFormat exclusion with host-toolchain fallback never approved plus Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801.
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
 library-API binding, and per-tool adapter mappings qualified under closed #420 with deferred
-implementation owned by ADR 0019; Ruby admission decided under #970 by ADR 0032 pending track,
-PowerShell admission decided under #970 by ADR 0032 pending track,
+implementation owned by ADR 0019; Ruby admission decided under #970 by ADR 0032 pending track issue #971,
+PowerShell foundation delivered provisionally under issue #972 with platform plus consumer plus release qualification pending,
 adapter execution under #800) stay decided by ADR 0032 (superseding ADR 0019 plus ADR 0030 for Ruby plus ADR 0031 for PowerShell). No `Supported` claim until platform plus
 consumer plus release evidence passes.
 
@@ -388,7 +392,7 @@ consumer plus release evidence passes.
 | C# | Planned | Planned: CSharpier | Planned: Roslyn CA analyzers (SDK) |
 | F# | Planned | Planned: Fantomas | Planned: FSharpLint |
 | Ruby | Planned (admitted to v1 per ADR 0032; RSpec via `rb_test`, `Gemfile.lock` fail-closed pending) | Planned: RuboCop, StandardRB | Planned: RuboCop, StandardRB |
-| PowerShell | Planned (admitted to v1 per ADR 0032; Pester via `pwsh_test`, Gallery lock fail-closed pending) | Planned: feasibility | Planned: PSScriptAnalyzer |
+| PowerShell | Planned (admitted to v1 per ADR 0032; Pester 5.7.1 via `pwsh_test`, Gallery lock provisional under #972 with `third_party/powershell/PSGallery.lock.json`) | Planned: feasibility (no formatter selected; explicitly scoped gap) | Planned: PSScriptAnalyzer (exact-module plus portable pwsh route, console-parse vs library-API binding open under #800) |
 | Swift | Not planned (exclusion re-evidenced by ADR 0032 spike: no hermetic toolchain over all required hosts) | Not planned | Not planned |
 
 `Planned` in the table above means scope admitted to v1 by ADR 0032 (superseding ADR 0019) with no delivery

@@ -1,0 +1,36 @@
+"""Seed PowerShell binary and library; consumer of pwsh_* wrappers."""
+
+load("//powershell/rules:defs.bzl", "pwsh_binary", "pwsh_library", "pwsh_test")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(
+    default_testonly = True,
+    default_visibility = ["//:__subpackages__"],
+)
+
+pwsh_library(
+    name = "hello_lib",
+    srcs = [
+        "Greet.psm1",
+        "Greet.psd1",
+    ],
+)
+
+pwsh_binary(
+    name = "hello",
+    srcs = ["Hello.ps1"],
+    deps = [":hello_lib"],
+)
+
+pwsh_test(
+    name = "hello_test",
+    srcs = ["HelloTest.ps1"],
+    deps = [":hello_lib"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    testonly = True,
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

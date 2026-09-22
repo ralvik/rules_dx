@@ -17,6 +17,7 @@ ADRs explain why the contracts exist; the test matrix defines the required evide
 - [C#](csharp.md): directory libraries over the Paket scope.
 - [F#](fsharp.md): directory libraries over the Paket scope.
 - [C/C++](cc.md): directory libraries with sources plus headers and no lockfile.
+- [PowerShell](powershell.md): handwritten wrappers over the portable pwsh runtime with the explicitly scoped no-Gazelle alternative.
 - [Mixed ownership](mixed.md): disjoint v1 container partition.
 - [Framework adapters](framework-adapters.md): Vue, Svelte, Astro, and MDX container boundaries.
 
@@ -48,14 +49,25 @@ C/C++ has none (every `http_archive` carries `sha256`/`integrity`).
 C/C++ hash wiring qualified seed-only under issue #484 via
 `bazel run //tools/ci:cc_hermetic_qualification` with `cc/tests/fixtures/hermetic/`.
 Upstream pins live in `MODULE.bazel`.
-Ruby and PowerShell have no generation mapping yet: admitted to v1 by
+PowerShell has a provisional generation mapping (issue #972):
+`powershell/rules/defs.bzl` wrappers preserving `PwshInfo` plus
+`QualitySourcesInfo` with `powershell/rules/wrapper_tests.bzl` conformance
+over `powershell/tests/fixtures/hello/`, handwritten wrappers only with the
+explicitly scoped no-Gazelle alternative per
+[PowerShell](powershell.md), Pester via `pwsh_test` per
+`powershell/tests/fixtures/pester/pins.bzl`, and Gallery lock
+`third_party/powershell/PSGallery.lock.json` per
+`powershell/tests/fixtures/gallery/pins.bzl` (consumes never writes,
+fail-closed, no consumer installer).
+Ruby has no generation mapping yet: admitted to v1 by
 [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding the
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md) deferral),
-with mappings pending in parallel Ruby/PowerShell tracks.
+with mapping pending in the parallel Ruby track (issue #971).
 Swift has none: excluded from v1 by the same record, re-evidenced by ADR 0032.
 Deferred/excluded generation record is decided by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md);
-no `ruby/`, `powershell/`,
-or `swift/` Gazelle extension lands here yet.
+no `ruby/` or `swift/` Gazelle extension lands here yet (PowerShell takes
+the explicitly scoped no-Gazelle alternative, so no `gazelle/powershell/`
+lands either).
 
 Required-core Rust provider plus Gazelle maps are pinned (issue #470):
 `rust/rules/defs.bzl` wrappers preserve `CrateInfo`/`DepInfo`/`TestCrateInfo`/`CcInfo`

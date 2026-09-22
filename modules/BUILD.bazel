@@ -11,6 +11,7 @@ exports_files([
     "java-scala-kotlin.bzl",
     "dotnet.bzl",
     "npm-uv-crates.bzl",
+    "powershell.bzl",
     "toolchains.bzl",
 ])
 
@@ -22,6 +23,7 @@ real_source_target(
         "java-scala-kotlin.bzl",
         "js.bzl",
         "npm-uv-crates.bzl",
+        "powershell.bzl",
         "python.bzl",
         "rust.bzl",
         "toolchains.bzl",

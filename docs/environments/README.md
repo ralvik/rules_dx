@@ -17,6 +17,7 @@ Developer environment and generated-source projection contracts:
 - [C# Environment](csharp.md): focused `csharp_env_plan` over wrapper direct sources.
 - [F# Environment](fsharp.md): focused `fsharp_env_plan` over wrapper direct sources.
 - [C/C++ Environment](cc.md): focused `cc_env_plan` over wrapper direct sources.
+- [PowerShell Environment](powershell.md): focused `powershell_env_plan` over wrapper direct sources.
 - [Vue Environment](vue.md): focused `vue_env_plan` over `JsInfo` plus direct sources.
 - [Svelte Environment](svelte.md): focused `svelte_env_plan` over `JsInfo` plus direct sources.
 - [Astro Environment](astro.md): focused `astro_env_plan` over `JsInfo` plus direct sources.
@@ -30,23 +31,23 @@ foundation, and Python follows as a later language projection.
 Accepted. Each foundation keeps its provisional upstream; no switch is approved here.
 
 Every implemented foundation (`rust`, `python`, `javascript`, `typescript`, `go`,
-`java`, `kotlin`, `scala`, `csharp`, `fsharp`, `cc`) contributes a provider-derived
+`java`, `kotlin`, `scala`, `csharp`, `fsharp`, `cc`, `powershell`) contributes a provider-derived
 plan via `<lang>/env/plan.bzl`, pinned by `<lang>/env/plan_tests.bzl` and exercised
 by `<lang>/tests/fixtures/hello/`. Rust, Node, and Python projections are further defined in
 [Rust Environment](rust.md), [Node Environment](node.md), and
 [Python Environment](python-environment.md). Go, Java, Kotlin, Scala, C#, F#,
 and C/C++ plans are owned by [Go](go.md), [Java](java.md),
-[Kotlin](kotlin.md), [Scala](scala.md), [C#](csharp.md), [F#](fsharp.md), and
-[C/C++](cc.md); Vue, Svelte, Astro, and MDX plans are owned by [Vue](vue.md),
+[Kotlin](kotlin.md), [Scala](scala.md), [C#](csharp.md), [F#](fsharp.md),
+[C/C++](cc.md), and [PowerShell](powershell.md); Vue, Svelte, Astro, and MDX plans are owned by [Vue](vue.md),
 [Svelte](svelte.md), [Astro](astro.md), and [MDX](mdx.md). Additional toolchains use the default
 upstream toolchain now; per-platform acquisition stays open under the native plan.
-Ruby and PowerShell have no environment mapping yet: admitted to v1 by
+Ruby has no environment mapping yet: admitted to v1 by
 [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding the
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md) deferral),
-with mappings pending in parallel Ruby/PowerShell tracks.
+with mapping pending in the parallel Ruby track (issue #971).
+PowerShell mapping is delivered provisionally under issue #972.
 Deferred/excluded env record is decided by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md);
-no `ruby/`, `powershell/`, or
-`swift/` env plan lands here yet.
+no `ruby/` or `swift/` env plan lands here yet.
 
 Required-core Rust integration is pinned (issue #470): the provider-derived focused-target
 `rust_env_plan` in `rust/env/plan.bzl` (`RustEnvPlanInfo` from authoritative

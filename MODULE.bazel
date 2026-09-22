@@ -41,7 +41,10 @@ bazel_dep(name = "rules_python", version = "1.9.0")
 # against Bazel 9.2.0 on the seed host.
 bazel_dep(name = "rules_go", version = "0.63.0")
 bazel_dep(name = "gazelle", version = "0.52.2")
-bazel_dep(name = "rules_shell", version = "0.6.1")
+# 0.7.1 is the MVS-selected version (via rules_powershell 0.2.0 requiring
+# 0.7.1); the root pin tracks the selected version so the direct-dep check
+# stays clean.
+bazel_dep(name = "rules_shell", version = "0.7.1")
 
 gazelle_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
 # Pinned Go module deps (ADR 0019). Single-module go.mod via from_file
@@ -198,6 +201,37 @@ maven.install(
     ],
 )
 use_repo(maven, "maven")
+
+# Pinned PowerShell foundation (ADR 0032). Pins owned by `//modules:powershell.bzl`. 0.2.0 is the
+# latest stable in the Bazel Central Registry (BCR-published April 2026;
+# verified against Bazel 9.2.0 on the seed host). Single young
+# execution-only upstream (`pwsh_binary` plus `pwsh_library` plus
+# `pwsh_test` plus `PwshInfo` with a `pwsh` toolchain download extension);
+# generation/dependency/env/IDE stories are owned by the PowerShell track
+# (issue #972). Portable `pwsh` 7.5.4 is the upstream default (covers
+# linux_x64, linux_arm64, osx_arm64, osx_x64, win_x64, win_arm64, so
+# Windows arm64 is not an exception here); 7.6.5 LTS observed stays a
+# currency candidate. Gallery modules (Pester 5.7.1 plus PSScriptAnalyzer
+# 1.25.0) resolve via the exact lock in
+# `//third_party/powershell:PSGallery.lock.json` with explicit-path import
+# only; consumer `Install-Module`/`Install-PSResource` rejected. Laziness:
+# registration fetches nothing; each per-platform toolchain repository
+# downloads only when a `pwsh_*` action needs its artifact (same lazy
+# shape as the `dx_tools` per-platform repos).
+bazel_dep(name = "rules_powershell", version = "0.2.0")
+
+powershell = use_extension("@rules_powershell//powershell:extensions.bzl", "powershell")
+# Hub name differs from the upstream default (`powershell_toolchains`) to
+# avoid the duplicate-repo collision when both the upstream module and this
+# root module declare the extension (the extension creates
+# `<name>__<platform>` repos per tag without deduplication).
+powershell.toolchain(
+    name = "dx_powershell_toolchains",
+    version = "7.5.4",
+)
+use_repo(powershell, "dx_powershell_toolchains")
+
+register_toolchains("@dx_powershell_toolchains//:all")
 
 # Pinned Python foundation (ADR 0010). Pins owned by `//modules:python.bzl`. Exact 2.x prerelease is a
 # dated deferral per issue #961 and an explicit exception to ADR 0008 until a compatible stable 2.x exists.
