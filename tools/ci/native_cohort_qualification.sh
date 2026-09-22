@@ -3,7 +3,7 @@
 #
 # Qualifies the as-built native quality-cohort record with fixture
 # evidence and owned gaps, without claiming Supported:
-# - delivered: seven adapters (`clang_format` format c plus cpp,
+# - delivered: seven adapters (`clang_format` format c plus cpp plus cuda,
 #   `clang_tidy` lint c plus cpp check-only via delegated text
 #   diagnostics, `cppcheck` lint c plus cpp via delegated XML,
 #   `gofumpt` format go, `staticcheck` lint go via delegated JSON,
@@ -29,11 +29,11 @@
 #   native-config defaults qualified seed-only (staticcheck default
 #   checks, govet default analyzers with errcheck complementary,
 #   clang-tidy default checks, cppcheck default enablement as upstream
-#   built-in defaults with no hidden preset), parity-delivered c/cpp/go,
+#   built-in defaults with no hidden preset), parity-delivered c/cpp/cuda/go,
 #   taxonomy with native bindings;
 # - open owned gaps: exact artifact digests plus toolchain qualification,
 #   platform plus consumer plus release evidence. REAL_ADAPTERS claims
-#   c/cpp/go green.
+#   c/cpp/cuda/go green.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:native_cohort_qualification`,
 # following //tools/ci:scala_dotnet_cohort_qualification.
@@ -77,6 +77,7 @@ fi
 # nothing here; delivery under #798).
 if ! grep -q -F -e '"c":' "$parity" &&
   ! grep -q -F -e '"cpp":' "$parity" &&
+  ! grep -q -F -e '"cuda":' "$parity" &&
   ! grep -q -F -e '"go":' "$parity"; then
   ok
 else
@@ -86,16 +87,17 @@ fi
 # Every cohort class stays classified in the frozen taxonomy, one family each.
 if grep -q -F -e '"c": "cc"' "$adapters" &&
   grep -q -F -e '"cpp": "cc"' "$adapters" &&
+  grep -q -F -e '"cuda": "cuda"' "$adapters" &&
   grep -q -F -e '"go": "go"' "$adapters"; then
   ok
 else
-  bad "frozen taxonomy lost the c/cpp/go classification"
+  bad "frozen taxonomy lost the c/cpp/cuda/go classification"
 fi
 
-# Classification-only today: cc/go families carry no curated defaults
+# Classification-only today: cc/cuda/go families carry no curated defaults
 # (curated membership unchanged; no native default selected).
 cohort_curated=""
-for family in '"cc": {' '"go": {'; do
+for family in '"cc": {' '"cuda": {' '"go": {'; do
   if grep -q -F -e "$family" "$curated"; then
     cohort_curated="$cohort_curated $family:claimed"
   fi

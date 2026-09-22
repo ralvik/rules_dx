@@ -223,7 +223,7 @@ csharpier_config = _make_native_config_rule(
 
 clang_format_config = _make_native_config_rule(
     "clang_format",
-    "Checked-in clang-format dotfile (.clang-format) for C/C++ format. The adapter passes it as --style=file:<path>.",
+    "Checked-in clang-format dotfile (.clang-format) for C/C++/CUDA format. The adapter passes it as --style=file:<path>.",
 )
 
 clang_tidy_config = _make_native_config_rule(

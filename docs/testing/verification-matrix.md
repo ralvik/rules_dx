@@ -165,10 +165,10 @@ provider/import/lock/tool-graph proofs are pinned by
 (`bazel run //tools/ci:quality_taxonomy_qualification` with
 `quality/tests/fixtures/quality_taxonomy/pins.bzl` plus
 `quality_taxonomy.expected`; `quality_taxonomy_qualification` 25/25;
- 10 curated families with JVM java/kotlin delivered under #796, 38 backed
+ 10 curated families with JVM java/kotlin delivered under #796, 39 backed
  classes over 53 adapters with JVM plus Scala/.NET plus native plus
  structured plus file-family matrix plus parser plus checkstyle
- native evidence, 9 deferred with ADR 0019 owner plus frozen route;
+ native evidence, 8 deferred with ADR 0019 owner plus frozen route;
    taxonomy doc only plus report-not-gate shape only rejected; deferred
    delivery linked under #796 plus #797 plus #798 plus #799 plus #800
    with remaining owned under ADR 0019 plus #307, digest policy with JVM

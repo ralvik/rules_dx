@@ -22,7 +22,6 @@ PARITY_SCHEMA_VERSION = 1
 # under the owning decision.
 PARITY_DEFERRED = {
     "astro": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "cuda": ["ADR 0019", "authoritative toolchain (clang-format); CUDA scope fails closed until qualified"],
     "graphql": ["ADR 0019", "private Node graph (Prettier GraphQL parser)"],
     "html": ["ADR 0019", "private Node graph (Prettier HTML parser)"],
     "json5": ["ADR 0019", "private Node graph (Prettier JSON5 parser); Biome adapter claim pending"],

@@ -276,7 +276,7 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   (see the Scala + .NET rows in
   [Initial Artifact Research](../tools/tool-acquisition.md#initial-artifact-research)).
 - **Native cohort (#798, successor to closed #418):** adapters `clang_format` (format `c`,
-  `cpp`), `clang_tidy` (lint `c`, `cpp`), `cppcheck` (lint `c`, `cpp`),
+  `cpp`, `cuda`), `clang_tidy` (lint `c`, `cpp`), `cppcheck` (lint `c`, `cpp`),
   `gofumpt` (format `go`), `staticcheck` (lint `go`), `govet` (lint `go`),
   `errcheck` (lint `go`, complementary) over the decided routes: split
   native route for clang-format/clang-tidy via the qualified hermetic-llvm

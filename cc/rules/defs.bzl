@@ -1,6 +1,6 @@
 """Experimental minimal C/C++ wrappers (ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
+Contract: `docs/decisions/0019-first-release-additional-foundations.md`, `docs/quality/quality-sources.md`.
 """
 
 load("@rules_cc//cc:defs.bzl", _cc_binary = "cc_binary", _cc_library = "cc_library", _cc_test = "cc_test")
@@ -8,8 +8,8 @@ load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_forwarded_test_kwargs", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
-_CC_SRCS = [".c", ".cc", ".cpp", ".cxx"]
-_CC_HDRS = [".h", ".hh", ".hpp", ".hxx"]
+_CC_SRCS = [".c", ".cc", ".cpp", ".cxx", ".cu"]
+_CC_HDRS = [".h", ".hh", ".hpp", ".hxx", ".cuh"]
 
 _DX_CC_LIBRARY_PROVIDES = [
     CcInfo,
@@ -35,11 +35,16 @@ _DX_CC_EXEC_PROVIDES = [
 # `c` and `.hh`/`.hpp`/`.hxx` map to `cpp` (See: docs/quality/quality-sources.md).
 # `hdrs` stays library-only by design: upstream `cc_binary`/`cc_test` take no
 # `hdrs`, headers arrive via library `deps`, so binaries/tests own `srcs`
-# only. `cuda` (`.cu`/`.cuh`) stays deferred with no wrapper claim (See:
-# quality/parity_tests.bzl); `.cu` sources fail closed until qualified.
+# only. `cuda` (`.cu`/`.cuh`) is owned here as its own `cuda` class (See:
+# docs/quality/quality-sources.md; Owning contract:
+# docs/decisions/0019-first-release-additional-foundations.md): `.cu` sources
+# and `.cuh` headers ride the same `cc_*` wrappers plus the authoritative
+# `clang-format` toolchain binding, additive with no change to the existing
+# `c`/`cpp` shapes.
 _DX_CC_SOURCE_SPECS = [
     ("c", ["c", "h"]),
     ("cpp", ["cc", "cpp", "cxx", "hh", "hpp", "hxx"]),
+    ("cuda", ["cu", "cuh"]),
 ]
 
 _cc_library_forward = dx_library_forward_rule(
@@ -50,12 +55,12 @@ _cc_library_forward = dx_library_forward_rule(
     allow_files = _CC_SRCS,
     upstream_providers = [[CcInfo]],
     doc = "Forwards upstream C++ library providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct C/C++ sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct C/C++/CUDA sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream cc_library target whose providers are preserved.",
     extra_attrs = {
         "hdrs": attr.label_list(
             allow_files = _CC_HDRS,
-            doc = "Direct C/C++ headers owned by this wrapper for QualitySourcesInfo.",
+            doc = "Direct C/C++/CUDA headers owned by this wrapper for QualitySourcesInfo.",
         ),
     },
     extra_quality_attrs = ["hdrs"],
@@ -70,7 +75,7 @@ _cc_binary_forward = dx_executable_forward_rule(
     allow_files = _CC_SRCS,
     upstream_providers = [[CcInfo]],
     doc = "Executable forwarder for cc_binary: symlinks the upstream binary.",
-    srcs_doc = "Direct C/C++ sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct C/C++/CUDA sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream cc_binary target whose executable is symlinked.",
     optional_providers = [CcInfo],
     runtime = "besteffort",
@@ -85,7 +90,7 @@ _cc_forward_test = dx_executable_forward_rule(
     allow_files = _CC_SRCS,
     upstream_providers = [[CcInfo]],
     doc = "Test forwarder for cc_test: symlinks the upstream test executable.",
-    srcs_doc = "Direct C/C++ test sources owned by this wrapper for QualitySourcesInfo.",
+    srcs_doc = "Direct C/C++/CUDA test sources owned by this wrapper for QualitySourcesInfo.",
     upstream_doc = "The private upstream cc_test target whose executable is symlinked.",
     extra_attrs = dx_lcov_merger_attr(),
     optional_providers = [CcInfo],

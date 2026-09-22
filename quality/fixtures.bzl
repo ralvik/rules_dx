@@ -37,10 +37,11 @@ quality_source_target = rule(
 
 def _real_source_target_impl(ctx):
     # File-family classes without dedicated wrappers (cue/jsonnet/pkl/css
-    # and kin, plus go_module/cuda) stay fixture- and matrix-owned ad-hoc
+    # and kin, plus go_module) stay fixture- and matrix-owned ad-hoc
     # (See: docs/quality/quality-sources.md): this rule covers the
     # aspect-wired core, runner matrices cover the rest, never a second
-    # wrapper allowlist.
+    # wrapper allowlist. `cuda` is wrapper-owned via `cc_*` (See:
+    # cc/rules/defs.bzl), not fixture-owned here.
     direct_sources = {}
     if len(ctx.files.javascript_srcs) > 0:
         direct_sources["javascript"] = depset(ctx.files.javascript_srcs)
