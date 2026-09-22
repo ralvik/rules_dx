@@ -3,6 +3,7 @@
 Contract: `docs/environments/go.md`.
 """
 
+load("//env:focused.bzl", "focused_direct_sources", "focused_simple_plan", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
@@ -16,37 +17,20 @@ GoEnvPlanInfo = provider(
     },
 )
 
-def _direct_sources(target):
-    if QualitySourcesInfo not in target:
-        return []
-    info = target[QualitySourcesInfo]
-    out = []
-    for class_id in sorted(info.direct_sources.keys()):
-        for f in info.direct_sources[class_id].to_list():
-            out.append(f.basename)
-    return sorted(out)
-
 def _go_env_plan_impl(ctx):
     target = ctx.attr.target
     if QualitySourcesInfo not in target:
         fail("go_env_plan: target has no QualitySourcesInfo: " + display_label(target.label))
-    direct = _direct_sources(target)
-    source_count = len(direct)
-    has_sources = source_count > 0
-    plan = {
-        "direct_sources": ",".join(direct),
-        "has_sources": str(has_sources),
-        "source_count": str(source_count),
-        "target": display_label(ctx.attr.target.label),
-    }
-    out = ctx.actions.declare_file(ctx.label.name + ".json")
-    ctx.actions.write(out, json.encode(plan) + "\n")
+    direct = focused_direct_sources(target)
+    info = focused_simple_plan(direct, display_label(ctx.attr.target.label))
+    plan = info.plan
+    out = focused_write_plan(ctx, plan)
     return [
         DefaultInfo(files = depset([out])),
         GoEnvPlanInfo(
             direct_sources = direct,
-            has_sources = has_sources,
-            source_count = source_count,
+            has_sources = info.has_sources,
+            source_count = info.source_count,
             target = plan["target"],
         ),
         DxSubjectInfo(fields = plan),
