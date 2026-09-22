@@ -12,12 +12,17 @@ Hello builds in `fsharp/tests/fixtures/hello/` consume the wrappers.
 ## Sources And Ownership
 
 One directory holds one reusable `fsharp_library` named after the directory
-basename with sorted non-test `.fs` sources. `*Test.fs` files are never
-library sources; handwritten `fsharp_test` owns them. Thin `fsharp_binary`
-entries are never inferred, and a directory mixing a library with a
-`main`-defining source fails so the owner splits it first. Exact naming,
-test, and main rules live in `gazelle/fsharp/naming.go` and
-`gazelle/fsharp/parser.go`, pinned by their fixtures.
+basename with dependency-ordered non-test `.fs` sources. `srcs` order is
+significant: F# compiles topologically, so dependencies come first with an
+alphabetical tie-break (unlike C#, where order is irrelevant). Intra-package
+`open` edges matching sibling basenames drive the order; same-namespace uses
+without an `open` still need handwritten dependency-first order. `*Test.fs`
+files are never library sources; handwritten `fsharp_test` owns them. Thin
+`fsharp_binary` entries are never inferred, and a directory mixing a library
+with a `main`-defining source fails so the owner splits it first. Exact
+naming, test, main, and ordering rules live in `gazelle/fsharp/naming.go` and
+`gazelle/fsharp/parser.go`, pinned by their fixtures. Wrapper `srcs` keep the
+same contract in `fsharp/rules/defs.bzl`.
 
 ## Resolution
 

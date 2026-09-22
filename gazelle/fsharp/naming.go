@@ -10,7 +10,8 @@
 //
 // FSharp is package-level (Go-style, not Python one-source): one directory
 // holds one reusable `fsharp_library` named after the directory basename,
-// with `srcs` as the sorted non-test `.fs` files. `*Test.fs` files are
+// with `srcs` in F# compile order (dependencies first, alphabetical
+// tie-break). `*Test.fs` files are
 // never library sources (handwritten `fsharp_test` owns them), thin
 // `fsharp_binary` entries are never inferred, and directories mixing a
 // library with a `main`-defining source stay handwritten: generation fails
