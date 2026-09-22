@@ -79,8 +79,12 @@ source or dependency closure includes it.
 ## Deterministic Arguments
 
 Rules sort labels and paths using a documented stable ordering before constructing
-action arguments. User-authored ordered option lists retain semantic order. Sets
-or depsets are converted with an explicitly selected order. Tests compare action
+action arguments. Workspace-relative keys (`short_path`) are the stable cache identity;
+exec-root values (`File.path`) locate bytes at execution time. Stage order follows the
+curated adapter-registry definition order, independent of user list order. Config closures
+are sorted by `short_path` before emitting `--tool-file` entries; sources, siblings, and
+resolve entries are sorted likewise. User-authored ordered option lists retain semantic
+order. Sets or depsets are converted with an explicitly selected order. Tests compare action
 keys or action descriptions across declaration-order permutations.
 
 ## Tool Pinning
@@ -125,9 +129,15 @@ Remote boundary: pipeline plus evaluator actions are safe to cache locally
 (deterministic inputs plus versioned result messages) but not safe to
 execute remotely today — tool artifacts are per-host pinned binaries with no
 matching remote execution platform qualified, and no remote cache or executor
-is wired. Local execution-log hit/miss is the delivered cache evidence; a warm
+is wired. Qualification would require pinning toolchains/hubs as toolchain inputs with
+matching remote platforms, not loose file inputs; until then `no-remote-exec` stays
+fail-closed (the hermetic scratch in `quality/runner/src/real.rs` alone does not qualify
+remote). Local execution-log hit/miss is the delivered cache evidence; a warm
 local no-op alone is not a cache test, and controlled remote-cache proof stays
-unverified. Only the final Rust apply step updates the local
+unverified. Lightweight proxy budgets (action count plus cache-hit, no wall-time benchmarks
+per [ADR 0022](../decisions/0022-no-benchmarking.md)) bound scale: clean/warm/one-edit/shared-config
+counts plus per-fixture exact action counts in `quality_cache_aquery` prove fan-out without
+reviving full benchmarks. Only the final Rust apply step updates the local
 working tree. It validates complete result envelopes, groups edits by path, and atomically
 applies each valid file independently. Its design is covered by
 [ADR 0005](../decisions/0005-mutating-operations.md).

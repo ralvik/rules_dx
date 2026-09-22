@@ -650,7 +650,7 @@ fn biome_prettier_identical_output_converges_stable() {
 }
 
 #[test]
-fn biome_prettier_conflicting_output_converges_last_writer_wins() {
+fn biome_prettier_conflicting_output_reports_oscillation() {
     let stages = vec![
         stage("biome", &["javascript"], &["src/app.js"]),
         stage("prettier", &["javascript"], &["src/app.js"]),
@@ -660,7 +660,10 @@ fn biome_prettier_conflicting_output_converges_last_writer_wins() {
     // Stateful normalizers modeling the fixed probes: Biome leaves
     // tabs unchanged and converts anything else to tabs; Prettier
     // leaves spaces unchanged and converts anything else to spaces.
-    // Lexical order converges stable with the last writer winning.
+    // No common fixed point exists: round 2 nets to its start after
+    // intermediate changes, so the run is period-1 oscillation, not
+    // last-writer-wins stability (only STABLE may carry replacements).
+    // See: `docs/quality/quality-testing.md#determinism`.
     let normalize = |tool: &str, _: &str, text: &str| {
         if tool == "biome" {
             if text == "tabs\n" {
@@ -676,7 +679,7 @@ fn biome_prettier_conflicting_output_converges_last_writer_wins() {
     };
     let (terminal, completed, convergence) =
         run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, normalize).expect("converged");
-    assert_eq!(convergence, Convergence::Stable);
+    assert_eq!(convergence, Convergence::Oscillation);
     assert_eq!(completed, 2);
     assert_eq!(terminal["src/app.js"], "spaces\n");
     // The identity arms are live: each formatter already leaves its
@@ -692,7 +695,7 @@ fn biome_prettier_conflicting_output_converges_last_writer_wins() {
 }
 
 #[test]
-fn biome_prettier_reverse_order_converges_to_other_terminal() {
+fn biome_prettier_reverse_order_reports_oscillation() {
     let stages = vec![
         stage("prettier", &["javascript"], &["src/app.js"]),
         stage("biome", &["javascript"], &["src/app.js"]),
@@ -714,10 +717,11 @@ fn biome_prettier_reverse_order_converges_to_other_terminal() {
     };
     let (terminal, completed, convergence) =
         run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, normalize).expect("converged");
-    assert_eq!(convergence, Convergence::Stable);
+    assert_eq!(convergence, Convergence::Oscillation);
     assert_eq!(completed, 2);
-    // Reverse order converges to the other terminal, proving the order
-    // is material and must stay frozen lexically for determinism.
+    // Reverse order reaches the other round-end, proving the order is
+    // material and stays frozen in registry order for determinism; both
+    // orders oscillate without a common fixed point.
     assert_eq!(terminal["src/app.js"], "tabs\n");
     assert_eq!(
         normalize("biome", "javascript", "tabs\n").expect("idempotent"),

@@ -46,17 +46,26 @@ def stage_sources(direct_sources, effective_classes):
     return sorted(seen.keys())
 
 def pipeline_stages(target_classes, capability, family_selections, class_to_family, adapters):
-    """Returns the nonempty stages for one target/capability, in tool order.
+    """Returns the nonempty stages for one target/capability, in ruleset order.
 
+    Order follows the adapter registry definition order (`adapters` dict
+    insertion order: `quality/adapters.bzl` for real/synthetic), which is the
+    curated stable pipeline order, independent of user list order and not a
+    bare lexical sort. Curated defaults (`quality/curated_defaults.bzl`) are
+    in this same stable order. See: `docs/quality/tool-integrations.md`,
+    `docs/decisions/0003-action-granularity.md`.
     Each stage is a dict `{"tool": ..., "classes": [...]}` with sorted
     effective classes. Adapters with no effective classes create no stage.
     Fails on a selected tool ID absent from `adapters`."""
     authorized = authorize_classes(family_selections, class_to_family)
-    stages = []
-    for tool in sorted(authorized.keys()):
+    for tool in authorized.keys():
         if tool not in adapters:
             fail("pipeline: unknown tool '" + tool +
                  "': not in the ruleset adapter registry")
+    stages = []
+    for tool in adapters.keys():
+        if tool not in authorized:
+            continue
         adapter_classes = adapters[tool].get(capability, [])
         effective = effective_classes(target_classes, adapter_classes, authorized[tool])
         if len(effective) > 0:
@@ -88,8 +97,13 @@ def aspect_family_selections(policy, capability):
     """Expands one capability across policy families (See: quality-sources.md#adapter-applicability)."""
     return {family_id: getattr(policy.families[family_id], capability) for family_id in policy.families.keys()}
 
-def aspect_direct_maps(direct_sources):
-    """Splits provider sources into class/file/path maps (See: quality-sources.md#adapter-applicability)."""
+def aspect_direct_maps(direct_sources, what):
+    """Splits provider sources into class/file/path maps (See: quality-sources.md#adapter-applicability).
+
+    Fail-closed multi-config boundary: duplicate workspace paths across
+    classes and `..` escapes fail analysis instead of first-wins or late
+    runner rejection. See: `docs/quality/native-configuration.md#closures-and-action-inputs`.
+    """
     direct_files = {}
     direct_paths = {}
     path_to_file = {}
@@ -99,6 +113,9 @@ def aspect_direct_maps(direct_sources):
         paths = sorted([f.short_path for f in files])
         direct_paths[class_id] = paths
         for f in files:
-            if f.short_path not in path_to_file:
-                path_to_file[f.short_path] = f
+            if ".." in f.short_path.split("/"):
+                fail(what + ": source path escapes workspace: '" + f.short_path + "'")
+            if f.short_path in path_to_file:
+                fail(what + ": duplicate source path '" + f.short_path + "' across classes; one target/capability pipeline needs one owner per path")
+            path_to_file[f.short_path] = f
     return (sorted(direct_files.keys()), direct_files, direct_paths, path_to_file)

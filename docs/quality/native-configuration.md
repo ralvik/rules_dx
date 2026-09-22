@@ -142,9 +142,23 @@ dependency closure. Missing and undeclared references fail rather than reading a
 
 Each action receives only the minimal relevant native config set and those configs' complete
 closures. Config files outside that local set, Gazelle discovery metadata, and repository-wide
-config indexes are not inputs. A target crossing a native-config boundary remains one
-target/capability pipeline; each stage still receives only its effective direct-source subset and
-the tool performs its native per-file resolution against preserved workspace-relative paths.
+config indexes are not inputs. Config content reaches the action key through declared inputs:
+editing a config invalidates every and only pipeline whose selected tool's local set contains
+it, via input digest change; `--tool-config` carries only the stable workspace-relative key
+(`short_path`), never a content hash in the flag itself.
+
+A target crossing a native-config boundary remains one target/capability pipeline; each stage
+still receives only its effective direct-source subset and the tool performs its native per-file
+resolution against preserved workspace-relative paths. Per-file resolution is the tool's job
+where proven hermetic; per-target convergence is the pipeline's job (one ordered stage set
+converging over action-local virtual bytes per [ADR 0003](../decisions/0003-action-granularity.md)).
+A single convergence over multiple policies is therefore well-defined: the tool selects the
+effective config per file, the pipeline converges the union, and identical final bytes across
+owner/configuration contexts deduplicate while disagreement rejects only that file.
+
+Fail-closed multi-config boundary: duplicate workspace paths across classes, sibling shadows
+of checked sources or of each other, and `..` escapes fail analysis instead of first-wins or
+late runner rejection, so the wrong config can never silently win.
 
 Editing a config invalidates every and only pipeline whose selected tool's local set contains it.
 Adding, moving, or removing a config changes generated bindings and action keys only in the affected

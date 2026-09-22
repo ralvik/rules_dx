@@ -230,7 +230,7 @@ def real_pipeline_unit_tests(name):
                 ],
             ),
             expect_equal(
-                "pipeline_stages orders python lint opt-ins lexically",
+                "pipeline_stages orders python lint opt-ins in registry order",
                 pipeline_stages(
                     ["python"],
                     "lint",
@@ -246,7 +246,7 @@ def real_pipeline_unit_tests(name):
                 ],
             ),
             expect_equal(
-                "pipeline_stages orders javascript lint opt-ins lexically",
+                "pipeline_stages orders javascript lint opt-ins in registry order",
                 pipeline_stages(
                     ["javascript"],
                     "lint",
@@ -260,7 +260,7 @@ def real_pipeline_unit_tests(name):
                 ],
             ),
             expect_equal(
-                "pipeline_stages orders javascript format alternatives lexically",
+                "pipeline_stages orders javascript format alternatives in registry order",
                 pipeline_stages(
                     ["javascript"],
                     "format",

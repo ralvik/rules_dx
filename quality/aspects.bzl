@@ -21,7 +21,7 @@ def _quality_pipeline_action(target, ctx, capability):
     info = target[QualitySourcesInfo]
     policy = ctx.attr._policy[QualityPolicyInfo]
 
-    (target_classes, direct_files, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources)
+    (target_classes, direct_files, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources, "quality_aspect (" + str(target.label) + ")")
     selections = aspect_family_selections(policy, capability)
     resolved = resolve_pipeline(
         target_classes,

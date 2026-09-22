@@ -479,8 +479,8 @@ fn state_digest_independent_of_insertion_order() {
 fn diagnostics_tiebreak_deterministically_across_tool_and_message() {
     // Determinism battery: permutation ranking must be
     // total — same path/offset from concurrent adapters resolves by
-    // (end_byte, tool_id, message) so every arrival permutation
-    // converges to one canonical order.
+    // (end_byte, severity, tool_id, rule_id, message) so every arrival
+    // permutation converges to one canonical order.
     fn diag(tool: &str, message: &str) -> Diagnostic {
         Diagnostic {
             severity: Severity::Warning as i32,
@@ -607,6 +607,81 @@ fn changing_tenth_round_fails_without_eleventh_invocation() {
     .unwrap();
     assert!(result.replacements.is_empty());
     assert!(quality_result::validate(&result).is_ok());
+}
+
+#[test]
+fn full_round_revert_reports_oscillation_not_stability() {
+    // Determinism battery: `quality-testing.md` requires a full round
+    // whose end bytes equal its start after intermediate changes to report
+    // oscillation, not false stability (only STABLE may carry replacements).
+    // Two stages undoing each other in one round net to the start with
+    // changed==true, so the run must be OSCILLATION at round 1.
+    // See: issue #919 multi-config determinism.
+    let stages = vec![
+        stage("lint-a", &["rust"], &["src/lib.rs"]),
+        stage("lint-b", &["rust"], &["src/lib.rs"]),
+    ];
+    let mut initial = BTreeMap::new();
+    initial.insert("src/lib.rs".to_owned(), "a".to_owned());
+    let undo = |tool: &str, _: &str, text: &str| match (tool, text) {
+        ("lint-a", "a") => Ok("b".to_owned()),
+        ("lint-b", "b") => Ok("a".to_owned()),
+        _ => Ok(text.to_owned()),
+    };
+    let (terminal, completed, convergence) =
+        run_convergence(&initial, &stages, 10, undo).expect("converged");
+    assert_eq!(convergence, Convergence::Oscillation);
+    assert_eq!(completed, 1);
+    assert_eq!(terminal["src/lib.rs"], "a");
+    let result = assemble(
+        "//quality:test",
+        Capability::Lint as i32,
+        &stages,
+        &initial,
+        &terminal,
+        (Vec::new(), Vec::new()),
+        (completed, convergence),
+    )
+    .unwrap();
+    assert!(result.replacements.is_empty());
+    assert!(validate(&result).is_ok());
+}
+
+#[test]
+fn diagnostics_sort_includes_severity_and_rule() {
+    // Full sort key (path,start,end,severity,tool,rule,message) keeps the
+    // order total when concurrent adapters share one range with different
+    // severities or rules. Same path/offsets with different severity must
+    // order by severity, then tool, then rule, then message.
+    // See: `docs/quality/quality-result-protocol.md#diagnostics`.
+    fn diag(severity: i32, tool: &str, rule: &str, message: &str) -> Diagnostic {
+        Diagnostic {
+            severity,
+            message: message.to_owned(),
+            tool_id: tool.to_owned(),
+            rule_id: rule.to_owned(),
+            path: "src/same.rs".to_owned(),
+            start_byte: Some(3),
+            end_byte: Some(4),
+            fixable: false,
+            ..Default::default()
+        }
+    }
+    let canonical = vec![
+        diag(Severity::Info as i32, "lint-a", "a-rule", "alpha"),
+        diag(Severity::Warning as i32, "lint-a", "a-rule", "alpha"),
+        diag(Severity::Warning as i32, "lint-a", "b-rule", "alpha"),
+        diag(Severity::Warning as i32, "lint-b", "a-rule", "alpha"),
+        diag(Severity::Error as i32, "lint-a", "a-rule", "alpha"),
+    ];
+    let mut reversed = canonical.clone();
+    reversed.reverse();
+    sort_diagnostics(&mut reversed);
+    assert_eq!(reversed, canonical);
+    let mut rotated = canonical.clone();
+    rotated.rotate_left(2);
+    sort_diagnostics(&mut rotated);
+    assert_eq!(rotated, canonical);
 }
 
 #[test]

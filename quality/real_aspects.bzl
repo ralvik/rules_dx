@@ -52,7 +52,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     info = target[QualitySourcesInfo]
     policy = ctx.attr._policy[QualityPolicyInfo]
 
-    (target_classes, direct_files, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources)
+    (target_classes, direct_files, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources, "real_aspect (" + str(target.label) + ")")
     selections = aspect_family_selections(policy, capability)
     resolved = resolve_pipeline(
         target_classes,
@@ -242,9 +242,10 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     # Markdown link-resolution siblings: unclassified files declared via
     # `markdown_siblings` on the visited rule. Only collected when a
     # markdown_check stage runs, so non-Markdown actions stay
-    # byte-identical. A sibling shadowing a checked source is dropped
-    # (the checked source wins); siblings shadowing each other keep the
-    # first in attribute order.
+    # byte-identical. Fail-closed: a sibling shadowing a checked source or
+    # another sibling fails analysis instead of first-wins, so the wrong
+    # link-resolution closure cannot silently win. `..` escapes fail here,
+    # not in the runner.
     sibling_pairs = {}
     if "markdown_check" in stage_tools and hasattr(ctx.rule.attr, "markdown_siblings"):
         for sibling in ctx.rule.attr.markdown_siblings:
@@ -255,8 +256,13 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             else:
                 sibling_files = [sibling]
             for f in sibling_files:
-                if f.short_path not in path_to_file and f.short_path not in sibling_pairs:
-                    sibling_pairs[f.short_path] = f
+                if ".." in f.short_path.split("/"):
+                    fail("real_aspect (" + str(target.label) + "): sibling path escapes workspace: '" + f.short_path + "'")
+                if f.short_path in path_to_file:
+                    fail("real_aspect (" + str(target.label) + "): sibling '" + f.short_path + "' shadows a checked source; siblings must not shadow sources")
+                if f.short_path in sibling_pairs:
+                    fail("real_aspect (" + str(target.label) + "): duplicate sibling '" + f.short_path + "'; siblings must be unique")
+                sibling_pairs[f.short_path] = f
 
     args = ctx.actions.args()
     args.add("--producer", str(target.label))
@@ -291,11 +297,11 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         if transitive != None:
             for f in transitive.to_list():
                 ws_path = f.short_path
+                if ".." in ws_path.split("/"):
+                    fail("real_aspect (" + str(target.label) + "): resolve path escapes workspace: '" + ws_path + "'")
                 if ws_path in path_to_file or ws_path in sibling_pairs or ws_path in resolve_pairs:
                     continue
                 if not ws_path.endswith(".py") and not ws_path.endswith(".pyi"):
-                    continue
-                if ws_path.startswith("../"):
                     continue
                 resolve_pairs[ws_path] = f
     for ws_path in sorted(resolve_pairs.keys()):
@@ -327,7 +333,11 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             hint = configs_by_tool[tool]
             config_rel = hint.config.short_path
             args.add("--tool-config", tool + "=" + config_rel)
-            for f in hint.closure.to_list():
+            # Stable workspace-relative keys: sort closure by short_path so
+            # declaration/depset order never perturbs the action key. Config
+            # content itself reaches the key via declared inputs.
+            # See: `docs/quality/action-model.md#deterministic-arguments`.
+            for f in sorted(hint.closure.to_list(), key = lambda f: f.short_path):
                 args.add("--tool-file", tool + "=" + f.short_path + "=" + f.path)
                 inputs.append(f)
     if clippy_delegated:

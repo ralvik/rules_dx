@@ -2,10 +2,15 @@
 //!
 //! Contract: `docs/cli/cli-contract.md` (direct Bazel CI) and result
 //! semantics in `docs/quality/quality-result-protocol.md#execution-and-policy`.
-//! One evaluator consumes one validated `QualityResult` and fails when any
-//! initial or terminal diagnostic meets the `--fail_on` threshold, when the
-//! result proposes any replacement independently of severity, or when
-//! convergence is not `STABLE`. `fixable` never weakens evaluation: direct
+//! One evaluator consumes one validated `QualityResult` (one target/capability
+//! pipeline) and fails when any initial or terminal diagnostic meets the
+//! `--fail_on` threshold, when the result proposes any replacement
+//! independently of severity, or when convergence is not `STABLE`.
+//! Replacement and convergence failures are intentional check parity, not a
+//! threshold bypass: `dx lint --check` fails on any proposed change even with
+//! zero diagnostics, so evaluators enforce the same rule at every threshold.
+//! Round caps stay fixed ruleset policy (ten rounds per ADR 0003), not
+//! per-result configuration. `fixable` never weakens evaluation: direct
 //! Bazel applies no fix, so every original finding still counts, exactly as
 //! CLI check mode evaluates every original finding including
 //! guaranteed-fixable ones.
