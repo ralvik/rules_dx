@@ -1,0 +1,10 @@
+# Editor shell-indent mirror for `shfmt -i 2` (issue #1071): editors format
+# shell like the harness. Bazel shfmt/shellcheck actions never read this
+# (explicit `-d`/`-w` plus `--format=gcc`; Prettier passes
+# `--no-editorconfig`). `-ci` stays CLI-only. See
+# `docs/contributing/local-workflows.md#shell`.
+root = true
+
+[*.sh]
+indent_style = space
+indent_size = 2

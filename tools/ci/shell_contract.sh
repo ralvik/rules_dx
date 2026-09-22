@@ -188,14 +188,22 @@ fi
 
 # Lint: shellcheck config stays (bash, all checks with scoped
 # disables) and the harness stays shfmt clean (shfmt -i 2 -ci).
+# The invocation stays discoverable (issue #1071): local-workflows
+# documents shellcheck plus shfmt -i 2 -ci, .editorconfig mirrors the
+# shell indent.
 if grep -q -F -e 'shell=bash' .shellcheckrc &&
   grep -q -F -e 'enable=all' .shellcheckrc &&
   grep -q -F -e 'disable=SC1090,SC1091' .shellcheckrc &&
   grep -q -F -e 'shfmt -i 2 -ci' .shellcheckrc &&
-  grep -q -F -e 'shfmt -i 2 -ci' tools/sh/lib.sh; then
+  grep -q -F -e 'shfmt -i 2 -ci' tools/sh/lib.sh &&
+  grep -q -F -e 'shfmt -i 2 -ci' docs/contributing/local-workflows.md &&
+  grep -q -F -e 'shellcheck' docs/contributing/local-workflows.md &&
+  grep -q -F -e '[*.sh]' .editorconfig &&
+  grep -q -F -e 'indent_size = 2' .editorconfig &&
+  grep -q -F -e 'indent_style = space' .editorconfig; then
   ok
 else
-  bad "shellcheck/shfmt pins missing (.shellcheckrc bash+all plus shfmt -i 2 -ci, issue #323)"
+  bad "shellcheck/shfmt pins missing (.shellcheckrc bash+all plus shfmt -i 2 -ci plus local-workflows invocation plus .editorconfig shell indent, issues #323, #1071)"
 fi
 
 # Windows shell stays bash-only for the harness: no harness `.ps1`/`.bat`,

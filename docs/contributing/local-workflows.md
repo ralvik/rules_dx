@@ -101,6 +101,20 @@ Coverage follows the mandatory project gate described in
 bazel run //cli/cli:dx -- coverage --min-coverage <percent> //...
 ```
 
+## Shell
+
+Shell harness files stay `shellcheck` plus `shfmt` clean (`.shellcheckrc` bash plus all checks, `shfmt -i 2 -ci`):
+
+```sh
+shellcheck <files>
+shfmt -i 2 -ci -d <files>  # check; -w rewrites in place
+```
+
+`.shellcheckrc` owns the bash-only policy plus the nine scoped disables
+(see [Code style](style.md#shellcheck)); `.editorconfig` mirrors the shell
+indent for editors (`-ci` stays CLI-only). `//tools/ci:shell_contract`
+pins both configs.
+
 ## Corpus Dogfood
 
 The repository corpus (`real_source_target(name = "corpus_*")` per content
