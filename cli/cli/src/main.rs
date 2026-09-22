@@ -84,6 +84,72 @@ struct BinaryRunner {
     inherit_stdout: bool,
 }
 
+/// Single streamed-spawn owner for the binary runner: spawns `argv[0]`
+/// with piped-or-inherited stdout, stderr always inherited, through the
+/// `CHILD_PID` registration plus stdout-to-stderr pump and signal
+/// re-raise teardown. `clear_env` selects the hermetic secrets path
+/// (only explicit env reaches the child); otherwise the parent
+/// environment is inherited.
+fn spawn_streamed(
+    argv: &[String],
+    cwd: &Path,
+    env: &[(&str, &str)],
+    clear_env: bool,
+    inherit_stdout: bool,
+) -> io::Result<ChildStatus> {
+    let (binary, args) = argv
+        .split_first()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary"))?;
+    let mut command = Command::new(binary);
+    command.args(args).current_dir(cwd).stderr(Stdio::inherit());
+    if clear_env {
+        command.env_clear();
+    }
+    command.envs(env.iter().copied());
+    if inherit_stdout {
+        command.stdout(Stdio::inherit());
+    } else {
+        command.stdout(Stdio::piped());
+    }
+    let mut child = command.spawn()?;
+    CHILD_PID.store(child.id(), Ordering::SeqCst);
+    let pump = if inherit_stdout {
+        None
+    } else {
+        let stdout = child.stdout.take();
+        Some(std::thread::spawn(move || {
+            if let Some(mut stdout) = stdout {
+                let mut stderr = io::stderr();
+                let _ = io::copy(&mut stdout, &mut stderr);
+            }
+        }))
+    };
+    let status = child.wait();
+    CHILD_PID.store(0, Ordering::SeqCst);
+    if let Some(pump) = pump {
+        let _ = pump.join();
+    }
+    let status = status?;
+    // Fail-fast policy: signal re-raise exists only on
+    // unix (`ExitStatusExt::signal`); Windows reports codes only, so
+    // this stays gated instead of a portable fake. Safe cleanup is
+    // complete (child reaped, pump joined): restore the default
+    // disposition and re-raise so the shell observes the signal death.
+    #[cfg(unix)]
+    {
+        use std::os::unix::process::ExitStatusExt;
+        if let Some(signo) = status.signal() {
+            unsafe {
+                libc::signal(signo, libc::SIG_DFL);
+                libc::raise(signo);
+            }
+        }
+    }
+    Ok(ChildStatus {
+        code: status.code(),
+    })
+}
+
 impl Runner for BinaryRunner {
     fn run_hermetic(
         &self,
@@ -93,53 +159,7 @@ impl Runner for BinaryRunner {
     ) -> io::Result<ChildStatus> {
         // Secrets path clears ambient configuration before spawning:
         // only the explicit hermetic env reaches Gitleaks.
-        let (binary, args) = argv.split_first().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
-        })?;
-        let mut command = Command::new(binary);
-        command
-            .args(args)
-            .env_clear()
-            .envs(env.iter().copied())
-            .current_dir(cwd)
-            .stderr(Stdio::inherit());
-        if self.inherit_stdout {
-            command.stdout(Stdio::inherit());
-        } else {
-            command.stdout(Stdio::piped());
-        }
-        let mut child = command.spawn()?;
-        CHILD_PID.store(child.id(), Ordering::SeqCst);
-        let pump = if self.inherit_stdout {
-            None
-        } else {
-            let stdout = child.stdout.take();
-            Some(std::thread::spawn(move || {
-                if let Some(mut stdout) = stdout {
-                    let mut stderr = io::stderr();
-                    let _ = io::copy(&mut stdout, &mut stderr);
-                }
-            }))
-        };
-        let status = child.wait();
-        CHILD_PID.store(0, Ordering::SeqCst);
-        if let Some(pump) = pump {
-            let _ = pump.join();
-        }
-        let status = status?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::ExitStatusExt;
-            if let Some(signo) = status.signal() {
-                unsafe {
-                    libc::signal(signo, libc::SIG_DFL);
-                    libc::raise(signo);
-                }
-            }
-        }
-        Ok(ChildStatus {
-            code: status.code(),
-        })
+        spawn_streamed(argv, cwd, env, true, self.inherit_stdout)
     }
 
     fn gitleaks_tool(&self) -> Option<std::path::PathBuf> {
@@ -155,58 +175,7 @@ impl Runner for BinaryRunner {
     }
 
     fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus> {
-        let (binary, args) = argv.split_first().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
-        })?;
-        let mut command = Command::new(binary);
-        command
-            .args(args)
-            .envs(env.iter().copied())
-            .current_dir(cwd)
-            .stderr(Stdio::inherit());
-        if self.inherit_stdout {
-            command.stdout(Stdio::inherit());
-        } else {
-            command.stdout(Stdio::piped());
-        }
-        let mut child = command.spawn()?;
-        CHILD_PID.store(child.id(), Ordering::SeqCst);
-        let pump = if self.inherit_stdout {
-            None
-        } else {
-            let stdout = child.stdout.take();
-            Some(std::thread::spawn(move || {
-                if let Some(mut stdout) = stdout {
-                    let mut stderr = io::stderr();
-                    let _ = io::copy(&mut stdout, &mut stderr);
-                }
-            }))
-        };
-        let status = child.wait();
-        CHILD_PID.store(0, Ordering::SeqCst);
-        if let Some(pump) = pump {
-            let _ = pump.join();
-        }
-        let status = status?;
-        // Fail-fast policy: signal re-raise exists only on
-        // unix (`ExitStatusExt::signal`); Windows reports codes only, so
-        // this stays gated instead of a portable fake.
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::ExitStatusExt;
-            if let Some(signo) = status.signal() {
-                // Safe cleanup is complete (child reaped, pump joined):
-                // restore the default disposition and re-raise so the
-                // shell observes the signal death.
-                unsafe {
-                    libc::signal(signo, libc::SIG_DFL);
-                    libc::raise(signo);
-                }
-            }
-        }
-        Ok(ChildStatus {
-            code: status.code(),
-        })
+        spawn_streamed(argv, cwd, env, false, self.inherit_stdout)
     }
 }
 

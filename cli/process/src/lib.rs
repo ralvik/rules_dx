@@ -574,20 +574,36 @@ pub trait Runner {
     }
 }
 
+/// Single captured-spawn owner: runs `argv[0]` with the rest as args in
+/// `cwd`, capturing stdio. `env` carries extra variables; `clear_env`
+/// clears the parent environment first so only `env` reaches the child
+/// and `PATH` is never set.
+/// See: `docs/cli/cli-contract.md` (process boundary).
+pub fn spawn_output(
+    argv: &[String],
+    cwd: &Path,
+    env: &[(&str, &str)],
+    clear_env: bool,
+) -> io::Result<std::process::Output> {
+    let (binary, args) = argv
+        .split_first()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary"))?;
+    let mut command = Command::new(OsStr::new(binary));
+    command.args(args).current_dir(cwd);
+    if clear_env {
+        command.env_clear();
+    }
+    command.envs(env.iter().copied());
+    command.output()
+}
+
 /// Real runner that spawns the process directly. Argument vectors are
 /// passed through and never rendered.
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {
     fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus> {
-        let (binary, args) = argv.split_first().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
-        })?;
-        let output = Command::new(OsStr::new(binary))
-            .args(args)
-            .envs(env.iter().copied())
-            .current_dir(cwd)
-            .output()?;
+        let output = spawn_output(argv, cwd, env, false)?;
         Ok(ChildStatus {
             code: output.status.code(),
         })
@@ -599,15 +615,7 @@ impl Runner for SystemRunner {
         cwd: &Path,
         env: &[(&str, &str)],
     ) -> io::Result<ChildStatus> {
-        let (binary, args) = argv.split_first().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary")
-        })?;
-        let output = Command::new(OsStr::new(binary))
-            .args(args)
-            .env_clear()
-            .envs(env.iter().copied())
-            .current_dir(cwd)
-            .output()?;
+        let output = spawn_output(argv, cwd, env, true)?;
         Ok(ChildStatus {
             code: output.status.code(),
         })
