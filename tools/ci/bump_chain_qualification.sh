@@ -41,11 +41,13 @@ expected="cli/bump/tests/fixtures/bump_chain/bump_chain.expected"
 fixture_build="cli/bump/tests/fixtures/bump_chain/BUILD.bazel"
 bump_lib="cli/bump/src/lib.rs"
 bump_request="cli/bump/src/request.rs"
+bump_request_tests="cli/bump/src/request_tests.rs"
+bump_version="cli/bump/src/version.rs"
 bump_sets="cli/bump/src/sets.rs"
 bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
-build="tools/ci/BUILD.bazel"
-ci=".github/workflows/ci.yml"
+targets_c="tools/ci/ci_targets_c.bzl"
+freshness="tools/ci/dogfood_freshness.sh"
 verify="docs/testing/verification-matrix.md"
 
 # Bump lib owns the automatic chaining contract (never a manual second step).
@@ -62,7 +64,7 @@ fi
 if grep -q -F -e 'refresh_selector' "$bump_request" &&
   grep -q -F -e 'automatically' "$bump_request" &&
   grep -q -F -e 'issue #638' "$bump_request" &&
-  grep -q -F -e 'refresh_selector_chains_automatically_per_set' "$bump_request"; then
+  grep -q -F -e 'refresh_selector_chains_automatically_per_set' "$bump_request_tests"; then
   ok
 else
   bad "bump request.rs lost its refresh_selector automatic chaining under #638"
@@ -129,6 +131,21 @@ else
   bad "exec/bump.rs lost its chaining test pins under #638"
 fi
 
+# Major-bump=>migrate hint (issue #931): bump(major) plans print the
+# missing-manifest hint with exit mapping, pinned here plus migrate.
+if grep -q -F -e 'generic_major_bump_hint' "$bump_exec" &&
+  grep -q -F -e 'major_bump_hint' "$bump_request" &&
+  grep -q -F -e 'is_major_bump' "$bump_version" &&
+  grep -q -F -e 'major_bump_migrate_hint' "$bump_version" &&
+  grep -q -F -e 'major_bump_plans_carry_migrate_hint_with_exit_mapping' "$bump_exec" &&
+  grep -q -F -e 'dx migrate --from' "$bump_exec" &&
+  grep -q -F -e 'migrate_failed' "$bump_exec" &&
+  grep -q -F -e 'missing-versions' "$bump_exec"; then
+  ok
+else
+  bad "exec/bump.rs lost its major-bump=>migrate hint with exit mapping under #931"
+fi
+
 # Fixture pins stay present with disposition plus per-set chaining plus selectors.
 if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" ]] &&
   grep -q -F -e 'BUMP_CHAIN = "automatic"' "$pins" &&
@@ -158,6 +175,18 @@ else
   bad "bump_chain pins.bzl lost its file-only plus failure plus rejected plus honesty wiring under #638"
 fi
 
+# Major-bump=>migrate fixture pins (issue #931).
+if grep -q -F -e 'BUMP_MAJOR_HINT' "$pins" &&
+  grep -q -F -e 'major bump' "$pins" &&
+  grep -q -F -e 'dx migrate --from' "$pins" &&
+  grep -q -F -e 'migrate_failed' "$pins" &&
+  grep -q -F -e 'missing-versions' "$pins" &&
+  grep -q -F -e 'migrate-v1-to-v2.json' "$pins"; then
+  ok
+else
+  bad "bump_chain pins.bzl lost its major-bump=>migrate hint wiring under #931"
+fi
+
 # Expected fixture pins the chaining plus failure plus honesty lines.
 if grep -q -F -e 'cargo widen then automatic' "$expected" &&
   grep -q -F -e 'npm widen then automatic' "$expected" &&
@@ -172,6 +201,16 @@ if grep -q -F -e 'cargo widen then automatic' "$expected" &&
   ok
 else
   bad "bump_chain.expected lost its chaining plus failure plus honesty lines under #638"
+fi
+
+# Expected fixture pins the major-bump=>migrate hint (issue #931).
+if grep -q -F -e 'major bump 1.2.3 -> 2.0.0' "$expected" &&
+  grep -q -F -e 'migrate-v1-to-v2.json' "$expected" &&
+  grep -q -F -e 'migrate_failed' "$expected" &&
+  grep -q -F -e 'missing-versions' "$expected"; then
+  ok
+else
+  bad "bump_chain.expected lost its major-bump=>migrate hint lines under #931"
 fi
 
 # Fixture BUILD exports pins plus expected with corpus coverage.
@@ -193,6 +232,17 @@ else
   bad "audit-update-bazel.md lost its automatic chaining #638 note with fixture link"
 fi
 
+# Command docs carry the major-bump=>migrate hint (issue #931).
+if grep -q -F -e 'Major bumps hint migrate' "$command_doc" &&
+  grep -q -F -e 'issue #931' "$command_doc" &&
+  grep -q -F -e 'dx migrate --from' "$command_doc" &&
+  grep -q -F -e 'migrate_failed' "$command_doc" &&
+  grep -q -F -e 'missing-versions' "$command_doc"; then
+  ok
+else
+  bad "audit-update-bazel.md lost its major-bump=>migrate hint under #931"
+fi
+
 # ADR 0024 owns the automatic chaining rationale (never manual).
 if grep -q -F -e 'chains automatically' "$adr" &&
   grep -q -F -e 'issue #638' "$adr" &&
@@ -202,13 +252,13 @@ else
   bad "ADR 0024 lost its automatic chaining record under #638"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "bump_chain_qualification"' "$build" &&
-  grep -q -F -e 'bump_chain_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_chain_qualification' "$ci"; then
+# BUILD owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "bump_chain_qualification"' "$targets_c" &&
+  grep -q -F -e 'bump_chain_qualification.sh' "$targets_c" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_chain_qualification' "$freshness"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the bump_chain_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the bump_chain_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Verification matrix owns the harness entry as seed-only fixture evidence.

@@ -10,6 +10,7 @@ npm:jest refreshes npm:jest
 maven:junit:junit refreshes maven
 nuget:FSharp.Core refreshes nuget
 widen kept in manifest on refresh failure (update_failed, no rollback)
+major bump 1.2.3 -> 2.0.0 via migrate-v1-to-v2.json (migrate_failed exit 1; missing-versions exit 2)
 manual second step rejected
 private resolver rejected
 qualified seed-only under issue #638

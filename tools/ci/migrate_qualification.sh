@@ -36,6 +36,11 @@ dx_test_init
 
 migrate_rs="cli/adopt/src/migrate.rs"
 migrate_exec="cli/cli/src/exec/migrate.rs"
+bump_exec="cli/cli/src/exec/bump.rs"
+bump_request="cli/bump/src/request.rs"
+bump_version="cli/bump/src/version.rs"
+bump_pins="cli/bump/tests/fixtures/bump_chain/pins.bzl"
+bump_expected="cli/bump/tests/fixtures/bump_chain/bump_chain.expected"
 command_rs="cli/cli/src/args/command.rs"
 grammar_rs="cli/cli/src/args/grammar.rs"
 parser_rs="cli/cli/src/args/parser.rs"
@@ -152,6 +157,29 @@ if grep -q -F -e '`migrate`' "$testing" &&
   ok
 else
   bad "testing/cli.md lost its migrate fixture plus #462/#671 owner record"
+fi
+
+# Cross-command hint (issue #931): bump(major) plans print the
+# missing-manifest hint with exit mapping; migrate docs own the reverse link.
+if grep -q -F -e 'generic_major_bump_hint' "$bump_exec" &&
+  grep -q -F -e 'major_bump_hint' "$bump_request" &&
+  grep -q -F -e 'is_major_bump' "$bump_version" &&
+  grep -q -F -e 'BUMP_MAJOR_HINT' "$bump_pins" &&
+  grep -q -F -e 'major bump 1.2.3 -> 2.0.0' "$bump_expected" &&
+  grep -q -F -e 'migrate_failed' "$bump_expected" &&
+  grep -q -F -e 'missing-versions' "$bump_expected"; then
+  ok
+else
+  bad "bump major-hint lost its cross-command pin under #931"
+fi
+if grep -q -F -e 'Bump Cross-Hint' "$migrate_doc" &&
+  grep -q -F -e 'issue #931' "$migrate_doc" &&
+  grep -q -F -e 'dx bump' "$migrate_doc" &&
+  grep -q -F -e 'migrate_failed' "$migrate_doc" &&
+  grep -q -F -e 'missing-versions' "$migrate_doc"; then
+  ok
+else
+  bad "migrate doc lost its bump cross-hint under #931"
 fi
 
 dx_test_summary "migrate syntax plus manifest-selection harness"

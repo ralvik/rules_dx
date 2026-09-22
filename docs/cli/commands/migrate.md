@@ -78,3 +78,13 @@ pinned by `dx_adopt` unit tests (`migrate_is_upgrade`,
 `migrate_manifest_name_full`, `plan_migrate`) plus `dx_cli` parse/execution
 fixtures and `bazel run //tools/ci:migrate_qualification` (issue
 #462, upgrade scope issue #671).
+
+## Bump Cross-Hint
+
+Major dependency widens hint this command (issue #931): `dx bump`
+semver plans print `if major bump, run dx migrate --from <old> --to
+<new>` with the missing-manifest mapping (`migrate_failed` exit `1`
+live without a manifest; missing `--from`/`--to` exit `2`
+`missing-versions`). See
+[`dx bump`](audit-update-bazel.md#dx-bump) plus
+`cli/bump/tests/fixtures/bump_chain/`.

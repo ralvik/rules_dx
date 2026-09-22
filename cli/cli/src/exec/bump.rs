@@ -147,11 +147,16 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
     // sets (Bazel, GitHub Actions) have no refresh launch; Cargo/npm/Go
     // refresh through the approved `dx_update::backend` operations.
     if !request.needs_update_refresh() {
-        let message = format!(
+        let mut message = format!(
             "widened {} to {} in {manifest} (then run preset flag-diff review plus `bazel build //...`)",
             request.selector,
             request.version.display()
         );
+        // Major-bump=>migrate hint (issue #931, See: `docs/cli/commands/migrate.md`):
+        // semver widens carry the missing-manifest hint with exit mapping.
+        if request.version.is_semver() {
+            message.push_str(&format!("; {}", dx_bump::generic_major_bump_hint()));
+        }
         if invocation.output == OutputMode::Json {
             if let Ok(event) = notice_event(&NoticeEvent {
                 level: "info".to_owned(),
@@ -249,9 +254,13 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
                 request.selector,
                 request.version.display()
             );
-            let refreshed_message = format!(
+            let mut refreshed_message = format!(
                 "{widened_message} and refreshed {update_selector} via `dx update {update_selector}` automatically (pinned module lock; no-op success)"
             );
+            // Major-bump=>migrate hint (issue #931, See: `docs/cli/commands/migrate.md`).
+            if request.version.is_semver() {
+                refreshed_message.push_str(&format!("; {}", dx_bump::generic_major_bump_hint()));
+            }
             emit_bump_refreshed(
                 invocation,
                 out,
@@ -288,9 +297,16 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
                             request.selector,
                             request.version.display()
                         );
-                        let refreshed_message = format!(
+                        let mut refreshed_message = format!(
                             "{widened_message} and refreshed {update_selector} via `dx update {update_selector}` automatically (resolver-owned)"
                         );
+                        // Major-bump=>migrate hint (issue #931, See: `docs/cli/commands/migrate.md`).
+                        if request.version.is_semver() {
+                            refreshed_message.push_str(&format!(
+                                "; {}",
+                                dx_bump::generic_major_bump_hint()
+                            ));
+                        }
                         emit_bump_refreshed(invocation, out, err, &request, manifest, &widened_message, &refreshed_message, update_set.name(), verbose);
                         0
                     }
@@ -826,5 +842,34 @@ mod tests {
             std::fs::read_to_string(harness.workspace.join(".bazelversion")).expect("read"),
             "9.3.0\n"
         );
+    }
+
+    #[test]
+    fn major_bump_plans_carry_migrate_hint_with_exit_mapping() {
+        // Issue #931 (See: `docs/cli/commands/migrate.md`): semver dry-run
+        // plus live plans print the missing-manifest hint with exit mapping;
+        // Git shapes never hint.
+        let harness = Harness::new("bump-major-hint-dryrun");
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.toml",
+            "[dependencies]\nanyhow = \"1\"\n",
+        );
+        let (code, out, err) = harness.run(&["bump", "cargo:anyhow", "2.0.0", "--dry-run"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("major bump"), "{out}");
+        assert!(out.contains("dx migrate --from"), "{out}");
+        assert!(out.contains("migrate_failed"), "{out}");
+        assert!(out.contains("missing-versions"), "{out}");
+        let harness = Harness::new("bump-major-hint-live");
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.toml",
+            "[dependencies]\nanyhow = \"1\"\n",
+        );
+        let (code, out, err) = harness.run(&["bump", "cargo:anyhow", "2.0.0"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("widened cargo:anyhow to 2.0.0"), "{out}");
+        assert!(out.contains("major bump"), "{out}");
+        assert!(out.contains("migrate_failed"), "{out}");
+        assert!(out.contains("missing-versions"), "{out}");
     }
 }

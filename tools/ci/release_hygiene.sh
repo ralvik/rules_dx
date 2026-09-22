@@ -55,9 +55,33 @@ else
   bad "dist/ or release/ paths are committed: $(git ls-files | grep -E '^(dist|release)/' | head -n 5)"
 fi
 
-# The module stays at 0.0.0; consumers pin reviewed commits, never tags.
-dx_guard_re_contains MODULE.bazel '^module\(|version = "0\.0\.0"' "MODULE.bazel drifted from version 0.0.0"
-dx_guard_re_absent MODULE.bazel 'version = "0\.1\.0"' "MODULE.bazel drifted from version 0.0.0"
+# Atomic version flip (issue #931): at 0.0.0 consumers pin reviewed
+# commits, never tags; after the first SemVer flip the new version must
+# land with a CHANGELOG SemVer entry plus marker removal in the same PR.
+# Either half alone fails closed (see release_policy.sh for the mirrored
+# gate).
+dx_guard_re_contains MODULE.bazel '^module\(' "MODULE.bazel lost its module() header"
+hygiene_module_version="$(grep -o -E -e '^    version = "[^"]+"' MODULE.bazel | head -1 | cut -d'"' -f2 || true)"
+if [[ -z "$hygiene_module_version" ]]; then
+  bad "MODULE.bazel lost its version pin (want single-version atomic, issue #931)"
+elif [[ "$hygiene_module_version" == "0.0.0" ]]; then
+  if grep -q -F -e 'No release has been cut' CHANGELOG.md; then
+    ok
+  else
+    bad "CHANGELOG.md lost the no-release marker at 0.0.0 (want atomic flip, issue #931)"
+  fi
+else
+  if grep -q -F -e 'No release has been cut' CHANGELOG.md; then
+    bad "CHANGELOG.md still carries the no-release marker with MODULE.bazel at $hygiene_module_version (want atomic SemVer entry plus marker removal, issue #931)"
+  else
+    ok
+  fi
+  if grep -q -F -e "$hygiene_module_version" CHANGELOG.md && grep -q -E -e '^## ' CHANGELOG.md; then
+    ok
+  else
+    bad "CHANGELOG.md lost its SemVer entry for MODULE.bazel $hygiene_module_version (want atomic entry plus marker removal, issue #931)"
+  fi
+fi
 
 # No version tags without explicit owner approval (the unapproved v0.1.0
 # candidate was removed; remote stays tag-free, verified via ls-remote).
