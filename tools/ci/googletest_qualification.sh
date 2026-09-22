@@ -39,7 +39,7 @@ lib="cc/tests/fixtures/googletest/greeter.cc"
 test="cc/tests/fixtures/googletest/greeter_test.cc"
 module="MODULE.bazel"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 verify="docs/testing/verification-matrix.md"
 ci=".github/workflows/ci.yml"
 tools_build="tools/ci/BUILD.bazel"
@@ -154,7 +154,7 @@ if grep -q -F -e 'qualified GoogleTest v1.18.0' "$gen_readme" &&
   grep -q -F -e 'issue #479' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified GoogleTest record under issue #479"
+  bad "docs/generation/foundation-qualification.md lost its qualified GoogleTest record under issue #479"
 fi
 
 # Verification matrix owns the qualified seed-only record under.

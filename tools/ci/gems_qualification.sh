@@ -35,7 +35,7 @@ gemfile="third_party/ruby/Gemfile"
 lock="third_party/ruby/Gemfile.lock"
 module="MODULE.bazel"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 checker="tools/depcheck/src/lib.rs"
 
 if [[ -f "$pins" && -f "$pins_build" && -f "$gemfile" && -f "$lock" ]]; then

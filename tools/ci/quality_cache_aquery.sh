@@ -65,7 +65,7 @@
 # change by construction), pipeline invalidation remainder
 # (stage-order/runner policy changes beyond canonical order), plus
 # controlled remote-cache / separate-machine proof (requires remote
-# infrastructure unavailable per docs/testing/README.md Remote Tests;
+# infrastructure unavailable per docs/testing/strategy-details.md Remote Tests;
 # tracked under, never claimed here). The execution-log half below
 # distinguishes executed actions from cache hits locally; this harness is
 # action-graph plus local execution-log, no remote execution.
@@ -734,7 +734,7 @@ if [[ "$no_typecheck_actions" == *"tsc"* ]]; then bad "no-typecheck: forbidden [
 # execution log (must execute with source+tool+runner in the log), then
 # rebuild unchanged (log must be empty: cache hit, nothing executed).
 # Controlled remote-cache / separate-machine proof stays tracked under
-# per docs/testing/README.md (infrastructure unavailable here).
+# per docs/testing/strategy-details.md (infrastructure unavailable here).
 # Runner-temp discipline (issue #750): never hardcode /tmp; Bazel scopes
 # TMPDIR per action and runners provide RUNNER_TEMP, so the wrapper
 # honors both. File form (issue #914): `dx_mktemp_file` owns temp files

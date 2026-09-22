@@ -147,8 +147,8 @@ else
 fi
 
 # Docs select first-party with Codecov at most opt-in.
-if grep -q -F -e 'first-party coverage PR reporting' docs/testing/README.md &&
-  grep -q -F -e 'Codecov stays at most opt-in' docs/testing/README.md &&
+if grep -q -F -e 'first-party coverage PR reporting' docs/testing/strategy-details.md &&
+  grep -q -F -e 'Codecov stays at most opt-in' docs/testing/strategy-details.md &&
   grep -q -F -e 'first-party' docs/github-ci.md &&
   grep -q -F -e 'first-party PR summary' docs/contributing/local-workflows.md; then
   ok

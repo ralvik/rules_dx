@@ -42,7 +42,7 @@ fixture_build="rust/tests/fixtures/bindgen/BUILD.bazel"
 native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
 contract="docs/generation/rust.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
@@ -181,7 +181,7 @@ if grep -q -F -e 'qualified under' "$gen_readme" &&
   grep -q -F -e 'bindgen.expected' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified bindgen record under issue #473"
+  bad "docs/generation/foundation-qualification.md lost its qualified bindgen record under issue #473"
 fi
 
 # BUILD owns the harness target.

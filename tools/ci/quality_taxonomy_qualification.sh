@@ -368,7 +368,7 @@ fi
 if grep -q -F -e 'unsupported_platform' cli/cli/src/platform.rs &&
   grep -q -F -e 'build-arm64' "$ci" &&
   grep -q -F -e 'build-windows-x86_64' "$ci" &&
-  grep -q -F -e 'no cross-cell union' docs/testing/README.md; then
+  grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else
   bad "taxonomy lost its platform evidence linkage (want refusal plus per-host CI plus no-union under issue #802)"

@@ -47,7 +47,7 @@ kotlin_build="kotlin/tests/fixtures/junit/BUILD.bazel"
 java_hello="java/tests/fixtures/hello/BUILD.bazel"
 kotlin_hello="kotlin/tests/fixtures/hello/BUILD.bazel"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
@@ -188,7 +188,7 @@ if grep -q -F -e 'qualified Maven maven_install.json' "$gen_readme" &&
   grep -q -F -e 'issue #481' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified Maven lock record under issue #481"
+  bad "docs/generation/foundation-qualification.md lost its qualified Maven lock record under issue #481"
 fi
 
 # Verification matrix owns the qualified seed-only record under.

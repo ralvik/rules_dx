@@ -234,10 +234,10 @@ fi
 
 # docs-pipeline gaps stay tracked in the documentation contract
 # (live successor to closed; owns).
-if grep -q -F -e 'Docs pipeline gaps stay open under' docs/documentation/README.md; then
+if grep -q -F -e 'Docs pipeline gaps stay open under' docs/documentation/delivery.md; then
   ok
 else
-  bad "documentation README lost its #581 docs-pipeline tracker record"
+  bad "documentation delivery lost its #581 docs-pipeline tracker record"
 fi
 
 # Mxx/Oxx de-milestoning stays clean plus Stage-N (cross-links hygiene,

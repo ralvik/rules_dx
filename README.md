@@ -9,9 +9,8 @@ rulesets, toolchains, package managers, test frameworks, and developer tools.
 
 ## Installation
 
-Prerequisites: Bazel via Bazelisk (see `.bazelversion`), plus the pinned language toolchains
-that Bazel acquires automatically. No separate language runtimes or quality tools need
-manual installation.
+Prerequisites: Bazel via Bazelisk (see `.bazelversion`); language toolchains
+come from Bazel automatically.
 
 ```sh
 # Build everything on the seed host.
@@ -29,16 +28,11 @@ bazel run //cli/cli:dx -- --help
 # Build and test the current workspace.
 bazel run //cli/cli:dx -- build //...
 bazel run //cli/cli:dx -- test //...
-
-# Minimal example: adopt the Rust starter and generate targets.
-cp -r examples/adopt-rust /tmp/myapp
-bazel run //cli/cli:dx -- generate /tmp/myapp/...
 ```
 
-Next: [CLI reference](docs/cli/README.md) and [Command reference](docs/cli/commands/README.md).
-For supported platforms and foundations, see the
-[support matrix](docs/product/support-matrix.md) and
-[product scope](docs/product/scope.md).
+Next: [CLI reference](docs/cli/README.md), [Command reference](docs/cli/commands/README.md),
+[consumer examples](examples/README.md), [support matrix](docs/product/support-matrix.md),
+and [product scope](docs/product/scope.md).
 
 ## Product
 

@@ -20,7 +20,7 @@ dx_cd_workspace
 
 dx_test_init
 
-# --- Item 1: README length (60 lines, grandfathered with split plan) ---
+# --- Item 1: README length (60 lines, splits completed under #986) ---
 limit="60"
 split_plan="docs/testing/readme-split-plan.md"
 if [[ -f "$split_plan" ]] &&
@@ -28,20 +28,11 @@ if [[ -f "$split_plan" ]] &&
   grep -q -F -e 'docs/architecture/README.md' "$split_plan"; then
   ok
 else
-  bad "$split_plan missing or lost its testing/architecture split record (want grandfather with split plan, issue #926)"
+  bad "$split_plan missing or lost its testing/architecture split record (want completed splits with plan, issues #926/#986)"
 fi
-# Grandfathered over-limit READMEs pinned here; shrinking one off the list
-# removes it here in the same PR. New READMEs must stay at/under the limit.
-allowlisted=(
-  "README.md"
-  "docs/README.md"
-  "docs/documentation/README.md"
-  "docs/cli/commands/README.md"
-  ".github/workflows/README.md"
-  "docs/generation/README.md"
-  "docs/architecture/README.md"
-  "docs/testing/README.md"
-)
+# Splits completed under #986: no over-limit README remains, so the allowlist
+# stays empty. New READMEs must stay at/under the limit.
+allowlisted=()
 over_bad=""
 while IFS= read -r f; do
   rel="${f#./}"
@@ -60,10 +51,10 @@ done < <(find . -name "README.md" -not -path "./bazel-*" -not -path "./.git/*" |
 if [[ -z "$over_bad" ]]; then
   ok
 else
-  bad "README length exceeded ${limit} lines outside the grandfather allowlist:$over_bad (want short READMEs with details in docs/ or examples/, issue #926)"
+  bad "README length exceeded ${limit} lines:$over_bad (want short READMEs with details in docs/ or examples/, issues #926/#986)"
 fi
-# Allowlist stays honest: every entry must still exist and still be over
-# the limit (shrunk files leave the list), and the split plan must name it.
+# Allowlist stays empty now that splits completed under #986; any future
+# over-limit README fails above without an allowlist entry.
 for a in "${allowlisted[@]}"; do
   if [[ -f "$a" ]] && grep -q -F -e "$a" "$split_plan"; then
     ok
@@ -275,11 +266,11 @@ if ! grep -F -e 'UPDATE_EXPECT=1' "$ci" | grep -v -E -e '^[[:space:]]*#' | grep 
 else
   bad "ci.yml sets UPDATE_EXPECT=1 (goldens would auto-pass; want mismatch fails closed, issue #926)"
 fi
-if grep -q -F -e 'UPDATE_EXPECT=1' docs/testing/README.md &&
+if grep -q -F -e 'UPDATE_EXPECT=1' docs/testing/strategy-details.md &&
   grep -q -F -e 'UPDATE_EXPECT' tools/sh/snapshot.sh; then
   ok
 else
-  bad "snapshot refresh workflow lost its docs plus helper pins (want UPDATE_EXPECT in docs/testing/README.md plus tools/sh/snapshot.sh, issue #926)"
+  bad "snapshot refresh workflow lost its docs plus helper pins (want UPDATE_EXPECT in docs/testing/strategy-details.md plus tools/sh/snapshot.sh, issue #926)"
 fi
 
 dx_test_summary "docs testing gates (issue #926)"

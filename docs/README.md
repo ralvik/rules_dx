@@ -27,15 +27,6 @@ command and language guides below.
 - [Testing](testing/README.md): behavior, hermeticity, cache, platform, consumer evidence.
 - [Documentation domain](documentation/README.md): documentation IR, site build, and CLI surface.
 - [Deploy](deploy/README.md): `dx deploy` dispatch and release path.
-
-## Internal / Maintainer-Only
-
-Maintainer planning and evidence. Not required for normal use.
-
-- [Promotion checklist](product/promotion-checklist.md): tag hygiene, versioning, and per-cell evidence to `Supported`.
-- [Verification matrix](testing/verification-matrix.md): as-built language x layer status.
-- [Native toolchains](native-toolchains.md): provisional C/C++/Rust stack and qualification plan.
-- [Documentation site build](documentation/site.md) and [documentation IR](documentation/doc-ir.md): planned site design, not a working site yet.
 - [Decision records](decisions/README.md): accepted, provisional, superseded, and rejected decisions.
   Authoring rules live in [decision instructions](decisions/AGENTS.md).
 

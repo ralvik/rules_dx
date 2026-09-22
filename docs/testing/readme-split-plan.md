@@ -1,31 +1,32 @@
-# README Split Plan (Issue #926)
+# README Split Plan (Issues #926/#986)
 
-Accepted. Grandfathered long READMEs with a split/trim plan so the
-60-line gate stays honest without silent drift.
+Completed under #986. All indexes stay at or under 60 lines; details live in
+named contracts, not READMEs.
 
-## Grandfathered (over 60 lines, pinned by `bazel run //tools/ci:docs_testing_gates`)
+## Completed (pinned by `bazel run //tools/ci:docs_testing_gates`)
 
-- `docs/testing/README.md` (310 lines): split into per-matrix pages under
-  `docs/testing/` (already started: `cli.md`, `github-ci.md`,
-  `generation.md`, `environments.md`, `tools.md`); root keeps goals plus
-  links only.
-- `docs/architecture/README.md` (261 lines): split per-component pages;
-  root keeps overview plus links only.
-- `docs/generation/README.md` (143 lines): split per-language pages;
-  root keeps overview plus links only.
-- `.github/workflows/README.md` (98 lines): trim to workflow index;
-  details move to `docs/github-ci.md`.
-- `docs/cli/commands/README.md` (84 lines): trim to command index;
-  details stay in per-command pages.
-- `docs/documentation/README.md` (78 lines): trim to doc index;
-  details stay in per-doc pages.
-- `README.md` (65 lines): trim to landing plus links; details stay in
+- `docs/testing/README.md` (40 lines): goals plus links only; layers, coverage,
+  infrastructure, and evidence live in `docs/testing/strategy-details.md` plus the
+  per-matrix pages (`cli.md`, `github-ci.md`, `generation.md`, `environments.md`, `tools.md`).
+- `docs/architecture/README.md` (44 lines): overview plus principles plus flow only;
+  ownership lives in `ownership.md`, facade plus libraries in `facade.md`, lifecycle in `lifecycle.md`.
+- `docs/generation/README.md` (41 lines): contracts plus links plus `dx generate` snippet only;
+  mapping and lock/runner evidence lives in `foundation-qualification.md`.
+- `docs/environments/README.md` (34 lines): contracts plus links plus `dx env` snippet only;
+  plan mapping lives in `foundation-qualification.md`.
+- `docs/tools/README.md` (16 lines): inventory plus links only;
+  tool-graph mapping lives in `foundation-qualification.md`.
+- `.github/workflows/README.md` (11 lines): workflow index only;
+  policy notes live in `docs/testing/workflow-notes.md`.
+- `docs/cli/commands/README.md` (44 lines): command index only;
+  scope policy lives in `scope-defaults.md`, behavior stays in per-command pages.
+- `docs/documentation/README.md` (22 lines): design plus contract index only;
+  pipeline and delivery record lives in `delivery.md`.
+- `README.md` (57 lines): landing plus links plus minimal snippets only; details stay in
   `docs/` and `examples/`.
-- `docs/README.md` (64 lines): trim to doc index; details stay in
-  domain folders.
+- `docs/README.md` (54 lines): doc index only; Internal planning section dropped (issues own planning).
 
 ## Rule
 
-New READMEs must stay at or under 60 lines. Growing a grandfathered file
-without shrinking toward its split fails the gate; shrinking a file off
-the allowlist removes it from the allowlist in the same PR.
+New READMEs must stay at or under 60 lines. The allowlist stays empty; any
+over-limit README fails the gate with no grandfather entry.

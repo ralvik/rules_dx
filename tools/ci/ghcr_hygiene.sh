@@ -193,7 +193,7 @@ fi
 
 # Quota qualified in docs (not assumed): container free for public with
 # 1-month notice; private-Packages quotas do not apply to containers.
-if grep -q -F -e 'currently free for public' docs/contributing/devcontainer.md && grep -q -F -e 'one month notice' docs/contributing/devcontainer.md && grep -q -F -e 'currently free for public' docs/testing/README.md; then
+if grep -q -F -e 'currently free for public' docs/contributing/devcontainer.md && grep -q -F -e 'one month notice' docs/contributing/devcontainer.md && grep -q -F -e 'currently free for public' docs/testing/strategy-details.md; then
   ok
 else
   bad "quota record lost its qualification (want currently-free + 1-month notice in devcontainer.md + testing README)"

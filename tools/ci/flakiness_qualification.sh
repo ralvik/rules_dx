@@ -19,7 +19,7 @@
 #   Bazel intra-job test sharding follows ordinary semantics
 #   (docs/testing/starlark.md);
 # - docs in place: `docs/testing/github-ci.md` workflow hygiene plus
-# `docs/testing/README.md` battery timeout record carry;
+# `docs/testing/strategy-details.md` battery timeout record carry;
 # - CI only: no product runtime change.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:flakiness_qualification`,
@@ -36,9 +36,9 @@ dx_cd_workspace
 dx_test_init
 
 ci=".github/workflows/ci.yml"
-ci_notes=".github/workflows/README.md"
+ci_notes="docs/testing/workflow-notes.md"
 test_matrix="docs/testing/github-ci.md"
-testing_readme="docs/testing/README.md"
+testing_readme="docs/testing/strategy-details.md"
 verify="docs/testing/verification-matrix.md"
 build="tools/ci/BUILD.bazel"
 targets_b="tools/ci/ci_targets_b.bzl"
@@ -169,12 +169,12 @@ else
   bad "docs/testing/github-ci.md lost the issue #619 flakiness plus timeout plus sharding record"
 fi
 
-# Testing README keeps the tuned-timeout battery pointer under.
-if grep -q -F -e 'issue #619' "$testing_readme" &&
-  grep -q -F -e 'seed test/coverage 45' "$testing_readme"; then
+# Strategy details links the tuned-timeout battery record (numbers live once in the matrix).
+if grep -q -F -e 'github-ci.md' "$testing_readme" &&
+  grep -q -F -e 'Flakiness' "$testing_readme"; then
   ok
 else
-  bad "docs/testing/README.md lost its issue #619 tuned-timeout record"
+  bad "docs/testing/strategy-details.md lost its flakiness link to github-ci.md"
 fi
 
 # Verification matrix owns the qualified seed-only record under.

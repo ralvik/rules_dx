@@ -48,7 +48,7 @@ else
   depcheck_bin="bazel run --noshow_progress //tools/depcheck:depcheck --"
 fi
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"

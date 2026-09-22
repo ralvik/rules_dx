@@ -42,7 +42,7 @@ module="MODULE.bazel"
 lock="MODULE.bazel.lock"
 env_lib="cli/env/src/lib.rs"
 managed="docs/environments/managed-state.md"
-arch="docs/architecture/README.md"
+arch="docs/architecture/lifecycle.md"
 adr14="docs/decisions/0014-tested-platform-release-stack.md"
 native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
@@ -161,7 +161,7 @@ if grep -q -F -e 'deferred EULA' "$arch" &&
   grep -q -F -e 'Accepted fit (2026-09-21, #959)' "$arch"; then
   ok
 else
-  bad "docs/architecture/README.md lost its activation plus deferred-failure plus #959 fit record (want boundary, issue #917)"
+  bad "docs/architecture/lifecycle.md lost its activation plus deferred-failure plus #959 fit record (want boundary, issue #917)"
 fi
 
 # ADR 0014 owns the strictly-lazy decision with the version-resolution boundary.

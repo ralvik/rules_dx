@@ -44,7 +44,7 @@ kotlin_test="kotlin/tests/fixtures/junit/HelloJupiterTest.kt"
 module="MODULE.bazel"
 lock="third_party/jvm/maven_install.json"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 verify="docs/testing/verification-matrix.md"
@@ -175,7 +175,7 @@ if grep -q -F -e 'qualified JUnit 6.1.3 Jupiter' "$gen_readme" &&
   grep -q -F -e 'issue #476' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its qualified JUnit record under issue #476"
+  bad "docs/generation/foundation-qualification.md lost its qualified JUnit record under issue #476"
 fi
 
 # Verification matrix owns the qualified seed-only record under.

@@ -415,7 +415,7 @@ if grep -q -F -e 'build-arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'build-musl-x86_64' .github/workflows/ci.yml &&
   grep -q -F -e 'build-macos-arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'build-windows-x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'no cross-cell union' docs/testing/README.md; then
+  grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else
   bad "per-host CI plus coverage no-union linkage lost (issue #787)"

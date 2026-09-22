@@ -39,7 +39,7 @@ module="MODULE.bazel"
 contract="docs/generation/rust.md"
 native="docs/native-toolchains.md"
 matrix="docs/product/support-matrix.md"
-gen_readme="docs/generation/README.md"
+gen_readme="docs/generation/foundation-qualification.md"
 gen_matrix="docs/testing/generation.md"
 lang="gazelle/rust/lang.go"
 lang_test="gazelle/rust/lang_test.go"
@@ -135,7 +135,7 @@ fi
 if grep -q -F -e 'third-party half pinned global `False`' "$gen_readme"; then
   ok
 else
-  bad "docs/generation/README.md lost its third-party global False pin under issue #472"
+  bad "docs/generation/foundation-qualification.md lost its third-party global False pin under issue #472"
 fi
 
 # Generation test matrix still demands the hostile-PATH plus kept-override proof.

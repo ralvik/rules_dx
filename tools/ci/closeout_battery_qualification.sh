@@ -30,7 +30,7 @@ dx_cd_workspace
 dx_test_init
 
 verify="docs/testing/verification-matrix.md"
-testing_readme="docs/testing/README.md"
+testing_readme="docs/testing/strategy-details.md"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 reusable=".github/workflows/reusable-docs.yml"
