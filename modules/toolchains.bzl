@@ -10,6 +10,10 @@ PLATFORMS_VERSION = "1.1.0"
 BAZEL_SKYLIB_VERSION = "1.9.0"
 RULES_PROTO_VERSION = "7.1.0"
 GO_SDK_VERSION = "1.26.6"
+# Language floor for third_party/go/go.mod (tracks gazelle's go directive
+# so the shared go_deps extension sees no conflict). The SDK minor stays
+# >= this floor; see MODULE.bazel plus per-split pin_consistency in
+# tools/ci/pin_consistency.sh.
 GO_LANGUAGE_FLOOR = "1.24.12"
 
 # Pinned Go SDK archives (see MODULE.bazel go_sdk.download sdks; per-split

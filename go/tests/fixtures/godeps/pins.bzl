@@ -6,8 +6,15 @@ Contract: `docs/product/support-matrix.md#provisional-default-dependency-locks`.
 # Upstream ruleset pin (MODULE.bazel plus MODULE.bazel.lock).
 RULES_GO_VERSION = "0.63.0"
 
-# Toolchain pin (go_sdk.download in MODULE.bazel).
+# Toolchain pin (go_sdk.download in MODULE.bazel, owned by
+# //modules:toolchains.bzl GO_SDK_VERSION).
 GO_SDK_VERSION = "1.26.6"
+
+# Language floor (go directive in third_party/go/go.mod, owned by
+# //modules:toolchains.bzl GO_LANGUAGE_FLOOR). Tracks gazelle 0.52.2's
+# go 1.24.12 so the shared go_deps extension sees no version conflict;
+# the SDK minor stays >= this floor (issue #1003).
+GO_LANGUAGE_FLOOR = "1.24.12"
 
 # Gazelle ruleset pin (go_deps extension owner).
 GAZELLE_VERSION = "0.52.2"

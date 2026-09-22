@@ -58,10 +58,13 @@ gazelle_go_deps.from_file(go_mod = "//third_party/go:go.mod")
 use_repo(gazelle_go_deps, "com_github_bazelbuild_buildtools", "com_github_google_go_cmp", "com_github_pmezard_go_difflib")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
-# Pinned Go toolchain (ADR 0019). The SDK is the toolchain floor;
-# `third_party/go/go.mod` carries the language floor (`go 1.24.12`).
+# Pinned Go toolchain (ADR 0019). The SDK is the toolchain floor
+# (mirrors `//modules:toolchains.bzl` `GO_SDK_VERSION`);
+# `third_party/go/go.mod` carries the language floor (`go 1.24.12`,
+# mirrors `GO_LANGUAGE_FLOOR` and tracks gazelle 0.52.2's `go` directive
+# so the shared `go_deps` extension sees no version conflict).
 # The SDK minor must stay >= the go.mod minor (see
-# `//tools/ci:pin_consistency_test`, issue #912). `sdks` pins the exact
+# `//tools/ci:pin_consistency_test`, issues #912, #1003). `sdks` pins the exact
 # per-platform archives plus sha256 from https://go.dev/dl/?mode=json for
 # 1.26.6 (mirrors `//modules:toolchains.bzl` `GO_SDK_SDKS`; the sha is the
 # trust anchor, the single dl.google.com URL is availability only). Pinning
