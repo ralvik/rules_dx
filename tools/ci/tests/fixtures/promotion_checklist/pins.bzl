@@ -22,11 +22,11 @@ VERSION_CALLERS_PIN_COMMITS = "callers pin reviewed commits, never release tags"
 VERSION_NEVER_REBUILD = "never rebuilt or substituted silently, byte identity fail-closed"
 
 # Platform evidence per cell: per-host successors plus floors/routes/coverage plus refusal.
-PLATFORM_HOSTS = "Linux arm64 native issue #410 plus static-musl profiles issue #411 plus macOS arm64 native issue #412 plus macOS x86_64 best-effort native issue #413 plus Windows x86_64 MSVC-compatible native issue #414"
+PLATFORM_HOSTS = "Linux arm64 native issue #410 plus static-musl profiles issue #411 plus macOS arm64 native issue #412 plus Windows x86_64 MSVC-compatible native issue #414 (macOS x86_64 Not planned per #976)"
 PLATFORM_FLOORS = "bazel run //tools/ci:deployment_floors_qualification"
 PLATFORM_ROUTES = "bazel run //tools/ci:cross_routes_qualification"
 PLATFORM_COVERAGE = "bazel run //tools/ci:coverage_qualification"
-PLATFORM_REFUSAL = "clean unsupported_platform refusal, best-effort gaps never block required-host release"
+PLATFORM_REFUSAL = "clean unsupported_platform refusal"
 
 # Consumer evidence per cell: nine checks plus explicit platforms plus self-call plus updater.
 CONSUMER_NINE_CHECKS = "Nine checks through the reusable workflow with explicit platform selection"

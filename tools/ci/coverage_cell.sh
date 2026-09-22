@@ -4,8 +4,7 @@
 # Every required configuration/platform cell gates its own combined LCOV
 # report: no cross-platform union, no averaged percentages, no rounding
 # up. The seed host plus Linux arm64 native plus the two
-# Linux static-musl profiles plus macOS arm64 native (issue
-# plus macOS x86_64 best-effort native (non-blocking)
+# Linux static-musl profiles plus macOS arm64 native
 # plus Windows x86_64 MSVC-compatible native qualify;
 # this harness wires the seed cell end to end through the versioned
 # inventory at tools/coverage/seed-inventory.txt and the `coverage_bin`
@@ -13,9 +12,7 @@
 # the CI `coverage-arm64` job, the musl twins gate
 # tools/coverage/musl-*-inventory.txt in the CI `coverage-musl-*` jobs,
 # the macOS arm64 twin gates tools/coverage/macos-arm64-inventory.txt
-# in the CI `coverage-macos-arm64` job on `macos-14`, the macOS x86_64
-# best-effort twin gates tools/coverage/macos-x86_64-inventory.txt in the
-# CI `coverage-macos-x86_64` job on `macos-15-intel`, and the Windows x86_64
+# in the CI `coverage-macos-arm64` job on `macos-14`, and the Windows x86_64
 # twin gates tools/coverage/windows-x86_64-inventory.txt in the CI
 # `coverage-windows-x86_64` job on `windows-latest`
 # against the same scope):
@@ -44,7 +41,7 @@ inventory="tools/coverage/seed-inventory.txt"
 dx_mkscratch scratch
 
 # `bazel coverage` above leaves `coverage_bin` instrumented
-# (`-C instrument-coverage`), and the harness executes it directly 7x from
+# (`-C instrument-coverage`), and the harness executes it directly 6x from
 # the workspace root. With `LLVM_PROFILE_FILE` unset, Rust writes
 # `default_%m_%p.profraw` to CWD per invocation. Redirect profiles into the
 # auto-cleaned scratch dir so harness runs spill nothing to the checkout.
@@ -76,7 +73,7 @@ else
 fi
 
 # The arm64 cell gates the same first-party scope: the same
-# real report passes the arm64 inventory, so all seven versioned
+# real report passes the arm64 inventory, so all six versioned
 # inventories stay functionally in sync (the CI coverage-arm64 job gates
 # the arm64 runner's own report per-cell with no union).
 arm64_rc=0
@@ -89,7 +86,7 @@ else
 fi
 
 # The static-musl cells gate the same first-party scope:
-# the same real report passes both musl inventories, so all seven
+# the same real report passes both musl inventories, so all six
 # versioned inventories stay functionally in sync (the CI
 # coverage-musl-x86_64 plus coverage-musl-arm64 jobs gate their own
 # runners' reports per-cell with no union; dynamic musl stays out of
@@ -112,7 +109,7 @@ else
 fi
 
 # The macOS arm64 cell gates the same first-party scope:
-# the same real report passes the macos-arm64 inventory, so all seven
+# the same real report passes the macos-arm64 inventory, so all six
 # versioned inventories stay functionally in sync (the CI
 # coverage-macos-arm64 job gates its own macos-14 runner report per-cell
 # with no union; host-installed SDK fallback is never approved).
@@ -125,23 +122,8 @@ else
   bad "macos arm64 cell gate did not pass: rc=$macos_arm64_rc out=$macos_arm64_out"
 fi
 
-# The macOS x86_64 best-effort cell gates the same first-party scope
-# (non-blocking): the same real report passes the
-# macos-x86_64 inventory, so all seven versioned inventories stay
-# functionally in sync (the CI coverage-macos-x86_64 job gates its own
-# macos-15-intel runner report per-cell with no union; gaps never block
-# required-host release; host-installed SDK fallback is never approved).
-macos_x86_64_rc=0
-macos_x86_64_out="$("$check_bin" --report bazel-out/_coverage/_coverage_report.dat \
-  --inventory tools/coverage/macos-x86_64-inventory.txt --sources "$scratch/sources.txt" --root . 2>&1)" || macos_x86_64_rc=$?
-if [[ "$macos_x86_64_rc" == "0" ]] && echo "$macos_x86_64_out" | grep -q 'coverage gate: PASS'; then
-  ok
-else
-  bad "macos x86_64 cell gate did not pass: rc=$macos_x86_64_rc out=$macos_x86_64_out"
-fi
-
 # The Windows x86_64 cell gates the same first-party scope:
-# the same real report passes the windows-x86_64 inventory, so all seven
+# the same real report passes the windows-x86_64 inventory, so all six
 # versioned inventories stay functionally in sync (the CI
 # coverage-windows-x86_64 job gates its own windows-latest runner report
 # per-cell with no union; toolchains_msvc backend stays provisional with

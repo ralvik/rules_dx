@@ -89,11 +89,10 @@ produce actionable configuration failures, not skipped validation or platform su
 Linux execution for shared quality checks does not add Linux to the validation matrix.
 
 Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native,
-issue #410), `macos_arm64` (native, issue #412), `macos_x86_64`
-(best-effort native, issue #413), and `windows_x86_64` (native
+issue #410), `macos_arm64` (native, issue #412) and `windows_x86_64` (native
 MSVC-compatible, issue #414). The reusable workflow routes
 `linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
-`macos_arm64` to `macos-14`, `macos_x86_64` to `macos-15-intel`, and
+`macos_arm64` to `macos-14`, and
 `windows_x86_64` to `windows-latest`; every other spelling fails closed in
 `platforms-gate` before any per-platform job queues a runner. Static-musl
 target profiles
@@ -103,10 +102,9 @@ host platforms; dynamic musl stays explicitly out of scope. macOS arm64
 native (issue #412) runs on `macos-14` through the pinned upstream
 toolchains with the hermetic-llvm Apple-SDK backend provisional (immutable
 lazy fetch, no host-installed SDK fallback, no secrets, no interactive
-acceptance). macOS x86_64 best-effort native (issue #413) runs on
-`macos-15-intel` through the same pinned upstream toolchains with the same
+acceptance). macOS x86_64 is Not planned per #976 with no runner.
 provisional backend plus no fallback plus no secrets plus no interactive
-acceptance (`macos-13` retired December 2025, `macos-15-intel` until August
+acceptance (`macos-13` retired December 2025; macOS x86_64 Not planned per #976;
 2027; best-effort gaps never block required-host release). Windows x86_64
 MSVC-compatible native (issue #414) runs on `windows-latest` (shell `bash`,
 per-host `bazel-windows-x86_64-` cache scope) through the pinned upstream
@@ -303,13 +301,13 @@ Floating runners age out and SDK/floor pins go stale with no review owner.
 This section owns the review cadence plus retirement handling (issue #642).
 
 Qualified runners are `ubuntu-latest` plus `ubuntu-24.04-arm` plus `macos-14`
-plus `macos-15-intel` plus `windows-latest` with per-profile cache scopes.
-macos-13 retired December 2025, macos-15-intel until August 2027;
-`ubuntu-latest` plus `windows-latest` float and age out. SDK plus floor scope
+plus `windows-latest` with per-profile cache scopes.
+macos-13 retired December 2025, macos x86_64 Not planned per #976 with no
+runner; `ubuntu-latest` plus `windows-latest` float and age out. SDK plus floor scope
 is glibc `2.28` plus musl `1.2.6` plus MacOSX26.5 via hermetic-llvm `v0.8.19`
 plus MSVC `14.50.35717` plus redist `14.50.35710` plus SDK package
 `10.0.26100.7705`; exact pins, hosts, floors, and SDK/CRT identities stay
-owned by issues #410-#414 plus #500, not pinned here.
+owned by issues #410-#412 plus #414 plus #500, not pinned here.
 
 Review is quarterly review plus on retirement notice plus on hermetic-llvm release;
 the sole maintainer owns every row until delegation (see `CODEOWNERS`).

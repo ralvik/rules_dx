@@ -2,7 +2,7 @@
 #
 # Canonical single source for the per-cell step-summary block (issue #915):
 # previously each non-seed coverage job (arm64, musl-x86_64, musl-arm64,
-# macos-arm64, macos-x86_64, windows-x86_64) repeated a near-identical
+# macos-arm64, windows-x86_64) repeated a near-identical
 # shell block differing only by cell name plus log/rc filenames, so a
 # wording change meant N identical edits that could drift. Jobs now call
 # this one composite with `cell` plus `stem`; the verdict lands in the step

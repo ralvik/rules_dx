@@ -3,9 +3,10 @@
 #
 # Owns the review cadence plus retirement handling left without an owner:
 # - runners: ubuntu-latest plus ubuntu-24.04-arm plus macos-14 plus
-#   macos-15-intel plus windows-latest with per-profile cache scopes;
-#   macos-13 retired December 2025, macos-15-intel until August 2027,
-#   ubuntu-latest plus windows-latest float and age out;
+#   windows-latest with per-profile cache scopes; macos x86_64 is Not
+#   planned per #976 with no runner (macos-13 retired December 2025,
+#   macos-15-intel sunset history stays docs-only, ubuntu-latest plus
+#   windows-latest float and age out);
 # - cadence: quarterly review plus on retirement notice plus on
 #   hermetic-llvm release, sole maintainer owns every row until delegation;
 # - SDK scope: glibc 2.28 plus musl 1.2.6 plus MacOSX26.5 via
@@ -55,20 +56,20 @@ fi
 if grep -q -F -e 'RUNNER_SEED = "ubuntu-latest"' "$pins" &&
   grep -q -F -e 'RUNNER_ARM64 = "ubuntu-24.04-arm"' "$pins" &&
   grep -q -F -e 'RUNNER_MACOS_ARM64 = "macos-14"' "$pins" &&
-  grep -q -F -e 'RUNNER_MACOS_X86_64 = "macos-15-intel"' "$pins" &&
+  ! grep -q -F -e 'RUNNER_MACOS_X86_64' "$pins" &&
   grep -q -F -e 'RUNNER_WINDOWS = "windows-latest"' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its qualified runner set (ubuntu-latest plus ubuntu-24.04-arm plus macos-14 plus macos-15-intel plus windows-latest, issue #642)"
+  bad "pins.bzl lost its qualified runner set (ubuntu-latest plus ubuntu-24.04-arm plus macos-14 plus windows-latest, no x86_64 per #976)"
 fi
 
 # Pins record retirement handling (never silent).
 if grep -q -F -e 'macos-13 retired December 2025' "$pins" &&
-  grep -q -F -e 'macos-15-intel until August 2027' "$pins" &&
+  grep -q -F -e 'macos x86_64 Not planned' "$pins" &&
   grep -q -F -e 'float and age out' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its retirement record (macos-13 retired plus macos-15-intel until plus floating age-out, issue #642)"
+  bad "pins.bzl lost its retirement record (macos-13 retired plus x86_64 Not-planned plus floating age-out, issue #642 plus #976)"
 fi
 
 # Pins record review cadence plus owner.
@@ -120,7 +121,7 @@ fi
 # Expected fixture pins runners plus retirement plus cadence plus SDK plus flows plus rejected.
 if grep -q -F -e 'ubuntu-latest plus ubuntu-24.04-arm plus macos-14' "$expected" &&
   grep -q -F -e 'macos-13 retired December 2025' "$expected" &&
-  grep -q -F -e 'macos-15-intel until August 2027' "$expected" &&
+  grep -q -F -e 'macos x86_64 Not planned' "$expected" &&
   grep -q -F -e 'quarterly plus on retirement notice plus on hermetic-llvm' "$expected" &&
   grep -q -F -e 'glibc 2.28 plus musl 1.2.6 plus MacOSX26.5' "$expected" &&
   grep -q -F -e 'bazel build //...' "$expected" &&
@@ -128,7 +129,7 @@ if grep -q -F -e 'ubuntu-latest plus ubuntu-24.04-arm plus macos-14' "$expected"
   grep -q -F -e 'Qualified seed-only under issue #642' "$expected"; then
   ok
 else
-  bad "runner_rotation.expected lost its runners plus retirement plus cadence plus SDK plus flows plus rejected lines under #642"
+  bad "runner_rotation.expected lost its runners plus retirement plus cadence plus SDK plus flows plus rejected lines under #642 plus #976"
 fi
 
 # Fixture BUILD exports pins plus expected with corpus coverage.
@@ -144,14 +145,14 @@ fi
 if grep -q -F -e 'Runner Plus SDK Rotation' "$contract" &&
   grep -q -F -e 'quarterly review plus on retirement notice plus on hermetic-llvm release' "$contract" &&
   grep -q -F -e 'macos-13 retired December 2025' "$contract" &&
-  grep -q -F -e 'macos-15-intel until August 2027' "$contract" &&
+  grep -q -F -e 'macos x86_64 Not planned' "$contract" &&
   grep -q -F -e 'Permanent rotation job in CI rejected' "$contract" &&
   grep -q -F -e 'tools/ci/tests/fixtures/runner_rotation/pins.bzl' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:runner_rotation_qualification' "$contract" &&
   grep -q -F -e 'issue #642' "$contract"; then
   ok
 else
-  bad "github-ci.md lost its runner-plus-SDK rotation cadence plus retirement plus rejected record with fixture proof under #642"
+  bad "github-ci.md lost its runner-plus-SDK rotation cadence plus retirement plus rejected record with fixture proof under #642 plus #976"
 fi
 
 # Native plan links SDK/floor review to the rotation contract (no copy).
@@ -188,7 +189,7 @@ fi
 if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
   grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
   grep -q -F -e 'runs-on: macos-14' "$ci" &&
-  grep -q -F -e 'runs-on: macos-15-intel' "$ci" &&
+  ! grep -q -F -e 'runs-on: macos-15-intel' "$ci" &&
   grep -q -F -e 'runs-on: windows-latest' "$ci" &&
   grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
   grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
@@ -197,7 +198,7 @@ if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
   grep -q -F -e 'GLIBC_FLOOR = "2.28"' "$floors"; then
   ok
 else
-  bad "ci.yml lost its as-built runner plus cache record or floors lost SDK identities (want five runners plus no paid plus MacOSX26.5 plus glibc 2.28, issue #642)"
+  bad "ci.yml lost its as-built runner plus cache record or floors lost SDK identities (want four runners plus no paid plus MacOSX26.5 plus glibc 2.28, issue #642 plus #976)"
 fi
 
 # Live proof: customer build flow only, no new CI job.

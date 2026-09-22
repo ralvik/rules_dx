@@ -1,15 +1,15 @@
 Runner plus SDK rotation without extra CI jobs (issue #642).
 Qualified runners are ubuntu-latest plus ubuntu-24.04-arm plus macos-14
-plus macos-15-intel plus windows-latest with per-profile cache scopes;
-macos-13 retired December 2025, macos-15-intel until August 2027;
+plus windows-latest with per-profile cache scopes;
+macos-13 retired December 2025, macos x86_64 Not planned per #976;
 ubuntu-latest plus windows-latest float and age out.
 Review is quarterly plus on retirement notice plus on hermetic-llvm
 release; sole maintainer owns every row until delegation.
 SDK plus floor scope is glibc 2.28 plus musl 1.2.6 plus MacOSX26.5 via
 hermetic-llvm v0.8.19 plus MSVC 14.50.35717 plus redist 14.50.35710 plus
-SDK package 10.0.26100.7705 (exact values owned by issues #410-#414 plus
-#500, not pinned here); retirement handling updates ci.yml plus docs plus
-pins in one reviewed PR.
+SDK package 10.0.26100.7705 (exact values owned by issues #410-#412 plus
+#414 plus #500, not pinned here); retirement handling updates ci.yml plus
+docs plus pins in one reviewed PR.
 Qualified locally/on-demand with customer flows only: bazel build //...
 plus bazel test //... plus dx coverage --min-coverage 97 //... (seed gate
 plus on-demand per-host, no new non-customer CI jobs).

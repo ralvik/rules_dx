@@ -45,8 +45,9 @@ REJECTED_TAXONOMY_UNDER = "leaving under taxonomy rejected with mismatched scope
 REJECTED_BANDIT_RESELECT = "Bandit re-selection rejected here with ADR 0019 exclusion standing"
 
 # Platform evidence: Ruff per-host standalone artifacts already
-# delivered for the required hosts; audit rides the same bytes.
-PLATFORM_RUFF_HOSTS = "ruff per-host artifacts linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus windows_x86_64"
+# delivered for the required hosts (macOS x86_64 removed per #976); audit
+# rides the same bytes.
+PLATFORM_RUFF_HOSTS = "ruff per-host artifacts linux_x86_64 plus linux_arm64 plus macos_arm64 plus windows_x86_64"
 PLATFORM_RUFF_ROUTE = "standalone artifact route with per-host digests in quality/artifacts/ruff"
 
 # Consumer evidence: adopt-python proves the consumer path; audit

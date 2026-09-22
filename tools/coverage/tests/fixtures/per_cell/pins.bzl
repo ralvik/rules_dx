@@ -5,18 +5,17 @@ Fixture: `tools/coverage/tests/fixtures/per_cell/` via
 `bazel run //tools/ci:coverage_qualification`.
 """
 
-# Per-cell registry: seven qualified cells, same first-party scope.
+# Per-cell registry: six qualified cells, same first-party scope.
 # Each cell gates its own combined LCOV report through `coverage_bin`
 # against its versioned inventory; no cross-cell union, no averaged
 # percentages, no rounding up. Only the inventory path differs per cell.
 PER_CELL_REGISTRY = "tools/coverage/cells.txt"
-PER_CELL_COUNT = 7
+PER_CELL_COUNT = 6
 PER_CELL_SEED = "qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt"
 PER_CELL_ARM64 = "qualified linux_arm64 tools/coverage/arm64-inventory.txt"
 PER_CELL_MUSL_X86_64 = "qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt"
 PER_CELL_MUSL_ARM64 = "qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt"
 PER_CELL_MACOS_ARM64 = "qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt"
-PER_CELL_MACOS_X86_64 = "qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt"
 PER_CELL_WINDOWS_X86_64 = "qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt"
 PER_CELL_NO_UNION = "no cross-cell union"
 PER_CELL_NO_UNION_CONSUMER = "no union"

@@ -8,7 +8,6 @@ _CELL_ROWS = [
     "qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt",
     "qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt",
     "qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt",
-    "qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt",
     "qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt",
 ]
 
@@ -18,7 +17,6 @@ _CELL_ENTRIES = [
     "\"linux_x86_64_musl\": \"tools/coverage/musl-x86_64-inventory.txt\"",
     "\"linux_arm64_musl\": \"tools/coverage/musl-arm64-inventory.txt\"",
     "\"macos_arm64\": \"tools/coverage/macos-arm64-inventory.txt\"",
-    "\"macos_x86_64\": \"tools/coverage/macos-x86_64-inventory.txt\"",
     "\"windows_x86_64\": \"tools/coverage/windows-x86_64-inventory.txt\"",
 ]
 

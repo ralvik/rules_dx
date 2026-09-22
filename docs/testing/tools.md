@@ -146,8 +146,8 @@ extractor updates additionally require that exception's compatibility and drift 
 
 Exercise every declared host/execution OS and CPU pair. Unsupported combinations
 must fail during analysis or toolchain resolution with actionable diagnostics.
-The authoritative required-host set, including the macOS x86_64 best-effort
-status, is defined in
+The authoritative required-host set, including the macOS x86_64 Not-planned
+status per #976, is defined in
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms);
 this matrix adds no separate host list.
 
@@ -237,7 +237,6 @@ coverage cells gate Rust code unaffected by sh skips with no union.
 | seed linux_x86_64 | `ubuntu-latest` | real run, 0 skips: all 31 `sh_test` executed |
 | linux_arm64 | `ubuntu-24.04-arm` | real run, 0 skips: all 31 `sh_test` executed |
 | macos_arm64 | `macos-14` | budgeted 31 skips: 31 `sh_test` skips honestly (127 `sh_binary` build skips) |
-| macos_x86_64 | `macos-15-intel` best-effort | budgeted 31 skips: 31 `sh_test` skips honestly (127 `sh_binary` build skips) |
 | windows_x86_64 | `windows-latest` with shell bash | budgeted 31 skips: 31 `sh_test` skips honestly (127 `sh_binary` build skips) |
 
 Every per-host `test //...` job reports its cell skip volume to its step

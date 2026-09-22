@@ -141,18 +141,19 @@ else
 fi
 
 # Per-host cache scopes stay pinned per platform family: ci.yml passes the
-# prefix per job while the shared action owns the exact-key shape.
+# prefix per job while the shared action owns the exact-key shape
+# (macOS x86_64 removed per #976).
 if grep -q -F -e 'bazel-seed-' "$ci" &&
   grep -q -F -e 'bazel-arm64-' "$ci" &&
   grep -q -F -e 'bazel-musl-x86_64-' "$ci" &&
   grep -q -F -e 'bazel-musl-arm64-' "$ci" &&
   grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
-  grep -q -F -e 'bazel-macos-x86_64-' "$ci" &&
+  ! grep -q -F -e 'bazel-macos-x86_64-' "$ci" &&
   grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
   grep -q -F -e 'actions/cache' "$cache_action"; then
   ok
 else
-  bad "ci.yml lost a per-host Bazel disk-cache scope (seed plus arm64 plus musl pair plus macos pair plus windows)"
+  bad "ci.yml lost a per-host Bazel disk-cache scope (seed plus arm64 plus musl pair plus macos arm64 plus windows; x86_64 removed per #976)"
 fi
 
 # Local execution-log half stays wired next to the aquery shape half.

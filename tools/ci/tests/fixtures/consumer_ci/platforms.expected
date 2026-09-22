@@ -1,19 +1,18 @@
 Consumer platform plus runner plus isolation plus cache plus ordering stay
 qualified with fixture evidence (issue #509).
 
-Five explicit platform identifiers with no implicit default: linux_x86_64,
+Four explicit platform identifiers with no implicit default: linux_x86_64,
 linux_arm64 native (issue #410), macos_arm64 native (issue #412),
-macos_x86_64 best-effort native (issue #413, non-blocking), windows_x86_64
-native MSVC-compatible (issue #414). Missing, empty, or unsupported
+windows_x86_64 native MSVC-compatible (issue #414). macOS x86_64 is Not
+planned per issue #976 with no runner. Missing, empty, or unsupported
 selections fail closed in platforms-gate before any per-platform job queues
 a runner (must be a nonempty JSON array, unsupported platforms rejected,
 no implicit default, not skipped validation or platform substitution).
 
 Runner routing never falls through: linux_x86_64 to ubuntu-latest,
-linux_arm64 to ubuntu-24.04-arm, macos_arm64 to macos-14, macos_x86_64 to
-macos-15-intel, windows_x86_64 to windows-latest with shell bash.
-Linux arm64 never reaches the macOS runner; macOS x86_64 never reaches
-the arm64 runner; Windows never reaches macOS.
+linux_arm64 to ubuntu-24.04-arm, macos_arm64 to macos-14,
+windows_x86_64 to windows-latest with shell bash.
+Linux arm64 never reaches the macOS runner; Windows never reaches macOS.
 
 Isolation is per-job checkouts with persist-credentials false on separate
 runners: nine actions/checkout uses with persist-credentials false,
@@ -27,7 +26,7 @@ passes --noshow_progress to Bazel invocations.
 Cache is absent in the reusable workflow (no actions/cache in
 reusable-consumer): consumers get cold caches per job. Per-host disk-cache
 scopes live in ci.yml only (bazel-seed-, bazel-arm64-, bazel-musl-x86_64-,
-bazel-musl-arm64-, bazel-macos-arm64-, bazel-macos-x86_64-,
+bazel-musl-arm64-, bazel-macos-arm64-,
 bazel-windows-x86_64-), free-tier eligible with no paid services.
 
 Ordering is parallel only: scheduling_mode parallel is the default and
@@ -39,4 +38,4 @@ the overall run, and do not cancel independent checks.
 
 Seed only for platform plus consumer plus release evidence; no
 Supported claim. Live multi-host consumer execution beyond the seed
-stays owned under issues #298/#410/#411/#412/#413/#414.
+stays owned under issues #298/#410/#411/#412/#414.

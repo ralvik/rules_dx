@@ -1,10 +1,10 @@
 Per-cell coverage stays qualified with fixture evidence (issue #507).
 
-Seven required plus best-effort cells gate their own combined LCOV
+Six required cells gate their own combined LCOV
 report separately through coverage_bin against their versioned
 inventory: seed linux_x86_64 plus linux_arm64 native (issue #410) plus
 two static-musl profiles (issue #411) plus macos arm64 native (issue
-#412) plus macos x86_64 best-effort native (issue #413, non-blocking)
+#412)
 plus windows x86_64 MSVC-compatible native (issue #414). Same
 first-party scope in every cell; only the inventory path differs.
 No cross-cell union, no averaged percentages, no rounding up.

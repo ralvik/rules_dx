@@ -48,19 +48,20 @@ A cell promotes only with its required-host evidence landed:
 - Pins, hosts, floors, JDK/SDK/CRT identities, qualified native plus cross
   routes, per-cell coverage, and consumer plus release evidence under its
   per-host successor (Linux arm64 native #410, static-musl profiles
-  #411, macOS arm64 native #412, macOS x86_64 best-effort native
-  #413, Windows x86_64 MSVC-compatible native #414).
+  #411, macOS arm64 native #412,
+  Windows x86_64 MSVC-compatible native #414; macOS x86_64 Not planned
+  per #976).
 - Floors pinned via `bazel run //tools/ci:deployment_floors_qualification`
   (#500); routes pinned via
   `bazel run //tools/ci:cross_routes_qualification` (#504, Linux-first,
   never every-target-from-every-host); per-cell coverage via
-  `bazel run //tools/ci:coverage_qualification` (#507, seven cells, same
+  `bazel run //tools/ci:coverage_qualification` (#507, six cells, same
   scope, no union).
-- Unqualified hosts keep the clean `unsupported_platform` refusal; a host flips
-  on exactly when its evidence lands. Best-effort gaps never block
-  required-host release.
+- Unqualified hosts plus Not-planned macOS x86_64 keep the clean
+  `unsupported_platform` refusal; a host flips
+  on exactly when its evidence lands.
 - Per-host skip budget as platform evidence (issue #769): Linux cells show
-  real runs with 0 skips while macOS arm64 plus macOS x86_64 best-effort plus
+  real runs with 0 skips while macOS arm64 plus
   Windows x86_64 show budgeted skips, never silent skips, pinned by
   `bazel run //tools/ci:skip_budget_qualification` with the inventory in
   [Tool And Platform Test Matrix](../testing/tools.md#shell-and-host-tool-contract).
@@ -98,10 +99,10 @@ A cell promotes only with its required-host evidence landed:
   (`windows-latest` with shell bash, `bazel-windows-x86_64-` cache) for
   Windows x86_64 MSVC-compatible (hermetic acquisition plus MSVC compatibility
   gates unchanged, explicit EULA acceptance never automatic with no installed
-  Build Tools fallback, issue #807 closed). Best-effort macOS x86_64 carries no
-  per-host SBOM job and never blocks required-host release (closed #806 moot).
+  Build Tools fallback, issue #807 closed). macOS x86_64 is Not planned
+  per #976 with no per-host SBOM job.
   Every required host landed under closed #803 plus #804 plus #805 plus #807
-  with best-effort exempt under closed #806 moot (process #808).
+  (process #808).
 - NOTICE bundling: aggregated NOTICE from the audited license inventory via
   `//deploy/release:notice_demo` (hermetic bundling with byte-identical
   rebuilds, `missing-notice-text` fails closed), verified via
@@ -138,9 +139,8 @@ claim, enforced by `bazel run //tools/ci:supported_evidence_gate`
 Compatibility: Release only.
 
 Qualified seed-only under #611; required-host release evidence landed under
-closed #803 plus #804 plus #805 plus #807 with best-effort macOS x86_64 exempt
-under closed #806 moot (process #808); remaining platform plus consumer plus release gaps stay owned; no Supported claim.
+closed #803 plus #804 plus #805 plus #807 (process #808); remaining platform plus consumer plus release gaps stay owned; no Supported claim.
 
 ## Related issues
 
-Tracking lives in GitHub issues and the [support matrix](support-matrix.md#status-lifecycle). Checklist: #611. Platform: #410-#414. Consumer: #408, #461. Release: #459, #460, #612. Per-host release evidence: closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot. Process: #808. Gate: #301.
+Tracking lives in GitHub issues and the [support matrix](support-matrix.md#status-lifecycle). Checklist: #611. Platform: #410-#412 plus #414 (macOS x86_64 Not planned per #976). Consumer: #408, #461. Release: #459, #460, #612. Per-host release evidence: closed #803 plus #804 plus #805 plus #807. Process: #808. Gate: #301.

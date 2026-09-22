@@ -9,12 +9,13 @@
 # hermetic CLI-contract pins (replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
 # seed plus arm64 plus static-musl plus macos arm64
-# plus macos x86_64 best-effort plus windows x86_64 coverage/remote
+# plus windows x86_64 coverage/remote
 # qualification; audit live execution,
-# docs-pipeline, env/codegen, remaining out-of-v1 platform cells,
+# docs-pipeline, env/codegen, remaining out-of-v1 platform cells plus
+# Not-planned macOS x86_64,
 # Linux arm64 release evidence landed under closed #803, static musl under
-# closed #804, macos arm64 under closed #805, macos x86_64 best-effort
-# exempt under closed #806 moot, windows x86_64 under closed #807
+# closed #804, macos arm64 under closed #805,
+# windows x86_64 under closed #807
 # (process #808)), admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
@@ -103,20 +104,16 @@ else
   bad "support-matrix lost the macOS arm64 Platform-qualified record (issue #412 plus #805 release evidence delivered, no host fallback)"
 fi
 
-# macOS x86_64 best-effort native is Platform-qualified,
-# never Supported without release evidence and never back to unqualified
-# refusal. Best-effort by ADR 0014 definition: gaps recorded without
-# blocking required-host release. Host-installed SDK fallback stays never
-# approved. Release evidence exempt as best-effort non-blocking under
-# closed #806 moot; every required host landed under closed #803 plus
-# #804 plus #805 plus #807 (process #808).
-if grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified (#413' &&
-  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Best-effort' &&
-  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'release evidence exempt as best-effort non-blocking (closed #806 moot' &&
-  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'host-installed SDK fallback never approved'; then
+# macOS x86_64 is Not planned and never planned for support (issue #976),
+# never Supported, never Platform-qualified. No CI, coverage, or artifact
+# footprint; clean `unsupported_platform` refusal.
+if grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Not planned' &&
+  grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'unsupported_platform' &&
+  ! grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Platform-qualified' &&
+  ! grep -E -e '^\| macOS x86_64 \|' docs/product/support-matrix.md | grep -q -F -e 'Supported'; then
   ok
 else
-  bad "support-matrix lost the macOS x86_64 best-effort Platform-qualified record (issue #413, release evidence exempt closed #806 moot, no host fallback, non-blocking)"
+  bad "support-matrix lost the macOS x86_64 Not-planned record (issue #976, never Platform-qualified, never Supported)"
 fi
 
 # Windows x86_64 MSVC-compatible native is Platform-qualified, never
@@ -233,8 +230,8 @@ else
   bad "audit/update Delivered lost live codes or guards harness"
 fi
 
-# Coverage seed plus arm64 plus static-musl plus macos arm64 plus macos
-# x86_64 best-effort plus windows x86_64 qualified
+# Coverage seed plus arm64 plus static-musl plus macos arm64 plus windows
+# x86_64 qualified (macOS x86_64 removed per #976)
 # cell gate + versioned inventories and
 # registry plus qualification harnesses, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
@@ -243,7 +240,7 @@ if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
-  [[ -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
+  [[ ! -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/windows-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/cells.txt" ]] &&
   [[ -f "tools/ci/coverage_qualification.sh" ]] &&
@@ -253,7 +250,7 @@ if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   grep -q -F -e 'seed cell' tools/coverage/seed-inventory.txt; then
   ok
 else
-  bad "coverage seed plus arm64 plus musl plus macos plus macos-x86_64 plus windows lost its cell gate, inventories, registry, or qualification harnesses"
+  bad "coverage seed plus arm64 plus musl plus macos arm64 plus windows lost its cell gate, inventories, registry, or qualification harnesses (x86_64 removed per #976)"
 fi
 
 # Env/codegen + docs-pipeline Open: backlog contracts pin frozen halves.
@@ -292,15 +289,15 @@ fi
 # Gate enforces the per-cell promotion checklist (process #808): the
 # checklist owns tag hygiene, versioning, and platform plus consumer plus
 # release evidence per cell, and this gate is its enforcement point. Every
-# required host landed under closed #803 plus #804 plus #805 plus #807 with
-# best-effort macOS x86_64 exempt under closed #806 moot.
+# required host landed under closed #803 plus #804 plus #805 plus #807
+# (macOS x86_64 Not planned per #976, no #806 exempt).
 if grep -q -F -e 'bazel run //tools/ci:supported_evidence_gate' docs/product/promotion-checklist.md &&
   grep -q -F -e 'promotion-checklist.md' docs/product/support-matrix.md &&
   grep -q -F -e 'closed #803 plus #804 plus #805 plus #807' docs/product/promotion-checklist.md &&
-  grep -q -F -e 'closed #806 moot' docs/product/promotion-checklist.md; then
+  ! grep -q -F -e 'best-effort macOS x86_64 exempt' docs/product/promotion-checklist.md; then
   ok
 else
-  bad "promotion checklist lost its supported_evidence_gate enforcement with closed #803-#807 plus #806 moot (process #808)"
+  bad "promotion checklist lost its supported_evidence_gate enforcement with closed #803-#805 plus #807 (x86_64 Not planned per #976)"
 fi
 
 dx_test_summary "supported evidence gate harness"

@@ -35,12 +35,12 @@ jobs:
     # coverage`, which executes the tests, so running both doubles test
     # execution. Verbatim `//...` scope, same entrypoints as external
     # consumers. Runs on all qualified hosts (seed plus arm64 native plus
-    # macOS arm64 plus macOS x86_64 best-effort plus Windows x86_64
-    # MSVC-compatible, issues #410/#412/#413/#414).
+    # macOS arm64 plus Windows x86_64
+    # MSVC-compatible, issues #410/#412/#414).
     uses: ./.github/workflows/reusable-consumer.yml
     with:
       rules_dx_version: "0.0.0"
-      platforms: '["linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"]'
+      platforms: '["linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64"]'
       disabled_checks: "test"
     permissions:
       contents: read
@@ -865,81 +865,6 @@ jobs:
         run: |
           echo "### coverage-macos-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Command: dx coverage --min-coverage 97 //... (macos arm64 cell only, per-cell no-union; host-installed SDK fallback never approved; issue #412)." >> "$GITHUB_STEP_SUMMARY"
-  build-macos-x86_64:
-    name: build-macos-x86_64 (bazel build //..., macOS x86_64 best-effort native)
-    timeout-minutes: 60
-    runs-on: macos-15-intel
-    steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
-      - name: Restore Bazel disk cache
-        uses: ./.github/actions/restore-bazel-cache
-        with:
-          prefix: bazel-macos-x86_64-
-      - name: Build workspace
-        run: bazel build --noshow_progress //...
-      - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
-        run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### build-macos-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: bazel build //... plus adopt-rust dx_dev smoke (macOS x86_64 best-effort native on macos-15-intel, local-only; pinned upstream toolchains, hermetic-llvm Apple-SDK backend provisional with no host-installed SDK fallback, no secrets, no interactive acceptance; best-effort gaps never block required-host release; issue #413)." >> "$GITHUB_STEP_SUMMARY"
-  test-macos-x86_64:
-    name: test-macos-x86_64 (bazel test //..., macOS x86_64 best-effort native)
-    needs: [build-macos-x86_64]
-    timeout-minutes: 60
-    runs-on: macos-15-intel
-    steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
-      - name: Restore Bazel disk cache
-        uses: ./.github/actions/restore-bazel-cache
-        with:
-          prefix: bazel-macos-x86_64-
-      - name: Test workspace
-        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
-      - name: Report skip volume (Linux-only sh harness, issue #769)
-        if: always()
-        run: |
-          echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell macos_x86_64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### test-macos-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: bazel test //... (macOS x86_64 best-effort native on macos-15-intel, local-only; manual targets excluded by Bazel tag semantics; best-effort gaps never block required-host release; issue #413)." >> "$GITHUB_STEP_SUMMARY"
-  coverage-macos-x86_64:
-    name: coverage-macos-x86_64 (dx coverage gate, macos x86_64 cell)
-    needs: [build-macos-x86_64]
-    timeout-minutes: 60
-    runs-on: macos-15-intel
-    permissions:
-      contents: read
-    steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
-      - name: Restore Bazel disk cache
-        uses: ./.github/actions/restore-bazel-cache
-        with:
-          prefix: bazel-macos-x86_64-
-      - name: Enforce macos x86_64 coverage cell
-        run: |
-          set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.log"
-          rc=${PIPESTATUS[0]}
-          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_x86_64.rc"
-          exit $rc
-      - name: Render macos x86_64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #413): rendered via
-        # ./.github/actions/render-coverage-summary with cell macos-x86_64 macos_x86_64.
-        if: always()
-        uses: ./.github/actions/render-coverage-summary
-        with:
-          cell: macos-x86_64 macos_x86_64
-          stem: dx_coverage_macos_x86_64
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### coverage-macos-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: dx coverage --min-coverage 97 //... (macos x86_64 cell only, per-cell no-union; host-installed SDK fallback never approved; best-effort gaps never block required-host release; issue #413)." >> "$GITHUB_STEP_SUMMARY"
   build-windows-x86_64:
     name: build-windows-x86_64 (bazel build //..., windows x86_64 native)
     timeout-minutes: 60
@@ -1041,7 +966,7 @@ jobs:
         if: always()
         run: |
           echo "### prove — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 under #410/#411/#412/#413/#414), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 plus x86_64 best-effort qualification (issues #412/#413 native plus per-cell plus portable-shell plus no host SDK fallback, best-effort non-blocking), Windows x86_64 qualification (issue #414 native MSVC-compatible plus per-cell plus portable-shell plus explicit EULA never automatic), CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell), bootstrap portability (issue #617 five hosts plus retry plus no sudo plus portable hash), CI flakiness plus timeout tuning (issue #619 retries plus timeouts plus sharding, long-timeouts-only rejected), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only harness plus portable forms with windows shell bash, issue #414)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Proved: manual negatives (manual-tag interaction), target-tag semantics, seed coverage cell gate, coverage qualification (issue #308 per-cell plus Starlark plus Codecov plus quotas plus local-only remote; seed plus arm64 plus static musl plus macos arm64 plus windows x86_64 under #410/#411/#412/#414), static-musl qualification (issue #411 profiles plus exec/target plus per-cell plus dynamic out of scope), macOS arm64 qualification (issue #412 native plus per-cell plus portable-shell plus no host SDK fallback), Windows x86_64 qualification (issue #414 native MSVC-compatible plus per-cell plus portable-shell plus explicit EULA never automatic), CI multi-platform host matrix (issue #415 runners plus caches plus refusal plus sharding plus portable shell), bootstrap portability (issue #617 four hosts plus retry plus no sudo plus portable hash), CI flakiness plus timeout tuning (issue #619 retries plus timeouts plus sharding, long-timeouts-only rejected), release hygiene (issue #5 no-publication inputs), release policy (issue #89 curated defaults + parity gate), publish trust (issues #78/#26/#5 draft-only sites + nothing published), shell contract (issue #299 bash-only harness plus portable forms with windows shell bash, issue #414)." >> "$GITHUB_STEP_SUMMARY"
           echo "Proved (follow-up): coverage spill containment (issues #252/#656/#953, LLVM_PROFILE_FILE to scratch plus shared-library default)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)

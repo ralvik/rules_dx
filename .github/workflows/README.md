@@ -11,9 +11,7 @@ The following policy notes lived as header comments in `ci.yml`:
 # Qualified hosts: Linux x86_64 glibc (ubuntu-latest) plus Linux arm64
 # glibc native (ubuntu-24.04-arm, issue #410) plus Linux static-musl
 # profiles (issue #411, cross-built from Linux runners with per-profile
-# cache scopes) plus macOS arm64 native (macos-14, issue #412) plus macOS
-# x86_64 best-effort native (macos-15-intel, issue #413, non-blocking;
-# `macos-13` retired December 2025, `macos-15-intel` until August 2027) plus
+# cache scopes) plus macOS arm64 native (macos-14, issue #412) plus
 # Windows x86_64 MSVC-compatible native (windows-latest with shell bash,
 # issue #414), local execution, no remote.
 # Platform qualification for the remaining ADR 0014 host stays open under
@@ -77,12 +75,9 @@ The following policy notes lived as header comments in `ci.yml`:
 # scope; static-musl profile jobs (issue #411) cross-build from Linux
 # runners with per-profile `bazel-musl-x86_64-` plus `bazel-musl-arm64-`
 # scopes; macOS arm64 native jobs (issue #412) stay on macos-14 with the
-# separate `bazel-macos-arm64-` scope; macOS x86_64 best-effort native jobs
-# (issue #413) stay on macos-15-intel with the separate
-# `bazel-macos-x86_64-` scope; Windows x86_64 MSVC-compatible native jobs
+# separate `bazel-macos-arm64-` scope; Windows x86_64 MSVC-compatible native jobs
 # (issue #414) stay on windows-latest with shell bash and the separate
-# `bazel-windows-x86_64-` scope (free-tier eligible, no paid services;
-# best-effort gaps never block required-host release). `needs:` chains
+# `bazel-windows-x86_64-` scope (free-tier eligible, no paid services). `needs:` chains
 # enforce
 # fast-fail ordering so a broken build skips downstream stages instead of
 # burning parallel runners. Each job writes a `$GITHUB_STEP_SUMMARY` block
