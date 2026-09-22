@@ -9,6 +9,7 @@ struct FakeFs {
     files: HashSet<PathBuf>,
     texts: HashMap<PathBuf, String>,
     errors: HashMap<PathBuf, io::ErrorKind>,
+    broken: HashMap<PathBuf, String>,
 }
 
 impl FakeFs {
@@ -17,6 +18,7 @@ impl FakeFs {
             files: paths.iter().map(PathBuf::from).collect(),
             texts: HashMap::new(),
             errors: HashMap::new(),
+            broken: HashMap::new(),
         }
     }
 
@@ -40,6 +42,10 @@ impl Fs for FakeFs {
             return Err(io::Error::new(*kind, "injected read failure"));
         }
         Err(io::Error::new(io::ErrorKind::NotFound, "no such file"))
+    }
+
+    fn broken_marker_hint(&self, dir: &Path) -> Option<String> {
+        self.broken.get(dir).cloned()
     }
 }
 
@@ -803,4 +809,140 @@ fn stdout_broken_pipe_maps_to_141() {
     let other = io::Error::new(io::ErrorKind::Other, "boom");
     assert!(!is_broken_pipe_io(&other));
     assert_eq!(stdout_io_code(&other), operational_code());
+}
+
+#[test]
+fn override_broken_marker_reports_unreadable() {
+    let mut fs = FakeFs::with_files(&[]);
+    fs.broken.insert(
+        PathBuf::from("/other"),
+        "No such file or directory".to_owned(),
+    );
+    let err = discover(Path::new("/repo"), Some(Path::new("/other")), &fs).expect_err("broken");
+    assert!(matches!(err, DiscoverError::UnreadableOverride { .. }));
+    assert!(err.to_string().contains("workspace_unreadable"));
+    assert!(err.to_string().contains("/other"));
+    assert!(err.to_string().contains("No such file"));
+}
+
+#[test]
+fn ancestor_broken_marker_reports_unreadable() {
+    let mut fs = FakeFs::with_files(&[]);
+    fs.broken.insert(
+        PathBuf::from("/repo"),
+        "No such file or directory".to_owned(),
+    );
+    let err = discover(Path::new("/repo/sub"), None, &fs).expect_err("broken ancestor");
+    assert!(matches!(err, DiscoverError::UnreadableMarker { .. }));
+    assert!(err.to_string().contains("workspace_unreadable"));
+}
+
+#[test]
+fn expand_tilde_uses_home_and_leaves_user() {
+    let Some(home) = std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")) else {
+        assert_eq!(expand_tilde(Path::new("~/ws")), PathBuf::from("~/ws"));
+        return;
+    };
+    assert_eq!(
+        expand_tilde(Path::new("~/ws")),
+        PathBuf::from(home.clone()).join("ws")
+    );
+    assert_eq!(expand_tilde(Path::new("~")), PathBuf::from(home));
+    assert_eq!(
+        expand_tilde(Path::new("~other/ws")),
+        PathBuf::from("~other/ws")
+    );
+    assert_eq!(expand_tilde(Path::new("/abs/ws")), PathBuf::from("/abs/ws"));
+}
+
+#[test]
+fn override_display_joins_relative_and_keeps_absolute() {
+    let base = Path::new("/base");
+    assert_eq!(
+        resolve_override_display(Path::new("sub/dir"), base),
+        PathBuf::from("/base/sub/dir")
+    );
+    assert_eq!(
+        resolve_override_display(Path::new("/abs/ws"), base),
+        PathBuf::from("/abs/ws")
+    );
+}
+
+#[test]
+fn real_fs_canonicalizes_dotdot_and_trailing_slash() {
+    let scratch = dx_test_scratch::scratch("dx-workspace-canonical-");
+    let root = scratch.path().to_path_buf();
+    let nested = root.join("a").join("b");
+    std::fs::create_dir_all(&nested).expect("dirs");
+    std::fs::write(root.join("MODULE.bazel"), "module(name = \"t\")\n").expect("marker");
+    let canonical_root = std::fs::canonicalize(&root).expect("canonical");
+    let dotdot = root.join("a").join("b").join("..").join("..");
+    let found = discover_real(&dotdot, None).expect("dotdot");
+    assert_eq!(found, canonical_root);
+    let trailing = PathBuf::from(format!("{}/", root.display()));
+    let found = discover_real(&trailing, None).expect("trailing");
+    assert_eq!(found, canonical_root);
+    let override_dotdot = root.join("./a/../");
+    let found = discover_real(&nested, Some(override_dotdot.as_path())).expect("override dotdot");
+    assert_eq!(found, canonicalize_or_keep(&root.join("a").join("..")));
+    scratch.close().expect("cleanup");
+}
+
+#[test]
+fn real_fs_symlinked_root_canonicalizes() {
+    let scratch = dx_test_scratch::scratch("dx-workspace-symlink-");
+    let root = scratch.path().to_path_buf();
+    let real = root.join("real");
+    std::fs::create_dir_all(&real).expect("dirs");
+    std::fs::write(real.join("MODULE.bazel"), "module(name = \"t\")\n").expect("marker");
+    let link = root.join("link");
+    if cfg!(unix) {
+        std::os::unix::fs::symlink(&real, &link).expect("symlink");
+        let canonical_real = std::fs::canonicalize(&real).expect("canonical");
+        let found = discover_real(&link.join("sub"), None).expect("symlink start");
+        assert_eq!(found, canonical_real);
+        let found = discover_real(&root, Some(link.as_path())).expect("symlink override");
+        assert_eq!(found, canonical_real);
+    }
+    scratch.close().expect("cleanup");
+}
+
+#[test]
+fn real_fs_broken_marker_carries_io_hint() {
+    let scratch = dx_test_scratch::scratch("dx-workspace-broken-");
+    let root = scratch.path().to_path_buf();
+    std::fs::create_dir_all(&root).expect("dirs");
+    let missing = root.join("missing-target");
+    let marker = root.join("MODULE.bazel");
+    if cfg!(unix) {
+        std::os::unix::fs::symlink(&missing, &marker).expect("broken link");
+        let err = discover_real(&root, Some(root.as_path())).expect_err("broken override");
+        assert!(
+            matches!(err, DiscoverError::UnreadableOverride { .. }),
+            "got {err:?}"
+        );
+        assert!(err.to_string().contains("workspace_unreadable"));
+        let err = discover_real(&root.join("sub"), None).expect_err("broken ancestor");
+        assert!(
+            matches!(err, DiscoverError::UnreadableMarker { .. }),
+            "got {err:?}"
+        );
+    }
+    scratch.close().expect("cleanup");
+}
+
+#[test]
+fn real_fs_override_keeps_display_path() {
+    let scratch = dx_test_scratch::scratch("dx-workspace-display-");
+    let root = scratch.path().to_path_buf();
+    std::fs::create_dir_all(&root).expect("dirs");
+    let display = root.join("./missing/../missing");
+    let err = discover_real(&root, Some(display.as_path())).expect_err("missing");
+    match err {
+        DiscoverError::InvalidOverride { path } => {
+            assert_eq!(path, resolve_override_display(display.as_path(), &root));
+        }
+        other => panic!("expected InvalidOverride, got {other:?}"),
+    }
+    scratch.close().expect("cleanup");
 }
