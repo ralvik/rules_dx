@@ -4,10 +4,12 @@ Contract: `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md`
 """
 
 # Versioned registry schema for the adapter taxonomy.
-# Consumers query via `real_supported_classes`, `is_known_adapter_tool`,
-# `is_classified`, and `adapter_registry_schema_error` instead of
-# duplicating the maps, so adding a language/tool edits this one data
-# registry plus parity/compat, never a parallel allowlist.
+# This file owns the data (`REAL_ADAPTERS`, `REAL_CLASS_TO_FAMILY`); query
+# helpers for families/tools live once in `//quality:registry.bzl`, so adding
+# a language/tool edits this one data registry plus parity/compat, never a
+# parallel allowlist. `tsc` stays pipeline-only by design (target-coupled via
+# `TsConfigInfo`); the runner dispatch parity (`REAL_TOOLS` == registry tools
+# minus `tsc`) is pinned by the runner backend tests (See: quality/runner/src/real_tests_b.rs).
 ADAPTER_REGISTRY_SCHEMA_VERSION = 1
 
 # Synthetic tool ID to capability to supported semantic file classes.
@@ -187,17 +189,6 @@ def is_known_adapter_tool(tool_id):
 def is_classified(class_id):
     """Reports whether a class is in the versioned class-to-family map."""
     return class_id in REAL_CLASS_TO_FAMILY
-
-def registry_families():
-    """Returns the sorted unique owning families in the registry."""
-    seen = {}
-    for class_id in REAL_CLASS_TO_FAMILY:
-        seen[REAL_CLASS_TO_FAMILY[class_id]] = True
-    return sorted(seen.keys())
-
-def registry_tools():
-    """Returns the sorted known real adapter tool IDs."""
-    return sorted(REAL_ADAPTERS.keys())
 
 def _is_canonical_token(text):
     if text == "":

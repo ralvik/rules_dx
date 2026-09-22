@@ -79,3 +79,26 @@ def resolve_pipeline(target_classes, direct_sources, capability, family_selectio
                 "tool": stage["tool"],
             })
     return resolved
+
+def aspect_capability_blocked(rule_attr, capability):
+    """Reports whether `no-<capability>` blocks the aspect (See: quality-sources.md#tags)."""
+    return ("no-" + capability) in getattr(rule_attr, "tags", [])
+
+def aspect_family_selections(policy, capability):
+    """Expands one capability across policy families (See: quality-sources.md#adapter-applicability)."""
+    return {family_id: getattr(policy.families[family_id], capability) for family_id in policy.families.keys()}
+
+def aspect_direct_maps(direct_sources):
+    """Splits provider sources into class/file/path maps (See: quality-sources.md#adapter-applicability)."""
+    direct_files = {}
+    direct_paths = {}
+    path_to_file = {}
+    for class_id in direct_sources.keys():
+        files = direct_sources[class_id].to_list()
+        direct_files[class_id] = files
+        paths = sorted([f.short_path for f in files])
+        direct_paths[class_id] = paths
+        for f in files:
+            if f.short_path not in path_to_file:
+                path_to_file[f.short_path] = f
+    return (sorted(direct_files.keys()), direct_files, direct_paths, path_to_file)

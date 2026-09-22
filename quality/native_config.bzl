@@ -47,7 +47,17 @@ DxNativeConfigInfo = provider(
 # remaining cohort tools (cue, jsonnetfmt, pkl, modfmt, terraform,
 # yamlfmt, keep_sorted, shfmt, shellcheck, rubocop, standardrb,
 # psscriptanalyzer) take no typed config by design (whole-file rewrite
-# or check-only with upstream defaults, no hidden preset). Clippy plus
+# or check-only with upstream defaults, no hidden preset). Prettier,
+# flake8, pylint, pydoclint, ty, and the repo-owned markdown checker
+# likewise take no typed config by design: prettier runs `--no-config`
+# plus `--no-editorconfig`, flake8 runs `--isolated`, pylint runs with a
+# cleared environment plus scratch cwd, pydoclint plus ty run pinned
+# upstream defaults with no discovery, and markdown_check performs no
+# discovery, so every stage uses pinned upstream defaults with no hidden
+# preset. The remaining JVM/structured adapters without an entry
+# (google_java_format, ktfmt, ktlint, pmd, spotbugs, fantomas, roslyn,
+# tsc) likewise run pinned upstream defaults or delegated records with no
+# hinted config by design. Clippy plus
 # rustc likewise take no typed config: the upstream rust_clippy_aspect plus
 # the Rust rules own their invocations and read clippy.toml via their own
 # label flags (See: quality/real_aspects.bzl, clippy_delegated/the

@@ -34,7 +34,11 @@ _DX_JS_BINARY_PROVIDES = [
 
 _JS_EXTS = [".js", ".jsx", ".mjs", ".cjs"]
 
-_DX_JS_SOURCE_SPECS = [("javascript", ["js", "jsx", "mjs", "cjs"])]
+# JavaScript owns `.js`/`.mjs`/`.cjs`; JSX stays its own class per the
+# admissibility table (See: docs/quality/quality-sources.md). Both map to the
+# `javascript` policy family via the single-sourced registry, so splitting
+# keeps adapter applicability exact (biome/eslint/prettier distinguish them).
+_DX_JS_SOURCE_SPECS = [("javascript", ["js", "mjs", "cjs"]), ("jsx", "jsx")]
 
 _javascript_library_forward = dx_library_forward_rule(
     provides = _DX_JS_LIBRARY_PROVIDES,
