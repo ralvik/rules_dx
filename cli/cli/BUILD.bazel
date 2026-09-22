@@ -5,11 +5,9 @@ load("//deploy/rules:archive.bzl", "archive_deploy")
 load("//deploy/rules:github.bzl", "github_deploy")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
+load("//tools/visibility:visibility.bzl", "VIS_CLI")
 
-package(default_visibility = [
-    "//cli:__pkg__",
-    "//cli:__subpackages__",
-])
+package(default_visibility = VIS_CLI)
 
 # Hand-written binary crate; see docs/generation/rust.md.
 

@@ -5,6 +5,7 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
 load("//quality:native_config.bzl", "biome_config", "checkstyle_config", "eslint_config", "ruff_config", "rustfmt_config", "vale_config")
+load("//tools/visibility:visibility.bzl", "VIS_QUALITY")
 load(":aspect_tests.bzl", "aspect_fixture_tests")
 load(":real_aspect_subject.bzl", "real_aspect_subject")
 load(":real_aspect_tests.bzl", "real_aspect_fixture_tests")
@@ -12,10 +13,7 @@ load(":real_typecheck_subject.bzl", "real_typecheck_subject")
 load(":real_typecheck_tests.bzl", "real_typecheck_fixture_tests")
 load(":runner_matrix_cases.bzl", "runner_matrix_cases")
 
-package(default_visibility = [
-    "//quality:__pkg__",
-    "//quality:__subpackages__",
-])
+package(default_visibility = VIS_QUALITY)
 
 quality_source_target(
     name = "fixture_rust",

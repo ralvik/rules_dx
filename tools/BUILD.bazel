@@ -3,7 +3,7 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//quality:fixtures.bzl", "real_source_target")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//:__subpackages__"])
 
 # Single repin entry point over every managed lock dialect (see
 # docs/tools/tool-acquisition.md#repinning). Maintainer only; CI never
