@@ -3,6 +3,7 @@ Action execution constraints plus cache-key correctness stay local-only.
 Dx pipeline plus evaluator actions carry no-remote-exec (never remotely
 executed, still locally cacheable); disk-cache keys hash every
 Bazel-affecting lock/config with exact-key-only hits (a bust starts cold,
-no stale prefix reuse); aquery ExecutionInfo plus ActionKey shape plus the
+no stale prefix reuse) scoped by branch so a PR entry never poisons main,
+with PR runs restore-only and saves owned by main; aquery ExecutionInfo plus ActionKey shape plus the
 local execution-log hit/miss half prove invalidation locally while remote
 execution plus remote cache stay unverified and unwired.

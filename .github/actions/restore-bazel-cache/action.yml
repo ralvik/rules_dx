@@ -6,7 +6,10 @@
 # one edit here instead of N identical edits that could drift (previously
 # repeated verbatim ~24x across ci.yml). Exact key only with no prefix
 # fallback, so a bust starts cold; remote cache stays unwired (local-only
-# execution, no remote cache/executor/BES flags).
+# execution, no remote cache/executor/BES flags). The key is branch-scoped
+# via `github.ref` with no restore-keys fallback, so a poisoned PR entry is
+# never reusable by main on the same lock hash (issue #1059). Saves run only
+# on main via `lookup-only`, so PR runs are restore-only and main owns saves.
 name: restore-bazel-cache
 description: Restore the Bazel disk cache with the canonical exact-key inputs.
 
@@ -22,5 +25,6 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: ~/.cache/bazel
-        key: ${{ inputs.prefix }}${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
-        # exact key only, bust starts cold
+        key: ${{ inputs.prefix }}${{ github.ref }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', 'tools/bazelrc/preset.bazelrc', '.bazelversion', '.npmrc', 'cargo-bazel-lock.json', '**/Cargo.lock', '**/Cargo.toml', '**/pnpm-lock.yaml', '**/pnpm-workspace.yaml', '**/maven_install.json', '**/go.mod', '**/go.sum', '**/paket.dependencies', '**/paket.lock', '**/uv.lock', '**/pyproject.toml') }}
+        lookup-only: ${{ github.ref != 'refs/heads/main' }}
+        # exact key only, bust starts cold; branch-scoped, restore-only off main

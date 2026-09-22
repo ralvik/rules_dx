@@ -154,6 +154,18 @@ else
   bad "workflows regained a prefix fallback (want exact key only, bust starts cold)"
 fi
 
+# Branch-scoped poison isolation (issue #1059): the key carries github.ref
+# so a PR entry is never reusable by main on the same lock hash, with no
+# restore fallback; PR runs are restore-only via lookup-only while main owns
+# saves.
+if grep -q -F -e 'github.ref' "$cache_action" &&
+  grep -q -F -e 'lookup-only' "$cache_action" &&
+  grep -q -F -e "refs/heads/main" "$cache_action"; then
+  ok
+else
+  bad "restore-bazel-cache lost branch-scoped poison isolation (want github.ref key plus lookup-only restore-only off main, issue #1059)"
+fi
+
 # Exact-key record stays explicit in the single-source restore action plus
 # the policy note (issue #953): the hashFiles list lives once in the
 # composite while ci.yml passes only per-host prefixes.
@@ -260,6 +272,9 @@ if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]] &&
   grep -q -F -e 'execution_requirements.bzl' "$pins" &&
   grep -q -F -e 'cli/bep/src/remote.rs' "$pins" &&
   grep -q -F -e 'exact key only, bust starts cold' "$pins" &&
+  grep -q -F -e 'github.ref' "$pins" &&
+  grep -q -F -e 'lookup-only' "$pins" &&
+  grep -q -F -e 'refs/heads/main' "$pins" &&
   grep -q -F -e 'bazel-seed-' "$pins"; then
   ok
 else

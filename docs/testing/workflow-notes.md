@@ -58,7 +58,11 @@ The following policy notes lived as header comments in `ci.yml`:
 # lock/config (issue #618): MODULE plus bazelrc plus toolchain plus all
 # resolver locks, so lock/config changes bust the cache instead of reusing
 # a stale disk entry; exact key only with no prefix fallback, so a bust
-# starts cold; ci.yml passes only the per-host prefix, so the list cannot
+# starts cold; the key is branch-scoped via `github.ref` with no
+# restore-keys fallback, so a poisoned PR entry is never reusable by main
+# on the same lock hash (issue #1059); saves run only on main via
+# `lookup-only`, so PR runs are restore-only and main owns saves;
+# ci.yml passes only the per-host prefix, so the list cannot
 # drift across jobs. Remote cache stays unwired (issue #618 wont-fix):
 # paid remote services are not approved per the budget, and Apple/MS
 # acquisition plus cache rights stay license-bounded (issue #496), so CI
