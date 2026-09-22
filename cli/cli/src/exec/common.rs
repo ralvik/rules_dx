@@ -129,6 +129,12 @@ pub(crate) const CODE_BUMP_FAILED: &str = "bump_failed";
 /// (`migrate-v<from>-to-v<to>.json`) or per full version pair for
 /// minor/patch upgrades once published.
 pub(crate) const CODE_MIGRATE_FAILED: &str = "migrate_failed";
+/// Stable operational error code for cache-only `--offline`/`--frozen`
+/// runs that would need network: the selected advisory refresh, resolver
+/// update, or bump refresh cannot proceed without fetches, so the run
+/// fails closed with no launch and no mutation.
+/// See: `docs/deploy/offline-bootstrap.md`.
+pub(crate) const CODE_OFFLINE_REQUIRED: &str = "offline_required";
 
 /// Execution environment: resolved workspace, process seams for the
 /// workflow and for ownership queries, temporary directory for the BEP

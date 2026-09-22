@@ -18,9 +18,14 @@ use dx_output::{
 /// `dx update go` noop, `dx update maven` full, `dx update nuget` full
 /// for Cargo/npm/Go/Maven/NuGet; preset flag-diff review plus build
 /// stays file-only for Bazel/GitHub Actions with no launch).
+/// `--offline` (`--frozen` alias) forces cache-only: resolver refreshes
+/// that would fetch fail with `offline_required` before any widen (no
+/// mutation), while file-only sets and the pinned Go no-op still succeed.
 /// Usage errors exit `2` before any write; widen failures exit `1` with
 /// `bump_failed`; refresh failures exit `1` with `update_failed` with the
-/// widen kept (no rollback).
+/// widen kept (no rollback); offline blocks exit `1` with
+/// `offline_required` and no widen.
+/// See: `docs/deploy/offline-bootstrap.md`.
 pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
         invocation.command == Command::Bump,
@@ -50,7 +55,10 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
         Ok(request) => request,
         Err(error) => return pre_exec(err, &error.to_string()),
     };
-    let summary = request.summary();
+    let mut summary = request.summary();
+    if invocation.offline {
+        summary.push_str(" (offline, cache-only)");
+    }
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
@@ -83,6 +91,28 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     } else if verbose {
         let _ = writeln!(out, "{summary}");
+    }
+    // Cache-only `--offline`/`--frozen` gate: resolver refreshes that would
+    // fetch fail before any widen (no mutation), while file-only sets and
+    // the pinned Go no-op still succeed.
+    // See: `docs/deploy/offline-bootstrap.md`.
+    if invocation.offline && request.needs_update_refresh() {
+        if let Some((set, req, _)) = refresh_target(&request) {
+            if let Err(dx_update::backend::BackendError::OfflineRequired { .. }) =
+                dx_update::backend::plan(set, &req, true)
+            {
+                return operational(
+                    invocation,
+                    out,
+                    err,
+                    CODE_OFFLINE_REQUIRED,
+                    &format!(
+                        "cannot refresh {} without network: re-run without --offline/--frozen once connected, or use the vendored bundle per docs/deploy/offline-bootstrap.md (no widen performed)",
+                        request.selector,
+                    ),
+                );
+            }
+        }
     }
     // Live: read the owning manifest, plan the single-requirement edit
     // over its bytes, and commit atomically. Any failure leaves the tree
@@ -188,37 +218,9 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
     // Resolver-owned refresh: Cargo full, npm selective for the widened
     // package, Go full noop, Maven full, NuGet full. Never a private
     // resolver.
-    let (update_set, update_request, update_selector) = match request.set {
-        dx_bump::BumpSet::Cargo => (
-            dx_update::sets::SetId::Cargo,
-            dx_update::selector::SetRequest::Full,
-            "cargo".to_owned(),
-        ),
-        dx_bump::BumpSet::Npm => {
-            let package = request.package.clone();
-            (
-                dx_update::sets::SetId::Npm,
-                dx_update::selector::SetRequest::Packages(vec![package.clone()]),
-                format!("npm:{package}"),
-            )
-        }
-        dx_bump::BumpSet::Go => (
-            dx_update::sets::SetId::Go,
-            dx_update::selector::SetRequest::Full,
-            "go".to_owned(),
-        ),
-        dx_bump::BumpSet::Maven => (
-            dx_update::sets::SetId::Maven,
-            dx_update::selector::SetRequest::Full,
-            "maven".to_owned(),
-        ),
-        dx_bump::BumpSet::NuGet => (
-            dx_update::sets::SetId::NuGet,
-            dx_update::selector::SetRequest::Full,
-            "nuget".to_owned(),
-        ),
-        // File-only sets return above; this arm is unreachable.
-        dx_bump::BumpSet::Bazel | dx_bump::BumpSet::GithubActions => {
+    let (update_set, update_request, update_selector) = match refresh_target(&request) {
+        Some(target) => target,
+        None => {
             return operational(
                 invocation,
                 out,
@@ -231,21 +233,23 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
             );
         }
     };
-    let plan = match dx_update::backend::plan(update_set, &update_request) {
+    let plan = match dx_update::backend::plan(update_set, &update_request, invocation.offline) {
         Ok(plan) => plan,
-        Err(error) => {
-            let detail = match error {
-                dx_update::backend::BackendError::Unsupported { reason, .. } => reason,
-            };
-            return bump_refresh_failed(
-                invocation,
-                out,
-                err,
-                &request,
-                manifest,
-                &format!("unsupported refresh: {detail}"),
-            );
-        }
+        Err(error) => match error {
+            dx_update::backend::BackendError::Unsupported { reason, .. } => {
+                return bump_refresh_failed(
+                    invocation,
+                    out,
+                    err,
+                    &request,
+                    manifest,
+                    &format!("unsupported refresh: {reason}"),
+                );
+            }
+            dx_update::backend::BackendError::OfflineRequired { .. } => {
+                return bump_offline_failed(invocation, out, err, &request, manifest);
+            }
+        },
     };
     match plan {
         dx_update::backend::BackendPlan::Noop => {
@@ -422,7 +426,15 @@ fn bump_refresh_failed(
     manifest: &str,
     message: &str,
 ) -> i32 {
-    let _ = writeln!(err, "dx: {CODE_UPDATE_FAILED}: {message}");
+    // Cache-only `offline_required` failures surface their own code so
+    // air-gapped runs are distinguishable from resolver failures.
+    // See: `docs/deploy/offline-bootstrap.md`.
+    let code = if message.contains(CODE_OFFLINE_REQUIRED) {
+        CODE_OFFLINE_REQUIRED
+    } else {
+        CODE_UPDATE_FAILED
+    };
+    let _ = writeln!(err, "dx: {code}: {message}");
     if invocation.output == OutputMode::Json {
         // The widen stays visible: emit the widen notice before the error
         // so interrupted chaining keeps the preceding widen true.
@@ -443,7 +455,7 @@ fn bump_refresh_failed(
         }) {
             let _ = write_event(out, &event);
         }
-        if let Ok(event) = error_event(CODE_UPDATE_FAILED, message, None, None, Some("execute")) {
+        if let Ok(event) = error_event(code, message, None, None, Some("execute")) {
             let _ = write_event(out, &event);
         }
         let finished = command_finished(
@@ -456,6 +468,89 @@ fn bump_refresh_failed(
         let _ = write_event(out, &finished);
     }
     dx_process::operational_code()
+}
+
+/// Maps one bump request to its resolver-owned refresh target: Cargo full,
+/// npm selective for the widened package, Go full noop, Maven full, NuGet
+/// full. Returns `None` for file-only sets (Bazel, GitHub Actions) with no
+/// refresh launch. Single source for the pre-widen offline gate plus the
+/// post-widen chaining so cache-only checks never drift from execution.
+/// See: `docs/cli/commands/audit-update-bazel.md#dx-bump`.
+fn refresh_target(
+    request: &dx_bump::BumpRequest,
+) -> Option<(
+    dx_update::sets::SetId,
+    dx_update::selector::SetRequest,
+    String,
+)> {
+    match request.set {
+        dx_bump::BumpSet::Cargo => Some((
+            dx_update::sets::SetId::Cargo,
+            dx_update::selector::SetRequest::Full,
+            "cargo".to_owned(),
+        )),
+        dx_bump::BumpSet::Npm => {
+            let package = request.package.clone();
+            Some((
+                dx_update::sets::SetId::Npm,
+                dx_update::selector::SetRequest::Packages(vec![package.clone()]),
+                format!("npm:{package}"),
+            ))
+        }
+        dx_bump::BumpSet::Go => Some((
+            dx_update::sets::SetId::Go,
+            dx_update::selector::SetRequest::Full,
+            "go".to_owned(),
+        )),
+        dx_bump::BumpSet::Maven => Some((
+            dx_update::sets::SetId::Maven,
+            dx_update::selector::SetRequest::Full,
+            "maven".to_owned(),
+        )),
+        dx_bump::BumpSet::NuGet => Some((
+            dx_update::sets::SetId::NuGet,
+            dx_update::selector::SetRequest::Full,
+            "nuget".to_owned(),
+        )),
+        dx_bump::BumpSet::Bazel | dx_bump::BumpSet::GithubActions => None,
+    }
+}
+
+/// Reports a cache-only offline block after the widen is kept (exit 1,
+/// `offline_required`): the widen stays committed with no rollback, like
+/// any refresh failure, but the code names the air-gapped gate.
+/// Used only when the pre-widen gate races (post-widen plan still needs
+/// network); the normal offline path fails before any widen.
+/// See: `docs/deploy/offline-bootstrap.md`.
+fn bump_offline_failed(
+    invocation: &Invocation,
+    out: &mut dyn std::io::Write,
+    err: &mut dyn std::io::Write,
+    request: &dx_bump::BumpRequest,
+    manifest: &str,
+) -> i32 {
+    bump_refresh_failed(
+        invocation,
+        out,
+        err,
+        request,
+        manifest,
+        &format!(
+            "failed to refresh {}: {} (widen kept in {manifest})",
+            request.selector,
+            dx_update::backend::BackendError::OfflineRequired {
+                set: match request.set {
+                    dx_bump::BumpSet::Cargo => "cargo",
+                    dx_bump::BumpSet::Npm => "npm",
+                    dx_bump::BumpSet::Go => "go",
+                    dx_bump::BumpSet::Maven => "maven",
+                    dx_bump::BumpSet::NuGet => "nuget",
+                    dx_bump::BumpSet::Bazel => "bazel",
+                    dx_bump::BumpSet::GithubActions => "github-actions",
+                }
+            }
+        ),
+    )
 }
 
 #[cfg(test)]
@@ -896,5 +991,80 @@ mod tests {
         assert!(out.contains("major bump"), "{out}");
         assert!(out.contains("migrate_failed"), "{out}");
         assert!(out.contains("missing-versions"), "{out}");
+    }
+    #[test]
+    fn offline_dry_run_plans_cache_only_without_writing() {
+        // See: `docs/deploy/offline-bootstrap.md`. Dry-run never launches or
+        // writes, so offline dry-run plans cache-only and exits 0.
+        let harness = Harness::new("bump-offline-dryrun");
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.toml",
+            "[dependencies]\nanyhow = \"1\"\n",
+        );
+        let (code, out, err) =
+            harness.run(&["bump", "cargo:anyhow", "1.2.3", "--offline", "--dry-run"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("offline, cache-only"), "{out}");
+        assert_eq!(err, "", "{err}");
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "offline dry-run launches nothing"
+        );
+        assert_eq!(
+            std::fs::read_to_string(
+                harness
+                    .workspace
+                    .join("rust/tests/fixtures/hello/Cargo.toml")
+            )
+            .expect("read"),
+            "[dependencies]\nanyhow = \"1\"\n"
+        );
+    }
+
+    #[test]
+    fn offline_live_resolver_fails_before_widen_without_mutation() {
+        // See: `docs/deploy/offline-bootstrap.md`. Resolver refreshes that
+        // would fetch fail with `offline_required` before any widen (no
+        // mutation), while file-only sets and the Go no-op still succeed.
+        let harness = Harness::new("bump-offline-resolver");
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.toml",
+            "[dependencies]\nanyhow = \"1\"\n",
+        );
+        let (code, _, err) = harness.run(&["bump", "cargo:anyhow", "1.2.3", "--offline"]);
+        assert_eq!(code, 1, "{err}");
+        assert!(err.contains("offline_required"), "{err}");
+        assert!(err.contains("without network"), "{err}");
+        assert!(
+            harness.seen_env.borrow().is_empty(),
+            "offline launches nothing"
+        );
+        assert_eq!(
+            std::fs::read_to_string(
+                harness
+                    .workspace
+                    .join("rust/tests/fixtures/hello/Cargo.toml")
+            )
+            .expect("read"),
+            "[dependencies]\nanyhow = \"1\"\n",
+            "offline must not widen"
+        );
+        // File-only Bazel still succeeds offline with no launch.
+        let fileonly = Harness::new("bump-offline-fileonly");
+        fileonly.write_source(".bazelversion", "9.2.0\n");
+        let (code, out, err) = fileonly.run(&["bump", "bazel:.bazelversion", "9.3.0", "--offline"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("widened bazel:.bazelversion"), "{out}");
+        assert!(fileonly.seen_env.borrow().is_empty());
+        // Pinned Go no-op still succeeds offline with no launch.
+        let go = Harness::new("bump-offline-go");
+        go.write_source(
+            "third_party/go/go.mod",
+            "module example.com/mod\n\nrequire example.com/mod v1.2.3\n",
+        );
+        let (code, out, err) = go.run(&["bump", "go:example.com/mod", "1.3.0", "--offline"]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(out.contains("no-op success"), "{out}");
+        assert!(go.seen_env.borrow().is_empty());
     }
 }

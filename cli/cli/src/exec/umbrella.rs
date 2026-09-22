@@ -147,6 +147,7 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             here: false,
             serve: false,
             port: None,
+            offline: false,
         };
         let mut phase_out = Vec::new();
         let mut phase_err = Vec::new();

@@ -53,6 +53,20 @@ time from the bundle bytes, so re-copying a refreshed bundle is the
 mirror refresh. Live `dx audit` performs no network fetch on either
 path and never uploads lockfiles or inventories.
 
+## Offline flag
+
+`dx audit`, `dx update`, and `dx bump` accept `--offline` (`--frozen`
+alias) to force cache-only operation without network fetches. `--dry-run`
+plans without launching and never fails for offline; live runs fail closed
+with `offline_required` (exit `1`, no launch and — except for bump refresh
+races — no mutation) instead of fetching. Audit matches locally against
+already-fresh `.dx/advisory/` snapshots; any advisory failure becomes
+`offline_required` instead of `advisory_refresh_failed`. Update fails per
+fetching set with `offline_required` while the pinned Go no-op still
+succeeds. Bump fails before any widen when its refresh would fetch;
+file-only sets and the Go no-op still succeed. Every other command rejects
+`--offline` pre-exec instead of silently ignoring it.
+
 ## Offline setup, env, and codegen
 
 `dx setup`, `dx env`, and `dx codegen` run unchanged once the bundle is

@@ -811,3 +811,69 @@ fn completion_check_verifies_without_writing() {
         Err(ArgsError::UnsupportedOption { .. })
     ));
 }
+
+#[test]
+fn offline_forces_cache_only_on_audit_update_bump() {
+    // See: `docs/deploy/offline-bootstrap.md`. `--offline` (`--frozen`
+    // alias) forces cache-only without fetches on audit/update/bump only.
+    for command in ["audit", "update"] {
+        let got = parse(&args(&[command, "--offline"])).expect("offline parses");
+        assert!(got.offline, "command: {command}");
+        assert!(got.command.supports_offline(), "command: {command}");
+        let alias = parse(&args(&[command, "--frozen"])).expect("frozen alias parses");
+        assert!(alias.offline, "command: {command}");
+        let before = parse(&args(&["--offline", command])).expect("before parses");
+        assert!(before.offline, "command: {command}");
+        let bare = parse(&args(&[command])).expect("bare parses");
+        assert!(!bare.offline, "command: {command}");
+    }
+    let bump = parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--offline"])).expect("bump offline");
+    assert!(bump.offline);
+    assert!(bump.command.supports_offline());
+    let bump_alias =
+        parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--frozen"])).expect("bump frozen");
+    assert!(bump_alias.offline);
+    // `--offline` with `--dry-run` still plans (no launch, no fail).
+    let dry = parse(&args(&["update", "--offline", "--dry-run"])).expect("offline dry-run");
+    assert!(dry.offline);
+    assert!(dry.dry_run);
+    // Every other command rejects `--offline` instead of silently ignoring it.
+    for words in [
+        vec!["lint", "--offline"],
+        vec!["build", "//a:one", "--offline"],
+        vec!["clean", "--offline"],
+        vec!["codegen", "--offline"],
+        vec!["status", "--offline"],
+        vec!["docs", "--offline"],
+        vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--offline"],
+    ] {
+        assert_eq!(
+            parse(&args(&words)),
+            Err(ArgsError::UnsupportedOption {
+                command: words[0],
+                option: "--offline".to_owned(),
+            }),
+            "words: {words:?}"
+        );
+    }
+    // `dx bazel` owns its tail verbatim: `--offline` after it forwards to
+    // Bazel, while dx-owned `--offline` before it is rejected.
+    let verbatim = parse(&args(&["bazel", "build", "--offline"])).expect("verbatim");
+    assert_eq!(verbatim.command, Command::Bazel);
+    assert!(!verbatim.offline);
+    assert_eq!(
+        parse(&args(&["--offline", "bazel", "version"])),
+        Err(ArgsError::UnsupportedOption {
+            command: "bazel",
+            option: "--offline".to_owned(),
+        })
+    );
+    // Boolean shape: `=value` stays unknown, never a silent value.
+    assert_eq!(
+        parse(&args(&["audit", "--offline=yes"])),
+        Err(ArgsError::UnknownOption {
+            option: "--offline=yes".to_owned(),
+            suggestion: None,
+        })
+    );
+}

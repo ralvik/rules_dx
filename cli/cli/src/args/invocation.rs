@@ -70,6 +70,10 @@ pub struct Invocation {
     pub serve: bool,
     /// `dx docs --serve --port <port>`: preview port (docs only).
     pub port: Option<u16>,
+    /// `dx audit/update/bump --offline` (`--frozen` alias): force cache-only
+    /// operation without network fetches (audit/update/bump only).
+    /// See: `docs/deploy/offline-bootstrap.md`.
+    pub offline: bool,
 }
 
 impl Invocation {
@@ -243,6 +247,7 @@ mod tests {
             here: true,
             serve: false,
             port: None,
+            offline: false,
         }
     }
 

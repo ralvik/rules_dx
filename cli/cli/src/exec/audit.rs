@@ -138,6 +138,11 @@ pub(crate) enum AuditError {
         #[source]
         error: dx_audit::license_policy::PolicyProblem,
     },
+    /// Cache-only `--offline`/`--frozen` run cannot refresh advisory data
+    /// without network.
+    /// See: `docs/deploy/offline-bootstrap.md#vendored-advisory-mirror`.
+    #[error("offline_required: cannot obtain current advisory data for {set} without network: {detail} (re-run without --offline/--frozen once connected, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)")]
+    OfflineRequired { set: String, detail: String },
 }
 
 fn resolve_audit_sets(scopes: &[String]) -> Result<Vec<dx_update::sets::SetId>, AuditError> {
@@ -472,6 +477,7 @@ fn run_secrets(
     temp_dir: &Path,
     pid: u32,
     nonce: u64,
+    offline: bool,
 ) -> (
     Vec<dx_audit::secrets::SecretFinding>,
     Option<String>,
@@ -520,7 +526,13 @@ fn run_secrets(
         }
     };
     let temp_arg = temp_dir.to_string_lossy().into_owned();
-    let plan = match dx_audit::backend::plan_secrets(&tool_path, &report_arg, config, &temp_arg) {
+    let plan = match dx_audit::backend::plan_secrets(
+        &tool_path,
+        &report_arg,
+        config,
+        &temp_arg,
+        offline,
+    ) {
         Ok(dx_audit::backend::BackendPlan::Run { argv, env }) => (argv, env),
         Ok(dx_audit::backend::BackendPlan::Noop) => (Vec::new(), Vec::new()),
         Err(error) => {
@@ -651,6 +663,7 @@ struct SecurityInputs<'a> {
     sets: &'a [dx_update::sets::SetId],
     fail_on: Threshold,
     today: &'a str,
+    offline: bool,
 }
 
 fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
@@ -663,9 +676,10 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
         sets,
         fail_on,
         today,
+        offline,
     } = inputs;
     let (secret_findings, secrets_incomplete, mut diagnostics) =
-        run_secrets(workspace, runner, temp_dir, pid, nonce);
+        run_secrets(workspace, runner, temp_dir, pid, nonce, offline);
     let mut vuln_findings_all: Vec<dx_audit::vuln::VulnFinding> = Vec::new();
     let mut unassessed_all: Vec<dx_audit::vuln::Unassessed> = Vec::new();
     let mut incomplete: Option<String> = secrets_incomplete;
@@ -694,8 +708,22 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
         };
         let advisories = match load_advisories(workspace, *set, today) {
             Err(error) => {
+                // Cache-only `--offline`/`--frozen` runs cannot refresh
+                // advisory data over the network, so any advisory failure
+                // becomes `offline_required` instead of
+                // `advisory_refresh_failed`. Local lock/parse failures stay
+                // as-is (no fetch would fix them).
+                // See: `docs/deploy/offline-bootstrap.md`.
+                let wrapped = if offline {
+                    AuditError::OfflineRequired {
+                        set: set.name().to_owned(),
+                        detail: error.to_string(),
+                    }
+                } else {
+                    error
+                };
                 if incomplete.is_none() {
-                    incomplete = Some(format!("failed to assess {}: {error}", set.name()));
+                    incomplete = Some(format!("failed to assess {}: {wrapped}", set.name()));
                 }
                 continue;
             }
@@ -791,7 +819,11 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
 /// through `dx_audit`, dependency-set resolution through the approved
 /// `dx_update` registry, then qualified auditors per family over resolved
 /// scopes with per-family reporting. `--dry-run` prints the planned
-/// families and scopes and exits `0` without launching. Audit is
+/// families and scopes and exits `0` without launching. `--offline`
+/// (`--frozen` alias) forces cache-only: advisory snapshots must already
+/// be fresh locally (vendored mirror or prior fetch), and any advisory
+/// failure becomes `offline_required` instead of
+/// `advisory_refresh_failed`. Audit is
 /// non-mutating: advisory refresh changes analysis inputs, never
 /// manifests, lockfiles, or projections.
 pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
@@ -830,7 +862,10 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
         .join("+");
     let effective = request.effective_scopes();
     let scopes = effective.join(", ");
-    let summary = format!("Running audit {families} for {scopes}");
+    let mut summary = format!("Running audit {families} for {scopes}");
+    if invocation.offline {
+        summary.push_str(" (offline, cache-only)");
+    }
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
@@ -875,6 +910,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                     sets: &sets,
                     fail_on: invocation.fail_on,
                     today: &today,
+                    offline: invocation.offline,
                 });
                 sarif_tools.insert("gitleaks".to_owned());
                 sarif_tools.insert("vuln".to_owned());
@@ -1085,8 +1121,17 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                 }
                 dx_audit::outcome::FamilyStatus::Findings
                 | dx_audit::outcome::FamilyStatus::Incomplete => {
+                    // Cache-only runs surface `offline_required` (not
+                    // `audit_failed`) when the advisory snapshot would need
+                    // a network refresh. See:
+                    // `docs/deploy/offline-bootstrap.md`.
+                    let code = if message.contains(CODE_OFFLINE_REQUIRED) {
+                        CODE_OFFLINE_REQUIRED
+                    } else {
+                        CODE_AUDIT_FAILED
+                    };
                     if let Ok(event) = error_event(
-                        CODE_AUDIT_FAILED,
+                        code,
                         &format!("audit {family_name}: {message}"),
                         None,
                         None,
@@ -1094,10 +1139,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                     ) {
                         let _ = write_event(out, &event);
                     }
-                    let _ = writeln!(
-                        err,
-                        "dx: {CODE_AUDIT_FAILED}: audit {family_name}: {message}"
-                    );
+                    let _ = writeln!(err, "dx: {code}: audit {family_name}: {message}");
                 }
             }
         }
@@ -1125,10 +1167,12 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
             }
             dx_audit::outcome::FamilyStatus::Findings
             | dx_audit::outcome::FamilyStatus::Incomplete => {
-                let _ = writeln!(
-                    err,
-                    "dx: {CODE_AUDIT_FAILED}: audit {family_name}: {message}"
-                );
+                let code = if message.contains(CODE_OFFLINE_REQUIRED) {
+                    CODE_OFFLINE_REQUIRED
+                } else {
+                    CODE_AUDIT_FAILED
+                };
+                let _ = writeln!(err, "dx: {code}: audit {family_name}: {message}");
             }
         }
     }

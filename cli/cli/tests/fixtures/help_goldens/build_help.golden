@@ -45,7 +45,7 @@ Commands:
 
 dx [global-options] <command> [scope ...] [-- bazel-options ...]
 
-Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults). --here selects the current directory tree instead (//path/...; //... at the root) and cannot be combined with explicit scopes.
+Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults). --here (--cwd alias) selects the current directory tree instead (//path/...; //... at the root) and cannot be combined with explicit scopes.
 
 Exit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.
 
@@ -118,7 +118,7 @@ Options:
           Target version for `dx migrate` plus `dx upgrade` (migrate plus upgrade only). See: `docs/cli/commands/new-upgrade.md`
 
       --here
-          Select the current directory tree instead of `//...` (audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs only; `//path/...`, `//...` at the root; cannot be combined with explicit scopes)
+          Select the current directory tree instead of `//...` (`--cwd` alias) (audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs only; `//path/...`, `//...` at the root; cannot be combined with explicit scopes; never implicit: bare invocations in a subdir stay `//...`)
           
           [alias: --cwd]
 
@@ -127,6 +127,11 @@ Options:
 
       --port <PORT>
           Preview port for `dx docs --serve` (docs only; requires `--serve`). See: `docs/cli/commands/docs.md`
+
+      --offline
+          Force cache-only operation without network fetches (audit/update/bump only; `--frozen` alias). See: `docs/deploy/offline-bootstrap.md`
+          
+          [alias: --frozen]
 
   -h, --help
           Print help (see a summary with '-h')

@@ -318,6 +318,15 @@ impl Command {
         )
     }
 
+    /// True when `--offline` (`--frozen` alias) forces cache-only operation
+    /// without network fetches (See: `docs/deploy/offline-bootstrap.md`):
+    /// the audit/update/bump surfaces whose backends would otherwise fetch
+    /// (advisory refresh, resolver updates, bump refresh). Every other
+    /// command rejects `--offline` pre-exec instead of silently ignoring it.
+    pub fn supports_offline(self) -> bool {
+        matches!(self, Command::Audit | Command::Update | Command::Bump)
+    }
+
     /// True for commands that mutate by default (extended by
     /// for `migrate` plus `new` plus `upgrade`).
     ///
@@ -654,6 +663,33 @@ mod tests {
         assert!(!Command::Update.supports_diff());
         assert!(!Command::Bump.supports_diff());
         assert!(!Command::Migrate.supports_diff());
+    }
+
+    #[test]
+    fn offline_is_audit_update_bump_only() {
+        // See: `docs/deploy/offline-bootstrap.md`. Cache-only `--offline`
+        // (`--frozen` alias) forces no fetches on audit/update/bump only.
+        for command in [Command::Audit, Command::Update, Command::Bump] {
+            assert!(
+                command.supports_offline(),
+                "{command:?} must support --offline"
+            );
+        }
+        for command in [
+            Command::Lint,
+            Command::Build,
+            Command::Clean,
+            Command::Codegen,
+            Command::Status,
+            Command::Docs,
+            Command::Bazel,
+            Command::Migrate,
+        ] {
+            assert!(
+                !command.supports_offline(),
+                "{command:?} must reject --offline"
+            );
+        }
     }
 
     #[test]
