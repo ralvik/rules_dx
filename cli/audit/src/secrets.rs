@@ -74,7 +74,7 @@ pub const TOOL_LABEL: &str = "@dx_tools//:gitleaks";
 /// upstream published checksums verified by the generator.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct HostArtifact {
-    /// Execution platform (`os_cpu`, one of the five required hosts).
+    /// Execution platform (`os_cpu`, one of the four required hosts).
     pub platform: &'static str,
     /// Immutable download URL for the exact artifact.
     pub url: &'static str,
@@ -86,7 +86,7 @@ pub struct HostArtifact {
     pub executable: &'static str,
 }
 
-/// Hermetic per-host pins for the five required hosts. Linux binaries
+/// Hermetic per-host pins for the four required hosts. Linux binaries
 /// are static Go executables (no interpreter, no shared libraries);
 /// macOS/Windows record the dynamic delivery-class bound with no host
 /// SDK dependency (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
@@ -110,13 +110,6 @@ pub const HOST_ARTIFACTS: &[HostArtifact] = &[
         url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_arm64.tar.gz",
         sha256: "b40ab0ae55c505963e365f271a8d3846efbc170aa17f2607f13df610a9aeb6a5",
         size: 7897593,
-        executable: "gitleaks",
-    },
-    HostArtifact {
-        platform: "macos_x86_64",
-        url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_x64.tar.gz",
-        sha256: "dfe101a4db2255fc85120ac7f3d25e4342c3c20cf749f2c20a18081af1952709",
-        size: 8359235,
         executable: "gitleaks",
     },
     HostArtifact {
@@ -725,7 +718,6 @@ mod tests {
                 "linux_x86_64",
                 "linux_arm64",
                 "macos_arm64",
-                "macos_x86_64",
                 "windows_x86_64",
             ]
         );

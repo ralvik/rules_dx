@@ -1,6 +1,6 @@
 """Coverage cell registry (single source). Contract: docs/testing/README.md#coverage."""
 
-# Seven qualified cells, same first-party scope. Each cell gates its own
+# Six qualified cells, same first-party scope. Each cell gates its own
 # combined LCOV report through `coverage_bin` against its versioned
 # inventory; no cross-cell union, no averaged percentages, no rounding up.
 # Every non-seed inventory carries the seed eligible scope line-for-line
@@ -15,7 +15,6 @@ COVERAGE_CELLS = {
     "linux_x86_64_musl": "tools/coverage/musl-x86_64-inventory.txt",
     "linux_arm64_musl": "tools/coverage/musl-arm64-inventory.txt",
     "macos_arm64": "tools/coverage/macos-arm64-inventory.txt",
-    "macos_x86_64": "tools/coverage/macos-x86_64-inventory.txt",
     "windows_x86_64": "tools/coverage/windows-x86_64-inventory.txt",
 }
 
@@ -27,7 +26,6 @@ INVENTORY_FILES = [
     "arm64-inventory.txt",
     "cells.txt",
     "macos-arm64-inventory.txt",
-    "macos-x86_64-inventory.txt",
     "musl-arm64-inventory.txt",
     "musl-x86_64-inventory.txt",
     "seed-inventory.txt",

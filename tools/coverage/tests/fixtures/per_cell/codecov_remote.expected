@@ -5,7 +5,7 @@ activation or upload wiring is used here: no codecov-action, no
 CODECOV_TOKEN, no codecov upload step in workflows, tools, or CLI.
 The first-party comment rendered from the Bazel-owned gate verdict is
 the adopted PR surface (seed cell owns the PR comment; arm64 plus musl
-plus macos plus macos-x86_64 plus windows cells report to their job
+plus macos plus windows cells report to their job
 summaries). Consumer coverage stays per-cell with no union and Codecov
 opt-in only through reusable-consumer.yml.
 

@@ -2,7 +2,7 @@
 
 ## Bootstrap
 
-Fresh clone to green build, copy-paste. Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible native (issue #414).
+Fresh clone to green build, copy-paste. Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412) plus Windows x86_64 MSVC-compatible native (issue #414; macOS x86_64 Not planned per #976).
 Pinned versions: Bazel `9.2.0` (canonical `.bazelversion`), Bazelisk
 `v1.29.0` (canonical `.github/actions/setup-bazelisk/action.yml`
 defaults with per-OS sha256), pnpm `10.34.5` (via `packageManager`, use corepack).
@@ -86,7 +86,7 @@ first Bazel module and toolchain fetch still needs network once.
 
 ## Current Workflow
 
-Build, test, and coverage run through Bazel on Linux x86_64 (plus Linux arm64 native, issue #410, plus static-musl profiles, issue #411, plus macOS arm64 native on macos-14, issue #412, plus macOS x86_64 best-effort native on macos-15-intel, issue #413, plus Windows x86_64 MSVC-compatible native on windows-latest with shell bash, issue #414) with local-only
+Build, test, and coverage run through Bazel on Linux x86_64 (plus Linux arm64 native, issue #410, plus static-musl profiles, issue #411, plus macOS arm64 native on macos-14, issue #412, plus Windows x86_64 MSVC-compatible native on windows-latest with shell bash, issue #414 (macOS x86_64 Not planned per #976)) with local-only
 execution:
 
 ```sh

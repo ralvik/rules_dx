@@ -38,7 +38,6 @@ CACHE_SCOPES = [
     "bazel-musl-x86_64-",
     "bazel-musl-arm64-",
     "bazel-macos-arm64-",
-    "bazel-macos-x86_64-",
     "bazel-windows-x86_64-",
 ]
 

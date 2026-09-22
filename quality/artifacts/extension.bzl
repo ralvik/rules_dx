@@ -14,74 +14,60 @@ availability only, and Bazel's downloader retries the fetch.
 load("//quality/artifacts:biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:biome.macos_arm64.bzl", _biome_macos_arm64 = "ARTIFACT")
-load("//quality/artifacts:biome.macos_x86_64.bzl", _biome_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:biome.windows_x86_64.bzl", _biome_windows_x86_64 = "ARTIFACT")
 load("//quality/artifacts:buildifier.linux_arm64.bzl", _buildifier_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:buildifier.macos_arm64.bzl", _buildifier_macos_arm64 = "ARTIFACT")
-load("//quality/artifacts:buildifier.macos_x86_64.bzl", _buildifier_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:buildifier.windows_x86_64.bzl", _buildifier_windows_x86_64 = "ARTIFACT")
 load("//quality/artifacts:gitleaks.linux_arm64.bzl", _gitleaks_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:gitleaks.linux_x86_64.bzl", _gitleaks_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:gitleaks.macos_arm64.bzl", _gitleaks_macos_arm64 = "ARTIFACT")
-load("//quality/artifacts:gitleaks.macos_x86_64.bzl", _gitleaks_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:gitleaks.windows_x86_64.bzl", _gitleaks_windows_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ruff.linux_arm64.bzl", _ruff_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:ruff.linux_x86_64.bzl", _ruff_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ruff.macos_arm64.bzl", _ruff_macos_arm64 = "ARTIFACT")
-load("//quality/artifacts:ruff.macos_x86_64.bzl", _ruff_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ruff.windows_x86_64.bzl", _ruff_windows_x86_64 = "ARTIFACT")
 load("//quality/artifacts:taplo.linux_arm64.bzl", _taplo_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:taplo.linux_x86_64.bzl", _taplo_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:taplo.macos_arm64.bzl", _taplo_macos_arm64 = "ARTIFACT")
-load("//quality/artifacts:taplo.macos_x86_64.bzl", _taplo_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:taplo.windows_x86_64.bzl", _taplo_windows_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ty.linux_arm64.bzl", _ty_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:ty.linux_x86_64.bzl", _ty_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ty.macos_arm64.bzl", _ty_macos_arm64 = "ARTIFACT")
-load("//quality/artifacts:ty.macos_x86_64.bzl", _ty_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:ty.windows_x86_64.bzl", _ty_windows_x86_64 = "ARTIFACT")
 load("//quality/artifacts:vale.linux_arm64.bzl", _vale_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:vale.linux_x86_64.bzl", _vale_linux_x86_64 = "ARTIFACT")
 load("//quality/artifacts:vale.macos_arm64.bzl", _vale_macos_arm64 = "ARTIFACT")
-load("//quality/artifacts:vale.macos_x86_64.bzl", _vale_macos_x86_64 = "ARTIFACT")
 load("//quality/artifacts:vale.windows_x86_64.bzl", _vale_windows_x86_64 = "ARTIFACT")
 
 _ARTIFACTS = [
     _biome_linux_x86_64,
     _biome_linux_arm64,
     _biome_macos_arm64,
-    _biome_macos_x86_64,
     _biome_windows_x86_64,
     _buildifier_linux_x86_64,
     _buildifier_linux_arm64,
     _buildifier_macos_arm64,
-    _buildifier_macos_x86_64,
     _buildifier_windows_x86_64,
     _gitleaks_linux_x86_64,
     _gitleaks_linux_arm64,
     _gitleaks_macos_arm64,
-    _gitleaks_macos_x86_64,
     _gitleaks_windows_x86_64,
     _ruff_linux_x86_64,
     _ruff_linux_arm64,
     _ruff_macos_arm64,
-    _ruff_macos_x86_64,
     _ruff_windows_x86_64,
     _taplo_linux_x86_64,
     _taplo_linux_arm64,
     _taplo_macos_arm64,
-    _taplo_macos_x86_64,
     _taplo_windows_x86_64,
     _ty_linux_x86_64,
     _ty_linux_arm64,
     _ty_macos_arm64,
-    _ty_macos_x86_64,
     _ty_windows_x86_64,
     _vale_linux_x86_64,
     _vale_linux_arm64,
     _vale_macos_arm64,
-    _vale_macos_x86_64,
     _vale_windows_x86_64,
 ]
 
@@ -92,7 +78,6 @@ _PLATFORMS = [
     "linux_x86_64",
     "linux_arm64",
     "macos_arm64",
-    "macos_x86_64",
     "windows_x86_64",
 ]
 
@@ -232,13 +217,6 @@ config_setting(
     ],
 )
 config_setting(
-    name = "macos_x86_64",
-    constraint_values = [
-        "{os_macos}",
-        "{cpu_x86_64}",
-    ],
-)
-config_setting(
     name = "windows_x86_64",
     constraint_values = [
         "{os_windows}",
@@ -254,13 +232,12 @@ _HUB_ALIAS = """alias(
             ":linux_x86_64": "@{repo_linux_x86_64}//:tool",
             ":linux_arm64": "@{repo_linux_arm64}//:tool",
             ":macos_arm64": "@{repo_macos_arm64}//:tool",
-            ":macos_x86_64": "@{repo_macos_x86_64}//:tool",
             ":windows_x86_64": "@{repo_windows_x86_64}//:tool",
         }},
         no_match_error = (
             "rules_dx: no {tool} artifact for this execution platform; " +
             "want one of linux_x86_64, linux_arm64, macos_arm64, " +
-            "macos_x86_64, windows_x86_64 (see //quality/artifacts)."
+            "windows_x86_64 (see //quality/artifacts)."
         ),
     ),
     visibility = ["//visibility:public"],
@@ -284,7 +261,6 @@ def _hub_repo_impl(ctx):
             repo_linux_x86_64 = repos["linux_x86_64"],
             repo_linux_arm64 = repos["linux_arm64"],
             repo_macos_arm64 = repos["macos_arm64"],
-            repo_macos_x86_64 = repos["macos_x86_64"],
             repo_windows_x86_64 = repos["windows_x86_64"],
         ))
     ctx.file("BUILD.bazel", "\n".join(lines))

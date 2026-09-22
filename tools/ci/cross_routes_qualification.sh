@@ -80,16 +80,17 @@ else
   bad "pins.bzl lost its first Linux cross-build cohort plus not-every-target mandate under issue #504"
 fi
 
-# Pins record the five qualified native rows with runners plus cache scopes.
+# Pins record the four qualified native rows with runners plus cache scopes
+# (macOS x86_64 removed per #976).
 if grep -q -F -e 'Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed' "$pins" &&
   grep -q -F -e 'Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm with bazel-arm64- scope' "$pins" &&
   grep -q -F -e 'Native macOS arm64 qualified under issue #412 on macos-14 with bazel-macos-arm64- scope' "$pins" &&
-  grep -q -F -e 'Native macOS x86_64 best-effort qualified under issue #413 on macos-15-intel with bazel-macos-x86_64- scope' "$pins" &&
+  ! grep -q -F -e 'Native macOS x86_64' "$pins" &&
   grep -q -F -e 'Native Windows x86_64 qualified under issue #414 on windows-latest with bazel-windows-x86_64- scope' "$pins" &&
   grep -q -F -e 'pinned upstream toolchains with provisional backends' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its five qualified native rows with runners plus cache scopes under issue #504"
+  bad "pins.bzl lost its four qualified native rows with runners plus cache scopes under issue #504 plus #976"
 fi
 
 # Pins record the qualified Linux same-arch musl closures plus cross-arch cohort gates.

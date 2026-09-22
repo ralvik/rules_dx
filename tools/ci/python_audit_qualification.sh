@@ -106,7 +106,7 @@ else
 fi
 
 # Pins record platform plus consumer plus release evidence.
-if grep -q -F -e 'ruff per-host artifacts linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus windows_x86_64' "$pins" &&
+if grep -q -F -e 'ruff per-host artifacts linux_x86_64 plus linux_arm64 plus macos_arm64 plus windows_x86_64' "$pins" &&
   grep -q -F -e 'standalone artifact route with per-host digests in quality/artifacts/ruff' "$pins" &&
   grep -q -F -e 'examples/adopt-python consumer with lazy audit opt-in' "$pins" &&
   grep -q -F -e 'promotion-checklist plus SBOM plus signing linkage with no Supported claim' "$pins"; then
@@ -255,8 +255,9 @@ else
   bad "audit samples lost their S ruleset split (want assert plus shell=True dirty, clean without assert)"
 fi
 
-# Platform evidence: Ruff per-host artifacts stay present.
-if [[ -f "quality/artifacts/ruff.linux_x86_64.bzl" && -f "quality/artifacts/ruff.linux_arm64.bzl" && -f "quality/artifacts/ruff.macos_arm64.bzl" && -f "quality/artifacts/ruff.macos_x86_64.bzl" && -f "quality/artifacts/ruff.windows_x86_64.bzl" ]]; then
+# Platform evidence: Ruff per-host artifacts stay present (macOS x86_64
+# removed per #976).
+if [[ -f "quality/artifacts/ruff.linux_x86_64.bzl" && -f "quality/artifacts/ruff.linux_arm64.bzl" && -f "quality/artifacts/ruff.macos_arm64.bzl" && -f "quality/artifacts/ruff.windows_x86_64.bzl" && ! -f "quality/artifacts/ruff.macos_x86_64.bzl" ]]; then
   ok
 else
   bad "Ruff per-host artifacts missing (want quality/artifacts/ruff per-host bzl for platform evidence)"

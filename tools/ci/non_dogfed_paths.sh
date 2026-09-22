@@ -271,13 +271,13 @@ else
   bad "CI lost a no-coverage gate half (test execution + target_tags + coverage_cell + coverage_qualification)"
 fi
 
-# C7: cells registry stays seed plus arm64 plus static musl plus macos arm64 plus macos x86_64 best-effort plus windows x86_64 with no cross-cell union.
+# C7: cells registry stays seed plus arm64 plus static musl plus macos arm64 plus windows x86_64 with no cross-cell union (macOS x86_64 removed per #976).
 if grep -q -F -e 'qualified seed-linux_x86_64' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' tools/coverage/cells.txt &&
-  grep -q -F -e 'qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt' tools/coverage/cells.txt &&
+  ! grep -q -F -e 'qualified macos_x86_64' tools/coverage/cells.txt &&
   grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'tools/coverage/seed-inventory.txt' tools/coverage/cells.txt &&
   [[ -f tools/coverage/seed-inventory.txt ]] &&
@@ -285,11 +285,11 @@ if grep -q -F -e 'qualified seed-linux_x86_64' tools/coverage/cells.txt &&
   [[ -f tools/coverage/musl-x86_64-inventory.txt ]] &&
   [[ -f tools/coverage/musl-arm64-inventory.txt ]] &&
   [[ -f tools/coverage/macos-arm64-inventory.txt ]] &&
-  [[ -f tools/coverage/macos-x86_64-inventory.txt ]] &&
+  [[ ! -f tools/coverage/macos-x86_64-inventory.txt ]] &&
   [[ -f tools/coverage/windows-x86_64-inventory.txt ]]; then
   ok
 else
-  bad "coverage cells registry lost its seed plus arm64 plus musl plus macos plus macos x86_64 plus windows qualified record"
+  bad "coverage cells registry lost its seed plus arm64 plus musl plus macos arm64 plus windows qualified record (x86_64 removed per #976)"
 fi
 
 # --- D. shell sources with no quality class ---

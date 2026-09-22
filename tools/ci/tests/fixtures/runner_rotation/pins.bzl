@@ -9,19 +9,18 @@ Fixture: `tools/ci/tests/fixtures/runner_rotation/` via
 RUNNER_SEED = "ubuntu-latest"
 RUNNER_ARM64 = "ubuntu-24.04-arm"
 RUNNER_MACOS_ARM64 = "macos-14"
-RUNNER_MACOS_X86_64 = "macos-15-intel"
 RUNNER_WINDOWS = "windows-latest"
 
 # Retirement record (handled by review, never silent).
 RETIRED_MACOS_13 = "macos-13 retired December 2025"
-RETIRES_MACOS_INTEL = "macos-15-intel until August 2027"
+NOT_PLANNED_MACOS_X86_64 = "macos x86_64 Not planned per #976 with no runner"
 FLOATING_NOTE = "ubuntu-latest plus windows-latest float and age out"
 
 # Review cadence plus owner (sole maintainer via CODEOWNERS, no review owner gap).
 CADENCE = "quarterly review plus on retirement notice plus on hermetic-llvm release"
 OWNER = "sole maintainer owns every row until delegation"
 
-# SDK plus floor review scope (exact values owned by issues #410-#414 plus #500, not pinned here).
+# SDK plus floor review scope (exact values owned by issues #410-#412 plus #414 plus #500, not pinned here).
 SDK_GLIBC = "glibc 2.28 symbol floor"
 SDK_MUSL = "musl 1.2.6 static closure"
 SDK_APPLE = "MacOSX26.5 via hermetic-llvm v0.8.19 pinned extraction"

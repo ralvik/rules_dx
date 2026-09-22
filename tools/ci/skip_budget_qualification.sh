@@ -6,7 +6,7 @@
 # harness:
 # - delivered: every bash `sh_binary`/`sh_test` stays Linux-only per the
 #   shell contract, so Linux cells run the full scope while the macOS
-#   arm64 plus macOS x86_64 best-effort plus Windows x86_64 cells skip the
+#   arm64 plus Windows x86_64 cells skip the
 #   same scope honestly; the skip volume is inventoried here (31 `sh_test`
 #   test skips plus 127 `sh_binary` build skips, 162 Linux-only labels)
 #   with a fail-closed per-host budget (Linux cells 0 skips, non-Linux
@@ -65,18 +65,18 @@ else
 fi
 
 # Docs own the per-host real-runs vs skips table: Linux cells run, the
-# macOS pair plus Windows skip honestly with budgeted volumes.
+# macOS arm64 plus Windows skip honestly with budgeted volumes.
 if grep -q -F -e 'Real runs vs skips' "$tools_doc" &&
   grep -q -F -e 'seed linux_x86_64' "$tools_doc" &&
   grep -q -F -e 'linux_arm64' "$tools_doc" &&
   grep -q -F -e 'macos_arm64' "$tools_doc" &&
-  grep -q -F -e 'macos_x86_64' "$tools_doc" &&
+  ! grep -q -F -e 'macos_x86_64' "$tools_doc" &&
   grep -q -F -e 'windows_x86_64' "$tools_doc" &&
   grep -q -F -e 'real run' "$tools_doc" &&
   grep -q -F -e '31 skips' "$tools_doc"; then
   ok
 else
-  bad "docs/testing/tools.md lost the per-host real-runs vs skips table (issue #769)"
+  bad "docs/testing/tools.md lost the per-host real-runs vs skips table (issue #769; x86_64 removed per #976)"
 fi
 
 # Test skip inventory stays within budget: every sh_test is Linux-only,
@@ -130,11 +130,11 @@ else
 fi
 
 # CI reports skip volume on every per-host test job: seed plus arm64
-# plus macos pair plus windows each carry the report step.
-if [[ "$(grep -c -F -e 'Report skip volume (Linux-only sh harness, issue #769)' "$ci")" == "5" ]]; then
+# plus macos arm64 plus windows each carry the report step.
+if [[ "$(grep -c -F -e 'Report skip volume (Linux-only sh harness, issue #769)' "$ci")" == "4" ]]; then
   ok
 else
-  bad "ci.yml lost a per-host skip-volume report step (want 5 test jobs reporting, issue #769)"
+  bad "ci.yml lost a per-host skip-volume report step (want 4 test jobs reporting, issue #769; x86_64 removed per #976)"
 fi
 
 # Linux cells report real runs with 0 skips: seed plus arm64 summaries
@@ -145,12 +145,12 @@ else
   bad "ci.yml lost the Linux real-run 0-skips record (want seed plus arm64, issue #769)"
 fi
 
-# Non-Linux cells report budgeted skips: macos pair plus windows name
+# Non-Linux cells report budgeted skips: macos arm64 plus windows name
 # the 31 sh_test skips instead of passing silently.
-if [[ "$(grep -c -F -e '31 sh_test skips' "$ci")" -ge "3" ]]; then
+if [[ "$(grep -c -F -e '31 sh_test skips' "$ci")" -ge "2" ]]; then
   ok
 else
-  bad "ci.yml lost the non-Linux budgeted-skips record (want macos pair plus windows with 31 sh_test skips, issue #769)"
+  bad "ci.yml lost the non-Linux budgeted-skips record (want macos arm64 plus windows with 31 sh_test skips, issue #769; x86_64 removed per #976)"
 fi
 
 # Promotion checklist wires the budget as platform evidence per cell,

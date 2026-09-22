@@ -7,8 +7,8 @@
 # `per_cell.expected` plus `codecov_remote.expected`), without claiming
 # qualified floors, qualified accounting, or Supported:
 # - per-cell LCOV gating (seed plus arm64 plus two static-musl plus macos
-#   arm64 plus macos x86_64 best-effort plus windows x86_64 qualified, all
-#   required plus best-effort qualified, never unioned),
+#   arm64 plus windows x86_64 qualified, all
+#   required qualified, never unioned),
 # - Starlark instrumentation-vs-behavioral-matrix decision with evidence,
 # - Codecov opt-in-only qualification (no activation, no upload wiring),
 # - free-tier quota qualification for the services actually used,
@@ -19,10 +19,11 @@
 # Codecov stays opt-in only and is never required. Remote correctness is
 # not claimed: local aquery plus execution-log evidence proves cache
 # behavior locally, and docs state remote remains unverified. All required
-# plus best-effort cells are qualified per the platform policy (issues
+# cells are qualified per the platform policy (issues
 # /, arm64 qualified under, static musl under, macos arm64
-# under, macos x86_64 best-effort under, windows x86_64 under
-# with clean refusal for the remaining out-of-v1 host, never silent
+# under, windows x86_64 under
+# with clean refusal for the remaining out-of-v1 hosts plus Not-planned macOS
+# x86_64, never silent
 # substitution.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_qualification`,
@@ -49,34 +50,32 @@ github_ci="docs/github-ci.md"
 build_coverage_doc="docs/cli/commands/build-test-coverage.md"
 verify="docs/testing/verification-matrix.md"
 
-# Per-cell registry exists with exactly seven qualified rows (seed x86_64
+# Per-cell registry exists with exactly six qualified rows (seed x86_64
 # plus arm64 native plus two static-musl profiles under
-# plus macos arm64 native plus macos x86_64
-# best-effort native plus windows x86_64 MSVC-compatible
+# plus macos arm64 native
+# plus windows x86_64 MSVC-compatible
 # native).
 if [[ -f "$cells" ]] &&
-  [[ "$(grep -c -E -e '^qualified ' "$cells")" == "7" ]] &&
+  [[ "$(grep -c -E -e '^qualified ' "$cells")" == "6" ]] &&
   grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' "$cells" &&
-  grep -q -F -e 'qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' "$cells"; then
   ok
 else
   bad "cells registry missing or a qualified row wrong: $cells"
 fi
 
-# All required plus best-effort hosts are qualified (macos x86_64
-# best-effort flipped qualified under, windows x86_64 flipped qualified
+# All required hosts are qualified (windows x86_64 flipped qualified
 # under); no unqualified coverage row remains. Out-of-v1 Windows arm64
-# carries no coverage cell.
+# plus Not-planned macOS x86_64 carry no coverage cell.
 if [[ "$(grep -c -E -e '^unqualified ' "$cells" || true)" == "0" ]] &&
   ! grep -q -F -e 'unqualified windows_x86_64' "$cells"; then
   ok
 else
-  bad "cells registry gained an unqualified row (want 0: all required plus best-effort qualified under #413/#414)"
+  bad "cells registry gained an unqualified row (want 0: all required qualified)"
 fi
 
 # No duplicate cell names in the registry.
@@ -87,31 +86,28 @@ else
 fi
 
 # Qualified inventories exist and stay Rust-only (no Starlark line data).
-# All seven cells gate the same first-party scope; only the header prose differs.
+# All six cells gate the same first-party scope; only the header prose differs.
 if [[ -f "$seed_inventory" ]] &&
   [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
-  [[ -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/windows-x86_64-inventory.txt" ]] &&
   ! grep -E -e '\.bzl$' "$seed_inventory" | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/arm64-inventory.txt | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/musl-x86_64-inventory.txt | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/musl-arm64-inventory.txt | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/macos-arm64-inventory.txt | grep -q . &&
-  ! grep -E -e '\.bzl$' tools/coverage/macos-x86_64-inventory.txt | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/windows-x86_64-inventory.txt | grep -q . &&
   grep -q -F -e 'eligible cli/lcov/src/lib.rs' "$seed_inventory" &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/arm64-inventory.txt) &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/musl-x86_64-inventory.txt) &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/musl-arm64-inventory.txt) &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/macos-arm64-inventory.txt) &&
-  cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/macos-x86_64-inventory.txt) &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/windows-x86_64-inventory.txt); then
   ok
 else
-  bad "seed/arm64/musl/macos/macos-x86_64/windows inventories missing, non-Rust scope, or out of sync"
+  bad "seed/arm64/musl/macos/windows inventories missing, non-Rust scope, or out of sync"
 fi
 
 # No cross-cell union: renderer, workflows, and docs keep cells separate.
@@ -124,29 +120,26 @@ else
 fi
 
 # Seed coverage job stays seed-cell scoped in CI, with per-cell arm64 plus
-# musl plus macos plus macos-x86_64 plus windows twins (static musl only,
+# musl plus macos plus windows twins (static musl only,
 # ; dynamic musl has no cell; macos arm64 native on macos-14,
-# ; macos x86_64 best-effort native on macos-15-intel, issue
-# , non-blocking; windows x86_64 MSVC-compatible native on
+# ; windows x86_64 MSVC-compatible native on
 # windows-latest,).
 if grep -q -F -e 'coverage (dx coverage gate, seed cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-musl-x86_64 (dx coverage gate, musl x86_64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-musl-arm64 (dx coverage gate, musl arm64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-macos-arm64 (dx coverage gate, macos arm64 cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-macos-x86_64 (dx coverage gate, macos x86_64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-windows-x86_64 (dx coverage gate, windows x86_64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'seed linux_x86_64' .github/workflows/ci.yml &&
   grep -q -F -e 'arm64 linux_arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'musl-x86_64 linux_x86_64_musl' .github/workflows/ci.yml &&
   grep -q -F -e 'musl-arm64 linux_arm64_musl' .github/workflows/ci.yml &&
   grep -q -F -e 'macos-arm64 macos_arm64' .github/workflows/ci.yml &&
-  grep -q -F -e 'macos-x86_64 macos_x86_64' .github/workflows/ci.yml &&
   grep -q -F -e 'windows-x86_64 windows_x86_64' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage --min-coverage' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost the seed/arm64/musl/macos/macos-x86_64/windows per-cell coverage gate scope"
+  bad "ci.yml lost the seed/arm64/musl/macos/windows per-cell coverage gate scope"
 fi
 
 # Consumer coverage stays per-cell with no union and Codecov opt-in only.
@@ -319,20 +312,19 @@ else
   bad "per-cell coverage fixture missing (want $pins plus $pins_build plus per_cell.expected plus codecov_remote.expected)"
 fi
 
-# Pins record the per-cell registry with seven qualified cells and no union.
-if grep -q -F -e 'PER_CELL_COUNT = 7' "$pins" &&
+# Pins record the per-cell registry with six qualified cells and no union.
+if grep -q -F -e 'PER_CELL_COUNT = 6' "$pins" &&
   grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' "$pins" &&
-  grep -q -F -e 'qualified macos_x86_64 tools/coverage/macos-x86_64-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' "$pins" &&
   grep -q -F -e 'no cross-cell union' "$pins" &&
   grep -q -F -e 'coverage --min-coverage 97 //...' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its seven-cell registry plus no-union plus rate-gate pins under issue #507"
+  bad "pins.bzl lost its six-cell registry plus no-union plus rate-gate pins under issue #507"
 fi
 
 # Pins record the accepted decision: repo exact gate plus configurable
@@ -410,7 +402,7 @@ else
 fi
 
 # Fixture expected texts cover per-cell plus Codecov plus remote gaps.
-if grep -q -F -e 'Seven required plus best-effort cells' "$per_cell_expected" &&
+if grep -q -F -e 'Six required cells' "$per_cell_expected" &&
   grep -q -F -e 'configurable --min-coverage requirement for users per-cell' "$per_cell_expected" &&
   grep -q -F -e 'behavioral matrix' "$per_cell_expected" &&
   grep -q -F -e 'Codecov stays at most opt-in' "$codecov_remote_expected" &&

@@ -38,7 +38,7 @@ class by design — never silently under the standard dogfood gates.
 - **Examples external-consumer**: per-foundation `adopt-*` workspaces
   proving generation as a consumer, plus acquisition/laziness proof
    (delivered on the seed host; platform/remote dimensions landed under
-   closed #803 plus #804 plus #805 plus #807 with best-effort exempt under
+   closed #803 plus #804 plus #805 plus #807 with macOS x86_64 Not planned per #976 under
    closed #806 moot, successors to closed #298, process #808).
 - **Layer-4 CLI-contract (issue #407, hermetic, replaces nested E2E)**:
   `dx test`/`dx build` exit-code preservation via `cli/cli/src/exec` unit
@@ -114,8 +114,7 @@ class by design — never silently under the standard dogfood gates.
 
 `Delivered` means implemented and verified on the Linux x86_64 seed host
 plus Linux arm64 native (issue #410) plus the two Linux static-musl
-profiles (issue #411) plus macOS arm64 native (issue #412) plus macOS
-x86_64 best-effort native (issue #413) plus Windows x86_64 MSVC-compatible
+profiles (issue #411) plus macOS arm64 native (issue #412) plus Windows x86_64 MSVC-compatible
  native (issue #414). `Delivered` here is verification-layer evidence only, not
 support-matrix promotion: it never promotes a support-matrix `Planned` cell to
 `Seed-host-delivered`, `Platform-qualified`, or `Supported`. `Open` means open work under its owning GitHub issues tracker with no
@@ -204,10 +203,7 @@ plus Linux arm64 native (issue #410, `ubuntu-24.04-arm` runners with a
 separate `bazel-arm64-` disk-cache scope) plus the two static-musl profiles
 (issue #411, Linux runners with per-profile `bazel-musl-*` scopes) plus
 macOS arm64 native (issue #412, `macos-14` runners with a separate
-`bazel-macos-arm64-` disk-cache scope) plus macOS x86_64 best-effort native
-(issue #413, `macos-15-intel` runners with a separate
-`bazel-macos-x86_64-` disk-cache scope; `macos-13` retired December 2025,
-`macos-15-intel` until August 2027; gaps never block required-host release)
+`bazel-macos-arm64-` disk-cache scope; macOS x86_64 Not planned per #976 with no runner)
 plus Windows x86_64 MSVC-compatible native (issue #414, `windows-latest`
 runners with shell `bash` and a separate `bazel-windows-x86_64-` disk-cache
 scope). The host matrix across these hosts is pinned by `bazel run
@@ -251,12 +247,7 @@ CI only, no Supported claim).
   `tools/coverage/macos-arm64-inventory.txt`, summary only, no cross-cell
   union) natively on macOS arm64 (`macos-14`, issue #412; host-installed
   SDK fallback never approved, no secrets, no interactive acceptance).
-- `build-macos-x86_64`, `test-macos-x86_64`, `coverage-macos-x86_64`: the same
-  build plus `dx_dev` smoke, `bazel test //...`, and the macos x86_64
-  best-effort per-cell coverage gate (`dx coverage --min-coverage 97 //...`
-  against `tools/coverage/macos-x86_64-inventory.txt`, summary only, no
-  cross-cell union) natively on macOS x86_64 best-effort (`macos-15-intel`,
-  issue #413; host-installed SDK fallback never approved, no secrets, no
+- macOS x86_64 is Not planned per #976 with no `build-macos-x86_64`, `test-macos-x86_64`, or `coverage-macos-x86_64` jobs and no per-cell coverage
   interactive acceptance; gaps never block required-host release).
 - `build-windows-x86_64`, `test-windows-x86_64`, `coverage-windows-x86_64`:
   the same build plus `dx_dev` smoke, `bazel test //...`, and the windows
@@ -272,7 +263,7 @@ CI only, no Supported claim).
   (seed cell only) plus `bazel run //tools/ci:coverage_report_guards`.
 - `prove`: `:target_tags`, `:coverage_cell`,
   `:coverage_spill`, `:coverage_qualification`, `:musl_qualification`,
-  `:macos_qualification` (arm64 plus x86_64 best-effort),
+  `:macos_qualification` (arm64 only; x86_64 Not planned per #976),
   `:windows_qualification`,
   `:ci_matrix_qualification` (host matrix runners plus caches plus refusal
   plus sharding plus portable shell, issue #415),
@@ -413,7 +404,7 @@ CI only, no Supported claim).
    `:promotion_checklist_qualification` (promotion checklist pins plus
    fixture evidence, closed #611; process now #808),
    `:sbom_upload_qualification` (SBOM plus provenance CI upload pins plus
-   fixture evidence, closed #612; per-host release evidence closed #803 plus #804 plus #805 plus #807 with best-effort exempt under closed #806 moot, process #808),
+   fixture evidence, closed #612; per-host release evidence closed #803 plus #804 plus #805 plus #807, process #808),
    `:release_arm64_qualification` (Linux arm64 per-host release evidence pins plus
    fixture evidence, issue #803 closed; `release_arm64_qualification` 18/18),
    `:release_musl_qualification` (Linux static-musl per-profile release evidence pins plus
@@ -443,7 +434,7 @@ CI only, no Supported claim).
   issue #926), and `:closeout_battery_qualification`
   (battery commands plus docs gate, issue #467).
 - `devcontainer-check`, `docs-ci`, `dogfood (test-disabled self-call on
-  linux_x86_64 plus linux_arm64 plus macos_arm64 plus macos_x86_64 plus
+  linux_x86_64 plus linux_arm64 plus macos_arm64 plus
   windows_x86_64, issue
   #408 plus Phase 1 #607 coverage superset, verbatim `//...`).
 

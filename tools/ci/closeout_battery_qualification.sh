@@ -158,7 +158,7 @@ else
   bad "dogfood qualification sweep lost (want supported plus adapters plus env/docs/consumer/file/helper/clap/hello/parser/cli plus musl/macos/windows/matrix plus closeout)"
 fi
 
-# Per-host jobs: arm64 triple plus musl pairs plus macos triples plus windows triple.
+# Per-host jobs: arm64 triple plus musl pairs plus macos arm64 triple plus windows triple.
 if grep -q -F -e 'build-arm64 (bazel build' "$ci" &&
   grep -q -F -e 'test-arm64 (bazel test' "$ci" &&
   grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' "$ci" &&
@@ -169,15 +169,15 @@ if grep -q -F -e 'build-arm64 (bazel build' "$ci" &&
   grep -q -F -e 'build-macos-arm64' "$ci" &&
   grep -q -F -e 'test-macos-arm64' "$ci" &&
   grep -q -F -e 'coverage-macos-arm64' "$ci" &&
-  grep -q -F -e 'build-macos-x86_64' "$ci" &&
-  grep -q -F -e 'test-macos-x86_64' "$ci" &&
-  grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
+  ! grep -q -F -e 'build-macos-x86_64' "$ci" &&
+  ! grep -q -F -e 'test-macos-x86_64' "$ci" &&
+  ! grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
   grep -q -F -e 'build-windows-x86_64' "$ci" &&
   grep -q -F -e 'test-windows-x86_64' "$ci" &&
   grep -q -F -e 'coverage-windows-x86_64' "$ci"; then
   ok
 else
-  bad "ci.yml lost a per-host job (arm64 triple plus musl pairs plus macos triples plus windows triple)"
+  bad "ci.yml lost a per-host job (arm64 triple plus musl pairs plus macos arm64 triple plus windows triple; x86_64 removed per #976)"
 fi
 
 # Host matrix stays pinned by ci_matrix_qualification.
@@ -186,11 +186,11 @@ if grep -q -F -e 'ci_matrix_qualification' "$verify" &&
   grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
   grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
   grep -q -F -e 'runs-on: macos-14' "$ci" &&
-  grep -q -F -e 'runs-on: macos-15-intel' "$ci" &&
+  ! grep -q -F -e 'runs-on: macos-15-intel' "$ci" &&
   grep -q -F -e 'runs-on: windows-latest' "$ci"; then
   ok
 else
-  bad "host matrix lost its ci_matrix_qualification plus five-runner pin (issue #415)"
+  bad "host matrix lost its ci_matrix_qualification plus four-runner pin (issue #415 plus #976)"
 fi
 
 # Battery documents the tail jobs: devcontainer plus docs-ci plus dogfood.
@@ -230,18 +230,18 @@ else
   bad "reusable-docs lost its check-only plus validated-tree plus clean-checkout contract (issue #581)"
 fi
 
-# Dogfood gate: test-disabled self-call on the five host platforms
+# Dogfood gate: test-disabled self-call on the four host platforms
 # (Phase 1 coverage superset; starter stays all-nine).
 if grep -q -F -e 'platforms:' "$ci" &&
   grep -q -F -e 'linux_x86_64' "$ci" &&
   grep -q -F -e 'linux_arm64' "$ci" &&
   grep -q -F -e 'macos_arm64' "$ci" &&
-  grep -q -F -e 'macos_x86_64' "$ci" &&
+  ! grep -q -F -e 'macos_x86_64' "$ci" &&
   grep -q -F -e 'windows_x86_64' "$ci" &&
   grep -q -F -e 'disabled_checks: "test"' "$ci"; then
   ok
 else
-  bad "dogfood gate lost its test-disabled five-platform self-call (issue #408 plus Phase 1 #607)"
+  bad "dogfood gate lost its test-disabled four-platform self-call (issue #408 plus Phase 1 #607; x86_64 removed per #976)"
 fi
 
 # Devcontainer gate: parity test plus definition shape, boot stays open gap.

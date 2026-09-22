@@ -7,37 +7,30 @@ load(":repos.bzl", "DX_TOOL_HUB", "DX_TOOL_REPOS")
 load(":biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
 load(":biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
 load(":biome.macos_arm64.bzl", _biome_macos_arm64 = "ARTIFACT")
-load(":biome.macos_x86_64.bzl", _biome_macos_x86_64 = "ARTIFACT")
 load(":biome.windows_x86_64.bzl", _biome_windows_x86_64 = "ARTIFACT")
 load(":buildifier.linux_arm64.bzl", _buildifier_linux_arm64 = "ARTIFACT")
 load(":buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
 load(":buildifier.macos_arm64.bzl", _buildifier_macos_arm64 = "ARTIFACT")
-load(":buildifier.macos_x86_64.bzl", _buildifier_macos_x86_64 = "ARTIFACT")
 load(":buildifier.windows_x86_64.bzl", _buildifier_windows_x86_64 = "ARTIFACT")
 load(":gitleaks.linux_arm64.bzl", _gitleaks_linux_arm64 = "ARTIFACT")
 load(":gitleaks.linux_x86_64.bzl", _gitleaks_linux_x86_64 = "ARTIFACT")
 load(":gitleaks.macos_arm64.bzl", _gitleaks_macos_arm64 = "ARTIFACT")
-load(":gitleaks.macos_x86_64.bzl", _gitleaks_macos_x86_64 = "ARTIFACT")
 load(":gitleaks.windows_x86_64.bzl", _gitleaks_windows_x86_64 = "ARTIFACT")
 load(":ruff.linux_arm64.bzl", _ruff_linux_arm64 = "ARTIFACT")
 load(":ruff.linux_x86_64.bzl", _ruff_linux_x86_64 = "ARTIFACT")
 load(":ruff.macos_arm64.bzl", _ruff_macos_arm64 = "ARTIFACT")
-load(":ruff.macos_x86_64.bzl", _ruff_macos_x86_64 = "ARTIFACT")
 load(":ruff.windows_x86_64.bzl", _ruff_windows_x86_64 = "ARTIFACT")
 load(":taplo.linux_arm64.bzl", _taplo_linux_arm64 = "ARTIFACT")
 load(":taplo.linux_x86_64.bzl", _taplo_linux_x86_64 = "ARTIFACT")
 load(":taplo.macos_arm64.bzl", _taplo_macos_arm64 = "ARTIFACT")
-load(":taplo.macos_x86_64.bzl", _taplo_macos_x86_64 = "ARTIFACT")
 load(":taplo.windows_x86_64.bzl", _taplo_windows_x86_64 = "ARTIFACT")
 load(":ty.linux_arm64.bzl", _ty_linux_arm64 = "ARTIFACT")
 load(":ty.linux_x86_64.bzl", _ty_linux_x86_64 = "ARTIFACT")
 load(":ty.macos_arm64.bzl", _ty_macos_arm64 = "ARTIFACT")
-load(":ty.macos_x86_64.bzl", _ty_macos_x86_64 = "ARTIFACT")
 load(":ty.windows_x86_64.bzl", _ty_windows_x86_64 = "ARTIFACT")
 load(":vale.linux_arm64.bzl", _vale_linux_arm64 = "ARTIFACT")
 load(":vale.linux_x86_64.bzl", _vale_linux_x86_64 = "ARTIFACT")
 load(":vale.macos_arm64.bzl", _vale_macos_arm64 = "ARTIFACT")
-load(":vale.macos_x86_64.bzl", _vale_macos_x86_64 = "ARTIFACT")
 load(":vale.windows_x86_64.bzl", _vale_windows_x86_64 = "ARTIFACT")
 
 # Frozen schema surface (WP1): sorted ARTIFACT keys.
@@ -114,17 +107,6 @@ def metadata_tests(name):
         "0e8d513eb6c612236b47ccf0e218ac3917d863d41f853c65c38410774daa26ed",
     )
     checks += _artifact_checks(
-        _biome_macos_x86_64,
-        "biome",
-        "macos_x86_64",
-        "2.5.12",
-        "https://github.com/biomejs/biome/releases/download/@biomejs/biome@2.5.12/biome-darwin-x64",
-        "0680097ec839fadc82451634680e39b9b7e48cc4334ef920525850b4d8f54a8b",
-        58413368,
-        "biome-darwin-x64",
-        "0680097ec839fadc82451634680e39b9b7e48cc4334ef920525850b4d8f54a8b",
-    )
-    checks += _artifact_checks(
         _biome_windows_x86_64,
         "biome",
         "windows_x86_64",
@@ -167,17 +149,6 @@ def metadata_tests(name):
         7565746,
         "buildifier-darwin-arm64",
         "62836a9667fa0db309b0d91e840f0a3f2813a9c8ea3e44b9cd58187c90bc88ba",
-    )
-    checks += _artifact_checks(
-        _buildifier_macos_x86_64,
-        "buildifier",
-        "macos_x86_64",
-        "8.5.1",
-        "https://github.com/bazel-contrib/buildtools/releases/download/v8.5.1/buildifier-darwin-amd64",
-        "31de189e1a3fe53aa9e8c8f74a0309c325274ad19793393919e1ca65163ca1a4",
-        7737072,
-        "buildifier-darwin-amd64",
-        "31de189e1a3fe53aa9e8c8f74a0309c325274ad19793393919e1ca65163ca1a4",
     )
     checks += _artifact_checks(
         _buildifier_windows_x86_64,
@@ -224,17 +195,6 @@ def metadata_tests(name):
         "ba52fb1bfabbcde42f032afad3d6e0b19dff8ed105229a16e7caa338bbc0e84f",
     )
     checks += _artifact_checks(
-        _gitleaks_macos_x86_64,
-        "gitleaks",
-        "macos_x86_64",
-        "8.30.1",
-        "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_darwin_x64.tar.gz",
-        "dfe101a4db2255fc85120ac7f3d25e4342c3c20cf749f2c20a18081af1952709",
-        8359235,
-        "gitleaks",
-        "cee01fea7173f1b779dff188e1c26ecbcb4027d394acc573b23aaf0be260e291",
-    )
-    checks += _artifact_checks(
         _gitleaks_windows_x86_64,
         "gitleaks",
         "windows_x86_64",
@@ -277,17 +237,6 @@ def metadata_tests(name):
         9344878,
         "ruff-aarch64-apple-darwin/ruff",
         "61da2ccac4b58c298f35544a59d2f52ab6bc4a8eacbe866edf7d20993206c569",
-    )
-    checks += _artifact_checks(
-        _ruff_macos_x86_64,
-        "ruff",
-        "macos_x86_64",
-        "0.16.7",
-        "https://github.com/astral-sh/ruff/releases/download/0.16.7/ruff-x86_64-apple-darwin.tar.gz",
-        "6f3b98ec349f470b7efde5294d44e5171613ddaac3c251a918a7946b303d3ec2",
-        9864923,
-        "ruff-x86_64-apple-darwin/ruff",
-        "f2395291ca6da479e14cfd54b62aa00938eafbe0614e63c7ee6e588ef047db10",
     )
     checks += _artifact_checks(
         _ruff_windows_x86_64,
@@ -334,17 +283,6 @@ def metadata_tests(name):
         "13cd257c1cadb003b40daf82b3fb1451e012e2463b760bdd33df07a07970c604",
     )
     checks += _artifact_checks(
-        _taplo_macos_x86_64,
-        "taplo",
-        "macos_x86_64",
-        "0.10.0",
-        "https://github.com/tamasfe/taplo/releases/download/0.10.0/taplo-darwin-x86_64.gz",
-        "898122cde3a0b1cd1cbc2d52d3624f23338218c91b5ddb71518236a4c2c10ef2",
-        4921954,
-        "taplo",
-        "9fd7a2872ea154df61a2c7e9ca69fc19ac08e29f2e2dc2f866e299bdc789c1a1",
-    )
-    checks += _artifact_checks(
         _taplo_windows_x86_64,
         "taplo",
         "windows_x86_64",
@@ -387,17 +325,6 @@ def metadata_tests(name):
         12478461,
         "ty-aarch64-apple-darwin/ty",
         "9b09467ea3db2d4e507c0f420fa1fb7e9d7099969310fdddf7a293bdad6baa93",
-    )
-    checks += _artifact_checks(
-        _ty_macos_x86_64,
-        "ty",
-        "macos_x86_64",
-        "0.0.80",
-        "https://github.com/astral-sh/ty/releases/download/0.0.80/ty-x86_64-apple-darwin.tar.gz",
-        "3718c4ab92202e98bcede7c07ecfea1734c3398b7726efb092de4a073ee45d2c",
-        12843954,
-        "ty-x86_64-apple-darwin/ty",
-        "80062d6a95d20ea1ee0a95d1aa3e40dc5821bfcaf94347a78219911ed8151770",
     )
     checks += _artifact_checks(
         _ty_windows_x86_64,
@@ -444,17 +371,6 @@ def metadata_tests(name):
         "048f05392a0b26f52ce8f49a03d1b19d4dcc73dc6ab77e2cd9a9e9418a4f25dc",
     )
     checks += _artifact_checks(
-        _vale_macos_x86_64,
-        "vale",
-        "macos_x86_64",
-        "3.20.0",
-        "https://github.com/vale-cli/vale/releases/download/v3.20.0/vale_3.20.0_macOS_64-bit.tar.gz",
-        "8d51cbe9ca6274fade890fc943b30dc564071dcb8fd8814abce2d0dca37fbba7",
-        11725558,
-        "vale",
-        "ef499e26dc9a5f0b3ca75b598bad8ee03f9d79a0c99af2e6e5fe7a774a648b24",
-    )
-    checks += _artifact_checks(
         _vale_windows_x86_64,
         "vale",
         "windows_x86_64",
@@ -468,7 +384,7 @@ def metadata_tests(name):
     # use_repo inventory (see repos.bzl): derived repo names must equal the
     # checked-in list, so adding a tool means metadata plus inventory together.
     derived_repos = sorted(["dx_%s_%s_%s" % (artifact["tool"], artifact["os"], artifact["cpu"]) for artifact in TOOL_ARTIFACTS])
-    checks.append(expect_equal("dx tool repo count", len(DX_TOOL_REPOS), 35))
+    checks.append(expect_equal("dx tool repo count", len(DX_TOOL_REPOS), 28))
     checks.append(expect_equal("dx tool repos match metadata", DX_TOOL_REPOS, derived_repos))
     checks.append(expect_equal("dx tool repos sorted", DX_TOOL_REPOS, sorted(DX_TOOL_REPOS)))
     checks.append(expect_equal("dx tool hub", DX_TOOL_HUB, "dx_tools"))

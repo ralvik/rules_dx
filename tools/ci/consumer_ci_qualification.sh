@@ -69,8 +69,8 @@ else
   bad "reusable-consumer lost its nine-check plus gate plus aggregate contract"
 fi
 
-# Platforms-gate pins the five supported platforms with explicit selection.
-if grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}' "$workflow" &&
+# Platforms-gate pins the four supported platforms with explicit selection.
+if grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64"}' "$workflow" &&
   grep -q -F -e 'no implicit default' "$workflow" &&
   grep -q -F -e 'must be a nonempty JSON array' "$workflow"; then
   ok
@@ -80,19 +80,18 @@ fi
 
 # Per-platform jobs route each platform to its runner: seed Linux x86_64
 # to ubuntu-latest, Linux arm64 native to ubuntu-24.04-arm,
-# macOS arm64 to macos-14, macOS x86_64 best-effort (issue
-# to macos-15-intel, Windows x86_64 MSVC-compatible to
-# windows-latest. Linux arm64 must never fall through to macOS; macOS
-# x86_64 must never fall through to the arm64 runner; Windows must never
-# fall through to macOS.
+# macOS arm64 to macos-14, Windows x86_64 MSVC-compatible to
+# windows-latest. Linux arm64 must never fall through to macOS;
+# Windows must never fall through to macOS. macOS x86_64 is Not planned
+# (issue #976) with no runner.
 if [[ "$(grep -c -F -e "matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm'" "$workflow")" == "3" ]] &&
-  grep -q -F -e "macos_x86_64' && 'macos-15-intel'" "$workflow" &&
+  ! grep -q -F -e "macos_x86_64' && 'macos-15-intel'" "$workflow" &&
   grep -q -F -e "macos_arm64' && 'macos-14'" "$workflow" &&
   grep -q -F -e 'windows_x86_64' "$workflow" &&
   grep -q -F -e 'windows-latest' "$workflow"; then
   ok
 else
-  bad "per-platform jobs lost the linux_arm64/macos/windows runner mappings (arm64 to ubuntu-24.04-arm, macos_arm64 to macos-14, macos_x86_64 to macos-15-intel, windows_x86_64 to windows-latest)"
+  bad "per-platform jobs lost the linux_arm64/macos/windows runner mappings (arm64 to ubuntu-24.04-arm, macos_arm64 to macos-14, windows_x86_64 to windows-latest; x86_64 removed per #976)"
 fi
 
 # Sequential stays rejected fail-closed plus unknown-mode rejection.
@@ -217,19 +216,19 @@ fi
 
 # Self-call in ci.yml runs eight checks with `test` disabled
 # dogfood-like consumer plus Phase 1 coverage superset) on all
-# qualified hosts (seed plus arm64 native plus macOS arm64 plus macOS x86_64
-# best-effort plus Windows x86_64,). `dx coverage`
+# qualified hosts (seed plus arm64 native plus macOS arm64
+# plus Windows x86_64,). `dx coverage`
 # resolves scope via `resolve_for_test` (same as `dx test`) and runs `bazel
 # coverage`, which executes the tests. No bespoke corpus scope remains in
 # ci.yml: dogfood is verbatim `//...` via the reusable workflow.
 if grep -q -F -e 'dogfood (self-call reusable consumer workflow)' "$ci" &&
   grep -q -F -e 'disabled_checks: "test"' "$ci" &&
-  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"macos_x86_64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
   ! grep -q -F -e 'attr(tags, corpus' "$ci" &&
   ! grep -q -F -e 'Only build is enabled' "$ci"; then
   ok
 else
-  bad "ci.yml self-call lost test-disabled plus explicit-platforms plus no-corpus honesty (issue #607 coverage superset)"
+  bad "ci.yml self-call lost test-disabled plus explicit-platforms plus no-corpus honesty (issue #607 coverage superset; x86_64 removed per #976)"
 fi
 
 # Functional gate: sequential fails closed, parallel linux passes.
@@ -423,18 +422,18 @@ fi
 
 # Pins record platform plus runner decisions with no implicit default.
 if grep -q -F -e 'PLATFORM_IDS' "$pins" &&
-  grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}' "$pins" &&
+  grep -q -F -e 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64"}' "$pins" &&
   grep -q -F -e 'no implicit default' "$pins" &&
   grep -q -F -e 'must be a nonempty JSON array' "$pins" &&
   grep -q -F -e "matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm'" "$pins" &&
-  grep -q -F -e "macos_x86_64' && 'macos-15-intel'" "$pins" &&
+  ! grep -q -F -e "macos_x86_64' && 'macos-15-intel'" "$pins" &&
   grep -q -F -e "macos_arm64' && 'macos-14'" "$pins" &&
   grep -q -F -e 'windows-latest' "$pins" &&
   grep -q -F -e 'never fall through' "$pins" &&
   grep -q -F -e 'shell: bash' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its platform plus runner pins under issue #509"
+  bad "pins.bzl lost its platform plus runner pins under issue #509 (x86_64 removed per #976)"
 fi
 
 # Pins record isolation plus cache plus ordering decisions.
@@ -549,7 +548,7 @@ else
 fi
 
 # Fixture expected texts cover platform plus revision plus reporting gaps.
-if grep -q -F -e 'Five explicit platform identifiers with no implicit default' "$platforms_expected" &&
+if grep -q -F -e 'Four explicit platform identifiers with no implicit default' "$platforms_expected" &&
   grep -q -F -e 'never falls through' "$platforms_expected" &&
   grep -q -F -e 'absent in the reusable workflow' "$platforms_expected" &&
   grep -q -F -e 'parallel only' "$platforms_expected" &&

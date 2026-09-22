@@ -10,10 +10,9 @@ PLATFORM_IDS = [
     "linux_x86_64",
     "linux_arm64",
     "macos_arm64",
-    "macos_x86_64",
     "windows_x86_64",
 ]
-PLATFORM_SUPPORTED_SET = 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "macos_x86_64", "windows_x86_64"}'
+PLATFORM_SUPPORTED_SET = 'supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64"}'
 PLATFORM_NO_IMPLICIT_DEFAULT = "no implicit default"
 PLATFORM_NONEMPTY_JSON = "must be a nonempty JSON array"
 PLATFORM_FAIL_CLOSED = "unsupported platforms"
@@ -23,7 +22,6 @@ PLATFORM_NO_SUBSTITUTION = "not skipped validation or platform substitution"
 RUNNER_LINUX_X86_64 = "matrix.platform == 'linux_x86_64' && 'ubuntu-latest'"
 RUNNER_LINUX_ARM64 = "matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm'"
 RUNNER_MACOS_ARM64 = "macos_arm64' && 'macos-14'"
-RUNNER_MACOS_X86_64 = "macos_x86_64' && 'macos-15-intel'"
 RUNNER_WINDOWS_X86_64 = "windows_x86_64"
 RUNNER_WINDOWS_LABEL = "windows-latest"
 RUNNER_NO_FALLTHROUGH = "never fall through"
@@ -46,7 +44,6 @@ CACHE_CI_SCOPES = [
     "bazel-musl-x86_64-",
     "bazel-musl-arm64-",
     "bazel-macos-arm64-",
-    "bazel-macos-x86_64-",
     "bazel-windows-x86_64-",
 ]
 CACHE_FREE_TIER = "free-tier eligible"

@@ -92,15 +92,15 @@ else
 fi
 
 # Per-host test plus coverage stay capped at 60 minutes; no blanket 90
-# remains anywhere in the workflow.
+# remains anywhere in the workflow (macOS x86_64 removed per #976).
 if grep -A3 -e '^  test-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
   grep -A3 -e '^  coverage-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
   grep -A3 -e '^  coverage-musl-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
   grep -A3 -e '^  coverage-musl-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
   grep -A3 -e '^  test-macos-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
   grep -A3 -e '^  coverage-macos-arm64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  test-macos-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
-  grep -A3 -e '^  coverage-macos-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
+  ! grep -q -F -e 'test-macos-x86_64' "$ci" &&
+  ! grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
   grep -A3 -e '^  test-windows-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
   grep -A3 -e '^  coverage-windows-x86_64:' "$ci" | grep -q -F -e 'timeout-minutes: 60' &&
   ! grep -q -F -e 'timeout-minutes: 90' "$ci"; then
@@ -123,20 +123,21 @@ else
 fi
 
 # Sharding proof reuses the per-host matrix: seed plus arm64
-# plus musl pair plus macos pair plus windows test/coverage jobs stay queued.
+# plus musl pair plus macos arm64 plus windows test/coverage jobs stay queued
+# (macOS x86_64 removed per #976).
 if grep -q -F -e 'test-arm64 (bazel test' "$ci" &&
   grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' "$ci" &&
   grep -q -F -e 'coverage-musl-x86_64' "$ci" &&
   grep -q -F -e 'coverage-musl-arm64' "$ci" &&
   grep -q -F -e 'test-macos-arm64 (bazel test' "$ci" &&
   grep -q -F -e 'coverage-macos-arm64' "$ci" &&
-  grep -q -F -e 'test-macos-x86_64 (bazel test' "$ci" &&
-  grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
+  ! grep -q -F -e 'test-macos-x86_64 (bazel test' "$ci" &&
+  ! grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
   grep -q -F -e 'test-windows-x86_64 (bazel test' "$ci" &&
   grep -q -F -e 'coverage-windows-x86_64' "$ci"; then
   ok
 else
-  bad "ci.yml lost per-host test/coverage sharding (seed plus arm64 plus musl pair plus macos pair plus windows, issues #415/#619)"
+  bad "ci.yml lost per-host test/coverage sharding (seed plus arm64 plus musl pair plus macos arm64 plus windows, issues #415/#619; x86_64 removed per #976)"
 fi
 
 # No strategy.matrix: per-host/per-stage jobs stay the sharding shape

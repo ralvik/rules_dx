@@ -94,7 +94,8 @@ fi
 # Checklist records platform evidence per cell.
 if grep -q -F -e 'Linux arm64 native #410' "$checklist" &&
   grep -q -F -e 'static-musl profiles' "$checklist" &&
-  grep -q -F -e '#413' "$checklist" &&
+  grep -q -F -e 'macOS arm64 native #412' "$checklist" &&
+  grep -q -F -e 'Not planned' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:deployment_floors_qualification' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:cross_routes_qualification' "$checklist" &&
   grep -q -F -e 'bazel run //tools/ci:coverage_qualification' "$checklist" &&

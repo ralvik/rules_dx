@@ -1,6 +1,7 @@
 # Cross-routes cohort (issue #504).
 # First Linux cross-build cohort, not a mandate to build every target
-# from every host. Native rows qualified under issues #410-#414; Linux
+# from every host. Native rows qualified under issues #410-#412 plus #414
+# (macOS x86_64 Not planned per #976); Linux
 # same-arch musl closures qualified under issue #411; Linux cross-arch
 # rows stay in the first cohort with separate native target execution
 # plus separate cache and remote evidence. Optional macOS expansion only
@@ -24,9 +25,8 @@ target: Linux arm64-to-x86_64 glibc plus static musl
 native: Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed
 native: Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm with bazel-arm64- scope
 native: Native macOS arm64 qualified under issue #412 on macos-14 with bazel-macos-arm64- scope
-native: Native macOS x86_64 best-effort qualified under issue #413 on macos-15-intel with bazel-macos-x86_64- scope
 native: Native Windows x86_64 qualified under issue #414 on windows-latest with bazel-windows-x86_64- scope
-expansion: macOS arm64 -> Linux x86_64 and arm64 profiles, then macOS x86_64
+expansion: macOS arm64 -> Linux x86_64 and arm64 profiles
 expansion: Optional first expansion if bounded upstream configuration suffices
 expansion: Expand only after the initial cohort passes
 excluded: Linux-to-Windows outside the initial qualification cohort, not claims of impossibility

@@ -39,7 +39,6 @@ NATIVE_ROWS = [
     "Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed",
     "Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm with bazel-arm64- scope",
     "Native macOS arm64 qualified under issue #412 on macos-14 with bazel-macos-arm64- scope",
-    "Native macOS x86_64 best-effort qualified under issue #413 on macos-15-intel with bazel-macos-x86_64- scope",
     "Native Windows x86_64 qualified under issue #414 on windows-latest with bazel-windows-x86_64- scope",
 ]
 NATIVE_BACKEND_NOTE = "pinned upstream toolchains with provisional backends"
@@ -56,12 +55,11 @@ CROSS_ARCH_TARGETS = [
 CROSS_ARCH_GATE = "matching native target execution with separate cache and remote evidence"
 
 # Optional first expansion: macOS arm64 builds Linux x86_64 and arm64
-# profiles, then macOS x86_64, only if bounded upstream configuration
-# suffices. Expand only after the initial cohort passes.
+# profiles only if bounded upstream configuration suffices. Expand only
+# after the initial cohort passes. macOS x86_64 is Not planned per #976.
 OPTIONAL_EXPANSION_EXEC = "macOS arm64"
 OPTIONAL_EXPANSION_TARGETS = [
     "Linux x86_64 and arm64 profiles",
-    "macOS x86_64",
 ]
 OPTIONAL_EXPANSION_NOTE = "Optional first expansion if bounded upstream configuration suffices"
 EXPANSION_GATE = "Expand only after the initial cohort passes"
@@ -106,7 +104,6 @@ CACHE_SCOPES = [
     "bazel-musl-x86_64-",
     "bazel-musl-arm64-",
     "bazel-macos-arm64-",
-    "bazel-macos-x86_64-",
     "bazel-windows-x86_64-",
 ]
 CACHE_SCOPE_NOTE = "separate cache scope for every claimed row"

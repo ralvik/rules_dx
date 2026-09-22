@@ -125,9 +125,10 @@ dx_guards_contains "$dryrun" "publish-dry-run.yml lost RUNNER_TEMP staging or th
 dx_guard_contains CONTRIBUTING.md 'No tags, GitHub releases' "CONTRIBUTING.md lost the no-tags/no-releases policy"
 
 # The dry-run report names the full release matrix explicitly (issue
-# #815): seed linux-x86_64 qualified-built-here, the other four
-# (linux-arm64, macos-x86_64/arm64, windows-x86_64) qualified with per-host
-# evidence (frozen in deploy/release/matrix.bzl).
+# #815): seed linux-x86_64 qualified-built-here, the other three
+# (linux-arm64, macos-arm64, windows-x86_64) qualified with per-host
+# evidence (frozen in deploy/release/matrix.bzl; macOS x86_64 Not planned
+# per #976, removal tracked under #815).
 dx_guards_contains "$dryrun" "publish-dry-run.yml lost the explicit release-matrix qualification table" \
   'dx-linux-arm64' \
   'dx-macos-arm64' \
