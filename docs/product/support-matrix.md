@@ -101,11 +101,11 @@ live execution (ecosystem resolvers, advisory matching, secrets wiring). A sourc
 cell of `Not planned` or `Planned: audit tools (open work)` is consistent with a `Delivered`
 ecosystem `Audit/update` cell: Rust, JavaScript, TypeScript, Vue, Svelte, Astro, and MDX
 source audit is `Not planned` while ecosystem audit/update is delivered repo-wide, and Python
-source-audit tooling is qualified seed-only under closed #801 (successor to closed #613; Ruff S selected, Bandit excluded) while ecosystem audit/update wiring is delivered.
+source-audit tooling is qualified seed-only under closed #801 (successor to closed #613; Ruff S selected, Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801) while ecosystem audit/update wiring is delivered.
 Source-`Audit` `Not planned` is the evidence-backed recorded exclusion for v1: no qualified
 standalone source-audit tool meets hermetic acquisition plus pinned defaults for Rust,
 JavaScript, TypeScript, Vue, Svelte, Astro, or MDX, and ecosystem `dx audit` covers
-dependency vulnerabilities, so only Python Ruff S is admitted as source audit.
+dependency vulnerabilities, so only Python Ruff S plus Bandit (Bandit re-selected by ADR 0032, wiring pending under #801) is admitted as source audit.
 Python source-audit tooling is tracked under closed #801 with fixture evidence in
 `python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`;
 closed #512 stays taxonomy-only and owns no Python audit tool.
@@ -120,7 +120,7 @@ They are not eligible for the additional-foundation deferral policy.
 | Language | Build | Test | Dependencies | Generate | Environment | IDE | Coverage | Format | Lint | Typecheck | Audit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Rust | Planned | Planned | Planned: Cargo lock | Planned | Planned: native tools | Planned: rust-analyzer/flycheck | Planned | Planned: rustfmt | Planned: Clippy | Planned: compiler diagnostics | Not planned |
-| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under closed #801 with Ruff S selected via `python/tests/fixtures/python_audit/pins.bzl` with `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification`; Ruff S via pinned Ruff 0.16.7 standalone artifact with S opt-in, curated audit stays empty with explicit disablement, Bandit excluded; platform plus consumer plus release #808 owned gap) |
+| Python | Planned | Planned: pytest | Planned: uv lock | Planned | Planned: `.venv` | Planned: interpreter/imports | Planned | Planned: Ruff | Planned: Ruff, pydoclint; flake8/pylint opt-in | Planned: Ty | Planned: audit tools (qualified seed-only under closed #801 with Ruff S selected via `python/tests/fixtures/python_audit/pins.bzl` with `python_audit.expected` via `bazel run //tools/ci:python_audit_qualification`; Ruff S via pinned Ruff 0.16.7 standalone artifact with S opt-in, curated audit stays empty with explicit disablement, Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801; platform plus consumer plus release #808 owned gap) |
 | JavaScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: Node/modules | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | N/A | Not planned |
 | TypeScript | Planned | Planned: Jest | Planned: pnpm lock | Planned | Planned: `node_modules` | Planned: TypeScript/Node | Planned | Planned: Biome default, Prettier available | Planned: Biome default, ESLint available | Planned: `tsc` | Not planned |
 | Vue | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Planned | Not planned |
@@ -159,7 +159,7 @@ fixture evidence; provisional notes below do not select additional defaults or n
 | Python application | `aspect_rules_py` 2.x ([ADR 0010](../decisions/0010-python-foundation.md)) | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JavaScript/TypeScript application | `aspect_rules_js`/`aspect_rules_ts`, `aspect_rules_jest` ([ADR 0013](../decisions/0013-rust-javascript-typescript-foundations.md)) | Wrappers/Gazelle | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | JS/TS quality | Biome default; ESLint, Prettier available; `tsc` diagnostic-only | Mappings | Pinned (`bazel run //tools/ci:foundation_maps`) |
-| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md)) | Mappings, Ty | Pinned (`bazel run //tools/ci:foundation_maps`) |
+| Python quality | Ruff, Ty, pydoclint (Bandit excluded from v1 by [ADR 0019](../decisions/0019-first-release-additional-foundations.md) and re-selected by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) with wiring pending under #801) | Mappings, Ty | Pinned (`bazel run //tools/ci:foundation_maps`) |
 | Vue / Svelte / Astro / MDX | Named upstream adapters per framework | Adapter mappings plus composition evidence qualified seed-only under closed #510 | Qualified (`bazel run //tools/ci:layer2_opens_qualification`, `quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`, adapter-less as pass rejected) |
 | Generation transport | Declared versioned manifest artifact (`GenerationManifest` in `generation/result.proto`, projected by `ProjectedManifest` in `cli/cli/src/generate.rs`) with explicit path/label/pattern scope | Implemented | Shipped |
 | Target resolution | All-direct-owners query strategy ([Target Resolution](../cli/target-resolution.md), pinned by resolver fixtures) | Implemented | Shipped |
@@ -255,6 +255,7 @@ each tracked item lands; no person-hour figures are frozen here.
 ## Additional V1 Foundations
 
 Admit/defer/exclude outcomes are decided by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md), superseding
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md), with Ruby
 reconsideration decided by
 [ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md), with PowerShell
@@ -271,11 +272,18 @@ This is a minimum inventory, not an exhaustive list of eligible languages.
 
 ### Admitted To V1
 
-Java, Kotlin, C#, F#, Go, C/C++, and Scala application foundations are admitted
-to v1 scope by [ADR 0019](../decisions/0019-first-release-additional-foundations.md), on the evidence in the
+Java, Kotlin, C#, F#, Go, C/C++, Scala, Ruby, and PowerShell application
+foundations are admitted to v1 scope by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md) plus
+[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) plus
+[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md)), on the evidence in the
 [candidate review](#initial-feasibility-review): each has
 an active Bzlmod-published upstream ruleset with a concrete dependency-lock
-and toolchain story. Their quality integration is v1 scope with the defaults in
+and toolchain story. Ruby (`rules_ruby` 0.28.0, RSpec via `rb_test`) and
+PowerShell (`rules_powershell` 0.2.0, Pester via `pwsh_test`) are
+provisional upstreams with lock plus platform qualification pending in
+parallel Ruby/PowerShell tracks. Their quality integration is v1 scope with the defaults in
 the [disposition table](#deferred-beyond-v1);
 exact versions, rule sets, and adapter mappings are tracked in
 qualified seed-only under closed #485-#489 with adapter delivery delivered under closed #796-#800 (successors to closed #416-#420). The managed Scala
@@ -283,7 +291,7 @@ route decision was recorded 2026-09-13.
 Unresolved cells block qualification; moving an admitted foundation out later
 requires a new evidence-backed decision.
 
-Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#) are delivered
+Admitted additional foundations (Go, C/C++, Java, Kotlin, Scala, C#, F#, Ruby, PowerShell) are delivered
 under closed #796-#800 (successors to closed #416-#420) with foundation mappings qualified
 seed-only under closed #476-#484 plus closed #485-#488: per-foundation exact upstream versions, rulesets,
 adapter mappings, lock wiring, test runners, and quality tools remain qualification work. Qualified mappings
@@ -331,46 +339,43 @@ evidence passes.
 
 ### Deferred Beyond V1
 
-Ruby and PowerShell application foundations are deferred beyond v1 by
+No application foundation is currently deferred beyond v1. Ruby and
+PowerShell application foundations were deferred beyond v1 by
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md), with
-evidence in the [candidate review](#initial-feasibility-review):
-Ruby's fragmented ruleset maintenance ownership and gem/bundler packaging
-effort, and PowerShell's single young execution-only upstream with unproven
-generation, dependency, environment, and IDE stories, exceed the low-cost
-hermetic integration bar. Ruby reconsideration under issue #777 keeps the
-deferral per [ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md):
-consolidated `rules_ruby` 0.28.0 plus portable-Ruby Linux/macOS-only plus
-Windows RubyInstaller fallback plus open git-gem and checksum gaps plus missing
-Gazelle/env/IDE/lock stories still exceed the bar. PowerShell reconsideration
-under issue #778 keeps the deferral per
-[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md):
-single young execution-only `rules_powershell` 0.2.0 plus missing
-Gazelle/dependency/env/IDE/lock stories still exceed the bar. Deferred foundations'
-quality-tool cells (RuboCop, StandardRB, PSScriptAnalyzer) stay in force; a foundation
-deferral removes no baseline tool. Reconsideration after v1 requires a new
-scope decision. The deferred/excluded record is decided by
+evidence in the [candidate review](#initial-feasibility-review), and kept
+deferred by Ruby reconsideration under issue #777 per
+[ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) plus
+PowerShell reconsideration under issue #778 per
+[ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md); both
+are now admitted to v1 by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) with
+provisional upstreams (`rules_ruby` 0.28.0 with RSpec via `rb_test`,
+`rules_powershell` 0.2.0 with Pester via `pwsh_test`) and lock plus
+platform qualification pending in parallel Ruby/PowerShell tracks.
+Admitted foundations' quality-tool cells (RuboCop, StandardRB,
+PSScriptAnalyzer) stay in force. The deferred/excluded record is decided by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md), superseding
 [ADR 0019](../decisions/0019-first-release-additional-foundations.md) plus
 [ADR 0030](../decisions/0030-ruby-foundation-reconsideration.md) for Ruby plus
 [ADR 0031](../decisions/0031-powershell-foundation-reconsideration.md) for PowerShell (Ruby plus
-PowerShell deferred, Swift plus Bandit excluded, host-toolchain fallback never approved;
-Ruby reconsidered under #777 still deferred, PowerShell reconsidered under #778 still deferred).
+PowerShell admitted, Swift plus Bandit exclusion revoked for Bandit and re-evidenced for Swift, host-toolchain fallback never approved;
+Ruby reconsidered under #777 now admitted per ADR 0032, PowerShell reconsidered under #778 now admitted per ADR 0032).
 Qualified record is pinned by `bazel run //tools/ci:foundation_maps` with owning
 qualification in [Generation](../generation/README.md#language-mapping-qualification),
 [Environments](../environments/README.md#language-mapping-qualification),
 [Tools](../tools/README.md#language-mapping-qualification),
 [tool baseline](../tools/tool-baseline.md), [tool acquisition](../tools/tool-acquisition.md),
 and the parity gate (`quality/parity_tests.bzl`): no `ruby/`, `powershell/`, or `swift/`
-foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps;
-`ruby`/`powershell` classes classified with no adapter claim (`quality/adapters.bzl` plus
-`PARITY_DEFERRED` with ADR 0019); retained cohorts (RuboCop/StandardRB via
+foundation dirs, wrappers, Gazelle extensions, env plans, hello builds, or `MODULE.bazel` deps yet (admission is scope, delivery pending in Ruby/PowerShell tracks);
+`ruby`/`powershell` classes classified with no foundation adapter claim yet (`quality/adapters.bzl` plus
+`PARITY_DEFERRED` with ADR 0019, foundation admission by ADR 0032); retained cohorts (RuboCop/StandardRB via
 release-assembled Ruby closure, PSScriptAnalyzer via exact-module plus portable PowerShell
-runtime); Swift/SwiftFormat plus Bandit exclusions with host-toolchain fallback never approved.
+runtime); Swift/SwiftFormat exclusion with host-toolchain fallback never approved plus Bandit excluded from v1 by ADR 0019 and re-selected by ADR 0032 with wiring pending under #801.
 Remaining gaps (bundle contents, lock inputs, module/runtime identities, console-parse versus
 library-API binding, and per-tool adapter mappings qualified under closed #420 with deferred
-implementation owned by ADR 0019; Ruby reconsideration decided under #777 by ADR 0030 still
-deferred, PowerShell reconsideration decided under #778 by ADR 0031 still
-deferred,
-adapter execution under #800) stay decided by ADR 0019 plus ADR 0030 for Ruby plus ADR 0031 for PowerShell. No `Supported` claim until platform plus
+implementation owned by ADR 0019; Ruby admission decided under #970 by ADR 0032 pending track,
+PowerShell admission decided under #970 by ADR 0032 pending track,
+adapter execution under #800) stay decided by ADR 0032 (superseding ADR 0019 plus ADR 0030 for Ruby plus ADR 0031 for PowerShell). No `Supported` claim until platform plus
 consumer plus release evidence passes.
 
 | Language | Application foundation | Format | Lint, typecheck, or audit |
@@ -382,13 +387,13 @@ consumer plus release evidence passes.
 | Scala | Planned | Planned: scalafmt | Planned: scalafix |
 | C# | Planned | Planned: CSharpier | Planned: Roslyn CA analyzers (SDK) |
 | F# | Planned | Planned: Fantomas | Planned: FSharpLint |
-| Ruby | Deferred beyond v1 (reconsidered under #777 still deferred per ADR 0030) | Planned: feasibility | Planned: RuboCop, StandardRB |
-| PowerShell | Deferred beyond v1 (reconsidered under #778 still deferred per ADR 0031) | Planned: feasibility | Planned: PSScriptAnalyzer |
-| Swift | Not planned | Not planned | Not planned |
+| Ruby | Planned (admitted to v1 per ADR 0032; RSpec via `rb_test`, `Gemfile.lock` fail-closed pending) | Planned: RuboCop, StandardRB | Planned: RuboCop, StandardRB |
+| PowerShell | Planned (admitted to v1 per ADR 0032; Pester via `pwsh_test`, Gallery lock fail-closed pending) | Planned: feasibility | Planned: PSScriptAnalyzer |
+| Swift | Not planned (exclusion re-evidenced by ADR 0032 spike: no hermetic toolchain over all required hosts) | Not planned | Not planned |
 
-`Planned` in the table above means scope admitted to v1 by ADR 0019 with no delivery
+`Planned` in the table above means scope admitted to v1 by ADR 0032 (superseding ADR 0019) with no delivery
 claimed; delivery follows the [verification matrix](../testing/verification-matrix.md).
-Every cell in the table above stays `Planned` (or `Deferred beyond v1` / `Not planned`
+Every cell in the table above stays `Planned` (or `Not planned`
 where marked); none is `Seed-host-delivered` or higher, even where the verification
 matrix shows `Delivered` for the capability: verification `Delivered` is seed-host
 layer evidence, not support-matrix promotion. Admitted `Format`/`Lint` cells map to `Layer-2 matrix Open (adapter-less)` (no adapter

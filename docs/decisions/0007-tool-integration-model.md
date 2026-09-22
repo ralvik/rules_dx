@@ -39,7 +39,8 @@ upstream implementations or Bazel rules permit hermetic thin integration under
 This does not authorize building replacement stacks.
 
 Swift and SwiftFormat are excluded from v1 by
-[ADR 0019](0019-first-release-additional-foundations.md); host
+[ADR 0019](0019-first-release-additional-foundations.md), re-evidenced by
+[ADR 0032](0032-ruby-powershell-bandit-swift.md); host
 toolchain fallback was never approved. The exclusion is recorded in
 [Swift Feasibility](../tools/tool-baseline.md#swift-feasibility); reconsidering Swift after v1
 requires a new scope decision.

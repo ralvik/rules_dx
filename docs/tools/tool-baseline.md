@@ -78,8 +78,9 @@ The planned initial curated Python defaults are Ruff, Ty, and pydoclint. Ruff
 and pydoclint run under lint and Ty runs under typecheck; Python source-audit selection is
 Ruff S (flake8-bandit) via the pinned Ruff 0.16.7 standalone artifact with S opt-in under closed #801
 (successor to closed #613; Bandit excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md), curated audit stays empty with
-explicit disablement, with fixture evidence in
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md) and re-selected by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) with wiring pending under #801,
+curated audit stays empty with explicit disablement until that wiring lands, with fixture evidence in
 `python/tests/fixtures/python_audit/pins.bzl` via `bazel run //tools/ci:python_audit_qualification`).
 Ruff is planned as the default and only active Python formatter. Flake8 and pylint remain
 baseline opt-ins.
@@ -123,9 +124,14 @@ or formatting drift; they do not authorize default membership changes.
 ## Swift Feasibility
 
 Swift, including SwiftFormat, is excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md).
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md),
+re-evidenced by the conditional spike in
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md).
 SwiftFormat has no proven compliant upstream integration route here, and the v2.8.0
-SwiftFormat integration requires a host Swift toolchain; that route is forbidden. This
+SwiftFormat integration requires a host Swift toolchain; that route is forbidden. The
+spike finds no hermetic Swift toolchain covering all required hosts
+(rules_swift standalone covers macOS `.pkg` macOS-host-only plus Linux
+distros only; no Windows or musl route). This
 exclusion is an evidence-backed v1 scope decision, not a pending feasibility assessment,
 and SwiftFormat is not a v1 release blocker. Reconsidering Swift after v1 requires
 a new scope decision.

@@ -32,7 +32,8 @@ curated expansion under [First-Release Admission](../product/scope.md#first-rele
 (candidate review open), on every
 [required platform](../decisions/0014-tested-platform-release-stack.md#required-platforms).
 Swift and SwiftFormat are excluded from v1 by
-[ADR 0019](../decisions/0019-first-release-additional-foundations.md); see
+[ADR 0019](../decisions/0019-first-release-additional-foundations.md), re-evidenced by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md); see
 [Swift Feasibility](tool-baseline.md#swift-feasibility).
 
 This contract does not state that any integration is currently implemented, dogfooded,
@@ -398,8 +399,10 @@ for this cohort) and no adapter claims `csharp` or
 Decided route: PSScriptAnalyzer takes the
 exact-module plus portable-PowerShell-runtime route. The analyzer resolves
 to its exact upstream module package imported by explicit path over a
-portable `pwsh` runtime; the PowerShell application foundation stays
-deferred beyond v1 (only this tool cohort is in scope). Exact module
+portable `pwsh` runtime; the PowerShell application foundation is admitted
+to v1 by [ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md)
+(superseding the ADR 0019 deferral), with foundation delivery pending in
+the PowerShell track. Exact module
 version, runtime identity, console-parse versus library-API binding choice
 (per the adapter-input notes), and adapter qualification remain pending
 under closed #800 (successor to closed #420; live successor to closed #307 for the `powershell`
@@ -411,8 +414,10 @@ release-assembled Ruby closure route (the exceptional bundle within the
 approved packaging-effort boundary). Release CI assembles the complete
 ready-to-run Ruby runtime/package closure with manifest, SBOM, licenses,
 and constituent provenance; consumer builds only download, verify, extract,
-and execute it. The Ruby application foundation stays deferred beyond v1
-(only this tool cohort is in scope). Bundle contents, lock inputs, and
+and execute it. The Ruby application foundation is admitted to v1 by
+[ADR 0032](../decisions/0032-ruby-powershell-bandit-swift.md) (superseding
+the ADR 0019 deferral), with foundation delivery pending in the Ruby
+track. Bundle contents, lock inputs, and
 adapter qualification remain tracked under closed #800 (successor to closed #420; live successor to
 closed #307 for the `ruby` class) and no adapter claims `ruby` yet
 (tracked under closed #800, successor to closed #420). This

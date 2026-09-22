@@ -4,10 +4,12 @@
 
 Date: 2026-09-08.
 
-Accepted. Records the scope dispositions summarized in the
-[support matrix](../product/support-matrix.md#additional-v1-foundations).
-It complements [ADR 0016](0016-broad-first-release.md), which sets direction
-but approves no milestone by itself.
+Superseded by
+[ADR 0032](0032-ruby-powershell-bandit-swift.md), which admits the Ruby
+and PowerShell foundations to v1, re-selects Bandit, and re-evidences
+the Swift/SwiftFormat exclusion. This record below is historical; the
+[support matrix](../product/support-matrix.md#additional-v1-foundations)
+owns current dispositions.
 
 ## Context
 

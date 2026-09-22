@@ -26,7 +26,7 @@ validation and are not stable commitments.
 | [0016: Broad First Release](0016-broad-first-release.md) | Accepted | — | V1 scope and project coverage |
 | [0017: dx Watch Loop](0017-dx-watch.md) | Provisional | — | CLI iteration |
 | [0018: Umbrella Check/Fix And Managed-State Cleanup](0018-umbrella-check-fix-cleanup-clean.md) | Accepted | — | CLI surface |
-| [0019: First-Release Additional-Foundation Dispositions](0019-first-release-additional-foundations.md) | Accepted | 2026-09-08 | V1 scope dispositions |
+| [0019: First-Release Additional-Foundation Dispositions](0019-first-release-additional-foundations.md) | Superseded (Ruby/PowerShell admitted, Bandit re-selected, Swift exclusion re-evidenced by 0032) | 2026-09-08 | V1 scope dispositions |
 | [0020: Remove The `dx docs` Placeholder Command](0020-remove-dx-docs-placeholder.md) | Accepted | — | CLI surface |
 | [0021: Build Profiles](0021-build-profiles.md) | Accepted | — | Configuration |
 | [0022: No Standing Benchmarking](0022-no-benchmarking.md) | Accepted | — | Performance and testing |
@@ -37,5 +37,6 @@ validation and are not stable commitments.
 | [0027: Depcheck Checker Rust Delivery](0027-depcheck-rust.md) | Accepted | — | Product runtime |
 | [0028: Deferred CI Drivers Plus Artifacts Update Stance](0028-deferred-ci-drivers-update.md) | Accepted | — | Product runtime |
 | [0029: Deploy/Release Shell Rust Delivery](0029-deploy-release-rust.md) | Accepted | — | Product runtime |
-| [0030: Ruby Foundation Reconsideration Keeps Deferred Beyond V1](0030-ruby-foundation-reconsideration.md) | Accepted | 2026-09-21 | V1 scope dispositions |
-| [0031: PowerShell Foundation Reconsideration Keeps Deferred Beyond V1](0031-powershell-foundation-reconsideration.md) | Accepted | 2026-09-21 | V1 scope dispositions |
+| [0030: Ruby Foundation Reconsideration Keeps Deferred Beyond V1](0030-ruby-foundation-reconsideration.md) | Superseded (admitted to v1 by 0032) | 2026-09-21 | V1 scope dispositions |
+| [0031: PowerShell Foundation Reconsideration Keeps Deferred Beyond V1](0031-powershell-foundation-reconsideration.md) | Superseded (admitted to v1 by 0032) | 2026-09-21 | V1 scope dispositions |
+| [0032: Admit Ruby and PowerShell Foundations, Re-select Bandit, Swift Spike Keeps Exclusion](0032-ruby-powershell-bandit-swift.md) | Accepted | 2026-09-22 | V1 scope dispositions |
