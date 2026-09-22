@@ -4,6 +4,12 @@
 # Canonical sources:
 #   Biome version: `quality/artifacts/update.py` TOOLS[biome] upstream_version;
 #     both `biome.json` files carry `$schema: .../<version>/schema.json`.
+#   Biome editor excludes: workspace `biome.json` owns `files.includes`
+#     with `**` plus Bazel-mirroring ignores (regular `!**/node_modules`
+#     so type info still indexes, force-ignore `!!` for build outputs,
+#     caches, and agent-local state); the `quality/testdata` fixture
+#     stays byte-identical. Biome v2 removed `files.ignore`, so the
+#     v2 `includes` negations are the ignore mechanism (issue #1072).
 #   Ruff lint selection + Python floor: workspace `ruff.toml` owns the
 #     selection; the `quality/testdata` fixture mirrors it.
 #   pnpm version: both `package.json` files pin the same `packageManager`;
@@ -73,6 +79,22 @@ if cmp -s "$biome_json" "$biome_fixture"; then
 else
   bad "biome.json fixture drifts from the canonical root (want byte-identical $biome_json and $biome_fixture, issue #912)"
 fi
+for f in "$biome_json" "$biome_fixture"; do
+  dx_guards_contains "$f" "$f lost editor excludes (want files.includes with ** plus Bazel-mirroring node_modules/bazel-*/dist/release/caches/opencode, issue #1072)" \
+    '"files"' \
+    '"includes"' \
+    '"**"' \
+    '!**/node_modules' \
+    '!!**/bazel-*' \
+    '!!**/dist' \
+    '!!**/release' \
+    '!!**/.cache' \
+    '!!**/.direnv' \
+    '!!**/.tmp' \
+    '!!**/__pycache__' \
+    '!!**/.ruff_cache' \
+    '!!**/.opencode'
+done
 
 # --- Ruff canonical: shared lint selection plus Python floor ---
 for f in "$ruff_toml" "$ruff_fixture"; do
