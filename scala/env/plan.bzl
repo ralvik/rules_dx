@@ -1,6 +1,6 @@
 """Focused Scala environment plan (WP2).
 
-Contract: `docs/environments/environment.md`.
+Contract: `docs/environments/scala.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")

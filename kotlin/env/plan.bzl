@@ -1,6 +1,6 @@
 """Focused Kotlin environment plan (WP2).
 
-Contract: `docs/environments/environment.md`.
+Contract: `docs/environments/kotlin.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")

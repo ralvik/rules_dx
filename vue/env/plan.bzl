@@ -1,6 +1,6 @@
 """Focused Vue environment plan (WP2).
 
-Contract: `docs/environments/environment.md`.
+Contract: `docs/environments/vue.md`.
 """
 
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
