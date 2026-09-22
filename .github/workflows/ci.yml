@@ -595,11 +595,15 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage.rc"
           exit $rc
       - name: Render first-party coverage summary (seed cell, same LCOV)
-        # First-party PR reporting (issue #254): Bazel-owned gate stays the
-        # source of truth; this step only presents the verdict already
-        # computed by the gate. Execution runs without secrets so fork code
-        # never sees write credentials; publication below uses GH_TOKEN only
-        # on non-fork PRs and never executes fork targets.
+        # First-party PR reporting (issue #254) plus the per-cell visibility
+        # contract (issue #1062): Bazel-owned gate stays the source of truth;
+        # this step only presents the verdict already computed by the gate.
+        # Same coverage_bin gate plus same coverage_comment.sh shape as the
+        # five non-seed cells (which stay step-summary only); only this seed
+        # cell publishes the PR comment below, to avoid sixfold spam.
+        # Execution runs without secrets so fork code never sees write
+        # credentials; publication below uses GH_TOKEN only on non-fork PRs
+        # and never executes fork targets.
         if: always()
         run: |
           set -euo pipefail
@@ -632,12 +636,15 @@ jobs:
           echo "### coverage summary (seed linux_x86_64, first-party, issue #254)" >> "$GITHUB_STEP_SUMMARY"
           cat "${RUNNER_TEMP:-/tmp}/coverage_comment.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Publish PR summary comment (dedup marker, fork-safe)
-        # One integration-owned updated comment per PR (docs/github-ci.md).
-        # Dedup by marker; human comments never touched; concurrency group
-        # cancels superseded runs so stale runs never overwrite current.
-        # Fork PRs skip (step-summary only) so fork code never gets write
-        # credentials. Publication failure fails this step separately while
-        # the gate outcomes above stay preserved in the summary.
+        # One integration-owned updated comment per PR (docs/github-ci.md)
+        # plus the per-cell visibility contract (issue #1062): only the seed
+        # cell publishes; the five non-seed cells stay step-summary only by
+        # design with the same rich shape. Dedup by marker; human comments
+        # never touched; concurrency group cancels superseded runs so stale
+        # runs never overwrite current. Fork PRs skip (step-summary only) so
+        # fork code never gets write credentials. Publication failure fails
+        # this step separately while the gate outcomes above stay preserved
+        # in the summary.
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -734,13 +741,19 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_arm64.rc"
           exit $rc
       - name: Render arm64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #410): rendered via
-        # ./.github/actions/render-coverage-summary with cell arm64 linux_arm64.
+        # Per-cell evidence with no cross-cell union (issue #410) plus the
+        # per-cell visibility contract (issue #1062): rendered via
+        # ./.github/actions/render-coverage-summary with cell arm64 linux_arm64
+        # plus its versioned inventory. Same coverage_bin gate plus same
+        # coverage_comment.sh shape as the seed cell; step-summary only by
+        # design (only the seed publishes the PR comment, to avoid sixfold
+        # spam).
         if: always()
         uses: ./.github/actions/render-coverage-summary
         with:
           cell: arm64 linux_arm64
           stem: dx_coverage_arm64
+          inventory: tools/coverage/arm64-inventory.txt
       - name: Write job summary
         if: always()
         run: |
@@ -805,13 +818,18 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc"
           exit $rc
       - name: Render musl x86_64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #411): rendered via
-        # ./.github/actions/render-coverage-summary with cell musl-x86_64 linux_x86_64_musl.
+        # Per-cell evidence with no cross-cell union (issue #411) plus the
+        # per-cell visibility contract (issue #1062): rendered via
+        # ./.github/actions/render-coverage-summary with cell musl-x86_64 linux_x86_64_musl
+        # plus its versioned inventory. Same coverage_bin gate plus same
+        # coverage_comment.sh shape as the seed cell; step-summary only by
+        # design (only the seed publishes the PR comment).
         if: always()
         uses: ./.github/actions/render-coverage-summary
         with:
           cell: musl-x86_64 linux_x86_64_musl
           stem: dx_coverage_musl_x86
+          inventory: tools/coverage/musl-x86_64-inventory.txt
       - name: Write job summary
         if: always()
         run: |
@@ -838,13 +856,18 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc"
           exit $rc
       - name: Render musl arm64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #411): rendered via
-        # ./.github/actions/render-coverage-summary with cell musl-arm64 linux_arm64_musl.
+        # Per-cell evidence with no cross-cell union (issue #411) plus the
+        # per-cell visibility contract (issue #1062): rendered via
+        # ./.github/actions/render-coverage-summary with cell musl-arm64 linux_arm64_musl
+        # plus its versioned inventory. Same coverage_bin gate plus same
+        # coverage_comment.sh shape as the seed cell; step-summary only by
+        # design (only the seed publishes the PR comment).
         if: always()
         uses: ./.github/actions/render-coverage-summary
         with:
           cell: musl-arm64 linux_arm64_musl
           stem: dx_coverage_musl_arm64
+          inventory: tools/coverage/musl-arm64-inventory.txt
       - name: Write job summary
         if: always()
         run: |
@@ -913,13 +936,18 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_macos_arm64.rc"
           exit $rc
       - name: Render macos arm64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #412): rendered via
-        # ./.github/actions/render-coverage-summary with cell macos-arm64 macos_arm64.
+        # Per-cell evidence with no cross-cell union (issue #412) plus the
+        # per-cell visibility contract (issue #1062): rendered via
+        # ./.github/actions/render-coverage-summary with cell macos-arm64 macos_arm64
+        # plus its versioned inventory. Same coverage_bin gate plus same
+        # coverage_comment.sh shape as the seed cell; step-summary only by
+        # design (only the seed publishes the PR comment).
         if: always()
         uses: ./.github/actions/render-coverage-summary
         with:
           cell: macos-arm64 macos_arm64
           stem: dx_coverage_macos_arm64
+          inventory: tools/coverage/macos-arm64-inventory.txt
       - name: Write job summary
         if: always()
         run: |
@@ -997,13 +1025,18 @@ jobs:
           echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_windows_x86_64.rc"
           exit $rc
       - name: Render windows x86_64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #414): rendered via
-        # ./.github/actions/render-coverage-summary with cell windows-x86_64 windows_x86_64.
+        # Per-cell evidence with no cross-cell union (issue #414) plus the
+        # per-cell visibility contract (issue #1062): rendered via
+        # ./.github/actions/render-coverage-summary with cell windows-x86_64 windows_x86_64
+        # plus its versioned inventory. Same coverage_bin gate plus same
+        # coverage_comment.sh shape as the seed cell; step-summary only by
+        # design (only the seed publishes the PR comment).
         if: always()
         uses: ./.github/actions/render-coverage-summary
         with:
           cell: windows-x86_64 windows_x86_64
           stem: dx_coverage_windows_x86_64
+          inventory: tools/coverage/windows-x86_64-inventory.txt
       - name: Write job summary
         if: always()
         run: |
