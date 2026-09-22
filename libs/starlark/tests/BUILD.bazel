@@ -14,7 +14,7 @@ load(":matrix_tests.bzl", "matrix_validation_tests")
 load(":output_group_tests.bzl", "output_group_unit_tests")
 load(":subject.bzl", "example_subject")
 load(":toolchain_tests.bzl", "toolchain_unit_tests")
-load(":wrapper_tests.bzl", "wrapper_optional_forward_tests")
+load(":wrapper_tests.bzl", "wrapper_optional_forward_tests", "wrapper_shape_kwargs_tests")
 
 example_subject(
     name = "subject_under_test",
@@ -80,6 +80,8 @@ matrix_validation_tests(name = "matrix_validation")
 
 wrapper_optional_forward_tests(name = "wrapper_optional_forward")
 
+wrapper_shape_kwargs_tests(name = "wrapper_shape_kwargs")
+
 test_suite(
     name = "all",
     tests = [
@@ -95,6 +97,7 @@ test_suite(
         ":subject_analysis",
         ":toolchain_unit",
         ":wrapper_optional_forward",
+        ":wrapper_shape_kwargs",
     ],
 )
 

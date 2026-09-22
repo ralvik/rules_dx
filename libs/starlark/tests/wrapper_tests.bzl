@@ -2,7 +2,7 @@
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load("//libs/starlark:wrapper.bzl", "dx_missing_optional_names", "dx_optional_forward_warning")
+load("//libs/starlark:wrapper.bzl", "dx_binary_forward_kwargs", "dx_missing_optional_names", "dx_optional_forward_warning", "dx_test_forward_kwargs", "dx_test_upstream_kwargs")
 
 def wrapper_optional_forward_tests(name):
     starlark_test(
@@ -56,6 +56,94 @@ def wrapper_optional_forward_tests(name):
                 "empty forward warns and marks the empty case expected",
                 dx_optional_forward_warning("go_*", "//go:bin_upstream", ["GoArchive"], ["GoArchive"]),
                 "go_*: upstream //go:bin_upstream omits optional provider(s) GoArchive (forwarded 0 of 1); empty forward is expected when upstream omits the surface",
+            ),
+        ],
+    )
+
+def wrapper_shape_kwargs_tests(name):
+    starlark_test(
+        name = name,
+        mode = "unit",
+        checks = [
+            expect_equal(
+                "binary empty stays empty",
+                dx_binary_forward_kwargs({}),
+                {},
+            ),
+            expect_equal(
+                "binary tags ride verbatim including manual",
+                dx_binary_forward_kwargs({"tags": ["manual", "cpu:4"]}),
+                {"tags": ["manual", "cpu:4"]},
+            ),
+            expect_equal(
+                "binary hints ride forwarder",
+                dx_binary_forward_kwargs({"aspect_hints": ["//quality:hint"]}),
+                {"aspect_hints": ["//quality:hint"]},
+            ),
+            expect_equal(
+                "binary drops non-forwarded attrs",
+                dx_binary_forward_kwargs({"timeout": "short", "copts": ["-Werror"]}),
+                {},
+            ),
+            expect_equal(
+                "binary none tags stay empty",
+                dx_binary_forward_kwargs({"tags": None}),
+                {},
+            ),
+            expect_equal(
+                "test upstream empty stays private",
+                dx_test_upstream_kwargs({}),
+                {"visibility": ["//visibility:private"]},
+            ),
+            expect_equal(
+                "test upstream strips manual-only tags",
+                dx_test_upstream_kwargs({"tags": ["manual"]}),
+                {"visibility": ["//visibility:private"]},
+            ),
+            expect_equal(
+                "test upstream keeps non-manual tags",
+                dx_test_upstream_kwargs({"tags": ["manual", "cpu:4"]}),
+                {"tags": ["cpu:4"], "visibility": ["//visibility:private"]},
+            ),
+            expect_equal(
+                "test upstream forces private visibility",
+                dx_test_upstream_kwargs({"visibility": ["//visibility:public"]}),
+                {"visibility": ["//visibility:private"]},
+            ),
+            expect_equal(
+                "test upstream sets srcs when given",
+                dx_test_upstream_kwargs({}, ["hello_test.go"]),
+                {"visibility": ["//visibility:private"], "srcs": ["hello_test.go"]},
+            ),
+            expect_equal(
+                "test upstream keeps compiler flags",
+                dx_test_upstream_kwargs({"copts": ["-Werror"]}),
+                {"copts": ["-Werror"], "visibility": ["//visibility:private"]},
+            ),
+            expect_equal(
+                "test forward empty stays empty",
+                dx_test_forward_kwargs({}),
+                {},
+            ),
+            expect_equal(
+                "test forward strips manual",
+                dx_test_forward_kwargs({"tags": ["manual", "cpu:4"]}),
+                {"tags": ["cpu:4"]},
+            ),
+            expect_equal(
+                "test forward keeps timeout and flaky",
+                dx_test_forward_kwargs({"timeout": "short", "flaky": True}),
+                {"timeout": "short", "flaky": True},
+            ),
+            expect_equal(
+                "test forward rides hints",
+                dx_test_forward_kwargs({"aspect_hints": ["//quality:hint"]}),
+                {"aspect_hints": ["//quality:hint"]},
+            ),
+            expect_equal(
+                "test forward drops non-test attrs",
+                dx_test_forward_kwargs({"copts": ["-Werror"]}),
+                {},
             ),
         ],
     )
