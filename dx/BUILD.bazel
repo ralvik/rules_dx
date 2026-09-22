@@ -5,16 +5,17 @@ implementation moved to `cli/*`; this package reserves the canonical
 consumer labels so external workspaces keep mirroring `//dx`.
 Consumer policy defaults to ADR 0011.
 
-Accepted: `config` stays an empty filegroup as the
+Accepted durable per issue #961: `config` stays an empty filegroup as the
 resolvable default for the `@rules_dx//config:workspace` label flag.
 It is not a policy: aspects require the aggregate `QualityPolicyInfo`
 provider, so selecting this default fails fast at analysis until a
 consumer binds its typed workspace policy. The typed per-family
 sections and thin canonical aggregate are frozen in
-`//quality:policy.bzl` (`quality_family`, `workspace_policy`,
-freeze for) and `//quality:sources.bzl` (`QualitySourcesInfo`,
-Freeze for) with validation; aspect binding to the workspace
-flag stays deferred per `//quality:aspects.bzl`. Populating this
+`//quality:policy.bzl` (`quality_family`, `workspace_policy`) and
+`//quality:sources.bzl` (`QualitySourcesInfo`) with validation per ADR 0011;
+aspect binding to the workspace flag stays a dated deferral per issue #961
+(current aspects bind `//quality:fixture_policy`, see
+`//quality:aspects.bzl`). Populating this
 default with empty families would silently disable every capability
 (worse than fail-fast), and duplicating the curated families would
 create a second source of truth beside

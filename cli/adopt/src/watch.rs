@@ -2,11 +2,11 @@
 //!
 //! Split from `super` (`lib.rs`): owns `WATCH_DEBOUNCE_MS`,
 //! `WATCHABLE_COMMANDS`, `watch_iteration_accepts`, `plan_watch`,
-//! `coalesce_watch_paths`, and `watch_for_change`. Re-exported through
-//! `super` so the public path stays
+//! `should_watch_path`, `coalesce_watch_paths`, and `watch_for_change`.
+//! Re-exported through `super` so the public path stays
 //! `dx_adopt::{WATCH_DEBOUNCE_MS, WATCHABLE_COMMANDS,
-//! watch_iteration_accepts, plan_watch, coalesce_watch_paths,
-//! watch_for_change}`.
+//! watch_iteration_accepts, plan_watch, should_watch_path,
+//! coalesce_watch_paths, watch_for_change}`.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -57,11 +57,30 @@ pub fn plan_watch(command: &str, ci: bool) -> Result<String, AdoptError> {
     Ok(format!("watch:{command}:debounce={WATCH_DEBOUNCE_MS}ms"))
 }
 
+/// Whether a changed path re-triggers the loop (frozen ignore set).
+///
+/// See: `docs/decisions/0017-dx-watch.md`.
+pub fn should_watch_path(path: &Path) -> bool {
+    if path.file_name().is_some_and(|name| name == "dx.local.toml") {
+        return false;
+    }
+    for component in path.components() {
+        let text = component.as_os_str().to_string_lossy();
+        if text == ".dx" || text.starts_with("bazel-") {
+            return false;
+        }
+    }
+    true
+}
+
 /// Coalesces debounced watcher paths into a single deterministic
-/// rebuild trigger: rapid create/modify/delete bursts
-/// for one path collapse to one entry; outputs sort ascending with
+/// rebuild trigger: frozen ignores dropped, rapid create/modify/delete
+/// bursts for one path collapse to one entry; outputs sort ascending with
 /// duplicates removed so repeated runs render identically.
+///
+/// See: `docs/decisions/0017-dx-watch.md`.
 pub fn coalesce_watch_paths(mut paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    paths.retain(|path| should_watch_path(path));
     paths.sort();
     paths.dedup();
     paths
@@ -200,6 +219,31 @@ mod tests {
             first.clone(),
         ]);
         assert_eq!(trigger, vec![second, first]);
+    }
+
+    #[test]
+    fn watch_ignores_frozen_outputs_and_overlays() {
+        assert!(!should_watch_path(Path::new("/tmp/ws/bazel-bin/a.rs")));
+        assert!(!should_watch_path(Path::new(
+            "/tmp/ws/bazel-out/k8-fastbuild/bin/a.rs"
+        )));
+        assert!(!should_watch_path(Path::new("/tmp/ws/.dx/current")));
+        assert!(!should_watch_path(Path::new("/tmp/ws/.dx/bin/dx")));
+        assert!(!should_watch_path(Path::new("/tmp/ws/dx.local.toml")));
+        assert!(!should_watch_path(Path::new("/tmp/ws/sub/dx.local.toml")));
+        assert!(should_watch_path(Path::new("/tmp/ws/src/main.rs")));
+        assert!(should_watch_path(Path::new("/tmp/ws/BUILD.bazel")));
+    }
+
+    #[test]
+    fn watch_coalesce_drops_ignored_paths() {
+        let trigger = coalesce_watch_paths(vec![
+            PathBuf::from("/tmp/ws/bazel-bin/a.rs"),
+            PathBuf::from("/tmp/ws/.dx/current"),
+            PathBuf::from("/tmp/ws/dx.local.toml"),
+            PathBuf::from("/tmp/ws/src/main.rs"),
+        ]);
+        assert_eq!(trigger, vec![PathBuf::from("/tmp/ws/src/main.rs")]);
     }
 
     #[test]

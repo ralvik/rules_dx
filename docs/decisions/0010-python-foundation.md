@@ -31,15 +31,16 @@ permitted under the [core-language remediation strategy](0013-rust-javascript-ty
 `rules_dx` does not rewrite a whole ruleset or replace a language engine, dependency solver,
 compiler, or runtime.
 
-Using a 2.x prerelease is an explicit exception to
-[ADR 0008](0008-dependency-currency.md) until a compatible stable 2.x release exists. The exact
-prerelease identity is not pinned by this record; it is pending qualification and the
-required consumer and platform evidence. The selected
-release must pass the required consumer and platform evidence before shipping. A compatible stable
-release replaces the prerelease after passing the same evidence. Stable-watch
-plus repin qualification are owned by issue #916 as the single retirement
-tracker for the five provisional exceptions: the bump selector is the latest
-stable 2.x in the Bazel Central Registry, rechecked on every
+Using a 2.x prerelease is a dated provisional pick per issue #961
+(2026-09-22) and an explicit exception to
+[ADR 0008](0008-dependency-currency.md) until a compatible stable 2.x release
+exists. The exact prerelease identity is not pinned by this record; it is
+pending qualification and the required consumer and platform evidence. The
+selected release must pass the required consumer and platform evidence before
+shipping. A compatible stable release replaces the prerelease after passing
+the same evidence. Stable-watch plus repin qualification are owned by issue
+#916 with review on every dependency-currency pass: the bump selector is the
+latest stable 2.x in the Bazel Central Registry, rechecked on every
 dependency-currency pass (see `//tools/ci:pin_consistency_test`); a stable
 replacement requires the same consumer and platform evidence plus
 lock/uv/groups/providers re-qualification per ADR 0008/0014 before ship.
@@ -139,9 +140,10 @@ mere presence of this accepted decision.
   package semantics.
 - `rules_dx` owns a smaller wrapper and generation compatibility surface rather than a Python rules
   ecosystem.
-- The prerelease exception creates an explicit release gate and an upgrade obligation when a stable
-  compatible 2.x release becomes available. Retirement owned by issue #916:
-  stable-watch plus repin qualification (lock/uv/groups/providers) with
+- The prerelease exception is a dated deferral per issue #961 (2026-09-22):
+  it creates an explicit release gate and an upgrade obligation when a stable
+  compatible 2.x release becomes available. Stable-watch plus repin
+  qualification (lock/uv/groups/providers) stays owned by issue #916 with
   fixture evidence plus consumer and platform evidence per ADR 0008/0014 before
   ship.
 - Strict dependency authority prevents successful generation of guessed or incomplete external

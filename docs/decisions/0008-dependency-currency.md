@@ -37,6 +37,10 @@ is permitted, with archive integrity and pinned acquisition inputs. Record why t
 insufficient, qualification results, maintenance ownership, and tracking for migration to a suitable
 release. Missing required workflow, hermeticity, licensing, or interoperability evidence still blocks
 release; this exception neither selects a backend nor authorizes an unbounded fork.
+The generic commit-pin rule above is durable. The specific
+`toolchains_msvc` commit pin is a dated deferral per issue #961 (2026-09-22),
+tracked in [Native Toolchain Qualification](../native-toolchains.md) with
+migration to a published stable release on every dependency-currency pass.
 
 Maintainer automation checks for newer stable releases. A `rules_dx` release is
 blocked while managed dependencies have pending stable updates unless each
@@ -56,7 +60,9 @@ metadata. Where compiler versions cannot share artifacts, extraction must obtain
 inputs through the qualified Bazel route; an ambient compiler or silent semantic fallback is not
 permitted. Incompatibility blocks the affected integration rather than changing the application pin.
 
-Maintainers own pin updates and the [documentation drift suite](../documentation/doc-ir.md#drift-policy).
+The generic nightly-extraction rule above is durable. The specific nightly pin
+is a dated deferral per issue #961 (2026-09-22). Maintainers own pin updates
+and the [documentation drift suite](../documentation/doc-ir.md#drift-policy).
 Each release records the exact nightly, why stable extraction is still insufficient, and passing
 completeness, compatibility, and deterministic-rebuild evidence. Missing evidence or an unqualified
 pin update blocks release. Requalify a stable machine-input route when available; this exception
