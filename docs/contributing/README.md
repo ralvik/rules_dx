@@ -6,6 +6,8 @@ adds no new semantics.
 
 - [Local workflows](local-workflows.md): current manual checks and tooling gaps;
   planned Linux-first bring-up, coverage, and local overrides.
+- [First-hour timing](first-hour-timing.md): one-shot clone-to-green
+  evidence per ADR 0022, no CI budget.
 - [Devcontainer](devcontainer.md): scaffolding through `dx init` (implemented in `cli/adopt`),
   not a commitment to working container support.
 - [Diagnostics and versioning](diagnostics-versioning.md): implemented `dx status`/`dx version`

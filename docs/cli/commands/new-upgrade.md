@@ -29,6 +29,12 @@ list. `--dry-run` lists `would write <name>/...` without writing;
 dry-run plans are summaries, suppressed under `--quiet`. `new` is
 text-only: `--output json|diff` is rejected at parse time.
 
+`dx new` is not an alias for `dx init`: `init` wires a repository in
+place while `new` scaffolds a per-language project under `<name>/`
+(including the `init` wiring prefixed). Typo hints reuse the shared
+`jaro > 0.7` command suggestion over the accepted spellings, so close
+misspellings point at the intended verb without an alias table.
+
 ## `dx upgrade`
 
 `dx upgrade --from <version> --to <version>` composes pin plus
@@ -58,6 +64,12 @@ mode emits `command_started` plus an `upgrade_failed` error plus
 `--from`/`--to`, non-semver, and downgrades/equal versions fail
 pre-exec (exit `2`).
 
+Both versions stay explicit by contract: there is no auto pin-detect
+one-shot. Reading the installed pin plus discovering the target would
+require Git inspection plus network plus manifest discovery, which
+stay rejected; the caller names `--from` plus `--to` and the recovery
+pointer above makes the retry idempotent.
+
 ## Editor coverage
 
 Dispositions follow the [automatic-workflow
@@ -67,7 +79,15 @@ otherwise an explicit snapshot, projection, or manual wiring. The
 scaffolded `.vscode/settings.json`, `.vscode/extensions.json`, and
 devcontainer extensions cover every row; see
 [Ownership And Refresh](../../environments/environment.md#ownership-and-refresh)
-for the managed drivers.
+for the managed drivers. Scaffolding is VSCode-only by contract:
+`.idea/` plus Neovim layouts stay manual and are never generated.
+Go plus TypeScript are covered through `.dx` projections: `golang.go`
+with `GOPACKAGESDRIVER` plus `node_modules` with the `tsdk` pointer
+(TypeScript language support itself ships with VSCode, so no extra
+recommendation is needed). This repository checks in no `.vscode/`
+directory: it predates the scaffold and consumes the same projections
+through `dx setup` plus the devcontainer snapshot instead of a
+checked-in settings copy.
 
 | Language | Disposition |
 | --- | --- |

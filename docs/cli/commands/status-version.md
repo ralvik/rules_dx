@@ -58,7 +58,8 @@ stderr, and rerun the Bazel verb directly for `aquery`/sandbox/cache
 introspection outside the `dx` API (raw BEP is never part of the API).
 
 Non-goals (explicit): `dx status` checks `toolchain`, `platform`, `tools`,
-and `pin` only. It performs no server/disk/network checks and emits no
+and `pin` only. It performs no server/disk/network checks, reports no
+direnv hook or `PATH` status, and emits no
 redacted support bundle. There is no single error-correlation ID across the
 `operation` plus `error` plus `status` events today: join manually across the
 `operation` scope, the `error` phase/code, `dx status`, stderr, and `aquery`.
