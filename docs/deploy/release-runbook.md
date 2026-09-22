@@ -143,9 +143,12 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
 CI builds plus verifies SBOM plus provenance on every push/PR via the
 `sbom` job in `.github/workflows/ci.yml` (issue #612): `bazel build
 //deploy/release:sbom_demo` plus `bazel test
-//deploy/release:dx_release_tools_test`, staged under `RUNNER_TEMP/sbom` and
-uploaded as the `sbom-provenance` artifact (SPDX-2.3 plus SLSA v1, publishes
-nothing). Per-host release evidence for Linux arm64 glibc lands via the
+//deploy/release:dx_release_tools_test`, staged under `RUNNER_TEMP/sbom` with
+`digests.txt` plus `origin.txt` (sha256 bind plus repository, commit, run, ref)
+and uploaded as the `sbom-provenance` artifact (SPDX-2.3 plus SLSA v1, publishes
+nothing). Push-to-main runs additionally attest the staged pair via
+`actions/attest` (Sigstore, fork-safe: PRs never attest); release signing stays
+owner-gated human-run via `//deploy/release:signing_demo`. Per-host release evidence for Linux arm64 glibc lands via the
 `sbom-arm64` job in `.github/workflows/ci.yml` (issue #803 closed): the same
 `sbom_demo` build plus `dx_release_tools_test` verify on the arm64 native
 runner (`ubuntu-24.04-arm`, `bazel-arm64-` cache, `needs: [build-arm64]`,

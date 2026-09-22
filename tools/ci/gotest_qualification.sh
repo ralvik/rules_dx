@@ -74,7 +74,8 @@ fi
 
 # MODULE pins the ruleset plus toolchain (runner follows the toolchain).
 if grep -q -F -e 'bazel_dep(name = "rules_go", version = "0.63.0")' "$module" &&
-  grep -q -F -e 'go_sdk.download(version = "1.26.6")' "$module"; then
+  grep -q -F -e 'go_sdk.download(' "$module" &&
+  grep -q -F -e 'version = "1.26.6"' "$module"; then
   ok
 else
   bad "MODULE.bazel lost its rules_go 0.63.0 plus Go SDK 1.26.6 pins under issue #478"

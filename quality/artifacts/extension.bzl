@@ -1,10 +1,14 @@
 """Standalone quality-tool acquisition (WP1).
 
 Contract: `docs/tools/tool-acquisition.md` (checksummed-artifact route).
-Outer `sha256` is verified by `ctx.download`; the extracted executable is
-re-hashed against the recorded `executable_sha256` (inner digest) before
-the repo is exposed, so a tampered archive member fails closed at fetch
-time instead of shipping a substituted binary.
+Outer `sha256` is verified by `ctx.download` with an explicit
+`canonical_id` so the repository cache keys by checksum plus origin;
+the extracted executable is re-hashed against the recorded
+`executable_sha256` (inner digest) before the repo is exposed, so a
+tampered archive member fails closed at fetch time instead of shipping
+a substituted binary. One pinned upstream URL per tool/platform is
+intentional: the checked-in digest is the trust anchor, the URL is
+availability only, and Bazel's downloader retries the fetch.
 """
 
 load("//quality/artifacts:biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
@@ -133,25 +137,31 @@ def _standalone_tool_repo_impl(ctx):
             output = ctx.attr.executable,
             sha256 = ctx.attr.sha256,
             executable = True,
+            canonical_id = "dx-tool:" + ctx.attr.url,
         )
     elif kind == "gzip":
         ctx.download(
             url = ctx.attr.url,
             output = ctx.attr.asset,
             sha256 = ctx.attr.sha256,
+            canonical_id = "dx-tool:" + ctx.attr.url,
         )
 
         # A bare single-file gzip extracts to the repo root under its
         # recorded member name; no output directory is used. Gzip stores
         # no unix mode, so the extracted file lands 644 and needs one
-        # mode fix (taplo only; tar.gz members already carry 0o755).
+        # deterministic mode fix (taplo only; tar.gz members already carry
+        # 0o755). See: `docs/tools/tool-acquisition.md`
+        # (checksummed-artifact route): the explicit 755 keeps the fetch
+        # hermetic instead of inheriting host umask via `+x`.
         ctx.extract(ctx.attr.asset)
-        ctx.execute(["chmod", "+x", ctx.attr.executable])
+        ctx.execute(["chmod", "755", ctx.attr.executable])
     elif kind == "tar.gz":
         ctx.download(
             url = ctx.attr.url,
             output = ctx.attr.asset,
             sha256 = ctx.attr.sha256,
+            canonical_id = "dx-tool:" + ctx.attr.url,
         )
 
         # Upstream tar members already carry 0o755 (see the metadata
@@ -163,6 +173,7 @@ def _standalone_tool_repo_impl(ctx):
             url = ctx.attr.url,
             output = ctx.attr.asset,
             sha256 = ctx.attr.sha256,
+            canonical_id = "dx-tool:" + ctx.attr.url,
         )
 
         # Zip members carry no reliable unix mode (windows zips record

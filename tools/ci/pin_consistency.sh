@@ -167,7 +167,8 @@ for asset in bazelisk-linux-amd64 bazelisk-linux-arm64 bazelisk-darwin-amd64 baz
 done
 
 # --- Go canonical: MODULE SDK owns the toolchain floor, go.mod the language floor ---
-sdk_version="$(grep -o -E -e 'go_sdk\.download\(version = "[^"]+"' "$module" | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+# Narrow to the go_sdk block: the first version pin inside go_sdk.download.
+sdk_version="$(sed -n '/go_sdk.download(/,/)/p' "$module" | grep -o -E -e 'version = "[^"]+"' | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
 go_version="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$go_mod" | head -1 | cut -d' ' -f2 || true)"
 if [[ -z "$sdk_version" || -z "$go_version" ]]; then
   bad "Go pin missing (want go_sdk.download version in MODULE.bazel plus go directive in third_party/go/go.mod, issue #912)"
@@ -298,10 +299,16 @@ else
   bad "MODULE.bazel drifts from modules/dotnet.bzl DOTNET_VERSION=$dotnet_ver"
 fi
 ts_ver="$(mod_pin "$modules_js" TYPESCRIPT_VERSION)"
-if grep -q -F -e "typescript.deps(version = \"$ts_ver\")" "$module"; then
+ts_integrity="$(mod_pin "$modules_js" TYPESCRIPT_INTEGRITY)"
+if grep -q -F -e "version = \"$ts_ver\"" "$module" && grep -q -F -e "$ts_integrity" "$module"; then
   ok
 else
-  bad "MODULE.bazel drifts from modules/js.bzl TYPESCRIPT_VERSION=$ts_ver"
+  bad "MODULE.bazel drifts from modules/js.bzl TYPESCRIPT_VERSION=$ts_ver plus TYPESCRIPT_INTEGRITY (want typescript.deps version plus integrity)"
+fi
+if grep -q -F -e 'integrity = "sha512-' "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost the TypeScript SRI pin (want typescript.deps integrity sha512, issue #954)"
 fi
 py_interp="$(mod_pin "$modules_python" PYTHON_VERSION)"
 if grep -q -F -e "python.toolchain(python_version = \"$py_interp\")" "$module"; then
@@ -310,10 +317,27 @@ else
   bad "MODULE.bazel drifts from modules/python.bzl PYTHON_VERSION=$py_interp"
 fi
 sdk_ver="$(mod_pin "$modules_toolchains" GO_SDK_VERSION)"
-if grep -q -F -e "go_sdk.download(version = \"$sdk_ver\")" "$module"; then
+if grep -q -F -e "version = \"$sdk_ver\"" "$module" && grep -q -F -e "go_sdk.download(" "$module"; then
   ok
 else
   bad "MODULE.bazel drifts from modules/toolchains.bzl GO_SDK_VERSION=$sdk_ver"
+fi
+# Go SDK archive pins (issue #954): every GO_SDK_SDKS entry must mirror
+# MODULE.bazel sdks so the sha trust anchor never drifts from the wrapper.
+for platform in darwin_amd64 darwin_arm64 linux_amd64 linux_arm64 windows_amd64 windows_arm64; do
+  want_sha="$(grep -A30 -F -e 'GO_SDK_SDKS = {' "$modules_toolchains" | grep -F -e "\"$platform\"" | grep -o -E -e '[0-9a-f]{64}' | head -1 || true)"
+  if [[ -z "$want_sha" ]]; then
+    bad "modules/toolchains.bzl GO_SDK_SDKS lost $platform (want six pinned archives, issue #954)"
+  elif grep -q -F -e "$want_sha" "$module"; then
+    ok
+  else
+    bad "MODULE.bazel sdks drifts from modules/toolchains.bzl GO_SDK_SDKS $platform=$want_sha (want mirrored sha, issue #954)"
+  fi
+done
+if grep -q -F -e "go1.26.6.linux-amd64.tar.gz" "$module" && grep -q -F -e "go1.26.6.windows-amd64.zip" "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost the Go SDK archive filenames (want pinned sdks filenames, issue #954)"
 fi
 go_floor="$(mod_pin "$modules_toolchains" GO_LANGUAGE_FLOOR)"
 go_mod_ver="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$go_mod" | head -1 | cut -d' ' -f2 || true)"
@@ -327,6 +351,21 @@ if [[ -n "$root_pm" && "$pnpm_mod" == "${root_pm#pnpm@}" ]]; then
   ok
 else
   bad "modules/js.bzl PNPM_VERSION=$pnpm_mod drifts from root packageManager $root_pm"
+fi
+
+# --- Maven availability plus fail-closed lock (issue #954): dual origins
+# pin availability while lock hashes pin identity. MODULE must keep both
+# Central origins plus fail_if_repin_required, so a single-origin drift
+# fails here instead of silently losing redundancy.
+if grep -q -F -e "https://maven-central.storage-download.googleapis.com/maven2" "$module" && grep -q -F -e "https://repo1.maven.org/maven2" "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost Maven dual origins (want GCS mirror plus repo1, issue #954)"
+fi
+if grep -q -F -e "fail_if_repin_required = True" "$module" && grep -q -F -e 'lock_file = "//third_party/jvm:maven_install.json"' "$module"; then
+  ok
+else
+  bad "MODULE.bazel lost the Maven fail-closed lock (want lock_file plus fail_if_repin_required, issue #954)"
 fi
 
 # Crate-manifest groups: every wrapper manifest must mirror MODULE.bazel
