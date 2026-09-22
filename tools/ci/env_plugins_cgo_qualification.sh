@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Third-party env plugin model plus Go cgo scope qualification.
 #
-# Qualifies the two slices that explicitly does not cover:
+# Qualifies the two areas it explicitly does not cover:
 # - plugin model: third-party language-integration (persistent-environment)
-#   plugins stay deferred past v1 with an explicit design owner plus
-#   acceptance criteria instead of an owner-less deferral;
+#   plugins stay out of scope with an explicit design owner plus
+#   acceptance criteria instead of an owner-less exclusion;
 #   repurposing `EnvironmentInfo` as a persistent-environment plugin API is
 #   wont-fix in v1, and the private first-party contribution path stays
 #   rejected;
@@ -17,8 +17,7 @@
 #   exception because upstream does not guarantee cgo completion, so cgo
 #   fixtures record gaps rather than claiming generic IDE parity;
 # - cgo scope (issue #789): source-only module identity, strict dependency
-#   resolution, and cgo/race scope resolution per the support-matrix
-#   Initial Feasibility Review; generation fails closed on `import "C"`
+#   resolution, and cgo/race scope resolution; generation fails closed on `import "C"`
 #   (cgo stays handwritten), generated rules carry no cgo/race scope attrs,
 #   handwritten wrappers may set them upstream, and the live
 #   `go/tests/fixtures/cgo/` pair proves the scope with race requiring cgo;
@@ -162,7 +161,7 @@ fi
 
 # Fixture pins stay present with plugin plus cgo plus rejected plus honesty.
 if [[ -f "$pins" && -f "$expected" && -f "$fixture_build" ]] &&
-  grep -q -F -e 'PLUGIN_DISPOSITION = "deferred past v1"' "$pins" &&
+  grep -q -F -e 'PLUGIN_DISPOSITION = "out of scope"' "$pins" &&
   grep -q -F -e 'PLUGIN_OWNER = "//env plus //cli/env"' "$pins" &&
   grep -q -F -e 'PLUGIN_ENV_INFO_WONT_FIX = "EnvironmentInfo stays PATH-tool-only"' "$pins" &&
   grep -q -F -e 'PLUGIN_NO_PRIVATE_PATH' "$pins" &&
@@ -178,7 +177,7 @@ else
 fi
 
 # Expected fixture pins the decision plus boundary plus rejected plus honesty lines.
-if grep -q -F -e 'deferred past v1 with design owner' "$expected" &&
+if grep -q -F -e 'out of scope with design owner' "$expected" &&
   grep -q -F -e 'is not a persistent-environment plugin API' "$expected" &&
   grep -q -F -e 'no private first-party contribution path' "$expected" &&
   grep -q -F -e 'GOPACKAGESDRIVER on rules_go 0.63.0' "$expected" &&

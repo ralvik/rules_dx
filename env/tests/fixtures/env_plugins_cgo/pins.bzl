@@ -7,9 +7,9 @@ Fixture: `env/tests/fixtures/env_plugins_cgo/` via
 `bazel run //tools/ci:env_plugins_cgo_qualification`.
 """
 
-# Plugin model stays deferred past v1 with an explicit design owner.
-PLUGIN_DISPOSITION = "deferred past v1"
-PLUGIN_DEFERRED_NOTE = "third-party language-integration plugins are deferred past v1"
+# Plugin model stays out of scope with an explicit design owner.
+PLUGIN_DISPOSITION = "out of scope"
+PLUGIN_SCOPE_NOTE = "third-party language-integration plugins are out of scope"
 PLUGIN_OWNER = "//env plus //cli/env"
 PLUGIN_NO_MODEL = "no v1 persistent-environment plugin model"
 PLUGIN_NO_EXTENSION_POINT = "no EnvironmentInfo extension point"
@@ -19,7 +19,7 @@ PLUGIN_ENV_INFO_WONT_FIX = "EnvironmentInfo stays PATH-tool-only"
 PLUGIN_ENV_INFO_NOT_PLUGIN_API = "is not a persistent-environment plugin API"
 PLUGIN_NO_PRIVATE_PATH = "no private first-party contribution path"
 
-# Acceptance criteria for any post-v1 plugin proposal.
+# Acceptance criteria for any future plugin proposal.
 PLUGIN_CRITERIA_PROVIDER_DERIVED = "provider-derived symlink-only plans"
 PLUGIN_CRITERIA_SELECTION = "managed identity/commit/reuse selection"
 PLUGIN_CRITERIA_BOUNDARY = "PATH-tools-only boundary"

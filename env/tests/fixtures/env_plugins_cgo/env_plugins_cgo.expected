@@ -2,11 +2,11 @@ Third-party env plugins plus Go cgo scope boundary (issue #587 plus issue #789)
 (`env/tests/fixtures/env_plugins_cgo/pins.bzl` via
 `bazel run //tools/ci:env_plugins_cgo_qualification`).
 
-Plugin model stays deferred past v1 with design owner //env plus //cli/env:
+Plugin model stays out of scope with design owner //env plus //cli/env:
 no v1 persistent-environment plugin model and no EnvironmentInfo extension point.
 EnvironmentInfo stays PATH-tool-only and is not a persistent-environment plugin API
 (wont-fix in v1 to repurpose it); no private first-party contribution path.
-Post-v1 acceptance criteria: provider-derived symlink-only plans plus managed
+Acceptance criteria: provider-derived symlink-only plans plus managed
 identity/commit/reuse selection plus PATH-tools-only boundary plus no private path
 plus fixture-pinned qualification with no Supported claim.
 

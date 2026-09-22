@@ -8,7 +8,7 @@ Superseded by
 [ADR 0032](0032-ruby-powershell-bandit-swift.md), which admits the Ruby
 and PowerShell foundations to v1, re-selects Bandit, and re-evidences
 the Swift/SwiftFormat exclusion. This record below is historical; the
-[support matrix](../product/support-matrix.md#additional-v1-foundations)
+[support matrix](../product/support-matrix.md#additional-foundations)
 owns current dispositions.
 
 ## Context
@@ -29,7 +29,7 @@ The following dispositions are v1 scope decisions under the admission policy:
 - Admitted to v1: Java, Kotlin, C#, F#, Go, C/C++, and Scala application
   foundations. Each has an active Bzlmod-published upstream ruleset with a
   concrete dependency-lock and toolchain story, documented in the
-  [candidate review](../product/support-matrix.md#initial-feasibility-review).
+  [support matrix](../product/support-matrix.md#additional-foundations).
   Provisional upstreams, exact versions, mappings, and adapter work stay under
   ADR 0019/qualification; this record freezes only the admit outcome.
 - Deferred beyond v1: Ruby and PowerShell application foundations. Ruby's
@@ -40,7 +40,7 @@ The following dispositions are v1 scope decisions under the admission policy:
   PSScriptAnalyzer) stay v1 scope under ADR 0019; a foundation deferral removes no
   baseline tool.
 - Excluded from v1: Swift/SwiftFormat and Bandit. These are evidence-backed
-  exclusions, not pending assessments. Reconsideration after v1 requires a new
+  exclusions, not pending assessments. Reconsideration requires a new
   scope decision.
 
 Delivery cohorts are unchanged:
@@ -67,7 +67,7 @@ Delivery cohorts are unchanged:
 
 ## Rejected Alternatives
 
-- Blanket post-v1 deferral of all additional languages: rejected; it
+- Blanket deferral of all additional languages: rejected; it
   contradicts the accepted broad-first-release direction.
 - Admitting Ruby/PowerShell foundations despite the cost evidence: rejected;
   deferral with retained tool cohorts preserves the baseline without delaying
