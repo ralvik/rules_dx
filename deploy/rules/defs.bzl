@@ -4,6 +4,7 @@ Contract: `docs/deploy/authoring.md`, `docs/decisions/0021-build-profiles.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
+load("//libs/starlark:wrapper.bzl", "dx_symlink_executable", "dx_symlink_windows_attr")
 
 DxDeployInfo = provider(
     doc = "Deploy entrypoint identity and default profile for `dx deploy` dispatch.",
@@ -37,8 +38,7 @@ def _dx_deployment_impl(ctx):
     if exe == None:
         fail("dx_deployment " + str(ctx.label) + ": deploy target " +
              str(ctx.attr.deploy.label) + " has no executable")
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
+    link = dx_symlink_executable(ctx, exe)
     runfiles = ctx.runfiles(files = [link]).merge(deploy_default.default_runfiles)
     app_label = None
     app_text = ""
@@ -80,6 +80,6 @@ dx_deployment = rule(
             doc = "Default profile for this deployment (debug, dev, or release). An explicit CLI flag always wins.",
             values = VALID_DEPLOY_PROFILES,
         ),
-    },
+    } | dx_symlink_windows_attr(),
     doc = "Wraps one executable deploy program with DxDeployInfo (issue #178).",
 )

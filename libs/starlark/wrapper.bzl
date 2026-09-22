@@ -127,14 +127,42 @@ def _has_excluded_suffix(basename, excludes):
             return True
     return False
 
+def dx_symlink_executable_name(name, is_windows):
+    """Maps one forwarder output name to its host-native filename."""
+    if is_windows:
+        return name + ".exe"
+    return name
+
+def dx_symlink_windows_attr():
+    """Returns the `_windows_os` attribute detecting Windows target platforms."""
+    return {
+        "_windows_os": attr.label(
+            default = "@platforms//os:windows",
+            doc = "Constraint value detecting Windows target platforms for executable naming.",
+        ),
+    }
+
+def dx_symlink_is_windows(ctx):
+    """Returns whether the forwarder builds for a Windows target platform."""
+    return ctx.target_platform_has_constraint(
+        ctx.attr._windows_os[platform_common.ConstraintValueInfo],
+    )
+
+def dx_symlink_executable(ctx, target_file):
+    """Symlinks one upstream executable with platform-aware naming and attrs."""
+    link = ctx.actions.declare_file(
+        dx_symlink_executable_name(ctx.label.name, dx_symlink_is_windows(ctx)),
+    )
+    ctx.actions.symlink(output = link, target_file = target_file, is_executable = True)
+    return link
+
 def dx_symlink_default_info(ctx, what):
     """Builds the executable `DefaultInfo` symlinking the upstream binary."""
     upstream = ctx.attr.upstream[DefaultInfo]
     exe = upstream.files_to_run.executable
     if exe == None:
         fail(what + ": upstream target has no executable: " + str(ctx.attr.upstream.label))
-    link = ctx.actions.declare_file(ctx.label.name)
-    ctx.actions.symlink(output = link, target_file = exe)
+    link = dx_symlink_executable(ctx, exe)
     return DefaultInfo(
         executable = link,
         files = depset([link]),
@@ -275,6 +303,7 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
         upstream_doc = upstream_doc,
         extra_attrs = extra_attrs,
     )
+    attrs.update(dx_symlink_windows_attr())
     if kind == "executable":
         return rule(
             implementation = _impl,
