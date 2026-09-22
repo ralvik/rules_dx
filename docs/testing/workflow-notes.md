@@ -74,8 +74,14 @@ The following policy notes lived as header comments in `ci.yml`:
 #
 # Per-cell coverage summaries render through the single
 # `.github/actions/render-coverage-summary` composite (issue #915: cell
-# plus stem inputs; no cross-cell union). The seed cell keeps its own
-# first-party block (coverage_bin gate plus PR comment).
+# plus stem plus inventory inputs; no cross-cell union) with the same
+# portable Rust `coverage_bin` gate plus the same
+# `tools/coverage/coverage_comment.sh` shape as the seed cell (issue
+# #1062: verdict plus Uncovered locations plus LCOV note). The seed cell
+# keeps its own first-party block (same gate plus same script via `bazel
+# run` plus the single PR comment); the five non-seed cells stay
+# step-summary only by design under the per-cell visibility contract
+# (issue #1062) to avoid sixfold spam.
 #
 # Sharding policy (issue #210): one logical stage per job for failure
 # attribution without log-grep forensics. Seed jobs stay on ubuntu-latest

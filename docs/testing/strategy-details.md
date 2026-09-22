@@ -93,10 +93,19 @@ plus test execution with no quality class by design.
 ## GitHub Coverage Reporting
 
 This project uses first-party coverage PR reporting under the
-[free-infrastructure constraint](#infrastructure-budget). The `coverage` job
-renders a compact summary comment from the Bazel-owned gate verdict and
-publishes one integration-owned updated comment per PR. Consumers get the same
-per-cell shape through `reusable-consumer.yml`. A summary comment never turns
+[free-infrastructure constraint](#infrastructure-budget). Every required
+cell gates its own combined LCOV through the portable Rust `coverage_bin`
+against its versioned inventory and renders through the same
+`tools/coverage/coverage_comment.sh` script (verdict plus Uncovered
+locations plus LCOV note plus dx rate line), with no cross-cell union.
+The seed cell runs the script via `bazel run` (Linux-only `sh_binary` by
+the shell contract; the seed runs on ubuntu-latest) and publishes one
+integration-owned updated comment per PR; the five non-seed cells run the
+same script directly via `bash` through the portable
+`.github/actions/render-coverage-summary` composite (same output, portable
+across linux plus macos plus windows-latest) and stay step-summary only by
+design to avoid sixfold comment spam. Consumers get the same per-cell
+shape through `reusable-consumer.yml`. A summary comment never turns
 missing reports or failing coverage into success, and any Starlark behavioral
 fallback stays separate from measured line coverage.
 

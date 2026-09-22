@@ -151,6 +151,22 @@ else
   bad "reusable-consumer lost its per-cell no-union coverage shape"
 fi
 
+# Each non-seed cell gates its own LCOV through the portable composite
+# (issue #1062): same coverage_bin gate plus same coverage_comment.sh shape
+# as the seed, with its versioned inventory wired per job, step-summary
+# only (only the seed publishes the PR comment).
+if grep -q -F -e 'inventory: tools/coverage/arm64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'inventory: tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'inventory: tools/coverage/musl-arm64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'inventory: tools/coverage/macos-arm64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'inventory: tools/coverage/windows-x86_64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'coverage_bin' .github/actions/render-coverage-summary/action.yml &&
+  grep -q -F -e 'coverage_comment.sh' .github/actions/render-coverage-summary/action.yml; then
+  ok
+else
+  bad "ci.yml lost the per-cell own-LCOV gate wiring (portable composite plus versioned inventories, issue #1062)"
+fi
+
 # Functional per-cell proof without a full rebuild: two synthetic cell
 # LCOVs where a cross-cell union would hide the gap. The gate binary must
 # pass the covered cell and fail the uncovered cell with its location, so

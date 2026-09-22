@@ -139,6 +139,26 @@ else
   bad "first-party reporting lost its no-union record"
 fi
 
+# Per-cell visibility contract (issue #1062): every cell renders the same
+# rich shape (coverage_bin verdict plus Uncovered locations plus LCOV note)
+# through the same script; only the seed publishes the PR comment while the
+# five non-seed cells stay step-summary only. The portable composite gates
+# its own LCOV via coverage_bin and presents via coverage_comment.sh
+# directly through bash (portable despite the sh_binary Linux-only label).
+if grep -q -F -e 'inventory' .github/actions/render-coverage-summary/action.yml &&
+  grep -q -F -e 'coverage_bin' .github/actions/render-coverage-summary/action.yml &&
+  grep -q -F -e 'coverage_comment.sh' .github/actions/render-coverage-summary/action.yml &&
+  grep -q -F -e 'step-summary only' .github/actions/render-coverage-summary/action.yml &&
+  grep -q -F -e 'tools/coverage/arm64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'tools/coverage/musl-arm64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'tools/coverage/macos-arm64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'tools/coverage/windows-x86_64-inventory.txt' .github/workflows/ci.yml; then
+  ok
+else
+  bad "per-cell coverage reporting lost its visibility contract (same gate plus same script, seed PR plus non-seed summary-only, issue #1062)"
+fi
+
 # Renderer never turns a failing gate into success.
 if grep -q -F -e 'never the gate' tools/coverage/coverage_comment.sh; then
   ok
@@ -149,6 +169,8 @@ fi
 # Docs select first-party with Codecov at most opt-in.
 if grep -q -F -e 'first-party coverage PR reporting' docs/testing/strategy-details.md &&
   grep -q -F -e 'Codecov stays at most opt-in' docs/testing/strategy-details.md &&
+  grep -q -F -e 'step-summary only' docs/testing/strategy-details.md &&
+  grep -q -F -e 'same' docs/testing/strategy-details.md &&
   grep -q -F -e 'first-party' docs/github-ci.md &&
   grep -q -F -e 'first-party PR summary' docs/contributing/local-workflows.md; then
   ok
