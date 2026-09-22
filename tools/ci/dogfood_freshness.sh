@@ -111,6 +111,7 @@ bazel run --noshow_progress //tools/ci:stable_stack_qualification
 bazel run --noshow_progress //tools/ci:windows_acquisition_qualification
 bazel run --noshow_progress //tools/ci:acquisition_rights_qualification
 bazel run --noshow_progress //tools/ci:windows_eula_qualification
+bazel run --noshow_progress //tools/ci:laziness_host_qualification
 bazel run --noshow_progress //tools/ci:windows_transport_qualification
 bazel run --noshow_progress //tools/ci:prebuilt_interop_qualification
 bazel run --noshow_progress //tools/ci:linux_corpus_qualification
