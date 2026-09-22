@@ -29,6 +29,8 @@ STRICT_MISSING_REJECTED = [
     "--workspace",
     "--min-coverage",
     "--port",
+    "--host",
+    "--color",
     "--from",
 ]
 STRICT_HYPHEN_VALUES_NOT_CONSUMED = True
@@ -37,8 +39,10 @@ STRICT_MISSING_NAMES_BARE_FLAG = True
 # Strict: invalid values fail with contract shapes, never silently ignored.
 STRICT_BAD_OUTPUT_REJECTED = ["yaml"]
 STRICT_BAD_FAIL_ON_REJECTED = ["never"]
+STRICT_BAD_COLOR_REJECTED = ["bright"]
 STRICT_BAD_REPORT_REJECTED = ["sarif", "=out.sarif", "sarif=", ""]
 STRICT_BAD_MIN_COVERAGE_REJECTED = ["eighty", "101"]
+STRICT_BAD_PORT_REJECTED = ["0"]
 
 # Strict: typo hints come from the same grammar (commands plus longs).
 STRICT_COMMAND_SUGGESTION = {"lintt": "lint"}
@@ -48,6 +52,9 @@ STRICT_OPTION_SUGGESTION = {"--ouptut=json": "--output"}
 # never silently ignored.
 STRICT_UNSUPPORTED_REJECTED = [
     "build --serve",
+    "build --port=8080",
+    "build --host=example.test",
+    "build --open",
     "lint --min-coverage",
     "build --check",
     "lint --bazel",

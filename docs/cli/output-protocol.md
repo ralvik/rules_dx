@@ -36,7 +36,8 @@ and dry-run plans print summaries, so `--quiet` silences their stdout (refusals 
 errors stay on stderr).
 
 `--verbose` (`-v`) and `--log-level error|warn|info|debug|trace` select structured diagnostics on stderr via tracing (`warn`
-by default, `info` under `--verbose`, explicit level under `--log-level`, `RUST_LOG` overrides when set). It is orthogonal
+by default, `info` under `--verbose`, explicit level under `--log-level`, `RUST_LOG` overrides when set). `--color auto|always|never`
+selects log and human-status color (`auto` stays plain unless a TTY without `NO_COLOR`). It is orthogonal
 to `--quiet` (summaries vs logs): `--quiet` plus `--verbose` (or `--log-level`) means quiet summaries with
 verbose logs. Diagnostics go to stderr so stdout stays machine-owned in every mode:
 `--verbose` and `--log-level` combine with `--output text|diff|json` without changing stdout contracts,
@@ -717,7 +718,7 @@ Stable codes are:
 | `offline_required` | Cache-only `--offline`/`--frozen` run would need network (advisory refresh, resolver update, or bump refresh; detail prefix inside `audit_failed` for audit, operational code for update/bump, see [Offline Bootstrap](../deploy/offline-bootstrap.md)) |
 | `migrate_failed` | Live migrate failure (no migrate manifest exists yet, see [dx migrate](commands/migrate.md)) |
 | `upgrade_failed` | Live upgrade failure (no upgrade manifest exists yet, see [dx upgrade](commands/new-upgrade.md#dx-upgrade)) |
-| `serve_failed` | Docs preview failure (`dx docs --serve` preview server exited nonzero after a successful build, see [dx docs](commands/docs.md)) |
+| `serve_failed` | Docs preview failure (`dx docs --serve` preview failed to launch or exited nonzero after a successful build, including bind failures like a port in use, see [dx docs](commands/docs.md)) |
 | `unsupported_platform` | The selected workflow has no hermetic platform support |
 | `status_pin_mismatch` | `dx status` pin failure (check reported `error` — today pin mismatch — or the pin was missing/unreadable, see [status/version](commands/status-version.md)) |
 | `version_skew` | Drifted `.dx/version` pin refuses mutating or generating commands (see [status/version](commands/status-version.md)) |

@@ -189,7 +189,7 @@ fn render_env_help() -> String {
     out.push_str("  RUST_LOG=<filter>\n");
     out.push_str("      Override --verbose/-v and --log-level with a tracing filter (e.g. RUST_LOG=debug).\n");
     out.push_str("  NO_COLOR=<any>\n");
-    out.push_str("      Disable styled human output when present (any value, per the spec).\n");
+    out.push_str("      Disable styled human output when present (any value, per the spec); `--color=always` forces color, `--color=never` stays plain.\n");
     out.push_str("  BUILD_WORKSPACE_DIRECTORY=<dir>\n");
     out.push_str("      Workspace start under `bazel run`; falls back to the current directory.\n");
     out.push_str("  See docs/cli/output-protocol.md and docs/cli/cli-contract.md.\n");
@@ -273,7 +273,7 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
             "Per-command flags: [--check] verifies without writing (exactly one <shell> bash|zsh|fish|powershell without --check; zero shells checks all, one checks that shell with --check; unknown shells fail with unknown-shell; --output json|diff and `-- --bazel-options` do not apply)."
         }
         Command::Docs => {
-            "Per-command flags: --check/--serve/--port (docs only; --check validates without rendering, --serve previews the last build locally, --port requires --serve; --output text|json only, diff has no patch)."
+            "Per-command flags: --check/--serve/--port/--host/--open (docs only; --check validates without rendering, --serve previews the last build locally, --port/--host/--open require --serve; --output text|json only, diff has no patch)."
         }
     }
 }
@@ -327,7 +327,7 @@ pub(crate) fn render_command_help(command: Command) -> String {
             "Usage: dx [global-options] completion [<shell> bash|zsh|fish|powershell] [--check]"
         }
         Command::Docs => {
-            "Usage: dx [global-options] docs [--check] [--serve [--port <n>]] [--here] [scope ...]"
+            "Usage: dx [global-options] docs [--check] [--serve [--port <n>] [--host <addr>] [--open]] [--here] [scope ...]"
         }
     };
     let scopes = match command {

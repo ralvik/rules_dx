@@ -55,6 +55,12 @@ pub(crate) struct Cli {
     /// Short `-v`; conflicts with `--log-level` (See: `docs/cli/output-protocol.md`).
     #[arg(long, short = 'v')]
     pub(crate) verbose: bool,
+    /// Select color output for logs and human status (`auto|always|never`).
+    /// `auto` stays byte-identical plain unless a TTY without `NO_COLOR`;
+    /// `always` forces color, `never` stays plain.
+    /// See: `docs/cli/cli-contract.md`.
+    #[arg(long, allow_negative_numbers = true, overrides_with = "color")]
+    pub(crate) color: Option<String>,
     /// Select the structured diagnostic level on stderr via tracing.
     /// Default stays byte-identical (`warn`); `--verbose`/`-v` is `info`.
     /// `RUST_LOG` overrides when set (See: `docs/cli/output-protocol.md`).
@@ -122,6 +128,16 @@ pub(crate) struct Cli {
     /// See: `docs/cli/commands/docs.md`.
     #[arg(long, allow_negative_numbers = true, overrides_with = "port")]
     pub(crate) port: Option<String>,
+    /// Preview bind host for `dx docs --serve` (docs only; requires
+    /// `--serve`). Defaults to `127.0.0.1`.
+    /// See: `docs/cli/commands/docs.md`.
+    #[arg(long, allow_negative_numbers = true, overrides_with = "host")]
+    pub(crate) host: Option<String>,
+    /// Open the preview URL in a browser after building (docs only;
+    /// requires `--serve`).
+    /// See: `docs/cli/commands/docs.md`.
+    #[arg(long)]
+    pub(crate) open: bool,
     /// Force cache-only operation without network fetches (audit/update/bump
     /// only; `--frozen` alias).
     /// See: `docs/deploy/offline-bootstrap.md`.
@@ -159,5 +175,7 @@ pub(crate) const VALUE_OPTIONS: &[&str] = &[
     "--from",
     "--to",
     "--port",
+    "--host",
+    "--color",
     "--log-level",
 ];

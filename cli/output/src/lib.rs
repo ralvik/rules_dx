@@ -40,9 +40,10 @@ pub use clap_errors::{
     first_line, invalid_token, leading_flag, recover_unknown_token, rejected_value,
 };
 pub use diagnostics::{
-    color_enabled, colors_allowed, emit_status, format_status, init_diagnostics,
-    init_diagnostics_with_level, resolve_log_filter, styled_status, styled_status_for, LogLevel,
-    DEFAULT_LOG_FILTER, VERBOSE_LOG_FILTER,
+    color_enabled, color_enabled_for, color_override, colors_allowed, colors_allowed_for,
+    emit_status, format_status, init_diagnostics, init_diagnostics_with_color,
+    init_diagnostics_with_level, resolve_log_filter, set_color_override, styled_status,
+    styled_status_for, ColorMode, LogLevel, DEFAULT_LOG_FILTER, VERBOSE_LOG_FILTER,
 };
 pub use findings::{
     diagnostic_event, notice_event, sort_diagnostics, DiagnosticEvent, NoticeEvent, Resolution,

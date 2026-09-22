@@ -26,6 +26,8 @@ pub enum OutputError {
     BadThreshold { value: String },
     #[error("invalid log level {value:?}: want error|warn|info|debug|trace")]
     BadLogLevel { value: String },
+    #[error("invalid color {value:?}: want auto|always|never")]
+    BadColor { value: String },
     #[error("invalid path {path:?}: {reason}")]
     BadPath { path: String, reason: &'static str },
     #[error("invalid digest for {field} {value:?}")]

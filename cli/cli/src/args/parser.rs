@@ -104,6 +104,7 @@ pub fn parse_with<S: AsRef<OsStr>>(
         quiet,
         verbose,
         log_level: log_level_name,
+        color: color_name,
         output,
         report,
         fail_on,
@@ -120,6 +121,8 @@ pub fn parse_with<S: AsRef<OsStr>>(
         here,
         serve,
         port: port_name,
+        host: host_name,
+        open,
         offline,
         command: command_name,
         targets: targets_os,
@@ -204,6 +207,16 @@ pub fn parse_with<S: AsRef<OsStr>>(
     if verbose && log_level.is_some() {
         return Err(ArgsError::ConflictingVerboseLogLevel);
     }
+    let color_name = invocation_defaults::resolve_string(
+        color_name,
+        invocation_defaults::env_string(env_get, invocation_defaults::DX_COLOR_ENV),
+        file.color.clone(),
+        "auto",
+    );
+    let color =
+        dx_output::ColorMode::parse(&color_name).map_err(|_| ArgsError::BadColor {
+            value: color_name.clone(),
+        })?;
     let mut reports = Vec::new();
     for value in &report {
         reports.push(parse_report(value)?);
@@ -220,13 +233,22 @@ pub fn parse_with<S: AsRef<OsStr>>(
             });
         }
         match value.parse::<u16>() {
-            Ok(port_value) => port = Some(port_value),
-            Err(_) => {
+            Ok(port_value) if port_value != 0 => port = Some(port_value),
+            _ => {
                 return Err(ArgsError::MissingValue {
                     option: "--port".to_owned(),
                 });
             }
         }
+    }
+    let mut host: Option<String> = None;
+    if let Some(value) = &host_name {
+        if value.is_empty() {
+            return Err(ArgsError::MissingValue {
+                option: "--host".to_owned(),
+            });
+        }
+        host = Some(value.clone());
     }
     let command = command_name.ok_or(ArgsError::MissingCommand)?;
     // `--here` (`--cwd` alias, See: `docs/cli/target-resolution.md`, issue #699): explicit cwd scope only.
@@ -706,14 +728,27 @@ pub fn parse_with<S: AsRef<OsStr>>(
                 option: "--port".to_owned(),
             });
         }
+        if host.is_some() && !serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--host".to_owned(),
+            });
+        }
+        if open && !serve {
+            return Err(ArgsError::UnsupportedOption {
+                command: command.name(),
+                option: "--open".to_owned(),
+            });
+        }
         for scope in &targets {
             if scope.is_empty() || scope.starts_with(':') {
                 return Err(scope_error(scope));
             }
         }
     }
-    // `--serve`/`--port` belong to `docs` only: every other command fails
-    // fast instead of silently ignoring the preview request.
+    // `--serve`/`--port`/`--host`/`--open` belong to `docs` only: every
+    // other command fails fast instead of silently ignoring the preview
+    // request.
     // See: `docs/cli/commands/docs.md`.
     if command != Command::Docs && serve {
         return Err(ArgsError::UnsupportedOption {
@@ -725,6 +760,18 @@ pub fn parse_with<S: AsRef<OsStr>>(
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
             option: "--port".to_owned(),
+        });
+    }
+    if command != Command::Docs && host.is_some() {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--host".to_owned(),
+        });
+    }
+    if command != Command::Docs && open {
+        return Err(ArgsError::UnsupportedOption {
+            command: command.name(),
+            option: "--open".to_owned(),
         });
     }
     if command.is_workflow() {
@@ -1034,6 +1081,7 @@ pub fn parse_with<S: AsRef<OsStr>>(
         quiet,
         verbose,
         log_level,
+        color,
         output,
         reports,
         fail_on,
@@ -1049,6 +1097,8 @@ pub fn parse_with<S: AsRef<OsStr>>(
         here,
         serve,
         port,
+        host,
+        open,
         offline,
     })
 }

@@ -5,7 +5,7 @@
 //! ([`super::parser`]) constructs these; `super` re-exports them so
 //! `crate::args::{Invocation, ReportRequest}` paths are unchanged.
 
-use dx_output::{LogLevel, OutputMode, Threshold};
+use dx_output::{ColorMode, LogLevel, OutputMode, Threshold};
 
 use super::profile::{resolve_profile, Profile};
 use super::Command;
@@ -43,6 +43,9 @@ pub struct Invocation {
     /// level on stderr; conflicts with `--verbose` (`-v` is `info`).
     /// `RUST_LOG` overrides both when set.
     pub log_level: Option<LogLevel>,
+    /// `--color auto|always|never`: color for logs and human status.
+    /// `auto` stays byte-identical plain unless a TTY without `NO_COLOR`.
+    pub color: ColorMode,
     pub output: OutputMode,
     pub reports: Vec<ReportRequest>,
     pub fail_on: Threshold,
@@ -74,6 +77,10 @@ pub struct Invocation {
     pub serve: bool,
     /// `dx docs --serve --port <port>`: preview port (docs only).
     pub port: Option<u16>,
+    /// `dx docs --serve --host <host>`: preview bind host (docs only).
+    pub host: Option<String>,
+    /// `dx docs --serve --open`: open the preview URL in a browser.
+    pub open: bool,
     /// `dx audit/update/bump --offline` (`--frozen` alias): force cache-only
     /// operation without network fetches (audit/update/bump only).
     /// See: `docs/deploy/offline-bootstrap.md`.
@@ -226,7 +233,7 @@ mod tests {
     use super::*;
 
     fn invocation_for(command: Command, targets: &[&str]) -> Invocation {
-        use dx_output::{OutputMode, Threshold};
+        use dx_output::{ColorMode, OutputMode, Threshold};
         Invocation {
             command,
             check: false,
@@ -237,6 +244,7 @@ mod tests {
             quiet: false,
             verbose: false,
             log_level: None,
+            color: ColorMode::Auto,
             output: OutputMode::Text { quiet: false },
             reports: Vec::new(),
             fail_on: Threshold::Warning,
@@ -252,6 +260,8 @@ mod tests {
             here: true,
             serve: false,
             port: None,
+            host: None,
+            open: false,
             offline: false,
         }
     }

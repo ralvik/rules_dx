@@ -3,7 +3,7 @@
 Implementation status: delivered.
 
 ```text
-dx docs [--check] [--serve [--port <n>]] [--here] [scope ...]
+dx docs [--check] [--serve [--port <n>] [--host <addr>] [--open]] [--here] [scope ...]
 ```
 
 `dx docs` builds the [unified documentation
@@ -27,9 +27,13 @@ no source-tree writes; Bazel output and cache writes are permitted in both modes
 Rendered HTML is also a build artifact, never committed.
 
 `--serve` builds once and previews the output locally for authoring (default port
-8000). It
+8000, default host `127.0.0.1`). It
 performs no caching of its own and is outside the Bazel action graph; the
-served bytes are exactly the last build outputs.
+served bytes are exactly the last build outputs. `--port` (1-65535, `0`
+rejected) and `--host` refine `--serve` and fail without it; `--open`
+opens the preview URL in a browser (best-effort, preview continues when
+the opener fails). Preview launch and bind failures (for example a port
+in use; retry another `--port`) report `serve_failed`.
 
 Machine output follows the complete [Output
 Protocol](../output-protocol.md). Failures name the affected (language,

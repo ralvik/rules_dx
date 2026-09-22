@@ -27,12 +27,34 @@ const DOCS_BUILD_TARGET: &str = "//docs/site:demo_site";
 /// See: `docs/cli/commands/docs.md`.
 const DOCS_DEFAULT_PORT: u16 = 8000;
 
+/// Default preview bind host when `--serve` runs without `--host`.
+/// Loopback only so authoring previews never bind publicly by default.
+/// See: `docs/cli/commands/docs.md`.
+const DOCS_DEFAULT_HOST: &str = "127.0.0.1";
+
 /// Stable operational error code for `dx docs --serve` preview failures:
-/// the local preview server exited nonzero after a successful build.
+/// the local preview server failed to launch or exited nonzero after a
+/// successful build (including bind failures like a port in use).
 // See: `docs/cli/output-protocol.md#operational-error`.
 pub(crate) const CODE_SERVE_FAILED: &str = "serve_failed";
 
-/// Runs `dx docs [--check] [--serve [--port <n>]] [scope ...]`: resolves
+/// Preview URL for `host`/`port` (`http://<host>:<port>/`).
+fn preview_url(host: &str, port: u16) -> String {
+    format!("http://{host}:{port}/")
+}
+
+/// Browser opener argv reusing the preview `python3` dependency:
+/// `webbrowser.open` works cross-platform without `xdg-open`/`open`.
+fn opener_argv(url: &str) -> Vec<String> {
+    vec![
+        "python3".to_owned(),
+        "-c".to_owned(),
+        "import sys, webbrowser; webbrowser.open(sys.argv[1])".to_owned(),
+        url.to_owned(),
+    ]
+}
+
+/// Runs `dx docs [--check] [--serve [--port <n>] [--host <addr>] [--open]] [scope ...]`: resolves
 /// the scope through the shared workflow resolution (bare scope selects
 /// the repository docs site), builds the Bazel-cached extract to
 /// aggregate to render chain, and optionally previews the last build
@@ -102,7 +124,12 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
             let _ = writeln!(out, "{summary}");
             if invocation.serve {
                 let port = invocation.port.unwrap_or(DOCS_DEFAULT_PORT);
-                let _ = writeln!(out, "would serve at http://127.0.0.1:{port}/");
+                let host = invocation.host.as_deref().unwrap_or(DOCS_DEFAULT_HOST);
+                let url = preview_url(host, port);
+                let _ = writeln!(out, "would serve at {url}");
+                if invocation.open {
+                    let _ = writeln!(out, "would open {url}");
+                }
             }
         }
         return 0;
@@ -168,14 +195,35 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
         return 0;
     }
     let port = invocation.port.unwrap_or(DOCS_DEFAULT_PORT);
+    let host = invocation.host.as_deref().unwrap_or(DOCS_DEFAULT_HOST);
+    let url = preview_url(host, port);
     let serve_dir = workspace.join("bazel-bin/docs/site");
     let serve_dir_text = serve_dir.display().to_string();
     if !json && matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet
     {
-        let _ = writeln!(
-            out,
-            "Serving docs at http://127.0.0.1:{port}/ ({serve_dir_text})"
-        );
+        let _ = writeln!(out, "Serving docs at {url} ({serve_dir_text})");
+        if invocation.open {
+            let _ = writeln!(out, "Opening {url}");
+        }
+    }
+    if invocation.open {
+        let open_argv = opener_argv(&url);
+        match runner.run(&open_argv, workspace, &[]) {
+            Ok(status) if status.code == Some(0) => {}
+            Ok(status) => {
+                let _ = writeln!(
+                    err,
+                    "dx: warning: browser open exited with {:?} for {url} (continuing preview)",
+                    status.code,
+                );
+            }
+            Err(error) => {
+                let _ = writeln!(
+                    err,
+                    "dx: warning: failed to open browser for {url}: {error} (continuing preview)",
+                );
+            }
+        }
     }
     let serve_argv = vec![
         "python3".to_owned(),
@@ -184,6 +232,8 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
         port.to_string(),
         "--directory".to_owned(),
         serve_dir_text,
+        "--bind".to_owned(),
+        host.to_owned(),
     ];
     let serve_status = match runner.run(&serve_argv, workspace, &[]) {
         Ok(status) => status,
@@ -192,8 +242,8 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
                 invocation,
                 out,
                 err,
-                CODE_LAUNCH_FAILED,
-                &format!("failed to launch docs preview: {error}"),
+                CODE_SERVE_FAILED,
+                &format!("failed to launch docs preview at {url}: {error} (port in use? retry another --port)"),
             );
         }
     };
@@ -210,7 +260,7 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
         if serve_code != 0 {
             if let Ok(event) = error_event(
                 CODE_SERVE_FAILED,
-                &format!("Docs preview exited with {serve_code} (see stderr diagnostics)"),
+                &format!("Docs preview exited with {serve_code} at {url} (port in use? retry another --port; see stderr diagnostics)"),
                 None,
                 None,
                 Some("serve"),
@@ -257,6 +307,14 @@ mod tests {
             .collect();
         let err = crate::args::parse(&args).expect_err("port without serve must fail");
         assert!(err.to_string().contains("--port"), "{err}");
+        for words in [
+            vec!["docs", "--host=example.test"],
+            vec!["docs", "--open"],
+            vec!["docs", "--port=0", "--serve"],
+        ] {
+            let args: Vec<String> = words.iter().map(ToString::to_string).collect();
+            assert!(crate::args::parse(&args).is_err(), "{words:?}");
+        }
     }
 
     #[test]
@@ -268,6 +326,129 @@ mod tests {
             out.contains("Serving docs at http://127.0.0.1:8080/"),
             "{out}"
         );
+    }
+
+    #[test]
+    fn docs_serve_host_and_open() {
+        let harness = Harness::new("docs-serve-host");
+        let (code, out, _) = harness.run(&[
+            "docs",
+            "--serve",
+            "--port=8080",
+            "--host=example.test",
+            "--open",
+        ]);
+        assert_eq!(code, 0, "{out}");
+        assert!(
+            out.contains("Serving docs at http://example.test:8080/"),
+            "{out}"
+        );
+        assert!(out.contains("Opening http://example.test:8080/"), "{out}");
+    }
+
+    #[test]
+    fn docs_serve_binds_host_and_opens_browser() {
+        use std::cell::RefCell;
+        use std::io;
+        use std::rc::Rc;
+        struct Probe {
+            seen: Rc<RefCell<Vec<Vec<String>>>>,
+        }
+        impl dx_process::Runner for Probe {
+            fn run(
+                &self,
+                argv: &[String],
+                _cwd: &std::path::Path,
+                _env: &[(&str, &str)],
+            ) -> io::Result<dx_process::ChildStatus> {
+                self.seen.borrow_mut().push(argv.to_vec());
+                Ok(dx_process::ChildStatus { code: Some(0) })
+            }
+        }
+        let harness = Harness::new("docs-serve-bind");
+        let inv = invocation(&[
+            "docs",
+            "--serve",
+            "--port=8080",
+            "--host=example.test",
+            "--open",
+        ]);
+        let seen = Rc::new(RefCell::new(Vec::new()));
+        let runner = Probe { seen: Rc::clone(&seen) };
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = super::execute_docs(
+            &inv,
+            super::super::common::Env {
+                workspace: &harness.workspace,
+                runner: &runner,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 0);
+        let calls = seen.borrow();
+        // Bazel build plus browser open plus preview server.
+        assert_eq!(calls.len(), 3, "{calls:?}");
+        let serve = calls.iter().find(|argv| argv.contains(&"http.server".to_owned()));
+        let serve = serve.expect("serve argv");
+        assert!(serve.contains(&"8080".to_owned()), "{serve:?}");
+        assert!(serve.contains(&"--bind".to_owned()), "{serve:?}");
+        assert!(serve.contains(&"example.test".to_owned()), "{serve:?}");
+        let open = calls
+            .iter()
+            .find(|argv| argv.iter().any(|arg| arg.contains("webbrowser")));
+        assert!(open.is_some(), "opener must run for --open: {calls:?}");
+    }
+
+    #[test]
+    fn docs_serve_launch_failure_maps_to_serve_failed() {
+        use std::io;
+        struct LaunchFailRunner;
+        impl dx_process::Runner for LaunchFailRunner {
+            fn run(
+                &self,
+                argv: &[String],
+                _cwd: &std::path::Path,
+                _env: &[(&str, &str)],
+            ) -> io::Result<dx_process::ChildStatus> {
+                if argv.first().is_some_and(|first| first == "bazel") {
+                    Ok(dx_process::ChildStatus { code: Some(0) })
+                } else {
+                    Err(io::Error::other("fake bind failure: address in use"))
+                }
+            }
+        }
+        let harness = Harness::new("docs-serve-bind-fail");
+        let inv = invocation(&["docs", "--serve", "--port=8080", "--output=json"]);
+        let runner = LaunchFailRunner;
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = super::execute_docs(
+            &inv,
+            super::super::common::Env {
+                workspace: &harness.workspace,
+                runner: &runner,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 1, "launch failure is operational");
+        let err_text = String::from_utf8(err).expect("stderr");
+        assert!(err_text.contains("serve_failed"), "{err_text}");
+        assert!(!err_text.contains("launch_failed"), "{err_text}");
+        let text = String::from_utf8(out).expect("out");
+        assert!(text.contains("serve_failed"), "{text}");
     }
 
     #[test]

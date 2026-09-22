@@ -804,6 +804,14 @@ mod tests {
             bad_fail.contains("info|warning|error"),
             "fail-on value set drifted: {bad_fail}"
         );
+        let bad_color = super::super::error::ArgsError::BadColor {
+            value: "bright".to_owned(),
+        }
+        .to_string();
+        assert!(
+            bad_color.contains("auto|always|never"),
+            "color value set drifted: {bad_color}"
+        );
         assert_eq!(
             super::super::completion::COMPLETION_SHELLS,
             &["bash", "zsh", "fish", "powershell"],
@@ -822,7 +830,7 @@ mod tests {
         }
         // Man escapes dashes (`\-\-output`), so assert the stems plus the
         // alias token: same grammar as `--help`, parity by construction.
-        for stem in ["output", "fail", "here", "cwd"] {
+        for stem in ["output", "fail", "here", "cwd", "color", "host", "open"] {
             assert!(text.contains(stem), "man missing flag stem {stem}");
         }
     }
