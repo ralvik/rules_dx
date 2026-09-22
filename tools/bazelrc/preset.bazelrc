@@ -12,3 +12,5 @@ coverage --instrumentation_filter=^//
 build:dx_debug --compilation_mode=dbg
 build:dx_dev --compilation_mode=fastbuild
 build:dx_release --compilation_mode=opt
+build:dx_dev_remote --compilation_mode=fastbuild
+build:dx_toolchain --compilation_mode=fastbuild

@@ -1,3 +1,4 @@
+# Snapshot of the tools/coverage/cells.bzl registry; scope follows the seed cell.
 # Seed-cell exact-gate inventory (issue #89 item 1; registry issue #507).
 #
 # Each required configuration/platform cell gates its own combined LCOV

@@ -597,6 +597,25 @@ Maintainer automation updates exact standalone metadata and private locks, verif
 licenses, and opens reviewable pull requests. Ruleset-owned package graphs are resolved
 only by maintainer workflows; published module sources contain complete current locks.
 
+### Repinning
+
+Every managed lock dialect repins through one resolver-owned command (maintainer
+only; requires network). `bazel run //tools:repin-all` sequences the whole table
+and stops at the first failure; `depcheck locks`
+(`//tools/depcheck:repo_locks_test`) owns pin consistency for all six and fails
+on drift.
+
+| Dialect | Manifest | Lock | Repin command |
+| --- | --- | --- | --- |
+| cargo | `rust/tests/fixtures/hello/Cargo.toml` (plus the hub manifests in `modules/rust.bzl`) | `rust/tests/fixtures/hello/Cargo.lock` plus `cargo-bazel-lock.json` | `CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello` |
+| npm | `package.json` | `pnpm-lock.yaml` | `bazel run @pnpm//:pnpm -- update` |
+| npm tools | `quality/tools/javascript/package.json` | `quality/tools/javascript/pnpm-lock.yaml` | `bazel run @pnpm//:pnpm -- --dir quality/tools/javascript install --lockfile-only` |
+| maven | `third_party/jvm/pins.bzl` (`MAVEN_ARTIFACTS`) | `third_party/jvm/maven_install.json` | `REPIN=1 bazel run @maven//:pin` |
+| nuget | `third_party/dotnet/paket.dependencies` | `third_party/dotnet/paket.lock` | `bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file $PWD/third_party/dotnet/paket.dependencies --output-folder $PWD/third_party/dotnet/deps` |
+| go | `third_party/go/go.mod` | `third_party/go/go.sum` | Intentional no-op (pinned module lock tracks Gazelle; widen via `dx bump`) |
+| uv | `python/tests/fixtures/hello/pyproject.toml` | `python/tests/fixtures/hello/uv.lock` | `uv lock` in `python/tests/fixtures/hello` |
+| uv tools | `quality/tools/python/pyproject.toml` | `quality/tools/python/uv.lock` | `uv lock` in `quality/tools/python` |
+
 Unchanged content-addressed artifacts may be reused across `rules_dx` releases. An update
 must run the affected capability suite on every required platform and may not silently
 change delivery class, runtime compatibility, or curated plugin membership.

@@ -7,6 +7,19 @@
 #   Bazelisk version + per-OS sha256: `.github/actions/setup-bazelisk/action.yml`
 # defaults (the single portable installer,; Dockerfile tracks
 #     the linux-amd64 pair and docs bootstrap tracks all five hosts).
+#   Module pins: `modules/*.bzl` wrappers own per-ecosystem pins
+#     (rust, python, js, java-scala-kotlin, dotnet, toolchains) plus the
+#     crate-manifest groups; `MODULE.bazel` keeps only `bazel_dep` plus
+#     extension use plus `use_repo` re-exports and must match every wrapper.
+#   Tested stack: `libs/testing/tested_stack.bzl` carries the full MODULE
+#     dep map (generated from `bazel mod deps --depth=1 --format=json`);
+#     the preset pins plus `.bazelversion` plus the support matrix track it.
+#   Preset fragment: `tools/bazelrc/src/lib.rs` inventory owns
+#     `tools/bazelrc/preset.bazelrc`; this test enforces the same invariant
+#     as `preset.update --verify-only` (flag lines plus counts plus pins).
+#   Tool repos: `quality/artifacts/repos.bzl` owns the `dx_tools`
+#     `use_repo` inventory; `//quality/artifacts:metadata` proves it
+#     against metadata and this test proves MODULE.bazel against it.
 #   Go toolchain: `MODULE.bazel` `go_sdk.download` owns the toolchain floor;
 #     `third_party/go/go.mod` carries the language floor (SDK minor must stay
 #     >= go.mod minor, issue #912).
@@ -22,7 +35,9 @@
 #
 # Usage: pin_consistency.sh <bazelversion> <module> <preset_rs>
 #   <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod>
-#   <root_pkg> <js_pkg>
+#   <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js>
+#   <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains>
+#   <repos_bzl> <preset_fragment> <root_bazelrc>
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
@@ -40,7 +55,17 @@ action_yml="${6:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <
 local_workflows="${7:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
 go_mod="${8:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
 root_pkg="${9:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-js_pkg="${10:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+js_pkg="${10:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_rust="${11:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_python="${12:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_js="${13:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_jvm="${14:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_dotnet="${15:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_hubs="${16:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_toolchains="${17:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+repos_bzl="${18:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+preset_fragment="${19:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+root_bazelrc="${20:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
 
 # --- Bazel canonical ---
 bazel_pin="$(tr -d '[:space:]' <"$bazelversion")"
@@ -191,6 +216,237 @@ if grep -q -F -e 'Bump selector: latest stable 2.x' "$module"; then
   ok
 else
   bad "MODULE.bazel lost the aspect_rules_py bump selector (want 'Bump selector: latest stable 2.x' for the ADR 0008 prerelease exception, issue #912)"
+fi
+
+# --- modules/ split: wrapper pins must equal MODULE.bazel pins ---
+mod_pin() { # file, CONSTANT -> version on stdout
+  grep -o -E -e "^${2} = \"[^\"]+\"" "$1" | head -1 | cut -d'"' -f2 || true
+}
+
+check_dep_pin() { # wrapper-file, CONSTANT, module-name
+  local want
+  want="$(mod_pin "$1" "$2")"
+  if [[ -z "$want" ]]; then
+    bad "$1 lost $2 (want a top-level string pin)"
+  elif grep -q -F -e "bazel_dep(name = \"$3\", version = \"$want\")" "$module"; then
+    ok
+  else
+    bad "MODULE.bazel drifts from $1 $2=$want (want bazel_dep $3 at $want)"
+  fi
+}
+
+check_dep_pin "$modules_rust" RULES_RUST_VERSION rules_rust
+check_dep_pin "$modules_rust" RULES_RUST_PROST_VERSION rules_rust_prost
+check_dep_pin "$modules_toolchains" RULES_CC_VERSION rules_cc
+check_dep_pin "$modules_toolchains" GOOGLETEST_VERSION googletest
+check_dep_pin "$modules_python" RULES_PYTHON_VERSION rules_python
+check_dep_pin "$modules_toolchains" RULES_GO_VERSION rules_go
+check_dep_pin "$modules_toolchains" GAZELLE_VERSION gazelle
+check_dep_pin "$modules_toolchains" RULES_SHELL_VERSION rules_shell
+check_dep_pin "$modules_toolchains" PLATFORMS_VERSION platforms
+check_dep_pin "$modules_toolchains" BAZEL_SKYLIB_VERSION bazel_skylib
+check_dep_pin "$modules_toolchains" RULES_PROTO_VERSION rules_proto
+check_dep_pin "$modules_jvm" RULES_JAVA_VERSION rules_java
+check_dep_pin "$modules_jvm" RULES_KOTLIN_VERSION rules_kotlin
+check_dep_pin "$modules_jvm" RULES_SCALA_VERSION rules_scala
+check_dep_pin "$modules_dotnet" RULES_DOTNET_VERSION rules_dotnet
+check_dep_pin "$modules_dotnet" BAZEL_LIB_VERSION bazel_lib
+check_dep_pin "$modules_jvm" RULES_JVM_EXTERNAL_VERSION rules_jvm_external
+check_dep_pin "$modules_python" ASPECT_RULES_PY_VERSION aspect_rules_py
+check_dep_pin "$modules_js" ASPECT_RULES_JS_VERSION aspect_rules_js
+check_dep_pin "$modules_js" ASPECT_RULES_TS_VERSION aspect_rules_ts
+check_dep_pin "$modules_js" ASPECT_RULES_JEST_VERSION aspect_rules_jest
+
+# Extension-level pins (non-bazel_dep call sites).
+rust_ver="$(mod_pin "$modules_rust" RUST_VERSION)"
+if grep -q -F -e "versions = [\"$rust_ver\"]" "$module"; then
+  ok
+else
+  bad "MODULE.bazel drifts from modules/rust.bzl RUST_VERSION=$rust_ver (want rust.toolchain versions)"
+fi
+rustfmt_ver="$(mod_pin "$modules_rust" RUSTFMT_VERSION)"
+if grep -q -F -e "rustfmt_version = \"$rustfmt_ver\"" "$module"; then
+  ok
+else
+  bad "MODULE.bazel drifts from modules/rust.bzl RUSTFMT_VERSION=$rustfmt_ver"
+fi
+for triple in x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
+  if grep -q -F -e "\"$triple\"" "$modules_rust" && grep -q -F -e "\"$triple\"" "$module"; then
+    ok
+  else
+    bad "musl triple $triple lost from modules/rust.bzl or MODULE.bazel rust.toolchain"
+  fi
+done
+scala_ver="$(mod_pin "$modules_jvm" SCALA_VERSION)"
+if grep -q -F -e "scala_config.settings(scala_version = \"$scala_ver\")" "$module"; then
+  ok
+else
+  bad "MODULE.bazel drifts from modules/java-scala-kotlin.bzl SCALA_VERSION=$scala_ver"
+fi
+dotnet_ver="$(mod_pin "$modules_dotnet" DOTNET_VERSION)"
+if grep -q -F -e "dotnet.toolchain(dotnet_version = \"$dotnet_ver\")" "$module"; then
+  ok
+else
+  bad "MODULE.bazel drifts from modules/dotnet.bzl DOTNET_VERSION=$dotnet_ver"
+fi
+ts_ver="$(mod_pin "$modules_js" TYPESCRIPT_VERSION)"
+if grep -q -F -e "typescript.deps(version = \"$ts_ver\")" "$module"; then
+  ok
+else
+  bad "MODULE.bazel drifts from modules/js.bzl TYPESCRIPT_VERSION=$ts_ver"
+fi
+py_interp="$(mod_pin "$modules_python" PYTHON_VERSION)"
+if grep -q -F -e "python.toolchain(python_version = \"$py_interp\")" "$module"; then
+  ok
+else
+  bad "MODULE.bazel drifts from modules/python.bzl PYTHON_VERSION=$py_interp"
+fi
+sdk_ver="$(mod_pin "$modules_toolchains" GO_SDK_VERSION)"
+if grep -q -F -e "go_sdk.download(version = \"$sdk_ver\")" "$module"; then
+  ok
+else
+  bad "MODULE.bazel drifts from modules/toolchains.bzl GO_SDK_VERSION=$sdk_ver"
+fi
+go_floor="$(mod_pin "$modules_toolchains" GO_LANGUAGE_FLOOR)"
+go_mod_ver="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$go_mod" | head -1 | cut -d' ' -f2 || true)"
+if [[ "$go_floor" == "$go_mod_ver" ]]; then
+  ok
+else
+  bad "modules/toolchains.bzl GO_LANGUAGE_FLOOR=$go_floor drifts from third_party/go/go.mod $go_mod_ver"
+fi
+pnpm_mod="$(mod_pin "$modules_js" PNPM_VERSION)"
+if [[ -n "$root_pm" && "$pnpm_mod" == "${root_pm#pnpm@}" ]]; then
+  ok
+else
+  bad "modules/js.bzl PNPM_VERSION=$pnpm_mod drifts from root packageManager $root_pm"
+fi
+
+# Crate-manifest groups: every wrapper manifest must mirror MODULE.bazel
+# exactly (MODULE files cannot load wrappers). Label existence is enforced
+# by Bazel itself at MODULE evaluation (a missing label fails the build).
+crate_labels="$(grep -o -E -e '"//[^"]*:Cargo.toml"' "$modules_rust" | tr -d '"' || true)"
+if [[ -z "$crate_labels" ]]; then
+  bad "modules/rust.bzl carries no crate manifests"
+else
+  ok
+fi
+module_manifests="$(sed -n '/crate.from_cargo(/,/^)/p' "$module" | grep -o -E -e '"//[^"]*:Cargo.toml"' | tr -d '"' | LC_ALL=C sort -u || true)"
+wrapper_manifests="$(echo "$crate_labels" | LC_ALL=C sort -u || true)"
+if [[ -n "$module_manifests" && "$module_manifests" == "$wrapper_manifests" ]]; then
+  ok
+else
+  bad "MODULE.bazel crate manifests drift from modules/rust.bzl groups (mirror both ways)"
+fi
+dupes="$(echo "$crate_labels" | LC_ALL=C sort | uniq -d | wc -l | tr -d ' ')"
+if [[ "$dupes" == "0" ]]; then
+  ok
+else
+  bad "modules/rust.bzl lists a crate manifest twice"
+fi
+for group in CRATE_FIXTURE_MANIFESTS CRATE_CLI_MANIFESTS CRATE_DEPLOY_MANIFESTS CRATE_SHARD_WRITER_MANIFESTS CRATE_SHARED_MANIFESTS; do
+  if grep -q -F -e "$group = [" "$modules_rust"; then
+    ok
+  else
+    bad "modules/rust.bzl lost manifest group $group"
+  fi
+done
+
+# --- Tool repos: MODULE.bazel use_repo must equal repos.bzl inventory ---
+want_repos="$(grep -o -E -e '"dx_[a-z0-9_]+"' "$repos_bzl" | tr -d '"' | LC_ALL=C sort -u || true)"
+have_repos="$(sed -n '/^use_repo($/,/^)/p' "$module" | grep -o -E -e '"dx_[a-z0-9_]+"' | tr -d '"' | LC_ALL=C sort -u || true)"
+if [[ -n "$want_repos" && "$want_repos" == "$have_repos" ]]; then
+  ok
+else
+  bad "MODULE.bazel dx_tools use_repo drifts from quality/artifacts/repos.bzl DX_TOOL_REPOS"
+fi
+
+# --- Shell-env policy: third-party pin stays False with zero opt-ins ---
+if grep -q -F -e 'build --@rules_rust//cargo/settings:use_default_shell_env=False' "$root_bazelrc"; then
+  ok
+else
+  bad ".bazelrc lost the hermetic build-script pin (want use_default_shell_env=False; first-party default lives in gazelle/rust/lang_generate.go)"
+fi
+if grep -v -E -e '^\s*#' "$module" | grep -q -F -e 'build_script_use_default_shell_env = "on"'; then
+  bad "MODULE.bazel gained a shell-env opt-in (narrowly allowed only with a reviewed policy update in modules/rust.bzl)"
+else
+  ok
+fi
+
+# --- Preset verify-only: fragment must equal the lib.rs inventory ---
+preset_flags="$(grep -o -E -e '^    "[a-z_:]+ [^"]+"' "$preset_py" | sed -e 's/^    "//' -e 's/"$//' || true)"
+preset_flag_count="$(echo "$preset_flags" | grep -c . || true)"
+fragment_flags="$(grep -v -E -e '^#|^$' "$preset_fragment" || true)"
+fragment_flag_count="$(echo "$fragment_flags" | grep -c . || true)"
+if [[ "$preset_flag_count" == "$fragment_flag_count" ]] && [[ "$preset_flag_count" == "12" ]]; then
+  ok
+else
+  bad "preset flag drift (lib.rs has $preset_flag_count, preset.bazelrc has $fragment_flag_count; want 12 each: run preset.update)"
+fi
+stale_preset=0
+while IFS= read -r flag; do
+  [[ -n "$flag" ]] || continue
+  if ! grep -q -F -e "$flag" "$preset_fragment"; then
+    bad "preset.bazelrc stale: missing inventory flag $flag (run preset.update)"
+    stale_preset=1
+  fi
+done <<<"$preset_flags"
+if [[ "$stale_preset" == "0" ]]; then
+  ok
+fi
+dx_ver="$(grep -o -E -e 'PRESET_DX_VERSION[^"]*"[^"]+"' "$preset_py" | head -1 | grep -o -E -e '"[^"]+"$' | tr -d '"' || true)"
+module_ver="$(grep -o -E -e '^    version = "[^"]+"' "$module" | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$dx_ver" && "$dx_ver" == "$module_ver" ]]; then
+  ok
+else
+  bad "preset PRESET_DX_VERSION=$dx_ver drifts from MODULE.bazel version=$module_ver"
+fi
+
+# --- Tested stack: full MODULE dep map must match ---
+while IFS= read -r dep_line; do
+  [[ -n "$dep_line" ]] || continue
+  dep_name="$(echo "$dep_line" | cut -d'"' -f2)"
+  dep_ver="$(echo "$dep_line" | cut -d'"' -f4)"
+  if grep -q -F -e "bazel_dep(name = \"$dep_name\", version = \"$dep_ver\")" "$module"; then
+    ok
+  else
+    bad "tested_stack.bzl $dep_name=$dep_ver drifts from MODULE.bazel"
+  fi
+done <<<"$(grep -o -E -e '^    "[a-z_0-9]+": "[^"]+"' "$tested_stack" || true)"
+stack_dotnet="$(grep -A2 -F -e '"dotnet_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$stack_dotnet" && "$stack_dotnet" == "$dotnet_ver" ]]; then
+  ok
+else
+  bad "tested_stack.bzl dotnet_version=$stack_dotnet drifts from modules/dotnet.bzl DOTNET_VERSION=$dotnet_ver"
+fi
+stack_go_sdk="$(grep -A2 -F -e '"go_sdk_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$stack_go_sdk" && "$stack_go_sdk" == "$sdk_ver" ]]; then
+  ok
+else
+  bad "tested_stack.bzl go_sdk_version=$stack_go_sdk drifts from modules/toolchains.bzl GO_SDK_VERSION=$sdk_ver"
+fi
+stack_pnpm="$(grep -A2 -F -e '"pnpm_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$stack_pnpm" && "$stack_pnpm" == "$pnpm_mod" ]]; then
+  ok
+else
+  bad "tested_stack.bzl pnpm_version=$stack_pnpm drifts from modules/js.bzl PNPM_VERSION=$pnpm_mod"
+fi
+stack_python="$(grep -A2 -F -e '"python_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$stack_python" && "$stack_python" == "$py_interp" ]]; then
+  ok
+else
+  bad "tested_stack.bzl python_version=$stack_python drifts from modules/python.bzl PYTHON_VERSION=$py_interp"
+fi
+stack_scala="$(grep -A2 -F -e '"scala_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$stack_scala" && "$stack_scala" == "$scala_ver" ]]; then
+  ok
+else
+  bad "tested_stack.bzl scala_version=$stack_scala drifts from modules/java-scala-kotlin.bzl SCALA_VERSION=$scala_ver"
+fi
+stack_ts="$(grep -A2 -F -e '"typescript_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$stack_ts" && "$stack_ts" == "$ts_ver" ]]; then
+  ok
+else
+  bad "tested_stack.bzl typescript_version=$stack_ts drifts from modules/js.bzl TYPESCRIPT_VERSION=$ts_ver"
 fi
 
 dx_test_summary "pin consistency"

@@ -143,6 +143,37 @@ fn version_tuple(value: &str) -> Vec<i64> {
         .collect()
 }
 
+/// Numeric dotted versions compare equal when zero-padded forms match
+/// (NuGet records `4.0` for manifest `4.0.0`; every managed resolver pads
+/// the same way). Prerelease or build segments stay string-exact.
+fn versions_equal(spec: &str, locked: &str) -> bool {
+    if spec.contains(['-', '+']) || locked.contains(['-', '+']) {
+        return spec == locked;
+    }
+    fn numeric_parts(value: &str) -> Option<Vec<u64>> {
+        let mut parts = Vec::new();
+        for part in value.split('.') {
+            if part.is_empty() || !part.bytes().all(|c| c.is_ascii_digit()) {
+                return None;
+            }
+            parts.push(part.parse::<u64>().ok()?);
+        }
+        Some(parts)
+    }
+    match (numeric_parts(spec), numeric_parts(locked)) {
+        (Some(mut a), Some(mut b)) => {
+            while a.len() < b.len() {
+                a.push(0);
+            }
+            while b.len() < a.len() {
+                b.push(0);
+            }
+            a == b
+        }
+        _ => spec == locked,
+    }
+}
+
 fn is_full_version(text: &str) -> bool {
     let mut parts = text.split(['.', '-']);
     let (Some(a), Some(b), Some(c)) = (parts.next(), parts.next(), parts.next()) else {
@@ -230,11 +261,8 @@ pub fn satisfies(spec: &str, locked: &str) -> bool {
     if s == "*" || s.is_empty() {
         return true;
     }
-    if exact {
-        return locked_norm.trim() == s;
-    }
-    if is_full_version(&s) {
-        return locked_norm.trim() == s;
+    if exact || is_full_version(&s) {
+        return versions_equal(&s, locked_norm.trim());
     }
     let smajor = s.split('.').next().unwrap_or("").trim().to_owned();
     let lmajor = locked_norm
@@ -916,10 +944,10 @@ pub fn parse_dotnet_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, S
     Ok(deps)
 }
 
-/// Parse `paket.lock` (native).
+/// Parse `paket.lock` (native; top-level entries only, never nested constraints).
 pub fn parse_dotnet_lock(path: &Path) -> Result<BTreeMap<String, String>, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable lock: {e}"))?;
-    let re = regex::Regex::new(r"^\s*([A-Za-z0-9_.\-]+)\s+\(([^)]+)\)")
+    let re = regex::Regex::new(r"^    ([A-Za-z0-9_.\-]+) \(([^)]+)\)")
         .map_err(|e| format!("unreadable lock: {e}"))?;
     let mut pkgs = BTreeMap::new();
     for line in text.lines() {
@@ -1376,13 +1404,26 @@ pub fn cmd_consistency(
             return 2;
         }
     };
-    let mut failures = Vec::new();
     let cc_lock_sha = if eco == Ecosystem::Cc {
         parse_cc_lock_sha(lock)
     } else {
         BTreeMap::new()
     };
-    for (name, info) in &deps {
+    check_maps(eco, &deps, &pkgs, &cc_lock_sha, stdout, stderr)
+}
+
+/// Compare declared deps against locked versions (shared by the single-pair
+/// and workspace-locks commands; callers own file loading).
+fn check_maps(
+    eco: Ecosystem,
+    deps: &BTreeMap<String, DepInfo>,
+    pkgs: &BTreeMap<String, String>,
+    cc_lock_sha: &BTreeMap<String, String>,
+    stdout: &mut dyn std::fmt::Write,
+    stderr: &mut dyn std::fmt::Write,
+) -> i32 {
+    let mut failures = Vec::new();
+    for (name, info) in deps {
         let mut locked = pkgs.get(name).cloned();
         if locked.is_none() {
             let alt = if name.contains('_') {
@@ -1438,6 +1479,198 @@ pub fn cmd_consistency(
         eco.name()
     );
     0
+}
+
+/// Parse the `MAVEN_ARTIFACTS` coordinate list (see `third_party/jvm/pins.bzl`).
+pub fn parse_maven_artifacts_list(path: &Path) -> Result<BTreeMap<String, DepInfo>, String> {
+    let text = std::fs::read_to_string(path).map_err(|e| format!("unreadable manifest: {e}"))?;
+    let re = regex::Regex::new(r#""([^":\s]+:[^":\s]+:[^":\s]+)""#)
+        .map_err(|e| format!("unreadable manifest: {e}"))?;
+    let mut deps = BTreeMap::new();
+    for caps in re.captures_iter(&text) {
+        let coord = caps[1].to_owned();
+        let mut parts = coord.split(':');
+        let (Some(group), Some(artifact), Some(version)) =
+            (parts.next(), parts.next(), parts.next())
+        else {
+            continue;
+        };
+        if parts.next().is_some() {
+            continue;
+        }
+        deps.insert(
+            normalize_jvm(&format!("{group}:{artifact}")),
+            DepInfo {
+                spec: version.to_owned(),
+                category: "prod".to_owned(),
+                optional: false,
+                platform: false,
+                raw: format!("{group}:{artifact}"),
+                peer: false,
+                sha256: String::new(),
+            },
+        );
+    }
+    if deps.is_empty() {
+        return Err("unreadable manifest: no maven coordinates".to_owned());
+    }
+    Ok(deps)
+}
+
+/// Workspace lock pairs for the six managed dialects (see `//tools:repin-all`).
+pub struct WorkspaceLocks<'a> {
+    pub cargo_manifest: &'a Path,
+    pub cargo_lock: &'a Path,
+    pub uv_manifest: &'a Path,
+    pub uv_lock: &'a Path,
+    pub pnpm_manifest: &'a Path,
+    pub pnpm_lock: &'a Path,
+    pub go_manifest: &'a Path,
+    pub go_lock: &'a Path,
+    pub maven_artifacts: &'a Path,
+    pub maven_lock: &'a Path,
+    pub paket_manifest: &'a Path,
+    pub paket_lock: &'a Path,
+}
+
+fn check_pair(
+    eco: Ecosystem,
+    manifest: &Path,
+    lock: &Path,
+    stdout: &mut dyn std::fmt::Write,
+    stderr: &mut dyn std::fmt::Write,
+) -> i32 {
+    if !manifest.exists() {
+        let _ = writeln!(
+            stderr,
+            "depcheck: ERROR: manifest missing: {}",
+            manifest.display()
+        );
+        return 2;
+    }
+    if !lock.exists() {
+        let _ = writeln!(
+            stderr,
+            "depcheck: ERROR: lock missing: {} (declare lock inputs, do not skip)",
+            lock.display()
+        );
+        return 2;
+    }
+    let mut deps = match load_manifest(eco, manifest) {
+        Ok(deps) => deps,
+        Err(err) => {
+            let _ = writeln!(stderr, "depcheck: ERROR: {err}");
+            return 2;
+        }
+    };
+    if matches!(eco, Ecosystem::Js | Ecosystem::Ts) {
+        deps.retain(|_, v| !v.peer);
+    }
+    let pkgs = match load_lock(eco, lock) {
+        Ok(pkgs) => pkgs,
+        Err(err) => {
+            let _ = writeln!(stderr, "depcheck: ERROR: {err}");
+            return 2;
+        }
+    };
+    check_maps(eco, &deps, &pkgs, &BTreeMap::new(), stdout, stderr)
+}
+
+fn check_maven_pair(
+    artifacts: &Path,
+    lock: &Path,
+    stdout: &mut dyn std::fmt::Write,
+    stderr: &mut dyn std::fmt::Write,
+) -> i32 {
+    if !artifacts.exists() {
+        let _ = writeln!(
+            stderr,
+            "depcheck: ERROR: manifest missing: {}",
+            artifacts.display()
+        );
+        return 2;
+    }
+    if !lock.exists() {
+        let _ = writeln!(
+            stderr,
+            "depcheck: ERROR: lock missing: {} (declare lock inputs, do not skip)",
+            lock.display()
+        );
+        return 2;
+    }
+    let deps = match parse_maven_artifacts_list(artifacts) {
+        Ok(deps) => deps,
+        Err(err) => {
+            let _ = writeln!(stderr, "depcheck: ERROR: {err}");
+            return 2;
+        }
+    };
+    let pkgs = match parse_jvm_lock(lock) {
+        Ok(pkgs) => pkgs,
+        Err(err) => {
+            let _ = writeln!(stderr, "depcheck: ERROR: {err}");
+            return 2;
+        }
+    };
+    check_maps(
+        Ecosystem::Java,
+        &deps,
+        &pkgs,
+        &BTreeMap::new(),
+        stdout,
+        stderr,
+    )
+}
+
+/// Verify all six workspace locks in one invocation (offline, non-mutating).
+/// Returns the worst per-dialect code: 0 clean, 1 stale, 2 unreadable.
+pub fn cmd_locks(
+    locks: &WorkspaceLocks,
+    stdout: &mut dyn std::fmt::Write,
+    stderr: &mut dyn std::fmt::Write,
+) -> i32 {
+    let mut worst = 0;
+    for code in [
+        check_pair(
+            Ecosystem::Rust,
+            locks.cargo_manifest,
+            locks.cargo_lock,
+            stdout,
+            stderr,
+        ),
+        check_pair(
+            Ecosystem::Python,
+            locks.uv_manifest,
+            locks.uv_lock,
+            stdout,
+            stderr,
+        ),
+        check_pair(
+            Ecosystem::Js,
+            locks.pnpm_manifest,
+            locks.pnpm_lock,
+            stdout,
+            stderr,
+        ),
+        check_pair(
+            Ecosystem::Go,
+            locks.go_manifest,
+            locks.go_lock,
+            stdout,
+            stderr,
+        ),
+        check_maven_pair(locks.maven_artifacts, locks.maven_lock, stdout, stderr),
+        check_pair(
+            Ecosystem::Csharp,
+            locks.paket_manifest,
+            locks.paket_lock,
+            stdout,
+            stderr,
+        ),
+    ] {
+        worst = worst.max(code);
+    }
+    worst
 }
 
 /// Verify declared deps are used in the owning scope. Returns exit code.

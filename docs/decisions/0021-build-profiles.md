@@ -24,8 +24,9 @@ with fixtures in `cli/cli/tests/fixtures/build_profiles/` via
 
 ## Decision
 
-Three additive Bazel configs live in the vendored preset
-(`tools/bazelrc/preset.bazelrc`, reviewed via `tools/bazelrc/src/lib.rs`):
+Three accepted Bazel configs live in the vendored preset
+(`tools/bazelrc/preset.bazelrc`, reviewed via `tools/bazelrc/src/lib.rs`),
+plus two provisional lanes (see Provisional Extension below):
 
 - `dx_debug` maps to `dbg`.
 - `dx_dev` maps to `fastbuild`.
@@ -42,11 +43,26 @@ Command defaults are `dev` for `build`/`run`/`test` and `release` for
 and the `DX_PROFILE` forwarding contract are qualified under issue #814
 (successor to closed #457), not to this record.
 
+## Provisional Extension
+
+Two provisional lanes reserve stable names without changing behavior:
+
+- `dx_dev_remote` maps to `fastbuild`; remote executor/BES selection stays
+  open and remote behavior remains unverified.
+- `dx_toolchain` maps to `fastbuild`; per-invocation toolchain flags stay
+  explicit until toolchain-resolution flags qualify.
+
+Selecting either lane equals `dx_dev` today. Both are additive only; no
+existing invocation changes meaning, and the CLI surface is unchanged (no
+new `--remote`/`--toolchain` flags; Bazel-level lanes only). Executor plus
+toolchain flag qualification stays open work linked from the roadmap, not
+claimed here.
+
 ## Consequences
 
 - One shared vocabulary backs all commands; no per-command flag drift.
 - The configs are additive only; no existing invocation changes meaning.
-- The preset generator and `preset.update_test` pin the three mappings;
+- The preset generator and `preset.update_test` pin the five mappings;
   a new profile or mode change requires a reviewed regen.
 - CLI surface is unchanged by this record.
 

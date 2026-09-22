@@ -1,0 +1,22 @@
+"""Maintainer entry points (repin-all). Contract: docs/tools/tool-acquisition.md."""
+
+load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//quality:fixtures.bzl", "real_source_target")
+
+package(default_visibility = ["//visibility:public"])
+
+# Single repin entry point over every managed lock dialect (see
+# docs/tools/tool-acquisition.md#repinning). Maintainer only; CI never
+# runs it (repinning needs the network and mutates locks).
+sh_binary(
+    name = "repin-all",
+    srcs = ["repin_all.sh"],
+    # Bash-only harness is Linux-only (shell contract).
+    target_compatible_with = ["@platforms//os:linux"],
+)
+
+real_source_target(
+    name = "corpus_starlark",
+    starlark_srcs = ["BUILD.bazel"],
+    tags = ["corpus"],
+)

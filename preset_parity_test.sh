@@ -51,10 +51,12 @@ dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
   'coverage --combined_report=lcov' \
   'coverage --test_tag_filters=-no-coverage' \
   'coverage --instrumentation_filter=^//' \
-  '# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).' \
-  'build:dx_debug --compilation_mode=dbg' \
-  'build:dx_dev --compilation_mode=fastbuild' \
-  'build:dx_release --compilation_mode=opt'
+   '# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).' \
+   'build:dx_debug --compilation_mode=dbg' \
+   'build:dx_dev --compilation_mode=fastbuild' \
+   'build:dx_release --compilation_mode=opt' \
+   'build:dx_dev_remote --compilation_mode=fastbuild' \
+   'build:dx_toolchain --compilation_mode=fastbuild'
 echo "preset schema: checked-in fragment carries the pinned contract"
 
 # Hermetic coverage toolchain (issue #767): no ambient host gcov path;

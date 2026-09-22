@@ -39,10 +39,15 @@ const COVERAGE_FLAGS: [&str; 4] = [
 ];
 
 /// Owned build profiles (mirrors `BUILD_PROFILES`).
-const BUILD_PROFILES: [&str; 3] = [
+/// `dx_dev_remote` plus `dx_toolchain` reserve the remote plus toolchain
+/// lanes on the dev mode until executor plus toolchain flags qualify.
+/// See: `tools/bazelrc/src/lib.rs`.
+const BUILD_PROFILES: [&str; 5] = [
     "build:dx_debug --compilation_mode=dbg",
     "build:dx_dev --compilation_mode=fastbuild",
     "build:dx_release --compilation_mode=opt",
+    "build:dx_dev_remote --compilation_mode=fastbuild",
+    "build:dx_toolchain --compilation_mode=fastbuild",
 ];
 
 /// Renders the preset fragment byte-identical to `tools/bazelrc/src/lib.rs`.
@@ -267,7 +272,7 @@ mod tests {
         // Exact inventory counts (mirrors `tools/bazelrc/src/lib.rs` len pins).
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
         assert_eq!(COVERAGE_FLAGS.len(), 4);
-        assert_eq!(BUILD_PROFILES.len(), 3);
+        assert_eq!(BUILD_PROFILES.len(), 5);
         // Flags present.
         for flag in UPSTREAM_FLAGS
             .iter()
