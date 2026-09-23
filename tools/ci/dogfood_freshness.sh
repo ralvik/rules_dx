@@ -2,6 +2,13 @@
 # Dogfood-freshness battery (split from `.github/workflows/ci.yml`). No behavior change.
 set -euo pipefail
 
+# Shared workspace + runfiles helpers.
+# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
+source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
+dx_bootstrap "tools/sh/lib.sh"
+
+dx_cd_workspace
+
 bazel build --noshow_progress @dx_tools//:buildifier @dx_tools//:taplo @dx_tools//:vale //quality/evaluator:quality_evaluator
 bazel run --noshow_progress //cli/cli:dx -- generate --check //...
 bazel run --noshow_progress //tools/ci:corpus_audit

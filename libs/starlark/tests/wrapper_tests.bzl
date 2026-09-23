@@ -131,9 +131,14 @@ def wrapper_shape_kwargs_tests(name):
                 {"tags": ["cpu:4"]},
             ),
             expect_equal(
-                "test forward keeps timeout and flaky",
+                "test forward keeps timeout, drops flaky",
                 dx_test_forward_kwargs({"timeout": "short", "flaky": True}),
-                {"timeout": "short", "flaky": True},
+                {"timeout": "short"},
+            ),
+            expect_equal(
+                "test forward flaky-only stays empty",
+                dx_test_forward_kwargs({"flaky": True}),
+                {},
             ),
             expect_equal(
                 "test forward rides hints",

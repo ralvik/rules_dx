@@ -119,11 +119,15 @@ runs:
         }
         # Version-assert the selected hashing tool before checksumming
         # (issue #1061): the python3 fallback carries the 3.9+ floor,
-        # sha256sum/shasum log their versions for provenance.
+        # sha256sum/shasum log their versions for provenance. Capture the
+        # full --version output first so `head` cannot SIGPIPE the writer
+        # under `set -o pipefail` (sha256sum --version prints 7 lines).
         if command -v sha256sum >/dev/null 2>&1; then
-          sha256sum --version | head -n 1
+          hash_ver="$(sha256sum --version)"
+          printf '%s\n' "${hash_ver%%$'\n'*}"
         elif command -v shasum >/dev/null 2>&1; then
-          shasum --version | head -n 1
+          hash_ver="$(shasum --version)"
+          printf '%s\n' "${hash_ver%%$'\n'*}"
         else
           python3 --version
           python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'

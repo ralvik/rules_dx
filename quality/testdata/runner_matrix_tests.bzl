@@ -408,6 +408,9 @@ def runner_matrix_suite(name, cases):
             upstream_generated = case.get("upstream_generated", {}),
             expected = case["expected"],
             tags = ["no-coverage"],
+            # Goldens pin linux_x86_64 tool output (issue #1207); arm64/macOS
+            # runners skip rather than drift.
+            target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
         )
         tests.append(":" + case["name"])
     native.test_suite(name = name, tests = tests)

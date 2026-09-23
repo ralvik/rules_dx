@@ -34,14 +34,16 @@ const UPSTREAM_FLAGS: [&str; 3] = [
 ];
 
 /// Owned coverage flags (mirrors old `EXTRA_PRESETS["coverage"]`).
-/// Why no `COVERAGE_GCOV_PATH` pin: coverage tools resolve per-host via
-/// the C++ toolchain (`COVERAGE_GCOV_PATH`/`LLVM_COV`/`LLVM_PROFDATA`
-/// from `cc_toolchain`), never an ambient `/usr/bin/*` path.
+/// `COVERAGE_GCOV_PATH` pins the host gcov Bazel's collect_cc_coverage.sh
+/// needs when CC instruments under coverage; without it the script exits
+/// with `COVERAGE_GCOV_PATH: unbound variable` and every test fails.
+/// Toolchain llvm-cov still wins via `GENERATE_LLVM_LCOV=1` where present.
 /// See: `docs/cli/commands/build-test-coverage.md`.
-const COVERAGE_FLAGS: [&str; 4] = [
+const COVERAGE_FLAGS: [&str; 5] = [
     "coverage --test_env=GENERATE_LLVM_LCOV=1",
     "coverage --combined_report=lcov",
     "coverage --test_tag_filters=-no-coverage",
+    "coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
     "coverage --instrumentation_filter=^//",
 ];
 
@@ -308,14 +310,14 @@ mod tests {
         assert_eq!(PRESET_BAZEL_VERSION, "9.2.0");
         assert_eq!(PRESET_DX_VERSION, "0.0.0");
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
-        assert_eq!(COVERAGE_FLAGS.len(), 4);
+        assert_eq!(COVERAGE_FLAGS.len(), 5);
         assert_eq!(BUILD_PROFILES.len(), 5);
     }
 
     #[test]
     fn fragment_bytes_match_retired_python() {
         let rendered = render_fragment();
-        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
+        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
         assert_eq!(rendered, expected);
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));
@@ -336,7 +338,7 @@ mod tests {
         assert!(flags.contains("build:dx_dev --compilation_mode=fastbuild"));
         assert!(flags.contains("build:dx_dev_remote --compilation_mode=fastbuild"));
         assert!(flags.contains("build:dx_toolchain --compilation_mode=fastbuild"));
-        assert_eq!(flags.len(), 12);
+        assert_eq!(flags.len(), 13);
         assert!(!flags.iter().any(|line| line.starts_with('#')));
         assert!(!flags.iter().any(String::is_empty));
     }

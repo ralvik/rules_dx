@@ -7,7 +7,10 @@ useDefault = true
 # narrowed to docs prose paths plus match-level targeting so source files
 # never benefit from it.
 [allowlist]
-description = "docs SBOM prose is not a secret (generic-api-key false positive on 'SBOM/provenance')"
+description = "docs SBOM prose is not a secret; dx audit offline OSV snapshots under .dx/ are data, not source"
 regexes = ["SBOM/provenance"]
-paths = ["docs/.*\\.md$"]
+paths = [
+  "docs/.*\\.md$",
+  "\\.dx/.*",
+]
 regexTarget = "match"

@@ -119,9 +119,10 @@ def dx_forwarded_test_kwargs(kwargs):
     """Extracts the standard test attributes a test forwarder preserves.
 
     `tags` (minus `manual`, so both the private upstream and the public
-    wrapper run under `//...`), `timeout`, `flaky`, `shard_count`, and
-    `size` ride the forwarder; remaining kwargs stay upstream-only. See
-    issue #928.
+    wrapper run under `//...`), `timeout`, `shard_count`, and `size` ride
+    the forwarder; `flaky` stays upstream-only so the public forwarder is
+    an ordinary test (`//tools/ci:target_tags`). Remaining kwargs stay
+    upstream-only. See issue #928.
 
     Args:
       kwargs: Caller keyword arguments to filter.
@@ -134,7 +135,7 @@ def dx_forwarded_test_kwargs(kwargs):
         kept = [t for t in kwargs["tags"] if t != "manual"]
         if len(kept) > 0:
             out["tags"] = kept
-    for key in ("timeout", "flaky", "shard_count", "size"):
+    for key in ("timeout", "shard_count", "size"):
         if key in kwargs and kwargs[key] != None:
             out[key] = kwargs[key]
     return out
@@ -464,8 +465,9 @@ def dx_test_forward_kwargs(kwargs):
     """Returns the forwarder kwargs for one test shape.
 
     Standard test attributes via `dx_forwarded_test_kwargs` plus
-    `aspect_hints`, which ride the public forwarder where quality
-    aspects visit. Contract: `docs/quality/quality-sources.md`.
+    `aspect_hints` (quality aspects visit the public forwarder) and
+    `target_compatible_with` (both shapes skip together on an
+    incompatible platform). Contract: `docs/quality/quality-sources.md`.
 
     Args:
       kwargs: Caller keyword arguments to filter.
@@ -476,6 +478,8 @@ def dx_test_forward_kwargs(kwargs):
     out = dx_forwarded_test_kwargs(kwargs)
     if kwargs.get("aspect_hints", None) != None:
         out["aspect_hints"] = kwargs["aspect_hints"]
+    if kwargs.get("target_compatible_with", None) != None:
+        out["target_compatible_with"] = kwargs["target_compatible_with"]
     return out
 
 def dx_wrap_binary(name, upstream_rule, forward_rule, srcs, visibility = None, upstream_kwargs = None, **kwargs):

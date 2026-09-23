@@ -12,6 +12,8 @@ _AT = "@"
 # All executables live in authoritative toolchain repositories; any change
 # (toolchain update, rules_rust layout change, vendored copy) fails review.
 # rustc (WP3) shares the main toolchain repository with clippy-driver.
+# Windows/arm64/macOS runners get the linux_x86_64 goldens only on that
+# platform (issue #1207); the observation subject still builds everywhere.
 EXPECTED_IDENTITY_OBSERVATIONS = """subject //rust/toolchains:identity_under_test
 field clippy.owner=""" + _AT + """@rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools//:rust_toolchain
 field clippy.path=bazel-out/k8-fastbuild/bin/external/rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools/rust_toolchain/bin/clippy-driver
@@ -24,6 +26,8 @@ aspect_field field_count=6
 aspect_field has_subject=True
 aspect_field subject_label=//rust/toolchains:identity_under_test
 aspect_field transitive_count=0"""
+
+_LINUX_X86_64 = ["@platforms//os:linux", "@platforms//cpu:x86_64"]
 
 def toolchain_identity_tests(name):
     starlark_test(
@@ -47,4 +51,5 @@ def toolchain_identity_tests(name):
         mode = "analysis",
         subjects = [":identity_under_test"],
         expected_observations = EXPECTED_IDENTITY_OBSERVATIONS,
+        target_compatible_with = _LINUX_X86_64,
     )
