@@ -13,9 +13,10 @@
 # is the single stable required check. Reporting is first-party dx code;
 # no reviewdog. SARIF Code Scanning publication is opt-in, off by default.
 #
-# Hygiene (issue #80, deduped under #915): job bootstraps go through the
-# single `.github/actions/setup-checkout-bazelisk` composite (no-secrets
-# checkout plus pinned Bazelisk); every third-party
+# Hygiene (issue #80, deduped under #915): job bootstraps are an inline
+# no-secrets `actions/checkout` (must be step 1 — GitHub cannot resolve
+# `./` local actions before checkout) plus the pinned
+# `.github/actions/setup-bazelisk` installer; every third-party
 # action is pinned to a commit SHA with its tag in a trailing comment.
 # Platform labels never reach `runs-on` unchecked: `platforms-gate`
 # fails closed on missing, empty, or unsupported selections before any
@@ -140,7 +141,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Verify rules_dx pin
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
@@ -155,7 +159,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- typecheck --check //...
 
   format:
@@ -166,7 +173,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- format --check //...
 
   generate:
@@ -177,7 +187,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- generate --check //...
 
   security-audit:
@@ -188,7 +201,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- audit security //...
 
   license-audit:
@@ -199,7 +215,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- audit license //...
 
   test:
@@ -215,7 +234,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: test requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -234,7 +256,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: build requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -254,7 +279,10 @@ jobs:
       checks: write
       pull-requests: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: coverage requires explicit nonempty platforms; no implicit default" >&2; exit 1'

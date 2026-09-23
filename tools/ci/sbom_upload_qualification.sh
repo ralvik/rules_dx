@@ -39,12 +39,12 @@ release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 dryrun=".github/workflows/publish-dry-run.yml"
 runbook="docs/deploy/release-runbook.md"
-env_doc="docs/environments/environment.md"
 authoring="docs/deploy/authoring.md"
 pins="tools/ci/tests/fixtures/sbom_upload/pins.bzl"
 expected="tools/ci/tests/fixtures/sbom_upload/sbom_upload.expected"
 fixture_build="tools/ci/tests/fixtures/sbom_upload/BUILD.bazel"
-build="tools/ci/BUILD.bazel"
+build="tools/ci/ci_targets_b.bzl"
+freshness="tools/ci/dogfood_freshness.sh"
 
 # SBOM wire profile stays pinned: SPDX-2.3 plus SLSA v1 via the hermetic Rust toolchain.
 if grep -q -F -e 'SPDX-2.3' "$sbom" &&
@@ -94,8 +94,8 @@ fi
 # Upload stays pinned plus fail-closed plus least-privilege, publishes nothing.
 if grep -q -F -e 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4' "$ci" &&
   grep -q -F -e 'if-no-files-found: error' "$ci" &&
-  grep -q -F -e 'persist-credentials: false' .github/actions/setup-checkout-bazelisk/action.yml &&
-  grep -q -F -e 'setup-checkout-bazelisk' "$ci" &&
+  grep -q -F -e 'persist-credentials: false' "$ci" &&
+  grep -q -F -e 'setup-bazelisk' "$ci" &&
   grep -q -F -e 'publishes nothing' "$ci"; then
   ok
 else
@@ -110,7 +110,7 @@ else
   bad "publish-dry-run.yml lost its sbom_demo plus release-tests exercise (#612)"
 fi
 
-# Runbook records CI upload plus owner-gated attestation under.
+# Runbook records the CI upload plus owner-gated attestation under.
 if grep -q -F -e 'issue #612' "$runbook" &&
   grep -q -F -e 'sbom-provenance' "$runbook" &&
   grep -q -F -e 'owner-gated human-run' "$runbook" &&
@@ -120,15 +120,9 @@ else
   bad "release-runbook.md lost its #612 CI sbom-provenance plus owner-gated attestation record"
 fi
 
-# Environment doc records the CI SBOM upload (dispatch vs push split).
-if grep -q -F -e 'issue #612' "$env_doc" &&
-  grep -q -F -e 'sbom-provenance' "$env_doc"; then
-  ok
-else
-  bad "environment.md lost its #612 CI sbom-provenance upload record"
-fi
-
-# Authoring doc records the CI SBOM upload on the release path.
+# Authoring doc records the CI SBOM upload on the release path
+# (environment.md dropped the duplicate record under #985; runbook plus
+# authoring own the as-built text).
 if grep -q -F -e 'issue #612' "$authoring" &&
   grep -q -F -e 'sbom-provenance' "$authoring"; then
   ok
@@ -136,13 +130,16 @@ else
   bad "authoring.md lost its #612 CI sbom-provenance upload record"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
+# BUILD owns the harness target plus dogfood-freshness wires it
+# (targets live in the ci_targets_b shard after the BUILD split, #652;
+# ci.yml invokes dogfood_freshness, which lists this harness).
 if grep -q -F -e 'name = "sbom_upload_qualification"' "$build" &&
   grep -q -F -e 'sbom_upload_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:sbom_upload_qualification' "$ci"; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:sbom_upload_qualification' "$freshness" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:dogfood_freshness' "$ci"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the sbom_upload_qualification wiring (want target plus dogfood-freshness)"
+  bad "ci_targets_b.bzl or dogfood_freshness.sh lost the sbom_upload_qualification wiring (want target plus freshness)"
 fi
 
 # Fixture files stay present with corpus coverage.

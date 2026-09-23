@@ -139,13 +139,14 @@ else
   bad "dx-ci lost its stable needs plus always plus skipped-green record"
 fi
 
-# Four consumer fixture harnesses stay wired as evidence.
+# Four consumer fixture harnesses stay wired as evidence (targets live
+# in the ci_targets_a shard after the BUILD split, issue #652).
 if [[ -f "tools/ci/consumer_scheduling_test.sh" ]] &&
   [[ -f "tools/ci/consumer_aggregate_test.sh" ]] &&
   [[ -f "tools/ci/consumer_guards_test.sh" ]] &&
   [[ -f "tools/ci/consumer_pins_test.sh" ]] &&
-  grep -q -F -e 'consumer_scheduling_test' tools/ci/BUILD.bazel &&
-  grep -q -F -e 'consumer_aggregate_test' tools/ci/BUILD.bazel; then
+  grep -q -F -e 'consumer_scheduling_test' tools/ci/ci_targets_a.bzl &&
+  grep -q -F -e 'consumer_aggregate_test' tools/ci/ci_targets_a.bzl; then
   ok
 else
   bad "consumer fixture harnesses missing (scheduling/aggregate/guards/pins)"
@@ -164,18 +165,21 @@ else
   bad "caller template lost SHA pin, platforms, parallel, or version match ($caller_version vs $module_version)"
 fi
 
-# Hygiene: SHA pins with tag comments, single setup-checkout-bazelisk bootstrap, no inline install.
-# The no-secrets checkout pin lives once in the bootstrap composite (issue #915),
-# so pin counting covers the workflow plus the composite
+# Hygiene: SHA pins with tag comments, single setup-bazelisk bootstrap
+# after inline no-secrets checkout, no inline install. Checkout must be
+# step 1 (GitHub cannot resolve `./` local actions before checkout); the
+# pin count covers the workflow plus caller plus the installer action
 # (hermetic match count: host grep -o quirks diverge, issue #1006).
-actions_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40}')"
-commented_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-checkout-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+')"
+actions_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40}')"
+commented_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+')"
 if [[ "$actions_pins" -gt "0" && "$actions_pins" == "$commented_pins" ]] &&
-  [[ "$(grep -c -F -e './.github/actions/setup-checkout-bazelisk' "$workflow")" -ge "9" ]] &&
-  ! grep -F -e './.github/actions/setup-bazelisk' "$workflow" | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
+  [[ "$(grep -c -F -e './.github/actions/setup-bazelisk' "$workflow")" -ge "9" ]] &&
+  [[ "$(grep -c -F -e 'persist-credentials: false' "$workflow")" -ge "9" ]] &&
+  grep -q -F -e 'actions/checkout@' "$workflow" &&
+  ! grep -e 'setup-bazelisk' "$workflow" | grep -v -F -e './.github/actions/setup-bazelisk' | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
   ok
 else
-  bad "hygiene lost (SHA plus tag comments or single setup-checkout-bazelisk bootstrap path)"
+  bad "hygiene lost (SHA plus tag comments or single setup-bazelisk bootstrap after no-secrets checkout)"
 fi
 
 # Concurrency cancels superseded PR runs without deleting history.
@@ -188,12 +192,13 @@ else
 fi
 
 # Permissions stay least-privilege with fork-safe checkout (no-secrets
-# checkout lives once in the setup-checkout-bazelisk composite).
+# checkout is inline step 1 per job: `./` local actions need a
+# checked-out workspace, so a composite cannot own checkout as step 1).
 if grep -q -F -e 'contents: read' "$workflow" &&
   grep -q -F -e 'checks: write' "$workflow" &&
   grep -q -F -e 'pull-requests: write' "$workflow" &&
-  grep -q -F -e 'persist-credentials: false' .github/actions/setup-checkout-bazelisk/action.yml &&
-  [[ "$(grep -c -F -e './.github/actions/setup-checkout-bazelisk' "$workflow")" -ge "9" ]]; then
+  [[ "$(grep -c -F -e 'persist-credentials: false' "$workflow")" -ge "9" ]] &&
+  [[ "$(grep -c -F -e './.github/actions/setup-bazelisk' "$workflow")" -ge "9" ]]; then
   ok
 else
   bad "permissions lost least-privilege plus no-secrets bootstrap record"
@@ -374,9 +379,10 @@ else
   bad "fork/untrusted/sensitive/retries/Code-Scanning gap lost its owner"
 fi
 
-# Contract plus matrix keep the qualification tracker.
-if grep -q -F -e 'issue #509' "$contract" &&
-  grep -q -F -e 'issue #509' "$matrix"; then
+# Contract plus matrix keep the qualification tracker (#509 closed;
+# contract says closed #509, matrix still says issue #509).
+if grep -q -F -e '#509' "$contract" &&
+  grep -q -F -e '#509' "$matrix"; then
   ok
 else
   bad "github-ci contract/matrix lost its #509 qualification tracker record"

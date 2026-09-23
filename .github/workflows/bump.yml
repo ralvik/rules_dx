@@ -27,9 +27,10 @@
 # open PRs with write credentials) and the human merge path from
 # docs/contributing/automation.md preserved.
 #
-# Hygiene (issue #80, deduped under #915): the bootstrap goes through
-# `.github/actions/setup-checkout-bazelisk` (no-secrets checkout plus
-# pinned Bazelisk); every third-party action
+# Hygiene (issue #80, deduped under #915): the bootstrap is an inline
+# no-secrets `actions/checkout` (step 1; local `./` actions need a
+# checked-out workspace) plus the pinned
+# `.github/actions/setup-bazelisk` installer; every third-party action
 # is pinned to a commit SHA with its tag in a trailing comment.
 
 name: bump
@@ -70,7 +71,10 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
