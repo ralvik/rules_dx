@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, known, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -62,6 +62,7 @@ pub fn parse_ruff(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "ruff";
+    check_output_size(TOOL, stdout)?;
     let diagnostics: Vec<RuffDiagnostic> =
         serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
             tool: TOOL,
@@ -104,6 +105,7 @@ pub fn parse_ruff_format(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "ruff_format";
+    check_output_size(TOOL, stdout)?;
     let diagnostics: Vec<RuffDiagnostic> =
         serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
             tool: TOOL,

@@ -13,7 +13,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, FileFinding, ParseError};
+use super::{check_output_size, code_name, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -210,6 +210,7 @@ pub fn parse_sarif(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size(tool, stdout)?;
     let log: SarifLog = serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
         tool,
         detail: err.to_string(),

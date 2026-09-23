@@ -8,7 +8,7 @@
 //! with N errors.` summary goes to stderr and is ignored here). URIs
 //! are `file:` paths with point regions; `level` maps error/warning.
 
-use super::{sarif::parse_sarif, FileFinding, ParseError};
+use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
 /// Parses Checkstyle `-f sarif` stdout. `files` are the absolute
 /// scratch paths passed to the tool.
@@ -17,6 +17,7 @@ pub fn parse_checkstyle(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size("checkstyle", stdout)?;
     parse_sarif("checkstyle", stdout, code, files)
 }
 

@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -72,6 +72,7 @@ pub fn parse_biome_lint(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "biome";
+    check_output_size(TOOL, stdout)?;
     let report: BiomeReport = serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
         tool: TOOL,
         detail: err.to_string(),
@@ -124,6 +125,7 @@ pub fn parse_biome_format(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "biome_format";
+    check_output_size(TOOL, stdout)?;
     let report: BiomeReport = serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
         tool: TOOL,
         detail: err.to_string(),

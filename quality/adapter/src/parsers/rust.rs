@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, known, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, FileFinding, ParseError};
 use crate::{Finding, Suggestion, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -57,6 +57,7 @@ pub fn parse_clippy(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size("clippy", stderr)?;
     parse_rust_diagnostics("clippy", stderr, code, files)
 }
 
@@ -69,6 +70,7 @@ pub fn parse_rustc(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size("rustc", stderr)?;
     parse_rust_diagnostics("rustc", stderr, code, files)
 }
 
@@ -78,6 +80,7 @@ fn parse_rust_diagnostics(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size(tool, stderr)?;
     let stderr_text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
         tool,
         detail: err.to_string(),

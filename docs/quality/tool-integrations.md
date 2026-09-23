@@ -134,6 +134,16 @@ are implemented with conformance fixtures and metadata pins, and no new public A
 support claim follows from these selections beyond what the fixtures prove. Acquisition evidence
 lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-research).
 
+Parser hardening (issue #1064): every parser enforces the shared 8 MiB output cap
+(`ParseError::TooLarge`) before grammar work; every check or fix spawn enforces
+`SPAWN_TIMEOUT` wall-time plus the same output cap, fail-closed as action errors. Piped
+child output is drained concurrently so a chatty tool cannot fake a timeout by filling the
+pipe buffer. A std-only property harness feeds mutated bytes through representative parsers
+across text, JSON, SARIF, JSONL, and dual-stream families and proves `Ok` or `ParseError`,
+never panic (no new supply-chain dep). `tsc` bare-file runner dispatch is wont-fix
+(issue #1064): target-coupled only (requires `TsConfigInfo`), pipeline-only with pass plus
+fail samples and no `REAL_TOOLS` entry.
+
 - **Buildifier:** qualify `--mode=check --format=json` with `--lint=off` for formatting and
   `--lint=warn` for linting, plus explicit `--config` or `--config=off`. The
   [v8.5.1 CLI](https://github.com/bazel-contrib/buildtools/blob/v8.5.1/buildifier/buildifier.go)
@@ -229,6 +239,8 @@ lives in [Tool Acquisition](../tools/tool-acquisition.md#initial-artifact-resear
   adapter only: it never runs as a bare file invocation and requires the authoritative
   `typescript_project` context (`TsConfigInfo`). Bare-file use would lose tsconfig and declaration
   context. Upstream mapping evidence is the `typescript_project` typecheck test target.
+  Bare-file runner dispatch is wont-fix (issue #1064): pipeline-only with parser samples,
+  no `REAL_TOOLS` entry and no matrix cell.
 - **JVM cohort (closed #796, successor to closed #416, delivered):**
   complete-upstream-artifact plus shared-JDK route for google-java-format, Checkstyle, PMD,
   SpotBugs, ktfmt, ktlint, with detekt plus Error Prone itemized under closed #796 (successor to closed #416).

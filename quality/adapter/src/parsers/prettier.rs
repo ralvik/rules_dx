@@ -3,7 +3,7 @@
 //! Per-family module of [`crate::parsers`]: the pinned-shape contract
 //! and [`ParseError`] semantics live in the parent module docs.
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Parses Prettier `--check` stderr. `files` are the workspace-relative
@@ -15,6 +15,7 @@ pub fn parse_prettier_check(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "prettier";
+    check_output_size(TOOL, stderr)?;
     let text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

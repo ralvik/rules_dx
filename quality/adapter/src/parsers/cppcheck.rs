@@ -5,7 +5,7 @@
 //!
 //! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
-use super::{code_name, known, missing, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, missing, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 /// Finds the value of `name="..."` inside one XML element tag.
@@ -41,6 +41,7 @@ pub fn parse_cppcheck(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "cppcheck";
+    check_output_size(TOOL, stderr)?;
     let text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

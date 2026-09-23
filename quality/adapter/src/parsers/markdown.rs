@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// One newline-delimited JSON finding line from the repo-owned Markdown
@@ -32,6 +32,7 @@ pub fn parse_markdown_findings(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "markdown_check";
+    check_output_size(TOOL, stdout)?;
     // Kebab-case ids emitted by the repo-owned checker
     // (`quality_markdown::kind_id`): every checker kind must parse here,
     // otherwise real.rs turns live findings into action failures.
