@@ -5,7 +5,7 @@
 //!
 //! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Parses `rubocop --format json` stdout over the release-assembled
@@ -21,6 +21,7 @@ pub fn parse_rubocop(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "rubocop";
+    check_output_size(TOOL, stdout)?;
     let value: serde_json::Value =
         serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
             tool: TOOL,

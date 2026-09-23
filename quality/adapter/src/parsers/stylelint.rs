@@ -5,7 +5,7 @@
 //!
 //! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Parses `stylelint --formatter json` stdout. `files` are the
@@ -22,6 +22,7 @@ pub fn parse_stylelint(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "stylelint";
+    check_output_size(TOOL, stdout)?;
     let value: serde_json::Value =
         serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
             tool: TOOL,

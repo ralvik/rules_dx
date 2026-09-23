@@ -13,7 +13,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, known, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -55,6 +55,7 @@ pub fn parse_scalafix(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "scalafix";
+    check_output_size(TOOL, stdout)?;
     if code != Some(0) {
         return Err(ParseError::Shape {
             tool: TOOL,

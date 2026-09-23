@@ -13,7 +13,7 @@
 
 use serde::Deserialize;
 
-use super::{known, FileFinding, ParseError};
+use super::{check_output_size, known, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -109,6 +109,7 @@ fn roslyn_severity(level: Option<&str>) -> Result<ToolSeverity, ParseError> {
 /// fail closed.
 pub fn parse_roslyn(sarif: &[u8], files: &[&str]) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "roslyn";
+    check_output_size(TOOL, sarif)?;
     let text = std::str::from_utf8(sarif).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

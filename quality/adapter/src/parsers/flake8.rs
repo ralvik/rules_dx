@@ -3,7 +3,7 @@
 //! Per-family module of [`crate::parsers`]: the pinned-shape contract
 //! and [`ParseError`] semantics live in the parent module docs.
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Maps a flake8 code family onto a severity: `E` (pycodestyle errors)
@@ -65,6 +65,7 @@ pub fn parse_flake8(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "flake8";
+    check_output_size(TOOL, stdout)?;
     let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

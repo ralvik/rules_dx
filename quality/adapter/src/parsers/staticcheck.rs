@@ -5,7 +5,7 @@
 //!
 //! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
-use super::{code_name, known, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 fn json_fail(tool: &'static str, detail: String) -> ParseError {
@@ -49,6 +49,7 @@ pub fn parse_staticcheck(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "staticcheck";
+    check_output_size(TOOL, stdout)?;
     let text = std::str::from_utf8(stdout).map_err(|err| shape_fail(TOOL, err.to_string()))?;
     let value: serde_json::Value =
         serde_json::from_str(text).map_err(|err| json_fail(TOOL, err.to_string()))?;

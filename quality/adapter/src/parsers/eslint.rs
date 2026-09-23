@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, known, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -50,6 +50,7 @@ pub fn parse_eslint(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "eslint";
+    check_output_size(TOOL, stdout)?;
     let reports: Vec<EslintFile> =
         serde_json::from_slice(stdout).map_err(|err| ParseError::Json {
             tool: TOOL,

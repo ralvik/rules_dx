@@ -14,7 +14,7 @@
 
 use serde::Deserialize;
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -47,6 +47,7 @@ pub fn parse_buf_lint(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "buf";
+    check_output_size(TOOL, stdout)?;
     let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),
@@ -149,6 +150,7 @@ pub fn parse_buf_format(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "buf";
+    check_output_size(TOOL, stdout)?;
     let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

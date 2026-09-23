@@ -9,7 +9,7 @@
 //! finding (empty rule, `file is not formatted`, warning), mirroring
 //! Prettier.
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Parses google-java-format `--dry-run --set-exit-if-changed` stdout.
@@ -20,6 +20,7 @@ pub fn parse_google_java_format(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "google_java_format";
+    check_output_size(TOOL, stdout)?;
     let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),
