@@ -68,7 +68,7 @@ initial 1
 initial WARNING clang_format - matrix/clang_format_dirty.c 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/clang_format_dirty.c 0 94 "// Seed C format fixture.\\n#include <stdio.h>\\n\\nint greet( const char*name){ fixed return 0; }\\n"
+replacement matrix/clang_format_dirty.c 75 81 "fixed"
 """,
     },
     {
@@ -110,7 +110,7 @@ initial 1
 initial WARNING clang_format - matrix/clang_format_dirty.cpp 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/clang_format_dirty.cpp 0 77 "// Seed C++ format fixture.\\n\\nint greet( const char*name){ fixed return 0; }\\n"
+replacement matrix/clang_format_dirty.cpp 58 64 "fixed"
 """,
     },
     {
@@ -236,7 +236,7 @@ initial 1
 initial WARNING gofumpt - matrix/gofumpt_dirty.go 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/gofumpt_dirty.go 0 106 "// Seed Go format fixture.\\npackage gofumpt\\n\\nfunc greet( name string)string{ fixed return \\"hello \\"+name }\\n"
+replacement matrix/gofumpt_dirty.go 76 82 "fixed"
 """,
     },
     {

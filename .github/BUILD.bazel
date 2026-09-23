@@ -8,6 +8,7 @@ package(default_visibility = ["//:__subpackages__"])
 # All workflows are exported (issue #915): reusable callers plus the
 # self-called ci/bump/ghcr routes share one export list.
 exports_files([
+    "workflows/README.md",
     "workflows/bump.yml",
     "workflows/ci.yml",
     "workflows/ghcr.yml",

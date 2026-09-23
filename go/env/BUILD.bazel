@@ -21,7 +21,7 @@ go_env_plan(
 go_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//go/tests/fixtures/hello:hello",
+    target = "//go/tests/fixtures/hello",
 )
 
 go_env_plan(

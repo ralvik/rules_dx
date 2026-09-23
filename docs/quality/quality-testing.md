@@ -113,7 +113,7 @@ The apply step itself never changes Bazel action keys.
 Verification uses `aquery` plus execution logs or a controlled remote cache.
 A warm local no-op alone is not a cache test. Delivered evidence is local
 execution-log hit/miss; remote-cache proof stays unverified per
-[Testing Strategy](../testing/README.md#remote-tests).
+[Testing Strategy](../testing/strategy-details.md#remote-tests).
 
 ## Determinism
 

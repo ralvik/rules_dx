@@ -1,7 +1,7 @@
 """Seed Ruby RSpec fixture: ruby_test over pinned rspec 3.13.0."""
 
-load("//ruby/rules:defs.bzl", "ruby_library", "ruby_test")
 load("//quality:fixtures.bzl", "real_source_target")
+load("//ruby/rules:defs.bzl", "ruby_library", "ruby_test")
 
 package(
     default_testonly = True,

@@ -145,8 +145,8 @@ fn nearby_reason(
             max: MAX_REASON_LEN,
         });
     }
-    let has_issue = issue_value(current).is_some()
-        || previous.is_some_and(|prev| issue_value(prev).is_some());
+    let has_issue =
+        issue_value(current).is_some() || previous.is_some_and(|prev| issue_value(prev).is_some());
     if !has_issue {
         return Err(LcovError::MissingIssue {
             path: path.to_string(),
@@ -561,7 +561,10 @@ mod tests {
     fn range_excludes_interior_and_boundaries() {
         let source = file_lines(&[
             "fn f() {".to_string(),
-            format!("    // {} - reason: range opens, issue: 1055.", marker("_START")),
+            format!(
+                "    // {} - reason: range opens, issue: 1055.",
+                marker("_START")
+            ),
             "    1".to_string(),
             format!(
                 "    // {} - reason: range closes, issue: 1055.",
@@ -670,7 +673,10 @@ mod tests {
     fn marker_after_string_state_is_recognized() {
         let source = file_lines(&[
             "let s = \"a\\\"b\";".to_string(),
-            format!("// {} - reason: after strings, issue: 1055.", marker("_LINE")),
+            format!(
+                "// {} - reason: after strings, issue: 1055.",
+                marker("_LINE")
+            ),
             "code();".to_string(),
         ]);
         let ignores = find_ignores("t.rs", &source).unwrap();
@@ -730,7 +736,10 @@ mod tests {
     fn hash_range_excludes_boundaries_for_starlark() {
         let source = file_lines(&[
             "def f():".to_string(),
-            format!("    # {} - reason: range opens, issue: 1055.", marker("_START")),
+            format!(
+                "    # {} - reason: range opens, issue: 1055.",
+                marker("_START")
+            ),
             "    pass".to_string(),
             format!(
                 "    # {} - reason: range closes, issue: 1055.",
@@ -893,10 +902,7 @@ mod tests {
             marker("_LINE")
         )]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(
-            err.to_string().contains("bare policy"),
-            "{err}"
-        );
+        assert!(err.to_string().contains("bare policy"), "{err}");
     }
 
     #[test]
@@ -907,10 +913,7 @@ mod tests {
             "    1".to_string(),
         ]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(
-            err.to_string().contains("bare policy"),
-            "{err}"
-        );
+        assert!(err.to_string().contains("bare policy"), "{err}");
     }
 
     #[test]
@@ -920,10 +923,7 @@ mod tests {
             marker("_LINE")
         )]);
         let err = find_ignores("t.rs", &source).unwrap_err();
-        assert!(
-            err.to_string().contains("issue"),
-            "{err}"
-        );
+        assert!(err.to_string().contains("issue"), "{err}");
     }
 
     #[test]
@@ -975,10 +975,7 @@ mod tests {
     fn max_length_reason_passes_at_boundary() {
         let suffix = ", issue: 1055";
         let exact = "z".repeat(MAX_REASON_LEN - suffix.len());
-        let source = file_lines(&[format!(
-            "// {} - reason: {exact}{suffix}",
-            marker("_LINE")
-        )]);
+        let source = file_lines(&[format!("// {} - reason: {exact}{suffix}", marker("_LINE"))]);
         assert!(find_ignores("t.rs", &source)
             .unwrap()
             .singles
@@ -1013,7 +1010,7 @@ mod tests {
     #[test]
     fn reason_wins_when_line_carries_both_keys() {
         let source = file_lines(&[format!(
-            "// {} - reason: first policy: second.",
+            "// {} - issue: 1055 - reason: first policy: second.",
             marker("_LINE")
         )]);
         let ignores = find_ignores("t.rs", &source).unwrap();

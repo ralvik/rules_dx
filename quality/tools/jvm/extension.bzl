@@ -5,8 +5,8 @@ One lazy repo per tool; registration fetches nothing (no per-platform matrix: JV
 run over the shared JDK).
 """
 
-load("//quality/tools/jvm:repos.bzl", "JVM_TOOLS")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", _http_archive = "http_archive", _http_file = "http_file")
+load("//quality/tools/jvm:repos.bzl", "JVM_TOOLS")
 
 def _jvm_tools_impl(ctx):
     for name in sorted(JVM_TOOLS.keys()):

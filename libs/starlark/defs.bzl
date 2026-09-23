@@ -332,7 +332,7 @@ _RUNNER_PRELUDE = [
     '        case "$0" in',
     '            */*) self_runfiles="$0.runfiles/$TEST_WORKSPACE/$short_path";;',
     '            *) self_runfiles="$TEST_SRCDIR/$TEST_WORKSPACE/$short_path";;',
-    '        esac',
+    "        esac",
     '        if [ -f "$self_runfiles" ]; then',
     '            path="$self_runfiles"',
     "        fi",

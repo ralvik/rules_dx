@@ -111,9 +111,9 @@ go_test(
     name = "rust_test",
     srcs = [
         "cargo_test.go",
-        "lang_test.go",
         "lang_resolve_test.go",
         "lang_scopes_test.go",
+        "lang_test.go",
         "layout_test.go",
         "manifest_test.go",
         "naming_test.go",

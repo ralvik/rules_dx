@@ -3,8 +3,8 @@
 Contract: `docs/quality/action-model.md`.
 """
 
-load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 load("//libs/starlark:canonical.bzl", "strip_canonical")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 load("//quality:real_aspects.bzl", "real_rust_typecheck_aspect", "real_typecheck_aspect")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 

@@ -46,6 +46,10 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # `main.cc`; thin cc_binary entries stay handwritten, so Gazelle never
 # owns it.
 # gazelle:exclude cc/tests/fixtures/hello
+# cc/ide holds the handwritten thin-binary fixture with `version.cc`
+# defining main; thin cc_binary entries stay handwritten, so Gazelle
+# never owns it.
+# gazelle:exclude cc/ide
 # gazelle/cc/testdata holds the cc generation-test corpus with
 # intentionally ambiguous basenames; Gazelle never owns the golden tree.
 # gazelle:exclude gazelle/cc/testdata
@@ -70,6 +74,10 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # fsharp/tests/fixtures/xunit holds the handwritten entry-point
 # fixture; Gazelle never owns it.
 # gazelle:exclude fsharp/tests/fixtures/xunit
+# fsharp/tests/fixtures/order holds the handwritten mixed-package
+# compile-order fixture (`module Demo` + `module Helper` in one
+# directory); F# mixed packages fail closed, so Gazelle never owns it.
+# gazelle:exclude fsharp/tests/fixtures/order
 # gazelle holds the extension implementations themselves: handwritten
 # Go with framework imports that resolve via MODULE, not a go.mod, so
 # strict generation fails closed and Gazelle never owns them.

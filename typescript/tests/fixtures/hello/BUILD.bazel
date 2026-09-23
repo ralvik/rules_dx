@@ -40,11 +40,11 @@ typescript_test(
     srcs = ["hello_test.ts"],
     config = "jest.config.cjs",
     declaration = True,
-    deps = [":hello_lib"],
     node_modules = "//:node_modules",
     node_options = ["--experimental-vm-modules"],
     transpiler = "tsc",
     tsconfig = "tsconfig.json",
+    deps = [":hello_lib"],
 )
 
 # Hello smoke test; no-coverage process-spawning, see build-conventions.

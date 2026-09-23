@@ -42,7 +42,7 @@ initial WARNING buildifier module-docstring matrix/starlark_dirty.bzl 0 1 fixabl
 terminal 1
 terminal WARNING buildifier module-docstring matrix/starlark_dirty.bzl 0 1 fixable=false "The file has no module docstring.\\nA module docstring is a string literal (not a comment) which should be the first statement of a file (it may follow comment lines)."
 replacements 1
-replacement matrix/starlark_dirty.bzl 0 4 "x = 1\\n"
+replacement matrix/starlark_dirty.bzl 1 2 " = "
 """,
     },
     {
@@ -82,7 +82,7 @@ initial 1
 initial WARNING buildifier - matrix/starlark_dirty.bzl 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/starlark_dirty.bzl 0 4 "x = 1\\n"
+replacement matrix/starlark_dirty.bzl 1 2 " = "
 """,
     },
     {
@@ -121,7 +121,7 @@ convergence STABLE
 initial 0
 terminal 0
 replacements 1
-replacement matrix/toml_dirty.toml 0 4 "a = 1\\n"
+replacement matrix/toml_dirty.toml 1 2 " = "
 """,
     },
     {
@@ -161,7 +161,7 @@ initial 1
 initial WARNING taplo - matrix/toml_dirty.toml 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/toml_dirty.toml 0 4 "a = 1\\n"
+replacement matrix/toml_dirty.toml 1 2 " = "
 """,
     },
 ]

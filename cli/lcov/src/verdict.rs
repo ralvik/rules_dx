@@ -769,7 +769,10 @@ mod tests {
 
     #[test]
     fn invalid_source_markers_fail_evaluation() {
-        let source = file_lines(&[format!("// {} - reason: stray stop, issue: 1055.", marker("_STOP"))]);
+        let source = file_lines(&[format!(
+            "// {} - reason: stray stop, issue: 1055.",
+            marker("_STOP")
+        )]);
         let files = BTreeMap::from([("elf.rs", source)]);
         let verdict = evaluate(
             &eligible_inventory(&["elf.rs"]),

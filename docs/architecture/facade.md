@@ -3,7 +3,7 @@
 Consumer facade mapping, Rust library boundary, and upstream authorities.
 The [Architecture index](README.md) stays short; this document owns the facade record.
 
-### Facade Twins (Post-Reorg Mapping)
+## Facade Twins (Post-Reorg Mapping)
 
 `cli/` holds the Rust implementation (34 crates: 27 under `cli/` plus 5
 under `quality/` plus 2 under `generation/`, `dx_*` crate names stable) and
@@ -32,7 +32,7 @@ hermetically under issue #466: no `e2e/` tree, CLI-contract pins run under
 | `//tools/coverage:coverage_gate` | Single crate after the unused `:coverage` wrapper removal | Accepted |
 | `real_source_target(name="corpus_*")` splits | Per content type per package, Gazelle-owned via `dx generate`, shared `tags = ["corpus"]` (issue #15) | Accepted |
 
-### Rust Library Boundary (Issue #469)
+## Rust Library Boundary (Issue #469)
 
 Rust libraries stay internal with a binaries-only public boundary: only
 `//cli/cli:dx` and `//cli/env:env` are public tool entry points, and
@@ -43,7 +43,7 @@ and wont-extract rationale live in
 [ADR 0023](../decisions/0023-rust-libraries-internal.md); guard
 `//tools/ci:rust_library_qualification` pins them.
 
-### Upstream Authorities
+## Upstream Authorities
 
 Language foundations wrap pinned upstream rulesets for build, test, toolchain, provider, and IDE
 semantics. Wrapper macros use bare conventional names (`python_library`, not `dx_py_library`)

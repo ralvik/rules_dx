@@ -79,7 +79,7 @@ initial 1
 initial WARNING prettier - quality/testdata/real_dirty.json 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.json 0 8 "{ \\"a\\": 1 }\\n"
+replacement quality/testdata/real_dirty.json 1 6 " \\"a\\": 1 "
 """,
     },
 ]

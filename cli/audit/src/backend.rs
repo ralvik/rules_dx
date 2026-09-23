@@ -10,7 +10,7 @@
 //! V1 backends (all offline, no lockfile/inventory upload):
 //! - Secrets (security family, once per invocation): Gitleaks-only
 //!   (Trufflehog wont-fix, issue #629; See: `docs/cli/commands/audit-update-bazel.md#dx-audit`) as a checksummed standalone
-//!   artifact (`gitleaks detect --source .` with SARIF output,
+//!   artifact (`gitleaks detect --no-git --source .` with SARIF output,
 //!   `--redact`, and `--exit-code 2`), using the flag shapes pinned
 //!   in [`crate::secrets`]. Findings-versus-error distinction consults
 //!   the SARIF report (see [`crate::secrets`] exit classification);
@@ -66,6 +66,12 @@ pub const SECRETS_BINARY: &str = "gitleaks";
 
 /// Secrets subcommand: repository detection over the workspace source.
 pub const SECRETS_SUBCOMMAND: &str = "detect";
+
+/// Scan as a plain directory: the child env is cleared to `TMPDIR` only
+/// (PATH never set, See: [`crate::secrets::hermetic_env`]), so Gitleaks
+/// cannot spawn `git` for history mode. Working-tree detection still
+/// runs; git-history mode is unreachable by the hermetic contract.
+pub const NO_GIT_FLAG: &str = "--no-git";
 
 /// Source flag: scan the runner cwd (the resolved workspace).
 pub const SOURCE_FLAG: &str = "--source";
@@ -159,6 +165,7 @@ pub fn plan_secrets(
     let mut argv = vec![
         tool.to_owned(),
         SECRETS_SUBCOMMAND.to_owned(),
+        NO_GIT_FLAG.to_owned(),
         SOURCE_FLAG.to_owned(),
         WORKSPACE_SOURCE.to_owned(),
         REPORT_FORMAT_FLAG.to_owned(),
@@ -224,6 +231,7 @@ mod tests {
             BackendPlan::Run { argv, env } => {
                 assert_eq!(argv[0], "/hermetic/gitleaks");
                 assert!(argv.contains(&"detect".to_owned()));
+                assert!(argv.contains(&"--no-git".to_owned()));
                 assert!(argv.contains(&"--source".to_owned()));
                 assert!(argv.contains(&".".to_owned()));
                 assert!(argv.contains(&"--report-format".to_owned()));
@@ -336,6 +344,7 @@ mod tests {
     fn frozen_spellings() {
         assert_eq!(SECRETS_BINARY, "gitleaks");
         assert_eq!(SECRETS_SUBCOMMAND, "detect");
+        assert_eq!(NO_GIT_FLAG, "--no-git");
         assert_eq!(SOURCE_FLAG, "--source");
         assert_eq!(WORKSPACE_SOURCE, ".");
         assert_eq!(SECRETS_ERROR_EXIT, "2");

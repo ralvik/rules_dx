@@ -18,7 +18,12 @@ field clippy.path=bazel-out/k8-fastbuild/bin/external/rules_rust++rust+rust_linu
 field rustc.owner=""" + _AT + """@rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools//:rust_toolchain
 field rustc.path=bazel-out/k8-fastbuild/bin/external/rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools/rust_toolchain/bin/rustc
 field rustfmt.owner=""" + _AT + """@rules_rust++rust+rustfmt_1.98.0__x86_64-unknown-linux-gnu_tools//:bin/rustfmt
-field rustfmt.path=external/rules_rust++rust+rustfmt_1.98.0__x86_64-unknown-linux-gnu_tools/bin/rustfmt"""
+field rustfmt.path=external/rules_rust++rust+rustfmt_1.98.0__x86_64-unknown-linux-gnu_tools/bin/rustfmt
+aspect_field aspect_seen=True
+aspect_field field_count=6
+aspect_field has_subject=True
+aspect_field subject_label=//rust/toolchains:identity_under_test
+aspect_field transitive_count=0"""
 
 def toolchain_identity_tests(name):
     starlark_test(

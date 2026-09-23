@@ -70,10 +70,10 @@ sh_test(
     ],
     data = [
         ":aggregated.sarif",
-        ":net8.sarif",
         ":net10.sarif",
-        ":roslyn_net8",
+        ":net8.sarif",
         ":roslyn_net10",
+        ":roslyn_net8",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
     ],

@@ -77,7 +77,7 @@ initial 1
 initial WARNING biome - quality/testdata/real_dirty.ts 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.ts 0 91 "export function add(first: number, second: number) {\\n\\tconst unused = 1;\\n\\treturn first + second;\\n}\\n"
+replacement quality/testdata/real_dirty.ts 20 89 "first: number, second: number) {\\n\\tconst unused = 1;\\n\\treturn first + second;\\n"
 """,
     },
     {
@@ -157,7 +157,7 @@ initial 1
 initial WARNING biome - matrix/jsx_dirty.jsx 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/jsx_dirty.jsx 0 69 "export function View() {\\n\\tconst unused = 1;\\n\\treturn <div>Hello</div>;\\n}\\n"
+replacement matrix/jsx_dirty.jsx 21 67 ") {\\n\\tconst unused = 1;\\n\\treturn <div>Hello</div>;\\n"
 """,
     },
     {
@@ -237,7 +237,7 @@ initial 1
 initial WARNING biome - matrix/tsx_dirty.tsx 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/tsx_dirty.tsx 0 100 "export function View(props: { name: string }) {\\n\\tconst unused = 1;\\n\\treturn <div>Hello {props.name}</div>;\\n}\\n"
+replacement matrix/tsx_dirty.tsx 27 98 " { name: string }) {\\n\\tconst unused = 1;\\n\\treturn <div>Hello {props.name}</div>;\\n"
 """,
     },
 ]

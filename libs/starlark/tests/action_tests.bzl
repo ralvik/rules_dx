@@ -2,7 +2,7 @@
 """
 
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_equal", "expect_false", "expect_match", "expect_true", "starlark_test")
-load("//libs/starlark/tests/fixtures/starlark_futures:action_subjects.bzl", "admitted_action_outputs", "admitted_actions", "action_fingerprint_like", "action_report", "action_subject_fields", "is_supported_action", "resolve_action")
+load("//libs/starlark/tests/fixtures/starlark_futures:action_subjects.bzl", "action_fingerprint_like", "action_report", "action_subject_fields", "admitted_action_outputs", "admitted_actions", "is_supported_action", "resolve_action")
 
 def action_unit_tests(name):
     starlark_test(

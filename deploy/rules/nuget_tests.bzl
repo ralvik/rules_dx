@@ -92,12 +92,22 @@ def nuget_unit_tests(name):
 EXPECTED_NUGET_DEFAULT_OBSERVATIONS = """subject //deploy/rules:nuget_demo
 file nuget_demo
 field app=
-field profile=release"""
+field profile=release
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//deploy/rules:nuget_demo
+aspect_field transitive_count=0"""
 
 EXPECTED_NUGET_DEBUG_OBSERVATIONS = """subject //deploy/rules:nuget_demo_debug
 file nuget_demo_debug
 field app=
-field profile=debug"""
+field profile=debug
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//deploy/rules:nuget_demo_debug
+aspect_field transitive_count=0"""
 
 def nuget_analysis_tests(name):
     starlark_test(

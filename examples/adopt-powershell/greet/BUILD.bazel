@@ -13,8 +13,8 @@ package(default_visibility = ["//:__subpackages__"])
 pwsh_library(
     name = "greet",
     srcs = [
-        "Greet.psm1",
         "Greet.psd1",
+        "Greet.psm1",
     ],
 )
 

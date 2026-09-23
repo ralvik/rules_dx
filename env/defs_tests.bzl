@@ -183,7 +183,12 @@ def env_defs_unit_tests(name):
 
 EXPECTED_ENV_OBSERVATIONS = """subject //env:config_under_test
 field count=2
-field names=a,alpha,beta"""
+field names=a,alpha,beta
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//env:config_under_test
+aspect_field transitive_count=0"""
 
 def env_config_analysis_tests(name):
     starlark_test(
@@ -200,7 +205,12 @@ file beta
 file tree_under_test.metadata.json
 field count=2
 field host_names=a,alpha,beta
-field platform=posix"""
+field platform=posix
+aspect_field aspect_seen=True
+aspect_field field_count=3
+aspect_field has_subject=True
+aspect_field subject_label=//env:tree_under_test
+aspect_field transitive_count=0"""
 
 def env_tree_analysis_tests(name):
     starlark_test(
@@ -212,7 +222,12 @@ def env_tree_analysis_tests(name):
 
 EXPECTED_DEFAULT_CONFIG_OBSERVATIONS = """subject //env:default_config
 field count=3
-field names=doctor,dx,quality_markdown"""
+field names=doctor,dx,quality_markdown
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//env:default_config
+aspect_field transitive_count=0"""
 
 def env_default_config_analysis_tests(name):
     starlark_test(
@@ -229,7 +244,12 @@ file dx
 file quality_markdown
 field count=3
 field host_names=doctor,dx,quality_markdown
-field platform=posix"""
+field platform=posix
+aspect_field aspect_seen=True
+aspect_field field_count=3
+aspect_field has_subject=True
+aspect_field subject_label=//env:default_tree
+aspect_field transitive_count=0"""
 
 def env_default_tree_analysis_tests(name):
     starlark_test(

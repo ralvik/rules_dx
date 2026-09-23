@@ -40,7 +40,7 @@ audit integrations to the selected Bazel scope. It has two families, `security`
 license-policy analysis); it is not an umbrella
 for lint, formatting, tests, or builds. Gitleaks is the V1 secrets integration
 (Trufflehog wont-fix, issue #629: one pinned tool, silent swap rejected),
-run as `<hermetic-gitleaks> detect --source . --report-format sarif --report-path <temp>`
+run as `<hermetic-gitleaks> detect --no-git --source . --report-format sarif --report-path <temp>`
 with `--redact` and `--exit-code 2`, using built-in defaults unless
 `.gitleaks.toml` is committed (explicit `--config` then pins it). The binary
 is the pinned `@dx_tools//:gitleaks` standalone artifact (v8.30.1 on all five
@@ -52,7 +52,9 @@ per-run temp directory) reaches Gitleaks, `PATH` is never set, and
 `GITLEAKS_CONFIG`/`GITLEAKS_CONFIG_TOML` plus every other parent variable are
 never inherited, so configuration flows only through explicit `--config`, the
 committed `.gitleaks.toml`, or built-in defaults and ambient values cannot
-inject rules. The committed file is honored without a hash pin, so a tampered
+inject rules. `--no-git` is required because the cleared env never supplies
+`PATH` for a `git` spawn: the scan is working-tree only under the hermetic
+contract (git-history mode is unreachable by design). The committed file is honored without a hash pin, so a tampered
 config can disable rules: every scan under it carries a warning diagnostic,
 and the checked-in allowlist stays narrowed to docs prose with owner plus
 review notes (see `.gitleaks.toml`). Detection flags are unchanged. Platform evidence: SARIF

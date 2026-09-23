@@ -141,6 +141,7 @@ sh_test(
         "$(rootpath //third_party/ruby:Gemfile.lock)",
     ],
     data = [
+        ":depcheck",
         "//:package.json",
         "//:pnpm-lock.yaml",
         "//python/tests/fixtures/hello:pyproject.toml",
@@ -157,7 +158,6 @@ sh_test(
         "//third_party/ruby:Gemfile.lock",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
-        ":depcheck",
     ],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
@@ -192,6 +192,7 @@ sh_test(
         "$(rootpath //examples/adopt-polyglot:Cargo.lock)",
     ],
     data = [
+        ":depcheck",
         "//examples/adopt-go:go.mod",
         "//examples/adopt-go:go.sum",
         "//examples/adopt-js-ts:package.json",
@@ -210,7 +211,6 @@ sh_test(
         "//examples/adopt-rust:Cargo.toml",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
-        ":depcheck",
     ],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],

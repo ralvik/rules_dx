@@ -53,7 +53,7 @@ initial 1
 initial WARNING buf - matrix/buf_dirty.proto 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/buf_dirty.proto 0 49 "syntax = \\"proto3\\";\\n\\npackage fixtures.buf; fixed\\n"
+replacement matrix/buf_dirty.proto 42 48 "fixed"
 """,
     },
     {
@@ -137,7 +137,7 @@ initial 1
 initial WARNING qmlformat - matrix/qmlformat_dirty.qml 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/qmlformat_dirty.qml 0 32 "import QtQuick\\n\\nItem { fixed }\\n"
+replacement matrix/qmlformat_dirty.qml 23 29 "fixed"
 """,
     },
     {

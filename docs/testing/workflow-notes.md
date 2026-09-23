@@ -3,8 +3,6 @@
 CI policy notes split from `ci.yml` header comments.
 The [workflow index](../../.github/workflows/README.md) stays short; this document owns the policy-note record.
 
-# CI workflow notes (split from `ci.yml`). No behavior change.
-
 The following policy notes lived as header comments in `ci.yml`:
 
 ```yaml

@@ -128,7 +128,9 @@ runs:
           python3 --version
           python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'
         fi
-        got="$(sha_of "$tmp_file")"
+        # Windows Git Bash can prefix the hash with non-hex bytes (observed
+        # as a leading `\0` before the correct digest); compare hex-only.
+        got="$(sha_of "$tmp_file" | tr -cd '0-9a-f' | tr 'A-F' 'a-f')"
         if [[ "$got" != "$want" ]]; then
           echo "setup-bazelisk: checksum mismatch for $asset: got $got, want $want" >&2
           exit 1

@@ -11,8 +11,8 @@ package(
 pwsh_library(
     name = "hello_lib",
     srcs = [
-        "Greet.psm1",
         "Greet.psd1",
+        "Greet.psm1",
     ],
 )
 

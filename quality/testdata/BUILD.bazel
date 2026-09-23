@@ -1,7 +1,7 @@
 """WP2c aspect fixtures and evidence (synthetic, real, Python)."""
 
-load("//libs/starlark:failure_test.bzl", "failure_test")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
+load("//libs/starlark:failure_test.bzl", "failure_test")
 load("//quality:aspect_subject.bzl", "aspect_subject")
 load("//quality:fixtures.bzl", "quality_source_target", "real_source_target")
 load("//quality:native_config.bzl", "biome_config", "checkstyle_config", "eslint_config", "ruff_config", "rustfmt_config", "vale_config")
@@ -368,12 +368,16 @@ real_aspect_subject(
 
 # JVM fixtures: clean modules passing the curated format plus lint
 # defaults, plus a hinted Checkstyle closure proving the native-config
-# `-c` reaches the tool. Lint/format subjects live in the lint/format
-# presence suite below. SpotBugs stays target-coupled (no provider-less
-# fixture stage) so no SpotBugs subject appears here.
+# `-c` reaches the tool. The unhinted java source stays a manual
+# negative (Checkstyle has no usable upstream default, so the subject
+# must fail analysis like fixture_real_markdown_no_config); the green
+# presence suite carries only the hinted java subject plus kotlin.
+# SpotBugs stays target-coupled (no provider-less fixture stage) so no
+# SpotBugs subject appears here.
 real_source_target(
     name = "fixture_real_java",
     java_srcs = ["real_clean.java"],
+    tags = ["manual"],
 )
 
 real_source_target(
@@ -394,6 +398,7 @@ checkstyle_config(
 
 real_aspect_subject(
     name = "fixture_real_java_subject",
+    tags = ["manual"],
     target = ":fixture_real_java",
 )
 
@@ -410,6 +415,16 @@ real_aspect_subject(
 real_aspect_subject(
     name = "real_plain_subject",
     target = ":plain",
+)
+
+# Manual negative demo: java without a checkstyle_config hint must
+# fail analysis with the actionable config-required error. The red
+# source + subject stay manual (wildcard builds skip them); the
+# expect-failure test below is green and proves the diagnostic.
+failure_test(
+    name = "fixture_real_java_no_config_test",
+    expected_failure_substring = "applicable Checkstyle requires declared config",
+    target = ":fixture_real_java_subject",
 )
 
 # Manual negative demo: markdown without a vale_config hint must
@@ -436,7 +451,6 @@ real_aspect_fixture_tests(
     name = "real_aspect_presence",
     subjects = [
         ":fixture_real_java_hinted_subject",
-        ":fixture_real_java_subject",
         ":fixture_real_javascript_hinted_subject",
         ":fixture_real_javascript_subject",
         ":fixture_real_json_subject",

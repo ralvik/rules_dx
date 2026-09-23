@@ -35,4 +35,14 @@ def _vue_wrap_library(name, srcs, visibility = None, **kwargs):
 
 def vue_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for Vue SFCs."""
+
+    # PARITY_DEFERRED (ADR 0019): no adapter claims `vue` yet. Tag the
+    # public forwarder so the fail-closed deferred pipeline does not fail
+    # analysis for every consumer of this wrapper; remove when an adapter
+    # claims the class (See: quality/parity_tests.bzl).
+    tags = list(kwargs.pop("tags", []))
+    for tag in ["no-format", "no-lint", "no-typecheck"]:
+        if tag not in tags:
+            tags.append(tag)
+    kwargs["tags"] = tags
     _vue_wrap_library(name, srcs, visibility = visibility, **kwargs)

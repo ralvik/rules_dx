@@ -116,7 +116,7 @@ jobs with Bazel intra-job test sharding under ordinary semantics (no
 timeouts without bounded retries stay a failure mode, and retry-until-green
 analyzer behavior stays rejected — reruns use GitHub's native rerun controls
 with unchanged selection plus revision identity. See the
-[testing strategy](README.md#infrastructure-budget) for the free-tier budget
+[testing strategy](strategy-details.md#infrastructure-budget) for the free-tier budget
 that keeps this local-only.
 
 ### Repository Scope And Reruns

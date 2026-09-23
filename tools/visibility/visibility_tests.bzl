@@ -4,7 +4,7 @@ Contract: `docs/contributing/build-conventions.md#visibility`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_false", "expect_true", "starlark_test")
-load(":visibility.bzl", "DX_FACADE_PACKAGE", "EXPLICIT_PUBLIC_EXPORTS", "EXPLICIT_PUBLIC_TARGETS", "LAYER_FORBIDDEN_DEPS", "PRIVATE_ENV_PACKAGES", "PRIVATE_GAZELLE_PACKAGES", "PUBLIC_PACKAGES", "SCOPED_PACKAGES", "SCOPED_TARGET_GRANTS", "VIS_CLI", "VIS_INTERNAL", "VIS_PRIVATE", "VIS_PUBLIC", "VIS_QUALITY", "is_private_package", "is_public_package", "scoped_constant")
+load(":visibility.bzl", "DX_FACADE_PACKAGE", "EXPLICIT_PUBLIC_EXPORTS", "EXPLICIT_PUBLIC_TARGETS", "LAYER_FORBIDDEN_DEPS", "PRIVATE_ENV_PACKAGES", "PRIVATE_GAZELLE_PACKAGES", "PUBLIC_PACKAGES", "SCOPED_TARGET_GRANTS", "VIS_CLI", "VIS_INTERNAL", "VIS_PRIVATE", "VIS_PUBLIC", "VIS_QUALITY", "is_private_package", "is_public_package", "scoped_constant")
 
 def _sorted(values):
     return sorted(values)
@@ -77,7 +77,7 @@ def visibility_unit_tests(name):
             expect_equal(
                 "scoped packages resolve through the contract",
                 [scoped_constant("cli/path"), scoped_constant("generation/codegen_shard"), scoped_constant("quality/result")],
-                ["VIS_CLI_WIDE", "VIS_CLI", "VIS_QUALITY_CLI"],
+                ["VIS_CLI_WIDE", "VIS_CLI_GENERATION", "VIS_QUALITY_CLI"],
             ),
             expect_equal(
                 "cli binary package stays cli-scoped",

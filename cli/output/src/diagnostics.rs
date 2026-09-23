@@ -236,11 +236,7 @@ pub fn emit_status(status: &str, message: &str) {
 /// Sets the process-wide [`color_override`] before delegating to
 /// [`init_diagnostics_with_level`] so both tracing ANSI (`with_ansi`) and
 /// [`styled_status`] follow the flag. Idempotent like the wrapped init.
-pub fn init_diagnostics_with_color(
-    verbose: bool,
-    level: Option<LogLevel>,
-    color: ColorMode,
-) {
+pub fn init_diagnostics_with_color(verbose: bool, level: Option<LogLevel>, color: ColorMode) {
     set_color_override(color);
     init_diagnostics_with_level(verbose, level);
 }
@@ -359,10 +355,7 @@ mod tests {
             ColorMode::parse("always").expect("always"),
             ColorMode::Always
         );
-        assert_eq!(
-            ColorMode::parse("never").expect("never"),
-            ColorMode::Never
-        );
+        assert_eq!(ColorMode::parse("never").expect("never"), ColorMode::Never);
         assert!(ColorMode::parse("AUTO").is_err());
         assert!(ColorMode::parse("yes").is_err());
         assert_eq!(ColorMode::Auto.as_str(), "auto");

@@ -3,8 +3,8 @@
 Contract: `docs/quality/action-model.md`, `docs/quality/quality-result-protocol.md#transport`.
 """
 
-load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 load("//libs/starlark:canonical.bzl", "strip_canonical")
+load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 load("//quality:aspects.bzl", "audit_aspect", "format_aspect", "lint_aspect", "typecheck_aspect")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 

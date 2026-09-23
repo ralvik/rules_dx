@@ -79,6 +79,7 @@ def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
     rejection = typescript_srcs_rejection(srcs)
     if rejection != None:
         fail(rejection)
+
     # Lane-A: aspect_hints ride the public forwarder via dx_wrap.
     dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 

@@ -323,7 +323,8 @@ mod tests {
             .expect("hyphen aliases parse");
         assert_eq!(parsed.dry_run, Some(true));
         assert_eq!(parsed.fail_on, Some("info".to_owned()));
-        let parsed = parse_file_text("workspace = \"\"\noutput = \"\"\ncolor = \"\"\n").expect("empty parses");
+        let parsed = parse_file_text("workspace = \"\"\noutput = \"\"\ncolor = \"\"\n")
+            .expect("empty parses");
         assert_eq!(parsed.workspace, None);
         assert_eq!(parsed.output, None);
         assert_eq!(parsed.color, None);

@@ -227,7 +227,7 @@ and always passes `--draft --verify-tag`, so the program never creates or
 pushes tags itself.
 
 Release hosting, signing, and verification services must satisfy the
-[free-infrastructure constraint](../testing/README.md#infrastructure-budget)
+[free-infrastructure constraint](../testing/strategy-details.md#infrastructure-budget)
 without weakening artifact verification or required host coverage.
 
 Starting with v1, the module and CLI share Semantic Versioning 2.0.0 release

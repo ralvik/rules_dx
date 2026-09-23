@@ -159,6 +159,12 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         generated = generated_source_paths(direct_files)
         if len(generated) > 0:
             resolved = prune_tool_generated_sources(resolved, generated, "rustfmt")
+            if len(resolved) == 0:
+                # Every stage was generated-only (e.g. a rust_binary whose
+                # sole src is a generated launcher): nothing for rustfmt to
+                # format. Return without creating an action so the runner
+                # never sees an empty stage list.
+                return []
 
     # Delegated Clippy: this aspect requires the upstream
     # `rust_clippy_aspect`, which emits the authoritative
@@ -317,8 +323,14 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         if transitive != None:
             for f in transitive.to_list():
                 ws_path = f.short_path
+
+                # Third-party wheels (uv/pip install trees) live outside the
+                # workspace via `../repo/...` short_paths. They are resolution
+                # context only and are never first-party sources, so skip them
+                # instead of failing; first-party sources already fail closed
+                # in aspect_direct_maps above.
                 if ".." in ws_path.split("/"):
-                    fail("real_aspect (" + str(target.label) + "): resolve path escapes workspace: '" + ws_path + "'")
+                    continue
                 if ws_path in path_to_file or ws_path in sibling_pairs or ws_path in resolve_pairs:
                     continue
                 if not ws_path.endswith(".py") and not ws_path.endswith(".pyi"):
@@ -353,6 +365,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             hint = configs_by_tool[tool]
             config_rel = hint.config.short_path
             args.add("--tool-config", tool + "=" + config_rel)
+
             # Stable workspace-relative keys: sort closure by short_path so
             # declaration/depset order never perturbs the action key. Config
             # content itself reaches the key via declared inputs.
@@ -412,6 +425,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             "--tool-env",
             "pylint=RUNFILES_DIR=" + ctx.executable._runner.path + ".runfiles",
         )
+
     # JVM `java_binary` wrappers (google-java-format, Checkstyle, PMD,
     # SpotBugs, ktfmt, ktlint) locate their managed JDK plus tool JARs
     # through their runfiles forest (adjacent `$0.runfiles`), so each
@@ -447,8 +461,10 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
 
 def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain):
     """Makes one shard impl over the shared real pipeline action (See: quality-sources.md#adapter-applicability)."""
+
     def _impl(target, ctx):
         return _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain)
+
     return _impl
 
 def real_allowed_tools_error():

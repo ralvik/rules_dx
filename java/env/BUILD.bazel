@@ -21,7 +21,7 @@ java_env_plan(
 java_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//java/tests/fixtures/hello:hello",
+    target = "//java/tests/fixtures/hello",
 )
 
 java_env_plan(

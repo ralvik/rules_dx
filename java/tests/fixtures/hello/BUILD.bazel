@@ -12,11 +12,13 @@ package(
 java_library(
     name = "hello_lib",
     srcs = ["Hello.java"],
+    aspect_hints = ["//quality:corpus_checkstyle_config"],
 )
 
 java_binary(
     name = "hello",
     srcs = ["Main.java"],
+    aspect_hints = ["//quality:corpus_checkstyle_config"],
     main_class = "hello.Main",
     deps = [":hello_lib"],
 )
@@ -24,6 +26,7 @@ java_binary(
 java_test(
     name = "hello_test",
     srcs = ["HelloTest.java"],
+    aspect_hints = ["//quality:corpus_checkstyle_config"],
     test_class = "hello.HelloTest",
     deps = [":hello_lib"],
 )

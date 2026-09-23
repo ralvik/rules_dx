@@ -4,7 +4,7 @@ Contract: `docs/tools/tool-acquisition.md#first-release-tool-routing`,
 `docs/quality/tool-integrations.md#jvm-cohort`.
 """
 
-load("@rules_java//java:defs.bzl", "java_binary", "java_import", "java_library")
+load("@rules_java//java:defs.bzl", "java_binary", "java_import")
 load("//quality:fixtures.bzl", "real_source_target")
 load(":metadata_tests.bzl", "jvm_metadata_tests")
 

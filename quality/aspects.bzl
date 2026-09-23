@@ -86,8 +86,10 @@ def _quality_pipeline_action(target, ctx, capability):
 
 def _make_synthetic_impl(capability):
     """Makes one capability impl over the shared pipeline action (See: quality-sources.md#adapter-applicability)."""
+
     def _impl(target, ctx):
         return _quality_pipeline_action(target, ctx, capability)
+
     return _impl
 
 # Single table-driven capability set: one impl per capability over the

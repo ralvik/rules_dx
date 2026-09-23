@@ -17,7 +17,7 @@ sh_test(
     data = [
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
-        "@ruby//:ruby",
+        "@ruby",
     ],
     tags = ["no-coverage"],
     target_compatible_with = ["@platforms//os:linux"],

@@ -91,12 +91,22 @@ def oci_unit_tests(name):
 EXPECTED_OCI_DEFAULT_OBSERVATIONS = """subject //deploy/rules:oci_demo
 file oci_demo
 field app=
-field profile=release"""
+field profile=release
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//deploy/rules:oci_demo
+aspect_field transitive_count=0"""
 
 EXPECTED_OCI_DEBUG_OBSERVATIONS = """subject //deploy/rules:oci_demo_debug
 file oci_demo_debug
 field app=
-field profile=debug"""
+field profile=debug
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//deploy/rules:oci_demo_debug
+aspect_field transitive_count=0"""
 
 def oci_analysis_tests(name):
     starlark_test(

@@ -60,7 +60,7 @@ initial 1
 initial WARNING rustfmt - matrix/rustfmt_dirty.rs 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/rustfmt_dirty.rs 0 41 "pub fn add(a: i32, b: i32) -> i32 {\\n    a + b\\n}\\n"
+replacement matrix/rustfmt_dirty.rs 13 37 " i32, b: i32) -> i32 {\\n    a + "
 """,
     },
     {

@@ -27,7 +27,7 @@ DAEMON_HERMETIC_PROBE = "ArgvProbe code Some(3)"
 BUILDIFIER_HERMETIC_MATRIX = "//quality/testdata:runner_matrix"
 BUILDIFIER_HERMETIC_CASE = "matrix_starlark_format_fail"
 BUILDIFIER_HERMETIC_DIRTY = "matrix/starlark_dirty.bzl"
-BUILDIFIER_HERMETIC_REWRITE = 'x=1 to x = 1'
+BUILDIFIER_HERMETIC_REWRITE = "x=1 to x = 1"
 BUILDIFIER_HERMETIC_TOOL = "@dx_tools//:buildifier"
 
 # Full consumer wiring is wont-fix, smoke-only: a full adopt-* consumer

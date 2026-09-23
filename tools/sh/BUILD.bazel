@@ -88,6 +88,7 @@ real_source_target(
 
 real_source_target(
     name = "corpus_python",
+    aspect_hints = ["//:ruff_config"],
     python_srcs = [
         "hermetic_grep.py",
         "hermetic_grep_test.py",

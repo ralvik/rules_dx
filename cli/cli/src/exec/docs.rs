@@ -374,7 +374,9 @@ mod tests {
             "--open",
         ]);
         let seen = Rc::new(RefCell::new(Vec::new()));
-        let runner = Probe { seen: Rc::clone(&seen) };
+        let runner = Probe {
+            seen: Rc::clone(&seen),
+        };
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = super::execute_docs(
@@ -395,7 +397,9 @@ mod tests {
         let calls = seen.borrow();
         // Bazel build plus browser open plus preview server.
         assert_eq!(calls.len(), 3, "{calls:?}");
-        let serve = calls.iter().find(|argv| argv.contains(&"http.server".to_owned()));
+        let serve = calls
+            .iter()
+            .find(|argv| argv.contains(&"http.server".to_owned()));
         let serve = serve.expect("serve argv");
         assert!(serve.contains(&"8080".to_owned()), "{serve:?}");
         assert!(serve.contains(&"--bind".to_owned()), "{serve:?}");

@@ -432,16 +432,21 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
  where quality aspects visit (lane A): the forwarder is the
     `QualitySourcesInfo` owner, so hints must reach it, not only the
     private upstream. `hdrs` (C/C++ headers) ride both shapes where the
-    forwarder owns them for `QualitySourcesInfo`. `tags` and `testonly`
-    ride the forwarder so lane-A filtering and test-only marking stay
-    honest on the visited target; `timeout`/`flaky`/`shard_count`/`size`
-    are test-rule built-ins and stay upstream-only through `dx_wrap`
+    forwarder owns them for `QualitySourcesInfo`. `tags` ride only the
+    forwarder so lane-A filtering stays honest on the visited target and
+    target tags never become per-action execution info on the private
+    upstream (Bazel 9 folds tags into every owned action, which makes two
+    targets that copy the same source file conflict when only one is
+    tagged). `testonly` rides both shapes so a testonly dependency edge
+    stays legal on the private upstream; `timeout`/`flaky`/`shard_count`/
+    `size` are test-rule built-ins and stay upstream-only through `dx_wrap`
     (test forwarders use `dx_forwarded_test_kwargs`). The forwarder
     defaults to private visibility when the caller passes none, so a
     public package default never leaks the forwarder. Remaining kwargs
     stay upstream-only. See issue #928."""
     hints = kwargs.get("aspect_hints", None)
     hdrs = kwargs.get("hdrs", None)
+    tags = kwargs.pop("tags", None)
     upstream_rule(
         name = name + "_upstream",
         srcs = srcs,
@@ -453,8 +458,8 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
         forward_kwargs["aspect_hints"] = hints
     if hdrs != None:
         forward_kwargs["hdrs"] = hdrs
-    if kwargs.get("tags", None) != None:
-        forward_kwargs["tags"] = kwargs["tags"]
+    if tags != None:
+        forward_kwargs["tags"] = tags
     if kwargs.get("testonly", None) != None:
         forward_kwargs["testonly"] = kwargs["testonly"]
     forward_rule(

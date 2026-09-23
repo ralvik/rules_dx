@@ -21,7 +21,7 @@ fsharp_env_plan(
 fsharp_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//fsharp/tests/fixtures/hello:hello",
+    target = "//fsharp/tests/fixtures/hello",
 )
 
 fsharp_env_plan(

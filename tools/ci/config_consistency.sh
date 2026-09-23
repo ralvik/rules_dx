@@ -11,7 +11,9 @@
 #     stays byte-identical. Biome v2 removed `files.ignore`, so the
 #     v2 `includes` negations are the ignore mechanism (issue #1072).
 #   Ruff lint selection + Python floor: workspace `ruff.toml` owns the
-#     selection; the `quality/testdata` fixture mirrors it.
+#     selection; the `quality/testdata` fixture mirrors it. Floor is
+#     `target-version` only (Ruff rejects `requires-python`; that key
+#     belongs to `pyproject.toml` below).
 #   pnpm version: both `package.json` files pin the same `packageManager`;
 #     `MODULE.bazel` resolves the pnpm toolchain from the root pin.
 #   Node floor: both `package.json` files carry `engines: {node: 22}` to
@@ -100,8 +102,7 @@ done
 for f in "$ruff_toml" "$ruff_fixture"; do
   dx_guards_contains "$f" "$f lost the shared Ruff lint selection (want E4/E7/E9/F/W/I/B, issue #912)" \
     'select = ["E4", "E7", "E9", "F", "W", "I", "B"]'
-  dx_guards_contains "$f" "$f lost the Python floor (want requires-python plus target-version py312, issue #912)" \
-    'requires-python = ">=3.12"' \
+  dx_guards_contains "$f" "$f lost the Python floor (want target-version py312; requires-python is pyproject-only, issue #912)" \
     'target-version = "py312"'
 done
 

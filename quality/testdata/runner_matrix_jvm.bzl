@@ -39,7 +39,7 @@ initial 1
 initial WARNING google_java_format - quality/testdata/real_dirty.java 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.java 0 132 "package hello;\\n\\npublic class Dirty {\\n  public static String hello(String name) {\\n    return \\"hello \\" + name;\\n  }\\n}\\n"
+replacement quality/testdata/real_dirty.java 15 128 "\\npublic class Dirty {\\n  public static String hello(String name) {\\n    return \\"hello \\" + name;\\n  "
 """,
     },
     {
@@ -163,7 +163,7 @@ initial 1
 initial WARNING ktfmt - quality/testdata/real_dirty.kt 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.kt 0 115 "package hello\\n\\nobject Dirty {\\n  fun hello(name: String): String {\\n    return \\"hello \\" + name\\n  }\\n}\\n"
+replacement quality/testdata/real_dirty.kt 14 111 "\\nobject Dirty {\\n  fun hello(name: String): String {\\n    return \\"hello \\" + name\\n  "
 """,
     },
     {
@@ -210,7 +210,7 @@ initial ERROR ktlint standard:indent quality/testdata/real_dirty.kt 111 111 fixa
 terminal 1
 terminal ERROR ktlint standard:filename quality/testdata/real_dirty.kt 0 0 fixable=false "File 'real_dirty.kt' contains a single top level declaration and should be named 'Dirty.kt'"
 replacements 1
-replacement quality/testdata/real_dirty.kt 0 115 "package hello\\nimport java.util.ArrayList\\n\\nobject Dirty {\\n    fun hello(name: String): String = \\"hello \\" + name\\n}\\n"
+replacement quality/testdata/real_dirty.kt 41 112 "\\nobject Dirty {\\n    fun hello(name: String): String = \\"hello \\" + name"
 """,
     },
 ]

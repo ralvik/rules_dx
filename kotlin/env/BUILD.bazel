@@ -21,7 +21,7 @@ kotlin_env_plan(
 kotlin_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//kotlin/tests/fixtures/hello:hello",
+    target = "//kotlin/tests/fixtures/hello",
 )
 
 kotlin_env_plan(

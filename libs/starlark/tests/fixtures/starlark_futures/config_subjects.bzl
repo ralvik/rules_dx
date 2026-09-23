@@ -8,18 +8,15 @@ Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//libs/starlark:defs.bzl", "DxConfigInfo", "DxSubjectInfo")
 
-
 def _config_flip_transition_impl(settings, attr):
     """Flips the futures config_value setting for deps. See: `docs/testing/starlark.md#modes`."""
     return {"//libs/starlark/tests/fixtures/starlark_futures:config_value": "flipped"}
-
 
 config_flip_transition = transition(
     implementation = _config_flip_transition_impl,
     inputs = [],
     outputs = ["//libs/starlark/tests/fixtures/starlark_futures:config_value"],
 )
-
 
 def _config_leaf_impl(ctx):
     """Exposes configurable attribute plus fragment plus setting values."""
@@ -41,7 +38,6 @@ def _config_leaf_impl(ctx):
         }),
     ]
 
-
 config_leaf = rule(
     implementation = _config_leaf_impl,
     fragments = ["platform"],
@@ -52,7 +48,6 @@ config_leaf = rule(
         ),
     },
 )
-
 
 def _config_group_impl(ctx):
     """Exposes its own config plus the transitioned dep value."""
@@ -81,7 +76,6 @@ def _config_group_impl(ctx):
             "transition": "group",
         }),
     ]
-
 
 config_group = rule(
     implementation = _config_group_impl,

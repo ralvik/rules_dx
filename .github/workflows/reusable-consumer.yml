@@ -205,6 +205,10 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-bazelisk
+      - name: Resolve hermetic Gitleaks
+        run: |
+          rel="$(bazel cquery --output=files @dx_tools//:gitleaks 2>/dev/null | tail -1)"
+          echo "DX_GITLEAKS_BIN=$(bazel info output_base)/$rel" >> "$GITHUB_ENV"
       - run: bazel run @rules_dx//cli/cli:dx -- audit security //...
 
   license-audit:

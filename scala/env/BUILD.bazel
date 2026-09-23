@@ -21,7 +21,7 @@ scala_env_plan(
 scala_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//scala/tests/fixtures/hello:hello",
+    target = "//scala/tests/fixtures/hello",
 )
 
 scala_env_plan(

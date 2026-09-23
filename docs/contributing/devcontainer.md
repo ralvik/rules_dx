@@ -97,7 +97,7 @@ As built today (owner-gated push with signing, no push claimed until dispatch):
   against the published release checksums; no `sigstore/*` installer
   action). Nothing here is signed until the gated push runs.
 - GHCR quotas and retention (qualified per the infrastructure budget in
-  [testing](../testing/README.md#infrastructure-budget)): container image
+  [testing](../testing/strategy-details.md#infrastructure-budget)): container image
   storage and bandwidth are currently free for public repos, with at least
   one month notice before any pricing change (GitHub Packages billing);
   the private-Packages quotas (500 MB storage, 1 GB transfer on Free) do

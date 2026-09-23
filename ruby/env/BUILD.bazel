@@ -6,9 +6,9 @@ preserved `RubyFilesInfo` toolchain closure by reference.
 Focused-target only; repository/root/exact-target orchestration remains.
 """
 
+load("//quality:fixtures.bzl", "real_source_target")
 load("//ruby/env:plan.bzl", "ruby_env_plan")
 load("//ruby/env:plan_tests.bzl", "env_plan_tests")
-load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:private"])
 

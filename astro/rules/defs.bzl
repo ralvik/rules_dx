@@ -35,4 +35,14 @@ def _astro_wrap_library(name, srcs, visibility = None, **kwargs):
 
 def astro_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for Astro components."""
+
+    # PARITY_DEFERRED (ADR 0019): no adapter claims `astro` yet. Tag the
+    # public forwarder so the fail-closed deferred pipeline does not fail
+    # analysis for every consumer of this wrapper; remove when an adapter
+    # claims the class (See: quality/parity_tests.bzl).
+    tags = list(kwargs.pop("tags", []))
+    for tag in ["no-format", "no-lint", "no-typecheck"]:
+        if tag not in tags:
+            tags.append(tag)
+    kwargs["tags"] = tags
     _astro_wrap_library(name, srcs, visibility = visibility, **kwargs)

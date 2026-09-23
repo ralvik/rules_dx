@@ -21,7 +21,7 @@ cc_env_plan(
 cc_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//cc/tests/fixtures/hello:hello",
+    target = "//cc/tests/fixtures/hello",
 )
 
 cc_env_plan(
