@@ -378,7 +378,12 @@ def runner_matrix_suite(name, cases):
     """Instantiates one `_runner_matrix_test` per matrix case plus a suite.
 
     Each case is a struct of the rule attrs above plus `name`. All case
-    data lives here in `.bzl`; BUILD files only pass the suite name."""
+    data lives here in `.bzl`; BUILD files only pass the suite name.
+
+    Args:
+      name: Aggregate `test_suite` target name.
+      cases: List of case structs; each needs `name`, `capability`, `stages`, and `expected`.
+    """
     tests = []
     for case in cases:
         _runner_matrix_test(

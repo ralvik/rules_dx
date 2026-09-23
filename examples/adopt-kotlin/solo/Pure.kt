@@ -2,7 +2,5 @@
 package solo
 
 object Pure {
-  fun pure(name: String): String {
-    return "hello " + name
-  }
+    fun pure(name: String): String = "hello " + name
 }

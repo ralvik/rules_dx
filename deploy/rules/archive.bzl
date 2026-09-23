@@ -68,6 +68,7 @@ def _archive_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@APP_RLOC@@": app_rloc,
             "@@CHECKSUM_RLOC@@": checksum_rloc,
@@ -110,7 +111,13 @@ def archive_deploy(name, app, profile = "release"):
     after `--` to choose where the artifacts land (default:
     `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Deploy runtime is
     hermetic Python only (hashlib plus file copies): no bash, no host
-    `tar`/`sha256sum`, no `sh_binary`."""
+    `tar`/`sha256sum`, no `sh_binary`.
+
+    Args:
+      name: Deploy target base name; derives stage/archive/program targets.
+      app: Executable app target to package.
+      profile: Deploy profile (debug, dev, or release).
+    """
     (tarball, checksum) = archive_filenames(name)
     archive_target = name + "_archive"
     checksum_target = name + "_checksum"
@@ -181,6 +188,11 @@ def archive_release(name, app, profile = "release"):
     """Compat alias for `archive_deploy`.
 
     Kept for one release cycle, then removed.
+
+    Args:
+      name: Deploy target base name.
+      app: Executable app target to package.
+      profile: Deploy profile (debug, dev, or release).
     """
     archive_deploy(
         name = name,

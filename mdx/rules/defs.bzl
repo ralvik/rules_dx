@@ -34,7 +34,14 @@ def _mdx_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _mdx_library_forward, srcs, visibility = visibility, **kwargs)
 
 def mdx_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for MDX documents."""
+    """Experimental minimal wrapper over `js_library` for MDX documents.
+
+    Args:
+      name: Target name.
+      srcs: Direct MDX documents owned by this wrapper.
+      visibility: Visibility list for the public forwarder.
+      **kwargs: Forwarded keyword arguments to the wrapper rules.
+    """
 
     # PARITY_DEFERRED (ADR 0019): no adapter claims `mdx` yet. Tag the
     # public forwarder so the fail-closed deferred pipeline does not fail

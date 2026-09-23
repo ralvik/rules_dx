@@ -132,12 +132,32 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     # QualitySourcesInfo-only targets carry no `JavaInfo`, so drop
     # SpotBugs stages there (unfetched, keys unchanged per the
     # target-coupled laziness row). Authoritative `java_library` targets
-    # keep their SpotBugs stage with the compiled closure as inputs.
+    # keep stage sources as the workspace `.java` files (SARIF finding
+    # anchors); the workspace-local runtime jars reach the runner as
+    # binary-safe `--tool-file` entries (stage `--source` is UTF-8-only).
+    spotbugs_jars = []
     if "spotbugs" in [stage["tool"] for stage in resolved]:
         if JavaInfo not in target:
             resolved = drop_pipeline_tool(resolved, "spotbugs")
             if len(resolved) == 0:
                 return []
+        else:
+            # Workspace-local jars only: external `../repo/...` short_paths
+            # never stage (same `..` rule as first-party sources); SpotBugs
+            # still emits valid SARIF without the full third-party classpath
+            # for these fixtures.
+            jars = []
+            for jar in target[JavaInfo].transitive_runtime_jars.to_list():
+                if ".." in jar.short_path.split("/"):
+                    continue
+                jars.append(jar)
+            jars = sorted(jars, key = lambda f: f.short_path)
+            if len(jars) == 0:
+                resolved = drop_pipeline_tool(resolved, "spotbugs")
+                if len(resolved) == 0:
+                    return []
+            else:
+                spotbugs_jars = jars
 
     # rustfmt crate context: the edition comes from the
     # authoritative `CrateInfo` (or the test crate's inner `CrateInfo`,
@@ -356,6 +376,10 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         binary = tool_binaries[tool]
         args.add("--tool-binary", tool + "=" + binary.path)
         inputs.append(binary)
+        if tool == "spotbugs":
+            for jar in spotbugs_jars:
+                args.add("--tool-file", "spotbugs=" + jar.short_path + "=" + jar.path)
+                inputs.append(jar)
         if tool == "rustfmt":
             # Always set when a rustfmt stage survives: provider-less
             # targets fall back to RUST_EDITION above, so the runner's
@@ -468,7 +492,11 @@ def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain
     return _impl
 
 def real_allowed_tools_error():
-    """Validates aspect shards stay registry subsets (See: //quality:registry.bzl)."""
+    """Validates aspect shards stay registry subsets (See: //quality:registry.bzl).
+
+    Returns:
+      Empty string when every allowed tool is a registry subset; otherwise a diagnostic.
+    """
     allowed = (
         _CORE_LINT_TOOLS + _CORE_FORMAT_TOOLS + _CORE_TYPECHECK_TOOLS +
         _JS_LINT_TOOLS + _JS_FORMAT_TOOLS + _PY_LINT_TOOLS +

@@ -7,18 +7,18 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class GreetTest {
-  @Test
-  fun testGreet() {
-    assertEquals("hello world", Greet.greet("world"))
-  }
+    @Test
+    fun testGreet() {
+        assertEquals("hello world", Greet.greet("world"))
+    }
 
-  @Test
-  fun testSuffix() {
-    assertEquals(" world", Helper.suffix())
-  }
+    @Test
+    fun testSuffix() {
+        assertEquals(" world", Helper.suffix())
+    }
 
-  @Test
-  fun testGuavaJoin() {
-    assertEquals("hello,world", Guava.join())
-  }
+    @Test
+    fun testGuavaJoin() {
+        assertEquals("hello,world", Guava.join())
+    }
 }

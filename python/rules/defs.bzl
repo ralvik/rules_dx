@@ -71,7 +71,14 @@ def _python_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _py_binary, _python_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def python_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `py_library`."""
+    """Experimental minimal wrapper over `py_library`.
+
+    Args:
+      name: Target name.
+      srcs: Direct Python sources owned by this wrapper.
+      visibility: Visibility list for the public forwarder.
+      **kwargs: Forwarded keyword arguments to the wrapper rules.
+    """
     _python_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
@@ -82,7 +89,15 @@ def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
     `main.py` carries only `main` plus `deps = [":<library>"]` with no
     `srcs`. The library alone owns the source and its source-derived
     dependencies; the thin binary reports no direct sources. Both shapes
-    preserve the upstream providers and execution semantics."""
+    preserve the upstream providers and execution semantics.
+
+    Args:
+      name: Target name.
+      srcs: Direct Python sources; None becomes an empty list.
+      main: Entry-point `main.py` label for thin shapes, or None.
+      visibility: Visibility list for the public forwarder.
+      **kwargs: Forwarded keyword arguments to the wrapper rules.
+    """
     effective_srcs = srcs if srcs != None else []
     if main != None:
         _python_wrap_binary(name, effective_srcs, visibility = visibility, main = main, **kwargs)
@@ -110,7 +125,14 @@ def python_test(name, srcs, visibility = None, **kwargs):
     With `srcs`, those test sources are this test's direct sources for
     QualitySourcesInfo. Imported non-test modules retain their ordinary
     library owners. Uses pytest and Bazel's standard test and coverage
-    protocols per the Python generation contract."""
+    protocols per the Python generation contract.
+
+    Args:
+      name: Target name.
+      srcs: Direct Python test sources owned by this test.
+      visibility: Visibility list for the public forwarder.
+      **kwargs: Forwarded keyword arguments to the wrapper rules.
+    """
     rejection = python_test_rejection(kwargs)
     if rejection != None:
         fail(rejection)

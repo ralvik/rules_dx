@@ -85,7 +85,14 @@ def fsharp_tfm_with_defaults(kwargs):
     """Returns kwargs defaulting target_frameworks plus warnings-as-errors.
 
     Caller-provided values win; only missing keys get defaults.
-    See: docs/testing/generation.md."""
+    See: docs/testing/generation.md.
+
+    Args:
+      kwargs: Rule keyword arguments to default.
+
+    Returns:
+      Copy of `kwargs` with default TFM and warnings-as-errors when absent.
+    """
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("target_frameworks", ["net10.0"])
     upstream_kwargs.setdefault("treat_warnings_as_errors", True)

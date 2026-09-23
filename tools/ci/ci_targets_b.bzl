@@ -6,6 +6,9 @@ Contract: `docs/github-ci.md`.
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 def add_b():
+    """Declares CI hygiene targets for shard B.
+    """
+
     sh_binary(
         name = "registry_singularity",
         srcs = ["registry_singularity.sh"],

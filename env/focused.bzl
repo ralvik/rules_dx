@@ -6,7 +6,14 @@ Contract: `docs/environments/environment.md`.
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def focused_direct_sources(target):
-    """Returns sorted basenames of direct sources from QualitySourcesInfo."""
+    """Returns sorted basenames of direct sources from QualitySourcesInfo.
+
+    Args:
+      target: Target observed for QualitySourcesInfo.
+
+    Returns:
+      Sorted direct-source basenames, or empty when absent.
+    """
     if QualitySourcesInfo not in target:
         return []
     info = target[QualitySourcesInfo]
@@ -17,7 +24,15 @@ def focused_direct_sources(target):
     return sorted(out)
 
 def focused_simple_plan(direct, label):
-    """Builds the simple-language plan dict plus typed source fields."""
+    """Builds the simple-language plan dict plus typed source fields.
+
+    Args:
+      direct: Sorted direct-source basenames for the target.
+      label: Display label string for the observed target.
+
+    Returns:
+      Struct with has_sources, plan dict, and source_count.
+    """
     source_count = len(direct)
     has_sources = source_count > 0
     plan = {
@@ -33,7 +48,15 @@ def focused_simple_plan(direct, label):
     )
 
 def focused_js_closure(transitive_sources, npm_sources):
-    """Collects sorted transitive basenames plus npm closure counts."""
+    """Collects sorted transitive basenames plus npm closure counts.
+
+    Args:
+      transitive_sources: Transitive source files for the JS closure.
+      npm_sources: Linked npm package store source files.
+
+    Returns:
+      Struct with has_npm, npm_count, and sorted transitive basenames.
+    """
     seen = {}
     for f in transitive_sources:
         seen[f.basename] = True
@@ -64,7 +87,14 @@ def focused_python_transitive(transitive_sources):
 
     Wheel payloads are covered by `wheel_count` plus site-packages import
     roots; raw venv markers carry no import identity and would collapse
-    lossily under basename projection."""
+    lossily under basename projection.
+
+    Args:
+      transitive_sources: Transitive source files for the Python closure.
+
+    Returns:
+      Sorted `.py` basenames from the closure.
+    """
     seen = {}
     for f in transitive_sources:
         if f.basename.endswith(".py"):
@@ -91,7 +121,14 @@ def focused_venv_projection(target):
     """Returns the materialized `.venv` projection from RunEnvironmentInfo.
 
     Binaries and tests carry `VIRTUAL_ENV` naming the upstream `py_venv`
-    directory; libraries carry no RunEnvironmentInfo and project no venv."""
+    directory; libraries carry no RunEnvironmentInfo and project no venv.
+
+    Args:
+      target: Target observed for RunEnvironmentInfo.
+
+    Returns:
+      Struct with has_venv and venv path fields.
+    """
     if RunEnvironmentInfo not in target:
         return struct(has_venv = False, venv = "")
     env = target[RunEnvironmentInfo].environment
@@ -126,14 +163,28 @@ def _focused_as_list(value):
     return value
 
 def focused_transitive_basenames(files):
-    """Returns sorted basenames for a list or depset of files."""
+    """Returns sorted basenames for a list or depset of files.
+
+    Args:
+      files: List or depset of file artifacts.
+
+    Returns:
+      Sorted basenames.
+    """
     seen = {}
     for f in _focused_as_list(files):
         seen[f.basename] = True
     return sorted(seen.keys())
 
 def focused_go_transitive(transitive):
-    """Returns sorted basenames of `.go` sources in a GoArchive transitive closure."""
+    """Returns sorted basenames of `.go` sources in a GoArchive transitive closure.
+
+    Args:
+      transitive: List or depset of GoArchive values.
+
+    Returns:
+      Sorted `.go` basenames from the closure.
+    """
     seen = {}
     for archive in _focused_as_list(transitive):
         for f in archive.srcs:
@@ -141,7 +192,15 @@ def focused_go_transitive(transitive):
     return sorted(seen.keys())
 
 def focused_dotnet_transitive(refs, transitive_refs):
-    """Returns sorted basenames for own refs plus the transitive ref closure."""
+    """Returns sorted basenames for own refs plus the transitive ref closure.
+
+    Args:
+      refs: Own reference files for the target.
+      transitive_refs: Transitive reference files from the closure.
+
+    Returns:
+      Sorted basenames from both lists.
+    """
     seen = {}
     for f in _focused_as_list(refs):
         seen[f.basename] = True
@@ -153,7 +212,14 @@ def focused_test_sources(basenames):
     """Returns sorted test basenames from combined direct plus transitive lists.
 
     Test shape is `Test` (JVM/Dotnet CamelCase) or `_test` (Go/CC snake_case
-    plus Bazel-derived jar/DLL names); `latest` plus `scalatest` stay source-side."""
+    plus Bazel-derived jar/DLL names); `latest` plus `scalatest` stay source-side.
+
+    Args:
+      basenames: Combined direct and transitive source basenames.
+
+    Returns:
+      Sorted basenames that look like test sources.
+    """
     seen = {}
     for name in basenames:
         if "Test" in name or "_test" in name:
@@ -161,7 +227,16 @@ def focused_test_sources(basenames):
     return sorted(seen.keys())
 
 def focused_closure_plan(direct, transitive, label):
-    """Builds the closure plan dict plus typed source/test fields."""
+    """Builds the closure plan dict plus typed source/test fields.
+
+    Args:
+      direct: Sorted direct-source basenames for the target.
+      transitive: Sorted transitive-source basenames for the closure.
+      label: Display label string for the observed target.
+
+    Returns:
+      Struct with plan dict and typed source/test count fields.
+    """
     tests = focused_test_sources(direct + transitive)
     source_count = len(direct)
     transitive_source_count = len(transitive)
@@ -191,7 +266,15 @@ def focused_closure_plan(direct, transitive, label):
     )
 
 def focused_write_plan(ctx, plan):
-    """Declares and writes the focused plan JSON output."""
+    """Declares and writes the focused plan JSON output.
+
+    Args:
+      ctx: Rule implementation context for declaring the output.
+      plan: Plan struct or dict encoded as JSON.
+
+    Returns:
+      Declared File written with the plan JSON.
+    """
     out = ctx.actions.declare_file(ctx.label.name + ".json")
     ctx.actions.write(out, json.encode(plan) + "\n")
     return out

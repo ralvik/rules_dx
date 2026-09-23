@@ -20,7 +20,15 @@ def selected_adapters(selection, adapters):
     """Resolves a policy-ordered tool-ID selection against adapter metadata.
 
     `adapters` maps known tool ID to its support record. Returns the
-    selection in policy order, deduplicated. Fails on an unknown tool ID."""
+    selection in policy order, deduplicated. Fails on an unknown tool ID.
+
+    Args:
+      selection: Policy-ordered tool IDs to resolve.
+      adapters: Maps known tool ID to its support record.
+
+    Returns:
+      Deduplicated tool IDs in policy order.
+    """
     ordered = []
     seen = {}
     for tool_id in selection:
@@ -33,7 +41,16 @@ def selected_adapters(selection, adapters):
     return ordered
 
 def effective_classes(target_classes, adapter_classes, policy_classes):
-    """Returns the sorted three-way class intersection for one tool stage."""
+    """Returns the sorted three-way class intersection for one tool stage.
+
+    Args:
+      target_classes: Semantic classes present on the target.
+      adapter_classes: Classes the adapter supports for the capability.
+      policy_classes: Classes authorized by the policy for the tool.
+
+    Returns:
+      Sorted class IDs in all three sets.
+    """
     adapter_set = {c: True for c in adapter_classes}
     policy_set = {c: True for c in policy_classes}
     effective = {}

@@ -77,7 +77,14 @@ def java_javacopts_with_werror(kwargs):
     """Returns kwargs with -Werror plus -Xlint:all enforced on javacopts.
 
     Existing flags are kept; missing ones are appended.
-    See: docs/testing/generation.md."""
+    See: docs/testing/generation.md.
+
+    Args:
+      kwargs: Rule keyword arguments possibly containing `javacopts`.
+
+    Returns:
+      Copy of `kwargs` with `-Werror` and `-Xlint:all` appended when absent.
+    """
     upstream_kwargs = dict(kwargs)
     javacopts = list(upstream_kwargs.get("javacopts", []))
     for flag in ["-Werror", "-Xlint:all"]:
@@ -106,7 +113,15 @@ def java_binary(name, srcs = None, main_class = None, visibility = None, **kwarg
     names its `main_class` explicitly (no inference); a thin entry binary
     carries only `runtime_deps` with no `srcs` and reports no direct
     sources. Both shapes preserve the upstream providers and execution
-    semantics."""
+    semantics.
+
+    Args:
+      name: Target name.
+      srcs: Direct Java sources; None becomes an empty list.
+      main_class: Fully qualified main class, or None to omit.
+      visibility: Visibility list for the public forwarder.
+      **kwargs: Forwarded keyword arguments to the wrapper rules.
+    """
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:

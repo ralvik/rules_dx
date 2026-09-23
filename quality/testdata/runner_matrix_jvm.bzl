@@ -163,7 +163,7 @@ initial 1
 initial WARNING ktfmt - quality/testdata/real_dirty.kt 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.kt 14 111 "\\nobject Dirty {\\n  fun hello(name: String): String {\\n    return \\"hello \\" + name\\n  "
+replacement quality/testdata/real_dirty.kt 14 111 "\\nobject Dirty {\\n    fun hello(name: String): String {\\n        return \\"hello \\" + name\\n    "
 """,
     },
     {

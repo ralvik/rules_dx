@@ -98,7 +98,14 @@ def sources_schema_error(classes = None):
     class edits the registry data only and never a parallel allowlist:
     non-empty list, canonical lowercase IDs, no duplicates. Pass an
     explicit list to validate a candidate registry; defaults to the
-    committed `KNOWN_SEMANTIC_FILE_CLASSES`."""
+    committed `KNOWN_SEMANTIC_FILE_CLASSES`.
+
+    Args:
+      classes: Optional candidate class list; defaults to the committed registry.
+
+    Returns:
+      Empty string when the schema is valid; otherwise a diagnostic.
+    """
     ids = KNOWN_SEMANTIC_FILE_CLASSES if classes == None else classes
     if type(ids) != "list" or len(ids) == 0:
         return "sources registry: want a non-empty class list (schema v1)"
@@ -116,7 +123,12 @@ def check_direct_sources(direct_sources, what):
 
     Fails analysis on: non-dict map, unknown class ID, non-depset value,
     or non-File member. Ownership, admissibility, and single-class
-    membership are validated by the consuming aspect, not here."""
+    membership are validated by the consuming aspect, not here.
+
+    Args:
+      direct_sources: Maps class ID to depset of Files.
+      what: Diagnostic prefix naming the failing target or context.
+    """
     if type(direct_sources) != "dict":
         fail("QualitySourcesInfo (" + what + "): direct_sources must be a " +
              "dict of class ID to depset, got " + type(direct_sources))

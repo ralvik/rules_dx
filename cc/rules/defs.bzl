@@ -97,15 +97,26 @@ _cc_forward_test = dx_executable_forward_rule(
 )
 
 def cc_copts_with_werror(kwargs):
-    """Returns kwargs with -Werror enforced on copts.
+    """Returns kwargs with warnings-as-errors enforced on copts.
 
-    Existing flags are kept; a missing flag is appended.
-    See: docs/testing/generation.md."""
+    Existing flags are kept; a missing flag is appended per-platform
+    (`/WX` under MSVC on Windows, `-Werror` elsewhere).
+    See: docs/testing/generation.md.
+
+    Args:
+      kwargs: Rule keyword arguments possibly containing `copts`.
+
+    Returns:
+      Copy of `kwargs` with a platform-selected warnings-as-errors flag.
+    """
     upstream_kwargs = dict(kwargs)
     copts = list(upstream_kwargs.get("copts", []))
-    if "-Werror" not in copts:
-        copts = copts + ["-Werror"]
-    upstream_kwargs["copts"] = copts
+    if "-Werror" in copts or "/WX" in copts:
+        return upstream_kwargs
+    upstream_kwargs["copts"] = select({
+        "@platforms//os:windows": copts + ["/WX"],
+        "//conditions:default": copts + ["-Werror"],
+    })
     return upstream_kwargs
 
 def _cc_with_werror(kwargs):

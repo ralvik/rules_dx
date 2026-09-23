@@ -8,7 +8,7 @@ Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//libs/starlark:defs.bzl", "DxConfigInfo", "DxSubjectInfo")
 
-def _config_flip_transition_impl(settings, attr):
+def _config_flip_transition_impl(_settings, _attr):
     """Flips the futures config_value setting for deps. See: `docs/testing/starlark.md#modes`."""
     return {"//libs/starlark/tests/fixtures/starlark_futures:config_value": "flipped"}
 

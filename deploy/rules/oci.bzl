@@ -54,7 +54,11 @@ def oci_schema_error():
     Checks data shape without pinning exact contents: version is v1, each
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so values embed safely
-    in the deploy launcher."""
+    in the deploy launcher.
+
+    Returns:
+      Empty string when the schema is valid, else an error message.
+    """
     if OCI_SCHEMA_VERSION != 1:
         return "oci tag: unsupported schema v" + str(OCI_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
@@ -87,7 +91,14 @@ def oci_schema_error():
     return ""
 
 def oci_tag_error(tag):
-    """Validates one image tag value."""
+    """Validates one image tag value.
+
+    Args:
+      tag: Candidate image tag.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(tag) != "string" or tag == "":
         return ("oci_deploy: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'latest')")
@@ -99,7 +110,14 @@ def oci_tag_error(tag):
     return ""
 
 def oci_registry_error(registry):
-    """Validates one registry value."""
+    """Validates one registry value.
+
+    Args:
+      registry: Candidate registry host plus optional path.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(registry) != "string" or registry == "":
         return ("oci_deploy: invalid registry '" + str(registry) +
                 "': want a non-empty registry (for example '" +
@@ -123,7 +141,14 @@ def oci_registry_error(registry):
     return ""
 
 def oci_repository_error(repository):
-    """Validates one repository value."""
+    """Validates one repository value.
+
+    Args:
+      repository: Candidate repository path name.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(repository) != "string" or repository == "":
         return ("oci_deploy: invalid repository '" + str(repository) +
                 "': want a non-empty repository (for example 'oci_demo')")
@@ -141,7 +166,14 @@ def oci_repository_error(repository):
     return ""
 
 def oci_tar_error(filename):
-    """Validates one image-tar filename value."""
+    """Validates one image-tar filename value.
+
+    Args:
+      filename: Candidate image tar basename (.tar or .tar.gz).
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(filename) != "string" or filename == "":
         return ("oci_deploy: invalid image_tar '" + str(filename) +
                 "': want a non-empty .tar filename")
@@ -181,6 +213,7 @@ def _oci_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@IMAGE_RLOC@@": tar_rloc,
             "@@OCI_REGISTRY@@": ctx.attr.registry,
@@ -233,7 +266,16 @@ def oci_deploy(name, image_tar, tag = "latest", registry = OCI_DEFAULT_REGISTRY,
     `OCI_PUBLISH_LIVE=1`, `OCI_REGISTRY_USER`, `OCI_REGISTRY_TOKEN`, and
     `OCI_PUBLISH_APPROVED=1` after explicit owner approval, with
     SBOM/provenance plus signing verification first. Registry credentials
-    come from env only, never from BUILD."""
+    come from env only, never from BUILD.
+
+    Args:
+      name: Deploy target base name.
+      image_tar: Image tar file label pinned in the local layout.
+      tag: Image tag for the local-first publish path.
+      registry: Registry host plus optional path for the publish path.
+      repository: Repository name; defaults to `name` when empty.
+      profile: Deploy profile (debug, dev, or release).
+    """
     effective_repo = repository if repository != "" else name
     tag_error = oci_tag_error(tag)
     if tag_error != "":

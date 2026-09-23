@@ -15,7 +15,7 @@ coverage counts/denominators where applicable. Treat warnings as errors.
 
 Follow the repository formatter/linter entry points
 (`bazel run //cli/cli:dx -- lint`, `bazel run //cli/cli:dx -- format --check`),
-the [manual documentation checks](../docs/testing/README.md#documentation-checks),
+the [manual documentation checks](../docs/testing/README.md#details),
 and the [local workflow](../docs/contributing/local-workflows.md#current-workflow).
 Record missing tool commands and tests as gaps, not passes.
 

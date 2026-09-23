@@ -8,7 +8,6 @@ load(
     "//libs/starlark:plan_shard.bzl",
     "plan_shard_aspect_inputs",
     "plan_shard_conflict_error",
-    "plan_shard_edge_targets",
     "plan_shard_exec_matches",
     "plan_shard_fingerprint",
     "plan_shard_merge_records",
@@ -50,7 +49,14 @@ DX_CODEGEN_ADMITTED_PAIRS = (
 )
 
 def codegen_path_error(path):
-    """Validates one workspace-relative projection path."""
+    """Validates one workspace-relative projection path.
+
+    Args:
+      path: Candidate workspace-relative projection path.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if path == "":
         return "invalid codegen path '': must be a non-empty workspace-relative path"
     if path.startswith("/"):
@@ -100,7 +106,14 @@ def _codegen_claim_key(entry):
     return entry.logical_path
 
 def codegen_record_error(record):
-    """Validates one contributor record."""
+    """Validates one contributor record.
+
+    Args:
+      record: Normalized contributor record struct to validate.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     second_error = ""
     if record.language == "":
         second_error = "language must be a non-empty file class"
@@ -120,7 +133,14 @@ def codegen_exec_error(path):
     Empty means a logical-only entry requiring no artifact. Non-empty
     follows the same workspace-relative shape rules as logical paths
     and never uses the reserved shard suffix (a shard never backs
-    another shard)."""
+    another shard).
+
+    Args:
+      path: Candidate BEP-matching exec-path suffix, or empty.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if path == "":
         return ""
     if path.endswith(DX_CODEGEN_SHARD_SUFFIX):
@@ -138,7 +158,16 @@ def codegen_replaces_error(logical_path, exec_path, replaces):
     entry logical path (explicit self-replacement acknowledgment) and
     requires a non-empty exec path binding the replacing generated
     artifact, so the contract identifies both the replaced source and
-    the generated artifact identity."""
+    the generated artifact identity.
+
+    Args:
+      logical_path: Entry logical path the replaces field must equal.
+      exec_path: Entry exec path binding the replacing artifact.
+      replaces: Declared replacement path, or empty for none.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if replaces == "":
         return ""
     error = codegen_path_error(replaces)
@@ -209,7 +238,15 @@ def codegen_merge_schema_error(records, merged):
     edits test data only: owners sorted and unique, entries sorted and unique
     per owner, every input entry present deduped, every merged entry sourced,
     and each merged record valid. Exact owner/entry values stay in snapshot
-    assertions; this proves normalization."""
+    assertions; this proves normalization.
+
+    Args:
+      records: Input contributor records before normalization.
+      merged: Candidate normalized record list.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(merged) != "list":
         return "codegen merge: want a list, got " + type(merged)
     owners = []
@@ -265,7 +302,14 @@ def codegen_fingerprint_schema_error(fingerprint):
     (producer, language) with entries sorted by the full key, each entry
     carrying validated paths plus read-only truth plus the replacement
     contract. Exact fingerprint bytes stay in snapshot assertions; this
-    proves the hash-input contract."""
+    proves the hash-input contract.
+
+    Args:
+      fingerprint: Candidate fingerprint JSON string.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     decoded = json.decode(fingerprint)
     if type(decoded) != "list" or len(decoded) == 0:
         return "codegen fingerprint: want a non-empty list"
@@ -329,7 +373,11 @@ def codegen_schema_error():
 
     Checks data shape without pinning exact contents, so adding a pair
     edits the admitted data only: version is v1, the list is non-empty
-    with unique canonical (schema_kind, language) tuples."""
+    with unique canonical (schema_kind, language) tuples.
+
+    Returns:
+      Empty string when the schema is valid, else an error message.
+    """
     if CODEGEN_SCHEMA_VERSION != 1:
         return "codegen: unsupported schema v" + str(CODEGEN_SCHEMA_VERSION) + " (want v1)"
     if type(DX_CODEGEN_ADMITTED_PAIRS) != "tuple" or len(DX_CODEGEN_ADMITTED_PAIRS) == 0:
@@ -462,9 +510,6 @@ dx_codegen_shard = rule(
     },
     doc = "Emits one contributor's normalized binary codegen plan shard (issue #506 WP1).",
 )
-
-def _edge_targets(rule_attr, name):
-    return plan_shard_edge_targets(rule_attr, name)
 
 # Narrow traversal edges for the collecting aspect: the shard rule's own
 # `deps`, the prost library's `proto` edge, and the prost adapter's

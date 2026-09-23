@@ -51,7 +51,8 @@ fn flush_out(out: &mut dyn Write) -> Result<(), i32> {
 /// Active Bazel child for signal forwarding; see `forward_to_child`.
 static CHILD_PID: AtomicU32 = AtomicU32::new(0);
 
-/// Signal-forwarding contract:
+/// Signal-forwarding contract (Unix only; Windows has no `libc::kill`
+/// and installs no handler — See: `docs/cli/cli-contract.md`):
 ///
 /// - Forwards SIGINT and SIGTERM only, to the active child if one is
 ///   registered. Any other signal keeps its default disposition.
@@ -68,6 +69,7 @@ static CHILD_PID: AtomicU32 = AtomicU32::new(0);
 ///   the pid clear forwards to an already-reaped pid. The window is two
 ///   stores wide and accepted like any supervisor's; the kill target is
 ///   at worst a recycled pid, never shim state.
+#[cfg(unix)]
 extern "C" fn forward_to_child(signo: libc::c_int) {
     let pid = CHILD_PID.load(Ordering::SeqCst);
     if pid != 0 {
@@ -86,6 +88,7 @@ extern "C" fn forward_to_child(signo: libc::c_int) {
 /// pid-0 swallow above, while the `kill` itself stays `unsafe libc`
 /// either way — no safety win for a new dependency, lockfile churn,
 /// and supply-chain review on the -hardened forwarding path.
+#[cfg(unix)]
 fn install_forwarding() {
     unsafe {
         libc::signal(
@@ -98,6 +101,10 @@ fn install_forwarding() {
         );
     }
 }
+
+/// Windows has no Unix signal handler; forwarding is a no-op.
+#[cfg(not(unix))]
+fn install_forwarding() {}
 
 /// Runner used by the `dx` binary: inherits stderr always, inherits
 /// stdout in text mode without a stdout report (subprocess output is

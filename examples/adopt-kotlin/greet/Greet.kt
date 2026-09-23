@@ -4,7 +4,5 @@ package greet
 import java.util.Objects
 
 object Greet {
-  fun greet(name: String): String {
-    return "hello " + Objects.requireNonNull(name)
-  }
+    fun greet(name: String): String = "hello " + Objects.requireNonNull(name)
 }

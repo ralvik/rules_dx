@@ -27,6 +27,7 @@ real_source_target(
         "python.bzl",
         "rust.bzl",
         "toolchains.bzl",
+        "ruby.bzl",
     ],
     tags = ["corpus"],
 )

@@ -6,6 +6,9 @@ Contract: `docs/github-ci.md`.
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 
 def add_d():
+    """Declares CI hygiene targets for shard D.
+    """
+
     sh_binary(
         name = "shell_env_qualification",
         srcs = ["shell_env_qualification.sh"],

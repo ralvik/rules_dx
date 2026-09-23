@@ -11,7 +11,14 @@ _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567
 _VALID_PACKAGE_CHARS = _VALID_TAG_CHARS + "@/"
 
 def npm_tag_error(tag):
-    """Validates one npm dist-tag value."""
+    """Validates one npm dist-tag value.
+
+    Args:
+      tag: Candidate npm dist-tag (for example `latest`).
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(tag) != "string" or tag == "":
         return ("npm_deploy: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'latest')")
@@ -23,7 +30,14 @@ def npm_tag_error(tag):
     return ""
 
 def npm_package_error(package):
-    """Validates one npm package name value."""
+    """Validates one npm package name value.
+
+    Args:
+      package: Candidate npm package name.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(package) != "string" or package == "":
         return ("npm_deploy: invalid package '" + str(package) +
                 "': want a non-empty package name (for example 'npm-demo')")
@@ -35,7 +49,14 @@ def npm_package_error(package):
     return ""
 
 def npm_registry_error(registry):
-    """Validates one npm registry URL value."""
+    """Validates one npm registry URL value.
+
+    Args:
+      registry: Candidate https registry URL.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(registry) != "string" or not registry.startswith("https://"):
         return ("npm_deploy: invalid registry '" + str(registry) +
                 "': want an https:// URL " +
@@ -61,6 +82,14 @@ def npm_deploy(name, package, tag = "latest", srcs = [], registry = "https://reg
     `NPM_PUBLISH_LIVE=1` plus `NPM_TOKEN`), and `<name>` (the
     `dx_deployment` returning `DxDeployInfo`). Run with
     `bazel run :<name>` or `dx deploy :<name>`.
+
+    Args:
+      name: Deploy target base name.
+      package: npm package name for the packed feed.
+      tag: npm dist-tag for the publish path.
+      srcs: Source labels packed into the tarball.
+      registry: https registry URL for the publish path.
+      profile: Deploy profile (debug, dev, or release).
     """
     pkg_error = npm_package_error(package)
     if pkg_error != "":

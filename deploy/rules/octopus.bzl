@@ -68,7 +68,11 @@ def octopus_schema_error():
     Checks data shape without pinning exact contents: version is v1,
     each charset is non-empty with unique launcher-safe characters and
     never admits quotes, backslash, space, or newline so names embed
-    safely in the deploy launcher."""
+    safely in the deploy launcher.
+
+    Returns:
+      Empty string when the schema is valid, else an error message.
+    """
     if OCTOPUS_SCHEMA_VERSION != 1:
         return "octopus project: unsupported schema v" + str(OCTOPUS_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_PROJECT_CHARS) != "string" or _VALID_PROJECT_CHARS == "":
@@ -110,7 +114,14 @@ def octopus_schema_error():
     return ""
 
 def octopus_project_error(project):
-    """Validates one Octopus project name value."""
+    """Validates one Octopus project name value.
+
+    Args:
+      project: Candidate Octopus project name.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(project) != "string" or project == "":
         return ("octopus_deploy: invalid project '" + str(project) +
                 "': want a non-empty project (for example 'octopus_demo')")
@@ -122,7 +133,14 @@ def octopus_project_error(project):
     return ""
 
 def octopus_channel_error(channel):
-    """Validates one Octopus channel name value."""
+    """Validates one Octopus channel name value.
+
+    Args:
+      channel: Candidate Octopus channel name.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(channel) != "string" or channel == "":
         return ("octopus_deploy: invalid channel '" + str(channel) +
                 "': want a non-empty channel (for example 'Default')")
@@ -134,7 +152,14 @@ def octopus_channel_error(channel):
     return ""
 
 def octopus_version_error(version):
-    """Validates one Octopus release version value."""
+    """Validates one Octopus release version value.
+
+    Args:
+      version: Candidate Octopus release version.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(version) != "string" or version == "":
         return ("octopus_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -146,7 +171,14 @@ def octopus_version_error(version):
     return ""
 
 def octopus_environment_error(environment):
-    """Validates one Octopus environment (`--deploy-to`) value."""
+    """Validates one Octopus environment (`--deploy-to`) value.
+
+    Args:
+      environment: Candidate deploy-to environment name.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(environment) != "string" or environment == "":
         return ("octopus_deploy: invalid environment '" + str(environment) +
                 "': want a non-empty environment (for example 'Production')")
@@ -158,7 +190,14 @@ def octopus_environment_error(environment):
     return ""
 
 def octopus_space_error(space):
-    """Validates one Octopus space name value (empty means the default space)."""
+    """Validates one Octopus space name value (empty means the default space).
+
+    Args:
+      space: Candidate space name, or empty for the default space.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if space == "":
         return ""
     if type(space) != "string":
@@ -172,7 +211,14 @@ def octopus_space_error(space):
     return ""
 
 def octopus_url_error(octopus_url):
-    """Validates one Octopus server URL value."""
+    """Validates one Octopus server URL value.
+
+    Args:
+      octopus_url: Candidate https Octopus server URL.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(octopus_url) != "string" or octopus_url == "":
         return ("octopus_deploy: invalid octopus_url '" + str(octopus_url) +
                 "': want a non-empty https URL (for example '" +
@@ -188,7 +234,14 @@ def octopus_url_error(octopus_url):
     return ""
 
 def octopus_package_error(filename):
-    """Validates one Octopus package filename value."""
+    """Validates one Octopus package filename value.
+
+    Args:
+      filename: Candidate `.tar.gz` basename from archive_deploy.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(filename) != "string" or filename == "":
         return ("octopus_deploy: invalid package '" + str(filename) +
                 "': want a non-empty .tar.gz filename from archive_deploy")
@@ -232,6 +285,7 @@ def _octopus_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@CHANNEL@@": ctx.attr.channel,
             "@@DEPLOY_NAME@@": ctx.attr.drop_name,
@@ -302,7 +356,19 @@ def octopus_deploy(name, package, project, channel = "Default", version = "0.0.0
     `create-release --project --channel` manifest) and verifies bytes,
     publishing nothing. Live `push` plus `create-release` runs only with
     `OCTOPUS_PUBLISH_LIVE=1`, `OCTOPUS_URL`, `OCTOPUS_API_KEY`, and
-    `OCTOPUS_PUBLISH_APPROVED=1` after explicit owner approval."""
+    `OCTOPUS_PUBLISH_APPROVED=1` after explicit owner approval.
+
+    Args:
+      name: Deploy target base name.
+      package: Archive package label (archive_deploy .tar.gz output).
+      project: Octopus project name for the release manifest.
+      channel: Octopus channel name for the release manifest.
+      version: Octopus release version for the manifest.
+      deploy_to: Optional deploy-to environment names.
+      space: Octopus space; empty means the default space.
+      octopus_url: https Octopus server URL used only with explicit env.
+      profile: Deploy profile (debug, dev, or release).
+    """
     project_error = octopus_project_error(project)
     if project_error != "":
         fail(project_error + " (in " + native.package_name() + ":" + name + ")")

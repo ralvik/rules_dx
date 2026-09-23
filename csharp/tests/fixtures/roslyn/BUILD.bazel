@@ -1,8 +1,7 @@
-load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
-
 """Roslyn per-TFM-RID SARIF aggregation fixture."""
 
+load("@rules_dx//csharp/rules:defs.bzl", "csharp_library")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(

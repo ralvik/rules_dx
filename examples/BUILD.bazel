@@ -18,6 +18,7 @@ real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_siblings = [
+        "//docs:generation/framework-adapters.md",
         "//examples/adopt-cpp:README.md",
         "//examples/adopt-csharp:README.md",
         "//examples/adopt-fsharp:README.md",
@@ -26,7 +27,9 @@ real_source_target(
         "//examples/adopt-js-ts:README.md",
         "//examples/adopt-kotlin:README.md",
         "//examples/adopt-polyglot:README.md",
+        "//examples/adopt-powershell:README.md",
         "//examples/adopt-python:README.md",
+        "//examples/adopt-ruby:README.md",
         "//examples/adopt-rust:README.md",
         "//examples/adopt-scala:README.md",
     ],

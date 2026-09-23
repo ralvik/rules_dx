@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class HelloJupiterTest {
-  @Test
-  fun testHello() {
-    assertEquals("hello world", Hello.hello("world"))
-  }
+    @Test
+    fun testHello() {
+        assertEquals("hello world", Hello.hello("world"))
+    }
 }

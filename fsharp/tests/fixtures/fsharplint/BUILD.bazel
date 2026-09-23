@@ -1,7 +1,6 @@
-load("@rules_dx//fsharp/rules:defs.bzl", "fsharp_library")
-
 """FSharpLint console vs library-API binding fixture."""
 
+load("@rules_dx//fsharp/rules:defs.bzl", "fsharp_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(

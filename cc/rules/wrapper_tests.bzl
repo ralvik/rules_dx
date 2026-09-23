@@ -3,7 +3,7 @@
 Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
-load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
+load("//libs/starlark:defs.bzl", "expect_equal", "expect_match", "expect_true", "starlark_test")
 load("//libs/starlark:wrapper.bzl", "dx_effective_visibility", "dx_forwarded_test_kwargs")
 load("//quality:sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES")
 load(":defs.bzl", "cc_copts_with_werror")
@@ -21,10 +21,14 @@ def cc_wrapper_contract_tests(name):
             expect_equal("test kwargs strip manual", dx_forwarded_test_kwargs({"tags": ["manual", "cpu:4"]}), {"tags": ["cpu:4"]}),
             expect_equal("test kwargs forward timeout/flaky", dx_forwarded_test_kwargs({"timeout": "short", "flaky": True}), {"timeout": "short", "flaky": True}),
             expect_equal("test kwargs empty stays empty", dx_forwarded_test_kwargs({}), {}),
-            expect_equal(
-                "empty gains werror",
-                cc_copts_with_werror({})["copts"],
-                ["-Werror"],
+            expect_true(
+                "empty gains platform werror select",
+                type(cc_copts_with_werror({})["copts"]) == "select",
+            ),
+            expect_match(
+                "empty select covers windows WX and default Werror",
+                str(cc_copts_with_werror({})["copts"]),
+                "windows",
             ),
             expect_equal(
                 "existing werror is kept without duplication",
@@ -32,9 +36,18 @@ def cc_wrapper_contract_tests(name):
                 ["-Werror"],
             ),
             expect_equal(
-                "other flags are kept",
-                cc_copts_with_werror({"copts": ["-Wall"]})["copts"],
-                ["-Wall", "-Werror"],
+                "existing msvc werror is kept without duplication",
+                cc_copts_with_werror({"copts": ["/WX"]})["copts"],
+                ["/WX"],
+            ),
+            expect_true(
+                "other flags stay under the platform select",
+                type(cc_copts_with_werror({"copts": ["-Wall"]})["copts"]) == "select",
+            ),
+            expect_match(
+                "other flags keep -Wall in the select",
+                str(cc_copts_with_werror({"copts": ["-Wall"]})["copts"]),
+                "-Wall",
             ),
             expect_equal(
                 "other kwargs survive",

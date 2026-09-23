@@ -2,7 +2,5 @@
 package greet
 
 object Helper {
-  fun suffix(): String {
-    return " world"
-  }
+    fun suffix(): String = " world"
 }

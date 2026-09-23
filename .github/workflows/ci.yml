@@ -1191,3 +1191,70 @@ jobs:
         run: |
           echo "### devcontainer-check — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Checked: dx init scaffold parity plus devcontainer definition shape (check-only; seed-host boot manually verified on Dockerfile change with non-Linux/arm64 wont-fix, no boot job in CI per docs/contributing/devcontainer.md#container-boot-manual)." >> "$GITHUB_STEP_SUMMARY"
+  ci:
+    name: ci
+    # Single required status check for branch protection: aggregates every
+    # job in this workflow so one green gate covers the whole matrix.
+    # `if: always()` keeps the gate reporting when a need is cancelled or
+    # fails; skipped needs (e.g. path-filtered) count as non-failing.
+    if: ${{ always() }}
+    needs:
+      [
+        docs-ci,
+        dogfood,
+        build,
+        sbom,
+        sbom-arm64,
+        sbom-musl-x86_64,
+        sbom-musl-arm64,
+        sbom-macos-arm64,
+        sbom-windows-x86_64,
+        preset-stale,
+        gitleaks,
+        test,
+        coverage,
+        build-arm64,
+        test-arm64,
+        coverage-arm64,
+        build-musl-x86_64,
+        build-musl-arm64,
+        coverage-musl-x86_64,
+        coverage-musl-arm64,
+        build-macos-arm64,
+        test-macos-arm64,
+        coverage-macos-arm64,
+        build-windows-x86_64,
+        test-windows-x86_64,
+        coverage-windows-x86_64,
+        prove,
+        dogfood-freshness,
+        devcontainer-check,
+      ]
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate job results
+        env:
+          NEEDS: ${{ toJson(needs) }}
+        run: |
+          python3 --version
+          python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'
+          python3 - <<'EOF'
+          import json
+          import os
+          import sys
+
+          needs = json.loads(os.environ.get("NEEDS") or "{}")
+          failing = sorted(
+              key
+              for key, value in needs.items()
+              if value.get("result") not in ("success", "skipped")
+          )
+          print(json.dumps({"aggregate": "ci", "failing checks": failing}))
+          sys.exit(1 if failing else 0)
+          EOF
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### ci — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Aggregate required check over every ci.yml job (branch-protection single gate; skipped needs are non-failing)." >> "$GITHUB_STEP_SUMMARY"

@@ -43,7 +43,15 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
     bytes + sha256) and `<name>.provenance.json` (in-toto Statement v1
     with the SLSA v1 predicate, subject digest = artifact sha256). Both
     are deterministic given the artifact bytes: the hermetic Rust generator
-    records the sha256 at build time with no host toolchain."""
+    records the sha256 at build time with no host toolchain.
+
+    Args:
+      name: Target base name; derives SPDX and provenance targets.
+      artifact: Artifact label to describe and digest.
+      package_name: Package name recorded in the SPDX document.
+      supplier: Supplier name recorded in the SPDX document.
+      builder_id: Allowlisted SLSA builder workflow identity.
+    """
     spdx_err = sbom_spdx_error("SPDX-2.3")
     if spdx_err != "":
         fail(spdx_err + " (in " + native.package_name() + ":" + name + ")")

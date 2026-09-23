@@ -9,7 +9,6 @@ load(
     "//libs/starlark:plan_shard.bzl",
     "plan_shard_aspect_inputs",
     "plan_shard_conflict_error",
-    "plan_shard_edge_targets",
     "plan_shard_exec_matches",
     "plan_shard_fingerprint",
     "plan_shard_merge_records",
@@ -50,7 +49,14 @@ DX_ENV_ADMITTED_INTEGRATIONS = (
 )
 
 def env_plan_key_error(key):
-    """Validates one identity-dimension key."""
+    """Validates one identity-dimension key.
+
+    Args:
+      key: Candidate identity-dimension key token.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if key == "":
         return "invalid env plan key '': must be a non-empty single token"
     if "/" in key or "\\" in key:
@@ -60,7 +66,14 @@ def env_plan_key_error(key):
     return ""
 
 def env_plan_value_error(value):
-    """Validates one identity-input value."""
+    """Validates one identity-input value.
+
+    Args:
+      value: Candidate identity-input value token.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if value == "":
         return "invalid env plan value '': must be a non-empty identity input"
     if "|" in value:
@@ -72,7 +85,14 @@ def env_plan_exec_error(path):
 
     Empty means a logical-only identity input requiring no artifact.
     Non-empty must be a workspace-relative path and never uses the
-    reserved shard suffix (a shard never backs another shard)."""
+    reserved shard suffix (a shard never backs another shard).
+
+    Args:
+      path: Candidate BEP-matching exec-path suffix, or empty.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if path == "":
         return ""
     if path.endswith(DX_ENV_SHARD_SUFFIX):
@@ -118,7 +138,14 @@ def _env_plan_claim_key(entry):
     return entry.key
 
 def env_plan_record_error(record):
-    """Validates one contributor record."""
+    """Validates one contributor record.
+
+    Args:
+      record: Normalized contributor record struct to validate.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     second_error = ""
     if record.integration == "":
         second_error = "integration must be a non-empty language class"
@@ -284,9 +311,6 @@ dx_env_shard = rule(
     },
     doc = "Emits one contributor's normalized binary environment plan shard (issue #506 WP2).",
 )
-
-def _edge_targets(rule_attr, name):
-    return plan_shard_edge_targets(rule_attr, name)
 
 # Narrow traversal edges for the collecting aspect: the shard rule's own
 # `deps` and the Rust adapter's `target` edge. No `data`, `srcs`,

@@ -8,7 +8,7 @@ run over the shared JDK).
 load("@bazel_tools//tools/build_defs/repo:http.bzl", _http_archive = "http_archive", _http_file = "http_file")
 load("//quality/tools/jvm:repos.bzl", "JVM_TOOLS")
 
-def _jvm_tools_impl(ctx):
+def _jvm_tools_impl(_ctx):
     for name in sorted(JVM_TOOLS.keys()):
         spec = JVM_TOOLS[name]
         if spec["kind"] == "file":

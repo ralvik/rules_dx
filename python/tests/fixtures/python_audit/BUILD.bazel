@@ -1,7 +1,6 @@
-load("@rules_dx//python/rules:defs.bzl", "python_library")
-
 """Python source-audit split fixture."""
 
+load("@rules_dx//python/rules:defs.bzl", "python_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
@@ -38,4 +37,5 @@ python_library(
     testonly = True,
     srcs = ["Sample_audit_dirty.py"],
     imports = ["."],
+    tags = ["no-lint"],
 )

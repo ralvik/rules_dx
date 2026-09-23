@@ -1,5 +1,6 @@
 """standardrb fixture."""
 
+load("@rules_dx//ruby/rules:defs.bzl", "ruby_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
@@ -21,4 +22,10 @@ real_source_target(
         "pins.bzl",
     ],
     tags = ["corpus"],
+)
+
+ruby_library(
+    name = "standardrb",
+    testonly = True,
+    srcs = ["Sample.rb"],
 )

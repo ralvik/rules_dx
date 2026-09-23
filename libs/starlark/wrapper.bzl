@@ -9,7 +9,15 @@ def dx_forwarded_runtime_providers(upstream, what):
     """Forwards the upstream runtime providers every wrapper preserves.
 
     `InstrumentedFilesInfo` must be present; `OutputGroupInfo` and
-    `RunEnvironmentInfo` are forwarded when available."""
+    `RunEnvironmentInfo` are forwarded when available.
+
+    Args:
+      upstream: Upstream target providing the runtime providers.
+      what: Diagnostic prefix naming the failing wrapper or context.
+
+    Returns:
+      List of provider instances to return from the forwarder.
+    """
     out = []
     if InstrumentedFilesInfo not in upstream:
         fail(what + ": upstream target has no InstrumentedFilesInfo: " + str(upstream.label))
@@ -25,7 +33,17 @@ def dx_missing_optional_names(requested_names, present_names):
     return [n for n in requested_names if n not in present_names]
 
 def dx_optional_forward_warning(what, upstream_label, requested_names, missing_names):
-    """Returns the skip warning for an optional forward, or None when nothing was skipped. See issue #943."""
+    """Returns the skip warning for an optional forward, or None when nothing was skipped. See issue #943.
+
+    Args:
+      what: Diagnostic prefix naming the failing wrapper or context.
+      upstream_label: String rendering of the upstream target label.
+      requested_names: Provider names the forward requested.
+      missing_names: Provider names absent from the upstream target.
+
+    Returns:
+      Warning message string, or None when no provider was skipped.
+    """
     if len(missing_names) == 0:
         return None
     forwarded = len(requested_names) - len(missing_names)
@@ -40,7 +58,16 @@ def dx_forwarded_optional(upstream, providers, what = "dx wrapper"):
     their upstream target's optional surfaces (Go archives,
     CcInfo/JavaInfo on binaries, .NET assemblies, coverage metadata on
     shapes whose upstream may omit it). Empty forward is expected when
-    upstream omits the surface. See issue #943."""
+    upstream omits the surface. See issue #943.
+
+    Args:
+      upstream: Upstream target queried for each optional provider.
+      providers: Provider types to forward when present on `upstream`.
+      what: Diagnostic prefix naming the failing wrapper or context.
+
+    Returns:
+      List of provider instances present on the upstream target.
+    """
     missing = [p for p in providers if p not in upstream]
     if len(missing) > 0:
         warning = dx_optional_forward_warning(
@@ -50,11 +77,20 @@ def dx_forwarded_optional(upstream, providers, what = "dx wrapper"):
             [str(p) for p in missing],
         )
         if warning != None:
-            print(warning)
+            print(warning)  # buildifier: disable=print  # intentional optional-provider skip warning, not debug
     return [upstream[p] for p in providers if p in upstream]
 
 def dx_preserved_providers(upstream, required, what):
-    """Returns the required upstream provider instances, failing when absent."""
+    """Returns the required upstream provider instances, failing when absent.
+
+    Args:
+      upstream: Upstream target carrying the required providers.
+      required: List of (provider type, display name) pairs that must be present.
+      what: Diagnostic prefix naming the failing wrapper or context.
+
+    Returns:
+      List of provider instances in `required` order.
+    """
     out = []
     for item in required:
         provider = item[0]
@@ -86,6 +122,12 @@ def dx_forwarded_test_kwargs(kwargs):
     wrapper run under `//...`), `timeout`, `flaky`, `shard_count`, and
     `size` ride the forwarder; remaining kwargs stay upstream-only. See
     issue #928.
+
+    Args:
+      kwargs: Caller keyword arguments to filter.
+
+    Returns:
+      Dict of forwarded standard test attributes.
     """
     out = {}
     if "tags" in kwargs and kwargs["tags"] != None:
@@ -98,7 +140,16 @@ def dx_forwarded_test_kwargs(kwargs):
     return out
 
 def dx_quality_sources(files, specs, label):
-    """Builds `QualitySourcesInfo` for direct wrapper sources."""
+    """Builds `QualitySourcesInfo` for direct wrapper sources.
+
+    Args:
+      files: Candidate source Files to bucket by class.
+      specs: List of (class ID, extensions, optional excluded suffixes) tuples.
+      label: String label used in validation diagnostics.
+
+    Returns:
+      QualitySourcesInfo with non-empty class-to-depset buckets.
+    """
     buckets = {}
     order = []
     for spec in specs:
@@ -157,7 +208,15 @@ def dx_symlink_executable(ctx, target_file):
     return link
 
 def dx_symlink_default_info(ctx, what):
-    """Builds the executable `DefaultInfo` symlinking the upstream binary."""
+    """Builds the executable `DefaultInfo` symlinking the upstream binary.
+
+    Args:
+      ctx: Rule context providing `attr.upstream` and actions.
+      what: Diagnostic prefix naming the failing wrapper or context.
+
+    Returns:
+      DefaultInfo whose executable symlinks the upstream binary.
+    """
     upstream = ctx.attr.upstream[DefaultInfo]
     exe = upstream.files_to_run.executable
     if exe == None:
@@ -199,6 +258,16 @@ def dx_forward_attrs(allow_files, srcs_doc, upstream_providers, upstream_doc, ex
     `allow_files` (a rule target, never a source file). The sealed
     `providers` list is the fail-closed contract: Bazel rejects a wrong
     upstream at analysis. See issue #928.
+
+    Args:
+      allow_files: Whether `srcs` may list source files.
+      srcs_doc: Documentation string for the `srcs` attribute.
+      upstream_providers: Required providers on the upstream target, or None.
+      upstream_doc: Documentation string for the `upstream` attribute.
+      extra_attrs: Optional extra attribute dict merged into the result.
+
+    Returns:
+      Dict of `srcs`, `upstream`, and any `extra_attrs` entries.
     """
     upstream_attr_kwargs = {
         "doc": upstream_doc,
@@ -284,7 +353,27 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
     The implementation symlinks the upstream executable into its own
     declared output, then preserves the required upstream providers,
     forwards the best-effort optional providers plus the shared runtime
-    providers, and adds `QualitySourcesInfo` for the direct sources."""
+    providers, and adds `QualitySourcesInfo` for the direct sources.
+
+    Args:
+      kind: Either `"executable"` or `"test"` selecting the rule shape.
+      provides: Provider types the forwarder declares.
+      required_providers: (provider, name) pairs preserved from upstream.
+      quality_specs: Class-bucket specs for `QualitySourcesInfo`.
+      what: Diagnostic prefix naming the failing wrapper or context.
+      allow_files: Whether `srcs` may list source files.
+      upstream_providers: Required providers on the upstream target, or None.
+      doc: Rule documentation string.
+      srcs_doc: Documentation string for the `srcs` attribute.
+      upstream_doc: Documentation string for the `upstream` attribute.
+      extra_attrs: Optional extra attribute dict merged into the rule attrs.
+      optional_providers: Optional provider types forwarded when present.
+      runtime: Runtime forwarding mode (`"mandatory"` or `"besteffort"`).
+      extra_quality_attrs: Extra src-like attrs included in quality sources.
+
+    Returns:
+      The configured executable or test rule.
+    """
 
     def _impl(ctx):
         upstream = ctx.attr.upstream
@@ -329,7 +418,14 @@ def dx_binary_forward_kwargs(kwargs):
     `tags` ride verbatim (binaries keep `manual` filtering on both
     shapes) and `aspect_hints` ride the public forwarder where quality
     aspects visit. Remaining kwargs stay upstream-only.
-    Contract: `docs/quality/quality-sources.md`."""
+    Contract: `docs/quality/quality-sources.md`.
+
+    Args:
+      kwargs: Caller keyword arguments to filter.
+
+    Returns:
+      Dict of forwarder kwargs (`tags`, `aspect_hints`) when present.
+    """
     out = {}
     if kwargs.get("tags", None) != None:
         out["tags"] = kwargs["tags"]
@@ -343,7 +439,15 @@ def dx_test_upstream_kwargs(kwargs, srcs = None):
     `manual` is stripped so both the private upstream and the public
     wrapper run under `//...` (double-execution is the cost of green
     suites); visibility is forced private; `srcs` is set when given.
-    Contract: `docs/quality/quality-sources.md`."""
+    Contract: `docs/quality/quality-sources.md`.
+
+    Args:
+      kwargs: Base keyword arguments for the private upstream target.
+      srcs: Optional source labels set on the upstream when not None.
+
+    Returns:
+      Copy of `kwargs` with tags filtered, private visibility, and optional srcs.
+    """
     out = dict(kwargs)
     if "tags" in out:
         kept = [t for t in out["tags"] if t != "manual"]
@@ -361,7 +465,14 @@ def dx_test_forward_kwargs(kwargs):
 
     Standard test attributes via `dx_forwarded_test_kwargs` plus
     `aspect_hints`, which ride the public forwarder where quality
-    aspects visit. Contract: `docs/quality/quality-sources.md`."""
+    aspects visit. Contract: `docs/quality/quality-sources.md`.
+
+    Args:
+      kwargs: Caller keyword arguments to filter.
+
+    Returns:
+      Dict of forwarder kwargs including standard test attributes and hints.
+    """
     out = dx_forwarded_test_kwargs(kwargs)
     if kwargs.get("aspect_hints", None) != None:
         out["aspect_hints"] = kwargs["aspect_hints"]
@@ -376,7 +487,17 @@ def dx_wrap_binary(name, upstream_rule, forward_rule, srcs, visibility = None, u
     so thin-entry shapes own no upstream sources, and stays private.
     The forwarder owns `srcs` directly and takes `tags` plus
     `aspect_hints` from the caller kwargs; remaining kwargs stay
-    upstream-only. Contract: `docs/quality/quality-sources.md`."""
+    upstream-only. Contract: `docs/quality/quality-sources.md`.
+
+    Args:
+      name: Target base name; derives `<name>_upstream` and the forwarder.
+      upstream_rule: Private upstream rule function.
+      forward_rule: Public forwarder rule function.
+      srcs: Source labels owned by the shapes as configured.
+      visibility: Visibility list for the public forwarder.
+      upstream_kwargs: Optional transformed upstream-only base kwargs.
+      **kwargs: Forwarded keyword arguments split between upstream and forwarder.
+    """
     effective = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
     if len(srcs) > 0:
         effective["srcs"] = srcs
@@ -405,7 +526,18 @@ def dx_wrap_test(name, upstream_rule, forward_rule, srcs, visibility = None, ups
     attributes plus `aspect_hints`, is marked `testonly`, and owns
     `srcs` (empty when the wrapper owns no direct sources).
     `extra_forward_kwargs` carries forwarder-only extras such as the
-    mirrored `env_inherit`. Contract: `docs/quality/quality-sources.md`."""
+    mirrored `env_inherit`. Contract: `docs/quality/quality-sources.md`.
+
+    Args:
+      name: Target base name; derives `<name>_upstream` and the forwarder.
+      upstream_rule: Private upstream rule function.
+      forward_rule: Public forwarder rule function.
+      srcs: Source labels; None becomes an empty forwarder list.
+      visibility: Visibility list for the public forwarder.
+      upstream_kwargs: Optional transformed upstream-only base kwargs.
+      extra_forward_kwargs: Optional forwarder-only extra kwargs.
+      **kwargs: Forwarded keyword arguments split between upstream and forwarder.
+    """
     base = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
     effective = dx_test_upstream_kwargs(base, srcs = srcs)
     forward_srcs = srcs if srcs != None else []
@@ -443,7 +575,16 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
     (test forwarders use `dx_forwarded_test_kwargs`). The forwarder
     defaults to private visibility when the caller passes none, so a
     public package default never leaks the forwarder. Remaining kwargs
-    stay upstream-only. See issue #928."""
+    stay upstream-only. See issue #928.
+
+    Args:
+      name: Target base name; derives `<name>_upstream` and the forwarder.
+      upstream_rule: Private upstream rule function.
+      forward_rule: Public forwarder rule function.
+      srcs: Source labels passed to both shapes.
+      visibility: Visibility list for the public forwarder.
+      **kwargs: Forwarded keyword arguments split between upstream and forwarder.
+    """
     hints = kwargs.get("aspect_hints", None)
     hdrs = kwargs.get("hdrs", None)
     tags = kwargs.pop("tags", None)

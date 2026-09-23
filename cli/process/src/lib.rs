@@ -664,6 +664,7 @@ pub enum UnixSignal {
 }
 
 /// Maps a CLI signal to its OS number.
+#[cfg(unix)]
 pub fn signal_number(signal: UnixSignal) -> libc::c_int {
     match signal {
         UnixSignal::Interrupt => libc::SIGINT,
@@ -673,6 +674,9 @@ pub fn signal_number(signal: UnixSignal) -> libc::c_int {
 
 /// Forwards `signo` to `pid`. The CLI binary calls this with
 /// [`signal_number`] output after mapping its received signal.
+/// Unix-only: Windows has no `libc::kill`; the binary installs no
+/// Unix signal handler there (See: `docs/cli/cli-contract.md`).
+#[cfg(unix)]
 pub fn forward_signal_number(pid: u32, signo: libc::c_int) -> io::Result<()> {
     let rc = unsafe { libc::kill(pid as libc::pid_t, signo) };
     if rc == 0 {
@@ -683,6 +687,7 @@ pub fn forward_signal_number(pid: u32, signo: libc::c_int) -> io::Result<()> {
 }
 
 /// Forwards a CLI signal to a child process id.
+#[cfg(unix)]
 pub fn forward_signal(pid: u32, signal: UnixSignal) -> io::Result<()> {
     forward_signal_number(pid, signal_number(signal))
 }
@@ -690,6 +695,7 @@ pub fn forward_signal(pid: u32, signal: UnixSignal) -> io::Result<()> {
 /// Re-raises `signo` in this process. The CLI binary calls this with
 /// [`signal_number`] output after safe cleanup so shell signal
 /// semantics are preserved. Signal zero performs no delivery.
+#[cfg(unix)]
 pub fn reraise_number(signo: libc::c_int) -> io::Result<()> {
     let rc = unsafe { libc::raise(signo) };
     if rc == 0 {

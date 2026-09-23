@@ -1,14 +1,20 @@
 """Root package for the rules_dx seed."""
 
-load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rustfmt_config")
+load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rustfmt_config", "vale_config")
 
 # Gazelle Rust resolve map (repo-wide directives); see docs/generation/rust.md.
+# gazelle:resolve rust dx_adopt //cli/adopt:dx_adopt
 # gazelle:resolve rust dx_apply //cli/apply:dx_apply
 # gazelle:resolve rust dx_atomic_fs //cli/atomic_fs:dx_atomic_fs
+# gazelle:resolve rust dx_audit //cli/audit:dx_audit
 # gazelle:resolve rust dx_bep //cli/bep:dx_bep
+# gazelle:resolve rust dx_bump //cli/bump:dx_bump
 # gazelle:resolve rust dx_clean //cli/clean:dx_clean
+# gazelle:resolve rust dx_codegen //cli/codegen:dx_codegen
 # gazelle:resolve rust dx_diff //cli/diff:dx_diff
 # gazelle:resolve rust dx_digest //cli/digest:dx_digest
+# gazelle:resolve rust dx_env_plan //cli/env_plan:dx_env_plan
+# gazelle:resolve rust dx_fingerprint //cli/fingerprint:dx_fingerprint
 # gazelle:resolve rust dx_lcov //cli/lcov:dx_lcov
 # gazelle:resolve rust dx_output //cli/output:dx_output
 # gazelle:resolve rust dx_path //cli/path:dx_path
@@ -17,6 +23,8 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # gazelle:resolve rust dx_roots //cli/roots:dx_roots
 # gazelle:resolve rust dx_schema //cli/schema:dx_schema
 # gazelle:resolve rust dx_setup //cli/setup:dx_setup
+# gazelle:resolve rust dx_test_scratch //cli/test_scratch:dx_test_scratch
+# gazelle:resolve rust dx_update //cli/update:dx_update
 # gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
 # gazelle:resolve rust documentation_ir //docs/ir/ir:documentation_ir
 # gazelle:resolve rust generation_result //generation/result:generation_result
@@ -64,6 +72,10 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # csharp/tests/fixtures/xunit holds the handwritten entry-point fixture
 # with an intentional duplicate namespace; Gazelle never owns it.
 # gazelle:exclude csharp/tests/fixtures/xunit
+# csharp/tests/fixtures/roslyn holds one Sample.cs claimed by three
+# csharp_library pivots (roslyn, roslyn_net8, roslyn_net10); one-owner
+# claims delete the pivots by design, so Gazelle never owns it.
+# gazelle:exclude csharp/tests/fixtures/roslyn
 # tools/ci/testdata/warnings holds per-language unused-code linter
 # subjects with no BUILD file; Gazelle never owns the corpus.
 # gazelle:exclude tools/ci/testdata/warnings
@@ -121,6 +133,10 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # ownership fixture; its `helper` stem collides repo-wide by design, so
 # Gazelle never owns it.
 # gazelle:exclude javascript/tests/fixtures/entries
+# python/tests/fixtures/entries holds the handwritten entry-point
+# ownership fixture; helper_test keeps `@pypi//pytest` for the runner
+# hub while gazelle sees no import, so Gazelle never owns it.
+# gazelle:exclude python/tests/fixtures/entries
 # mdx/tests/fixtures/hello holds the handwritten render fixture with a
 # compiler import strict generation rejects; Gazelle never owns it.
 # gazelle:exclude mdx/tests/fixtures/hello
@@ -162,6 +178,14 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # rust/tests/fixtures/hello holds curated edition/binary fixtures owned
 # by the rustfmt-edition qualification; Gazelle never owns it.
 # gazelle:exclude rust/tests/fixtures/hello
+# ruby/tests/fixtures/hello holds the handwritten thin-binary fixture
+# with `main.rb`; the directory basename collides with the generated
+# `ruby_library` claim by design, so Gazelle never owns it.
+# gazelle:exclude ruby/tests/fixtures/hello
+# ruby/tests/fixtures/rspec holds handwritten greeter_lib plus
+# spec_helper over a pinned rspec runner; generated same-name claims
+# replace them, so Gazelle never owns it.
+# gazelle:exclude ruby/tests/fixtures/rspec
 # rust/tests/fixtures/bindgen holds the curated header fixture with a
 # pinned non-basename library; Gazelle never owns it.
 # gazelle:exclude rust/tests/fixtures/bindgen
@@ -194,6 +218,11 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rus
 # corpus targets; the shared stem collides across extensions by design,
 # so Gazelle never owns it.
 # gazelle:exclude quality/tests/fixtures/strict_preset
+# tools/sh holds the handwritten hermetic_grep py_binary plus shell
+# helpers; shell is not a Gazelle language here and the generated
+# python_library claim collides with the handwritten owner by design,
+# so Gazelle never owns it.
+# gazelle:exclude tools/sh
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
@@ -312,13 +341,18 @@ real_source_target(
     markdown_siblings = [
         "//docs:README.md",
         "//docs:architecture/README.md",
+        "//docs:cli/README.md",
+        "//docs:cli/commands/README.md",
+        "//docs:contributing/first-hour-timing.md",
         "//docs:contributing/local-workflows.md",
         "//docs:decisions/README.md",
         "//docs:environments/environment.md",
+        "//docs:generation/framework-adapters.md",
         "//docs:product/README.md",
         "//docs:product/scope.md",
         "//docs:product/support-matrix.md",
         "//docs:testing/README.md",
+        "//examples:README.md",
         "LICENSE",
     ],
     markdown_srcs = [
@@ -348,4 +382,11 @@ real_source_target(
         "rustfmt.toml",
         "licenses.toml",
     ],
+)
+
+vale_config(
+    name = "vale_config",
+    src = ".vale.ini",
+    data = ["//quality:corpus_styles/Dx/Markers.yml"],
+    visibility = ["//:__subpackages__"],
 )

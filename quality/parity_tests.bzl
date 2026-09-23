@@ -70,7 +70,11 @@ def parity_schema_error():
     class edits the deferral data only: version is v1, every deferred ID
     is canonical, and every entry carries an owning decision plus a frozen
     route. Disposition coverage (unclassified/undispositioned/double-claim)
-    stays checked by the registry queries below, not by an allowlist."""
+    stays checked by the registry queries below, not by an allowlist.
+
+    Returns:
+      Empty string when the schema is valid; otherwise a diagnostic.
+    """
     if PARITY_SCHEMA_VERSION != 1:
         return "parity gate: unsupported schema v" + str(PARITY_SCHEMA_VERSION) + " (want v1)"
     for class_id in PARITY_DEFERRED:
@@ -117,6 +121,13 @@ def deferred_pipeline_error(target_classes, capability):
     naming the owning decision plus frozen route per deferral, so `dx status`
     surfaces the honest red via the failed action. Empty means no deferred
     class present: genuinely no work, stay green.
+
+    Args:
+      target_classes: Semantic classes present on the target.
+      capability: Capability name (e.g. `lint`, `format`).
+
+    Returns:
+      Empty string when no deferred class is present; otherwise a diagnostic.
     """
     deferred = sorted([c for c in target_classes if c in PARITY_DEFERRED])
     if len(deferred) == 0:

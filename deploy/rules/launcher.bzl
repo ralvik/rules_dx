@@ -27,7 +27,15 @@ def rlocation_path(ctx, f):
 
     Matches `$(rlocationpath)` and `rules_shell` `_to_rlocation_path`:
     main-repo files are `workspace/short_path`, external files strip
-    the leading `../` (`../repo/path` -> `repo/path`)."""
+    the leading `../` (`../repo/path` -> `repo/path`).
+
+    Args:
+      ctx: Rule implementation context providing the workspace name.
+      f: File artifact to resolve.
+
+    Returns:
+      Runfiles rlocation path string for `f`.
+    """
     sp = f.short_path
     if sp.startswith("../"):
         return sp[3:]

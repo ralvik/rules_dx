@@ -55,7 +55,11 @@ def maven_schema_error():
     Checks data shape without pinning exact contents: version is v1,
     each charset is non-empty with unique launcher-safe characters and
     never admits quotes, backslash, space, or newline so coordinates
-    embed safely in the deploy launcher."""
+    embed safely in the deploy launcher.
+
+    Returns:
+      Empty string when the schema is valid, else an error message.
+    """
     if MAVEN_SCHEMA_VERSION != 1:
         return "maven coordinates: unsupported schema v" + str(MAVEN_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_GROUP_CHARS) != "string" or _VALID_GROUP_CHARS == "":
@@ -88,7 +92,14 @@ def maven_schema_error():
     return ""
 
 def maven_group_error(group):
-    """Validates one Maven groupId value."""
+    """Validates one Maven groupId value.
+
+    Args:
+      group: Candidate Maven groupId.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(group) != "string" or group == "":
         return ("maven_deploy: invalid group '" + str(group) +
                 "': want a non-empty groupId (for example 'com.example')")
@@ -100,7 +111,14 @@ def maven_group_error(group):
     return ""
 
 def maven_artifact_error(artifact):
-    """Validates one Maven artifactId value."""
+    """Validates one Maven artifactId value.
+
+    Args:
+      artifact: Candidate Maven artifactId.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(artifact) != "string" or artifact == "":
         return ("maven_deploy: invalid artifact '" + str(artifact) +
                 "': want a non-empty artifactId (for example 'maven_demo')")
@@ -112,7 +130,14 @@ def maven_artifact_error(artifact):
     return ""
 
 def maven_version_error(version):
-    """Validates one Maven version value."""
+    """Validates one Maven version value.
+
+    Args:
+      version: Candidate Maven version.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(version) != "string" or version == "":
         return ("maven_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -124,7 +149,14 @@ def maven_version_error(version):
     return ""
 
 def maven_repository_error(repository_url):
-    """Validates one Maven repository URL value."""
+    """Validates one Maven repository URL value.
+
+    Args:
+      repository_url: Candidate staging repository URL.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(repository_url) != "string" or repository_url == "":
         return ("maven_deploy: invalid repository_url '" + str(repository_url) +
                 "': want a non-empty https URL (for example '" +
@@ -140,7 +172,14 @@ def maven_repository_error(repository_url):
     return ""
 
 def maven_jar_error(filename):
-    """Validates one jar filename value."""
+    """Validates one jar filename value.
+
+    Args:
+      filename: Candidate `.jar` basename.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(filename) != "string" or filename == "":
         return ("maven_deploy: invalid jar '" + str(filename) +
                 "': want a non-empty .jar filename")
@@ -155,7 +194,14 @@ def maven_jar_error(filename):
     return ""
 
 def maven_pom_error(filename):
-    """Validates one pom filename value."""
+    """Validates one pom filename value.
+
+    Args:
+      filename: Candidate `.pom` basename.
+
+    Returns:
+      Empty string when valid, else an actionable error message.
+    """
     if type(filename) != "string" or filename == "":
         return ("maven_deploy: invalid pom '" + str(filename) +
                 "': want a non-empty .pom filename")
@@ -208,6 +254,7 @@ def _maven_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ARTIFACT@@": ctx.attr.artifact,
             "@@GROUP@@": ctx.attr.group,
@@ -269,7 +316,18 @@ def maven_deploy(name, jar, pom, group, artifact, version = "0.0.0", repository_
     plus the `.pom`) and verifies bytes, publishing nothing. Live staging
     via `mvn deploy:deploy-file` with GPG signing runs only with
     `MAVEN_PUBLISH_LIVE=1`, `MAVEN_USERNAME`, `MAVEN_PASSWORD`, and
-    `MAVEN_PUBLISH_APPROVED=1` after explicit owner approval."""
+    `MAVEN_PUBLISH_APPROVED=1` after explicit owner approval.
+
+    Args:
+      name: Deploy target base name.
+      jar: Jar file label pinned in the local file repo.
+      pom: Pom file label pinned in the local file repo.
+      group: Maven groupId for the local file repo layout.
+      artifact: Maven artifactId for the local file repo layout.
+      version: Maven version for the local file repo layout.
+      repository_url: Live-staging repository URL used only with explicit env.
+      profile: Deploy profile (debug, dev, or release).
+    """
     group_error = maven_group_error(group)
     if group_error != "":
         fail(group_error + " (in " + native.package_name() + ":" + name + ")")

@@ -102,7 +102,11 @@ def wrapper_schema_error():
     moves its family from "other" to its label here: version is v1, every
     family spelling is canonical, every owner is a wrapper label or the
     explicit "other" verdict, every taxonomy family has an entry, and no
-    entry names a family outside the taxonomy."""
+    entry names a family outside the taxonomy.
+
+    Returns:
+      Empty string when the schema is valid; otherwise a diagnostic.
+    """
     if WRAPPER_SCHEMA_VERSION != 1:
         return "wrapper owners: unsupported schema v" + str(WRAPPER_SCHEMA_VERSION) + " (want v1)"
     for family in WRAPPER_OWNERS:
@@ -133,9 +137,6 @@ def _malformed_owners():
         if owner != "other" and not _is_owner_label(owner):
             bad.append(family)
     return bad
-
-def _uncovered_classes():
-    return sorted([c for c in REAL_CLASS_TO_FAMILY if WRAPPER_OWNERS.get(REAL_CLASS_TO_FAMILY[c], "") == "other"])
 
 def wrapper_unit_tests(name):
     starlark_test(

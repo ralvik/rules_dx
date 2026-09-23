@@ -209,6 +209,58 @@ jobs:
         run: |
           rel="$(bazel cquery --output=files @dx_tools//:gitleaks 2>/dev/null | tail -1)"
           echo "DX_GITLEAKS_BIN=$(bazel info output_base)/$rel" >> "$GITHUB_ENV"
+      - name: Populate advisory snapshots (OSV offline sets)
+        # dx audit security loads `.dx/advisory/<set>.json` plus identity
+        # offline (no network in the audit itself). Populate all five
+        # supported sets from the OSV GCS zips, merge each zip's per-vuln
+        # JSON files into one array, and write same-day identities.
+        run: |
+          set -euo pipefail
+          mkdir -p .dx/advisory
+          today="$(date -u +%F)"
+          populate() {
+            set="$1"
+            url="$2"
+            tmp="$(mktemp -d)"
+            curl -fsSL -o "$tmp/all.zip" "$url"
+            python3 - "$tmp" "$set" "$url" "$today" <<'PY'
+          import hashlib, json, pathlib, sys, zipfile
+          tmp, set_name, url, today = sys.argv[1:5]
+          root = pathlib.Path(tmp)
+          with zipfile.ZipFile(root / "all.zip") as zf:
+              zf.extractall(root / "db")
+          vulns = []
+          for path in sorted((root / "db").rglob("*.json")):
+              text = path.read_text(encoding="utf-8")
+              if not text.strip():
+                  continue
+              data = json.loads(text)
+              if isinstance(data, list):
+                  vulns.extend(data)
+              else:
+                  vulns.append(data)
+          out = pathlib.Path(".dx/advisory") / f"{set_name}.json"
+          payload = json.dumps(vulns, separators=(",", ":"), sort_keys=True).encode("utf-8")
+          out.write_bytes(payload)
+          meta = {
+              "set": set_name,
+              "url": url,
+              "sha256": hashlib.sha256(payload).hexdigest(),
+              "retrieved_at": today,
+              "path": str(out),
+          }
+          pathlib.Path(str(out).replace(".json", ".meta.json")).write_text(
+              json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          print(f"{set_name}: {len(vulns)} advisories")
+          PY
+            rm -rf "$tmp"
+          }
+          populate cargo "https://osv-vulnerabilities.storage.googleapis.com/crates.io/all.zip"
+          populate npm "https://osv-vulnerabilities.storage.googleapis.com/npm/all.zip"
+          populate maven "https://osv-vulnerabilities.storage.googleapis.com/Maven/all.zip"
+          populate nuget "https://osv-vulnerabilities.storage.googleapis.com/NuGet/all.zip"
+          populate go "https://osv-vulnerabilities.storage.googleapis.com/Go/all.zip"
       - run: bazel run @rules_dx//cli/cli:dx -- audit security //...
 
   license-audit:
@@ -229,6 +281,9 @@ jobs:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',test,') }}
     needs: [platforms-gate]
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -251,6 +306,9 @@ jobs:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',build,') }}
     needs: [platforms-gate]
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -273,6 +331,9 @@ jobs:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',coverage,') }}
     needs: [platforms-gate]
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:

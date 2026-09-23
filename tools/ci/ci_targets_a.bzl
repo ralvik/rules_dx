@@ -7,6 +7,9 @@ load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 def add_a():
+    """Declares CI hygiene targets for shard A.
+    """
+
     sh_binary(
         name = "corpus_audit",
         srcs = ["corpus_audit.sh"],

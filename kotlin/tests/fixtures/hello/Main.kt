@@ -2,5 +2,5 @@
 package hello
 
 fun main() {
-  println(Hello.hello("world"))
+    println(Hello.hello("world"))
 }

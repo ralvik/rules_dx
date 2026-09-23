@@ -4,7 +4,5 @@ package greet
 import com.google.common.collect.ImmutableList
 
 object Guava {
-  fun join(): String {
-    return ImmutableList.of("hello", "world").joinToString(",")
-  }
+    fun join(): String = ImmutableList.of("hello", "world").joinToString(",")
 }

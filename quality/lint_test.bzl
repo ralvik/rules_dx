@@ -27,7 +27,14 @@ def lint_test(name, srcs, expected_observations, **kwargs):
     (`runner_matrix_cases.bzl`): provider-less bytes with `print_result`
     goldens, both `*_pass`/`*_fail` green. This macro is for clean
     presence pins; dirty live subjects break `dx <check> --check //...`
-    and belong in the matrix, not here."""
+    and belong in the matrix, not here.
+
+    Args:
+      name: Test target name; also derives fixture and subject names.
+      srcs: Attribute kwargs for the private `real_source_target` fixture.
+      expected_observations: Golden observations the subject must equal.
+      **kwargs: Forwarded keyword arguments to `starlark_test`.
+    """
     real_source_target(
         name = name + "_fixture",
         **srcs

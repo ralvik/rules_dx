@@ -638,12 +638,14 @@ fn dry_run_never_executes_final_workflows() {
         .contains("dry-run"));
 }
 
+#[cfg(unix)]
 #[test]
 fn signal_numbers_match_os() {
     assert_eq!(signal_number(UnixSignal::Interrupt), libc::SIGINT);
     assert_eq!(signal_number(UnixSignal::Terminate), libc::SIGTERM);
 }
 
+#[cfg(unix)]
 #[test]
 fn forward_signal_number_checks_existence_safely() {
     // Signal zero performs error checking without delivering.
@@ -652,12 +654,14 @@ fn forward_signal_number_checks_existence_safely() {
     assert!(forward_signal_number(std::process::id(), -1).is_err());
 }
 
+#[cfg(unix)]
 #[test]
 fn forward_signal_propagates_os_errors() {
     // An unallocated pid fails without delivering any signal.
     assert!(forward_signal(1 << 30, UnixSignal::Terminate).is_err());
 }
 
+#[cfg(unix)]
 #[test]
 fn reraise_zero_is_safe() {
     reraise_number(0).expect("raise zero");
