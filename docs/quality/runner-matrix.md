@@ -222,7 +222,8 @@ JVM lint cohort plus spotbugs, shellcheck, shfmt, standardrb, staticcheck, style
 taplo lint plus format, terraform, tsc, ty, vale, yamlfmt, yamllint. Recorded Clippy/rustc diagnostics stay
 byte-identical to the parser unit samples (`quality/adapter/src/parsers/rust.rs`);
 `tsc` keeps its adapter parser with pass plus fail samples but stays
-pipeline-only by design (target-coupled, no runner dispatch, no matrix cell).
+pipeline-only by design (target-coupled, no runner dispatch, no matrix cell;
+bare-file dispatch wont-fix under issue #1064).
 Roslyn keeps its SARIF parser with pass plus fail samples and runs delegated
 (per-pivot SARIF inputs, no spawn), like Clippy/rustc. Buf lint plus qmllint
 keep their JSON parsers with pass plus fail samples and run delegated

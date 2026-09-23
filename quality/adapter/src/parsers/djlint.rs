@@ -5,7 +5,7 @@
 //!
 //! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
-use super::{code_name, known, missing, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Parses `djlint --lint` text diagnostics on stdout. `files` are the
@@ -20,6 +20,7 @@ pub fn parse_djlint(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "djlint";
+    check_output_size(TOOL, stderr)?;
     let text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),
@@ -92,6 +93,7 @@ pub fn parse_djlint_format(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "djlint";
+    check_output_size(TOOL, stdout)?;
     let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

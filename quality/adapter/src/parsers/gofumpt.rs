@@ -5,7 +5,7 @@
 //!
 //! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
-use super::{code_name, known, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Parses `gofumpt -d` stdout. `files` are the scratch-absolute paths
@@ -23,6 +23,7 @@ pub fn parse_gofumpt(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "gofumpt";
+    check_output_size(TOOL, stdout)?;
     let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

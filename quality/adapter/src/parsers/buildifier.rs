@@ -5,7 +5,7 @@
 
 use serde::Deserialize;
 
-use super::{known, point, FileFinding, ParseError};
+use super::{check_output_size, known, point, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
 #[derive(Debug, Deserialize)]
@@ -43,6 +43,8 @@ pub fn parse_buildifier(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "buildifier";
+    check_output_size(TOOL, stdout)?;
+    check_output_size(TOOL, stderr)?;
     let text = std::str::from_utf8(stdout).map_err(|err| ParseError::Json {
         tool: TOOL,
         detail: err.to_string(),

@@ -9,7 +9,7 @@
 //! `JavaInfo`, never bare sources), so provider-less matrix cases never
 //! exercise it; the parser is still fail-closed on the pinned grammar.
 
-use super::{sarif::parse_sarif, FileFinding, ParseError};
+use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
 /// Parses SpotBugs `-sarif` output. `files` are the absolute scratch
 /// paths passed to the tool.
@@ -18,6 +18,7 @@ pub fn parse_spotbugs(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size("spotbugs", stdout)?;
     parse_sarif("spotbugs", stdout, code, files)
 }
 

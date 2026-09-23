@@ -6,7 +6,7 @@
 //! PMD `-f sarif` prints a SARIF 2.1.0 log to stdout with ranged
 //! regions; `level` maps error/warning.
 
-use super::{sarif::parse_sarif, FileFinding, ParseError};
+use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
 /// Parses PMD `-f sarif` stdout. `files` are the absolute scratch
 /// paths passed to the tool.
@@ -15,6 +15,7 @@ pub fn parse_pmd(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size("pmd", stdout)?;
     parse_sarif("pmd", stdout, code, files)
 }
 

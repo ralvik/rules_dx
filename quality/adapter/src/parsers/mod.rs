@@ -5,7 +5,8 @@
 //! re-roots that path onto the workspace path before placement. Parsers
 //! never spawn processes and never invent positions: anything outside the
 //! pinned grammar is a [`ParseError`], which the runner surfaces as an
-//! action failure.
+//! action failure. Every entry point first enforces [`MAX_OUTPUT_BYTES`]
+//! so unbounded tool output fails closed as [`ParseError::TooLarge`].
 //!
 //! Pinned shapes (probed against the binaries, Python probes in
 //! the evidence):
@@ -342,6 +343,33 @@ pub enum ParseError {
     /// Vale refused without a usable config (E100/E201 envelope).
     #[error("vale needs a usable config: {detail}")]
     ValeConfig { detail: String },
+    /// Tool output exceeds the max output size guard.
+    #[error("{tool} output exceeds max size {limit} bytes (got {bytes})")]
+    TooLarge {
+        tool: &'static str,
+        bytes: usize,
+        limit: usize,
+    },
+}
+
+/// Maximum tool output bytes any parser accepts (supply-chain bound).
+/// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+pub const MAX_OUTPUT_BYTES: usize = 8 * 1024 * 1024;
+
+/// Rejects oversized output before parsing (max output size guard).
+/// Every parser calls this first so unbounded tool output fails closed
+/// as [`ParseError::TooLarge`]. The fuzz property harness feeds
+/// arbitrary bytes here; only `ParseError`, never panic (proptest-style
+/// mutations run with a std-only xorshift, no new supply-chain dep).
+pub fn check_output_size(tool: &'static str, bytes: &[u8]) -> Result<(), ParseError> {
+    if bytes.len() > MAX_OUTPUT_BYTES {
+        return Err(ParseError::TooLarge {
+            tool,
+            bytes: bytes.len(),
+            limit: MAX_OUTPUT_BYTES,
+        });
+    }
+    Ok(())
 }
 
 /// Resolves a tool-reported path against the checked scratch files.
@@ -375,7 +403,7 @@ fn code_name(code: Option<i32>) -> String {
 mod tests {
     // Error-format stability lives with the shared error type;
     // per-family grammar pins live in their family modules.
-    use super::ParseError;
+    use super::{check_output_size, ParseError, MAX_OUTPUT_BYTES};
 
     #[test]
     fn error_display_is_stable() {
@@ -396,5 +424,124 @@ mod tests {
         }
         .to_string()
         .contains("E100"));
+        assert!(ParseError::TooLarge {
+            tool: "sarif",
+            bytes: MAX_OUTPUT_BYTES + 1,
+            limit: MAX_OUTPUT_BYTES,
+        }
+        .to_string()
+        .contains("max size"));
+    }
+
+    #[test]
+    fn output_size_guard_rejects_oversized() {
+        assert!(check_output_size("tsc", b"ok").is_ok());
+        assert!(check_output_size("tsc", &vec![b'x'; MAX_OUTPUT_BYTES]).is_ok());
+        let big = vec![b'x'; MAX_OUTPUT_BYTES + 1];
+        assert_eq!(
+            check_output_size("tsc", &big),
+            Err(ParseError::TooLarge {
+                tool: "tsc",
+                bytes: big.len(),
+                limit: MAX_OUTPUT_BYTES,
+            })
+        );
+        // Every parser enforces the same guard first.
+        assert!(super::tsc::parse_tsc(&big, Some(2), &["/s/a.ts"]).is_err());
+        assert!(super::sarif::parse_sarif("sarif-test", &big, Some(1), &["/s/a.java"]).is_err());
+    }
+
+    fn xorshift(state: &mut u64) -> u64 {
+        // std-only deterministic PRNG for the fuzz property harness.
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    #[test]
+    fn fuzz_parsers_never_panic_on_arbitrary_bytes() {
+        // Property harness: arbitrary/truncated/mutated bytes yield Ok or
+        // ParseError, never panic (cargo fuzz seeds reuse these corpora).
+        // Covers representative grammar families: classic text, JSON,
+        // SARIF, JSONL, dual-stream, and config-envelope parsers.
+        let seeds: &[&[u8]] = &[
+            b"{}",
+            b"[]",
+            b"not json",
+            b"/s/a.ts(1,1): error TS1234: msg\n",
+            br#"{"version":"2.1.0","runs":[]}"#,
+            br#"[{"filePath":"/s/a.js","messages":[{"ruleId":"x","severity":2,"message":"m","line":1,"column":1}]}]"#,
+            br#"{"success":false,"files":[{"filename":"/s/a.bzl","formatted":false,"valid":true,"warnings":[]}]}"#,
+            b"path:1:1: E100 message\n",
+            b"error: bad\n  \xe2\x94\x8c\xe2\x94\x80 /s/x.toml:1:5\n",
+            b"Diff in /s/x.rs:1:\n-fn  main(){}\n+fn main() {}\n",
+            b"--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@\n-a\n+b\n",
+            b"{\"path\":\"x.proto\",\"start_line\":1,\"start_column\":1,\"type\":\"T\",\"message\":\"m\"}\n",
+            b"/s/Hello.java:3: error: [DeadException] msg\n1 error\n",
+            b"\xff\xfe\x00",
+        ];
+        let mut state = 0x9E37_79B9_7F4A_7C15u64;
+        for round in 0..400 {
+            let seed = seeds[round % seeds.len()];
+            let mut input = seed.to_vec();
+            // Mutate: truncate, flip, or extend with PRNG bytes.
+            match xorshift(&mut state) % 3 {
+                0 => {
+                    let keep = (xorshift(&mut state) as usize) % (input.len() + 1);
+                    input.truncate(keep);
+                }
+                1 => {
+                    if !input.is_empty() {
+                        let at = (xorshift(&mut state) as usize) % input.len();
+                        input[at] ^= (xorshift(&mut state) & 0xFF) as u8;
+                    }
+                }
+                _ => {
+                    let extra = (xorshift(&mut state) % 32) as usize;
+                    for _ in 0..extra {
+                        input.push((xorshift(&mut state) & 0xFF) as u8);
+                    }
+                }
+            }
+            let files = [
+                "/s/a.ts",
+                "/s/a.java",
+                "/s/a.js",
+                "/s/a.bzl",
+                "/s/x.toml",
+                "/s/x.rs",
+                "/s/a.py",
+                "/s/x.proto",
+                "/s/Hello.java",
+                "/s/dirty.toml",
+            ];
+            let _ = super::tsc::parse_tsc(&input, Some(2), &files);
+            let _ = super::sarif::parse_sarif("fuzz", &input, Some(1), &files);
+            let _ = super::ruff::parse_ruff(&input, Some(1), &files);
+            let _ = super::ruff::parse_ruff_format(&input, Some(1), &files);
+            let _ = super::vale::parse_vale(&input, Some(1), &files);
+            let _ = super::rust::parse_clippy(&input, Some(1), &files);
+            let _ = super::rust::parse_rustc(&input, Some(1), &files);
+            let _ = super::buildifier::parse_buildifier(&input, &input, &files);
+            let _ = super::eslint::parse_eslint(&input, Some(1), &files);
+            let _ = super::ty::parse_ty(&input, Some(1), &files);
+            let _ = super::taplo::parse_taplo_lint(&input, Some(1), &files);
+            let _ = super::taplo::parse_taplo_format_check(&input, Some(1), &files);
+            let _ = super::rustfmt::parse_rustfmt(&input, &input, Some(1), &files);
+            let _ = super::error_prone::parse_error_prone(&input, &input, Some(1), &files);
+            let _ = super::buf::parse_buf_lint(&input, Some(1), &files);
+            let _ = super::buf::parse_buf_format(&input, Some(1), &files);
+            let _ = super::djlint::parse_djlint(&input, Some(1), &files);
+            let _ = super::djlint::parse_djlint_format(&input, Some(1), &files);
+            let _ = super::shellcheck::parse_shellcheck(&input, Some(1), &files);
+            let _ = super::prettier::parse_prettier_check(&input, Some(1), &files);
+            let _ = super::govet::parse_govet(&input, Some(1), &files);
+            let _ = super::gofumpt::parse_gofumpt(&input, Some(1), &files);
+            let _ = super::markdown::parse_markdown_findings(&input, Some(0), &files);
+            let _ = super::spotbugs::parse_spotbugs(&input, Some(1), &files);
+        }
     }
 }

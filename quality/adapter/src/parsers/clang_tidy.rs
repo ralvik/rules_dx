@@ -5,7 +5,7 @@
 //!
 //! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 
-use super::{code_name, known, missing, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// Parses clang-tidy text diagnostics on stderr. `files` are the
@@ -23,6 +23,7 @@ pub fn parse_clang_tidy(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "clang_tidy";
+    check_output_size(TOOL, stderr)?;
     let text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

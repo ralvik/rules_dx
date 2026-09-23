@@ -3,7 +3,7 @@
 //! Per-family module of [`crate::parsers`]: the pinned-shape contract
 //! and [`ParseError`] semantics live in the parent module docs.
 
-use super::{code_name, known, missing, point, FileFinding, ParseError};
+use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
 /// One `error:` / `┌─ <path>:<line>:<col>` block plus its caret detail.
@@ -98,6 +98,7 @@ pub fn parse_taplo_lint(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "taplo";
+    check_output_size(TOOL, stderr)?;
     let stderr_text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),
@@ -136,6 +137,7 @@ pub fn parse_taplo_format_check(
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "taplo";
+    check_output_size(TOOL, stderr)?;
     let stderr_text = std::str::from_utf8(stderr).map_err(|err| ParseError::Shape {
         tool: TOOL,
         detail: err.to_string(),

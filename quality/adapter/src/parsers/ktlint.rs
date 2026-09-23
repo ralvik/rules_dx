@@ -8,7 +8,7 @@
 //! `ktlint --format` in place (re-read like ESLint `--fix`); the
 //! format capability itself stays owned by ktfmt in curated defaults.
 
-use super::{sarif::parse_sarif, FileFinding, ParseError};
+use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
 /// Parses ktlint `--reporter=sarif` stdout. `files` are the absolute
 /// scratch paths passed to the tool.
@@ -17,6 +17,7 @@ pub fn parse_ktlint(
     code: Option<i32>,
     files: &[&str],
 ) -> Result<Vec<FileFinding>, ParseError> {
+    check_output_size("ktlint", stdout)?;
     parse_sarif("ktlint", stdout, code, files)
 }
 

@@ -34,9 +34,10 @@
 
 use normpath::BasePathBuf;
 use std::ffi::OsStr;
-use std::io;
+use std::io::{self, Read};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 /// Contents of one mirror entry, at a scratch-relative path.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -345,25 +346,120 @@ pub fn hermetic_env(tmpdir: &Path, extra: &[(&str, &str)]) -> Vec<(String, Strin
     env
 }
 
+/// Maximum tool output wall-time plus max output size guard.
+/// Tools that exceed either fail closed as action errors, never silent.
+/// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
+pub const SPAWN_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// Rejects oversized child output (max output size guard, output-byte
+/// budget for check plus sandbox-apply-and-diff spawns).
+fn check_child_output_size(stdout: &[u8], stderr: &[u8]) -> io::Result<()> {
+    let limit = crate::parsers::MAX_OUTPUT_BYTES;
+    if stdout.len() > limit || stderr.len() > limit {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("tool output exceeds max size {limit} bytes"),
+        ));
+    }
+    Ok(())
+}
+
+/// Drains one child pipe on a helper thread so a chatty child never
+/// fills the pipe buffer and blocks on write (which would fake a
+/// timeout). Stores at most `MAX_OUTPUT_BYTES + 1` so the size guard
+/// still fails closed without unbounded memory; keeps reading past that
+/// without storing so the child can finish or be reaped on kill.
+fn drain_pipe<R: Read + Send + 'static>(mut pipe: R) -> std::thread::JoinHandle<Vec<u8>> {
+    std::thread::spawn(move || {
+        let limit = crate::parsers::MAX_OUTPUT_BYTES;
+        let mut buf = Vec::new();
+        let mut chunk = [0u8; 16 * 1024];
+        loop {
+            match pipe.read(&mut chunk) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let room = limit.saturating_add(1).saturating_sub(buf.len());
+                    let take = n.min(room);
+                    buf.extend_from_slice(&chunk[..take]);
+                }
+                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                Err(_) => break,
+            }
+        }
+        buf
+    })
+}
+
+/// Joins one drain thread, mapping a reader panic to an action error.
+fn join_drain(handle: Option<std::thread::JoinHandle<Vec<u8>>>) -> io::Result<Vec<u8>> {
+    match handle {
+        None => Ok(Vec::new()),
+        Some(handle) => handle
+            .join()
+            .map_err(|_| io::Error::other("tool output reader thread panicked")),
+    }
+}
+
 /// Spawns one absolute tool binary with a cleared environment.
 pub fn spawn(
     argv: &[impl AsRef<OsStr>],
     cwd: &Path,
     env: &[(String, String)],
 ) -> io::Result<ChildOutput> {
+    spawn_with_timeout(argv, cwd, env, SPAWN_TIMEOUT)
+}
+
+/// Spawns with an explicit timeout (fuzz/property harness uses short
+/// timeouts; production uses [`SPAWN_TIMEOUT`]).
+pub fn spawn_with_timeout(
+    argv: &[impl AsRef<OsStr>],
+    cwd: &Path,
+    env: &[(String, String)],
+    timeout: Duration,
+) -> io::Result<ChildOutput> {
     let (binary, args) = argv
         .split_first()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "invocation needs a binary"))?;
-    let output = Command::new(binary)
+    let mut child = Command::new(binary)
         .args(args)
         .current_dir(cwd)
         .env_clear()
         .envs(env.iter().map(|(key, value)| (key, value)))
-        .output()?;
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    let mut stdout_reader = child.stdout.take().map(drain_pipe);
+    let mut stderr_reader = child.stderr.take().map(drain_pipe);
+    let deadline = Instant::now() + timeout;
+    let status = loop {
+        match child.try_wait()? {
+            Some(status) => break status,
+            None => {
+                if Instant::now() >= deadline {
+                    // Fail closed on timeout: kill then reap so no zombie
+                    // remains; join drains (pipes close on kill) so no
+                    // reader outlives the call; the caller surfaces
+                    // TimedOut as an action failure.
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    let _ = join_drain(stdout_reader.take());
+                    let _ = join_drain(stderr_reader.take());
+                    return Err(io::Error::new(
+                        io::ErrorKind::TimedOut,
+                        format!("tool timed out after {}s", timeout.as_secs()),
+                    ));
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        }
+    };
+    let stdout = join_drain(stdout_reader)?;
+    let stderr = join_drain(stderr_reader)?;
+    check_child_output_size(&stdout, &stderr)?;
     Ok(ChildOutput {
-        code: output.status.code(),
-        stdout: output.stdout,
-        stderr: output.stderr,
+        code: status.code(),
+        stdout,
+        stderr,
     })
 }
 
@@ -745,5 +841,64 @@ mod tests {
         assert!(spawn(&[OsStr::new("/nonexistent-dx-tool")], Path::new("/"), &env).is_err());
         let empty: Vec<&OsStr> = Vec::new();
         assert!(spawn(&empty, Path::new("/"), &env).is_err());
+    }
+
+    #[test]
+    fn spawn_enforces_timeout_and_kills_the_child() {
+        let env = hermetic_env(&std::env::temp_dir(), &[]);
+        let err = spawn_with_timeout(
+            &[
+                OsStr::new("/bin/sh"),
+                OsStr::new("-c"),
+                OsStr::new("exec sleep 30"),
+            ],
+            Path::new("/"),
+            &env,
+            Duration::from_millis(50),
+        )
+        .expect_err("timeout");
+        assert_eq!(err.kind(), io::ErrorKind::TimedOut);
+        assert!(err.to_string().contains("timed out"));
+    }
+
+    #[test]
+    fn spawn_drains_large_output_without_faking_a_timeout() {
+        // A child that writes past the pipe buffer (~64 KiB) must not
+        // block on write; concurrent drain keeps it exiting under the
+        // wall-time budget.
+        let env = hermetic_env(&std::env::temp_dir(), &[]);
+        let out = spawn_with_timeout(
+            &[
+                OsStr::new("/bin/sh"),
+                OsStr::new("-c"),
+                OsStr::new("head -c 1048576 /dev/zero"),
+            ],
+            Path::new("/"),
+            &env,
+            Duration::from_secs(10),
+        )
+        .expect("large output");
+        assert_eq!(out.code, Some(0));
+        assert_eq!(out.stdout.len(), 1_048_576);
+        assert!(out.stderr.is_empty());
+    }
+
+    #[test]
+    fn spawn_rejects_oversized_output() {
+        // Output past MAX_OUTPUT_BYTES fails closed even when the child
+        // itself exits cleanly.
+        let env = hermetic_env(&std::env::temp_dir(), &[]);
+        let limit = crate::parsers::MAX_OUTPUT_BYTES;
+        let bytes = limit + 1;
+        let script = format!("head -c {bytes} /dev/zero");
+        let err = spawn_with_timeout(
+            &[OsStr::new("/bin/sh"), OsStr::new("-c"), OsStr::new(&script)],
+            Path::new("/"),
+            &env,
+            Duration::from_secs(30),
+        )
+        .expect_err("oversize");
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(err.to_string().contains("max size"));
     }
 }
