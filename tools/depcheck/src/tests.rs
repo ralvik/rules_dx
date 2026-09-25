@@ -1079,8 +1079,10 @@ fn find_usages_walks_odd_files() {
         use std::os::unix::fs::PermissionsExt;
         let mode = std::fs::Permissions::from_mode(0o000);
         std::fs::set_permissions(&locked, mode).expect("chmod");
+        // macOS filesystems reject non-UTF-8 names with EPERM, so this entry
+        // is best-effort; the walk still sees the unreadable and non-source files.
         let odd = dir.path().join(std::ffi::OsStr::from_bytes(b"bad\xff"));
-        write_file(&odd, "fn odd() {}\n");
+        let _ = std::fs::write(&odd, "fn odd() {}\n");
     }
     let rust_hits =
         find_usages(Ecosystem::Rust, dir.path(), &["codegen".to_owned()]).expect("usages");

@@ -295,7 +295,8 @@ impl Verifier for SystemVerifier {
         use sha2::Digest as _;
         let mut hasher = sha2::Sha256::new();
         let mut file = std::fs::File::open(path)?;
-        let mut buf = [0u8; 1 << 20];
+        // Heap buffer: 1MiB on the stack overflows Windows (issue #1207).
+        let mut buf = vec![0u8; 64 << 10];
         loop {
             use std::io::Read as _;
             let read = file.read(&mut buf)?;

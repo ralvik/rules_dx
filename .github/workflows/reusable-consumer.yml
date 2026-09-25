@@ -61,9 +61,10 @@ permissions:
   contents: read
 
 env:
-  # Git Bash must preserve Bazel labels when invoking native Windows binaries.
-  MSYS_NO_PATHCONV: "1"
-  MSYS2_ARG_CONV_EXCL: "*"
+  # Git Bash must preserve Bazel labels (`//...`) when invoking native
+  # Windows binaries, while still converting MSYS paths (`/c/...`) for
+  # tools like tsc.bat. Exclude only `//`, not `*`.
+  MSYS2_ARG_CONV_EXCL: "//"
 
 concurrency:
   group: dx-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

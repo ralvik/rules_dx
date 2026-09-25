@@ -60,18 +60,18 @@ dx_guards_contains docs/testing/tools.md "tool matrix lost the product boundary 
   'ADR 0028' \
   'product_runtime_guards'
 
-# Direct product py_binary allowlist stays exact (4 targets): hermetic
-# npm_packer plus update plus the two must-stay
+# Direct product py_binary allowlist stays exact (5 targets): hermetic
+# npm_packer plus update plus the three must-stay
 # linter shims (archiver/hasher delivered Rust under #760, preset
 # delivered Rust under #761, SBOM/BCR gens delivered Rust under #763). A new
 # product py_binary fails here until its accepted successor updates both
 # this row and ADR 0026. Depcheck stays a filegroup run via sh_test, not
 # a py_binary, and migrates as its own phase.
 py_names="$(grep -h -A1 -e '^[[:space:]]*py_binary(' deploy/rules/BUILD.bazel deploy/release/BUILD.bazel tools/bazelrc/BUILD.bazel quality/artifacts/BUILD.bazel quality/tools/python/BUILD.bazel 2>/dev/null | grep -e 'name = ' | sed -e 's/.*name = //' -e 's/[",]//g' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$py_names" == "flake8 npm_packer pylint update" ]]; then
+if [[ "$py_names" == "flake8 npm_packer pydoclint pylint update" ]]; then
   ok
 else
-  bad "product py_binary allowlist drifted (want npm_packer plus update plus flake8/pylint shims with archiver/hasher plus preset plus sbom/bcr Rust, got: $py_names)"
+  bad "product py_binary allowlist drifted (want npm_packer plus update plus flake8/pylint/pydoclint shims with archiver/hasher plus preset plus sbom/bcr Rust, got: $py_names)"
 fi
 
 # Archiver/hasher stay Rust (delivered Phase 1): no return to Python.
@@ -165,13 +165,16 @@ else
 fi
 
 # Must-stay linter shims stay py_binary (Rust cannot import the libs).
-dx_guards_contains quality/tools/python/BUILD.bazel "linter shims lost their must-stay py_binary (want flake8 plus pylint)" \
+dx_guards_contains quality/tools/python/BUILD.bazel "linter shims lost their must-stay py_binary (want flake8 plus pylint plus pydoclint)" \
   'name = "flake8"' \
   'name = "pylint"' \
+  'name = "pydoclint"' \
   'flake8_main.py' \
-  'pylint_main.py'
+  'pylint_main.py' \
+  'pydoclint_main.py'
 dx_guard_file quality/tools/python/flake8_main.py "must-stay flake8 shim missing (ADR 0026)"
 dx_guard_file quality/tools/python/pylint_main.py "must-stay pylint shim missing (ADR 0026)"
+dx_guard_file quality/tools/python/pydoclint_main.py "must-stay pydoclint shim missing (ADR 0026)"
 
 # POSIX fixtures stay portable with no Linux constraint.
 if ! grep -A4 -e 'name = "tool_sh"' env/BUILD.bazel | grep -q -F -e 'target_compatible_with' &&

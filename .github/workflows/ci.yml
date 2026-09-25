@@ -8,9 +8,11 @@ on:
   pull_request:
 
 env:
-  # Preserve Bazel labels passed through Git Bash to native Windows binaries.
-  MSYS_NO_PATHCONV: "1"
-  MSYS2_ARG_CONV_EXCL: "*"
+  # Preserve Bazel labels (`//...`) passed through Git Bash to native
+  # Windows binaries, while still converting MSYS paths (`/c/...` to
+  # `C:\...`) that tools like tsc.bat require. Excluding only the `//`
+  # prefix (not `*`, not `MSYS_NO_PATHCONV`) keeps both working.
+  MSYS2_ARG_CONV_EXCL: "//"
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

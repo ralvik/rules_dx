@@ -39,12 +39,13 @@ fn basename(path: &Path) -> io::Result<String> {
         })
 }
 
-/// SHA-256 hex of the file at `path`, streamed in 1 MiB chunks.
+/// SHA-256 hex of the file at `path`, streamed in 64KiB chunks.
 fn sha256_file(path: &Path) -> io::Result<String> {
     use sha2::Digest as _;
     let mut hasher = sha2::Sha256::new();
     let mut file = std::fs::File::open(path)?;
-    let mut buf = [0u8; 1 << 20];
+    // Heap buffer: 1MiB on the stack overflows Windows (issue #1207).
+    let mut buf = vec![0u8; 64 << 10];
     loop {
         use std::io::Read as _;
         let read = file.read(&mut buf)?;
