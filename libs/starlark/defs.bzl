@@ -95,9 +95,7 @@ def expect_false(name, actual):
     })
 
 def expect_contains(name, haystack, needle):
-    """Builds one membership record (string substring, list/tuple element, dict key). See: `docs/testing/starlark.md#authoring`.
-
-    """
+    """Builds one membership record (string substring, list/tuple element, dict key). See: `docs/testing/starlark.md#authoring`."""
     haystack_type = type(haystack)
     if haystack_type == "string":
         if type(needle) != "string":
@@ -583,7 +581,6 @@ def starlark_test(name, mode, checks = [], subjects = [], expected_observations 
     demonstrations that must fail without breaking `//...` suites.
     `observe_output_groups` opts analysis tests into `dx_results`
     output-group plus instrumented-files observations (issue #928).
-
     """
     if mode not in _MODES:
         fail("starlark_test: unknown mode '" + mode + "': want one of " +

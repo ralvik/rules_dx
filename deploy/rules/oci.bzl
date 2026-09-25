@@ -54,7 +54,8 @@ def oci_schema_error():
     Checks data shape without pinning exact contents: version is v1, each
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so values embed safely
-    in the deploy launcher."""
+    in the deploy launcher.
+    """
     if OCI_SCHEMA_VERSION != 1:
         return "oci tag: unsupported schema v" + str(OCI_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
@@ -181,6 +182,7 @@ def _oci_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@IMAGE_RLOC@@": tar_rloc,
             "@@OCI_REGISTRY@@": ctx.attr.registry,
@@ -233,7 +235,8 @@ def oci_deploy(name, image_tar, tag = "latest", registry = OCI_DEFAULT_REGISTRY,
     `OCI_PUBLISH_LIVE=1`, `OCI_REGISTRY_USER`, `OCI_REGISTRY_TOKEN`, and
     `OCI_PUBLISH_APPROVED=1` after explicit owner approval, with
     SBOM/provenance plus signing verification first. Registry credentials
-    come from env only, never from BUILD."""
+    come from env only, never from BUILD.
+    """
     effective_repo = repository if repository != "" else name
     tag_error = oci_tag_error(tag)
     if tag_error != "":

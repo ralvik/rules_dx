@@ -103,7 +103,6 @@ def wrapper_schema_error():
     family spelling is canonical, every owner is a wrapper label or the
     explicit "other" verdict, every taxonomy family has an entry, and no
     entry names a family outside the taxonomy.
-
     """
     if WRAPPER_SCHEMA_VERSION != 1:
         return "wrapper owners: unsupported schema v" + str(WRAPPER_SCHEMA_VERSION) + " (want v1)"

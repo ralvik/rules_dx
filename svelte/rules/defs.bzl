@@ -34,9 +34,7 @@ def _svelte_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _svelte_library_forward, srcs, visibility = visibility, **kwargs)
 
 def svelte_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for Svelte components.
-
-    """
+    """Experimental minimal wrapper over `js_library` for Svelte components."""
 
     # PARITY_DEFERRED (ADR 0019): no adapter claims `svelte` yet. Tag the
     # public forwarder so the fail-closed deferred pipeline does not fail

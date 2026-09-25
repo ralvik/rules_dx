@@ -73,9 +73,7 @@ def _artifact_checks(artifact, tool, platform, version, url, sha256, size, exe, 
     ]
 
 def metadata_tests(name):
-    """Declare the standalone-artifact metadata pin test.
-
-    """
+    """Declare the standalone-artifact metadata pin test."""
     checks = []
     checks += _artifact_checks(
         _biome_linux_arm64,

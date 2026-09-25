@@ -644,6 +644,7 @@ sh_binary(
 # Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = ["BUILD.bazel"] + glob(
         ["*.bzl"],
         exclude = ["real_clean.bzl"],

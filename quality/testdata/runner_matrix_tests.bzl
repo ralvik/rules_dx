@@ -379,7 +379,6 @@ def runner_matrix_suite(name, cases):
 
     Each case is a struct of the rule attrs above plus `name`. All case
     data lives here in `.bzl`; BUILD files only pass the suite name.
-
     """
     tests = []
     for case in cases:

@@ -134,7 +134,8 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     `BCR_DRY_RUN=1 bazel run :<name>` to print the would-submit PR (what
     CI exercises, submits nothing). A real submission needs an
     owner-approved SemVer version plus explicit approval per the runbook;
-    `0.0.0` fails submission by construction."""
+    `0.0.0` fails submission by construction.
+    """
     src_err = bcr_source_error(module_name, version)
     if src_err != "":
         fail(src_err + " (in " + native.package_name() + ":" + name + ")")

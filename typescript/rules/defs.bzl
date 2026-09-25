@@ -66,7 +66,8 @@ def typescript_srcs_rejection(srcs):
     and configuration come from `typescript_project` over real sources,
     and no wrapper independently enumerates sources or invokes a second
     compiler. Silently dropping them from `QualitySourcesInfo` would mask
-    the authoring error, so they fail here instead."""
+    the authoring error, so they fail here instead.
+    """
     bad = [src for src in srcs or [] if _is_declaration(src)]
     if bad:
         return ("typescript_project takes real sources only; declaration " +
@@ -79,6 +80,7 @@ def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
     rejection = typescript_srcs_rejection(srcs)
     if rejection != None:
         fail(rejection)
+
     # Lane-A: aspect_hints ride the public forwarder via dx_wrap.
     dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 
@@ -133,7 +135,8 @@ _typescript_test = rule(
 def typescript_test_rejection(kwargs):
     """Returns the contract rejection for forbidden `typescript_test` kwargs, or `None`.
 
-    See: `docs/testing/generation.md`."""
+    See: `docs/testing/generation.md`.
+    """
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("typescript_test always uses jest with the standard " +
                 "auto-configured reporters (Bazel test logs); " +
@@ -145,7 +148,8 @@ def typescript_test_rejection(kwargs):
 def typescript_test_env(env_inherit):
     """Computes the effective test-runtime inherited environment.
 
-    See: `docs/testing/generation.md`."""
+    See: `docs/testing/generation.md`.
+    """
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
@@ -168,7 +172,8 @@ def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig
     attrs. Execution of TypeScript entries reuses `javascript_binary`
     over the compiled output; there is no `typescript_binary`.
 
-    See: `docs/decisions/0013-rust-javascript-typescript-foundations.md`."""
+    See: `docs/decisions/0013-rust-javascript-typescript-foundations.md`.
+    """
 
     # Declaration sources are inert for the library wrapper and for tests.
     rejection = typescript_srcs_rejection(srcs)

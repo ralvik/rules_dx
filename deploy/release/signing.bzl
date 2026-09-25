@@ -47,9 +47,7 @@ def signing_bundle_media_error(media_type):
     return ""
 
 def signing_identity_error(identity, issuer):
-    """Validates the expected certificate identity + issuer.
-
-    """
+    """Validates the expected certificate identity + issuer."""
     if type(identity) != "string" or identity == "":
         return ("signing: invalid identity '" + str(identity) +
                 "': want the owner-approved release workflow identity")
@@ -187,14 +185,6 @@ def signed_release(name, artifacts, identity, issuer = "https://token.actions.gi
     drift fails at analysis time, and the launcher re-checks
     `cosign version` at run time before any live sign (bundle verify
     follows every sign in `signing_run`).
-
-    Args:
-      name: Deploy target base name.
-      artifacts: Pinned artifact labels to sign and attest.
-      identity: Expected certificate identity URL for keyless signing.
-      issuer: Expected OIDC issuer for the signing identity.
-      profile: Deploy profile (debug, dev, or release).
-      cosign_version: Pinned cosign CLI version for the launcher.
     """
     err = signing_identity_error(identity, issuer)
     if err != "":

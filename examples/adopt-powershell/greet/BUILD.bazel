@@ -31,12 +31,14 @@ pwsh_binary(
 pwsh_test(
     name = "greet_test",
     srcs = ["Greet.Tests.ps1"],
+    data = ["Greet.Describe.ps1"],
     target_compatible_with = ["@platforms//os:linux"],
     deps = [":greet"],
 )
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

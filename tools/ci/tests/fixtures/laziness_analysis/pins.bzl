@@ -8,18 +8,20 @@ Fixture: `tools/ci/tests/fixtures/laziness_analysis/` via
 # M1 configured-target counts: `bazel cquery "deps(//examples/<ex>/...)"`
 # `--output=label | sort -u | wc -l` on the seed host. Delta must be zero:
 # adding a bazel_dep+extension must not add configured targets to
-# single-foundation adopt-* consumers.
+# single-foundation adopt-* consumers. Each corpus_starlark also binds
+# `//:buildifier_config`, costing the same two configured targets the
+# Markdown corpus's Vale binding costs (config target plus its source).
 CQUERY_EXPECTED = {
-    "adopt-cpp": 240,
-    "adopt-csharp": 4811,
-    "adopt-fsharp": 4825,
-    "adopt-go": 6127,
-    "adopt-java": 2586,
-    "adopt-js-ts": 6122,
-    "adopt-kotlin": 2848,
-    "adopt-python": 2401,
-    "adopt-rust": 483,
-    "adopt-scala": 4284,
+    "adopt-cpp": 242,
+    "adopt-csharp": 4813,
+    "adopt-fsharp": 4827,
+    "adopt-go": 6129,
+    "adopt-java": 2588,
+    "adopt-js-ts": 6124,
+    "adopt-kotlin": 2850,
+    "adopt-python": 2403,
+    "adopt-rust": 485,
+    "adopt-scala": 4286,
 }
 
 # M2 action counts: `bazel aquery //examples/<ex>/... --output=text |

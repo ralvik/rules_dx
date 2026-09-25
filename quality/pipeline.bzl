@@ -13,7 +13,6 @@ def authorize_classes(family_selections, class_to_family):
     map). Returns a dict of tool ID to sorted authorizing class list: the
     union of classes assigned to every family selecting that tool. Several
     families selecting one adapter yield one stage over the union.
-
     """
     family_to_classes = {}
     for class_id in class_to_family.keys():
@@ -41,7 +40,6 @@ def stage_sources(direct_sources, effective_classes):
     `direct_sources` maps class ID to path list. Missing classes contribute
     nothing. Output is sorted and deduplicated: declaration and depset order
     have no semantics.
-
     """
     seen = {}
     for class_id in effective_classes:
@@ -61,7 +59,6 @@ def pipeline_stages(target_classes, capability, family_selections, class_to_fami
     Each stage is a dict `{"tool": ..., "classes": [...]}` with sorted
     effective classes. Adapters with no effective classes create no stage.
     Fails on a selected tool ID absent from `adapters`.
-
     """
     authorized = authorize_classes(family_selections, class_to_family)
     for tool in authorized.keys():
@@ -84,7 +81,6 @@ def resolve_pipeline(target_classes, direct_sources, capability, family_selectio
     Each entry is `{"tool": ..., "classes": [...], "sources": [...]}` with
     sorted classes and sorted deduplicated workspace-relative paths. Stages
     with no effective sources are omitted, so no empty action is registered.
-
     """
     resolved = []
     for stage in pipeline_stages(target_classes, capability, family_selections, class_to_family, adapters):
@@ -103,7 +99,6 @@ def target_subject_classes(target_classes):
     Sorts and dedupes the class list so custom rules testing
     QualitySourcesInfo construction (ADR 0002/0011) can assert target
     subjects deterministically regardless of declaration order.
-
     """
     seen = {}
     for class_id in target_classes:
@@ -116,7 +111,6 @@ def file_subject_paths(direct_sources):
     `direct_sources` maps class ID to path list (string test double for
     the provider depsets). Output is sorted and deduplicated so custom
     rules can assert file subjects without Bazel File objects.
-
     """
     seen = {}
     for class_id in direct_sources.keys():
@@ -130,7 +124,6 @@ def depset_subject_paths(depset_lists):
     `depset_lists` is a list of path lists, each standing in for one
     depset's `to_list()`. Output is sorted and deduplicated so custom
     rules can assert depset unions without Bazel depset objects.
-
     """
     seen = {}
     for paths in depset_lists:
@@ -145,7 +138,6 @@ def runfiles_subject_paths(checked_paths, runfiles_paths):
     so a runfiles path colliding with a checked path is dropped. Output
     is sorted so custom rules can assert runfiles subjects
     deterministically.
-
     """
     checked = {}
     for path in checked_paths:
@@ -170,7 +162,6 @@ def aspect_direct_maps(direct_sources, what):
     Fail-closed multi-config boundary: duplicate workspace paths across
     classes and `..` escapes fail analysis instead of first-wins or late
     runner rejection. See: `docs/quality/native-configuration.md#closures-and-action-inputs`.
-
     """
     direct_files = {}
     direct_paths = {}
@@ -198,9 +189,7 @@ def drop_pipeline_tool(resolved, tool):
     return [stage for stage in resolved if stage["tool"] != tool]
 
 def ordered_pipeline_paths(resolved):
-    """Unions resolved stage sources into sorted workspace paths (See: action-model.md#outputs-remote-cache-and-execution).
-
-    """
+    """Unions resolved stage sources into sorted workspace paths (See: action-model.md#outputs-remote-cache-and-execution)."""
     union = {}
     for stage in resolved:
         for path in stage["sources"]:
@@ -216,9 +205,7 @@ def stage_flag(stage):
     return stage["tool"] + ";" + ",".join(stage["classes"]) + ";" + ",".join(stage["sources"])
 
 def prune_tool_generated_sources(resolved, generated_paths, tool):
-    """Drops generated paths from one tool's stages, omitting emptied stages (See: tool-integrations.md).
-
-    """
+    """Drops generated paths from one tool's stages, omitting emptied stages (See: tool-integrations.md)."""
     kept = []
     for stage in resolved:
         if stage["tool"] != tool:
@@ -232,9 +219,7 @@ def prune_tool_generated_sources(resolved, generated_paths, tool):
     return kept
 
 def generated_source_paths(direct_files):
-    """Collects non-source (`is_source == False`) workspace paths (See: tool-integrations.md).
-
-    """
+    """Collects non-source (`is_source == False`) workspace paths (See: tool-integrations.md)."""
     generated = {}
     for class_id in direct_files:
         for f in direct_files[class_id]:

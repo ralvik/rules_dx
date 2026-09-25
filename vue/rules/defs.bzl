@@ -34,9 +34,7 @@ def _vue_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _vue_library_forward, srcs, visibility = visibility, **kwargs)
 
 def vue_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for Vue SFCs.
-
-    """
+    """Experimental minimal wrapper over `js_library` for Vue SFCs."""
 
     # PARITY_DEFERRED (ADR 0019): no adapter claims `vue` yet. Tag the
     # public forwarder so the fail-closed deferred pipeline does not fail

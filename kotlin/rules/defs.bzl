@@ -105,7 +105,8 @@ def kotlin_binary(name, srcs = None, main_class = None, visibility = None, **kwa
     names its `main_class` explicitly (no inference); a thin entry binary
     carries only `runtime_deps` with no `srcs` and reports no direct
     sources. Both shapes preserve the upstream providers and execution
-    semantics."""
+    semantics.
+    """
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:

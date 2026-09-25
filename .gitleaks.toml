@@ -9,8 +9,5 @@ useDefault = true
 [allowlist]
 description = "docs SBOM prose is not a secret; dx audit offline OSV snapshots under .dx/ are data, not source"
 regexes = ["SBOM/provenance"]
-paths = [
-  "docs/.*\\.md$",
-  "\\.dx/.*",
-]
+paths = ["docs/.*\\.md$", "\\.dx/.*"]
 regexTarget = "match"

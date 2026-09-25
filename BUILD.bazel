@@ -1,6 +1,6 @@
 """Root package for the rules_dx seed."""
 
-load("@rules_dx//quality:native_config.bzl", "biome_config", "ruff_config", "rustfmt_config", "vale_config")
+load("@rules_dx//quality:native_config.bzl", "biome_config", "buildifier_config", "ruff_config", "rustfmt_config", "vale_config")
 
 # Gazelle Rust resolve map (repo-wide directives); see docs/generation/rust.md.
 # gazelle:resolve rust dx_adopt //cli/adopt:dx_adopt
@@ -366,6 +366,7 @@ real_source_target(
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "MODULE.bazel",
@@ -389,5 +390,11 @@ vale_config(
     name = "vale_config",
     src = ".vale.ini",
     data = ["//quality:corpus_styles/Dx/Markers.yml"],
+    visibility = ["//:__subpackages__"],
+)
+
+buildifier_config(
+    name = "buildifier_config",
+    src = ".buildifier.json",
     visibility = ["//:__subpackages__"],
 )

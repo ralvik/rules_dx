@@ -7,13 +7,8 @@ $ErrorActionPreference = "Stop"
 Import-Module (Join-Path $PSScriptRoot "Greet.psm1") -Force
 if (Get-Module -ListAvailable -Name Pester) {
     Import-Module Pester -MinimumVersion 5.7.1 -ErrorAction Stop
-    Describe "Get-AdoptGreeting" {
-        It "greets powershell" {
-            Get-AdoptGreeting | Should -Be "hello powershell"
-        }
-    } | Out-Null
-    $result = Invoke-Pester -PassThru -Output None
-    if ($result.FailedCount -gt 0) { exit 1 }
+    $result = Invoke-Pester -Path (Join-Path $PSScriptRoot "Greet.Describe.ps1") -PassThru -Output None
+    if ($result.FailedCount -gt 0 -or $result.FailedBlocksCount -gt 0) { exit 1 }
     exit 0
 }
 $greeting = Get-AdoptGreeting

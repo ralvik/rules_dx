@@ -336,7 +336,7 @@ The following source facts prevent describing it as a drop-in hermetic stack:
   manifest reads are version-resolution cost while restricted MSVC payload download requires
   explicit acceptance and never happens for unrelated workflows, per
   [ADR 0014](decisions/0014-tested-platform-release-stack.md#decision) and
-  [Activation And Laziness](architecture/README.md#activation-and-laziness). Acknowledgement UX is
+  [Activation And Laziness](architecture/lifecycle.md#activation-and-laziness). Acknowledgement UX is
   qualified seed-only under issue #818 (`cc/tests/fixtures/windows_eula/pins.bzl` via
   `bazel run //tools/ci:windows_eula_qualification`, missing-ack fails before fetch with an
   actionable error, unrelated-workflows-green).
@@ -611,7 +611,7 @@ claim.
 
 Admitted C/C++ foundation stays owned under issues #476-#484: MSVC interop plus SDK licensing
 is qualified for the Windows x86_64 host under issue #414 per the [support
-matrix](product/support-matrix.md#initial-feasibility-review) and [Windows
+matrix](product/support-matrix.md) and [Windows
 acquisition](#windows-acquisition-and-compatibility) above (provisional
 toolchains_msvc backend, explicit EULA never automatic, interop plus
 manifest/path/ABI fixtures, per-cell coverage); no `Supported` claim until
@@ -656,7 +656,7 @@ assume rights rejected).
 Admission records a light inventory entry — minimal required core/framework inventory plus
 dispositions only, with effort evidence recorded as each tracked item lands. Remaining
 per-candidate mappings stay pending
-[additional-foundation qualification](product/support-matrix.md#additional-v1-foundations) as
+[additional-foundation qualification](decisions/0019-first-release-additional-foundations.md) as
 delivered work under closed #416-#420 (successors closed #796-#800). Ownership: the sole repository
 maintainer owns every row until maintenance is explicitly delegated.
 

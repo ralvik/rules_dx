@@ -161,6 +161,7 @@ def _standalone_tool_repo_impl(ctx):
         ctx.extract(ctx.attr.asset)
     else:
         fail("unsupported archive format: " + kind)
+
     # Inner-digest enforcement. See: `docs/tools/tool-acquisition.md`
     # (checksummed-artifact route): the outer sha256 above verifies the
     # downloaded asset; this re-hashes the extracted executable against

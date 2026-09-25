@@ -105,12 +105,6 @@ def cc_copts_with_werror(kwargs):
     Windows so GoogleTest C++17 floors compile under `cl.exe`
     (qualified runner: `bazel run //tools/ci:googletest_qualification`).
     See: docs/testing/generation.md.
-
-    Args:
-      kwargs: Rule keyword arguments possibly containing `copts`.
-
-    Returns:
-      Copy of `kwargs` with a platform-selected warnings-as-errors flag.
     """
     upstream_kwargs = dict(kwargs)
     copts = list(upstream_kwargs.get("copts", []))

@@ -1,8 +1,8 @@
 import { total } from "./totals.js";
 
 declare function test(name: string, fn: () => void): void;
-declare const expect: {
-	(actual: unknown): { toBe(expected: unknown): void };
+declare const expect: (actual: unknown) => {
+	toBe(expected: unknown): void;
 };
 
 test("totals small lists", () => {

@@ -3,7 +3,7 @@
 Pre-release. No cell is `Supported`. Tracking lives in GitHub issues.
 
 
-### Platform-qualified targets
+## Platform-qualified targets
 
 | Consumer | Status | consumer self-call: test-disabled |
 | --- | --- | --- |

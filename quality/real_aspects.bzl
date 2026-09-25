@@ -492,9 +492,7 @@ def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain
     return _impl
 
 def real_allowed_tools_error():
-    """Validates aspect shards stay registry subsets (See: //quality:registry.bzl).
-
-    """
+    """Validates aspect shards stay registry subsets (See: //quality:registry.bzl)."""
     allowed = (
         _CORE_LINT_TOOLS + _CORE_FORMAT_TOOLS + _CORE_TYPECHECK_TOOLS +
         _JS_LINT_TOOLS + _JS_FORMAT_TOOLS + _PY_LINT_TOOLS +

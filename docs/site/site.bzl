@@ -89,11 +89,6 @@ def site_link_target_error(target, known_pages, known_api_paths):
     strip any `#fragment` and require the base in `known_pages` or
     `known_api_paths`. Empty or unknown bases fail closed with no silent
     dangling pass.
-
-    Args:
-      target: raw Markdown link target (inside `](...)` or definition).
-      known_pages: valid render-input basenames at the pre-render boundary.
-      known_api_paths: valid per-symbol `api/...` pages from shard IDs.
     """
     if target == "":
         return "docs_site: empty link target"
@@ -154,12 +149,6 @@ def docs_extract(name, language, package, srcs):
     `LC_ALL=C sort`, and emits deterministic textproto with no timestamps,
     no absolute paths, and workspace-relative IDs only. The shard is a
     generated Bazel output, never a committed file. No network access.
-
-    Args:
-      name: instance name; owns the `<name>.ir.textproto` shard output.
-      language: language identity (e.g. `python`).
-      package: package identity (e.g. `demo`).
-      srcs: symbol-list inputs (`qualified|doc` per line).
     """
     unit_err = site_symbol_id_error(language, package, "unit")
     if unit_err != "":
@@ -192,12 +181,6 @@ def docs_aggregate(name, shards, prose, book_toml):
     resolve to prose or generated API pages with no dangling targets with
     dangling targets fail the aggregate action; remote targets are skipped,
     never fetched with no partial outputs.
-
-    Args:
-      name: instance name; owns SUMMARY, API, and records outputs.
-      shards: IR shard labels from `docs_extract`.
-      prose: mdBook-compatible Markdown prose labels.
-      book_toml: mdBook `book.toml` config label (declared input).
     """
     if len(shards) == 0:
         fail("docs_aggregate " + native.package_name() + ":" + name + ": need at least one shard")
@@ -244,13 +227,6 @@ def docs_render(name, summary, api, records, book_toml):
     stamps the pinned mdBook version with no timestamps and no absolute
     paths; the search index is copied from aggregate records, never parsed
     from rendered HTML.
-
-    Args:
-      name: instance name; owns the site entry plus search-index outputs.
-      summary: SUMMARY.md label from `docs_aggregate`.
-      api: generated API pages label from `docs_aggregate`.
-      records: search-records label from `docs_aggregate`.
-      book_toml: mdBook `book.toml` config label (declared input).
     """
     html = site_html_name(name)
     index = site_index_name(name)
@@ -276,14 +252,6 @@ def docs_site(name, language, package, srcs, prose, book_toml):
     One `docs_extract` per unit, one shared-validation `docs_aggregate`,
     one pinned-renderer `docs_render`. Check mode selects extract plus
     aggregate without render; see `plan_mode_actions` in `cli/docgen`.
-
-    Args:
-      name: site instance name; owns the full extract to render chain.
-      language: language identity for the extract unit.
-      package: package identity for the extract unit.
-      srcs: symbol-list inputs for extraction.
-      prose: mdBook-compatible Markdown prose inputs.
-      book_toml: mdBook `book.toml` config input.
     """
     docs_extract(
         name = name + "_extract",

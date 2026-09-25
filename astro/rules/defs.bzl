@@ -34,9 +34,7 @@ def _astro_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _astro_library_forward, srcs, visibility = visibility, **kwargs)
 
 def astro_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library` for Astro components.
-
-    """
+    """Experimental minimal wrapper over `js_library` for Astro components."""
 
     # PARITY_DEFERRED (ADR 0019): no adapter claims `astro` yet. Tag the
     # public forwarder so the fail-closed deferred pipeline does not fail

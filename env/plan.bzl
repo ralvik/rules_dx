@@ -49,9 +49,7 @@ DX_ENV_ADMITTED_INTEGRATIONS = (
 )
 
 def env_plan_key_error(key):
-    """Validates one identity-dimension key.
-
-    """
+    """Validates one identity-dimension key."""
     if key == "":
         return "invalid env plan key '': must be a non-empty single token"
     if "/" in key or "\\" in key:
@@ -61,9 +59,7 @@ def env_plan_key_error(key):
     return ""
 
 def env_plan_value_error(value):
-    """Validates one identity-input value.
-
-    """
+    """Validates one identity-input value."""
     if value == "":
         return "invalid env plan value '': must be a non-empty identity input"
     if "|" in value:
@@ -76,7 +72,6 @@ def env_plan_exec_error(path):
     Empty means a logical-only identity input requiring no artifact.
     Non-empty must be a workspace-relative path and never uses the
     reserved shard suffix (a shard never backs another shard).
-
     """
     if path == "":
         return ""
@@ -123,9 +118,7 @@ def _env_plan_claim_key(entry):
     return entry.key
 
 def env_plan_record_error(record):
-    """Validates one contributor record.
-
-    """
+    """Validates one contributor record."""
     second_error = ""
     if record.integration == "":
         second_error = "integration must be a non-empty language class"

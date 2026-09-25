@@ -48,7 +48,8 @@ def promotion_schema_error():
     Checks data shape without pinning exact contents: version is v1,
     each charset is non-empty with unique launcher-safe characters and
     never admits quotes, backslash, space, or newline so names embed
-    safely in the deploy launcher."""
+    safely in the deploy launcher.
+    """
     if PROMOTION_SCHEMA_VERSION != 1:
         return "promotion: unsupported schema v" + str(PROMOTION_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ENVIRONMENT_CHARS) != "string" or _VALID_ENVIRONMENT_CHARS == "":
@@ -153,6 +154,7 @@ def _promotion_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ARTIFACT_RLOC@@": artifact_rloc,
             "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
@@ -212,7 +214,8 @@ def promotion_deploy(name, artifact, from_environment = "staging", to_environmen
     `0.0.0` placeholder, gates on `PROMOTION_REQUIRE_HEALTH=1` plus
     `PROMOTION_HEALTH_CMD`, records rollbacks via `PROMOTION_ROLLBACK=1`
     plus `PROMOTION_ROLLBACK_TO`, and reads registry credentials plus app
-    secrets from env only, never from BUILD."""
+    secrets from env only, never from BUILD.
+    """
     from_error = promotion_environment_error(from_environment)
     if from_error != "":
         fail(from_error + " (in " + native.package_name() + ":" + name + ")")

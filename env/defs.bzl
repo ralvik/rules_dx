@@ -45,17 +45,13 @@ _EXECUTABLE_SUFFIXES = (".bat", ".cmd", ".com", ".exe")
 ENV_METADATA_SCHEMA_VERSION = 1
 
 def env_host_filename(name, is_windows):
-    """Maps one logical tool name to its host-native filename.
-
-    """
+    """Maps one logical tool name to its host-native filename."""
     if is_windows:
         return name + ".exe"
     return name
 
 def env_name_error(name):
-    """Validates one host command name.
-
-    """
+    """Validates one host command name."""
     if name == "":
         return "invalid host name '': must be a non-empty single path component"
     if name == "." or name == "..":
@@ -72,9 +68,7 @@ def env_name_error(name):
     return ""
 
 def env_tool_error(bin_name, aliases):
-    """Validates one tool record.
-
-    """
+    """Validates one tool record."""
     primary_error = env_name_error(bin_name)
     if primary_error != "":
         return "invalid bin_name: " + primary_error
@@ -85,9 +79,7 @@ def env_tool_error(bin_name, aliases):
     return ""
 
 def env_tool_record(owner, bin_name, aliases):
-    """Builds one tool-record struct for collision analysis.
-
-    """
+    """Builds one tool-record struct for collision analysis."""
     return struct(
         aliases = tuple(aliases),
         bin_name = bin_name,
@@ -95,9 +87,7 @@ def env_tool_record(owner, bin_name, aliases):
     )
 
 def env_tree_metadata(records, is_windows):
-    """Renders the staged tree management metadata as a JSON string.
-
-    """
+    """Renders the staged tree management metadata as a JSON string."""
     tools = []
     for record in sorted(records, key = lambda r: (r.bin_name, r.owner)):
         names = [record.bin_name] + list(record.aliases)
@@ -119,7 +109,6 @@ def env_collision_error(records):
     claimed by more than one owner fails, listing every claimant. Repeated
     claims by a single owner (for example an alias equal to its bin_name)
     are one claim, not a collision.
-
     """
     owners_by_key = {}
     for record in records:

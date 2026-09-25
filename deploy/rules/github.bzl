@@ -30,7 +30,8 @@ def tag_schema_error():
     Checks data shape without pinning exact contents: version is v1, the
     charset is non-empty with unique shell-safe characters and never
     admits double-quote, backslash, single-quote, space, or newline so
-    tags embed safely in the deploy launcher."""
+    tags embed safely in the deploy launcher.
+    """
     if TAG_SCHEMA_VERSION != 1:
         return "github tag: unsupported schema v" + str(TAG_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
@@ -99,6 +100,7 @@ def _github_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ASSET_RLOCS@@": ";".join(asset_rlocs),
             "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
@@ -146,7 +148,8 @@ def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile 
     and publishes nothing (this is what CI exercises). Live `gh release
     create --draft --verify-tag` runs only with `GH_RELEASE_LIVE=1` and
     `GH_RELEASE_APPROVED=1` after explicit owner approval, never by
-    default, and refuses the `v0.0.0-dryrun` placeholder."""
+    default, and refuses the `v0.0.0-dryrun` placeholder.
+    """
     tag_error = github_tag_error(tag)
     if tag_error != "":
         fail(tag_error + " (in " + native.package_name() + ":" + name + ")")

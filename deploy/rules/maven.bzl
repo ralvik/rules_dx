@@ -55,7 +55,8 @@ def maven_schema_error():
     Checks data shape without pinning exact contents: version is v1,
     each charset is non-empty with unique launcher-safe characters and
     never admits quotes, backslash, space, or newline so coordinates
-    embed safely in the deploy launcher."""
+    embed safely in the deploy launcher.
+    """
     if MAVEN_SCHEMA_VERSION != 1:
         return "maven coordinates: unsupported schema v" + str(MAVEN_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_GROUP_CHARS) != "string" or _VALID_GROUP_CHARS == "":
@@ -208,6 +209,7 @@ def _maven_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ARTIFACT@@": ctx.attr.artifact,
             "@@GROUP@@": ctx.attr.group,
@@ -269,7 +271,8 @@ def maven_deploy(name, jar, pom, group, artifact, version = "0.0.0", repository_
     plus the `.pom`) and verifies bytes, publishing nothing. Live staging
     via `mvn deploy:deploy-file` with GPG signing runs only with
     `MAVEN_PUBLISH_LIVE=1`, `MAVEN_USERNAME`, `MAVEN_PASSWORD`, and
-    `MAVEN_PUBLISH_APPROVED=1` after explicit owner approval."""
+    `MAVEN_PUBLISH_APPROVED=1` after explicit owner approval.
+    """
     group_error = maven_group_error(group)
     if group_error != "":
         fail(group_error + " (in " + native.package_name() + ":" + name + ")")
