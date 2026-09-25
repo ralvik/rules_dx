@@ -208,8 +208,9 @@ atomically and `--check` gates staleness (exit `0` clean / `1` stale).
 Owned build profiles (`dx_debug`/`dx_dev`/`dx_release` plus provisional
 `dx_dev_remote`/`dx_toolchain`) are reviewed the
 same way; see [ADR 0021](../decisions/0021-build-profiles.md). Coverage
-flags pin `GENERATE_LLVM_LCOV=1` plus `COVERAGE_GCOV_PATH=/usr/bin/gcov`
-for Bazel's collect_cc_coverage.sh (see
+flags pin `GENERATE_LLVM_LCOV=1` plus a `coverage:linux`/`coverage:macos`
+-scoped `COVERAGE_GCOV_PATH=/usr/bin/gcov` for Bazel's
+collect_cc_coverage.sh (see
 [Build, Test, And Coverage](../cli/commands/build-test-coverage.md#dx-coverage)).
 
 Version bumps flow through the native widen-one-requirement loop
