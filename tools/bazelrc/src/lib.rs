@@ -34,16 +34,24 @@ const UPSTREAM_FLAGS: [&str; 3] = [
 ];
 
 /// Owned coverage flags (mirrors old `EXTRA_PRESETS["coverage"]`).
-/// `COVERAGE_GCOV_PATH` pins the host gcov Bazel's collect_cc_coverage.sh
-/// needs when CC instruments under coverage; without it the script exits
-/// with `COVERAGE_GCOV_PATH: unbound variable` and every test fails.
+/// `common --enable_platform_specific_config` scopes the `COVERAGE_GCOV_PATH`
+/// pin to `coverage:linux`/`coverage:macos` hosts: Bazel's
+/// collect_cc_coverage.sh exits `COVERAGE_GCOV_PATH: unbound variable` when
+/// CC instruments without it, while Windows resolves coverage tools from
+/// `cc_toolchain` and has no `/usr/bin/gcov` to pin.
+/// `coverage --enable_runfiles` materializes runfiles trees on Windows
+/// (manifest-only by default), which collect_coverage.sh's
+/// `cd "$TEST_SRCDIR/$TEST_WORKSPACE"` and runfiles-path tests require.
 /// Toolchain llvm-cov still wins via `GENERATE_LLVM_LCOV=1` where present.
 /// See: `docs/cli/commands/build-test-coverage.md`.
-const COVERAGE_FLAGS: [&str; 5] = [
+const COVERAGE_FLAGS: [&str; 8] = [
+    "common --enable_platform_specific_config",
     "coverage --test_env=GENERATE_LLVM_LCOV=1",
     "coverage --combined_report=lcov",
     "coverage --test_tag_filters=-no-coverage",
-    "coverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
+    "coverage --enable_runfiles",
+    "coverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
+    "coverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
     "coverage --instrumentation_filter=^//",
 ];
 
@@ -310,14 +318,14 @@ mod tests {
         assert_eq!(PRESET_BAZEL_VERSION, "9.2.0");
         assert_eq!(PRESET_DX_VERSION, "0.0.0");
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
-        assert_eq!(COVERAGE_FLAGS.len(), 5);
+        assert_eq!(COVERAGE_FLAGS.len(), 8);
         assert_eq!(BUILD_PROFILES.len(), 5);
     }
 
     #[test]
     fn fragment_bytes_match_retired_python() {
         let rendered = render_fragment();
-        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
+        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncommon --enable_platform_specific_config\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --enable_runfiles\ncoverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
         assert_eq!(rendered, expected);
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));
@@ -338,7 +346,7 @@ mod tests {
         assert!(flags.contains("build:dx_dev --compilation_mode=fastbuild"));
         assert!(flags.contains("build:dx_dev_remote --compilation_mode=fastbuild"));
         assert!(flags.contains("build:dx_toolchain --compilation_mode=fastbuild"));
-        assert_eq!(flags.len(), 13);
+        assert_eq!(flags.len(), 16);
         assert!(!flags.iter().any(|line| line.starts_with('#')));
         assert!(!flags.iter().any(String::is_empty));
     }

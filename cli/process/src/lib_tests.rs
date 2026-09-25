@@ -893,6 +893,7 @@ fn real_fs_canonicalizes_dotdot_and_trailing_slash() {
     scratch.close().expect("cleanup");
 }
 
+#[cfg(unix)]
 #[test]
 fn real_fs_symlinked_root_canonicalizes() {
     let scratch = dx_test_scratch::scratch("dx-workspace-symlink-");
@@ -901,17 +902,16 @@ fn real_fs_symlinked_root_canonicalizes() {
     std::fs::create_dir_all(&real).expect("dirs");
     std::fs::write(real.join("MODULE.bazel"), "module(name = \"t\")\n").expect("marker");
     let link = root.join("link");
-    if cfg!(unix) {
-        std::os::unix::fs::symlink(&real, &link).expect("symlink");
-        let canonical_real = std::fs::canonicalize(&real).expect("canonical");
-        let found = discover_real(&link.join("sub"), None).expect("symlink start");
-        assert_eq!(found, canonical_real);
-        let found = discover_real(&root, Some(link.as_path())).expect("symlink override");
-        assert_eq!(found, canonical_real);
-    }
+    std::os::unix::fs::symlink(&real, &link).expect("symlink");
+    let canonical_real = std::fs::canonicalize(&real).expect("canonical");
+    let found = discover_real(&link.join("sub"), None).expect("symlink start");
+    assert_eq!(found, canonical_real);
+    let found = discover_real(&root, Some(link.as_path())).expect("symlink override");
+    assert_eq!(found, canonical_real);
     scratch.close().expect("cleanup");
 }
 
+#[cfg(unix)]
 #[test]
 fn real_fs_broken_marker_carries_io_hint() {
     let scratch = dx_test_scratch::scratch("dx-workspace-broken-");
@@ -919,20 +919,18 @@ fn real_fs_broken_marker_carries_io_hint() {
     std::fs::create_dir_all(&root).expect("dirs");
     let missing = root.join("missing-target");
     let marker = root.join("MODULE.bazel");
-    if cfg!(unix) {
-        std::os::unix::fs::symlink(&missing, &marker).expect("broken link");
-        let err = discover_real(&root, Some(root.as_path())).expect_err("broken override");
-        assert!(
-            matches!(err, DiscoverError::UnreadableOverride { .. }),
-            "got {err:?}"
-        );
-        assert!(err.to_string().contains("workspace_unreadable"));
-        let err = discover_real(&root.join("sub"), None).expect_err("broken ancestor");
-        assert!(
-            matches!(err, DiscoverError::UnreadableMarker { .. }),
-            "got {err:?}"
-        );
-    }
+    std::os::unix::fs::symlink(&missing, &marker).expect("broken link");
+    let err = discover_real(&root, Some(root.as_path())).expect_err("broken override");
+    assert!(
+        matches!(err, DiscoverError::UnreadableOverride { .. }),
+        "got {err:?}"
+    );
+    assert!(err.to_string().contains("workspace_unreadable"));
+    let err = discover_real(&root.join("sub"), None).expect_err("broken ancestor");
+    assert!(
+        matches!(err, DiscoverError::UnreadableMarker { .. }),
+        "got {err:?}"
+    );
     scratch.close().expect("cleanup");
 }
 
