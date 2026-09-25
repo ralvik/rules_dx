@@ -5,6 +5,15 @@ import %workspace%/tools/bazelrc/preset.bazelrc
 
 # Project overrides stay explicit here, never in the generated fragment.
 
+# Short Windows output root (issue #1207): MSVC link.exe resolves input paths
+# against MAX_PATH (260) and the default
+# %USERPROFILE%\_bazel_runneradmin\<base>\execroot\_main\bazel-out\... paths
+# for exec-config Rust links land at 265-279 characters, which fails the link
+# with LNK1181/LNK1104 (see .github/workflows/ci.yml, build-windows-x86_64).
+# `startup:<os>` lines are always enabled by Bazel, so this only applies on
+# Windows; C:/bz saves 34 characters over the default root.
+startup:windows --output_user_root=C:/bz
+
 # Warnings are errors for every compiled Rust crate (issue #82): deny
 # warnings via the rules_rust extra_rustc_flags setting. Third-party
 # crate_universe targets stay green because their generated targets carry
