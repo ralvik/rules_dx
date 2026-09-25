@@ -19,6 +19,7 @@ rust_library(
         "src/real_tests_a.rs",
         "src/real_tests_b.rs",
         "src/real_tests_c.rs",
+        "src/real_tests_d.rs",
     ],
     aliases = aliases(
         package_name = "quality/quality_runner",

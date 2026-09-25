@@ -1784,3 +1784,6 @@ mod real_tests_b;
 #[cfg(test)]
 #[path = "real_tests_c.rs"]
 mod real_tests_c;
+#[cfg(test)]
+#[path = "real_tests_d.rs"]
+mod real_tests_d;
