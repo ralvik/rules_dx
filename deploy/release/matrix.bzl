@@ -19,28 +19,14 @@ def release_matrix_names():
     return [entry[0] for entry in RELEASE_MATRIX]
 
 def release_matrix_status(name):
-    """Returns the qualification status for one matrix cell.
-
-    Args:
-      name: Matrix artifact name (for example `dx-linux-x86_64`).
-
-    Returns:
-      Status string for the cell, or empty when unknown.
-    """
+    """Returns the qualification status for one matrix cell."""
     for entry in RELEASE_MATRIX:
         if entry[0] == name:
             return entry[3]
     return ""
 
 def release_matrix_error(name):
-    """Validates one matrix cell name.
-
-    Args:
-      name: Candidate matrix artifact name.
-
-    Returns:
-      Empty string when known, else an actionable error message.
-    """
+    """Validates one matrix cell name."""
     if release_matrix_status(name) == "":
         return ("release_matrix: unknown artifact '" + str(name) +
                 "': want one of " + ", ".join(release_matrix_names()))

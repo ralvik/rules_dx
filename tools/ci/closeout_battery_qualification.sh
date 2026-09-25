@@ -52,17 +52,17 @@ else
 fi
 
 # BUILD owns the harness target.
-if grep -q -F -e 'name = "closeout_battery_qualification"' "$build"; then
+if grep -q -F -e 'name = "closeout_battery_qualification"' tools/ci/ci_targets_c.bzl; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the closeout_battery_qualification target"
+  bad "tools/ci/ci_targets_c.bzl lost the closeout_battery_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:closeout_battery_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:closeout_battery_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the closeout_battery_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the closeout_battery_qualification step"
 fi
 
 # Build battery: full build plus the adopt-rust dx_dev smoke.
@@ -74,8 +74,8 @@ else
 fi
 
 # Test battery: full test with hermetic CLI-contract pins, no manual.
-# Tuned bounded flaky retries plus per-test timeout cap.
-if grep -q -F -e 'bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...' "$ci"; then
+# Tuned bounded flaky retries plus per-test timeout cap (extra flags allowed).
+if grep -E -q 'bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300.*//\.\.\.' "$ci"; then
   ok
 else
   bad "test battery lost (want bazel test //... in ci.yml)"
@@ -89,51 +89,56 @@ else
   bad "coverage battery lost (want dx coverage gate plus report guards in ci.yml)"
 fi
 
-# Prove battery: the twelve prove harnesses stay wired.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:target_tags' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_cell' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_spill' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:musl_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:macos_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:ci_matrix_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:release_hygiene' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:release_policy' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:publish_trust' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' "$ci"; then
+# Prove battery: the twelve prove harnesses stay wired (prove.sh).
+prove="tools/ci/prove.sh"
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:target_tags' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_cell' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_spill' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_qualification' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:musl_qualification' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:macos_qualification' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_qualification' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:ci_matrix_qualification' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:release_hygiene' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:release_policy' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:publish_trust' "$prove" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' "$prove" &&
+  grep -q -F -e 'tools/ci/prove.sh' "$ci"; then
   ok
 else
-  bad "prove battery lost (want twelve prove harnesses in ci.yml)"
+  bad "prove battery lost (want twelve prove harnesses in prove.sh plus ci.yml step)"
 fi
 
-# Dogfood core: freshness plus ownership audits.
-if grep -q -F -e 'generate --check //...' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:corpus_audit' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:code_ownership' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_paths' "$ci"; then
+# Dogfood core: freshness plus ownership audits (dogfood_freshness.sh).
+dogfood="tools/ci/dogfood_freshness.sh"
+if grep -q -F -e 'generate --check //...' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:corpus_audit' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:code_ownership' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_paths' "$dogfood" &&
+  grep -q -F -e 'tools/ci:dogfood_freshness' "$ci"; then
   ok
 else
-  bad "dogfood core lost (want generate --check plus corpus/code/non-dogfed in ci.yml)"
+  bad "dogfood core lost (want generate --check plus corpus/code/non-dogfed in dogfood_freshness.sh)"
 fi
 
-# Dogfood extended: qualification sweep stays wired.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:supported_evidence_gate' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:quality_adapters_parity' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:env_codegen_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:docs_pipeline_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:consumer_ci_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:file_family_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:helper_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:clap_tokenizer_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:hello_smoke_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:parser_sample_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cli_contract_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:musl_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:macos_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:ci_matrix_qualification' "$ci" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:closeout_battery_qualification' "$ci"; then
+# Dogfood extended: qualification sweep stays wired (dogfood_freshness.sh).
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:supported_evidence_gate' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:quality_adapters_parity' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:env_codegen_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:docs_pipeline_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:consumer_ci_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:file_family_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:helper_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:clap_tokenizer_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:hello_smoke_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:parser_sample_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cli_contract_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:musl_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:macos_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:ci_matrix_qualification' "$dogfood" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:closeout_battery_qualification' "$dogfood" &&
+  grep -q -F -e 'tools/ci:dogfood_freshness' "$ci"; then
   ok
 else
   bad "dogfood qualification sweep lost (want supported plus adapters plus env/docs/consumer/file/helper/clap/hello/parser/cli plus musl/macos/windows/matrix plus closeout)"

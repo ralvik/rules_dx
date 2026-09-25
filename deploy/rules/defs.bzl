@@ -21,14 +21,7 @@ DxDeployInfo = provider(
 VALID_DEPLOY_PROFILES = ["debug", "dev", "release"]
 
 def deploy_profile_error(profile):
-    """Validates one deploy profile value.
-
-    Args:
-      profile: Candidate profile (debug, dev, or release), or None.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one deploy profile value."""
     if profile == None:
         return ""
     if type(profile) != "string" or profile not in VALID_DEPLOY_PROFILES:

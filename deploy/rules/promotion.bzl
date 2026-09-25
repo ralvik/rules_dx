@@ -48,11 +48,7 @@ def promotion_schema_error():
     Checks data shape without pinning exact contents: version is v1,
     each charset is non-empty with unique launcher-safe characters and
     never admits quotes, backslash, space, or newline so names embed
-    safely in the deploy launcher.
-
-    Returns:
-      Empty string when the schema is valid, else an error message.
-    """
+    safely in the deploy launcher."""
     if PROMOTION_SCHEMA_VERSION != 1:
         return "promotion: unsupported schema v" + str(PROMOTION_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ENVIRONMENT_CHARS) != "string" or _VALID_ENVIRONMENT_CHARS == "":
@@ -78,14 +74,7 @@ def promotion_schema_error():
     return ""
 
 def promotion_environment_error(environment):
-    """Validates one promotion environment name value.
-
-    Args:
-      environment: Candidate promotion environment name.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one promotion environment name value."""
     if type(environment) != "string" or environment == "":
         return ("promotion_deploy: invalid environment '" + str(environment) +
                 "': want a non-empty environment (for example 'staging')")
@@ -97,14 +86,7 @@ def promotion_environment_error(environment):
     return ""
 
 def promotion_version_error(version):
-    """Validates one promotion version value.
-
-    Args:
-      version: Candidate promoted version.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one promotion version value."""
     if type(version) != "string" or version == "":
         return ("promotion_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '1.2.3')")
@@ -116,14 +98,7 @@ def promotion_version_error(version):
     return ""
 
 def promotion_artifact_error(filename):
-    """Validates one promotion artifact filename value.
-
-    Args:
-      filename: Candidate deploy-artifact basename.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one promotion artifact filename value."""
     if type(filename) != "string" or filename == "":
         return ("promotion_deploy: invalid artifact '" + str(filename) +
                 "': want a non-empty deploy artifact filename")
@@ -142,15 +117,7 @@ def promotion_artifact_error(filename):
     return ""
 
 def promotion_edge_error(from_environment, to_environment):
-    """Validates one staging-to-production promotion edge.
-
-    Args:
-      from_environment: Source environment for the promotion.
-      to_environment: Target environment for the promotion.
-
-    Returns:
-      Empty string when the edge is valid, else an error message.
-    """
+    """Validates one staging-to-production promotion edge."""
     if from_environment == to_environment:
         return ("promotion_deploy: invalid edge '" + from_environment + " -> " +
                 to_environment + "': source and target environments must differ")
@@ -186,7 +153,6 @@ def _promotion_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ARTIFACT_RLOC@@": artifact_rloc,
             "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
@@ -246,16 +212,7 @@ def promotion_deploy(name, artifact, from_environment = "staging", to_environmen
     `0.0.0` placeholder, gates on `PROMOTION_REQUIRE_HEALTH=1` plus
     `PROMOTION_HEALTH_CMD`, records rollbacks via `PROMOTION_ROLLBACK=1`
     plus `PROMOTION_ROLLBACK_TO`, and reads registry credentials plus app
-    secrets from env only, never from BUILD.
-
-    Args:
-      name: Deploy target base name.
-      artifact: Deploy artifact label pinned in the promotion directory.
-      from_environment: Source environment for the promotion.
-      to_environment: Target environment for the promotion.
-      version: Promoted version for the record.
-      profile: Deploy profile (debug, dev, or release).
-    """
+    secrets from env only, never from BUILD."""
     from_error = promotion_environment_error(from_environment)
     if from_error != "":
         fail(from_error + " (in " + native.package_name() + ":" + name + ")")

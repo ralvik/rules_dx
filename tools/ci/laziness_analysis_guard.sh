@@ -67,11 +67,11 @@ else
 fi
 
 # Pins carry all ten consumers with zero-delta counts plus allowlists.
-if grep -q -F -e '"adopt-rust": 485' "$pins" &&
-  grep -q -F -e '"adopt-python": 2405' "$pins" &&
-  grep -q -F -e '"adopt-js-ts": 6109' "$pins" &&
-  grep -q -F -e '"adopt-go": 6103' "$pins" &&
-  grep -q -F -e '"adopt-cpp": 174' "$pins" &&
+if grep -q -F -e '"adopt-rust": 483' "$pins" &&
+  grep -q -F -e '"adopt-python": 2401' "$pins" &&
+  grep -q -F -e '"adopt-js-ts": 6122' "$pins" &&
+  grep -q -F -e '"adopt-go": 6127' "$pins" &&
+  grep -q -F -e '"adopt-cpp": 240' "$pins" &&
   grep -q -F -e '"adopt-rust": 92' "$pins" &&
   grep -q -F -e '"adopt-python": 126' "$pins" &&
   grep -q -F -e 'ANALYSIS_BUDGET_MS' "$pins" &&

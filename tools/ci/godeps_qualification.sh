@@ -157,10 +157,10 @@ fi
 # MODULE wires the go.mod hub with the qualified lock record.
 if grep -q -F -e 'gazelle_go_deps.from_file(go_mod = "//third_party/go:go.mod")' "$module" &&
   grep -q -F -e 'use_repo(gazelle_go_deps, "com_github_bazelbuild_buildtools", "com_github_google_go_cmp", "com_github_pmezard_go_difflib")' "$module" &&
-  grep -q -F -e 'issue #483' "$module"; then
+  grep -q -F -e 'bazel run //tools/ci:godeps_qualification' "$module"; then
   ok
 else
-  bad "MODULE.bazel lost its from_file go_mod hub wiring plus #483 qualified record"
+  bad "MODULE.bazel lost its from_file go_mod hub wiring plus qualified-seed annotation (issue #483 rides foundation-qualification.md)"
 fi
 
 # Hand module tags stay rejected; go.work stays only for multi-module.
@@ -203,12 +203,12 @@ else
   bad "generation README lost its #483 qualified Go from_file lock record"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "godeps_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:godeps_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "godeps_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:godeps_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the godeps_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the godeps_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Depcheck proves offline lock authority with go fixtures plus parser.

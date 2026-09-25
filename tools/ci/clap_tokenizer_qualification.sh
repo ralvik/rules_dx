@@ -44,17 +44,17 @@ contract="docs/cli/cli-contract.md"
 if grep -q -F -e 'qualified seed-only under issue #316' "$contract" &&
   grep -q -F -e 'bazel run //tools/ci:clap_tokenizer_qualification' "$contract" &&
   grep -q -F -e 'frozen' "$contract" &&
-  grep -q -F -e 'stays owned gap' "$contract"; then
+  grep -q -F -e 'delivered under closed #810' "$contract"; then
   ok
 else
-  bad "cli-contract lost its qualified seed-only record under #316"
+  bad "cli-contract lost its qualified seed-only record under #316 plus closed-#810 migration note"
 fi
 
 # Contract keeps the freeze decision plus the owned-gap migration phrase
 # (the latter also keeps //tools/ci:quality_foundations_guards green).
 if grep -q -F -e 'freeze legacy' "$contract" &&
   grep -q -F -e 'output as contract' "$contract" &&
-  grep -q -F -e 'migrate to strict' "$contract" &&
+  grep -q -F -e 'not strict clap parsing with auto help' "$contract" &&
   grep -q -F -e 'allow_hyphen_values' "$contract"; then
   ok
 else
@@ -77,14 +77,14 @@ fi
 # Every tokenizer site carries a frozen-contract decision record.
 missing=""
 for f in cli/env/src/main.rs generation/codegen_shard/src/main.rs env/env_shard/src/main.rs quality/evaluator/src/main.rs quality/runner/src/main.rs quality/markdown/src/lib.rs cli/cli/src/args/tokenizer.rs; do
-  if ! grep -q -F -e '#316' "$f"; then
+  if ! grep -q -F -e 'frozen' "$f"; then
     missing="$missing $f"
   fi
 done
 if [[ -z "$missing" ]]; then
   ok
 else
-  bad "tokenizer sites missing a #316 decision record:$missing"
+  bad "tokenizer sites missing a frozen-contract marker (issue #316 record rides docs/cli/cli-contract.md):$missing"
 fi
 
 # Every thin shim pins disable_help_flag (legacy help/usage routing, no auto help).
@@ -93,7 +93,7 @@ if grep -q -F -e 'disable_help_flag' cli/env/src/main.rs &&
   grep -q -F -e 'disable_help_flag' env/env_shard/src/main.rs &&
   grep -q -F -e 'disable_help_flag' quality/evaluator/src/main.rs &&
   grep -q -F -e 'disable_help_flag' quality/runner/src/main.rs &&
-  grep -q -F -e 'disable_help_flag' quality/markdown/src/lib.rs; then
+  grep -q -F -e 'disable_help_flag' quality/markdown/src/check.rs; then
   ok
 else
   bad "a thin shim lost its disable_help_flag legacy-help pin"
@@ -105,7 +105,7 @@ if grep -q -F -e 'allow_hyphen_values' cli/env/src/main.rs &&
   grep -q -F -e 'allow_hyphen_values' env/env_shard/src/main.rs &&
   grep -q -F -e 'allow_hyphen_values' quality/evaluator/src/main.rs &&
   grep -q -F -e 'allow_hyphen_values' quality/runner/src/main.rs &&
-  grep -q -F -e 'allow_hyphen_values' quality/markdown/src/lib.rs; then
+  grep -q -F -e 'allow_hyphen_values' quality/markdown/src/check.rs; then
   ok
 else
   bad "a thin shim lost its allow_hyphen_values hyphen-consumption pin"
@@ -122,8 +122,8 @@ if grep -q -F -e 'fn invalid_token' cli/env/src/main.rs &&
   grep -q -F -e 'fn parse_error' quality/evaluator/src/main.rs &&
   grep -q -F -e 'fn invalid_token' quality/runner/src/main.rs &&
   grep -q -F -e 'fn parse_error' quality/runner/src/main.rs &&
-  grep -q -F -e 'fn invalid_token' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'fn parse_error' quality/markdown/src/lib.rs &&
+  grep -q -F -e 'fn invalid_token' quality/markdown/src/check.rs &&
+  grep -q -F -e 'fn parse_error' quality/markdown/src/check.rs &&
   grep -q -F -e 'fn invalid_token' cli/cli/src/args/tokenizer.rs &&
   grep -q -F -e 'fn map_clap_error' cli/cli/src/args/tokenizer.rs; then
   ok
@@ -137,7 +137,7 @@ if grep -q -F -e 'unknown flag' cli/env/src/main.rs &&
   grep -q -F -e 'unknown flag' quality/runner/src/main.rs &&
   grep -q -F -e 'unknown argument' generation/codegen_shard/src/main.rs &&
   grep -q -F -e 'unknown argument' env/env_shard/src/main.rs &&
-  grep -q -F -e 'unknown argument' quality/markdown/src/lib.rs; then
+  grep -q -F -e 'unknown argument' quality/markdown/src/check.rs; then
   ok
 else
   bad "a site lost its frozen unknown-flag/unknown-argument phrasing"
@@ -149,9 +149,9 @@ fi
 if grep -q -F -e 'missing value for' cli/env/src/main.rs &&
   grep -q -F -e 'missing value for' quality/evaluator/src/main.rs &&
   grep -q -F -e 'missing value for' quality/runner/src/main.rs &&
-  grep -q -F -e 'missing value for' quality/markdown/src/lib.rs &&
+  grep -q -F -e 'missing value for' quality/markdown/src/check.rs &&
   grep -q -F -e 'MissingValue' cli/cli/src/args/error.rs &&
-  grep -q -F -e 'ErrorKind::InvalidValue => usage()' generation/codegen_shard/src/main.rs &&
+  grep -q -F -e 'ErrorKind::InvalidValue => WriterError::Usage(usage())' generation/codegen_shard/src/main.rs &&
   grep -q -F -e 'ErrorKind::InvalidValue => usage()' env/env_shard/src/main.rs; then
   ok
 else
@@ -169,8 +169,8 @@ fi
 # Evaluator threshold plus runner/markdown mapping rejections stay frozen.
 if grep -q -F -e 'unknown fail_on' quality/evaluator/src/main.rs &&
   grep -q -F -e 'malformed --stage' quality/runner/src/main.rs &&
-  grep -q -F -e 'malformed --source' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'malformed --sibling' quality/markdown/src/lib.rs; then
+  grep -q -F -e 'malformed --source' quality/markdown/src/check.rs &&
+  grep -q -F -e 'malformed --sibling' quality/markdown/src/check.rs; then
   ok
 else
   bad "evaluator/runner/markdown lost a frozen value-rejection pin"
@@ -182,7 +182,7 @@ if grep -q -F -e 'strips an attached' cli/env/src/main.rs &&
   grep -q -F -e 'strips an attached' env/env_shard/src/main.rs &&
   grep -q -F -e 'strips an attached' quality/evaluator/src/main.rs &&
   grep -q -F -e 'strips an attached' quality/runner/src/main.rs &&
-  grep -q -F -e 'strips an attached' quality/markdown/src/lib.rs; then
+  grep -q -F -e 'strips an attached' quality/markdown/src/check.rs; then
   ok
 else
   bad "a site lost its attached-=value echo recovery pin"
@@ -195,7 +195,7 @@ if grep -q -F -e 'unconditional' cli/env/src/main.rs &&
   grep -q -F -e 'unconditional' env/env_shard/src/main.rs &&
   grep -q -F -e 'unconditional' quality/evaluator/src/main.rs &&
   grep -q -F -e 'unconditional' quality/runner/src/main.rs &&
-  grep -q -F -e 'unconditional' quality/markdown/src/lib.rs; then
+  grep -q -F -e 'unconditional' quality/markdown/src/check.rs; then
   ok
 else
   bad "a site lost its hyphen-value legacy-parity record"
@@ -214,32 +214,32 @@ else
 fi
 
 # Fixture evidence: markdown snapshot tests pin unknown/missing/malformed shapes.
-if grep -q -F -e 'fn cli_unknown_argument_fails' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'fn cli_missing_value_fails' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'fn cli_malformed_mapping_fails' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'unknown argument: --bogus' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'missing value for --source' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'malformed --source' quality/markdown/src/lib.rs; then
+if grep -q -F -e 'fn cli_unknown_argument_fails' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'fn cli_missing_value_fails' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'fn cli_malformed_mapping_fails' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'unknown argument: --bogus' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'missing value for --source' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'malformed --source' quality/markdown/src/lib_tests.rs; then
   ok
 else
   bad "markdown lost its unknown/missing/malformed snapshot tests"
 fi
 
 # Fixture evidence: hyphen-value plus attached-echo plus positional plus empty shapes.
-if grep -q -F -e 'fn cli_flag_as_value_is_malformed' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'fn cli_attached_forms_echo_whole_token' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'fn cli_bare_positional_is_unknown_argument' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'fn cli_empty_value_is_malformed' quality/markdown/src/lib.rs &&
-  grep -q -F -e '--sibling' quality/markdown/src/lib.rs &&
-  grep -q -F -e '--source=' quality/markdown/src/lib.rs; then
+if grep -q -F -e 'fn cli_flag_as_value_is_malformed' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'fn cli_attached_forms_echo_whole_token' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'fn cli_bare_positional_is_unknown_argument' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'fn cli_empty_value_is_malformed' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e '--sibling' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e '--source=' quality/markdown/src/lib_tests.rs; then
   ok
 else
   bad "markdown lost its hyphen-value/attached/positional/empty snapshot tests"
 fi
 
 # Fixture evidence: usage line rides every markdown failure (exit 2 surface).
-if grep -q -F -e 'starts_with("usage: quality_markdown")' quality/markdown/src/lib.rs &&
-  grep -q -F -e 'fn usage' quality/markdown/src/lib.rs; then
+if grep -q -F -e 'starts_with("usage: quality_markdown")' quality/markdown/src/lib_tests.rs &&
+  grep -q -F -e 'fn usage' quality/markdown/src/check.rs; then
   ok
 else
   bad "markdown lost its usage-line failure-surface pin"

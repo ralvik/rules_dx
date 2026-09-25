@@ -4,7 +4,6 @@ Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_dotnet//dotnet:defs.bzl", _csharp_binary = "csharp_binary", _csharp_library = "csharp_library", _csharp_test = "csharp_test")
-
 # Intentional upstream-private load (issue #928): the .NET assembly
 # providers live only under @rules_dotnet//dotnet/private, so the wrapper
 # must load them there; the sealed `upstream_providers` plus
@@ -88,14 +87,7 @@ def csharp_tfm_with_defaults(kwargs):
     The default is single-TFM (`net10.0`); multi-pivot consumers declare
     one `csharp_library` per TFM and aggregate per-pivot SARIFs in
     deterministic pivot order.
-    See: docs/testing/generation.md, csharp/tests/fixtures/roslyn/pins.bzl.
-
-    Args:
-      kwargs: Rule keyword arguments to default.
-
-    Returns:
-      Copy of `kwargs` with default TFM and warnings-as-errors when absent.
-    """
+    See: docs/testing/generation.md, csharp/tests/fixtures/roslyn/pins.bzl."""
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("target_frameworks", ["net10.0"])
     upstream_kwargs.setdefault("treat_warnings_as_errors", True)

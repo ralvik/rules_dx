@@ -21,6 +21,10 @@ load(":ci_targets_d.bzl", "add_d")
 
 package(default_visibility = ["//:__subpackages__"])
 
+# prove.sh is CI-run as a plain path (not a sh_binary); export it so the
+# non_dogfed_paths D4 ownership query can see the package source file.
+exports_files(["prove.sh"])
+
 add_a()
 
 add_b()

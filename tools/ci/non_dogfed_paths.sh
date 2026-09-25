@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Non-dogfed execution plan (; hermetic pins under).
+# Non-dogfed execution plan (issue #508, hermetic pins under).
 #
 # Cohorts that never run under the standard dogfood/CI gates by design
 # (explicit suites, carve-outs, tag suppression). Each has an explicit
 # execution path, never a silent gap:
 #
-# - CLI contract (replaces nested E2E): no `integration/`
+# - CLI contract (issue #407, replaces nested E2E): no `integration/`
 #   workspace, no second Bazel download, no `manual`/`local`/`exclusive`/
 #   `no-sandbox`, no `long` timeouts. Equivalents run hermetically under
 #   `bazel test //...`: `dx test`/`dx build` exit-code preservation via
@@ -194,8 +194,8 @@ else
 fi
 
 # B4: CI test job runs the green proofs via `bazel test //...` (no separate
-# manual_negatives prove step per).
-if grep -q -F -e 'bazel test --noshow_progress //...' .github/workflows/ci.yml &&
+# manual_negatives prove step per). Flags between --noshow_progress and //... allowed.
+if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' .github/workflows/ci.yml &&
   ! grep -q -F -e 'bazel run --noshow_progress //tools/ci:manual_negatives' .github/workflows/ci.yml; then
   ok
 else
@@ -252,11 +252,11 @@ else
   bad "target_tags lost its no-coverage skip proof (hello_output_test vs hello_test)"
 fi
 
-# C6: gate halves stay wired in CI (execution in test, exclusion proof in coverage/prove).
-if grep -q -F -e 'bazel test --noshow_progress //...' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:target_tags' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_cell' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_qualification' .github/workflows/ci.yml; then
+# C6: gate halves stay wired (execution in test, exclusion proof in prove.sh).
+if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' .github/workflows/ci.yml &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:target_tags' tools/ci/prove.sh &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_cell' tools/ci/prove.sh &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_qualification' tools/ci/prove.sh; then
   ok
 else
   bad "CI lost a no-coverage gate half (test execution + target_tags + coverage_cell + coverage_qualification)"
@@ -310,15 +310,30 @@ else
   bad "code_ownership filter broke (want code languages only, never .sh)"
 fi
 
-# D4: every checked-in.sh rides deps(//...) (nested E2E
-# deleted, so the two integration POSIX fixtures are gone; zero unowned).
+# D4: every checked-in.sh rides deps(//...) or its package source files
+# (exports_files plus package members count as owned; nested E2E deleted,
+# so the two integration POSIX fixtures are gone; zero unowned).
+# --keep_going: windows-only external fetches (e.g. rules_ruby windows)
+# fail on non-Windows hosts; first-party .sh still resolve (issue #1006-class).
+# kind('source file', //...) is empty on some Bazel versions; query each
+# package that has a tracked .sh so exports_files inputs are owned too.
 git ls-files '*.sh' | LC_ALL=C sort -u >"$scratch/all_sh.txt"
-bazel query "kind('source file', deps(//...))" 2>/dev/null |
+{
+  bazel query --keep_going "kind('source file', deps(//...))" 2>/dev/null
+  while IFS= read -r sh_path; do
+    sh_dir="$(dirname "$sh_path")"
+    if [[ "$sh_dir" == "." ]]; then
+      bazel query --keep_going "kind('source file', //:*)" 2>/dev/null || true
+    else
+      bazel query --keep_going "kind('source file', //${sh_dir}:*)" 2>/dev/null || true
+    fi
+  done <"$scratch/all_sh.txt"
+} |
   grep -E '^(@@)?//' |
   sed 's/^@@//; s|^//||; s|:|/|; s|^/||' |
   grep '\.sh$' |
   grep -v '^@' |
-  LC_ALL=C sort -u >"$scratch/owned_sh_raw.txt"
+  LC_ALL=C sort -u >"$scratch/owned_sh_raw.txt" || true
 comm -23 "$scratch/all_sh.txt" "$scratch/owned_sh_raw.txt" >"$scratch/unowned_sh.txt" || true
 unowned_count="$(wc -l <"$scratch/unowned_sh.txt" | tr -d ' ')"
 if [[ "$unowned_count" == "0" ]]; then
@@ -328,9 +343,9 @@ else
 fi
 
 # D5: shell execution paths stay wired (test job for sh tests, no nested suite).
-if grep -q -F -e 'bazel test --noshow_progress //...' .github/workflows/ci.yml &&
+if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' .github/workflows/ci.yml &&
   ! grep -q -F -e 'bazel test --noshow_progress //tools/ci:e2e' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' .github/workflows/ci.yml; then
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' tools/ci/prove.sh; then
   ok
 else
   bad "CI lost a shell execution path (want test //... + shell_contract, no :e2e)"
@@ -348,11 +363,11 @@ fi
 
 # --- E. plan record (no silent gaps) ---
 
-# E2: this harness is wired in CI's dogfood-freshness job alongside the ownership audits.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_paths' .github/workflows/ci.yml; then
+# E2: this harness is wired in the dogfood-freshness battery alongside the ownership audits.
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_paths' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the non_dogfed_paths step (want dogfood-freshness alongside corpus_audit/code_ownership)"
+  bad "dogfood_freshness.sh lost the non_dogfed_paths step (want alongside corpus_audit/code_ownership)"
 fi
 
 dx_test_summary "non-dogfed paths harness"

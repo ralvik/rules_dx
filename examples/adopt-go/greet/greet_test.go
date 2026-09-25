@@ -5,6 +5,7 @@ package greet
 
 import (
 	"os"
+	"runtime"
 	"testing"
 )
 
@@ -17,8 +18,12 @@ func TestHello(t *testing.T) {
 	if got, want := Hello("world"), "hello world"; got != want {
 		t.Fatalf("Hello(world) = %q, want %q", got, want)
 	}
-	if got, want := Platform(), "linux"; got != want {
-		t.Fatalf("Platform() = %q, want %q (seed host is linux)", got, want)
+	want := "other"
+	if runtime.GOOS == "linux" {
+		want = "linux"
+	}
+	if got := Platform(); got != want {
+		t.Fatalf("Platform() = %q, want %q (GOOS=%s)", got, want, runtime.GOOS)
 	}
 }
 

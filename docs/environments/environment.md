@@ -206,7 +206,9 @@ requires neither a local Rust toolchain nor Bazel. Until releases are cut
 with owner approval the Bazel-first path above is the supported installation.
 There is no checksum-only fallback: a checksum delivered alongside a binary
 is not by itself proof of publisher identity. Install-time
-publisher-identity verification runs before install or exec. Airgapped hosts
+publisher-identity verification runs before install or exec
+(`//deploy/install:dx_verify` owns the check, recorded under
+[Deploy Authoring](../deploy/authoring.md)). Airgapped hosts
 install the same artifacts from the vendored bundle; see
 [Offline Bootstrap](../deploy/offline-bootstrap.md).
 

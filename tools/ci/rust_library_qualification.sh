@@ -63,7 +63,7 @@ else
 fi
 
 # Architecture owns the boundary section linking ADR 0023 under.
-if grep -q -F -e '### Rust Library Boundary (Issue #469)' "$arch" &&
+if grep -q -F -e '## Rust Library Boundary (Issue #469)' "$arch" &&
   grep -q -F -e '0023-rust-libraries-internal.md' "$arch" &&
   grep -q -F -e 'rust_library_qualification' "$arch" &&
   grep -q -F -e 'only' "$arch"; then
@@ -102,15 +102,16 @@ else
   bad "libs/ gained Rust sources (want Starlark-only, no Cargo.toml or .rs)"
 fi
 
-# Public Rust boundary stays binaries-only: explicit public visibility only
-# in cli/cli plus cli/env (entry points, Cargo exports, man pages)
-# (hermetic file list: BSD grep lacks --include; BRE class spelled as
-# Python `\s`, issue #1006).
+# Public Rust boundary stays entry points plus public Starlark API:
+# explicit public visibility only in cli/cli plus cli/env plus dx (entry
+# points, Cargo exports, man pages) plus deploy/rules (public Starlark
+# rules) (hermetic file list: BSD grep lacks --include; BRE class spelled
+# as Python `\s`, issue #1006).
 explicit_public_files="$(dx_hermetic_grep tree-list --re --include 'BUILD.bazel' --roots . -- '^\s*visibility = \["//visibility:public"\]' 2>/dev/null | sed -e 's|^\./||' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$explicit_public_files" == "cli/cli/BUILD.bazel cli/env/BUILD.bazel" ]]; then
+if [[ "$explicit_public_files" == "cli/cli/BUILD.bazel cli/env/BUILD.bazel deploy/rules/BUILD.bazel dx/BUILD.bazel" ]]; then
   ok
 else
-  bad "explicit public targets leaked (want only cli/cli/BUILD.bazel plus cli/env/BUILD.bazel, got: $explicit_public_files)"
+  bad "explicit public targets drifted (want cli/cli plus cli/env plus dx plus deploy/rules, got: $explicit_public_files)"
 fi
 
 # No Rust library package defaults to public (crate directories only; the
@@ -131,17 +132,17 @@ else
 fi
 
 # BUILD target plus CI wiring stay pinned.
-if grep -q -F -e 'name = "rust_library_qualification"' "$build" &&
-  grep -q -F -e 'rust_library_qualification.sh' "$build"; then
+if grep -q -F -e 'name = "rust_library_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'rust_library_qualification.sh' "tools/ci/ci_targets_c.bzl"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost its rust_library_qualification target"
+  bad "tools/ci/ci_targets_c.bzl lost its rust_library_qualification target"
 fi
 
-if grep -q -F -e '//tools/ci:rust_library_qualification' "$ci"; then
+if grep -q -F -e '//tools/ci:rust_library_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost its rust_library_qualification step"
+  bad "dogfood_freshness.sh lost its rust_library_qualification step"
 fi
 
 dx_test_summary "rust library extraction harness"

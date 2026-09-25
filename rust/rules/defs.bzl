@@ -148,16 +148,7 @@ def rust_test(
 
     With `crate`, the referenced wrapper stays the single source owner and
     this target reports no direct sources. With `srcs`, those sources are
-    this test's direct sources.
-
-    Args:
-      name: Target name.
-      srcs: Direct Rust test sources; None defers ownership to `crate`.
-      crate: Label of the library wrapper under test, or None.
-      edition: Crate edition for the test compilation.
-      visibility: Visibility list for the public forwarder.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
-    """
+    this test's direct sources."""
     upstream_kwargs = dict(kwargs)
     upstream_kwargs["crate"] = crate
     upstream_kwargs["edition"] = edition
@@ -292,20 +283,7 @@ def dx_rust_crate(
 
     Crates with binaries keep hand-written `rust_binary` stanzas (and
     lint `targets` covering them): see e.g. `quality/evaluator`, whose
-    `quality_evaluator` binary shares the crate name with the lib.
-
-    Args:
-      name: Crate target base name; derives lib, test, fmt, and clippy targets.
-      package_name: crate_universe package name for deps and aliases.
-      deps: Crate dependency names for the library and tests.
-      dev_deps: Extra crate dependency names for the test target only.
-      extra_deps: Literal labels appended after resolved library deps.
-      extra_test_deps: Literal labels appended after resolved test deps.
-      crate_name: Override crate name; defaults to `name`.
-      srcs: Library sources; defaults to `["src/lib.rs"]`.
-      size: Bazel size of the generated test targets.
-      visibility: Visibility list for the generated targets.
-    """
+    `quality_evaluator` binary shares the crate name with the lib."""
     crate = name if crate_name == None else crate_name
     lib_srcs = srcs or ["src/lib.rs"]
     lib_deps = _crate_deps(

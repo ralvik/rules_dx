@@ -126,12 +126,12 @@ else
   bad "pins.bzl lost its sole-policy plus rule-set resolutions plus rejections under issue #489"
 fi
 
-# No hidden file-family native-config preset: no cohort binding exists in
-# the typed native-config rules (adapters run pinned upstream defaults until
-# checked-in policy qualifies against the native-config contract).
+# No hidden file-family native-config preset: a cohort binding in the
+# typed native-config rules exists only alongside its delivered adapter
+# claim (no binding may appear ahead of an adapter claim).
 family_config=""
 for tool in cue jsonnetfmt pkl djlint stylelint modfmt terraform yamlfmt yamllint keep-sorted keep_sorted prettier gherkin sql xml css html_template go_module text yaml; do
-  if grep -q -F -e "${tool}_config" "$native"; then
+  if grep -q -F -e "${tool}_config" "$native" && ! grep -q -F -e "\"$tool\": {" "$adapters"; then
     family_config="$family_config $tool:preset"
   fi
 done
@@ -141,22 +141,19 @@ else
   bad "native-config carries a hidden file-family preset:$family_config"
 fi
 
-# No false adapter claim for the remaining file-family cohort: none of the cohort
-# tool IDs appear in REAL_ADAPTERS. Classification exists; adapter claim
-# does not (buf/qmlformat/qmllint delivered under #799, no longer guarded here).
-# The `"tool": {` shape matches adapter entries only: class==tool taxonomy
-# rows like `"cue": "cue"` carry a family string, never a capability map,
-# so they cannot match here.
+# Delivered file-family cohort: every cohort tool ID appears in
+# REAL_ADAPTERS under #800. Classification exists; adapter claim
+# delivered (buf/qmlformat/qmllint were delivered under #799 earlier).
 family_claim=""
-for tool in cue jsonnetfmt pkl djlint stylelint modfmt terraform yamlfmt yamllint keep-sorted keep_sorted; do
-  if grep -q -F -e "\"$tool\": {" "$adapters"; then
-    family_claim="$family_claim $tool:claimed"
+for tool in cue djlint jsonnetfmt keep_sorted modfmt pkl stylelint terraform yamlfmt yamllint; do
+  if ! grep -q -F -e "\"$tool\": {" "$adapters"; then
+    family_claim="$family_claim $tool:missing"
   fi
 done
 if [[ -z "$family_claim" ]]; then
   ok
 else
-  bad "false adapter claim for file-family cohort:$family_claim"
+  bad "file-family adapter delivery missing:$family_claim (want all ten under #800)"
 fi
 
 # Classification-only today: file-family families carry no curated defaults,
@@ -185,56 +182,57 @@ fi
 # Tool acquisition keeps the frozen standalone route with no separate
 # ambient resolution and no false claim; versions qualified under with
 # modfmt resolved under, digests plus adapters stay pending under.
-if grep -q -F -e 'Decided route: cue, jsonnetfmt, pkl, terraform, yamlfmt, keep-sorted, and modfmt take the' "$acquisition" &&
-  grep -q -F -e 'standalone checksummed' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #489' "$acquisition" &&
-  grep -q -F -e 'modfmt v0.4.0' "$acquisition" &&
-  grep -q -F -e 'resolved seed-only under issue #582' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #420' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `cue`' "$acquisition"; then
+if grep -q -F -e 'standalone plus managed-graph plus closure routes for cue/jsonnetfmt/' "$integrations" &&
+  grep -q -F -e 'checksummed standalone artifacts' "$integrations" &&
+  grep -q -F -e 'seed-only under issue #489' "$integrations" &&
+  grep -q -F -e 'modfmt v0.4.0' "$pins" &&
+  grep -q -F -e 'issue #582; digests stay observations' "$integrations" &&
+  grep -q -F -e 'successor to closed #420' "$integrations" &&
+  grep -q -F -e 'adapters qualified seed-only under #800' "$integrations"; then
   ok
 else
-  bad "tool-acquisition lost its frozen standalone route with #489 plus #582 versions plus #420 digests/adapters split"
+  bad "tool-integrations lost its frozen standalone route with #489 plus #582 versions plus #420 digests/adapters split"
 fi
 
-# Tool acquisition keeps the frozen Python plus Node graph routes with the
-# private-closure discipline and no false claim; versions qualified under 
-# with gherkin/xml resolved under.
-if grep -q -F -e 'Decided route: djlint and yamllint take the' "$acquisition" &&
-  grep -q -F -e 'private wheel-only Python graph' "$acquisition" &&
-  grep -q -F -e 'Decided route: Stylelint plus prettier-plugin' "$acquisition" &&
-  grep -q -F -e 'private pure-JavaScript graph' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #489' "$acquisition" &&
-  grep -q -F -e 'prettier-plugin-gherkin 4.0.0' "$acquisition" &&
-  grep -q -F -e '@prettier/plugin-xml 3.4.2' "$acquisition" &&
-  grep -q -F -e 'resolved seed-only under issue #582' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #420' "$acquisition"; then
+# Tool integrations keep the frozen Python plus Node graph routes with the
+# private-closure discipline; versions qualified under #489 with
+# gherkin/xml resolved under #582, digests plus adapters under #800.
+if grep -q -F -e 'djlint/yamllint as private' "$integrations" &&
+  grep -q -F -e 'wheel-only Python graph members' "$integrations" &&
+  grep -q -F -e 'stylelint/prettier plugins as private' "$integrations" &&
+  grep -q -F -e 'pure-JavaScript graph members' "$integrations" &&
+  grep -q -F -e 'seed-only under issue #489' "$integrations" &&
+  grep -q -F -e 'prettier-plugin-gherkin 4.0.0' "$pins" &&
+  grep -q -F -e '@prettier/plugin-xml 3.4.2' "$pins" &&
+  grep -q -F -e 'issue #582; digests stay observations' "$integrations" &&
+  grep -q -F -e 'successor to closed #420' "$integrations"; then
   ok
 else
-  bad "tool-acquisition lost its frozen Python/Node routes with #489 plus #582 versions plus #420 digests/adapters split"
+  bad "tool-integrations lost its frozen Python/Node routes with #489 plus #582 versions plus #420 digests/adapters split"
 fi
 
-# Tool acquisition keeps the file-family research rows with byte-identity risk
-# (modfmt plus gherkin/xml resolved seed-only under).
+# Tool integrations keep the file-family research rows with byte-identity
+# risk (modfmt plus gherkin/xml resolved seed-only under).
 family_research=""
-for tool in '| cue |' '| jsonnetfmt |' '| pkl |' '| djlint |' '| Stylelint |' '| prettier-plugin-gherkin |' '| prettier-plugin-sql |' '| prettier-plugin-xml |' '| modfmt |' '| terraform |' '| yamlfmt |' '| yamllint |' '| keep-sorted |'; do
-  grep -q -F -e "$tool" "$acquisition" || family_research="$family_research $tool:missing"
+for tool in 'cue' 'jsonnetfmt' 'pkl' 'djlint' 'Stylelint' 'prettier-plugin-gherkin' 'prettier-plugin-sql' 'plugin-xml' 'modfmt' 'terraform' 'yamlfmt' 'yamllint' 'keep-sorted'; do
+  grep -q -F -e "$tool" "$integrations" || grep -q -F -e "$tool" "$pins" || family_research="$family_research $tool:missing"
 done
 if [[ -z "$family_research" ]] &&
-  grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
+  grep -q -F -e 'actual bytes when adding each adapter' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost a file-family research row or byte-identity honesty:$family_research"
+  bad "tool-integrations lost a file-family research row or byte-identity honesty:$family_research"
 fi
 
 # Tool integrations keep the file-family adapter-input notes with pinned
-# versions plus resolutions (adapters still open under; protobuf/qml cross-linked to).
-if grep -q -F -e 'Interpreted/file-family cohort (issue #420' "$integrations" &&
-  grep -q -F -e 'no adapter claims `ruby`,' "$integrations" &&
-  grep -q -F -e 'qualified seed-only under issue #489' "$integrations" &&
-  grep -q -F -e 'resolved seed-only under issue #582' "$integrations" &&
-  grep -q -F -e 'adapters stay owned under issue #420' "$integrations" &&
-  grep -q -F -e 'cross-linked here, never double-claimed' "$integrations"; then
+# versions plus resolutions (adapters delivered under #800; protobuf/qml
+# cross-linked to).
+if grep -q -F -e 'Interpreted/file-family cohort (#800' "$integrations" &&
+  grep -q -F -e 'RuboCop/StandardRB via the' "$integrations" &&
+  grep -q -F -e 'seed-only under issue #489' "$integrations" &&
+  grep -q -F -e 'with modfmt plus gherkin/xml resolved seed-only under' "$integrations" &&
+  grep -q -F -e 'adapters qualified seed-only under #800' "$integrations" &&
+  grep -q -F -e 'cross-linked here, never' "$integrations"; then
   ok
 else
   bad "tool-integrations lost its file-family notes with #489 plus #582 versions plus #420 adapters split"
@@ -248,12 +246,12 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "file_family_defaults_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:file_family_defaults_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "file_family_defaults_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:file_family_defaults_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the file_family_defaults_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the file_family_defaults_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the file-family fixture loads on the seed host (deferred

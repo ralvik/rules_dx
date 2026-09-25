@@ -14,6 +14,9 @@ remediation guidance.
 
 ## Supported Versions
 
+No release exists yet, so the supported-versions section cannot imply
+support beyond the current tree.
+
 | Version | Supported |
 | --- | --- |
 | Unreleased (`0.0.0`, no release cut) | Yes, current tree |

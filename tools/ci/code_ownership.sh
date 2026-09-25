@@ -69,10 +69,14 @@ git ls-files |
   grep -E '\.(rs|py|js|mjs|cjs|ts|mts|cts|jsx|tsx|go|java|kt|kts|scala|cs|fs|fsx|c|h|cc|cpp|hpp|vue|svelte|astro|mdx)$|\.js\.map$' |
   LC_ALL=C sort -u >"$scratch/code_applicable.txt"
 
-bazel query "kind('source file', deps(//...))" 2>/dev/null |
+# --keep_going: windows-only external fetches (e.g. rules_ruby windows)
+# fail on non-Windows hosts; first-party code still resolves (same as
+# non_dogfed_paths.sh, issue #1006-class). Empty/failed query falls
+# through to the uncovered check below rather than a silent exit.
+bazel query --keep_going "kind('source file', deps(//...))" 2>/dev/null |
   grep -E '^(@@)?//' |
   sed 's/^@@//; s|^//||; s|:|/|; s|^/||' |
-  LC_ALL=C sort -u >"$scratch/code_closure.txt"
+  LC_ALL=C sort -u >"$scratch/code_closure.txt" || true
 
 # Every exclusion must still be present and still unowned: a newly
 # owned exclusion is a stale entry, not a pass.

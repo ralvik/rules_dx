@@ -811,6 +811,35 @@ fn osv_typed_cargo_projects_interval_and_matches() {
 }
 
 #[test]
+fn osv_explicit_versions_do_not_caret_match_fixed_release() {
+    // GHSA-qx2v-8332-m4fv shape: ranges plus a one-element `versions`
+    // list. Bare cargo list entries must pin exact so fixed `0.4.11+`
+    // never matches via caret (`^0.4.10` would cover `0.4.12`).
+    let text = r#"[{
+        "id": "GHSA-qx2v-8332-m4fv",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "slab", "ecosystem": "crates.io"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "0.4.10"}, {"fixed": "0.4.11"}]}],
+            "versions": ["0.4.10"]
+        }]
+    }]"#;
+    let parsed = parse_snapshot(text).expect("osv parses");
+    assert!(parsed.iter().any(|entry| entry.versions == "=0.4.10"));
+    assert!(parsed
+        .iter()
+        .any(|entry| entry.versions == ">=0.4.10, <0.4.11"));
+    let any_affected = |version: &str| {
+        parsed
+            .iter()
+            .any(|entry| version_affected("cargo", &entry.versions, version))
+    };
+    assert!(any_affected("0.4.10"));
+    assert!(!any_affected("0.4.11"));
+    assert!(!any_affected("0.4.12"));
+}
+
+#[test]
 fn osv_typed_sets_project_to_native_scopes() {
     // npm semver, go v-prefix, maven/nuget intervals (no narrowing change).
     let text = r#"[{
@@ -918,11 +947,15 @@ fn osv_typed_withdrawn_unsupported_and_git_skip() {
         }]
     }]"#;
     let parsed = parse_snapshot(text).expect("osv parses");
-    // Only the explicit-versions entry projects (two scopes).
+    // Only the explicit-versions entry projects (two scopes); cargo bare
+    // list entries pin with `=` so they stay exact, not caret.
     assert_eq!(parsed.len(), 2);
     assert!(parsed.iter().all(|entry| entry.id == "GHSA-explicit-0001"));
-    assert!(parsed.iter().any(|entry| entry.versions == "1.2.3"));
-    assert!(parsed.iter().any(|entry| entry.versions == "1.2.4"));
+    assert!(parsed.iter().any(|entry| entry.versions == "=1.2.3"));
+    assert!(parsed.iter().any(|entry| entry.versions == "=1.2.4"));
+    assert!(version_affected("cargo", "=1.2.3", "1.2.3"));
+    assert!(!version_affected("cargo", "=1.2.3", "1.2.4"));
+    assert!(!version_affected("cargo", "=1.2.3", "1.3.0"));
 }
 
 #[test]

@@ -42,6 +42,7 @@ sources="quality/sources.bzl"
 curated="quality/curated_defaults.bzl"
 native="quality/native_config.bzl"
 matrix="quality/testdata/runner_matrix_cases.bzl"
+matrix_data="quality/testdata/runner_matrix_data.bzl"
 subjects="quality/testdata/BUILD.bazel"
 aspects="quality/real_aspects.bzl"
 
@@ -86,54 +87,53 @@ else
   bad "tool-acquisition lost a file-family delivery route (node/python/standalone)"
 fi
 
-# Tool acquisition keeps the decided buf route, delivered under #799.
-if grep -q -F -e 'Decided route: `buf` takes the checksummed' "$acquisition" &&
-  grep -q -F -e 'with `protobuf` claimed via `buf`' "$acquisition" &&
-  grep -q -F -e '(delivered under #799' "$acquisition"; then
+# Tool integrations keep the decided buf route, delivered under #799.
+if grep -q -F -e 'native/self-contained artifact route for `buf` (self-contained per-platform' "$integrations" &&
+  grep -q -F -e 'adapters qualified seed-only under #799' "$integrations" &&
+  grep -q -F -e 'cohort delivered under #799' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its delivered buf route under #799"
+  bad "tool-integrations lost its delivered buf route under #799"
 fi
 
-# Tool acquisition keeps the qml authoritative-toolchain route, delivered under #799.
-if grep -q -F -e 'qmlformat and qmllint take the authoritative-toolchain route' "$acquisition" &&
-  grep -q -F -e 'with `qml` claimed via' "$acquisition" &&
-  grep -q -F -e '(delivered under #799' "$acquisition"; then
+# Tool integrations keep the qml authoritative-toolchain route, delivered under #799.
+if grep -q -F -e 'authoritative-toolchain route for qmlformat/qmllint from the Qt distribution' "$integrations" &&
+  grep -q -F -e 'Qt-last ordering decided' "$integrations" &&
+  grep -q -F -e 'cohort delivered under #799' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its delivered qml route under #799"
+  bad "tool-integrations lost its delivered qml route under #799"
 fi
 
-# Parity deferrals name owner plus frozen route for every remaining file-family class
-# (protobuf/qml delivered under #799, no longer deferred here).
-if grep -q -F -e '"css": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"html_template": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"shell": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"text": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"yaml": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"cue": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"jsonnet": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"pkl": ["ADR 0019"' "$parity" &&
-  grep -q -F -e '"terraform": ["ADR 0019"' "$parity" &&
-  grep -q -F -e 'PARITY_DEFERRED = {' "$parity"; then
+# Parity no longer defers the delivered file-family classes (all delivered
+# under #800; only framework regions stay deferred).
+parity_left=""
+for cls in css cue html_template jsonnet pkl shell terraform text yaml; do
+  if grep -q -F -e "\"$cls\": [\"ADR 0019\"" "$parity"; then
+    parity_left="$parity_left $cls:still-deferred"
+  fi
+done
+if [[ -z "$parity_left" ]] &&
+  grep -q -F -e 'PARITY_DEFERRED = {' "$parity" &&
+  grep -q -F -e '"vue": ["ADR 0019"' "$parity"; then
   ok
 else
-  bad "parity deferrals lost a file-family owner/route (css/template/shell/text/yaml/cue/jsonnet/pkl/terraform)"
+  bad "parity deferrals lost a file-family owner/route (css/template/shell/text/yaml/cue/jsonnet/pkl/terraform):$parity_left"
 fi
 
-# No false adapter claim for the remaining deferred file-family tools (tool IDs only;
-# class==tool names like cue/pkl/terraform live in the taxonomy, not here;
-# buf/qmlformat/qmllint delivered under #799, no longer guarded here).
+# Delivered file-family tools: every cohort tool ID appears in
+# REAL_ADAPTERS (delivered under #800; buf/qmlformat/qmllint delivered
+# earlier under #799).
 file_claim=""
-for tool in shfmt shellcheck yamlfmt yamllint keep-sorted keep_sorted djlint stylelint jsonnetfmt; do
-  if grep -q -F -e "\"$tool\":" "$adapters"; then
-    file_claim="$file_claim $tool:claimed"
+for tool in shfmt shellcheck yamlfmt yamllint keep_sorted djlint stylelint jsonnetfmt; do
+  if ! grep -q -F -e "\"$tool\":" "$adapters"; then
+    file_claim="$file_claim $tool:missing"
   fi
 done
 if [[ -z "$file_claim" ]]; then
   ok
 else
-  bad "false adapter claim for deferred file-family tools:$file_claim"
+  bad "file-family adapter delivery missing:$file_claim (want all eight under #800)"
 fi
 
 # Every file-family class stays classified in the frozen taxonomy.
@@ -149,8 +149,8 @@ fi
 
 # Starlark/Buildifier keeps adapter-backed fixture evidence.
 if grep -q -F -e '"buildifier": {"format": ["starlark"]' "$adapters" &&
-  grep -q -F -e 'matrix_starlark_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_starlark_format_fail' "$matrix" &&
+  grep -q -F -e 'matrix_starlark_lint_pass' "$matrix_data" &&
+  grep -q -F -e 'matrix_starlark_format_fail' "$matrix_data" &&
   grep -q -F -e 'starlark' "$subjects" &&
   [[ -f "quality/adapter/src/parsers/buildifier.rs" ]]; then
   ok
@@ -160,8 +160,8 @@ fi
 
 # TOML/Taplo keeps adapter-backed fixture evidence.
 if grep -q -F -e '"taplo": {"format": ["toml"]' "$adapters" &&
-  grep -q -F -e 'matrix_toml_lint_pass' "$matrix" &&
-  grep -q -F -e 'matrix_toml_format_fail' "$matrix" &&
+  grep -q -F -e 'matrix_toml_lint_pass' "$matrix_data" &&
+  grep -q -F -e 'matrix_toml_format_fail' "$matrix_data" &&
   grep -q -F -e 'toml' "$subjects" &&
   [[ -f "quality/adapter/src/parsers/taplo.rs" ]]; then
   ok
@@ -181,9 +181,9 @@ fi
 
 # Applicability never infers from suffix: provider classes intersect
 # adapter support intersect policy, with registry validation only.
-if grep -q -F -e 'effective classes =' "$applicability" &&
-  grep -q -F -e 'target provider classes' "$applicability" &&
-  grep -q -F -e 'intersect adapter-supported classes' "$applicability" &&
+if grep -q -F -e 'effective classes =' "$sources_doc" &&
+  grep -q -F -e 'target provider classes' "$sources_doc" &&
+  grep -q -F -e 'intersect adapter-supported classes' "$sources_doc" &&
   grep -q -F -e 'Raw extension matching is registry validation, not an' "$integrations" &&
   grep -q -F -e 'never infer custom-rule sources' "$sources_doc"; then
   ok

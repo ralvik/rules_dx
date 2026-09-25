@@ -494,8 +494,6 @@ def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain
 def real_allowed_tools_error():
     """Validates aspect shards stay registry subsets (See: //quality:registry.bzl).
 
-    Returns:
-      Empty string when every allowed tool is a registry subset; otherwise a diagnostic.
     """
     allowed = (
         _CORE_LINT_TOOLS + _CORE_FORMAT_TOOLS + _CORE_TYPECHECK_TOOLS +

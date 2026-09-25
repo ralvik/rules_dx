@@ -180,8 +180,7 @@ fi
 
 # Network-disabled run: shadow curl/wget with failing stubs so any
 # network attempt fails, then bootstrap from the fixture bundle.
-scratch="$(mktemp -d)"
-trap 'rm -rf "$scratch"' EXIT
+dx_mkscratch scratch
 mkdir -p "$scratch/stubs" "$scratch/bin" "$scratch/ws"
 printf '#!/usr/bin/env bash\necho "network disabled: curl stub" >&2\nexit 1\n' >"$scratch/stubs/curl"
 printf '#!/usr/bin/env bash\necho "network disabled: wget stub" >&2\nexit 1\n' >"$scratch/stubs/wget"

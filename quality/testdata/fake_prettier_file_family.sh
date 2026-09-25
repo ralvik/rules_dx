@@ -22,7 +22,7 @@ done
 if [[ "$is_fix" == "1" ]]; then
   for f in "${files[@]}"; do
     if grep -q -F "BADFMT" "$f"; then
-      sed -i 's/BADFMT/fixed/g' "$f"
+      sed 's/BADFMT/fixed/g' "$f" >"$f.dxtmp" && mv "$f.dxtmp" "$f"
     fi
   done
   exit 0
@@ -33,14 +33,9 @@ for f in "${files[@]}"; do
     # Prettier reports working-directory-relative paths even for absolute
     # arguments, so emit the scratch-relative mirror path like the real
     # tool (the runner passes workspace-relative mirrors for attribution).
-    rel="$f"
-    if command -v realpath >/dev/null 2>&1; then
-      rel="$(realpath --relative-to="$PWD" "$f" 2>/dev/null || echo "$f")"
-    else
+    rel="${f#"$PWD"/}"
+    if [[ "$rel" == "$f" ]]; then
       rel="${f##*/}"
-      # Fallback keeps the basename; the runner still re-anchors, but
-      # prefer realpath above for exact workspace mirrors.
-      :
     fi
     printf -- "[warn] %s\n" "$rel" >&2
     dirty=1

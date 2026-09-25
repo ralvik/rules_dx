@@ -209,7 +209,7 @@ fn slash_scan() -> Option<&'static Regex> {
             let _ = SCAN.set(compiled);
             SCAN.get()
         }
-        Err(_) => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     }
 }
 
@@ -223,7 +223,7 @@ fn hash_scan() -> Option<&'static Regex> {
             let _ = SCAN.set(compiled);
             SCAN.get()
         }
-        Err(_) => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     }
 }
 
@@ -240,7 +240,7 @@ fn directive_suffix() -> Option<&'static Regex> {
             let _ = SUFFIX.set(compiled);
             SUFFIX.get()
         }
-        Err(_) => None, // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     }
 }
 
@@ -267,21 +267,21 @@ fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
         }
         if slash_scan().is_some() {
             return None;
-        } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     } else if opener == b"#" {
         if let Some(end) = scan_with(line, hash_scan()) {
             return Some(&line[end..]);
         }
         if hash_scan().is_some() {
             return None;
-        } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
-    } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
-    line_comment_with_fallback(line, opener) // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    line_comment_with_fallback(line, opener) // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
 /// Byte-loop fallback for [`line_comment_with`] (unreachable unless the
 /// static `regex` patterns fail to compile).
-// LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_START - reason: compile-fail fallback is unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     let bytes = line.as_bytes();
     let mut index = 0;
@@ -317,7 +317,7 @@ fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a st
     }
     None
 }
-// LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+// LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 
 /// Comment text after the `//` comment start, honoring `"`/`'` literals and
 /// backslash escapes. Returns `None` when the line has no line comment.
@@ -381,14 +381,14 @@ fn take_word(rest: &str, word: &str) -> bool {
             Some(matched) => matched.as_str() == word,
             None => false,
         };
-    } // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
-      // LCOV_EXCL_START - policy: docs/testing/README.md#coverage
+    } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+      // LCOV_EXCL_START - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     if let Some(tail) = rest.strip_prefix(word) {
         !tail.starts_with(|c: char| c == '_' || c.is_alphanumeric())
     } else {
         false
     }
-    // LCOV_EXCL_STOP - policy: docs/testing/README.md#coverage
+    // LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
 /// Validate the exclusion markers in the `source` of `path`.
@@ -920,6 +920,18 @@ mod tests {
     fn reason_without_issue_is_rejected() {
         let source = file_lines(&[format!(
             "// {} - reason: specific but untracked.",
+            marker("_LINE")
+        )]);
+        let err = find_ignores("t.rs", &source).unwrap_err();
+        assert!(err.to_string().contains("issue"), "{err}");
+    }
+
+    #[test]
+    fn issue_without_digit_is_rejected() {
+        // `issue:` must carry a digit for budget/expiry tracking; a
+        // non-numeric value fails closed as missing issue.
+        let source = file_lines(&[format!(
+            "// {} - reason: fixture, issue: no-digit.",
             marker("_LINE")
         )]);
         let err = find_ignores("t.rs", &source).unwrap_err();

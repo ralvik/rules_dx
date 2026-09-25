@@ -32,11 +32,7 @@ def pypi_schema_error():
     Checks data shape without pinning exact contents: version is v1, the
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so names embed safely in
-    the generated Python launcher.
-
-    Returns:
-      Empty string when the schema is valid, else an error message.
-    """
+    the generated Python launcher."""
     if PYPI_SCHEMA_VERSION != 1:
         return "pypi name: unsupported schema v" + str(PYPI_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_NAME_CHARS) != "string" or _VALID_NAME_CHARS == "":
@@ -51,14 +47,7 @@ def pypi_schema_error():
     return ""
 
 def pypi_name_error(dist_name):
-    """Validates one distribution name value.
-
-    Args:
-      dist_name: Candidate distribution name.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one distribution name value."""
     if type(dist_name) != "string" or dist_name == "":
         return ("pypi_deploy: invalid distribution name '" + str(dist_name) +
                 "': want a non-empty name (for example 'pypi_demo')")
@@ -70,14 +59,7 @@ def pypi_name_error(dist_name):
     return ""
 
 def pypi_repository_error(repository_url):
-    """Validates one PyPI repository URL value.
-
-    Args:
-      repository_url: Candidate https upload repository URL.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one PyPI repository URL value."""
     if type(repository_url) != "string" or repository_url == "":
         return ("pypi_deploy: invalid repository_url '" + str(repository_url) +
                 "': want a non-empty https URL (for example '" +
@@ -93,14 +75,7 @@ def pypi_repository_error(repository_url):
     return ""
 
 def pypi_wheel_error(filename):
-    """Validates one wheel filename value.
-
-    Args:
-      filename: Candidate `.whl` basename.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one wheel filename value."""
     if type(filename) != "string" or filename == "":
         return ("pypi_deploy: invalid wheel '" + str(filename) +
                 "': want a non-empty .whl filename")
@@ -155,7 +130,6 @@ def _pypi_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@DIST_NAME@@": ctx.attr.dist_name,
             "@@REPOSITORY_URL@@": ctx.attr.repository_url,
@@ -206,15 +180,7 @@ def pypi_deploy(name, wheel, sdist = None, repository_url = PYPI_DEFAULT_REPOSIT
     the `.whl`) and verifies bytes, publishing nothing. Live
     `twine upload --non-interactive --repository-url` runs only with
     `PYPI_PUBLISH_LIVE=1`, `PYPI_API_TOKEN`, and `PYPI_PUBLISH_APPROVED=1`
-    after explicit owner approval.
-
-    Args:
-      name: Deploy target base name (also the distribution name).
-      wheel: Wheel file label pinned in the local wheelhouse.
-      sdist: Optional sdist file label pinned in the wheelhouse.
-      repository_url: https upload repository URL used only with explicit env.
-      profile: Deploy profile (debug, dev, or release).
-    """
+    after explicit owner approval."""
     name_error = pypi_name_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

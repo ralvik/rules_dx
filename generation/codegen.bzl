@@ -51,11 +51,6 @@ DX_CODEGEN_ADMITTED_PAIRS = (
 def codegen_path_error(path):
     """Validates one workspace-relative projection path.
 
-    Args:
-      path: Candidate workspace-relative projection path.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if path == "":
         return "invalid codegen path '': must be a non-empty workspace-relative path"
@@ -108,11 +103,6 @@ def _codegen_claim_key(entry):
 def codegen_record_error(record):
     """Validates one contributor record.
 
-    Args:
-      record: Normalized contributor record struct to validate.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     second_error = ""
     if record.language == "":
@@ -135,11 +125,6 @@ def codegen_exec_error(path):
     and never uses the reserved shard suffix (a shard never backs
     another shard).
 
-    Args:
-      path: Candidate BEP-matching exec-path suffix, or empty.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if path == "":
         return ""
@@ -160,13 +145,6 @@ def codegen_replaces_error(logical_path, exec_path, replaces):
     artifact, so the contract identifies both the replaced source and
     the generated artifact identity.
 
-    Args:
-      logical_path: Entry logical path the replaces field must equal.
-      exec_path: Entry exec path binding the replacing artifact.
-      replaces: Declared replacement path, or empty for none.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if replaces == "":
         return ""
@@ -240,12 +218,6 @@ def codegen_merge_schema_error(records, merged):
     and each merged record valid. Exact owner/entry values stay in snapshot
     assertions; this proves normalization.
 
-    Args:
-      records: Input contributor records before normalization.
-      merged: Candidate normalized record list.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if type(merged) != "list":
         return "codegen merge: want a list, got " + type(merged)
@@ -304,11 +276,6 @@ def codegen_fingerprint_schema_error(fingerprint):
     contract. Exact fingerprint bytes stay in snapshot assertions; this
     proves the hash-input contract.
 
-    Args:
-      fingerprint: Candidate fingerprint JSON string.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     decoded = json.decode(fingerprint)
     if type(decoded) != "list" or len(decoded) == 0:
@@ -375,8 +342,6 @@ def codegen_schema_error():
     edits the admitted data only: version is v1, the list is non-empty
     with unique canonical (schema_kind, language) tuples.
 
-    Returns:
-      Empty string when the schema is valid, else an error message.
     """
     if CODEGEN_SCHEMA_VERSION != 1:
         return "codegen: unsupported schema v" + str(CODEGEN_SCHEMA_VERSION) + " (want v1)"

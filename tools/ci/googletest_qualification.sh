@@ -42,8 +42,8 @@ test="cc/tests/fixtures/googletest/greeter_test.cc"
 module="MODULE.bazel"
 matrix="docs/product/support-matrix.md"
 gen_readme="docs/generation/foundation-qualification.md"
-ci=".github/workflows/ci.yml"
-tools_build="tools/ci/BUILD.bazel"
+ci="tools/ci/dogfood_freshness.sh"
+tools_build="tools/ci/ci_targets_d.bzl"
 defs="cc/rules/defs.bzl"
 
 # Fixture quad plus pins stay present.
@@ -72,12 +72,12 @@ else
   bad "pins.bzl lost its gtest_main labels plus fixture target under issue #479"
 fi
 
-# MODULE pins the 1.18.0 line.
+# MODULE pins the 1.18.0 line (qualification record in foundation-qualification).
 if grep -q -F -e 'bazel_dep(name = "googletest", version = "1.18.0")' "$module" &&
-  grep -q -F -e 'issue #479' "$module"; then
+  grep -q -F -e 'googletest_qualification' "$module"; then
   ok
 else
-  bad "MODULE.bazel lost its googletest 1.18.0 pin under issue #479"
+  bad "MODULE.bazel lost its googletest 1.18.0 pin plus qualification wiring"
 fi
 
 # Fixture maps cc_test over the pinned gtest_main with the C++17 floor.
@@ -133,10 +133,10 @@ fi
 
 # Wrapper owns the qualified mapping, not an open selection.
 if grep -q -F -e 'GoogleTest' "$defs" &&
-  grep -q -F -e 'issue #479' "$defs"; then
+  grep -q -F -e 'googletest_qualification' "$defs"; then
   ok
 else
-  bad "cc wrapper lost its #479 qualified GoogleTest mapping record"
+  bad "cc wrapper lost its qualified GoogleTest mapping record"
 fi
 
 # Generation README pins the qualified runner alongside the other gaps.
@@ -149,18 +149,18 @@ else
   bad "docs/generation/foundation-qualification.md lost its qualified GoogleTest record under issue #479"
 fi
 
-# BUILD owns the harness target.
+# ci_targets_d owns the harness target.
 if grep -q -F -e 'name = "googletest_qualification"' "$tools_build"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the googletest_qualification target"
+  bad "tools/ci/ci_targets_d.bzl lost the googletest_qualification target"
 fi
 
-# CI wires the harness in dogfood-freshness.
+# dogfood-freshness wires the harness run.
 if grep -q -F -e 'bazel run --noshow_progress //tools/ci:googletest_qualification' "$ci"; then
   ok
 else
-  bad "ci.yml lost the googletest_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the googletest_qualification step"
 fi
 
 # Live proof: GoogleTest plus plain seed mappings execute green on the seed host.

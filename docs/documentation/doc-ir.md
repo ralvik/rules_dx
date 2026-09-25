@@ -2,8 +2,8 @@
 
 The documentation intermediate representation (IR) is the versioned contract
 between per-language extractors, aggregation, and the site renderer.
-Generated shards stay in Bazel outputs and are never committed. Open work is
-tracked in GitHub issues.
+Generated shards stay in Bazel outputs and are never committed.
+Open work is tracked in GitHub issues.
 
 The checked-in [`docs/ir/doc_ir.proto`](../ir/doc_ir.proto) is the schema
 source of truth. The [`documentation_ir` codec crate](../ir/ir/src/lib.rs)
@@ -90,8 +90,7 @@ research observations are not pins.
 | Astro/MDX | None; prose-only | No library API surface to extract |
 
 XML or JSON comment dumps alone do not satisfy an adapter where the language
-separates comments from symbols (notably C#/F#): the adapter joins metadata
-with documentation.
+separates comments from symbols; the adapter joins metadata with documentation.
 
 ### Extractor Research
 
@@ -132,10 +131,12 @@ two API identities where the input pipeline is shared.
 Each adapter ships golden fixtures covering representative and difficult
 constructs for its language (generics, overloads, re-exports, inheritance,
 deprecation), not just minimal APIs. Checks verify that IR output decodes
-against the checked-in schema, a symbol-count inventory detects silent
-omissions, symbol IDs and cross-links are stable across reruns, selected
-pages match native-tool output, upgrades run old and new extractors against
-the same fixtures with explicit review of semantic changes, and
+against the checked-in schema;
+a symbol-count inventory detects silent omissions;
+symbol IDs and cross-links are stable across reruns;
+selected pages match native-tool output;
+upgrades run old and new extractors against the same fixtures with explicit
+review of semantic changes; and
 same-producer rebuilds are byte-identical while cross-version compatibility
 compares decoded semantics.
 
@@ -152,11 +153,12 @@ is green plus explicitly reviewed. An upstream format or toolchain change can
 therefore turn release preparation red, but never a user's build.
 
 Pins live in three places and bump together: the adapter pins file, the
-adapter source constants, and the machine-inputs table above. Drift detection
-reuses the codec gates: roundtrip, rejection parity, symbol and extension
-ordering, and minor forward-compat. Ordinary API changes require no IR
-snapshot update: generated shards stay in Bazel outputs and adapter golden
-fixtures stay pinned native inputs, not snapshots.
+adapter source constants, and the machine-inputs table above.
+Drift detection reuses the codec gates: roundtrip, rejection parity,
+symbol and extension ordering, and minor forward-compat.
+Ordinary API changes require no IR snapshot update: generated shards stay
+in Bazel outputs and adapter golden fixtures stay pinned native inputs,
+not snapshots.
 
 ## Related issues
 

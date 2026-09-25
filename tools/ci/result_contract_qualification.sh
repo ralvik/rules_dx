@@ -278,19 +278,20 @@ if grep -q -F -e 'qualified seed-only under issue #511' "$proto_doc" &&
   grep -q -F -e 'result_contract_qualification' "$proto_doc" &&
   grep -q -F -e 'quality/tests/fixtures/result_contract/pins.bzl' "$proto_doc" &&
   grep -q -F -e 'bare contract rejected' "$proto_doc" &&
-  grep -q -F -e 'open work under issue #511' "$output_doc" &&
-  grep -q -F -e 'open work under issue #511' "$reports_doc"; then
+  grep -q -F -e 'update aggregate exit codes stay owned' "$proto_doc" &&
+  grep -q -F -e 'SPDX' "$output_doc" &&
+  grep -q -F -e 'stay owned under issue #511' "$reports_doc"; then
   ok
 else
   bad "protocol docs lost their qualified result contract record plus SPDX plus update owned gaps under issue #511"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "result_contract_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:result_contract_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "result_contract_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:result_contract_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the result_contract_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the result_contract_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Fixture expected covers the full mapping with owned gaps.

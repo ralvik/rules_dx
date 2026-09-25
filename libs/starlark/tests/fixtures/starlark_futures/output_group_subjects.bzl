@@ -1,16 +1,9 @@
 """Concrete output-group-subjects use case (issue #794).
-
 Contract: `docs/testing/starlark.md#future-not-implemented`, `docs/decisions/0009-starlark-testing.md`.
-Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
-`bazel run //tools/ci:starlark_futures_qualification`.
-
-Output-group observation stays deferred: analysis observes `DxSubjectInfo`
-fields plus `DefaultInfo` output basenames only, not `OutputGroupInfo`;
-wrapper forwarding of output groups does not imply observation. The
-group-to-files mapping plus resolved report below stay a Starlark-level
-use case. Consumers expose resolved output-group state via `DxSubjectInfo`
-when they need it observed.
-"""
+Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via `bazel run //tools/ci:starlark_futures_qualification`.
+Output-group observation stays deferred: analysis observes `DxSubjectInfo` fields plus
+`DefaultInfo` output basenames only, not `OutputGroupInfo`, so the group-to-files mapping
+stays a Starlark-level use case; consumers expose resolved state via `DxSubjectInfo`."""
 
 def admitted_output_groups():
     return ["docs", "artifacts"]

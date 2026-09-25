@@ -100,7 +100,10 @@ def cc_copts_with_werror(kwargs):
     """Returns kwargs with warnings-as-errors enforced on copts.
 
     Existing flags are kept; a missing flag is appended per-platform
-    (`/WX` under MSVC on Windows, `-Werror` elsewhere).
+    (`/WX` under MSVC on Windows, `-Werror` elsewhere). GCC-style
+    `-std=` language floors rewrite to MSVC `/std:` spellings on
+    Windows so GoogleTest C++17 floors compile under `cl.exe`
+    (qualified runner: `bazel run //tools/ci:googletest_qualification`).
     See: docs/testing/generation.md.
 
     Args:
@@ -113,8 +116,20 @@ def cc_copts_with_werror(kwargs):
     copts = list(upstream_kwargs.get("copts", []))
     if "-Werror" in copts or "/WX" in copts:
         return upstream_kwargs
+
+    def _msvc_opt(flag):
+        if flag.startswith("-std=c++") or flag.startswith("-std=gnu++"):
+            # MSVC accepts only `/std:c++14|c++17|c++20|c++latest`.
+            if "14" in flag:
+                return "/std:c++14"
+            if "20" in flag:
+                return "/std:c++20"
+            return "/std:c++17"
+        return flag
+
+    win_copts = [_msvc_opt(c) for c in copts] + ["/WX"]
     upstream_kwargs["copts"] = select({
-        "@platforms//os:windows": copts + ["/WX"],
+        "@platforms//os:windows": win_copts,
         "//conditions:default": copts + ["-Werror"],
     })
     return upstream_kwargs

@@ -91,7 +91,7 @@ fi
 # invocation (curl with flags) in the action plus Dockerfile plus ghcr
 # cosign fetch carries --retry (fail-closed on flag drift, not presence).
 if grep -h -o -E -e 'curl -[^|;&]*' "$action" "$dockerfile" "$ghcr" 2>/dev/null | grep -q -F -e 'curl -' &&
-  ! grep -h -o -E -e 'curl -[^|;&]*' "$action" "$dockerfile" "$ghcr" 2>/dev/null | grep -v -F -e '--retry' | grep -q .; then
+  ! grep -h -o -E -e 'curl -[^|;&]*' "$action" "$dockerfile" "$ghcr" 2>/dev/null | grep -v -F -e '--retry' | grep -v -F -e 'curl --version' | grep -q .; then
   ok
 else
   bad "a bare curl without --retry survives in setup-bazelisk, Dockerfile.prebuilt, or ghcr.yml (want --retry everywhere, issue #932)"

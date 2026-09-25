@@ -54,7 +54,7 @@ action_doc="docs/quality/action-model.md"
 python_adr="docs/decisions/0010-python-foundation.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
-promotion="docs/product/promotion-checklist.md"
+promotion="docs/product/support-matrix.md"
 adopt="examples/adopt-python"
 
 # Fixture files stay present.
@@ -145,7 +145,7 @@ else
 fi
 
 # Tool baseline owns the #801 selection record with Bandit honesty.
-if grep -q -F -e 'issue #801' "$baseline" &&
+if grep -q -F -e 'closed #801' "$baseline" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$baseline" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$baseline" &&
   grep -q -F -e 'Bandit excluded from v1' "$baseline" &&
@@ -156,7 +156,7 @@ else
 fi
 
 # Action model owns the audit-selection record with Ruff S plus Bandit.
-if grep -q -F -e 'qualified seed-only under issue #801' "$action_doc" &&
+if grep -q -F -e 'qualified seed-only under closed #801' "$action_doc" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$action_doc" &&
   grep -q -F -e 'python_audit.expected' "$action_doc" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$action_doc" &&
@@ -168,7 +168,7 @@ else
 fi
 
 # Python foundation ADR owns the source-audit selection under #801.
-if grep -q -F -e 'issue #801' "$python_adr" &&
+if grep -q -F -e 'closed #801' "$python_adr" &&
   grep -q -F -e 'python/tests/fixtures/python_audit/pins.bzl' "$python_adr" &&
   grep -q -F -e 'bazel run //tools/ci:python_audit_qualification' "$python_adr"; then
   ok
@@ -176,11 +176,11 @@ else
   bad "docs/decisions/0010-python-foundation.md lost its #801 source-audit selection record"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "python_audit_qualification"' "$build" ||
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "python_audit_qualification"' "tools/ci/ci_targets_d.bzl" ||
   grep -q -F -e 'name = "python_audit_qualification"' "tools/ci/ci_targets_d.bzl"; then
   if grep -q -F -e 'bazel run --noshow_progress //tools/ci:python_audit_qualification' "tools/ci/dogfood_freshness.sh" ||
-    grep -q -F -e 'bazel run --noshow_progress //tools/ci:python_audit_qualification' "$ci"; then
+    grep -q -F -e 'bazel run --noshow_progress //tools/ci:python_audit_qualification' tools/ci/dogfood_freshness.sh; then
     ok
   else
     bad "dogfood_freshness.sh lost the python_audit_qualification wiring"
@@ -220,10 +220,10 @@ fi
 
 # Consumer plus release evidence stays linked.
 if [[ -d "$adopt" ]] &&
-  grep -q -F -e 'Promotion Checklist' "$promotion"; then
+  grep -q -F -e 'promotion to `Supported` requires release evidence' "$promotion"; then
   ok
 else
-  bad "consumer plus release evidence missing (want examples/adopt-python plus promotion-checklist)"
+  bad "consumer plus release evidence missing (want examples/adopt-python plus support-matrix release-evidence gate)"
 fi
 
 # Verification-remaining mirrors the #801 record.

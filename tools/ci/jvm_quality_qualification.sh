@@ -142,29 +142,29 @@ fi
 # Tool acquisition keeps the decided shared-JDK route with no Maven
 # reconstruction and no false claim; versions qualified under, digests
 # plus adapters stay pending under.
-if grep -q -F -e 'Decided route: google-java-format, Checkstyle,' "$acquisition" &&
-  grep -q -F -e 'sharing the one managed JDK cohort runtime' "$acquisition" &&
-  grep -q -F -e 'with `java` plus `kotlin` claimed' "$acquisition" &&
-  grep -q -F -e '(delivered under #796' "$acquisition"; then
+if grep -q -F -e 'JVM cohort delivered under #796' "$acquisition" &&
+  grep -q -F -e 'Complete upstream artifact plus shared JDK | google-java-format, Checkstyle, PMD, SpotBugs, ktfmt, ktlint' "$acquisition" &&
+  grep -q -F -e 'complete-upstream-artifact plus shared-JDK route for google-java-format, Checkstyle,' "$integrations" &&
+  grep -q -F -e 'adapters delivered under #796' "$integrations"; then
   ok
 else
   bad "tool-acquisition lost its delivered JVM route under #796"
 fi
 
-# Tool acquisition keeps the eight research rows with byte-identity risk.
+# Tool integrations keep the eight JVM research rows plus byte-identity risk.
 jvm_research=""
-for tool in '| google-java-format |' '| Checkstyle |' '| PMD |' '| SpotBugs |' '| ktfmt |' '| ktlint |' '| detekt |' '| Error Prone |'; do
-  grep -q -F -e "$tool" "$acquisition" || jvm_research="$jvm_research $tool:missing"
+for tool in 'google-java-format' 'Checkstyle' 'PMD' 'SpotBugs' 'ktfmt' 'ktlint' 'detekt' 'Error Prone'; do
+  grep -q -F -e "$tool" "$integrations" || jvm_research="$jvm_research $tool:missing"
 done
 if [[ -z "$jvm_research" ]] &&
-  grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
+  grep -q -F -e 'actual bytes when adding each adapter' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost a JVM research row or byte-identity honesty:$jvm_research"
+  bad "tool-integrations lost a JVM research row or byte-identity honesty:$jvm_research"
 fi
 
 # Tool integrations keep the delivered JVM notes under #796.
-if grep -q -F -e '**JVM cohort (#796' "$integrations" &&
+if grep -q -F -e '**JVM cohort (closed #796' "$integrations" &&
   grep -q -F -e 'digests pinned in' "$integrations" &&
   grep -q -F -e '`quality/tools/jvm/repos.bzl`' "$integrations" &&
   grep -q -F -e 'adapters delivered under #796' "$integrations" &&

@@ -37,6 +37,7 @@ env_plan_tests(
         ":hello_plan",
         ":hello_test_plan",
     ],
+    tags = ["no-coverage"],
 )
 
 real_source_target(

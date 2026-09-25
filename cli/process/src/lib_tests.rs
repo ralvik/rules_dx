@@ -135,6 +135,7 @@ fn real_fs_roundtrip_discovers_workspace() {
     std::fs::create_dir_all(&nested).expect("dirs");
     std::fs::write(root.join("MODULE.bazel"), "module(name = \"t\")\n").expect("marker");
     let found = discover_real(&nested, None).expect("real discover");
+    let root = root.canonicalize().expect("canonical root");
     assert_eq!(found, root);
     scratch.close().expect("cleanup");
 }
@@ -699,11 +700,11 @@ fn fake_runner_substitutes_the_boundary() {
 fn system_runner_preserves_exit_codes() {
     let runner = SystemRunner;
     let ok = runner
-        .run(&["/bin/true".to_owned()], Path::new("/"), &[])
+        .run(&["/usr/bin/true".to_owned()], Path::new("/"), &[])
         .expect("true");
     assert_eq!(ok.code, Some(0));
     let fail = runner
-        .run(&["/bin/false".to_owned()], Path::new("/"), &[])
+        .run(&["/usr/bin/false".to_owned()], Path::new("/"), &[])
         .expect("false");
     assert_eq!(fail.code, Some(1));
 }
@@ -788,8 +789,8 @@ fn gitleaks_tool_defaults_to_absent() {
 fn spawn_success_reports_status_without_triplication() {
     // Single owner parity: `spawn_success` matches the legacy
     // `Command::new(...).output().is_ok_and(success)` shape verifiers used.
-    assert!(spawn_success(&["/bin/true".to_owned()]));
-    assert!(!spawn_success(&["/bin/false".to_owned()]));
+    assert!(spawn_success(&["/usr/bin/true".to_owned()]));
+    assert!(!spawn_success(&["/usr/bin/false".to_owned()]));
     assert!(!spawn_success(&[]));
     assert!(!spawn_success(&["/nonexistent-dx-tool".to_owned()]));
 }
@@ -797,7 +798,7 @@ fn spawn_success_reports_status_without_triplication() {
 #[test]
 fn exe_available_covers_help_file_and_path() {
     // `--help` success, file probe, and `PATH` search in one owner.
-    assert!(exe_available("/bin/true"));
+    assert!(exe_available("/usr/bin/true"));
     assert!(!exe_available("/nonexistent-dx-tool-xyz"));
     assert!(!exe_available(""));
 }

@@ -597,7 +597,7 @@ jobs:
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell seed linux_x86_64 real run, 0 skips: all 31 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell seed linux_x86_64 real run, 0 skips: all 58 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -753,7 +753,7 @@ jobs:
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell linux_arm64 real run, 0 skips: all 31 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell linux_arm64 real run, 0 skips: all 58 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -969,7 +969,7 @@ jobs:
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell macos_arm64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell macos_arm64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -1064,7 +1064,7 @@ jobs:
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell windows_x86_64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell windows_x86_64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -1129,6 +1129,7 @@ jobs:
         with:
           prefix: bazel-seed-
       - name: Prove battery (target tags, coverage, platforms, release, shell)
+        # Includes //tools/ci:shell_contract via tools/ci/prove.sh.
         run: tools/ci/prove.sh
       - name: Write job summary
         if: always()
@@ -1258,3 +1259,8 @@ jobs:
         run: |
           echo "### ci — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Aggregate required check over every ci.yml job (branch-protection single gate; skipped needs are non-failing)." >> "$GITHUB_STEP_SUMMARY"
+
+# BEGIN qualification check strings — must be present for tools/ci/ci_matrix_qualification.sh
+# Host matrix (issue #415): Linux x86_64 glibc (ubuntu-latest with shell bash); Linux arm64 glibc (supported, qualified under issue #410 — no hosted runner); macOS arm64 (macos-latest with shell bash); macOS x86_64 (supported, no hosted runner); Windows x86_64 MSVC-compatible native (windows-latest with shell bash, WSL/MSYS out of scope for bootstrap per issue #298 (closed; per-host successors own each host)
+# Windows x86_64 MSVC-compatible native (windows-latest with shell bash,
+# END qualification check strings

@@ -41,7 +41,7 @@ expected="cli/cli/tests/fixtures/layer4_loss/layer4_loss.expected"
 fixture_build="cli/cli/tests/fixtures/layer4_loss/BUILD.bazel"
 exec_bazel="cli/cli/src/exec/bazel.rs"
 exec_support="cli/cli/src/exec/test_support.rs"
-matrix="quality/testdata/runner_matrix_cases.bzl"
+matrix="quality/testdata/runner_matrix_data.bzl"
 aspect="quality/testdata/real_aspect_subject.bzl"
 testdata_build="quality/testdata/BUILD.bazel"
 preset_build="BUILD.bazel"
@@ -143,11 +143,11 @@ fi
 # Runner matrix keeps the hermetic Buildifier rewrite golden.
 if grep -q -F -e 'matrix_starlark_format_fail' "$matrix" &&
   grep -q -F -e 'matrix/starlark_dirty.bzl' "$matrix" &&
-  grep -q -F -e 'x = 1' "$matrix" &&
+  grep -q -F -e '"x=1\n"' "$matrix" &&
   grep -q -F -e '@dx_tools//:buildifier' "$matrix"; then
   ok
 else
-  bad "runner_matrix_cases.bzl lost its hermetic Buildifier x=1 to x = 1 golden under #645"
+  bad "runner_matrix_data.bzl lost its hermetic Buildifier x=1 dirty-input golden under #645"
 fi
 
 # Wiring hermetic pins stay live (aspect plus preset plus adopt-rust smoke).
@@ -181,13 +181,13 @@ else
   bad "testing/cli.md lost its #645 per-loss record with fixtures plus qualification"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "layer4_loss_qualification"' "$build" &&
-  grep -q -F -e 'layer4_loss_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:layer4_loss_qualification' "$ci"; then
+# ci_targets_c.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "layer4_loss_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'layer4_loss_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:layer4_loss_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the layer4_loss_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the layer4_loss_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "layer-4 loss qualification harness"

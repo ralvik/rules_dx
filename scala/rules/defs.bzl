@@ -81,14 +81,7 @@ def scala_scalacopts_with_werror(kwargs):
     """Returns kwargs with -Xfatal-warnings enforced on scalacopts.
 
     Existing flags are kept; a missing flag is appended.
-    See: docs/testing/generation.md.
-
-    Args:
-      kwargs: Rule keyword arguments possibly containing `scalacopts`.
-
-    Returns:
-      Copy of `kwargs` with `-Xfatal-warnings` appended when absent.
-    """
+    See: docs/testing/generation.md."""
     upstream_kwargs = dict(kwargs)
     scalacopts = list(upstream_kwargs.get("scalacopts", []))
     if "-Xfatal-warnings" not in scalacopts:
@@ -116,15 +109,7 @@ def scala_binary(name, srcs = None, main_class = None, visibility = None, **kwar
     names its `main_class` explicitly (no inference); a thin entry binary
     carries only `runtime_deps` with no `srcs` and reports no direct
     sources. Both shapes preserve the upstream providers and execution
-    semantics.
-
-    Args:
-      name: Target name.
-      srcs: Direct Scala sources; None becomes an empty list.
-      main_class: Fully qualified main class, or None to omit.
-      visibility: Visibility list for the public forwarder.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
-    """
+    semantics."""
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:

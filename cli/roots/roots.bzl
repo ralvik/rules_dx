@@ -16,17 +16,6 @@ REPOSITORY_ROOT_STRATEGIES = [
 ]
 
 def repository_roots(strategy, monolith = None, shards = [], pattern_file = None):
-    """Returns repository-root target patterns for one root strategy.
-
-    Args:
-      strategy: Root strategy name from REPOSITORY_ROOT_STRATEGIES.
-      monolith: Aggregate root label for monolithic-aggregate, or None.
-      shards: Shard patterns for package-shards.
-      pattern_file: Pattern file path for query-pattern-file, or None.
-
-    Returns:
-      List of repository-root target patterns for the strategy.
-    """
     if strategy == "recursive-pattern":
         return [REPOSITORY_PATTERN]
     if strategy == "query-pattern-file":

@@ -97,11 +97,7 @@ def curated_families():
     return sorted(CURATED_DEFAULTS.keys())
 
 def curated_tools():
-    """Returns the sorted unique curated tool IDs across families.
-
-    Returns:
-      Sorted unique tool IDs across all curated families.
-    """
+    """Returns the sorted unique curated tool IDs across families."""
     seen = {}
     for family in CURATED_DEFAULTS:
         for capability in CURATED_DEFAULTS[family]:
@@ -124,11 +120,7 @@ def curated_schema_error():
     family edits the manifest data only: version is v1, every family and
     tool spelling is canonical, every family carries exactly the
     audit/format/lint/typecheck capabilities, and the frozen formatter
-    set matches the curated format selection.
-
-    Returns:
-      Empty string when the schema is valid; otherwise a diagnostic.
-    """
+    set matches the curated format selection."""
     if CURATED_SCHEMA_VERSION != 1:
         return "curated defaults: unsupported schema v" + str(CURATED_SCHEMA_VERSION) + " (want v1)"
     for family in CURATED_DEFAULTS:

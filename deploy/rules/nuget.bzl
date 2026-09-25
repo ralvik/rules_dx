@@ -44,11 +44,7 @@ def nuget_schema_error():
     Checks data shape without pinning exact contents: version is v1, each
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so ids and versions
-    embed safely in the deploy launcher.
-
-    Returns:
-      Empty string when the schema is valid, else an error message.
-    """
+    embed safely in the deploy launcher."""
     if NUGET_SCHEMA_VERSION != 1:
         return "nuget id: unsupported schema v" + str(NUGET_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ID_CHARS) != "string" or _VALID_ID_CHARS == "":
@@ -72,14 +68,7 @@ def nuget_schema_error():
     return ""
 
 def nuget_id_error(package_id):
-    """Validates one package id value.
-
-    Args:
-      package_id: Candidate NuGet package id.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one package id value."""
     if type(package_id) != "string" or package_id == "":
         return ("nuget_deploy: invalid package id '" + str(package_id) +
                 "': want a non-empty id (for example 'nuget_demo')")
@@ -91,14 +80,7 @@ def nuget_id_error(package_id):
     return ""
 
 def nuget_version_error(version):
-    """Validates one package version value.
-
-    Args:
-      version: Candidate NuGet package version.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one package version value."""
     if type(version) != "string" or version == "":
         return ("nuget_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -110,14 +92,7 @@ def nuget_version_error(version):
     return ""
 
 def nuget_nupkg_error(filename):
-    """Validates one nupkg filename value.
-
-    Args:
-      filename: Candidate `.nupkg` basename.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one nupkg filename value."""
     if type(filename) != "string" or filename == "":
         return ("nuget_deploy: invalid nupkg '" + str(filename) +
                 "': want a non-empty .nupkg filename")
@@ -132,14 +107,7 @@ def nuget_nupkg_error(filename):
     return ""
 
 def nuget_source_error(source):
-    """Validates one NuGet source URL value.
-
-    Args:
-      source: Candidate https NuGet source URL.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one NuGet source URL value."""
     if type(source) != "string" or source == "":
         return ("nuget_deploy: invalid source '" + str(source) +
                 "': want a non-empty https URL (for example '" +
@@ -181,7 +149,6 @@ def _nuget_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@NUPKG_RLOC@@": nupkg_rloc,
             "@@PACKAGE_ID@@": ctx.attr.package_id,
@@ -232,15 +199,7 @@ def nuget_deploy(name, nupkg, version = "0.0.0", source = NUGET_DEFAULT_SOURCE, 
     usable as a `dotnet` source) and verifies bytes, publishing nothing.
     Live `dotnet nuget push --source --api-key --skip-duplicate` runs only
     with `NUGET_PUBLISH_LIVE=1`, `NUGET_API_KEY`, and
-    `NUGET_PUBLISH_APPROVED=1` after explicit owner approval.
-
-    Args:
-      name: Deploy target base name (also the package id).
-      nupkg: Package file label pinned in the local feed.
-      version: Package version for the local-first publish path.
-      source: https NuGet source URL used only with explicit env.
-      profile: Deploy profile (debug, dev, or release).
-    """
+    `NUGET_PUBLISH_APPROVED=1` after explicit owner approval."""
     name_error = nuget_id_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

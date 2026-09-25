@@ -86,16 +86,18 @@ else
   bad "watch.md lost its #590 execution-gaps section with 8 plus 22 plus CI plus sequential"
 fi
 
-# Protocol owns the compatibility bullet with matrix plus sequential ordering.
-if grep -q -F -e 'issue #590' "$protocol" &&
-  grep -q -F -e 'cli/cli/tests/fixtures/cli_execution_gaps/' "$protocol" &&
-  grep -q -F -e 'bazel run //tools/ci:cli_execution_gaps_qualification' "$protocol" &&
-  grep -q -F -e 'UnsupportedFormat' "$protocol" &&
-  grep -q -F -e 'no' "$protocol" &&
+# Cli-contract owns the compatibility bullet with matrix plus sequential
+# ordering; output-protocol keeps the no-parallel-execution boundary.
+if grep -q -F -e 'issue #590' "$contract" &&
+  grep -q -F -e 'cli/cli/tests/fixtures/cli_execution_gaps/' "$contract" &&
+  grep -q -F -e 'bazel run //tools/ci:cli_execution_gaps_qualification' "$contract" &&
+  grep -q -F -e 'UnsupportedFormat' "$contract" &&
+  grep -q -F -e 'never silently substituted' "$contract" &&
+  grep -q -F -e '`update` runs per-set sequentially' "$contract" &&
   grep -q -F -e 'parallel execution' "$protocol"; then
   ok
 else
-  bad "output-protocol.md lost its #590 compatibility bullet with matrix plus sequential ordering"
+  bad "cli-contract lost its #590 compatibility bullet with matrix plus sequential ordering"
 fi
 
 # Standard-reports owns the wont-fix matrix table with check/fix plus SPDX plus format-none.
@@ -148,52 +150,55 @@ else
   bad "cli_execution_gaps BUILD.bazel lost its pins plus expected exports with corpus under #590"
 fi
 
-# Adopt watch keeps the full 8 plus 22 matrix with CI refusal under.
+# Adopt watch keeps the full 8 plus 22 matrix with CI refusal under
+# (bare issue refs live in docs, not non-test source).
 if grep -q -F -e 'watch_execution_gaps_matrix_is_wont_fix' "$adopt_watch" &&
-  grep -q -F -e 'Issue #590' "$adopt_watch" &&
   grep -q -F -e 'WATCHABLE_COMMANDS.len(), 8' "$adopt_watch" &&
   grep -q -F -e 'WATCH_DEBOUNCE_MS, 200' "$adopt_watch" &&
-  grep -q -F -e '"docs",' "$adopt_watch"; then
+  grep -q -F -e '"docs",' "$adopt_watch" &&
+  grep -q -F -e 'issue #590' "$watch_doc"; then
   ok
 else
-  bad "adopt/watch.rs lost its #590 8-plus-22 watch matrix fixture"
+  bad "adopt/watch.rs plus watch.md lost the #590 8-plus-22 watch matrix fixture"
 fi
 
-# Process keeps the startup plus test-binary forwarding matrix under.
-if grep -q -F -e 'execution_gaps_forwarding_matrix_is_wont_fix' "$process_lib" &&
-  grep -q -F -e 'Issue #590' "$process_lib" &&
+# Process keeps the startup plus test-binary forwarding matrix under
+# (the wont-fix test lives in lib_tests; bare issue refs live in docs).
+if grep -q -F -e 'execution_gaps_forwarding_matrix_is_wont_fix' "cli/process/src/lib_tests.rs" &&
   grep -q -F -e 'is_startup_option' "$process_lib" &&
   grep -q -F -e 'is_test_binary_arg' "$process_lib" &&
-  grep -q -F -e 'build_bazel_passthrough' "$process_lib"; then
+  grep -q -F -e 'build_bazel_passthrough' "$process_lib" &&
+  grep -q -F -e 'issue #590' "$contract"; then
   ok
 else
-  bad "process/lib.rs lost its #590 startup plus test-binary forwarding fixture"
+  bad "process lib plus tests lost the #590 startup plus test-binary forwarding fixture"
 fi
 
 # Planning keeps the per-command report matrix under.
 if grep -q -F -e 'execution_gaps_report_matrix_is_wont_fix' "$planning" &&
-  grep -q -F -e 'Issue #590' "$planning" &&
-  grep -q -F -e 'spec(Command::Format).reports.is_empty()' "$planning"; then
+  grep -q -F -e 'spec(Command::Format).reports.is_empty()' "$planning" &&
+  grep -q -F -e 'issue #590' "$contract"; then
   ok
 else
-  bad "reports/planning.rs lost its #590 per-command report matrix fixture"
+  bad "reports/planning.rs lost the #590 per-command report matrix fixture"
 fi
 
 # Outcome keeps the sequential parallelism pin under.
 if grep -q -F -e 'execution_gaps_parallelism_stays_sequential' "$outcome" &&
-  grep -q -F -e 'Issue #590' "$outcome" &&
-  grep -q -F -e 'wont-fix, sequential per-set' "$outcome"; then
+  grep -q -F -e 'wont-fix, sequential per-set' "$outcome" &&
+  grep -q -F -e 'issue #590' "$contract"; then
   ok
 else
-  bad "update/outcome.rs lost its #590 sequential parallelism fixture"
+  bad "update/outcome.rs lost the #590 sequential parallelism fixture"
 fi
 
-# Reports facade owns the wont-fix UnsupportedFormat record under.
-if grep -q -F -e 'issue #590' "$reports_facade" &&
-  grep -q -F -e 'never silently' "$reports_facade"; then
+# Reports facade plus standard-reports own the wont-fix UnsupportedFormat record under.
+if grep -q -F -e 'issue #590' "$reports_doc" &&
+  grep -q -F -e 'never silently' "$reports_facade" &&
+  grep -q -F -e 'UnsupportedFormat' "$reports_facade"; then
   ok
 else
-  bad "reports.rs lost its #590 wont-fix UnsupportedFormat record"
+  bad "reports.rs plus standard-reports lost the #590 wont-fix UnsupportedFormat record"
 fi
 
 # Testing matrix pins watch plus forwarding plus reports plus parallelism under.
@@ -208,13 +213,13 @@ else
   bad "testing/cli.md lost its #590 watch plus forwarding plus reports plus parallelism pins"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "cli_execution_gaps_qualification"' "$build" &&
-  grep -q -F -e 'cli_execution_gaps_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cli_execution_gaps_qualification' "$ci"; then
+# ci_targets_c.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "cli_execution_gaps_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'cli_execution_gaps_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cli_execution_gaps_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the cli_execution_gaps_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the cli_execution_gaps_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "cli execution gaps qualification harness"

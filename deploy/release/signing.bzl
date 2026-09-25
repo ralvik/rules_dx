@@ -49,12 +49,6 @@ def signing_bundle_media_error(media_type):
 def signing_identity_error(identity, issuer):
     """Validates the expected certificate identity + issuer.
 
-    Args:
-      identity: Expected certificate identity URL for keyless signing.
-      issuer: Expected OIDC issuer for the signing identity.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if type(identity) != "string" or identity == "":
         return ("signing: invalid identity '" + str(identity) +

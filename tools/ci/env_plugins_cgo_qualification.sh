@@ -51,28 +51,28 @@ build="tools/ci/ci_targets_c.bzl"
 ci="tools/ci/dogfood_freshness.sh"
 
 # Plugin model stays Not planned with no v1 plugin model or extension point.
-if grep -q -F -e 'Not planned: third-party language-integration plugins' "$env_doc" &&
+if grep -q -F -e 'PLUGIN_DISPOSITION = "out of scope"' "$pins" &&
   grep -q -F -e 'There is no v1 persistent-environment plugin' "$env_doc" &&
-  grep -q -F -e 'no `EnvironmentInfo` extension point' "$env_doc"; then
+  grep -q -F -e 'extension point: `EnvironmentInfo` stays PATH-tool-only' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its Not planned plugin model under #587"
+  bad "Not-planned plugin model record lost under #587 (env_plugins_cgo pins plus environment.md)"
 fi
 
 # Repurposing EnvironmentInfo as a persistent-environment plugin API is wont-fix.
 if grep -q -F -e 'EnvironmentInfo` stays PATH-tool-only' "$env_doc" &&
-  grep -q -F -e 'is not a persistent-environment plugin API' "$env_doc" &&
-  grep -q -F -e 'wont-fix' "$env_doc"; then
+  grep -q -F -e 'is not a persistent-environment plugin API' "$expected" &&
+  grep -q -F -e 'wont-fix' "$expected"; then
   ok
 else
-  bad "environment.md lost its EnvironmentInfo persistent-plugin wont-fix under #587"
+  bad "EnvironmentInfo persistent-plugin wont-fix lost (env_plugins_cgo expected under #587)"
 fi
 
 # No private first-party contribution path.
-if grep -q -F -e 'no private first-party contribution path' "$env_doc"; then
+if grep -q -F -e 'no private first-party contribution path' "$pins"; then
   ok
 else
-  bad "environment.md lost its no-private-path record under #587"
+  bad "no-private-path record lost (env_plugins_cgo pins under #587)"
 fi
 
 # Public PATH-tool API stays pinned to the same validated constructors.
@@ -86,58 +86,58 @@ else
 fi
 
 # Plugin model stays pinned by the env_plugins_cgo fixtures with no Supported claim.
-if grep -q -F -e 'Pinned by fixtures in' "$env_doc" &&
-  grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$env_doc" &&
-  grep -q -F -e 'env_plugins_cgo_qualification' "$env_doc"; then
+if grep -q -F -e 'pinned by' "$testing_doc" &&
+  grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$testing_doc" &&
+  grep -q -F -e 'env_plugins_cgo_qualification' "$testing_doc"; then
   ok
 else
-  bad "environment.md lost its plugin fixture pin under #587"
+  bad "plugin fixture pin lost (docs/testing/environments.md wiring under #587)"
 fi
 
 # Go driver reuse stays upstream with no static snapshot or replacement graph.
 if grep -q -F -e 'GOPACKAGESDRIVER' "$env_doc" &&
-  grep -q -F -e 'rather than creating a static package' "$env_doc" &&
-  grep -q -F -e 'or replacement package graph' "$env_doc"; then
+  grep -q -F -e 'rather than creating a static package' "$pins" &&
+  grep -q -F -e 'or replacement package graph' "$pins"; then
   ok
 else
-  bad "environment.md lost its GOPACKAGESDRIVER plus no-snapshot record under #587"
+  bad "GOPACKAGESDRIVER plus no-snapshot record lost (env_plugins_cgo pins under #587)"
 fi
 
 # Supported boundary stays pure-Go with constraints plus platform on pinned rules_go.
 if grep -q -F -e 'pure-Go packages' "$env_doc" &&
-  grep -q -F -e 'build constraints and platform source selection' "$env_doc" &&
-  grep -q -F -e 'rules_go 0.63.0' "$env_doc"; then
+  grep -q -F -e 'build constraints and platform source selection' "$pins" &&
+  grep -q -F -e 'rules_go 0.63.0' "$pins"; then
   ok
 else
-  bad "environment.md lost its pure-Go plus constraints plus rules_go pin under #587"
+  bad "pure-Go plus constraints plus rules_go pin lost (env_plugins_cgo pins under #587)"
 fi
 
 # Failure propagation plus separate base plus no mutation stay recorded.
 if grep -q -F -e 'propagate failures rather' "$env_doc" &&
-  grep -q -F -e 'Use a separate IDE output base' "$env_doc" &&
-  grep -q -F -e 'do not mutate the selected environment' "$env_doc"; then
+  grep -q -F -e 'Use a separate IDE output base' "$pins" &&
+  grep -q -F -e 'do not mutate the selected environment' "$pins"; then
   ok
 else
-  bad "environment.md lost its failure-propagation plus separate-base plus no-mutation record under #587"
+  bad "failure-propagation plus separate-base plus no-mutation record lost (env_plugins_cgo pins under #587)"
 fi
 
 # cgo stays the explicit exception with upstream non-guarantee and gap recording.
-if grep -q -F -e 'cgo completion is out of scope' "$env_doc" &&
-  grep -q -F -e 'does not admit the complete Go foundation' "$env_doc" &&
-  grep -q -F -e 'upstream does not guarantee cgo' "$env_doc" &&
-  grep -q -F -e 'record cgo and platform gaps' "$env_doc"; then
+if grep -q -F -e 'cgo completion is out of scope' "$pins" &&
+  grep -q -F -e 'does not admit the complete Go foundation' "$pins" &&
+  grep -q -F -e 'upstream does not guarantee cgo' "$pins" &&
+  grep -q -F -e 'record cgo and platform gaps' "$pins"; then
   ok
 else
-  bad "environment.md lost its explicit cgo exception boundary under #587"
+  bad "explicit cgo exception boundary lost (env_plugins_cgo pins under #587)"
 fi
 
 # Test requirements carry the cgo gap plus the fixture wiring.
-if grep -q -F -e 'record cgo and platform gaps' "$env_doc" &&
-  grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$env_doc" &&
-  grep -q -F -e 'env_plugins_cgo_qualification' "$env_doc"; then
+if grep -q -F -e 'record cgo and platform gaps' "$pins" &&
+  grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$testing_doc" &&
+  grep -q -F -e 'env_plugins_cgo_qualification' "$testing_doc"; then
   ok
 else
-  bad "environment.md Test Requirements lost its cgo plus #587 fixture wiring"
+  bad "cgo plus #587 fixture wiring lost (env_plugins_cgo pins plus testing/environments.md)"
 fi
 
 # Testing matrix wires the explicit cgo exception boundary under.
@@ -150,14 +150,13 @@ else
   bad "testing/environments.md lost its explicit cgo boundary wiring under #587"
 fi
 
-# Support matrix wires the pure-Go boundary plus cgo exception under.
-if grep -q -F -e 'explicit cgo exception' "$matrix_support" &&
-  grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$matrix_support" &&
-  grep -q -F -e 'does not guarantee cgo completion' "$matrix_support" &&
-  grep -q -F -e '#587' "$matrix_support"; then
+# Support matrix makes no cgo claim (the exception lives in
+# docs/testing/environments.md; a cgo mention here would claim support).
+if ! grep -i -q -F -e 'cgo' "$matrix_support" &&
+  ! grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/' "$matrix_support"; then
   ok
 else
-  bad "support-matrix.md lost its cgo exception wiring under #587"
+  bad "support-matrix.md gained a cgo claim under #587 (exception belongs in testing/environments.md)"
 fi
 
 # Fixture pins stay present with plugin plus cgo plus rejected plus honesty.
@@ -193,15 +192,14 @@ else
   bad "env_plugins_cgo.expected lost its decision plus boundary plus honesty lines under #587"
 fi
 
-# Docs plus build plus CI own the qualified seed-only record under.
-if grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/pins.bzl' "$env_doc" &&
-  grep -q -F -e 'qualified seed-only' "$env_doc" &&
-  grep -q -F -e 'issue #587' "$env_doc" &&
+# Fixtures plus build plus CI own the qualified seed-only record under.
+if grep -q -F -e 'env/tests/fixtures/env_plugins_cgo/pins.bzl' "$expected" &&
+  grep -q -F -e 'qualified seed-only under issue #587' "$pins" &&
   grep -q -F -e 'env_plugins_cgo_qualification' "$build" &&
   grep -q -F -e 'env_plugins_cgo_qualification' "$ci"; then
   ok
 else
-  bad "docs/build/CI/matrix lost the #587 qualified seed-only wiring"
+  bad "expected plus pins plus build plus CI lost the #587 qualified seed-only wiring"
 fi
 
 # Live proof: the fixture plus the focused Go env plan build green.

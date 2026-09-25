@@ -159,12 +159,12 @@ else
   bad "docs/native-toolchains.md lost its qualified corpus record with fixtures under issue #499"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "linux_corpus_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:linux_corpus_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "linux_corpus_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:linux_corpus_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the linux_corpus_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the linux_corpus_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the corpus lib builds on the seed host.

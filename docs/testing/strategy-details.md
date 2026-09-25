@@ -30,10 +30,10 @@ graphs.
 
 ### Coverage
 
-Project-wide first-party implementation must pass the exact per-cell gate: zero
-uncovered non-ignored executable lines in each required cell's versioned
-inventory. Run the gate with `dx coverage --min-coverage`; the flag is a
-user-facing threshold, not a second repo gate. Do not round a shortfall up to a pass.
+Project-wide first-party implementation must pass the single exact gate: the
+single exact per-cell gate with zero uncovered non-ignored executable lines in
+each required cell's versioned inventory. Run the gate with `dx coverage --min-coverage`; the flag is a
+user-facing threshold, informational only for the repo verdict, not a second repo gate. Do not round a shortfall up to a pass.
 
 Use each coverage tool's native source-level ignore directives for code that
 cannot reasonably be covered. Each ignore needs a nearby specific short
@@ -85,10 +85,12 @@ Tests cover only implemented commands. Open work is tracked in GitHub issues;
 the [support matrix](../product/support-matrix.md) stays the status source.
 
 Non-dogfed paths never run under the standard dogfood gates by design; each has
-an explicit execution path: CLI-contract via hermetic pins under
-`bazel test //...`, negative fixtures via explicit failure proofs, the
-no-coverage cohort via coverage-excluded runs, and shell sources via ownership
-plus test execution with no quality class by design.
+an explicit execution path: CLI-contract via hermetic pins under `bazel test //...`,
+negative fixtures via explicit failure proofs, the no-coverage cohort via
+coverage-excluded runs, and shell sources via ownership plus test execution with
+no quality class by design. The plan stays green via
+`bazel run //tools/ci:non_dogfed_paths` plus
+`bazel run //tools/ci:non_dogfed_qualification`.
 
 ## GitHub Coverage Reporting
 
@@ -107,18 +109,23 @@ across linux plus macos plus windows-latest) and stay step-summary only by
 design to avoid sixfold comment spam. Consumers get the same per-cell
 shape through `reusable-consumer.yml`. A summary comment never turns
 missing reports or failing coverage into success, and any Starlark behavioral
-fallback stays separate from measured line coverage.
+fallback stays separate from measured line coverage. Per-cell, Codecov, and
+remote evidence is qualified by `bazel run //tools/ci:coverage_qualification`
+over the pins fixture `tools/coverage/tests/fixtures/per_cell/pins.bzl`.
 
-Codecov stays at most opt-in and is never required.
+Codecov stays at most opt-in and is never required. No Codecov account exists for this repository.
 
 ## Infrastructure Budget
 
 CI and release infrastructure must use services available free of charge to this
-public GitHub repository. Paid runners, caches, remote execution, signing,
-storage, and service overages are not approved; any paid exception requires
+public GitHub repository: standard GitHub-hosted runners is free, the Actions
+cache allowance is 10 GB, artifact storage is 500 MB, and Larger runners are always charged. Paid runners, caches, remote execution, signing, storage, and
+service overages are not approved; any paid exception requires
 separate approval. Exhausted quotas or missing required hosts block affected
 work; they do not waive platform, coverage, artifact-trust, or release evidence
 requirements.
+
+GitHub Container Registry image storage and bandwidth are currently free for public repositories, with one month notice before any pricing change (GitHub Packages billing); the private-Packages quotas do not apply to containers.
 
 ## Remote Tests
 

@@ -176,7 +176,7 @@ def add_d():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Per-adopt consumer lock authority harness (issue #1077); see
+    # Per-adopt consumer lock authority harness (issue #1077). See:
     # docs/tools/tool-acquisition.md#repinning.
     sh_binary(
         name = "adopt_locks_qualification",

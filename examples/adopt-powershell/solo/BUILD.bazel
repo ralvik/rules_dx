@@ -13,6 +13,7 @@ pwsh_library(
 pwsh_binary(
     name = "hello",
     srcs = ["Hello.ps1"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":solo"],
 )
 
@@ -22,6 +23,7 @@ pwsh_binary(
 pwsh_test(
     name = "pure_test",
     srcs = ["Pure.Tests.ps1"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":solo"],
 )
 

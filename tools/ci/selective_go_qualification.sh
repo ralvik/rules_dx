@@ -42,6 +42,7 @@ backend="cli/update/src/backend.rs"
 selector="cli/update/src/selector.rs"
 sets="cli/update/src/sets.rs"
 exec_update="cli/cli/src/exec/update.rs"
+exec_tests_a="cli/cli/src/exec/update_tests_a.rs"
 bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 build="tools/ci/BUILD.bazel"
@@ -91,8 +92,8 @@ else
 fi
 
 # Live execution fails go:github.com/google/go-cmp/cmp without launching the updater.
-if grep -q -F -e 'go:github.com/google/go-cmp/cmp' "$exec_update" &&
-  grep -q -F -e 'live_unsupported_go_selective_fails_without_launch' "$exec_update" &&
+if grep -q -F -e 'go:github.com/google/go-cmp/cmp' "$exec_tests_a" &&
+  grep -q -F -e 'live_unsupported_go_selective_fails_without_launch' "$exec_tests_a" &&
   grep -q -F -e 'BackendError::Unsupported' "$exec_update"; then
   ok
 else
@@ -186,13 +187,13 @@ else
   bad "sets.rs or third_party/go/go.mod lost its Go from_file wiring under #636"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "selective_go_qualification"' "$build" &&
-  grep -q -F -e 'selective_go_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:selective_go_qualification' "$ci"; then
+# ci_targets_c.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "selective_go_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'selective_go_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:selective_go_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the selective_go_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the selective_go_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "selective go qualification harness"

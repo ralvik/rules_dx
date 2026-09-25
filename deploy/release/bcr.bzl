@@ -8,15 +8,7 @@ load("//deploy/rules:launcher.bzl", "rlocation_path")
 load("//rust/rules:defs.bzl", "rust_binary")
 
 def bcr_source_error(module_name, version):
-    """Validates the BCR module name + version pair.
-
-    Args:
-      module_name: BCR module name; must be `rules_dx`.
-      version: SemVer MAJOR.MINOR.PATCH release version.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates the BCR module name + version pair."""
     if module_name != "rules_dx":
         return ("bcr: invalid module '" + str(module_name) +
                 "': want 'rules_dx'")
@@ -34,15 +26,7 @@ def bcr_source_error(module_name, version):
     return ""
 
 def bcr_submit_error(version, approve):
-    """Validates whether a BCR submission may proceed.
-
-    Args:
-      version: Candidate release version; `0.0.0` is shape-check only.
-      approve: Explicit owner approval flag for a live submission.
-
-    Returns:
-      Empty string when submission may proceed, else an error message.
-    """
+    """Validates whether a BCR submission may proceed."""
     if version == "0.0.0":
         return ("bcr: version 0.0.0 is unpublishable (shape check only); " +
                 "a real submission needs an owner-approved SemVer release version")
@@ -150,15 +134,7 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     `BCR_DRY_RUN=1 bazel run :<name>` to print the would-submit PR (what
     CI exercises, submits nothing). A real submission needs an
     owner-approved SemVer version plus explicit approval per the runbook;
-    `0.0.0` fails submission by construction.
-
-    Args:
-      name: Deploy target base name.
-      module_name: BCR module name; must be `rules_dx`.
-      version: SemVer release version for the source template.
-      inputs: Extra pinned input labels for the submission program.
-      profile: Deploy profile (debug, dev, or release).
-    """
+    `0.0.0` fails submission by construction."""
     src_err = bcr_source_error(module_name, version)
     if src_err != "":
         fail(src_err + " (in " + native.package_name() + ":" + name + ")")

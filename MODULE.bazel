@@ -29,7 +29,7 @@ bazel_dep(name = "rules_cc", version = "0.2.22")
 # `bazel run //tools/ci:googletest_qualification` with
 # `cc/tests/fixtures/googletest/` over `@googletest//:gtest_main`;
 # living at head rejected per the dx pin policy). MSVC interop plus SDK
-# licensing stay open under ADR 0019.
+# licensing stay open under ADR 0019; qualification record under issue #479.
 bazel_dep(name = "googletest", version = "1.18.0")
 
 # Direct dep for the artifact-metadata generator. 1.9.0 is the

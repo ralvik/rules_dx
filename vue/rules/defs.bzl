@@ -36,11 +36,6 @@ def _vue_wrap_library(name, srcs, visibility = None, **kwargs):
 def vue_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for Vue SFCs.
 
-    Args:
-      name: Target name.
-      srcs: Direct Vue single-file components owned by this wrapper.
-      visibility: Visibility list for the public forwarder.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
     """
 
     # PARITY_DEFERRED (ADR 0019): no adapter claims `vue` yet. Tag the

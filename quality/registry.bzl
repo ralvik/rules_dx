@@ -18,11 +18,7 @@ def registry_classes():
     return sorted(REAL_CLASS_TO_FAMILY.keys())
 
 def registry_families():
-    """Returns the sorted unique owning families via query.
-
-    Returns:
-      Sorted unique owning family names.
-    """
+    """Returns the sorted unique owning families via query."""
     seen = {}
     for class_id in REAL_CLASS_TO_FAMILY:
         seen[REAL_CLASS_TO_FAMILY[class_id]] = True
@@ -60,11 +56,7 @@ def registry_schema_error():
     are classified, curated families/tools stay within the taxonomy,
     deferrals carry owner/route, and every taxonomy family carries a
     wrapper owner or an explicit uncovered verdict. Additions edit
-    registry data only.
-
-    Returns:
-      Empty string when every registry schema is valid; otherwise a diagnostic.
-    """
+    registry data only."""
     if REGISTRY_SCHEMA_VERSION != 1:
         return "registry: unsupported schema v" + str(REGISTRY_SCHEMA_VERSION) + " (want v1)"
     if SOURCES_REGISTRY_SCHEMA_VERSION != 1:

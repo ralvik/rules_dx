@@ -164,7 +164,7 @@ else
 fi
 
 # Audit docs keep the declared-inputs delivery record with same shape.
-if grep -q -F -e 'declared-Bazel-inputs delivery keeps the same' "$audit_doc" &&
+if grep -q -F -e 'declared-Bazel-inputs delivery (closed #812) keeps the same' "$audit_doc" &&
   grep -q -F -e 'per-package shape' "$audit_doc"; then
   ok
 else

@@ -30,8 +30,9 @@ stable for CI callers. Testdata fixtures stay (exempt testing).
 
 ## Consequences
 
-- `//tools/ci:product_runtime_guards` pins the Rust delivery (no `.py`,
-  `rust_binary` present, no `sh_test`).
+- `//tools/ci:product_runtime_guards` pins the Rust delivery (no `.py`
+  checker or shell wrapper tests, `rust_binary` present; the
+  lock-consistency `sh_test`s under #1077 invoke the Rust binary).
 - `//tools/ci:depcheck_contract` pins the Rust checker plus portable
   `rust_test` (no Linux-only pins).
 - Qualification callers (`cc_hermetic`, `godeps`, `paket`, layer-2, audit,

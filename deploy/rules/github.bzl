@@ -30,11 +30,7 @@ def tag_schema_error():
     Checks data shape without pinning exact contents: version is v1, the
     charset is non-empty with unique shell-safe characters and never
     admits double-quote, backslash, single-quote, space, or newline so
-    tags embed safely in the deploy launcher.
-
-    Returns:
-      Empty string when the schema is valid, else an error message.
-    """
+    tags embed safely in the deploy launcher."""
     if TAG_SCHEMA_VERSION != 1:
         return "github tag: unsupported schema v" + str(TAG_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
@@ -49,14 +45,7 @@ def tag_schema_error():
     return ""
 
 def github_tag_error(tag):
-    """Validates one release tag value.
-
-    Args:
-      tag: Candidate release tag for the dry-run or live path.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one release tag value."""
     if type(tag) != "string" or tag == "":
         return ("github_deploy: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'v0.0.0-dryrun')")
@@ -68,14 +57,7 @@ def github_tag_error(tag):
     return ""
 
 def github_draft_error(draft):
-    """Validates the draft gate.
-
-    Args:
-      draft: Whether the draft-only gate is still enabled.
-
-    Returns:
-      Empty string when allowed, else an actionable error message.
-    """
+    """Validates the draft gate."""
     if draft != True:
         return ("github_deploy: draft=False requires explicit owner " +
                 "approval per issue #5; keep the draft gate and publish " +
@@ -117,7 +99,6 @@ def _github_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ASSET_RLOCS@@": ";".join(asset_rlocs),
             "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
@@ -165,15 +146,7 @@ def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile 
     and publishes nothing (this is what CI exercises). Live `gh release
     create --draft --verify-tag` runs only with `GH_RELEASE_LIVE=1` and
     `GH_RELEASE_APPROVED=1` after explicit owner approval, never by
-    default, and refuses the `v0.0.0-dryrun` placeholder.
-
-    Args:
-      name: Deploy target base name.
-      artifacts: Pinned release asset labels (executables resolve to their binary).
-      tag: Release tag; must already exist in the remote for live runs.
-      draft: Whether to keep the draft-only publication gate.
-      profile: Deploy profile (debug, dev, or release).
-    """
+    default, and refuses the `v0.0.0-dryrun` placeholder."""
     tag_error = github_tag_error(tag)
     if tag_error != "":
         fail(tag_error + " (in " + native.package_name() + ":" + name + ")")
@@ -214,13 +187,6 @@ def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile
     """Compat alias for `github_deploy`.
 
     Kept for one release cycle, then removed.
-
-    Args:
-      name: Deploy target base name.
-      artifacts: Pinned release asset labels.
-      tag: Release tag for the draft release.
-      draft: Whether to keep the draft-only publication gate.
-      profile: Deploy profile (debug, dev, or release).
     """
     github_deploy(
         name = name,

@@ -43,11 +43,7 @@ def crates_schema_error():
     Checks data shape without pinning exact contents: version is v1, each
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so names and versions
-    embed safely in the deploy launcher.
-
-    Returns:
-      Empty string when the schema is valid, else an error message.
-    """
+    embed safely in the deploy launcher."""
     if CRATES_SCHEMA_VERSION != 1:
         return "crates name: unsupported schema v" + str(CRATES_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_NAME_CHARS) != "string" or _VALID_NAME_CHARS == "":
@@ -71,14 +67,7 @@ def crates_schema_error():
     return ""
 
 def crates_name_error(crate_name):
-    """Validates one crate name value.
-
-    Args:
-      crate_name: Candidate crate name for the local publish path.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one crate name value."""
     if type(crate_name) != "string" or crate_name == "":
         return ("crates_deploy: invalid crate name '" + str(crate_name) +
                 "': want a non-empty name (for example 'crates_demo')")
@@ -90,14 +79,7 @@ def crates_name_error(crate_name):
     return ""
 
 def crates_version_error(version):
-    """Validates one crate version value.
-
-    Args:
-      version: Candidate crate version for the local publish path.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one crate version value."""
     if type(version) != "string" or version == "":
         return ("crates_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -109,14 +91,7 @@ def crates_version_error(version):
     return ""
 
 def crates_file_error(filename):
-    """Validates one crate source filename value.
-
-    Args:
-      filename: Candidate crate source basename.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
-    """
+    """Validates one crate source filename value."""
     if type(filename) != "string" or filename == "":
         return ("crates_deploy: invalid crate file '" + str(filename) +
                 "': want a non-empty filename")
@@ -128,14 +103,7 @@ def crates_file_error(filename):
     return ""
 
 def crates_allow_dirty_error(allow_dirty):
-    """Validates the clean-tree gate.
-
-    Args:
-      allow_dirty: Whether a dirty-tree publish was requested.
-
-    Returns:
-      Empty string when allowed, else an actionable error message.
-    """
+    """Validates the clean-tree gate."""
     if allow_dirty != False:
         return ("crates_deploy: allow_dirty=True requires explicit owner " +
                 "approval; keep a clean tree and publish from committed " +
@@ -170,7 +138,6 @@ def _crates_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ALLOW_DIRTY@@": "1" if ctx.attr.allow_dirty else "0",
             "@@CRATE_NAME@@": ctx.attr.crate_name,
@@ -220,15 +187,7 @@ def crates_deploy(name, crate, version = "0.0.0", allow_dirty = False, profile =
     registry) and verifies bytes, publishing nothing. Live
     `cargo publish` runs only with `CRATES_PUBLISH_LIVE=1`,
     `CARGO_REGISTRY_TOKEN`, and `CRATES_PUBLISH_APPROVED=1` after explicit
-    owner approval, and never passes `--allow-dirty`.
-
-    Args:
-      name: Deploy target base name.
-      crate: Staged crate source label providing the publish inputs.
-      version: Crate version for the local-first publish path.
-      allow_dirty: Whether a dirty-tree publish was requested; must stay False.
-      profile: Deploy profile (debug, dev, or release).
-    """
+    owner approval, and never passes `--allow-dirty`."""
     name_error = crates_name_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

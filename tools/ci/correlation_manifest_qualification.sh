@@ -74,13 +74,13 @@ else
   bad "output-protocol.md lost its manifest projection with spanning edits plus empty-preserves-v1.0"
 fi
 
-# Protocol Compatibility Tests require the correlation_manifest fixtures.
-if grep -q -F -e 'cli/update/tests/fixtures/correlation_manifest/' "$protocol" &&
-  grep -q -F -e 'issue #811' "$protocol" &&
-  grep -q -F -e 'v1.0 consumers ignore the field' "$protocol"; then
+# Audit-update-bazel history requires the correlation_manifest fixtures.
+if grep -q -F -e 'cli/update/tests/fixtures/correlation_manifest/' "$command_doc" &&
+  grep -q -F -e 'issue #811' "$command_doc" &&
+  grep -q -F -e 'v1.0 consumers ignore' "$pins"; then
   ok
 else
-  bad "output-protocol.md Compatibility Tests lost the correlation_manifest fixture requirement under #811"
+  bad "audit-update-bazel.md Compatibility Tests lost the correlation_manifest fixture requirement under #811"
 fi
 
 # Command docs carry the 1.1 manifest cross-link with fixture paths.

@@ -149,40 +149,40 @@ fi
 # Tool acquisition keeps the decided managed-JVM route for Scalafmt/Scalafix
 # with no source-built route and no false claim; versions qualified under
 # , digests plus adapters stay pending under.
-if grep -q -F -e 'Decided route: Scalafmt and Scalafix take the' "$acquisition" &&
-  grep -q -F -e 'same shared managed JDK and Maven-lock story' "$acquisition" &&
-  grep -q -F -e 'adapter claims `scala` yet' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #486' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under issue #417' "$acquisition"; then
+if grep -q -F -e 'managed JVM route for Scalafmt (compatible JVM artifact over the shared' "$integrations" &&
+  grep -q -F -e 'adapters qualified seed-only under #797' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #486' "$integrations" &&
+  grep -q -F -e 'successor to closed #417' "$integrations" &&
+  grep -q -F -e 'cohort delivered under #797' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided Scala route with #486 versions plus #417 digests/adapters split"
+  bad "tool-integrations lost its decided Scala route with #486 versions plus #417 digests/adapters split"
 fi
 
 # Tool acquisition keeps the decided exact-package plus shared-.NET-runtime
 # route for CSharpier/Fantomas with no installer on the consumer path and
 # no false claim; versions qualified under, bounds plus adapters stay
 # pending under.
-if grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
-  grep -q -F -e 'no consumer runs `dotnet tool install`' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `csharp` or' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #486' "$acquisition" &&
-  grep -q -F -e 'bounds plus adapter mappings stay owned under issue #417' "$acquisition"; then
+if grep -q -F -e 'exact-package plus shared-.NET-runtime route for CSharpier and Fantomas' "$integrations" &&
+  grep -q -F -e 'no `dotnet tool install`' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #486' "$integrations" &&
+  grep -q -F -e 'successor to closed #417' "$integrations" &&
+  grep -q -F -e 'Exact upstream package plus shared .NET runtime | CSharpier, Fantomas' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided .NET route with #486 versions plus #417 bounds/adapters split"
+  bad "tool-integrations lost its decided .NET route with #486 versions plus #417 bounds/adapters split"
 fi
 
-# Tool acquisition keeps the five research rows with byte-identity risk.
+# Tool integrations keep the five research rows with byte-identity risk.
 cohort_research=""
-for tool in '| Scalafmt |' '| Scalafix |' '| CSharpier |' '| Fantomas |' '| FSharpLint |'; do
-  grep -q -F -e "$tool" "$acquisition" || cohort_research="$cohort_research $tool:missing"
+for tool in 'Scalafmt' 'Scalafix' 'CSharpier' 'Fantomas' 'FSharpLint'; do
+  grep -q -F -e "$tool" "$integrations" || cohort_research="$cohort_research $tool:missing"
 done
 if [[ -z "$cohort_research" ]] &&
-  grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
+  grep -q -F -e 'actual bytes when adding each adapter' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost a Scala + .NET research row or byte-identity honesty:$cohort_research"
+  bad "tool-integrations lost a Scala + .NET research row or byte-identity honesty:$cohort_research"
 fi
 
 # Tool integrations keep the Scala + .NET adapter-input notes with pinned
@@ -205,12 +205,12 @@ else
   bad "native-configuration lost its sole-policy plus no-hidden-preset honesty"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "scala_dotnet_defaults_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:scala_dotnet_defaults_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "scala_dotnet_defaults_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:scala_dotnet_defaults_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the scala_dotnet_defaults_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the scala_dotnet_defaults_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: Scala + .NET foundation fixtures stay green on the seed host

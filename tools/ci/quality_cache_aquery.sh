@@ -38,15 +38,17 @@
 # TypeScript/JSX/TSX/JSON each own only their source+tool with
 # JSON lint vs format split across biome vs prettier). Class-membership
 # and stage-subset isolation holds via mixed multi-class unions
-# (rust+starlark+toml single actions own all three sources+tools with
-# sorted tool-ID stage order), capability-tag removal (no-lint drops
+# (each family shard emits its own action, core and -rust, together
+# owning all three sources+tools, each in sorted tool-ID stage order),
+# capability-tag removal (no-lint drops
 # lint, no-format drops format, no-typecheck drops typecheck), and provider-less plain targets
 # emitting zero actions (unsupported classes leave keys unchanged);
 # the apply step never appears as a Bazel action and the runner
 # executable is an action input to every pipeline including typecheck
 # (runner change invalidates the complete affected target/capability
-# action, including markdown sibling lint); python lint stages run in
-# sorted tool-ID order [pydoclint ruff] and markdown lint stages in
+# action, including markdown sibling lint); python lint runs one
+# sorted-tool-ID stage per family-shard action ([ruff] core, [pydoclint]
+# -py) and markdown lint stages in
 # [markdown_check vale] (stage-order policy change invalidates); markdown
 # siblings resolve link targets only (sibling file is an input, never a
 # stage source, and the sibling pipeline owns only its own sources);
@@ -90,6 +92,14 @@ query_target() { # target -> aquery output
     --output_groups=dx_results --output=text --noshow_progress 2>/dev/null
 }
 
+dx_aquery_block() { # aquery text + mnemonic + output suffix -> one action block
+  awk -v m="$2" -v s="$3" 'BEGIN {RS = ""} index($0, "Mnemonic: " m) && index($0, s) {print}' <<<"$1"
+}
+
+dx_aquery_stages() { # aquery text + mnemonic + output suffix -> stage tool/class pairs
+  printf '%s\n' "$(dx_aquery_block "$1" "$2" "$3")" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true
+}
+
 python_actions="$(query_target '//quality/testdata:fixture_real_python')"
 rust_actions="$(query_target '//quality/testdata:fixture_real_rust')"
 if [[ -z "$python_actions" ]]; then
@@ -131,7 +141,10 @@ if [[ "$first_key" != "$second_key" ]]; then ok; else bad "python lint vs format
 # Per-capability tool isolation: changing one tool invalidates only its
 # owning capability action. Markers use ecosystem-specific repo strings
 # (dx_ty for Ty, ruff, pydoclint, clippy-driver, rustfmt) to avoid
-# substring collisions with common words like quality.
+# substring collisions with common words like quality. Python lint
+# splits across family-shard actions (core ruff, -py pydoclint), so
+# presence is asserted per shard and the whole-capability union carries
+# the forbidden-tool checks.
 union_actions="$(bazel aquery '//quality/testdata:fixture_real_python + //quality/testdata:fixture_real_rust' \
   --aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_format_aspect,//quality:real_aspects.bzl%real_typecheck_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_js_format_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect,//quality:real_aspects.bzl%real_rust_format_aspect,//quality:real_aspects.bzl%real_rust_typecheck_aspect \
   --output_groups=dx_results --output=text --noshow_progress 2>/dev/null || true)"
@@ -140,13 +153,19 @@ if [[ -z "$union_actions" ]]; then
 else
   ok
 fi
-python_lint_inputs="$(printf '%s' "$python_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+python_lint_inputs="$(printf '%s' "$python_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' || true)"
 python_format_inputs="$(printf '%s' "$python_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
 python_typecheck_inputs="$(printf '%s' "$python_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
 rust_lint_inputs="$(printf '%s' "$rust_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
 rust_format_inputs="$(printf '%s' "$rust_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
-if [[ "$python_lint_inputs" == *"ruff"* ]]; then ok; else bad "python lint: want [ruff]"; fi
-if [[ "$python_lint_inputs" == *"pydoclint"* ]]; then ok; else bad "python lint: want [pydoclint]"; fi
+python_lint_core_block="$(dx_aquery_block "$python_actions" DxRealQualityLint '-real-lint.pb]')"
+python_lint_py_block="$(dx_aquery_block "$python_actions" DxRealQualityLint '-real-lint-py.pb]')"
+python_lint_core_inputs="$(printf '%s\n' "$python_lint_core_block" | grep 'Inputs:' | head -1 || true)"
+python_lint_py_inputs="$(printf '%s\n' "$python_lint_py_block" | grep 'Inputs:' | head -1 || true)"
+if [[ "$python_lint_core_inputs" == *"ruff"* ]]; then ok; else bad "python lint core shard: want [ruff]"; fi
+if [[ "$python_lint_core_inputs" == *"pydoclint"* ]]; then bad "python lint core shard: forbidden [pydoclint] (family shards partition tools)"; else ok; fi
+if [[ "$python_lint_py_inputs" == *"pydoclint"* ]]; then ok; else bad "python lint py shard: want [pydoclint]"; fi
+if [[ "$python_lint_py_inputs" == *"ruff"* ]]; then bad "python lint py shard: forbidden [ruff] (family shards partition tools)"; else ok; fi
 if [[ "$python_lint_inputs" == *"dx_ty"* ]]; then bad "python lint: forbidden [dx_ty] (ty change must not invalidate lint)"; else ok; fi
 if [[ "$python_format_inputs" == *"ruff"* ]]; then ok; else bad "python format: want [ruff]"; fi
 if [[ "$python_format_inputs" == *"dx_ty"* ]]; then bad "python format: forbidden [dx_ty]"; else ok; fi
@@ -179,10 +198,13 @@ if [[ -z "$hinted_actions" ]]; then
 else
   ok
 fi
-hinted_lint_inputs="$(printf '%s' "$hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+hinted_lint_inputs="$(printf '%s' "$hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' || true)"
 hinted_format_inputs="$(printf '%s' "$hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
 hinted_typecheck_inputs="$(printf '%s' "$hinted_actions" | grep -A 8 'Mnemonic: DxRealQualityTypecheck' | grep 'Inputs:' | head -1 || true)"
+hinted_lint_py_block="$(dx_aquery_block "$hinted_actions" DxRealQualityLint '-real-lint-py.pb]')"
+hinted_lint_py_inputs="$(printf '%s\n' "$hinted_lint_py_block" | grep 'Inputs:' | head -1 || true)"
 if [[ "$hinted_lint_inputs" == *"ruff.toml"* ]]; then ok; else bad "hinted lint: want [ruff.toml] (shared Ruff config is an input)"; fi
+if [[ "$hinted_lint_py_inputs" == *"ruff.toml"* ]]; then bad "hinted lint py shard: forbidden [ruff.toml] (Ruff config reaches only the ruff stage)"; else ok; fi
 if [[ "$hinted_format_inputs" == *"ruff.toml"* ]]; then ok; else bad "hinted format: want [ruff.toml]"; fi
 if [[ "$hinted_typecheck_inputs" == *"ruff.toml"* ]]; then bad "hinted typecheck: forbidden [ruff.toml] (Ruff config must not invalidate Ty)"; else ok; fi
 if [[ "$python_lint_inputs" == *"ruff.toml"* ]]; then bad "unhinted lint: forbidden [ruff.toml] (unhinted uses default, shared change must not miss)"; else ok; fi
@@ -418,7 +440,8 @@ if [[ "$markdown_actions" == *"eslint"* ]]; then bad "markdown: forbidden [eslin
 
 # Class-membership + stage-source-subset + runner/stage-order/apply
 # isolation: mixed multi-class targets union exact source subsets into
-# one action per capability with sorted tool-ID stage order; capability
+# one action per capability per family shard (core and -rust), each in
+# sorted tool-ID stage order; capability
 # tags drop only their owning pipeline; provider-less targets emit zero
 # actions (unsupported classes leave keys unchanged); apply never
 # appears as a Bazel action while the runner executable is always an
@@ -449,18 +472,22 @@ no_format_format_count="$(printf '%s' "$no_format_actions" | grep -c 'Mnemonic: 
 no_typecheck_typecheck_count="$(printf '%s' "$no_typecheck_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
 python_typecheck_count="$(printf '%s' "$python_actions" | grep -c 'Mnemonic: DxRealQualityTypecheck' || true)"
 plain_dx_count="$(printf '%s' "$plain_actions" | grep -c 'Mnemonic: DxRealQuality' || true)"
-if [[ "$mixed_lint_count" == "1" ]]; then ok; else bad "mixed: want exactly 1 lint action (got $mixed_lint_count)"; fi
-if [[ "$mixed_format_count" == "1" ]]; then ok; else bad "mixed: want exactly 1 format action (got $mixed_format_count)"; fi
+# Family-shard action counts: each active family shard (core, -rust)
+# emits one action per capability with its own toolchain/attrs, and
+# quality/testdata/real_aspect_tests.bzl pins exactly these shard
+# outputs; capability-tag removal still drops every shard at once.
+if [[ "$mixed_lint_count" == "2" ]]; then ok; else bad "mixed: want exactly 2 lint actions (core+rust shards, got $mixed_lint_count)"; fi
+if [[ "$mixed_format_count" == "2" ]]; then ok; else bad "mixed: want exactly 2 format actions (core+rust shards, got $mixed_format_count)"; fi
 if [[ "$no_lint_lint_count" == "0" ]]; then ok; else bad "no-lint: want 0 lint actions (tag drops owning pipeline, got $no_lint_lint_count)"; fi
-if [[ "$no_lint_format_count" == "1" ]]; then ok; else bad "no-lint: want exactly 1 format action (got $no_lint_format_count)"; fi
-if [[ "$no_format_lint_count" == "1" ]]; then ok; else bad "no-format: want exactly 1 lint action (got $no_format_lint_count)"; fi
+if [[ "$no_lint_format_count" == "2" ]]; then ok; else bad "no-lint: want exactly 2 format actions (core+rust shards, got $no_lint_format_count)"; fi
+if [[ "$no_format_lint_count" == "2" ]]; then ok; else bad "no-format: want exactly 2 lint actions (core+rust shards, got $no_format_lint_count)"; fi
 if [[ "$no_format_format_count" == "0" ]]; then ok; else bad "no-format: want 0 format actions (tag drops owning pipeline, got $no_format_format_count)"; fi
 if [[ "$no_typecheck_typecheck_count" == "0" ]]; then ok; else bad "no-typecheck: want 0 typecheck actions (got $no_typecheck_typecheck_count)"; fi
 if [[ "$python_typecheck_count" == "1" ]]; then ok; else bad "python baseline: want 1 typecheck action (tag removal invalidates, got $python_typecheck_count)"; fi
 if [[ "$plain_dx_count" == "0" ]]; then ok; else bad "plain: want 0 quality actions (unsupported with no provider leaves keys unchanged, got $plain_dx_count)"; fi
-mixed_format_inputs="$(printf '%s' "$mixed_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
-no_lint_format_inputs="$(printf '%s' "$no_lint_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' | head -1 || true)"
-no_format_lint_inputs="$(printf '%s' "$no_format_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' | head -1 || true)"
+mixed_format_inputs="$(printf '%s' "$mixed_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' || true)"
+no_lint_format_inputs="$(printf '%s' "$no_lint_actions" | grep -A 8 'Mnemonic: DxRealQualityFormat' | grep 'Inputs:' || true)"
+no_format_lint_inputs="$(printf '%s' "$no_format_actions" | grep -A 8 'Mnemonic: DxRealQualityLint' | grep 'Inputs:' || true)"
 if [[ "$mixed_format_inputs" == *"real_clean.toml"* && "$mixed_format_inputs" == *"taplo"* ]]; then ok; else bad "mixed format: want [real_clean.toml+taplo] (exact stage source subset unions all three classes)"; fi
 if [[ "$no_lint_format_inputs" == *"real_clean.toml"* ]]; then bad "no-lint format: forbidden [real_clean.toml] (subset without TOML must not mention it)"; else ok; fi
 if [[ "$no_lint_format_inputs" == *"taplo"* ]]; then bad "no-lint format: forbidden [taplo] (TOML tool must not invalidate subset without TOML)"; else ok; fi
@@ -495,12 +522,20 @@ if [[ "$json_actions" == *"quality_runner"* ]]; then ok; else bad "json: want [q
 if [[ "$starlark_actions" == *"quality_runner"* ]]; then ok; else bad "starlark: want [quality_runner] in inputs (runner change invalidates)"; fi
 if [[ "$toml_actions" == *"quality_runner"* ]]; then ok; else bad "toml: want [quality_runner] in inputs (runner change invalidates)"; fi
 if [[ "$markdown_actions" == *"quality_runner"* ]]; then ok; else bad "markdown: want [quality_runner] in inputs (runner change invalidates)"; fi
-mixed_format_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality format //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
-mixed_lint_stages="$(printf '%s' "$mixed_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_mixed" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
-no_format_lint_stages="$(printf '%s' "$no_format_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_no_format" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
-if [[ "$mixed_format_stages" == *"'buildifier;starlark;"*"'rustfmt;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed format stages must be sorted tool-ID order [buildifier rustfmt taplo] (got $mixed_format_stages)"; fi
-if [[ "$mixed_lint_stages" == *"'buildifier;starlark;"*"'clippy;rust;"*"'taplo;toml;"* ]]; then ok; else bad "mixed lint stages must be sorted tool-ID order [buildifier clippy taplo] (got $mixed_lint_stages)"; fi
-if [[ "$no_format_lint_stages" == *"'buildifier;starlark;"*"'clippy;rust;"* ]]; then ok; else bad "no-format lint stages must be sorted tool-ID order [buildifier clippy] (got $no_format_lint_stages)"; fi
+# Stage order holds inside each family-shard action (capability
+# pipelines are separate actions; order across actions is not defined).
+mixed_format_core_stages="$(dx_aquery_stages "$mixed_actions" DxRealQualityFormat '-real-format.pb]')"
+mixed_format_rust_stages="$(dx_aquery_stages "$mixed_actions" DxRealQualityFormat '-real-format-rust.pb]')"
+mixed_lint_core_stages="$(dx_aquery_stages "$mixed_actions" DxRealQualityLint '-real-lint.pb]')"
+mixed_lint_rust_stages="$(dx_aquery_stages "$mixed_actions" DxRealQualityLint '-real-lint-rust.pb]')"
+no_format_lint_core_stages="$(dx_aquery_stages "$no_format_actions" DxRealQualityLint '-real-lint.pb]')"
+no_format_lint_rust_stages="$(dx_aquery_stages "$no_format_actions" DxRealQualityLint '-real-lint-rust.pb]')"
+if [[ "$mixed_format_core_stages" == *"'buildifier;starlark;"*"'taplo;toml;"* ]]; then ok; else bad "mixed format core stages must be sorted tool-ID order [buildifier taplo] (got $mixed_format_core_stages)"; fi
+if [[ "$mixed_format_rust_stages" == *"'rustfmt;rust;"* && "$mixed_format_rust_stages" != *"buildifier"* && "$mixed_format_rust_stages" != *"taplo"* ]]; then ok; else bad "mixed format rust stages must be [rustfmt] only (got $mixed_format_rust_stages)"; fi
+if [[ "$mixed_lint_core_stages" == *"'buildifier;starlark;"*"'taplo;toml;"* && "$mixed_lint_core_stages" != *"clippy"* ]]; then ok; else bad "mixed lint core stages must be sorted tool-ID order [buildifier taplo] without clippy (got $mixed_lint_core_stages)"; fi
+if [[ "$mixed_lint_rust_stages" == *"'clippy;rust;"* && "$mixed_lint_rust_stages" != *"buildifier"* && "$mixed_lint_rust_stages" != *"taplo"* ]]; then ok; else bad "mixed lint rust stages must be [clippy] only (got $mixed_lint_rust_stages)"; fi
+if [[ "$no_format_lint_core_stages" == *"'buildifier;starlark;"* && "$no_format_lint_core_stages" != *"clippy"* ]]; then ok; else bad "no-format lint core stages must be [buildifier] without clippy (got $no_format_lint_core_stages)"; fi
+if [[ "$no_format_lint_rust_stages" == *"'clippy;rust;"* ]]; then ok; else bad "no-format lint rust stages must be [clippy] (got $no_format_lint_rust_stages)"; fi
 # Flake8/pylint opt-in laziness: both are explicit opt-in Python lint
 # adapters, so default pipelines must never mention them (flake8/pylint
 # change leaves default keys unchanged per the unselected-adapter +
@@ -626,8 +661,9 @@ if [[ "$toml_typecheck_count" == "0" ]]; then ok; else bad "toml: want 0 typeche
 # Markdown dual-tool + stage-order + sibling isolation: markdown lint owns
 # both markdown_check (repo-owned link/structure) and vale (prose style)
 # in one action with sorted tool-ID stage order [markdown_check vale], so
-# changing either tool misses lint together; python lint stages run in
-# sorted order [pydoclint ruff]; markdown siblings are link-resolution
+# changing either tool misses lint together; python lint runs sorted
+# stages per family-shard action ([ruff] core, [pydoclint] -py);
+# markdown siblings are link-resolution
 # inputs only (never stage sources), and the sibling pipeline owns only
 # its own sources with distinct ActionKeys (one direct source misses only
 # its owning pipeline). Markdown_check change must not invalidate
@@ -644,8 +680,10 @@ if [[ "$markdown_lint_inputs" == *"vale"* ]]; then ok; else bad "markdown lint: 
 if [[ "$markdown_lint_inputs" == *"quality_runner"* ]]; then ok; else bad "markdown lint: want [quality_runner] in inputs (runner change invalidates)"; fi
 markdown_lint_stages="$(printf '%s' "$markdown_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_markdown" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
 if [[ "$markdown_lint_stages" == *"'markdown_check;markdown;"*"'vale;markdown;"* ]]; then ok; else bad "markdown lint stages must be sorted tool-ID order [markdown_check vale] (got $markdown_lint_stages)"; fi
-python_lint_stages="$(printf '%s' "$python_actions" | grep -A 30 "Dx real quality lint //quality/testdata:fixture_real_python" | grep -o "'[a-z_]*;[a-z_]*;" | tr '\n' ' ' || true)"
-if [[ "$python_lint_stages" == *"'pydoclint;python;"*"'ruff;python;"* ]]; then ok; else bad "python lint stages must be sorted tool-ID order [pydoclint ruff] (got $python_lint_stages)"; fi
+python_lint_core_stages="$(dx_aquery_stages "$python_actions" DxRealQualityLint '-real-lint.pb]')"
+python_lint_py_stages="$(dx_aquery_stages "$python_actions" DxRealQualityLint '-real-lint-py.pb]')"
+if [[ "$python_lint_core_stages" == *"'ruff;python;"* && "$python_lint_core_stages" != *"pydoclint"* ]]; then ok; else bad "python lint core stages must be [ruff] (got $python_lint_core_stages)"; fi
+if [[ "$python_lint_py_stages" == *"'pydoclint;python;"* && "$python_lint_py_stages" != *"ruff;"* ]]; then ok; else bad "python lint py stages must be [pydoclint] (got $python_lint_py_stages)"; fi
 if [[ "$python_actions" == *"markdown_check"* ]]; then bad "python: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate Python)"; else ok; fi
 if [[ "$rust_actions" == *"markdown_check"* ]]; then bad "rust: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate Rust)"; else ok; fi
 if [[ "$js_actions" == *"markdown_check"* ]]; then bad "js: forbidden [markdown_check] (unselected repo-owned adapter must not invalidate JS)"; else ok; fi

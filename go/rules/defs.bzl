@@ -95,15 +95,7 @@ def go_library(name, srcs, importpath, visibility = None, **kwargs):
     """Experimental minimal wrapper over `go_library`.
 
     Handwritten wrappers may set upstream cgo scope attrs (`cgo`, `pure`,
-    `race`, `gotags`, `cdeps`); generated rules never do (pure-Go scope).
-
-    Args:
-      name: Target name.
-      srcs: Direct Go sources owned by this wrapper.
-      importpath: Go import path of the library package.
-      visibility: Visibility list for the public forwarder.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
-    """
+    `race`, `gotags`, `cdeps`); generated rules never do (pure-Go scope)."""
     _go_wrap_library(name, srcs, visibility = visibility, importpath = importpath, **kwargs)
 
 def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs):
@@ -115,15 +107,7 @@ def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs)
     no `srcs`. The library alone owns the source and its
     source-derived dependencies in the thin shape; the thin binary
     reports no direct sources. Both shapes preserve the upstream
-    providers and execution semantics.
-
-    Args:
-      name: Target name.
-      srcs: Direct Go sources; None becomes an empty list.
-      importpath: Go import path of the binary package, or None.
-      visibility: Visibility list for the public forwarder.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
-    """
+    providers and execution semantics."""
     effective_srcs = go_effective_srcs(srcs)
     if importpath != None:
         _go_wrap_binary(name, effective_srcs, visibility = visibility, importpath = importpath, **kwargs)

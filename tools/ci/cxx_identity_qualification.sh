@@ -60,17 +60,17 @@ else
 fi
 
 # BUILD owns the harness target.
-if grep -q -F -e 'name = "cxx_identity_qualification"' "$build"; then
+if grep -q -F -e 'name = "cxx_identity_qualification"' "tools/ci/ci_targets_d.bzl"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the cxx_identity_qualification target"
+  bad "tools/ci/ci_targets_d.bzl lost the cxx_identity_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:cxx_identity_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:cxx_identity_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the cxx_identity_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the cxx_identity_qualification step (want dogfood-freshness)"
 fi
 
 # Fixture files stay present (identity Starlark plus manifest plus lib plus C++ stubs).

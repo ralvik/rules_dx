@@ -86,6 +86,11 @@ def wrapper_shape_kwargs_tests(name):
                 {},
             ),
             expect_equal(
+                "binary target_compatible_with rides forwarder",
+                dx_binary_forward_kwargs({"target_compatible_with": ["@platforms//os:linux"]}),
+                {"target_compatible_with": ["@platforms//os:linux"]},
+            ),
+            expect_equal(
                 "binary none tags stay empty",
                 dx_binary_forward_kwargs({"tags": None}),
                 {},

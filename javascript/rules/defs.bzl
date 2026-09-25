@@ -181,11 +181,6 @@ def javascript_test_env(env_inherit):
     forwarder rebuilds that provider from this exact list, so filtering
     support is structural, never caller-dependent.
 
-    Args:
-      env_inherit: Environment variable names to inherit, or None.
-
-    Returns:
-      Mirrored list plus `TESTBRIDGE_TEST_ONLY`.
     """
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
@@ -214,15 +209,6 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
     every test. Upstream-owned runfiles are unaffected (npm packages
     carry their own package.json, generated helpers are `.cjs`/`.mjs`).
 
-    Args:
-      name: Test target name; also derives `<name>_upstream`.
-      srcs: Direct JavaScript test sources owned by this wrapper.
-      node_modules: Upstream node_modules link expression for jest.
-      data: Extra upstream data inputs; None adds none.
-      visibility: Visibility list for the public forwarder.
-      tags: Test tags; `manual` is stripped from the upstream target.
-      env_inherit: Environment variable names to inherit at test runtime.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
     """
     upstream_data = list(srcs) + (list(data) if data != None else [])
     effective_env = javascript_test_env(env_inherit)

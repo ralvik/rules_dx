@@ -173,7 +173,7 @@ fi
 
 # Command docs carry the discovery note with the fixture link under #639.
 if grep -q -F -e 'dx_bump::discovery' "$command_doc" &&
-  grep -q -F -e 'issue #639' "$command_doc" &&
+  grep -q -F -e 'closed #639' "$command_doc" &&
   grep -q -F -e 'cli/bump/tests/fixtures/bump_discovery/' "$command_doc" &&
   grep -q -F -e 'manual selector only rejected' "$command_doc"; then
   ok
@@ -183,7 +183,7 @@ fi
 
 # Automation policy carries the upstream-client enumeration under #639.
 if grep -q -F -e 'dx_bump::discovery' "$automation" &&
-  grep -q -F -e 'issue #639' "$automation" &&
+  grep -q -F -e 'closed #639' "$automation" &&
   grep -q -F -e 'cli/bump/tests/fixtures/bump_discovery/' "$automation" &&
   grep -q -F -e 'manual selector only rejected' "$automation"; then
   ok
@@ -207,12 +207,12 @@ else
 fi
 
 # BUILD owns the harness target plus CI wires it records seed-only evidence.
-if grep -q -F -e 'name = "bump_discovery_qualification"' "$build" &&
-  grep -q -F -e 'bump_discovery_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_discovery_qualification' "$ci"; then
+if grep -q -F -e 'name = "bump_discovery_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bump_discovery_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_discovery_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the bump_discovery_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the bump_discovery_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "bump discovery qualification harness"

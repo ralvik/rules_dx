@@ -176,12 +176,12 @@ else
 fi
 
 # BUILD owns the harness target plus CI wires it records seed-only evidence.
-if grep -q -F -e 'name = "runner_rotation_qualification"' "$build" &&
-  grep -q -F -e 'runner_rotation_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:runner_rotation_qualification' "$ci"; then
+if grep -q -F -e 'name = "runner_rotation_qualification"' "tools/ci/ci_targets_b.bzl" &&
+  grep -q -F -e 'runner_rotation_qualification.sh' "tools/ci/ci_targets_b.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:runner_rotation_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the runner_rotation_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_b.bzl or dogfood_freshness.sh lost the runner_rotation_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # As-built runners plus caches stay pinned with no paid runner, and floors keep SDK identities.

@@ -101,17 +101,7 @@ def native_config_extension(tool_id):
     return _NATIVE_CONFIG_EXTENSIONS[tool_id]
 
 def native_config_error(tool_id, config_path, config_is_source, data):
-    """Returns the validation error for a native config, or "" when valid.
-
-    Args:
-      tool_id: Stable built-in tool identifier.
-      config_path: Workspace path of the config file ("" when missing).
-      config_is_source: Whether the config is a checked-in source file.
-      data: Data entries with `path` and `is_source` fields.
-
-    Returns:
-      Empty string when valid; otherwise a diagnostic message.
-    """
+    """Returns the validation error for a native config, or "" when valid."""
     if tool_id not in _NATIVE_CONFIG_EXTENSIONS:
         return ("native_config: unknown tool '" + tool_id + "': want one of " +
                 ", ".join(sorted(_NATIVE_CONFIG_EXTENSIONS.keys())))
@@ -131,16 +121,7 @@ def native_config_error(tool_id, config_path, config_is_source, data):
     return ""
 
 def collect_native_configs(hints, stage_tools, what):
-    """Resolves aspect hints to the configs for a pipeline's stage tools.
-
-    Args:
-      hints: DxNativeConfigInfo providers from aspect_hints.
-      stage_tools: Tool IDs appearing in the resolved pipeline stages.
-      what: Diagnostic prefix naming the failing target or context.
-
-    Returns:
-      Dict mapping stage tool ID to its DxNativeConfigInfo hint.
-    """
+    """Resolves aspect hints to the configs for a pipeline's stage tools."""
     by_tool = {}
     for hint in hints:
         if hint.tool_id in by_tool:

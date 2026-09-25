@@ -46,7 +46,7 @@ check_pair "rust" "${16:?usage}" "${17:?usage}" "adopt-polyglot Cargo.toml plus 
 dx_mkscratch scratch
 cp "${2:?usage}" "$scratch/go.mod"
 cp "${3:?usage}" "$scratch/go.sum"
-sed -i -E 's|github.com/google/go-cmp v0.6.0|github.com/google/go-cmp v0.7.0|' "$scratch/go.mod"
+sed -E 's|github.com/google/go-cmp v0.6.0|github.com/google/go-cmp v0.7.0|' "$scratch/go.mod" >"$scratch/go.mod.dxtmp" && mv "$scratch/go.mod.dxtmp" "$scratch/go.mod"
 if "$depcheck" consistency --ecosystem go --manifest "$scratch/go.mod" --lock "$scratch/go.sum" >/dev/null 2>&1; then
   bad "negative control broken: stale go.mod passed consistency (want failure)"
 else

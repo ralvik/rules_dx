@@ -190,12 +190,12 @@ else
   bad "docs/native-toolchains.md lost its frozen seed-pin line with provisional-baseline honesty under issue #494"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "stable_stack_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:stable_stack_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "stable_stack_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:stable_stack_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the stable_stack_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the stable_stack_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the as-built stack composes (Rust plus C++ hello builds green on the seed host).

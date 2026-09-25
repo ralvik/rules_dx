@@ -55,17 +55,17 @@ else
 fi
 
 # BUILD owns the harness target.
-if grep -q -F -e 'name = "cc_optout_qualification"' "$build"; then
+if grep -q -F -e 'name = "cc_optout_qualification"' "tools/ci/ci_targets_c.bzl"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the cc_optout_qualification target"
+  bad "tools/ci/ci_targets_c.bzl lost the cc_optout_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:cc_optout_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:cc_optout_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the cc_optout_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the cc_optout_qualification step (want dogfood-freshness)"
 fi
 
 # Fixture files stay present (handwritten pure-Rust script plus lib plus manifest).
@@ -119,11 +119,11 @@ else
 fi
 
 # Gazelle default stays hermetic on (opt-out is explicit keep only).
-if grep -q -F -e 'use_cc_toolchain", 1' gazelle/rust/lang.go &&
-  grep -q -F -e 'use_cc_toolchain' gazelle/rust/lang_test.go; then
+if grep -q -F -e 'use_cc_toolchain", 1' gazelle/rust/lang_generate.go &&
+  grep -q -F -e 'use_cc_toolchain' gazelle/rust/lang_scopes_test.go; then
   ok
 else
-  bad "Gazelle lost its use_cc_toolchain default-on proof (want lang.go 1 plus lang_test.go)"
+  bad "Gazelle lost its use_cc_toolchain default-on proof (want lang_generate.go 1 plus lang_scopes_test.go)"
 fi
 
 # Live proof: the kept opt-out builds (script execution plus lib).

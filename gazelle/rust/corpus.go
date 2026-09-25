@@ -255,7 +255,9 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 		// Dotfiles are tool-owned configs or hidden state, never linted
 		// corpus sources (for example .buildifier.json, .vale.ini).
 		// BUILD.bazel/MODULE.bazel never start with a dot, so they stay.
-		if strings.HasPrefix(base, ".") {
+		// Exception: .gitleaks.toml is a tracked supply-chain config that
+		// corpus_audit requires an owner for, so it stays in the toml corpus.
+		if strings.HasPrefix(base, ".") && base != ".gitleaks.toml" {
 			return nil
 		}
 		// Local overrides (for example AGENTS.local.md, dx.local.toml)

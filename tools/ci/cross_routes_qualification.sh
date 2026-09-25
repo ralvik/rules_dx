@@ -206,12 +206,12 @@ else
   bad "docs/native-toolchains.md lost its qualified cross-routes record with fixtures under issue #504"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "cross_routes_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cross_routes_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "cross_routes_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cross_routes_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the cross_routes_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the cross_routes_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the seed hello plus the fixture corpus build green on the

@@ -180,12 +180,12 @@ else
   bad "generation README lost its #484 qualified C/C++ hash record"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "cc_hermetic_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cc_hermetic_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "cc_hermetic_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:cc_hermetic_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the cc_hermetic_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the cc_hermetic_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the hermetic cc fixtures execute green on the seed host.

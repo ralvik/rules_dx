@@ -9,26 +9,11 @@ Contract: `docs/documentation/site.md`.
 MDBOOK_VERSION = "0.4.43"
 
 def site_symbol_id(language, package, qualified):
-    """Returns the stable symbol ID `language:package:qualified`.
-
-    Args:
-      language: language identity (e.g. `python`).
-      package: package identity (e.g. `demo`).
-      qualified: qualified symbol name (e.g. `AccountService.create`).
-    """
+    """Returns the stable symbol ID `language:package:qualified`."""
     return language + ":" + package + ":" + qualified
 
 def site_symbol_id_error(language, package, qualified):
-    """Validates one symbol identity, returning "" when valid.
-
-    Args:
-      language: language identity (e.g. `python`).
-      package: package identity (e.g. `demo`).
-      qualified: qualified symbol name (e.g. `AccountService.create`).
-
-    Returns:
-      Empty string when the identity is valid; otherwise a diagnostic.
-    """
+    """Validates one symbol identity, returning "" when valid."""
     if language == "":
         return "docs_site: language is required"
     if package == "":
@@ -86,12 +71,6 @@ def site_is_external_link(target):
     Remote targets contain `://` or use `mailto:`; they are recorded but
     never fetched. All other targets are internal and must resolve to
     prose or generated API pages with no dangling targets.
-
-    Args:
-      target: raw Markdown link target (inside `](...)` or definition).
-
-    Returns:
-      True when the target is remote; False when internal.
     """
     if "://" in target:
         return True
@@ -115,9 +94,6 @@ def site_link_target_error(target, known_pages, known_api_paths):
       target: raw Markdown link target (inside `](...)` or definition).
       known_pages: valid render-input basenames at the pre-render boundary.
       known_api_paths: valid per-symbol `api/...` pages from shard IDs.
-
-    Returns:
-      Empty string when the target is valid; otherwise a diagnostic.
     """
     if target == "":
         return "docs_site: empty link target"
@@ -164,12 +140,6 @@ def site_guide_step_error(step):
     `TODO`, `FIXME`, `UNEXECUTED`, `TBD`, or `SKIP` markers fail closed:
     guide steps are never allowed to go unexecuted. Every other line is
     an executable shell step run by CI.
-
-    Args:
-      step: one guide-step line from the step list.
-
-    Returns:
-      Empty string when the step is executable or skippable; otherwise a diagnostic.
     """
     if step == "" or step.startswith("#"):
         return ""

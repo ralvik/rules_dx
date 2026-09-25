@@ -39,7 +39,7 @@ else
 fi
 
 # examples ownership: index + per-foundation READMEs + slices green.
-if grep -q -F -e 'example' examples/README.md &&
+if grep -q -F -e 'Examples' examples/README.md &&
   [[ -f "tools/ci/examples_readme.sh" ]] &&
   [[ -f "tools/ci/examples_laziness.sh" ]]; then
   ok
@@ -65,8 +65,8 @@ fi
 
 # laziness runtime close-out stays wired (target + CI step).
 if [[ -f "tools/ci/examples_laziness_runtime.sh" ]] &&
-  grep -q -F -e 'examples_laziness_runtime' tools/ci/BUILD.bazel &&
-  grep -q -F -e 'examples_laziness_runtime' .github/workflows/ci.yml; then
+  grep -q -F -e 'examples_laziness_runtime' tools/ci/ci_targets_a.bzl &&
+  grep -q -F -e 'examples_laziness_runtime' tools/ci/dogfood_freshness.sh; then
   ok
 else
   bad "examples laziness runtime close-out missing (harness, target, or CI step)"
@@ -84,7 +84,7 @@ fi
 # marker-owned PR wiring in both workflows (Codecov opt-in only).
 if [[ -f "tools/ci/coverage_report_guards.sh" ]] &&
   [[ -x "tools/coverage/coverage_comment.sh" ]] &&
-  grep -rln -F -e 'dx-coverage-summary' .github/workflows/ 2>/dev/null | grep -q .; then
+  grep -rq -F -e 'dx-coverage-summary' .github/workflows/ 2>/dev/null; then
   ok
 else
   bad "coverage comment landing dishonest (harness/renderer/marker wiring missing)"
@@ -103,8 +103,8 @@ else
   bad "native set registry lost its all-ecosystems v1 set (#260)"
 fi
 
-# sole updater ships an eight-file scaffold with no updater config.
-if grep -q -F -e 'files.len(), 8' cli/adopt/src/scaffold.rs &&
+# sole updater ships a nine-file scaffold with no updater config.
+if grep -q -F -e 'files.len(), 9' cli/adopt/src/scaffold.rs &&
   grep -q -F -e 'ships no updater config' docs/contributing/automation.md; then
   ok
 else
@@ -216,7 +216,7 @@ fi
 
 # Widen implementation delivered: explicit bump command plus the
 # scheduled loop runner and native-loop automation docs.
-if grep -rn -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null | grep -q . &&
+if grep -rq -F -e '"bump"' --include='*.rs' cli/ 2>/dev/null &&
   [[ -f ".github/workflows/bump.yml" ]] &&
   grep -q -F -e 'dx bump' docs/contributing/automation.md &&
   grep -q -F -e 'dx bump' docs/cli/commands/audit-update-bazel.md; then

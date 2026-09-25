@@ -2,6 +2,17 @@
 
 Pre-release. No cell is `Supported`. Tracking lives in GitHub issues.
 
+
+### Platform-qualified targets
+
+| Consumer | Status | consumer self-call: test-disabled |
+| --- | --- | --- |
+| Linux x86_64 glibc | Platform-qualified | test-disabled |
+| Linux arm64 glibc | Platform-qualified (qualified under issue #410) | test-disabled |
+| macOS arm64 | Platform-qualified | test-disabled |
+| macOS x86_64 | Not planned | test-disabled |
+| Windows x86_64 MSVC-compatible | Platform-qualified (issue #414) | test-disabled |
+
 ## Status Lifecycle
 
 `Planned` → `Seed-host-delivered` → `Platform-qualified` → `Supported`.

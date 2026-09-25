@@ -66,14 +66,7 @@ def typescript_srcs_rejection(srcs):
     and configuration come from `typescript_project` over real sources,
     and no wrapper independently enumerates sources or invokes a second
     compiler. Silently dropping them from `QualitySourcesInfo` would mask
-    the authoring error, so they fail here instead.
-
-    Args:
-      srcs: Candidate source labels or file paths.
-
-    Returns:
-      Error message when a declaration file is listed, else None.
-    """
+    the authoring error, so they fail here instead."""
     bad = [src for src in srcs or [] if _is_declaration(src)]
     if bad:
         return ("typescript_project takes real sources only; declaration " +
@@ -86,7 +79,6 @@ def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
     rejection = typescript_srcs_rejection(srcs)
     if rejection != None:
         fail(rejection)
-
     # Lane-A: aspect_hints ride the public forwarder via dx_wrap.
     dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 
@@ -141,14 +133,7 @@ _typescript_test = rule(
 def typescript_test_rejection(kwargs):
     """Returns the contract rejection for forbidden `typescript_test` kwargs, or `None`.
 
-    See: `docs/testing/generation.md`.
-
-    Args:
-      kwargs: Rule keyword arguments to validate.
-
-    Returns:
-      Error message when a forbidden kwarg is set, else None.
-    """
+    See: `docs/testing/generation.md`."""
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("typescript_test always uses jest with the standard " +
                 "auto-configured reporters (Bazel test logs); " +
@@ -160,14 +145,7 @@ def typescript_test_rejection(kwargs):
 def typescript_test_env(env_inherit):
     """Computes the effective test-runtime inherited environment.
 
-    See: `docs/testing/generation.md`.
-
-    Args:
-      env_inherit: Environment variable names to inherit, or None.
-
-    Returns:
-      Mirrored list plus `TESTBRIDGE_TEST_ONLY`.
-    """
+    See: `docs/testing/generation.md`."""
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
@@ -190,22 +168,7 @@ def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig
     attrs. Execution of TypeScript entries reuses `javascript_binary`
     over the compiled output; there is no `typescript_binary`.
 
-    See: `docs/decisions/0013-rust-javascript-typescript-foundations.md`.
-
-    Args:
-      name: Test target name; also derives `<name>_ts` and `<name>_upstream`.
-      srcs: Direct TypeScript test sources owned by this wrapper.
-      node_modules: Upstream node_modules link expression for jest.
-      data: Extra upstream data inputs; None adds none.
-      deps: Library dependencies for the private tsc compilation.
-      tsconfig: Optional tsconfig label for `<name>_ts`.
-      transpiler: Optional transpiler setting for `<name>_ts`.
-      declaration: Optional declaration emit flag for `<name>_ts`.
-      visibility: Visibility list for the public forwarder.
-      tags: Test tags; `manual` is stripped from the upstream target.
-      env_inherit: Environment variable names to inherit at test runtime.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
-    """
+    See: `docs/decisions/0013-rust-javascript-typescript-foundations.md`."""
 
     # Declaration sources are inert for the library wrapper and for tests.
     rejection = typescript_srcs_rejection(srcs)

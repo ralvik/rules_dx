@@ -51,11 +51,6 @@ DX_ENV_ADMITTED_INTEGRATIONS = (
 def env_plan_key_error(key):
     """Validates one identity-dimension key.
 
-    Args:
-      key: Candidate identity-dimension key token.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if key == "":
         return "invalid env plan key '': must be a non-empty single token"
@@ -68,11 +63,6 @@ def env_plan_key_error(key):
 def env_plan_value_error(value):
     """Validates one identity-input value.
 
-    Args:
-      value: Candidate identity-input value token.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if value == "":
         return "invalid env plan value '': must be a non-empty identity input"
@@ -87,11 +77,6 @@ def env_plan_exec_error(path):
     Non-empty must be a workspace-relative path and never uses the
     reserved shard suffix (a shard never backs another shard).
 
-    Args:
-      path: Candidate BEP-matching exec-path suffix, or empty.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     if path == "":
         return ""
@@ -140,11 +125,6 @@ def _env_plan_claim_key(entry):
 def env_plan_record_error(record):
     """Validates one contributor record.
 
-    Args:
-      record: Normalized contributor record struct to validate.
-
-    Returns:
-      Empty string when valid, else an actionable error message.
     """
     second_error = ""
     if record.integration == "":

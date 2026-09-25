@@ -100,7 +100,7 @@ dx_guards_contains examples/adopt-python/app/BUILD.bazel "Gazelle keep boundary 
 dx_guard_contains python/tests/fixtures/hello/BUILD.bazel 'aspect_hints' "trim dropped non-obvious attrs (want aspect_hints proof bindings, issue #427)"
 dx_guard_contains rust/tests/fixtures/hello/BUILD.bazel 'aspect_hints' "trim dropped non-obvious attrs (want aspect_hints proof bindings, issue #427)"
 dx_guard_contains python/tests/fixtures/hello/BUILD.bazel 'no-coverage' "trim dropped non-obvious attrs (want no-coverage tags, issue #427)"
-labels="$(grep -r -F -e 'target_compatible_with' --include='BUILD.bazel' . | wc -l)"
+labels="$(grep -r -F -e 'target_compatible_with' --include='BUILD.bazel' --include='*.bzl' --exclude-dir='bazel-*' --exclude-dir='.git' . | wc -l)"
 if [[ "$labels" -ge 69 ]]; then
   ok
 else

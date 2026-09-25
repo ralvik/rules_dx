@@ -154,7 +154,7 @@ persistent semantic graph.
 
 ## Admitted-Pairs Evolution and New Generator Onboarding
 
-The admitted generator/language pairs stay frozen in
+The admitted generator/language pairs stay frozen under closed #506 in
 `generation/codegen.bzl:DX_CODEGEN_ADMITTED_PAIRS`. Adding a pair edits that
 registry data only and follows the checklist below. No pair is admitted by
 editing call sites or adding a second registry.

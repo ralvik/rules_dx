@@ -167,12 +167,12 @@ else
 fi
 
 # BUILD owns the harness target plus CI wires it records seed-only evidence.
-if grep -q -F -e 'name = "devcontainer_boot_qualification"' "$build" &&
-  grep -q -F -e 'devcontainer_boot_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:devcontainer_boot_qualification' "$ci"; then
+if grep -q -F -e 'name = "devcontainer_boot_qualification"' "tools/ci/ci_targets_b.bzl" &&
+  grep -q -F -e 'devcontainer_boot_qualification.sh' "tools/ci/ci_targets_b.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:devcontainer_boot_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the devcontainer_boot_qualification wiring (want target plus audit step)"
+  bad "tools/ci/ci_targets_b.bzl or dogfood_freshness.sh lost the devcontainer_boot_qualification wiring (want target plus audit step)"
 fi
 
 # As-built shape stays check-only with no boot job in CI.

@@ -150,49 +150,49 @@ fi
 # delivery record; digests stay owned.
 # Support matrix resolves the SA-only versus default-checks conflict as
 # upstream built-in defaults (SA-only shortcut rejected without qualification).
-if grep -q -F -e 'SA`-only shortcut is rejected without qualification' "$acquisition" &&
-  grep -q -F -e 'upstream built-in default checks' "$acquisition"; then
+if grep -q -F -e 'SA-only shortcut is rejected without qualification' "$integrations" &&
+  grep -q -F -e 'upstream built-in defaults with no hidden preset' "$integrations"; then
   ok
 else
-  bad "tool-acquisition lost its SA-only plus defaults conflict resolution"
+  bad "tool-integrations lost its SA-only plus defaults conflict resolution"
 fi
 
-# Tool acquisition keeps the decided split native route with no separate
+# Tool integrations keep the decided split native route with no separate
 # acquisition; versions qualified under #487, digests plus adapters owned
 # under #798.
-if grep -q -F -e 'Decided route: clang-format, clang-tidy, and cppcheck take the' "$acquisition" &&
-  grep -q -F -e 'no separate acquisition' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `c` or `cpp` yet' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #487' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under #798 (successor to closed #418)' "$acquisition"; then
+if grep -q -F -e 'native route for clang-format/clang-tidy via the qualified hermetic-llvm' "$integrations" &&
+  grep -q -F -e 'no separate acquisition' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #487' "$integrations" &&
+  grep -q -F -e 'Native cohort (#798, successor to closed #418)' "$integrations" &&
+  grep -q -F -e 'cohort delivered under #798' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided native route with #487 versions plus #798 digests/adapters split"
+  bad "tool-integrations lost its decided native route with #487 versions plus #798 digests/adapters split"
 fi
 
-# Tool acquisition keeps the decided split Go route with the SA-only
+# Tool integrations keep the decided split Go route with the SA-only
 # conflict resolved; versions qualified under #487, digests plus adapters
 # owned under #798.
-if grep -q -F -e 'Decided route: gofumpt, staticcheck, govet, and errcheck take the' "$acquisition" &&
-  grep -q -F -e 'strict superset of gofmt' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #487' "$acquisition" &&
-  grep -q -F -e 'no adapter claims `go`' "$acquisition" &&
-  grep -q -F -e 'digests plus adapter mappings stay owned under #798 (successor to closed #418)' "$acquisition"; then
+if grep -q -F -e 'and split Go route' "$integrations" &&
+  grep -q -F -e 'strict gofmt superset' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #487' "$integrations" &&
+  grep -q -F -e 'successor to closed #418' "$integrations" &&
+  grep -q -F -e 'gofumpt' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its decided Go route with #487 versions plus #798 digests/adapters split"
+  bad "tool-integrations lost its decided Go route with #487 versions plus #798 digests/adapters split"
 fi
 
-# Tool acquisition keeps the seven research rows with byte-identity risk.
+# Tool integrations keep the seven research rows with byte-identity risk.
 native_research=""
-for tool in '| clang-format |' '| clang-tidy |' '| cppcheck |' '| gofumpt |' '| staticcheck |' '| govet |' '| errcheck |'; do
-  grep -q -F -e "$tool" "$acquisition" || native_research="$native_research $tool:missing"
+for tool in 'clang-format' 'clang-tidy' 'cppcheck' 'gofumpt' 'staticcheck' 'govet' 'errcheck'; do
+  grep -q -F -e "$tool" "$integrations" || native_research="$native_research $tool:missing"
 done
 if [[ -z "$native_research" ]] &&
-  grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
+  grep -q -F -e 'actual bytes when adding each adapter' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost a native research row or byte-identity honesty:$native_research"
+  bad "tool-integrations lost a native research row or byte-identity honesty:$native_research"
 fi
 
 # Tool integrations keep the native adapter delivery record with pinned

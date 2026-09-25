@@ -68,29 +68,31 @@ else
   bad "language wrappers drifted off the shared forwarding helper"
 fi
 
+# Table-driven families (issue #1036) delegate aspect_hints plus manual
+# stripping to the shared dx_wrap helpers in libs/starlark/wrapper.bzl;
+# custom forwarders restate the plumbing locally. A wrapper defs
+# satisfies either form.
+defs_delegates() {
+  grep -q -F -e 'dx_wrap' "$1" && grep -q -F -e 'libs/starlark:wrapper.bzl' "$1"
+}
+
 # Lane-A native-config plumbing: aspect_hints ride the public
 # QualitySourcesInfo owner across every wrapper family (shared dx_wrap
 # plus custom binary/test forwarders), so own-tree runs bind workspace-level
 # native policy exactly like corpus targets bind their local configs.
-if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl &&
-  grep -q -F -e 'aspect_hints' go/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' java/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' kotlin/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' scala/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' csharp/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' fsharp/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' cc/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' python/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' rust/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' typescript/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' vue/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' svelte/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' astro/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' mdx/rules/defs.bzl; then
+# The shared helpers plus their conformance pins are asserted too.
+aspect_missing=""
+for defs in libs/starlark/wrapper.bzl go/rules/defs.bzl java/rules/defs.bzl kotlin/rules/defs.bzl scala/rules/defs.bzl csharp/rules/defs.bzl fsharp/rules/defs.bzl cc/rules/defs.bzl python/rules/defs.bzl rust/rules/defs.bzl javascript/rules/defs.bzl typescript/rules/defs.bzl vue/rules/defs.bzl svelte/rules/defs.bzl astro/rules/defs.bzl mdx/rules/defs.bzl; do
+  if ! grep -q -F -e 'aspect_hints' "$defs" && ! defs_delegates "$defs"; then
+    aspect_missing="$aspect_missing $defs"
+  fi
+done
+if [[ -z "$aspect_missing" ]] &&
+  grep -q -F -e 'wrapper_shape_kwargs_tests' libs/starlark/tests/wrapper_tests.bzl &&
+  grep -q -F -e 'wrapper_shape_kwargs_tests' libs/starlark/tests/BUILD.bazel; then
   ok
 else
-  bad "wrappers lost their lane-A aspect_hints forwarder plumbing"
+  bad "wrappers lost their lane-A aspect_hints forwarder plumbing:$aspect_missing"
 fi
 
 # Lane-A workspace-level native policy: root ruff/biome/rustfmt
@@ -115,20 +117,19 @@ else
 fi
 
 # Manual-tag handling stays unified: test forwarders strip `manual` so both
-# the private upstream and the public wrapper run under `bazel test //...`.
-if grep -q -F -e '!= "manual"' cc/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' go/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' java/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' kotlin/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' scala/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' csharp/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' fsharp/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' python/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' rust/rules/defs.bzl &&
-  grep -q -F -e '!= "manual"' javascript/rules/defs.bzl; then
+# the private upstream and the public wrapper run under `bazel test //...`,
+# either locally (custom forwarders) or via the shared dx_wrap_test path
+# (table-driven families, issue #1036).
+manual_missing=""
+for defs in cc/rules/defs.bzl go/rules/defs.bzl java/rules/defs.bzl kotlin/rules/defs.bzl scala/rules/defs.bzl csharp/rules/defs.bzl fsharp/rules/defs.bzl python/rules/defs.bzl rust/rules/defs.bzl javascript/rules/defs.bzl; do
+  if ! grep -q -F -e '!= "manual"' "$defs" && ! defs_delegates "$defs"; then
+    manual_missing="$manual_missing $defs"
+  fi
+done
+if [[ -z "$manual_missing" ]]; then
   ok
 else
-  bad "test wrappers drifted on manual-tag stripping"
+  bad "test wrappers drifted on manual-tag stripping:$manual_missing"
 fi
 
 # Upstream providers stay sealed: binary/test forwarders declare the expected
@@ -162,7 +163,8 @@ fi
 # Per-wrapper contract negatives for all 15 (issue #926): bad srcs are
 # rejected by `allow_files`, bad providers by `required_providers` plus
 # sealed `upstream_providers`, bad source ownership by `quality_specs`,
-# and bad native policy by `aspect_hints`. These forward-rule params are
+# and bad native policy by `aspect_hints` (locally or through the shared
+# dx_wrap helpers, issue #1036). These forward-rule params are
 # the fail-closed contract (Bazel rejects violations at analysis), so the
 # harness pins them for every language plus framework wrapper instead of
 # only checking presence plus hints.
@@ -174,7 +176,7 @@ for lang in rust python javascript typescript go java kotlin scala csharp fsharp
     ! grep -q -F -e 'upstream_providers' "$defs" ||
     ! grep -q -F -e 'quality_specs' "$defs" ||
     ! grep -q -F -e 'QualitySourcesInfo' "$defs" ||
-    ! grep -q -F -e 'aspect_hints' "$defs"; then
+    { ! grep -q -F -e 'aspect_hints' "$defs" && ! defs_delegates "$defs"; }; then
     contract_missing="$contract_missing $lang"
   fi
 done

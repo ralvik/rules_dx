@@ -97,13 +97,6 @@ def expect_false(name, actual):
 def expect_contains(name, haystack, needle):
     """Builds one membership record (string substring, list/tuple element, dict key). See: `docs/testing/starlark.md#authoring`.
 
-    Args:
-      name: Assertion name reported in the check record.
-      haystack: String, list, tuple, or dict searched for membership.
-      needle: Substring, element, or key sought in `haystack`.
-
-    Returns:
-      JSON string encoding the membership check record.
     """
     haystack_type = type(haystack)
     if haystack_type == "string":
@@ -591,15 +584,6 @@ def starlark_test(name, mode, checks = [], subjects = [], expected_observations 
     `observe_output_groups` opts analysis tests into `dx_results`
     output-group plus instrumented-files observations (issue #928).
 
-    Args:
-      name: Test target name.
-      mode: Test mode key (`load`, `unit`, `analysis`, or `execution`).
-      checks: Assertion records from the `expect_*` helpers.
-      subjects: Analysis-mode subject targets to observe.
-      expected_observations: Analysis-mode expected observation rendering.
-      file_checks: Maps file targets to required substrings.
-      observe_output_groups: Whether to also observe `dx_results` output groups.
-      **kwargs: Forwarded keyword arguments to the underlying test rule.
     """
     if mode not in _MODES:
         fail("starlark_test: unknown mode '" + mode + "': want one of " +

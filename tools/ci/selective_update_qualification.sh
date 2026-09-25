@@ -40,6 +40,7 @@ fixture_build="cli/update/tests/fixtures/selective_update/BUILD.bazel"
 backend="cli/update/src/backend.rs"
 selector="cli/update/src/selector.rs"
 exec_update="cli/cli/src/exec/update.rs"
+exec_tests_a="cli/cli/src/exec/update_tests_a.rs"
 bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 build="tools/ci/BUILD.bazel"
@@ -172,8 +173,8 @@ fi
 # Live execution maps Unsupported to update_failed without launching; npm selective runs once.
 if grep -q -F -e 'BackendError::Unsupported' "$exec_update" &&
   grep -q -F -e 'unsupported update:' "$exec_update" &&
-  grep -q -F -e 'live_unsupported_selective_fails_without_launch' "$exec_update" &&
-  grep -q -F -e 'live_selective_npm_runs_once_with_packages' "$exec_update"; then
+  grep -q -F -e 'live_unsupported_selective_fails_without_launch' "$exec_tests_a" &&
+  grep -q -F -e 'live_selective_npm_runs_once_with_packages' "$exec_tests_a"; then
   ok
 else
   bad "exec/update.rs lost its unsupported-fails-without-launch plus npm-selective-runs-once execution"
@@ -212,13 +213,13 @@ else
   bad "exec/bump.rs lost its automatic resolver-owned follow-up record (issue #638)"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "selective_update_qualification"' "$build" &&
-  grep -q -F -e 'selective_update_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:selective_update_qualification' "$ci"; then
+# ci_targets_c.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "selective_update_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'selective_update_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:selective_update_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the selective_update_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the selective_update_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "selective update qualification harness"

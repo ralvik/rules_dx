@@ -36,11 +36,6 @@ def _svelte_wrap_library(name, srcs, visibility = None, **kwargs):
 def svelte_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for Svelte components.
 
-    Args:
-      name: Target name.
-      srcs: Direct Svelte components owned by this wrapper.
-      visibility: Visibility list for the public forwarder.
-      **kwargs: Forwarded keyword arguments to the wrapper rules.
     """
 
     # PARITY_DEFERRED (ADR 0019): no adapter claims `svelte` yet. Tag the

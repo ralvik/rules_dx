@@ -75,8 +75,6 @@ def _artifact_checks(artifact, tool, platform, version, url, sha256, size, exe, 
 def metadata_tests(name):
     """Declare the standalone-artifact metadata pin test.
 
-    Args:
-      name: Test target name.
     """
     checks = []
     checks += _artifact_checks(

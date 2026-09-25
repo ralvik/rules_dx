@@ -128,8 +128,8 @@ v1 set with case-sensitive extension matching, no fallback, and no eager work
 for unused adapters. Required-core adapter mappings plus composition evidence
 stay qualified seed-only under closed #510 (successors closed #796-#800)
 (`quality/tests/fixtures/layer2_opens/pins.bzl` with `layer2_opens.expected`
-via `bazel run //tools/ci:layer2_opens_qualification`, adapter-less as pass
-rejected); no `Supported` claim until platform plus consumer
+via `bazel run //tools/ci:layer2_opens_qualification`,
+adapter-less as pass rejected); no `Supported` claim until platform plus consumer
 plus release evidence passes.
 
 Pinned by `bazel run //tools/ci:foundation_maps` plus

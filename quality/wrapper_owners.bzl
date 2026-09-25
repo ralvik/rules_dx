@@ -104,8 +104,6 @@ def wrapper_schema_error():
     explicit "other" verdict, every taxonomy family has an entry, and no
     entry names a family outside the taxonomy.
 
-    Returns:
-      Empty string when the schema is valid; otherwise a diagnostic.
     """
     if WRAPPER_SCHEMA_VERSION != 1:
         return "wrapper owners: unsupported schema v" + str(WRAPPER_SCHEMA_VERSION) + " (want v1)"

@@ -207,7 +207,8 @@ if grep -q -F -e 'five constructors' "$adr" &&
   grep -q -F -e 'expect_contains' "$adr" &&
   grep -q -F -e 'expect_match' "$adr" &&
   grep -q -F -e 'graduated under #790' "$adr" &&
-  grep -q -F -e 'no larger matcher library' "$adr" &&
+  grep -q -F -e 'no larger' "$adr" &&
+  grep -q -F -e 'matcher library is claimed' "$adr" &&
   grep -q -F -e 'ships no Rust orchestration' "$adr" &&
   grep -q -F -e 'no nested Bazel' "$adr"; then
   ok
@@ -265,7 +266,8 @@ else
   bad "defs.bzl must not handle test_filter per check under #588 plus #790 plus #791 plus #792 plus #793 plus #794 plus #795"
 fi
 
-# Code observes DefaultInfo plus DxSubjectInfo plus DxAspectInfo plus DxConfigInfo with no broader subject plumbing.
+# Code observes DefaultInfo plus DxSubjectInfo plus DxAspectInfo plus DxConfigInfo;
+# OutputGroupInfo[dx_results] rides the #928 opt-in and Toolchain stays out.
 if grep -q -F -e 'DxSubjectInfo' "$defs" &&
   grep -q -F -e 'DxAspectInfo' "$defs" &&
   grep -q -F -e 'DxConfigInfo' "$defs" &&
@@ -273,11 +275,11 @@ if grep -q -F -e 'DxSubjectInfo' "$defs" &&
   grep -q -F -e 'aspect_field' "$defs" &&
   grep -q -F -e 'config_field' "$defs" &&
   grep -q -F -e 'DefaultInfo' "$defs" &&
-  ! grep -q -F -e 'OutputGroupInfo' "$defs" &&
+  grep -q -F -e 'OutputGroupInfo[dx_results]' "$defs" &&
   ! grep -q -F -e 'Toolchain' "$defs"; then
   ok
 else
-  bad "defs.bzl lost its DefaultInfo plus DxSubjectInfo plus DxAspectInfo plus DxConfigInfo observation under #588 plus #790 plus #791 plus #792 plus #793 plus #794 plus #795"
+  bad "defs.bzl lost its DefaultInfo plus DxSubjectInfo plus DxAspectInfo plus DxConfigInfo observation under #588 plus #790 plus #791 plus #792 plus #793 plus #794 plus #795 with no Toolchain plumbing"
 fi
 
 # Code keeps one-call-one-target dispatch with no nested Bazel.

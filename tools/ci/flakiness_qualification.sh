@@ -261,7 +261,7 @@ for f in roots:
     if '.git/' in str(f):
         continue
     text = f.read_text(errors='ignore')
-    parts = re.split(r'(sh_test\(\n)', text)
+    parts = re.split(r'(\bsh_test\(\n)', text)
     for idx in range(1, len(parts), 2):
         chunk = parts[idx+1] if idx+1 < len(parts) else ''
         m = re.search(r'\n[ ]{0,8}\)\n', '\n' + chunk)

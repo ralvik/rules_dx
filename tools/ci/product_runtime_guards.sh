@@ -87,11 +87,11 @@ fi
 
 # Preset stays Rust (delivered Phase 2): no return to Python.
 if [[ ! -f "tools/bazelrc/preset.py" ]] &&
-  grep -q -F -e 'name = "preset.update"' tools/bazelrc/BUILD.bazel &&
+  grep -q -F -e 'name = "preset_update"' tools/bazelrc/BUILD.bazel &&
   grep -q -F -e 'rust_binary(' tools/bazelrc/BUILD.bazel; then
   ok
 else
-  bad "preset Rust delivery regressed (want no preset.py with rust_binary preset.update)"
+  bad "preset Rust delivery regressed (want no preset.py with rust_binary preset_update)"
 fi
 
 # SBOM/BCR gens stay Rust (delivered Phase 4): no return to Python.
@@ -107,14 +107,16 @@ else
   bad "sbom/bcr Rust delivery regressed (want no sbom_spdx_gen.py/sbom_prov_gen.py/bcr_source_gen.py with rust_binary sbom/bcr gens)"
 fi
 
-# No product py_binary outside the three allowlisted BUILD files. New
-# product code must reuse the pinned tools, not add a fourth file, until
-# its accepted successor updates this row and ADR 0026.
+# No product py_binary outside the four allowlisted BUILD files (the
+# tools/sh entry is the hermetic_grep helper, delivered #1153 and
+# recorded in this row). New product code must reuse the pinned tools,
+# not add a fifth file, until its accepted successor updates this row
+# and ADR 0026.
 py_files="$(grep -rl -e '^[[:space:]]*py_binary(' --include='BUILD.bazel' deploy tools quality env 2>/dev/null | sed -e 's|^\./||' | sort | tr '\n' ' ' | sed -e 's/ $//')"
-if [[ "$py_files" == "deploy/rules/BUILD.bazel quality/artifacts/BUILD.bazel quality/tools/python/BUILD.bazel" ]]; then
+if [[ "$py_files" == "deploy/rules/BUILD.bazel quality/artifacts/BUILD.bazel quality/tools/python/BUILD.bazel tools/sh/BUILD.bazel" ]]; then
   ok
 else
-  bad "product py_binary file set drifted (want exactly the three allowlisted BUILD files, got: $py_files)"
+  bad "product py_binary file set drifted (want exactly the four allowlisted BUILD files, got: $py_files)"
 fi
 
 # Deploy-macro launcher kinds stay py_binary (nine files): each phase
@@ -187,18 +189,19 @@ dx_guards_contains MODULE.bazel "python toolchain drifted (want aspect_rules_py 
   'rules_python'
 
 # Depcheck checker is Rust (delivered Phase 3 per ADR 0027): no Python
-# sources, rust_binary present, no sh_test harness.
+# sources or shell wrapper tests, rust_binary present. The package's
+# sh_tests are lock-consistency proofs (#1077) that invoke the Rust
+# binary, not checker wrappers.
 if [[ ! -f "tools/depcheck/depcheck.py" ]] &&
   [[ ! -f "tools/depcheck/consistency_test.sh" ]] &&
   [[ ! -f "tools/depcheck/usage_test.sh" ]] &&
   grep -q -F -e 'name = "depcheck_lib"' tools/depcheck/BUILD.bazel &&
   grep -q -F -e 'name = "depcheck"' tools/depcheck/BUILD.bazel &&
   grep -q -F -e 'rust_binary(' tools/depcheck/BUILD.bazel &&
-  ! grep -q -e '^[[:space:]]*py_binary(' tools/depcheck/BUILD.bazel &&
-  ! grep -q -e '^[[:space:]]*sh_test(' tools/depcheck/BUILD.bazel; then
+  ! grep -q -e '^[[:space:]]*py_binary(' tools/depcheck/BUILD.bazel; then
   ok
 else
-  bad "depcheck Rust delivery regressed (want depcheck_lib plus rust_binary depcheck with no .py/sh harness per ADR 0027)"
+  bad "depcheck Rust delivery regressed (want depcheck_lib plus rust_binary depcheck with no Python checker or shell wrapper per ADR 0027)"
 fi
 
 # update.py deferral stays py_binary per ADR 0028 until #667 decides otherwise.

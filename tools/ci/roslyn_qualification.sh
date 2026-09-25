@@ -197,23 +197,24 @@ fi
 
 # Tool acquisition keeps the decided.NET route with the aggregation
 # decision and no false claim.
-if grep -q -F -e 'decided under issue #492' "$acquisition" &&
-  grep -q -F -e 'Decided route: CSharpier and Fantomas take the' "$acquisition" &&
-  grep -q -F -e 'no consumer runs `dotnet tool install`' "$acquisition" &&
-  grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
+if grep -q -F -e 'decided under issue #492' "$integrations" &&
+  grep -q -F -e 'exact-package plus shared-.NET-runtime route for CSharpier and Fantomas' "$integrations" &&
+  grep -q -F -e 'no `dotnet tool install`' "$integrations" &&
+  grep -q -F -e 'Exact upstream package plus shared .NET runtime | CSharpier, Fantomas' "$acquisition" &&
+  grep -q -F -e 'actual bytes when adding each adapter' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its .NET route with #492 aggregation decision and no-claim honesty"
+  bad "tool-integrations lost its .NET route with #492 aggregation decision and delivery honesty"
 fi
 
 # Support matrix records the decision in adapter-input notes plus wire
 # formats plus open risks, with fixtures and no Supported claim.
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "roslyn_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:roslyn_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "roslyn_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:roslyn_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the roslyn_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the roslyn_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: C# foundation fixture stays green on the seed host

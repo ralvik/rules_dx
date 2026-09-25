@@ -92,20 +92,21 @@ else
   bad "language provider mappings drifted:$provider_fail"
 fi
 
-# upstream choices stay pinned; wrappers match MODULE.bazel pins.
+# upstream choices stay pinned in MODULE.bazel; each wrapper loads the
+# pinned upstream repo (defs no longer restate version prose).
 upstream_fail=""
-grep -q -F -e 'rules_rust 0.74.0' rust/rules/defs.bzl || upstream_fail="$upstream_fail rust"
-grep -q -F -e 'aspect_rules_py 2.0.0-alpha.6' python/rules/defs.bzl || upstream_fail="$upstream_fail python"
-grep -q -F -e 'aspect_rules_js 3.4.1' javascript/rules/defs.bzl || upstream_fail="$upstream_fail javascript"
-grep -q -F -e 'aspect_rules_ts 3.10.0' typescript/rules/defs.bzl || upstream_fail="$upstream_fail typescript"
-grep -q -F -e 'rules_go 0.63.0' go/rules/defs.bzl || upstream_fail="$upstream_fail go"
-grep -q -F -e 'rules_java 9.7.0' java/rules/defs.bzl || upstream_fail="$upstream_fail java"
-grep -q -F -e 'rules_kotlin 2.4.10' kotlin/rules/defs.bzl || upstream_fail="$upstream_fail kotlin"
-grep -q -F -e 'rules_scala 7.3.0' scala/rules/defs.bzl || upstream_fail="$upstream_fail scala"
-grep -q -F -e 'rules_dotnet 0.22.1' csharp/rules/defs.bzl || upstream_fail="$upstream_fail csharp"
-grep -q -F -e 'rules_dotnet 0.22.1' fsharp/rules/defs.bzl || upstream_fail="$upstream_fail fsharp"
-grep -q -F -e 'rules_cc 0.2.22' cc/rules/defs.bzl || upstream_fail="$upstream_fail cc"
-grep -q -F -e 'rules_ruby 0.28.0' ruby/rules/defs.bzl || upstream_fail="$upstream_fail ruby"
+grep -q -F -e '@rules_rust' rust/rules/defs.bzl || upstream_fail="$upstream_fail rust"
+grep -q -F -e '@aspect_rules_py' python/rules/defs.bzl || upstream_fail="$upstream_fail python"
+grep -q -F -e '@aspect_rules_js' javascript/rules/defs.bzl || upstream_fail="$upstream_fail javascript"
+grep -q -F -e '@aspect_rules_ts' typescript/rules/defs.bzl || upstream_fail="$upstream_fail typescript"
+grep -q -F -e '@rules_go' go/rules/defs.bzl || upstream_fail="$upstream_fail go"
+grep -q -F -e '@rules_java' java/rules/defs.bzl || upstream_fail="$upstream_fail java"
+grep -q -F -e '@rules_kotlin' kotlin/rules/defs.bzl || upstream_fail="$upstream_fail kotlin"
+grep -q -F -e '@rules_scala' scala/rules/defs.bzl || upstream_fail="$upstream_fail scala"
+grep -q -F -e '@rules_dotnet' csharp/rules/defs.bzl || upstream_fail="$upstream_fail csharp"
+grep -q -F -e '@rules_dotnet' fsharp/rules/defs.bzl || upstream_fail="$upstream_fail fsharp"
+grep -q -F -e '@rules_cc' cc/rules/defs.bzl || upstream_fail="$upstream_fail cc"
+grep -q -F -e '@rules_ruby' ruby/rules/defs.bzl || upstream_fail="$upstream_fail ruby"
 grep -q -F -e 'bazel_dep(name = "rules_rust", version = "0.74.0")' MODULE.bazel || upstream_fail="$upstream_fail module:rust"
 grep -q -F -e 'bazel_dep(name = "aspect_rules_py", version = "2.0.0-alpha.6")' MODULE.bazel || upstream_fail="$upstream_fail module:py"
 grep -q -F -e 'bazel_dep(name = "aspect_rules_js", version = "3.4.1")' MODULE.bazel || upstream_fail="$upstream_fail module:js"
@@ -239,17 +240,14 @@ else
   bad "framework provider mappings drifted:$fw_provider_fail"
 fi
 
-# framework upstream parser/compiler choices stay pinned; wrappers match
-# package.json and the JS toolchain pins in MODULE.bazel.
+# framework upstream parser/compiler choices stay pinned in package.json
+# plus MODULE.bazel; wrappers load the pinned ruleset (defs no longer
+# restate version prose).
 fw_upstream_fail=""
-grep -q -F -e 'aspect_rules_js 3.4.1' vue/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail vue:ruleset"
-grep -q -F -e 'aspect_rules_js 3.4.1' svelte/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail svelte:ruleset"
-grep -q -F -e 'aspect_rules_js 3.4.1' astro/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail astro:ruleset"
-grep -q -F -e 'aspect_rules_js 3.4.1' mdx/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail mdx:ruleset"
-grep -q -F -e 'Vue 3.5.42' vue/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail vue:compiler"
-grep -q -F -e 'Svelte 5.57.0' svelte/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail svelte:compiler"
-grep -q -F -e '@astrojs/compiler 4.0.0' astro/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail astro:compiler"
-grep -q -F -e '@mdx-js/mdx 3.1.1' mdx/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail mdx:compiler"
+grep -q -F -e '@aspect_rules_js' vue/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail vue:ruleset"
+grep -q -F -e '@aspect_rules_js' svelte/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail svelte:ruleset"
+grep -q -F -e '@aspect_rules_js' astro/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail astro:ruleset"
+grep -q -F -e '@aspect_rules_js' mdx/rules/defs.bzl || fw_upstream_fail="$fw_upstream_fail mdx:ruleset"
 grep -q -F -e '"@vue/compiler-sfc": "3.5.42"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:vue-compiler"
 grep -q -F -e '"vue": "3.5.42"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:vue"
 grep -q -F -e '"svelte": "5.57.0"' package.json || fw_upstream_fail="$fw_upstream_fail pkg:svelte"
@@ -297,7 +295,8 @@ fw_env_missing=""
 for fw in vue svelte astro mdx; do
   if [[ ! -f "$fw/env/plan.bzl" || ! -f "$fw/env/plan_tests.bzl" || ! -f "$fw/env/BUILD.bazel" ]]; then
     fw_env_missing="$fw_env_missing $fw:files"
-  elif ! grep -q -F -e 'JsInfo' "$fw/env/plan.bzl" || ! grep -q -F -e 'QualitySourcesInfo' "$fw/env/plan.bzl"; then
+  elif ! grep -q -F -e 'JsInfo' "$fw/env/plan.bzl" ||
+    { ! grep -q -F -e 'QualitySourcesInfo' "$fw/env/plan.bzl" && ! grep -q -F -e '//env:focused.bzl' "$fw/env/plan.bzl"; }; then
     fw_env_missing="$fw_env_missing $fw:providers"
   elif ! grep -q -F -e 'EXPECTED_ENV_PLAN_OBSERVATIONS' "$fw/env/plan_tests.bzl"; then
     fw_env_missing="$fw_env_missing $fw:tests"
@@ -305,7 +304,8 @@ for fw in vue svelte astro mdx; do
     fw_env_missing="$fw_env_missing $fw:plan-target"
   fi
 done
-if [[ -z "$fw_env_missing" ]]; then
+if [[ -z "$fw_env_missing" ]] &&
+  grep -q -F -e 'QualitySourcesInfo' env/focused.bzl; then
   ok
 else
   bad "framework environment plans missing:$fw_env_missing"
@@ -522,12 +522,12 @@ script_fail=""
 grep -q -F -e 'use_default_shell_env = False' docs/generation/rust.md || script_fail="$script_fail contract:shell-env"
 grep -q -F -e 'use_cc_toolchain = True' docs/generation/rust.md || script_fail="$script_fail contract:cc"
 grep -q -F -e 'emit_warnings = True' docs/generation/rust.md || script_fail="$script_fail contract:warnings"
-grep -q -F -e 'use_cc_toolchain", 1' gazelle/rust/lang.go || script_fail="$script_fail lang:cc"
-grep -q -F -e 'use_default_shell_env", 0' gazelle/rust/lang.go || script_fail="$script_fail lang:shell-env"
-grep -q -F -e 'emit_warnings", true' gazelle/rust/lang.go || script_fail="$script_fail lang:warnings"
-grep -q -F -e 'use_cc_toolchain' gazelle/rust/lang_test.go || script_fail="$script_fail test:cc"
-grep -q -F -e 'use_default_shell_env' gazelle/rust/lang_test.go || script_fail="$script_fail test:shell-env"
-grep -q -F -e 'emit_warnings' gazelle/rust/lang_test.go || script_fail="$script_fail test:warnings"
+grep -q -F -e 'use_cc_toolchain", 1' gazelle/rust/lang_generate.go || script_fail="$script_fail lang:cc"
+grep -q -F -e 'use_default_shell_env", 0' gazelle/rust/lang_generate.go || script_fail="$script_fail lang:shell-env"
+grep -q -F -e 'emit_warnings", true' gazelle/rust/lang_generate.go || script_fail="$script_fail lang:warnings"
+grep -q -F -e 'use_cc_toolchain' gazelle/rust/lang_scopes_test.go || script_fail="$script_fail test:cc"
+grep -q -F -e 'use_default_shell_env' gazelle/rust/lang_scopes_test.go || script_fail="$script_fail test:shell-env"
+grep -q -F -e 'emit_warnings' gazelle/rust/lang_scopes_test.go || script_fail="$script_fail test:warnings"
 if [[ -z "$script_fail" ]]; then
   ok
 else
@@ -538,11 +538,11 @@ fi
 # Ruff/pydoclint for Python; Biome/ESLint/Prettier/tsc for JS/TS).
 quality_fail=""
 grep -q -F -e '"ty": {"typecheck": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail ty:adapter"
-grep -q -F -e '"ruff": {"format": ["python", "python_stub"], "lint": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail ruff:adapter"
+grep -q -F -e '"ruff": {"audit": ["python", "python_stub"], "format": ["python", "python_stub"], "lint": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail ruff:adapter"
 grep -q -F -e '"pydoclint": {"lint": ["python", "python_stub"]}' quality/adapters.bzl || quality_fail="$quality_fail pydoclint:adapter"
 grep -q -F -e '"biome": {' quality/adapters.bzl || quality_fail="$quality_fail biome:adapter"
 grep -q -F -e '"eslint": {"lint": ["javascript", "jsx"]}' quality/adapters.bzl || quality_fail="$quality_fail eslint:adapter"
-grep -q -F -e '"prettier": {"format": ["javascript", "json", "jsx", "typescript", "tsx"]}' quality/adapters.bzl || quality_fail="$quality_fail prettier:adapter"
+grep -q -F -e '"prettier": {"format": ["css", "gherkin", "javascript", "json", "jsx", "less", "scss", "sql", "tsx", "typescript", "xml"]}' quality/adapters.bzl || quality_fail="$quality_fail prettier:adapter"
 grep -q -F -e '"tsc": {"typecheck": ["typescript", "tsx"]}' quality/adapters.bzl || quality_fail="$quality_fail tsc:adapter"
 [[ -f "quality/adapter/src/parsers/ty.rs" ]] || quality_fail="$quality_fail ty:parser"
 [[ -f "quality/adapter/src/parsers/ruff.rs" ]] || quality_fail="$quality_fail ruff:parser"
@@ -650,7 +650,7 @@ grep -q -F -e 'maven_install.json' docs/generation/foundation-qualification.md |
 grep -q -F -e 'paket.lock' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:paket"
 grep -q -F -e 'go.mod' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:go"
 grep -q -F -e 'Gemfile.lock' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:ruby"
-grep -q -F -e 'C/C++ none' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:cc"
+grep -q -F -e 'C/C++ has none' docs/generation/foundation-qualification.md || lock304_fail="$lock304_fail gen:cc"
 grep -q -F -e '@paket.main//fsharp.core' fsharp/tests/fixtures/hello/BUILD.bazel || lock304_fail="$lock304_fail fsharp:paket"
 grep -q -F -e 'paket.main' MODULE.bazel || lock304_fail="$lock304_fail module:paket"
 grep -q -F -e 'lock_file = "//third_party/jvm:maven_install.json"' MODULE.bazel || lock304_fail="$lock304_fail module:maven"
@@ -681,7 +681,7 @@ fi
 # buildtools require entry matches the godeps pin; Paket/Maven coordinates
 # match their pins; each currency recheck date stays present and valid.
 currency_fail=""
-sdk_minor="$(grep -o -E -e 'go_sdk\.download\(version = "[^"]+"' MODULE.bazel | head -1 | grep -o -E -e '[0-9]+\.[0-9]+\.[0-9]+' || true)"
+sdk_minor="$(sed -n '/^go_sdk.download(/,/^)/p' MODULE.bazel | grep -o -E -e 'go1\.[0-9]+\.[0-9]+' | head -1 | sed -e 's/^go//' || true)"
 sdk_mm="$(echo "$sdk_minor" | cut -d. -f1,2)"
 for gomod in third_party/go/go.mod examples/adopt-go/go.mod; do
   directive="$(grep -o -E -e '^go [0-9]+\.[0-9]+(\.[0-9]+)?' "$gomod" 2>/dev/null | head -1 | cut -d' ' -f2 || true)"
@@ -721,20 +721,20 @@ else
   bad "lock currency drifted:$currency_fail"
 fi
 
-# -: admitted quality classification stays pinned (families exist,
-# no adapter claims admitted classes yet; adapter side qualified under 
-# with deferred ADR 0019 routes).
+# -: admitted quality classification stays pinned (families exist, each
+# admitted class stays claimed by its delivered as-built cohort, and only
+# ADR 0019 deferred-framework regions remain without an adapter claim).
 class304_fail=""
 for cls in go c cpp java kotlin scala csharp fsharp; do
   grep -q -F -e "\"$cls\":" quality/adapters.bzl || class304_fail="$class304_fail $cls:family"
 done
-grep -q -F -e 'no adapter claims go yet' quality/adapters.bzl || class304_fail="$class304_fail go:open"
-grep -q -F -e 'no adapter claims c/cpp yet' quality/adapters.bzl || class304_fail="$class304_fail cc:open"
-grep -q -F -e 'adapter claims java yet' quality/adapters.bzl || class304_fail="$class304_fail java:open"
-grep -q -F -e 'no adapter claims kotlin' quality/adapters.bzl || class304_fail="$class304_fail kotlin:open"
-grep -q -F -e 'no adapter claims scala yet' quality/adapters.bzl || class304_fail="$class304_fail scala:open"
-grep -q -F -e 'no adapter claims csharp yet' quality/adapters.bzl || class304_fail="$class304_fail csharp:open"
-grep -q -F -e 'no adapter claims fsharp yet' quality/adapters.bzl || class304_fail="$class304_fail fsharp:open"
+adapter_block="$(sed -n '/^REAL_ADAPTERS = {/,/^}/p' quality/adapters.bzl)"
+for cls in go c cpp java kotlin scala csharp fsharp; do
+  if ! printf '%s\n' "$adapter_block" | grep -q -E "[\" ]$cls[\",]"; then
+    class304_fail="$class304_fail $cls:unclaimed"
+  fi
+done
+grep -q -F -e 'only ADR 0019 deferred-framework regions remain without' docs/tools/foundation-qualification.md || class304_fail="$class304_fail tools:deferred-only"
 grep -q -F -e '#476-#484' docs/tools/foundation-qualification.md || class304_fail="$class304_fail tools:tracking"
 grep -q -F -e 'issue #307' docs/tools/foundation-qualification.md || class304_fail="$class304_fail tools:adapter-tracking"
 if [[ -z "$class304_fail" ]]; then
@@ -834,8 +834,8 @@ grep -q -F -e 'Release-assembled Ruby closure' docs/tools/tool-acquisition.md ||
 grep -q -F -e 'RuboCop, StandardRB' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:rubocop"
 grep -q -F -e 'Exact upstream module plus portable PowerShell runtime' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:pwsh-route"
 grep -q -F -e 'PSScriptAnalyzer' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:psscript"
-grep -q -F -e 'Decided route: RuboCop and StandardRB take the' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:ruby-decided"
-grep -q -F -e 'Decided route: PSScriptAnalyzer takes the' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:pwsh-decided"
+grep -q -F -e '| Release-assembled Ruby closure | RuboCop, StandardRB |' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:ruby-decided"
+grep -q -F -e '| Exact upstream module plus portable PowerShell runtime | PSScriptAnalyzer |' docs/tools/tool-acquisition.md || cohort305_fail="$cohort305_fail acquire:pwsh-decided"
 grep -q -F -e 'Swift, including SwiftFormat, is excluded from v1 by' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:swift"
 grep -q -F -e 'that route is forbidden' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:host-forbidden"
 grep -q -F -e 'Bandit excluded from v1 by' docs/tools/tool-baseline.md || cohort305_fail="$cohort305_fail baseline:bandit"
@@ -854,10 +854,10 @@ own305_fail=""
 grep -q -F -e 'decided by [ADR 0032]' docs/generation/foundation-qualification.md || own305_fail="$own305_fail gen:tracking"
 grep -q -F -e 'decided by [ADR 0032]' docs/environments/foundation-qualification.md || own305_fail="$own305_fail env:tracking"
 grep -q -F -e 'decided by [ADR 0032]' docs/tools/foundation-qualification.md || own305_fail="$own305_fail tools:tracking"
-grep -q -F -e 'Bundle contents, lock inputs' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-gaps"
-grep -q -F -e 'console-parse versus library-API' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-gaps"
-grep -q -F -e 'no adapter claims `ruby` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:ruby-open"
-grep -q -F -e 'no adapter claims `powershell` yet' docs/tools/tool-acquisition.md || own305_fail="$own305_fail acquire:pwsh-open"
+grep -q -F -e 'file-family cohorts (including Ruby, PowerShell)' docs/tools/foundation-qualification.md || own305_fail="$own305_fail acquire:ruby-gaps"
+grep -q -F -e 'console-parse vs library-API binding' docs/tools/foundation-qualification.md || own305_fail="$own305_fail acquire:pwsh-gaps"
+grep -q -F -e 'Ruby foundation delivered in the Ruby track' docs/tools/foundation-qualification.md || own305_fail="$own305_fail acquire:ruby-open"
+grep -q -F -e 'foundation delivered provisionally under issue #972' docs/tools/foundation-qualification.md || own305_fail="$own305_fail acquire:pwsh-open"
 grep -q -F -e 'issue #307' docs/tools/foundation-qualification.md || own305_fail="$own305_fail tools:adapter-tracking"
 if grep -q -E -e '^\| .* \| Supported' docs/product/support-matrix.md; then
   own305_fail="$own305_fail unexpected-supported"
