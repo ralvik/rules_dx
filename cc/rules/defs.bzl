@@ -102,7 +102,8 @@ def cc_copts_with_werror(kwargs):
     Existing flags are kept; a missing flag is appended per-platform
     (`/WX` under MSVC on Windows, `-Werror` elsewhere). GCC-style
     `-std=` language floors rewrite to MSVC `/std:` spellings on
-    Windows so GoogleTest C++17 floors compile under `cl.exe`
+    Windows plus `/Zc:__cplusplus`, without which `cl.exe` keeps
+    reporting 199711L and the C++17 floor proofs fail
     (qualified runner: `bazel run //tools/ci:googletest_qualification`).
     See: docs/testing/generation.md.
     """
@@ -121,7 +122,9 @@ def cc_copts_with_werror(kwargs):
             return "/std:c++17"
         return flag
 
-    win_copts = [_msvc_opt(c) for c in copts] + ["/WX"]
+    # `/Zc:__cplusplus` makes `__cplusplus` track the `/std:` selection;
+    # without it MSVC reports 199711L and a floor proof fails.
+    win_copts = [_msvc_opt(c) for c in copts] + ["/Zc:__cplusplus", "/WX"]
     upstream_kwargs["copts"] = select({
         "@platforms//os:windows": win_copts,
         "//conditions:default": copts + ["-Werror"],

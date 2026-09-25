@@ -10,7 +10,8 @@ package(default_visibility = ["//:__subpackages__"])
 # GoogleTest v1.18.0 plus explicit -std=c++17 floor over the pinned
 # @googletest hub (hash authority: MODULE.bazel.lock integrity plus
 # per-archive sha256; C/C++ has no ecosystem lockfile). The cc wrapper
-# rewrites `-std=` to MSVC `/std:` on Windows.
+# rewrites `-std=` to MSVC `/std:` plus `/Zc:__cplusplus` on Windows so
+# the `__cplusplus` floor proof below reports the selected standard.
 cc_test(
     name = "greet_test",
     srcs = ["greet_test.cc"],

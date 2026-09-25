@@ -50,6 +50,11 @@ def cc_wrapper_contract_tests(name):
                 str(cc_copts_with_werror({"copts": ["-Wall"]})["copts"]),
                 "-Wall",
             ),
+            expect_match(
+                "windows std rewrite carries /Zc:__cplusplus",
+                str(cc_copts_with_werror({"copts": ["-std=c++17"]})["copts"]),
+                "/Zc:__cplusplus",
+            ),
             expect_equal(
                 "other kwargs survive",
                 cc_copts_with_werror({"deps": [":hello_lib"]})["deps"],
