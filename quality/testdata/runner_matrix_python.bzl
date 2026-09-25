@@ -45,13 +45,13 @@ completed_rounds 2
 convergence STABLE
 initial 3
 initial ERROR ruff F401 quality/testdata/real_dirty.py 49 51 fixable=true "`os` imported but unused"
-initial ERROR pydoclint DOC103 quality/testdata/real_dirty.py 54 54 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
 initial ERROR pydoclint DOC101 quality/testdata/real_dirty.py 54 54 fixable=false "Function `add`: Docstring contains fewer arguments than in function signature."
+initial ERROR pydoclint DOC103 quality/testdata/real_dirty.py 54 54 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
 terminal 2
-terminal ERROR pydoclint DOC103 quality/testdata/real_dirty.py 44 44 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
 terminal ERROR pydoclint DOC101 quality/testdata/real_dirty.py 44 44 fixable=false "Function `add`: Docstring contains fewer arguments than in function signature."
+terminal ERROR pydoclint DOC103 quality/testdata/real_dirty.py 44 44 fixable=false "Function `add`: Docstring arguments are different from function arguments. (Or could be other formatting issues: https://jsh9.github.io/pydoclint/violation_codes.html#notes-on-doc103 ). Arguments in the function signature but not in the docstring: [second: int]."
 replacements 1
-replacement quality/testdata/real_dirty.py 0 300 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL:int=add(1, \\"two\\")\\n"
+replacement quality/testdata/real_dirty.py 42 52 ""
 """,
     },
     {
@@ -89,7 +89,7 @@ initial 1
 initial ERROR ruff unformatted quality/testdata/real_dirty.py 282 286 fixable=true "File would be reformatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.py 0 300 "\\"\\"\\"Real-pipeline dirty fixture (WP2).\\"\\"\\"\\n\\nimport os\\n\\n\\ndef add(first: int, second: int) -> int:\\n    \\"\\"\\"Add two integers.\\n\\n    Parameters\\n    ----------\\n    first : int\\n        First operand.\\n\\n    Returns\\n    -------\\n    int\\n        The sum.\\n    \\"\\"\\"\\n    return first + second\\n\\n\\nTOTAL: int = add(1, \\"two\\")\\n"
+replacement quality/testdata/real_dirty.py 282 286 " int = "
 """,
     },
     {
@@ -178,7 +178,7 @@ initial ERROR ruff I001 matrix/stub_dirty.pyi 34 43 fixable=true "Import block i
 initial ERROR ruff F401 matrix/stub_dirty.pyi 41 43 fixable=true "`os` imported but unused"
 terminal 0
 replacements 1
-replacement matrix/stub_dirty.pyi 0 91 "\\"\\"\\"Matrix dirty stub fixture.\\"\\"\\"\\n\\n\\n\\ndef add(first: int, second: int) -> int: ...\\n"
+replacement matrix/stub_dirty.pyi 34 44 ""
 """,
     },
     {
@@ -220,7 +220,7 @@ initial 1
 initial ERROR ruff unformatted matrix/stub_format_dirty.pyi 27 58 fixable=true "File would be reformatted"
 terminal 0
 replacements 1
-replacement matrix/stub_format_dirty.pyi 0 67 "\\"\\"\\"Matrix stub fixture.\\"\\"\\"\\n\\ndef add(first: int, second: int) -> int: ...\\n"
+replacement matrix/stub_format_dirty.pyi 27 58 "\\ndef add(first: int, second: int) -> "
 """,
     },
     {

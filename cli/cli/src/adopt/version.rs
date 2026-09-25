@@ -385,6 +385,124 @@ mod tests {
         parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
     }
 
+    struct ClosedAfter {
+        lines: usize,
+    }
+
+    impl Write for ClosedAfter {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            if self.lines == 0 {
+                return Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"));
+            }
+            self.lines = self
+                .lines
+                .saturating_sub(bytes.iter().filter(|b| **b == b'\n').count());
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn version_output_boundaries_propagate_broken_pipes() {
+        for (words, pin, json_lines, text_lines) in [
+            (vec!["version"], Some("0.0.0"), 5, 3),
+            (vec!["version", "--check"], Some("0.0.0"), 3, 1),
+            (vec!["version", "--check"], Some("9.9.9"), 4, 0),
+            (vec!["version", "--pin=0.0.0"], None, 3, 1),
+            (vec!["version", "--pin=9.9.9"], None, 3, 0),
+            (vec!["version", "--rollback"], Some("9.9.9"), 3, 1),
+            (vec!["version", "--rollback"], Some(""), 3, 0),
+            (vec!["version", "--rollback"], None, 3, 0),
+            (vec!["version"], None, 3, 0),
+        ] {
+            for json in [false, true] {
+                for lines in 0..if json { json_lines } else { text_lines } {
+                    let scratch = dx_test_scratch::scratch("version-pipe-");
+                    if let Some(pin) = pin {
+                        std::fs::create_dir(scratch.path().join(".dx")).expect("dx");
+                        std::fs::write(scratch.path().join(".dx/version"), pin).expect("seed pin");
+                    }
+                    let mut inv = invocation(&words);
+                    if json {
+                        inv.output = OutputMode::Json;
+                    }
+                    assert_eq!(
+                        execute_version(
+                            &inv,
+                            scratch.path(),
+                            &mut ClosedAfter { lines },
+                            &mut Vec::new()
+                        ),
+                        141,
+                        "{words:?} json={json} lines={lines}"
+                    );
+                }
+            }
+        }
+        for words in [
+            vec!["version"],
+            vec!["version", "--check"],
+            vec!["version", "--pin=0.0.0"],
+            vec!["version", "--rollback"],
+        ] {
+            for json in [false, true] {
+                for lines in 0..if json { 2 } else { 1 } {
+                    let scratch = dx_test_scratch::scratch("version-dry-pipe-");
+                    dx_adopt::write_version_pin(scratch.path(), "9.9.9").expect("seed pin");
+                    let mut inv = invocation(&words);
+                    inv.dry_run = true;
+                    if json {
+                        inv.output = OutputMode::Json;
+                    }
+                    assert_eq!(
+                        execute_version(
+                            &inv,
+                            scratch.path(),
+                            &mut ClosedAfter { lines },
+                            &mut Vec::new()
+                        ),
+                        141
+                    );
+                    assert_eq!(
+                        dx_adopt::read_version_pin(scratch.path()).expect("pin"),
+                        "9.9.9"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn version_pin_io_failure_is_operational_in_text_and_json() {
+        for json in [false, true] {
+            let scratch = dx_test_scratch::scratch("version-pin-collision-");
+            std::fs::write(scratch.path().join(".dx"), "foreign file").expect("collision");
+            let mut inv = invocation(&["version", "--pin=0.0.0"]);
+            if json {
+                inv.output = OutputMode::Json;
+            }
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            assert_eq!(execute_version(&inv, scratch.path(), &mut out, &mut err), 1);
+            assert!(!err.is_empty());
+            assert_eq!(
+                std::fs::read_to_string(scratch.path().join(".dx")).expect("foreign"),
+                "foreign file"
+            );
+            if json {
+                let events: Vec<serde_json::Value> = String::from_utf8(out)
+                    .expect("stdout")
+                    .lines()
+                    .map(|line| serde_json::from_str(line).expect("event"))
+                    .collect();
+                assert_eq!(events[1]["code"], CODE_STATUS_PIN_MISMATCH);
+                assert_eq!(events[2]["exit_code"], 1);
+            }
+        }
+    }
+
     struct NullQuery;
 
     impl crate::resolve::QueryRunner for NullQuery {

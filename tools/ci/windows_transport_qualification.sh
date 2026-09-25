@@ -140,12 +140,12 @@ else
   bad "docs/native-toolchains.md lost its qualified transport record with fixtures under issue #497"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "windows_transport_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_transport_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "windows_transport_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_transport_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the windows_transport_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the windows_transport_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Fixture expected covers all seven declared-input cases.

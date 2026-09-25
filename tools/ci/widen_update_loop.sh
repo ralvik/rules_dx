@@ -59,16 +59,16 @@ else
 fi
 
 # Sole-updater shape: the native loop owns discovery plus widen plus
-# verify with one dep per PR; the scaffold plans eight files with no
+# verify with one dep per PR; the scaffold plans nine files with no
 # updater config and the policy names the sole updater.
-if grep -q -F -e 'files.len(), 8' cli/adopt/src/scaffold.rs &&
+if grep -q -F -e 'files.len(), 9' cli/adopt/src/scaffold.rs &&
   grep -q -F -e 'sole updater' "$automation" &&
   grep -q -F -e 'one dep per PR' "$automation" &&
   grep -q -F -e 'native-only' "$automation" &&
   grep -q -F -e 'issue #461' "$automation"; then
   ok
 else
-  bad "native loop lost its sole-updater shape (eight-file scaffold plus sole updater plus one-dep-per-PR plus native-only, issue #461)"
+  bad "native loop lost its sole-updater shape (nine-file scaffold plus sole updater plus one-dep-per-PR plus native-only, issue #461)"
 fi
 
 # Never-rewrites invariant pinned in code: both update requirement shapes

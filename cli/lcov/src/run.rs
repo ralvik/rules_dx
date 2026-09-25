@@ -65,7 +65,7 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
             let flag = dx_output::leading_flag(&token);
             format!("missing value for {flag}")
         }
-        _ => dx_output::first_line(&error), // LCOV_EXCL_LINE - policy: docs/testing/README.md#coverage
+        _ => dx_output::first_line(&error), // LCOV_EXCL_LINE - reason: first line keeps CLI error stable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     }
 }
 

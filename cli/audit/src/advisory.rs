@@ -405,7 +405,13 @@ mod tests {
 
     #[test]
     fn malformed_dates_fail() {
-        for bad_date in ["2026-9-18", "2026/09/18", "2026-13-01", "not-a-date"] {
+        for bad_date in [
+            "2026-9-18",
+            "2026/09/18",
+            "2026-13-01",
+            "2026-0X-18",
+            "not-a-date",
+        ] {
             let mut bad = snapshot();
             bad.retrieved_at = bad_date.to_owned();
             assert_eq!(

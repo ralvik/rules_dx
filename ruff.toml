@@ -10,8 +10,9 @@
 # Pinned upstream defaults stay authoritative for omitted settings; this
 # file owns the lint selection plus the Python floor (same selection and
 # floor as the `quality/testdata` fixture; see
-# `//tools/ci:config_consistency_test`).
-requires-python = ">=3.12"
+# `//tools/ci:config_consistency_test`). The interpreter floor itself
+# lives in `pyproject.toml` (`requires-python`); Ruff only understands
+# `target-version` and rejects `requires-python`.
 target-version = "py312"
 
 [lint]

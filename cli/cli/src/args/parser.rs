@@ -213,10 +213,9 @@ pub fn parse_with<S: AsRef<OsStr>>(
         file.color.clone(),
         "auto",
     );
-    let color =
-        dx_output::ColorMode::parse(&color_name).map_err(|_| ArgsError::BadColor {
-            value: color_name.clone(),
-        })?;
+    let color = dx_output::ColorMode::parse(&color_name).map_err(|_| ArgsError::BadColor {
+        value: color_name.clone(),
+    })?;
     let mut reports = Vec::new();
     for value in &report {
         reports.push(parse_report(value)?);

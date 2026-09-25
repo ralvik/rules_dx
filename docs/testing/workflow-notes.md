@@ -3,8 +3,6 @@
 CI policy notes split from `ci.yml` header comments.
 The [workflow index](../../.github/workflows/README.md) stays short; this document owns the policy-note record.
 
-# CI workflow notes (split from `ci.yml`). No behavior change.
-
 The following policy notes lived as header comments in `ci.yml`:
 
 ```yaml
@@ -43,11 +41,13 @@ The following policy notes lived as header comments in `ci.yml`:
 # `//:biome_config`, `//:rustfmt_config`) through direct `aspect_hints`
 # on normal targets (issue #12, lane A).
 #
-# Hygiene (issue #80, deduped under #915): job bootstraps go through the
-# single `.github/actions/setup-checkout-bazelisk` composite (no-secrets
-# checkout plus pinned Bazelisk via `.github/actions/setup-bazelisk`);
-# every third-party action is pinned to a commit SHA with its tag in a
-# trailing comment. Docs-publish plus ghcr keep their inline checkout
+# Hygiene (issue #80, deduped under #915): job bootstraps are an inline
+# no-secrets `actions/checkout` as step 1 (GitHub cannot resolve `./`
+# local actions before checkout — a composite that performs checkout
+# cannot be the first step) plus the pinned
+# `.github/actions/setup-bazelisk` installer; every third-party action
+# is pinned to a commit SHA with its tag in a trailing comment.
+# Docs-publish plus ghcr keep their inline checkout
 # (no Bazel there, so no installer).
 # Bazel disk-cache restores go through the single
 # `.github/actions/restore-bazel-cache` composite action (issue #953),

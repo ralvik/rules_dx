@@ -58,7 +58,7 @@ initial 1
 initial WARNING scalafmt - matrix/scalafmt_dirty.scala 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/scalafmt_dirty.scala 0 52 "package fixtures.scalafmt\\n\\nobject Sample { fixed }\\n"
+replacement matrix/scalafmt_dirty.scala 43 49 "fixed"
 """,
     },
     {
@@ -142,7 +142,7 @@ initial 1
 initial WARNING csharpier - matrix/csharpier_dirty.cs 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/csharpier_dirty.cs 0 97 "// Seed C# format fixture.\\nnamespace Fixtures.CSharpier;\\n\\npublic static class Greeter { fixed }\\n"
+replacement matrix/csharpier_dirty.cs 88 94 "fixed"
 """,
     },
     {
@@ -226,7 +226,7 @@ initial 1
 initial WARNING fantomas - matrix/fantomas_dirty.fs 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/fantomas_dirty.fs 0 66 "// Seed F# format fixture.\\nmodule Sample\\n\\nlet greet name = fixed\\n"
+replacement matrix/fantomas_dirty.fs 59 65 "fixed"
 """,
     },
     {

@@ -148,7 +148,8 @@ def rust_test(
 
     With `crate`, the referenced wrapper stays the single source owner and
     this target reports no direct sources. With `srcs`, those sources are
-    this test's direct sources."""
+    this test's direct sources.
+    """
     upstream_kwargs = dict(kwargs)
     upstream_kwargs["crate"] = crate
     upstream_kwargs["edition"] = edition
@@ -283,7 +284,8 @@ def dx_rust_crate(
 
     Crates with binaries keep hand-written `rust_binary` stanzas (and
     lint `targets` covering them): see e.g. `quality/evaluator`, whose
-    `quality_evaluator` binary shares the crate name with the lib."""
+    `quality_evaluator` binary shares the crate name with the lib.
+    """
     crate = name if crate_name == None else crate_name
     lib_srcs = srcs or ["src/lib.rs"]
     lib_deps = _crate_deps(

@@ -13,9 +13,10 @@
 # is the single stable required check. Reporting is first-party dx code;
 # no reviewdog. SARIF Code Scanning publication is opt-in, off by default.
 #
-# Hygiene (issue #80, deduped under #915): job bootstraps go through the
-# single `.github/actions/setup-checkout-bazelisk` composite (no-secrets
-# checkout plus pinned Bazelisk); every third-party
+# Hygiene (issue #80, deduped under #915): job bootstraps are an inline
+# no-secrets `actions/checkout` (must be step 1 — GitHub cannot resolve
+# `./` local actions before checkout) plus the pinned
+# `.github/actions/setup-bazelisk` installer; every third-party
 # action is pinned to a commit SHA with its tag in a trailing comment.
 # Platform labels never reach `runs-on` unchecked: `platforms-gate`
 # fails closed on missing, empty, or unsupported selections before any
@@ -58,6 +59,12 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # Git Bash must preserve Bazel labels (`//...`) when invoking native
+  # Windows binaries, while still converting MSYS paths (`/c/...`) for
+  # tools like tsc.bat. Exclude only `//`, not `*`.
+  MSYS2_ARG_CONV_EXCL: "//"
 
 concurrency:
   group: dx-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -140,7 +147,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Verify rules_dx pin
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
@@ -155,7 +165,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- typecheck --check //...
 
   format:
@@ -166,7 +179,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- format --check //...
 
   generate:
@@ -177,7 +193,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- generate --check //...
 
   security-audit:
@@ -188,7 +207,66 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
+      - name: Resolve hermetic Gitleaks
+        run: |
+          rel="$(bazel cquery --output=files @dx_tools//:gitleaks 2>/dev/null | tail -1)"
+          echo "DX_GITLEAKS_BIN=$(bazel info output_base)/$rel" >> "$GITHUB_ENV"
+      - name: Populate advisory snapshots (OSV offline sets)
+        # dx audit security loads `.dx/advisory/<set>.json` plus identity
+        # offline (no network in the audit itself). Populate all five
+        # supported sets from the OSV GCS zips, merge each zip's per-vuln
+        # JSON files into one array, and write same-day identities.
+        run: |
+          set -euo pipefail
+          mkdir -p .dx/advisory
+          today="$(date -u +%F)"
+          populate() {
+            set="$1"
+            url="$2"
+            tmp="$(mktemp -d)"
+            curl -fsSL -o "$tmp/all.zip" "$url"
+            python3 - "$tmp" "$set" "$url" "$today" <<'PY'
+          import hashlib, json, pathlib, sys, zipfile
+          tmp, set_name, url, today = sys.argv[1:5]
+          root = pathlib.Path(tmp)
+          with zipfile.ZipFile(root / "all.zip") as zf:
+              zf.extractall(root / "db")
+          vulns = []
+          for path in sorted((root / "db").rglob("*.json")):
+              text = path.read_text(encoding="utf-8")
+              if not text.strip():
+                  continue
+              data = json.loads(text)
+              if isinstance(data, list):
+                  vulns.extend(data)
+              else:
+                  vulns.append(data)
+          out = pathlib.Path(".dx/advisory") / f"{set_name}.json"
+          payload = json.dumps(vulns, separators=(",", ":"), sort_keys=True).encode("utf-8")
+          out.write_bytes(payload)
+          meta = {
+              "set": set_name,
+              "url": url,
+              "sha256": hashlib.sha256(payload).hexdigest(),
+              "retrieved_at": today,
+              "path": str(out),
+          }
+          pathlib.Path(str(out).replace(".json", ".meta.json")).write_text(
+              json.dumps(meta, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+          )
+          print(f"{set_name}: {len(vulns)} advisories")
+          PY
+            rm -rf "$tmp"
+          }
+          populate cargo "https://osv-vulnerabilities.storage.googleapis.com/crates.io/all.zip"
+          populate npm "https://osv-vulnerabilities.storage.googleapis.com/npm/all.zip"
+          populate maven "https://osv-vulnerabilities.storage.googleapis.com/Maven/all.zip"
+          populate nuget "https://osv-vulnerabilities.storage.googleapis.com/NuGet/all.zip"
+          populate go "https://osv-vulnerabilities.storage.googleapis.com/Go/all.zip"
       - run: bazel run @rules_dx//cli/cli:dx -- audit security //...
 
   license-audit:
@@ -199,13 +277,19 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - run: bazel run @rules_dx//cli/cli:dx -- audit license //...
 
   test:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',test,') }}
     needs: [platforms-gate]
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -215,7 +299,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: test requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -225,6 +312,9 @@ jobs:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',build,') }}
     needs: [platforms-gate]
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -234,7 +324,10 @@ jobs:
       contents: read
       checks: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: build requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -244,6 +337,9 @@ jobs:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',coverage,') }}
     needs: [platforms-gate]
     timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
@@ -254,7 +350,10 @@ jobs:
       checks: write
       pull-requests: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: coverage requires explicit nonempty platforms; no implicit default" >&2; exit 1'

@@ -41,12 +41,12 @@ else
   bad "adapters.bzl lost the single-sourced registry (REAL_CLASS_TO_FAMILY + REAL_ADAPTERS)"
 fi
 
-# curated defaults stay single-sourced in quality/.
+# curated defaults stay single-sourced in quality/ with registry wiring.
 if [[ -f "quality/curated_defaults.bzl" ]] &&
-  grep -q -F -e 'curated' quality/adapters.bzl; then
+  grep -q -F -e 'curated_defaults.bzl' quality/registry.bzl; then
   ok
 else
-  bad "curated-defaults evidence lost (quality/curated_defaults.bzl or adapters.bzl record)"
+  bad "curated-defaults evidence lost (quality/curated_defaults.bzl plus registry.bzl wiring)"
 fi
 
 # native-config evidence backing stays present.
@@ -100,8 +100,8 @@ else
 fi
 
 # determinism seed stays pinned: insertion-order independence test
-# present in the runner (QualitySourcesInfo/checkout-order evidence).
-if grep -q -F -e 'state_digest_independent_of_insertion_order' quality/runner/src/lib.rs; then
+# present in the runner unit tests (QualitySourcesInfo/checkout-order evidence).
+if grep -q -F -e 'state_digest_independent_of_insertion_order' quality/runner/src/lib_tests_a.rs; then
   ok
 else
   bad "quality runner lost its insertion-order determinism seed (#84)"
@@ -217,42 +217,43 @@ else
   bad "quality aspects lost their QualitySourcesInfo-only gate (#12)"
 fi
 
-# cache-argv marker stays pinned: the runner threads an explicit
+# cache-argv marker stays pinned: the runner tests thread an explicit
 # no-cache argv through (full invalidation batteries still open).
-if grep -q -F -e '--no-cache' quality/runner/src/real.rs; then
+if grep -q -F -e '--no-cache' quality/runner/src/real_tests_a.rs; then
   ok
 else
   bad "quality runner lost its --no-cache argv marker (#84)"
 fi
 
 # provider-closed aspects stay fallback-free: only direct_sources
-# supplies files, never a parallel list (proven language trees now run in
-# CI alongside the corpus; broader trees stay open with no false claim).
-if grep -q -F -e 'No generic fallback' quality/aspects.bzl; then
+# supplies files, never a parallel list (record lives in the framework
+# adapters doc under link-don't-copy; broader trees stay open with no
+# false claim).
+if grep -q -F -e 'no generic fallback' docs/generation/framework-adapters.md; then
   ok
 else
   bad "quality aspects lost their no-generic-fallback record (#12)"
 fi
 
 # lane-A native-config binding stays forwarder-closed: hints ride the
-# public QualitySourcesInfo owner across every wrapper family (shared
-# dx_wrap plus the custom binary/test forwarders).
+# public QualitySourcesInfo owner via shared dx_wrap (wrapper.bzl) plus
+# the custom language forwarders that re-declare them.
 if grep -q -F -e 'aspect_hints' libs/starlark/wrapper.bzl &&
-  grep -q -F -e 'aspect_hints' go/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' java/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' python/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' rust/rules/defs.bzl &&
-  grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl; then
+  grep -q -F -e 'aspect_hints' javascript/rules/defs.bzl &&
+  grep -q -F -e 'dx_wrap' go/rules/defs.bzl &&
+  grep -q -F -e 'dx_wrap' java/rules/defs.bzl &&
+  grep -q -F -e 'dx_wrap' python/rules/defs.bzl &&
+  grep -q -F -e 'dx_wrap' rust/rules/defs.bzl; then
   ok
 else
   bad "wrappers lost their lane-A aspect_hints forwarder plumbing (#12)"
 fi
 
-# lane-A CI scope covers the proven language trees alongside the
-# corpus (enforcing at --fail-on warning).
-if grep -q -F -e '//python/...' .github/workflows/ci.yml &&
-  grep -q -F -e '//javascript/...' .github/workflows/ci.yml &&
-  grep -q -F -e '//rust/tests/fixtures/hello/...' .github/workflows/ci.yml; then
+# lane-A CI scope covers the proven language trees via the whole-tree
+# test step plus the rust fixture pin (ruff enforces --fail_on warning).
+if grep -q -F -e '--local_test_jobs=4 //...' .github/workflows/ci.yml &&
+  grep -q -F -e '//rust/tests/fixtures/hello:hello' .github/workflows/ci.yml &&
+  grep -q -F -e '--fail_on warning' .bazelrc; then
   ok
 else
   bad "ci.yml lost its lane-A language-tree scope (#12)"

@@ -95,11 +95,11 @@ fi
 
 # Wrapper keeps the package-level test shape (private upstream plus embed).
 if grep -q -F -e '_go_forward_test' "$wrapper" &&
-  grep -q -F -e '_upstream' "$wrapper" &&
+  grep -q -F -e 'upstream_doc' "$wrapper" &&
   grep -q -F -e 'embed' "$wrapper"; then
   ok
 else
-  bad "go/rules/defs.bzl lost its package-level go_test shape (want forwarder plus private upstream plus embed) under issue #478"
+  bad "go/rules/defs.bzl lost its package-level go_test shape (want forwarder plus upstream_doc plus embed) under issue #478"
 fi
 
 # Hello fixture keeps the wrapper consumer shape (go_test plus embed plus srcs).
@@ -155,12 +155,12 @@ else
   bad "docs/generation/foundation-qualification.md lost its qualified Go test record under issue #478"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "gotest_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:gotest_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "gotest_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:gotest_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the gotest_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the gotest_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the wrapper go_test executes green on the seed host.

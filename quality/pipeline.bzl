@@ -12,7 +12,8 @@ def authorize_classes(family_selections, class_to_family):
     `class_to_family` maps semantic class to owning family ID (WP2 fixture
     map). Returns a dict of tool ID to sorted authorizing class list: the
     union of classes assigned to every family selecting that tool. Several
-    families selecting one adapter yield one stage over the union."""
+    families selecting one adapter yield one stage over the union.
+    """
     family_to_classes = {}
     for class_id in class_to_family.keys():
         family_id = class_to_family[class_id]
@@ -38,7 +39,8 @@ def stage_sources(direct_sources, effective_classes):
 
     `direct_sources` maps class ID to path list. Missing classes contribute
     nothing. Output is sorted and deduplicated: declaration and depset order
-    have no semantics."""
+    have no semantics.
+    """
     seen = {}
     for class_id in effective_classes:
         for path in direct_sources.get(class_id, []):
@@ -56,7 +58,8 @@ def pipeline_stages(target_classes, capability, family_selections, class_to_fami
     `docs/decisions/0003-action-granularity.md`.
     Each stage is a dict `{"tool": ..., "classes": [...]}` with sorted
     effective classes. Adapters with no effective classes create no stage.
-    Fails on a selected tool ID absent from `adapters`."""
+    Fails on a selected tool ID absent from `adapters`.
+    """
     authorized = authorize_classes(family_selections, class_to_family)
     for tool in authorized.keys():
         if tool not in adapters:
@@ -77,7 +80,8 @@ def resolve_pipeline(target_classes, direct_sources, capability, family_selectio
 
     Each entry is `{"tool": ..., "classes": [...], "sources": [...]}` with
     sorted classes and sorted deduplicated workspace-relative paths. Stages
-    with no effective sources are omitted, so no empty action is registered."""
+    with no effective sources are omitted, so no empty action is registered.
+    """
     resolved = []
     for stage in pipeline_stages(target_classes, capability, family_selections, class_to_family, adapters):
         sources = stage_sources(direct_sources, stage["classes"])

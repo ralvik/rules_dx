@@ -44,7 +44,8 @@ def nuget_schema_error():
     Checks data shape without pinning exact contents: version is v1, each
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so ids and versions
-    embed safely in the deploy launcher."""
+    embed safely in the deploy launcher.
+    """
     if NUGET_SCHEMA_VERSION != 1:
         return "nuget id: unsupported schema v" + str(NUGET_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ID_CHARS) != "string" or _VALID_ID_CHARS == "":
@@ -149,6 +150,7 @@ def _nuget_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@NUPKG_RLOC@@": nupkg_rloc,
             "@@PACKAGE_ID@@": ctx.attr.package_id,
@@ -199,7 +201,8 @@ def nuget_deploy(name, nupkg, version = "0.0.0", source = NUGET_DEFAULT_SOURCE, 
     usable as a `dotnet` source) and verifies bytes, publishing nothing.
     Live `dotnet nuget push --source --api-key --skip-duplicate` runs only
     with `NUGET_PUBLISH_LIVE=1`, `NUGET_API_KEY`, and
-    `NUGET_PUBLISH_APPROVED=1` after explicit owner approval."""
+    `NUGET_PUBLISH_APPROVED=1` after explicit owner approval.
+    """
     name_error = nuget_id_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

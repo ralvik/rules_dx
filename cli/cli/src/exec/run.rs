@@ -764,4 +764,40 @@ mod tests {
         assert_eq!(code, 1, "{err}");
         assert!(err.contains("ambiguous_runnable"), "{err}");
     }
+    #[test]
+    fn json_multirun_covers_success_dry_run_and_process_failures() {
+        for multiple in [false, true] {
+            for scenario in ["success", "dry", "exit", "signal", "spawn"] {
+                let mut harness = Harness::new("run-json-matrix");
+                harness.bazel_code = if scenario == "exit" { 7 } else { 0 };
+                harness.signalled = scenario == "signal";
+                harness.io_error = scenario == "spawn";
+                let mut words = vec!["run", "//a:one", "--output=json"];
+                if multiple {
+                    words.push("//b:two");
+                }
+                if scenario == "dry" {
+                    words.push("--dry-run");
+                }
+                let (code, out, err) = harness.run(&words);
+                let expected = match scenario {
+                    "exit" => 7,
+                    "signal" | "spawn" => 1,
+                    _ => 0,
+                };
+                assert_eq!(code, expected, "{words:?} {scenario}: {out}{err}");
+                let events: Vec<serde_json::Value> = out
+                    .lines()
+                    .map(|line| serde_json::from_str(line).expect("event"))
+                    .collect();
+                assert_eq!(events[0]["event"], "command_started");
+                assert_eq!(events.last().expect("finished")["exit_code"], expected);
+                if scenario == "dry" {
+                    assert!(harness.seen_env.borrow().is_empty());
+                } else if expected != 0 {
+                    assert!(events.iter().any(|event| event["event"] == "error"));
+                }
+            }
+        }
+    }
 }

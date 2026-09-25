@@ -206,7 +206,9 @@ requires neither a local Rust toolchain nor Bazel. Until releases are cut
 with owner approval the Bazel-first path above is the supported installation.
 There is no checksum-only fallback: a checksum delivered alongside a binary
 is not by itself proof of publisher identity. Install-time
-publisher-identity verification runs before install or exec. Airgapped hosts
+publisher-identity verification runs before install or exec
+(`//deploy/install:dx_verify` owns the check, recorded under
+[Deploy Authoring](../deploy/authoring.md)). Airgapped hosts
 install the same artifacts from the vendored bundle; see
 [Offline Bootstrap](../deploy/offline-bootstrap.md).
 
@@ -227,7 +229,7 @@ and always passes `--draft --verify-tag`, so the program never creates or
 pushes tags itself.
 
 Release hosting, signing, and verification services must satisfy the
-[free-infrastructure constraint](../testing/README.md#infrastructure-budget)
+[free-infrastructure constraint](../testing/strategy-details.md#infrastructure-budget)
 without weakening artifact verification or required host coverage.
 
 Starting with v1, the module and CLI share Semantic Versioning 2.0.0 release

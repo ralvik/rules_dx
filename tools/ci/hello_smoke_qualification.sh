@@ -41,18 +41,18 @@ else
   bad "docs/roadmap.md still exists (planned work lives in GitHub issues only, #981)"
 fi
 
-# BUILD owns the harness target.
-if grep -q -F -e 'name = "hello_smoke_qualification"' "$build"; then
+# Targets live in the ci_targets shards.
+if grep -q -F -e 'name = "hello_smoke_qualification"' tools/ci/ci_targets_c.bzl; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the hello_smoke_qualification target"
+  bad "tools/ci/ci_targets_c.bzl lost the hello_smoke_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:hello_smoke_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:hello_smoke_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the hello_smoke_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the hello_smoke_qualification step"
 fi
 
 # Every binary-capable hello fixture carries hello_output_test.
@@ -172,8 +172,8 @@ else
   bad "no-coverage wiring lost (want preset filter plus target_tags hello_output_test proof)"
 fi
 
-# CI test job runs the smokes via `bazel test //...` (no separate smoke job).
-if grep -q -F -e 'bazel test --noshow_progress //...' "$ci"; then
+# CI test job runs the smokes via `bazel test //...` (flags between --noshow_progress and //... allowed).
+if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' "$ci"; then
   ok
 else
   bad "ci.yml lost bazel test //... (want smokes via the test job)"

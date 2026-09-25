@@ -242,11 +242,21 @@ field files=env_shard_alpha.dxenv.pb,env_shard_beta.dxenv.pb
 field fingerprint=%s
 field label=//env:env_shard_beta
 field record_count=2
+aspect_field aspect_seen=True
+aspect_field field_count=4
+aspect_field has_subject=True
+aspect_field subject_label=//env:env_plan_chain_subject
+aspect_field transitive_count=0
 subject //env:env_plan_rust_subject
 field files=env_rust_fixture.dxenv.pb,lib.rs
 field fingerprint=%s
 field label=//env:env_rust_fixture
-field record_count=1""" % (_CHAIN_FINGERPRINT, _RUST_FINGERPRINT)
+field record_count=1
+aspect_field aspect_seen=True
+aspect_field field_count=4
+aspect_field has_subject=True
+aspect_field subject_label=//env:env_plan_rust_subject
+aspect_field transitive_count=0""" % (_CHAIN_FINGERPRINT, _RUST_FINGERPRINT)
 
 def env_plan_analysis_tests(name):
     starlark_test(

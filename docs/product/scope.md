@@ -18,7 +18,7 @@ Bazel remains authoritative for dependencies, source ownership, actions, tests,
 non-mutating CI checks, type checking, coverage, caching, sandboxing, and local
 execution. Remote execution and remote cache remain unqualified: pipeline plus
 evaluator actions are local-only until remote is qualified (see
-[Remote Tests](../testing/README.md#remote-tests) and the
+[Remote Tests](../testing/strategy-details.md#remote-tests) and the
 [remote boundary](../quality/action-model.md#outputs-remote-cache-and-execution)).
 The single `quality/execution_requirements.bzl` helper plus the `dx_bep::remote`
 interface own that boundary.
@@ -51,7 +51,7 @@ The out-of-the-box contract is one `rules_dx` dependency with tested defaults an
 lists or separately installed language runtimes and quality tools. Bazel acquires declared pinned
 dependencies; application manifests and locks remain authoritative. `dx generate` creates supported
 targets and `dx setup` prepares matching development environments. Unused foundations remain lazy
-per [Activation And Laziness](../architecture/README.md#activation-and-laziness): the consumer
+per [Activation And Laziness](../architecture/lifecycle.md#activation-and-laziness): the consumer
 surface is one dependency while the internal module graph and `MODULE.bazel.lock` size are
 version-resolution cost, not payload.
 This does not eliminate the documented Bazel/bootstrap prerequisites or invent application policy.

@@ -19,6 +19,7 @@ rust_library(
         "src/real_tests_a.rs",
         "src/real_tests_b.rs",
         "src/real_tests_c.rs",
+        "src/real_tests_d.rs",
     ],
     aliases = aliases(
         package_name = "quality/quality_runner",
@@ -115,6 +116,7 @@ rust_test(
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

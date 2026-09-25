@@ -3,7 +3,7 @@
 //! Per-family module of [`crate::parsers`]: the pinned-shape contract
 //! and [`ParseError`] semantics live in the parent module docs.
 //!
-//! ktfmt `--dry-run` (with `--google-style` or `--kotlinlang-style`)
+//! ktfmt `--dry-run` (with `--kotlinlang-style`)
 //! prints the paths of files that would change, one per line, to
 //! stdout (clean prints nothing). Each listed path becomes one `1:1`
 //! format finding (empty rule, `file is not formatted`, warning),

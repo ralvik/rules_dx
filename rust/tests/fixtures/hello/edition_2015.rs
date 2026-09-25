@@ -3,5 +3,5 @@
 // edition flow (a single-edition 2021 rustfmt would reject it).
 pub fn edition_gate() -> i32 {
     let async = 1;
-    async
+    async.max(0)
 }

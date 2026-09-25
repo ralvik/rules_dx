@@ -77,7 +77,7 @@ initial 1
 initial WARNING biome - quality/testdata/real_dirty.js 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement quality/testdata/real_dirty.js 0 77 "export function add(first, second) {\\n\\tconst unused = 1;\\n\\treturn first + second;\\n}\\n"
+replacement quality/testdata/real_dirty.js 20 75 "first, second) {\\n\\tconst unused = 1;\\n\\treturn first + second;\\n"
 """,
     },
     {

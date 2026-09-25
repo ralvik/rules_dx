@@ -22,7 +22,7 @@ def _quality_pipeline_action(target, ctx, capability):
     info = target[QualitySourcesInfo]
     policy = ctx.attr._policy[QualityPolicyInfo]
 
-    (target_classes, direct_files, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources, "quality_aspect (" + str(target.label) + ")")
+    (target_classes, _, direct_paths, path_to_file) = aspect_direct_maps(info.direct_sources, "quality_aspect (" + str(target.label) + ")")
     selections = aspect_family_selections(policy, capability)
     resolved = resolve_pipeline(
         target_classes,
@@ -86,8 +86,10 @@ def _quality_pipeline_action(target, ctx, capability):
 
 def _make_synthetic_impl(capability):
     """Makes one capability impl over the shared pipeline action (See: quality-sources.md#adapter-applicability)."""
+
     def _impl(target, ctx):
         return _quality_pipeline_action(target, ctx, capability)
+
     return _impl
 
 # Single table-driven capability set: one impl per capability over the

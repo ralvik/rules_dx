@@ -147,39 +147,39 @@ fi
 # Tool acquisition keeps the decided checksummed buf route with no
 # target-compiler context plus execution-platform laziness, delivered
 # under #799; versions qualified under #488.
-if grep -q -F -e 'Decided route: `buf` takes the checksummed' "$acquisition" &&
-  grep -q -F -e 'needs no target compiler context' "$acquisition" &&
-  grep -q -F -e 'with `protobuf` claimed via `buf`' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #488' "$acquisition" &&
-  grep -q -F -e '(delivered under #799' "$acquisition"; then
+if grep -q -F -e 'native/self-contained artifact route for `buf` (self-contained per-platform' "$integrations" &&
+  grep -q -F -e 'no target compiler context' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #488' "$integrations" &&
+  grep -q -F -e 'cohort delivered under #799' "$acquisition" &&
+  grep -q -F -e 'Checksummed native/self-contained artifact | Biome' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its delivered buf route with #488 versions plus #799 delivery"
+  bad "tool-integrations lost its delivered buf route with #488 versions plus #799 delivery"
 fi
 
-# Tool acquisition keeps the decided Qt-last authoritative-toolchain route
+# Tool integrations keep the decided Qt-last authoritative-toolchain route
 # for qmlformat/qmllint, delivered under #799; versions qualified under
 # #488.
-if grep -q -F -e 'Decided route (Qt last)' "$acquisition" &&
-  grep -q -F -e 'qmlformat and qmllint take the authoritative-toolchain route' "$acquisition" &&
-  grep -q -F -e 'with `qml` claimed via' "$acquisition" &&
-  grep -q -F -e 'qualified seed-only under issue #488' "$acquisition" &&
-  grep -q -F -e '(delivered under #799' "$acquisition"; then
+if grep -q -F -e 'authoritative-toolchain route for qmlformat/qmllint from the Qt distribution' "$integrations" &&
+  grep -q -F -e 'Qt-last ordering decided' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under issue #488' "$integrations" &&
+  grep -q -F -e 'cohort delivered under #799' "$acquisition" &&
+  grep -q -F -e 'Authoritative selected toolchain (Qt distribution) | qmlformat, qmllint' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its delivered Qt route with #488 versions plus #799 delivery"
+  bad "tool-integrations lost its delivered Qt route with #488 versions plus #799 delivery"
 fi
 
-# Tool acquisition keeps the three research rows with byte-identity risk.
+# Tool integrations keep the three research rows with byte-identity risk.
 cohort_research=""
-for tool in '| buf |' '| qmlformat |' '| qmllint |'; do
-  grep -q -F -e "$tool" "$acquisition" || cohort_research="$cohort_research $tool:missing"
+for tool in 'buf' 'qmlformat' 'qmllint'; do
+  grep -q -F -e "$tool" "$integrations" || cohort_research="$cohort_research $tool:missing"
 done
 if [[ -z "$cohort_research" ]] &&
-  grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
+  grep -q -F -e 'actual bytes when adding each adapter' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost a structured research row or byte-identity honesty:$cohort_research"
+  bad "tool-integrations lost a structured research row or byte-identity honesty:$cohort_research"
 fi
 
 # Tool integrations keep the delivered structured notes with pinned

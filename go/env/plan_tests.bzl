@@ -52,10 +52,11 @@ aspect_field has_subject=True
 aspect_field subject_label=//go/env:hello_test_plan
 aspect_field transitive_count=0"""
 
-def env_plan_tests(name, subjects):
+def env_plan_tests(name, subjects, **kwargs):
     starlark_test(
         name = name,
         mode = "analysis",
         subjects = subjects,
         expected_observations = EXPECTED_ENV_PLAN_OBSERVATIONS,
+        **kwargs
     )

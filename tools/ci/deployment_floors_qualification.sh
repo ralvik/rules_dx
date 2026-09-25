@@ -159,12 +159,12 @@ else
   bad "docs/native-toolchains.md lost its qualified floors record with fixtures under issue #500"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "deployment_floors_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:deployment_floors_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "deployment_floors_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:deployment_floors_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the deployment_floors_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the deployment_floors_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Fixture floors.expected plus oldest/current separation covers every floor with split runs.

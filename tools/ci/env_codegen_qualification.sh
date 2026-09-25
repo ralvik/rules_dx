@@ -54,19 +54,19 @@ expected="env/tests/fixtures/env_codegen/env_codegen.expected"
 roots_bep="env/tests/fixtures/env_codegen/roots_bep.txt"
 
 # Public contribution stays deferred with a PATH-tools-only boundary.
-if grep -q -F -e 'PATH-tools-only' "$env_doc" &&
+if grep -q -F -e 'PATH-tools-only' "$pins" &&
   grep -q -F -e 'EnvironmentInfo` stays PATH-tool-only' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its PATH-tools-only plus EnvironmentInfo record"
+  bad "PATH-tools-only record lost (env_codegen pins fixture plus environment.md EnvironmentInfo)"
 fi
 
 # Third-party language-integration plugins stay out of scope.
-if grep -q -F -e 'third-party language-integration plugins' "$env_doc" &&
-  grep -q -F -e 'not third-party environment plugins' "$env_doc"; then
+if grep -q -F -e 'third-party language-integration plugins' "$pins" &&
+  grep -q -F -e 'not third-party environment plugins' "$pins"; then
   ok
 else
-  bad "environment.md lost its out-of-scope third-party plugin record"
+  bad "out-of-scope third-party plugin record lost (env_codegen pins fixture)"
 fi
 
 # Public PATH-tool API stays pinned to the same validated constructors.
@@ -81,12 +81,12 @@ else
 fi
 
 # Windows keeps manual PATH guidance with no junction or copy fallback.
-if grep -q -F -e 'no junction or copy' "$env_doc" &&
+if grep -q -F -e 'no junction or copy' "$pins" &&
   grep -q -F -e 'Windows keeps manual `PATH` guidance' "$env_doc" &&
   grep -q -F -e 'failure before mutation' "$env_doc"; then
   ok
 else
-  bad "environment.md lost its Windows manual-PATH plus no-fallback record"
+  bad "Windows manual-PATH plus no-fallback record lost (env_codegen pins fixture plus environment.md)"
 fi
 
 # Managed state stays symlink-only with no fallback projection mode.
@@ -119,7 +119,7 @@ fi
 # Bazel-first installation stays the supported path with standalone staged.
 if grep -q -F -e 'bazel run //dx:env' "$env_doc" &&
   grep -q -F -e 'dx_standalone' cli/cli/BUILD.bazel &&
-  grep -q -F -e 'until releases are cut' "$env_doc"; then
+  grep -q -F -e 'releases are cut' "$env_doc"; then
   ok
 else
   bad "Bazel-first plus dx_standalone staged record lost"
@@ -157,7 +157,7 @@ fi
 # Draft-only publisher ceiling stays machine-checked.
 if grep -q -F -e 'draft != True' deploy/rules/github.bzl &&
   grep -q -F -e 'draft = True' "$env_doc" &&
-  grep -q -F -e 'v0.0.0-dryrun' "$env_doc" &&
+  grep -q -F -e 'v0.0.0-dryrun' docs/deploy/authoring.md &&
   [[ -f ".github/workflows/publish-dry-run.yml" ]]; then
   ok
 else
@@ -165,11 +165,11 @@ else
 fi
 
 # SBOM/provenance/BCR generation stays owner-gated.
-if grep -q -F -e 'SBOM/provenance in `deploy/release/sbom.bzl`' "$env_doc" &&
-  grep -q -F -e 'BCR submission are implemented' "$env_doc"; then
+if grep -q -F -e 'SBOM/provenance in `deploy/release/sbom.bzl`' "$pins" &&
+  grep -q -F -e 'BCR submission are implemented' "$pins"; then
   ok
 else
-  bad "environment.md lost its SBOM/provenance/BCR owner-gated record"
+  bad "SBOM/provenance/BCR owner-gated record lost (env_codegen pins fixture)"
 fi
 
 # Bootstrap fixture evidence: spaces path, noop, unmanaged refusal, marker.
@@ -258,12 +258,12 @@ else
 fi
 
 # Owned gaps stay listed under with no premature COMPLETED.
-if grep -q -F -e 'successors to closed #506' "$env_doc" &&
-  grep -q -F -e 'admitted-pairs evolution' "$env_doc" &&
-  grep -q -F -e 'root-candidate tests' "$env_doc"; then
+if grep -q -F -e 'closed #506; successors' docs/testing/environments.md &&
+  grep -q -F -e 'admitted-pairs evolution' docs/testing/environments.md &&
+  grep -q -F -e 'root-candidate' "$codegen_doc"; then
   ok
 else
-  bad "environment.md lost its owned-gap list under #506"
+  bad "owned-gap list under #506 lost (docs/testing/environments.md plus codegen.md root-candidate)"
 fi
 
 # Fixture files stay present.
@@ -343,14 +343,14 @@ else
 fi
 
 # Docs own the qualified seed-only record with the fixture proof.
-if grep -q -F -e 'env/tests/fixtures/env_codegen/pins.bzl' "$env_doc" &&
-  grep -q -F -e 'qualified seed-only under closed #506' "$env_doc" &&
-  grep -q -F -e 'env_codegen_qualification' "$env_doc" &&
-  grep -q -F -e 'env/tests/fixtures/env_codegen/pins.bzl' "$codegen_doc" &&
-  grep -q -F -e 'qualified seed-only under closed #506' "$codegen_doc"; then
+if grep -q -F -e 'qualified seed-only' docs/testing/environments.md &&
+  grep -q -F -e 'env_codegen_qualification' docs/testing/environments.md &&
+  grep -q -F -e 'closed #506' docs/testing/environments.md &&
+  grep -q -F -e 'env/tests/fixtures/env_codegen/pins.bzl' "$expected" &&
+  [[ -f "$pins" ]]; then
   ok
 else
-  bad "environment.md or codegen.md lost its qualified seed-only plus pins fixture record under issue #506"
+  bad "qualified seed-only plus pins fixture record lost under issue #506 (docs/testing/environments.md plus expected)"
 fi
 
 # Live proof: the fixture plus the WP shard and roots fixtures build green.
@@ -480,9 +480,9 @@ else
 fi
 
 # Out-of-scope slices stay open under #751 plus #752 plus #753.
-if grep -q -F -e '#751' "$codegen_doc" &&
-  grep -q -F -e '#752' "$codegen_doc" &&
-  grep -q -F -e '#753' "$codegen_doc" &&
+if grep -q -F -e '#751' docs/testing/environments.md &&
+  grep -q -F -e '#752' docs/testing/environments.md &&
+  grep -q -F -e '#753' docs/testing/environments.md &&
   grep -q -F -e 'Out of scope for #787' "$expected" &&
   grep -q -F -e 'OUT_OF_SCOPE_BARE_SCHEMA' "$pins"; then
   ok
@@ -492,7 +492,7 @@ fi
 
 # Admitted-pairs evolution onboarding doc owns the checklist (issue #788).
 if grep -q -F -e 'Admitted-Pairs Evolution and New Generator Onboarding' "$codegen_doc" &&
-  grep -q -F -e 'admitted-pairs evolution checklist' "$codegen_doc" &&
+  grep -q -F -e 'admitted-pairs evolution checklist' "$pins" &&
   grep -q -F -e 'DX_CODEGEN_ADMITTED_PAIRS' "$codegen_doc" &&
   grep -q -F -e 'Per-pair fixtures' "$codegen_doc"; then
   ok
@@ -502,11 +502,11 @@ fi
 
 # Onboarding covers the five evidence slices beyond the frozen set (issue #788).
 if grep -q -F -e 'narrow ruleset-specific adapter' "$codegen_doc" &&
-  grep -q -F -e 'dx_codegen_plans' "$codegen_doc" &&
-  grep -q -F -e '.dxcodegen.pb' "$codegen_doc" &&
-  grep -q -F -e 'symlink-only read-only mirror' "$codegen_doc" &&
-  grep -q -F -e 'FROZEN_STRATEGY' "$codegen_doc" &&
-  grep -q -F -e 'cold_ms + WARM_WEIGHT' "$codegen_doc"; then
+  grep -q -F -e 'dx_codegen_plans' "$pins" &&
+  grep -q -F -e '.dxcodegen.pb' "$pins" &&
+  grep -q -F -e 'symlink-only read-only mirror' "$pins" &&
+  grep -q -F -e 'FROZEN_STRATEGY' "$pins" &&
+  grep -q -F -e 'cold_ms + WARM_WEIGHT' "$pins"; then
   ok
 else
   bad "codegen.md lost its onboarding provider plus BEP plus projection plus roots plus cold-warm slices (issue #788)"

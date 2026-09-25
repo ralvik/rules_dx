@@ -21,7 +21,7 @@ fsharp_env_plan(
 fsharp_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//fsharp/tests/fixtures/hello:hello",
+    target = "//fsharp/tests/fixtures/hello",
 )
 
 fsharp_env_plan(
@@ -41,6 +41,7 @@ env_plan_tests(
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "plan.bzl",

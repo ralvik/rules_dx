@@ -188,11 +188,11 @@ else
 fi
 
 # Harness stays wired in BUILD plus CI.
-if grep -q -F -e 'name = "xunit_qualification"' "$build" &&
-  grep -q -F -e '//tools/ci:xunit_qualification' "$ci"; then
+if grep -q -F -e 'name = "xunit_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e '//tools/ci:xunit_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "xunit_qualification lost its BUILD plus CI wiring"
+  bad "xunit_qualification lost its shard plus dogfood wiring"
 fi
 
 dx_test_summary "xUnit v3 qualification harness"

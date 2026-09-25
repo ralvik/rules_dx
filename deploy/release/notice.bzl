@@ -34,7 +34,8 @@ def notice_bundle(name, root, inventory, texts):
     declared per-package `LICENSE*`/`NOTICE*` word files resolved by
     basename. Missing words fail the action with an actionable
     `missing-notice-text` diagnostic. Both run as hermetic Rust tools
-    with no host toolchain."""
+    with no host toolchain.
+    """
     root_err = notice_root_error(root)
     if root_err != "":
         fail(root_err + " (in " + native.package_name() + ":" + name + ")")

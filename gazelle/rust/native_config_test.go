@@ -13,6 +13,70 @@ import (
 	"github.com/bazelbuild/bazel-gazelle/rule"
 )
 
+func TestCorpusSplitPreservesSiblingsAndFixtureOwnership(t *testing.T) {
+	root := t.TempDir()
+	for _, name := range []string{"BUILD.bazel", "README.md", "sibling.md", "fixture.md", "config.toml", ".gitleaks.toml", ".hidden.md", "AGENTS.local.md", "new.json", "keep.json", "fixture.json", "sub/guide.md", "sub/config.toml", "nested/BUILD", "nested/hidden.md", "other/BUILD.bazel", "other/hidden.md", ".state/hidden.md", "node_modules/hidden.md", "bazel-out/hidden.md", "data.lock"} {
+		writeFixture(t, root, name, "")
+	}
+	writeFixture(t, root, ".buildifier.json", "{}")
+	file := rule.EmptyFile(filepath.Join(root, "BUILD.bazel"), "")
+	legacy := rule.NewRule(corpusKind, "corpus")
+	legacy.SetAttr("markdown_siblings", []string{"sibling.md", "//other:doc", ":local", "@repo//:doc", "*.md", ""})
+	legacy.SetAttr("json_srcs", []string{"keep.json", "fixture.json", "@repo//:json", "//other:json", ":json", "*.json", ""})
+	legacy.Insert(file)
+	fixture := rule.NewRule(corpusKind, "fixture")
+	fixture.SetAttr("markdown_srcs", []string{"fixture.md", "@repo//:doc", "//other:doc", ":local", "*.md", ""})
+	fixture.SetAttr("json_srcs", []string{"fixture.json"})
+	fixture.Insert(file)
+	cfg := config.New()
+	cfg.RepoRoot = root
+	plan := planCorpus(language.GenerateArgs{Config: cfg, Dir: root, File: file}, false)
+	byName := map[string]*rule.Rule{}
+	for _, r := range plan.gen {
+		byName[r.Name()] = r
+	}
+	for name, want := range map[string]string{"corpus_markdown": "README.md,sub/guide.md", "corpus_toml": ".gitleaks.toml,config.toml,sub/config.toml", "corpus_json": "keep.json", "corpus_starlark": "BUILD.bazel"} {
+		attr := strings.Replace(name, "corpus_", "", 1) + "_srcs"
+		if byName[name] == nil || strings.Join(byName[name].AttrStrings(attr), ",") != want {
+			t.Fatalf("%s: %v, want %s", name, byName[name], want)
+		}
+	}
+	if len(byName["corpus_markdown"].AttrStrings("markdown_siblings")) != 6 {
+		t.Fatal("siblings lost")
+	}
+	if got := byName["corpus_starlark"].AttrStrings("aspect_hints"); len(got) != 1 || got[0] != corpusBuildifierHint {
+		t.Fatalf("buildifier hints: %v", got)
+	}
+	if len(plan.empty) != 1 || plan.empty[0].Name() != "corpus" {
+		t.Fatalf("legacy deletion: %v", plan.empty)
+	}
+}
+
+func TestCorpusSkipsToolTreesAndKeepsSiblingOnlyTargets(t *testing.T) {
+	cfg := config.New()
+	root := t.TempDir()
+	for _, rel := range []string{".opencode", ".opencode/skills", "node_modules", "node_modules/pkg", "pkg/node_modules/pkg", "tools/depcheck/testdata", "tools/depcheck/testdata/fixture"} {
+		plan := planCorpus(language.GenerateArgs{Config: cfg, Dir: root, Rel: rel}, true)
+		if len(plan.gen) != 0 {
+			t.Fatalf("tool tree generated: %s", rel)
+		}
+	}
+	file := rule.EmptyFile(filepath.Join(root, "BUILD.bazel"), "")
+	legacy := rule.NewRule(corpusKind, "corpus")
+	legacy.SetAttr("markdown_siblings", []string{"//other:doc"})
+	legacy.Insert(file)
+	plan := planCorpus(language.GenerateArgs{Config: cfg, Dir: root, File: file}, false)
+	for _, r := range plan.gen {
+		if r.Name() == "corpus_markdown" {
+			if len(r.AttrStrings("markdown_srcs")) != 0 || len(r.AttrStrings("aspect_hints")) != 0 || len(r.AttrStrings("markdown_siblings")) != 1 {
+				t.Fatalf("sibling target: %v", r)
+			}
+			return
+		}
+	}
+	t.Fatal("missing sibling-only target")
+}
+
 // runNativeGenerate mimics the Gazelle walk for one directory: parent
 // configuration first so directives inherit, then GenerateRules with the
 // direct-child regular files and the parsed BUILD file.
@@ -89,15 +153,15 @@ func findEmpty(result language.GenerateResult, kind, name string) bool {
 
 func TestNativeConfigRecognition(t *testing.T) {
 	_, result := runNativeGenerate(t, "site", map[string]string{
-		"site/src/lib.rs":       "pub fn current() {}\n",
-		"site/rustfmt.toml":     "edition = \"2021\"\n",
-		"site/clippy.toml":      "[lints]\n",
-		"site/.vale.ini":        "StylesPath = styles\n",
+		"site/src/lib.rs":           "pub fn current() {}\n",
+		"site/rustfmt.toml":         "edition = \"2021\"\n",
+		"site/clippy.toml":          "[lints]\n",
+		"site/.vale.ini":            "StylesPath = styles\n",
 		"site/styles/org/Rules.yml": "extends: existence\n",
-		"site/taplo.toml":       "[formatting]\n",
-		"site/.buildifier.json": "{}\n",
-		"site/custom.toml":      "[custom]\n",
-		"site/vale_test.ini":    "StylesPath = styles\n",
+		"site/taplo.toml":           "[formatting]\n",
+		"site/.buildifier.json":     "{}\n",
+		"site/custom.toml":          "[custom]\n",
+		"site/vale_test.ini":        "StylesPath = styles\n",
 	}, "")
 	want := map[string]string{
 		"rustfmt_config":    "rustfmt.toml",
@@ -467,8 +531,8 @@ func TestNativeRootVisibility(t *testing.T) {
 func TestNativeValeStylesVariants(t *testing.T) {
 	// Custom StylesPath closes over its own directory.
 	_, custom := runNativeGenerate(t, "site", map[string]string{
-		"site/.vale.ini":            "StylesPath = config/styles\n",
-		"site/config/styles/a.yml":  "extends: existence\n",
+		"site/.vale.ini":             "StylesPath = config/styles\n",
+		"site/config/styles/a.yml":   "extends: existence\n",
 		"site/config/styles/b/c.yml": "extends: occurrence\n",
 	}, "")
 	vale := findGenerated(custom, "vale_config", "vale_config")
@@ -522,9 +586,9 @@ func TestNativeValeStylesInvalidPaths(t *testing.T) {
 
 func TestNativeCargoHints(t *testing.T) {
 	_, result := runNativeGenerate(t, "app", map[string]string{
-		"app/Cargo.toml":    "[package]\nname = \"app\"\nversion = \"0.1.0\"\n",
-		"app/src/main.rs":   "fn main() {}\n",
-		"app/rustfmt.toml":  "edition = \"2021\"\n",
+		"app/Cargo.toml":   "[package]\nname = \"app\"\nversion = \"0.1.0\"\n",
+		"app/src/main.rs":  "fn main() {}\n",
+		"app/rustfmt.toml": "edition = \"2021\"\n",
 	}, "")
 	bin := findGenerated(result, binaryKind, "app")
 	if bin == nil {

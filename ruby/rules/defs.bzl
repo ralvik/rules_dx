@@ -106,7 +106,8 @@ def ruby_binary(name, srcs = None, visibility = None, **kwargs):
     carries only `main` plus `deps = [":<library>"]` with no `srcs`. The
     library alone owns the source and its source-derived dependencies in
     the thin shape; the thin binary reports no direct sources. Both shapes
-    preserve the upstream providers and execution semantics."""
+    preserve the upstream providers and execution semantics.
+    """
     effective_srcs = ruby_effective_srcs(srcs)
     if "srcs" in kwargs:
         kwargs.pop("srcs")
@@ -120,5 +121,6 @@ def ruby_test(name, srcs, visibility = None, **kwargs):
     `deps`; test sources are never the library's sources. RSpec runs through
     `main = "@bundle//bin:rspec"` with `args` plus `deps` on the spec helper
     and `@bundle` (no new rule kind); plain `rb_test` executables stay
-    supported. Uses Bazel's standard test and coverage protocols."""
+    supported. Uses Bazel's standard test and coverage protocols.
+    """
     dx_wrap_test(name, _rb_test, _ruby_forward_test, srcs, visibility = visibility, **kwargs)

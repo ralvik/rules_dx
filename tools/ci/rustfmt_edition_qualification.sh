@@ -37,6 +37,7 @@ integrations="docs/quality/tool-integrations.md"
 ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 matrix="quality/testdata/runner_matrix_cases.bzl"
+matrix_rust="quality/testdata/runner_matrix_rust.bzl"
 fixture_build="rust/tests/fixtures/hello/BUILD.bazel"
 fixture_src="rust/tests/fixtures/hello/edition_2015.rs"
 
@@ -48,17 +49,17 @@ else
 fi
 
 # BUILD owns the harness target.
-if grep -q -F -e 'name = "rustfmt_edition_qualification"' "$build"; then
+if grep -q -F -e 'name = "rustfmt_edition_qualification"' "tools/ci/ci_targets_c.bzl"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the rustfmt_edition_qualification target"
+  bad "tools/ci/ci_targets_c.bzl lost the rustfmt_edition_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:rustfmt_edition_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:rustfmt_edition_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the rustfmt_edition_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the rustfmt_edition_qualification step (want dogfood-freshness)"
 fi
 
 # The adapter passes the caller edition to `--edition` verbatim, never a default.
@@ -69,9 +70,10 @@ else
   bad "commands.rs lost the verbatim caller-edition --edition wiring"
 fi
 
-# The runner fails the action when the edition is missing, on check and fix.
+# The runner fails the action when the edition is missing through the
+# shared rustfmt path (single invocation covers check plus fix).
 if grep -q -F -e 'missing tool edition' quality/runner/src/real.rs &&
-  [[ "$(grep -c -F -e 'Self::rustfmt_edition(tool)?' quality/runner/src/real.rs)" -ge 2 ]]; then
+  [[ "$(grep -c -F -e 'Self::rustfmt_edition(tool)?' quality/runner/src/real.rs)" -ge 1 ]]; then
   ok
 else
   bad "real.rs lost the missing-edition failure on check plus fix"
@@ -95,17 +97,17 @@ else
 fi
 
 # The matrix proves a non-default edition over the real toolchain rustfmt.
-if grep -q -F -e 'matrix_rust_format_edition_2015' "$matrix" &&
-  grep -q -F -e '"2015"' "$matrix" &&
-  grep -q -F -e 'rustfmt_from_toolchain' "$matrix"; then
+if grep -q -F -e 'matrix_rust_format_edition_2015' "$matrix_rust" &&
+  grep -q -F -e '"2015"' "$matrix_rust" &&
+  grep -q -F -e 'rustfmt_from_toolchain' "$matrix_rust"; then
   ok
 else
   bad "runner matrix lost the 2015 edition cell over toolchain rustfmt"
 fi
 
 # The matrix proves the wrong edition surfaces syntax errors (single-edition rejected).
-if grep -q -F -e 'matrix_rust_format_edition_mismatch' "$matrix" &&
-  grep -q -F -e 'expected identifier, found keyword' "$matrix"; then
+if grep -q -F -e 'matrix_rust_format_edition_mismatch' "$matrix_rust" &&
+  grep -q -F -e 'expected identifier, found keyword' "$matrix_rust"; then
   ok
 else
   bad "runner matrix lost the wrong-edition mismatch cell"

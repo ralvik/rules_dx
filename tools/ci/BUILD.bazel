@@ -7,8 +7,6 @@ they dogfood. Promoted from an inline ci.yml shell pipeline so the
 audit logic is versioned and reviewable.
 """
 
-load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
-load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
 # Single target list (issue #915): ~160 sh_binary/sh_test targets live in
@@ -22,6 +20,10 @@ load(":ci_targets_c.bzl", "add_c")
 load(":ci_targets_d.bzl", "add_d")
 
 package(default_visibility = ["//:__subpackages__"])
+
+# prove.sh is CI-run as a plain path (not a sh_binary); export it so the
+# non_dogfed_paths D4 ownership query can see the package source file.
+exports_files(["prove.sh"])
 
 add_a()
 
@@ -38,6 +40,7 @@ filegroup(
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "ci_targets_a.bzl",

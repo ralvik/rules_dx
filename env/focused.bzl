@@ -64,7 +64,8 @@ def focused_python_transitive(transitive_sources):
 
     Wheel payloads are covered by `wheel_count` plus site-packages import
     roots; raw venv markers carry no import identity and would collapse
-    lossily under basename projection."""
+    lossily under basename projection.
+    """
     seen = {}
     for f in transitive_sources:
         if f.basename.endswith(".py"):
@@ -91,7 +92,8 @@ def focused_venv_projection(target):
     """Returns the materialized `.venv` projection from RunEnvironmentInfo.
 
     Binaries and tests carry `VIRTUAL_ENV` naming the upstream `py_venv`
-    directory; libraries carry no RunEnvironmentInfo and project no venv."""
+    directory; libraries carry no RunEnvironmentInfo and project no venv.
+    """
     if RunEnvironmentInfo not in target:
         return struct(has_venv = False, venv = "")
     env = target[RunEnvironmentInfo].environment
@@ -153,7 +155,8 @@ def focused_test_sources(basenames):
     """Returns sorted test basenames from combined direct plus transitive lists.
 
     Test shape is `Test` (JVM/Dotnet CamelCase) or `_test` (Go/CC snake_case
-    plus Bazel-derived jar/DLL names); `latest` plus `scalatest` stay source-side."""
+    plus Bazel-derived jar/DLL names); `latest` plus `scalatest` stay source-side.
+    """
     seen = {}
     for name in basenames:
         if "Test" in name or "_test" in name:

@@ -108,7 +108,8 @@ def env_collision_error(records):
     Every claimed name (primary plus aliases) is keyed case-folded; any key
     claimed by more than one owner fails, listing every claimant. Repeated
     claims by a single owner (for example an alias equal to its bin_name)
-    are one claim, not a collision."""
+    are one claim, not a collision.
+    """
     owners_by_key = {}
     for record in records:
         seen = {}

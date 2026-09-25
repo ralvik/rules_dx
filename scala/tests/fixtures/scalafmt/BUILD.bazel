@@ -1,7 +1,6 @@
-load("@rules_dx//scala/rules:defs.bzl", "scala_library")
-
 """Scalafmt format fixture."""
 
+load("@rules_dx//scala/rules:defs.bzl", "scala_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
@@ -19,6 +18,7 @@ exports_files([
 real_source_target(
     name = "corpus_starlark",
     testonly = True,
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "pins.bzl",

@@ -5,8 +5,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class HelloTest {
-  @Test
-  fun testHello() {
-    assertEquals("hello world", Hello.hello("world"))
-  }
+    @Test
+    fun testHello() {
+        assertEquals("hello world", Hello.hello("world"))
+    }
 }

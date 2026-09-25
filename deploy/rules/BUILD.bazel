@@ -8,12 +8,12 @@ load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 load(":archive.bzl", "archive_deploy")
 load(":archive_tests.bzl", "archive_analysis_tests", "archive_debug_analysis_tests", "archive_unit_tests")
+load(":crates.bzl", "crates_deploy")
+load(":crates_tests.bzl", "crates_analysis_tests", "crates_debug_analysis_tests", "crates_unit_tests")
 load(":defs.bzl", "dx_deployment")
 load(":deploy_tests.bzl", "deploy_analysis_tests", "deploy_app_analysis_tests", "deploy_debug_analysis_tests", "deploy_unit_tests")
 load(":github.bzl", "github_deploy")
 load(":github_tests.bzl", "github_analysis_tests", "github_debug_analysis_tests", "github_unit_tests")
-load(":crates.bzl", "crates_deploy")
-load(":crates_tests.bzl", "crates_analysis_tests", "crates_debug_analysis_tests", "crates_unit_tests")
 load(":maven.bzl", "maven_deploy")
 load(":maven_tests.bzl", "maven_analysis_tests", "maven_debug_analysis_tests", "maven_unit_tests")
 load(":npm.bzl", "npm_deploy")
@@ -24,10 +24,10 @@ load(":oci.bzl", "oci_deploy")
 load(":oci_tests.bzl", "oci_analysis_tests", "oci_debug_analysis_tests", "oci_unit_tests")
 load(":octopus.bzl", "octopus_deploy")
 load(":octopus_tests.bzl", "octopus_analysis_tests", "octopus_debug_analysis_tests", "octopus_unit_tests")
-load(":pypi.bzl", "pypi_deploy")
-load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 load(":promotion.bzl", "promotion_deploy")
 load(":promotion_tests.bzl", "promotion_analysis_tests", "promotion_debug_analysis_tests", "promotion_unit_tests")
+load(":pypi.bzl", "pypi_deploy")
+load(":pypi_tests.bzl", "pypi_analysis_tests", "pypi_debug_analysis_tests", "pypi_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -267,11 +267,11 @@ py_library(
 py_test(
     name = "npm_deploy_test",
     srcs = ["npm_deploy_test.py"],
+    tags = ["no-coverage"],
     deps = [
         ":npm_deploy_lib",
         ":npm_pack_lib",
     ],
-    tags = ["no-coverage"],
 )
 
 sh_binary(
@@ -593,14 +593,14 @@ py_test(
 # default, never publishes; live needs explicit env plus approval.
 npm_deploy(
     name = "npm_demo",
-    package = "npm-demo",
     srcs = ["npm_demo/package.json"],
+    package = "npm-demo",
 )
 
 npm_deploy(
     name = "npm_demo_debug",
-    package = "npm-demo",
     srcs = ["npm_demo/package.json"],
+    package = "npm-demo",
     profile = "debug",
 )
 
@@ -821,6 +821,7 @@ py_test(
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "archive.bzl",

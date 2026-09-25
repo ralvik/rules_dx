@@ -4,6 +4,148 @@
 use super::*;
 
 #[test]
+fn lock_fallback_parsers_match_normal_paths() {
+    for (path, expected) in [
+        ("node_modules/outer/deep", Some("deep")),
+        ("node_modules/outer/", None),
+        ("node_modules/@scope/deep/name", Some("name")),
+        ("node_modules/@scope/deep/", None),
+    ] {
+        assert_eq!(package_lock_name(path).as_deref(), expected, "{path}");
+    }
+    for key in [
+        "@scope/demo@1.0.0",
+        "@scope/demo@",
+        "@scope/demo",
+        "@scope/demo@1.0.0-beta",
+    ] {
+        assert_eq!(
+            split_pnpm_scoped_fallback(key),
+            split_pnpm_key(key),
+            "{key}"
+        );
+    }
+    for key in ["demo@1.0.0", "demo@", "demo", "@", "demo@1.0.0-beta"] {
+        assert_eq!(
+            split_pnpm_unscoped_fallback(key),
+            split_pnpm_key(key),
+            "{key}"
+        );
+    }
+    for line in [
+        "Demo (1.0.0)",
+        "Demo ()",
+        "(1.0.0)",
+        "Demo )1.0.0(",
+        "Demo",
+        "remote: foo (1.0.0)",
+    ] {
+        assert_eq!(
+            split_paket_line_fallback(line),
+            split_paket_line(line),
+            "{line}"
+        );
+    }
+    assert!(parse_cargo_lock(
+        "[[package]]\nname = \"\"\nversion = \"1.0.0\"\nsource = \"registry+test\"\n"
+    )
+    .is_err());
+}
+
+#[test]
+fn pnpm_git_resolution_forms_are_never_assessed_as_registry_packages() {
+    for resolution in [
+        "{type: git}",
+        "{commit: deadbeef}",
+        "{repo: 'github:owner/repo'}",
+        "{tarball: 'https://codeload.github.com/owner/repo/tar.gz/v1'}",
+    ] {
+        let text = format!("packages:\n  demo@1.0.0:\n    resolution: {resolution}\n");
+        let packages = parse_pnpm_lock(&text).expect("pnpm");
+        assert_eq!(packages.len(), 1);
+        assert!(packages[0].is_git, "{resolution}");
+    }
+    let packages = parse_pnpm_lock("packages:\n  42: {}\n  'demo@': {}\n  'local@file:../local': {}\n  'linked@link:../local': {}\n  'registry@1.0.0': {}\n").expect("pnpm");
+    assert_eq!(packages.len(), 1);
+    assert_eq!(packages[0].name, "registry");
+}
+
+#[test]
+fn npm_lock_shapes_keep_registry_and_git_entries_but_skip_workspace_links() {
+    let packages = parse_package_lock(r#"{
+        "packages": {
+            "": {"version":"1.0.0"},
+            "node_modules/": {},
+            "node_modules/@broken": {},
+            "node_modules/not-an-object": 1,
+            "node_modules/link": {"link":true,"version":"1.0.0"},
+            "node_modules/missing-version": {},
+            "node_modules/local": {"version":"file:../local"},
+            "node_modules/linked": {"version":"link:../local"},
+            "node_modules/local-resolved": {"version":"1.0.0","resolved":"file:../local"},
+            "node_modules/@scope/demo": {"version":"1.0.0"},
+            "node_modules/git-demo": {"version":"1.0.0","from":"github:owner/repo"}
+        },
+        "dependencies": {
+            " ": {"version":"1.0.0"},
+            "not-an-object": 1,
+            "link": {"link":true,"version":"1.0.0"},
+            "missing-version": {},
+            "local": {"version":"file:../local"},
+            "linked": {"version":"link:../local"},
+            "local-resolved": {"version":"1.0.0","resolved":"file:../local"},
+            "@scope/demo": {"version":"1.0.0"},
+            "git-demo": {"version":"1.0.0","from":"github:owner/repo"},
+            "legacy": {"version":"2.0.0","resolved":"https://registry.npmjs.org/legacy/-/legacy-2.0.0.tgz"}
+        }
+    }"#).expect("npm lock");
+    assert_eq!(
+        packages
+            .iter()
+            .map(|p| (p.name.as_str(), p.version.as_str(), p.is_git))
+            .collect::<Vec<_>>(),
+        vec![
+            ("@scope/demo", "1.0.0", false),
+            ("git-demo", "1.0.0", true),
+            ("legacy", "2.0.0", false)
+        ]
+    );
+    assert!(parse_package_lock("[]").is_err());
+    assert!(parse_package_lock("{").is_err());
+}
+
+#[test]
+fn yarn_lock_handles_stanza_boundaries_and_workspace_protocols() {
+    let packages = parse_yarn_lock("# yarn lock\n  orphan \"ignored\"\n\nempty@1:\n  resolved \"https://example.com\"\n\nlocal@1:\n  version \"file:../local\"\nlinked@1:\n  version link:../linked\nportal@1:\n  version portal:../portal\nresolved-local@1:\n  version 1.0.0\n  resolved file:../local\nresolved-link@1:\n  version 1.0.0\n  resolved link:../local\nresolved-portal@1:\n  version 1.0.0\n  resolved portal:../local\n\"@scope/demo@^1.0.0\", \"@scope/demo@~1.0.0\":\n  version: \"1.2.0\"\n  resolved \"https://registry.npmjs.org/demo.tgz\"\n# flush\nmissing@1:\n  version \"\"\n  resolved\nregistry:\n  version 2.0.0 # pinned\n  resolved https://registry.npmjs.org/registry.tgz\n").expect("yarn");
+    assert_eq!(
+        packages
+            .iter()
+            .map(|p| (p.name.as_str(), p.version.as_str()))
+            .collect::<Vec<_>>(),
+        vec![("@scope/demo", "1.2.0"), ("registry", "2.0.0")]
+    );
+    assert!(packages.iter().all(|p| !p.is_git));
+}
+
+#[test]
+fn pnpm_documents_reject_scalars_and_nonmapping_packages() {
+    for invalid in [
+        "42\n",
+        "[one, two]\n",
+        "packages: [one, two]\n",
+        "packages: [\n",
+    ] {
+        assert!(parse_pnpm_lock(invalid).is_err(), "{invalid}");
+    }
+    for empty in ["", " \n", "null\n", "---\nnull\n...\n", "packages: null\n"] {
+        assert!(
+            parse_pnpm_lock(empty).expect("empty lock").is_empty(),
+            "{empty}"
+        );
+    }
+}
+
+#[test]
 fn cargo_lock_splits_registry_git_and_first_party() {
     let text = r#"
 [[package]]
@@ -403,6 +545,23 @@ fn go_mod_comment_stripping_keeps_bare_tokens() {
         strip_go_comment("module example.com/root"),
         "module example.com/root"
     );
+    // `//` inside a token (never a comment in `go.mod`) stays in the line.
+    assert_eq!(
+        strip_go_comment("replace https://example.com => v1.0.0"),
+        "replace https://example.com => v1.0.0"
+    );
+}
+
+#[test]
+fn go_mod_incomplete_require_and_replace_lines_are_skipped() {
+    let text = "module example.com/root\n\
+        require (\n        lone-entry\n    )\n\
+        require onlyname\n\
+        replace (\n        example.com/a =>\n        example.com/b v1.0.0\n    )\n\
+        replace example.com/c =>\n\
+        replace example.com/d\n";
+    let packages = parse_go_mod(text).expect("parses");
+    assert!(packages.is_empty());
 }
 
 #[test]
@@ -481,6 +640,22 @@ fn npm_licenses_read_legacy_dependencies_shape() {
     // Invalid JSON stays fail-closed to UNKNOWN for every package.
     let fallback = npm_licenses("not json", &packages);
     assert!(fallback.iter().all(|entry| entry.license == "UNKNOWN"));
+}
+
+#[test]
+fn license_extractors_skip_malformed_entries_without_inventing_ids() {
+    let cargo_lock = "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n";
+    let cargo_packages = parse_cargo_lock(cargo_lock).expect("locks");
+    let blank = r#"{"packages": {"serde 1.0.100": {"license": "  "}}}"#;
+    assert_eq!(cargo_licenses(blank, &cargo_packages)[0].license, "UNKNOWN");
+
+    // Non-object details, missing versions, and blank licenses fall
+    // through without an identity; degenerate dependency keys skip.
+    let text = r#"{"packages":{"node_modules/str":"1.0.0","node_modules/nov":{"license":"MIT"},"node_modules/nolic":{"version":"1.0.0","license":" "}},"dependencies":{"  ":{"version":"1.0.0"},"obj":"1.0.0","nover":{"license":"MIT"},"nolic":{"version":"1.0.0","license":""}}}"#;
+    let licensed = npm_licenses(text, &[]);
+    assert!(licensed.is_empty());
+    // A JSON root that is not an object contributes no entries.
+    assert!(npm_licenses("[]", &[]).is_empty());
 }
 
 #[test]

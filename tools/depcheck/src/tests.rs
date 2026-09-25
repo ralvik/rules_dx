@@ -781,3 +781,548 @@ fn ruby_consistency_ok() {
     );
     assert_eq!(code, 0, "{err}");
 }
+
+#[test]
+fn ecosystem_parse_covers_every_name() {
+    for (text, eco) in [
+        ("rust", Ecosystem::Rust),
+        ("python", Ecosystem::Python),
+        ("js", Ecosystem::Js),
+        ("ts", Ecosystem::Ts),
+        ("go", Ecosystem::Go),
+        ("java", Ecosystem::Java),
+        ("kotlin", Ecosystem::Kotlin),
+        ("scala", Ecosystem::Scala),
+        ("csharp", Ecosystem::Csharp),
+        ("fsharp", Ecosystem::Fsharp),
+        ("cc", Ecosystem::Cc),
+        ("ruby", Ecosystem::Ruby),
+    ] {
+        assert_eq!(Ecosystem::parse(text), Some(eco), "{text}");
+    }
+    assert_eq!(Ecosystem::parse("node"), None);
+}
+
+#[test]
+fn satisfies_fallback_arms() {
+    assert!(versions_equal("x", "x"));
+    assert!(!versions_equal("x", "y"));
+    assert!(!satisfies("~1", "1.0.0"));
+    assert!(satisfies("~1.x", "1.x"));
+    assert!(satisfies("<=2.0.0", "1.0.0"));
+    assert!(!satisfies("<=1.0.0", "2.0.0"));
+    assert!(satisfies("foo", "foo"));
+    assert!(!satisfies("foo", "bar"));
+}
+
+#[test]
+fn rust_manifest_odd_values_and_target_sections() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let man = dir.path().join("Cargo.toml");
+    write_file(
+        &man,
+        r#"
+[dependencies]
+int-ver = { version = 1 }
+float-ver = { version = 1.5 }
+bool-ver = { version = true }
+arr-ver = { version = ["1"] }
+odd = ["1"]
+
+[target]
+plain = "x"
+
+[target.'cfg(unix)'.dev-dependencies]
+dev-plat = "1"
+
+[target.'cfg(unix)'.build-dependencies]
+build-tab = { version = "2" }
+weird = ["3"]
+"#,
+    );
+    let deps = parse_rust_manifest(&man).expect("parse");
+    assert_eq!(deps["int-ver"].spec, "1");
+    assert_eq!(deps["float-ver"].spec, "1.5");
+    assert_eq!(deps["bool-ver"].spec, "true");
+    assert_eq!(deps["arr-ver"].spec, "*");
+    assert_eq!(deps["odd"].spec, "*");
+    assert_eq!(deps["dev-plat"].category, "dev");
+    assert!(deps["dev-plat"].platform);
+    assert_eq!(deps["build-tab"].category, "build");
+    assert_eq!(deps["build-tab"].spec, "2");
+    assert_eq!(deps["weird"].category, "build");
+    assert_eq!(deps["weird"].spec, "*");
+}
+
+#[test]
+fn python_manifest_malformed_entries() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let groups_only = dir.path().join("groups_only.toml");
+    write_file(
+        &groups_only,
+        "[dependency-groups]\ndev = [\"left-pad==1.0\"]\n",
+    );
+    let deps = parse_python_manifest(&groups_only).expect("parse");
+    assert!(deps.contains_key("left_pad"));
+
+    let no_deps = dir.path().join("no_deps.toml");
+    write_file(&no_deps, "[project]\nname = \"hello\"\n");
+    let deps = parse_python_manifest(&no_deps).expect("parse");
+    assert!(deps.is_empty());
+
+    let odd = dir.path().join("odd.toml");
+    write_file(
+        &odd,
+        r#"
+[project]
+dependencies = ["", "!!!", "extras[foo]", "[foo]"]
+
+[project.optional-dependencies]
+extra = "not-a-list"
+bad = [""]
+
+[dependency-groups]
+grp = 5
+grp2 = [""]
+"#,
+    );
+    let deps = parse_python_manifest(&odd).expect("parse");
+    assert_eq!(deps.len(), 1);
+    assert_eq!(deps["extras"].spec, "*");
+}
+
+#[test]
+fn python_lock_regex_fallback() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let lock = dir.path().join("uv.lock");
+    write_file(&lock, "name = \"pytest\"\nversion = \"8.0.0\"\n");
+    let pkgs = parse_python_lock(&lock).expect("parse");
+    assert_eq!(pkgs["pytest"], "8.0.0");
+}
+
+#[test]
+fn parsers_tolerate_missing_sections() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let rust_lock = dir.path().join("Cargo.lock");
+    write_file(&rust_lock, "[metadata]\n");
+    let pkgs = parse_rust_lock(&rust_lock).expect("parse");
+    assert!(pkgs.is_empty());
+
+    let pkg = dir.path().join("package.json");
+    write_file(&pkg, "{\"devDependencies\": {\"dev\": \"1\"}}");
+    let deps = parse_js_manifest(&pkg).expect("parse");
+    assert_eq!(deps["dev"].category, "dev");
+
+    let maven = dir.path().join("maven_install.json");
+    write_file(&maven, "{\"compilation_level\": \"A\"}");
+    let pkgs = parse_jvm_lock(&maven).expect("parse");
+    assert!(pkgs.is_empty());
+
+    let cc = dir.path().join("cc_lock.json");
+    write_file(&cc, "{\"other\": {}}");
+    let pkgs = parse_cc_lock(&cc).expect("parse");
+    assert!(pkgs.is_empty());
+    assert!(parse_cc_lock_sha(&cc).is_empty());
+
+    let missing = dir.path().join("MISSING.json");
+    assert!(parse_cc_lock_sha(&missing).is_empty());
+
+    let bad = dir.path().join("bad.json");
+    write_file(&bad, "{not json");
+    assert!(parse_cc_lock_sha(&bad).is_empty());
+}
+
+#[test]
+fn pnpm_lock_odd_lines_and_section_exit() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let lock = dir.path().join("pnpm-lock.yaml");
+    write_file(
+        &lock,
+        "packages:\n  'good@1.0.0':\n    resolution: {integrity: sha512-x}\n    plain garbage line\n  'nokey line here':\n    resolution: {integrity: sha512-y}\n  '@odd':\n    resolution: {integrity: sha512-z}\n  'empty@':\n    resolution: {integrity: sha512-w}\n  'paren@1.0.0 (hint)':\n    resolution: {integrity: sha512-v}\nsnapshots:\n  'snap@1.0.0':\n    resolution: {integrity: sha512-q}\n",
+    );
+    let pkgs = parse_pnpm_lock(&lock).expect("parse");
+    assert_eq!(pkgs["good"], "1.0.0");
+    assert_eq!(pkgs["paren"], "1.0.0");
+    assert_eq!(pkgs.len(), 2);
+}
+
+#[test]
+fn go_manifest_comments_and_markers() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let man = dir.path().join("go.mod");
+    write_file(
+        &man,
+        "module example.com/x\n\n// plain comment\n\ngo 1.21\n\nrequire (\n\texample.com/plat v1.0.0 // platform\n\texample.com/tst v1.0.0 // test\n\texample.com/greet v1.0.0\n)\n",
+    );
+    let deps = parse_go_manifest(&man).expect("parse");
+    assert!(deps["example.com/plat"].platform);
+    assert_eq!(deps["example.com/tst"].category, "dev");
+    assert_eq!(deps["example.com/greet"].category, "prod");
+}
+
+#[test]
+fn go_lock_skips_degenerate_lines() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let lock = dir.path().join("go.sum");
+    write_file(
+        &lock,
+        "# header\nexample.com/a v1.0.0 h1:abc=\n\nsolo-token\nexample.com/b v2.0.0 h1:def=\n",
+    );
+    let pkgs = parse_go_lock(&lock).expect("parse");
+    assert_eq!(pkgs.len(), 2);
+    assert_eq!(pkgs["example.com/a"], "v1.0.0");
+    assert_eq!(pkgs["example.com/b"], "v2.0.0");
+}
+
+#[test]
+fn parser_error_paths_are_typed() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let jvm = dir.path().join("jvm_deps.toml");
+    write_file(&jvm, "[[dep]]\nversion = \"1.0.0\"\n");
+    let err = parse_jvm_manifest(&jvm).expect_err("missing group/artifact");
+    assert!(
+        err.to_string()
+            .contains("jvm dep entry without group/artifact"),
+        "{err}"
+    );
+
+    let cc = dir.path().join("cc_deps.toml");
+    write_file(&cc, "[[dep]]\nversion = \"1.0.0\"\n");
+    let err = parse_cc_manifest(&cc).expect_err("missing name");
+    assert!(
+        err.to_string().contains("cc dep entry without name"),
+        "{err}"
+    );
+
+    let err = parse_exceptions(Some(&dir.path().join("MISSING.toml"))).expect_err("missing file");
+    assert!(err.to_string().contains("exceptions file missing"), "{err}");
+
+    let exc = dir.path().join("depcheck_exceptions.toml");
+    write_file(&exc, "[[exception]]\nreason = \"because\"\n");
+    let err = parse_exceptions(Some(&exc)).expect_err("missing dependency");
+    assert!(
+        err.to_string()
+            .contains("exception entry without dependency"),
+        "{err}"
+    );
+}
+
+#[test]
+fn parsers_skip_unrecognized_lines() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let paket = dir.path().join("paket.dependencies");
+    write_file(
+        &paket,
+        "# comment\nsource https://nuget.org/api/v2\nframework: net8.0\npin Something\nnuget Foo 1.0.0\n",
+    );
+    let deps = parse_dotnet_manifest(&paket).expect("parse");
+    assert_eq!(deps.len(), 1);
+    assert_eq!(deps["foo"].spec, "1.0.0");
+
+    let gemfile = dir.path().join("Gemfile");
+    write_file(
+        &gemfile,
+        "# frozen\nsource \"https://rubygems.org\"\nruby \"3.2.0\"\nputs \"skip\"\ngem \"rake\", \"1.0.0\"\n",
+    );
+    let deps = parse_ruby_manifest(&gemfile).expect("parse");
+    assert_eq!(deps.len(), 1);
+    assert_eq!(deps["rake"].spec, "1.0.0");
+}
+
+#[test]
+fn ruby_usage_normalizes_exceptions() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let gemfile = dir.path().join("Gemfile");
+    write_file(
+        &gemfile,
+        "source \"https://rubygems.org\"\n\ngem \"rspec\", \"3.13.0\"\n",
+    );
+    let exc = dir.path().join("depcheck_exceptions.toml");
+    write_file(
+        &exc,
+        "[[exception]]\ndependency = \"rspec\"\nreason = \"unused in fixtures\"\n",
+    );
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_usage(
+        Ecosystem::Ruby,
+        &gemfile,
+        dir.path(),
+        Some(&exc),
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 0, "{err}");
+}
+
+#[test]
+fn test_file_detection_ruby() {
+    assert!(is_test_file(Ecosystem::Ruby, Path::new("a/foo_spec.rb")));
+    assert!(is_test_file(Ecosystem::Ruby, Path::new("a/foo_test.rb")));
+    assert!(!is_test_file(Ecosystem::Ruby, Path::new("a/foo.rb")));
+}
+
+#[test]
+fn find_usages_walks_odd_files() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(&dir.path().join("notes.txt"), "not a source\n");
+    write_file(
+        &dir.path().join("build.rs"),
+        "fn main() { codegen::run(); }\n",
+    );
+    write_file(&dir.path().join("lib.rb"), "require 'rspec'\n");
+    let locked = dir.path().join("locked.rs");
+    write_file(&locked, "fn read() {}\n");
+    #[cfg(unix)]
+    {
+        use std::os::unix::ffi::OsStrExt;
+        use std::os::unix::fs::PermissionsExt;
+        let mode = std::fs::Permissions::from_mode(0o000);
+        std::fs::set_permissions(&locked, mode).expect("chmod");
+        // macOS filesystems reject non-UTF-8 names with EPERM, so this entry
+        // is best-effort; the walk still sees the unreadable and non-source files.
+        let odd = dir.path().join(std::ffi::OsStr::from_bytes(b"bad\xff"));
+        let _ = std::fs::write(&odd, "fn odd() {}\n");
+    }
+    let rust_hits =
+        find_usages(Ecosystem::Rust, dir.path(), &["codegen".to_owned()]).expect("usages");
+    assert!(rust_hits["codegen"].build);
+    let ruby_hits =
+        find_usages(Ecosystem::Ruby, dir.path(), &["rspec".to_owned()]).expect("usages");
+    assert!(ruby_hits["rspec"].src);
+    let missing_root = dir.path().join("MISSING_DIR");
+    let none = find_usages(Ecosystem::Rust, &missing_root, &["anyhow".to_owned()]).expect("empty");
+    assert!(!none["anyhow"].src);
+}
+
+#[test]
+fn consistency_cmd_error_paths() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let man = dir.path().join("Cargo.toml");
+    let lock = dir.path().join("Cargo.lock");
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_consistency(
+        Ecosystem::Rust,
+        &dir.path().join("MISSING.toml"),
+        &lock,
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 2);
+    assert!(err.contains("manifest missing"), "{err}");
+
+    err.clear();
+    write_file(&man, "not = [valid");
+    write_file(
+        &lock,
+        "[[package]]\nname = \"anyhow\"\nversion = \"1.0.0\"\n",
+    );
+    let code = cmd_consistency(Ecosystem::Rust, &man, &lock, &mut out, &mut err);
+    assert_eq!(code, 2);
+    assert!(err.contains("unreadable manifest"), "{err}");
+
+    err.clear();
+    write_file(&man, "[dependencies]\nanyhow = \"1\"\n");
+    write_file(&lock, "[[package]");
+    let code = cmd_consistency(Ecosystem::Rust, &man, &lock, &mut out, &mut err);
+    assert_eq!(code, 2);
+    assert!(err.contains("unreadable lock"), "{err}");
+}
+
+#[test]
+fn consistency_missing_entry_prefers_alt_names() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let man = dir.path().join("Cargo.toml");
+    let lock = dir.path().join("Cargo.lock");
+    write_file(
+        &man,
+        "[dependencies]\ndash-name = \"1\"\nunderscore_name = \"1\"\n",
+    );
+    write_file(
+        &lock,
+        "[[package]]\nname = \"other\"\nversion = \"9.9.9\"\n",
+    );
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_consistency(Ecosystem::Rust, &man, &lock, &mut out, &mut err);
+    assert_eq!(code, 1);
+    assert!(err.contains("missing lock entry for 'dash-name'"), "{err}");
+    assert!(
+        err.contains("missing lock entry for 'underscore_name'"),
+        "{err}"
+    );
+}
+
+#[test]
+fn consistency_stale_cc_sha_fails() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(
+        &dir.path().join("cc_deps.toml"),
+        "[[dep]]\nname = \"greet\"\nversion = \"1.0.0\"\nsha256 = \"aaa\"\nscope = \"prod\"\n",
+    );
+    write_file(
+        &dir.path().join("cc_lock.json"),
+        r#"{"packages": {"greet": {"version": "1.0.0", "sha256": "bbb"}}}"#,
+    );
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_consistency(
+        Ecosystem::Cc,
+        &dir.path().join("cc_deps.toml"),
+        &dir.path().join("cc_lock.json"),
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 1);
+    assert!(err.contains("stale sha256"), "{err}");
+}
+
+fn workspace_paths(dir: &Path) -> [PathBuf; 14] {
+    [
+        dir.join("Cargo.toml"),
+        dir.join("Cargo.lock"),
+        dir.join("pyproject.toml"),
+        dir.join("uv.lock"),
+        dir.join("package.json"),
+        dir.join("pnpm-lock.yaml"),
+        dir.join("go.mod"),
+        dir.join("go.sum"),
+        dir.join("pins.bzl"),
+        dir.join("maven_install.json"),
+        dir.join("paket.dependencies"),
+        dir.join("paket.lock"),
+        dir.join("Gemfile"),
+        dir.join("Gemfile.lock"),
+    ]
+}
+
+fn locks_from(paths: &[PathBuf; 14]) -> WorkspaceLocks<'_> {
+    WorkspaceLocks {
+        cargo_manifest: &paths[0],
+        cargo_lock: &paths[1],
+        uv_manifest: &paths[2],
+        uv_lock: &paths[3],
+        pnpm_manifest: &paths[4],
+        pnpm_lock: &paths[5],
+        go_manifest: &paths[6],
+        go_lock: &paths[7],
+        maven_artifacts: &paths[8],
+        maven_lock: &paths[9],
+        paket_manifest: &paths[10],
+        paket_lock: &paths[11],
+        ruby_manifest: &paths[12],
+        ruby_lock: &paths[13],
+    }
+}
+
+#[test]
+fn locks_cmd_error_paths() {
+    for case in [
+        "cargo_manifest_missing",
+        "cargo_manifest_bad",
+        "cargo_lock_bad",
+        "maven_artifacts_missing",
+        "maven_lock_missing",
+        "maven_artifacts_empty",
+        "maven_lock_bad",
+    ] {
+        let dir = tempfile::tempdir().expect("scratch");
+        write_workspace_locks(dir.path(), false);
+        let mut paths = workspace_paths(dir.path());
+        match case {
+            "cargo_manifest_missing" => paths[0] = dir.path().join("MISSING.toml"),
+            "cargo_manifest_bad" => write_file(&paths[0], "not = [valid"),
+            "cargo_lock_bad" => write_file(&paths[1], "[[package]"),
+            "maven_artifacts_missing" => paths[8] = dir.path().join("MISSING.bzl"),
+            "maven_lock_missing" => paths[9] = dir.path().join("MISSING.json"),
+            "maven_artifacts_empty" => write_file(&paths[8], "MAVEN_ARTIFACTS = []\n"),
+            "maven_lock_bad" => write_file(&paths[9], "{not json"),
+            _ => {}
+        }
+        let locks = locks_from(&paths);
+        let mut out = String::new();
+        let mut err = String::new();
+        let code = cmd_locks(&locks, &mut out, &mut err);
+        assert_eq!(code, 2, "{case}: {err}");
+    }
+}
+
+#[test]
+fn usage_cmd_error_paths() {
+    let dir = tempfile::tempdir().expect("scratch");
+    let man = dir.path().join("Cargo.toml");
+    write_file(&man, "[dependencies]\nanyhow = \"1\"\n");
+    let src = dir.path().join("src");
+    write_file(&src.join("lib.rs"), "use anyhow::Result;\n");
+    let mut out = String::new();
+    let mut err = String::new();
+
+    let code = cmd_usage(
+        Ecosystem::Rust,
+        &dir.path().join("MISSING.toml"),
+        &src,
+        None,
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 2);
+    assert!(err.contains("manifest missing"), "{err}");
+
+    err.clear();
+    let code = cmd_usage(
+        Ecosystem::Rust,
+        &man,
+        &dir.path().join("MISSING_DIR"),
+        None,
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 2);
+    assert!(err.contains("sources missing"), "{err}");
+
+    err.clear();
+    let bad = dir.path().join("bad.toml");
+    write_file(&bad, "not = [valid");
+    let code = cmd_usage(Ecosystem::Rust, &bad, &src, None, &mut out, &mut err);
+    assert_eq!(code, 2);
+    assert!(err.contains("unreadable manifest"), "{err}");
+
+    err.clear();
+    let missing_exc = dir.path().join("MISSING_exceptions.toml");
+    let code = cmd_usage(
+        Ecosystem::Rust,
+        &man,
+        &src,
+        Some(&missing_exc),
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 2);
+    assert!(err.contains("exceptions file missing"), "{err}");
+}
+
+#[test]
+fn usage_rust_build_only_is_category_error() {
+    let dir = tempfile::tempdir().expect("scratch");
+    write_file(
+        &dir.path().join("Cargo.toml"),
+        "[dependencies]\ncodegen = \"3\"\n",
+    );
+    write_file(
+        &dir.path().join("build.rs"),
+        "fn main() { codegen::generate(); }\n",
+    );
+    let mut out = String::new();
+    let mut err = String::new();
+    let code = cmd_usage(
+        Ecosystem::Rust,
+        &dir.path().join("Cargo.toml"),
+        dir.path(),
+        None,
+        &mut out,
+        &mut err,
+    );
+    assert_eq!(code, 1);
+    assert!(err.contains("used only by build tooling"), "{err}");
+}

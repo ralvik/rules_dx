@@ -79,3 +79,20 @@ func TestIsStdLib(t *testing.T) {
 		}
 	}
 }
+
+func TestTruncatedLiteralsAndCommentsAreInert(t *testing.T) {
+	for _, source := range []string{"/*\nusing Fake.Block;\n*/", "/*\nusing Fake.Unterminated;", "\"escaped\\\" using Fake.String;\"", "\"unterminated\n", "'x'", `'\''`, "'unterminated", "'unterminated\n"} {
+		if got := ParseImports([]byte(source)); len(got) != 0 {
+			t.Errorf("inert %q: %v", source, got)
+		}
+		if DefinesMain([]byte(source)) {
+			t.Errorf("unexpected entry point: %q", source)
+		}
+	}
+	if got := normalizeImport(" "); got != "" {
+		t.Fatalf("empty import: %q", got)
+	}
+	if _, err := ParsePackage([]byte("namespace A {}\nnamespace B {}\n")); err == nil || err.Error() != "csharp: duplicate namespace declaration A" {
+		t.Fatalf("duplicate: %v", err)
+	}
+}

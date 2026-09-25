@@ -133,12 +133,12 @@ else
   bad "docs/testing/strategy-details.md lost its non-dogfed explicit-path plus qualification record (issue #508)"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "non_dogfed_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_qualification' "$ci"; then
+# Targets live in the ci_targets shards; CI wires the harness in dogfood-freshness.
+if grep -q -F -e 'name = "non_dogfed_qualification"' tools/ci/ci_targets_c.bzl &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:non_dogfed_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the non_dogfed_qualification wiring (want target plus dogfood-freshness)"
+  bad "ci_targets_c.bzl or dogfood_freshness.sh lost the non_dogfed_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Term e2e throughout: no integration-drivers prose in the new pins plus plan.

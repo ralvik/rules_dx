@@ -184,7 +184,8 @@ def signed_release(name, artifacts, identity, issuer = "https://token.actions.gi
     `cosign_version` defaults to the pinned `SIGNING_COSIGN_VERSION`;
     drift fails at analysis time, and the launcher re-checks
     `cosign version` at run time before any live sign (bundle verify
-    follows every sign in `signing_run`)."""
+    follows every sign in `signing_run`).
+    """
     err = signing_identity_error(identity, issuer)
     if err != "":
         fail(err + " (in " + native.package_name() + ":" + name + ")")

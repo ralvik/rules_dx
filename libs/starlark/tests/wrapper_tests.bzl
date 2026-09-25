@@ -86,6 +86,11 @@ def wrapper_shape_kwargs_tests(name):
                 {},
             ),
             expect_equal(
+                "binary target_compatible_with rides forwarder",
+                dx_binary_forward_kwargs({"target_compatible_with": ["@platforms//os:linux"]}),
+                {"target_compatible_with": ["@platforms//os:linux"]},
+            ),
+            expect_equal(
                 "binary none tags stay empty",
                 dx_binary_forward_kwargs({"tags": None}),
                 {},
@@ -131,9 +136,14 @@ def wrapper_shape_kwargs_tests(name):
                 {"tags": ["cpu:4"]},
             ),
             expect_equal(
-                "test forward keeps timeout and flaky",
+                "test forward keeps timeout, drops flaky",
                 dx_test_forward_kwargs({"timeout": "short", "flaky": True}),
-                {"timeout": "short", "flaky": True},
+                {"timeout": "short"},
+            ),
+            expect_equal(
+                "test forward flaky-only stays empty",
+                dx_test_forward_kwargs({"flaky": True}),
+                {},
             ),
             expect_equal(
                 "test forward rides hints",

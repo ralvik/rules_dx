@@ -353,11 +353,21 @@ field files=codegen_shard_alpha.dxcodegen.pb,codegen_shard_beta.dxcodegen.pb
 field fingerprint=%s
 field label=//generation:codegen_shard_beta
 field record_count=2
+aspect_field aspect_seen=True
+aspect_field field_count=4
+aspect_field has_subject=True
+aspect_field subject_label=//generation:codegen_plan_chain_subject
+aspect_field transitive_count=0
 subject //generation:codegen_plan_prost_subject
 field files=codegen_prost_fixture.dxcodegen.pb,result_proto.lib.rs
 field fingerprint=%s
 field label=//generation:codegen_prost_fixture
-field record_count=1""" % (_CHAIN_FINGERPRINT, _PROST_FINGERPRINT)
+field record_count=1
+aspect_field aspect_seen=True
+aspect_field field_count=4
+aspect_field has_subject=True
+aspect_field subject_label=//generation:codegen_plan_prost_subject
+aspect_field transitive_count=0""" % (_CHAIN_FINGERPRINT, _PROST_FINGERPRINT)
 
 def codegen_plan_analysis_tests(name):
     starlark_test(

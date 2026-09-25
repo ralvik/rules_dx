@@ -13,7 +13,12 @@ __pycache__
 dist
 release
 .ruff_cache
-bazel-*
+# Gazelle rejects glob patterns; list the four output symlinks explicitly
+# (bazel-<workspace_name> is the execroot symlink for this workspace).
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-rules_dx
 # Parity notes (mirrors .gitignore): .ruff_cache is the Ruff cache dir;
 # bazel-* covers output symlinks (git: /bazel-*); .opencode/ is agent-local
 # whole-dir state (git: .opencode/).

@@ -600,7 +600,7 @@ fn jvm_format_checks_list_paths_and_fixes_rewrite() {
         argv_strings(&check),
         vec![
             BIN,
-            "--google-style",
+            "--kotlinlang-style",
             "--dry-run",
             "--set-exit-if-changed",
             "/scratch/src/Hello.kt"
@@ -610,7 +610,7 @@ fn jvm_format_checks_list_paths_and_fixes_rewrite() {
     let fix = ktfmt_fix(Path::new(BIN), &[kt]);
     assert_eq!(
         argv_strings(&fix),
-        vec![BIN, "--google-style", "/scratch/src/Hello.kt"]
+        vec![BIN, "--kotlinlang-style", "/scratch/src/Hello.kt"]
     );
     assert_eq!(fix.cwd_rel, "");
 }

@@ -20,7 +20,8 @@ def selected_adapters(selection, adapters):
     """Resolves a policy-ordered tool-ID selection against adapter metadata.
 
     `adapters` maps known tool ID to its support record. Returns the
-    selection in policy order, deduplicated. Fails on an unknown tool ID."""
+    selection in policy order, deduplicated. Fails on an unknown tool ID.
+    """
     ordered = []
     seen = {}
     for tool_id in selection:

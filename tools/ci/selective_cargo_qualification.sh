@@ -39,6 +39,7 @@ fixture_build="cli/update/tests/fixtures/selective_cargo/BUILD.bazel"
 backend="cli/update/src/backend.rs"
 selector="cli/update/src/selector.rs"
 exec_update="cli/cli/src/exec/update.rs"
+exec_tests_a="cli/cli/src/exec/update_tests_a.rs"
 bump_exec="cli/cli/src/exec/bump.rs"
 command_doc="docs/cli/commands/audit-update-bazel.md"
 build="tools/ci/BUILD.bazel"
@@ -86,8 +87,8 @@ else
 fi
 
 # Live execution fails cargo:anyhow without launching the updater.
-if grep -q -F -e 'cargo:anyhow' "$exec_update" &&
-  grep -q -F -e 'live_unsupported_selective_fails_without_launch' "$exec_update" &&
+if grep -q -F -e 'cargo:anyhow' "$exec_tests_a" &&
+  grep -q -F -e 'live_unsupported_selective_fails_without_launch' "$exec_tests_a" &&
   grep -q -F -e 'BackendError::Unsupported' "$exec_update"; then
   ok
 else
@@ -169,13 +170,13 @@ else
   bad "bump follow-up lost its automatic resolver-owned dx update cargo record (issue #638)"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "selective_cargo_qualification"' "$build" &&
-  grep -q -F -e 'selective_cargo_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:selective_cargo_qualification' "$ci"; then
+# ci_targets_c.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "selective_cargo_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'selective_cargo_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:selective_cargo_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the selective_cargo_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the selective_cargo_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Backend keeps the never-names-a-dx-lockfile invariant on the Cargo path.

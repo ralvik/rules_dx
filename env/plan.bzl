@@ -9,7 +9,6 @@ load(
     "//libs/starlark:plan_shard.bzl",
     "plan_shard_aspect_inputs",
     "plan_shard_conflict_error",
-    "plan_shard_edge_targets",
     "plan_shard_exec_matches",
     "plan_shard_fingerprint",
     "plan_shard_merge_records",
@@ -72,7 +71,8 @@ def env_plan_exec_error(path):
 
     Empty means a logical-only identity input requiring no artifact.
     Non-empty must be a workspace-relative path and never uses the
-    reserved shard suffix (a shard never backs another shard)."""
+    reserved shard suffix (a shard never backs another shard).
+    """
     if path == "":
         return ""
     if path.endswith(DX_ENV_SHARD_SUFFIX):
@@ -284,9 +284,6 @@ dx_env_shard = rule(
     },
     doc = "Emits one contributor's normalized binary environment plan shard (issue #506 WP2).",
 )
-
-def _edge_targets(rule_attr, name):
-    return plan_shard_edge_targets(rule_attr, name)
 
 # Narrow traversal edges for the collecting aspect: the shard rule's own
 # `deps` and the Rust adapter's `target` edge. No `data`, `srcs`,

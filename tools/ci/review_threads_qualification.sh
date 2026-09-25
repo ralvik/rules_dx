@@ -186,13 +186,13 @@ else
   bad "review_threads BUILD.bazel lost its pins plus expected exports with corpus under #592"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "review_threads_qualification"' "$build" &&
-  grep -q -F -e 'review_threads_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:review_threads_qualification' "$ci"; then
+# ci_targets_c.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "review_threads_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'review_threads_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:review_threads_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the review_threads_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the review_threads_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

@@ -4,6 +4,73 @@
 use super::*;
 
 #[test]
+fn malformed_records_and_foreign_parent_files_fail_closed() {
+    let scratch = dx_test_scratch::scratch("setup-record-failures-");
+    let setup = pair('a', 'b');
+    let setups = scratch.path().join("setups");
+    let record = setups.join(setup_hex(&setup));
+    fs::create_dir_all(&record).expect("record");
+    assert!(matches!(
+        ensure_setup_record(&setups, &setup),
+        Err(CommitError::RecordMismatch { .. })
+    ));
+    symlink_dir(
+        Path::new(&expected_environment_target(&setup)),
+        &record.join(ENVIRONMENT_LINK_NAME),
+    )
+    .expect("environment link");
+    assert!(matches!(
+        ensure_setup_record(&setups, &setup),
+        Err(CommitError::RecordMismatch { .. })
+    ));
+    let file = scratch.path().join("foreign");
+    fs::write(&file, "foreign").expect("file");
+    assert!(matches!(
+        ensure_setup_record(&file, &setup),
+        Err(CommitError::Install { .. })
+    ));
+    assert!(matches!(
+        install_and_swap(&file, None, &setup),
+        Err(CommitError::Install { .. })
+    ));
+    assert!(matches!(
+        clear_staged_pointer(&file.join("child")),
+        Err(CommitError::Install { .. })
+    ));
+    assert!(matches!(
+        map_lock_error(Error::Busy { path: file.clone() }),
+        CommitError::Busy { .. }
+    ));
+    let sides = || PreparedSides {
+        prepared_environment: Some(setup.environment.clone()),
+        prepared_generated: Some(setup.generated.clone()),
+        empty_environment: setup.environment.clone(),
+        empty_generated: setup.generated.clone(),
+    };
+    assert!(matches!(
+        commit_prepared(&file, sides()),
+        Err(CommitError::WorkspaceRoot { .. })
+    ));
+    fs::write(scratch.path().join(".dx"), "foreign").expect("dx collision");
+    assert!(matches!(
+        commit_pair(scratch.path(), &setup),
+        Err(CommitError::Install { .. })
+    ));
+    assert!(matches!(
+        commit_prepared(scratch.path(), sides()),
+        Err(CommitError::Install { .. })
+    ));
+    assert!(matches!(
+        read_current_pair(scratch.path()),
+        Err(CommitError::CurrentInvalid { .. })
+    ));
+    assert_eq!(
+        fs::read_to_string(file).expect("foreign preserved"),
+        "foreign"
+    );
+}
+
+#[test]
 fn frozen_identities_match_codegen_and_env() {
     assert_eq!(
         CODEGEN_ASPECT,

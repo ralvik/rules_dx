@@ -29,7 +29,7 @@ bazel_dep(name = "rules_cc", version = "0.2.22")
 # `bazel run //tools/ci:googletest_qualification` with
 # `cc/tests/fixtures/googletest/` over `@googletest//:gtest_main`;
 # living at head rejected per the dx pin policy). MSVC interop plus SDK
-# licensing stay open under ADR 0019.
+# licensing stay open under ADR 0019; qualification record under issue #479.
 bazel_dep(name = "googletest", version = "1.18.0")
 
 # Direct dep for the artifact-metadata generator. 1.9.0 is the
@@ -41,12 +41,14 @@ bazel_dep(name = "rules_python", version = "1.9.0")
 # against Bazel 9.2.0 on the seed host.
 bazel_dep(name = "rules_go", version = "0.63.0")
 bazel_dep(name = "gazelle", version = "0.52.2")
+
 # 0.7.1 is the MVS-selected version (via rules_powershell 0.2.0 requiring
 # 0.7.1); the root pin tracks the selected version so the direct-dep check
 # stays clean.
 bazel_dep(name = "rules_shell", version = "0.7.1")
 
 gazelle_go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+
 # Pinned Go module deps (ADR 0019). Single-module go.mod via from_file
 # (qualified seed-only via
 # `bazel run //tools/ci:godeps_qualification` with
@@ -58,6 +60,7 @@ gazelle_go_deps.from_file(go_mod = "//third_party/go:go.mod")
 use_repo(gazelle_go_deps, "com_github_bazelbuild_buildtools", "com_github_google_go_cmp", "com_github_pmezard_go_difflib")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
+
 # Pinned Go toolchain (ADR 0019). The SDK is the toolchain floor
 # (mirrors `//modules:toolchains.bzl` `GO_SDK_VERSION`);
 # `third_party/go/go.mod` carries the language floor (`go 1.24.12`,
@@ -71,15 +74,33 @@ go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 # avoids the go.dev index fetch and lets lockfile facts cover airgapped
 # builds with a warm download cache; Bazel's downloader retries the fetch.
 go_sdk.download(
-    version = "1.26.6",
     sdks = {
-        "darwin_amd64": ["go1.26.6.darwin-amd64.tar.gz", "08b65a63f244115121ced6c3b55ad38d801a7442acad5c949a17aad84ae6d684"],
-        "darwin_arm64": ["go1.26.6.darwin-arm64.tar.gz", "2dc95ce4675829f2df0e86b28bcef3283635902062a5f0580ca659bf570f3204"],
-        "linux_amd64": ["go1.26.6.linux-amd64.tar.gz", "708effb774be8237570d0add163225abbdfaf4fca28b2611df167beba4feef89"],
-        "linux_arm64": ["go1.26.6.linux-arm64.tar.gz", "d0507e9e9d7fe012aae570108cbd76c15de879e17130ab8cb90d4d7445cb1f2e"],
-        "windows_amd64": ["go1.26.6.windows-amd64.zip", "5b6c5b556525810463b5c897b50dc7a82d6a3dc0bfaf55d990a7e9f31d6b2318"],
-        "windows_arm64": ["go1.26.6.windows-arm64.zip", "06dbe785743d534ef8a469dad88adf7f1b2b438507ccfef9b98e7cf8c97b4b68"],
+        "darwin_amd64": [
+            "go1.26.6.darwin-amd64.tar.gz",
+            "08b65a63f244115121ced6c3b55ad38d801a7442acad5c949a17aad84ae6d684",
+        ],
+        "darwin_arm64": [
+            "go1.26.6.darwin-arm64.tar.gz",
+            "2dc95ce4675829f2df0e86b28bcef3283635902062a5f0580ca659bf570f3204",
+        ],
+        "linux_amd64": [
+            "go1.26.6.linux-amd64.tar.gz",
+            "708effb774be8237570d0add163225abbdfaf4fca28b2611df167beba4feef89",
+        ],
+        "linux_arm64": [
+            "go1.26.6.linux-arm64.tar.gz",
+            "d0507e9e9d7fe012aae570108cbd76c15de879e17130ab8cb90d4d7445cb1f2e",
+        ],
+        "windows_amd64": [
+            "go1.26.6.windows-amd64.zip",
+            "5b6c5b556525810463b5c897b50dc7a82d6a3dc0bfaf55d990a7e9f31d6b2318",
+        ],
+        "windows_arm64": [
+            "go1.26.6.windows-arm64.zip",
+            "06dbe785743d534ef8a469dad88adf7f1b2b438507ccfef9b98e7cf8c97b4b68",
+        ],
     },
+    version = "1.26.6",
 )
 
 # Direct dep so MODULE tags can name execution-platform
@@ -245,6 +266,7 @@ use_repo(maven, "maven")
 bazel_dep(name = "rules_powershell", version = "0.2.0")
 
 powershell = use_extension("@rules_powershell//powershell:extensions.bzl", "powershell")
+
 # Hub name differs from the upstream default (`powershell_toolchains`) to
 # avoid the duplicate-repo collision when both the upstream module and this
 # root module declare the extension (the extension creates
@@ -256,7 +278,6 @@ powershell.toolchain(
 use_repo(powershell, "dx_powershell_toolchains")
 
 register_toolchains("@dx_powershell_toolchains//:all")
-
 
 # Pinned Ruby foundation (ADR 0032). Pins owned by `//modules:ruby.bzl`. 0.28.0 is the
 # latest stable in the Bazel Central Registry (Bazel 8 tested per upstream;
@@ -313,8 +334,8 @@ bazel_dep(name = "aspect_rules_jest", version = "0.26.0")
 # availability point with the SRI as the trust anchor.
 typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript")
 typescript.deps(
-    version = "5.9.3",
     integrity = "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==",
+    version = "5.9.3",
 )
 use_repo(typescript, "npm_typescript")
 
@@ -390,13 +411,6 @@ use_repo(uv, "pypi")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
-    # Couple rustfmt to the selected stable toolchain instead of
-    # the rules_rust nightly default, so rustfmt follows toolchain updates
-    # exactly like Clippy with no second nightly pin.
-    rustfmt_version = "1.98.0",
-    # Pinned default of rules_rust 0.74.0 (rust/private/common.bzl),
-    # verified from the executed 0.74.0 module tree.
-    versions = ["1.98.0"],
     # Static-musl Rust std for both Linux profiles. The
     # hermetic-llvm static-only musl targets (native-toolchains.md) are
     # the provisional C/C++ backend; Rust needs its own musl std here so
@@ -409,6 +423,13 @@ rust.toolchain(
         "x86_64-unknown-linux-musl",
         "aarch64-unknown-linux-musl",
     ],
+    # Couple rustfmt to the selected stable toolchain instead of
+    # the rules_rust nightly default, so rustfmt follows toolchain updates
+    # exactly like Clippy with no second nightly pin.
+    rustfmt_version = "1.98.0",
+    # Pinned default of rules_rust 0.74.0 (rust/private/common.bzl),
+    # verified from the executed 0.74.0 module tree.
+    versions = ["1.98.0"],
 )
 use_repo(rust, "rust_toolchains")
 
@@ -427,6 +448,14 @@ register_toolchains("@rust_toolchains//:all")
 # Currently zero opt-ins: every third-party script stays hermetic and takes
 # only declared `build_script_tools`/`data`/`build_script_env` inputs.
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.annotation(
+    # Apple Clang's C profile records cannot share Rust's newer LLVM runtime.
+    # Keep this external NEON implementation uninstrumented, like its Rust code.
+    build_script_env = {
+        "CFLAGS_aarch64_apple_darwin": "-fno-profile-instr-generate -fno-coverage-mapping",
+    },
+    crate = "blake3",
+)
 crate.from_cargo(
     name = "crates",
     cargo_lockfile = "//rust/tests/fixtures/hello:Cargo.lock",

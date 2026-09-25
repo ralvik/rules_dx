@@ -421,6 +421,67 @@ pub(super) fn markdown_siblings_stay_out_of_snapshots_and_stages() {
 }
 
 #[test]
+fn resolve_inputs_are_staged_but_never_become_quality_sources() {
+    let backend = backend_for("markdown_check", plain_tool(), markdown_links);
+    let stages = vec![stage("markdown_check", &["markdown"], &["doc/guide.md"])];
+    let files = vec![file("doc/guide.md", "# Guide\n")];
+    let siblings = vec![file("LICENSE", "license\n")];
+    let resolve = vec![file("doc/target.md", "# Target\n")];
+    let result = run_real_pipeline_with_resolve(
+        "//quality:test",
+        "lint",
+        &stages,
+        &files,
+        &siblings,
+        &resolve,
+        &backend,
+    )
+    .expect("resolve pipeline");
+    assert_eq!(result.original_snapshot.len(), 1);
+    assert_eq!(result.original_snapshot[0].path, "doc/guide.md");
+    assert!(result.initial_diagnostics.is_empty());
+    for duplicate in [
+        vec![file("doc/guide.md", "duplicate")],
+        vec![file("LICENSE", "duplicate")],
+        vec![
+            file("doc/target.md", "first"),
+            file("doc/target.md", "second"),
+        ],
+    ] {
+        assert!(matches!(
+            run_real_pipeline_with_resolve(
+                "//quality:test",
+                "lint",
+                &stages,
+                &files,
+                &siblings,
+                &duplicate,
+                &backend
+            ),
+            Err(RunnerError::DuplicateFile { .. })
+        ));
+    }
+    let invalid = vec![FileInput {
+        path: "doc/target.md".to_owned(),
+        bytes: vec![0xff],
+    }];
+    assert_eq!(
+        run_real_pipeline_with_resolve(
+            "//quality:test",
+            "lint",
+            &stages,
+            &files,
+            &siblings,
+            &invalid,
+            &backend
+        ),
+        Err(RunnerError::InvalidUtf8 {
+            path: "doc/target.md".to_owned()
+        })
+    );
+}
+
+#[test]
 pub(super) fn sibling_colliding_with_a_source_fails() {
     let backend = backend_for("markdown_check", plain_tool(), markdown_links);
     let stages = vec![stage("markdown_check", &["markdown"], &["doc/guide.md"])];

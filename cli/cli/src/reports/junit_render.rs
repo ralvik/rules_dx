@@ -270,7 +270,8 @@ mod tests {
         // paste the actual document from the failure diff when the
         // render intentionally changes. Raw string: the XML carries
         // double quotes but no `"#` sequences.
-        insta::assert_snapshot!(doc, @r#"<?xml version="1.0" encoding="UTF-8"?>
+        insta::assert_snapshot!(doc, @r#"
+<?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="dx" tests="4" skipped="1" failures="1" errors="1" time="0.000">
     <testsuite name="//a:t" tests="3" skipped="1" errors="1" failures="1" time="0.000">
         <testcase name="a1" time="0.000">

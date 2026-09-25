@@ -28,13 +28,18 @@ const UPSTREAM_FLAGS: [&str; 3] = [
 ];
 
 /// Owned coverage flags (mirrors `EXTRA_PRESETS["coverage"]`).
-/// Why no `COVERAGE_GCOV_PATH` pin: coverage tools resolve per-host via
-/// the C++ toolchain, never an ambient `/usr/bin/*` path.
-/// See: `tools/bazelrc/src/lib.rs`.
-const COVERAGE_FLAGS: [&str; 4] = [
+/// `common --enable_platform_specific_config` scopes the `COVERAGE_GCOV_PATH`
+/// pin to `coverage:linux`/`coverage:macos` hosts (Windows resolves coverage
+/// tools from `cc_toolchain`); `coverage --enable_runfiles` materializes
+/// runfiles trees on Windows. See: `tools/bazelrc/src/lib.rs`.
+const COVERAGE_FLAGS: [&str; 8] = [
+    "common --enable_platform_specific_config",
     "coverage --test_env=GENERATE_LLVM_LCOV=1",
     "coverage --combined_report=lcov",
     "coverage --test_tag_filters=-no-coverage",
+    "coverage --enable_runfiles",
+    "coverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
+    "coverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov",
     "coverage --instrumentation_filter=^//",
 ];
 
@@ -271,7 +276,7 @@ mod tests {
         assert!(!rendered.contains("Upstream-derived flags"));
         // Exact inventory counts (mirrors `tools/bazelrc/src/lib.rs` len pins).
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
-        assert_eq!(COVERAGE_FLAGS.len(), 4);
+        assert_eq!(COVERAGE_FLAGS.len(), 8);
         assert_eq!(BUILD_PROFILES.len(), 5);
         // Flags present.
         for flag in UPSTREAM_FLAGS

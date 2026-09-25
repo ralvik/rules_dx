@@ -212,9 +212,9 @@ fi
 # allowed under ADR 0032 (`powershell/`, `examples/adopt-powershell/`,
 # `third_party/powershell/` plus their `MODULE.bazel` toolchain): the
 # harness shell stays bash-only while the product language ships `.ps1`.
-if [[ -z "$(find . -name '*.ps1' -not -path './bazel-*' -not -path './powershell/*' -not -path './examples/adopt-powershell/*' -not -path './third_party/powershell/*' -not -path './quality/tests/fixtures/file_family_adapters/psscriptanalyzer/*' -print -quit)" ]] &&
+if [[ -z "$(find . -name '*.ps1' -not -path './bazel-*' -not -path './powershell/*' -not -path './examples/adopt-powershell/*' -not -path './third_party/powershell/*' -not -path './quality/tests/fixtures/file_family_adapters/psscriptanalyzer/*' -not -path './tools/ci/testdata/*' -print -quit)" ]] &&
   [[ -z "$(find . -name '*.bat' -not -path './bazel-*' -print -quit)" ]] &&
-  ! grep -rn -F -e 'rules_powershell' --include='*.bzl' --include='MODULE.bazel' --include='*.bazel' . | grep -v -F -e 'powershell/rules/' | grep -v -F -e 'powershell/env/' | grep -v -F -e 'powershell/tests/' | grep -v -F -e 'examples/adopt-powershell' | grep -v -F -e 'third_party/powershell' | grep -v -F -e 'modules/powershell.bzl' | grep -v -F -e 'tools/ci/foundation_maps.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | grep -v -e 'MODULE.bazel.*rules_powershell' | grep -v -e 'MODULE.bazel.lock' | grep -v -F -e 'docs/' | grep -q .; then
+  ! grep -rn -F -e 'rules_powershell' --include='*.bzl' --include='MODULE.bazel' --include='*.bazel' . | grep -v -F -e 'powershell/rules/' | grep -v -F -e 'powershell/env/' | grep -v -F -e 'powershell/tests/' | grep -v -F -e 'examples/adopt-powershell' | grep -v -F -e 'third_party/powershell' | grep -v -F -e 'modules/powershell.bzl' | grep -v -F -e 'tools/ci/foundation_maps.sh' | grep -v -F -e 'tools/ci/shell_contract.sh' | grep -v -e 'MODULE.bazel.*rules_powershell' | grep -v -e 'MODULE.bazel.lock' | grep -v -F -e 'docs/' | grep -v -F -e 'libs/testing/tested_stack.bzl' | grep -q .; then
   ok
 else
   bad "a Windows harness shell artifact appeared (harness stays bash-only under issue #414, no ps1/bat/powershell outside the ADR 0032 product PowerShell foundation)"
@@ -439,7 +439,7 @@ dx_guards_contains tools/ci/quality_adapters_parity.sh "quality_adapters_parity 
 # inventory plus keep rationale with no wholesale migration, and the
 # verification-matrix shell row stays pinned here.
 dx_expect_contains docs/testing/tools.md 'issue #667' 'stays wont-fix' 'Wholesale Rust-ify' 'POSIX-only' 'harness-wide' 'shell=bash' '//tools/ci:shell_contract'
-dx_expect_contains docs/testing/verification-matrix.md 'issue #667' 'elimination wont-fix'
+dx_expect_contains docs/testing/tools.md 'issue #667' 'elimination stays wont-fix'
 
 # Crate-reuse plus scratch/tmp discipline stays delivered under issue #750:
 # PowerShell port wont-fix, workflows under RUNNER_TEMP, shell scratch via

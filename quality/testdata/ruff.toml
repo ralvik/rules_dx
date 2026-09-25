@@ -2,8 +2,8 @@
 # . Pins the strict lint selection plus the Python floor explicitly so
 # the hinted run proves the config closure reaches the tool instead of
 # `--isolated` defaults (same selection and floor as the workspace
-# `ruff.toml`; see `//tools/ci:config_consistency_test`).
-requires-python = ">=3.12"
+# `ruff.toml`; see `//tools/ci:config_consistency_test`). Ruff's floor
+# key is `target-version` only (`requires-python` is pyproject-only).
 target-version = "py312"
 
 [lint]

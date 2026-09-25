@@ -135,6 +135,7 @@ fn real_fs_roundtrip_discovers_workspace() {
     std::fs::create_dir_all(&nested).expect("dirs");
     std::fs::write(root.join("MODULE.bazel"), "module(name = \"t\")\n").expect("marker");
     let found = discover_real(&nested, None).expect("real discover");
+    let root = root.canonicalize().expect("canonical root");
     assert_eq!(found, root);
     scratch.close().expect("cleanup");
 }
@@ -638,12 +639,14 @@ fn dry_run_never_executes_final_workflows() {
         .contains("dry-run"));
 }
 
+#[cfg(unix)]
 #[test]
 fn signal_numbers_match_os() {
     assert_eq!(signal_number(UnixSignal::Interrupt), libc::SIGINT);
     assert_eq!(signal_number(UnixSignal::Terminate), libc::SIGTERM);
 }
 
+#[cfg(unix)]
 #[test]
 fn forward_signal_number_checks_existence_safely() {
     // Signal zero performs error checking without delivering.
@@ -652,12 +655,14 @@ fn forward_signal_number_checks_existence_safely() {
     assert!(forward_signal_number(std::process::id(), -1).is_err());
 }
 
+#[cfg(unix)]
 #[test]
 fn forward_signal_propagates_os_errors() {
     // An unallocated pid fails without delivering any signal.
     assert!(forward_signal(1 << 30, UnixSignal::Terminate).is_err());
 }
 
+#[cfg(unix)]
 #[test]
 fn reraise_zero_is_safe() {
     reraise_number(0).expect("raise zero");
@@ -695,11 +700,11 @@ fn fake_runner_substitutes_the_boundary() {
 fn system_runner_preserves_exit_codes() {
     let runner = SystemRunner;
     let ok = runner
-        .run(&["/bin/true".to_owned()], Path::new("/"), &[])
+        .run(&["/usr/bin/true".to_owned()], Path::new("/"), &[])
         .expect("true");
     assert_eq!(ok.code, Some(0));
     let fail = runner
-        .run(&["/bin/false".to_owned()], Path::new("/"), &[])
+        .run(&["/usr/bin/false".to_owned()], Path::new("/"), &[])
         .expect("false");
     assert_eq!(fail.code, Some(1));
 }
@@ -784,8 +789,8 @@ fn gitleaks_tool_defaults_to_absent() {
 fn spawn_success_reports_status_without_triplication() {
     // Single owner parity: `spawn_success` matches the legacy
     // `Command::new(...).output().is_ok_and(success)` shape verifiers used.
-    assert!(spawn_success(&["/bin/true".to_owned()]));
-    assert!(!spawn_success(&["/bin/false".to_owned()]));
+    assert!(spawn_success(&["/usr/bin/true".to_owned()]));
+    assert!(!spawn_success(&["/usr/bin/false".to_owned()]));
     assert!(!spawn_success(&[]));
     assert!(!spawn_success(&["/nonexistent-dx-tool".to_owned()]));
 }
@@ -793,7 +798,7 @@ fn spawn_success_reports_status_without_triplication() {
 #[test]
 fn exe_available_covers_help_file_and_path() {
     // `--help` success, file probe, and `PATH` search in one owner.
-    assert!(exe_available("/bin/true"));
+    assert!(exe_available("/usr/bin/true"));
     assert!(!exe_available("/nonexistent-dx-tool-xyz"));
     assert!(!exe_available(""));
 }
@@ -888,6 +893,7 @@ fn real_fs_canonicalizes_dotdot_and_trailing_slash() {
     scratch.close().expect("cleanup");
 }
 
+#[cfg(unix)]
 #[test]
 fn real_fs_symlinked_root_canonicalizes() {
     let scratch = dx_test_scratch::scratch("dx-workspace-symlink-");
@@ -896,17 +902,16 @@ fn real_fs_symlinked_root_canonicalizes() {
     std::fs::create_dir_all(&real).expect("dirs");
     std::fs::write(real.join("MODULE.bazel"), "module(name = \"t\")\n").expect("marker");
     let link = root.join("link");
-    if cfg!(unix) {
-        std::os::unix::fs::symlink(&real, &link).expect("symlink");
-        let canonical_real = std::fs::canonicalize(&real).expect("canonical");
-        let found = discover_real(&link.join("sub"), None).expect("symlink start");
-        assert_eq!(found, canonical_real);
-        let found = discover_real(&root, Some(link.as_path())).expect("symlink override");
-        assert_eq!(found, canonical_real);
-    }
+    std::os::unix::fs::symlink(&real, &link).expect("symlink");
+    let canonical_real = std::fs::canonicalize(&real).expect("canonical");
+    let found = discover_real(&link.join("sub"), None).expect("symlink start");
+    assert_eq!(found, canonical_real);
+    let found = discover_real(&root, Some(link.as_path())).expect("symlink override");
+    assert_eq!(found, canonical_real);
     scratch.close().expect("cleanup");
 }
 
+#[cfg(unix)]
 #[test]
 fn real_fs_broken_marker_carries_io_hint() {
     let scratch = dx_test_scratch::scratch("dx-workspace-broken-");
@@ -914,20 +919,18 @@ fn real_fs_broken_marker_carries_io_hint() {
     std::fs::create_dir_all(&root).expect("dirs");
     let missing = root.join("missing-target");
     let marker = root.join("MODULE.bazel");
-    if cfg!(unix) {
-        std::os::unix::fs::symlink(&missing, &marker).expect("broken link");
-        let err = discover_real(&root, Some(root.as_path())).expect_err("broken override");
-        assert!(
-            matches!(err, DiscoverError::UnreadableOverride { .. }),
-            "got {err:?}"
-        );
-        assert!(err.to_string().contains("workspace_unreadable"));
-        let err = discover_real(&root.join("sub"), None).expect_err("broken ancestor");
-        assert!(
-            matches!(err, DiscoverError::UnreadableMarker { .. }),
-            "got {err:?}"
-        );
-    }
+    std::os::unix::fs::symlink(&missing, &marker).expect("broken link");
+    let err = discover_real(&root, Some(root.as_path())).expect_err("broken override");
+    assert!(
+        matches!(err, DiscoverError::UnreadableOverride { .. }),
+        "got {err:?}"
+    );
+    assert!(err.to_string().contains("workspace_unreadable"));
+    let err = discover_real(&root.join("sub"), None).expect_err("broken ancestor");
+    assert!(
+        matches!(err, DiscoverError::UnreadableMarker { .. }),
+        "got {err:?}"
+    );
     scratch.close().expect("cleanup");
 }
 

@@ -53,8 +53,8 @@ API changes require no IR snapshot update.
   delivered seed-only;
   fixture-scale execution qualified and no site is published yet).
 
-Rust uses pinned nightly `rustdoc --output-format json`; Scala TASTy spike
-delivered; Astro/MDX prose-only confirmed.
+Rust uses pinned nightly `rustdoc --output-format json`.
+Scala TASTy spike delivered; Astro/MDX prose-only confirmed.
 Accepted scope covers thirteen adapter scopes. Per-language input pins,
 mappings, and adapter runs delivered under #779 with golden fixtures;
 renderer/site-build execution delivered seed-only under #780; rebuild proof

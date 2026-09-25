@@ -866,8 +866,13 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.offline {
         summary.push_str(" (offline, cache-only)");
     }
-    let verbose =
-        matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
+    // A standard report owns stdout exclusively. See: docs/cli/output-protocol.md.
+    let stdout_report = planned_reports
+        .iter()
+        .any(|report| report.destination == Destination::Stdout);
+    let verbose = matches!(invocation.output, OutputMode::Text { quiet: false })
+        && !invocation.quiet
+        && !stdout_report;
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
@@ -1010,7 +1015,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                 {
                     let _ = write_event(out, &event);
                 }
-            } else if matches!(invocation.output, OutputMode::Text { .. }) && !invocation.quiet {
+            } else if verbose {
                 if planned.destination != Destination::Stdout {
                     let _ = writeln!(
                         out,
@@ -1065,7 +1070,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                 {
                     let _ = write_event(out, &event);
                 }
-            } else if matches!(invocation.output, OutputMode::Text { .. }) && !invocation.quiet {
+            } else if verbose {
                 if planned.destination != Destination::Stdout {
                     let _ = writeln!(
                         out,

@@ -1,16 +1,9 @@
 """Concrete toolchain-subjects use case (issue #792).
-
 Contract: `docs/testing/starlark.md#future-not-implemented`, `docs/decisions/0009-starlark-testing.md`.
-Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
-`bazel run //tools/ci:starlark_futures_qualification`.
-
-Toolchain resolution needs platform plus toolchain context beyond
-provider-field observation: analysis observes `DxSubjectInfo` fields plus
-`DefaultInfo` output basenames only, so the platform-to-toolchain mapping
-plus the resolved report below stay a Starlark-level use case. Direct
-toolchain observation stays deferred; consumers expose resolved toolchain
-state via `DxSubjectInfo` when they need it observed.
-"""
+Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via `bazel run //tools/ci:starlark_futures_qualification`.
+Toolchain resolution needs platform plus toolchain context beyond provider-field
+observation, so the platform-to-toolchain mapping stays a Starlark-level use case
+that stays deferred; consumers expose resolved toolchain state via `DxSubjectInfo`."""
 
 def admitted_platforms():
     return ["linux_x86_64", "macos_arm64"]

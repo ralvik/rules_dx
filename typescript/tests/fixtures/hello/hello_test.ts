@@ -7,10 +7,10 @@
 import { hello } from "./hello.js";
 
 declare function test(name: string, fn: () => void): void;
-declare const expect: {
-  (actual: unknown): { toBe(expected: unknown): void };
+declare const expect: (actual: unknown) => {
+	toBe(expected: unknown): void;
 };
 
 test("greets by name", () => {
-  expect(hello("world")).toBe("hello world");
+	expect(hello("world")).toBe("hello world");
 });

@@ -295,7 +295,8 @@ impl Verifier for SystemVerifier {
         use sha2::Digest as _;
         let mut hasher = sha2::Sha256::new();
         let mut file = std::fs::File::open(path)?;
-        let mut buf = [0u8; 1 << 20];
+        // Heap buffer: 1MiB on the stack overflows Windows (issue #1207).
+        let mut buf = vec![0u8; 64 << 10];
         loop {
             use std::io::Read as _;
             let read = file.read(&mut buf)?;
@@ -901,5 +902,259 @@ mod tests {
         fake.write("/tmp/NOTICE", b"tampered notice\n");
         let err = verify(&args, &fake).expect_err("tampered notice");
         assert!(err.contains("NOTICE"), "got {err}");
+    }
+
+    fn base_argv() -> Vec<String> {
+        [
+            "dx_verify",
+            "--binary",
+            "/b",
+            "--bundle",
+            "/u",
+            "--identity",
+            "ID",
+            "--issuer",
+            "ISS",
+        ]
+        .iter()
+        .map(ToString::to_string)
+        .collect()
+    }
+
+    #[test]
+    fn parses_optional_flags_and_renders_arg_diagnostics() {
+        let mut argv = base_argv();
+        for (flag, value) in [
+            ("--attestation", "/a"),
+            ("--owner", "owner"),
+            ("--sbom", "/s"),
+            ("--sbom-bundle", "/sb"),
+            ("--notice", "/n"),
+            ("--notice-manifest", "/nm"),
+            ("--install-dir", "/d"),
+        ] {
+            argv.push(flag.to_owned());
+            argv.push(value.to_owned());
+        }
+        let args = parse_args(&argv).expect("all flags parse");
+        assert_eq!(args.attestation, "/a");
+        assert_eq!(args.owner, "owner");
+        assert_eq!(args.sbom_bundle, "/sb");
+        assert_eq!(args.notice_manifest, "/nm");
+        assert_eq!(args.install_dir, "/d");
+        let help = parse_args(&["dx_verify".to_owned(), "--help".to_owned()]).expect_err("help");
+        assert!(help.to_string().contains("usage: dx_verify --binary PATH"));
+        let unknown =
+            parse_args(&["dx_verify".to_owned(), "--frobnicate".to_owned()]).expect_err("unknown");
+        let rendered = unknown.to_string();
+        assert!(
+            rendered.contains("unknown argument '--frobnicate'"),
+            "got {rendered}"
+        );
+        assert!(rendered.contains("usage: dx_verify"));
+        assert_eq!(ArgsError("boom".to_owned()).to_string(), "boom");
+        for (flag, want) in [
+            ("--sbom-bundle", "--sbom-bundle needs --sbom"),
+            ("--notice-manifest", "--notice-manifest needs --notice"),
+        ] {
+            let mut unpaired = base_argv();
+            unpaired.push(flag.to_owned());
+            unpaired.push("/value".to_owned());
+            let err = parse_args(&unpaired).expect_err("unpaired flag");
+            assert!(err.to_string().contains(want), "want {want}, got {err}");
+        }
+    }
+
+    #[test]
+    fn verify_fails_closed_on_missing_or_empty_inputs() {
+        let check = |args: VerifyArgs, fake: FakeVerifier, want: &str| {
+            let err = verify(&args, &fake).expect_err(want);
+            assert!(err.contains(want), "want {want}, got {err}");
+        };
+        let mut fake = valid_fake();
+        fake.files.remove(Path::new("/tmp/dx-fake"));
+        check(valid_args(), fake, "binary not found");
+        let mut fake = valid_fake();
+        fake.files.remove(Path::new("/tmp/dx-fake.bundle"));
+        check(valid_args(), fake, "bundle not found");
+        let mut args = valid_args();
+        args.attestation = "/tmp/dx-fake.attestation".to_owned();
+        check(args, valid_fake(), "attestation not found");
+        let mut args = valid_args();
+        args.sbom = "/tmp/sbom".to_owned();
+        check(args, valid_fake(), "sbom not found");
+        let mut args = valid_args();
+        args.sbom = "/tmp/sbom".to_owned();
+        args.sbom_bundle = "/tmp/sbom.bundle".to_owned();
+        let mut fake = valid_fake();
+        fake.write("/tmp/sbom", b"sbom-bytes");
+        check(args, fake, "sbom bundle not found");
+        let mut args = valid_args();
+        args.notice = "/tmp/NOTICE".to_owned();
+        check(args, valid_fake(), "notice not found");
+        let mut args = valid_args();
+        args.notice = "/tmp/NOTICE".to_owned();
+        args.notice_manifest = "/tmp/inventory.txt".to_owned();
+        let mut fake = valid_fake();
+        fake.write("/tmp/NOTICE", b"NOTICE for //demo:root\n");
+        check(args, fake, "notice manifest not found");
+        let mut fake = valid_fake();
+        fake.write("/tmp/dx-fake.bundle", b"");
+        check(valid_args(), fake, "bundle is empty");
+        let fake = valid_fake();
+        assert!(!fake.cosign_verify(
+            "cosign",
+            Path::new("/tmp/missing.bundle"),
+            "ID",
+            "ISS",
+            Path::new("/tmp/dx-fake")
+        ));
+    }
+
+    #[test]
+    fn attestation_path_verifies_without_cosign() {
+        let attestation_args = || {
+            let mut args = valid_args();
+            args.attestation = "/tmp/dx-fake.attestation".to_owned();
+            args.owner = "owner".to_owned();
+            args
+        };
+        let attestation_fake = |cosign: bool, gh_ok: bool| {
+            let mut fake = valid_fake();
+            fake.have_cosign = cosign;
+            fake.gh_ok = gh_ok;
+            fake.write("/tmp/dx-fake.attestation", b"attestation-bytes");
+            fake
+        };
+        let out = verify(&attestation_args(), &attestation_fake(false, true)).expect("gh path");
+        assert!(out.contains("attestation publisher-identity OK (owner=owner)"));
+        let mut no_owner = attestation_args();
+        no_owner.owner.clear();
+        let err = verify(&no_owner, &attestation_fake(false, true)).expect_err("owner required");
+        assert!(err.contains("--owner OWNER is required"), "got {err}");
+        let err = verify(&attestation_args(), &attestation_fake(false, false))
+            .expect_err("attestation rejected");
+        assert!(err.contains("attestation verification failed"), "got {err}");
+        let mut with_sbom = attestation_args();
+        with_sbom.sbom = "/tmp/sbom".to_owned();
+        with_sbom.sbom_bundle = "/tmp/sbom.bundle".to_owned();
+        let mut fake = attestation_fake(false, true);
+        fake.write("/tmp/sbom", b"sbom-bytes");
+        fake.write("/tmp/sbom.bundle", b"sbom-bundle");
+        let err = verify(&with_sbom, &fake).expect_err("no cosign for sbom");
+        assert!(err.contains("SBOM verification needs cosign"), "got {err}");
+    }
+
+    #[test]
+    fn notice_manifest_failures_are_actionable() {
+        let entries =
+            parse_notice_manifest("# audited inventory\n\ndemo-lib-a|cargo|1.0.0|MIT|demo.txt\n")
+                .expect("comments and blanks skip");
+        assert_eq!(entries.len(), 1);
+        let err = parse_notice_manifest("demo-lib-a|cargo|1.0.0\n")
+            .err()
+            .expect("field count");
+        assert!(err.contains("want 5 '|' fields"), "got {err}");
+        let err = parse_notice_manifest(" |cargo|1.0.0|MIT|demo.txt\n")
+            .err()
+            .expect("empty package");
+        assert!(err.contains("must be non-empty"), "got {err}");
+        let err = verify_notice("NOTICE for //demo:root\n", "# no packages\n")
+            .expect_err("empty manifest");
+        assert!(err.contains("lists no packages"), "got {err}");
+        let err = verify_notice(
+            "NOTICE for //demo:root\n",
+            "demo-lib-a|cargo|1.0.0|MIT|demo.txt\n",
+        )
+        .expect_err("missing entry");
+        assert!(err.contains("NOTICE missing entry"), "got {err}");
+    }
+
+    #[test]
+    fn notice_inputs_fail_closed_when_unreadable() {
+        let (args, mut fake) = notice_fake();
+        fake.write("/tmp/NOTICE", b"   \n");
+        let err = verify(&args, &fake).expect_err("empty notice");
+        assert!(err.contains("notice is empty"), "got {err}");
+        let (args, mut fake) = notice_fake();
+        fake.write("/tmp/inventory.txt", &[0xff, 0xfe]);
+        let err = verify(&args, &fake).expect_err("manifest not utf-8");
+        assert!(err.contains("notice manifest not readable"), "got {err}");
+        let (args, mut fake) = notice_fake();
+        fake.write("/tmp/NOTICE", &[0xff]);
+        let err = verify(&args, &fake).expect_err("notice not utf-8");
+        assert!(err.contains("notice not readable"), "got {err}");
+    }
+
+    #[test]
+    fn system_verifier_io_uses_real_files() {
+        let scratch = tempfile::tempdir().expect("scratch");
+        let file = scratch.path().join("dx");
+        std::fs::write(&file, b"standalone-dx-bytes-v1").expect("write file");
+        let empty = scratch.path().join("empty");
+        std::fs::write(&empty, b"").expect("write empty");
+        let verifier = SystemVerifier;
+        assert!(verifier.is_file(&file));
+        assert!(!verifier.is_file(&scratch.path().join("missing")));
+        assert!(verifier.is_nonempty_file(&file));
+        assert!(!verifier.is_nonempty_file(&empty));
+        assert!(!verifier.is_nonempty_file(&scratch.path()));
+        assert!(!verifier.is_nonempty_file(&scratch.path().join("missing")));
+        use sha2::Digest as _;
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(b"standalone-dx-bytes-v1");
+        assert_eq!(
+            verifier.sha256_file(&file).expect("hash"),
+            hex::encode(hasher.finalize())
+        );
+        assert!(verifier
+            .sha256_file(&scratch.path().join("missing"))
+            .is_err());
+        let dst = scratch.path().join("nested/bin/dx");
+        verifier.install_copy(&file, &dst).expect("copy");
+        assert_eq!(
+            std::fs::read(&dst).expect("read copy"),
+            b"standalone-dx-bytes-v1"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            let mode = std::fs::metadata(&dst)
+                .expect("copy metadata")
+                .permissions()
+                .mode()
+                & 0o777;
+            assert_eq!(mode, 0o755);
+        }
+        assert!(verifier.install_copy(&file, Path::new("/")).is_err());
+        assert_eq!(
+            verifier.read_text(&file).as_deref(),
+            Some("standalone-dx-bytes-v1")
+        );
+        assert!(verifier
+            .read_text(&scratch.path().join("missing"))
+            .is_none());
+        assert!(!verifier.have("/nonexistent-dx-tool"));
+        #[cfg(unix)]
+        {
+            assert!(verifier.have("/usr/bin/true"));
+            assert!(verifier.cosign_verify("/usr/bin/true", &file, "ID", "ISS", &file));
+            assert!(!verifier.cosign_verify("/usr/bin/false", &file, "ID", "ISS", &file));
+            assert!(verifier.gh_verify("/usr/bin/true", &file, "owner"));
+            assert!(!verifier.gh_verify("/usr/bin/false", &file, "owner"));
+        }
+    }
+
+    #[test]
+    fn system_verifier_bin_names_follow_env_overrides() {
+        let verifier = SystemVerifier;
+        assert_eq!(verifier.cosign_bin(), "cosign");
+        assert_eq!(verifier.gh_bin(), "gh");
+        std::env::set_var("DX_VERIFY_COSIGN", "pinned-cosign");
+        std::env::set_var("DX_VERIFY_GH", "pinned-gh");
+        assert_eq!(verifier.cosign_bin(), "pinned-cosign");
+        assert_eq!(verifier.gh_bin(), "pinned-gh");
+        std::env::remove_var("DX_VERIFY_COSIGN");
+        std::env::remove_var("DX_VERIFY_GH");
     }
 }

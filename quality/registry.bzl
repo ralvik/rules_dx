@@ -56,7 +56,8 @@ def registry_schema_error():
     are classified, curated families/tools stay within the taxonomy,
     deferrals carry owner/route, and every taxonomy family carries a
     wrapper owner or an explicit uncovered verdict. Additions edit
-    registry data only."""
+    registry data only.
+    """
     if REGISTRY_SCHEMA_VERSION != 1:
         return "registry: unsupported schema v" + str(REGISTRY_SCHEMA_VERSION) + " (want v1)"
     if SOURCES_REGISTRY_SCHEMA_VERSION != 1:

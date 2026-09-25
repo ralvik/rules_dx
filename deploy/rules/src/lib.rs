@@ -183,7 +183,9 @@ pub fn hash_file(src: &Path, dst: &Path) -> io::Result<()> {
     let mut hasher = sha2::Sha256::new();
     use sha2::Digest as _;
     let mut file = std::fs::File::open(src)?;
-    let mut buf = [0u8; 1 << 20];
+    // Heap buffer: a 1MiB stack array overflows Windows' 1MiB main-thread
+    // stack (issue #1207); 64KiB streams identically on all hosts.
+    let mut buf = vec![0u8; 64 << 10];
     loop {
         use std::io::Read as _;
         let read = file.read(&mut buf)?;
@@ -415,5 +417,19 @@ mod tests {
         let missing = scratch.path().join("missing");
         let out = scratch.path().join("out.sha256");
         assert!(hash_file(&missing, &out).is_err());
+    }
+
+    #[test]
+    fn bin_shims_share_usage_and_failure_exit() {
+        assert_eq!(bin_usage("dx_archiver", "<src> <dst>"), 1);
+        assert_eq!(
+            bin_cannot(
+                "dx_archiver",
+                "write",
+                Path::new("/tmp/out.tar.gz"),
+                "read-only filesystem"
+            ),
+            1
+        );
     }
 }

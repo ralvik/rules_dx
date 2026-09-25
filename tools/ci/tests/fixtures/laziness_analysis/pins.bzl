@@ -6,20 +6,24 @@ Fixture: `tools/ci/tests/fixtures/laziness_analysis/` via
 """
 
 # M1 configured-target counts: `bazel cquery "deps(//examples/<ex>/...)"`
-# `--output=label | sort -u | wc -l` on the seed host. Delta must be zero:
-# adding a bazel_dep+extension must not add configured targets to
-# single-foundation adopt-* consumers.
+# `--output=label | LC_ALL=C sort -u | wc -l` on the seed host. Delta must
+# be zero: adding a bazel_dep+extension must not add configured targets to
+# single-foundation adopt-* consumers. Each corpus_starlark also binds
+# `//:buildifier_config`, costing the same two configured targets the
+# Markdown corpus's Vale binding costs (config target plus its source).
+# The C locale is required: UTF-8 collation merges distinct labels and
+# undercounts by 2-4 targets per consumer, which is the count CI reports.
 CQUERY_EXPECTED = {
-    "adopt-cpp": 174,
-    "adopt-csharp": 4714,
-    "adopt-fsharp": 4824,
-    "adopt-go": 6103,
-    "adopt-java": 2628,
-    "adopt-js-ts": 6109,
-    "adopt-kotlin": 2922,
-    "adopt-python": 2405,
-    "adopt-rust": 485,
-    "adopt-scala": 4342,
+    "adopt-cpp": 242,
+    "adopt-csharp": 4813,
+    "adopt-fsharp": 4827,
+    "adopt-go": 6132,
+    "adopt-java": 2592,
+    "adopt-js-ts": 6124,
+    "adopt-kotlin": 2854,
+    "adopt-python": 2407,
+    "adopt-rust": 487,
+    "adopt-scala": 4290,
 }
 
 # M2 action counts: `bazel aquery //examples/<ex>/... --output=text |
@@ -33,7 +37,7 @@ AQUERY_EXPECTED = {
     "adopt-fsharp": 32,
     "adopt-go": 34,
     "adopt-java": 40,
-    "adopt-js-ts": 41,
+    "adopt-js-ts": 62,
     "adopt-kotlin": 44,
     "adopt-python": 126,
     "adopt-rust": 92,
@@ -67,17 +71,20 @@ ANALYSIS_BUDGET_MS = {
 # Derived from `bazel cquery deps() --output=label` repo prefixes on the
 # seed host (Bzlmod has no resolved file on Bazel 9.2.0; the cquery repo
 # set is the portable configured-fetch equivalent, analysis-only).
+# Own-foundation acquisition repos arrive with the consumer lock fixtures
+# (pom, paket, go.mod, gtest pins) and stay foundation-owned; a foreign
+# ecosystem in a single-foundation closure still fails.
 FETCH_ALLOWLIST = {
-    "adopt-cpp": ["bazel_tools", "platforms", "rules_cc", "rules_shell"],
-    "adopt-csharp": ["bazel_tools", "platforms", "rules_dotnet", "rules_shell"],
+    "adopt-cpp": ["bazel_tools", "googletest", "platforms", "rules_cc", "rules_shell"],
+    "adopt-csharp": ["bazel_tools", "main", "paket.main", "platforms", "rules_dotnet", "rules_shell"],
     "adopt-fsharp": ["bazel_tools", "main", "paket.main", "platforms", "rules_dotnet", "rules_shell"],
-    "adopt-go": ["bazel_tools", "platforms", "rules_cc", "rules_go", "rules_shell"],
-    "adopt-java": ["aspect_rules_py", "bazel_tools", "platforms", "rules_cc", "rules_java", "rules_python", "rules_shell"],
+    "adopt-go": ["bazel_tools", "com_github_google_go_cmp", "platforms", "rules_cc", "rules_go", "rules_shell"],
+    "adopt-java": ["aspect_rules_py", "bazel_skylib", "bazel_tools", "maven", "package_metadata", "platforms", "rules_cc", "rules_java", "rules_jvm_external", "rules_python", "rules_shell"],
     "adopt-js-ts": ["aspect_bazel_lib", "aspect_rules_jest", "aspect_rules_js", "aspect_rules_ts", "bazel_lib", "bazel_skylib", "bazel_tools", "npm_typescript", "platforms", "rules_nodejs", "rules_shell", "tar.bzl"],
     "adopt-kotlin": ["aspect_rules_py", "bazel_skylib", "bazel_tools", "maven", "package_metadata", "platforms", "rules_cc", "rules_java", "rules_jvm_external", "rules_kotlin", "rules_python", "rules_shell"],
     "adopt-python": ["aspect_rules_py", "bazel_tools", "hermetic_launcher", "platforms", "pypi", "rules_python", "rules_shell"],
     "adopt-rust": ["bazel_skylib", "bazel_tools", "platforms", "rules_cc", "rules_rust", "rules_shell"],
-    "adopt-scala": ["abseil-cpp", "aspect_rules_py", "bazel_tools", "bazel_worker_api", "platforms", "protobuf", "rules_cc", "rules_java", "rules_license", "rules_python", "rules_scala", "rules_scala_config", "rules_shell", "zlib"],
+    "adopt-scala": ["abseil-cpp", "aspect_rules_py", "bazel_skylib", "bazel_tools", "bazel_worker_api", "maven", "package_metadata", "platforms", "protobuf", "rules_cc", "rules_java", "rules_jvm_external", "rules_license", "rules_python", "rules_scala", "rules_scala_config", "rules_shell", "zlib"],
 }
 
 # Forbidden ecosystem markers per consumer family (aquery action-graph

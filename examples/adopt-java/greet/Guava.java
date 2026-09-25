@@ -5,7 +5,9 @@ package greet;
 
 import com.google.common.collect.ImmutableList;
 
-public class Guava {
+public final class Guava {
+  private Guava() {}
+
   public static String join() {
     return String.join(",", ImmutableList.of("hello", "world"));
   }

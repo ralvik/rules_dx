@@ -13,6 +13,7 @@ package(default_visibility = ["//:__subpackages__"])
 pwsh_binary(
     name = "version",
     srcs = ["Version.ps1"],
+    target_compatible_with = ["@platforms//os:linux"],
 )
 
 sh_test(
@@ -32,6 +33,7 @@ sh_test(
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

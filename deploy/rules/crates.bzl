@@ -43,7 +43,8 @@ def crates_schema_error():
     Checks data shape without pinning exact contents: version is v1, each
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so names and versions
-    embed safely in the deploy launcher."""
+    embed safely in the deploy launcher.
+    """
     if CRATES_SCHEMA_VERSION != 1:
         return "crates name: unsupported schema v" + str(CRATES_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_NAME_CHARS) != "string" or _VALID_NAME_CHARS == "":
@@ -138,6 +139,7 @@ def _crates_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@ALLOW_DIRTY@@": "1" if ctx.attr.allow_dirty else "0",
             "@@CRATE_NAME@@": ctx.attr.crate_name,
@@ -187,7 +189,8 @@ def crates_deploy(name, crate, version = "0.0.0", allow_dirty = False, profile =
     registry) and verifies bytes, publishing nothing. Live
     `cargo publish` runs only with `CRATES_PUBLISH_LIVE=1`,
     `CARGO_REGISTRY_TOKEN`, and `CRATES_PUBLISH_APPROVED=1` after explicit
-    owner approval, and never passes `--allow-dirty`."""
+    owner approval, and never passes `--allow-dirty`.
+    """
     name_error = crates_name_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

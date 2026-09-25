@@ -88,11 +88,13 @@ else
   bad "a Supported status cell appeared in support-matrix tables without evidence"
 fi
 
-# Corpus dogfood Delivered has backing harnesses + CI wiring.
+# Corpus dogfood Delivered has backing harnesses + CI wiring (the
+# dogfood-freshness battery runs both and ci.yml invokes the battery).
 if [[ -f "tools/ci/corpus_audit.sh" ]] &&
   [[ -f "tools/ci/code_ownership.sh" ]] &&
-  grep -q -F -e '//tools/ci:corpus_audit' .github/workflows/ci.yml &&
-  grep -q -F -e '//tools/ci:code_ownership' .github/workflows/ci.yml; then
+  grep -q -F -e '//tools/ci:corpus_audit' tools/ci/dogfood_freshness.sh &&
+  grep -q -F -e '//tools/ci:code_ownership' tools/ci/dogfood_freshness.sh &&
+  grep -q -F -e 'dogfood_freshness' .github/workflows/ci.yml; then
   ok
 else
   bad "corpus-dogfood Delivered lacks backing harnesses or CI wiring"
@@ -106,8 +108,10 @@ else
   bad "Layer-2 matrix Delivered lacks runner-matrix docs or pipeline tests"
 fi
 
-# Generation Delivered has freshness gate + generation docs.
-if grep -q -F -e 'generate --check //...' .github/workflows/ci.yml &&
+# Generation Delivered has freshness gate + generation docs (the gate
+# runs inside the dogfood-freshness battery invoked by ci.yml).
+if grep -q -F -e 'generate --check //...' tools/ci/dogfood_freshness.sh &&
+  grep -q -F -e 'dogfood_freshness' .github/workflows/ci.yml &&
   [[ -f "docs/testing/generation.md" ]]; then
   ok
 else

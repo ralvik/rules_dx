@@ -26,6 +26,37 @@ func writeFixture(t *testing.T, root, name, content string) {
 	}
 }
 
+func TestIgnoreWitnessPreservesUsedInheritedEntries(t *testing.T) {
+	cfg := config.New()
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("absent: %v", got)
+	}
+	cfg.Exts[languageName] = "foreign"
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("foreign: %v", got)
+	}
+	delete(cfg.Exts, languageName)
+	lang := &ccLang{}
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "other"}, {Key: "dx_ignore_import", Value: "cc cc widget.h"}}})
+	lang.Configure(cfg, "child", nil)
+	entry := matchingIgnore(cfg, "widget.h")
+	if entry == nil {
+		t.Fatal("missing inherited ignore")
+	}
+	entry.used = true
+	conf := cfg.Exts[languageName].(*ccConfig)
+	conf.ignores = append(conf.ignores, nil, entry, &ignoreEntry{value: "Unused"})
+	got := CollectUsedIgnores(cfg)
+	if len(got) != 1 || got[0] != [2]string{"parent", "widget.h"} {
+		t.Fatalf("witness: %v", got)
+	}
+	lang.AfterResolvingDeps(context.Background())
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "dx_ignore_import", Value: "cc"}}})
+	if len(lang.errors) != 1 {
+		t.Fatal("malformed directive accepted")
+	}
+}
+
 func generateFixture(t *testing.T, files map[string]string, regular []string) language.GenerateResult {
 	t.Helper()
 	root := t.TempDir()

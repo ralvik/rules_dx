@@ -11,26 +11,29 @@ package(
 pwsh_library(
     name = "hello_lib",
     srcs = [
-        "Greet.psm1",
         "Greet.psd1",
+        "Greet.psm1",
     ],
 )
 
 pwsh_binary(
     name = "hello",
     srcs = ["Hello.ps1"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":hello_lib"],
 )
 
 pwsh_test(
     name = "hello_test",
     srcs = ["HelloTest.ps1"],
+    target_compatible_with = ["@platforms//os:linux"],
     deps = [":hello_lib"],
 )
 
 real_source_target(
     name = "corpus_starlark",
     testonly = True,
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

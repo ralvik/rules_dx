@@ -205,7 +205,8 @@ def adapter_registry_schema_error():
     language/tool edits the registry data only: version is v1, every
     class and family spelling is canonical, every adapter capability
     names a known capability with canonical classes, and every
-    adapter-backed class is classified."""
+    adapter-backed class is classified.
+    """
     if ADAPTER_REGISTRY_SCHEMA_VERSION != 1:
         return "adapter registry: unsupported schema v" + str(ADAPTER_REGISTRY_SCHEMA_VERSION) + " (want v1)"
     for class_id in REAL_CLASS_TO_FAMILY:

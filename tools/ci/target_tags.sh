@@ -27,7 +27,8 @@ dx_cd_workspace
 
 dx_test_init
 
-# flaky is off by default: no test in the tree opts into retries.
+# flaky is off by default: no public test opts into retries. The only
+# flaky target is the private passthrough-fixture upstream.
 flaky_tests="$(bazel query "attr('flaky', 1, kind(test, //...))" 2>/dev/null | grep -v -F -e 'flaky_passthrough_fixture_upstream' || true)"
 if [[ -z "$flaky_tests" ]]; then
   ok
@@ -53,10 +54,9 @@ fi
 # No wrapper family strips test kwargs except the green-suite pops:
 # `manual` is stripped from upstream `tags` (both run under //...,
 # double-execution) and `aspect_hints` rides the public forwarder only.
-# `flaky` (and size/timeout) must still forward untouched.
-if grep -rn -F -e ".pop('flaky'" --include='defs.bzl' ./*/rules/ | grep -v '\.git/' >/dev/null; then
-  bad "a wrapper strips flaky; flaky passthrough no longer holds by construction"
-elif grep -rn -E -e "\.pop\(['\"](size|timeout|shard_count|flaky)['\"]" --include='defs.bzl' ./*/rules/ | grep -v '\.git/' >/dev/null; then
+# `size`/`timeout`/`shard_count` still forward; `flaky` is intentionally
+# upstream-only (dx_forwarded_test_kwargs), not stripped from the base.
+if grep -rn -E -e "\.pop\(['\"](size|timeout|shard_count)['\"]" --include='defs.bzl' ./*/rules/ | grep -v '\.git/' >/dev/null; then
   bad "a wrapper strips test execution kwargs; forwarding no longer holds by construction"
 else
   ok

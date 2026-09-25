@@ -117,7 +117,12 @@ def _tree_scan(args):
     allows = args.allow or []
     allow_paths = args.allow_path or []
     hits = []
-    for path in _iter_tree_files(args.roots or ["."], args.include or [], args.exclude or [], set(args.exclude_dir or [])):
+    for path in _iter_tree_files(
+        args.roots or ["."],
+        args.include or [],
+        args.exclude or [],
+        set(args.exclude_dir or []),
+    ):
         rel = os.path.normpath(path)
         if any(sub in rel for sub in allow_paths):
             continue
@@ -154,7 +159,12 @@ def cmd_tree_list(args):
     args.allow_path = []
     seen = []
     seen_set = set()
-    for path in _iter_tree_files(args.roots or ["."], args.include or [], args.exclude or [], set(args.exclude_dir or [])):
+    for path in _iter_tree_files(
+        args.roots or ["."],
+        args.include or [],
+        args.exclude or [],
+        set(args.exclude_dir or []),
+    ):
         rel = os.path.normpath(path)
         try:
             lines = _read_lines(path)
@@ -173,7 +183,12 @@ def cmd_tree_list(args):
 def cmd_tree_count(args):
     compiled = _compile(args.pattern, args.fixed)
     total = 0
-    for path in _iter_tree_files(args.roots or ["."], args.include or [], args.exclude or [], set(args.exclude_dir or [])):
+    for path in _iter_tree_files(
+        args.roots or ["."],
+        args.include or [],
+        args.exclude or [],
+        set(args.exclude_dir or []),
+    ):
         try:
             lines = _read_lines(path)
         except OSError:
@@ -250,7 +265,9 @@ def cmd_extract_re(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="hermetic_grep", description="Hermetic grep replacement (issue #1006).")
+    parser = argparse.ArgumentParser(
+        prog="hermetic_grep", description="Hermetic grep replacement (issue #1006)."
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     def add_match_flags(p):
@@ -258,7 +275,9 @@ def build_parser():
         group.add_argument("--fixed", dest="fixed", action="store_true", default=True)
         group.add_argument("--re", dest="fixed", action="store_false")
 
-    contains = sub.add_parser("contains", help="Exit 0 when every PATTERN matches FILE.")
+    contains = sub.add_parser(
+        "contains", help="Exit 0 when every PATTERN matches FILE."
+    )
     contains.add_argument("file")
     contains.add_argument("pattern", nargs="+")
     add_match_flags(contains)
@@ -280,15 +299,21 @@ def build_parser():
         p.add_argument("--allow-path", action="append", default=[])
         add_match_flags(p)
 
-    tree_contains = sub.add_parser("tree-contains", help="Exit 0 when any PATTERN matches under ROOTS.")
+    tree_contains = sub.add_parser(
+        "tree-contains", help="Exit 0 when any PATTERN matches under ROOTS."
+    )
     add_tree_flags(tree_contains)
     tree_contains.set_defaults(func=cmd_tree_contains)
 
-    tree_absent = sub.add_parser("tree-absent", help="Exit 0 when no PATTERN matches under ROOTS.")
+    tree_absent = sub.add_parser(
+        "tree-absent", help="Exit 0 when no PATTERN matches under ROOTS."
+    )
     add_tree_flags(tree_absent)
     tree_absent.set_defaults(func=cmd_tree_absent)
 
-    tree_list = sub.add_parser("tree-list", help="Print files with a match (like grep -rl).")
+    tree_list = sub.add_parser(
+        "tree-list", help="Print files with a match (like grep -rl)."
+    )
     tree_list.add_argument("pattern", nargs="+")
     tree_list.add_argument("--roots", nargs="*", default=[])
     tree_list.add_argument("--include", action="append", default=[])
@@ -297,7 +322,9 @@ def build_parser():
     add_match_flags(tree_list)
     tree_list.set_defaults(func=cmd_tree_list)
 
-    tree_count = sub.add_parser("tree-count", help="Print the matching-line count (like grep -r ... | wc -l).")
+    tree_count = sub.add_parser(
+        "tree-count", help="Print the matching-line count (like grep -r ... | wc -l)."
+    )
     tree_count.add_argument("pattern", nargs="+")
     tree_count.add_argument("--roots", nargs="*", default=[])
     tree_count.add_argument("--include", action="append", default=[])
@@ -312,24 +339,37 @@ def build_parser():
         p.add_argument("pattern", nargs="+")
         p.add_argument("-A", "--after", type=int, required=True)
         anchor = p.add_mutually_exclusive_group()
-        anchor.add_argument("--anchor-fixed", dest="anchor_fixed", action="store_true", default=False)
+        anchor.add_argument(
+            "--anchor-fixed", dest="anchor_fixed", action="store_true", default=False
+        )
         anchor.add_argument("--anchor-re", dest="anchor_fixed", action="store_false")
         add_match_flags(p)
 
-    context_contains = sub.add_parser("context-contains", help="Exit 0 when PATTERN matches within -A lines after ANCHOR.")
+    context_contains = sub.add_parser(
+        "context-contains",
+        help="Exit 0 when PATTERN matches within -A lines after ANCHOR.",
+    )
     add_context_flags(context_contains)
     context_contains.set_defaults(func=cmd_context_contains)
 
-    context_absent = sub.add_parser("context-absent", help="Exit 0 when PATTERN never matches within -A lines after ANCHOR.")
+    context_absent = sub.add_parser(
+        "context-absent",
+        help="Exit 0 when PATTERN never matches within -A lines after ANCHOR.",
+    )
     add_context_flags(context_absent)
     context_absent.set_defaults(func=cmd_context_absent)
 
-    extract_quoted = sub.add_parser("extract-quoted", help='Print first "..." value on the first line containing LIT.')
+    extract_quoted = sub.add_parser(
+        "extract-quoted",
+        help='Print first "..." value on the first line containing LIT.',
+    )
     extract_quoted.add_argument("file")
     extract_quoted.add_argument("lit")
     extract_quoted.set_defaults(func=cmd_extract_quoted)
 
-    extract_re = sub.add_parser("extract-re", help="Print the first regex match (like grep -o -E | head -1).")
+    extract_re = sub.add_parser(
+        "extract-re", help="Print the first regex match (like grep -o -E | head -1)."
+    )
     extract_re.add_argument("file")
     extract_re.add_argument("re")
     extract_re.set_defaults(func=cmd_extract_re)

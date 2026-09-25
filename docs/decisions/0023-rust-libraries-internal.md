@@ -44,7 +44,7 @@ nowhere because they never depend on the libraries directly — they use the
 Extraction reopens only with a concrete external caller and an accepted
 successor record, per the architecture rule that shared code is extracted
 only with a concrete cross-package caller (see
-[Architecture](../architecture/README.md#ownership-boundaries)).
+[Architecture](../architecture/ownership.md#ownership-boundaries)).
 
 ## Consequences
 

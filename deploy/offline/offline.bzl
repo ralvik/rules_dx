@@ -34,11 +34,6 @@ def offline_bundle(name, advisory, launchers):
     byte-identical) plus `<name>.SHA256SUMS.sha256` (sidecar via the
     hermetic `//deploy/rules:hasher` tool). Every line runs as
     hermetic Rust tools with no host toolchain.
-
-    Args:
-      name: bundle instance name; owns the manifest plus sidecar outputs.
-      advisory: dict mapping each vendored advisory set to its snapshot label.
-      launchers: list of vendored per-OS launcher labels.
     """
     for set in advisory:
         set_err = offline_set_error(set)

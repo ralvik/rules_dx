@@ -5,6 +5,268 @@ use super::super::test_support::*;
 use super::audit_tests_a::*;
 
 #[test]
+fn secrets_launch_failure_is_incomplete_without_a_clean_result() {
+    struct Unavailable;
+    impl dx_process::Runner for Unavailable {
+        fn gitleaks_tool(&self) -> Option<std::path::PathBuf> {
+            Some(std::path::PathBuf::from("/hermetic/gitleaks"))
+        }
+        fn run(
+            &self,
+            _: &[String],
+            _: &std::path::Path,
+            _: &[(&str, &str)],
+        ) -> std::io::Result<dx_process::ChildStatus> {
+            Err(std::io::Error::other("cannot spawn pinned tool"))
+        }
+        fn run_hermetic(
+            &self,
+            argv: &[String],
+            cwd: &std::path::Path,
+            env: &[(&str, &str)],
+        ) -> std::io::Result<dx_process::ChildStatus> {
+            self.run(argv, cwd, env)
+        }
+    }
+    let harness = Harness::new("audit-launch-failed");
+    let (findings, incomplete, diagnostics) =
+        super::run_secrets(&harness.workspace, &Unavailable, &harness.temp, 1, 0, false);
+    assert!(findings.is_empty());
+    assert!(diagnostics.is_empty());
+    assert!(incomplete
+        .expect("incomplete")
+        .contains("failed to launch secrets auditor"));
+}
+
+#[test]
+fn license_policy_read_failures_and_empty_default_are_explicit() {
+    let harness = Harness::new("license-policy-io");
+    let path = harness.workspace.join("licenses.toml");
+    std::fs::write(&path, " \n").expect("empty");
+    assert!(super::load_license_policy(&harness.workspace)
+        .expect("default")
+        .tables
+        .allow
+        .contains("MIT"));
+    std::fs::write(&path, [0xff]).expect("invalid utf8");
+    assert!(matches!(
+        super::load_license_policy(&harness.workspace),
+        Err(super::AuditError::NotUtf8 { .. })
+    ));
+    std::fs::remove_file(&path).expect("remove");
+    std::fs::create_dir(&path).expect("directory");
+    assert!(matches!(
+        super::load_license_policy(&harness.workspace),
+        Err(super::AuditError::Read { .. })
+    ));
+}
+
+#[test]
+fn license_exceptions_only_approve_matching_current_findings() {
+    for (license, exception, expected) in [
+        ("AGPL-3.0-only", "", 1),
+        ("GPL-3.0-only", "", 1),
+        ("MPL-2.0", "", 1),
+        ("GPL-3.0-only", "[[exception]]\npackage = \"demo\"\nset = \"npm\"\nlicense = \"GPL-3.0-only\"\nversions = \"1.0.0\"\nreason = \"reviewed\"\nexpires = \"2999-01-01\"\n", 0),
+        ("GPL-3.0-only", "[[exception]]\npackage = \"other\"\nset = \"npm\"\nlicense = \"GPL-3.0-only\"\nversions = \"1.0.0\"\nreason = \"reviewed\"\nexpires = \"2999-01-01\"\n", 1),
+        ("GPL-3.0-only", "[[exception]]\npackage = \"demo\"\nset = \"npm\"\nlicense = \"GPL-3.0-only\"\nversions = \"1.0.0\"\nreason = \"reviewed\"\nexpires = \"2000-01-01\"\n", 1),
+    ] {
+        let (code, out, err) = run_with(&["audit", "license", "//javascript:demo", "--output=json"], &AuditRunner::clean(), &|h| {
+            h.write_source("package-lock.json", &serde_json::json!({"packages":{"node_modules/demo":{"version":"1.0.0","license":license}}}).to_string());
+            h.write_source("licenses.toml", &format!("[policy]\nblocked = [\"AGPL-3.0-only\"]\n[policy.distributed]\ndeny = [\"GPL-3.0-only\"]\nreview = [\"MPL-2.0\"]\n{exception}\n[[inventory]]\npackage = \"demo\"\nset = \"npm\"\nlicense = \"{license}\"\nversions = \"1.0.0\"\ntext_present = true\n"));
+        });
+        assert_eq!(code, expected, "{license}: {out}{err}");
+    }
+    let (code, out, err) = run_with(
+        &["audit", "license", "//javascript:demo"],
+        &AuditRunner::clean(),
+        &|h| {
+            h.write_source("package-lock.json", "{");
+        },
+    );
+    assert_eq!(code, 1, "{out}{err}");
+    assert!(err.contains("could not parse package-lock.json"));
+}
+
+#[test]
+fn secrets_process_status_and_report_content_are_both_authoritative() {
+    let clean =
+        r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"gitleaks"}},"results":[]}]}"#;
+    let finding = r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"gitleaks"}},"results":[{"ruleId":"gitleaks/token","message":{"text":"token detected"}}]}]}"#;
+    for (status, sarif, expected, detail) in [
+        (Some(0), Some(clean), 0, ""),
+        (Some(0), Some(finding), 1, "1 secret findings"),
+        (Some(0), Some("{"), 1, "invalid gitleaks SARIF"),
+        (Some(1), Some("{"), 1, "invalid gitleaks SARIF"),
+        (Some(1), Some(clean), 1, "no SARIF results"),
+        (Some(1), None, 1, "without a SARIF report"),
+        (Some(7), None, 1, "exited 7"),
+        (None, None, 1, "terminated by signal"),
+    ] {
+        let runner = AuditRunner {
+            code: status,
+            sarif: sarif.map(str::to_owned),
+            ..AuditRunner::clean()
+        };
+        let (code, out, err) = run_with(&["audit", "security", "--output=json"], &runner, &|h| {
+            clean_workspace(h);
+            write_all_empty_advisories(h);
+        });
+        assert_eq!(
+            code, expected,
+            "status={status:?} sarif={sarif:?}: {out}{err}"
+        );
+        assert!(err.contains(detail), "{err}");
+        let events: Vec<serde_json::Value> = out
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("event"))
+            .collect();
+        assert_eq!(events.last().expect("finished")["exit_code"], expected);
+    }
+}
+
+#[test]
+fn audit_stdout_reports_are_single_machine_documents() {
+    for (family, format) in [("security", "sarif"), ("license", "spdx")] {
+        let report = format!("--report={format}=-");
+        let (code, out, err) = run_with(&["audit", family, &report], &AuditRunner::clean(), &|h| {
+            clean_workspace(h);
+            write_all_empty_advisories(h);
+        });
+        assert_eq!(code, if family == "license" { 1 } else { 0 }, "{out}{err}");
+        let value: serde_json::Value = serde_json::from_str(&out).expect("one JSON document");
+        if format == "sarif" {
+            assert_eq!(value["version"], "2.1.0");
+        } else {
+            assert_eq!(value["spdxVersion"], "SPDX-2.3");
+        }
+    }
+}
+
+#[test]
+fn committed_gitleaks_config_produces_a_trust_warning() {
+    for config in [".gitleaks.toml"] {
+        let runner = AuditRunner::with_sarif(
+            Some(0),
+            r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"gitleaks"}},"results":[]}]}"#,
+        );
+        let (code, out, err) =
+            run_with(&["audit", "security", "--report=sarif=-"], &runner, &|h| {
+                clean_workspace(h);
+                write_all_empty_advisories(h);
+                h.write_source(config, "title = \"local rules\"\n");
+            });
+        assert_eq!(code, 0, "{out}{err}");
+        let value: serde_json::Value = serde_json::from_str(&out).expect("sarif");
+        assert!(value.to_string().contains("without a hash pin"));
+        assert!(runner
+            .calls
+            .borrow()
+            .iter()
+            .any(|args| args.iter().any(|arg| arg.ends_with(config))));
+    }
+}
+
+#[test]
+fn advisory_loader_rejects_corrupt_snapshots_and_identity_sidecars() {
+    use super::AuditError;
+    use dx_update::sets::SetId;
+    for variant in [
+        "directory",
+        "utf8",
+        "empty",
+        "missing-meta",
+        "meta-utf8",
+        "meta-json",
+        "meta-invalid",
+        "wrong-set",
+        "invalid-json",
+    ] {
+        let harness = Harness::new(&format!("advisory-corrupt-{variant}"));
+        write_advisory(&harness, "cargo", "[]");
+        let snapshot = harness.workspace.join(".dx/advisory/cargo.json");
+        let meta = harness.workspace.join(".dx/advisory/cargo.meta.json");
+        match variant {
+            "directory" => {
+                std::fs::remove_file(&snapshot).expect("remove snapshot");
+                std::fs::create_dir(&snapshot).expect("directory snapshot");
+            }
+            "utf8" => std::fs::write(&snapshot, [0xff]).expect("invalid utf8"),
+            "empty" => std::fs::write(&snapshot, " \n").expect("empty snapshot"),
+            "missing-meta" => std::fs::remove_file(&meta).expect("remove meta"),
+            "meta-utf8" => std::fs::write(&meta, [0xff]).expect("invalid meta utf8"),
+            "meta-json" => std::fs::write(&meta, "{").expect("invalid meta json"),
+            "meta-invalid" | "wrong-set" => {
+                let mut value: serde_json::Value =
+                    serde_json::from_slice(&std::fs::read(&meta).expect("meta")).expect("json");
+                if variant == "meta-invalid" {
+                    value["sha256"] = serde_json::json!("invalid");
+                } else {
+                    value["set"] = serde_json::json!("npm");
+                    value["path"] = serde_json::json!(".dx/advisory/npm.json");
+                    value["url"] = serde_json::json!(
+                        dx_audit::advisory::advisory_source("npm").expect("source")
+                    );
+                }
+                std::fs::write(&meta, value.to_string()).expect("write meta");
+            }
+            "invalid-json" => write_advisory(&harness, "cargo", "{"),
+            _ => unreachable!(),
+        }
+        let error = super::load_advisories(&harness.workspace, SetId::Cargo, &super::today_utc())
+            .expect_err(variant);
+        let expected = match variant {
+            "directory" => matches!(error, AuditError::AdvisoryRead { .. }),
+            "utf8" => matches!(error, AuditError::AdvisoryUtf8 { .. }),
+            "empty" => matches!(error, AuditError::AdvisoryEmpty { .. }),
+            "missing-meta" => matches!(error, AuditError::AdvisoryMissingMeta { .. }),
+            "meta-utf8" => matches!(error, AuditError::AdvisoryMeta { .. }),
+            "meta-json" => matches!(error, AuditError::AdvisoryIdentity { .. }),
+            "meta-invalid" => matches!(error, AuditError::AdvisorySnapshotInvalid { .. }),
+            "wrong-set" => matches!(error, AuditError::AdvisorySetMismatch { .. }),
+            "invalid-json" => matches!(error, AuditError::AdvisoryParse { .. }),
+            _ => unreachable!(),
+        };
+        assert!(expected, "{variant}: {error}");
+        assert!(error.to_string().starts_with("advisory_refresh_failed:"));
+    }
+}
+
+#[test]
+fn lock_loading_requires_readable_inputs_and_deduplicates_npm_siblings() {
+    use super::AuditError;
+    use dx_update::sets::SetId;
+    let harness = Harness::new("audit-lock-loading");
+    assert!(matches!(
+        super::lock_texts_for_set(&harness.workspace, SetId::Npm),
+        Err(AuditError::LockMissing { .. })
+    ));
+    harness.write_source("pnpm-lock.yaml", "packages:\n  demo@1.0.0: {}\n");
+    harness.write_source(
+        "package-lock.json",
+        r#"{"packages":{"node_modules/demo":{"version":"1.0.0"}}}"#,
+    );
+    harness.write_source("yarn.lock", "demo@^1.0.0:\n  version \"1.0.0\"\n");
+    let texts = super::lock_texts_for_set(&harness.workspace, SetId::Npm).expect("three locks");
+    assert_eq!(texts.len(), 3);
+    let packages = super::parse_locked_for_set(SetId::Npm, &texts).expect("deduplicate");
+    assert_eq!(packages.len(), 1);
+    assert_eq!(packages[0].name, "demo");
+    assert!(matches!(
+        super::parse_locked_for_set(
+            SetId::Npm,
+            &[("package-lock.json".to_owned(), "{".to_owned())]
+        ),
+        Err(AuditError::LockParse { .. })
+    ));
+    std::fs::write(harness.workspace.join("package-lock.json"), [0xff]).expect("bad utf8");
+    assert!(matches!(
+        super::lock_texts_for_set(&harness.workspace, SetId::Npm),
+        Err(AuditError::NotUtf8 { .. })
+    ));
+}
+
+#[test]
 fn audit_live_unowned_scope_fails_usage() {
     let harness = Harness::new("audit-unowned");
     let (code, _out, err) = harness.run(&["audit", "python/tests/fixtures/hello/hello.py"]);

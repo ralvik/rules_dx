@@ -26,6 +26,37 @@ func writeFixture(t *testing.T, root, name, content string) {
 	}
 }
 
+func TestIgnoreWitnessPreservesUsedInheritedEntries(t *testing.T) {
+	cfg := config.New()
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("absent: %v", got)
+	}
+	cfg.Exts[languageName] = "foreign"
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("foreign: %v", got)
+	}
+	delete(cfg.Exts, languageName)
+	lang := &goLang{}
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "other"}, {Key: "dx_ignore_import", Value: "go go example.com/widget"}}})
+	lang.Configure(cfg, "child", nil)
+	entry := matchingIgnore(cfg, "example.com/widget")
+	if entry == nil {
+		t.Fatal("missing inherited ignore")
+	}
+	entry.used = true
+	conf := cfg.Exts[languageName].(*goConfig)
+	conf.ignores = append(conf.ignores, nil, entry, &ignoreEntry{value: "Unused"})
+	got := CollectUsedIgnores(cfg)
+	if len(got) != 1 || got[0] != [2]string{"parent", "example.com/widget"} {
+		t.Fatalf("witness: %v", got)
+	}
+	lang.AfterResolvingDeps(context.Background())
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "dx_ignore_import", Value: "go"}}})
+	if len(lang.errors) != 1 {
+		t.Fatal("malformed directive accepted")
+	}
+}
+
 func generateFixture(t *testing.T, files map[string]string, regular []string) language.GenerateResult {
 	t.Helper()
 	root := t.TempDir()
@@ -169,7 +200,7 @@ func TestGenerateKindMismatchFails(t *testing.T) {
 func TestGenerateInternalAndExternalTestsCoexist(t *testing.T) {
 	regular := []string{"demo.go", "internal_test.go", "external_test.go", "helper_test.go"}
 	result := generateFixture(t, map[string]string{
-		"pkg/demo/demo.go":         "package demo\n",
+		"pkg/demo/demo.go":          "package demo\n",
 		"pkg/demo/internal_test.go": "package demo\n\nimport \"testing\"\n",
 		"pkg/demo/external_test.go": "package demo_test\n\nimport \"testing\"\n",
 		"pkg/demo/helper_test.go":   "package demo\n\nimport \"testing\"\n",
@@ -304,7 +335,7 @@ func TestParseGoModule(t *testing.T) {
 func TestGenerateImportPathFromGoMod(t *testing.T) {
 	root := t.TempDir()
 	for name, content := range map[string]string{
-		"go.mod":          "module example.com/adopt-go\n\ngo 1.26\n",
+		"go.mod":           "module example.com/adopt-go\n\ngo 1.26\n",
 		"pkg/demo/demo.go": "package demo\n",
 	} {
 		writeFixture(t, root, name, content)

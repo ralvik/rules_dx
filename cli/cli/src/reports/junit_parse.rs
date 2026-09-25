@@ -454,6 +454,70 @@ mod tests {
     use super::*;
 
     #[test]
+    fn timestamp_attribute_scanner_preserves_unrelated_and_truncated_bytes() {
+        for input in [
+            "testcase timestamp",
+            "testcase timestamp=",
+            "testcase timestamp=unquoted",
+            "testcase timestamp='unterminated",
+            "testcase note='timestamp'",
+            "testcase timestamp >",
+            "testcase timestamp /",
+            "testcase timestamp ?",
+            "testcase = timestamp",
+            "testcase timestamp   ",
+        ] {
+            assert_eq!(
+                remove_timestamp_from_tag(input.as_bytes(), 8),
+                None,
+                "{input}"
+            );
+        }
+        assert_eq!(remove_timestamp_from_tag(b"short", 99), None);
+        assert_eq!(
+            remove_timestamp_from_tag(b"testcase timestamp='ignored' name='kept'", 8),
+            Some(b"testcase name='kept'".to_vec())
+        );
+    }
+
+    #[test]
+    fn negative_duration_normalization_preserves_results() {
+        let cases = parse_test_xml(
+            b"<testsuite><testcase name=\"standalone\" time=\"-2\"/></testsuite>",
+            2,
+            3,
+        )
+        .expect("testcase");
+        assert_eq!(cases.len(), 1);
+        assert_eq!(cases[0].name, "standalone");
+        for (input, expected) in [
+            (
+                "<testcase runtime=\"-1\" time = \"-2\"/>",
+                "<testcase runtime=\"-1\" time = \"0\"/>",
+            ),
+            ("<testcase time='-1'/>", "<testcase time='-1'/>"),
+            ("<testcase time=\"-1>", "<testcase time=\"-1>"),
+            (
+                "<testcase time other=\"x\"/>",
+                "<testcase time other=\"x\"/>",
+            ),
+        ] {
+            assert_eq!(clamp_negative_times(input), expected);
+        }
+        assert_eq!(
+            strip_leading_decl("<?xml unterminated"),
+            "<?xml unterminated"
+        );
+        for bad in [
+            "<testsuite timestamp=\"unterminated",
+            "<testsuite timestamp=noquote>",
+            "<testsuite timestamp=\"x\" broken>",
+        ] {
+            assert!(parse_test_xml(bad.as_bytes(), 0, 0).is_err(), "{bad}");
+        }
+    }
+
+    #[test]
     fn junit_parse_covers_happy_and_error_paths() {
         // Happy: start/end testcase with children, empty testcase, decl/comment.
         // Note: quick-junit allows one main status per testcase, so the

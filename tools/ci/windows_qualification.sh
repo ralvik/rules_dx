@@ -150,7 +150,7 @@ fi
 # (`Rejected`).
 # (Self-excluded: this script names the banned form in its own pattern.
 # Hermetic tree search with allow-strings, issue #1006.)
-if dx_tree_absent --exclude='windows_qualification.sh' --allow='never approved' --allow='never-approved' --allow='no installed' --allow='No installed' --allow='Rejected' --allow='rejected' 'Installed Build Tools' -- docs/ cli/ tools/ .github/; then
+if dx_tree_absent --exclude='windows_qualification.sh' --exclude='hermetic_grep_test.py' --allow='never approved' --allow='never-approved' --allow='no installed' --allow='No installed' --allow='Rejected' --allow='rejected' 'Installed Build Tools' -- docs/ cli/ tools/ .github/; then
   ok
 else
   bad "an installed Build Tools fallback claim appeared (stays never approved, issue #414)"

@@ -38,7 +38,10 @@ python_test(
     # Reuses the hello uv graph (single pypi hub); no separate lock.
     dep_group = "hello",
     imports = ["."],
-    deps = [":helper"],
+    deps = [
+        ":helper",
+        "@pypi//pytest",
+    ],
 )
 
 real_source_target(

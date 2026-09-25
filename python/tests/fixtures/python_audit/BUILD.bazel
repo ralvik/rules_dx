@@ -1,7 +1,6 @@
-load("@rules_dx//python/rules:defs.bzl", "python_library")
-
 """Python source-audit split fixture."""
 
+load("@rules_dx//python/rules:defs.bzl", "python_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
@@ -19,6 +18,7 @@ exports_files([
 real_source_target(
     name = "corpus_starlark",
     testonly = True,
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "pins.bzl",
@@ -38,4 +38,5 @@ python_library(
     testonly = True,
     srcs = ["Sample_audit_dirty.py"],
     imports = ["."],
+    tags = ["no-lint"],
 )

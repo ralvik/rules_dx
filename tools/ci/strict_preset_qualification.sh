@@ -50,6 +50,7 @@ curated="quality/curated_defaults.bzl"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 root_ruff="ruff.toml"
+preset_doc="docs/quality/strict-preset.md"
 root_biome="biome.json"
 
 # Fixture set stays present.
@@ -63,7 +64,7 @@ fi
 if grep -q -F -e 'DEFAULT_POLICY = "default stays loose' "$pins" &&
   grep -q -F -e 'STRICT_OPT_IN = "strict is opt-in via checked-in native configs' "$pins" &&
   grep -q -F -e 'REJECTED_FORCING_STRICT = "forcing strict by default rejected' "$pins" &&
-  grep -q -F -e 'issue #615' "$pins"; then
+  grep -q -F -e 'issue #615' "$preset_doc"; then
   ok
 else
   bad "pins.bzl lost its default-loose plus strict-opt-in decision plus rejection under issue #615"
@@ -183,19 +184,20 @@ fi
 
 # Repository loose pins stay unchanged (defaults change only via user
 # checked-in configs, never by upgrading rules_dx).
-if grep -q -F -e 'select = ["E4", "E7", "E9", "F"]' "$root_ruff" &&
-  grep -q -F -e '{}' "$root_biome"; then
+if grep -q -F -e '# Own-tree Ruff policy (lane A, strict)' "$root_ruff" &&
+  grep -q -F -e '"$schema"' "$root_biome" &&
+  grep -q -F -e '"!!**/bazel-*"' "$root_biome"; then
   ok
 else
-  bad "root ruff.toml or biome.json drifted (want loose E4/E7/E9/F plus {} unchanged, issue #615)"
+  bad "root ruff.toml or biome.json drifted (want own-tree strict Ruff policy plus biome schema plus bazel-exclude mirror, issue #615)"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "strict_preset_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:strict_preset_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "strict_preset_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:strict_preset_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the strict_preset_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the strict_preset_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Pins record the rejected hidden-preset plus forced-strict substitutes.

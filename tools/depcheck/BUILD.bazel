@@ -118,6 +118,7 @@ exports_files(["Cargo.toml"])
 # Workspace lock pin-consistency across all six dialects (see
 # docs/tools/tool-acquisition.md#repinning). `depcheck locks` owns the
 # check; repinning stays with `bazel run //tools:repin-all`.
+# No-coverage: process-spawning test; see this doc.
 sh_test(
     name = "repo_locks_test",
     size = "small",
@@ -141,6 +142,7 @@ sh_test(
         "$(rootpath //third_party/ruby:Gemfile.lock)",
     ],
     data = [
+        ":depcheck",
         "//:package.json",
         "//:pnpm-lock.yaml",
         "//python/tests/fixtures/hello:pyproject.toml",
@@ -157,16 +159,17 @@ sh_test(
         "//third_party/ruby:Gemfile.lock",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
-        ":depcheck",
     ],
+    tags = ["no-coverage"],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
 # Per-adopt consumer lock consistency (issue #1077): each adopt-* arrival
 # manifest plus lock pair proves foreign consistency offline via `depcheck
-# consistency` with stale plus missing negative controls; repinning stays
+# `consistency` with stale plus missing negative controls; repinning stays
 # with the per-adopt commands in docs/tools/tool-acquisition.md#repinning.
+# No-coverage: process-spawning test; see this doc.
 sh_test(
     name = "adopt_locks_test",
     size = "small",
@@ -192,6 +195,7 @@ sh_test(
         "$(rootpath //examples/adopt-polyglot:Cargo.lock)",
     ],
     data = [
+        ":depcheck",
         "//examples/adopt-go:go.mod",
         "//examples/adopt-go:go.sum",
         "//examples/adopt-js-ts:package.json",
@@ -210,8 +214,8 @@ sh_test(
         "//examples/adopt-rust:Cargo.toml",
         "//tools/sh:bootstrap",
         "//tools/sh:lib",
-        ":depcheck",
     ],
+    tags = ["no-coverage"],
     # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

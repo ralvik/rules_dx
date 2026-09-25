@@ -7,8 +7,8 @@
 # - delivered: every bash `sh_binary`/`sh_test` stays Linux-only per the
 #   shell contract, so Linux cells run the full scope while the macOS
 #   arm64 plus Windows x86_64 cells skip the
-#   same scope honestly; the skip volume is inventoried here (31 `sh_test`
-#   test skips plus 127 `sh_binary` build skips, 162 Linux-only labels)
+#   same scope honestly; the skip volume is inventoried here (58 `sh_test`
+#   test skips plus 181 `sh_binary` build skips, 240 Linux-only labels)
 #   with a fail-closed per-host budget (Linux cells 0 skips, non-Linux
 #   cells at most the pinned inventory);
 # - CI reporting: every per-host `test //...` job reports its cell skip
@@ -48,16 +48,16 @@ dx_mkscratch skip_scratch
 # non-Linux cell skips at most the pinned Linux-only inventory. Growing
 # the Linux-only harness beyond these budgets fails here and must bump
 # the budget plus the tools.md inventory in the same reviewed PR.
-shtest_budget="31"
-shbin_budget="127"
-labels_budget="162"
+shtest_budget="58"
+shbin_budget="181"
+labels_budget="240"
 
 # Docs own the skip-budget decision with the pinned inventory plus this
 # harness, never a silent skip.
 if grep -q -F -e 'skip budget (issue #769' "$tools_doc" &&
-  grep -q -F -e '31 `sh_test`' "$tools_doc" &&
-  grep -q -F -e '127 `sh_binary`' "$tools_doc" &&
-  grep -q -F -e '162 Linux-only labels' "$tools_doc" &&
+  grep -q -F -e '58 `sh_test`' "$tools_doc" &&
+  grep -q -F -e '181 `sh_binary`' "$tools_doc" &&
+  grep -q -F -e '240 Linux-only labels' "$tools_doc" &&
   grep -q -F -e 'bazel run //tools/ci:skip_budget_qualification' "$tools_doc"; then
   ok
 else
@@ -73,7 +73,7 @@ if grep -q -F -e 'Real runs vs skips' "$tools_doc" &&
   ! grep -q -F -e 'macos_x86_64' "$tools_doc" &&
   grep -q -F -e 'windows_x86_64' "$tools_doc" &&
   grep -q -F -e 'real run' "$tools_doc" &&
-  grep -q -F -e '31 skips' "$tools_doc"; then
+  grep -q -F -e '58 skips' "$tools_doc"; then
   ok
 else
   bad "docs/testing/tools.md lost the per-host real-runs vs skips table (issue #769; x86_64 removed per #976)"
@@ -147,11 +147,11 @@ else
 fi
 
 # Non-Linux cells report budgeted skips: macos arm64 plus windows name
-# the 31 sh_test skips instead of passing silently.
-if [[ "$(grep -c -F -e '31 sh_test skips' "$ci")" -ge "2" ]]; then
+# the 58 sh_test skips instead of passing silently.
+if [[ "$(grep -c -F -e '58 sh_test skips' "$ci")" -ge "2" ]]; then
   ok
 else
-  bad "ci.yml lost the non-Linux budgeted-skips record (want macos arm64 plus windows with 31 sh_test skips, issue #769; x86_64 removed per #976)"
+  bad "ci.yml lost the non-Linux budgeted-skips record (want macos arm64 plus windows with 58 sh_test skips, issue #769; x86_64 removed per #976)"
 fi
 
 # Promotion checklist wires the budget as platform evidence per cell,
@@ -174,10 +174,10 @@ fi
 
 # Live proof: the queried inventory matches the documented inventory,
 # so the budget gates the real scope, not a stale pin.
-if [[ "$shtest_linux" == "31" ]] && [[ "$shbin_linux" == "127" ]] && [[ "$labels" == "162" ]]; then
+if [[ "$shtest_linux" == "58" ]] && [[ "$shbin_linux" == "181" ]] && [[ "$labels" == "240" ]]; then
   ok
 else
-  bad "live inventory drifted from the tools.md pin (want 31 sh_test plus 127 sh_binary plus 162 labels, found $shtest_linux plus $shbin_linux plus $labels; update budget plus docs in one reviewed PR, issue #769)"
+  bad "live inventory drifted from the tools.md pin (want 58 sh_test plus 181 sh_binary plus 240 labels, found $shtest_linux plus $shbin_linux plus $labels; update budget plus docs in one reviewed PR, issue #769)"
 fi
 
 dx_test_summary "per-host skip budget qualification harness"

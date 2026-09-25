@@ -170,17 +170,17 @@ else
 fi
 
 # BUILD owns the harness target.
-if grep -q -F -e 'name = "exact_target_qualification"' "$build"; then
+if grep -q -F -e 'name = "exact_target_qualification"' "tools/ci/ci_targets_d.bzl"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the exact_target_qualification target"
+  bad "tools/ci/ci_targets_d.bzl lost the exact_target_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:exact_target_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:exact_target_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the exact_target_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the exact_target_qualification step (want dogfood-freshness)"
 fi
 
 # Live proof: exact isolation holds (lib vs bin), not package-wide :all.

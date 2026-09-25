@@ -9,7 +9,8 @@ def dx_forwarded_runtime_providers(upstream, what):
     """Forwards the upstream runtime providers every wrapper preserves.
 
     `InstrumentedFilesInfo` must be present; `OutputGroupInfo` and
-    `RunEnvironmentInfo` are forwarded when available."""
+    `RunEnvironmentInfo` are forwarded when available.
+    """
     out = []
     if InstrumentedFilesInfo not in upstream:
         fail(what + ": upstream target has no InstrumentedFilesInfo: " + str(upstream.label))
@@ -40,7 +41,8 @@ def dx_forwarded_optional(upstream, providers, what = "dx wrapper"):
     their upstream target's optional surfaces (Go archives,
     CcInfo/JavaInfo on binaries, .NET assemblies, coverage metadata on
     shapes whose upstream may omit it). Empty forward is expected when
-    upstream omits the surface. See issue #943."""
+    upstream omits the surface. See issue #943.
+    """
     missing = [p for p in providers if p not in upstream]
     if len(missing) > 0:
         warning = dx_optional_forward_warning(
@@ -50,7 +52,7 @@ def dx_forwarded_optional(upstream, providers, what = "dx wrapper"):
             [str(p) for p in missing],
         )
         if warning != None:
-            print(warning)
+            print(warning)  # buildifier: disable=print  # intentional optional-provider skip warning, not debug
     return [upstream[p] for p in providers if p in upstream]
 
 def dx_preserved_providers(upstream, required, what):
@@ -83,16 +85,17 @@ def dx_forwarded_test_kwargs(kwargs):
     """Extracts the standard test attributes a test forwarder preserves.
 
     `tags` (minus `manual`, so both the private upstream and the public
-    wrapper run under `//...`), `timeout`, `flaky`, `shard_count`, and
-    `size` ride the forwarder; remaining kwargs stay upstream-only. See
-    issue #928.
+    wrapper run under `//...`), `timeout`, `shard_count`, and `size` ride
+    the forwarder; `flaky` stays upstream-only so the public forwarder is
+    an ordinary test (`//tools/ci:target_tags`). Remaining kwargs stay
+    upstream-only. See issue #928.
     """
     out = {}
     if "tags" in kwargs and kwargs["tags"] != None:
         kept = [t for t in kwargs["tags"] if t != "manual"]
         if len(kept) > 0:
             out["tags"] = kept
-    for key in ("timeout", "flaky", "shard_count", "size"):
+    for key in ("timeout", "shard_count", "size"):
         if key in kwargs and kwargs[key] != None:
             out[key] = kwargs[key]
     return out
@@ -284,7 +287,8 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
     The implementation symlinks the upstream executable into its own
     declared output, then preserves the required upstream providers,
     forwards the best-effort optional providers plus the shared runtime
-    providers, and adds `QualitySourcesInfo` for the direct sources."""
+    providers, and adds `QualitySourcesInfo` for the direct sources.
+    """
 
     def _impl(ctx):
         upstream = ctx.attr.upstream
@@ -327,14 +331,19 @@ def dx_binary_forward_kwargs(kwargs):
     """Returns the forwarder kwargs for one binary shape.
 
     `tags` ride verbatim (binaries keep `manual` filtering on both
-    shapes) and `aspect_hints` ride the public forwarder where quality
-    aspects visit. Remaining kwargs stay upstream-only.
-    Contract: `docs/quality/quality-sources.md`."""
+    shapes), `aspect_hints` ride the public forwarder where quality
+    aspects visit, and `target_compatible_with` rides both shapes so
+    an incompatible platform skips the pair together. Remaining kwargs
+    stay upstream-only.
+    Contract: `docs/quality/quality-sources.md`.
+    """
     out = {}
     if kwargs.get("tags", None) != None:
         out["tags"] = kwargs["tags"]
     if kwargs.get("aspect_hints", None) != None:
         out["aspect_hints"] = kwargs["aspect_hints"]
+    if kwargs.get("target_compatible_with", None) != None:
+        out["target_compatible_with"] = kwargs["target_compatible_with"]
     return out
 
 def dx_test_upstream_kwargs(kwargs, srcs = None):
@@ -343,7 +352,8 @@ def dx_test_upstream_kwargs(kwargs, srcs = None):
     `manual` is stripped so both the private upstream and the public
     wrapper run under `//...` (double-execution is the cost of green
     suites); visibility is forced private; `srcs` is set when given.
-    Contract: `docs/quality/quality-sources.md`."""
+    Contract: `docs/quality/quality-sources.md`.
+    """
     out = dict(kwargs)
     if "tags" in out:
         kept = [t for t in out["tags"] if t != "manual"]
@@ -360,11 +370,15 @@ def dx_test_forward_kwargs(kwargs):
     """Returns the forwarder kwargs for one test shape.
 
     Standard test attributes via `dx_forwarded_test_kwargs` plus
-    `aspect_hints`, which ride the public forwarder where quality
-    aspects visit. Contract: `docs/quality/quality-sources.md`."""
+    `aspect_hints` (quality aspects visit the public forwarder) and
+    `target_compatible_with` (both shapes skip together on an
+    incompatible platform). Contract: `docs/quality/quality-sources.md`.
+    """
     out = dx_forwarded_test_kwargs(kwargs)
     if kwargs.get("aspect_hints", None) != None:
         out["aspect_hints"] = kwargs["aspect_hints"]
+    if kwargs.get("target_compatible_with", None) != None:
+        out["target_compatible_with"] = kwargs["target_compatible_with"]
     return out
 
 def dx_wrap_binary(name, upstream_rule, forward_rule, srcs, visibility = None, upstream_kwargs = None, **kwargs):
@@ -376,7 +390,8 @@ def dx_wrap_binary(name, upstream_rule, forward_rule, srcs, visibility = None, u
     so thin-entry shapes own no upstream sources, and stays private.
     The forwarder owns `srcs` directly and takes `tags` plus
     `aspect_hints` from the caller kwargs; remaining kwargs stay
-    upstream-only. Contract: `docs/quality/quality-sources.md`."""
+    upstream-only. Contract: `docs/quality/quality-sources.md`.
+    """
     effective = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
     if len(srcs) > 0:
         effective["srcs"] = srcs
@@ -405,7 +420,8 @@ def dx_wrap_test(name, upstream_rule, forward_rule, srcs, visibility = None, ups
     attributes plus `aspect_hints`, is marked `testonly`, and owns
     `srcs` (empty when the wrapper owns no direct sources).
     `extra_forward_kwargs` carries forwarder-only extras such as the
-    mirrored `env_inherit`. Contract: `docs/quality/quality-sources.md`."""
+    mirrored `env_inherit`. Contract: `docs/quality/quality-sources.md`.
+    """
     base = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
     effective = dx_test_upstream_kwargs(base, srcs = srcs)
     forward_srcs = srcs if srcs != None else []
@@ -432,16 +448,22 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
  where quality aspects visit (lane A): the forwarder is the
     `QualitySourcesInfo` owner, so hints must reach it, not only the
     private upstream. `hdrs` (C/C++ headers) ride both shapes where the
-    forwarder owns them for `QualitySourcesInfo`. `tags` and `testonly`
-    ride the forwarder so lane-A filtering and test-only marking stay
-    honest on the visited target; `timeout`/`flaky`/`shard_count`/`size`
-    are test-rule built-ins and stay upstream-only through `dx_wrap`
+    forwarder owns them for `QualitySourcesInfo`. `tags` ride only the
+    forwarder so lane-A filtering stays honest on the visited target and
+    target tags never become per-action execution info on the private
+    upstream (Bazel 9 folds tags into every owned action, which makes two
+    targets that copy the same source file conflict when only one is
+    tagged). `testonly` rides both shapes so a testonly dependency edge
+    stays legal on the private upstream; `timeout`/`flaky`/`shard_count`/
+    `size` are test-rule built-ins and stay upstream-only through `dx_wrap`
     (test forwarders use `dx_forwarded_test_kwargs`). The forwarder
     defaults to private visibility when the caller passes none, so a
     public package default never leaks the forwarder. Remaining kwargs
-    stay upstream-only. See issue #928."""
+    stay upstream-only. See issue #928.
+    """
     hints = kwargs.get("aspect_hints", None)
     hdrs = kwargs.get("hdrs", None)
+    tags = kwargs.pop("tags", None)
     upstream_rule(
         name = name + "_upstream",
         srcs = srcs,
@@ -453,8 +475,8 @@ def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs
         forward_kwargs["aspect_hints"] = hints
     if hdrs != None:
         forward_kwargs["hdrs"] = hdrs
-    if kwargs.get("tags", None) != None:
-        forward_kwargs["tags"] = kwargs["tags"]
+    if tags != None:
+        forward_kwargs["tags"] = tags
     if kwargs.get("testonly", None) != None:
         forward_kwargs["testonly"] = kwargs["testonly"]
     forward_rule(

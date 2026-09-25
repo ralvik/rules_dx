@@ -3,6 +3,173 @@
 
 use super::*;
 
+#[test]
+fn osv_range_boundaries_project_to_native_ecosystem_scopes() {
+    use osv::schema::Event::{Fixed, Introduced, LastAffected, Limit};
+    for (events, lower, upper, inclusive) in [
+        (vec![Introduced("0".to_owned())], None, None, false),
+        (
+            vec![Introduced("1.0.0".to_owned())],
+            Some("1.0.0"),
+            None,
+            false,
+        ),
+        (vec![Fixed("2.0.0".to_owned())], None, Some("2.0.0"), false),
+        (
+            vec![LastAffected("2.0.0".to_owned())],
+            None,
+            Some("2.0.0"),
+            true,
+        ),
+        (vec![Limit("2.0.0".to_owned())], None, Some("2.0.0"), false),
+        (
+            vec![Introduced("1.0.0".to_owned()), Limit("2.0.0".to_owned())],
+            Some("1.0.0"),
+            Some("2.0.0"),
+            false,
+        ),
+        (
+            vec![
+                Introduced("1.0.0".to_owned()),
+                LastAffected("2.0.0".to_owned()),
+            ],
+            Some("1.0.0"),
+            Some("2.0.0"),
+            true,
+        ),
+    ] {
+        let intervals = range_events_to_intervals(&events);
+        assert_eq!(
+            intervals,
+            vec![(
+                lower.map(str::to_owned),
+                upper.map(str::to_owned),
+                inclusive
+            )]
+        );
+        for set in ["cargo", "npm", "go", "maven", "nuget"] {
+            let scope =
+                interval_to_scope(set, &intervals[0].0, &intervals[0].1, inclusive).expect("scope");
+            assert!(version_affected(set, &scope, "1.5.0"), "{set} {scope}");
+            if upper.is_some() {
+                assert_eq!(
+                    version_affected(set, &scope, "2.0.0"),
+                    inclusive,
+                    "{set} {scope}"
+                );
+                assert!(!version_affected(set, &scope, "2.0.1"), "{set} {scope}");
+            }
+            if lower.is_some() {
+                assert!(!version_affected(set, &scope, "0.9.0"), "{set} {scope}");
+            }
+        }
+    }
+    assert_eq!(
+        range_events_to_intervals(&[
+            Introduced("1.0.0".to_owned()),
+            Introduced("2.0.0".to_owned())
+        ]),
+        vec![
+            (Some("1.0.0".to_owned()), None, false),
+            (Some("2.0.0".to_owned()), None, false)
+        ]
+    );
+    assert!(interval_to_scope("unknown", &None, &None, false).is_none());
+}
+
+#[test]
+fn osv_projection_skips_incomplete_packages_and_uses_severity_precedence() {
+    let base = serde_json::json!({
+        "id": "GHSA-demo", "modified": "2026-01-01T00:00:00Z",
+        "affected": [{"package": {"ecosystem": "npm", "name": "demo"}, "versions": ["", "1.0.0", "1.0.0"]}]
+    });
+    for source in ["affected", "top", "ecosystem"] {
+        let mut value = base.clone();
+        match source {
+            "affected" => {
+                value["affected"][0]["severity"] =
+                    serde_json::json!([{"type":"CVSS_V3","score":"high"}])
+            }
+            "top" => value["severity"] = serde_json::json!([{"type":"CVSS_V3","score":"medium"}]),
+            "ecosystem" => {
+                value["affected"][0]["ecosystem_specific"] = serde_json::json!({"severity":"low"})
+            }
+            _ => unreachable!(),
+        }
+        let vuln: osv::schema::Vulnerability = serde_json::from_value(value).expect("OSV");
+        let projected = project_osv_snapshot(&[vuln]);
+        assert_eq!(projected.len(), 1);
+        assert_eq!(projected[0].versions, "1.0.0");
+        assert_eq!(
+            projected[0].severity,
+            match source {
+                "affected" => "high",
+                "top" => "medium",
+                _ => "low",
+            }
+        );
+    }
+    for variant in ["empty-id", "missing-package", "empty-name", "no-affected"] {
+        let mut value = base.clone();
+        match variant {
+            "empty-id" => value["id"] = serde_json::json!(" "),
+            "missing-package" => {
+                value["affected"][0]
+                    .as_object_mut()
+                    .expect("affected")
+                    .remove("package");
+            }
+            "empty-name" => value["affected"][0]["package"]["name"] = serde_json::json!(" "),
+            "no-affected" => {
+                value.as_object_mut().expect("vuln").remove("affected");
+            }
+            _ => unreachable!(),
+        }
+        let vuln: osv::schema::Vulnerability = serde_json::from_value(value).expect("OSV");
+        assert!(project_osv_snapshot(&[vuln]).is_empty(), "{variant}");
+    }
+}
+
+#[test]
+fn go_comparators_respect_partial_versions_and_zero_major_caret() {
+    for (scope, version, expected) in [
+        (">1.2.3", "1.2.4", true),
+        (">1.2.3", "1.2.3", false),
+        (">1.2", "1.3.0", true),
+        (">1.2", "1.2.9", false),
+        (">1", "2.0.0", true),
+        (">1", "1.9.9", false),
+        ("<1.2.3", "1.2.2", true),
+        ("<1.2.3", "1.2.3", false),
+        ("<1.2", "1.1.9", true),
+        ("<1.2", "1.2.0", false),
+        ("<1", "0.9.9", true),
+        ("<1", "1.0.0", false),
+        ("<=1.2.3", "1.2.3", true),
+        ("<=1.2.3", "1.2.4", false),
+        ("~1.2.3", "1.2.4", true),
+        ("~1.2.3", "1.3.0", false),
+        ("~1.2", "1.2.9", true),
+        ("~1.2", "1.3.0", false),
+        ("^1", "1.9.9", true),
+        ("^1", "2.0.0", false),
+        ("^1.2", "1.3.0", true),
+        ("^0.2", "0.3.0", false),
+        ("^0.2.3", "0.2.4", true),
+        ("^0.2.3", "0.3.0", false),
+        ("^0.0.3", "0.0.4", false),
+        ("^0.0.3", "0.0.3", true),
+    ] {
+        assert_eq!(
+            version_affected("go", scope, version),
+            expected,
+            "{scope} {version}"
+        );
+    }
+    assert!(version_affected("unknown", " 1.0.0 ", "1.0.0"));
+    assert!(!version_affected("unknown", "", ""));
+}
+
 fn packages() -> Vec<LockedPackage> {
     vec![
         LockedPackage {
@@ -592,6 +759,57 @@ fn nuget_ranges_cover_intervals_minimums_and_edges() {
 }
 
 #[test]
+fn nuget_malformed_versions_and_bounds_fail_closed() {
+    // Unparseable versions never order; equality gates stay closed.
+    assert_eq!(nuget_compare("", "1.0"), std::cmp::Ordering::Equal);
+    assert_eq!(
+        nuget_compare(&"1".repeat(300), "1.0"),
+        std::cmp::Ordering::Equal
+    );
+    assert_eq!(nuget_compare("banana", "1.0"), std::cmp::Ordering::Equal);
+    assert!(!nuget_version_eq("", "1.0"));
+    assert!(!nuget_version_eq("1.0", &"1".repeat(300)));
+    // Version-side rejections: floating, metadata-only, empty core,
+    // five-part core, empty or unruly prerelease remainder.
+    assert!(!nuget_in_scope("[1.0,2.0)", "1.*"));
+    assert!(!nuget_in_scope("[1.0,2.0)", "+"));
+    assert!(!nuget_in_scope("[1.0,2.0)", "-1.0"));
+    assert!(!nuget_in_scope("[1.0,2.0)", "1.2.3.4.5"));
+    assert!(!nuget_in_scope("[1.0,2.0)", "1.0-"));
+    assert!(!nuget_in_scope("[1.0,2.0)", "1.0-a b"));
+    assert!(!nuget_in_scope("[1.0,2.0)", "1.0-a..b"));
+    assert!(!nuget_in_scope("[1.0,2.0)", "1.0-a_b"));
+    // All-zero numeric labels normalize to zero, not empty.
+    assert!(!nuget_in_scope("[1.0,2.0)", "1.0-00"));
+    // Overlong scope fails closed before any interval reading.
+    assert!(!nuget_in_scope(&"1".repeat(5000), "1.0"));
+    // Single-bound and range intervals need non-empty, parseable,
+    // within-length bounds.
+    assert!(!nuget_in_scope("[ ]", "1.0"));
+    assert!(!nuget_in_scope("[banana]", "1.0"));
+    assert!(!nuget_in_scope(
+        &format!("[{},2.0)", "1".repeat(300)),
+        "1.0"
+    ));
+    assert!(!nuget_in_scope("[banana,2.0)", "1.0"));
+    assert!(!nuget_in_scope("[1.0,banana)", "1.0"));
+}
+
+#[test]
+fn nuget_prerelease_labels_compare_numeric_then_alpha_upstream() {
+    // Equal numeric labels continue into later labels.
+    assert_eq!(
+        nuget_compare("1.0-1.beta", "1.0-1.beta"),
+        std::cmp::Ordering::Equal
+    );
+    // Numeric labels sort before alphanumeric labels.
+    assert_eq!(
+        nuget_compare("1.0-alpha", "1.0-2"),
+        std::cmp::Ordering::Greater
+    );
+}
+
+#[test]
 fn nuget_range_advisories_report_findings() {
     // Range advisories fire instead of looking clean (issue #624).
     let packages = vec![LockedPackage {
@@ -811,6 +1029,35 @@ fn osv_typed_cargo_projects_interval_and_matches() {
 }
 
 #[test]
+fn osv_explicit_versions_do_not_caret_match_fixed_release() {
+    // GHSA-qx2v-8332-m4fv shape: ranges plus a one-element `versions`
+    // list. Bare cargo list entries must pin exact so fixed `0.4.11+`
+    // never matches via caret (`^0.4.10` would cover `0.4.12`).
+    let text = r#"[{
+        "id": "GHSA-qx2v-8332-m4fv",
+        "modified": "2026-09-18T00:00:00Z",
+        "affected": [{
+            "package": {"name": "slab", "ecosystem": "crates.io"},
+            "ranges": [{"type": "SEMVER", "events": [{"introduced": "0.4.10"}, {"fixed": "0.4.11"}]}],
+            "versions": ["0.4.10"]
+        }]
+    }]"#;
+    let parsed = parse_snapshot(text).expect("osv parses");
+    assert!(parsed.iter().any(|entry| entry.versions == "=0.4.10"));
+    assert!(parsed
+        .iter()
+        .any(|entry| entry.versions == ">=0.4.10, <0.4.11"));
+    let any_affected = |version: &str| {
+        parsed
+            .iter()
+            .any(|entry| version_affected("cargo", &entry.versions, version))
+    };
+    assert!(any_affected("0.4.10"));
+    assert!(!any_affected("0.4.11"));
+    assert!(!any_affected("0.4.12"));
+}
+
+#[test]
 fn osv_typed_sets_project_to_native_scopes() {
     // npm semver, go v-prefix, maven/nuget intervals (no narrowing change).
     let text = r#"[{
@@ -918,11 +1165,15 @@ fn osv_typed_withdrawn_unsupported_and_git_skip() {
         }]
     }]"#;
     let parsed = parse_snapshot(text).expect("osv parses");
-    // Only the explicit-versions entry projects (two scopes).
+    // Only the explicit-versions entry projects (two scopes); cargo bare
+    // list entries pin with `=` so they stay exact, not caret.
     assert_eq!(parsed.len(), 2);
     assert!(parsed.iter().all(|entry| entry.id == "GHSA-explicit-0001"));
-    assert!(parsed.iter().any(|entry| entry.versions == "1.2.3"));
-    assert!(parsed.iter().any(|entry| entry.versions == "1.2.4"));
+    assert!(parsed.iter().any(|entry| entry.versions == "=1.2.3"));
+    assert!(parsed.iter().any(|entry| entry.versions == "=1.2.4"));
+    assert!(version_affected("cargo", "=1.2.3", "1.2.3"));
+    assert!(!version_affected("cargo", "=1.2.3", "1.2.4"));
+    assert!(!version_affected("cargo", "=1.2.3", "1.3.0"));
 }
 
 #[test]

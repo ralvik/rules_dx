@@ -600,6 +600,19 @@ mod tests {
                 ident("MPL-2.0"),
             ])
         );
+        // Same-operator nesting flattens on either side of the operator.
+        assert_eq!(
+            parse_license("(MIT OR Apache-2.0) OR MPL-2.0"),
+            LicenseExpr::Or(vec![ident("MIT"), ident("Apache-2.0"), ident("MPL-2.0")])
+        );
+        assert_eq!(
+            parse_license("(MIT AND Apache-2.0) AND MPL-2.0"),
+            LicenseExpr::And(vec![ident("MIT"), ident("Apache-2.0"), ident("MPL-2.0")])
+        );
+        assert_eq!(
+            parse_license("MIT AND (Apache-2.0 AND MPL-2.0)"),
+            LicenseExpr::And(vec![ident("MIT"), ident("Apache-2.0"), ident("MPL-2.0")])
+        );
     }
 
     #[test]

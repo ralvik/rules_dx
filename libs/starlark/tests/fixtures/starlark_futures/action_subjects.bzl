@@ -1,16 +1,9 @@
 """Concrete action-subjects use case (issue #795).
-
 Contract: `docs/testing/starlark.md#future-not-implemented`, `docs/decisions/0009-starlark-testing.md`.
-Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
-`bazel run //tools/ci:starlark_futures_qualification`.
-
-Action observation stays deferred: analysis observes `DxSubjectInfo`
-fields plus `DefaultInfo` output basenames only, not registered actions;
-actions are proven via execution-mode `file_checks` or `aquery` evidence,
-not analysis subjects. The mnemonic-to-outputs mapping plus resolved
-report below stay a Starlark-level use case. Consumers expose resolved
-action state via `DxSubjectInfo` when they need it observed.
-"""
+Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via `bazel run //tools/ci:starlark_futures_qualification`.
+Action observation stays deferred: analysis observes `DxSubjectInfo` fields plus
+`DefaultInfo` output basenames only, not registered actions; the mnemonic-to-outputs
+mapping stays a Starlark-level use case; consumers expose state via `DxSubjectInfo`."""
 
 def admitted_actions():
     return ["StarlarkAction", "FileWrite"]

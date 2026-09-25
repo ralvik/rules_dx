@@ -97,10 +97,10 @@ fi
 
 # MODULE pins the 7.1 resolver line.
 if grep -q -F -e 'bazel_dep(name = "rules_jvm_external", version = "7.1")' "$module" &&
-  grep -q -F -e 'issue #481' "$module"; then
+  grep -q -F -e 'bazel run //tools/ci:maven_lock_qualification' "$module"; then
   ok
 else
-  bad "MODULE.bazel lost its rules_jvm_external 7.1 pin plus #481 record under issue #481"
+  bad "MODULE.bazel lost its rules_jvm_external 7.1 pin plus qualified-seed annotation (issue #481 rides foundation-qualification.md)"
 fi
 
 # MODULE wires lock_file plus fail_if_repin_required with the mirror order.
@@ -225,12 +225,12 @@ else
   bad "docs/generation/foundation-qualification.md lost its qualified Maven lock record under issue #481"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "maven_lock_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:maven_lock_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "maven_lock_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:maven_lock_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the maven_lock_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the maven_lock_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the fail-closed @maven consumers execute green on the seed host.

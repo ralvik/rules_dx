@@ -67,7 +67,7 @@ initial 1
 initial WARNING cue - matrix/cue_dirty.cue 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/cue_dirty.cue 0 36 "package sample\\n\\nvalue:\\"hello\\"fixed\\n"
+replacement matrix/cue_dirty.cue 29 35 "fixed"
 """,
     },
     {
@@ -109,7 +109,7 @@ initial 1
 initial WARNING jsonnetfmt - matrix/jsonnet_dirty.jsonnet 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/jsonnet_dirty.jsonnet 0 22 "{value:\\"hello\\"fixed}\\n"
+replacement matrix/jsonnet_dirty.jsonnet 14 20 "fixed"
 """,
     },
     {
@@ -151,7 +151,7 @@ initial 1
 initial WARNING pkl - matrix/pkl_dirty.pkl 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/pkl_dirty.pkl 0 20 "value=\\"hello\\"fixed\\n"
+replacement matrix/pkl_dirty.pkl 13 19 "fixed"
 """,
     },
     {
@@ -193,7 +193,7 @@ initial 1
 initial WARNING modfmt - matrix/modfmt_dirty.mod 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/modfmt_dirty.mod 0 32 "module example.com/samplefixed\\n"
+replacement matrix/modfmt_dirty.mod 25 31 "fixed"
 """,
     },
     {
@@ -319,7 +319,7 @@ initial 1
 initial WARNING shfmt - matrix/shfmt_dirty.sh 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/shfmt_dirty.sh 0 38 "#!/usr/bin/env bash\\necho\\"hello\\"fixed\\n"
+replacement matrix/shfmt_dirty.sh 31 37 "fixed"
 """,
     },
     {
@@ -361,7 +361,7 @@ initial 1
 initial WARNING standardrb - matrix/standardrb_dirty.rb 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/standardrb_dirty.rb 0 12 "puts fixed\\n"
+replacement matrix/standardrb_dirty.rb 5 11 "fixed"
 """,
     },
     {
@@ -403,7 +403,7 @@ initial 1
 initial WARNING djlint - matrix/djlint_format_dirty.html 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/djlint_format_dirty.html 0 33 "<html><body>fixed</body></html>\\n"
+replacement matrix/djlint_format_dirty.html 12 18 "fixed"
 """,
     },
     {
@@ -445,7 +445,7 @@ initial 1
 initial WARNING prettier - matrix/prettier_css_dirty.css 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/prettier_css_dirty.css 0 26 ".sample{color:#ffffixed}\\n"
+replacement matrix/prettier_css_dirty.css 18 24 "fixed"
 """,
     },
     {
@@ -487,7 +487,7 @@ initial 1
 initial WARNING prettier - matrix/prettier_less_dirty.less 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/prettier_less_dirty.less 0 26 ".sample{color:#ffffixed}\\n"
+replacement matrix/prettier_less_dirty.less 18 24 "fixed"
 """,
     },
     {
@@ -529,7 +529,7 @@ initial 1
 initial WARNING prettier - matrix/prettier_scss_dirty.scss 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/prettier_scss_dirty.scss 0 26 ".sample{color:#ffffixed}\\n"
+replacement matrix/prettier_scss_dirty.scss 18 24 "fixed"
 """,
     },
     {
@@ -571,7 +571,7 @@ initial 1
 initial WARNING prettier - matrix/prettier_gherkin_dirty.feature 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/prettier_gherkin_dirty.feature 0 21 "Feature:samplefixed\\n"
+replacement matrix/prettier_gherkin_dirty.feature 14 20 "fixed"
 """,
     },
     {
@@ -613,7 +613,7 @@ initial 1
 initial WARNING prettier - matrix/prettier_sql_dirty.sql 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/prettier_sql_dirty.sql 0 16 "SELECT  1fixed\\n"
+replacement matrix/prettier_sql_dirty.sql 9 15 "fixed"
 """,
     },
     {
@@ -655,7 +655,7 @@ initial 1
 initial WARNING prettier - matrix/prettier_xml_dirty.xml 0 0 fixable=true "file is not formatted"
 terminal 0
 replacements 1
-replacement matrix/prettier_xml_dirty.xml 0 19 "<a>hello</a>fixed\\n"
+replacement matrix/prettier_xml_dirty.xml 12 18 "fixed"
 """,
     },
     {

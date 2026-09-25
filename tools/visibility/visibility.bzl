@@ -66,11 +66,16 @@ VIS_CLI_DOCS_GENERATION_QUALITY = VIS_CLI + [
 ]
 
 # Plan-shard libraries: env_shard serves the //env registry root (the
-# rust_env_shard target attribute) plus //cli; codegen_shard serves //cli
-# only, like its sibling //generation/result.
+# rust_env_shard target attribute) plus //cli; codegen_shard also serves
+# //generation (the dx_codegen_shard/prost_codegen_shard attr defaults
+# declared in generation/codegen.bzl).
 VIS_ENV_SHARD = VIS_CLI + [
     "//env:__pkg__",
     "//env:__subpackages__",
+]
+
+VIS_CLI_GENERATION = VIS_CLI + [
+    "//generation:__pkg__",
 ]
 
 # Quality leaves: visible inside //quality only, except markdown (serves
@@ -197,7 +202,7 @@ SCOPED_PACKAGES = {
     "cli/test_scratch": "VIS_CLI",
     "cli/update": "VIS_CLI",
     "env/env_shard": "VIS_ENV_SHARD",
-    "generation/codegen_shard": "VIS_CLI",
+    "generation/codegen_shard": "VIS_CLI_GENERATION",
     "generation/result": "VIS_CLI",
     "quality/adapter": "VIS_QUALITY",
     "quality/artifacts": "VIS_QUALITY",

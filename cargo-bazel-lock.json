@@ -1,5 +1,5 @@
 {
-  "checksum": "f663f863aa252e3df93f42e248a586fc7c28c131887280d26e0d83b64c252a42",
+  "checksum": "e1048a70aba71131e38bf7aef29cc29c0c023498102a0c5d3cc84e1bf7fa16e5",
   "conditions": {
     "aarch64-apple-darwin": [
       "aarch64-apple-darwin"
@@ -930,6 +930,9 @@
     },
     "blake3 1.8.7": {
       "build_script_attrs": {
+        "build_script_env": {
+          "CFLAGS_aarch64_apple_darwin": "-fno-profile-instr-generate -fno-coverage-mapping"
+        },
         "deps": [
           {
             "id": "cc 1.4.5",

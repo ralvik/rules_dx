@@ -482,10 +482,10 @@ preset_flags="$(grep -o -E -e '^    "[a-z_:]+ [^"]+"' "$preset_py" | sed -e 's/^
 preset_flag_count="$(echo "$preset_flags" | grep -c . || true)"
 fragment_flags="$(grep -v -E -e '^#|^$' "$preset_fragment" || true)"
 fragment_flag_count="$(echo "$fragment_flags" | grep -c . || true)"
-if [[ "$preset_flag_count" == "$fragment_flag_count" ]] && [[ "$preset_flag_count" == "12" ]]; then
+if [[ "$preset_flag_count" == "$fragment_flag_count" ]] && [[ "$preset_flag_count" == "16" ]]; then
   ok
 else
-  bad "preset flag drift (lib.rs has $preset_flag_count, preset.bazelrc has $fragment_flag_count; want 12 each: run preset.update)"
+  bad "preset flag drift (lib.rs has $preset_flag_count, preset.bazelrc has $fragment_flag_count; want 16 each: run preset.update)"
 fi
 stale_preset=0
 while IFS= read -r flag; do

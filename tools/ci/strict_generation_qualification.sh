@@ -191,12 +191,12 @@ else
   bad "docs/native-toolchains.md lost its qualified strict-generation record with fixtures under issue #503"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "strict_generation_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:strict_generation_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "strict_generation_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:strict_generation_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the strict_generation_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the strict_generation_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the strict lib builds, the strict test passes, and the Go

@@ -38,9 +38,28 @@ import (
 const corpusKind = "real_source_target"
 
 // corpusValeHint is the single Vale configuration every linted Markdown
-// corpus binds. Starlark (buildifier) and TOML (taplo) run on pinned
-// upstream defaults with no hint; JSON runs on pinned defaults as well.
+// corpus binds. TOML (taplo) and JSON run on pinned upstream defaults
+// with no hint; Starlark binds corpusBuildifierHint when the repository
+// root declares one, else pinned defaults as well.
 const corpusValeHint = "//quality:corpus_vale_config"
+
+// corpusBuildifierHint is the Buildifier policy every linted Starlark
+// corpus binds, so one checked-in `.buildifier.json` configures
+// buildifier repo-wide instead of per-file suppressions. It resolves only
+// when the repository root declares that file; a repository without one
+// keeps the pinned upstream defaults.
+const corpusBuildifierHint = "//:buildifier_config"
+
+// rootBuildifierConfig reports whether the repository root declares the
+// Buildifier config file corpusBuildifierHint names. Stat is relative to
+// the generation workspace root, never the process working directory.
+func rootBuildifierConfig(repoRoot string) bool {
+	if repoRoot == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(repoRoot, ".buildifier.json"))
+	return err == nil
+}
 
 // corpusTag is the shared tag on every generated corpus split target so CI
 // and docs scope without name matching: `attr(tags, corpus, ...)` covers
@@ -255,7 +274,9 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 		// Dotfiles are tool-owned configs or hidden state, never linted
 		// corpus sources (for example .buildifier.json, .vale.ini).
 		// BUILD.bazel/MODULE.bazel never start with a dot, so they stay.
-		if strings.HasPrefix(base, ".") {
+		// Exception: .gitleaks.toml is a tracked supply-chain config that
+		// corpus_audit requires an owner for, so it stays in the toml corpus.
+		if strings.HasPrefix(base, ".") && base != ".gitleaks.toml" {
 			return nil
 		}
 		// Local overrides (for example AGENTS.local.md, dx.local.toml)
@@ -335,6 +356,7 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 	// Emit one target per populated type. Starlark always has at least
 	// BUILD.bazel (the package file itself) except for synthetic test
 	// dirs without one; skip empty splits so removal stubs delete them.
+	bindBuildifier := rootBuildifierConfig(args.Config.RepoRoot)
 	emit := func(typ, attr string, srcs []string) {
 		if len(srcs) == 0 {
 			return
@@ -347,6 +369,8 @@ func planCorpus(args language.GenerateArgs, hasOtherGen bool) *corpusPlan {
 			if len(siblings) > 0 {
 				r.SetAttr("markdown_siblings", siblings)
 			}
+		} else if typ == "starlark" && bindBuildifier {
+			r.SetAttr("aspect_hints", []string{corpusBuildifierHint})
 		}
 		plan.gen = append(plan.gen, r)
 	}

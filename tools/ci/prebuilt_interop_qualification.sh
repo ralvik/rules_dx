@@ -122,11 +122,11 @@ if grep -q -F -e 'CXX_IDENTITY_VERSION = "1.0.200"' "$pins" &&
   grep -q -F -e '@crates//:cxxbridge-cmd' "$pins" &&
   grep -q -F -e 'mixed Rust/C/C++ host-to-target plus target execution qualify separately' "$pins" &&
   grep -q -F -e 'stays owned under' "$pins" &&
-  grep -q -F -e 'issue #497' "$pins" &&
-  grep -q -F -e 'issue #499' "$pins"; then
+  grep -q -F -e 'issue #497' "$native" &&
+  grep -q -F -e 'issue #499' "$native"; then
   ok
 else
-  bad "pins.bzl lost its mixed Rust/C/C++ CXX identity plus #497/#499 ownership under issue #498"
+  bad "pins.bzl plus native-toolchains.md lost their mixed Rust/C/C++ CXX identity plus #497/#499 ownership under issue #498"
 fi
 
 # Pins record the rejected substitutes (single-combo plus availability plus ancestry).
@@ -160,12 +160,12 @@ else
   bad "docs/native-toolchains.md lost its qualified interop record with fixtures under issue #498"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "prebuilt_interop_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:prebuilt_interop_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "prebuilt_interop_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:prebuilt_interop_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the prebuilt_interop_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the prebuilt_interop_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the interop lib builds on the seed host.

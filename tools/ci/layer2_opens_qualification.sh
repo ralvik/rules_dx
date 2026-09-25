@@ -245,22 +245,23 @@ else
   bad "layer2_opens.expected lost its open-cells plus rejected plus route record under issue #510"
 fi
 
-# Support matrix owns the qualified seed-only record under closed #510.
-if grep -q -F -e 'qualified seed-only under closed #510' "$support" &&
-  grep -q -F -e 'quality/tests/fixtures/layer2_opens/pins.bzl' "$support" &&
-  grep -q -F -e 'layer2_opens_qualification' "$support" &&
-  grep -q -F -e 'adapter-less as pass rejected' "$support"; then
+# Framework-adapters owns the qualified seed-only record under closed #510
+# (support-matrix consolidated into this home by issue #1146).
+if grep -q -F -e 'qualified seed-only under closed #510' "$framework" &&
+  grep -q -F -e 'quality/tests/fixtures/layer2_opens/pins.bzl' "$framework" &&
+  grep -q -F -e 'layer2_opens_qualification' "$framework" &&
+  grep -q -F -e 'adapter-less as pass rejected' "$framework"; then
   ok
 else
-  bad "support-matrix lost its closed-#510 qualified seed-only record with fixtures plus harness"
+  bad "framework-adapters lost its closed-#510 qualified seed-only record with fixtures plus harness"
 fi
 
 # Framework adapters plus quality-testing docs own their records.
-if grep -q -F -e 'qualified seed-only under issue #510' "$framework" &&
+if grep -q -F -e 'qualified seed-only under closed #510' "$framework" &&
   grep -q -F -e 'layer2_opens_qualification' "$framework" &&
   grep -q -F -e 'examples/mixed/hello/' "$framework" &&
-  grep -q -F -e 'remaining opens under issue #510' "$testing_doc" &&
-  grep -q -F -e 'framework-composition depcheck stays with the JS/TS pnpm route' "$testing_doc"; then
+  grep -q -F -e 'qualified seed-only under closed #510' "$testing_doc" &&
+  grep -q -F -e 'pinned by `bazel test //tools/depcheck/...`' "$testing_doc"; then
   ok
 else
   bad "framework-adapters or quality-testing lost its #510 qualified plus route record"

@@ -94,7 +94,7 @@ else
 fi
 
 # Live execution emits the recovery notice plus stderr hint on failure.
-if grep -q -F -e 'dx_update::recovery::plan(&report)' "$exec_update" &&
+if grep -q -F -e 'dx_update::recovery::plan(report)' "$exec_update" &&
   grep -q -F -e 'dx_update::recovery::RECOVERY_CODE' "$exec_update" &&
   grep -q -F -e 'update_recovery' "$exec_update"; then
   ok
@@ -162,10 +162,10 @@ if grep -q -F -e 'Atomicity is per set, never repository-wide' "$protocol" &&
   grep -q -F -e 'update_recovery' "$protocol" &&
   grep -q -F -e 'idempotent retry' "$protocol" &&
   grep -q -F -e 'dx: update_recovery:' "$protocol" &&
-  grep -q -F -e 'cli/update/tests/fixtures/update_rollback/' "$protocol"; then
+  grep -q -F -e 'cli/update/tests/fixtures/update_rollback/' "$command_doc"; then
   ok
 else
-  bad "output-protocol.md lost its per-set boundary with recovery notice under #772"
+  bad "protocol docs lost their per-set boundary with recovery notice under #772"
 fi
 
 # Protocol notice codes name update_recovery next to per-set codes.
@@ -177,12 +177,12 @@ else
   bad "output-protocol.md lost its update_recovery notice-code record under #772"
 fi
 
-# Protocol Compatibility Tests require the rollback fixtures.
-if grep -q -F -e 'cli/update/tests/fixtures/update_rollback/' "$protocol" &&
-  grep -q -F -e 'dx_update::recovery' "$protocol"; then
+# History Compatibility Tests require the rollback fixtures.
+if grep -q -F -e 'cli/update/tests/fixtures/update_rollback/' "$command_doc" &&
+  grep -q -F -e 'dx_update::recovery' "$command_doc"; then
   ok
 else
-  bad "output-protocol.md Compatibility Tests lost the update_rollback fixture requirement under #772"
+  bad "audit-update-bazel.md Compatibility Tests lost the update_rollback fixture requirement under #772"
 fi
 
 # Targets own the harness plus dogfood wires it.

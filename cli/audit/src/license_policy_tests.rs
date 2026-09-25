@@ -161,6 +161,17 @@ fn promotion_to_distributed_requalifies_under_strict_table() {
         evaluate(&expr, Tier::Distributed, &lookup, &denied),
         TierOutcome::Review
     );
+    // Identities outside the lookup's named table fall through to the
+    // unlisted arm: inventory in internal, deny in distributed.
+    let unlisted = LicenseExpr::Ident("MIT".to_owned());
+    assert_eq!(
+        evaluate(&unlisted, Tier::Internal, &lookup, &denied),
+        TierOutcome::Allow
+    );
+    assert_eq!(
+        evaluate(&unlisted, Tier::Distributed, &lookup, &denied),
+        TierOutcome::Deny
+    );
 }
 
 #[test]

@@ -4,8 +4,6 @@ Contract: `docs/tools/tool-acquisition.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
-load(":extension.bzl", "TOOL_ARTIFACTS")
-load(":repos.bzl", "DX_TOOL_HUB", "DX_TOOL_REPOS")
 load(":biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
 load(":biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
 load(":biome.macos_arm64.bzl", _biome_macos_arm64 = "ARTIFACT")
@@ -14,10 +12,12 @@ load(":buildifier.linux_arm64.bzl", _buildifier_linux_arm64 = "ARTIFACT")
 load(":buildifier.linux_x86_64.bzl", _buildifier_linux_x86_64 = "ARTIFACT")
 load(":buildifier.macos_arm64.bzl", _buildifier_macos_arm64 = "ARTIFACT")
 load(":buildifier.windows_x86_64.bzl", _buildifier_windows_x86_64 = "ARTIFACT")
+load(":extension.bzl", "TOOL_ARTIFACTS")
 load(":gitleaks.linux_arm64.bzl", _gitleaks_linux_arm64 = "ARTIFACT")
 load(":gitleaks.linux_x86_64.bzl", _gitleaks_linux_x86_64 = "ARTIFACT")
 load(":gitleaks.macos_arm64.bzl", _gitleaks_macos_arm64 = "ARTIFACT")
 load(":gitleaks.windows_x86_64.bzl", _gitleaks_windows_x86_64 = "ARTIFACT")
+load(":repos.bzl", "DX_TOOL_HUB", "DX_TOOL_REPOS")
 load(":ruff.linux_arm64.bzl", _ruff_linux_arm64 = "ARTIFACT")
 load(":ruff.linux_x86_64.bzl", _ruff_linux_x86_64 = "ARTIFACT")
 load(":ruff.macos_arm64.bzl", _ruff_macos_arm64 = "ARTIFACT")
@@ -383,6 +383,7 @@ def metadata_tests(name):
         "vale.exe",
         "24ca0647d8b929d786cc371848fe1153e605361cd7dffa4badac9cdf33f99487",
     )
+
     # use_repo inventory (see repos.bzl): derived repo names must equal the
     # checked-in list, so adding a tool means metadata plus inventory together.
     derived_repos = sorted(["dx_%s_%s_%s" % (artifact["tool"], artifact["os"], artifact["cpu"]) for artifact in TOOL_ARTIFACTS])

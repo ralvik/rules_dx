@@ -113,9 +113,9 @@ for pair in "javascript:javascript" "jsx:javascript" "typescript:typescript" "ts
 done
 [[ "$agree" == "1" ]] && ok
 
-# The synthetic maps stay labeled fixture/provisional, never the
+# The synthetic maps stay labeled synthetic/fixture, never the
 # taxonomy.
-if grep -q -F -e 'Provisional -only registry' quality/adapters.bzl && grep -q -F -e 'WP2 fixture class-to-family assignment' quality/adapters.bzl; then
+if grep -q -F -e 'Synthetic tool ID to capability' quality/adapters.bzl && grep -q -F -e 'WP2 fixture class-to-family assignment' quality/adapters.bzl; then
   ok
 else
   bad "synthetic adapter maps lost their fixture/provisional labeling"

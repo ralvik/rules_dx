@@ -132,8 +132,8 @@ fi
 # Upload stays pinned plus fail-closed plus least-privilege, publishes nothing.
 if grep -q -F -e 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4' "$ci" &&
   grep -q -F -e 'if-no-files-found: error' "$ci" &&
-  grep -q -F -e 'persist-credentials: false' .github/actions/setup-checkout-bazelisk/action.yml &&
-  grep -q -F -e 'setup-checkout-bazelisk' "$ci" &&
+  grep -q -F -e 'persist-credentials: false' "$ci" &&
+  grep -q -F -e 'setup-bazelisk' "$ci" &&
   grep -q -F -e 'CI never signs PR code, publishes nothing' "$ci"; then
   ok
 else

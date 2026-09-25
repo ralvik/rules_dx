@@ -229,7 +229,7 @@ else
 fi
 
 # Testing README records the Starlark route as investigated plus fallback.
-if grep -q -F -e 'Empirical Starlark feasibility evidence ran against the pinned Bazel' docs/testing/strategy-details.md &&
+if grep -q -F -e 'genuine executable-line instrumentation under' docs/testing/strategy-details.md &&
   grep -q -F -e 'behavioral matrix' docs/testing/strategy-details.md; then
   ok
 else
@@ -292,12 +292,13 @@ else
   bad "a remote cache/executor flag appeared (local-only execution)"
 fi
 
-# CI header stays local-only with platform qualification owned elsewhere.
-if grep -q -F -e 'local execution, no remote' .github/workflows/ci.yml &&
-  grep -q -F -e 'issue #298' .github/workflows/ci.yml; then
+# CI header stays local-only with platform qualification owned elsewhere
+# (policy notes live in docs/testing/workflow-notes.md after the split).
+if grep -q -F -e 'local execution, no remote' docs/testing/workflow-notes.md &&
+  grep -q -F -e 'issue #298' docs/testing/workflow-notes.md; then
   ok
 else
-  bad "ci.yml lost its local-only plus #298 platform record"
+  bad "workflow-notes lost its local-only plus #298 platform record"
 fi
 
 # Remote Tests section states the local-only else branch explicitly.

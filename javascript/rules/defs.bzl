@@ -179,7 +179,8 @@ def javascript_test_env(env_inherit):
     is the Bazel test-filtering (`--test_filter`/sharding) channel the
     upstream launcher only receives through `TestEnvironment`. The
     forwarder rebuilds that provider from this exact list, so filtering
-    support is structural, never caller-dependent."""
+    support is structural, never caller-dependent.
+    """
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
@@ -205,7 +206,8 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
     the upstream data: jest detects ESM by walking up the runfiles tree
     from each test file, so the scope file must be a runtime input of
     every test. Upstream-owned runfiles are unaffected (npm packages
-    carry their own package.json, generated helpers are `.cjs`/`.mjs`)."""
+    carry their own package.json, generated helpers are `.cjs`/`.mjs`).
+    """
     upstream_data = list(srcs) + (list(data) if data != None else [])
     effective_env = javascript_test_env(env_inherit)
     rejection = javascript_test_rejection(kwargs)

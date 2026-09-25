@@ -298,6 +298,6 @@ No delivery path becomes a default from documentation research alone. The
 authoritative acquisition, toolchain, platform, and laziness evidence is
 defined by the [Tool And Platform Test Matrix](../testing/tools.md).
 Capability-state definitions, support promotion, and completion-report
-evidence are defined by the [Testing Strategy](../testing/README.md#acceptance-evidence).
+evidence are defined by the [Testing Strategy](../testing/strategy-details.md#acceptance-evidence).
 Missing evidence delays the affected route or integration; it never weakens
 the consumer contract.

@@ -5,7 +5,7 @@ load("@rules_rust_prost//:defs.bzl", "rust_prost_library")
 load(":curated_defaults_tests.bzl", "curated_defaults_unit_tests")
 load(":execution_requirements_tests.bzl", "execution_requirements_unit_tests")
 load(":fixtures.bzl", "real_source_target")
-load(":native_config.bzl", "vale_config")
+load(":native_config.bzl", "checkstyle_config", "vale_config")
 load(":native_config_tests.bzl", "native_config_unit_tests")
 load(":parity_tests.bzl", "parity_unit_tests")
 load(":pipeline_tests.bzl", "pipeline_unit_tests")
@@ -270,8 +270,18 @@ vale_config(
     data = ["corpus_styles/Dx/Markers.yml"],
 )
 
+# Corpus Checkstyle configuration: every applicable Java corpus target
+# binds this hint (Checkstyle has no usable upstream default, so stages
+# fail without it). Narrow unused-imports policy mirrors the Layer-2
+# matrix fixture.
+checkstyle_config(
+    name = "corpus_checkstyle_config",
+    src = "corpus_checkstyle.xml",
+)
+
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "adapters.bzl",

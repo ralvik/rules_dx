@@ -68,7 +68,8 @@ def octopus_schema_error():
     Checks data shape without pinning exact contents: version is v1,
     each charset is non-empty with unique launcher-safe characters and
     never admits quotes, backslash, space, or newline so names embed
-    safely in the deploy launcher."""
+    safely in the deploy launcher.
+    """
     if OCTOPUS_SCHEMA_VERSION != 1:
         return "octopus project: unsupported schema v" + str(OCTOPUS_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_PROJECT_CHARS) != "string" or _VALID_PROJECT_CHARS == "":
@@ -232,6 +233,7 @@ def _octopus_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@CHANNEL@@": ctx.attr.channel,
             "@@DEPLOY_NAME@@": ctx.attr.drop_name,
@@ -302,7 +304,8 @@ def octopus_deploy(name, package, project, channel = "Default", version = "0.0.0
     `create-release --project --channel` manifest) and verifies bytes,
     publishing nothing. Live `push` plus `create-release` runs only with
     `OCTOPUS_PUBLISH_LIVE=1`, `OCTOPUS_URL`, `OCTOPUS_API_KEY`, and
-    `OCTOPUS_PUBLISH_APPROVED=1` after explicit owner approval."""
+    `OCTOPUS_PUBLISH_APPROVED=1` after explicit owner approval.
+    """
     project_error = octopus_project_error(project)
     if project_error != "":
         fail(project_error + " (in " + native.package_name() + ":" + name + ")")

@@ -6,13 +6,17 @@ Contract: `docs/github-ci.md`.
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
-
 def add_a():
+    """Declares CI hygiene targets for shard A.
+    """
+
     sh_binary(
         name = "corpus_audit",
         srcs = ["corpus_audit.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -78,12 +82,12 @@ def add_a():
             "$(rootpath //.github:workflows/reusable-consumer.yml)",
             "$(rootpath //examples:consumer-ci/caller.yml)",
             "$(rootpath //:MODULE.bazel)",
-            "$(rootpath //.github/actions/setup-checkout-bazelisk:action.yml)",
+            "$(rootpath //.github/actions/setup-bazelisk:action.yml)",
         ],
         data = [
             "//:MODULE.bazel",
             "//.github:workflows/reusable-consumer.yml",
-            "//.github/actions/setup-checkout-bazelisk:action.yml",
+            "//.github/actions/setup-bazelisk:action.yml",
             "//examples:consumer-ci/caller.yml",
             "//tools/sh:bootstrap",
             "//tools/sh:lib",
@@ -254,8 +258,10 @@ def add_a():
     sh_binary(
         name = "coverage_cell",
         srcs = ["coverage_cell.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -264,8 +270,10 @@ def add_a():
     sh_binary(
         name = "coverage_excludes_qualification",
         srcs = ["coverage_excludes_qualification.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -274,8 +282,10 @@ def add_a():
     sh_binary(
         name = "coverage_report_guards",
         srcs = ["coverage_report_guards.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -284,8 +294,10 @@ def add_a():
     sh_binary(
         name = "target_tags",
         srcs = ["target_tags.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -307,8 +319,10 @@ def add_a():
     sh_binary(
         name = "release_policy",
         srcs = ["release_policy.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -330,8 +344,10 @@ def add_a():
     sh_binary(
         name = "jvm_cohort_qualification",
         srcs = ["jvm_cohort_qualification.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -340,8 +356,10 @@ def add_a():
     sh_binary(
         name = "scala_dotnet_cohort_qualification",
         srcs = ["scala_dotnet_cohort_qualification.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -350,8 +368,10 @@ def add_a():
     sh_binary(
         name = "native_cohort_qualification",
         srcs = ["native_cohort_qualification.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -360,8 +380,10 @@ def add_a():
     sh_binary(
         name = "structured_cohort_qualification",
         srcs = ["structured_cohort_qualification.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -370,8 +392,10 @@ def add_a():
     sh_binary(
         name = "interpreted_file_cohort_qualification",
         srcs = ["interpreted_file_cohort_qualification.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -380,8 +404,10 @@ def add_a():
     sh_binary(
         name = "publish_trust",
         srcs = ["publish_trust.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -390,8 +416,10 @@ def add_a():
     sh_binary(
         name = "code_ownership",
         srcs = ["code_ownership.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -400,8 +428,10 @@ def add_a():
     sh_binary(
         name = "examples_readme",
         srcs = ["examples_readme.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -410,8 +440,10 @@ def add_a():
     sh_binary(
         name = "examples_laziness",
         srcs = ["examples_laziness.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -420,8 +452,10 @@ def add_a():
     sh_binary(
         name = "examples_laziness_query",
         srcs = ["examples_laziness_query.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -430,8 +464,10 @@ def add_a():
     sh_binary(
         name = "examples_laziness_aquery",
         srcs = ["examples_laziness_aquery.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -440,8 +476,10 @@ def add_a():
     sh_binary(
         name = "examples_laziness_runtime",
         srcs = ["examples_laziness_runtime.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )
@@ -450,8 +488,10 @@ def add_a():
     sh_binary(
         name = "laziness_analysis_guard",
         srcs = ["laziness_analysis_guard.sh"],
-        data = ["//tools/sh:bootstrap",
-"//tools/sh:lib"],
+        data = [
+            "//tools/sh:bootstrap",
+            "//tools/sh:lib",
+        ],
         # Bash-only harness is Linux-only (shell contract).
         target_compatible_with = ["@platforms//os:linux"],
     )

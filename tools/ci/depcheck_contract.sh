@@ -52,7 +52,7 @@ fi
 # Offline routes qualified (no open-work placeholder).
 if grep -q -F -e 'with network access denied' "$contract" &&
   grep -q -F -e 'does not query live registries' "$contract" &&
-  grep -q -F -e 'Accepted (issue #22' "$contract" &&
+  grep -q -F -e 'Accepted (closed #22' "$contract" &&
   grep -q -F -e 'bazel test //tools/depcheck/...' "$contract"; then
   ok
 else
@@ -126,13 +126,17 @@ else
 fi
 
 # Portable rust_test targets exist, independently runnable, no manual,
-# no Linux-only pins (Rust runs on all platforms).
-if grep -q -F -e 'name = "depcheck_test"' "$build" &&
+# no Linux-only pins (Rust runs on all platforms). The absence checks
+# scope to the rust_binary plus rust_test blocks: the bash-only lock
+# sh_tests below legitimately pin Linux (see their in-file comments).
+rust_blocks="$(sed -n '/^rust_binary($/,/^)/p; /^rust_test($/,/^)/p' "$build")"
+if [[ -n "$rust_blocks" ]] &&
+  grep -q -F -e 'name = "depcheck_test"' "$build" &&
   grep -q -F -e 'name = "depcheck"' "$build" &&
   grep -q -F -e 'rust_binary(' "$build" &&
   grep -q -F -e 'rust_test(' "$build" &&
-  ! grep -q -F -e '"manual"' "$build" &&
-  ! grep -q -F -e 'target_compatible_with' "$build"; then
+  ! printf '%s\n' "$rust_blocks" | grep -q -F -e '"manual"' &&
+  ! printf '%s\n' "$rust_blocks" | grep -q -F -e 'target_compatible_with'; then
   ok
 else
   bad "depcheck Rust targets missing, manual, or carry Linux-only pins"
@@ -140,8 +144,8 @@ fi
 
 # Docs describe only what runs: required-core plus admitted accepted for
 # (opens under), qualified adapter work under plus foundation under -.
-if grep -q -F -e 'Accepted (issue #22' "$contract" &&
-  grep -q -F -e 'issue #307' "$contract" &&
+if grep -q -F -e 'Accepted (closed #22' "$contract" &&
+  grep -q -F -e 'closed #307' "$contract" &&
   grep -q -F -e '#476-#484' "$contract"; then
   ok
 else

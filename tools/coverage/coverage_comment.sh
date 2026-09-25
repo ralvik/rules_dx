@@ -54,6 +54,7 @@ while [[ $# -gt 0 ]]; do
     --lcov) lcov_path="${2:-}"; shift 2 ;;
     --dx-output) dx_output="${2:-}"; shift 2 ;;
     --dx-exit) dx_exit="${2:-}"; shift 2 ;;
+    --) shift ;;
     --help|-h)
       echo "usage: coverage_comment.sh --cell <cell> --revision <sha> --run <run> --out <md> [--gate-output <f> --gate-exit <0|1>] [--lcov <path>] [--dx-output <f> --dx-exit <code>]"
       exit 0

@@ -81,9 +81,11 @@
 //!   `--dry-run --set-exit-if-changed <files>` (check; stdout lists
 //!   paths that would change); fix is `--replace <files>` (in-place,
 //!   re-read on exit 0).
-//! * ktfmt takes the whole stage file list as `--google-style
+//! * ktfmt takes the whole stage file list as `--kotlinlang-style
 //!   --dry-run <files>` (check; stdout lists paths that would change);
-//!   fix is `--google-style <files>` (in-place, re-read on exit 0).
+//!   fix is `--kotlinlang-style <files>` (in-place, re-read on exit 0).
+//!   kotlinlang-style (4-space) matches ktlint's default indent so
+//!   format and lint never fight on the same file.
 //! * Checkstyle takes the whole stage file list as `-c <config> -f
 //!   sarif <files>` (check; SARIF on stdout, chatter on stderr).
 //!   Check-only, never rewrites; the config is always explicit
@@ -946,26 +948,26 @@ pub fn google_java_format_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--replace"], files, "")
 }
 
-/// ktfmt check invocation: `--google-style --dry-run
+/// ktfmt check invocation: `--kotlinlang-style --dry-run
 /// --set-exit-if-changed` over the whole stage file list. Stdout lists
 /// the absolute paths that would change, one per line (clean prints
 /// nothing); exit 1 with listed paths is findings, exit 0 is clean.
 /// The style flag is always explicit so no ambient style can leak in
 /// (`.editorconfig` stays opt-in via `--enable-editorconfig`, never
-/// passed here).
+/// passed here). kotlinlang-style (4-space) matches ktlint default.
 pub fn ktfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(
         binary,
-        &["--google-style", "--dry-run", "--set-exit-if-changed"],
+        &["--kotlinlang-style", "--dry-run", "--set-exit-if-changed"],
         files,
         "",
     )
 }
 
-/// ktfmt fix invocation: `--google-style` (in-place). The caller
+/// ktfmt fix invocation: `--kotlinlang-style` (in-place). The caller
 /// re-reads on exit 0 and returns its input otherwise.
 pub fn ktfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
-    invocation(binary, &["--google-style"], files, "")
+    invocation(binary, &["--kotlinlang-style"], files, "")
 }
 
 /// Checkstyle lint check invocation: `-c <config> -f sarif` over the
@@ -1016,13 +1018,13 @@ pub fn pmd_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invoc
 }
 
 /// SpotBugs lint check invocation: `-textui -effort:default -sarif`
-/// over the whole stage file list. SARIF goes to stdout; exit 1 with
-/// a non-empty results log is findings, exit 0 is clean. Check-only:
-/// the runner never passes a fix flag. Target-coupled: the aspect
-/// supplies compiled classes from the authoritative `JavaInfo`, never
-/// bare sources (provider-less targets carry no classes, so the stage
-/// runs with no inputs and reports no findings, mirroring the
-/// target-coupled tsc laziness row).
+/// over the analysis target list (workspace-local runtime jars from
+/// `JavaInfo`, delivered as tool-files). SARIF goes to stdout; exit 1
+/// with a non-empty results log is findings, exit 0 is clean. Check-only:
+/// the runner never passes a fix flag. Target-coupled: provider-less
+/// targets carry no classes, so the stage is dropped (mirroring the
+/// target-coupled tsc laziness row); staged `.java` sources are finding
+/// anchors only, never analysis inputs.
 pub fn spotbugs_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),

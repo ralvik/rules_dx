@@ -17,6 +17,7 @@ exports_files([
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "dotnet.bzl",
@@ -27,6 +28,7 @@ real_source_target(
         "python.bzl",
         "rust.bzl",
         "toolchains.bzl",
+        "ruby.bzl",
     ],
     tags = ["corpus"],
 )

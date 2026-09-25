@@ -21,12 +21,19 @@ rust_prost_library(
 real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
+    markdown_siblings = [
+        "//docs:documentation/doc-ir.md",
+        "//docs:documentation/site.md",
+        "doc_ir.proto",
+        "//docs/ir/ir:src/lib.rs",
+    ],
     markdown_srcs = ["README.md"],
     tags = ["corpus"],
 )
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

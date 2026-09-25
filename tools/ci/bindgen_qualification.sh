@@ -178,17 +178,17 @@ else
 fi
 
 # BUILD owns the harness target.
-if grep -q -F -e 'name = "bindgen_qualification"' "$build"; then
+if grep -q -F -e 'name = "bindgen_qualification"' "tools/ci/ci_targets_d.bzl"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the bindgen_qualification target"
+  bad "tools/ci/ci_targets_d.bzl lost the bindgen_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:bindgen_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:bindgen_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the bindgen_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the bindgen_qualification step (want dogfood-freshness)"
 fi
 
 # Live proof: the fixture header is well-formed C both LLVM parsers must accept.

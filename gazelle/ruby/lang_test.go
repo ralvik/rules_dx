@@ -27,6 +27,37 @@ func writeFixture(t *testing.T, root, name, content string) {
 	}
 }
 
+func TestIgnoreWitnessPreservesUsedInheritedEntries(t *testing.T) {
+	cfg := config.New()
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("absent: %v", got)
+	}
+	cfg.Exts[languageName] = "foreign"
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("foreign: %v", got)
+	}
+	delete(cfg.Exts, languageName)
+	lang := &rubyLang{}
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "other"}, {Key: "dx_ignore_import", Value: "ruby ruby widget"}}})
+	lang.Configure(cfg, "child", nil)
+	entry := matchingIgnore(cfg, "widget")
+	if entry == nil {
+		t.Fatal("missing inherited ignore")
+	}
+	entry.used = true
+	conf := cfg.Exts[languageName].(*rubyConfig)
+	conf.ignores = append(conf.ignores, nil, entry, &ignoreEntry{value: "Unused"})
+	got := CollectUsedIgnores(cfg)
+	if len(got) != 1 || got[0] != [2]string{"parent", "widget"} {
+		t.Fatalf("witness: %v", got)
+	}
+	lang.AfterResolvingDeps(context.Background())
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "dx_ignore_import", Value: "ruby"}}})
+	if len(lang.errors) != 1 {
+		t.Fatal("malformed directive accepted")
+	}
+}
+
 func generateFixture(t *testing.T, files map[string]string, regular []string) language.GenerateResult {
 	t.Helper()
 	root := t.TempDir()
@@ -45,9 +76,9 @@ func generateFixture(t *testing.T, files map[string]string, regular []string) la
 func TestGeneratePackageLevelLibrary(t *testing.T) {
 	regular := []string{"demo.rb", "helper.rb", "notes.txt", "demo_spec.rb"}
 	result := generateFixture(t, map[string]string{
-		"pkg/demo/demo.rb":     "require \"acme/widget\"\n\nmodule Demo\n",
-		"pkg/demo/helper.rb":   "require \"json\"\n\nmodule Helper\n",
-		"pkg/demo/notes.txt":     "not a source\n",
+		"pkg/demo/demo.rb":      "require \"acme/widget\"\n\nmodule Demo\n",
+		"pkg/demo/helper.rb":    "require \"json\"\n\nmodule Helper\n",
+		"pkg/demo/notes.txt":    "not a source\n",
 		"pkg/demo/demo_spec.rb": "require \"json\"\n\nRSpec.describe Demo\n",
 	}, regular)
 	if len(result.Gen) != 1 || len(result.Imports) != 1 {
@@ -69,7 +100,7 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 func TestGenerateTestSourcesExcluded(t *testing.T) {
 	regular := []string{"demo.rb", "demo_spec.rb"}
 	result := generateFixture(t, map[string]string{
-		"pkg/demo/demo.rb":     "module Demo\n",
+		"pkg/demo/demo.rb":      "module Demo\n",
 		"pkg/demo/demo_spec.rb": "require \"acme/only_by_test\"\n\nRSpec.describe Demo\n",
 	}, regular)
 	if len(result.Gen) != 1 || len(result.Imports) != 1 {

@@ -166,7 +166,7 @@ fi
 
 # Command docs carry the auto note with the fixture link under #640.
 if grep -q -F -e 'dx_bump::gha' "$command_doc" &&
-  grep -q -F -e 'issue #640' "$command_doc" &&
+  grep -q -F -e 'closed #640' "$command_doc" &&
   grep -q -F -e 'cli/bump/tests/fixtures/bump_gha/' "$command_doc" &&
   grep -q -F -e 'manual SHA' "$command_doc"; then
   ok
@@ -176,7 +176,7 @@ fi
 
 # Automation policy carries the upstream-client auto resolution under #640.
 if grep -q -F -e 'dx_bump::gha' "$automation" &&
-  grep -q -F -e 'issue #640' "$automation" &&
+  grep -q -F -e 'closed #640' "$automation" &&
   grep -q -F -e 'cli/bump/tests/fixtures/bump_gha/' "$automation" &&
   grep -q -F -e 'manual SHA only rejected' "$automation"; then
   ok
@@ -197,12 +197,12 @@ else
 fi
 
 # BUILD owns the harness target plus CI wires it records seed-only evidence.
-if grep -q -F -e 'name = "bump_gha_qualification"' "$build" &&
-  grep -q -F -e 'bump_gha_qualification.sh' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_gha_qualification' "$ci"; then
+if grep -q -F -e 'name = "bump_gha_qualification"' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bump_gha_qualification.sh' "tools/ci/ci_targets_c.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:bump_gha_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the bump_gha_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_c.bzl or dogfood_freshness.sh lost the bump_gha_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 dx_test_summary "bump gha qualification harness"

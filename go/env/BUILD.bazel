@@ -21,7 +21,7 @@ go_env_plan(
 go_env_plan(
     name = "hello_plan",
     testonly = True,
-    target = "//go/tests/fixtures/hello:hello",
+    target = "//go/tests/fixtures/hello",
 )
 
 go_env_plan(
@@ -37,10 +37,12 @@ env_plan_tests(
         ":hello_plan",
         ":hello_test_plan",
     ],
+    tags = ["no-coverage"],
 )
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "plan.bzl",

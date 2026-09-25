@@ -1,6 +1,9 @@
 package dispatch
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -8,6 +11,78 @@ import (
 	"github.com/bazelbuild/bazel-gazelle/language"
 	"github.com/bazelbuild/bazel-gazelle/rule"
 )
+
+func TestManifestRecorderEnvironment(t *testing.T) {
+	t.Setenv(envIntendedManifest, "")
+	if rec, err := loadManifestRecorder(); rec != nil || err != nil {
+		t.Fatalf("disabled recorder: %v, %v", rec, err)
+	}
+	t.Setenv(envIntendedManifest, filepath.Join(t.TempDir(), "intended.json"))
+	t.Setenv(envGenerateMode, "")
+	t.Setenv(envGenerateScope, "")
+	rec, err := loadManifestRecorder()
+	if err != nil || rec.mode != "default" || len(rec.scopes) != 1 || rec.scopes[0].Element != "//..." {
+		t.Fatalf("default recorder: %+v, %v", rec, err)
+	}
+	t.Setenv(envGenerateMode, "invalid")
+	if _, err := loadManifestRecorder(); err == nil {
+		t.Fatal("invalid mode accepted")
+	}
+	t.Setenv(envGenerateMode, "check")
+	for _, raw := range []string{"{", "[]", "null"} {
+		t.Setenv(envGenerateScope, raw)
+		if _, err := loadManifestRecorder(); err == nil {
+			t.Fatalf("invalid scopes accepted: %s", raw)
+		}
+	}
+	t.Setenv(envGenerateScope, `[{"element":"//a/...","dirs":["a"]}]`)
+	rec, err = loadManifestRecorder()
+	if err != nil || rec.mode != "check" || rec.scopeIndex("a/b") != 0 || rec.scopeIndex("b") != -1 {
+		t.Fatalf("scoped recorder: %+v, %v", rec, err)
+	}
+}
+
+func TestManifestEmissionPreservesScopeAndDeduplicatesIgnores(t *testing.T) {
+	dir := t.TempDir()
+	rec := &manifestRecorder{outPath: filepath.Join(dir, "intended.json"), mode: "check", scopes: []scopeElement{{Element: "//...", Dirs: []string{""}}}, unionLoads: unionApparentLoads}
+	gen := rule.NewRule("python_library", "demo")
+	gen.SetAttr("srcs", []string{"demo.py"})
+	rec.record(genArgs(testConfig(), dir, "pkg", nil, []*rule.Rule{nil, gen, gen}), genRes([]*rule.Rule{nil, gen}))
+	if len(rec.visited[0].gen) != 1 {
+		t.Fatal("duplicate rules retained")
+	}
+	rec.record(genArgs(testConfig(), dir, "empty", nil, nil), genRes(nil))
+	ignores := []collectedIgnore{{"pkg/z.py", "python", "z"}, {"pkg/a.py", "rust", "z"}, {"pkg/a.py", "python", "z"}, {"pkg/a.py", "python", "a"}, {"pkg/a.py", "python", "a"}}
+	if err := rec.emit(ignores); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(rec.outPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest intendedManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if manifest.SchemaMajor != 1 || manifest.Mode != "check" || len(manifest.Files) != 1 || manifest.Files[0].Path != "pkg/BUILD.bazel" || manifest.Files[0].ScopeIndex != 0 || !manifest.Scopes[0].ResultsComplete {
+		t.Fatalf("manifest: %+v", manifest)
+	}
+	if len(manifest.IgnoredImports) != 4 || manifest.IgnoredImports[0].Import != "a" || manifest.IgnoredImports[1].Language != "python" || manifest.IgnoredImports[2].Language != "rust" || manifest.IgnoredImports[3].Path != "pkg/z.py" {
+		t.Fatalf("ignores: %+v", manifest.IgnoredImports)
+	}
+	rec.outPath = dir
+	if err := rec.emit(nil); err == nil || !strings.Contains(err.Error(), "cannot write") {
+		t.Fatalf("write error: %v", err)
+	}
+	rec.scopes = []scopeElement{{Element: "//other/...", Dirs: []string{"other"}}}
+	if err := rec.emit(nil); err == nil || !strings.Contains(err.Error(), "matches no") {
+		t.Fatalf("scope error: %v", err)
+	}
+	rec.visited = nil
+	if err := rec.emit(ignores); err == nil || !strings.Contains(err.Error(), "ignored import") {
+		t.Fatalf("ignore scope error: %v", err)
+	}
+}
 
 func genArgs(cfg *config.Config, dir, rel string, f *rule.File, other []*rule.Rule) language.GenerateArgs {
 	return language.GenerateArgs{
@@ -143,5 +218,59 @@ func TestDiffLinesProduceValidatedEdits(t *testing.T) {
 	out := applyFileEdits(t, original, intendedFile{Edits: edits})
 	if string(out) != string(intended) {
 		t.Fatalf("replay = %q, want %q", out, intended)
+	}
+}
+
+func TestKindMappingsFollowChainsAndRejectCycles(t *testing.T) {
+	cfg := testConfig()
+	cfg.KindMap = map[string]config.MappedKind{
+		"python_library": {KindName: "middle", KindLoad: "//:middle.bzl"},
+		"middle":         {KindName: "final", KindLoad: "//:final.bzl"},
+	}
+	loads := []rule.LoadInfo{{Name: "//:final.bzl", Symbols: []string{"existing"}}}
+	rec := packageRecord{cfg: cfg, genKinds: []string{"python_library"}}
+	got, err := applyKindMappings(rec, loads)
+	if err != nil || len(got) != 1 || strings.Join(got[0].Symbols, ",") != "existing,final" {
+		t.Fatalf("mapping: %v, %v", got, err)
+	}
+	got, err = applyKindMappings(rec, nil)
+	if err != nil || len(got) != 1 || got[0].Name != "//:final.bzl" {
+		t.Fatalf("new load: %v, %v", got, err)
+	}
+	if mapped, err := replacementKind(map[string]config.MappedKind{"self": {KindName: "self", KindLoad: "//:self.bzl"}}, "self"); err != nil || mapped.KindName != "self" {
+		t.Fatalf("self mapping: %v, %v", mapped, err)
+	}
+	cfg.KindMap["final"] = config.MappedKind{KindName: "middle", KindLoad: "//:middle.bzl"}
+	if _, err := applyKindMappings(rec, loads); err == nil {
+		t.Fatal("cycle accepted")
+	}
+	gen := rule.NewRule("python_library", "demo")
+	rec.gen = []*rule.Rule{gen}
+	rec.dir = t.TempDir()
+	recorder := &manifestRecorder{}
+	if _, _, err := recorder.witness(rec); err == nil {
+		t.Fatal("new-file cycle accepted")
+	}
+	rec.file = rule.EmptyFile(filepath.Join(rec.dir, "BUILD.bazel"), "")
+	if _, _, err := recorder.witness(rec); err == nil {
+		t.Fatal("existing-file cycle accepted")
+	}
+}
+
+func TestDiffEditsReplayInsertionsDeletionsAndUnterminatedLines(t *testing.T) {
+	for _, pair := range [][2]string{{"", "new"}, {"old", ""}, {"one\ntwo", "one\nthree"}, {"one\n", "one\ntwo\n"}} {
+		edits := diffLines([]byte(pair[0]), []byte(pair[1]))
+		got := applyFileEdits(t, []byte(pair[0]), intendedFile{Edits: edits})
+		if string(got) != pair[1] {
+			t.Fatalf("replay %q -> %q: %q", pair[0], pair[1], got)
+		}
+		for _, edit := range edits {
+			if edit.Replacement == nil {
+				t.Fatal("nil replacement serializes as null")
+			}
+		}
+	}
+	if got := manifestPath("", "BUILD.bazel"); got != "BUILD.bazel" {
+		t.Fatalf("root path: %s", got)
 	}
 }

@@ -32,7 +32,8 @@ def pypi_schema_error():
     Checks data shape without pinning exact contents: version is v1, the
     charset is non-empty with unique launcher-safe characters and never
     admits quotes, backslash, space, or newline so names embed safely in
-    the generated Python launcher."""
+    the generated Python launcher.
+    """
     if PYPI_SCHEMA_VERSION != 1:
         return "pypi name: unsupported schema v" + str(PYPI_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_NAME_CHARS) != "string" or _VALID_NAME_CHARS == "":
@@ -130,6 +131,7 @@ def _pypi_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
+        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
         substitutions = {
             "@@DIST_NAME@@": ctx.attr.dist_name,
             "@@REPOSITORY_URL@@": ctx.attr.repository_url,
@@ -180,7 +182,8 @@ def pypi_deploy(name, wheel, sdist = None, repository_url = PYPI_DEFAULT_REPOSIT
     the `.whl`) and verifies bytes, publishing nothing. Live
     `twine upload --non-interactive --repository-url` runs only with
     `PYPI_PUBLISH_LIVE=1`, `PYPI_API_TOKEN`, and `PYPI_PUBLISH_APPROVED=1`
-    after explicit owner approval."""
+    after explicit owner approval.
+    """
     name_error = pypi_name_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

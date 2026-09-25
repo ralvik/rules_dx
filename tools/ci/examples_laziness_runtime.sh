@@ -44,7 +44,13 @@ dx_test_init
 # Same prohibited-installer set as the static half (examples_laziness.sh):
 # the contract's "or equivalent installer" clause and the
 # laziness matrix (pip, uv, npm, pnpm, Cargo, Maven, NuGet, Bundler,
-# PowerShell Gallery).
+# PowerShell Gallery). One action-graph exception: rules_ruby's
+# application-test wrapper declares the make-var substitution
+# {{bundler_command}: bundle exec} over the Bazel-fetched @bundle hub
+# (third_party/ruby locks; runs already-fetched gems, no solver or
+# install step). The matrix's "normal application dependency behavior is
+# governed by its language foundation" clause owns that line; any other
+# bundle-exec command line stays a failure.
 check_no_installers() { # example
   local example="$1"
   local actions
@@ -57,7 +63,7 @@ check_no_installers() { # example
     return
   fi
   local hits
-  hits="$(echo "$actions" | grep -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' -e 'uv pip install' -e 'go install' -e 'dotnet add' -e 'bundle install' -e 'nuget install' -e 'Install-Module' -e 'mvn install' -e 'uv add' -e 'cargo add' -e 'gem install' -e 'dotnet restore' -e 'nuget restore' -e 'npm ci' -e 'yarn install' -e 'yarn add' -e 'pipx install' -e 'go get' -e 'dotnet tool restore' -e 'poetry install' -e 'poetry add' -e 'pipenv install' -e 'bun install' -e 'Install-Script' -e 'pip3 install' -e 'uv tool install' -e 'npm add' -e 'bun add' -e 'bundle add' -e 'Install-Package' -e 'pipenv sync' -e 'poetry sync' -e 'uv sync' -e 'uv pip sync' -e 'dotnet tool update' -e 'Install-PSResource' -e 'pnpm dlx' -e 'npx' -e 'cargo update' -e 'npm update' -e 'uv lock' -e 'poetry lock' -e 'pipenv lock' -e 'poetry update' -e 'uv pip compile' -e 'pip compile' -e 'bundle update' -e 'gem update' -e 'pipenv update' -e 'poetry export' -e 'yarn upgrade' -e 'pnpm upgrade' -e 'bun update' -e 'uv export' -e 'yarn dlx' -e 'bunx' -e 'uvx' -e 'go mod download' -e 'cargo fetch' -e 'Update-Module' -e 'pip download' -e 'npm exec' -e 'yarn exec' -e 'pnpm exec' -e 'bun x' -e 'cargo binstall' -e 'mvnw install' -e 'bundler install' -e 'Save-Module' -e 'go mod tidy' -e 'bundle lock' -e 'pip wheel' -e 'cargo upgrade' -e 'pnpm update' -e 'Update-Script' -e 'Save-Script' -e 'bundle exec' -e 'bundle pristine' || true)"
+  hits="$(echo "$actions" | grep -F -e 'pip install' -e 'npm install' -e 'cargo install' -e 'dotnet tool install' -e 'pnpm install' -e 'pnpm add' -e 'uv pip install' -e 'go install' -e 'dotnet add' -e 'bundle install' -e 'nuget install' -e 'Install-Module' -e 'mvn install' -e 'uv add' -e 'cargo add' -e 'gem install' -e 'dotnet restore' -e 'nuget restore' -e 'npm ci' -e 'yarn install' -e 'yarn add' -e 'pipx install' -e 'go get' -e 'dotnet tool restore' -e 'poetry install' -e 'poetry add' -e 'pipenv install' -e 'bun install' -e 'Install-Script' -e 'pip3 install' -e 'uv tool install' -e 'npm add' -e 'bun add' -e 'bundle add' -e 'Install-Package' -e 'pipenv sync' -e 'poetry sync' -e 'uv sync' -e 'uv pip sync' -e 'dotnet tool update' -e 'Install-PSResource' -e 'pnpm dlx' -e 'npx' -e 'cargo update' -e 'npm update' -e 'uv lock' -e 'poetry lock' -e 'pipenv lock' -e 'poetry update' -e 'uv pip compile' -e 'pip compile' -e 'bundle update' -e 'gem update' -e 'pipenv update' -e 'poetry export' -e 'yarn upgrade' -e 'pnpm upgrade' -e 'bun update' -e 'uv export' -e 'yarn dlx' -e 'bunx' -e 'uvx' -e 'go mod download' -e 'cargo fetch' -e 'Update-Module' -e 'pip download' -e 'npm exec' -e 'yarn exec' -e 'pnpm exec' -e 'bun x' -e 'cargo binstall' -e 'mvnw install' -e 'bundler install' -e 'Save-Module' -e 'go mod tidy' -e 'bundle lock' -e 'pip wheel' -e 'cargo upgrade' -e 'pnpm update' -e 'Update-Script' -e 'Save-Script' -e 'bundle exec' -e 'bundle pristine' | grep -v -F -e '{{bundler_command}: bundle exec}' || true)"
   if [[ -z "$hits" ]]; then
     ok
   else

@@ -4,6 +4,278 @@
 use super::*;
 
 #[test]
+fn cargo_table_variants_preserve_comments_and_reject_nonregistry_shapes() {
+    let bump = BumpRequest::parse("cargo:demo", "2.0.0").expect("request");
+    for table in [
+        "workspace.dependencies",
+        "target.'cfg(unix)'.dependencies",
+        "target.'cfg(unix)'.dev-dependencies",
+        "target.'cfg(unix)'.build-dependencies",
+        "patch.crates-io",
+    ] {
+        let source = format!("[{table}]\ndemo = \"1.0.0\" # pinned\n");
+        assert_eq!(
+            bump.plan_edit(&source).expect("edit"),
+            source.replace("1.0.0", "2.0.0")
+        );
+    }
+    for body in [
+        "git = 'https://example.com/demo'",
+        "path = '../demo'",
+        "workspace = true",
+        "version = 1",
+        "features = []",
+    ] {
+        let source = format!("[dependencies.demo]\n{body}\n");
+        assert!(
+            matches!(
+                bump.plan_edit(&source),
+                Err(BumpError::UnsupportedManifest { .. })
+            ),
+            "{body}"
+        );
+    }
+    for source in ["[dependencies]\ndemo = 1\n", "[dependencies]\ndemo = {}\n"] {
+        assert!(matches!(
+            bump.plan_edit(source),
+            Err(BumpError::UnsupportedManifest { .. })
+        ));
+    }
+    let tag = WidenVersion::GitTag("v2".to_owned());
+    assert!(matches!(
+        plan_cargo_toml("", "demo", &tag),
+        Err(BumpError::UnsupportedManifest { .. })
+    ));
+    let mut doc: toml_edit::DocumentMut =
+        "[dependencies]\nnumber = 1\ninline = {}\n[dependencies.table]\nfeatures = []\n"
+            .parse()
+            .expect("doc");
+    let table = doc["dependencies"].as_table_mut().expect("deps");
+    for package in ["missing", "number", "inline", "table"] {
+        assert!(!cargo_set_version(table, package, "2.0.0"));
+    }
+}
+#[test]
+fn fallback_edits_preserve_the_same_bytes_as_regex_edits() {
+    for input in [
+        "require example.com/demo v1.2.3\n",
+        " example.com/v2/demo v2.3.4-beta+build // indirect\r\n",
+        "example.com/demo v1.2.3+build",
+        "example.com/demo vbroken",
+        "example.com/demo v123",
+        "example.com/demo v...",
+        "example.com/demo v1.2.3 suffix",
+    ] {
+        assert_eq!(
+            replace_go_version_token_fallback(input, "v3.0.0"),
+            replace_go_version_token(input, "v3.0.0"),
+            "{input}"
+        );
+    }
+    for input in [
+        "version = \"1.0.0\"",
+        "version=\"1.0.0\" # keep",
+        "no attribute",
+        "version",
+        "version = 1",
+        "version = \"unterminated",
+    ] {
+        assert_eq!(
+            replace_version_attr_fallback(input, "2.0.0"),
+            replace_version_attr(input, "2.0.0"),
+            "{input}"
+        );
+    }
+    for input in [
+        "\"demo\": \"1.0.0\",",
+        "\"demo\":\"1.0.0\"",
+        "missing colon",
+        "\"demo\": 1",
+        "\"demo\": \"unterminated",
+    ] {
+        assert_eq!(
+            replace_first_quoted_version_after_colon_fallback(input, "2.0.0"),
+            replace_first_quoted_version_after_colon(input, "2.0.0"),
+            "{input}"
+        );
+    }
+}
+
+#[test]
+fn hand_built_requests_reject_wrong_version_kinds() {
+    let tag = WidenVersion::GitTag("v2".to_owned());
+    for set in [
+        BumpSet::Bazel,
+        BumpSet::Npm,
+        BumpSet::Go,
+        BumpSet::Maven,
+        BumpSet::NuGet,
+    ] {
+        let request = BumpRequest {
+            set,
+            package: "demo".to_owned(),
+            version: tag.clone(),
+            selector: "demo".to_owned(),
+            raw_version: "v2".to_owned(),
+        };
+        assert!(matches!(
+            request.plan_edit(""),
+            Err(BumpError::UnsupportedManifest { .. })
+        ));
+    }
+    assert!(matches!(
+        plan_bazelversion("1.0.0", &tag),
+        Err(BumpError::UnsupportedManifest { .. })
+    ));
+    let semver = WidenVersion::Semver("2.0.0".parse().expect("version"));
+    assert!(matches!(
+        plan_github_workflow("", "actions/checkout", &semver),
+        Err(BumpError::UnsupportedManifest { .. })
+    ));
+}
+
+#[test]
+fn package_validation_rejects_invalid_ecosystem_identities() {
+    for (set, packages) in [
+        (BumpSet::Bazel, vec!["bad!", ""]),
+        (
+            BumpSet::Npm,
+            vec![
+                "",
+                "a:b",
+                "a b",
+                "@scope",
+                "@/name",
+                "@scope/",
+                "@scope/bad!",
+                "a/b",
+                "bad!",
+            ],
+        ),
+        (
+            BumpSet::Go,
+            vec!["", "a:b", "a b", "/a", "a/", "a//b", "a!b"],
+        ),
+        (
+            BumpSet::GithubActions,
+            vec![
+                "owner",
+                "/repo",
+                "owner/",
+                "owner/a/b",
+                "owner/a b",
+                "a b/repo",
+                "bad!/repo",
+                "owner/bad!",
+            ],
+        ),
+        (BumpSet::Maven, vec!["bad!:artifact", "group:bad!"]),
+        (BumpSet::NuGet, vec!["bad!", ""]),
+    ] {
+        for package in packages {
+            assert!(
+                matches!(
+                    validate_package(set, package),
+                    Err(BumpError::InvalidPackage { .. })
+                ),
+                "{}:{package}",
+                set.name()
+            );
+        }
+    }
+    assert!(is_target_shape("unknown:a/b"));
+}
+
+#[test]
+fn widen_rejects_missing_ambiguous_and_malformed_requirements() {
+    for (selector, missing, duplicate, malformed) in [
+        (
+            "bazel:demo",
+            "module(name = \"root\")\n",
+            "bazel_dep(name = \"demo\", version = \"1.0.0\")\nbazel_dep(name = \"demo\", version = \"1.1.0\")\n",
+            "bazel_dep(name = \"demo\")\n",
+        ),
+        (
+            "npm:demo",
+            "{\"other\": \"1.0.0\"}\n",
+            "{\n\"dependencies\": {\n\"demo\": \"1.0.0\"\n},\n\"devDependencies\": {\n\"demo\": \"1.1.0\"\n}\n}\n",
+            "{\n\"demo\": 1\n}\n",
+        ),
+        (
+            "go:example.com/demo",
+            "module example.com/root\n",
+            "require example.com/demo v1.0.0\nrequire example.com/demo v1.1.0\n",
+            "require example.com/demo vbad\n",
+        ),
+        (
+            "maven:org.example:demo",
+            "maven.install(artifacts = [])\n",
+            "\"org.example:demo:1.0.0\",\n\"org.example:demo:1.1.0\",\n",
+            "\"org.example:demo:\",\n",
+        ),
+        (
+            "nuget:Demo",
+            "source https://example.com\n",
+            "nuget Demo 1.0.0\nnuget Demo 1.1.0\n",
+            "nuget Demo\n",
+        ),
+    ] {
+        let bump = BumpRequest::parse(selector, "2.0.0").expect("request");
+        assert!(matches!(bump.plan_edit(missing), Err(BumpError::NotFound { .. })), "{selector}");
+        assert!(matches!(bump.plan_edit(duplicate), Err(BumpError::Ambiguous { count: 2, .. })), "{selector}");
+        assert!(matches!(bump.plan_edit(malformed), Err(BumpError::UnsupportedManifest { .. })), "{selector}");
+    }
+    let bump = BumpRequest::parse("npm:demo", "2.0.0").expect("npm");
+    assert!(matches!(
+        bump.plan_edit("not json"),
+        Err(BumpError::UnsupportedManifest { .. })
+    ));
+    assert!(matches!(
+        bump.plan_edit("{\"other\": \"demo\"}"),
+        Err(BumpError::NotFound { .. })
+    ));
+    let bump = BumpRequest::parse("bazel:.bazelversion", "2.0.0").expect("bazel");
+    assert!(matches!(
+        bump.plan_edit(" \n"),
+        Err(BumpError::UnsupportedManifest { .. })
+    ));
+}
+
+#[test]
+fn widen_preserves_comments_crlf_and_package_boundaries() {
+    for (selector, input, expected) in [
+        ("go:example.com/demo", "// example.com/demo v9.0.0\n# keep\nrequire (\n example.com/demo-extra v1.0.0\n example.com/demo v1.2.3-beta+build // indirect\n)\n", "// example.com/demo v9.0.0\n# keep\nrequire (\n example.com/demo-extra v1.0.0\n example.com/demo v2.0.0 // indirect\n)\n"),
+        ("nuget:Demo", "# nuget Demo 9.0.0\r\n// keep\r\nnuget Demo.Other 1.0.0\r\n  nuget Demo 1.2.3  # pinned\r\n", "# nuget Demo 9.0.0\r\n// keep\r\nnuget Demo.Other 1.0.0\r\n  nuget Demo 2.0.0  # pinned\r\n"),
+        ("nuget:Demo", "nuget Demo 1.2.3", "nuget Demo 2.0.0"),
+    ] {
+        let bump = BumpRequest::parse(selector, "2.0.0").expect("request");
+        assert_eq!(bump.plan_edit(input).expect("edit"), expected);
+    }
+}
+
+#[test]
+fn workflow_widen_requires_one_nonempty_pin() {
+    let sha = "a".repeat(40);
+    let bump = BumpRequest::parse("gha:actions/checkout", &sha).expect("request");
+    assert!(matches!(
+        bump.plan_edit("steps: []\n"),
+        Err(BumpError::NotFound { .. })
+    ));
+    assert!(matches!(
+        bump.plan_edit("- uses: actions/checkout@\n"),
+        Err(BumpError::UnsupportedManifest { .. })
+    ));
+    assert!(matches!(
+        bump.plan_edit("- uses: actions/checkout@v1\n- uses: actions/checkout@v2\n"),
+        Err(BumpError::Ambiguous { count: 2, .. })
+    ));
+    assert_eq!(
+        bump.plan_edit("- uses: actions/checkout@v1").expect("edit"),
+        format!("- uses: actions/checkout@{sha}")
+    );
+}
+
+#[test]
 fn parses_single_requirement_shapes() {
     let bump = BumpRequest::parse("cargo:anyhow", "1.2.3").expect("cargo");
     assert_eq!(bump.set, BumpSet::Cargo);

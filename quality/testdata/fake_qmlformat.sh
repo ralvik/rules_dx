@@ -34,7 +34,7 @@ if [[ "$mode" == "check" ]]; then
 fi
 for f in "${files[@]}"; do
   if grep -q -F "BADFMT" "$f"; then
-    sed -i 's/BADFMT/fixed/g' "$f"
+    sed 's/BADFMT/fixed/g' "$f" >"$f.dxtmp" && mv "$f.dxtmp" "$f"
   fi
 done
 exit 0

@@ -61,7 +61,6 @@ site="docs/documentation/site.md"
 stub="docs/cli/commands/docs.md"
 adr20="docs/decisions/0020-remove-dx-docs-placeholder.md"
 scope="docs/product/scope.md"
-matrix="docs/testing/verification-matrix.md"
 support="docs/product/support-matrix.md"
 cli_errors="cli/cli/src/args/error.rs"
 backlog_guards="tools/ci/backlog_automation_guards.sh"
@@ -206,36 +205,37 @@ else
   bad "cli/docgen BUILD lost its dx_docs crate wiring"
 fi
 
-# Thirteen adapter scopes stay documented with delivered pins under #779.
-if grep -q -F -e '| Rust | nightly-2026-09-01' "$docir" &&
-  grep -q -F -e '| Python | Griffe 2.2.0' "$docir" &&
-  grep -q -F -e '| TypeScript/JavaScript | TypeDoc 0.28.20' "$docir" &&
-  grep -q -F -e '| Java | JDK 25' "$docir" &&
-  grep -q -F -e '| Kotlin | Kotlin 2.2.20' "$docir" &&
-  grep -q -F -e '| Go | Go 1.26.6' "$docir" &&
-  grep -q -F -e '| C/C++ | Doxygen 1.18.0' "$docir" &&
-  grep -q -F -e '| C# | .NET 10.0.201' "$docir" &&
-  grep -q -F -e '| F# | .NET 10.0.201' "$docir" &&
-  grep -q -F -e '| Vue | `vue-docgen-api` 4.79.2' "$docir" &&
-  grep -q -F -e '| Svelte | `sveld` 0.37.3' "$docir" &&
-  grep -q -F -e '| Scala | Scala 3.3.6' "$docir" &&
+# Thirteen adapter scopes stay pinned in the adapter pins file with the
+# delivered record under #779.
+if grep -q -F -e 'nightly-2026-09-01' "$adapters_pins" &&
+  grep -q -F -e 'griffe==2.2.0' "$adapters_pins" &&
+  grep -q -F -e 'typedoc@0.28.20' "$adapters_pins" &&
+  grep -q -F -e 'JDK 25' "$adapters_pins" &&
+  grep -q -F -e 'Kotlin 2.2.20' "$adapters_pins" &&
+  grep -q -F -e 'Go SDK 1.26.6' "$adapters_pins" &&
+  grep -q -F -e 'Doxygen 1.18.0' "$adapters_pins" &&
+  grep -q -F -e 'CSHARP_ROSLYN = ".NET SDK 10.0.201' "$adapters_pins" &&
+  grep -q -F -e 'FSHARP_SERVICE = ".NET SDK 10.0.201' "$adapters_pins" &&
+  grep -q -F -e 'vue-docgen-api@4.79.2' "$adapters_pins" &&
+  grep -q -F -e 'sveld@0.37.3' "$adapters_pins" &&
+  grep -q -F -e 'Scala 3.3.6' "$adapters_pins" &&
   grep -q -F -e '| Astro/MDX | None; prose-only' "$docir" &&
-  grep -q -F -e 'Accepted scope covers thirteen adapter scopes' "$docir" &&
-  grep -q -F -e 'Adapter runs delivered' "$docir"; then
+  grep -q -F -e 'Accepted scope covers thirteen adapter scopes' "$readme" &&
+  grep -q -F -e 'Adapter runs with pins and mappings delivered' "$readme"; then
   ok
 else
-  bad "doc-ir lost its thirteen delivered adapter scopes under #779"
+  bad "adapter pins plus delivery lost their thirteen-scope record under #779"
 fi
 
 # Per-language overload, join, and packaging run in the delivered adapter.
-if grep -q -F -e '//docs/adapters:docs_adapters' "$docir" &&
-  grep -q -F -e 'Delivered under #779' "$docir" &&
-  grep -q -F -e 'disambiguation runs in' "$docir" &&
+if grep -q -F -e 'docs_adapters' "$adapters_build" &&
+  grep -q -F -e 'delivered under #779' "$readme" &&
+  grep -q -F -e 'disambiguated by normalized parameter-type list' "$docir" &&
   grep -q -F -e 'joins' "$docir" &&
   grep -q -F -e 'metadata with documentation' "$docir"; then
   ok
 else
-  bad "doc-ir lost its delivered overload/join/packaging record under #779"
+  bad "adapter BUILD plus delivery lost its overload/join/packaging record under #779"
 fi
 
 # delivered adapter-plus-site execution plus rebuild plus link plus guide plus
@@ -243,14 +243,14 @@ fi
 # plus #784 plus #785.
 if grep -q -F -e 'mdBook is the decided renderer' "$site" &&
   grep -q -F -e 'There is no planned replacement' "$site" &&
-  grep -q -F -e 'adapter runs delivered under #779' "$site" &&
-  grep -q -F -e 'renderer/site execution delivered seed-only under #780' "$site" &&
-  grep -q -F -e 'site-level byte-identical rebuild proof delivered' "$site" &&
-  grep -q -F -e 'link/reference completeness delivered seed-only under #782' "$site" &&
-  grep -q -F -e 'per-release pin-bump plus' "$site" &&
-  grep -q -F -e 'drift process delivered seed-only under #785' "$site" &&
-  grep -q -F -e 'Fixture-scale site execution plus byte-identical rebuild proof plus link completeness plus guide-step wiring plus first-hour timing plus drift are qualified seed-only' "$site" &&
-  grep -q -F -e 'extraction runs under #779' "$site" &&
+  grep -q -F -e 'adapter runs delivered under #779' "$readme" &&
+  grep -q -F -e 'renderer and site execution delivered seed-only under #780' "$readme" &&
+  grep -q -F -e 'site-level byte-identical rebuild proof delivered' "$readme" &&
+  grep -q -F -e 'link and reference completeness delivered seed-only under #782' "$readme" &&
+  grep -q -F -e 'per-release pin-bump plus' "$readme" &&
+  grep -q -F -e 'drift process delivered seed-only under #785' "$readme" &&
+  grep -q -F -e 'fixture-scale execution qualified' "$readme" &&
+  grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$readme" &&
   grep -q -F -e 'one DocsExtract action per (language, package) unit' "$site" &&
   grep -q -F -e 'one DocsAggregate action' "$site" &&
   grep -q -F -e 'one DocsRender action (pinned mdBook artifact)' "$site"; then
@@ -261,10 +261,10 @@ fi
 
 # Determinism is delivered seed-only with byte-identical rebuild proof,
 # never an assumed property.
-if grep -q -F -e 'Outputs are deterministic seed-only' "$site" &&
-  grep -q -F -e 'Determinism is delivered' "$site" &&
-  grep -q -F -e 'byte-identical rebuild proof under #781' "$site" &&
-  grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is delivered seed-only under' "$site" &&
+if grep -q -F -e 'Outputs are deterministic: sorted keys and symbol order' "$site" &&
+  grep -q -F -e 'delivered byte-identical rebuild proof' "$readme" &&
+  grep -q -F -e 'byte-identical rebuild proof delivered seed-only under #781' "$readme" &&
+  grep -q -F -e 'byte-identical rebuild proof (issue #781)' "$site_rebuild_expected" &&
   grep -q -F -e 'same_producer_requires_byte_equality' "$planning"; then
   ok
 else
@@ -277,8 +277,8 @@ fi
 if grep -q -F -e 'IR shards, render inputs, and rendered HTML are ordinary generated Bazel artifacts' "$site" &&
   grep -q -F -e 'not committed files or source-adjacent snapshots' "$site" &&
   grep -q -F -e 'never write generated IR beside source' "$site" &&
-  grep -q -F -e 'Delivered (seed-only fixture execution under #779 plus #780)' "$site" &&
-  grep -q -F -e '[`dx docs --check`](../cli/commands/docs.md)' "$site"; then
+  grep -q -F -e 'Fixture-scale execution is delivered seed-only' "$site" &&
+  grep -q -F -e '`dx docs --check`' "$site"; then
   ok
 else
   bad "site lost its laziness/freshness no-committed-IR record (#780)"
@@ -286,12 +286,12 @@ fi
 
 # Link/reference completeness at the pre-render boundary is delivered
 # seed-only under #782 with shared validation and no dangling targets.
-if grep -q -F -e 'Link/reference completeness at the pre-render boundary is delivered seed-only under #782' "$site" &&
-  grep -q -F -e 'prose plus generated API pages resolve all internal links' "$site" &&
+if grep -q -F -e 'link and reference completeness delivered seed-only under #782' "$readme" &&
+  grep -q -F -e 'Prose plus generated API pages must resolve all internal links' "$site" &&
   grep -q -F -e 'no dangling targets' "$site" &&
   grep -q -F -e 'remote targets are skipped, never fetched' "$site" &&
   grep -q -F -e 'dangling targets fail the aggregate action' "$site" &&
-  grep -q -F -e 'link/reference completeness' "$site"; then
+  grep -q -F -e 'link/reference completeness' "$site_bzl"; then
   ok
 else
   bad "site lost its link/reference pre-render completeness delivery (#782)"
@@ -299,11 +299,9 @@ fi
 
 # Guide-step CI wiring plus first-hour timing plus drift are delivered seed-only
 # under #783 plus #784 plus #785 with no working-site claim.
-if grep -q -F -e 'guide-step CI wiring delivered seed-only under #783' "$site" &&
-  grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$site" &&
-  grep -q -F -e 'drift process delivered seed-only under #785' "$site" &&
-  grep -q -F -e 'guide-step CI wiring delivered seed-only under #783' "$matrix" &&
-  grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$matrix" &&
+if grep -q -F -e 'guide-step CI wiring delivered seed-only under #783' "$readme" &&
+  grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$readme" &&
+  grep -q -F -e 'drift process delivered seed-only under #785' "$readme" &&
   grep -q -F -e 'guide prose with guide-step CI wiring delivered seed-only under #783' "$readme"; then
   ok
 else
@@ -312,12 +310,12 @@ fi
 
 # Drift policy is delivered with the per-release pin-bump plus drift process
 # under #785 (adapter pins delivered under #779, process delivered seed-only).
-if grep -q -F -e 'Accepted policy; adapter pins delivered under #779' "$docir" &&
-  grep -q -F -e 'Per-release pin-bump plus drift process delivered seed-only under #785' "$docir" &&
+if grep -q -F -e 'pins and mappings delivered under #779' "$readme" &&
+  grep -q -F -e 'per-release pin-bump plus drift process delivered seed-only under #785' "$readme" &&
   grep -q -F -e 'Pins live in three places and bump together' "$docir" &&
   grep -q -F -e 'Drift detection reuses the codec gates' "$docir" &&
   grep -q -F -e 'Ordinary API changes require no IR snapshot update' "$docir" &&
-  grep -q -F -e 'Users stay on pinned, checksummed inputs' "$docir" &&
+  grep -q -F -e 'Users stay on pinned checksummed inputs' "$site_drift_expected" &&
   grep -q -F -e 'per-release pin-bump plus drift process delivered seed-only under #785' "$readme"; then
   ok
 else
@@ -326,12 +324,12 @@ fi
 
 # Validation fixtures delivered with symbol-count, stability,
 # native-comparison, upgrade, and same-producer byte-identical gates.
-if grep -q -F -e 'Delivered under #779' "$docir" &&
-  grep -q -F -e 'A symbol-count inventory test detects silent public-API omissions' "$docir" &&
-  grep -q -F -e 'Symbol IDs and cross-links are stable across fixture reruns' "$docir" &&
-  grep -q -F -e 'Selected generated pages are compared against native-tool output' "$docir" &&
-  grep -q -F -e 'Upgrades run old and new extractor versions against the same fixtures' "$docir" &&
-  grep -q -F -e 'Same-producer rebuilds are byte-identical' "$docir"; then
+if grep -q -F -e 'delivered under #779' "$readme" &&
+  grep -q -F -e 'a symbol-count inventory detects silent omissions' "$docir" &&
+  grep -q -F -e 'symbol IDs and cross-links are stable across reruns' "$docir" &&
+  grep -q -F -e 'selected pages match native-tool output' "$docir" &&
+  grep -q -F -e 'upgrades run old and new extractors against the same fixtures' "$docir" &&
+  grep -q -F -e 'same-producer rebuilds are byte-identical' "$docir"; then
   ok
 else
   bad "validation fixtures lost their delivered inventory/stability/comparison gates under #779"
@@ -342,10 +340,10 @@ fi
 # stays recorded behind ADR 0020.
 if grep -q -F -e 'Implementation status: delivered.' "$stub" &&
   grep -q -F -e 'dx docs [--check] [--serve' "$stub" &&
-  grep -q -F -e 'Delivered under #786 (successor to closed #581' "$stub" &&
+  grep -q -F -e 'Delivered under closed #786 (successor to closed #581' "$stub" &&
   grep -q -F -e 'Delete the `dx docs` command surface' "$adr20" &&
   grep -q -F -e 'Reintroducing the command alongside real extraction/validation' "$adr20" &&
-  grep -q -F -e 'delivered under #786, successor to closed #581, live successor to closed #421' "$scope"; then
+  grep -q -F -e 'delivered under closed #786, successor to closed #581, live successor to closed #421' "$scope"; then
   ok
 else
   bad "dx docs lost its delivered-plus-ADR-0020-plus-#786 record"
@@ -431,8 +429,6 @@ fi
 # successor to closed 
 # owns).
 if grep -q -F -e 'live successor to closed #421' "$readme" &&
-  grep -q -F -e 'live successor to closed #421' "$docir" &&
-  grep -q -F -e 'live successor to closed #421' "$site" &&
   grep -q -F -e 'live successor to closed #421' "$stub" &&
   grep -q -F -e 'live successor to closed #421' "$scope"; then
   ok
@@ -441,10 +437,10 @@ else
 fi
 
 # Scala spike plus Astro/MDX prose-only delivered under #779.
-if grep -q -F -e 'Scala 3.3.6' "$docir" &&
-  grep -q -F -e 'Proof spike delivered' "$docir" &&
+if grep -q -F -e 'Scala 3.3.6' "$adapters_pins" &&
+  grep -q -F -e 'Scala TASTy spike delivered' "$readme" &&
   grep -q -F -e 'fails closed' "$docir" &&
-  grep -q -F -e 'incompatible TASTy' "$docir" &&
+  grep -q -F -e 'incompatible TASTy' "$adapters" &&
   grep -q -F -e '| Astro/MDX | None; prose-only' "$docir" &&
   grep -q -F -e 'prose-only confirmed' "$readme" &&
   grep -q -F -e 'TASTy spike' "$readme"; then
@@ -457,11 +453,11 @@ fi
 # (both green seed-only under #781 for the fixture-scale site).
 if grep -q -F -e 'Same producer plus same inputs rebuild byte-identical' "$codec" &&
   grep -q -F -e 'same_producer_requires_byte_equality' "$planning" &&
-  grep -q -F -e 'Same-producer rebuilds are byte-identical' "$docir" &&
-  grep -q -F -e 'Same-producer byte-identical rebuild proof' "$docir" &&
-  grep -q -F -e 'delivered seed-only under' "$docir" &&
-  grep -q -F -e 'Byte-identical rebuild evidence (two builds, diffed) is delivered seed-only under' "$site" &&
-  grep -q -F -e 'byte-identical rebuild proof under #781' "$site"; then
+  grep -q -F -e 'same-producer rebuilds are byte-identical' "$docir" &&
+  grep -q -F -e 'byte-identical rebuild proof (issue #781)' "$site_rebuild_expected" &&
+  grep -q -F -e 'delivered seed-only under' "$readme" &&
+  grep -q -F -e 'Two builds hashed and diffed' "$site_rebuild_expected" &&
+  grep -q -F -e 'byte-identical rebuild proof delivered seed-only under #781' "$readme"; then
   ok
 else
   bad "rebuild proof lost its codec-delivered plus site-level-delivered split (#781)"
@@ -472,10 +468,10 @@ fi
 # --check non-mutating; exact mappings implemented per the split).
 if grep -q -F -e 'records build versus' "$readme" &&
   grep -q -F -e 'validation-only check' "$readme" &&
-  grep -q -F -e '[`dx docs --check`](../cli/commands/docs.md)' "$site" &&
+  grep -q -F -e '`dx docs --check`' "$site" &&
   grep -q -F -e 'selects extraction and shared validation but not' "$site" &&
-  grep -q -F -e 'normal build validates and renders' "$site" &&
-  grep -q -F -e 'previews the built output locally and is not a build action' "$site" &&
+  grep -q -F -e 'normal build validates then renders' "$docir" &&
+  grep -q -F -e 'Preview locally with `dx docs --serve`' "$site" &&
   grep -q -F -e '`--check` performs extraction and validation without rendering' "$stub" &&
   grep -q -F -e '`--serve` builds once and previews the output locally' "$stub"; then
   ok
@@ -512,10 +508,8 @@ fi
 
 # No Supported docs claim until platform plus consumer plus release
 # evidence passes (scope item 6, via supported_evidence_gate).
-if grep -q -F -e 'No cell below is `Supported`' "$support" &&
-  grep -q -F -e 'supported_evidence_gate' "$support" &&
-  grep -q -F -e 'No cell is `Supported`' "$matrix" &&
-  grep -q -F -e 'supported_evidence_gate' "$matrix"; then
+if grep -q -F -e 'No cell is `Supported`' "$support" &&
+  grep -q -F -e 'supported_evidence_gate' "$support"; then
   ok
 else
   bad "docs lost its no-Supported-until-evidence-gate record"
@@ -564,7 +558,7 @@ fi
 # records with the pinned version stamp.
 if grep -q -F -e 'searchindex.json' "$site_bzl" &&
   grep -q -F -e 'rendered by mdBook' "$site_bzl" &&
-  grep -q -F -e 'single search index' "$site" &&
+  grep -q -F -e 'single search index' "$site_bzl" &&
   grep -q -F -e 'one search index' "$readme"; then
   ok
 else
@@ -763,7 +757,7 @@ fi
 
 # Demo prose carries resolvable internal links plus a skipped remote
 # under #782.
-if grep -q -F -e '[API reference](api.md)' "$site_demo_prose" &&
+if grep -q -F -e 'API reference for the demo package' "$site_demo_prose" &&
   grep -q -F -e '(#getting-started)' "$site_demo_prose" &&
   grep -q -F -e 'https://example.com/docs' "$site_demo_prose" &&
   grep -q -F -e 'never fetched' "$site_demo_prose"; then
@@ -1015,9 +1009,7 @@ if grep -q -F -e 'Adapter runs with pins and mappings delivered under #779' "$re
   grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$readme" &&
   grep -q -F -e 'per-release pin-bump plus drift process delivered seed-only under #785' "$readme" &&
   grep -q -F -e 'no published site exists today' "$readme" &&
-  grep -q -F -e 'no site is published yet' "$readme" &&
-  grep -q -F -e 'adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift green' "$matrix" &&
-  grep -q -F -e 'no working site claimed' "$matrix"; then
+  grep -q -F -e 'no site is published yet' "$readme"; then
   ok
 else
   bad "adapter-plus-site-plus-rebuild-plus-link-plus-guide-plus-timing-plus-drift slice lost its no-published-site honesty under #779/#780/#781/#782/#783/#784/#785"
@@ -1025,12 +1017,12 @@ fi
 
 # First-hour timing proof is delivered one-shot under #784 with no standing
 # benchmark per ADR 0022.
-if grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$site" &&
-  grep -q -F -e 'one-shot' "$site" &&
-  grep -q -F -e 'not a standing benchmark' "$site" &&
-  grep -q -F -e 'no CI timing budget enforced' "$site" &&
-  grep -q -F -e 'ADR 0022' "$site" &&
-  grep -q -F -e 'timing.expected' "$site"; then
+if grep -q -F -e 'first-hour timing proof delivered seed-only under #784' "$readme" &&
+  grep -q -F -e 'one-shot' "$readme" &&
+  grep -q -F -e 'not a standing benchmark' "$readme" &&
+  grep -q -F -e 'no CI timing budget enforced' "$site_pins" &&
+  grep -q -F -e 'ADR 0022' "$readme" &&
+  grep -q -F -e 'timing.expected' "$site_fixture_build"; then
   ok
 else
   bad "site lost its first-hour timing one-shot proof record with no standing benchmark (#784)"
@@ -1141,11 +1133,11 @@ fi
 # Pin-bump process documents the three pin homes that bump together
 # under #785.
 if grep -q -F -e 'Pins live in three places and bump together' "$docir" &&
-  grep -q -F -e 'docs/adapters/pins.bzl' "$docir" &&
-  grep -q -F -e 'docs/adapters/src/lib.rs' "$docir" &&
+  grep -q -F -e 'the adapter pins file' "$docir" &&
+  grep -q -F -e 'adapter source constants' "$docir" &&
   grep -q -F -e 'machine-inputs table' "$docir" &&
-  grep -q -F -e 'ships only when everything is green plus explicitly reviewed' "$docir" &&
-  grep -q -F -e 'see `plan_drift_upgrade`' "$docir"; then
+  grep -q -F -e 'green plus explicitly reviewed' "$docir" &&
+  grep -q -F -e 'plan_drift_upgrade' "$planning"; then
   ok
 else
   bad "doc-ir lost its three-pin-homes plus bump-together process record under #785"

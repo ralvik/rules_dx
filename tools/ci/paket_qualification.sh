@@ -116,10 +116,10 @@ fi
 # MODULE wires the paket.main hub with the qualified lock record.
 if grep -q -F -e 'use_extension("//third_party/dotnet/deps:paket.main_extension.bzl"' "$module" &&
   grep -q -F -e 'use_repo(dotnet_nuget, "paket.main")' "$module" &&
-  grep -q -F -e 'issue #482' "$module"; then
+  grep -q -F -e 'bazel run //tools/ci:paket_qualification' "$module"; then
   ok
 else
-  bad "MODULE.bazel lost its paket.main hub wiring plus #482 qualified record"
+  bad "MODULE.bazel lost its paket.main hub wiring plus qualified-seed annotation (issue #482 rides foundation-qualification.md)"
 fi
 
 # Lock packages stay maintainer-owned with GENERATED hub output.
@@ -156,21 +156,21 @@ fi
 
 # packages.lock.json stays rejected: none lands, docs own the rules_dotnet 444 note.
 if ! find . -name 'packages.lock.json' -not -path './bazel-*' 2>/dev/null | grep -q . &&
-  grep -q -F -e 'packages.lock.json' "$matrix" &&
-  grep -q -F -e 'rules_dotnet issue 444' "$matrix"; then
+  grep -q -F -e 'packages.lock.json' "$module" &&
+  grep -q -F -e 'rules_dotnet issue 444' "$module"; then
   ok
 else
-  bad "packages.lock.json rejection lost (want no such file plus support-matrix rules_dotnet 444 note)"
+  bad "packages.lock.json rejection lost (want no such file plus MODULE rules_dotnet 444 note)"
 fi
 
 # Support matrix owns the qualified lock with fixtures and harness.
-if grep -q -F -e 'Paket' "$matrix" &&
-  grep -q -F -e 'qualified seed-only under issue #482' "$matrix" &&
-  grep -q -F -e 'paket_qualification' "$matrix" &&
-  grep -q -F -e 'csharp/tests/fixtures/paket/pins.bzl' "$matrix"; then
+if grep -q -F -e 'Paket' "$gen_readme" &&
+  grep -q -F -e 'qualified seed-only under issue #482' "$gen_readme" &&
+  grep -q -F -e 'paket_qualification' "$gen_readme" &&
+  grep -q -F -e 'csharp/tests/fixtures/paket/pins.bzl' "$gen_readme"; then
   ok
 else
-  bad "support-matrix lost its #482 qualified Paket lock record with fixtures"
+  bad "foundation-qualification.md lost its #482 qualified Paket lock record with fixtures"
 fi
 
 # Generation README owns the qualified lock alongside the other gaps.
@@ -182,12 +182,12 @@ else
   bad "generation README lost its #482 qualified Paket lock record"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "paket_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:paket_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "paket_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:paket_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the paket_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the paket_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Depcheck proves offline lock authority with paket fixtures plus parser.

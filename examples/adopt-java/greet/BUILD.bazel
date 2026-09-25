@@ -12,6 +12,7 @@ package(default_visibility = ["//:__subpackages__"])
 java_test(
     name = "greet_test",
     srcs = ["GreetTest.java"],
+    aspect_hints = ["//quality:corpus_checkstyle_config"],
     test_class = "greet.GreetTest",
     deps = [":greet"],
 )
@@ -23,11 +24,13 @@ java_library(
         "Guava.java",
         "Helper.java",
     ],
+    aspect_hints = ["//quality:corpus_checkstyle_config"],
     deps = ["@maven//:com_google_guava_guava"],
 )
 
 real_source_target(
     name = "corpus_starlark",
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

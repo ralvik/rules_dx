@@ -332,7 +332,7 @@ _RUNNER_PRELUDE = [
     '        case "$0" in',
     '            */*) self_runfiles="$0.runfiles/$TEST_WORKSPACE/$short_path";;',
     '            *) self_runfiles="$TEST_SRCDIR/$TEST_WORKSPACE/$short_path";;',
-    '        esac',
+    "        esac",
     '        if [ -f "$self_runfiles" ]; then',
     '            path="$self_runfiles"',
     "        fi",
@@ -580,7 +580,8 @@ def starlark_test(name, mode, checks = [], subjects = [], expected_observations 
     `size` defaults to `small`; pass `tags = ["manual"]` for negative
     demonstrations that must fail without breaking `//...` suites.
     `observe_output_groups` opts analysis tests into `dx_results`
-    output-group plus instrumented-files observations (issue #928)."""
+    output-group plus instrumented-files observations (issue #928).
+    """
     if mode not in _MODES:
         fail("starlark_test: unknown mode '" + mode + "': want one of " +
              ", ".join(sorted(_MODES.keys())))

@@ -16,8 +16,8 @@ Out of scope by design: `tsc` typechecks `typescript`/`tsx` but is
 target-coupled and never runs as a bare backend invocation, so it has no
 matrix cell; `spotbugs` lints `java` but is target-coupled (needs
 `JavaInfo` classes, dropped for provider-less fixtures), so it has no
-matrix cell. Scala plus C# plus F# cells below are opt-in adapters
-delivered under #797 (successor to closed #417), Java plus Kotlin cells
+matrix cell. Scala plus C# plus F# cells below are
+opt-in adapters delivered under #797 (successor to closed #417), Java plus Kotlin cells
 are opt-in adapters delivered under #796 (successor to closed #416),
 C plus C++ plus Go cells are opt-in adapters delivered under #798
 (successor to closed #418), Protobuf plus QML cells below are

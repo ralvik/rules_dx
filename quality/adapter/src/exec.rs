@@ -834,9 +834,9 @@ mod tests {
     #[test]
     fn spawn_runs_absolute_binaries_without_path() {
         let env = hermetic_env(&std::env::temp_dir(), &[]);
-        let ok = spawn(&[OsStr::new("/bin/true")], Path::new("/"), &env).expect("spawn");
+        let ok = spawn(&[OsStr::new("/usr/bin/true")], Path::new("/"), &env).expect("spawn");
         assert_eq!(ok.code, Some(0));
-        let fail = spawn(&[OsStr::new("/bin/false")], Path::new("/"), &env).expect("spawn");
+        let fail = spawn(&[OsStr::new("/usr/bin/false")], Path::new("/"), &env).expect("spawn");
         assert_eq!(fail.code, Some(1));
         assert!(spawn(&[OsStr::new("/nonexistent-dx-tool")], Path::new("/"), &env).is_err());
         let empty: Vec<&OsStr> = Vec::new();

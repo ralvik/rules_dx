@@ -1,5 +1,6 @@
 """standardrb fixture."""
 
+load("@rules_dx//ruby/rules:defs.bzl", "ruby_library")
 load("//quality:fixtures.bzl", "real_source_target")
 
 package(
@@ -16,9 +17,16 @@ exports_files([
 real_source_target(
     name = "corpus_starlark",
     testonly = True,
+    aspect_hints = ["//:buildifier_config"],
     starlark_srcs = [
         "BUILD.bazel",
         "pins.bzl",
     ],
     tags = ["corpus"],
+)
+
+ruby_library(
+    name = "standardrb",
+    testonly = True,
+    srcs = ["Sample.rb"],
 )

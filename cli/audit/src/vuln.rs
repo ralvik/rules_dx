@@ -1213,8 +1213,20 @@ fn project_osv_affected(
     if let Some(versions) = affected.versions.as_ref() {
         for version in versions {
             let trimmed = version.trim();
-            if !trimmed.is_empty() && !scopes.iter().any(|seen| seen == trimmed) {
-                scopes.push(trimmed.to_owned());
+            if trimmed.is_empty() {
+                continue;
+            }
+            // OSV `versions` is an exact affected list. Cargo/Go bare
+            // spellings parse as caret ranges (`0.4.10` ~ `^0.4.10` =
+            // `>=0.4.10, <0.5.0`), which over-matches fixed releases
+            // (GHSA-qx2v-8332-m4fv: `0.4.12` vs fixed `0.4.11`); pin
+            // with `=` so only the listed version matches.
+            let scope = match set {
+                "cargo" | "go" if !trimmed.starts_with('=') => format!("={trimmed}"),
+                _ => trimmed.to_owned(),
+            };
+            if !scopes.iter().any(|seen| seen == &scope) {
+                scopes.push(scope);
             }
         }
     }

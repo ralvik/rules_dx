@@ -47,33 +47,33 @@ exec_tests="cli/cli/src/exec/update_tests_b.rs"
 targets="tools/ci/ci_targets_c.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
 
-# Protocol owns the v1.0 wont-fix history with resolver-owned backends.
-if grep -q -F -e 'absence of file events was wont-fix' "$protocol" &&
-  grep -q -F -e 'resolver-owned by' "$protocol" &&
-  grep -q -F -e '`dx_update::backend`' "$protocol"; then
+# Audit-update-bazel history owns the v1.0 wont-fix record with resolver-owned backends.
+if grep -q -F -e 'absence of file events was wont-fix' "$command_doc" &&
+  grep -q -F -e 'resolver-owned by' "$command_doc" &&
+  grep -q -F -e '`dx_update::backend`' "$command_doc"; then
   ok
 else
-  bad "output-protocol.md lost its #586 wont-fix history with resolver-owned backend record"
+  bad "audit-update-bazel.md lost its #586 wont-fix history with resolver-owned backend record"
 fi
 
-# Protocol says v1.0 per-set reports are complete when manifests are absent.
-if grep -q -F -e 'stays the complete' "$protocol" &&
-  grep -q -F -e 'when no manifest' "$protocol" &&
-  grep -q -F -e 'when manifests are absent or empty' "$protocol"; then
+# Audit-update-bazel history says v1.0 per-set reports are complete when manifests are absent.
+if grep -q -F -e 'stays the complete' "$command_doc" &&
+  grep -q -F -e 'when no manifest' "$command_doc" &&
+  grep -q -F -e 'empty or absent' "$command_doc"; then
   ok
 else
-  bad "output-protocol.md lost its v1.0 per-set completeness when manifests absent"
+  bad "audit-update-bazel.md lost its v1.0 per-set completeness when manifests absent"
 fi
 
-# Protocol names the completeness contract (per-set plus finished).
+# Protocol plus history name the completeness contract (per-set plus finished).
 if grep -q -F -e 'per-set' "$protocol" &&
-  grep -q -F -e 'stays the complete' "$protocol" &&
+  grep -q -F -e 'stays the complete' "$command_doc" &&
   grep -q -F -e 'one terminal per-set event' "$protocol" &&
   grep -q -F -e 'update_set_success' "$protocol" &&
   grep -q -F -e 'update_set_blocked' "$protocol"; then
   ok
 else
-  bad "output-protocol.md lost its per-set plus finished completeness contract"
+  bad "protocol docs lost their per-set plus finished completeness contract"
 fi
 
 # Protocol pins live results_complete with dry-run/check omission.
@@ -85,7 +85,7 @@ else
 fi
 
 # Protocol rejects Git scan, BUILD parse, and rerun inference.
-if grep -q -F -e 'Git scan, BUILD parse, or rerun was rejected' "$protocol" &&
+if grep -q -F -e 'Git scan, BUILD parse, or rerun is rejected' "$protocol" &&
   grep -q -F -e 'the protocol already forbids it' "$protocol"; then
   ok
 else
@@ -103,13 +103,13 @@ else
   bad "output-protocol.md lost its interrupted-run completeness pin"
 fi
 
-# Protocol Compatibility Tests require the update_events fixtures.
-if grep -q -F -e 'cli/update/tests/fixtures/update_events/' "$protocol" &&
-  grep -q -F -e 'issue #586' "$protocol" &&
-  grep -q -F -e 'interrupted runs keeping preceding per-set events true' "$protocol"; then
+# Compatibility Tests history requires the update_events fixtures.
+if grep -q -F -e 'cli/update/tests/fixtures/update_events/' "$command_doc" &&
+  grep -q -F -e 'issue #586' "$command_doc" &&
+  grep -q -F -e 'runs keeping preceding per-set events true' "$command_doc"; then
   ok
 else
-  bad "output-protocol.md Compatibility Tests lost the update_events fixture requirement under #586"
+  bad "audit-update-bazel.md Compatibility Tests lost the update_events fixture requirement under #586"
 fi
 
 # Command docs carry the v1.0 history plus 1.1 manifest cross-link with fixture paths.

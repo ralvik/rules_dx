@@ -386,11 +386,11 @@ fi
 
 # Quality docs own the qualified record; audit stays explicit.
 # Promotion gaps stay linked under #802.
-if grep -q -F -e 'qualified seed-only under issue #512' "$sources_doc" &&
+if grep -q -F -e 'qualified seed-only under closed #512' "$sources_doc" &&
   grep -q -F -e 'quality_taxonomy_qualification' "$sources_doc" &&
-  grep -q -F -e 'qualified seed-only under issue #512' "$integrations" &&
+  grep -q -F -e 'qualified seed-only under closed #512' "$integrations" &&
   grep -q -F -e 'quality_taxonomy_qualification' "$integrations" &&
-  grep -q -F -e 'qualified seed-only under issue #512' "$action_doc" &&
+  grep -q -F -e 'qualified seed-only under closed #512' "$action_doc" &&
   grep -q -F -e 'quality_taxonomy_qualification' "$action_doc" &&
   grep -q -F -e 'Bandit excluded from v1' "$action_doc" &&
   grep -q -F -e '#802' "$sources_doc" &&

@@ -1,8 +1,8 @@
 # Quality Workflow Testing
 
 This document defines the required test evidence for quality workflows: what
-behavior must be proven and how to run it. Open work is tracked in GitHub
-issues. Run suites with `bazel test //...` and bare `dx test`.
+behavior must be proven and how to run it.
+Open work is tracked in GitHub issues. Run suites with `bazel test //...` and bare `dx test`.
 
 ## Result Protocol
 
@@ -113,7 +113,7 @@ The apply step itself never changes Bazel action keys.
 Verification uses `aquery` plus execution logs or a controlled remote cache.
 A warm local no-op alone is not a cache test. Delivered evidence is local
 execution-log hit/miss; remote-cache proof stays unverified per
-[Testing Strategy](../testing/README.md#remote-tests).
+[Testing Strategy](../testing/strategy-details.md#remote-tests).
 
 ## Determinism
 
@@ -141,12 +141,35 @@ writes. One rejected path never blocks valid unrelated paths.
 ## Tool Parity
 
 Each supported language needs separate consumer fixtures for lockfile
-consistency and declared-dependency usage. A stale lockfile fails consistency
-even when every declaration is used; a consistent lockfile with an unused
-declaration passes consistency but fails usage. Tests run offline after
-declared inputs are provisioned, without querying live registries, and neither
-test mutates manifests or locks. Exceptions need explanatory reasons; obsolete
-exceptions fail validation.
+consistency and declared-dependency usage.
+A stale lockfile must fail consistency even when every declaration is used;
+a consistent lockfile with an unused declaration must pass consistency but
+fail usage. A consistent lockfile with all declarations used
+must pass both, even when newer compatible releases exist.
+Verify that neither test mutates manifests or locks. Lockfile consistency
+runs with network access denied after declared inputs are provisioned,
+without an undeclared package-manager cache; the test does not query live registries
+for newer releases. Generated checks run through both `bazel test //...` and
+bare `dx test` without opt-in, stay independently runnable by label, and carry
+no default `manual` exclusion. A legitimate non-import use can pass through an explicit dependency-scoped
+exception with an explanatory reason while an unrelated unused declaration
+still fails; the exception does not waive lockfile consistency.
+Missing reasons must fail validation. Where the ecosystem distinguishes
+dependency categories, a production declaration used only by tests
+must fail the usage test with a category error.
+Correctly categorized and legitimate multi-category usage must pass.
+Stale exceptions fail as obsolete after a checker upgrade, reported
+without deleting them.
+
+Accepted (closed #22; remaining composition plus Layer-2 cells
+qualified seed-only under closed #510, successors closed #796-#800): required-core
+(Rust, Python, JavaScript, TypeScript) plus admitted (Go, Java, Kotlin,
+Scala, C#, F#, C/C++) fixtures with category checks, explained exceptions,
+and obsolete-exception errors are implemented in `tools/depcheck/` and
+pinned by `bazel test //tools/depcheck/...`; remaining admitted
+quality-adapter work delivered under closed #307 (successors closed
+#796-#800), with foundation mappings qualified seed-only under closed
+#476-#484.
 
 Every required entry in [First-Release Tool Baseline](../tools/tool-baseline.md),
 including mandatory curated expansion, requires a fixture with native

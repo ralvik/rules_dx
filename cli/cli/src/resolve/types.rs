@@ -61,7 +61,7 @@ impl QueryRunner for ProcessQueryRunner {
 ///
 /// Single shared guard for every `resolve` test module (See: `docs/testing/README.md#coverage`, issue #914):
 /// previously copy-pasted as five private `NeverQuery` structs with
-/// drifting panic messages plus five `LCOV_EXCL` pairs. See:
+/// drifting panic messages plus five coverage-exclusion pairs. See:
 /// `docs/testing/README.md#coverage`.
 // LCOV_EXCL_START - reason: test guard, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 #[cfg(test)]

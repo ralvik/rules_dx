@@ -65,12 +65,12 @@ else
 fi
 
 # MODULE.bazel documents the zero-opt-in annotation contract.
-if grep -q -F -e 'Shell-env contract (issue #472)' "$module" &&
+if grep -q -F -e 'Shell-env contract:' "$module" &&
   grep -q -F -e 'build_script_use_default_shell_env' "$module" &&
   grep -q -F -e 'zero opt-ins' "$module"; then
   ok
 else
-  bad "MODULE.bazel lost its shell-env annotation contract comment under issue #472"
+  bad "MODULE.bazel lost its shell-env annotation contract comment (issue #472 rides .bazelrc plus docs)"
 fi
 
 # No live per-crate opt-in: uncommented MODULE.bazel carries no
@@ -84,17 +84,17 @@ else
 fi
 
 # First-party emission stays pinned in the generator.
-if grep -q -F -e 'use_default_shell_env", 0' "$lang"; then
+if grep -q -F -e 'use_default_shell_env", 0' "gazelle/rust/lang_generate.go"; then
   ok
 else
-  bad "gazelle/rust/lang.go lost its use_default_shell_env 0 emission"
+  bad "gazelle/rust/lang_generate.go lost its use_default_shell_env 0 emission"
 fi
 
 # Focused Go fixture still proves the first-party default.
-if grep -q -F -e 'use_default_shell_env' "$lang_test"; then
+if grep -q -F -e 'use_default_shell_env' "gazelle/rust/lang_scopes_test.go"; then
   ok
 else
-  bad "gazelle/rust/lang_test.go lost its use_default_shell_env fixture"
+  bad "gazelle/rust/lang_scopes_test.go lost its use_default_shell_env fixture"
 fi
 
 # First-party golden still carries the hermetic value.
@@ -155,17 +155,17 @@ else
 fi
 
 # BUILD owns the harness target.
-if grep -q -F -e 'name = "shell_env_qualification"' "$build"; then
+if grep -q -F -e 'name = "shell_env_qualification"' "tools/ci/ci_targets_d.bzl"; then
   ok
 else
-  bad "tools/ci/BUILD.bazel lost the shell_env_qualification target"
+  bad "tools/ci/ci_targets_d.bzl lost the shell_env_qualification target"
 fi
 
 # CI wires the harness in dogfood-freshness.
-if grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_env_qualification' "$ci"; then
+if grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_env_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "ci.yml lost the shell_env_qualification step (want dogfood-freshness)"
+  bad "dogfood_freshness.sh lost the shell_env_qualification step (want dogfood-freshness)"
 fi
 
 dx_test_summary "shell-env qualification harness"

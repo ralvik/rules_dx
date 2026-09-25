@@ -41,6 +41,7 @@ scalatest_build="scala/tests/fixtures/scalatest/BUILD.bazel"
 hello_build="scala/tests/fixtures/hello/BUILD.bazel"
 hello_test="scala/tests/fixtures/hello/HelloTest.scala"
 wrapper="scala/rules/defs.bzl"
+common="libs/starlark/wrapper.bzl"
 module="MODULE.bazel"
 jvm_pins="third_party/jvm/pins.bzl"
 jvm_lock="third_party/jvm/maven_install.json"
@@ -134,11 +135,11 @@ fi
 
 # Wrapper keeps the forwarder shape (private upstream plus test forwarder).
 if grep -q -F -e '_scala_forward_test' "$wrapper" &&
-  grep -q -F -e '_upstream' "$wrapper" &&
-  grep -q -F -e 'testonly = True' "$wrapper"; then
+  grep -q -F -e 'upstream_doc' "$wrapper" &&
+  grep -q -F -e 'testonly = True' "$common"; then
   ok
 else
-  bad "scala/rules/defs.bzl lost its forwarder shape (want _scala_forward_test plus private upstream) under issue #480"
+  bad "scala/rules/defs.bzl plus wrapper.bzl lost their forwarder shape (want _scala_forward_test plus upstream_doc plus testonly) under issue #480"
 fi
 
 # Hello fixture keeps the wrapper consumer shape (scala_test plus deps).
@@ -179,12 +180,12 @@ else
   bad "docs/generation/foundation-qualification.md lost its qualified ScalaTest record under issue #480"
 fi
 
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "scalatest_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:scalatest_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "scalatest_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:scalatest_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the scalatest_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the scalatest_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: the wrapper scala_test executes green on the seed host.

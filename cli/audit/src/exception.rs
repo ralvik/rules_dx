@@ -980,6 +980,104 @@ mod tests {
     }
 
     #[test]
+    fn npm_scope_gates_overlong_and_absurd_inputs() {
+        // Length caps fail closed before any parsing.
+        assert!(!npm_in_scope(&"1".repeat(5000), "1.0.0"));
+        assert!(!npm_in_scope("1.0.0", &"1".repeat(300)));
+        // More than 64 `||` branches fail closed even when one matches.
+        assert!(!npm_in_scope(&vec!["1.0.0"; 65].join("||"), "1.0.0"));
+        // Overlong comparator token fails closed.
+        assert!(!npm_in_scope(&"1".repeat(300), "1.0.0"));
+        // Overlong partial reaches the parser only through hyphen ends.
+        assert!(!npm_in_scope(
+            &format!("{} - 2.0.0", "1".repeat(300)),
+            "1.5.0"
+        ));
+    }
+
+    #[test]
+    fn npm_locked_markers_branch_shapes_and_merged_operators() {
+        // Leading `v`/`=` markers strip from locked versions.
+        assert!(npm_in_scope("1.2.3", "v1.2.3"));
+        assert!(npm_in_scope("1.2.3", "=1.2.3"));
+        assert!(!npm_in_scope("1.2.3", "v"));
+        // A branch empty after trimming fails closed; so does one with
+        // no usable tokens at all.
+        assert!(!npm_in_scope("9.9.9 || ", "1.0.0"));
+        assert!(!npm_in_scope(",", "1.0.0"));
+        // A lone operator token joins its successor into one comparator.
+        assert!(npm_in_scope(">= 1.2.3", "1.5.0"));
+        // A mid-list wildcard never parses upstream (fail closed).
+        assert!(!npm_in_scope("1 *", "1.5.0"));
+        // Build metadata rides the comparator but never the ordering.
+        assert!(npm_in_scope("1.2.3+b", "1.2.3+b"));
+        assert!(!npm_in_scope("+", "1.0.0"));
+    }
+
+    #[test]
+    fn npm_malformed_partials_fail_closed() {
+        assert!(!npm_in_scope("1.2.3.4", "1.2.3"));
+        assert!(!npm_in_scope("1..2", "1.2.0"));
+        assert!(!npm_in_scope("1.x-rc", "1.2.0"));
+        assert!(!npm_in_scope("1.2.3-rc_1", "1.2.3"));
+    }
+
+    #[test]
+    fn npm_hyphen_ranges_cover_wildcard_and_partial_ends() {
+        // Wildcard starts and ends leave that side unbounded; both
+        // unbounded fails closed.
+        assert!(npm_in_scope("* - 2.0.0", "1.5.0"));
+        assert!(npm_in_scope("1.0.0 - *", "1.5.0"));
+        assert!(!npm_in_scope("* - *", "1.5.0"));
+        // Unparseable ends fail closed.
+        assert!(!npm_in_scope("banana - 2.0.0", "1.5.0"));
+        assert!(!npm_in_scope("1.0.0 - banana", "1.5.0"));
+        // Full prerelease end stays inclusive on the same tuple; full
+        // prerelease start keeps its tuple in the lower bound.
+        assert!(npm_in_scope("1.0.0 - 2.3.4-beta", "2.3.4-beta"));
+        assert!(npm_in_scope("1.2.3-rc.1 - 2.0.0", "1.2.3-rc.1"));
+        // A partial major end narrows below the next line.
+        assert!(npm_in_scope("1.0.0 - 1", "1.0.5"));
+    }
+
+    #[test]
+    fn npm_comparator_operators_expand_upstream() {
+        // Operator detection arms: `<=`, bare `>`, and `=`.
+        assert!(npm_in_scope("<=2.0.0", "1.5.0"));
+        assert!(npm_in_scope(">1.2.3", "1.5.0"));
+        assert!(npm_in_scope("=1.2.3", "1.2.3"));
+        // Prerelease on a bare full version keeps the tuple exact.
+        assert!(npm_in_scope("1.2.3-rc.1", "1.2.3-rc.1"));
+        // Partial bounds desugar per upstream.
+        assert!(npm_in_scope(">=1.2", "1.2.5"));
+        assert!(npm_in_scope("<=1.2", "1.2.5"));
+        assert!(npm_in_scope("<=1", "1.5.0"));
+        assert!(npm_in_scope("<1.2", "1.1.0"));
+        assert!(npm_in_scope(">1.2", "1.3.0"));
+        assert!(npm_in_scope(">1", "2.0.0"));
+        // Operator followed by an operator or wildcard fails closed.
+        assert!(!npm_in_scope(">=^1.0", "1.0.0"));
+        assert!(!npm_in_scope("=v", "1.0.0"));
+        assert!(!npm_in_scope(">*", "1.0.0"));
+        // Incrementing `9` carries into a new digit place.
+        assert!(npm_in_scope("9", "9.0.0"));
+    }
+
+    #[test]
+    fn npm_caret_and_tilde_expand_each_upstream_branch() {
+        // Caret: prerelease lower bound plus the ^0.x minor, patch,
+        // minor-zero, and major-zero upper branches.
+        assert!(npm_in_scope("^1.2.3-rc.1", "1.2.3-rc.1"));
+        assert!(npm_in_scope("^0.2.3", "0.2.5"));
+        assert!(npm_in_scope("^0.0.3", "0.0.3"));
+        assert!(npm_in_scope("^0.0", "0.0.5"));
+        assert!(npm_in_scope("^0", "0.9.0"));
+        // Tilde: prerelease lower bound plus the major-only upper bound.
+        assert!(npm_in_scope("~1.2.3-rc.1", "1.2.3-rc.1"));
+        assert!(npm_in_scope("~1", "1.9.0"));
+    }
+
+    #[test]
     fn exception_schema_stays_versioned_without_allowlist() {
         assert_eq!(EXCEPTION_SCHEMA_VERSION, 1);
         // New advisories/packages/scopes are data validated via the shared

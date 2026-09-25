@@ -57,12 +57,17 @@ else
   bad "audit outcome lost its aggregate exit-code mapping"
 fi
 
-# /: consumer smoke still disables both audits (live, not yet gated).
-if grep -q -F -e 'security-audit' .github/workflows/ci.yml &&
-  grep -q -F -e 'license-audit' .github/workflows/ci.yml; then
+# /: consumer smoke disables only `test` (its in-file comment: coverage
+# already executes the tests) and both audits run enabled among its
+# checks (re-enabled intentionally, issue #518).
+if grep -q -F -e 'disabled_checks: "test"' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'security-audit' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'license-audit' .github/workflows/ci.yml &&
+  grep -q -F -e 'security-audit:' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'license-audit:' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "dogfood lost its disabled security/license audit record"
+  bad "dogfood lost its test-only disable record (want disabled_checks test plus both audit jobs enabled)"
 fi
 
 # live update executes resolver backends with continuation (no deferred code).

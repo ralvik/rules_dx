@@ -18,9 +18,10 @@
 # #421; formerly #421) without changing this
 # vehicle.
 #
-# Hygiene (issue #80, deduped under #915): the docs-check bootstrap goes
-# through `.github/actions/setup-checkout-bazelisk` (no-secrets checkout
-# plus pinned Bazelisk); every third-party
+# Hygiene (issue #80, deduped under #915): the docs-check bootstrap is
+# an inline no-secrets `actions/checkout` (step 1; local `./` actions
+# need a checked-out workspace) plus the pinned
+# `.github/actions/setup-bazelisk` installer; every third-party
 # action is pinned to a commit SHA with its tag in a trailing comment.
 # `docs-publish` stages the artifact in a temp dir so the checkout is
 # never left dirty for later steps.
@@ -68,7 +69,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Verify rules_dx pin
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}

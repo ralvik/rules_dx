@@ -139,25 +139,25 @@ fi
 
 # Tool acquisition keeps the Scalafix research row plus the decided
 # managed-JVM route with the decision and no false claim.
-if grep -q -F -e '| Scalafix |' "$acquisition" &&
-  grep -q -F -e 'decided under issue #490' "$acquisition" &&
-  grep -q -F -e 'Decided route: Scalafmt and Scalafix take the' "$acquisition" &&
-  grep -q -F -e 'same shared managed JDK and Maven-lock story' "$acquisition" &&
-  grep -q -F -e 'adapter claims `scala` yet' "$acquisition" &&
-  grep -q -F -e 'maintainer acquisition must establish and record byte identity' "$acquisition"; then
+if grep -q -F -e 'Scalafix' "$integrations" &&
+  grep -q -F -e 'decided under issue #490' "$integrations" &&
+  grep -q -F -e 'managed JVM route for Scalafmt (compatible JVM artifact over the shared' "$integrations" &&
+  grep -q -F -e 'and Scalafix (semantic-rule artifacts over the same JDK' "$integrations" &&
+  grep -q -F -e 'cohort delivered under #797' "$acquisition" &&
+  grep -q -F -e 'actual bytes when adding each adapter' "$acquisition"; then
   ok
 else
-  bad "tool-acquisition lost its Scalafix row plus decided route with #490 decision and no-claim honesty"
+  bad "tool-integrations lost its Scalafix row plus decided route with #490 decision and delivery honesty"
 fi
 
 # Support matrix records the decision in adapter-input notes plus fix
 # modes plus open risks, with fixtures and no Supported claim.
-# BUILD owns the harness target plus CI wires it in dogfood-freshness.
-if grep -q -F -e 'name = "scalafix_qualification"' "$build" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:scalafix_qualification' "$ci"; then
+# ci_targets_d.bzl owns the harness target plus dogfood-freshness wires it.
+if grep -q -F -e 'name = "scalafix_qualification"' "tools/ci/ci_targets_d.bzl" &&
+  grep -q -F -e 'bazel run --noshow_progress //tools/ci:scalafix_qualification' tools/ci/dogfood_freshness.sh; then
   ok
 else
-  bad "tools/ci/BUILD.bazel or ci.yml lost the scalafix_qualification wiring (want target plus dogfood-freshness)"
+  bad "tools/ci/ci_targets_d.bzl or dogfood_freshness.sh lost the scalafix_qualification wiring (want target plus dogfood-freshness)"
 fi
 
 # Live proof: Scala foundation fixture stays green on the seed host

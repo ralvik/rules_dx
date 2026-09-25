@@ -19,14 +19,14 @@ go_library(
     name = "godeps",
     srcs = ["godeps.go"],
     importpath = "rules_dx/go/tests/fixtures/godeps",
-    deps = ["@com_github_google_go_cmp//cmp:cmp"],
+    deps = ["@com_github_google_go_cmp//cmp"],
 )
 
 go_test(
     name = "godeps_test",
     srcs = ["godeps_test.go"],
     embed = [":godeps"],
-    deps = ["@com_github_google_go_cmp//cmp:cmp"],
+    deps = ["@com_github_google_go_cmp//cmp"],
 )
 
 exports_files(["pins.bzl"])

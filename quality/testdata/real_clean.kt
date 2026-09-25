@@ -1,7 +1,11 @@
+@file:Suppress("ktlint:standard:filename")
+
 package hello
 
 object Hello {
-  fun hello(name: String): String {
-    return "hello " + name
-  }
+    fun hello(name: String): String = "hello " + name
+}
+
+object World {
+    fun world(): String = "world"
 }

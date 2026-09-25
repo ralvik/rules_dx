@@ -5,6 +5,6 @@
 // `noExplicitAny` illustration. Illustrative only; not executed by the
 // qualification harness as a tool run.
 export function greet(name) {
-  const result: any = name;
-  return result;
+	const result: any = name;
+	return result;
 }

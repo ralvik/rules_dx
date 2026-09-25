@@ -94,12 +94,22 @@ def crates_unit_tests(name):
 EXPECTED_CRATES_DEFAULT_OBSERVATIONS = """subject //deploy/rules:crates_demo
 file crates_demo
 field app=
-field profile=release"""
+field profile=release
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//deploy/rules:crates_demo
+aspect_field transitive_count=0"""
 
 EXPECTED_CRATES_DEBUG_OBSERVATIONS = """subject //deploy/rules:crates_demo_debug
 file crates_demo_debug
 field app=
-field profile=debug"""
+field profile=debug
+aspect_field aspect_seen=True
+aspect_field field_count=2
+aspect_field has_subject=True
+aspect_field subject_label=//deploy/rules:crates_demo_debug
+aspect_field transitive_count=0"""
 
 def crates_analysis_tests(name):
     starlark_test(

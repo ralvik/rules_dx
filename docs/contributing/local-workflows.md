@@ -208,8 +208,9 @@ atomically and `--check` gates staleness (exit `0` clean / `1` stale).
 Owned build profiles (`dx_debug`/`dx_dev`/`dx_release` plus provisional
 `dx_dev_remote`/`dx_toolchain`) are reviewed the
 same way; see [ADR 0021](../decisions/0021-build-profiles.md). Coverage
-flags carry no ambient host path: `GENERATE_LLVM_LCOV=1` plus
-toolchain-provided gcov/llvm-cov per host (see
+flags pin `GENERATE_LLVM_LCOV=1` plus a `coverage:linux`/`coverage:macos`
+-scoped `COVERAGE_GCOV_PATH=/usr/bin/gcov` for Bazel's
+collect_cc_coverage.sh (see
 [Build, Test, And Coverage](../cli/commands/build-test-coverage.md#dx-coverage)).
 
 Version bumps flow through the native widen-one-requirement loop
@@ -238,7 +239,7 @@ reduction: v1 retains full required-host coverage.
 
 Coverage is local-only. The mandatory
 [project coverage gate](../testing/README.md#coverage) must pass; the
-adopted [first-party PR summary](../testing/README.md#github-coverage-reporting)
+adopted [first-party PR summary](../testing/strategy-details.md#github-coverage-reporting)
 renders from the same Bazel-owned LCOV in CI with fork-PR step-summary-only
 handling. Codecov stays opt-in only. Do not present local reports as service
 evidence.

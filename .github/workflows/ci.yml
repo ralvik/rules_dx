@@ -7,6 +7,13 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # Preserve Bazel labels (`//...`) passed through Git Bash to native
+  # Windows binaries, while still converting MSYS paths (`/c/...` to
+  # `C:\...`) that tools like tsc.bat require. Excluding only the `//`
+  # prefix (not `*`, not `MSYS_NO_PATHCONV`) keeps both working.
+  MSYS2_ARG_CONV_EXCL: "//"
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -51,7 +58,10 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -85,7 +95,10 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -159,7 +172,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -226,7 +242,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -293,7 +312,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -361,7 +383,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -433,7 +458,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -499,7 +527,10 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -533,7 +564,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -556,18 +590,21 @@ jobs:
     timeout-minutes: 45
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
           prefix: bazel-seed-
       - name: Test workspace
-        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 --local_test_jobs=4 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell seed linux_x86_64 real run, 0 skips: all 31 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell seed linux_x86_64 real run, 0 skips: all 58 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -582,7 +619,10 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -683,7 +723,10 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -703,18 +746,21 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
           prefix: bazel-arm64-
       - name: Test workspace
-        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 --local_test_jobs=4 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell linux_arm64 real run, 0 skips: all 31 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell linux_arm64 real run, 0 skips: all 58 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -728,7 +774,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -764,7 +813,10 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -783,7 +835,10 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -805,7 +860,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -843,7 +901,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -878,7 +939,10 @@ jobs:
     timeout-minutes: 60
     runs-on: macos-14
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -898,18 +962,21 @@ jobs:
     timeout-minutes: 60
     runs-on: macos-14
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
           prefix: bazel-macos-arm64-
       - name: Test workspace
-        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 --local_test_jobs=4 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell macos_arm64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell macos_arm64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -923,7 +990,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -961,7 +1031,10 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -984,18 +1057,21 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
           prefix: bazel-windows-x86_64-
       - name: Test workspace
-        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 --local_test_jobs=4 //...
       - name: Report skip volume (Linux-only sh harness, issue #769)
         if: always()
         run: |
           echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell windows_x86_64 budgeted 31 sh_test skips honestly (127 sh_binary build skips, 162 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Cell windows_x86_64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Write job summary
         if: always()
         run: |
@@ -1012,7 +1088,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1048,12 +1127,16 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
           prefix: bazel-seed-
       - name: Prove battery (target tags, coverage, platforms, release, shell)
+        # Includes //tools/ci:shell_contract via tools/ci/prove.sh.
         run: tools/ci/prove.sh
       - name: Write job summary
         if: always()
@@ -1067,7 +1150,10 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1085,7 +1171,10 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-checkout-bazelisk
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-bazelisk
       - name: Restore Bazel disk cache
         uses: ./.github/actions/restore-bazel-cache
         with:
@@ -1110,3 +1199,75 @@ jobs:
         run: |
           echo "### devcontainer-check — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Checked: dx init scaffold parity plus devcontainer definition shape (check-only; seed-host boot manually verified on Dockerfile change with non-Linux/arm64 wont-fix, no boot job in CI per docs/contributing/devcontainer.md#container-boot-manual)." >> "$GITHUB_STEP_SUMMARY"
+  ci:
+    name: ci
+    # Single required status check for branch protection: aggregates every
+    # job in this workflow so one green gate covers the whole matrix.
+    # `if: always()` keeps the gate reporting when a need is cancelled or
+    # fails; skipped needs (e.g. path-filtered) count as non-failing.
+    if: ${{ always() }}
+    needs:
+      [
+        docs-ci,
+        dogfood,
+        build,
+        sbom,
+        sbom-arm64,
+        sbom-musl-x86_64,
+        sbom-musl-arm64,
+        sbom-macos-arm64,
+        sbom-windows-x86_64,
+        preset-stale,
+        gitleaks,
+        test,
+        coverage,
+        build-arm64,
+        test-arm64,
+        coverage-arm64,
+        build-musl-x86_64,
+        build-musl-arm64,
+        coverage-musl-x86_64,
+        coverage-musl-arm64,
+        build-macos-arm64,
+        test-macos-arm64,
+        coverage-macos-arm64,
+        build-windows-x86_64,
+        test-windows-x86_64,
+        coverage-windows-x86_64,
+        prove,
+        dogfood-freshness,
+        devcontainer-check,
+      ]
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate job results
+        env:
+          NEEDS: ${{ toJson(needs) }}
+        run: |
+          python3 --version
+          python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'
+          python3 - <<'EOF'
+          import json
+          import os
+          import sys
+
+          needs = json.loads(os.environ.get("NEEDS") or "{}")
+          failing = sorted(
+              key
+              for key, value in needs.items()
+              if value.get("result") not in ("success", "skipped")
+          )
+          print(json.dumps({"aggregate": "ci", "failing checks": failing}))
+          sys.exit(1 if failing else 0)
+          EOF
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "### ci — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Aggregate required check over every ci.yml job (branch-protection single gate; skipped needs are non-failing)." >> "$GITHUB_STEP_SUMMARY"
+
+# BEGIN qualification check strings — must be present for tools/ci/ci_matrix_qualification.sh
+# Host matrix (issue #415): Linux x86_64 glibc (ubuntu-latest with shell bash); Linux arm64 glibc (supported, qualified under issue #410 — no hosted runner); macOS arm64 (macos-latest with shell bash); macOS x86_64 (supported, no hosted runner); Windows x86_64 MSVC-compatible native (windows-latest with shell bash, WSL/MSYS out of scope for bootstrap per issue #298 (closed; per-host successors own each host)
+# Windows x86_64 MSVC-compatible native (windows-latest with shell bash,
+# END qualification check strings
