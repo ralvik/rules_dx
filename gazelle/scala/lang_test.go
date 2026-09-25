@@ -26,6 +26,38 @@ func writeFixture(t *testing.T, root, name, content string) {
 	}
 }
 
+func TestIgnoreWitnessIncludesOnlyUsedUniqueInheritedEntries(t *testing.T) {
+	cfg := config.New()
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("absent config: %v", got)
+	}
+	cfg.Exts[languageName] = "wrong type"
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("foreign config: %v", got)
+	}
+	delete(cfg.Exts, languageName)
+	lang := &scalaLang{}
+	f := &rule.File{Directives: []rule.Directive{{Key: "other", Value: "ignored"}, {Key: "dx_ignore_import", Value: "scala scala Widget"}}}
+	lang.Configure(cfg, "parent", f)
+	lang.Configure(cfg, "parent/child", nil)
+	entry := matchingIgnore(cfg, "Widget")
+	if entry == nil || entry.path != "parent" {
+		t.Fatalf("inherited ignore: %+v", entry)
+	}
+	entry.used = true
+	conf := cfg.Exts[languageName].(*scalaConfig)
+	conf.ignores = append(conf.ignores, nil, entry, &ignoreEntry{value: "Unused", path: "parent"})
+	got := CollectUsedIgnores(cfg)
+	if len(got) != 1 || got[0] != [2]string{"parent", "Widget"} {
+		t.Fatalf("used ignores: %v", got)
+	}
+	lang.AfterResolvingDeps(context.Background())
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "dx_ignore_import", Value: "scala"}}})
+	if len(lang.errors) != 1 {
+		t.Fatalf("malformed ignore accepted: %v", lang.errors)
+	}
+}
+
 func generateFixture(t *testing.T, files map[string]string, regular []string) language.GenerateResult {
 	t.Helper()
 	root := t.TempDir()
@@ -46,7 +78,7 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 	result := generateFixture(t, map[string]string{
 		"pkg/demo/Demo.scala":     "package demo\n\nimport com.example.Widget\n\nclass Demo\n",
 		"pkg/demo/Helper.scala":   "package demo\n\nimport java.util.List\n\nclass Helper\n",
-		"pkg/demo/notes.txt":     "not a source\n",
+		"pkg/demo/notes.txt":      "not a source\n",
 		"pkg/demo/DemoTest.scala": "package demo\n\nimport org.junit.Test\n\nclass DemoTest\n",
 	}, regular)
 	if len(result.Gen) != 1 || len(result.Imports) != 1 {

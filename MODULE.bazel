@@ -448,6 +448,14 @@ register_toolchains("@rust_toolchains//:all")
 # Currently zero opt-ins: every third-party script stays hermetic and takes
 # only declared `build_script_tools`/`data`/`build_script_env` inputs.
 crate = use_extension("@rules_rust//crate_universe:extensions.bzl", "crate")
+crate.annotation(
+    # Apple Clang's C profile records cannot share Rust's newer LLVM runtime.
+    # Keep this external NEON implementation uninstrumented, like its Rust code.
+    build_script_env = {
+        "CFLAGS_aarch64_apple_darwin": "-fno-profile-instr-generate -fno-coverage-mapping",
+    },
+    crate = "blake3",
+)
 crate.from_cargo(
     name = "crates",
     cargo_lockfile = "//rust/tests/fixtures/hello:Cargo.lock",

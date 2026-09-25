@@ -247,7 +247,7 @@ fn pnpm_packages_from_value(value: &yaml_serde::Value, out: &mut Vec<LockedPacka
             }
             let is_git = is_npm_git_reference(&key)
                 || is_npm_git_reference(&version)
-                || pnpm_resolution_is_git(detail);
+                || detail.get("resolution").is_some_and(pnpm_resolution_is_git);
             out.push(LockedPackage {
                 name,
                 version,

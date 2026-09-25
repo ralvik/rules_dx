@@ -558,6 +558,107 @@ mod tests {
     use super::super::test_support::*;
 
     #[test]
+    fn unreadable_and_non_utf8_manifests_fail_without_refresh() {
+        for json in [false, true] {
+            for invalid_utf8 in [false, true] {
+                let harness = Harness::new("bump-unreadable");
+                if invalid_utf8 {
+                    std::fs::write(harness.workspace.join(".bazelversion"), [0xff])
+                        .expect("invalid bytes");
+                }
+                let output = if json {
+                    "--output=json"
+                } else {
+                    "--output=text"
+                };
+                let (code, out, err) =
+                    harness.run(&["bump", "bazel:.bazelversion", "9.3.0", output]);
+                assert_eq!(code, 1, "{out}{err}");
+                assert!(err.contains(if invalid_utf8 {
+                    "not valid UTF-8"
+                } else {
+                    "cannot read"
+                }));
+                assert!(harness.seen_env.borrow().is_empty());
+                if json {
+                    let events: Vec<serde_json::Value> = out
+                        .lines()
+                        .map(|line| serde_json::from_str(line).expect("event"))
+                        .collect();
+                    assert_eq!(events[1]["code"], super::CODE_BUMP_FAILED);
+                    assert_eq!(events.last().expect("finished")["exit_code"], 1);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn file_only_and_noop_bumps_work_offline_with_json_reports() {
+        for (selector, version, path, before, after) in [
+            (
+                "bazel:.bazelversion",
+                "9.3.0",
+                ".bazelversion",
+                "9.2.0\n",
+                "9.3.0\n",
+            ),
+            (
+                "gha:actions/checkout",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                ".github/workflows/ci.yml",
+                "- uses: actions/checkout@v1\n",
+                "- uses: actions/checkout@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+            ),
+            (
+                "go:example.com/demo",
+                "1.3.0",
+                "third_party/go/go.mod",
+                "require example.com/demo v1.2.0\n",
+                "require example.com/demo v1.3.0\n",
+            ),
+        ] {
+            let harness = Harness::new("bump-file-offline");
+            harness.write_source(path, before);
+            let (code, out, err) =
+                harness.run(&["bump", selector, version, "--offline", "--output=json"]);
+            assert_eq!(code, 0, "{out}{err}");
+            assert_eq!(
+                std::fs::read_to_string(harness.workspace.join(path)).expect("manifest"),
+                after
+            );
+            assert!(harness.seen_env.borrow().is_empty());
+            let events: Vec<serde_json::Value> = out
+                .lines()
+                .map(|line| serde_json::from_str(line).expect("event"))
+                .collect();
+            assert_eq!(events[0]["event"], "command_started");
+            assert!(events.iter().any(|event| event["code"] == "bump_widened"));
+            assert_eq!(events.last().expect("finished")["exit_code"], 0);
+        }
+    }
+
+    #[test]
+    fn signalled_refresh_keeps_widen_and_reports_failure() {
+        let mut harness = Harness::new("bump-signalled");
+        harness.signalled = true;
+        harness.write_source(
+            "rust/tests/fixtures/hello/Cargo.toml",
+            "[dependencies]\ndemo = \"1\"\n",
+        );
+        let (code, out, err) = harness.run(&["bump", "cargo:demo", "2.0.0", "--output=json"]);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(err.contains("signal"));
+        assert!(out.contains("bump_widened"));
+        assert!(std::fs::read_to_string(
+            harness
+                .workspace
+                .join("rust/tests/fixtures/hello/Cargo.toml")
+        )
+        .expect("manifest")
+        .contains("2.0.0"));
+    }
+
+    #[test]
     fn dry_run_plans_without_writing() {
         let harness = Harness::new("bump-dryrun");
         harness.write_source(

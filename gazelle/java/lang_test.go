@@ -26,6 +26,38 @@ func writeFixture(t *testing.T, root, name, content string) {
 	}
 }
 
+func TestIgnoreWitnessIncludesOnlyUsedUniqueInheritedEntries(t *testing.T) {
+	cfg := config.New()
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("absent config: %v", got)
+	}
+	cfg.Exts[languageName] = "wrong type"
+	if got := CollectUsedIgnores(cfg); got != nil {
+		t.Fatalf("foreign config: %v", got)
+	}
+	delete(cfg.Exts, languageName)
+	lang := &javaLang{}
+	f := &rule.File{Directives: []rule.Directive{{Key: "other", Value: "ignored"}, {Key: "dx_ignore_import", Value: "java java Widget"}}}
+	lang.Configure(cfg, "parent", f)
+	lang.Configure(cfg, "parent/child", nil)
+	entry := matchingIgnore(cfg, "Widget")
+	if entry == nil || entry.path != "parent" {
+		t.Fatalf("inherited ignore: %+v", entry)
+	}
+	entry.used = true
+	conf := cfg.Exts[languageName].(*javaConfig)
+	conf.ignores = append(conf.ignores, nil, entry, &ignoreEntry{value: "Unused", path: "parent"})
+	got := CollectUsedIgnores(cfg)
+	if len(got) != 1 || got[0] != [2]string{"parent", "Widget"} {
+		t.Fatalf("used ignores: %v", got)
+	}
+	lang.AfterResolvingDeps(context.Background())
+	lang.Configure(cfg, "parent", &rule.File{Directives: []rule.Directive{{Key: "dx_ignore_import", Value: "java"}}})
+	if len(lang.errors) != 1 {
+		t.Fatalf("malformed ignore accepted: %v", lang.errors)
+	}
+}
+
 func generateFixture(t *testing.T, files map[string]string, regular []string) language.GenerateResult {
 	t.Helper()
 	root := t.TempDir()

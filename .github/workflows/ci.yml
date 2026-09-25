@@ -7,6 +7,11 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # Preserve Bazel labels passed through Git Bash to native Windows binaries.
+  MSYS_NO_PATHCONV: "1"
+  MSYS2_ARG_CONV_EXCL: "*"
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

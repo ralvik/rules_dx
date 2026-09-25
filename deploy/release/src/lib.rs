@@ -1227,4 +1227,196 @@ mod tests {
         let err = notice_verify_files(&notice, &good_manifest, &texts).expect_err("tampered");
         assert!(err.to_string().contains("NOTICE"));
     }
+
+    #[test]
+    fn bin_shims_share_failure_rendering() {
+        assert_eq!(bin_usage("sbom_spdx_gen", "<artifact> <spdx> <prov>"), 1);
+        assert_eq!(
+            bin_cannot_write(
+                "notice_gen",
+                Path::new("/nope/notice.NOTICE"),
+                "read-only filesystem"
+            ),
+            1
+        );
+        assert_eq!(bin_error("release: owner approval missing"), 1);
+    }
+
+    #[test]
+    fn write_spdx_fails_when_target_unwritable() {
+        let scratch = scratch_dir();
+        let src = write_artifact(scratch.path(), "artifact.bin", b"hello world\n");
+        assert!(write_spdx(&src, scratch.path(), "dx", "rules_dx").is_err());
+    }
+
+    #[test]
+    fn sbom_verify_rejects_broken_bindings() {
+        let scratch = scratch_dir();
+        let artifact = write_artifact(scratch.path(), "artifact.bin", b"hello world\n");
+        let digest = sha256_file(&artifact).expect("digest");
+        let zeros = "0".repeat(digest.len());
+        let spdx_ok = scratch.path().join("ok.spdx.json");
+        write_spdx(&artifact, &spdx_ok, "dx", "rules_dx").expect("spdx ok");
+        let prov_ok = scratch.path().join("ok.prov.json");
+        write_provenance(&artifact, &prov_ok, PROVENANCE_BUILDER_DRY_RUN).expect("prov ok");
+        let spdx_bad = scratch.path().join("bad.spdx.json");
+        std::fs::write(
+            &spdx_bad,
+            render_spdx("artifact.bin", &zeros, "dx", "rules_dx"),
+        )
+        .expect("spdx bad");
+        let err = sbom_verify_files(&artifact, &spdx_bad, &prov_ok).expect_err("spdx digest");
+        assert!(
+            err.to_string().contains("SPDX missing artifact digest"),
+            "got {err}"
+        );
+        let prov_text = std::fs::read_to_string(&prov_ok).expect("prov text");
+        for (variant, want) in [
+            (
+                prov_text.replace(
+                    "https://in-toto.io/Statement/v1",
+                    "https://in-toto.io/Statement/v2",
+                ),
+                "provenance missing in-toto Statement v1",
+            ),
+            (
+                prov_text.replace(
+                    "https://slsa.dev/provenance/v1",
+                    "https://slsa.dev/provenance/v2",
+                ),
+                "provenance missing SLSA v1 predicate",
+            ),
+            (
+                prov_text.replace(&digest, &zeros),
+                "provenance missing subject digest",
+            ),
+        ] {
+            let path = scratch.path().join("variant.prov.json");
+            std::fs::write(&path, variant).expect("variant");
+            let err = sbom_verify_files(&artifact, &spdx_ok, &path).expect_err(want);
+            assert!(err.to_string().contains(want), "want {want}, got {err}");
+        }
+    }
+
+    #[test]
+    fn notice_text_map_fails_actionable() {
+        let scratch = scratch_dir();
+        let err =
+            read_text_map(&[std::path::PathBuf::from("/")]).expect_err("root has no basename");
+        assert!(err.contains("no UTF-8 basename"), "got {err}");
+        let empty_words = scratch.path().join("empty.txt");
+        std::fs::write(&empty_words, "  \n").expect("empty words");
+        let err = read_text_map(&[empty_words]).expect_err("empty words");
+        assert!(err.contains("missing-notice-text"), "got {err}");
+        let err = join_notice_entries("# no packages\n", &[]).expect_err("no entries");
+        assert!(err.contains("lists no packages"), "got {err}");
+        let other_words = scratch.path().join("demo-lib-b.txt");
+        std::fs::write(&other_words, "Fixture words for demo-lib-b.\n").expect("words b");
+        let err = join_notice_entries(
+            "demo-lib-a|cargo|1.0.0|MIT|demo-lib-a.txt\n",
+            &[other_words],
+        )
+        .expect_err("no matching input");
+        assert!(err.contains("no matching input file"), "got {err}");
+    }
+
+    #[test]
+    fn notice_verify_rejects_unbound_bundles() {
+        let scratch = scratch_dir();
+        let notice = scratch.path().join("out.NOTICE");
+        std::fs::write(&notice, "NOTICE for //demo:root\n").expect("notice");
+        let manifest = scratch.path().join("inventory.txt");
+        std::fs::write(&manifest, "# no packages\n").expect("manifest");
+        let err = notice_verify_files(&notice, &manifest, &[]).expect_err("empty manifest");
+        assert!(err.to_string().contains("lists no packages"), "got {err}");
+        std::fs::write(&manifest, "demo-lib-a|cargo|1.0.0|MIT|\n").expect("manifest");
+        let err = notice_verify_files(&notice, &manifest, &[]).expect_err("no words");
+        assert!(
+            err.to_string().contains("ships no LICENSE*/NOTICE* words"),
+            "got {err}"
+        );
+        std::fs::write(&manifest, "demo-lib-a|cargo|1.0.0|MIT|demo-lib-a.txt\n").expect("manifest");
+        let err = notice_verify_files(&notice, &manifest, &[]).expect_err("no matching input");
+        assert!(
+            err.to_string().contains("no matching input file"),
+            "got {err}"
+        );
+        let words = scratch.path().join("demo-lib-a.txt");
+        std::fs::write(&words, "Fixture words for demo-lib-a.\n").expect("words");
+        let err = notice_verify_files(&notice, &manifest, &[words.clone()]).expect_err("no header");
+        assert!(
+            err.to_string().contains("missing entry header"),
+            "got {err}"
+        );
+        std::fs::write(
+            &notice,
+            "NOTICE for //demo:root\n=== demo-lib-a 1.0.0 (MIT) ===\nOther words.\n",
+        )
+        .expect("notice header only");
+        let err = notice_verify_files(&notice, &manifest, &[words]).expect_err("no words bound");
+        assert!(
+            err.to_string().contains("NOTICE missing words for"),
+            "got {err}"
+        );
+    }
+
+    #[cfg(unix)]
+    fn write_fake_cosign(dir: &Path, body: &str) {
+        std::fs::create_dir_all(dir).expect("bin dir");
+        let script = dir.join("cosign");
+        std::fs::write(&script, body).expect("write cosign");
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755))
+            .expect("chmod cosign");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn signing_live_enforces_pinned_cosign() {
+        let ok = "#!/bin/sh\ncase \"$1\" in\n  version) echo \"cosign version v2.4.1 (go1.24)\"; exit 0;;\n  sign-blob) exit 0;;\n  verify-blob) exit 0;;\nesac\nexit 0\n";
+        let version_drift = "#!/bin/sh\ncase \"$1\" in\n  version) echo \"cosign version v2.4.0 (go1.24)\"; exit 0;;\nesac\nexit 0\n";
+        let sign_fails = "#!/bin/sh\ncase \"$1\" in\n  version) echo \"cosign version v2.4.1 (go1.24)\"; exit 0;;\n  sign-blob) exit 1;;\nesac\nexit 0\n";
+        let verify_fails = "#!/bin/sh\ncase \"$1\" in\n  version) echo \"cosign version v2.4.1 (go1.24)\"; exit 0;;\n  verify-blob) exit 1;;\nesac\nexit 0\n";
+        let gone_at_sign =
+            "#!/bin/sh\ncase \"$1\" in\n  version) echo \"cosign version v2.4.1 (go1.24)\"; /bin/rm -f \"$PATH/cosign\"; exit 0;;\nesac\nexit 0\n";
+        let gone_at_verify = "#!/bin/sh\ncase \"$1\" in\n  version) echo \"cosign version v2.4.1 (go1.24)\"; exit 0;;\n  sign-blob) /bin/rm -f \"$PATH/cosign\"; exit 0;;\nesac\nexit 0\n";
+        let scratch = scratch_dir();
+        let asset = write_artifact(scratch.path(), "artifact.bin", b"artifact bytes\n");
+        let assets = [asset.to_string_lossy().into_owned()];
+        let original_path = std::env::var_os("PATH");
+        let scenario = |name: &str, script: Option<&str>| -> Result<String, String> {
+            let dir = scratch.path().join(name);
+            std::fs::create_dir_all(&dir).expect("scenario dir");
+            if let Some(body) = script {
+                write_fake_cosign(&dir, body);
+            }
+            std::env::set_var("PATH", &dir);
+            signing_run(
+                "https://github.com/ralvik/rules_dx/.github/workflows/release.yml@refs/tags/v0.0.0-dryrun",
+                SIGNING_ISSUER_DEFAULT,
+                &assets,
+                false,
+                true,
+            )
+        };
+        let err = scenario("no-cosign", None).expect_err("cosign absent");
+        assert!(err.contains("cannot run 'cosign version'"), "got {err}");
+        let err = scenario("version-drift", Some(version_drift)).expect_err("version drift");
+        assert!(err.contains("cosign version must be v2.4.1"), "got {err}");
+        let err = scenario("sign-fails", Some(sign_fails)).expect_err("sign fails");
+        assert!(err.contains("failed for"), "got {err}");
+        assert!(err.contains("publishing nothing"), "got {err}");
+        let err = scenario("verify-fails", Some(verify_fails)).expect_err("verify fails");
+        assert!(err.contains("bundle rejected"), "got {err}");
+        let ok = scenario("all-ok", Some(ok)).expect("live sign");
+        assert!(ok.contains("signed: "), "got {ok}");
+        assert!(ok.contains("(verified)"), "got {ok}");
+        let err = scenario("gone-at-sign", Some(gone_at_sign)).expect_err("sign spawn fails");
+        assert!(err.contains("cannot run 'cosign sign-blob"), "got {err}");
+        let err = scenario("gone-at-verify", Some(gone_at_verify)).expect_err("verify spawn fails");
+        assert!(err.contains("cannot run 'cosign verify-blob"), "got {err}");
+        if let Some(path) = original_path {
+            std::env::set_var("PATH", path);
+        }
+    }
 }

@@ -15,9 +15,11 @@
 # adopt-kotlin, adopt-scala, adopt-csharp, adopt-fsharp.
 #
 # Metrics (all pinned in tools/ci/tests/fixtures/laziness_analysis/pins.bzl):
-# - M1 configured targets: cquery deps() --output=label | sort -u | wc -l
-#   equals pin, delta 0 (unconfigured query is blind to select() and
-#   toolchain resolution, so configured cquery is required).
+# - M1 configured targets: cquery deps() --output=label | LC_ALL=C sort -u
+#   | wc -l equals pin, delta 0 (unconfigured query is blind to select()
+#   and toolchain resolution, so configured cquery is required). The C
+#   locale is mandatory: UTF-8 collation collapses distinct labels and
+#   undercounts the seed host by 2-4 targets per consumer.
 # - M2 actions: aquery --output=text | grep -c ActionKey: equals pin, plus
 #   forbidden-marker absence (same markers as slices 3/4, never
 #   rules_cc/rules_java/bazel_tools/skylib/platforms).
@@ -67,10 +69,10 @@ else
 fi
 
 # Pins carry all ten consumers with zero-delta counts plus allowlists.
-if grep -q -F -e '"adopt-rust": 485' "$pins" &&
-  grep -q -F -e '"adopt-python": 2403' "$pins" &&
+if grep -q -F -e '"adopt-rust": 487' "$pins" &&
+  grep -q -F -e '"adopt-python": 2407' "$pins" &&
   grep -q -F -e '"adopt-js-ts": 6124' "$pins" &&
-  grep -q -F -e '"adopt-go": 6129' "$pins" &&
+  grep -q -F -e '"adopt-go": 6132' "$pins" &&
   grep -q -F -e '"adopt-cpp": 242' "$pins" &&
   grep -q -F -e '"adopt-rust": 92' "$pins" &&
   grep -q -F -e '"adopt-python": 126' "$pins" &&
@@ -212,15 +214,23 @@ for ex in $examples; do
     bad "$ex: bazel cquery failed"
     continue
   fi
-  got_cquery="$(sort -u "$cquery_out" | wc -l | tr -d ' ')"
+  got_cquery="$(LC_ALL=C sort -u "$cquery_out" | wc -l | tr -d ' ')"
   want_cquery="$(pin_cquery "$ex")"
   if [[ "$got_cquery" == "$want_cquery" ]]; then
     ok
   else
-    bad "$ex: configured-target delta (want $want_cquery, got $got_cquery; offending labels: $(sort -u "$cquery_out" | head -n 3 | tr '\n' ' '))"
+    bad "$ex: configured-target delta (want $want_cquery, got $got_cquery; offending labels: $(LC_ALL=C sort -u "$cquery_out" | head -n 3 | tr '\n' ' '))"
   fi
 
   # M2 action count plus forbidden markers share one aquery.
+  # Warm the build-script binary explicitly: Bazel may defer its five
+  # target-config actions on the first deps() traversal after shutdown.
+  if [[ "$ex" == "adopt-rust" ]]; then
+    if ! bazel cquery //examples/adopt-rust/crates/api:api_build_script_ --noshow_progress >/dev/null 2>&1; then
+      bad "$ex: build-script analysis failed"
+      continue
+    fi
+  fi
   aquery_out="$laziness_scratch/aquery-$ex.txt"
   if ! bazel aquery "//examples/$ex/..." --output=text --noshow_progress >"$aquery_out" 2>/dev/null; then
     bad "$ex: bazel aquery failed"

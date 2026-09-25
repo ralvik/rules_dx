@@ -56,3 +56,28 @@ func TestDefinesMain(t *testing.T) {
 		}
 	}
 }
+
+func TestMalformedIncludesAndLiteralBoundaries(t *testing.T) {
+	for _, inert := range []string{
+		"#", "#include", "#include MACRO", "#included \"fake.h\"", "int x; #include \"fake.h\"",
+		"#include \"unterminated", "#include <unterminated", "#include \"\"", "/* unterminated\n#include \"fake.h\"",
+		"\"unterminated\n", "'unterminated", "\"escaped\\\"quote\"", `'\''`, "R\"tag(\n#include \"fake.h\"\n)tag\"",
+	} {
+		if got := ParseQuotedIncludes([]byte(inert)); len(got) != 0 {
+			t.Errorf("inert %q: %v", inert, got)
+		}
+	}
+	for _, directive := range []string{"# include \\\n\"path/real.h\"", "#\tinclude\\\r\n \"real.h\"", " \t#\tinclude \"dir/real.h\""} {
+		if got := ParseQuotedIncludes([]byte(directive)); !reflect.DeepEqual(got, []string{"real.h"}) {
+			t.Errorf("continued %q: %v", directive, got)
+		}
+	}
+	for _, literal := range []string{"/* main( unterminated", "\"main( unterminated\n", "'main( unterminated", "R\"main(\"", "\"escaped\\\" main(\"", `'\''`} {
+		if DefinesMain([]byte(literal)) {
+			t.Errorf("literal main: %q", literal)
+		}
+	}
+	if _, _, ok := parseIncludePath([]byte("other"), 0); ok {
+		t.Fatal("non-include parsed")
+	}
+}

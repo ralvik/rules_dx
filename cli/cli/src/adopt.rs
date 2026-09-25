@@ -109,6 +109,182 @@ mod tests {
         parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
     }
 
+    struct LimitedOutput {
+        remaining: usize,
+    }
+
+    #[test]
+    fn status_missing_pin_json_truncation_never_reports_success() {
+        let scratch = dx_test_scratch::scratch("status-missing-pipe-");
+        let inv = invocation(&["status", "--output=json"]);
+        let run = |out: &mut dyn Write| {
+            execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: scratch.path(),
+                    query_runner: &NullQuery,
+                    runner: &NullRunner,
+                    out,
+                    err: &mut Vec::new(),
+                },
+            )
+        };
+        let mut baseline = Vec::new();
+        assert_eq!(run(&mut baseline), 1);
+        let events: Vec<serde_json::Value> = String::from_utf8(baseline.clone())
+            .expect("stdout")
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("event"))
+            .collect();
+        assert_eq!(events[1]["code"], "status_pin_mismatch");
+        assert_eq!(events[2]["exit_code"], 1);
+        for remaining in [
+            0,
+            baseline
+                .iter()
+                .position(|b| *b == b'\n')
+                .expect("first event")
+                + 1,
+            baseline.len() - 1,
+        ] {
+            assert_eq!(run(&mut LimitedOutput { remaining }), 141);
+        }
+    }
+
+    #[test]
+    fn status_drift_and_hook_mutation_reports_propagate_broken_pipe() {
+        let scratch = dx_test_scratch::scratch("adoption-live-pipe-");
+        dx_adopt::write_version_pin(scratch.path(), "9.9.9").expect("drifted pin");
+        let inv = invocation(&["status", "--output=json"]);
+        let mut baseline = Vec::new();
+        let run = |out: &mut dyn Write| {
+            execute_adoption(
+                &inv,
+                AdoptEnv {
+                    workspace: scratch.path(),
+                    query_runner: &NullQuery,
+                    runner: &NullRunner,
+                    out,
+                    err: &mut Vec::new(),
+                },
+            )
+        };
+        assert_eq!(run(&mut baseline), 1);
+        for remaining in baseline
+            .iter()
+            .enumerate()
+            .filter(|(_, byte)| **byte == b'\n')
+            .map(|(index, _)| index + 1)
+            .filter(|offset| *offset < baseline.len())
+        {
+            assert_eq!(run(&mut LimitedOutput { remaining }), 141);
+        }
+        for verb in ["install", "uninstall"] {
+            let scratch = dx_test_scratch::scratch("hooks-live-pipe-");
+            std::fs::create_dir(scratch.path().join(".git")).expect("git");
+            if verb == "uninstall" {
+                dx_adopt::install_hooks(scratch.path()).expect("install");
+            }
+            let inv = invocation(&["hooks", verb]);
+            assert_eq!(
+                execute_adoption(
+                    &inv,
+                    AdoptEnv {
+                        workspace: scratch.path(),
+                        query_runner: &NullQuery,
+                        runner: &NullRunner,
+                        out: &mut LimitedOutput { remaining: 0 },
+                        err: &mut Vec::new()
+                    }
+                ),
+                141
+            );
+        }
+    }
+
+    impl Write for LimitedOutput {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            if self.remaining == 0 {
+                return Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"));
+            }
+            let written = self.remaining.min(bytes.len());
+            self.remaining -= written;
+            Ok(written)
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn adoption_output_truncation_fails_at_each_document_boundary() {
+        for words in [
+            vec!["status"],
+            vec!["status", "--output=json"],
+            vec!["status", "--dry-run"],
+            vec!["status", "--dry-run", "--output=json"],
+            vec!["upgrade", "--from=1.0.0", "--to=2.0.0"],
+            vec!["upgrade", "--from=1.0.0", "--to=2.0.0", "--output=json"],
+            vec!["upgrade", "--from=1.0.0", "--to=2.0.0", "--dry-run"],
+            vec![
+                "upgrade",
+                "--from=1.0.0",
+                "--to=2.0.0",
+                "--dry-run",
+                "--output=json",
+            ],
+            vec!["hooks", "status"],
+            vec!["hooks", "status", "--dry-run"],
+            vec!["hooks", "install", "--dry-run"],
+            vec!["hooks", "uninstall", "--dry-run"],
+            vec!["hooks", "run", "pre-commit", "--dry-run"],
+            vec!["completion", "bash"],
+            vec!["completion", "bash", "--dry-run"],
+            vec!["init", "--dry-run"],
+            vec!["new", "rust", "demo", "--dry-run"],
+        ] {
+            let scratch = dx_test_scratch::scratch("adoption-pipe-");
+            dx_adopt::write_version_pin(scratch.path(), "0.0.0").expect("pin");
+            let inv = invocation(&words);
+            let run = |out: &mut dyn Write| {
+                execute_adoption(
+                    &inv,
+                    AdoptEnv {
+                        workspace: scratch.path(),
+                        query_runner: &NullQuery,
+                        runner: &NullRunner,
+                        out,
+                        err: &mut Vec::new(),
+                    },
+                )
+            };
+            let mut baseline = Vec::new();
+            let code = run(&mut baseline);
+            assert!(code == 0 || words[0] == "upgrade", "{words:?}: {code}");
+            assert!(!baseline.is_empty(), "{words:?}");
+            let mut boundaries = vec![0, baseline.len() - 1];
+            if words[0] != "completion" {
+                boundaries.extend(
+                    baseline
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, byte)| **byte == b'\n')
+                        .map(|(index, _)| index + 1)
+                        .filter(|offset| *offset < baseline.len()),
+                );
+            }
+            boundaries.sort_unstable();
+            boundaries.dedup();
+            for remaining in boundaries {
+                assert_eq!(
+                    run(&mut LimitedOutput { remaining }),
+                    141,
+                    "{words:?} after {remaining} bytes"
+                );
+            }
+        }
+    }
+
     struct NullQuery;
 
     impl QueryRunner for NullQuery {

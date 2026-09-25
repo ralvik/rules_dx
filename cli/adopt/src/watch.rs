@@ -258,8 +258,12 @@ mod tests {
             let _ = std::fs::write(writer.join("trigger.txt"), "change");
         });
         let trigger = watch_for_change(&root, Duration::from_secs(5)).expect("watch create");
+        // FSEvents may coalesce creation into its containing directory.
+        let canonical_root = root.canonicalize().expect("canonical watch root");
         assert!(
-            trigger.iter().any(|path| path.ends_with("trigger.txt")),
+            trigger
+                .iter()
+                .any(|path| path.ends_with("trigger.txt") || path == &canonical_root),
             "created file must trigger a rebuild: {trigger:?}"
         );
         let idle = watch_for_change(&root, Duration::from_millis(300)).expect("watch idle");

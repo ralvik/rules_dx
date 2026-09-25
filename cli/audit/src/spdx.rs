@@ -408,6 +408,25 @@ mod tests {
     }
 
     #[test]
+    fn maven_package_urls_cover_grouped_slash_and_degenerate_shapes() {
+        // `group:a/b` keeps slashes as namespace separators instead of
+        // encoding them inside one artifact name.
+        assert_eq!(
+            package_url("maven", "com.example:foo/bar", "1.0.0"),
+            "pkg:maven/com.example/foo/bar@1.0.0"
+        );
+        // A trailing slash splits into an empty purl namespace, so the
+        // artifact keeps its raw spelling through the fallback builder.
+        assert_eq!(
+            package_url("maven", "g:a/", "1.0.0"),
+            "pkg:maven/g/a%2F@1.0.0"
+        );
+        // Degenerate group or artifact falls through to the format shape.
+        assert_eq!(package_url("maven", "g:", "1.0.0"), "pkg:maven/g/@1.0.0");
+        assert_eq!(package_url("maven", ":a", "1.0.0"), "pkg:maven//a@1.0.0");
+    }
+
+    #[test]
     fn spdx_document_pins_version_package_urls_and_relations() {
         let roots = vec!["//services/payments:image".to_owned()];
         let packages = vec![

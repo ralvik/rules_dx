@@ -60,6 +60,11 @@ on:
 permissions:
   contents: read
 
+env:
+  # Git Bash must preserve Bazel labels when invoking native Windows binaries.
+  MSYS_NO_PATHCONV: "1"
+  MSYS2_ARG_CONV_EXCL: "*"
+
 concurrency:
   group: dx-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

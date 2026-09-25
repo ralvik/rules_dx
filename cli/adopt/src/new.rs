@@ -302,7 +302,7 @@ mod tests {
     #[test]
     fn new_plans_init_wiring_plus_language_sources() {
         // See: `docs/cli/commands/new-upgrade.md`.
-        for lang in ["rust", "go", "java", "cpp", "python", "typescript"] {
+        for lang in SUPPORTED_NEW_LANGUAGES {
             let files = plan_new_files(lang, "demo").expect("plans");
             assert!(
                 files.iter().any(|f| f.path == "demo/.dx/version"),
@@ -331,6 +331,24 @@ mod tests {
         assert_eq!(
             plan_new_files("ruby", "demo").unwrap_err().to_string(),
             "unknown language for dx new: ruby (want one of rust, python, javascript, typescript, go, java, kotlin, scala, csharp, fsharp, c, cc, cpp)"
+        );
+    }
+
+    #[test]
+    fn default_name_and_parent_collisions_are_explicit() {
+        let files = plan_new_files("rust", "").expect("default name");
+        assert!(files
+            .iter()
+            .all(|file| file.path.starts_with("my_project/")));
+        let scratch = dx_test_scratch::scratch("new-parent-collision-");
+        std::fs::write(scratch.path().join("demo"), "foreign").expect("collision");
+        assert!(matches!(
+            apply_new(scratch.path(), "rust", "demo"),
+            Err(AdoptError::CreateParent { .. })
+        ));
+        assert_eq!(
+            std::fs::read_to_string(scratch.path().join("demo")).expect("foreign"),
+            "foreign"
         );
     }
 

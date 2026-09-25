@@ -416,4 +416,18 @@ mod tests {
         let out = scratch.path().join("out.sha256");
         assert!(hash_file(&missing, &out).is_err());
     }
+
+    #[test]
+    fn bin_shims_share_usage_and_failure_exit() {
+        assert_eq!(bin_usage("dx_archiver", "<src> <dst>"), 1);
+        assert_eq!(
+            bin_cannot(
+                "dx_archiver",
+                "write",
+                Path::new("/tmp/out.tar.gz"),
+                "read-only filesystem"
+            ),
+            1
+        );
+    }
 }

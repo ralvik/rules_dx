@@ -10,6 +10,94 @@ fn args(words: &[&str]) -> Vec<String> {
 }
 
 #[test]
+fn command_option_ownership_rejects_every_unsupported_surface() {
+    for command in [
+        "audit", "update", "bump", "migrate", "upgrade", "docs", "status", "version", "owners",
+        "deps", "hooks", "init", "new",
+    ] {
+        let base = match command {
+            "bump" => vec![command, "cargo:demo", "1.0.0"],
+            "migrate" | "upgrade" => vec![command, "--from=1.0.0", "--to=2.0.0"],
+            "owners" | "deps" => vec![command, "//:demo"],
+            "hooks" => vec![command, "status"],
+            "new" => vec![command, "rust"],
+            _ => vec![command],
+        };
+        for option in [
+            "--pin=1.0.0",
+            "--fail-on=error",
+            "--report=junit=report.xml",
+            "--bazel",
+            "--check",
+        ] {
+            let supported = match option {
+                "--pin=1.0.0" => command == "version",
+                "--fail-on=error" => command == "audit",
+                "--report=junit=report.xml" => command == "audit",
+                "--check" => matches!(command, "generate" | "update" | "docs" | "version"),
+                _ => false,
+            };
+            if supported {
+                continue;
+            }
+            let mut words = base.clone();
+            words.push(option);
+            assert!(parse(&args(&words)).is_err(), "{words:?}");
+        }
+        if !matches!(command, "generate") {
+            let mut words = base.clone();
+            words.extend(["--", "--keep_going"]);
+            assert!(parse(&args(&words)).is_err(), "{words:?}");
+        }
+    }
+    for words in [
+        vec!["version", "--pin="],
+        vec!["migrate", "--from="],
+        vec!["migrate", "--to="],
+        vec!["status", "extra"],
+        vec!["version", "extra"],
+        vec!["init", "one", "two"],
+        vec!["hooks"],
+        vec!["watch"],
+        vec!["owners"],
+        vec!["deps"],
+        vec!["docs", ":relative"],
+        vec!["docs", ""],
+        vec!["generate", ":relative"],
+        vec!["audit", ""],
+        vec!["update", ""],
+        vec!["migrate", "--from=1.0.0", "--to=2.0.0", ":relative"],
+        vec!["--bazel", "bazel", "version"],
+    ] {
+        assert!(parse(&args(&words)).is_err(), "{words:?}");
+    }
+}
+
+#[test]
+fn file_defaults_load_from_workspace_and_reject_invalid_toml() {
+    let scratch = dx_test_scratch::scratch("parser-file-defaults-");
+    assert_eq!(
+        super::load_file_defaults(scratch.path()).expect("absent"),
+        super::super::FileDefaults::default()
+    );
+    std::fs::write(scratch.path().join("MODULE.bazel"), "").expect("workspace");
+    std::fs::create_dir(scratch.path().join(".dx")).expect("dx");
+    std::fs::write(
+        scratch.path().join(".dx/config.toml"),
+        "[dx]\nquiet = true\n",
+    )
+    .expect("defaults");
+    assert_eq!(
+        super::load_file_defaults(scratch.path())
+            .expect("defaults")
+            .quiet,
+        Some(true)
+    );
+    std::fs::write(scratch.path().join(".dx/config.toml"), "[broken").expect("bad defaults");
+    assert!(super::load_file_defaults(scratch.path()).is_err());
+}
+
+#[test]
 fn bump_needs_exactly_one_selector_plus_version() {
     // `dx bump <selector> <version>`: one requirement,
     // never batch, mutating without confirmation.

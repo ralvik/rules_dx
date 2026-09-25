@@ -680,6 +680,35 @@ mod tests {
 
     #[test]
     fn invalid_identities_fail_closed() {
+        for (set, packages) in [
+            (
+                SetId::Npm,
+                vec![
+                    "",
+                    "a:b",
+                    "a b",
+                    "@scope",
+                    "@/name",
+                    "@scope/",
+                    "@scope/bad!",
+                    "a/b",
+                    "bad!",
+                ],
+            ),
+            (SetId::NuGet, vec!["bad!", ""]),
+            (SetId::Go, vec!["", "a:b", "a b", "/a", "a/", "a//b", "a!b"]),
+        ] {
+            for package in packages {
+                assert!(
+                    matches!(
+                        validate_package(set, package),
+                        Err(SelectorError::InvalidPackage { .. })
+                    ),
+                    "{}:{package}",
+                    set.name()
+                );
+            }
+        }
         assert!(matches!(
             parse_selector("cargo:"),
             Err(SelectorError::InvalidPackage { .. })
@@ -732,6 +761,20 @@ mod tests {
 
     #[test]
     fn owning_sets_cover_the_five_families() {
+        for (path, expected) in [
+            ("examples/adopt-rust/crates", vec![SetId::Cargo]),
+            ("examples/adopt-js-ts/app", vec![SetId::Npm]),
+            ("examples/adopt-java/greet", vec![SetId::Maven]),
+            ("examples/adopt-kotlin/greet", vec![SetId::Maven]),
+            ("examples/adopt-go/greet", vec![SetId::Go]),
+            (
+                "examples/adopt-polyglot/frontend",
+                vec![SetId::Cargo, SetId::Npm],
+            ),
+            ("docs/ir/ir", vec![SetId::Cargo]),
+        ] {
+            assert_eq!(owning_sets(path), expected, "{path}");
+        }
         assert_eq!(owning_sets("//..."), SetId::ALL.to_vec());
         assert_eq!(owning_sets("MODULE.bazel"), SetId::ALL.to_vec());
         assert_eq!(

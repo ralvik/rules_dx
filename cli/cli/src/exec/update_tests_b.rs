@@ -5,6 +5,60 @@ use super::super::test_support::*;
 use super::update_tests_a::*;
 
 #[test]
+fn preset_check_dry_run_never_reads_or_writes() {
+    for json in [false, true] {
+        let harness = Harness::new("update-check-dry");
+        let output = if json {
+            "--output=json"
+        } else {
+            "--output=text"
+        };
+        let (code, out, err) = harness.run(&["update", "--check", "--dry-run", output]);
+        assert_eq!(code, 0, "{out}{err}");
+        assert!(harness.seen_env.borrow().is_empty());
+        assert!(!harness.workspace.join("tools").exists());
+        if json {
+            let events: Vec<serde_json::Value> = out
+                .lines()
+                .map(|line| serde_json::from_str(line).expect("event"))
+                .collect();
+            assert_eq!(events.len(), 2);
+            assert_eq!(events[0]["dry_run"], true);
+            assert_eq!(events[1]["exit_code"], 0);
+        } else {
+            assert!(out.contains("Would check preset"));
+        }
+    }
+}
+
+#[test]
+fn updater_spawn_and_signal_failures_keep_other_sets_independent() {
+    for spawn_error in [false, true] {
+        let mut runner = ScriptRunner::new(&[("cargo", None)]);
+        runner.io_error = spawn_error;
+        let (code, out, err) = run_with(&["update", "cargo", "go", "--output=json"], &runner);
+        assert_eq!(code, 1, "{out}{err}");
+        assert!(out.contains(if spawn_error {
+            "failed to launch updater"
+        } else {
+            "terminated by signal"
+        }));
+        let events: Vec<serde_json::Value> = out
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("event"))
+            .collect();
+        assert!(
+            events
+                .iter()
+                .any(|event| event["code"] == "update_set_success"
+                    && event["scope"] == serde_json::json!(["go"])),
+            "{out}"
+        );
+        assert_eq!(events.last().expect("finished")["exit_code"], 1);
+    }
+}
+
+#[test]
 fn check_clean_passes_without_launching() {
     let harness = Harness::new("update-check-clean");
     harness.write_source(

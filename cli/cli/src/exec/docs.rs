@@ -282,6 +282,45 @@ mod tests {
     use super::CODE_SERVE_FAILED;
 
     #[test]
+    fn docs_explicit_scopes_and_process_failures_keep_exit_contract() {
+        for json in [false, true] {
+            let output = if json {
+                "--output=json"
+            } else {
+                "--output=text"
+            };
+            let harness = Harness::new("docs-scope");
+            let (code, out, err) = harness.run(&[
+                "docs",
+                "//docs:page",
+                "--dry-run",
+                "--serve",
+                "--open",
+                output,
+            ]);
+            assert_eq!(code, 0, "{out}{err}");
+            assert!(out.contains("//docs:page"));
+            assert!(harness.seen_env.borrow().is_empty());
+            if !json {
+                assert!(out.contains("would open http://127.0.0.1:8000/"));
+            }
+            for signalled in [false, true] {
+                let mut harness = Harness::new("docs-process-failure");
+                harness.signalled = signalled;
+                harness.io_error = !signalled;
+                let (code, out, err) = harness.run(&["docs", output]);
+                assert_eq!(code, 1, "{out}{err}");
+                assert!(err.contains(if signalled { "signal" } else { "launch" }));
+            }
+        }
+        let harness = Harness::new("docs-missing-scope");
+        let (code, _, err) = harness.run(&["docs", "missing.md"]);
+        assert_eq!(code, 2);
+        assert!(!err.is_empty());
+        assert!(harness.seen_env.borrow().is_empty());
+    }
+
+    #[test]
     fn docs_check_builds_aggregate_without_render() {
         let harness = Harness::new("docs-check");
         let (code, out, _) = harness.run(&["docs", "--check", "--output=text"]);

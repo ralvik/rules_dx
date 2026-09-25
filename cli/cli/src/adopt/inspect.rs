@@ -529,6 +529,217 @@ mod tests {
         parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
     }
 
+    struct BrokenPipeAfter {
+        remaining_lines: usize,
+    }
+
+    impl Write for BrokenPipeAfter {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            if self.remaining_lines == 0 {
+                return Err(io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe"));
+            }
+            self.remaining_lines -= bytes.iter().filter(|byte| **byte == b'\n').count();
+            Ok(bytes.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+
+    struct FailingLeg {
+        calls: std::cell::Cell<usize>,
+        leg: usize,
+        spawn_error: bool,
+    }
+
+    impl QueryRunner for FailingLeg {
+        fn run_query(&self, _: &[String], _: &std::path::Path) -> io::Result<QueryResult> {
+            let call = self.calls.get();
+            self.calls.set(call + 1);
+            if call == self.leg {
+                if self.spawn_error {
+                    return Err(io::Error::new(io::ErrorKind::NotFound, "bazel unavailable"));
+                }
+                return Ok(QueryResult {
+                    code: None,
+                    stdout: Vec::new(),
+                    stderr: Vec::new(),
+                });
+            }
+            Ok(QueryResult {
+                code: Some(0),
+                stdout: b"//owner:lib\n".to_vec(),
+                stderr: Vec::new(),
+            })
+        }
+    }
+
+    #[test]
+    fn inspect_query_failures_preserve_lifecycle_and_stop_why() {
+        for words in [
+            vec!["owners", "src/lib.rs"],
+            vec!["why", "src/lib.rs", "//app:server"],
+        ] {
+            for json in [false, true] {
+                for spawn_error in [false, true] {
+                    for leg in 0..if words[0] == "why" { 2 } else { 1 } {
+                        let mut inv = invocation(&words);
+                        if json {
+                            inv.output = OutputMode::Json;
+                        }
+                        let query = FailingLeg {
+                            calls: std::cell::Cell::new(0),
+                            leg,
+                            spawn_error,
+                        };
+                        let mut out = Vec::new();
+                        let mut err = Vec::new();
+                        assert_eq!(
+                            execute_inspect(
+                                &inv,
+                                std::path::Path::new("."),
+                                &query,
+                                &mut out,
+                                &mut err
+                            ),
+                            1
+                        );
+                        assert_eq!(query.calls.get(), leg + 1);
+                        assert!(!err.is_empty());
+                        if json {
+                            let events: Vec<serde_json::Value> = String::from_utf8(out)
+                                .expect("stdout")
+                                .lines()
+                                .map(|line| serde_json::from_str(line).expect("event"))
+                                .collect();
+                            assert_eq!(events[0]["event"], "command_started");
+                            assert_eq!(events[1]["code"], "bazel_failed");
+                            assert_eq!(events.last().expect("finished")["exit_code"], 1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn inspect_broken_pipe_stops_at_each_output_boundary() {
+        for words in [
+            vec!["owners", "src/lib.rs"],
+            vec!["why", "src/lib.rs", "//app:server"],
+        ] {
+            for json in [false, true] {
+                for dry_run in [false, true] {
+                    let mut inv = invocation(&words);
+                    inv.dry_run = dry_run;
+                    if json {
+                        inv.output = OutputMode::Json;
+                    }
+                    let lines = if json {
+                        if dry_run {
+                            2
+                        } else {
+                            3
+                        }
+                    } else {
+                        1
+                    };
+                    for remaining_lines in 0..lines {
+                        let query = ScriptedQuery::with(&["//owner:lib\n", "//app:server\n"]);
+                        let mut out = BrokenPipeAfter { remaining_lines };
+                        assert_eq!(
+                            execute_inspect(
+                                &inv,
+                                std::path::Path::new("."),
+                                &query,
+                                &mut out,
+                                &mut Vec::new()
+                            ),
+                            141,
+                            "{words:?} json={json} dry={dry_run}"
+                        );
+                    }
+                }
+                if json {
+                    for spawn_error in [false, true] {
+                        for leg in 0..if words[0] == "why" { 2 } else { 1 } {
+                            for remaining_lines in 1..3 {
+                                let mut inv = invocation(&words);
+                                inv.output = OutputMode::Json;
+                                let query = FailingLeg {
+                                    calls: std::cell::Cell::new(0),
+                                    leg,
+                                    spawn_error,
+                                };
+                                assert_eq!(
+                                    execute_inspect(
+                                        &inv,
+                                        std::path::Path::new("."),
+                                        &query,
+                                        &mut BrokenPipeAfter { remaining_lines },
+                                        &mut Vec::new()
+                                    ),
+                                    141
+                                );
+                            }
+                        }
+                    }
+                    for owner in ["", "@external//:owner\n"] {
+                        for remaining_lines in 1..3 {
+                            let mut inv = invocation(&["why", "src/lib.rs", "//app:server"]);
+                            inv.output = OutputMode::Json;
+                            assert_eq!(
+                                execute_inspect(
+                                    &inv,
+                                    std::path::Path::new("."),
+                                    &ScriptedQuery::with(&[owner]),
+                                    &mut BrokenPipeAfter { remaining_lines },
+                                    &mut Vec::new()
+                                ),
+                                141
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn inspect_rejects_hand_built_external_scopes_before_query() {
+        for command in ["owners", "deps", "why"] {
+            for json in [false, true] {
+                for dry_run in [false, true] {
+                    let mut inv = if command == "why" {
+                        invocation(&[command, "src/lib.rs", "//app:server"])
+                    } else {
+                        invocation(&[command, "src/lib.rs"])
+                    };
+                    inv.targets[0] = "@external//:lib".to_owned();
+                    inv.dry_run = dry_run;
+                    if json {
+                        inv.output = OutputMode::Json;
+                    }
+                    let query = ScriptedQuery::with(&[]);
+                    let mut out = Vec::new();
+                    assert_eq!(
+                        execute_inspect(
+                            &inv,
+                            std::path::Path::new("."),
+                            &query,
+                            &mut out,
+                            &mut Vec::new()
+                        ),
+                        2
+                    );
+                    assert!(query.calls.borrow().is_empty());
+                    assert!(out.is_empty());
+                }
+            }
+        }
+    }
+
     struct ScriptedQuery {
         calls: std::cell::RefCell<Vec<Vec<String>>>,
         outputs: Vec<Vec<u8>>,

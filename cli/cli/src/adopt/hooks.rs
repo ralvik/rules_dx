@@ -428,6 +428,107 @@ mod tests {
         parse(&words.iter().map(ToString::to_string).collect::<Vec<_>>()).expect("parse")
     }
 
+    #[test]
+    fn hooks_install_uninstall_and_collisions_are_reported() {
+        let scratch = dx_test_scratch::scratch("hooks-install-cycle-");
+        let root = scratch.path();
+        std::fs::create_dir(root.join(".git")).expect("git");
+        for verb in ["install", "uninstall"] {
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            assert_eq!(
+                execute_hooks(
+                    &invocation(&["hooks", verb]),
+                    root,
+                    &NullQuery,
+                    &NullRunner,
+                    &mut out,
+                    &mut err
+                ),
+                0
+            );
+            assert!(String::from_utf8(out)
+                .expect("out")
+                .contains(if verb == "install" {
+                    "installed"
+                } else {
+                    "removed"
+                }));
+            assert!(err.is_empty());
+        }
+        let foreign = dx_test_scratch::scratch("hooks-install-collision-");
+        std::fs::create_dir_all(foreign.path().join(".git/hooks")).expect("hooks");
+        std::fs::write(foreign.path().join(".git/hooks/pre-commit"), "foreign hook")
+            .expect("foreign hook");
+        for verb in ["install", "uninstall"] {
+            let mut err = Vec::new();
+            assert_eq!(
+                execute_hooks(
+                    &invocation(&["hooks", verb]),
+                    foreign.path(),
+                    &NullQuery,
+                    &NullRunner,
+                    &mut Vec::new(),
+                    &mut err
+                ),
+                1
+            );
+            assert!(!err.is_empty());
+        }
+    }
+
+    #[test]
+    fn hook_process_launch_failures_stop_before_recording_timings() {
+        struct MissingProcess;
+        impl QueryRunner for MissingProcess {
+            fn run_query(&self, _: &[String], _: &Path) -> io::Result<QueryResult> {
+                Err(io::Error::other("missing executable"))
+            }
+        }
+        impl dx_process::Runner for MissingProcess {
+            fn git_tool(&self) -> Option<PathBuf> {
+                Some(PathBuf::from("/hermetic/git"))
+            }
+            fn run(
+                &self,
+                _: &[String],
+                _: &Path,
+                _: &[(&str, &str)],
+            ) -> io::Result<dx_process::ChildStatus> {
+                Err(io::Error::other("missing executable"))
+            }
+        }
+        let scratch = dx_test_scratch::scratch("hooks-spawn-failure-");
+        write_workspace(scratch.path());
+        let inv = invocation(&["hooks", "run", "pre-commit"]);
+        for query in [
+            &MissingProcess as &dyn QueryRunner,
+            &ScriptQuery::staged_then_owners("pkg/a.py\n", "//pkg:lib\n"),
+        ] {
+            let mut err = Vec::new();
+            assert_eq!(
+                execute_hooks(
+                    &inv,
+                    scratch.path(),
+                    query,
+                    &MissingProcess,
+                    &mut Vec::new(),
+                    &mut err
+                ),
+                1
+            );
+            assert!(String::from_utf8(err)
+                .expect("err")
+                .contains("missing executable"));
+            assert!(!scratch.path().join(dx_adopt::HOOK_TIMINGS_REL).exists());
+        }
+        assert_eq!(first_line(b"\nignored"), "no Git diagnostic");
+        assert_eq!(
+            first_line("x".repeat(201).as_bytes()),
+            format!("{}...", "x".repeat(200))
+        );
+    }
+
     struct NullQuery;
 
     impl crate::resolve::QueryRunner for NullQuery {
@@ -647,6 +748,97 @@ mod tests {
         std::fs::create_dir_all(root.join("pkg")).expect("pkg");
         std::fs::write(root.join("pkg/BUILD.bazel"), "").expect("build");
         std::fs::write(root.join("pkg/a.py"), "x = 1\n").expect("source");
+    }
+
+    #[test]
+    fn hooks_run_handles_empty_selection_signal_and_invalid_state() {
+        for (scenario, want_code, want_detail) in [
+            ("no-checks", 0, "no checks configured"),
+            ("deleted-file", 0, "no affected targets"),
+            ("bad-config", 1, ""),
+            ("signal", 1, "terminated by signal"),
+            ("bad-timings", 1, ""),
+            ("timings-collision", 1, "write timings"),
+            ("query-failed", 1, "hook git diff failed"),
+            ("query-utf8", 1, "not UTF-8"),
+            ("owner-failed", 1, "query"),
+        ] {
+            let scratch = dx_test_scratch::scratch("hooks-failure-");
+            let root = scratch.path();
+            write_workspace(root);
+            let query = ScriptQuery::staged_then_owners("pkg/a.py\n", "//pkg:lib\n");
+            let runner = ScriptRunner::git_with_codes("/hermetic/git", vec![Some(0), Some(0)]);
+            match scenario {
+                "no-checks" => {
+                    std::fs::write(root.join("dx.hooks.toml"), "[hooks]\npre_commit = []\n")
+                        .expect("config")
+                }
+                "deleted-file" => {
+                    std::fs::remove_file(root.join("pkg/a.py")).expect("delete source")
+                }
+                "bad-config" => {
+                    std::fs::write(root.join("dx.hooks.toml"), "[broken").expect("config")
+                }
+                "signal" => runner.codes.borrow_mut()[0] = None,
+                "bad-timings" => {
+                    std::fs::create_dir(root.join(".dx")).expect("dx");
+                    std::fs::write(root.join(dx_adopt::HOOK_TIMINGS_REL), "[broken")
+                        .expect("timings");
+                }
+                "timings-collision" => {
+                    std::fs::create_dir_all(root.join(dx_adopt::HOOK_TIMINGS_REL))
+                        .expect("collision")
+                }
+                "query-failed" => query.outputs.borrow_mut()[0].code = Some(1),
+                "query-utf8" => query.outputs.borrow_mut()[0].stdout = vec![0xff],
+                "owner-failed" => query.outputs.borrow_mut()[1].code = Some(1),
+                _ => unreachable!(),
+            }
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            let inv = invocation(&["hooks", "run", "pre-commit"]);
+            assert_eq!(
+                execute_hooks(&inv, root, &query, &runner, &mut out, &mut err),
+                want_code,
+                "{scenario}"
+            );
+            let detail = format!(
+                "{}{}",
+                String::from_utf8(out).expect("out"),
+                String::from_utf8(err).expect("err")
+            );
+            assert!(detail.contains(want_detail), "{scenario}: {detail}");
+            if want_code == 1 {
+                assert!(!detail.is_empty());
+            }
+            if scenario == "signal" {
+                assert_eq!(runner.seen.borrow().len(), 1);
+            }
+        }
+    }
+
+    #[test]
+    fn hooks_status_rejects_invalid_overlay_and_timings() {
+        for rel in [dx_adopt::HOOK_OVERLAY_REL, dx_adopt::HOOK_TIMINGS_REL] {
+            let scratch = dx_test_scratch::scratch("hooks-status-invalid-");
+            std::fs::create_dir_all(scratch.path().join(".dx")).expect("dx");
+            std::fs::write(scratch.path().join(rel), "[broken").expect("invalid layer");
+            let mut out = Vec::new();
+            let mut err = Vec::new();
+            assert_eq!(
+                execute_status(
+                    &invocation(&["hooks", "status"]),
+                    scratch.path(),
+                    &mut out,
+                    &mut err
+                ),
+                1
+            );
+            assert!(out.is_empty());
+            assert!(String::from_utf8(err)
+                .expect("err")
+                .contains("missing merged layer"));
+        }
     }
 
     #[test]
