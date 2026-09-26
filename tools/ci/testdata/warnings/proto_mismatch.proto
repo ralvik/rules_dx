@@ -1,8 +1,0 @@
-// Warning fixture: package/directory mismatch (buf lint PACKAGE_DIRECTORY_MATCH) plus buf format --diff --exit-code.
-syntax = "proto3";
-
-package foo;
-
-message Mismatch {
-  string greet = 1;
-}

@@ -18,3 +18,5 @@ build:dx_dev --compilation_mode=fastbuild
 build:dx_release --compilation_mode=opt
 build:dx_dev_remote --compilation_mode=fastbuild
 build:dx_toolchain --compilation_mode=fastbuild
+# Owned Windows execution (runfiles tree; Windows is manifest-only by default).
+build:windows --enable_runfiles

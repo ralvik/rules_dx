@@ -1,8 +1,0 @@
-Docs pipeline per-release pin-bump plus drift process (issue #785)
-Pinned native inputs bump per release via pins.bzl plus adapter constants plus doc-ir table
-Drift testing runs contract suite plus golden fixtures plus determinism evidence; ships only when green plus reviewed
-Codec drift gates: roundtrip plus rejection-parity plus symbol-ordering plus extension-ordering plus minor-forward-compat
-Same-producer rebuilds stay byte-identical; cross-version compares decoded semantics never bytes
-Ordinary API changes require no IR snapshot update; no committed IR shards; adapter goldens stay inputs not snapshots
-Users stay on pinned checksummed inputs; upstream change turns release preparation red never user build
-Qualified seed-only, no Supported claim

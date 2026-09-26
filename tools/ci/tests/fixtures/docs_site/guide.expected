@@ -1,5 +1,0 @@
-Docs guide prose with guide-step CI wiring (issue #783)
-Fixture-scale quickstart guide with executable steps run in CI
-Every guide step CI-executed and green with no unexecuted steps allowed
-Known guides: quickstart plus tutorial plus migration
-Qualified seed-only, no Supported claim

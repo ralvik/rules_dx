@@ -76,9 +76,6 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "buildifier_config"
 # csharp_library pivots (roslyn, roslyn_net8, roslyn_net10); one-owner
 # claims delete the pivots by design, so Gazelle never owns it.
 # gazelle:exclude csharp/tests/fixtures/roslyn
-# tools/ci/testdata/warnings holds per-language unused-code linter
-# subjects with no BUILD file; Gazelle never owns the corpus.
-# gazelle:exclude tools/ci/testdata/warnings
 # fsharp/tests/fixtures/hello holds the handwritten thin-binary fixture
 # with `Program.fs`; thin fsharp_binary entries stay handwritten, so
 # Gazelle never owns it.

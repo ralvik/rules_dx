@@ -55,8 +55,7 @@ concurrency:
 
 env:
   # Single-sourced Bazelisk pin for the setup-bazel step in this
-  # workflow (tracked against .devcontainer/Dockerfile.prebuilt by
-  # //tools/ci:pin_consistency_test).
+  # workflow (kept in sync with .devcontainer/Dockerfile.prebuilt).
   BAZELISK_VERSION: "1.29.0"
 
 jobs:

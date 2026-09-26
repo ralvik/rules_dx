@@ -7,8 +7,8 @@ Contract: `docs/decisions/0014-tested-platform-release-stack.md`.
 # for the preset pins, `.bazelversion`, and the support matrix):
 #   bazel mod deps --depth=1 --format=json | python3 -c \
 #     'import json,sys; [print(m["name"], m["version"]) for m in json.load(sys.stdin)["modules"]]'
-# Every default must equal its MODULE.bazel pin; `//tools/ci:pin_consistency_test`
-# fails on drift, and `//libs/testing:stack_contract` pins the manifest shape.
+# Every default must equal its MODULE.bazel pin (drift breaks the stack),
+# and `//libs/testing:stack_contract` pins the manifest shape.
 _TESTED_DEPS = {
     "rules_rust": "0.74.0",
     "rules_cc": "0.2.22",

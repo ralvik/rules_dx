@@ -60,11 +60,12 @@ dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
    'build:dx_dev --compilation_mode=fastbuild' \
    'build:dx_release --compilation_mode=opt' \
    'build:dx_dev_remote --compilation_mode=fastbuild' \
-   'build:dx_toolchain --compilation_mode=fastbuild'
+   'build:dx_toolchain --compilation_mode=fastbuild' \
+   '# Owned Windows execution (runfiles tree; Windows is manifest-only by default).' \
+   'build:windows --enable_runfiles'
 echo "preset schema: checked-in fragment carries the pinned contract"
 
-# Rust inventory pins (mirrors //tools/ci:pin_consistency_test for the
-# Bazel pin, plus the per-release dx stamp).
+# Rust inventory pins (Bazel pin plus the per-release dx stamp).
 dx_guards_contains "$preset_rs" "preset src lost its Bazel/dx version pins" \
   'PRESET_BAZEL_VERSION' \
   'PRESET_DX_VERSION' \

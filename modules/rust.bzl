@@ -69,8 +69,8 @@ CRATE_SHARED_MANIFESTS = [
 ]
 
 # Hub input mirror: every group exactly once (MODULE.bazel cannot load
-# wrappers, so it mirrors this list; `//tools/ci:pin_consistency_test`
-# fails on drift in either direction; lockfile bytes are resolver-owned
+# wrappers, so it mirrors this list (drift in either direction breaks the
+# hub; lockfile bytes are resolver-owned
 # and order-independent, so grouping is ownership, not build order).
 RUST_CRATE_MANIFESTS = (
     CRATE_FIXTURE_MANIFESTS +

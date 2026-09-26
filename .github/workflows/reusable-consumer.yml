@@ -76,14 +76,13 @@ env:
   # local-cache only. With a key, pull requests stay read-only via
   # `ci-pr` and the header rides inline (never in a committed rc file).
   BAZEL_CONFIG: ${{ secrets.BUILDBUDDY_API_KEY != '' && (github.event_name == 'pull_request' && '--config=ci --config=ci-pr' || '--config=ci') || '' }}
-  BB_ARGS: ${{ secrets.BUILDBUDDY_API_KEY != '' && '--remote_header=x-buildbuddy-api-key=' + secrets.BUILDBUDDY_API_KEY || '' }}
+  BB_ARGS: ${{ secrets.BUILDBUDDY_API_KEY != '' && format('--remote_header=x-buildbuddy-api-key={0}', secrets.BUILDBUDDY_API_KEY) || '' }}
   # Git Bash must preserve Bazel labels (`//...`) when invoking native
   # Windows binaries, while still converting MSYS paths (`/c/...`) for
   # tools like tsc.bat. Exclude only `//`, not `*`.
   MSYS2_ARG_CONV_EXCL: "//"
   # Single-sourced Bazelisk pin for every setup-bazel step in this
-  # workflow (tracked against .devcontainer/Dockerfile.prebuilt by
-  # //tools/ci:pin_consistency_test).
+  # workflow (kept in sync with .devcontainer/Dockerfile.prebuilt).
   BAZELISK_VERSION: "1.29.0"
 
 concurrency:

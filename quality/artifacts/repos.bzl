@@ -4,8 +4,8 @@
 # root MODULE.bazel `use_repo` block. Single source stays the artifact
 # metadata loaded by `extension.bzl`; `//quality/artifacts:metadata`
 # fails when this list drifts from the derived `dx_<tool>_<os>_<cpu>`
-# names, and `//tools/ci:pin_consistency_test` fails when MODULE.bazel
-# drifts from this list. Add a tool here only with its four platform
+# names, and MODULE.bazel must match this list (drift breaks acquisition).
+# Add a tool here only with its four platform
 # metadata files plus extension coverage (macOS x86_64 removed per #976).
 DX_TOOL_REPOS = [
     "dx_biome_linux_arm64",

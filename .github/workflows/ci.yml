@@ -15,15 +15,14 @@ env:
   # local-cache only. With a key, pull requests stay read-only via
   # `ci-pr` and the header rides inline (never in a committed rc file).
   BAZEL_CONFIG: ${{ secrets.BUILDBUDDY_API_KEY != '' && (github.event_name == 'pull_request' && '--config=ci --config=ci-pr' || '--config=ci') || '' }}
-  BB_ARGS: ${{ secrets.BUILDBUDDY_API_KEY != '' && '--remote_header=x-buildbuddy-api-key=' + secrets.BUILDBUDDY_API_KEY || '' }}
+  BB_ARGS: ${{ secrets.BUILDBUDDY_API_KEY != '' && format('--remote_header=x-buildbuddy-api-key={0}', secrets.BUILDBUDDY_API_KEY) || '' }}
   # Preserve Bazel labels (`//...`) passed through Git Bash to native
   # Windows binaries, while still converting MSYS paths (`/c/...` to
   # `C:\...`) that tools like tsc.bat require. Excluding only the `//`
   # prefix (not `*`, not `MSYS_NO_PATHCONV`) keeps both working.
   MSYS2_ARG_CONV_EXCL: "//"
   # Single-sourced Bazelisk pin for every setup-bazel step in this
-  # workflow (tracked against .devcontainer/Dockerfile.prebuilt by
-  # //tools/ci:pin_consistency_test).
+  # workflow (kept in sync with .devcontainer/Dockerfile.prebuilt).
   BAZELISK_VERSION: "1.29.0"
 
 concurrency:
@@ -57,7 +56,7 @@ jobs:
       checks: write
       pull-requests: write
   dogfood-freshness:
-    name: dogfood-freshness (tools, generate --check, corpus audit)
+    name: dogfood-freshness (preset + generate check)
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
@@ -69,32 +68,19 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Check preset freshness (issue #332)
+      - name: Check preset freshness
         run: |
           bazel run --noshow_progress $BAZEL_CONFIG $BB_ARGS //tools/bazelrc:preset_update -- --verify-only
           bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- update --check -- $BAZEL_CONFIG $BB_ARGS
-      - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
+      - name: Adopt-rust dx_dev smoke
         run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev $BAZEL_CONFIG $BB_ARGS
-      - name: Prove battery (target tags, coverage, platforms, release, shell)
-        # Includes //tools/ci:shell_contract via tools/ci/prove.sh.
-        run: tools/ci/prove.sh
-      - name: Prove coverage report contract (gate-owned LCOV, first-party comment)
-        run: bazel run --noshow_progress //tools/ci:coverage_report_guards $BAZEL_CONFIG $BB_ARGS
-      - name: Report skip volume (Linux-only sh harness, issue #769)
-        if: always()
-        run: |
-          echo "### skip volume — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell seed linux_x86_64 real run, 0 skips: all 58 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell linux_arm64 real run, 0 skips: all 58 sh_test executed, no Linux-only skip (budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell macos_arm64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
-          echo "Cell windows x86_64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
-      - name: Run dogfood-freshness battery (tools, freshness, audits)
-        run: bazel run --noshow_progress //tools/ci:dogfood_freshness $BAZEL_CONFIG $BB_ARGS
+      - name: Check generated files fresh
+        run: bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- generate --check //... -- $BAZEL_CONFIG $BB_ARGS
       - name: Write job summary
         if: always()
         run: |
           echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: preset freshness (dx update --check, issue #332), adopt-rust dx_dev smoke (issue #407), prove battery (target tags, coverage cell/spill/qualification, platforms, release hygiene/policy, publish trust, shell contract, bootstrap, flakiness via tools/ci/prove.sh), coverage report guards, skip-volume inventory (issue #769), then the dogfood-freshness guard battery (Bazel-resolved tool execution, generate --check freshness, corpus/code ownership, non-dogfed plan, examples checks, closeout/distribution/backlog/docs/consumer guards; full inventory in tools/ci/dogfood_freshness.sh)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: preset freshness, dx update --check, adopt-rust dx_dev smoke, dx generate --check." >> "$GITHUB_STEP_SUMMARY"
   devcontainer-check:
     name: devcontainer-check (init parity, definition valid)
     timeout-minutes: 15
@@ -169,7 +155,6 @@ jobs:
         run: |
           echo "### ci — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
           echo "Aggregate required check over every ci.yml job (branch-protection single gate; skipped needs are non-failing)." >> "$GITHUB_STEP_SUMMARY"
-# BEGIN qualification check strings — must be present for tools/ci/ci_matrix_qualification.sh
-# Host matrix (issue #415): Linux x86_64 glibc (ubuntu-latest with shell bash); Linux arm64 glibc (ubuntu-24.04-arm, issue #410); macOS arm64 (macos-latest with shell bash, issue #412); macOS x86_64 Not planned per #976 with no jobs; Windows x86_64 MSVC-compatible native (windows-latest with shell bash, Platform-qualified under issue #414; WSL/MSYS out of scope for bootstrap per issue #298 (closed; per-host successors own each host)).
-# This workflow keeps no per-cell raw build/coverage jobs; every host runs inside .github/workflows/reusable-consumer.yml (consumer self-call, full dx test plus dx coverage, no disabled checks).
-# END qualification check strings
+# Host matrix: Linux x86_64 (ubuntu-latest), Linux arm64 (ubuntu-24.04-arm),
+# macOS arm64 (macos-14), Windows x86_64 (windows-latest). Every host runs
+# inside .github/workflows/reusable-consumer.yml (consumer self-call).

@@ -68,6 +68,16 @@ const BUILD_PROFILES: [&str; 5] = [
     "build:dx_toolchain --compilation_mode=fastbuild",
 ];
 
+/// Owned Windows execution flags.
+/// `build:windows` auto-applies on Windows hosts via
+/// `common --enable_platform_specific_config` above. Runfiles stay
+/// manifest-only on Windows by default, so `js_binary` tools (notably
+/// `tsc` through `ts_project`) fail with `entry_point not found` when
+/// their entry point lives in unmaterialized runfiles. Forcing the
+/// runfiles tree fixes `dx build`/`dx test` on Windows; coverage
+/// already carries its own `--enable_runfiles` for the same reason.
+const WINDOWS_FLAGS: [&str; 1] = ["build:windows --enable_runfiles"];
+
 /// Renders the fragment byte-identical to the retired Python generator.
 pub fn render_fragment() -> String {
     let mut lines = vec![
@@ -82,6 +92,11 @@ pub fn render_fragment() -> String {
             .to_owned(),
     );
     lines.extend(BUILD_PROFILES.iter().map(|flag| (*flag).to_owned()));
+    lines.push(
+        "# Owned Windows execution (runfiles tree; Windows is manifest-only by default)."
+            .to_owned(),
+    );
+    lines.extend(WINDOWS_FLAGS.iter().map(|flag| (*flag).to_owned()));
     let mut out = lines.join("\n");
     out.push('\n');
     out
@@ -320,12 +335,13 @@ mod tests {
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
         assert_eq!(COVERAGE_FLAGS.len(), 8);
         assert_eq!(BUILD_PROFILES.len(), 5);
+        assert_eq!(WINDOWS_FLAGS.len(), 1);
     }
 
     #[test]
     fn fragment_bytes_match_retired_python() {
         let rendered = render_fragment();
-        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncommon --enable_platform_specific_config\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --enable_runfiles\ncoverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n";
+        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncommon --enable_platform_specific_config\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --enable_runfiles\ncoverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n# Owned Windows execution (runfiles tree; Windows is manifest-only by default).\nbuild:windows --enable_runfiles\n";
         assert_eq!(rendered, expected);
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));
@@ -333,6 +349,7 @@ mod tests {
             .iter()
             .chain(COVERAGE_FLAGS.iter())
             .chain(BUILD_PROFILES.iter())
+            .chain(WINDOWS_FLAGS.iter())
         {
             assert!(rendered.contains(flag), "missing {flag}");
         }
@@ -346,7 +363,7 @@ mod tests {
         assert!(flags.contains("build:dx_dev --compilation_mode=fastbuild"));
         assert!(flags.contains("build:dx_dev_remote --compilation_mode=fastbuild"));
         assert!(flags.contains("build:dx_toolchain --compilation_mode=fastbuild"));
-        assert_eq!(flags.len(), 16);
+        assert_eq!(flags.len(), 17);
         assert!(!flags.iter().any(|line| line.starts_with('#')));
         assert!(!flags.iter().any(String::is_empty));
     }

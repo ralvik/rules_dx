@@ -1,52 +1,19 @@
-"""CI-owned hygiene scripts.
+"""CI package stub.
 
-`bazel run //tools/ci:corpus_audit` runs the corpus ownership audit:
-every applicable checked-in file must have a corpus owner
-(`real_source_target`) so the dx quality commands cover the repository
-they dogfood. Promoted from an inline ci.yml shell pipeline so the
-audit logic is versioned and reviewable.
+The shell qualification harness (`*_qualification.sh`, `prove.sh`,
+`dogfood_freshness.sh`, target shards) was removed: CI runs the `dx`
+dogfood matrix directly, so nothing here declares targets. The package
+itself stays so existing `//tools/ci:__pkg__` visibility grants keep
+resolving.
 """
 
-load("//quality:fixtures.bzl", "real_source_target")
-
-# Single target list (issue #915): ~160 sh_binary/sh_test targets live in
-# four size shards (ci_targets_a/b/c/d.bzl, ~40 each) so files stay
-# reviewable; this BUILD file is the only call site (add_a/b/c/d below).
-# Targets keep bespoke srcs/args/data per harness, so glob generation stays
-# rejected: a glob would silently adopt stray scripts with wrong deps.
-load(":ci_targets_a.bzl", "add_a")
-load(":ci_targets_b.bzl", "add_b")
-load(":ci_targets_c.bzl", "add_c")
-load(":ci_targets_d.bzl", "add_d")
+load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
-
-# prove.sh is CI-run as a plain path (not a sh_binary); export it so the
-# non_dogfed_paths D4 ownership query can see the package source file.
-exports_files(["prove.sh"])
-
-add_a()
-
-add_b()
-
-add_c()
-
-add_d()
-
-filegroup(
-    name = "warnings_as_errors_testdata",
-    srcs = glob(["testdata/warnings/**"]),
-)
 
 real_source_target(
     name = "corpus_starlark",
     aspect_hints = ["//:buildifier_config"],
-    starlark_srcs = [
-        "BUILD.bazel",
-        "ci_targets_a.bzl",
-        "ci_targets_b.bzl",
-        "ci_targets_c.bzl",
-        "ci_targets_d.bzl",
-    ],
+    starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )

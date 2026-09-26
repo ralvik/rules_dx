@@ -55,6 +55,12 @@ const BUILD_PROFILES: [&str; 5] = [
     "build:dx_toolchain --compilation_mode=fastbuild",
 ];
 
+/// Owned Windows execution flags (mirrors `WINDOWS_FLAGS`).
+/// Forces the runfiles tree on Windows hosts (manifest-only by
+/// default) so `js_binary` tools such as `tsc` find their entry point.
+/// See: `tools/bazelrc/src/lib.rs`.
+const WINDOWS_FLAGS: [&str; 1] = ["build:windows --enable_runfiles"];
+
 /// Renders the preset fragment byte-identical to `tools/bazelrc/src/lib.rs`.
 pub fn render_preset_fragment() -> String {
     let mut lines = vec![
@@ -69,6 +75,11 @@ pub fn render_preset_fragment() -> String {
             .to_owned(),
     );
     lines.extend(BUILD_PROFILES.iter().map(|s| (*s).to_owned()));
+    lines.push(
+        "# Owned Windows execution (runfiles tree; Windows is manifest-only by default)."
+            .to_owned(),
+    );
+    lines.extend(WINDOWS_FLAGS.iter().map(|s| (*s).to_owned()));
     let mut out = lines.join("\n");
     out.push('\n');
     out
@@ -278,11 +289,13 @@ mod tests {
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
         assert_eq!(COVERAGE_FLAGS.len(), 8);
         assert_eq!(BUILD_PROFILES.len(), 5);
+        assert_eq!(WINDOWS_FLAGS.len(), 1);
         // Flags present.
         for flag in UPSTREAM_FLAGS
             .iter()
             .chain(COVERAGE_FLAGS.iter())
             .chain(BUILD_PROFILES.iter())
+            .chain(WINDOWS_FLAGS.iter())
         {
             assert!(rendered.contains(flag), "missing {flag}");
         }

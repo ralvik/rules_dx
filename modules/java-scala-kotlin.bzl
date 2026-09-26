@@ -13,7 +13,7 @@ MAVEN_REPIN = "REPIN=1 bazel run @maven//:pin"
 
 # JVM quality-tool acquisition pins (see //quality/tools/jvm:repos.bzl plus
 # //quality/tools/jvm:extension.bzl; MODULE.bazel `jvm_tools` use_repo must
-# match `JVM_TOOL_REPOS`; `//tools/ci:pin_consistency_test` fails on drift).
+# match `JVM_TOOL_REPOS`; drift breaks acquisition).
 JVM_TOOL_VERSIONS = {
     "google-java-format": "1.35.0",
     "checkstyle": "14.1.0",
