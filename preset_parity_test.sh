@@ -55,7 +55,7 @@ dx_guards_contains "$expected" "preset.bazelrc missing contract lines" \
   'coverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov' \
   'coverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov' \
   'coverage --instrumentation_filter=^//' \
-   '# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).' \
+   '# Owned build profiles.' \
    'build:dx_debug --compilation_mode=dbg' \
    'build:dx_dev --compilation_mode=fastbuild' \
    'build:dx_release --compilation_mode=opt' \

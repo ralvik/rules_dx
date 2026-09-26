@@ -127,17 +127,18 @@ jobs:
         # The artifact is the Bazel-owned rendered bundle
         # (`bazel-bin/docs/site`), never committed sources. Stage a copy
         # under RUNNER_TEMP so the repo tree stays renderer-clean and the
-        # checkout is never left dirty.
+        # checkout is never left dirty. Uses the workspace `bazel-bin`
+        # symlink left by `dx docs`: no `bazel info` call, which would
+        # resolve a different output base than dx's `--nohome_rc` build.
         run: |
           set -euo pipefail
           stage="$RUNNER_TEMP/pages"
           rm -rf "$stage"
           mkdir -p "$stage"
-          bin="$(bazel info $BAZEL_CONFIG $BB_ARGS bazel-bin)"
-          test -f "$bin/docs/site/demo_site_index.html"
-          test -f "$bin/docs/site/demo_site_searchindex.json"
-          cp "$bin/docs/site/demo_site_index.html" "$stage/index.html"
-          cp "$bin/docs/site/demo_site_searchindex.json" "$stage/searchindex.json"
+          test -f "bazel-bin/docs/site/demo_site_index.html"
+          test -f "bazel-bin/docs/site/demo_site_searchindex.json"
+          cp "bazel-bin/docs/site/demo_site_index.html" "$stage/index.html"
+          cp "bazel-bin/docs/site/demo_site_searchindex.json" "$stage/searchindex.json"
           echo "PAGES_STAGE=$stage" >> "$GITHUB_ENV"
       - name: Upload rendered site as Pages artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
