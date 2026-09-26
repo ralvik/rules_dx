@@ -6,7 +6,7 @@ use crate::reports::{
     Destination, JunitCase, PlannedReport,
 };
 use dx_apply::{FileSystem, RealFileSystem};
-use dx_bep::{collect_test_outputs, ArtifactReader};
+use dx_bep::{collect_test_outputs_with_workspace, ArtifactReader};
 use dx_output::{command_finished, report_event, write_event, FinishedCounts, OutputMode};
 use std::collections::BTreeMap;
 use std::io::{BufReader, Write};
@@ -42,19 +42,21 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
             format!("failed to read build events: {err}"),
         )
     }) {
-        Ok(file) => match collect_test_outputs(BufReader::new(file)) {
-            Ok(outputs) => outputs,
-            Err(error) => {
-                let _ = std::fs::remove_file(bep);
-                return operational(
-                    invocation,
-                    out,
-                    err,
-                    CODE_INVALID_BEP,
-                    &format!("invalid build events: {error}"),
-                );
+        Ok(file) => {
+            match collect_test_outputs_with_workspace(BufReader::new(file), Some(workspace)) {
+                Ok(outputs) => outputs,
+                Err(error) => {
+                    let _ = std::fs::remove_file(bep);
+                    return operational(
+                        invocation,
+                        out,
+                        err,
+                        CODE_INVALID_BEP,
+                        &format!("invalid build events: {error}"),
+                    );
+                }
             }
-        },
+        }
         Err((code, message)) => {
             let _ = std::fs::remove_file(bep);
             return operational(invocation, out, err, &code, &message);

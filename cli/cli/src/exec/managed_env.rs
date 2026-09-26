@@ -9,8 +9,11 @@ pub(crate) type ManagedEnvCollection = (
     Vec<dx_env_plan::ProjectionEntry>,
 );
 
-pub(crate) fn collect_managed_env(bep: &Path) -> Result<ManagedEnvCollection, (String, String)> {
-    let outputs = collect_managed_group(bep, dx_env_plan::OUTPUT_GROUP)?;
+pub(crate) fn collect_managed_env(
+    bep: &Path,
+    workspace: &Path,
+) -> Result<ManagedEnvCollection, (String, String)> {
+    let outputs = collect_managed_group(bep, dx_env_plan::OUTPUT_GROUP, workspace)?;
     let plan = dx_env_plan::collect_plan(&outputs).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),

@@ -20,10 +20,10 @@
 # comment); every third-party action is pinned to a commit SHA with its
 # tag in a trailing comment. The optional BuildBuddy remote cache rides
 # the caller-provided `BUILDBUDDY_API_KEY` secret through the workflow
-# `BAZEL_CONFIG` plus `BB_ARGS` env on the outer `bazel run` only.
-# BEP-collecting checks (lint, typecheck, format, test, coverage) run
-# their inner Bazel local-only: dx reads only local `file://` BEP
-# artifacts, and remote cache hits report `bytestream://` URIs.
+# `BAZEL_CONFIG` plus `BB_ARGS` env on every Bazel plus dx call.
+# Inner dx Bazel invocations share the cache: dx resolves `bytestream://`
+# BEP artifacts through workspace-local copies materialized by
+# `--remote_download_outputs=all`.
 # Platform labels map to runners through the fixed table in each job's
 # `runs-on`; unknown labels fail the workflow when the matrix expands.
 
@@ -71,8 +71,7 @@ permissions:
 
 env:
   # CI flag set (the workspace `.bazelrc` `ci` plus `ci-pr` configs) and
-  # the optional BuildBuddy key, passed inline on the outer `bazel run`.
-  # Inner dx Bazel invocations for BEP checks stay local-only (no forward).
+  # the optional BuildBuddy key, passed inline on every Bazel and dx call.
   # No key (fork pull request, or a caller that passes no secret): both
   # stay empty, so no remote-cache flag is set at all and Bazel runs
   # local-cache only. With a key, pull requests stay read-only via
@@ -119,7 +118,7 @@ jobs:
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
         run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check //...
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check //... -- $BAZEL_CONFIG $BB_ARGS
   typecheck:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',typecheck,') }}
     timeout-minutes: 30
@@ -143,7 +142,7 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- typecheck --check //...
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- typecheck --check //... -- $BAZEL_CONFIG $BB_ARGS
   format:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',format,') }}
     timeout-minutes: 30
@@ -167,7 +166,7 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- format --check //...
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- format --check //... -- $BAZEL_CONFIG $BB_ARGS
   generate:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',generate,') }}
     timeout-minutes: 30
@@ -323,7 +322,7 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- test //...
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- test //... -- $BAZEL_CONFIG $BB_ARGS
   build:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',build,') }}
     timeout-minutes: 60
@@ -388,7 +387,7 @@ jobs:
           # validated numeric threshold stays one flag plus one value.
           # Input travels via env and is numeric-validated above, never
           # interpolated into the script.
-          bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- coverage "${extra[@]}" //... 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage.log
+          bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- coverage "${extra[@]}" //... -- $BAZEL_CONFIG $BB_ARGS 2>&1 | tee ${RUNNER_TEMP:-/tmp}/dx_coverage.log
           rc=${PIPESTATUS[0]}
           echo "$rc" > ${RUNNER_TEMP:-/tmp}/dx_coverage.rc
           exit $rc

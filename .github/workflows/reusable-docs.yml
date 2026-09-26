@@ -21,9 +21,9 @@
 # comment); every third-party action is pinned to a commit SHA with its
 # tag in a trailing comment. The optional BuildBuddy remote cache rides
 # the caller-provided `BUILDBUDDY_API_KEY` secret through the workflow
-# `BAZEL_CONFIG` plus `BB_ARGS` env on the outer `bazel run` only.
-# The lint check runs its inner Bazel local-only: dx reads only local
-# `file://` BEP artifacts, and remote cache hits report `bytestream://`.
+# `BAZEL_CONFIG` plus `BB_ARGS` env on every Bazel plus dx call.
+# Inner dx Bazel invocations share the cache: dx resolves `bytestream://`
+# BEP artifacts through workspace-local copies.
 # `docs-publish` stages the artifact in a temp dir so the checkout is
 # never left dirty for later steps.
 
@@ -94,7 +94,7 @@ jobs:
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
         run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check ${{ inputs.docs_scope }}
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check ${{ inputs.docs_scope }} -- $BAZEL_CONFIG $BB_ARGS
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- docs --check
   docs-publish:
     name: docs-publish (GitHub Pages)

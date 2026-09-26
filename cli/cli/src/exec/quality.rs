@@ -108,7 +108,7 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
             "Bazel terminated by signal",
         );
     };
-    let mut collected = match collect_results(&bep) {
+    let mut collected = match collect_results(&bep, workspace) {
         Ok(collected) => collected,
         Err((code, message)) => {
             let _ = std::fs::remove_file(&bep);

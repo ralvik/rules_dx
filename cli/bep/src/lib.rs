@@ -6,9 +6,9 @@ pub mod outputs;
 pub mod remote;
 pub mod test_outputs;
 
-pub use outputs::collect;
+pub use outputs::{collect, collect_with_workspace};
 pub use remote::{Downloader, LocalDownloader, RemoteConfig, UNWIRED_REMOTE_FLAGS};
-pub use test_outputs::{collect_test_outputs, TestOutputFile};
+pub use test_outputs::{collect_test_outputs, collect_test_outputs_with_workspace, TestOutputFile};
 
 use std::path::{Path, PathBuf};
 
@@ -79,6 +79,52 @@ pub(crate) fn file_uri_to_path(uri: &str) -> Result<PathBuf, BepError> {
         return Err(unsupported());
     }
     parsed.to_file_path().map_err(|_| unsupported())
+}
+
+pub fn is_bytestream_uri(uri: &str) -> bool {
+    uri.starts_with("bytestream://")
+}
+
+pub fn local_path_for_bep_file(workspace: &Path, path_prefix: &[String], name: &str) -> PathBuf {
+    let mut path = workspace.to_path_buf();
+    for part in path_prefix {
+        path.push(part);
+    }
+    path.push(name);
+    path
+}
+
+fn test_output_filename(name: &str) -> &str {
+    if name == "test.lcov" {
+        "coverage.dat"
+    } else {
+        name
+    }
+}
+
+pub fn testlog_path_for_label(workspace: &Path, label: &str, name: &str) -> Option<PathBuf> {
+    if label.starts_with('@') {
+        return None;
+    }
+    let rest = label.strip_prefix("//")?;
+    let (package, target) = match rest.split_once(':') {
+        Some((pkg, tgt)) => (pkg, tgt),
+        None => {
+            let base = rest.rsplit('/').next().unwrap_or(rest);
+            (rest, base)
+        }
+    };
+    if target.is_empty() {
+        return None;
+    }
+    let mut path = workspace.to_path_buf();
+    path.push("bazel-testlogs");
+    if !package.is_empty() {
+        path.push(package);
+    }
+    path.push(target);
+    path.push(test_output_filename(name));
+    Some(path)
 }
 
 pub fn is_shard_artifact(path: &Path, suffix: &str) -> bool {
@@ -181,5 +227,39 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn bytestream_fallback_paths_resolve_through_workspace_symlinks() {
+        assert!(is_bytestream_uri(
+            "bytestream://remote.buildbuddy.io/blobs/abc/269"
+        ));
+        assert!(!is_bytestream_uri("file:///out/a.pb"));
+        let ws = Path::new("/ws");
+        assert_eq!(
+            local_path_for_bep_file(
+                ws,
+                &[
+                    "bazel-out".to_owned(),
+                    "k8-fastbuild".to_owned(),
+                    "bin".to_owned()
+                ],
+                "docs/site/a.md"
+            ),
+            PathBuf::from("/ws/bazel-out/k8-fastbuild/bin/docs/site/a.md")
+        );
+        assert_eq!(
+            testlog_path_for_label(ws, "//cli/bep:dx_bep_test", "test.xml").expect("path"),
+            PathBuf::from("/ws/bazel-testlogs/cli/bep/dx_bep_test/test.xml")
+        );
+        assert_eq!(
+            testlog_path_for_label(ws, "//cli/bep:dx_bep_test", "test.lcov").expect("lcov"),
+            PathBuf::from("/ws/bazel-testlogs/cli/bep/dx_bep_test/coverage.dat")
+        );
+        assert_eq!(
+            testlog_path_for_label(ws, "//:preset_parity_test", "test.xml").expect("root"),
+            PathBuf::from("/ws/bazel-testlogs/preset_parity_test/test.xml")
+        );
+        assert!(testlog_path_for_label(ws, "@ext//pkg:t", "test.xml").is_none());
     }
 }

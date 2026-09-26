@@ -11,8 +11,9 @@ pub(crate) type ManagedCodegenCollection = (
 
 pub(crate) fn collect_managed_codegen(
     bep: &Path,
+    workspace: &Path,
 ) -> Result<ManagedCodegenCollection, (String, String)> {
-    let outputs = collect_managed_group(bep, dx_codegen::OUTPUT_GROUP)?;
+    let outputs = collect_managed_group(bep, dx_codegen::OUTPUT_GROUP, workspace)?;
     let plan = dx_codegen::collect_plan(&outputs).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),

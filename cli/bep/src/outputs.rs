@@ -1,15 +1,19 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::BufRead;
+use std::path::Path;
 
 use serde_json::Value;
 
 use super::{
-    file_uri_to_path, ArtifactReader, BepError, CollectedArtifact, CollectorConfig, TargetOutput,
+    file_uri_to_path, is_bytestream_uri, local_path_for_bep_file, ArtifactReader, BepError,
+    CollectedArtifact, CollectorConfig, TargetOutput,
 };
 
 struct RawFile {
     line: u64,
     uri: Option<String>,
+    name: Option<String>,
+    path_prefix: Vec<String>,
 }
 
 struct RawSet {
@@ -44,6 +48,15 @@ pub fn collect(
     config: &CollectorConfig,
     artifacts: &dyn ArtifactReader,
 ) -> Result<Vec<TargetOutput>, BepError> {
+    collect_with_workspace(reader, config, artifacts, None)
+}
+
+pub fn collect_with_workspace(
+    reader: impl BufRead,
+    config: &CollectorConfig,
+    artifacts: &dyn ArtifactReader,
+    workspace: Option<&Path>,
+) -> Result<Vec<TargetOutput>, BepError> {
     let mut sets: BTreeMap<String, RawSet> = BTreeMap::new();
     let mut pending: Vec<PendingTarget> = Vec::new();
     for (index, line) in reader.lines().enumerate() {
@@ -75,12 +88,32 @@ pub fn collect(
                     reason: "named set files must be an array".to_owned(),
                 })?;
                 for file in files {
-                    let uri = file
-                        .as_object()
+                    let obj = file.as_object();
+                    let uri = obj
                         .and_then(|entry| entry.get("uri"))
                         .and_then(Value::as_str)
                         .map(str::to_owned);
-                    raw.push(RawFile { line: line_no, uri });
+                    let name = obj
+                        .and_then(|entry| entry.get("name"))
+                        .and_then(Value::as_str)
+                        .map(str::to_owned);
+                    let mut path_prefix = Vec::new();
+                    if let Some(prefix) = obj
+                        .and_then(|entry| entry.get("pathPrefix"))
+                        .and_then(Value::as_array)
+                    {
+                        for part in prefix {
+                            if let Some(text) = part.as_str() {
+                                path_prefix.push(text.to_owned());
+                            }
+                        }
+                    }
+                    raw.push(RawFile {
+                        line: line_no,
+                        uri,
+                        name,
+                        path_prefix,
+                    });
                 }
             }
             let mut children = Vec::new();
@@ -188,10 +221,7 @@ pub fn collect(
     }
     let mut outputs = Vec::with_capacity(pending.len());
     for target in &pending {
-        let mut uris: BTreeSet<String> = BTreeSet::new();
-        // Resolve the transitive file closure: a set contributes its
-        // direct files plus every nested child set. Revisits are
-        // skipped so a repeated reference stays idempotent.
+        let mut seen: BTreeMap<String, (u64, Option<String>, Vec<String>)> = BTreeMap::new();
         let mut visited: BTreeSet<String> = BTreeSet::new();
         let mut stack: Vec<(String, u64)> = target
             .set_ids
@@ -211,15 +241,26 @@ pub fn collect(
                     line: file.line,
                     reason: "named set file without uri".to_owned(),
                 })?;
-                uris.insert(uri);
+                seen.entry(uri)
+                    .or_insert((file.line, file.name.clone(), file.path_prefix.clone()));
             }
             for child in &set.children {
                 stack.push((child.clone(), set.line));
             }
         }
-        let mut collected = Vec::with_capacity(uris.len());
-        for uri in &uris {
-            let path = file_uri_to_path(uri)?;
+        let mut collected = Vec::with_capacity(seen.len());
+        for (uri, (_, name, path_prefix)) in &seen {
+            let path = if is_bytestream_uri(uri) {
+                let Some(ws) = workspace else {
+                    return Err(BepError::UnsupportedUri { uri: uri.clone() });
+                };
+                let Some(file_name) = name else {
+                    return Err(BepError::UnsupportedUri { uri: uri.clone() });
+                };
+                local_path_for_bep_file(ws, path_prefix, file_name)
+            } else {
+                file_uri_to_path(uri)?
+            };
             let bytes =
                 artifacts
                     .read_artifact(&path)
@@ -805,6 +846,32 @@ mod tests {
         };
         assert!(probe.read_artifact(Path::new("/out/a.pb")).is_err());
         assert_eq!(probe.reads.get(), 1);
+    }
+
+    #[test]
+    fn bytestream_falls_back_to_workspace_local_copy() {
+        let dir = tempfile::TempDir::new().expect("scratch");
+        let ws = dir.path();
+        let local = ws.join("bazel-out/k8-fastbuild/bin/q/a.pb");
+        std::fs::create_dir_all(local.parent().expect("parent")).expect("dirs");
+        std::fs::write(&local, b"cached-bytes").expect("write");
+        let file = r#"{"name": "q/a.pb", "uri": "bytestream://remote.buildbuddy.io/blobs/abc/12", "pathPrefix": ["bazel-out", "k8-fastbuild", "bin"]}"#;
+        let stream = [
+            format!(
+                r#"{{"id": {{"namedSetOfFiles": {{"id": "1"}}}}, "namedSetOfFiles": {{"files": [{file}]}}}}"#
+            ),
+            completed("//q:a", true, &group_ref("dx_results", &["1"])),
+        ]
+        .join("\n");
+        let artifacts = FakeArtifacts {
+            files: HashMap::from([(local.clone(), b"cached-bytes".to_vec())]),
+        };
+        let got = collect_with_workspace(Cursor::new(stream), &config(), &artifacts, Some(ws))
+            .expect("fallback");
+        assert_eq!(got.len(), 1);
+        assert_eq!(got[0].artifacts.len(), 1);
+        assert_eq!(got[0].artifacts[0].bytes, b"cached-bytes".to_vec());
+        assert_eq!(got[0].artifacts[0].exec_path, local);
     }
 
     #[test]

@@ -31,7 +31,7 @@ pub(crate) fn prepare_managed_sides(
     };
     match command {
         Command::Codegen => {
-            let (_, plan, projection) = collect_managed_codegen(bep)?;
+            let (_, plan, projection) = collect_managed_codegen(bep, workspace)?;
             let generated = stage_codegen_side(workspace, &plan, &projection)?;
             Ok(dx_setup::PreparedSides {
                 prepared_generated: Some(generated),
@@ -39,7 +39,7 @@ pub(crate) fn prepare_managed_sides(
             })
         }
         Command::Env => {
-            let (_, plan, projection) = collect_managed_env(bep)?;
+            let (_, plan, projection) = collect_managed_env(bep, workspace)?;
             let environment = stage_env_side(workspace, &plan, &projection)?;
             Ok(dx_setup::PreparedSides {
                 prepared_environment: Some(environment),
@@ -47,8 +47,9 @@ pub(crate) fn prepare_managed_sides(
             })
         }
         Command::Setup => {
-            let (codegen_outputs, codegen_plan, codegen_projection) = collect_managed_codegen(bep)?;
-            let (env_outputs, env_plan, env_projection) = collect_managed_env(bep)?;
+            let (codegen_outputs, codegen_plan, codegen_projection) =
+                collect_managed_codegen(bep, workspace)?;
+            let (env_outputs, env_plan, env_projection) = collect_managed_env(bep, workspace)?;
             let prepared_generated = if repository || !codegen_outputs.is_empty() {
                 Some(stage_codegen_side(
                     workspace,

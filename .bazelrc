@@ -88,10 +88,10 @@ build --@rules_rust//cargo/settings:use_default_shell_env=False
 # `user.bazelrc` (keep `--noremote_upload_local_results` for read-only
 # use); dx spawns Bazel with `--nohome_rc`, so only workspace-level rc
 # files channel flags.
-# `dx` collects results through BEP and only reads local `file://`
-# artifacts (it never downloads `bytestream://` itself), so CI forces
-# Bazel to materialize remote outputs locally; speed still comes from
-# the shared cache, correctness from local files.
+# `dx` collects results through BEP and reads `file://` artifacts
+# directly; `bytestream://` hits resolve through workspace-local copies
+# materialized by `--remote_download_outputs=all`, so CI keeps speed
+# from the shared cache with correctness from local files.
 common:ci --remote_cache=grpcs://remote.buildbuddy.io
 common:ci --remote_cache_compression
 common:ci --remote_timeout=10m

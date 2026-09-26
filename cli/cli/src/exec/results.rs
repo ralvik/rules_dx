@@ -3,7 +3,7 @@ use std::io::BufReader;
 use std::path::Path;
 
 use crate::plan::OUTPUT_GROUP;
-use dx_bep::{collect, CollectorConfig};
+use dx_bep::CollectorConfig;
 use dx_output::{DiagnosticEvent, Severity, Snapshot};
 use quality_result::{decode_validated, proto};
 
@@ -66,11 +66,15 @@ pub(crate) fn map_change(change: &proto::FileEdits) -> Option<FileChange> {
     })
 }
 
-pub(crate) fn collect_results(bep: &Path) -> Result<Collected, (String, String)> {
-    collect_results_in(bep, OUTPUT_GROUP)
+pub(crate) fn collect_results(bep: &Path, workspace: &Path) -> Result<Collected, (String, String)> {
+    collect_results_in(bep, OUTPUT_GROUP, workspace)
 }
 
-pub(crate) fn collect_results_in(bep: &Path, group: &str) -> Result<Collected, (String, String)> {
+pub(crate) fn collect_results_in(
+    bep: &Path,
+    group: &str,
+    workspace: &Path,
+) -> Result<Collected, (String, String)> {
     let file = std::fs::File::open(bep).map_err(|err| {
         (
             CODE_UNREADABLE_BEP.to_owned(),
@@ -83,7 +87,13 @@ pub(crate) fn collect_results_in(bep: &Path, group: &str) -> Result<Collected, (
             format!("invalid BEP config: {err}"),
         )
     })?;
-    let targets = collect(BufReader::new(file), &config, &FsArtifacts).map_err(|err| {
+    let targets = dx_bep::collect_with_workspace(
+        BufReader::new(file),
+        &config,
+        &FsArtifacts,
+        Some(workspace),
+    )
+    .map_err(|err| {
         (
             CODE_INVALID_BEP.to_owned(),
             format!("invalid build events: {err}"),
@@ -231,7 +241,7 @@ mod tests {
         let dir = temp_dir("group-tmp");
         let bep = dir.path().join("empty.json");
         std::fs::write(&bep, "").expect("bep");
-        let Err((code, message)) = collect_results_in(&bep, "") else {
+        let Err((code, message)) = collect_results_in(&bep, "", dir.path()) else {
             panic!("empty output group must fail"); // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
         };
         assert_eq!(code, CODE_INVALID_BEP);

@@ -1,9 +1,9 @@
 use std::io::BufRead;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
-use super::{file_uri_to_path, malformed, BepError};
+use super::{file_uri_to_path, is_bytestream_uri, malformed, testlog_path_for_label, BepError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TestOutputFile {
@@ -67,6 +67,13 @@ impl<'a> TestActionOutput<'a> {
 }
 
 pub fn collect_test_outputs(reader: impl BufRead) -> Result<Vec<TestOutputFile>, BepError> {
+    collect_test_outputs_with_workspace(reader, None)
+}
+
+pub fn collect_test_outputs_with_workspace(
+    reader: impl BufRead,
+    workspace: Option<&Path>,
+) -> Result<Vec<TestOutputFile>, BepError> {
     let mut outputs = Vec::new();
     for (index, line) in reader.lines().enumerate() {
         let line_no = (index + 1) as u64;
@@ -106,10 +113,24 @@ pub fn collect_test_outputs(reader: impl BufRead) -> Result<Vec<TestOutputFile>,
         })?;
         for (index, file) in files.iter().enumerate() {
             let entry = TestActionOutput::parse(file, index, line_no)?;
+            let exec_path = if is_bytestream_uri(entry.uri) {
+                let Some(ws) = workspace else {
+                    return Err(BepError::UnsupportedUri {
+                        uri: entry.uri.to_owned(),
+                    });
+                };
+                testlog_path_for_label(ws, label.label, entry.name).ok_or_else(|| {
+                    BepError::UnsupportedUri {
+                        uri: entry.uri.to_owned(),
+                    }
+                })?
+            } else {
+                file_uri_to_path(entry.uri)?
+            };
             outputs.push(TestOutputFile {
                 label: label.label.to_owned(),
                 name: entry.name.to_owned(),
-                exec_path: file_uri_to_path(entry.uri)?,
+                exec_path,
                 run: label.run,
                 shard: label.shard,
                 attempt: label.attempt,
@@ -396,5 +417,41 @@ mod tests {
             }
         }
         assert!(collect_test_outputs(std::io::BufReader::new(FailRead)).is_err());
+    }
+
+    #[test]
+    fn bytestream_test_outputs_resolve_through_testlogs_symlink() {
+        use std::path::Path;
+        let ws = Path::new("/ws");
+        let stream = [test_result(
+            "//cli/bep:dx_bep_test",
+            &[
+                ("test.xml", "bytestream://remote.buildbuddy.io/blobs/abc/10"),
+                (
+                    "test.lcov",
+                    "bytestream://remote.buildbuddy.io/blobs/def/20",
+                ),
+            ],
+        )]
+        .join("\n");
+        let got =
+            collect_test_outputs_with_workspace(Cursor::new(stream), Some(ws)).expect("fallback");
+        assert_eq!(got.len(), 2);
+        assert_eq!(
+            got[0].exec_path,
+            Path::new("/ws/bazel-testlogs/cli/bep/dx_bep_test/coverage.dat")
+        );
+        assert_eq!(got[0].name, "test.lcov");
+        assert_eq!(
+            got[1].exec_path,
+            Path::new("/ws/bazel-testlogs/cli/bep/dx_bep_test/test.xml")
+        );
+        let stream = [test_result(
+            "//a:t",
+            &[("test.xml", "bytestream://remote.buildbuddy.io/blobs/abc/10")],
+        )]
+        .join("\n");
+        let err = collect_test_outputs(Cursor::new(stream)).expect_err("no workspace must fail");
+        assert!(matches!(err, BepError::UnsupportedUri { .. }));
     }
 }
