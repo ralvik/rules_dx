@@ -34,17 +34,12 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     };
     let plan = inventory.plan();
-    // Reclaimable bytes measure the planned prune set before any lock or
-    // deletion: symlinks count, targets never do, and vanished entries
-    // measure zero so measure and idempotent apply agree.
     let bytes = match measure_prune_bytes(workspace, &plan) {
         Ok(bytes) => bytes,
         Err(error) => {
             return operational(invocation, out, err, CODE_CLEAN_FAILED, &error.to_string());
         }
     };
-    // Human prose is the only output on this path: `--dry-run` and the
-    // prune summary print in text mode unless `--quiet` suppresses them.
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     if invocation.dry_run {
@@ -88,8 +83,6 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
         return 0;
     }
-    // The explicit forward is exactly `bazel clean` (never any other
-    // verb): the argv pins to the frozen `dx_clean` forward shape.
     let mut argv = vec!["bazel".to_owned()];
     argv.extend(bazel_forward_argv());
     let status = match runner.run(&argv, workspace, &[]) {
@@ -115,8 +108,6 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
     };
     if json {
         if bazel_code != 0 {
-            // Failure explainer without argv/secrets: which phase failed plus
-            // the stderr pointer; Bazel diagnostics stay on stderr.
             if let Ok(event) = error_event(
                 "bazel_failed",
                 &format!(
@@ -280,7 +271,6 @@ mod tests {
     #[test]
     fn clean_dry_run_lists_stale_record_and_deletes_nothing() {
         let harness = Harness::new("clean-dryrun-list");
-        // Commit order selects the last pair: stale first, current last.
         let stale = commit_clean_pair(&harness, '3', '4');
         let current = commit_clean_pair(&harness, '1', '2');
         let (code, out, err) = harness.run(&["clean", "--dry-run"]);
@@ -289,9 +279,6 @@ mod tests {
             out.contains(&format!("prune setup record: .dx/setups/{stale}")),
             "{out}"
         );
-        // The listing reports per-entry reclaimable bytes plus the
-        // total; the stale record holds pair links (nonzero) while the
-        // empty generation dirs measure zero.
         assert!(out.contains("bytes)"), "{out}");
         assert!(out.contains("reclaimable total:"), "{out}");
         assert!(

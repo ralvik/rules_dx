@@ -206,7 +206,6 @@ pub fn render_sarif(
         .runs(runs)
         .version(serde_json::Value::String("2.1.0".to_owned()))
         .build();
-    // Single owner for string-only JSON shapes (typed, no `unreachable!`).
     Ok(dx_fingerprint::to_json(&document)?)
 }
 

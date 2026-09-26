@@ -1,6 +1,5 @@
 """Wrapper conformance tests for PowerShell.
 
-Contract: `docs/decisions/0032-ruby-powershell-bandit-swift.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

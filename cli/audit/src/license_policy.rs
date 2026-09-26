@@ -83,7 +83,6 @@ impl PolicyTables {
 }
 
 impl Distribution {
-    /// Tier of one distributable label: internal only when listed under
     pub fn tier_of(&self, label: &str) -> Tier {
         if self.internal.contains(label) {
             Tier::Internal

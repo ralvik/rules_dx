@@ -1,15 +1,10 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use std::io::Write;
 use std::path::PathBuf;
 
-// LCOV_EXCL_START - reason: thin man shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin man shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 fn main() {
-    // Structured diagnostics: build-step failures report via
-    // `tracing::error!` with the legacy message text; init is idempotent
-    // and emits nothing by default.
     dx_output::init_diagnostics(false);
     let out: PathBuf = std::env::args_os()
         .nth(1)
@@ -18,7 +13,7 @@ fn main() {
             tracing::error!("usage: dx_man <output-file>");
             std::process::exit(2);
         });
-    // LCOV_EXCL_STOP - reason: end thin man shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin man shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     let man = clap_mangen::Man::new(dx_cli::args::cli_command()).section("1");
     let mut buffer = Vec::new();
     man.render(&mut buffer).unwrap_or_else(|error| {

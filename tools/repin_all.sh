@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Repin every managed lock dialect (maintainer only; requires network).
-#
-# Single entry point over the per-dialect repin commands in
-# `docs/tools/tool-acquisition.md#repinning` (one row per lock dialect).
-# Each backend is resolver-owned: this script only sequences the approved
-# commands and stops at the first failure.
-#
-# Usage: bazel run //tools:repin-all
 set -euo pipefail
 
 workspace="$(git rev-parse --show-toplevel)"

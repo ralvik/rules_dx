@@ -128,9 +128,6 @@ fn quiet_applies_to_text_output() {
 
 #[test]
 fn verbose_parses_before_and_after_command_and_stays_orthogonal_to_quiet() {
-    // `--verbose` enables tracing diagnostics without
-    // changing the machine-output contract; `--quiet` still controls
-    // summaries independently.
     let bare = parse(&args(&["lint", "--verbose"])).expect("parse");
     assert!(bare.verbose);
     assert!(!bare.quiet);
@@ -310,7 +307,6 @@ fn workflow_commands_reject_quality_only_options() {
         }),
         "check is reported before fail-on"
     );
-    // Quality commands keep both options.
     assert!(parse(&args(&["lint", "--check", "--fail-on=error"])).is_ok());
 }
 
@@ -447,8 +443,6 @@ fn clean_rejects_scopes_and_quality_options() {
             option: "--fail-on".to_owned(),
         })
     );
-    // `clean` supports `--output=json` (planning + per-entry notices); only
-    // `--output=diff` has no patch to emit.
     let got = parse(&args(&["clean", "--output=json"])).expect("clean json");
     assert_eq!(got.output, OutputMode::Json);
     assert!(got.command.supports_json());
@@ -487,7 +481,6 @@ fn clean_rejects_scopes_and_quality_options() {
             suggestion: None,
         })
     );
-    // `--bazel` belongs to clean only.
     assert_eq!(
         parse(&args(&["lint", "--bazel"])),
         Err(ArgsError::UnsupportedOption {
@@ -530,8 +523,6 @@ fn audit_update_parse_and_reject_unsupported_options() {
             option: "--check".to_owned(),
         })
     );
-    // `dx update --check` is the preset stale gate:
-    // non-mutating, exit 0 clean / 1 stale, ignoring selectors.
     let check = parse(&args(&["update", "--check"])).expect("parse update check");
     assert_eq!(check.command, Command::Update);
     assert!(check.check);
@@ -543,8 +534,6 @@ fn audit_update_parse_and_reject_unsupported_options() {
             option: "--fail-on".to_owned(),
         })
     );
-    // `update` supports `--output=json`: dry-run
-    // planning plus live per-set reporting.
     let got = parse(&args(&["update", "--output=json"])).expect("update json");
     assert_eq!(got.command, Command::Update);
     assert_eq!(got.output, OutputMode::Json);

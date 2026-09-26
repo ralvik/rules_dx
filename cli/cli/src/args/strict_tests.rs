@@ -224,9 +224,6 @@ fn strict_bazel_tail_forwards_verbatim() {
 
 #[test]
 fn strict_help_verb_redirects_to_generated_help() {
-    // `dx help [command]` verb redirects to the same generated help as
-    // Only exact lowercase `help` is the verb; `Help`/`HELP` stay unknown
-    // like any other casing typo.
     for words in [vec!["Help"], vec!["HELP"]] {
         match parse(&args(&words)) {
             Err(ArgsError::UnknownCommand { command, .. }) => {
@@ -250,7 +247,6 @@ fn strict_help_verb_redirects_to_generated_help() {
             other => panic!("words: {words:?}: want Help, got {other:?}"),
         }
     }
-    // `dx help lint` matches `dx lint --help`.
     let verb = match parse(&args(&["help", "lint"])) {
         Err(ArgsError::Help { text }) => text,
         other => panic!("help lint: want Help, got {other:?}"),
@@ -376,9 +372,6 @@ fn strict_known_flags_on_wrong_commands_fail_as_unsupported() {
 fn strict_every_command_help_pins_usage_scopes_exits_output() {
     use clap::ValueEnum;
     for command in Command::value_variants() {
-        // `dx bazel --help` forwards `--help` verbatim to Bazel by contract,
-        // and `dx --help bazel` routes to top help via the verbatim split;
-        // dx-owned bazel help is the generated `render_command_help` golden.
         let text = if *command == Command::Bazel {
             super::super::help::render_command_help(Command::Bazel)
         } else {
@@ -413,14 +406,11 @@ fn strict_every_command_help_pins_usage_scopes_exits_output() {
 #[cfg(unix)]
 #[test]
 fn strict_non_utf8_argv_fails_as_invalid_scope() {
-    // Non-UTF8 `argv` must not panic in `args()`: `args_os` plus `OsString`
-    // workspace/targets decode here, failing as `InvalidScope` with a lossy
     use std::ffi::OsString;
     use std::os::unix::ffi::OsStringExt;
     let raw = OsString::from_vec(vec![0xff]);
     let lossy = raw.to_string_lossy().into_owned();
     assert!(raw.to_str().is_none(), "fixture must be non-UTF8");
-    // Non-UTF8 scope positional.
     let argv = vec![OsString::from("lint"), raw.clone()];
     assert_eq!(
         parse(&argv),
@@ -428,7 +418,6 @@ fn strict_non_utf8_argv_fails_as_invalid_scope() {
             scope: lossy.clone(),
         })
     );
-    // Non-UTF8 `--workspace` value.
     let argv = vec![
         OsString::from("--workspace"),
         raw.clone(),

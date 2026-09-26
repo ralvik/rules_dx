@@ -123,10 +123,6 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         .changes
         .sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));
 
-    // Mutation plus status projection live in `quality_apply` (issue
-    // verified-source collection and check/incomplete/apply
-    // handling, then check-mode vs default-mode status with the
-    // fail-closed `failed` flag.
     let applied_outcome = apply_collected_changes(
         workspace,
         invocation.check,
@@ -145,8 +141,6 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         !collected.changes.is_empty(),
     );
 
-    // Projection: text lines, unified patch, or NDJSON events.
-    // Diff-patch rendering lives in `quality_patch`.
     let mut patch = String::new();
     if invocation.output == OutputMode::Diff {
         match render_diff_patch(&sources, &collected.changes) {
@@ -157,8 +151,6 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
     }
 
-    // Human and machine emission of findings, changes, and mutations
-    // lives in `quality_emit`.
     let emit_counts = match emit_findings(
         EmitInputs {
             invocation,
@@ -179,9 +171,6 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     let not_applied_count = emit_counts.not_applied_count;
     let change_count = collected.changes.len() as u64;
 
-    // Standard reports live in `quality_reports`: SARIF
-    // over current findings with snapshot line regions, written
-    // atomically after validation.
     let reports_ok = write_standard_reports(
         StandardReports {
             workspace,
@@ -195,8 +184,6 @@ pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
         err,
     );
 
-    // Counts: diagnostics over emitted status findings; changes over
-    // validated change records; mutations in default mode only.
     let mut info = 0u64;
     let mut warning = 0u64;
     let mut error = 0u64;

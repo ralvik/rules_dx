@@ -1,9 +1,4 @@
-"""Concrete configuration-subjects use case.
-
-Contract: `docs/testing/starlark.md#modes`, `docs/decisions/0009-starlark-testing.md`.
-Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
-`bazel run //tools/ci:starlark_futures_qualification`.
-"""
+"""Concrete configuration-subjects use case."""
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//libs/starlark:defs.bzl", "DxConfigInfo", "DxSubjectInfo")

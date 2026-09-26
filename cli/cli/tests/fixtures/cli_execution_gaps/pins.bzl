@@ -1,13 +1,5 @@
-"""CLI execution/reporting gaps fixture.
+"""CLI execution/reporting gaps fixture."""
 
-Contract: `docs/cli/cli-contract.md#execution-reporting-gaps`,
-`docs/cli/commands/watch.md`, `docs/cli/output-protocol.md`,
-`docs/cli/standard-reports.md`.
-Fixture: `cli/cli/tests/fixtures/cli_execution_gaps/` via
-`bazel run //tools/ci:cli_execution_gaps_qualification`.
-"""
-
-# Watch: exactly the 8 thin-loop commands stay watchable (ADR 0017/0018).
 WATCHABLE_COMMANDS = [
     "build",
     "test",
@@ -20,7 +12,6 @@ WATCHABLE_COMMANDS = [
 ]
 WATCHABLE_COUNT = 8
 
-# Watch: the remaining 22 registry commands stay not watchable.
 NOT_WATCHABLE_COMMANDS = [
     "audit",
     "bazel",
@@ -47,13 +38,10 @@ NOT_WATCHABLE_COMMANDS = [
 ]
 NOT_WATCHABLE_COUNT = 22
 
-# Watch locality: CI use stays refused, debounce stays 200ms.
 WATCH_REFUSES_CI = True
 WATCH_DEBOUNCE_MS = 200
 WATCH_REUSES_WRAPPED_VERBATIM = True
 
-# Arg-forwarding: Bazel startup options stay rejected on workflow
-# commands with guidance to use `dx bazel`.
 STARTUP_OPTIONS_REJECTED = [
     "bazelrc",
     "home_rc",
@@ -67,17 +55,13 @@ STARTUP_OPTIONS_REJECTED = [
 ]
 STARTUP_DISPOSITION = "wont-fix"
 
-# Arg-forwarding: test-binary args stay rejected on workflow commands.
 TEST_BINARY_ARGS_REJECTED = ["test_arg"]
 TEST_BINARY_DISPOSITION = "wont-fix"
 
-# Arg-forwarding: only `dx bazel` forwards unchanged; `dx run` forwards
-# after `--` to the application binary, not to Bazel.
 BAZEL_FORWARDS_UNCHANGED = True
 RUN_FORWARDS_TO_APP = True
 OTHER_WORKFLOW_FORWARDS_TO_BAZEL_COMMAND_OPTIONS = True
 
-# Report matrix: per-command supported standard-report formats.
 REPORT_LINT = ["sarif"]
 REPORT_TYPECHECK = ["sarif"]
 REPORT_TEST = ["junit"]
@@ -112,21 +96,17 @@ REPORT_NONE = [
 ]
 REPORT_DISPOSITION = "wont-fix"
 
-# Parallelism: every multi-phase/multi-set/multi-target plan stays
-# sequential with no parallel, caching, scheduling, or daemon behavior.
 PARALLEL_CHECK_FIX = "sequential format then lint then typecheck then generate"
 PARALLEL_WATCH = "one iteration at a time"
 PARALLEL_UPDATE = "sequential per-set with continuation, no parallel"
 PARALLEL_RUN = "sequential multirun in scope order"
 PARALLEL_DISPOSITION = "wont-fix"
 
-# Rejected substitutes (never accepted as the resolution).
 REJECTED_SILENT_SUBSTITUTION = "silent substitution across commands rejected"
 REJECTED_WATCH_DAEMON = "watch daemon rejected"
 REJECTED_PARALLEL_UMBRELLA = "parallel umbrella rejected"
 REJECTED_INFERRED_FORWARDS = "inferred option-class forwarding rejected"
 REJECTED_INVENTED_REPORTS = "invented standard reports rejected"
 
-# Honesty lines (never pinned as supported here).
 NO_SUPPORTED = "no Supported claim"
 SEED_ONLY = "qualified seed-only under issue #590"

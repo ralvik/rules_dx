@@ -1,15 +1,11 @@
 """JVM tool acquisition inventory pins.
 
-Contract: `docs/tools/tool-acquisition.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_true", "starlark_test")
 load("//modules:java-scala-kotlin.bzl", "JVM_TOOL_VERSIONS")
 load(":repos.bzl", "JVM_TOOLS", "JVM_TOOL_REPOS")
 
-# Repo-to-version linkage: each lazy repo carries its single-source version
-# in its artifact URLs (plus strip_prefix for archives). Adding a tool edits
-# this map plus `JVM_TOOLS` plus `JVM_TOOL_VERSIONS` together.
 _VERSION_KEY = {
     "jvm_checkstyle": "checkstyle",
     "jvm_google_java_format": "google-java-format",

@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# Fake qmlformat for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics `qmlformat --check` (exit 0 clean, exit 1 with unformatted
-# workspace-relative paths when dirty) plus `qmlformat -i` (in-place
-# rewrite, exit 0) over the BADFMT marker. Paths are reported relative
-# to the working directory (the scratch root), like the real tool, so
-# the backend re-anchors them. Real-tool behavior stays proven by
-# `quality/tests/fixtures/qmlformat/`; this fake proves dispatch plus
-# parser plus fix flow without Qt.
 set -euo pipefail
 mode=""
 files=()

@@ -1,7 +1,5 @@
-// LCOV_EXCL_START - reason: re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: re-export only, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -27,4 +25,4 @@ pub use envelope::{
     FileOperation, ENVELOPE_VERSION,
 };
 pub use validators::{validate, ValidationError, BLOCKED_EXTENSIONS, MAX_OPERATION_BYTES};
-// LCOV_EXCL_STOP - reason: end re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_STOP - reason: end re-export only, issue: 1055, policy: docs/cli/commands/build-test-coverage.md

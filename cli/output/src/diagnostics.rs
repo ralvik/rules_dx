@@ -1,16 +1,11 @@
 pub const DEFAULT_LOG_FILTER: &str = "warn";
 pub const VERBOSE_LOG_FILTER: &str = "info";
 
-/// Structured color mode for `--color`.
-/// See: `docs/cli/cli-contract.md`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ColorMode {
-    /// TTY-aware color (`NO_COLOR` respected, non-TTY stays plain).
     #[default]
     Auto,
-    /// Force color even when non-TTY or `NO_COLOR` is set.
     Always,
-    /// Never use color, even on a TTY.
     Never,
 }
 
@@ -54,7 +49,6 @@ pub fn color_override() -> ColorMode {
     }
 }
 
-/// Structured diagnostic level for `--log-level` (See: `docs/cli/output-protocol.md`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum LogLevel {
     Error,
@@ -279,7 +273,6 @@ mod tests {
 
     #[test]
     fn diagnostics_format_status_is_byte_identical_when_plain() {
-        // Force the plain path via the pure helper to avoid TTY flakiness.
         let plain = format!("{} {}", styled_status_for("ok", false), "done");
         assert_eq!(plain, "ok done");
     }

@@ -6,11 +6,6 @@ load("//tools/visibility:visibility.bzl", "VIS_CLI_WIDE")
 
 package(default_visibility = VIS_CLI_WIDE)
 
-# Leaf-crate pattern via `dx_rust_crate`: emits
-# `dx_proto_validate` + `dx_proto_validate_test` + fmt/clippy tests +
-# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
-# `prost` is a literal third-party label (not a crate_universe crate
-# name), so it travels via `extra_deps`.
 dx_rust_crate(
     name = "dx_proto_validate",
     package_name = "cli/dx_proto_validate",

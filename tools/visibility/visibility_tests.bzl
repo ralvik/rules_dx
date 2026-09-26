@@ -1,6 +1,5 @@
 """Unit tests for the visibility contract (single source).
 
-Contract: `docs/contributing/build-conventions.md#visibility`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_false", "expect_true", "starlark_test")

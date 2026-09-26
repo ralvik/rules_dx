@@ -133,7 +133,6 @@ pub fn status_event(check: &StatusEvent) -> Result<Value, OutputError> {
     Ok(Value::Object(map))
 }
 
-/// CLI, orchestration, protocol, or infrastructure failure. Never carries
 pub fn error_event(
     code: &str,
     message: &str,
@@ -213,9 +212,6 @@ pub fn write_event(writer: &mut dyn std::io::Write, event: &Value) -> Result<(),
         }
         _ => return Err(OutputError::NotAnEvent),
     }
-    // Serialize first so the only I/O is one atomic line write: `EPIPE`
-    // surfaces from `write_all` with its `broken pipe` text intact for
-    // `OutputError::is_broken_pipe` instead of wrapped in `serde_json::Error`.
     let mut buf = serde_json::to_vec(event).map_err(|e| OutputError::Io(e.to_string()))?;
     buf.push(b'\n');
     writer
@@ -419,8 +415,6 @@ mod tests {
         assert_eq!(SCHEMA_MAJOR, 1);
         assert_eq!(SCHEMA_MINOR, 1);
         assert_eq!(schema(), serde_json::json!({"major": 1, "minor": 1}));
-        // Minor-1.0 consumers ignore the 1.1 `correlation` field: unknown
-        // fields never break parsing within one major version.
         let correlated = with_correlation(
             operation_event("run", "execute", None).expect("op"),
             "run://a:bin",
@@ -436,7 +430,6 @@ mod tests {
             reparsed.get("correlation"),
             Some(&Value::String("run://a:bin".to_owned()))
         );
-        // Omitting correlation preserves v1.0 wire shape.
         let bare = operation_event("run", "execute", None).expect("bare");
         assert!(bare.get("correlation").is_none());
     }

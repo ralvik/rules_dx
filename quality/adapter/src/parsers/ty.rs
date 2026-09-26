@@ -136,9 +136,6 @@ mod tests {
 
     #[test]
     fn ty_survives_colons_inside_the_message() {
-        // Pinned shape from the real dirty fixture: the message itself
-        // carries `incorrect: Expected`, so only a left split keeps the
-        // severity intact.
         let stdout = concat!(
             "quality/testdata/real_dirty.py:22:18: error[invalid-argument-type] Argument to function `add` is incorrect: Expected `int`, found `Literal[\"two\"]`\n",
             "Found 1 diagnostic\n",
@@ -166,11 +163,6 @@ mod tests {
 
     #[test]
     fn ty_grammar_mismatches_are_fail_closed() {
-        // Split from the former cross-family witness: each family
-        // owns its mismatch battery.
-
-        // Ty: unknown severities, malformed positions, and non-UTF8
-        // output are grammar mismatches.
         assert!(parse_ty(b"/s/a.py:1:1: info[rule] msg\n", Some(1), &["/s/a.py"]).is_err());
         assert!(parse_ty(b"/s/a.py:0:1: error[rule] msg\n", Some(1), &["/s/a.py"]).is_err());
         assert!(parse_ty(&[0xff], Some(1), &["/s/a.py"]).is_err());

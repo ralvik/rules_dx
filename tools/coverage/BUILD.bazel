@@ -1,8 +1,5 @@
 """Thin entry point over the promoted `dx_lcov` library."""
 
-# Source-only package (no Cargo manifest). The gate library now lives
-# at `//cli/lcov:dx_lcov`; this package owns only the `coverage_bin` entry
-# point, hand-maintained and excluded from generation in the root BUILD.
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary")
 load(":cells.bzl", "INVENTORY_FILES", "coverage_cells")
@@ -10,17 +7,12 @@ load(":cells_tests.bzl", "coverage_cells_tests")
 
 package(default_visibility = ["//:__subpackages__"])
 
-# Cell registry plus per-cell inventories (issue #915): referenced by
-# cells.txt rows and gated by coverage_bin; exported here so Bazel
-# consumers depend on labels instead of reaching into the source tree.
-# The file list is owned by cells.bzl (COVERAGE_CELLS registry).
 exports_files(INVENTORY_FILES)
 
 coverage_cells(name = "cell_inventories")
 
 coverage_cells_tests(name = "cells")
 
-# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",
     starlark_srcs = [

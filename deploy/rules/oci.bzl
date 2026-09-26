@@ -1,28 +1,17 @@
 """Local-first OCI publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
-# Versioned registry/tag charset schema. Consumers query via
-# `oci_registry_charset`, `oci_tag_charset`, and `oci_*_error`
-# instead of duplicating the charset, so any charset evolution edits this
-# one data constant with schema review, never a parallel allowlist.
 OCI_SCHEMA_VERSION = 1
 
-# Image tags embed directly in the generated Python launcher, so the
-# charset is restricted to what is safe inside single quotes.
 _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
-# Registries embed directly in the generated Python launcher, so the
-# charset covers host plus optional repository path and port.
 _VALID_REGISTRY_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-/:"
 
-# Repositories embed directly in the generated Python launcher, so the
-# charset covers path segments without ports.
 _VALID_REPOSITORY_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-/"
 
 OCI_DEFAULT_REGISTRY = "ghcr.io"
@@ -258,9 +247,6 @@ def oci_deploy(name, image_tar, tag = "latest", registry = OCI_DEFAULT_REGISTRY,
         tag = tag,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     py_binary(
         name = program_target,
         srcs = [":" + launcher_target],

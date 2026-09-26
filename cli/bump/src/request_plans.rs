@@ -50,8 +50,6 @@ pub(super) fn plan_module_bazel(
     let mut out = String::with_capacity(content.len());
     for line in content.split_inclusive('\n') {
         if line.contains("bazel_dep(") && line.contains(&needle) {
-            // Replace the `version = "old"` attr on this bazel_dep line
-            // (never the `name = "..."` attr, which sorts first).
             match replace_version_attr(line, &new) {
                 Some(replaced) => {
                     matches += 1;
@@ -68,8 +66,6 @@ pub(super) fn plan_module_bazel(
         }
         out.push_str(line);
     }
-    // Handle a final line without trailing newline (split_inclusive still
-    // yields it; the loop above already covered it).
     match matches {
         1 => Ok(out),
         0 => Err(BumpError::NotFound {
@@ -98,10 +94,6 @@ pub(super) fn plan_package_json(
             });
         }
     };
-    // Text replacement of `"package": "old"` preserves formatting
-    // (no serde_json re-emit, which would reformat the whole file).
-    // Validate the file is JSON through the upstream parser first so a
-    // corrupt manifest fails closed before any edit.
     let _: serde_json::Value =
         serde_json::from_str(content).map_err(|_| BumpError::UnsupportedManifest {
             manifest: "package.json".to_owned(),
@@ -112,8 +104,6 @@ pub(super) fn plan_package_json(
     let mut out = String::with_capacity(content.len());
     for line in content.split_inclusive('\n') {
         if line.contains(&key) && line.contains(':') && line.contains('"') {
-            // Only count lines where the key is a JSON object key (quoted
-            // package followed by optional whitespace then `:`).
             if let Some(key_at) = line.find(&key) {
                 let after = &line[key_at + key.len()..];
                 if after.trim_start().starts_with(':') {
@@ -171,9 +161,6 @@ pub(super) fn plan_go_mod(
             out.push_str(line);
             continue;
         }
-        // `require example.com/mod v1.2.3` or bare `example.com/mod v1.2.3`
-        // inside a require block. Match the module path as a whitespace
-        // delimited token to avoid prefix collisions.
         if line_contains_module_token(line, package) && line.contains('v') {
             match replace_go_version_token(line, &new) {
                 Some(replaced) => {
@@ -210,9 +197,6 @@ pub(super) fn go_version_token_re() -> Option<&'static Regex> {
     if let Some(compiled) = RE.get() {
         return Some(compiled);
     }
-    // `v` + digits/dots (at least one digit and one dot; trailing dots
-    // kept to match the historical byte loop) + optional `-`/`+` suffix
-    // running to whitespace. Last match wins (see below).
     match Regex::new(r"v[0-9.]+(?:[-+][^\s]*)?") {
         Ok(compiled) => {
             let _ = RE.set(compiled);
@@ -238,9 +222,6 @@ pub(super) fn has_version_shape(token: &str) -> bool {
 }
 
 pub(super) fn line_contains_module_token(line: &str, package: &str) -> bool {
-    // Declarative whitespace-delimited token (`my-mod` never matches
-    // `mod`): `regex::escape` keeps dots/slashes literal. Falls back to
-    // the split check when the dynamic pattern fails to compile.
     let pattern = format!(r"(?:^|\s){}(?:\s|$)", regex::escape(package));
     match Regex::new(&pattern) {
         Ok(re) => re.is_match(line),
@@ -249,8 +230,6 @@ pub(super) fn line_contains_module_token(line: &str, package: &str) -> bool {
 }
 
 pub(super) fn replace_go_version_token(line: &str, new: &str) -> Option<String> {
-    // Replace the last `v<digits...>` token (the version) with `new`.
-    // Keeps indentation, trailing comments, and newline style intact.
     if let Some(re) = go_version_token_re() {
         let mut last: Option<(usize, usize)> = None;
         for matched in re.find_iter(line) {
@@ -268,15 +247,11 @@ pub(super) fn replace_go_version_token(line: &str, new: &str) -> Option<String> 
         if re.find_iter(line).next().is_some() {
             return None;
         }
-        // No candidate at all: fall through to the byte loop so a
-        // regex-shape drift still behaves like the historical scan.
     }
     replace_go_version_token_fallback(line, new)
 }
 
 pub(super) fn replace_go_version_token_fallback(line: &str, new: &str) -> Option<String> {
-    // Replace the last `v<digits...>` token (the version) with `new`.
-    // Keeps indentation, trailing comments, and newline style intact.
     let mut last_start: Option<usize> = None;
     let mut last_end: Option<usize> = None;
     let bytes = line.as_bytes();
@@ -295,7 +270,6 @@ pub(super) fn replace_go_version_token_fallback(line: &str, new: &str) -> Option
                     dots += 1;
                     end += 1;
                 } else if byte == b'-' || byte == b'+' {
-                    // Prerelease/build suffix: consume until whitespace.
                     end += 1;
                     while end < bytes.len() && !bytes[end].is_ascii_whitespace() {
                         end += 1;
@@ -340,9 +314,6 @@ pub(super) fn plan_maven_module_bazel(
             });
         }
     };
-    // Declared requirement shape: `"group:artifact:old"` inside
-    // `maven.install(artifacts = [...])`. The quoted `group:artifact:`
-    // prefix keeps `junit:junit` from matching `junit:junit-jupiter`.
     let needle = format!("\"{package}:");
     let mut matches = 0usize;
     let mut out = String::with_capacity(content.len());
@@ -410,9 +381,6 @@ pub(super) fn plan_paket_dependencies(
             });
         }
     };
-    // Declared requirement shape: `nuget <id> <old>` (one per line).
-    // Match the id as a whitespace-delimited token so `xunit.v3` never
-    // matches `xunit.v3.assert`.
     let mut matches = 0usize;
     let mut out = String::with_capacity(content.len());
     for line in content.split_inclusive('\n') {
@@ -461,10 +429,6 @@ pub(super) fn paket_line_targets_package(line: &str, package: &str) -> bool {
 }
 
 pub(super) fn replace_paket_version_token(line: &str, new: &str) -> Option<String> {
-    // Replace the last whitespace-delimited token (the version),
-    // preserving leading spacing, trailing comments, and newline style.
-    // `nuget <id> <old>` carries exactly three tokens before any `#`
-    // comment; the version is the third.
     let newline = line
         .strip_suffix("\r\n")
         .or_else(|| line.strip_suffix('\n'));
@@ -546,7 +510,6 @@ pub(super) fn plan_github_workflow(
 pub(super) fn replace_gha_sha(line: &str, needle: &str, sha: &str) -> Option<String> {
     let at = line.find(needle)? + needle.len();
     let rest = &line[at..];
-    // SHA runs until whitespace or end-of-line.
     let end = rest.find(|c: char| c.is_whitespace()).unwrap_or(rest.len());
     if end == 0 {
         return None;
@@ -665,12 +628,6 @@ pub(super) fn target_prefix_re() -> Option<&'static Regex> {
 }
 
 pub(super) fn is_target_shape(text: &str) -> bool {
-    // `set:package` never starts with `/`/`@` and never contains `/`
-    // except inside GitHub Actions `owner/repo` packages (which still
-    // start with `github-actions:`/`gha:`). Labels/paths do. The `//`/`@`
-    // prefix is a declarative `^(//|@)`; the `/`-with/without
-    // known-set checks below stay textual because they branch on the set
-    // registry, not on character classes.
     if let Some(re) = target_prefix_re() {
         if re.is_match(text) {
             return true;
@@ -678,10 +635,6 @@ pub(super) fn is_target_shape(text: &str) -> bool {
     } else if text.starts_with("//") || text.starts_with('@') {
         return true;
     }
-    // Bare filenames/paths owned by bump manifests are still not
-    // selectors: `package.json`, `MODULE.bazel`, `.bazelversion`, and any
-    // `a/b` path without a known `set:` prefix fail as NotAPackage, not
-    // as UnknownSelector, so the operator learns the `set:package` shape.
     if text.contains('/') && !text.contains(':') {
         return true;
     }
@@ -806,9 +759,6 @@ pub(super) fn validate_package(set: BumpSet, package: &str) -> Result<(), BumpEr
                     if re.is_match(package) {
                         return Ok(());
                     }
-                    // Regex failed: mirror the historical split so the
-                    // payload stays byte-identical (`@a/b/c` reports the
-                    // charset reason because `b/c` is not dotted).
                     let (scope, slash, name) = match rest.find('/') {
                         Some(idx) => (&rest[..idx], true, &rest[idx + 1..]),
                         None => ("", false, ""),

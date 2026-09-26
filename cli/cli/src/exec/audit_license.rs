@@ -55,10 +55,6 @@ pub(super) fn run_license(
     let mut packages_all: Vec<dx_audit::spdx::SpdxPackage> = Vec::new();
     let mut incomplete: Option<String> = None;
     let mut licensed_all: Vec<dx_audit::locks::LicensedPackage> = Vec::new();
-    // Per-package notice-text presence from the committed inventory,
-    // keyed by `set/name@version` for the notice evaluation below.
-    // Absent entries mean no words (fail closed in `distributed` when
-    // the license requires reproduction).
     let mut notice_present: std::collections::BTreeMap<(String, String, String), bool> =
         std::collections::BTreeMap::new();
     for set in sets {
@@ -100,9 +96,6 @@ pub(super) fn run_license(
             }
             _ => dx_audit::locks::inventory_licenses(&locked, &policy.inventory, set.name()),
         };
-        // Committed inventory overrides automatic identities where it
-        // matches (explicit curator data wins); for Maven/NuGet/Go the
-        // inventory is the only source, already resolved above.
         if *set == dx_update::sets::SetId::Cargo || *set == dx_update::sets::SetId::Npm {
             let inventoried =
                 dx_audit::locks::inventory_licenses(&locked, &policy.inventory, set.name());
@@ -187,10 +180,6 @@ pub(super) fn run_license(
         let outcome = dx_audit::license_expr::evaluate(&expr, tier, &lookup, &approved);
         let fails = dx_audit::license_expr::fails_in_tier(outcome, tier);
         let level = if fails { "error" } else { "info" };
-        // Per-package notice-text evaluation: the words come from the
-        // committed inventory (`text_present`), absent means no words.
-        // `missing-notice-text` fails in `distributed` unless the same
-        // exception that approves the license approves it.
         let text_present = notice_present
             .get(&(
                 licensed.set.clone(),

@@ -14,9 +14,6 @@ pub fn parse_test_xml(
 ) -> Result<Vec<JunitCase>, ReportError> {
     let text = std::str::from_utf8(bytes)
         .map_err(|e| junit_error(format!("test XML is not UTF-8: {e}")))?;
-    // Reject documents with no element structure early so empty or
-    // whitespace-only artifacts fail closed instead of yielding zero
-    // cases that look like a passing suite.
     if !text.contains('<') {
         return Err(junit_error("test XML has no elements"));
     }
@@ -82,20 +79,7 @@ pub fn parse_test_xml(
 }
 
 fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
-    // Jest (and other emitters) write `timestamp="2026-09-19T21:10:02"`
-    // without a timezone; quick-junit 0.8 validates timestamps as RFC3339
-    // and rejects those artifacts. Timestamps are unused (caller groups by
-    // Bazel label), so strip the attribute from start/empty tags before
-    // deserializing. Typed `quick-xml` events keep failure text, CDATA,
-    // and comments containing `timestamp="..."` byte-identical.
     let without_ts = strip_timestamp_attrs(text);
-    // Bazel emitters occasionally write negative testcase durations
-    // (e.g. `time="-2"` from clock skew); quick-junit rejects negatives as
-    // malformed durations. Duration is informational (pass/fail rides the
-    // failure/error tags), so clamp negatives to zero before
-    // deserializing. Non-numeric times ("bogus", "inf") still fail.
-    // Restricted to `<testsuite*`/`<testcase*` start tags so failure text
-    // containing `time="-..."` is preserved.
     let without_negative = clamp_negative_times(&without_ts);
     let normalized = without_negative
         .replace("<testsuite>", "<testsuite name=\"dx\">")
@@ -103,8 +87,6 @@ fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
     match quick_junit::Report::deserialize_from_str(&normalized) {
         Ok(report) => {
             if report.test_suites.is_empty() && normalized.contains("<testcase") {
-                // A bare `<testcase>` without a suite wrapper parses as
-                // an empty report; nest it so the case is preserved.
                 let wrapped = format!(
                     "<testsuites><testsuite name=\"dx\">{normalized}</testsuite></testsuites>"
                 );
@@ -117,10 +99,6 @@ fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
         Err(first) => {
             let msg = first.to_string();
             if msg.contains("testsuites") {
-                // Bare `<testsuite>` artifact: nest under a synthetic root.
-                // Strip a leading XML declaration first: `<?xml ...?>` is
-                // only valid at offset zero, so embedding it inside
-                // `<testsuites>` would poison the wrapped document.
                 let inner = strip_leading_decl(&normalized);
                 let wrapped = format!("<testsuites>{inner}</testsuites>");
                 quick_junit::Report::deserialize_from_str(&wrapped)
@@ -148,7 +126,6 @@ fn strip_timestamp_attrs(text: &str) -> String {
     use quick_xml::writer::Writer;
     use std::io::Cursor;
 
-    // Fast path: without the substring there is no attribute to drop.
     if !text.contains("timestamp") {
         return text.to_owned();
     }
@@ -214,8 +191,6 @@ fn strip_timestamp_attrs(text: &str) -> String {
                 }
             }
             Err(_) => {
-                // Malformed XML during the strip pass: fall back to the
-                // original so the caller still fails closed via `junit_error`.
                 return text.to_owned();
             }
         }
@@ -236,7 +211,6 @@ fn remove_timestamp_from_tag(content: &[u8], name_len: usize) -> Option<Vec<u8>>
     if name_len > content.len() {
         return None;
     }
-    // Quick pre-check to avoid scanning tags that cannot match.
     let mut has_candidate = false;
     if content.len() >= b"timestamp".len() {
         for window in content.windows(b"timestamp".len()) {
@@ -480,16 +454,9 @@ mod tests {
 
     #[test]
     fn junit_parse_covers_happy_and_error_paths() {
-        // Happy: start/end testcase with children, empty testcase, decl/comment.
-        // Note: quick-junit allows one main status per testcase, so the
-        // third case carries only `<error>` (plus system streams).
         let good = r#"<?xml version="1.0"?><!-- c --><testsuite><testcase name="a" classname="c" time="1.5"><failure message="m">text</failure></testcase><testcase name="b"/><testcase name="c" time="0"><error/><system-out/><system-err/></testcase></testsuite>"#;
         let cases = parse_test_xml(good.as_bytes(), 0, 0).expect("good");
         assert_eq!(cases.len(), 3);
-        // Start/end with system-out text and nested markup.
-        // quick-junit skips unknown nested elements (e.g. `<b>`) but
-        // preserves surrounding text; self-closing unknowns like
-        // `<br/>` are not representable and are excluded here.
         let nested = r#"<testsuite><testcase name="a"><failure>text <b>bold</b> moretail</failure></testcase><testcase name="b"><error><![CDATA[blob]]></error></testcase></testsuite>"#;
         let cases = parse_test_xml(nested.as_bytes(), 0, 0).expect("nested");
         assert_eq!(cases.len(), 2);
@@ -499,7 +466,6 @@ mod tests {
             .expect("failure")
             .text
             .contains("text"));
-        // Errors: non-utf8, no elements, malformed, missing/empty name, bad time.
         assert!(parse_test_xml(&[0xff], 0, 0).is_err());
         assert!(parse_test_xml(b"hello", 0, 0).is_err());
         assert!(parse_test_xml(b"<testcase", 0, 0).is_err());
@@ -511,9 +477,6 @@ mod tests {
             0
         )
         .is_err());
-        // Bazel clock skew writes negative durations; they clamp to zero
-        // instead of failing (duration is informational, status rides the
-        // failure/error tags).
         let negative = parse_test_xml(
             b"<testsuite><testcase name=\"a\" time=\"-1\"/></testsuite>",
             0,
@@ -528,7 +491,6 @@ mod tests {
             0
         )
         .is_err());
-        // Duplicate main statuses fail.
         assert!(parse_test_xml(
             b"<testsuite><testcase name=\"a\"><failure/><failure/></testcase></testsuite>",
             0,
@@ -541,9 +503,7 @@ mod tests {
             0
         )
         .is_err());
-        // Unbalanced and truncated fail.
         assert!(parse_test_xml(b"<testsuite><testcase name=\"a\">", 0, 0).is_err());
-        // Malformed attribute fails; well-formed text succeeds.
         assert!(parse_test_xml(
             b"<testsuite><testcase name=\"a\"><failure message=\"\xff\"/></testcase></testsuite>",
             0,
@@ -561,16 +521,12 @@ mod tests {
 
     #[test]
     fn junit_parse_rejects_multiple_main_statuses() {
-        // quick-junit models one main status per testcase; legacy
-        // artifacts carrying both fail closed so collection is partial.
         let xml = b"<testsuite><testcase name=\"a\"><error/><skipped/></testcase></testsuite>";
         assert!(parse_test_xml(xml, 0, 0).is_err());
     }
 
     #[test]
     fn junit_parse_covers_start_and_end_branches() {
-        // Start testcase empty name and bad times (Empty variants are in the
-        // happy/error test; these hit the Start arms).
         assert!(parse_test_xml(
             b"<testsuite><testcase name=\"\"></testcase></testsuite>",
             0,
@@ -582,13 +538,10 @@ mod tests {
                 format!("<testsuite><testcase name=\"a\" time=\"{bad}\"></testcase></testsuite>");
             assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err(), "{bad}");
         }
-        // Negative durations clamp to zero (clock skew, see above).
         let xml = "<testsuite><testcase name=\"a\" time=\"-1\"></testcase></testsuite>";
         let clamped = parse_test_xml(xml.as_bytes(), 0, 0).expect("negative time clamps");
         assert_eq!(clamped.len(), 1);
         assert_eq!(clamped[0].time, 0.0);
-        // Children for every kind plus unknown tags (unknown yields no
-        // child but still closes cleanly).
         for child in [
             "<failure></failure>",
             "<error></error>",
@@ -601,16 +554,12 @@ mod tests {
             let xml = format!("<testsuite><testcase name=\"a\">{child}</testcase></testsuite>");
             assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_ok(), "{child}");
         }
-        // Empty duplicate skipped fails (duplicate main status).
-        // Duplicate system-out/err are lenient in quick-junit (last
-        // wins) unlike the old state machine.
         let xml = "<testsuite><testcase name=\"a\"><skipped/><skipped/></testcase></testsuite>";
         assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_err());
         for dup in ["<system-out/><system-out/>", "<system-err/><system-err/>"] {
             let xml = format!("<testsuite><testcase name=\"a\">{dup}</testcase></testsuite>");
             assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_ok(), "{dup}");
         }
-        // Text and CDATA outside any child cover the no-child arms.
         assert!(parse_test_xml(
             b"<testsuite><testcase name=\"a\">hello</testcase></testsuite>",
             0,
@@ -623,15 +572,12 @@ mod tests {
             0
         )
         .is_ok());
-        // Bad text entity fails unescape.
         assert!(parse_test_xml(
             b"<testsuite><testcase name=\"a\"><failure>&notanentity</failure></testcase></testsuite>",
             0,
             0
         )
         .is_err());
-        // End duplicates for failure/error/skipped fail; duplicate
-        // system-out/err are lenient (last wins).
         for dup in [
             "<failure></failure><failure></failure>",
             "<error></error><error></error>",
@@ -647,7 +593,6 @@ mod tests {
             let xml = format!("<testsuite><testcase name=\"a\">{dup}</testcase></testsuite>");
             assert!(parse_test_xml(xml.as_bytes(), 0, 0).is_ok(), "{dup}");
         }
-        // Children outside testcase are ignored; unbalanced closes fail.
         assert!(parse_test_xml(
             b"<testsuite><failure></failure><testcase name=\"a\"/></testsuite>",
             0,
@@ -665,9 +610,6 @@ mod tests {
 
     #[test]
     fn junit_parse_accepts_jest_timestamp_without_timezone() {
-        // Jest emits `timestamp="2026-09-19T21:10:02"` without a timezone;
-        // quick-junit validates RFC3339 and would reject it. dx ignores
-        // suite timestamps, so the attribute is stripped and cases parse.
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="jest tests" tests="2" failures="0" errors="0" time="0.803">
   <testsuite name="Hello.astro" errors="0" failures="0" skipped="0" timestamp="2026-09-19T21:10:02" time="0.602" tests="2">
@@ -679,7 +621,6 @@ mod tests {
 </testsuites>"#;
         let cases = parse_test_xml(xml.as_bytes(), 0, 0).expect("jest timestamp");
         assert_eq!(cases.len(), 2);
-        // Failure text containing timestamp-looking content is preserved.
         let tricky = r#"<testsuite name="a" timestamp="2026-09-19T21:10:02"><testcase name="a"><failure>timestamp="kept"</failure></testcase></testsuite>"#;
         let cases = parse_test_xml(tricky.as_bytes(), 0, 0).expect("tricky");
         assert!(cases[0]
@@ -692,28 +633,24 @@ mod tests {
 
     #[test]
     fn junit_strip_timestamp_uses_typed_events() {
-        // Single quotes and whitespace around `=` are real attributes.
         let single = r#"<testsuite name="a" timestamp = '2026-09-19T21:10:02'><testcase name="a"/></testsuite>"#;
         let stripped = strip_timestamp_attrs(single);
         assert!(!stripped.contains("2026-09-19T21:10:02"));
         assert!(stripped.contains(r#"name="a""#));
         assert!(parse_test_xml(single.as_bytes(), 0, 0).is_ok());
 
-        // `>` inside another attribute value must not truncate the tag scan.
         let gt = r#"<testsuite name="a>b" timestamp="2026-09-19T21:10:02"><testcase name="a"/></testsuite>"#;
         let stripped = strip_timestamp_attrs(gt);
         assert!(!stripped.contains("2026-09-19T21:10:02"));
         assert!(stripped.contains(r#"name="a>b""#));
         assert!(parse_test_xml(gt.as_bytes(), 0, 0).is_ok());
 
-        // `timestamp`-like text inside another attribute value is preserved.
         let value_lookalike = r#"<testsuite name='a timestamp="kept" b' timestamp="2026-09-19T21:10:02"><testcase name="a"/></testsuite>"#;
         let stripped = strip_timestamp_attrs(value_lookalike);
         assert!(!stripped.contains("2026-09-19T21:10:02"));
         assert!(stripped.contains(r#"timestamp="kept""#));
         assert!(parse_test_xml(value_lookalike.as_bytes(), 0, 0).is_ok());
 
-        // CDATA containing a testsuite-like tag passes through byte-identical.
         let cdata_inner = r#"<testsuite timestamp="2026-09-19T21:10:02">"#;
         let cdata = r#"<testsuite name="a" timestamp="2026-09-19T21:10:02"><testcase name="a"><failure><![CDATA[<testsuite timestamp="2026-09-19T21:10:02">]]></failure></testcase></testsuite>"#;
         let stripped = strip_timestamp_attrs(cdata);
@@ -726,7 +663,6 @@ mod tests {
             .text
             .contains("testsuite"));
 
-        // Comments containing a testsuite-like tag are preserved.
         let comment = r#"<!-- <testsuite timestamp="2026-09-19T21:10:02"> -->"#;
         let with_comment = format!(
             r#"<testsuite name="a" timestamp="2026-09-19T21:10:02">{comment}<testcase name="a"/></testsuite>"#
@@ -735,7 +671,6 @@ mod tests {
         assert!(stripped.contains(comment));
         assert!(parse_test_xml(with_comment.as_bytes(), 0, 0).is_ok());
 
-        // Timestamps on the testsuites root and testcase tags are also dropped.
         let roots = r#"<testsuites timestamp="2026-09-19T21:10:02"><testsuite><testcase name="a"/></testsuite></testsuites>"#;
         assert!(parse_test_xml(roots.as_bytes(), 0, 0).is_ok());
         let case_ts =

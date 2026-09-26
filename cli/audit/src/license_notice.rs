@@ -97,8 +97,6 @@ mod tests {
         for identity in ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause"] {
             assert!(requires_notice_text(identity), "{identity} needs words");
         }
-        // The seed covers exactly the contract-named families; anything
-        // else waits on identity qualification.
         for identity in ["ISC", "MPL-2.0", "GPL-3.0-only", "Unicode-3.0"] {
             assert!(!requires_notice_text(identity), "{identity} unqualified");
         }
@@ -149,8 +147,6 @@ mod tests {
 
     #[test]
     fn compound_expressions_with_requiring_member_need_words() {
-        // Dual-licensed compounds containing MIT/Apache/BSD require
-        // words (fail closed — the distributor has not yet chosen).
         for license in [
             "MIT OR Apache-2.0",
             "MIT AND GPL-3.0-only",
@@ -169,10 +165,7 @@ mod tests {
                 TierOutcome::Allow
             );
         }
-        // Compounds without a requiring member need no words.
         assert!(!license_requires_notice_text("MPL-2.0 OR GPL-3.0-only"));
-        // Unparseable text is handled by the expression lattice, never
-        // by notice evaluation.
         assert!(!license_requires_notice_text("not a license !!!"));
         assert!(!license_requires_notice_text("UNKNOWN"));
     }

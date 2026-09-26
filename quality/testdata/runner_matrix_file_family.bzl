@@ -1,30 +1,22 @@
 """Interpreted/file-family cohort matrix cells.
 
-Contract: `docs/quality/runner-matrix.md`.
 Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
-# Recorded djlint lint diagnostics.
 DJLINT_LINT = """matrix/djlint_dirty.html:3:1: H006 img tags require alt text"""
 
-# Recorded stylelint JSON per class.
 STYLELINT_LINT_CSS = """[{"source": "matrix/stylelint_dirty.css", "warnings": [{"line": 2, "column": 5, "rule": "color-no-invalid-hex", "text": "Unexpected invalid hex", "severity": "error"}]}]"""
 STYLELINT_LINT_LESS = """[{"source": "matrix/stylelint_dirty.less", "warnings": [{"line": 2, "column": 5, "rule": "color-no-invalid-hex", "text": "Unexpected invalid hex", "severity": "error"}]}]"""
 STYLELINT_LINT_SCSS = """[{"source": "matrix/stylelint_dirty.scss", "warnings": [{"line": 2, "column": 5, "rule": "color-no-invalid-hex", "text": "Unexpected invalid hex", "severity": "error"}]}]"""
 
-# Recorded rubocop JSON.
 RUBOCOP_LINT = """{"files": [{"path": "matrix/rubocop_dirty.rb", "offenses": [{"severity": "convention", "message": "Use double quotes", "cop_name": "Style/StringLiterals", "location": {"line": 3, "column": 1}}]}]}"""
 
-# Recorded PSScriptAnalyzer text.
 PSSCRIPTANALYZER_LINT = """matrix/psscriptanalyzer_dirty.ps1:4:1: [PSAvoidUsingWriteHost] Avoid using Write-Host"""
 
-# Recorded yamllint text.
 YAMLLINT_LINT = """matrix/yamllint_dirty.yaml:2:1: [trailing-spaces] trailing spaces"""
 
-# Recorded shellcheck gcc.
 SHELLCHECK_LINT = """matrix/shellcheck_dirty.sh:3:1: warning: Double quote to prevent globbing [SC2086]"""
 
-# Recorded keep-sorted text.
 KEEP_SORTED_LINT = """matrix/keep_sorted_dirty.txt:4: block is not sorted"""
 
 FILE_FAMILY_CASES = [

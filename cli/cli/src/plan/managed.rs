@@ -226,9 +226,6 @@ mod tests {
 
     #[test]
     fn managed_expanded_roots_join_every_root_in_argv_and_summary() {
-        // Bare-schema expansion output plans through the expanded roots
-        // so one Bazel build analyzes the schema plus every registered
-        // projection; the summary lists the full analyzed set.
         let roots = options(&[
             "//generation:codegen_prost_fixture",
             "//generation:result_proto",

@@ -1,6 +1,5 @@
 """Wrapper conformance tests for C#.
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

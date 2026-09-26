@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub fn invalid_token(error: &clap::Error) -> String {
@@ -40,7 +38,6 @@ pub fn leading_flag(token: &str) -> &str {
     token.split_whitespace().next().unwrap_or(token)
 }
 
-/// First line of a `clap` error render, for the unreachable fallback arm.
 pub fn first_line(error: &clap::Error) -> String {
     error
         .to_string()

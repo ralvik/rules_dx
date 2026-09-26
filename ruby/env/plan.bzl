@@ -1,6 +1,5 @@
 """Focused Ruby environment plan (WP2).
 
-Contract: `docs/environments/ruby.md`.
 """
 
 load("//env:focused.bzl", "focused_direct_sources", "focused_simple_plan", "focused_write_plan")

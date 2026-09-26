@@ -22,20 +22,12 @@ impl WorkflowVerb {
             Command::Deploy => None,
             Command::Lint | Command::Typecheck | Command::Format | Command::Generate => None,
             Command::Check | Command::Fix | Command::Clean => None,
-            // Managed selections plan their own collection argv
-            // ([`super::managed::plan_managed`]), never a fixed workflow verb.
             Command::Codegen | Command::Env | Command::Setup => None,
-            // Security/license/update/bump plan through
-            // `dx_audit`/`dx_update`/`dx_bump`, never a fixed workflow
-            // verb. Migrate plans through
-            // `dx_adopt::plan_migrate`, never a workflow verb.
             Command::Security
             | Command::License
             | Command::Update
             | Command::Bump
             | Command::Migrate => None,
-            // Raw launcher passthrough plans its own argv (launcher
-            // plus forwarded arguments), never a fixed workflow verb.
             Command::Bazel => None,
             Command::Init
             | Command::New
@@ -143,8 +135,6 @@ pub fn plan_workflow(
     let protected = workflow_protected(verb, profile);
     let (scope, labels) = workflow_scope_labels(resolved);
     let argv = build_workflow_argv(verb.name(), bazel_options, &required, &protected, &labels)?;
-    // Workflow verbs are self-describing (`Running build for ...`):
-    // no phase noun applies.
     let summary = format!("Running {} for {}", verb.name(), describe_scope(&scope));
     Ok(BuildPlan { argv, summary })
 }
@@ -293,9 +283,6 @@ mod tests {
 
     #[test]
     fn workflow_profile_pins_config_flag_in_order() {
-        // Fixture pinning the mapping: flag profiles select
-        // their `--config=dx_*` right after the workspace policy; the
-        // bare default is the explicit `dx_dev`.
         for (profile, flag) in [
             (Profile::Debug, "--config=dx_debug"),
             (Profile::Dev, "--config=dx_dev"),
@@ -323,16 +310,12 @@ mod tests {
                 "{profile:?}: {plan:?}"
             );
         }
-        // Coverage carries no profile pin (no flags in scope).
         let plan =
             plan_workflow(WorkflowVerb::Coverage, &resolved(&[]), &[], None, None).expect("plan");
         assert!(
             !plan.argv.iter().any(|arg| arg.starts_with("--config=")),
             "coverage argv is unchanged: {plan:?}"
         );
-        // Repeating the required profile value is accepted and
-        // canonicalized; a conflicting `--config` fails before
-        // execution instead of silently overriding the profile.
         let repeated = plan_workflow(
             WorkflowVerb::Build,
             &resolved(&[]),

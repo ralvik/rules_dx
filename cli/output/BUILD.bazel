@@ -6,9 +6,6 @@ load("//tools/visibility:visibility.bzl", "VIS_CLI_ENV_GENERATION_QUALITY")
 
 package(default_visibility = VIS_CLI_ENV_GENERATION_QUALITY)
 
-# Leaf-crate pattern via `dx_rust_crate`: emits
-# `dx_output` + `dx_output_test` + fmt/clippy tests +
-# `Cargo.toml` export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(
     name = "dx_output",
     package_name = "cli/dx_output",

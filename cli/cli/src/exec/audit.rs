@@ -32,7 +32,7 @@ pub(crate) enum AuditError {
     )]
     AdvisoryUnsupported { set: String },
     #[error(
-        "advisory_refresh_failed: could not obtain current advisory data for {set}: missing {rel} (refresh via {upstream}, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: missing {rel} (refresh via {upstream})"
     )]
     AdvisoryMissing {
         set: String,
@@ -81,7 +81,7 @@ pub(crate) enum AuditError {
     )]
     AdvisorySetMismatch { set: String, actual: String },
     #[error(
-        "advisory_refresh_failed: could not obtain current advisory data for {set}: stale snapshot {retrieved_at} (want {today}; refresh via {upstream}, or re-copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+        "advisory_refresh_failed: could not obtain current advisory data for {set}: stale snapshot {retrieved_at} (want {today}; refresh via {upstream})"
     )]
     AdvisoryStale {
         set: String,
@@ -104,7 +104,7 @@ pub(crate) enum AuditError {
         #[source]
         error: dx_audit::license_policy::PolicyProblem,
     },
-    #[error("offline_required: cannot obtain current advisory data for {set} without network: {detail} (re-run without --offline/--frozen once connected, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)")]
+    #[error("offline_required: cannot obtain current advisory data for {set} without network: {detail} (re-run without --offline once connected)")]
     OfflineRequired { set: String, detail: String },
 }
 
@@ -158,14 +158,6 @@ fn load_advisories(
     set: dx_update::sets::SetId,
     today: &str,
 ) -> Result<Vec<dx_audit::vuln::Advisory>, AuditError> {
-    // snapshot fails with `advisory_refresh_failed`, never a clean result
-    // and never a stale fallback. Snapshots refresh automatically via
-    // supported upstream database-download tooling (per-set OSV GCS zips
-    // fetched by HTTPS GET with no inventory in the request); the derived
-    // bytes plus identity are the audited inputs. Airgapped workspaces
-    // populate the same inputs by copying the vendored advisory mirror
-    // mirror snapshots keep the same sha256 plus same-day freshness gates.
-    // Live CLI performs no network fetch and no lockfile upload.
     let set_name = set.name().to_owned();
     let source = dx_audit::advisory::advisory_source(set.name())
         .ok_or_else(|| AuditError::AdvisoryUnsupported {
@@ -174,9 +166,6 @@ fn load_advisories(
         .to_owned();
     let rel = advisory_path(set);
     let full = workspace.join(&rel);
-    // No `is_file` pre-check: read directly so a disappearing snapshot
-    // cannot slip between check and read. Missing maps to the refresh
-    // hint, other I/O keeps its source.
     let bytes = match std::fs::read(&full) {
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             return Err(AuditError::AdvisoryMissing {
@@ -210,9 +199,6 @@ fn load_advisories(
         });
     }
     let meta_rel = advisory_identity_path(set);
-    // Same direct-read discipline for the identity sidecar: missing maps
-    // to the missing-identity hint, every other read failure keeps its
-    // source under the advisory prefix.
     let meta_text = match read_workspace_text(workspace, &meta_rel) {
         Err(AuditError::Read { rel, error }) if error.kind() == std::io::ErrorKind::NotFound => {
             return Err(AuditError::AdvisoryMissingMeta {
@@ -273,19 +259,12 @@ fn lock_texts_for_set(
     let mut out = Vec::new();
     let mut missing: Vec<String> = Vec::new();
     for rel in dx_audit::backend::vuln_locks(set.name()) {
-        // No `is_file` pre-check: read directly so a disappearing lock
-        // cannot slip between check and read. Only `NotFound` skips an
-        // npm sibling; every other I/O failure stays fail-closed.
         match read_workspace_text(workspace, rel) {
             Ok(text) => out.push(((*rel).to_owned(), text)),
             Err(AuditError::Read {
                 rel: missing_rel,
                 error,
             }) if error.kind() == std::io::ErrorKind::NotFound => {
-                // Npm owns three competing lock shapes; a workspace carries
-                // whichever its package manager writes. Absent shapes are
-                // skipped so a pnpm-only workspace never fails for a missing
-                // sibling lock; every other set keeps required-lock behavior.
                 if set == dx_update::sets::SetId::Npm {
                     missing.push(missing_rel);
                     continue;
@@ -376,9 +355,6 @@ fn load_license_policy(
     workspace: &Path,
 ) -> Result<dx_audit::license_policy::LicensePolicy, AuditError> {
     let rel = "licenses.toml";
-    // No `is_file` pre-check: read directly so a disappearing policy
-    // cannot slip between check and read. Missing or empty means the
-    // built-in default; every other failure keeps its source.
     let text = match read_workspace_text(workspace, rel) {
         Err(AuditError::Read { error, .. }) if error.kind() == std::io::ErrorKind::NotFound => {
             return Ok(default_license_policy());
@@ -451,11 +427,6 @@ fn run_secrets(
     } else {
         None
     };
-    // the workspace file is honored without a hash pin, so a tampered
-    // config can disable rules. Surface a warning whenever the scan runs
-    // under it; env-provided configs are never inherited (see
-    // `dx_audit::secrets::hermetic_env`), so this is the only
-    // non-default config source.
     let trust_warning: Vec<DiagnosticEvent> = match &config {
         Some(path) => vec![DiagnosticEvent {
             severity: Severity::Warning,
@@ -668,11 +639,6 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
         };
         let advisories = match load_advisories(workspace, *set, today) {
             Err(error) => {
-                // Cache-only `--offline`/`--frozen` runs cannot refresh
-                // advisory data over the network, so any advisory failure
-                // becomes `offline_required` instead of
-                // `advisory_refresh_failed`. Local lock/parse failures stay
-                // as-is (no fetch would fix them).
                 let wrapped = if offline {
                     AuditError::OfflineRequired {
                         set: set.name().to_owned(),
@@ -900,9 +866,6 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     let report = dx_audit::outcome::AuditReport::aggregate(outcomes);
     let exit = dx_audit::outcome::exit_code(&report);
     let sarif_complete = !any_incomplete && report.incomplete().is_empty();
-    // reports stage via an OS-random sibling plus rename so a crash never
-    // leaves a partial SARIF/SPDX behind. A missing parent still fails
-    // closed with `report_failed` instead of creating directories.
     let fs = RealFileSystem;
     let mut reports_ok = true;
     for planned in &planned_reports {
@@ -1077,8 +1040,6 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                 }
                 dx_audit::outcome::FamilyStatus::Findings
                 | dx_audit::outcome::FamilyStatus::Incomplete => {
-                    // Cache-only runs surface `offline_required` (not
-                    // `audit_failed`) when the advisory snapshot would need
                     let code = if message.contains(CODE_OFFLINE_REQUIRED) {
                         CODE_OFFLINE_REQUIRED
                     } else {

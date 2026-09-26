@@ -1,18 +1,14 @@
 """Pinned Ruby foundation."""
 
-# Pinned Ruby foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_RUBY_VERSION = "0.28.0"
 RUBY_VERSION = "3.4.9"
 
-# Single shared Gemfile lock for the admitted Ruby foundation (see MODULE.bazel ruby.bundle_fetch).
 GEMFILE = "//third_party/ruby:Gemfile"
 GEMFILE_LOCK = "//third_party/ruby:Gemfile.lock"
 BUNDLE_HUB = "@bundle"
 
-# RSpec runner pin (provisional test runner; see ruby/tests/fixtures/rspec/pins.bzl).
 RSPEC_VERSION = "3.13.0"
 
-# Gem checksums for fail-closed Bundler fetch (see MODULE.bazel ruby.bundle_fetch).
 GEM_CHECKSUMS = {
     "diff-lcs-1.5.0": "49b934001c8c6aedb37ba19daec5c634da27b318a7a3c654ae979d6ba1929b67",
     "rspec-3.13.0": "d490914ac1d5a5a64a0e1400c1d54ddd2a501324d703b8cfe83f458337bab993",

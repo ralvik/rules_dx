@@ -18,12 +18,6 @@ fn file(path: &str, body: &str) -> FileInput {
 
 #[test]
 fn diagnostic_envelope_rejected_by_validate_gate() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // complete result-envelope validation before any path mutation.
-    // The runner emits well-formed diagnostics, so any diagnostic
-    // violating severity, message, tool identity, or byte-range rules
-    // must fail `validate`, proving the gate blocks malformed
-    // envelopes from leaving the action.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let files = vec![file("src/lib.rs", "BAD\n")];
     let valid = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
@@ -52,13 +46,6 @@ fn diagnostic_envelope_rejected_by_validate_gate() {
 
 #[test]
 fn unstable_envelope_with_replacements_rejected_by_validate_gate() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // complete-envelope validation so no partial write escapes on
-    // non-stable terminals. A stable BAD->GOOD result passes
-    // `validate`; the same envelope with IterationLimit or Oscillation
-    // convergence plus replacements must fail; unstable with empty
-    // replacements passes, proving the gate blocks partial writes
-    // while allowing the empty envelope `assemble` emits.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let files = vec![file("src/lib.rs", "BAD\n")];
     let valid = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
@@ -79,14 +66,6 @@ fn unstable_envelope_with_replacements_rejected_by_validate_gate() {
 
 #[test]
 fn newline_variants_yield_distinct_manifests() {
-    // Determinism/apply-safety battery:
-    // `quality-testing.md` requires file modes preserved and newline
-    // behavior documented. The runner takes only (path, bytes), so
-    // newline bytes must stay load-bearing while modes stay out of
-    // band. LF, missing-final-newline, and CRLF variants of the same
-    // BAD body must converge to distinct manifests with distinct
-    // digests; rerunning one variant must reproduce its own manifest
-    // exactly.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let variants = ["BAD\n", "BAD", "BAD\r\n"];
     let terminals = ["GOOD\n", "GOOD", "GOOD\r\n"];
@@ -101,7 +80,6 @@ fn newline_variants_yield_distinct_manifests() {
             digest(body.as_bytes())
         );
         assert_eq!(result.replacements[0].edits.len(), 1);
-        // Byte-minimal edit splices to the terminal body.
         let edit = &result.replacements[0].edits[0];
         let mut spliced = Vec::new();
         spliced.extend_from_slice(&body.as_bytes()[..edit.start_byte as usize]);
@@ -121,11 +99,6 @@ fn newline_variants_yield_distinct_manifests() {
 
 #[test]
 fn quality_originated_file_creates_emit_no_replacements() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // quality-originated file creates to be rejected. The runner emits
-    // only minimal candidates for paths in the original snapshot, so
-    // an extra terminal path must yield no replacement while the valid
-    // stable sibling still emits exactly one bound to digest(original).
     let stages = vec![stage("lint-a", &["rust"], &["src/a.rs"])];
     let mut initial = BTreeMap::new();
     initial.insert("src/a.rs".to_owned(), "BAD\n".to_owned());
@@ -157,13 +130,6 @@ fn quality_originated_file_creates_emit_no_replacements() {
 
 #[test]
 fn file_modes_do_not_alter_pipeline_outputs() {
-    // Determinism/apply-safety battery:
-    // `quality-testing.md` requires file modes preserved and newline
-    // behavior documented. The runner takes only (path, bytes), so
-    // model each mode as metadata stripped before the call and
-    // require byte-identical manifests; different bytes under one
-    // mode must diverge, proving modes are preserved out of band
-    // while bytes (including newlines) stay load-bearing.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let modes = [0o644, 0o755, 0o600];
     let mut manifests = Vec::with_capacity(modes.len());
@@ -189,12 +155,6 @@ fn file_modes_do_not_alter_pipeline_outputs() {
 
 #[test]
 fn invalid_utf8_replacement_rejected_by_validate_gate() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // invalid UTF-8 source and replacement bytes to be rejected. The
-    // runner rejects non-UTF-8 sources at request validation, and
-    // `validate` rejects non-UTF-8 replacements, so a valid stable
-    // BAD->GOOD candidate with corrupted replacement bytes must fail
-    // `validate` while the unmutated result passes.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let files = vec![file("src/lib.rs", "BAD\n")];
     let valid = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();
@@ -212,17 +172,6 @@ fn invalid_utf8_replacement_rejected_by_validate_gate() {
 
 #[test]
 fn permutation_ranking_prefers_stable_fewer_rounds() {
-    // Determinism battery: `quality-testing.md` requires
-    // comparing viable permutations for each multi-tool set, rejecting
-    // incorrect, divergent, oscillating, and unjustifiably different
-    // terminals, and ranking equivalent correct orders by
-    // non-convergence count, rounds, process starts, then wall time.
-    // Equivalent lint-a+fmt-a orders over BAD plus whitespace converge
-    // to identical stable terminals in identical rounds, so their rank
-    // keys tie deterministically; a direct fix in fewer rounds ranks
-    // before a gradual fix to the same terminal; stable ranks before
-    // oscillation and iteration-limit; different terminals diverge and
-    // must be rejected rather than ranked together.
     let forward = vec![
         stage("lint-a", &["rust"], &["src/lib.rs"]),
         stage("fmt-a", &["rust"], &["src/lib.rs"]),
@@ -307,12 +256,6 @@ fn permutation_ranking_prefers_stable_fewer_rounds() {
 
 #[test]
 fn interruption_leaves_no_partially_written_file() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // interruption to leave no partially written file and only complete
-    // earlier path commits in deterministic path order. The runner emits
-    // one minimal edit per stable changed file, so every prefix of
-    // the sorted replacements must leave each path fully original or
-    // fully terminal, and the full prefix must equal the terminal map.
     let stages = vec![stage(
         "lint-a",
         &["rust"],
@@ -339,7 +282,6 @@ fn interruption_leaves_no_partially_written_file() {
     assert_eq!(result.replacements.len(), 3);
     for edits in &result.replacements {
         assert_eq!(edits.edits.len(), 1);
-        // Minimal edit splices to the terminal body.
         let original = initial.get(&edits.path).expect("staged path");
         let terminal_body = terminal.get(&edits.path).expect("staged path");
         let edit = &edits.edits[0];
@@ -388,14 +330,6 @@ fn interruption_leaves_no_partially_written_file() {
 
 #[test]
 fn checkout_and_query_permutations_converge_identically() {
-    // Determinism battery: `quality-testing.md` requires
-    // different checkout paths and randomized query/arrival orders to
-    // compare equal where Bazel permits. The runner takes only
-    // workspace-relative path+bytes, so model each absolute checkout
-    // prefix as stripped metadata while simultaneously reversing file
-    // arrival and stage declaration orders; both permutations must
-    // converge to identical snapshots, sorted diagnostics, sorted
-    // replacements, and rounds.
     let checkouts = ["/tmp/checkout-a", "/home/user/work/tree"];
     let mut manifests = Vec::with_capacity(checkouts.len());
     for (index, prefix) in checkouts.iter().enumerate() {
@@ -416,12 +350,8 @@ fn checkout_and_query_permutations_converge_identically() {
         assert_eq!(result.replacements.len(), 2);
         assert!(validate(&result).is_ok());
         manifests.push(encode_validated(&result).unwrap());
-        // Absolute prefix never enters FileInput by construction.
         assert!(format!("{prefix}/src/a.rs").ends_with("src/a.rs"));
     }
-    // Checkout prefix plus query/arrival permutation leaves semantic
-    // outputs identical; stage echoes keep declaration order by design
-    // so sorted stage sets compare separately.
     let decoded: Vec<QualityResult> = manifests
         .iter()
         .map(|bytes| decode_validated(bytes).expect("decode"))
@@ -454,16 +384,6 @@ fn checkout_and_query_permutations_converge_identically() {
 
 #[test]
 fn permutation_ranking_uses_process_starts_then_wall_time_tiebreak() {
-    // Determinism battery: `quality-testing.md` requires
-    // equivalent correct orders to rank by non-convergence count,
-    // rounds, process starts, then measured wall time. The existing
-    // ranking test proves the first two keys; this proves the last
-    // two tiebreaks deterministically. Two pipelines converge to the
-    // same stable GOOD terminal in the same 2 rounds: single-stage
-    // (2 starts) vs lint-a plus identity lint-b (4 starts). Fewer
-    // starts must rank first; with equal starts the smaller synthetic
-    // wall time must rank first (real wall time is measured, ordering
-    // here proves the tiebreak is total and stable).
     let single = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let doubled = vec![
         stage("lint-a", &["rust"], &["src/lib.rs"]),
@@ -521,14 +441,6 @@ fn permutation_ranking_uses_process_starts_then_wall_time_tiebreak() {
 
 #[test]
 fn each_stage_runs_once_per_round_without_hidden_passes() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // native tool-internal passes to count as one stage when proving
-    // the fixed ten-round limit. The convergence loop must invoke
-    // each stage exactly once per round per staged path: two stages
-    // over three staged paths converging in 2 rounds invoke apply
-    // exactly 3 x 2 = 6 times, with every (tool, path) pair invoked
-    // exactly once per round (2x). A hidden extra internal pass or a
-    // skipped stage invocation would break either count.
     let stages = vec![
         stage("lint-a", &["rust"], &["src/a.rs", "src/b.rs"]),
         stage("fmt-a", &["rust"], &["src/a.rs"]),
@@ -568,9 +480,6 @@ fn each_stage_runs_once_per_round_without_hidden_passes() {
 
 #[test]
 fn minimal_edits_trim_common_prefix_and_suffix() {
-    // Scale battery: replacements are byte-minimal single-hunk edits, not
-    // whole-file rewrites, so common prefix/suffix bytes stay out of the
-    // span while splicing still reproduces the terminal body.
     let cases = vec![
         ("BAD\n", "GOOD\n", 0, 2, "GOO"),
         ("BAD BAD\n", "GOOD GOOD\n", 0, 6, "GOOD GOO"),
@@ -589,8 +498,6 @@ fn minimal_edits_trim_common_prefix_and_suffix() {
         spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
         assert_eq!(&spliced, terminal_body.as_bytes(), "{original:?}");
     }
-    // Multibyte boundaries never split: the changed middle stays on char
-    // boundaries while the shared multibyte prefix/suffix trims.
     let edit = minimal_edit("héllo BAD 🌍\n", "héllo GOOD 🌍\n");
     assert!("héllo BAD 🌍\n".is_char_boundary(edit.start_byte as usize));
     assert!("héllo BAD 🌍\n".is_char_boundary(edit.end_byte as usize));
@@ -603,9 +510,6 @@ fn minimal_edits_trim_common_prefix_and_suffix() {
 
 #[test]
 fn per_capability_round_caps_short_circuit_check_only() {
-    // Scale battery: audit and typecheck capabilities are check-only, so
-    // they converge in exactly one round, while lint and format keep the
-    // full ten-round oscillation budget.
     assert_eq!(max_rounds_for_capability("audit"), 1);
     assert_eq!(max_rounds_for_capability("typecheck"), 1);
     assert_eq!(max_rounds_for_capability("lint"), MAX_COMPLETED_ROUNDS);
@@ -614,9 +518,6 @@ fn per_capability_round_caps_short_circuit_check_only() {
 
 #[test]
 fn unchanged_terminal_reuses_initial_diagnostics() {
-    // Scale battery: the terminal diagnose pass is skipped when
-    // convergence leaves bytes untouched, so clean and diagnostic-only
-    // pipelines cost one diagnose per stage, not two.
     let stages = vec![stage("lint-b", &["rust"], &["src/lib.rs"])];
     let files = vec![file("src/lib.rs", "ok FAIL end\n")];
     let result = run_pipeline("//quality:test", "lint", &stages, &files).unwrap();

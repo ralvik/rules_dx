@@ -111,7 +111,6 @@ pub fn plan_pin_update(
     })
 }
 
-/// Apply a planned pin change to a caller without touching consumer
 pub fn apply_pin_update(caller: &PlannedCaller, update: &PinUpdate) -> PlannedCaller {
     let _ = update;
     caller.clone()
@@ -281,7 +280,6 @@ mod tests {
                 "floating {floating:?} must fail closed"
             );
         }
-        // Uppercase hex is not the canonical `[0-9a-f]{40}` shape.
         assert!(matches!(
             plan_pin_update("3D3C42E5AAC5BA805825DA76410C181273BA90B1", sha, true),
             Err(PinError::InvalidPin { .. })

@@ -1,7 +1,5 @@
 """djlint check plus fix wiring.
 
-Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
-`docs/tools/tool-acquisition.md#initial-artifact-research`.
 """
 
 DJLINT_VERSION = "v1.45.0"

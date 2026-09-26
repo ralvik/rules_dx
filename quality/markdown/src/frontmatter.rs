@@ -104,9 +104,6 @@ pub(crate) fn code_regions(text: &str, starts: &[usize]) -> Vec<CodeRegion> {
             }
             Event::End(TagEnd::CodeBlock) => {
                 if let Some((start_line, fence_info)) = open.take() {
-                    // The block range ends just past its last byte: the
-                    // closing marker line when closed, the last content line
-                    // when the fence runs to end of input.
                     let end_line = line_of(starts, range.end.saturating_sub(1)).max(start_line);
                     regions.push(CodeRegion {
                         start_line,

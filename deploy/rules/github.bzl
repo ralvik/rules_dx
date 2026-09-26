@@ -1,20 +1,13 @@
 """Draft-only GitHub Release publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
-# Versioned tag-charset schema. Consumers query via
-# `tag_charset` and `github_tag_error` instead of duplicating the charset,
-# so any charset evolution edits this one data constant with schema review,
-# never a parallel allowlist.
 TAG_SCHEMA_VERSION = 1
 
-# Release tags embed directly in the generated launcher, so the charset
-# is restricted to what is safe inside double quotes.
 _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
 def tag_charset():
@@ -169,9 +162,6 @@ def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile 
         tag = tag,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     py_binary(
         name = program_target,
         srcs = [":" + launcher_target],

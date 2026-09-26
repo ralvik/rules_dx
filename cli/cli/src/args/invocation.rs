@@ -91,8 +91,6 @@ pub fn here_scope(workspace: &std::path::Path, cwd: &std::path::Path) -> Result<
                         cwd.display()
                     )
                 })?;
-                // Normalize Windows separators inside a part (defensive;
-                // `components` already splits on both separators).
                 for piece in text.replace('\\', "/").split('/') {
                     if !piece.is_empty() && piece != "." {
                         parts.push(piece.to_owned());
@@ -180,9 +178,6 @@ mod tests {
     #[test]
     fn here_scope_maps_cwd_to_directory_spelling() {
         let workspace = std::path::Path::new("/ws");
-        // Workspace root selects repository-wide `//...` directly so both
-        // the `classify` directory path and the audit `owning_sets` label
-        // path resolve without a filesystem probe.
         assert_eq!(
             here_scope(workspace, std::path::Path::new("/ws")),
             Ok("//...".to_owned())
@@ -200,18 +195,15 @@ mod tests {
         let subdir = std::path::Path::new("/ws/cli/cli");
         let root = std::path::Path::new("/ws");
 
-        // Quality command in a subdir becomes the relative directory scope.
         let resolved =
             apply_here(&invocation_for(Command::Lint, &[]), workspace, subdir).expect("resolves");
         assert!(!resolved.here);
         assert_eq!(resolved.targets, vec!["cli/cli".to_owned()]);
 
-        // Workspace root becomes `//...` so `owning_sets` stays ALL.
         let resolved =
             apply_here(&invocation_for(Command::Lint, &[]), workspace, root).expect("resolves");
         assert_eq!(resolved.targets, vec!["//...".to_owned()]);
 
-        // Security/license resolve like every other graph-scope command.
         let resolved = apply_here(&invocation_for(Command::Security, &[]), workspace, subdir)
             .expect("resolves");
         assert_eq!(resolved.targets, vec!["cli/cli".to_owned()]);
@@ -219,7 +211,6 @@ mod tests {
             apply_here(&invocation_for(Command::License, &[]), workspace, root).expect("resolves");
         assert_eq!(resolved.targets, vec!["//...".to_owned()]);
 
-        // Explicit scopes never combine; unsupported commands fail closed.
         assert!(apply_here(
             &invocation_for(Command::Lint, &["//a:one"]),
             workspace,
@@ -240,7 +231,6 @@ mod tests {
         )
         .is_err());
 
-        // Without the flag the invocation passes through untouched.
         let mut plain = invocation_for(Command::Lint, &[]);
         plain.here = false;
         let resolved = apply_here(&plain, workspace, subdir).expect("passthrough");
@@ -259,8 +249,6 @@ mod tests {
             here_scope(workspace, std::path::Path::new("/ws/cli/cli")),
             Ok("cli/cli".to_owned())
         );
-        // Canonicalization: trailing slashes, dot segments, and doubled
-        // separators never reach `classify`.
         assert_eq!(
             here_scope(workspace, std::path::Path::new("/ws/cli/cli/")),
             Ok("cli/cli".to_owned())
@@ -269,8 +257,6 @@ mod tests {
             here_scope(workspace, std::path::Path::new("/ws/./cli/cli")),
             Ok("cli/cli".to_owned())
         );
-        // Bare invocations in a subdir stay `//...`: only `--here`/`--cwd`
-        // selects the directory tree, never the no-flag default.
         let mut bare = invocation_for(Command::Lint, &[]);
         bare.here = false;
         let resolved =
@@ -279,7 +265,6 @@ mod tests {
             resolved.targets.is_empty(),
             "bare subdir must stay empty (=//...)"
         );
-        // `--cwd` is the same flag as `--here` (visible alias).
         let aliased = crate::args::parse(
             &["lint", "--cwd"]
                 .iter()

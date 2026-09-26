@@ -1,6 +1,5 @@
 """Focused C/C++ environment plan (WP2).
 
-Contract: `docs/environments/cc.md`.
 """
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")

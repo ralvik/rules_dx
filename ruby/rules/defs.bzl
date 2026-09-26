@@ -1,6 +1,5 @@
 """Experimental minimal Ruby wrappers (ADR 0032).
 
-Contract: `docs/decisions/0032-ruby-powershell-bandit-swift.md`.
 Upstream: rules_ruby 0.28.0 plus Ruby 3.4.9 (MODULE.bazel).
 """
 
@@ -16,15 +15,11 @@ _DX_RUBY_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream `RubyFilesInfo` plus
 _DX_RUBY_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-# Ruby owns `.rb` only. `Gemfile`/`Gemfile.lock` stay fixture-owned
-# no manifest `srcs`, so Bundler manifests run via depcheck fixtures,
-# never these wrappers.
 _DX_RUBY_SOURCE_SPECS = [("ruby", "rb")]
 _DX_RUBY_SOURCE_EXTS = [".rb"]
 
@@ -75,8 +70,8 @@ _ruby_forward_test = dx_executable_forward_rule(
 def ruby_effective_srcs(srcs):
     """Returns the effective direct sources for a ruby binary or test shape.
 
-    None becomes empty (thin entry shape owns no direct sources).
-    See: docs/quality/quality-sources.md."""
+    None becomes empty.
+    """
     return srcs if srcs != None else []
 
 def _ruby_wrap_library(name, srcs, visibility = None, **kwargs):

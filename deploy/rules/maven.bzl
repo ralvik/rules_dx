@@ -1,25 +1,17 @@
 """Local-first Maven Central publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
-# Versioned coordinate-charset schema. Consumers query via
 MAVEN_SCHEMA_VERSION = 1
 
-# Group and artifact ids embed directly in the generated Python
-# launcher, so the charset is restricted to what is safe inside single
-# quotes (dots cover Maven group paths).
 _VALID_GROUP_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
 _VALID_ARTIFACT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
-# Versions embed directly in the generated Python launcher, so the
-# charset is restricted to semver-safe characters inside single quotes
-# (`+` covers build metadata).
 _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+"
 
 MAVEN_DEFAULT_REPOSITORY_URL = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
@@ -294,9 +286,6 @@ def maven_deploy(name, jar, pom, group, artifact, version = "0.0.0", repository_
         version = version,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     py_binary(
         name = program_target,
         srcs = [":" + launcher_target],

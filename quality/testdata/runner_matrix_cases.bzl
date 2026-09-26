@@ -1,6 +1,5 @@
 """Layer-2 matrix cases (snapshot workflow): every supported language x capability cell.
 
-Contract: `docs/quality/runner-matrix.md`.
 Split into per-language files with no behavior change.
 """
 

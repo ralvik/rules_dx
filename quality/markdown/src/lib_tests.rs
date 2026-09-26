@@ -109,8 +109,6 @@ fn unclosed_fence_is_a_finding() {
 
 #[test]
 fn fence_closed_by_longer_run_reopens_after() {
-    // ```` closes the ```rust block; the trailing ``` opens a new
-    // untagged block that runs to end of input.
     let text = "# T\n\n```rust\n````\n```\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert_eq!(
@@ -150,9 +148,6 @@ fn unclosed_fence_hides_rest_of_document() {
 
 #[test]
 fn indented_code_content_is_suppressed() {
-    // Indented code blocks are CommonMark code: links and headings
-    // inside are content, never findings. (The retired line scanner
-    // treated indented fences as literal text and scanned them.)
     let text = "# T\n\n    [gone](gone.md)\n\n    ## Fake\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -182,8 +177,6 @@ fn remote_targets_are_skipped_never_fetched() {
 
 #[test]
 fn email_autolink_is_out_of_scope() {
-    // Wont-fix: email autolinks are structure-out-of-scope,
-    // so ignored with no finding and no skipped remote.
     let text = "# T\n\nWrite <dev@example.com>.\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -192,8 +185,6 @@ fn email_autolink_is_out_of_scope() {
 
 #[test]
 fn relative_autolink_with_at_in_path_fails_closed_when_missing() {
-    // `@` with a `/` after it cannot be an email autolink (domain never
-    // holds `/`): undeclared stays a finding.
     let text = "# T\n\nSee <./dir@name/file.md>.\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingFileTarget)]);
@@ -295,9 +286,6 @@ fn multiline_link_target_resolves() {
 
 #[test]
 fn html_block_content_is_ignored() {
-    // Headings and links inside an HTML block are markup content, never
-    // findings (CommonMark renders them verbatim). No blank line: a
-    // blank line would end the block and re-expose the link.
     let text = "# T\n\n<div>\n# Fake\n[gone](gone.md)\n</div>\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -305,8 +293,6 @@ fn html_block_content_is_ignored() {
 
 #[test]
 fn inline_html_leaves_line_links_visible() {
-    // Inline HTML is not an HTML block: the link still resolves (and the
-    // tag itself is markup, never an autolink target).
     let text = "# T\n\nPress <kbd>Ctrl</kbd> plus [gone](gone.md).\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert_eq!(kinds(&outcome), vec![(3, FindingKind::MissingFileTarget)]);
@@ -315,15 +301,12 @@ fn inline_html_leaves_line_links_visible() {
 
 #[test]
 fn blockquote_heading_is_not_a_heading() {
-    // ATX-only scope: `#` under a blockquote marker is not a heading.
     let outcome = check_markdown("a.md", "> # Quoted\n", &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
 }
 
 #[test]
 fn bare_brackets_without_definition_are_literal_text() {
-    // `[text]` with no definition is literal text, not a link: silent.
-    // This documents the shortcut-reference approximation.
     let text = "# T\n\nA [bracket] aside.\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -338,8 +321,6 @@ fn resolve_target_handles_relative_and_root_paths() {
 
 #[test]
 fn resolve_target_normalizes_dot_segments_and_clamps_excessive_dotdot() {
-    // Fixtures: `a/b/../c`, `./`, trailing-slash,
-    // excessive-`..` (clamped to the sibling root, never errors).
     assert_eq!(resolve_target("docs/a.md", "a/b/../c.md"), "docs/a/c.md");
     assert_eq!(resolve_target("docs/a.md", "./c.md"), "docs/c.md");
     assert_eq!(resolve_target("docs/a.md", "b/./c.md"), "docs/b/c.md");
@@ -446,8 +427,6 @@ fn declared_file_wins_over_directory_index() {
 
 #[test]
 fn self_directory_link_resolves_to_root_readme_index() {
-    // A target normalizing to the source's own directory resolves to
-    // its declared `README.md` index (empty resolution branch).
     let text = "# T\n\nSee the [index](./) page.\n";
     let outcome = check_markdown("notes.md", text, &siblings(&[("README.md", "# Root\n")]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -455,8 +434,6 @@ fn self_directory_link_resolves_to_root_readme_index() {
 
 #[test]
 fn multiline_code_span_hides_autolink() {
-    // A code span opened on one line closes on the next; the `<pkg>`
-    // inside is span content, not an autolink (doc-ir shape).
     let text = "# T\n\nRun (`dump <pkg> [-o out]\n[-f]`, more).\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -464,8 +441,6 @@ fn multiline_code_span_hides_autolink() {
 
 #[test]
 fn span_closer_misread_as_opener_is_fixed_across_lines() {
-    // The closing backtick of a multi-line span must not reopen one
-    // (report shape): `<short_path>` stays span content.
     let text = "# T\n\nUnset under `bazel\ntest`. Resolve `$WS/<short_path>` here.\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -473,9 +448,6 @@ fn span_closer_misread_as_opener_is_fixed_across_lines() {
 
 #[test]
 fn span_carry_resets_on_blank_line() {
-    // A stray backtick is literal text under CommonMark, never a span
-    // opener: the link it precedes is reported (fail-closed), while a
-    // span still cannot hide links past its paragraph.
     let text = "# T\n\nStray ` opener hides [gone](gone.md).\n\nSee <also-gone.md>.\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert_eq!(
@@ -505,7 +477,6 @@ fn sibling_fence_content_headings_are_ignored() {
 
 #[test]
 fn slug_collapses_dashes_and_underscores() {
-    // (`slug::slugify`): `_` becomes `-`, runs collapse.
     let text = "# T\n\n## well-known_name\n\nSee [s](#well-known-name).\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -513,7 +484,6 @@ fn slug_collapses_dashes_and_underscores() {
 
 #[test]
 fn slug_transliterates_unicode_fixtures() {
-    // Fixtures: transliteration via `deunicode`, collapsed.
     assert_eq!(slug("Привет"), "privet");
     assert_eq!(slug("你好"), "ni-hao");
     assert_eq!(slug("😄 emoji"), "smile-emoji");
@@ -523,7 +493,6 @@ fn slug_transliterates_unicode_fixtures() {
 
 #[test]
 fn transliterated_anchors_resolve() {
-    // End-to-end: non-ASCII headings link via transliterated slugs.
     let text = "# T\n\n## Привет\n\n## 你好\n\nSee [ru](#privet) and [zh](#ni-hao).\n";
     let outcome = check_markdown("a.md", text, &siblings(&[]));
     assert!(outcome.findings.is_empty(), "{:?}", outcome.findings);
@@ -701,9 +670,6 @@ fn cli_findings_are_json_lines_and_exit_zero() {
 
 #[test]
 fn cli_findings_serialize_as_stable_json_lines() {
-    // Byte shape (field order, escaping, unicode passthrough) is the
-    // adapter's NDJSON contract: serde_json agrees with the retired hand
-    // escaper except 0x08/0x0c, which serde_json writes as \b/\f.
     let line = FindingLine {
         path: "p.md",
         line: 3,
@@ -841,8 +807,6 @@ fn cli_non_utf8_reports_path() {
 
 #[test]
 fn cli_flag_as_value_is_malformed() {
-    // The legacy loop consumed the next token unconditionally, even a
-    // `--`-led one; `clap` keeps that via `allow_hyphen_values`.
     let files = cli_files(&[]);
     for (args, want) in [
         (
@@ -872,7 +836,6 @@ fn cli_flag_as_value_is_malformed() {
 
 #[test]
 fn cli_attached_forms_echo_whole_token() {
-    // The legacy loop saw an attached token as the whole flag/value word.
     let files = cli_files(&[]);
     for (args, want) in [
         (vec!["--bogus=x"], "unknown argument: --bogus=x"),
@@ -907,9 +870,6 @@ fn cli_bare_positional_is_unknown_argument() {
 #[test]
 fn cli_empty_value_is_malformed() {
     let files = cli_files(&[]);
-    // An explicit empty value token malformed under its flag, like the
-    // legacy loop; attached-empty (`--source=`) was the whole flag word
-    // instead. Mixed shapes resolve left to right, as processed.
     for (args, want) in [
         (
             vec!["--source", ""],

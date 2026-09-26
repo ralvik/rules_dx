@@ -74,7 +74,6 @@ pub const CONFIG_DISCOVERY_ORDER: &[&str] = &[
     "built-in defaults",
 ];
 
-/// Checksummed standalone artifact identity a future adapter must
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ArtifactPin {
     pub tool: String,
@@ -98,7 +97,6 @@ pub enum PinProblem {
     BadSize { size: u64 },
 }
 
-/// Validate a checksummed standalone pin without fetching anything: the
 pub fn validate_pin(pin: &ArtifactPin) -> Result<(), PinProblem> {
     if pin.tool != GITLEAKS_TOOL {
         return Err(PinProblem::WrongTool {
@@ -114,19 +112,11 @@ pub fn validate_pin(pin: &ArtifactPin) -> Result<(), PinProblem> {
             return Err(PinProblem::MissingField { field });
         }
     }
-    // Fail-closed URL shape: the literal `https://` prefix stays the gate
-    // (so an uppercase scheme or bare `https:foo` never newly qualifies)
-    // and `Url::parse` additionally rejects malformed absolute URLs that
-    // the prefix alone would accept.
     if !(pin.url.starts_with("https://") && url::Url::parse(&pin.url).is_ok()) {
         return Err(PinProblem::BadUrl {
             url: pin.url.clone(),
         });
     }
-    // Decode round-trip pins the 64-lowercase-hex digest form via the
-    // single digest owner (`dx_digest::is_hex`): `hex` accepts any
-    // even-length hex, so the re-encode comparison (not the decode alone)
-    // is what rejects uppercase and wrong lengths.
     let valid_digest = dx_digest::is_hex(&pin.sha256);
     if !valid_digest {
         return Err(PinProblem::BadDigest {
@@ -146,7 +136,6 @@ pub struct SecretsReport {
     pub exit_code: Option<u8>,
 }
 
-/// Report wiring failures: SARIF is mandatory and destinations must be
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ReportProblem {
     #[error("secrets report needs an explicit --report-path destination")]
@@ -184,7 +173,6 @@ pub enum SecretsOutcome {
     Failed,
 }
 
-/// Classify one process exit code without executing anything. The
 pub fn classify_exit(code: i32) -> SecretsOutcome {
     match code {
         0 => SecretsOutcome::Clean,
@@ -212,11 +200,6 @@ pub fn triage_sarif(text: &str) -> Result<Vec<SecretFinding>, String> {
                 .as_deref()
                 .unwrap_or("gitleaks/secret")
                 .to_owned();
-            // Never surface secret values: the message is rebuilt
-            // from the rule ID plus the artifact path only. Raw
-            // `message.text` (which an unredacted report could fill
-            // with a secret) plus fingerprints, snippets, fixes, and
-            // properties are all ignored.
             let path = result
                 .locations
                 .as_ref()
@@ -273,8 +256,6 @@ mod tests {
 
     #[test]
     fn trufflehog_v1_stays_wont_fix() {
-        // a `trufflehog` tool identity, and this disposition pins the
-        // docs-level decision so a silent tool swap cannot qualify.
         assert_eq!(TRUFFLEHOG_V1, "wont-fix");
         assert_eq!(GITLEAKS_TOOL, "gitleaks");
     }
@@ -365,7 +346,6 @@ mod tests {
         assert!(argv.contains(&".gitleaks.toml".to_owned()));
         assert!(argv.contains(&"--exit-code".to_owned()));
         assert!(argv.contains(&"2".to_owned()));
-        // SARIF + redact stay mandatory alongside overrides.
         assert!(argv.contains(&"sarif".to_owned()));
         assert!(argv.contains(&"--redact".to_owned()));
     }
@@ -383,7 +363,6 @@ mod tests {
     #[test]
     fn exit_classification_is_fail_closed_on_one() {
         assert_eq!(classify_exit(0), SecretsOutcome::Clean);
-        // Conflated leaks-or-errors: triage via SARIF, never auto-pass.
         assert_eq!(classify_exit(1), SecretsOutcome::NeedsFindingErrorTriage);
         assert_eq!(classify_exit(2), SecretsOutcome::Failed);
         assert_eq!(classify_exit(-1), SecretsOutcome::Failed);
@@ -398,13 +377,11 @@ mod tests {
         assert_eq!(findings.len(), 2);
         assert_eq!(findings[0].rule, "gitleaks/aws-key");
         assert_eq!(findings[1].path, Some("src/app.py".to_owned()));
-        // Secret values never surface in triaged rules, messages, or paths.
         for finding in &findings {
             assert!(!finding.rule.contains("AKIAIOSFODNN7EXAMPLE"));
             assert!(!finding.message.contains("AKIAIOSFODNN7EXAMPLE"));
             assert!(finding.path.as_deref() != Some("AKIAIOSFODNN7EXAMPLE"));
         }
-        // Messages are rule-plus-path only, never raw SARIF text.
         assert_eq!(
             findings[1].message,
             "gitleaks/generic-api-key detected in src/app.py"
@@ -415,11 +392,6 @@ mod tests {
 
     #[test]
     fn sarif_triage_redaction_ignores_every_secret_field() {
-        // triage. Every plausible secret-carrying SARIF field carries
-        // a distinct sentinel; triaged output must contain none of
-        // them while still counting the finding with its rule and path.
-        // Sentinels are assembled at runtime so the file never stores
-        // a push-protected token shape verbatim.
         let aws = "AKIAIOSFODNN7EXAMPLE";
         let github = format!("{}{}", "ghp_", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8");
         let generic = format!("{}{}", "sk-live-", "51H7x9yQ2wE4rT6yU8iO0p");
@@ -454,9 +426,6 @@ mod tests {
                 "path leaks {secret}"
             );
         }
-        // The redacted twin (secrets replaced by `...`, as `--redact`
-        // emits) triages to the identical finding: secret values never
-        // affect triage output.
         let redacted = text
             .replace(aws, "...")
             .replace(github, "...")
@@ -467,9 +436,6 @@ mod tests {
 
     #[test]
     fn sarif_triage_message_never_copies_raw_text() {
-        // A SARIF `message.text` carrying only a secret still yields a
-        // rule-plus-path message with no secret substring. Assembled at
-        // runtime so the file never stores the token shape verbatim.
         let secret_owned = format!("{}{}", "xoxb-", "123456789012-abcdefghijklmnopqrstuvwx");
         let secret: &str = &secret_owned;
         let text = format!(
@@ -525,12 +491,6 @@ mod tests {
 
     #[test]
     fn hermetic_hosts_pin_five_platforms() {
-        // Multi-platform acquisition: one checksummed pin per required
-        // host, matching `quality/artifacts/gitleaks.*.bzl` plus the
-        // upstream checksums file. Execution is proven on the seed host
-        // via byte fetch plus triage fixtures; remaining hosts resolve
-        // via Bazel execution-platform selection with no host execution
-        // claimed here.
         assert_eq!(GITLEAKS_VERSION, "8.30.1");
         assert_eq!(TOOL_ENV_VAR, "DX_GITLEAKS_BIN");
         assert_eq!(TOOL_LABEL, "@dx_tools//:gitleaks");
@@ -571,10 +531,6 @@ mod tests {
 
     #[test]
     fn hermetic_env_carries_only_tmpdir() {
-        // Sanitized invocation environment: exactly `TMPDIR`, never
-        // `PATH` and never ambient `GITLEAKS_*`, so configuration flows
-        // only through explicit `--config`, committed `.gitleaks.toml`,
-        // or built-in defaults.
         let env = hermetic_env(std::path::Path::new("/tmp/dx-audit"));
         assert_eq!(env, vec![("TMPDIR".to_owned(), "/tmp/dx-audit".to_owned())]);
         assert!(!env.iter().any(|(key, _)| key == "PATH"));

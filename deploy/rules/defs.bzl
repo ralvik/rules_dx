@@ -1,6 +1,5 @@
 """Deploy boundary for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`, `docs/decisions/0021-build-profiles.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
@@ -14,10 +13,6 @@ DxDeployInfo = provider(
     },
 )
 
-# Profile vocabulary from ADR 0021. `dx_dev` equals the Bazel default
-# `fastbuild` for the inner loop; `dx_release` (`opt`) is the deploy
-# default; `dx_debug` (`dbg`) is diagnostics. The `dx_` config prefix is
-# a Bazel-config name only; provider and CLI spellings stay bare.
 VALID_DEPLOY_PROFILES = ["debug", "dev", "release"]
 
 def deploy_profile_error(profile):

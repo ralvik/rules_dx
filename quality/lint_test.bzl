@@ -1,6 +1,5 @@
 """Aspect-lint golden harness.
 
-Contract: `docs/quality/quality-testing.md`.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")
@@ -21,7 +20,7 @@ def lint_test(name, srcs, expected_observations, **kwargs):
     visibility to `//quality`, so no cross-boundary private load occurs
     (unlike upstream `@rules_dotnet//dotnet/private`, which is the only
     location of the .NET assembly providers and is therefore intentional
-    in the C#/F# wrappers). See: issue #928.
+    in the C#/F# wrappers).
 
     For dirty (expected-failure) coverage, prefer the matrix
     (`runner_matrix_cases.bzl`): provider-less bytes with `print_result`

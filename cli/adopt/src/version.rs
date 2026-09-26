@@ -34,7 +34,6 @@ pub fn read_version_pin(root: &Path) -> Result<String, AdoptError> {
     Ok(raw.trim().to_owned())
 }
 
-/// Write the `.dx/version` pin (verified-release versions only).
 pub fn write_version_pin(root: &Path, version: &str) -> Result<(), AdoptError> {
     if version.is_empty() {
         return Err(AdoptError::EmptyVersion);
@@ -61,12 +60,9 @@ mod tests {
         assert!(!version_pin_matches_module("1.2.3", "1.2.4"));
         assert!(!version_pin_matches_module("", ""));
         assert!(!version_pin_matches_module("1.2.3", ""));
-        // (semver pilot): pins must be valid semver; equal
-        // non-semver text never matches, even when verbatim equal.
         assert!(!version_pin_matches_module("abc", "abc"));
         assert!(!version_pin_matches_module("v1.2.3", "v1.2.3"));
         assert!(!version_pin_matches_module("1.2", "1.2"));
-        // Pre-release and build metadata compare exactly.
         assert!(version_pin_matches_module("1.2.3-alpha.1", "1.2.3-alpha.1"));
         assert!(!version_pin_matches_module(
             "1.2.3-alpha.1",
@@ -86,8 +82,6 @@ mod tests {
     #[test]
     fn delivered_version_matches_module() {
         assert!(version_pin_matches_module(DX_VERSION, MODULE_VERSION));
-        // Single-version state (no releases cut): the rollback target
-        // equals the delivered version, so rollback correctly refuses.
         assert!(!rollback_re_pins_previous(
             DX_VERSION,
             PREVIOUS_VERSION,

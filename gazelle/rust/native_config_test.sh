@@ -1,18 +1,8 @@
 #!/usr/bin/env bash
-# Native-config generation end to end.
-#
-# Covers the temporal and failure paths golden files cannot: fresh
-# generation with hint binding, rerun idempotency, config-file removal
-# (target stubs out, hint clears), unknown-tool failure before BUILD
-# emission, and ambiguous same-tool configs failing closed.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers.
-# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
 dx_bootstrap "tools/sh/lib.sh"
-
-# Portable helpers via tools/sh/lib.sh dx_realpath/dx_sha256.
 
 gazelle="$(dx_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"
@@ -33,7 +23,6 @@ for want in 'name = "rustfmt_config"' 'name = "taplo_config"' 'name = "vale_conf
     exit 1
   fi
 done
-# taplo has no Rust binding: its target generates but never a hint.
 if grep -q '":taplo_config"' "${build}"; then
   echo "non-binding tool leaked into aspect_hints" >&2
   exit 1
@@ -56,8 +45,6 @@ if grep -q "rustfmt" "${build}"; then
   echo "removed config file left a stale hint behind" >&2
   exit 1
 fi
-# taplo never binds a hint, so after rustfmt.toml goes away no hint
-# remains; the unrelated config targets survive untouched.
 if grep -q "aspect_hints" "${build}"; then
   echo "removed config file left a stale hint behind" >&2
   exit 1

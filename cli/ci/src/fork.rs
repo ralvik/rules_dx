@@ -29,12 +29,10 @@ pub fn plan_approval(
     )
 }
 
-/// Credentials granted to approved fork execution: always read-only.
 pub fn fork_credentials() -> ForkCredentials {
     ForkCredentials::ReadOnly
 }
 
-/// Privileged reporting never executes fork-controlled code.
 pub fn privileged_reporting_executes_fork_code() -> bool {
     false
 }
@@ -109,7 +107,6 @@ mod tests {
         assert!(!plan_aggregate(&[Success, Missing], true, true));
         assert!(!plan_aggregate(&[Success, Success], true, false));
         assert!(!plan_aggregate(&[], true, true));
-        // Queue-run PR comments are inapplicable, not failures.
         assert!(plan_aggregate(&[Success], false, false));
     }
 }

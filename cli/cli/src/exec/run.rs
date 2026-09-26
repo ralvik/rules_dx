@@ -106,11 +106,6 @@ fn execute_run_single(
             let _ = write_event(out, &event);
         }
         emit_run_operations(out, invocation.command.name(), &[target.to_owned()]);
-        // Launch/signal failures go through `operational` (which emits
-        // `error` + `finished`); application nonzero emits a sanitized
-        // `bazel_failed` explainer plus `finished` with the verbatim code.
-        // Direct `runner.run` keeps the two paths distinguishable even when
-        // the application exits 1 (the operational code).
         let status = match runner.run(&plan.argv, workspace, &[]) {
             Ok(status) => status,
             Err(error) => {
@@ -133,8 +128,6 @@ fn execute_run_single(
             );
         };
         if code != 0 {
-            // Failure explainer without argv/secrets: which target failed
-            // plus the stderr pointer; application output stays on stderr.
             if let Ok(event) = error_event(
                 "bazel_failed",
                 &format!("application {target} failed with exit {code} (see stderr diagnostics)"),
@@ -347,8 +340,6 @@ mod tests {
 
     #[test]
     fn run_bad_report_is_pre_exec() {
-        // `parse` rejects `--report` for `run` before execution; assert the
-        // usage error directly since `Harness::run` requires parse success.
         let args: Vec<String> = ["run", "//app:bin", "--report=sarif=a.sarif"]
             .iter()
             .map(ToString::to_string)
@@ -359,8 +350,6 @@ mod tests {
 
     #[test]
     fn run_dry_run_json_and_text() {
-        // `run` supports `--output=json` (planning + per-target events);
-        // text dry-run exercises planning on stderr.
         let harness = Harness::new("run-dry-json");
         let (code, out, err) = harness.run(&["run", "//app:bin", "--dry-run", "--output=json"]);
         assert_eq!(code, 0, "{out}{err}");
@@ -394,13 +383,11 @@ mod tests {
             .expect("operation");
         assert_eq!(op["phase"], serde_json::json!("execute"));
         assert_eq!(op["scope"], serde_json::json!(["//app:bin"]));
-        // Minor-1.1 correlation groups the operation under its target.
         assert_eq!(op["correlation"], serde_json::json!("run://app:bin"));
         assert_eq!(
             events.last().expect("finished")["exit_code"],
             serde_json::json!(0)
         );
-        // Child output stays off stdout; stdout is NDJSON only.
         for line in out.lines() {
             serde_json::from_str::<serde_json::Value>(line).expect("NDJSON line");
         }
@@ -436,8 +423,6 @@ mod tests {
 
     #[test]
     fn run_multi_target_runs_sequential_single_plans() {
-        // Multirun: each explicit label gets its own `bazel run`
-        // lifecycle line; the same `--` args forward to each.
         let harness = Harness::new("run-multi");
         let (code, _, err) = harness.run(&["run", "//a:bin", "//b:bin"]);
         assert_eq!(code, 0, "{err}");
@@ -448,7 +433,6 @@ mod tests {
         assert_eq!(code, 0, "{err}");
         assert!(err.contains("Running run for //a:bin"), "{err}");
         assert!(err.contains("Running run for //b:bin"), "{err}");
-        // App args reach every sequential launch.
         let harness = Harness::new("run-multi-argv");
         let seen = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
         let probe = ArgvProbe {
@@ -484,8 +468,6 @@ mod tests {
 
     #[test]
     fn run_multi_stops_on_first_failure() {
-        // Frozen multi-invocation contract: first required failure wins
-        // verbatim; the second target never launches.
         let harness = Harness {
             bazel_code: 7,
             ..Harness::new("run-multi-fail")
@@ -518,8 +500,6 @@ mod tests {
 
     #[test]
     fn run_pattern_expands_to_runnables() {
-        // `dx run //demo/...` expands Bazel-owned to runnable labels,
-        // then runs them sequentially in sorted order.
         let harness = Harness::new("run-pattern");
         harness
             .query
@@ -636,8 +616,6 @@ mod tests {
 
     #[test]
     fn run_manual_invocations_cover_defense_branches() {
-        // `parse` rejects `--report` for `run`; construct the
-        // invocation directly to cover `execute_run` defense branches.
         let harness = Harness::new("run-manual-report");
         let inv = run_invocation(
             Command::Run,
@@ -663,9 +641,6 @@ mod tests {
     fn run_profile_flags_reach_bazel_argv() {
         use std::cell::RefCell;
         use std::rc::Rc;
-        // End-to-end pin of the mapping on the `run` path:
-        // parse selects the profile and execution injects the matching
-        // `--config=dx_*` (bare means `dx_dev`).
         for (words, flag) in [
             (vec!["run", "//app:bin"], "--config=dx_dev"),
             (vec!["run", "--debug", "//app:bin"], "--config=dx_debug"),
@@ -707,16 +682,10 @@ mod tests {
 
     #[test]
     fn run_ci_refusal_is_pre_exec() {
-        // The refusal bit travels inside `Env`, never through
-        // process-global environment: parallel test threads share one
-        // process, so `set_var("CI", ...)` here used to flake
-        // unrelated `run` tests with spurious CI refusals.
         let harness = Harness::new("run-ci");
         let (code, _, err) = harness.run_with_ci(&["run", "//app:bin"], true);
         assert_eq!(code, 2, "{err}");
         assert!(err.contains("CI=true"), "{err}");
-        // The same invocation without the bit proceeds past the gate
-        // (here: into ambiguous-runnable resolution).
         std::fs::create_dir_all(harness.workspace.join("app")).expect("dir");
         harness.query.script_owners("//app:two\n//app:one\n");
         let (code, _, err) = harness.run(&["run", "app"]);

@@ -99,9 +99,6 @@ pub(crate) fn check_target(
         own_slugs
     } else {
         let resolved = resolve_target(source_path, &file_part);
-        // A directory target resolves to its declared `README.md` index; a
-        // directly declared file still wins. The index must be declared: an
-        // undeclared directory fails closed with the directory path named.
         let index = if resolved.is_empty() {
             "README.md".to_owned()
         } else {
@@ -163,9 +160,6 @@ pub fn resolve_target(source: &str, target: &str) -> String {
         parts.join("/")
     }
     if let Some(stripped) = target.strip_prefix('/') {
-        // Absolute-from-root also normalizes (former verbatim return left
-        // `..`/`.`/`//`/trailing-slash unnormalized): clamped `..` stays at
-        // the root to match the relative case.
         return normalize(stripped.split('/').map(str::to_owned));
     }
     let parent: Vec<String> = match source.rfind('/') {

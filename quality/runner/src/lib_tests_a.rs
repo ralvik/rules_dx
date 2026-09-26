@@ -41,8 +41,6 @@ fn stable_fix_is_valid_and_deterministic() {
     let edits = &result.replacements[0];
     assert_eq!(edits.path, "src/lib.rs");
     assert_eq!(edits.edits.len(), 1);
-    // Byte-minimal single-hunk edit: common "D\n" suffix stays out of the
-    // span, so the replacement is "GOOD GOO" applied at 0..6.
     assert_eq!(edits.edits[0].start_byte, 0);
     assert_eq!(edits.edits[0].end_byte, 6);
     assert_eq!(edits.edits[0].replacement, b"GOOD GOO");
@@ -79,8 +77,6 @@ fn format_trims_trailing_whitespace_idempotently() {
     assert_eq!(result.completed_rounds, 2);
     assert!(result.initial_diagnostics.is_empty());
     assert_eq!(result.replacements.len(), 1);
-    // Byte-minimal: common "x" prefix and "\nz\n" suffix stay out; the
-    // middle 1..6 rewrites to "\ny".
     assert_eq!(result.replacements[0].edits[0].start_byte, 1);
     assert_eq!(result.replacements[0].edits[0].end_byte, 6);
     assert_eq!(result.replacements[0].edits[0].replacement, b"\ny");
@@ -95,7 +91,6 @@ fn format_trims_final_line_without_trailing_newline() {
     assert_eq!(result.convergence, Convergence::Stable as i32);
     assert_eq!(result.completed_rounds, 2);
     assert_eq!(result.replacements.len(), 1);
-    // Byte-minimal: common "x" prefix stays out; 1..7 rewrites to "\ny".
     assert_eq!(result.replacements[0].edits[0].start_byte, 1);
     assert_eq!(result.replacements[0].edits[0].end_byte, 7);
     assert_eq!(result.replacements[0].edits[0].replacement, b"\ny");
@@ -311,11 +306,6 @@ fn iteration_limit_is_detected() {
 
 #[test]
 fn convergence_scales_linearly_in_rounds_and_files() {
-    // Only the last file (sorted last, so a full-map comparison
-    // must walk every entry before finding the difference) changes
-    // each round, producing a unique state per round. A linear
-    // history scan over full-map clones is quadratic here and
-    // effectively hangs; the digest set stays linear.
     const FILES: usize = 300;
     const ROUNDS: u32 = 4_000;
     let paths: Vec<String> = (0..FILES).map(|i| format!("src/f{i:03}.rs")).collect();
@@ -401,9 +391,6 @@ fn error_display_reports_variant() {
 
 #[test]
 fn convergence_reports_missing_stage_path_without_panicking() {
-    // Defense in depth: validation normally rejects stages naming
-    // absent files, but convergence still reports `MissingFile`
-    // instead of panicking if the two ever drift.
     let stages = vec![stage("lint-a", &["rust"], &["src/missing.rs"])];
     let initial = BTreeMap::new();
     let same = |_: &str, _: &str, text: &str| Ok(text.to_owned());
@@ -417,8 +404,6 @@ fn convergence_reports_missing_stage_path_without_panicking() {
 
 #[test]
 fn stage_subset_reports_missing_path_without_panicking() {
-    // Same drift guard for the per-stage projection the real
-    // pipeline shares: a missing path is an error, never a panic.
     let stages = vec![stage("lint-a", &["rust"], &["src/missing.rs"])];
     let files = BTreeMap::new();
     assert_eq!(
@@ -431,8 +416,6 @@ fn stage_subset_reports_missing_path_without_panicking() {
 
 #[test]
 fn diagnostics_sort_deterministically_under_shuffled_arrival() {
-    // Determinism battery seed: randomized report
-    // arrival must yield identical manifests.
     fn diag(path: &str, start: u64, tool: &str, message: &str) -> Diagnostic {
         Diagnostic {
             severity: Severity::Warning as i32,
@@ -462,11 +445,6 @@ fn diagnostics_sort_deterministically_under_shuffled_arrival() {
 
 #[test]
 fn state_digest_independent_of_insertion_order() {
-    // Determinism battery: converged-run identity must
-    // not depend on QualitySourcesInfo / checkout arrival order.
-    // BTreeMap canonicalizes to sorted-path order, so two maps with
-    // identical entries inserted in opposite orders hash equal,
-    // while any content change hashes different.
     let mut forward = BTreeMap::new();
     forward.insert("src/a.rs".to_owned(), "GOOD\n".to_owned());
     forward.insert("src/b.rs".to_owned(), "GOOD GOOD\n".to_owned());
@@ -483,10 +461,6 @@ fn state_digest_independent_of_insertion_order() {
 
 #[test]
 fn diagnostics_tiebreak_deterministically_across_tool_and_message() {
-    // Determinism battery: permutation ranking must be
-    // total — same path/offset from concurrent adapters resolves by
-    // (end_byte, severity, tool_id, rule_id, message) so every arrival
-    // permutation converges to one canonical order.
     fn diag(tool: &str, message: &str) -> Diagnostic {
         Diagnostic {
             severity: Severity::Warning as i32,
@@ -516,10 +490,6 @@ fn diagnostics_tiebreak_deterministically_across_tool_and_message() {
 
 #[test]
 fn assemble_emits_replacements_only_when_stable() {
-    // Apply-safety battery seed: replacements bind the
-    // original digest (pre-validation), apply whole-file to the
-    // terminal body, vanish when final bytes are identical, and
-    // never emit on oscillation.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let mut initial = BTreeMap::new();
     initial.insert("src/lib.rs".to_owned(), "BAD\n".to_owned());
@@ -541,11 +511,8 @@ fn assemble_emits_replacements_only_when_stable() {
     assert_eq!(edits.path, "src/lib.rs");
     assert_eq!(edits.original_digest, digest("BAD\n".as_bytes()));
     assert_eq!(edits.edits.len(), 1);
-    // Byte-minimal: common "D\n" suffix stays out, so 0..2 rewrites to "GOO".
     assert_eq!(edits.edits[0].start_byte, 0);
     assert_eq!(edits.edits[0].end_byte, 2);
-    // Minimal edit applies cleanly: prefix plus replacement plus suffix
-    // yields exactly the terminal body (atomic per-file apply shape).
     let original = "BAD\n";
     let applied = format!(
         "{}{}{}",
@@ -555,7 +522,6 @@ fn assemble_emits_replacements_only_when_stable() {
     );
     assert_eq!(applied, "GOOD\n");
 
-    // Identical final bytes emit no replacement.
     let unchanged = assemble(
         "//quality:test",
         Capability::Lint as i32,
@@ -568,7 +534,6 @@ fn assemble_emits_replacements_only_when_stable() {
     .unwrap();
     assert!(unchanged.replacements.is_empty());
 
-    // Oscillation never emits replacements, even with differing maps.
     let oscillating = assemble(
         "//quality:test",
         Capability::Lint as i32,
@@ -584,10 +549,6 @@ fn assemble_emits_replacements_only_when_stable() {
 
 #[test]
 fn changing_tenth_round_fails_without_eleventh_invocation() {
-    // Apply-safety battery: a pipeline that changes every
-    // round must report IterationLimit at exactly MAX_COMPLETED_ROUNDS
-    // (10) with no eleventh apply invocation, and assemble must emit
-    // no replacements for that outcome even with differing maps.
     let stages = vec![stage("lint-a", &["rust"], &["src/lib.rs"])];
     let mut initial = BTreeMap::new();
     initial.insert("src/lib.rs".to_owned(), "a".to_owned());
@@ -619,11 +580,6 @@ fn changing_tenth_round_fails_without_eleventh_invocation() {
 
 #[test]
 fn full_round_revert_reports_oscillation_not_stability() {
-    // Determinism battery: `quality-testing.md` requires a full round
-    // whose end bytes equal its start after intermediate changes to report
-    // oscillation, not false stability (only STABLE may carry replacements).
-    // Two stages undoing each other in one round net to the start with
-    // changed==true, so the run must be OSCILLATION at round 1.
     let stages = vec![
         stage("lint-a", &["rust"], &["src/lib.rs"]),
         stage("lint-b", &["rust"], &["src/lib.rs"]),
@@ -656,10 +612,6 @@ fn full_round_revert_reports_oscillation_not_stability() {
 
 #[test]
 fn diagnostics_sort_includes_severity_and_rule() {
-    // Full sort key (path,start,end,severity,tool,rule,message) keeps the
-    // order total when concurrent adapters share one range with different
-    // severities or rules. Same path/offsets with different severity must
-    // order by severity, then tool, then rule, then message.
     fn diag(severity: i32, tool: &str, rule: &str, message: &str) -> Diagnostic {
         Diagnostic {
             severity,
@@ -692,13 +644,6 @@ fn diagnostics_sort_includes_severity_and_rule() {
 
 #[test]
 fn assemble_replacements_follow_sorted_path_order_for_atomic_apply() {
-    // Determinism + apply-safety battery:
-    // `quality-testing.md` requires deterministic path-order commits —
-    // interruption may leave only complete earlier paths in path order,
-    // and each file applies atomically after full-envelope validation.
-    // Replacements must therefore arrive in sorted-path order
-    // regardless of QualitySourcesInfo insertion order, with each entry
-    // binding digest(original) and splicing to its terminal body.
     let stages = vec![stage(
         "lint-a",
         &["rust"],
@@ -735,7 +680,6 @@ fn assemble_replacements_follow_sorted_path_order_for_atomic_apply() {
         let terminal_body = terminal.get(&edits.path).expect("staged path");
         assert_eq!(edits.original_digest, digest(original.as_bytes()));
         assert_eq!(edits.edits.len(), 1);
-        // Byte-minimal single-hunk edit splices to the terminal body.
         let edit = &edits.edits[0];
         let mut spliced = Vec::new();
         spliced.extend_from_slice(&original.as_bytes()[..edit.start_byte as usize]);
@@ -743,8 +687,6 @@ fn assemble_replacements_follow_sorted_path_order_for_atomic_apply() {
         spliced.extend_from_slice(&original.as_bytes()[edit.end_byte as usize..]);
         assert_eq!(&spliced, terminal_body.as_bytes());
     }
-    // Interruption prefix property: any prefix of the ordered
-    // replacements is exactly the set of complete earlier-path commits.
     let prefix: Vec<&str> = paths.iter().take(2).copied().collect();
     assert_eq!(prefix, vec!["src/a.rs", "src/b.rs"]);
     assert!(quality_result::validate(&result).is_ok());

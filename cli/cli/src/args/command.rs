@@ -362,7 +362,6 @@ mod tests {
     #[test]
     fn command_names_are_clap_value_enum() {
         use clap::ValueEnum;
-        // Every stable name round-trips through the derive, case-sensitively.
         let commands = [
             Command::Security,
             Command::License,
@@ -413,10 +412,6 @@ mod tests {
 
     #[test]
     fn final_registry_is_exact_and_rejects_excluded_commands() {
-        // The final CLI registry holds
-        // exactly the 33 implemented commands (including `deploy` plus
-        // `bump` plus `migrate` plus `new` plus `upgrade` plus `docs`).
-        // `doctor` and `configure` stay rejected as unknown.
         use clap::ValueEnum;
         let mut got: Vec<&str> = Command::value_variants()
             .iter()
@@ -472,9 +467,6 @@ mod tests {
 
     #[test]
     fn mutating_by_default_matches_contract_and_help() {
-        // identification plus ADR 0005 plus ADR 0018. `check` stays
-        // non-mutating; `clean` mutates managed state only under its own
-        // contract.
         for command in [
             Command::Lint,
             Command::Typecheck,
@@ -531,7 +523,6 @@ mod tests {
             Command::Check.describe().contains("non-mutating"),
             "check help must name its non-mutating mode"
         );
-        // Diff-capable patch producers stay exactly the six check/fix
         for command in [
             Command::Lint,
             Command::Typecheck,
@@ -552,7 +543,6 @@ mod tests {
 
     #[test]
     fn offline_is_audit_update_bump_only() {
-        // (`--frozen` alias) forces no fetches on security/license/update/bump only.
         for command in [
             Command::Security,
             Command::License,
@@ -670,10 +660,6 @@ mod tests {
     #[test]
     fn value_sets_and_man_parity_are_pinned() {
         use clap::ValueEnum;
-        // the grammar uses `String`): the error texts name the sets, and
-        // the shell list stays exact. `man/dx.1` renders from the same
-        // `cli_command` grammar as `--help`, so parity holds by
-        // construction and is pinned here.
         let bad_output = super::super::error::ArgsError::BadOutput {
             value: "yaml".to_owned(),
         }
@@ -714,9 +700,7 @@ mod tests {
                 command.name()
             );
         }
-        // Man escapes dashes (`\-\-output`), so assert the stems plus the
-        // alias token: same grammar as `--help`, parity by construction.
-        for stem in ["output", "fail", "here", "cwd", "color", "host", "open"] {
+        for stem in ["output", "fail", "here", "color", "host", "open"] {
             assert!(text.contains(stem), "man missing flag stem {stem}");
         }
     }

@@ -4,7 +4,6 @@
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":arithmetic.bzl", "add", "greet", "mul")
 
-# Module top-level binding: evaluated when this file loads.
 LOADED_SUM = add(40, 2)
 
 def arithmetic_unit_tests(name):

@@ -12,7 +12,6 @@ pub struct TagSnapshot {
     pub sha: String,
 }
 
-/// Tag-to-SHA resolution errors (never a partial widen).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum GhaError {
     #[error("empty GHA tag entry; expected `owner/repo` plus tag plus SHA")]
@@ -90,8 +89,6 @@ pub fn resolve_tag(
     }
     for snapshot in snapshots {
         if snapshot.package == package && snapshot.tag == tag {
-            // Snapshot SHAs stay validated: a hand-built snapshot carrying a
-            // non-SHA fails closed instead of widening a corrupt pin.
             match version::parse(BumpSet::GithubActions, &snapshot.sha) {
                 Ok(WidenVersion::GitCommit(_)) => return Ok(snapshot.sha.clone()),
                 _ => {
@@ -156,7 +153,6 @@ mod tests {
 
     #[test]
     fn upstream_client_is_github_releases() {
-        // upstream GitHub releases client, never custom HTTP.
         assert_eq!(upstream_client(), "GitHub releases");
         assert_eq!(
             super::super::discovery::registry_client(BumpSet::GithubActions),
@@ -166,7 +162,6 @@ mod tests {
 
     #[test]
     fn tag_auto_resolves_to_sha_from_upstream_snapshot() {
-        // edit; manual SHA only stays rejected as the sole route.
         let snapshots = snapshot();
         assert_eq!(
             resolve_tag("actions/checkout", "v5", &snapshots).expect("resolve"),
@@ -180,8 +175,6 @@ mod tests {
 
     #[test]
     fn unknown_tag_fails_closed_without_inventing_sha() {
-        // No snapshot means nothing widened; the resolver never invents a
-        // SHA and manual SHA only stays rejected for the automatic goal.
         let snapshots = snapshot();
         assert!(matches!(
             resolve_tag("actions/checkout", "v9", &snapshots),
@@ -225,8 +218,6 @@ mod tests {
             ),
             Err(GhaError::InvalidPackage { .. })
         ));
-        // SHA-shaped text is not a tag; tag position rejects it as InvalidTag
-        // so a commit never re-resolves through the tag path.
         assert!(matches!(
             resolve_tag(
                 "actions/checkout",
@@ -247,8 +238,6 @@ mod tests {
             parse_snapshot("actions/checkout", "v5", "not-a-sha!!!"),
             Err(GhaError::InvalidSha { .. })
         ));
-        // Hand-built snapshots bypassing `parse_snapshot` still fail closed
-        // on resolve instead of widening a corrupt pin.
         let corrupt = vec![TagSnapshot {
             package: "actions/checkout".to_owned(),
             tag: "v5".to_owned(),
@@ -262,8 +251,6 @@ mod tests {
 
     #[test]
     fn snapshot_shapes_validate_through_upstream_parse() {
-        // Shapes delegate to upstream `version::parse`, never custom version
-        // code: tags parse as GitTag, SHAs as GitCommit.
         assert!(matches!(
             version::parse(BumpSet::GithubActions, "v5"),
             Ok(WidenVersion::GitTag(_))

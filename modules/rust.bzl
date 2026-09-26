@@ -1,14 +1,10 @@
 """Rust foundation pins plus crate-manifest groups."""
 
-# Pinned Rust foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_RUST_VERSION = "0.74.0"
 RULES_RUST_PROST_VERSION = "0.74.0"
 RUST_VERSION = "1.98.0"
 RUSTFMT_VERSION = "1.98.0"
 
-# Crate-manifest groups for the single `crates` hub (see MODULE.bazel crate.from_cargo).
-# The hub stays single while one Cargo workspace lock covers every manifest; the groups
-# own the inventory so a future multi-hub split moves whole groups, never single labels.
 CRATE_FIXTURE_MANIFESTS = [
     "//rust/tests/fixtures/hello:Cargo.toml",
 ]
@@ -67,10 +63,6 @@ CRATE_SHARED_MANIFESTS = [
     "//tools/depcheck:Cargo.toml",
 ]
 
-# Hub input mirror: every group exactly once (MODULE.bazel cannot load
-# wrappers, so it mirrors this list (drift in either direction breaks the
-# hub; lockfile bytes are resolver-owned
-# and order-independent, so grouping is ownership, not build order).
 RUST_CRATE_MANIFESTS = (
     CRATE_FIXTURE_MANIFESTS +
     CRATE_CLI_MANIFESTS +
@@ -79,13 +71,9 @@ RUST_CRATE_MANIFESTS = (
     CRATE_SHARED_MANIFESTS
 )
 
-# Hub repin (single workspace lock; see MODULE.bazel).
 CRATE_REPIN = "CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello"
 CRATE_CARGO_LOCK = "//rust/tests/fixtures/hello:Cargo.lock"
 CRATE_BAZEL_LOCK = "//:cargo-bazel-lock.json"
 
-# Shell-env policy: first-party scripts default hermetic via the generator,
-# third-party scripts defer to the global flag pinned in .bazelrc with zero
-# opt-ins (see MODULE.bazel crate.from_cargo, .bazelrc, gazelle/rust/lang_generate.go).
 SHELL_ENV_GENERATOR_DEFAULT = 0
 SHELL_ENV_GLOBAL_FLAG = False

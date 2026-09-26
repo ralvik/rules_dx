@@ -1,6 +1,5 @@
 """Focused MDX environment plan (WP2).
 
-Contract: `docs/environments/mdx.md`.
 """
 
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")

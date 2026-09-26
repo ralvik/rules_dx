@@ -62,8 +62,6 @@ pub struct SpdxDocument {
 }
 
 pub fn package_url(set: &str, name: &str, version: &str) -> String {
-    // Split `a/b/c` into namespace `a/b` + name `c` so slashes stay
-    // separators instead of `%2F` (go paths, npm scopes, generic).
     fn split_namespace(full: &str) -> (Option<&str>, &str) {
         match full.rsplit_once('/') {
             Some((ns, base)) if !ns.is_empty() && !base.is_empty() => (Some(ns), base),
@@ -88,7 +86,6 @@ pub fn package_url(set: &str, name: &str, version: &str) -> String {
                         return text;
                     }
                 } else if !artifact.is_empty() && artifact.contains('/') {
-                    // Unusual `group:a/b`: keep slashes as separators.
                     let (ns_extra, base) = split_namespace(artifact);
                     if !base.is_empty() {
                         let ns = match ns_extra {
@@ -328,19 +325,14 @@ mod tests {
 
     #[test]
     fn maven_package_urls_cover_grouped_slash_and_degenerate_shapes() {
-        // `group:a/b` keeps slashes as namespace separators instead of
-        // encoding them inside one artifact name.
         assert_eq!(
             package_url("maven", "com.example:foo/bar", "1.0.0"),
             "pkg:maven/com.example/foo/bar@1.0.0"
         );
-        // A trailing slash splits into an empty purl namespace, so the
-        // artifact keeps its raw spelling through the fallback builder.
         assert_eq!(
             package_url("maven", "g:a/", "1.0.0"),
             "pkg:maven/g/a%2F@1.0.0"
         );
-        // Degenerate group or artifact falls through to the format shape.
         assert_eq!(package_url("maven", "g:", "1.0.0"), "pkg:maven/g/@1.0.0");
         assert_eq!(package_url("maven", ":a", "1.0.0"), "pkg:maven//a@1.0.0");
     }
@@ -402,11 +394,6 @@ mod tests {
 
     #[test]
     fn spdx_golden_pins_full_document_shape() {
-        // envelope, per-package purl identities, and ordered
-        // DESCRIBES-then-CONTAINS relations. V1 live emission carries
-        // no CONTAINS edges (no lock-graph projection yet); the golden
-        // below pins the empty-CONTAINS live shape plus one explicit
-        // CONTAINS edge for the unit projection.
         let roots = vec!["//b:two".to_owned(), "//a:one".to_owned()];
         let packages = vec![
             spdx_package("maven", "junit:junit", "4.13.2", "EPL-1.0", 2),
@@ -415,8 +402,6 @@ mod tests {
         ];
         let text = render_spdx(&roots, &packages, &[], TEST_NAMESPACE);
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid JSON");
-        // Envelope: exactly one document per invocation, never per
-        // package/set/root.
         assert_eq!(value["spdxVersion"], serde_json::json!("SPDX-2.3"));
         assert_eq!(value["dataLicense"], serde_json::json!("CC0-1.0"));
         assert_eq!(value["SPDXID"], serde_json::json!("SPDXRef-DOCUMENT"));
@@ -425,8 +410,6 @@ mod tests {
             value["documentNamespace"],
             serde_json::json!(TEST_NAMESPACE)
         );
-        // Packages sorted by ID for determinism with the full V1 field
-        // set: concluded/declared, NOASSERTION copyright, single purl ref.
         let pkgs = value["packages"].as_array().expect("packages");
         assert_eq!(pkgs.len(), 3);
         assert_eq!(pkgs[0]["SPDXID"], serde_json::json!("SPDXRef-Package-1"));
@@ -451,8 +434,6 @@ mod tests {
             pkgs[2]["externalRefs"][0]["referenceLocator"],
             serde_json::json!("pkg:golang/example.com/hello@1.0.0")
         );
-        // Relationships: DESCRIBES from each audited root first
-        // (sorted), then CONTAINS (empty in V1 live emission).
         let rels = value["relationships"].as_array().expect("relationships");
         assert_eq!(rels.len(), 2);
         assert_eq!(
@@ -471,7 +452,6 @@ mod tests {
                 "relatedSpdxElement": "SPDXRef-DOCUMENT",
             })
         );
-        // Explicit CONTAINS projection stays ordered after DESCRIBES.
         let with_contains = render_spdx(
             &["//a:one".to_owned()],
             &packages[..2],
@@ -493,8 +473,5 @@ mod tests {
             with_rels[1]["relationshipType"],
             serde_json::json!("CONTAINS")
         );
-        // Partial documents stay non-authoritative: the shape carries no
-        // completeness flag itself; callers gate authoritative upload on
-        // `results_complete` (see `dx_cli::exec::audit`).
     }
 }

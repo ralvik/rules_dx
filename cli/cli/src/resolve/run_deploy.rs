@@ -34,11 +34,6 @@ pub fn resolve_run(
     let mut cache = PackageCache::default();
     let classified = classify_scopes(scopes, workspace, &mut cache)?;
     if classified.files.is_empty() && classified.patterns.is_empty() {
-        // Explicit-label multirun: plain labels pass through in
-        // input order with no query; patterns containing `...` or `*`
-        // expand inline through the same Bazel-owned `_binary` kind
-        // query as directory scopes. File/directory inference below is
-        // untouched, so multirun never activates on inference.
         if !classified.labels.iter().any(|label| is_run_pattern(label)) {
             return Ok(classified.labels);
         }
@@ -54,8 +49,6 @@ pub fn resolve_run(
                 targets.push(label.clone());
             }
         }
-        // Preserve first-seen order across inline expansions; the query
-        // helper already sorts each expansion batch.
         let mut seen = std::collections::HashSet::new();
         targets.retain(|target| seen.insert(target.clone()));
         if targets.is_empty() {
@@ -74,8 +67,6 @@ pub fn resolve_run(
             .collect();
         let found = run_label_query(&runnable_set_expression(&labels), workspace, runner)?;
         if found.is_empty() {
-            // Distinguish "files owned but not executable" from "files
-            // unowned": check plain ownership once for the batch.
             let owned = run_label_query(&ownership_set_expression(&labels), workspace, runner)?;
             if owned.is_empty() {
                 let first = &classified.files[0];
@@ -340,7 +331,6 @@ mod tests {
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "pkg/BUILD.bazel", "");
         write(&workspace, "pkg/a.py", "x = 1\n");
-        // No `_binary` owner, but a plain owner exists for guidance.
         let query = FakeQuery::new(vec![FakeQuery::ok("\n"), FakeQuery::ok("//pkg:lib\n")]);
         let err = resolve_run(&scopes(&["pkg/a.py"]), &workspace, &query).expect_err("no runnable");
         assert_eq!(
@@ -420,10 +410,6 @@ mod tests {
 
     #[test]
     fn run_cross_pattern_order_is_input_order_with_sorted_batches() {
-        // Each `...`/`*` pattern expands Bazel-owned (sorted per batch),
-        // batches concatenate in input order with first-seen dedup — never
-        // globally re-sorted. Same `--` args forward to each target and
-        // stop-first-failure stays wont-fix (sequential, no supervisor).
         let scratch = dx_test_scratch::scratch("dx-resolve-run-test-cross-pattern-");
         let workspace = scratch.path().to_path_buf();
         let query = FakeQuery::new(vec![
@@ -437,7 +423,6 @@ mod tests {
             scopes(&["//b:one", "//b:two", "//a:one", "//a:two"]),
             "batches stay in input order, each sorted"
         );
-        // First-seen dedup across labels and patterns.
         let scratch = dx_test_scratch::scratch("dx-resolve-run-test-dedup-");
         let workspace = scratch.path().to_path_buf();
         let query = FakeQuery::new(vec![FakeQuery::ok("//a:bin\n//a:other\n")]);
@@ -447,10 +432,6 @@ mod tests {
 
     #[test]
     fn run_file_alias_is_fail_closed_with_explicit_label_hint() {
-        // Plain labels pass through (Bazel owns alias/executability) without
-        // a query; file scopes match only direct `*_binary` owners (aliases
-        // not followed) and fail closed with a hint to pass the alias label
-        // explicitly. Aliases are `alias` kind, never `*_binary`.
         let scratch = dx_test_scratch::scratch("dx-resolve-run-test-alias-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "app/BUILD.bazel", "");

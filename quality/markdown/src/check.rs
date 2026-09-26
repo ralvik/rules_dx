@@ -54,10 +54,6 @@ pub fn check_markdown(
     let mut doc_links: Vec<DocLink> = Vec::new();
     let mut slug_counts: BTreeMap<String, usize> = BTreeMap::new();
 
-    // Block structure comes from pulldown-cmark: fence findings, suppressed
-    // lines (code regions plus HTML blocks), headings, links, and code-span
-    // ranges. Reference definitions resolve inside the parser; only
-    // explicitly broken references surface via the callback.
     let starts = line_starts(text);
     let regions = code_regions(text, &starts);
     let source_lines: Vec<&str> = text.lines().collect();
@@ -118,12 +114,6 @@ pub fn check_markdown(
                     dest_url,
                     ..
                 }) => {
-                    // Email autolinks are wont-fix out of scope:
-                    // structure only, so ignored, never findings or remotes.
-                    // Their span is still recorded so the relative-autolink
-                    // fallback skips them via overlap (it no longer filters
-                    // on `@`, so `@` in relative paths still resolves
-                    // fail-closed).
                     if link_type == LinkType::Email {
                         link_spans.push(range);
                         continue;
@@ -139,9 +129,6 @@ pub fn check_markdown(
                 Event::Code(_) => {
                     code_spans.push(range);
                 }
-                // Only real HTML blocks suppress lines: inline HTML leaves
-                // the line's links (and relative autolinks) visible, exactly
-                // as the retired line scanner saw them.
                 Event::Start(Tag::HtmlBlock) => {
                     html_start = Some(range.start);
                 }
@@ -153,8 +140,6 @@ pub fn check_markdown(
                         }
                     }
                 }
-                // Inline HTML is markup, never an autolink target: record
-                // its span so the relative-autolink fallback skips it.
                 Event::Html(_) | Event::InlineHtml(_) => {
                     html_spans.push(range);
                 }
@@ -163,9 +148,6 @@ pub fn check_markdown(
         }
     }
     for broken_ref in &broken {
-        // Shortcut references that resolve nowhere are literal text, never
-        // links; explicit (`[text][label]`) and collapsed (`[text][]`)
-        // references fail closed like any undeclared target.
         if broken_ref.link_type == LinkType::Shortcut {
             continue;
         }
@@ -177,10 +159,6 @@ pub fn check_markdown(
         });
     }
 
-    // Relative autolinks (`<./other.md>`) are not CommonMark autolinks, so
-    // the parser emits no event for them: scan unscanned lines for `<target>`
-    // forms exactly as the retired line scanner did, skipping code spans,
-    // link spans, inline HTML tags, and HTML blocks.
     for (index, line) in source_lines.iter().enumerate() {
         let line_no = (index as u32) + 1;
         if suppressed.contains(&line_no) {
@@ -197,9 +175,6 @@ pub fn check_markdown(
         ));
     }
 
-    // ATX-only scope is retained: a heading event whose source line is not
-    // an ATX heading (blockquote/list markers, setext underlines) counts for
-    // nothing, and the slug still derives from the source line.
     for line_no in heading_lines {
         let line = source_lines
             .get((line_no - 1) as usize)
@@ -227,8 +202,6 @@ pub fn check_markdown(
         }
     }
 
-    // Left-to-right per line, matching the retired line scanner order for
-    // `skipped_remotes`.
     doc_links.sort_by_key(|link| (link.line(), link.col()));
     check_headings(&headings, &mut outcome);
     let own_slugs: BTreeSet<String> = headings.into_iter().map(|h| h.slug).collect();
@@ -372,29 +345,19 @@ fn rejecting_flag(args: &[String], raw: &str) -> &'static str {
 fn parse_error(error: clap::Error, args: &[String]) -> Vec<String> {
     let token = invalid_token(&error);
     match error.kind() {
-        // `clap` strips an attached `=value` from the reported token; the
-        // legacy loop echoed the whole `argv` element, so recover it.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             vec![format!("unknown argument: {echoed}"), usage()]
         }
-        // The legacy loop names the bare `--flag` here.
         ErrorKind::InvalidValue => {
             let flag = dx_output::leading_flag(&token);
             vec![format!("missing value for {flag}"), usage()]
         }
         ErrorKind::ValueValidation => {
-            // Only the two mapping flags carry custom value parsers, so any
-            // rejection is a malformed mapping: resolve its (flag, value)
-            // pair and report the legacy `malformed …` text through the
-            // same parser the tokenizer wraps. The parser only runs on
-            // present values, so the re-check rejects too.
             if let Some(raw) = rejected_value(&error) {
                 let flag = rejecting_flag(args, &raw);
                 return check_mapping(flag, &raw, &error);
             }
-            // Empty values carry no rejected value; resolve them via the
-            // legacy-order `argv` scan instead.
             match empty_rejection(args) {
                 EmptyRejection::Attached(echoed) => {
                     vec![format!("unknown argument: {echoed}"), usage()]
@@ -498,7 +461,6 @@ pub fn run_cli(
                 message: finding.message.as_str(),
             };
             match dx_fingerprint::to_json(&line) {
-                // Single owner for string-only JSON shapes (typed, no `unreachable!`).
                 Ok(rendered) => print_out(&rendered),
                 Err(error) => print_err(&error.to_string()),
             }

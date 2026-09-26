@@ -127,8 +127,6 @@ mod tests {
 
     #[test]
     fn file_label_ignores_build_contents() {
-        // Existence-only probe: invalid BUILD syntax still yields a label
-        // because contents are never read; ownership comes from Bazel query.
         let scratch = dx_test_scratch::scratch("dx-resolve-packages-contents-");
         let workspace = scratch.path().to_path_buf();
         write(

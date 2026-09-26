@@ -99,7 +99,6 @@ fn precedence_is_flag_over_env_over_file() {
         Some("info"),
     );
     let env = env_of(&[("DX_WORKSPACE", "/env"), ("DX_OUTPUT", "json")]);
-    // Flag wins over both.
     let got = parse_with(
         &args(&["lint", "--workspace", "/flag", "--output=text"]),
         &env,
@@ -108,11 +107,9 @@ fn precedence_is_flag_over_env_over_file() {
     .expect("flag wins");
     assert_eq!(got.workspace, Some("/flag".to_owned()));
     assert_eq!(got.output, OutputMode::Text { quiet: false });
-    // Env wins over file when no flag.
     let got = parse_with(&args(&["lint"]), &env, &file).expect("env wins");
     assert_eq!(got.workspace, Some("/env".to_owned()));
     assert_eq!(got.output, OutputMode::Json);
-    // Bool: explicit flag wins; otherwise env wins over file.
     let file_bools = file_with(None, None, Some(true), None, None, None);
     let got = parse_with(&args(&["lint", "--verbose"]), &env_of(&[]), &file_bools)
         .expect("flag bool wins");
@@ -166,7 +163,6 @@ fn invalid_env_and_file_values_fail_closed() {
             value: "yaml".to_owned(),
         })
     );
-    // Empty env strings behave as absent.
     let env = env_of(&[("DX_WORKSPACE", ""), ("DX_OUTPUT", "")]);
     let got =
         parse_with(&args(&["lint"]), &env, &FileDefaults::default()).expect("empty env absent");
@@ -176,19 +172,15 @@ fn invalid_env_and_file_values_fail_closed() {
 
 #[test]
 fn color_flag_env_file_precedence() {
-    // Flag wins over env and file.
     let mut file = FileDefaults::default();
     file.color = Some("never".to_owned());
     let env = env_of(&[("DX_COLOR", "always")]);
     let got = parse_with(&args(&["lint", "--color=never"]), &env, &file).expect("flag wins");
     assert_eq!(got.color, ColorMode::Never);
-    // Env wins over file.
     let got = parse_with(&args(&["lint"]), &env, &file).expect("env wins");
     assert_eq!(got.color, ColorMode::Always);
-    // File supplies the default when flag and env are absent.
     let got = parse_with(&args(&["lint"]), &env_of(&[]), &file).expect("file wins");
     assert_eq!(got.color, ColorMode::Never);
-    // Invalid flag values fail closed.
     assert!(parse_with(
         &args(&["lint", "--color=bright"]),
         &env_of(&[]),

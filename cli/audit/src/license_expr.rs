@@ -301,7 +301,6 @@ mod tests {
             evaluate(&expr, Tier::Distributed, &lookup, &verbatim),
             TierOutcome::Allow
         );
-        // Approving the base alone never approves the expression.
         let base_only = approved(&["Apache-2.0"]);
         assert_eq!(
             evaluate(&expr, Tier::Distributed, &lookup, &base_only),
@@ -417,7 +416,6 @@ mod tests {
     fn review_listing_is_not_approval() {
         let table = contract_table();
         let lookup = lookup(&table);
-        // Merely placing an identity in `review` still fails distributed.
         assert_eq!(
             evaluate(
                 &ident("MPL-2.0"),
@@ -494,7 +492,6 @@ mod tests {
                 ident("MPL-2.0"),
             ])
         );
-        // Same-operator nesting flattens on either side of the operator.
         assert_eq!(
             parse_license("(MIT OR Apache-2.0) OR MPL-2.0"),
             LicenseExpr::Or(vec![ident("MIT"), ident("Apache-2.0"), ident("MPL-2.0")])

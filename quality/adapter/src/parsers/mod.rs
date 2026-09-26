@@ -174,8 +174,6 @@ fn code_name(code: Option<i32>) -> String {
 
 #[cfg(test)]
 mod tests {
-    // Error-format stability lives with the shared error type;
-    // per-family grammar pins live in their family modules.
     use super::{check_output_size, ParseError, MAX_OUTPUT_BYTES};
 
     #[test]
@@ -219,13 +217,11 @@ mod tests {
                 limit: MAX_OUTPUT_BYTES,
             })
         );
-        // Every parser enforces the same guard first.
         assert!(super::tsc::parse_tsc(&big, Some(2), &["/s/a.ts"]).is_err());
         assert!(super::sarif::parse_sarif("sarif-test", &big, Some(1), &["/s/a.java"]).is_err());
     }
 
     fn xorshift(state: &mut u64) -> u64 {
-        // std-only deterministic PRNG for the fuzz property harness.
         let mut x = *state;
         x ^= x << 13;
         x ^= x >> 7;
@@ -236,10 +232,6 @@ mod tests {
 
     #[test]
     fn fuzz_parsers_never_panic_on_arbitrary_bytes() {
-        // Property harness: arbitrary/truncated/mutated bytes yield Ok or
-        // ParseError, never panic (cargo fuzz seeds reuse these corpora).
-        // Covers representative grammar families: classic text, JSON,
-        // SARIF, JSONL, dual-stream, and config-envelope parsers.
         let seeds: &[&[u8]] = &[
             b"{}",
             b"[]",
@@ -260,7 +252,6 @@ mod tests {
         for round in 0..400 {
             let seed = seeds[round % seeds.len()];
             let mut input = seed.to_vec();
-            // Mutate: truncate, flip, or extend with PRNG bytes.
             match xorshift(&mut state) % 3 {
                 0 => {
                     let keep = (xorshift(&mut state) as usize) % (input.len() + 1);

@@ -11,8 +11,6 @@ package(
     default_visibility = ["//:__subpackages__"],
 )
 
-# Identity pin in the build graph: the versioned alias resolves only when
-# `cxx_bridge.bzl` parses and the pin matches the harness expectation.
 alias(
     name = "cxx_identity_pin",
     actual = ":cxx_identity",
@@ -43,7 +41,6 @@ rust_test(
     crate = ":cxx_identity",
 )
 
-# C++ side of the bridge shape (stands in for cxxbridge-cmd output).
 cc_library(
     name = "bridge",
     srcs = ["bridge.cc"],

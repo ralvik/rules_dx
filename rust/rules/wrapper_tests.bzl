@@ -21,9 +21,6 @@ def dx_wrapper_registry_tests(name):
         ],
     )
 
-# Filled in from the observed rendering on the pinned stack; any wrapper or
-# upstream change that alters providers, owners, markers, or tool identities
-# fails here first.
 EXPECTED_OBSERVATIONS = """subject //rust/tests/fixtures/hello:hello_cdylib_subject
 file hello_cdylib_subject.txt
 field cargo_tool=cargo

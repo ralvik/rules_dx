@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Shared workspace + runfiles helpers.
-# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
 dx_bootstrap "tools/sh/lib.sh"
-
-# Portable helpers via tools/sh/lib.sh dx_realpath/dx_sha256.
 
 gazelle="$(dx_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"
@@ -61,9 +57,6 @@ if [[ "${output}" == *panic* || "${output}" == *goroutine* ]]; then
   exit 1
 fi
 
-# A misconfigured recorder must fail closed with an actionable message:
-# nonzero exit, no panic text, no BUILD files, no manifest written. Drop
-# the root ignore so the mode error is the only failure.
 rm "${root}/BUILD.bazel"
 export DX_GENERATE_MODE=print
 export DX_GENERATE_INTENDED="${root}/intended.json"

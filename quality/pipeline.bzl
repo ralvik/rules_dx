@@ -1,6 +1,5 @@
 """Pure pipeline-construction helpers (WP2).
 
-Contract: `docs/quality/quality-sources.md#adapter-applicability`.
 """
 
 load(":applicability.bzl", "effective_classes")
@@ -54,8 +53,7 @@ def pipeline_stages(target_classes, capability, family_selections, class_to_fami
     insertion order: `quality/adapters.bzl` for real/synthetic), which is the
     curated stable pipeline order, independent of user list order and not a
     bare lexical sort. Curated defaults (`quality/curated_defaults.bzl`) are
-    in this same stable order. See: `docs/quality/tool-integrations.md`,
-    `docs/decisions/0003-action-granularity.md`.
+    in this same stable order.
     Each stage is a dict `{"tool": ..., "classes": [...]}` with sorted
     effective classes. Adapters with no effective classes create no stage.
     Fails on a selected tool ID absent from `adapters`.
@@ -161,7 +159,7 @@ def aspect_direct_maps(direct_sources, what):
 
     Fail-closed multi-config boundary: duplicate workspace paths across
     classes and `..` escapes fail analysis instead of first-wins or late
-    runner rejection. See: `docs/quality/native-configuration.md#closures-and-action-inputs`.
+    runner rejection.
     """
     direct_files = {}
     direct_paths = {}

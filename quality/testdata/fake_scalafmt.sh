@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Fake Scalafmt for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics `scalafmt --check` (exit 0 clean, exit 1 with unified diff headers
-# when dirty) plus in-place fix (rewrite, exit 0) over the BADFMT marker.
-# Real-tool behavior stays proven by `scala/tests/fixtures/scalafmt/`
-# (`check_dirty.diff` modeled on real `--check` output); this fake proves
-# the runner dispatch plus parser plus fix flow without a JVM.
 set -euo pipefail
 is_check=0
 files=()

@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use proto::{
@@ -82,9 +80,6 @@ pub enum Error {
 }
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
-    // Thin wrapper around `dx_path`: ladder order and canonical messages
-    // live in `dx_path::PathProblem::reason` (sole owner); only the error
-    // payload stays crate-local.
     match dx_path::reject_reason(path) {
         None => Ok(()),
         Some(reason) => Err(Error::BadPath {
@@ -111,8 +106,6 @@ fn check_unique_paths(
     paths: impl Iterator<Item = String>,
     duplicate: impl Fn(String) -> Error,
 ) -> Result<(), Error> {
-    // Shared uniqueness control flow lives in `dx_proto_validate`; only the
-    // crate-local `Error` payload stays here (proto-validate slice).
     let mut seen = std::collections::BTreeSet::new();
     for path in paths {
         dx_proto_validate::check_unique_insert(&mut seen, path, |existing| {
@@ -184,8 +177,6 @@ fn check_edits(file: &FileEdits) -> Result<(), Error> {
                 index,
             });
         }
-        // Strictly increasing starts reject same-offset edits; the
-        // end bound rejects overlap while allowing adjacency.
         if let Some(previous) = previous {
             if previous.start_byte >= edit.start_byte || previous.end_byte > edit.start_byte {
                 return Err(Error::EditOrder {
@@ -342,7 +333,6 @@ mod tests {
 
     #[test]
     fn digest_empty_matches_official_vector() {
-        // BLAKE3-team/BLAKE3 test_vectors.json, input_len 0, hash prefix.
         let expected = [
             0xaf, 0x13, 0x49, 0xb9, 0xf5, 0xf9, 0xa1, 0xa6, 0xa0, 0x40, 0x4d, 0xea, 0x36, 0xdc,
             0xc9, 0x49, 0x9b, 0xcb, 0x25, 0xc9, 0xad, 0xc1, 0x12, 0xb7, 0xcc, 0x9a, 0x93, 0xca,
@@ -387,7 +377,6 @@ mod tests {
     #[test]
     fn unknown_field_ignored() {
         let mut bytes = encode_validated(&sample()).unwrap();
-        // Field 100, varint 7: tag 0xA0 0x06, value 0x07.
         bytes.extend_from_slice(&[0xA0, 0x06, 0x07]);
         assert_eq!(decode_validated(&bytes).unwrap(), sample());
     }
@@ -413,8 +402,6 @@ mod tests {
 
     #[test]
     fn path_messages_are_pinned_to_dx_path_ladder() {
-        // Thin wrapper over `dx_path::reject_reason`: exact messages plus
-        // ladder order (first problem wins) are pinned so drift fails here.
         for (path, reason) in [
             ("", "path must be non-empty"),
             ("/absolute", "path must be workspace-relative, not absolute"),
@@ -438,7 +425,6 @@ mod tests {
                 "path: {path:?}"
             );
         }
-        // Ladder order: absolute beats empty-component, dot beats dot-dot.
         let mut result = sample();
         result.stages[0].source_paths = vec!["/a//b".to_owned()];
         assert_eq!(
@@ -507,7 +493,6 @@ mod tests {
 
     #[test]
     fn edit_ordering_enforced() {
-        // Same start offsets.
         let mut result = sample();
         result.replacements[0].edits = vec![
             Edit {
@@ -529,7 +514,6 @@ mod tests {
             })
         );
 
-        // Insertion strictly inside a replaced range.
         let mut result = sample();
         result.replacements[0].edits = vec![
             Edit {
@@ -545,7 +529,6 @@ mod tests {
         ];
         assert!(validate(&result).is_err());
 
-        // No-op edit.
         let mut result = sample();
         result.replacements[0].edits = vec![Edit {
             start_byte: 1,
@@ -560,7 +543,6 @@ mod tests {
             })
         );
 
-        // Non-UTF-8 replacement.
         let mut result = sample();
         result.replacements[0].edits = vec![Edit {
             start_byte: 0,
@@ -575,7 +557,6 @@ mod tests {
             })
         );
 
-        // Adjacent edits are valid.
         let mut result = sample();
         result.replacements[0].edits = vec![
             Edit {
@@ -662,7 +643,6 @@ mod tests {
             ..Default::default()
         };
 
-        // Pathless diagnostics carry no range.
         let mut diagnostic = valid();
         diagnostic.start_byte = Some(0);
         let mut result = sample();
@@ -673,7 +653,6 @@ mod tests {
         result.terminal_diagnostics = vec![valid()];
         assert!(validate(&result).is_ok());
 
-        // Tool identity is required even with a valid message.
         let mut diagnostic = valid();
         diagnostic.tool_id.clear();
         let mut result = sample();
@@ -683,7 +662,6 @@ mod tests {
             Err(Error::EmptyDiagnosticToolId { index: 0 })
         );
 
-        // A pathed diagnostic requires both range ends.
         let mut diagnostic = valid();
         diagnostic.path = "src/lib.rs".to_owned();
         diagnostic.start_byte = Some(0);
@@ -694,7 +672,6 @@ mod tests {
 
     #[test]
     fn replacements_shape_enforced() {
-        // Wrong digest length on the replaced file.
         let mut result = sample();
         result.replacements[0].original_digest = vec![0xAB; DIGEST_LEN + 1];
         assert_eq!(
@@ -706,7 +683,6 @@ mod tests {
             })
         );
 
-        // A replacement set with no edits carries no fix.
         let mut result = sample();
         result.replacements[0].edits = vec![];
         assert_eq!(
@@ -716,7 +692,6 @@ mod tests {
             })
         );
 
-        // Inverted edit range.
         let mut result = sample();
         result.replacements[0].edits = vec![Edit {
             start_byte: 2,
@@ -731,7 +706,6 @@ mod tests {
             })
         );
 
-        // One FileEdits per path.
         let mut result = sample();
         result.replacements.push(result.replacements[0].clone());
         assert_eq!(

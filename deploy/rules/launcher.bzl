@@ -1,10 +1,7 @@
 """Shared deploy-launcher helpers.
 """
 
-# Standard `runfiles.bash` initialization v3, copy-pasted from the Bazel
 RUNFILES_BASH_INIT = """# --- begin runfiles.bash initialization v3 ---
-# Copy-pasted from the Bazel Bash runfiles library v3.
-# five runfiles-layout probes below, which only exist under `bazel run` /
 set -uo pipefail; set +e; f=bazel_tools/tools/bash/runfiles/runfiles.bash
 source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \\
   source "$(grep -sm1 "^$f " "${RUNFILES_MANIFEST_FILE:-/dev/null}" | cut -f2- -d' ')" 2>/dev/null || \\
@@ -12,7 +9,6 @@ source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \\
   source "$(grep -sm1 "^$f " "$0.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \\
   source "$(grep -sm1 "^$f " "$0.exe.runfiles_manifest" | cut -f2- -d' ')" 2>/dev/null || \\
   { echo>&2 "ERROR: cannot find $f"; exit 1; }; f=; set -e
-# --- end runfiles.bash initialization v3 ---
 """
 
 def rlocation_path(ctx, f):

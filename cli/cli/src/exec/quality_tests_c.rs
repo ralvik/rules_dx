@@ -89,8 +89,6 @@ fn sarif_stdout_report_owns_stdout() {
     let (code, out, err) = harness.run(&["lint", "--check", "--output=text", "--report=sarif=-"]);
     assert_eq!(code, 1);
     assert!(out.contains("2.1.0"));
-    // The prose summary is suppressed while stdout carries the report;
-    // the human-readable finding moves to stderr.
     assert!(!out.contains("Running lint"));
     assert!(!err.contains("Running lint"));
     assert!(err.contains("unused"));
@@ -193,13 +191,6 @@ fn unknown_tool_finding_fails_sarif_render() {
 
 #[test]
 fn json_check_and_default_emit_identical_change_with_byte_equality() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // JSON check and default modes to emit one deterministic exact
-    // `change` event per valid candidate path, with check performing
-    // no writes and default emitting the change before its terminal
-    // mutation. Reconstructing the candidate from digest plus UTF-8
-    // ranges and replacements must equal default mode planned input
-    // byte-for-byte.
     fn changes(out: &str) -> Vec<serde_json::Value> {
         json_events(out)
             .into_iter()
@@ -277,13 +268,6 @@ fn json_check_and_default_emit_identical_change_with_byte_equality() {
 
 #[test]
 fn diff_check_and_default_emit_identical_patch_with_byte_equality() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // complete deterministic diff-mode patches from the same edit set
-    // in check and default modes without rerunning tools or truncating
-    // replacement content. Both modes must emit byte-identical patches;
-    // check performs no writes while default applies, and splicing the
-    // recorded 0..1 -> y edit must equal default's planned input
-    // byte-for-byte.
     let mut check = Harness::new("diff-patch-check");
     check.write_source("src/a.py", "x = 1\n");
     check.results.insert(
@@ -346,13 +330,6 @@ fn diff_check_and_default_emit_identical_patch_with_byte_equality() {
 
 #[test]
 fn default_mode_applies_in_sorted_path_order_despite_reversed_arrival() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // each selected file to apply atomically and independently after
-    // complete envelope validation, with interruption leaving no
-    // partially written file and only complete earlier path commits
-    // in deterministic path order. The CLI sorts collected changes
-    // by path bytes before mutation, so reversed proto arrival must
-    // still apply and emit in sorted order via atomic writes.
     let mut harness = Harness::new("sorted-apply-order");
     harness.write_source("src/a.py", "x = 1\n");
     harness.write_source("src/b.py", "a = 1\n");
@@ -425,8 +402,6 @@ fn default_mode_applies_in_sorted_path_order_despite_reversed_arrival() {
     harness.results.insert("//test:corpus".to_owned(), bytes);
     let (code, out, _) = harness.run(&["lint", "--output=json"]);
     assert_eq!(code, 0);
-    // Each file applies atomically: fully original or fully
-    // candidate, never truncated or partially written.
     assert_eq!(
         std::fs::read(harness.workspace.join("src/a.py")).expect("source"),
         b"y = 1\n"
@@ -459,9 +434,6 @@ fn default_mode_applies_in_sorted_path_order_despite_reversed_arrival() {
     assert_eq!(mutations[1]["outcome"], serde_json::json!("applied"));
     assert_eq!(mutations[2]["path"], serde_json::json!("src/c.py"));
     assert_eq!(mutations[2]["outcome"], serde_json::json!("applied"));
-    // Prefix property: sorted mutation order means interruption
-    // after k commits leaves exactly the first k paths terminal
-    // and the rest original, each complete.
     let terminals: std::collections::BTreeMap<&str, &[u8]> = [
         ("src/a.py", b"y = 1\n".as_slice()),
         ("src/b.py", b"b = 1\n".as_slice()),
@@ -497,23 +469,11 @@ fn default_mode_applies_in_sorted_path_order_despite_reversed_arrival() {
 
 #[test]
 fn default_apply_depends_on_bytes_not_git_status() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // mutation fixtures with tracked, modified, staged, and untracked
-    // inputs to depend on current bytes and source digests rather than
-    // Git status. The CLI reads verified source bytes only; git
-    // metadata never enters collection or mutation, so identical bytes
-    // under different simulated git states must apply identically with
-    // a single Bazel launch, while different bytes under one state must
-    // diverge (stale_source fails closed).
     let statuses = ["tracked", "modified", "staged", "untracked"];
     let mut digests = Vec::with_capacity(statuses.len());
     for status in statuses {
         let mut harness = Harness::new(&format!("git-status-{status}"));
         harness.write_source("src/a.py", "x = 1\n");
-        // Simulated git state as out-of-band metadata the CLI must
-        // ignore: a .git marker plus a status-specific marker. Neither
-        // path is a quality change path, so verified reads and atomic
-        // mutation must be unaffected.
         harness.write_source(".git/HEAD", "ref: refs/heads/main\n");
         harness.write_source(&format!(".git/status-{status}"), status);
         harness.results.insert(
@@ -535,7 +495,6 @@ fn default_apply_depends_on_bytes_not_git_status() {
             1,
             "{status}: default apply must launch Bazel exactly once, no rerun"
         );
-        // Git markers stay untouched; only the quality path mutates.
         assert_eq!(
             std::fs::read(harness.workspace.join(".git/HEAD")).expect("git head"),
             b"ref: refs/heads/main\n",
@@ -556,8 +515,6 @@ fn default_apply_depends_on_bytes_not_git_status() {
         digests.push(change["source_digest"].clone());
     }
     assert_all_equal(&digests);
-    // Bytes stay load-bearing under one git status: bytes changed after
-    // analysis fail closed as stale_source regardless of git markers.
     let mut stale = Harness::new("git-status-stale");
     stale.write_source("src/a.py", "x = 1\n");
     stale.write_source(".git/HEAD", "ref: refs/heads/main\n");
@@ -579,15 +536,6 @@ fn default_apply_depends_on_bytes_not_git_status() {
 
 #[test]
 fn invalid_edits_in_one_file_do_not_block_valid_sibling() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // each selected file to apply atomically and independently after
-    // complete envelope validation; one rejected path must not block
-    // valid unrelated paths. The mixed stale_source sibling is already
-    // covered; this proves the same independence for the invalid_edits
-    // reason: an out-of-bounds candidate passes proto validation but
-    // fails `apply_to_bytes`, so the valid sibling still applies while
-    // the invalid sibling reports invalid_edits with a single Bazel
-    // launch and no rerun.
     let mut harness = Harness::new("invalid-edits-sibling");
     harness.write_source("src/a.py", "x = 1\n");
     harness.write_source("src/b.py", "a = 1\n");
@@ -602,8 +550,6 @@ fn invalid_edits_in_one_file_do_not_block_valid_sibling() {
             replacement: b"y".to_vec(),
         }],
     );
-    // Out-of-bounds end passes proto ordering checks but fails the
-    // verified-bytes bounds check in `apply_to_bytes`.
     let change_b = harness.replacement_at(
         "src/b.py",
         digest(&original_b).to_vec(),

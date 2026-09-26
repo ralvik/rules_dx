@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -15,7 +13,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Filesystem seam so unit tests use a fake instead of the real tree.
 pub trait Fs {
     fn is_file(&self, path: &Path) -> bool;
     fn read_text(&self, path: &Path) -> io::Result<String>;
@@ -79,7 +76,6 @@ fn legacy_marker(fs: &dyn Fs, dir: &Path) -> bool {
     fs.is_file(&dir.join("WORKSPACE")) || fs.is_file(&dir.join("WORKSPACE.bazel"))
 }
 
-/// Expands a leading `~` or `~/` via `HOME` (`USERPROFILE` fallback).
 pub fn expand_tilde(path: &Path) -> PathBuf {
     let Some(text) = path.to_str() else {
         return path.to_path_buf();
@@ -200,12 +196,10 @@ pub fn workspace_start(cwd: &Path) -> PathBuf {
     canonicalize_or_keep(&dir)
 }
 
-/// Reports whether a `CI` value counts as CI for the local-only gate.
 pub fn is_ci_value(value: Option<&str>) -> bool {
     value.is_some_and(|value| value == "true")
 }
 
-/// Reads the launch `CI` environment once for the local-only gate.
 pub fn is_ci() -> bool {
     is_ci_value(std::env::var("CI").ok().as_deref())
 }
@@ -255,7 +249,6 @@ pub fn pinned_bazel_version_real(workspace: &Path) -> Result<String, LauncherErr
     pinned_bazel_version(workspace, &RealFs)
 }
 
-/// The only supported launcher executable: a Bazelisk-compatible
 pub fn launcher_argv0() -> &'static str {
     "bazel"
 }
@@ -271,7 +264,6 @@ pub enum Scope {
     Count(usize),
 }
 
-/// Renders the compact scope without expanding patterns.
 pub fn describe_scope(scope: &Scope) -> String {
     match scope {
         Scope::Repository => "//...".to_owned(),
@@ -288,7 +280,6 @@ pub fn describe_scope(scope: &Scope) -> String {
     }
 }
 
-/// Renders a safe operation summary. The summary never contains
 pub fn operation_summary(command: &str, phase: &str, scope: &Scope) -> String {
     format!("Running {command} {phase} for {}", describe_scope(scope))
 }
@@ -460,7 +451,6 @@ pub enum DryRunError {
     WouldExecuteAction,
 }
 
-/// Decides whether dry-run may proceed. Read-only resolution queries
 pub fn dry_run_allows(is_final_workflow: bool, resolution_requires_action: bool) -> bool {
     !is_final_workflow && !resolution_requires_action
 }

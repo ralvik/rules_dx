@@ -31,9 +31,6 @@ use crate::args::{Command, Invocation};
 pub use common::Env;
 
 pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
-    // `--here` must be consumed into explicit targets before dispatch
-    // (`main.rs` plus test `Harness` via `apply_here`); fail closed
-    // rather than silently ignoring an unresolved cwd scope.
     if invocation.here {
         let Env { err, .. } = env;
         return common::pre_exec(err, "option \"--here/--cwd\" needs cwd resolution");
@@ -196,10 +193,6 @@ mod tests {
 
     #[test]
     fn deferred_families_fail_closed_without_launch() {
-        // Audit executes live auditors per family; update
-        // executes resolver backends live (see exec/update.rs). Both fail
-        // closed with their stable operational codes when workspaces lack
-        // lockfiles.
         for argv in [vec!["security"]] {
             let name = format!("exec-deferred-{}", argv[0]);
             let harness = Harness::new(&name);

@@ -1,14 +1,9 @@
 """Typed native-configuration targets for adapters plus Ruff, Biome/ESLint, Checkstyle, Scala/.NET, Native, Structured, and file-family cohort.
 
-Contract: `docs/quality/native-configuration.md`.
 """
 
 DxNativeConfigInfo = provider(
-    doc = "One tool-owned native config file plus its checked-in closure. " +
-          "Forgeable by construction (Starlark providers carry no origin): " +
-          "trust comes from the typed constructor's extension/source checks " +
-          "plus aspect-time binding, never from the provider alone. " +
-          "See: issue #928.",
+    doc = "One tool-owned native config file plus its closure.",
     fields = {
         "closure": "depset[File]: config plus every data file the tool reaches.",
         "config": "File: the tool-owned config file passed to the adapter.",
@@ -16,7 +11,6 @@ DxNativeConfigInfo = provider(
     },
 )
 
-# Tool-owned config filename extensions. The extension is part of the
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buf": ".yaml",
@@ -105,7 +99,7 @@ def _make_native_config_rule(tool_id, doc):
             "data": attr.label_list(
                 allow_files = True,
                 default = [],
-                doc = "Checked-in data files the config reaches (Vale styles). Unbounded by design: closures span ini/yml and other tool-owned data. See: issue #928.",
+                doc = "Checked-in data files the config reaches.",
             ),
             "src": attr.label(
                 allow_single_file = True,
@@ -147,7 +141,7 @@ ruff_config = _make_native_config_rule(
 
 biome_config = _make_native_config_rule(
     "biome",
-    "Checked-in Biome JSON config (biome.json only, issue #589 wont-fix rejects biome.jsonc; See: docs/quality/native-configuration.md) for JavaScript/TypeScript/JSON lint/format. The adapter passes the config's directory as --config-path.",
+    "Checked-in Biome JSON config.",
 )
 
 eslint_config = _make_native_config_rule(

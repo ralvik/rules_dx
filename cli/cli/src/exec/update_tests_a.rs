@@ -145,7 +145,6 @@ pub(super) fn live_all_success_reports_per_set_and_exits_zero() {
     );
     assert!(out.contains("5 succeeded, 0 failed, 0 blocked"), "{out}");
     assert_eq!(err, "", "{err}");
-    // Go is a no-op with no launch; the four Bazel backends launch.
     assert_eq!(runner.calls.borrow().len(), 4);
 }
 
@@ -159,7 +158,6 @@ pub(super) fn live_independent_failure_preserves_success_and_exits_one() {
     assert!(out.contains("4 succeeded, 1 failed, 0 blocked"), "{out}");
     assert!(err.contains("update_failed"), "{err}");
     assert!(err.contains("failed to update maven"), "{err}");
-    // partial runs report the recovery plan, never silent success.
     assert!(err.contains("update_recovery"), "{err}");
     assert!(err.contains("dx update maven"), "{err}");
     assert_eq!(runner.calls.borrow().len(), 4);
@@ -195,8 +193,6 @@ pub(super) fn live_unsupported_selective_fails_without_launch() {
 
 #[test]
 pub(super) fn live_unsupported_nuget_selective_fails_without_launch() {
-    // `BackendError::Unsupported` with no updater launch and never a
-    // silent full substitution.
     let runner = ScriptRunner::new(&[]);
     let (code, out, err) = run_with(&["update", "nuget:FSharp.Core"], &runner);
     assert_eq!(code, 1, "{out}{err}");
@@ -208,8 +204,6 @@ pub(super) fn live_unsupported_nuget_selective_fails_without_launch() {
 
 #[test]
 pub(super) fn live_unsupported_go_selective_fails_without_launch() {
-    // closed as `BackendError::Unsupported` with no updater launch
-    // and never a silent full (no-op) substitution; widen via `dx bump`.
     let runner = ScriptRunner::new(&[]);
     let (code, out, err) = run_with(&["update", "go:github.com/google/go-cmp/cmp"], &runner);
     assert_eq!(code, 1, "{out}{err}");
@@ -257,8 +251,6 @@ pub(super) fn live_json_emits_per_set_notices_and_finished() {
     assert!(err.contains("update_failed"), "{err}");
     assert!(out.contains("\"code\":\"update_recovery\""), "{out}");
     assert!(err.contains("update_recovery"), "{err}");
-    // Minor-1.1 correlation groups each per-set report under
-    // `update:<set>`; line order stays authoritative.
     for event in &events {
         let code = event
             .get("code")
@@ -301,7 +293,6 @@ pub(super) fn manifest_projects_to_correlated_change_and_mutation() {
     assert_eq!(events[1]["event"], serde_json::json!("mutation"));
     assert_eq!(events[1]["outcome"], serde_json::json!("applied"));
     assert_eq!(events[1]["correlation"], serde_json::json!("update:npm"));
-    // Empty Go no-op projects to no file events, preserving v1.0.
     let empty = dx_update::manifest::CommittedManifest {
         set: "go".to_owned(),
         changes: Vec::new(),

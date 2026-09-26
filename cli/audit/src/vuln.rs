@@ -110,8 +110,6 @@ pub fn go_in_scope(scope: &str, version: &str) -> bool {
         Ok(version) => version,
         Err(_) => return false,
     };
-    // `*` parses to zero comparators (`VersionReq::STAR`): `all` on empty
-    // is true, so star covers pseudo-versions (unlike Cargo's gate).
     requirements
         .comparators
         .iter()
@@ -441,8 +439,6 @@ pub fn maven_compare(left: &str, right: &str) -> std::cmp::Ordering {
                         other => return other,
                     }
                 } else {
-                    // Hyphen-number sorts before dot-number even when
-                    // values differ (`1-2 < 1.1` per List vs Int).
                     let left_rank = if *sep_left == '-' { 0 } else { 1 };
                     let right_rank = if *sep_right == '-' { 0 } else { 1 };
                     if left_rank != right_rank {
@@ -488,8 +484,6 @@ pub fn maven_compare(left: &str, right: &str) -> std::cmp::Ordering {
             std::cmp::Ordering::Equal => continue,
             std::cmp::Ordering::Less => return std::cmp::Ordering::Greater,
             std::cmp::Ordering::Greater => return std::cmp::Ordering::Less,
-            // Equal handled above; no other variants exist, but keep
-            // exhaustive for clarity.
         }
     }
     std::cmp::Ordering::Equal
@@ -702,7 +696,6 @@ pub fn apply_exceptions(
             Err(problem) => problems.push(problem),
         }
     }
-    // Obsolete check runs after validation, against current findings.
     let finding_refs: Vec<FindingRef> = findings
         .iter()
         .map(|finding| FindingRef {
@@ -950,11 +943,6 @@ fn project_osv_affected(
             if trimmed.is_empty() {
                 continue;
             }
-            // OSV `versions` is an exact affected list. Cargo/Go bare
-            // spellings parse as caret ranges (`0.4.10` ~ `^0.4.10` =
-            // `>=0.4.10, <0.5.0`), which over-matches fixed releases
-            // (GHSA-qx2v-8332-m4fv: `0.4.12` vs fixed `0.4.11`); pin
-            // with `=` so only the listed version matches.
             let scope = match set {
                 "cargo" | "go" if !trimmed.starts_with('=') => format!("={trimmed}"),
                 _ => trimmed.to_owned(),

@@ -12,20 +12,13 @@ pub fn disposition(command: Command, dry_run: bool, skewed: bool) -> SkewDisposi
         return SkewDisposition::Proceed;
     }
     match command {
-        // Diagnose/repair path and the version-free shell helper stay
-        // usable on a drifted tree; gating them would block the fix.
         Command::Version | Command::Status | Command::Completion => SkewDisposition::Proceed,
-        // Read-only commands proceed with a warning: the check umbrella
-        // runs check-only phases, security/license are non-mutating, and
-        // the inspect wrappers only forward Bazel queries.
         Command::Check
         | Command::Security
         | Command::License
         | Command::Owners
         | Command::Deps
         | Command::Why => SkewDisposition::Warn,
-        // Mutating or generating commands refuse; a dry-run preview
-        // never mutates, so it warns instead.
         _ => {
             if dry_run {
                 SkewDisposition::Warn

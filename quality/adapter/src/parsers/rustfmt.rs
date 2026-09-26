@@ -181,7 +181,6 @@ mod tests {
                 "header: {header}"
             );
         }
-        // A location without a pending error opener is skipped.
         assert!(
             parse_rustfmt(b"", b" --> /s/x.rs:1:1\n", Some(0), &["/s/x.rs"])
                 .expect("parsed")

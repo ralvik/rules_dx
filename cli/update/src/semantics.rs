@@ -28,7 +28,6 @@ impl VersionRequirement {
 }
 
 impl GitRequirement {
-    /// Only a declared branch may advance its locked commit. Tags and
     pub fn locked_commit_may_advance(self) -> bool {
         match self {
             GitRequirement::Branch => true,

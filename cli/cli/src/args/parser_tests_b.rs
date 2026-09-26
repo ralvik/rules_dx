@@ -96,8 +96,6 @@ fn file_defaults_load_from_workspace_and_reject_invalid_toml() {
 
 #[test]
 fn bump_needs_exactly_one_selector_plus_version() {
-    // `dx bump <selector> <version>`: one requirement,
-    // never batch, mutating without confirmation.
     let bump = parse(&args(&["bump", "cargo:anyhow", "1.2.3"])).expect("parse bump");
     assert_eq!(bump.command, Command::Bump);
     assert_eq!(bump.command.name(), "bump");
@@ -174,10 +172,6 @@ fn bump_needs_exactly_one_selector_plus_version() {
 
 #[test]
 fn migrate_needs_from_and_to_versions() {
-    // `dx migrate --from <version> --to <version>`:
-    // both Cargo semver, upgrade-only gate, one manifest per
-    // major hop plus one per full version pair for minor/patch,
-    // mutating by default with fail-closed execution.
     let migrate = parse(&args(&["migrate", "--from=1.2.3", "--to=2.0.0"])).expect("parse migrate");
     assert_eq!(migrate.command, Command::Migrate);
     assert_eq!(migrate.command.name(), "migrate");
@@ -257,7 +251,6 @@ fn migrate_needs_from_and_to_versions() {
             option: "--".to_owned(),
         })
     );
-    // `--from`/`--to` belong to migrate plus upgrade only.
     let upgrade_ok =
         parse(&args(&["upgrade", "--from=1.2.3", "--to=2.0.0"])).expect("upgrade parses");
     assert_eq!(upgrade_ok.command, Command::Upgrade);
@@ -354,8 +347,6 @@ fn upgrade_needs_from_and_to_with_no_scopes() {
 
 #[test]
 fn run_rejects_machine_output_and_reports() {
-    // `run` supports `--output=json` (NDJSON planning + per-target events);
-    // only `--output=diff` has no patch to emit.
     let got = parse(&args(&["run", "//app:bin", "--output=json"])).expect("run json");
     assert_eq!(got.output, OutputMode::Json);
     assert!(got.command.supports_json());
@@ -381,13 +372,6 @@ fn run_rejects_machine_output_and_reports() {
 
 #[test]
 fn output_contract_has_no_silent_ignore() {
-    // Every command either supports a machine-output mode or
-    // rejects it pre-exec with `UnsupportedOption`. Silent ignore (accept
-    // the flag, print text anyway) is never allowed.
-    //
-    // JSON-capable: quality, generate, workflow build/test/coverage/run,
-    // umbrellas, security/license, update, managed, clean, status, version,
-    // owners/deps/why, docs.
     for command in [
         "lint",
         "typecheck",
@@ -412,13 +396,9 @@ fn output_contract_has_no_silent_ignore() {
         assert_eq!(got.output, OutputMode::Json, "command: {command}");
         assert!(got.command.supports_json(), "command: {command}");
     }
-    // Bump is JSON-capable with its required positionals
-    // (`dx bump <selector> <version>` never runs bare).
     let got = parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--output=json"])).expect("bump json");
     assert_eq!(got.output, OutputMode::Json);
     assert!(got.command.supports_json());
-    // Migrate plus upgrade are JSON-capable with their required versions
-    // (`dx migrate/upgrade --from/--to` never run bare).
     let got = parse(&args(&[
         "migrate",
         "--from=1.2.3",
@@ -452,17 +432,11 @@ fn output_contract_has_no_silent_ignore() {
     let got = parse(&args(&["why", "src/main.rs", "//a:one", "--output=json"])).expect("why json");
     assert_eq!(got.output, OutputMode::Json);
     assert!(Command::Why.supports_json());
-    // Diff-capable: patch producers only.
     for command in ["lint", "typecheck", "format", "generate", "check", "fix"] {
         let got = parse(&args(&[command, "--output=diff"])).expect("diff capable");
         assert_eq!(got.output, OutputMode::Diff, "command: {command}");
         assert!(got.command.supports_diff(), "command: {command}");
     }
-    // Text-only exemptions fail fast on both machine modes.
-    // (`bazel` takes dx flags before the command word; tokens after it
-    // forward verbatim to the launcher.)
-    // `clean`, `codegen`, `env`, `setup`, and `run` are JSON-capable now;
-    // only their `--output=diff` (no patch) stays rejected below.
     for words in [
         vec!["clean", "--output=diff"],
         vec!["codegen", "--output=diff"],
@@ -490,8 +464,6 @@ fn output_contract_has_no_silent_ignore() {
             "words: {words:?}"
         );
     }
-    // No patch to emit: JSON-capable but diff-rejecting commands fail
-    // fast on `--output=diff` instead of printing empty stdout.
     for words in [
         vec!["build", "//a:one", "--output=diff"],
         vec!["test", "//a:one", "--output=diff"],
@@ -541,8 +513,6 @@ fn bazel_forwards_verbatim_and_rejects_dx_options() {
             "--jobs=4".to_owned()
         ]
     );
-    // Tokens after the command word forward verbatim even when
-    // they look like dx options: dx globals must precede `bazel`.
     for words in [
         vec!["bazel", "--jobs=4"],
         vec!["bazel", "--check"],
@@ -559,8 +529,6 @@ fn bazel_forwards_verbatim_and_rejects_dx_options() {
         got.bazel_options,
         vec!["build".to_owned(), "--jobs".to_owned(), "4".to_owned()]
     );
-    // dx-owned options before the command word still fail fast so
-    // launcher flags can never be misread as dx flags.
     for words in [
         vec!["--output=json", "bazel", "version"],
         vec!["--check", "bazel", "version"],
@@ -704,10 +672,6 @@ fn managed_commands_parse_repo_and_exact_scopes() {
         let got = parse(&args(&[command, "@repo//pkg:lib"])).expect("external label");
         assert_eq!(got.targets, args(&["@repo//pkg:lib"]));
     }
-    // Scope rules are the shared setup scope rules: multiple
-    // positionals, patterns, and non-labels fail before execution.
-    // `MultipleTargets` reports the second positional via `get`
-    // (fail-closed, never direct indexing).
     assert_eq!(
         parse(&args(&["codegen", "//a:one", "//b:two"])),
         Err(ArgsError::UnsupportedOption {
@@ -740,9 +704,6 @@ fn managed_commands_parse_repo_and_exact_scopes() {
             "words: {words:?}"
         );
     }
-    // Quality-only, version-only, and clean-only options
-    // fail fast on managed commands (`--output=json` is accepted; only
-    // `--output=diff` has no patch to emit).
     for words in [
         vec!["codegen", "--check"],
         vec!["env", "--fail-on=error"],
@@ -789,8 +750,6 @@ fn why_requires_file_and_label() {
 
 #[test]
 fn init_and_hooks_have_no_force_flag() {
-    // overwrite flag, so `--force` must fail as an unknown option rather
-    // than read as a no-op.
     for words in [
         vec!["init", "--force"],
         vec!["init", "--force", "demo"],
@@ -809,8 +768,6 @@ fn init_and_hooks_have_no_force_flag() {
 
 #[test]
 fn here_selects_cwd_scope_only_via_explicit_flag() {
-    // tree on cwd-scope commands only, never implicitly, and never with
-    // explicit scopes. The no-flag default stays `//...`.
     for command in [
         "security",
         "license",
@@ -831,15 +788,12 @@ fn here_selects_cwd_scope_only_via_explicit_flag() {
         assert!(got.command.supports_here(), "command: {command}");
         let alias = parse(&args(&[command, "--cwd"])).expect("cwd alias parses");
         assert!(alias.here, "command: {command}");
-        // Flags may appear before or after the command word.
         let before = parse(&args(&["--here", command])).expect("before parses");
         assert!(before.here, "command: {command}");
-        // Bare default stays repository-wide without the flag.
         let bare = parse(&args(&[command])).expect("bare parses");
         assert!(!bare.here, "command: {command}");
         assert!(bare.targets.is_empty(), "command: {command}");
     }
-    // Explicit scopes never combine with `--here`.
     for words in [
         vec!["build", "--here", "//a:one"],
         vec!["lint", "src/a.py", "--here"],
@@ -853,7 +807,6 @@ fn here_selects_cwd_scope_only_via_explicit_flag() {
             "words: {words:?}"
         );
     }
-    // Every other command rejects `--here` instead of silently ignoring it.
     for words in [
         vec!["clean", "--here"],
         vec!["update", "--here"],
@@ -878,8 +831,6 @@ fn here_selects_cwd_scope_only_via_explicit_flag() {
             "words: {words:?}"
         );
     }
-    // `dx bazel` owns its tail verbatim: `--here` after it forwards to
-    // Bazel, while dx-owned `--here` before it is rejected.
     let verbatim = parse(&args(&["bazel", "build", "--here"])).expect("verbatim");
     assert_eq!(verbatim.command, Command::Bazel);
     assert!(!verbatim.here);
@@ -917,7 +868,6 @@ fn completion_check_verifies_without_writing() {
             option: "<shell>".to_owned(),
         })
     );
-    // `status --check` stays rejected.
     assert!(matches!(
         parse(&args(&["status", "--check"])),
         Err(ArgsError::UnsupportedOption { .. })
@@ -926,7 +876,6 @@ fn completion_check_verifies_without_writing() {
 
 #[test]
 fn offline_forces_cache_only_on_audit_update_bump() {
-    // alias) forces cache-only without fetches on security/license/update/bump only.
     for command in ["security", "license", "update"] {
         let got = parse(&args(&[command, "--offline"])).expect("offline parses");
         assert!(got.offline, "command: {command}");
@@ -944,11 +893,9 @@ fn offline_forces_cache_only_on_audit_update_bump() {
     let bump_alias =
         parse(&args(&["bump", "cargo:anyhow", "1.2.3", "--frozen"])).expect("bump frozen");
     assert!(bump_alias.offline);
-    // `--offline` with `--dry-run` still plans (no launch, no fail).
     let dry = parse(&args(&["update", "--offline", "--dry-run"])).expect("offline dry-run");
     assert!(dry.offline);
     assert!(dry.dry_run);
-    // Every other command rejects `--offline` instead of silently ignoring it.
     for words in [
         vec!["lint", "--offline"],
         vec!["build", "//a:one", "--offline"],
@@ -967,8 +914,6 @@ fn offline_forces_cache_only_on_audit_update_bump() {
             "words: {words:?}"
         );
     }
-    // `dx bazel` owns its tail verbatim: `--offline` after it forwards to
-    // Bazel, while dx-owned `--offline` before it is rejected.
     let verbatim = parse(&args(&["bazel", "build", "--offline"])).expect("verbatim");
     assert_eq!(verbatim.command, Command::Bazel);
     assert!(!verbatim.offline);
@@ -979,7 +924,6 @@ fn offline_forces_cache_only_on_audit_update_bump() {
             option: "--offline".to_owned(),
         })
     );
-    // Boolean shape: `=value` stays unknown, never a silent value.
     assert_eq!(
         parse(&args(&["security", "--offline=yes"])),
         Err(ArgsError::UnknownOption {

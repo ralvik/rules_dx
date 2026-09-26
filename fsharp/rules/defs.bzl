@@ -1,13 +1,9 @@
 """Experimental minimal F# wrappers (ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_dotnet//dotnet:defs.bzl", _fsharp_binary = "fsharp_binary", _fsharp_library = "fsharp_library", _fsharp_test = "fsharp_test")
 
-# providers live only under @rules_dotnet//dotnet/private, so the wrapper
-# must load them there; the sealed `upstream_providers` plus
-# `required_providers` below keep the boundary fail-closed.
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
@@ -20,7 +16,6 @@ _DX_FSHARP_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream assembly infos,
 _DX_FSHARP_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
@@ -77,7 +72,6 @@ def fsharp_tfm_with_defaults(kwargs):
     """Returns kwargs defaulting target_frameworks plus warnings-as-errors.
 
     Caller-provided values win; only missing keys get defaults.
-    See: docs/testing/generation.md.
     """
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("target_frameworks", ["net10.0"])

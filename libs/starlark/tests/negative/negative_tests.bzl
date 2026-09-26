@@ -4,8 +4,6 @@
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//libs/starlark:failure_test.bzl", "failure_test")
 
-# Deliberately wrong fixtures (red data, never live failing targets):
-
 def failing_check_demo(name):
     sh_test(
         name = name,
@@ -59,9 +57,6 @@ _wrong_phase_subject = rule(
 )
 
 def wrong_phase_demo(name):
-    # Analysis error, not a test failure: load mode rejects subjects.
-    # Subject stays manual (non-test, so wildcard builds skip it); the
-    # expect-failure test is non-manual and green.
     _wrong_phase_subject(
         name = name + "_subject",
         subjects = [":negative_subject"],

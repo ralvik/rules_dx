@@ -1,16 +1,10 @@
 """Structured cohort matrix cells.
 
-Contract: `docs/quality/runner-matrix.md`.
 Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
-# Recorded Buf lint JSONL for the lint-fail cell, shaped like the
-# parser unit samples (`quality/adapter/src/parsers/buf.rs`):
-# workspace-relative path, type plus positions. Injected verbatim.
 BUF_LINT = """{"path": "matrix/buf_lint_dirty.proto", "start_line": 3, "start_column": 9, "end_line": 3, "end_column": 18, "type": "PACKAGE_DIRECTORY_MATCH", "message": "Files with package fixtures.buf must be in a directory fixtures/buf."}"""
 
-# Recorded qmllint JSON for the lint-fail cell, shaped like the parser
-# unit samples (`quality/adapter/src/parsers/qmllint.rs`).
 QMLLINT_LINT = """{"diagnostics": [{"file": "matrix/qmllint_dirty.qml", "line": 4, "column": 5, "rule": "unqualified", "message": "Unqualified access to `foo`.", "severity": "warning"}]}"""
 
 STRUCTURED_CASES = [

@@ -1,6 +1,5 @@
 """Shared normalized shard pipeline.
 
-Contract: `docs/environments/environment.md`, `docs/environments/codegen.md`.
 """
 
 def plan_shard_exec_matches(file_path, exec_path):

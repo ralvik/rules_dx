@@ -1,6 +1,5 @@
 """Single-sourced versioned registry queries.
 
-Contract: `docs/quality/quality-sources.md`.
 """
 
 load(":adapters.bzl", "ADAPTER_REGISTRY_SCHEMA_VERSION", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "adapter_registry_schema_error")
@@ -9,8 +8,6 @@ load(":parity_tests.bzl", "PARITY_DEFERRED", "PARITY_SCHEMA_VERSION", "parity_sc
 load(":sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES", "SOURCES_REGISTRY_SCHEMA_VERSION", "sources_schema_error")
 load(":wrapper_owners.bzl", "WRAPPER_OWNERS", "WRAPPER_SCHEMA_VERSION", "wrapper_schema_error")
 
-# Version of this aggregated registry-query surface. Bumped only when the
-# query set itself breaks; registry data additions never bump it.
 REGISTRY_SCHEMA_VERSION = 1
 
 def registry_classes():
@@ -86,7 +83,6 @@ def registry_schema_error():
     if err != "":
         return err
 
-    # Cross-registry singularity without duplicating inventories: every
     for class_id in KNOWN_SEMANTIC_FILE_CLASSES:
         if class_id not in REAL_CLASS_TO_FAMILY:
             return "registry: known class '" + class_id + "' has no owning family"

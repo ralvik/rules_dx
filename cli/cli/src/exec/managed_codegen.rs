@@ -21,25 +21,25 @@ pub(crate) fn collect_managed_codegen(
         )
     })?;
     let projection = dx_codegen::plan_projection(&plan.records, &outputs).map_err(|err| {
-        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid codegen plan: {err}"),
         )
-        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     })?;
     Ok((outputs, plan, projection))
 }
 
 pub(crate) fn empty_generated_id() -> Result<dx_setup::GenerationId, (String, String)> {
-    // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     dx_setup::GenerationId::new(&dx_codegen::plan_hex("[]")).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid empty codegen plan digest: {err}"),
         )
     })
-    // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 }
 
 fn validate_logical_path(logical_path: &str) -> Result<(), ExecError> {
@@ -134,11 +134,6 @@ pub(crate) fn stage_codegen_generation(
                 )
             })?;
         }
-        // Reuse is exact-identity reuse: a leaf already pointing at the
-        // current BEP-reported artifact stays; any other existing leaf is
-        // reconstructed so a stale or foreign leaf never survives
-        // selection. An unreadable leaf falls through to replacement,
-        // which fails closed below when the filesystem is unusable.
         let needs_link = match std::fs::symlink_metadata(&leaf) {
             Ok(meta) => {
                 if meta.file_type().is_dir() && !meta.file_type().is_symlink() {
@@ -183,12 +178,12 @@ pub(crate) fn stage_codegen_side(
     projection: &[dx_codegen::ProjectionEntry],
 ) -> Result<dx_setup::GenerationId, (String, String)> {
     let id = dx_setup::GenerationId::new(&plan.hex()).map_err(|err| {
-        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid codegen plan digest: {err}"),
         )
-        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     })?;
     stage_codegen_generation(workspace, &id, projection)?;
     Ok(id)
@@ -255,13 +250,11 @@ mod tests {
             std::fs::read_link(dir.join("nested/b.txt")).expect("leaf"),
             second
         );
-        // Restaging is exact-identity reuse: nothing changes.
         stage_codegen_generation(&workspace, &id, &projection).expect("restage");
         assert_eq!(
             std::fs::read_link(dir.join("gen/a.txt")).expect("leaf"),
             first
         );
-        // A stale leaf pointing elsewhere is reconstructed.
         std::fs::remove_file(dir.join("gen/a.txt")).expect("remove leaf");
         symlink_leaf(&second, &dir.join("gen/a.txt")).expect("stale leaf");
         stage_codegen_generation(&workspace, &id, &projection).expect("repair stale");
@@ -269,7 +262,6 @@ mod tests {
             std::fs::read_link(dir.join("gen/a.txt")).expect("leaf"),
             first
         );
-        // A foreign regular file at a leaf is reconstructed too.
         std::fs::remove_file(dir.join("gen/a.txt")).expect("remove leaf");
         std::fs::write(dir.join("gen/a.txt"), "foreign").expect("foreign leaf");
         stage_codegen_generation(&workspace, &id, &projection).expect("repair foreign");
@@ -277,7 +269,6 @@ mod tests {
             std::fs::read_link(dir.join("gen/a.txt")).expect("leaf"),
             first
         );
-        // Duplicate entries resolving to the same artifact are one leaf.
         let doubled = vec![
             codegen_entry("gen/a.txt", &first),
             codegen_entry("gen/a.txt", &first),
@@ -313,7 +304,6 @@ mod tests {
         .expect_err("conflict");
         assert_eq!(code, CODE_INVALID_RESULT);
         assert!(message.contains("multiple artifacts"), "{message}");
-        // A logical path colliding with a checked-in source fails.
         std::fs::create_dir_all(workspace.join("gen")).expect("source dir");
         std::fs::write(workspace.join("gen/owned.txt"), "source").expect("source");
         let (code, message) =
@@ -324,7 +314,6 @@ mod tests {
             message.contains("collides with a workspace source"),
             "{message}"
         );
-        // Missing artifacts fail before selection; Bazel owns materialization.
         let missing = workspace.join("no-such-artifact.txt");
         let (code, message) = stage_codegen_generation(
             &workspace,
@@ -334,7 +323,6 @@ mod tests {
         .expect_err("missing artifact");
         assert_eq!(code, CODE_INVALID_RESULT);
         assert!(message.contains("Bazel owns materialization"), "{message}");
-        // A real directory at a leaf collides within its generation.
         let dir_id = dx_setup::GenerationId::new(&"2".repeat(64)).expect("fixture id");
         let dir = ensure_generation_dir(&workspace, GENERATED_DIR_NAME, dir_id.as_str())
             .expect("gen dir");
@@ -347,7 +335,6 @@ mod tests {
             message.contains("collides within its generation"),
             "{message}"
         );
-        // A file where an intermediate directory belongs fails creation.
         let parent_id = dx_setup::GenerationId::new(&"3".repeat(64)).expect("fixture id");
         let parent_dir = ensure_generation_dir(&workspace, GENERATED_DIR_NAME, parent_id.as_str())
             .expect("gen dir");
@@ -368,8 +355,6 @@ mod tests {
         let workspace = fixture.workspace().to_path_buf();
         let first = fixture.first.clone();
         let id = empty_generated_id().expect("empty digest");
-        // A checked-in source at the generated logical path fails closed
-        // without the contract.
         std::fs::create_dir_all(workspace.join("gen")).expect("source dir");
         std::fs::write(workspace.join("gen/owned.txt"), "source").expect("source");
         let (code, message) =
@@ -380,9 +365,6 @@ mod tests {
             message.contains("collides with a workspace source"),
             "{message}"
         );
-        // The same collision succeeds when the entry carries the explicit
-        // replacement contract identifying the replaced source
-        // (`replaces` equal to the logical path) and the backing artifact.
         stage_codegen_generation(
             &workspace,
             &id,
@@ -397,14 +379,10 @@ mod tests {
             std::fs::read_link(dir.join("gen/owned.txt")).expect("leaf"),
             first
         );
-        // The checked-in source itself is untouched: the mirror stages
-        // under the generation directory, never beside sources.
         assert_eq!(
             std::fs::read(workspace.join("gen/owned.txt")).expect("source"),
             b"source"
         );
-        // A cross-path contract never waives the collision: `replaces`
-        // must equal the logical path itself.
         let bad = dx_codegen::ProjectionEntry {
             logical_path: "gen/owned.txt".to_owned(),
             artifact: first.to_string_lossy().into_owned(),
@@ -425,8 +403,6 @@ mod tests {
         let first = fixture.first.clone();
         let second = fixture.second.clone();
         let id = empty_generated_id().expect("empty digest");
-        // Top-level leaves so the generation directory itself is the
-        // leaf parent under test.
         stage_codegen_generation(&workspace, &id, &[codegen_entry("a.txt", &first)])
             .expect("stage");
         let dir = workspace
@@ -434,13 +410,11 @@ mod tests {
             .join(GENERATED_DIR_NAME)
             .join(id.as_str());
         set_mode(&dir, 0o555);
-        // Replacing a stale leaf without write permission fails.
         let (code, message) =
             stage_codegen_generation(&workspace, &id, &[codegen_entry("a.txt", &second)])
                 .expect_err("cannot replace");
         assert_eq!(code, CODE_MANAGED_COMMIT_FAILED);
         assert!(message.contains("cannot replace"), "{message}");
-        // Linking a fresh leaf without write permission fails.
         let (code, message) = stage_codegen_generation(
             &workspace,
             &id,

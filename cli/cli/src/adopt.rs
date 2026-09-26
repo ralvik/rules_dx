@@ -31,7 +31,6 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
 
 fn operational(out: &mut dyn Write, err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
-    // Stdout truncation fails with `141` on `EPIPE`, else operational.
     if let Err(exit) = flush_out(out) {
         return exit;
     }
@@ -285,9 +284,6 @@ mod tests {
 
     #[test]
     fn quiet_suppresses_summaries_but_not_results() {
-        // `--quiet` silences `dx` prose summaries while result
-        // documents still print. Init dry-run plans are summaries;
-        // `status` output is the answer.
         let inv = invocation(&["init", "--dry-run", "--quiet", "demo"]);
         let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-init-");
         let root = scratch.path().to_path_buf();
@@ -326,8 +322,6 @@ mod tests {
         assert_eq!(code, 0);
         assert!(!String::from_utf8(out).expect("out").is_empty());
 
-        // Version dry-run plans are summaries (silenced); version output
-        // itself is the answer (never silenced).
         let inv = invocation(&["version", "--dry-run", "--pin=0.0.0", "--quiet"]);
         let scratch = dx_test_scratch::scratch("dx-adopt-cmd-quiet-version-dryrun-");
         let root = scratch.path().to_path_buf();

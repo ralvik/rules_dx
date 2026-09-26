@@ -1,20 +1,3 @@
-//! Validation and codec helpers for the normalized codegen plan shard
-//!.
-//!
-//! Contract: `docs/environments/codegen.md` (provider contract), schema
-//! `//generation:codegen.proto`. This crate enforces the checks that mirror
-//! the frozen Starlark semantics in `//generation:codegen.bzl`: producer
-//! label shape, non-empty language, non-empty entries, workspace-relative
-//! paths, within-shard duplicate logical paths, the always-true
-//! `read_only` wire bit, and the optional `exec_path` BEP-matching suffix
-//! (empty for logical-only entries, never the reserved shard suffix).
-//! Cross-record conflict detection and deterministic
-//! merge stay in Starlark (`codegen_conflict_error`, `codegen_merge_records`)
-//! and in the `dx` CLI collection; this crate only validates and encodes
-//! one contributor shard.
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -28,7 +11,6 @@
 pub use codegen_proto::rules_dx::codegen as proto;
 use proto::DxCodegenShard;
 
-/// Validation or codec failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
     #[error("cannot decode codegen shard: {0}")]
@@ -66,11 +48,6 @@ pub enum Error {
 }
 
 fn check_path(producer: &str, path: &str) -> Result<(), Error> {
-    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
-    // EmptyComponent is intentionally allowed to preserve parity with
-    // Starlark `codegen_path_error`, which only rejects
-    // empty/absolute/backslash/dot segments; messages mirror
-    // `//generation:codegen.bzl` verbatim and are pinned by tests below.
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("must be a non-empty workspace-relative path"),
@@ -92,10 +69,6 @@ fn check_path(producer: &str, path: &str) -> Result<(), Error> {
 }
 
 fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
-    // Empty exec paths are logical-only entries requiring no artifact.
-    // Non-empty exec paths are BEP-matching suffixes: same shape rules
-    // as logical paths, plus refusal of the reserved shard suffix so a
-    // shard can never claim another shard as its backing artifact.
     if path.is_empty() {
         return Ok(());
     }
@@ -126,11 +99,6 @@ fn check_replaces(
     exec_path: &str,
     replaces: &str,
 ) -> Result<(), Error> {
-    // Empty replaces means no replacement: colliding workspace sources
-    // fail closed. Non-empty must equal the logical path (explicit
-    // self-replacement acknowledgment) and requires a non-empty exec
-    // path binding the replacing generated artifact.
-    // See: `//generation:codegen.bzl` (`codegen_replaces_error`).
     if replaces.is_empty() {
         return Ok(());
     }
@@ -162,7 +130,6 @@ fn check_replaces(
     Ok(())
 }
 
-/// Validates one contributor shard, mirroring `codegen_record_error`.
 pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
     if shard.producer.is_empty() {
         return Err(Error::EmptyProducer);
@@ -199,8 +166,6 @@ pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
                 path: entry.logical_path.clone(),
             });
         }
-        // Shared uniqueness control flow lives in `dx_proto_validate`; only
-        // the crate-local `Error` payload stays here (slice).
         dx_proto_validate::check_unique_insert(&mut seen, &entry.logical_path, |existing| {
             Error::DuplicateLogicalPath {
                 producer: shard.producer.clone(),
@@ -211,12 +176,10 @@ pub fn validate(shard: &DxCodegenShard) -> Result<(), Error> {
     Ok(())
 }
 
-/// Encodes one validated shard to its binary wire form.
 pub fn encode_validated(shard: &DxCodegenShard) -> Result<Vec<u8>, Error> {
     dx_proto_validate::encode_with_validation(shard, validate)
 }
 
-/// Decodes and validates one shard from its binary wire form.
 pub fn decode_validated(bytes: &[u8]) -> Result<DxCodegenShard, Error> {
     dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
@@ -287,7 +250,6 @@ mod tests {
         let shard = sample();
         let bytes = encode_validated(&shard).unwrap();
         assert_eq!(decode_validated(&bytes).unwrap(), shard);
-        // Exec paths round-trip as well.
         let mut with_exec = sample();
         with_exec.entries[0] = entry_with_exec("src/beta.rs", "src", "beta", "result.lib.rs");
         let bytes = encode_validated(&with_exec).unwrap();
@@ -344,8 +306,6 @@ mod tests {
                 "import root {path:?} must fail",
             );
         }
-        // Empty exec paths are logical-only and valid; non-empty ones
-        // follow the same shape rules and never use the shard suffix.
         assert!(validate(&sample()).is_ok());
         for path in ["/out/a.rs", "src\\a.rs", "src/./a.rs", "a.dxcodegen.pb"] {
             let mut shard = sample();
@@ -362,10 +322,6 @@ mod tests {
 
     #[test]
     fn path_messages_are_pinned_to_dx_path_ladder() {
-        // Thin wrapper over `dx_path::classify`: exact messages (mirroring
-        // `//generation:codegen.bzl`) plus ladder order are pinned so
-        // order/message drift fails here. EmptyComponent stays allowed
-        // (Starlark parity).
         for (path, reason) in [
             ("", "must be a non-empty workspace-relative path"),
             ("/src/a.rs", "must not be absolute"),
@@ -385,7 +341,6 @@ mod tests {
                 "logical path {path:?}"
             );
         }
-        // Empty-component paths pass through (intentional parity gap).
         let mut allowed = sample();
         allowed.entries[0].logical_path = "a//b".into();
         allowed.entries[0].import_root = "src".into();
@@ -393,7 +348,6 @@ mod tests {
             validate(&allowed).is_ok(),
             "empty-component stays allowed for Starlark parity"
         );
-        // Ladder order: absolute beats backslash/dot; backslash beats dot.
         let mut ordered = sample();
         ordered.entries[0].logical_path = "/src/./a.rs".into();
         assert_eq!(
@@ -450,16 +404,12 @@ mod tests {
 
     #[test]
     fn rejects_bad_replacement_contracts() {
-        // Replaces without a backing exec path carries no generated
-        // artifact identity.
         let mut shard = sample();
         shard.entries[0] = entry_with_replaces("src/beta.rs", "src", "beta", "", "src/beta.rs");
         assert!(
             matches!(validate(&shard), Err(Error::BadReplaces { .. })),
             "replaces without exec must fail",
         );
-        // Replaces must equal the logical path: an explicit
-        // self-replacement acknowledgment, never a cross-path claim.
         let mut shard = sample();
         shard.entries[0] = entry_with_replaces(
             "src/beta.rs",
@@ -472,7 +422,6 @@ mod tests {
             matches!(validate(&shard), Err(Error::BadReplaces { .. })),
             "cross-path replaces must fail",
         );
-        // Replaces follows workspace-relative shape rules.
         for path in ["/src/a.rs", "src\\a.rs", "src/./a.rs"] {
             let mut shard = sample();
             shard.entries[0] =
@@ -482,7 +431,6 @@ mod tests {
                 "replaces {path:?} must fail",
             );
         }
-        // Empty replaces stays fail-closed and valid.
         assert!(validate(&sample()).is_ok());
     }
 

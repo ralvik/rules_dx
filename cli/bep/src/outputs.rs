@@ -134,8 +134,6 @@ pub fn collect_with_workspace(
                     children.push(child_id.to_owned());
                 }
             }
-            // Named sets are immutable: the first definition wins and a
-            // repeated id keeps stream order irrelevant.
             sets.entry(set_id.to_owned()).or_insert(RawSet {
                 line: line_no,
                 files: raw,
@@ -161,9 +159,6 @@ pub fn collect_with_workspace(
                     line: line_no,
                     reason: "completed event without target label".to_owned(),
                 })?;
-            // A completion without `success` is an aborted action (for
-            // example skipped dependents after a `--keep_going` failure):
-            // unsuccessful, contributing no artifacts.
             let success = completed
                 .get("success")
                 .and_then(Value::as_bool)
@@ -207,8 +202,6 @@ pub fn collect_with_workspace(
                 }
             }
             if success && set_ids.is_empty() && !mentions_group(completed, config.output_group()) {
-                // A successful target that never requested the group is not
-                // part of this collection.
                 continue;
             }
             pending.push(PendingTarget {
@@ -593,10 +586,6 @@ mod tests {
 
     #[test]
     fn aborted_completed_events_collect_as_failed() {
-        // Aborted actions (for example skipped dependents after a
-        // `--keep_going` failure) carry no `success` field: they collect
-        // as unsuccessful labels with no artifacts instead of failing
-        // collection. The caller observes the nonzero Bazel exit status.
         let stream = [
             r#"{"id": {"targetCompleted": {"label": "//q:a"}}, "completed": {}}"#.to_owned(),
             r#"{"id": {"targetCompleted": {"label": "//q:b"}}, "completed": {"success": false}}"#
@@ -840,7 +829,6 @@ mod tests {
             }
         );
         assert_eq!(reader.reads.get(), 0);
-        // The double itself records calls and fails loudly.
         let probe = NoReadReader {
             reads: std::cell::Cell::new(0),
         };
@@ -957,7 +945,6 @@ mod tests {
 
     #[test]
     fn set_definition_order_does_not_matter() {
-        // Completion before the named-set definition resolves identically.
         let stream = [
             completed("//q:a", true, &group_ref("dx_results", &["1"])),
             named_set("1", &["file:///out/a.pb"]),

@@ -54,9 +54,6 @@ pub enum ManifestError {
 }
 
 fn check_path_shape(path: &str) -> Result<(), &'static str> {
-    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
-    // Messages preserve the historical manifest wording; Dot/DotDot share
-    // one message. Pinned tests below prove the mapping plus ladder order.
     match dx_path::classify(path) {
         None => Ok(()),
         Some(dx_path::PathProblem::Empty) => Err("path must be non-empty"),
@@ -72,8 +69,6 @@ fn check_path_shape(path: &str) -> Result<(), &'static str> {
 }
 
 fn is_directory_hub(path: &str) -> bool {
-    // Derived output folders are not file changes; their owning lock
-    // carries the report. Today only the NuGet `deps` hub qualifies.
     path == "third_party/dotnet/deps"
 }
 
@@ -162,11 +157,7 @@ pub fn validate(manifest: &CommittedManifest) -> Result<(), ManifestError> {
                 }
             }
         }
-        if change.kind == CommittedKind::Create && change.new_content.is_empty() {
-            // Empty create content is allowed only when the backend truly
-            // committed an empty lock; the CLI still projects it as a
-            // `0..0` insertion. No extra gate here beyond UTF-8 (String).
-        }
+        if change.kind == CommittedKind::Create && change.new_content.is_empty() {}
     }
     Ok(())
 }
@@ -215,7 +206,6 @@ mod tests {
 
     #[test]
     fn empty_manifest_is_valid_no_changes() {
-        // Go no-op success with no file delta projects to no events.
         let manifest = CommittedManifest {
             set: "go".to_owned(),
             changes: vec![],
@@ -232,7 +222,6 @@ mod tests {
                 modify("rust/tests/fixtures/hello/Cargo.lock"),
             ],
         };
-        // Normalized byte order: `cargo-...` sorts before `rust/...`.
         validate(&manifest).expect("ordered cargo locks");
         let swapped = CommittedManifest {
             set: "cargo".to_owned(),
@@ -263,7 +252,6 @@ mod tests {
 
     #[test]
     fn create_omits_digest_with_zero_length() {
-        // New locks (for example a first-time derived lock) create.
         let manifest = CommittedManifest {
             set: "maven".to_owned(),
             changes: vec![CommittedChange {
@@ -331,22 +319,16 @@ mod tests {
         };
         missing_digest.changes[0].source_digest = None;
         assert!(validate(&missing_digest).is_err());
-        // Directory hubs never appear as file changes.
         let dir = CommittedManifest {
             set: "nuget".to_owned(),
             changes: vec![modify("third_party/dotnet/deps")],
         };
-        // `deps` is a declared output folder but a directory hub; the
-        // manifest fails closed here so no file event is ever forged.
-        // Their owning lock (`paket.lock`) carries the report.
         assert!(matches!(validate(&dir), Err(ManifestError::BadPath { .. })));
         assert!(project(&dir).is_err());
     }
 
     #[test]
     fn path_messages_are_pinned_to_dx_path_ladder() {
-        // Thin wrapper over `dx_path::classify`: exact messages plus ladder
-        // order are pinned so drift fails here.
         for (path, reason) in [
             ("", "path must be non-empty"),
             ("/abs", "path must be workspace-relative, not absolute"),
@@ -358,8 +340,6 @@ mod tests {
             assert_eq!(check_path_shape(path), Err(reason), "path: {path:?}");
         }
         assert_eq!(check_path_shape("pnpm-lock.yaml"), Ok(()));
-        // Ladder order: absolute beats backslash/dot, dot beats dot-dot
-        // (shared message, but the winning rung is order-determined).
         assert_eq!(
             check_path_shape("/a//b"),
             Err("path must be workspace-relative, not absolute")
@@ -391,13 +371,11 @@ mod tests {
         assert_eq!(projected[0].replacement, "new\n");
         assert_eq!(projected[0].source_digest.as_deref(), Some(DIGEST));
         assert_eq!(projected[1].path, "rust/tests/fixtures/hello/Cargo.lock");
-        // Empty manifests project to no records, preserving v1.0.
         let empty = CommittedManifest {
             set: "go".to_owned(),
             changes: vec![],
         };
         assert!(project(&empty).expect("empty").is_empty());
-        // Create projects to a 0..0 insertion.
         let create = CommittedManifest {
             set: "maven".to_owned(),
             changes: vec![CommittedChange {

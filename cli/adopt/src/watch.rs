@@ -106,10 +106,6 @@ mod tests {
 
     #[test]
     fn watch_execution_gaps_matrix_is_wont_fix() {
-        // The 8 thin-loop commands stay watchable; the
-        // remaining 22 registry commands stay fail-closed not watchable
-        // and CI stays refused. Pinned with fixtures in
-        // `cli/cli/tests/fixtures/cli_execution_gaps/`.
         for watchable in [
             "build",
             "test",
@@ -168,8 +164,6 @@ mod tests {
 
     #[test]
     fn watch_coalesces_bursts_into_a_single_trigger() {
-        // Rapid create/modify/delete bursts collapse to one
-        // deterministic rebuild trigger per path.
         let first = PathBuf::from("/tmp/ws/src/main.rs");
         let second = PathBuf::from("/tmp/ws/src/lib.rs");
         let trigger = coalesce_watch_paths(vec![
@@ -208,8 +202,6 @@ mod tests {
 
     #[test]
     fn watch_reports_created_files_and_times_out_when_idle() {
-        // A real `notify` watcher emits a debounced trigger
-        // for a created file, and reports empty when nothing changes.
         let scratch = dx_test_scratch::scratch("dx-adopt-watch-");
         let root = scratch.path().to_path_buf();
         let writer = root.clone();
@@ -218,7 +210,6 @@ mod tests {
             let _ = std::fs::write(writer.join("trigger.txt"), "change");
         });
         let trigger = watch_for_change(&root, Duration::from_secs(5)).expect("watch create");
-        // FSEvents may coalesce creation into its containing directory.
         let canonical_root = root.canonicalize().expect("canonical watch root");
         assert!(
             trigger

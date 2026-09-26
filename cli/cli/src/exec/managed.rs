@@ -48,13 +48,6 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
             "temporary event path is not UTF-8",
         );
     };
-    // Bare-schema expansion: exact `codegen`/`setup` targets expand to
-    // their registered `*_codegen_shard` reverse dependents via one
-    // unconfigured `bazel query` before analysis (an aspect cannot
-    // traverse reverse deps). Repository scopes already cover every
-    // projection; `env` needs no codegen expansion. An empty projection
-    // set keeps the single label so a bare schema with no consumers
-    // still selects its own empty closure. Query failures are pre-exec.
     let expanded: Option<Vec<String>> = match (invocation.command, &scope) {
         (Command::Codegen | Command::Setup, dx_setup::SetupScope::Exact(label)) => {
             match expand_codegen_roots(label, workspace, query_runner) {
@@ -82,16 +75,9 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         Ok(plan) => plan,
         Err(error) => return pre_exec(err, &format!("{error}")),
     };
-    // JSON streams `command_started`, one `collect` `operation` (explicit
-    // scope included, repository scope omitted), `selection`, and
-    // `command_finished`; text prints the planned operation unless
-    // `--quiet` suppresses it, in both `--dry-run` and live modes.
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
     let json = invocation.output == OutputMode::Json;
-    // Compact effective scope for the `operation` event: repository scopes
-    // omit it (like generate/update), exact scopes include the analyzed
-    // roots (expanded bare-schema union when present).
     let op_scope: Option<Vec<String>> = match (&scope, &expanded) {
         (_, Some(roots)) => Some(roots.clone()),
         (dx_setup::SetupScope::Exact(label), None) => Some(vec![label.clone()]),
@@ -144,8 +130,6 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
     if bazel_code != 0 {
         let _ = std::fs::remove_file(&bep);
         if json {
-            // Failure explainer without argv/secrets: which collection
-            // failed plus the stderr pointer; Bazel diagnostics stay on stderr.
             let scope_text = op_scope
                 .as_deref()
                 .map(|scope| scope.join(" "))
@@ -286,11 +270,6 @@ mod tests {
                 1,
                 "committed selection launches one Bazel build"
             );
-            // An empty plan stages the managed empty generations, so the
-            // first selection pairs each prepared side with the managed
-            // empty counterpart from the same digest family. Only staged
-            // sides materialize; the record links to an unstaged empty
-            // counterpart dangle with ordinary missing-target behavior.
             let pair = read_current_pair(&harness.workspace)
                 .expect("read current")
                 .expect("selection committed");
@@ -310,7 +289,6 @@ mod tests {
                     "{command} stages its {side} generation"
                 );
             }
-            // Reselection is a no-op success reporting the current setup.
             let (code, out, err) = harness.run(&[command]);
             assert_eq!(code, 0, "{out}{err}");
             assert!(out.contains("already selected setup "), "{out}");
@@ -324,8 +302,6 @@ mod tests {
             let name = format!("managed-exact-{command}");
             let harness = Harness::new(&name);
             if command == "codegen" {
-                // Bare-schema expansion with no registered projections
-                // keeps the single label (empty exact closure).
                 harness.query.script_owners("\n");
             }
             let (code, out, err) = harness.run(&[command, "//a:one"]);
@@ -356,10 +332,6 @@ mod tests {
 
     #[test]
     fn managed_exact_codegen_expands_bare_schema_to_projections() {
-        // Bare-schema expansion: the query returns the registered
-        // projections consuming the schema, the plan analyzes the union,
-        // and dry-run shows the full analyzed set without launching a
-        // build. Live runs with the same expansion still commit.
         let harness = Harness::new("managed-expand-dryrun");
         harness
             .query

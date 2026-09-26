@@ -60,7 +60,6 @@ impl SetId {
         }
     }
 
-    /// Human updater description (never argv; argv lives in [`crate::backend`]).
     pub fn updater(self) -> &'static str {
         match self {
             SetId::Cargo => {

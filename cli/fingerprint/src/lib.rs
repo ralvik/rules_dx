@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap`/`unreachable`/`todo` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -76,8 +74,6 @@ mod tests {
 
     #[test]
     fn ascii_escape_matches_python_ensure_ascii() {
-        // Parity with Python `json.dumps(ensure_ascii=True)`: BMP escapes
-        // as `\uXXXX`, astral as a surrogate pair, ASCII untouched.
         assert_eq!(ensure_ascii("caf\u{e9}"), "caf\\u00e9");
         assert_eq!(ensure_ascii("a\u{1F600}b"), "a\\ud83d\\ude00b");
         assert_eq!(ensure_ascii("plain"), "plain");
@@ -90,8 +86,6 @@ mod tests {
 
     #[test]
     fn json_error_is_typed_with_display() {
-        // A map with non-string keys cannot serialize: the typed error
-        // keeps the display (no panic) so callers propagate.
         use std::collections::HashMap;
         let mut bad: HashMap<Vec<u8>, String> = HashMap::new();
         bad.insert(vec![0xff], "x".to_owned());

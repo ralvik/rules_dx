@@ -1,6 +1,3 @@
-//! Native helper for the polyglot demo: pure functions only.
-
-/// Joins words with a single space.
 pub fn join(words: &[&str]) -> String {
     words.join(" ")
 }

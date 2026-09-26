@@ -9,7 +9,7 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
-# buildifier: disable=canonical-repository  # issue #914: extension-generated toolchain repos have no apparent name without use_repo
+# buildifier: disable=canonical-repository
 sh_test(
     name = "ide_acquisition_test",
     size = "small",

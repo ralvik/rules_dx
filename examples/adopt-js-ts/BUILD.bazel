@@ -4,8 +4,6 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
-# Arrival files; generator-owned BUILD files, regen must be no-op; see docs/generation/README.md.
-# Corpus: root arrival files only; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
@@ -26,10 +24,6 @@ real_source_target(
     tags = ["corpus"],
 )
 
-# Per-adopt arrival lock (issue #1077): foreign pnpm-lock.yaml resolved from
-# this tree's package.json (`pnpm install --lockfile-only`); the Bazel graph
-# keeps using the shared root pnpm hub, this pair proves foreign consistency
-# plus fail-closed repin via //tools/depcheck:adopt_locks_test.
 exports_files([
     "package.json",
     "pnpm-lock.yaml",

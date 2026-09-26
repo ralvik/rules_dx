@@ -18,10 +18,6 @@ exports_files([
     "pnpm-workspace.yaml",
 ])
 
-# Private importer-local facade over the authoritative pnpm store. Stable
-# tool entry points live in the ./bin subpackage so js_binary outputs
-# never collide with this linked tree (same split as //:node_modules vs
-# //javascript/... wrappers).
 npm_link_all_packages(name = "node_modules")
 
 real_source_target(

@@ -381,9 +381,6 @@ mod tests {
 
     #[test]
     fn unexpected_output_conflicts_fail_closed_typed() {
-        // `check_output_conflict` only returns the two known shapes, so any
-        // other `OutputError` (e.g. a future mode) maps to the typed
-        // `UnexpectedOutputConflict` instead of trapping.
         assert_eq!(
             stdout_conflict(OutputError::UnknownOutputMode {
                 value: "xml".to_owned(),
@@ -424,10 +421,6 @@ mod tests {
 
     #[test]
     fn execution_gaps_report_matrix_is_wont_fix() {
-        // The per-command standard-report matrix stays
-        // wont-fix with fail-closed `UnsupportedFormat`; silent
-        // substitution is rejected. Pinned with fixtures in
-        // `cli/cli/tests/fixtures/cli_execution_gaps/`.
         for (command, format) in [
             (Command::Lint, "sarif"),
             (Command::Typecheck, "sarif"),
@@ -476,7 +469,6 @@ mod tests {
                 "{command:?} {format} must stay unsupported"
             );
         }
-        // Format has no standard report in any mode.
         assert!(spec(Command::Format).reports.is_empty());
     }
 }

@@ -1,35 +1,14 @@
-//! Deterministic deploy archive tools for `archive_deploy`.
-//!
-//! Owning contract: `docs/deploy/authoring.md` (Path C).
-//!
-//! Why hand-rolled tar: Python `tarfile` PAX for short basenames emits plain
-//! USTAR (`mtime 0`, `uid/gid 0`, `RECORDSIZE` 10240 padding); the `tar`
-//! crate defaults (`typeflag` NUL, 7-digit checksum) differ, so bytes are
-//! built explicitly to stay identical.
-//! See: `deploy/rules/archive.bzl` (genrule `tools`).
-//! Why C zlib: Python `gzip` level 9 is C zlib deflate; pure-Rust backends
-//! emit different bytes for identical input, while `flate2` with the `zlib`
-//! feature matches exactly.
-//! See: `cli/digest/src/lib.rs` (SHA-256 shim).
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use std::io::{self, Write};
 use std::path::Path;
 
-/// Tar block size.
 const BLOCK: usize = 512;
-/// Python `tarfile.RECORDSIZE`: archives pad to multiples of 20 blocks.
 const RECORDSIZE: usize = 20 * BLOCK;
-/// Fixed metadata matching `archiver.py`.
 const MTIME: u64 = 0;
 const UID: u64 = 0;
 const GID: u64 = 0;
 
-/// Formats `value` as `digits - 1` octal digits plus NUL, matching
-/// Python `tarfile.itn` for values fitting the field.
 fn octal_field(value: u64, digits: usize) -> io::Result<Vec<u8>> {
     let max = 8u64.pow((digits - 1) as u32);
     if value >= max {
@@ -44,9 +23,6 @@ fn octal_field(value: u64, digits: usize) -> io::Result<Vec<u8>> {
     Ok(out)
 }
 
-/// Builds one 512-byte USTAR header with Python `tarfile` PAX short-name
-/// bytes (`mtime 0`, `uid/gid 0`, empty `uname/gname`, NUL device fields,
-/// `ustar\\0` + `00` magic, `typeflag` `0`, checksum `"%06o\\0 "`).
 fn tar_header(name: &str, size: u64, mode: u32) -> io::Result<[u8; BLOCK]> {
     let name_bytes = name.as_bytes();
     if name_bytes.is_empty() || name_bytes.len() > 100 || name_bytes.contains(&0) {
@@ -73,15 +49,11 @@ fn tar_header(name: &str, size: u64, mode: u32) -> io::Result<[u8; BLOCK]> {
     header[124..136].copy_from_slice(&size_field);
     let mtime_field = octal_field(MTIME, 12)?;
     header[136..148].copy_from_slice(&mtime_field);
-    // Checksum placeholder is eight spaces for the summation below.
-    // See: Python `tarfile._create_header` (`b"        "`).
     for slot in header.iter_mut().take(156).skip(148) {
         *slot = b' ';
     }
     header[156] = b'0';
-    // Linkname 100 NULs already zeroed; magic covers `ustar\\0` + `00`.
     header[257..265].copy_from_slice(b"ustar\x0000");
-    // Uname/gname/devmajor/devminor/prefix/pad stay NUL for this tool.
     let mut sum: u32 = 0;
     for byte in header {
         sum += u32::from(byte);
@@ -92,9 +64,6 @@ fn tar_header(name: &str, size: u64, mode: u32) -> io::Result<[u8; BLOCK]> {
     Ok(header)
 }
 
-/// Builds the deterministic tar image: one header plus file bytes plus
-/// two zero blocks, padded to `RECORDSIZE` multiples like Python
-/// `tarfile.close` (`-b20`).
 fn tar_image(name: &str, data: &[u8], mode: u32) -> io::Result<Vec<u8>> {
     let header = tar_header(name, data.len() as u64, mode)?;
     let data_blocks = data.len().div_ceil(BLOCK) * BLOCK;
@@ -109,8 +78,6 @@ fn tar_image(name: &str, data: &[u8], mode: u32) -> io::Result<Vec<u8>> {
     Ok(out)
 }
 
-/// Compresses `tar` with gzip level 9, `mtime 0`, no filename, `OS` 255,
-/// matching Python `gzip.GzipFile(filename="", compresslevel=9, mtime=0)`.
 fn gzip_compress(tar: &[u8]) -> io::Result<Vec<u8>> {
     let mut encoder = flate2::GzBuilder::new()
         .mtime(0)
@@ -120,7 +87,6 @@ fn gzip_compress(tar: &[u8]) -> io::Result<Vec<u8>> {
     encoder.finish()
 }
 
-/// Basename of `path` as UTF-8, matching Python `os.path.basename`.
 fn basename(path: &Path) -> io::Result<String> {
     path.file_name()
         .and_then(|name| name.to_str())
@@ -133,8 +99,6 @@ fn basename(path: &Path) -> io::Result<String> {
         })
 }
 
-/// File mode for the tar member: `0755` when any executable bit is set,
-/// else `0644`, matching `archiver.py` (`st_mode & 0o111`).
 fn member_mode(path: &Path) -> io::Result<u32> {
     let metadata = std::fs::metadata(path)?;
     #[cfg(unix)]
@@ -150,8 +114,6 @@ fn member_mode(path: &Path) -> io::Result<u32> {
     }
 }
 
-/// Archives one staged file into a deterministic tar.gz, dereferencing
-/// symlinks like `tar -h` (both read and stat follow links).
 pub fn archive_file(src: &Path, dst: &Path) -> io::Result<()> {
     let data = std::fs::read(src)?;
     let name = basename(src)?;
@@ -162,14 +124,12 @@ pub fn archive_file(src: &Path, dst: &Path) -> io::Result<()> {
     Ok(())
 }
 
-/// Builds the deterministic tar.gz bytes in memory (parity-test entry).
 pub fn archive_bytes(data: &[u8], name: &str, executable: bool) -> io::Result<Vec<u8>> {
     let mode = if executable { 0o755 } else { 0o644 };
     let tar = tar_image(name, data, mode)?;
     gzip_compress(&tar)
 }
 
-/// SHA-256 hex of `data`, matching `hashlib.sha256().hexdigest`.
 fn sha256_hex(data: &[u8]) -> String {
     use sha2::Digest as _;
     let mut hasher = sha2::Sha256::new();
@@ -177,14 +137,11 @@ fn sha256_hex(data: &[u8]) -> String {
     hex::encode(hasher.finalize())
 }
 
-/// Writes a `sha256sum`-compatible `<digest>  <basename>\\n` line.
 pub fn hash_file(src: &Path, dst: &Path) -> io::Result<()> {
     let base = basename(src)?;
     let mut hasher = sha2::Sha256::new();
     use sha2::Digest as _;
     let mut file = std::fs::File::open(src)?;
-    // Heap buffer: a 1MiB stack array overflows Windows' 1MiB main-thread
-    // stack (issue #1207); 64KiB streams identically on all hosts.
     let mut buf = vec![0u8; 64 << 10];
     loop {
         use std::io::Read as _;
@@ -199,21 +156,15 @@ pub fn hash_file(src: &Path, dst: &Path) -> io::Result<()> {
     Ok(())
 }
 
-/// Formats the checksum line in memory (parity-test entry).
 pub fn hash_line(data: &[u8], basename: &str) -> String {
     format!("{}  {basename}\n", sha256_hex(data))
 }
 
-/// Shared thin-binary helpers (issue #914): every `bin_*` shim reports
-/// usage to stderr and returns 1 through these, so `eprintln!` + exit
-/// codes cannot drift between shims. See: `docs/deploy/authoring.md`.
 pub fn bin_usage(prog: &str, usage: &str) -> i32 {
     eprintln!("usage: {prog} {usage}");
     1
 }
 
-/// Reports `<prog>: cannot <action> <target>: <error>` to stderr for a
-/// failed thin-binary operation. Returns the process exit code (1).
 pub fn bin_cannot(prog: &str, action: &str, target: &Path, error: impl std::fmt::Display) -> i32 {
     eprintln!("{prog}: cannot {action} {}: {error}", target.display());
     1
@@ -252,7 +203,6 @@ mod tests {
         assert!(header[157..257].iter().all(|byte| *byte == 0));
         assert_eq!(&header[257..265], b"ustar\x0000");
         assert!(header[265..512].iter().all(|byte| *byte == 0));
-        // Non-executable mode changes the checksum accordingly.
         let plain = tar_header("hello", 12, 0o644).expect("plain header");
         assert_eq!(&plain[100..108], b"0000644\0");
         assert_ne!(&plain[148..156], &header[148..156]);
@@ -273,7 +223,6 @@ mod tests {
         assert_eq!(&tiny[0..1], b"f");
         assert_eq!(&tiny[512..514], b"hi");
         assert!(tiny[514..].iter().all(|byte| *byte == 0));
-        // 10240 payload bytes need two records (header + 20 data + 2 end).
         let big_data = vec![b'x'; 10240];
         let big = tar_image("f", &big_data, 0o644).expect("big");
         assert_eq!(big.len(), 2 * RECORDSIZE);
@@ -287,7 +236,6 @@ mod tests {
             &gz[0..10],
             &[0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff]
         );
-        // Round-trips exactly through the standard decoder.
         let mut decoder = flate2::read::GzDecoder::new(&gz[..]);
         let mut decoded = Vec::new();
         use std::io::Read as _;
@@ -297,10 +245,6 @@ mod tests {
 
     #[test]
     fn archive_bytes_match_python_golden() {
-        // Golden from `archiver.py` over `hello world\\n` with mode 0755:
-        // header checksum `006771\\0 `, `RECORDSIZE` 10240 tar, gzip level 9
-        // `mtime 0`, `OS` 255. Regenerate with
-        // `bazel build //deploy/rules:archiver` output before editing this test.
         let gz = archive_bytes(b"hello world\n", "hello", true).expect("archive");
         assert_eq!(gz.len(), 110);
         assert_eq!(
@@ -350,8 +294,6 @@ mod tests {
             let mode = String::from_utf8_lossy(&tar[100..107]).into_owned();
             assert_eq!(mode, want_mode);
         }
-        // Symlink dereference like `tar -h`: archiving the link archives
-        // the target bytes under the link basename.
         #[cfg(unix)]
         {
             let link = scratch.path().join("link.sh");

@@ -1,4 +1,4 @@
-"""Bzlmod split inventory (single source for MODULE pins). Contract: docs/decisions/0019-first-release-additional-foundations.md."""
+"""Bzlmod split inventory (single source for MODULE pins)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

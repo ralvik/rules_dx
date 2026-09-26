@@ -306,11 +306,6 @@ mod tests {
 
     #[test]
     fn shuffled_query_orders_yield_identical_build_argv() {
-        // Determinism battery: `quality-testing.md` requires
-        // randomized query result order to yield identical Bazel argv.
-        // Resolve the same file scope twice with reversed owner lines;
-        // ownership canonicalization (sort + dedup) must converge both to
-        // identical targets, so `plan_build` emits byte-identical argv.
         let scratch = dx_test_scratch::scratch("dx-quality-query-order-");
         let root: PathBuf = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join("pkg")).expect("pkg dir");

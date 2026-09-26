@@ -14,9 +14,6 @@ fn split_bazel_verbatim<S: AsRef<OsStr>>(args: &[S]) -> Option<usize> {
     let mut index = 0;
     while index < args.len() {
         let raw = args[index].as_ref();
-        // Opaque non-UTF8 positional: cannot be `--`, a flag, or `bazel`,
-        // so the verbatim split does not own the tail here; the full parse
-        // reports it as `InvalidScope`.
         let arg = arg_text(raw)?;
         if arg == "--" {
             return None;
@@ -26,11 +23,6 @@ fn split_bazel_verbatim<S: AsRef<OsStr>>(args: &[S]) -> Option<usize> {
             if !arg.contains('=') && VALUE_OPTIONS.contains(&name) {
                 let next = args.get(index + 1)?;
                 let next_raw = next.as_ref();
-                // A value-option payload is any next token that is not a
-                // `--` flag: non-UTF8 bytes count as a payload (e.g.
-                // `--workspace <non-UTF8>`) so the flag still consumes them
-                // and the workspace conversion reports `InvalidScope`
-                // instead of `MissingValue`.
                 let is_flag = next_raw == OsStr::new("--")
                     || next_raw.to_str().is_some_and(|text| text.starts_with("--"));
                 if !is_flag {
@@ -63,8 +55,6 @@ fn invalid_value(error: &clap::Error) -> Option<String> {
 
 fn recover_token<S: AsRef<OsStr>>(args: &[S], token: Option<String>) -> String {
     let token = token.unwrap_or_default();
-    // Compare lossy so non-UTF8 elements still recover deterministically;
-    // UTF-8 tokens compare exactly, non-UTF8 never spuriously matches.
     for arg in args {
         let text = arg.as_ref().to_string_lossy();
         if text == token {
@@ -119,11 +109,6 @@ fn map_clap_error<S: AsRef<OsStr>>(args: &[S], error: &clap::Error) -> ArgsError
                     option: leading_flag(&token),
                 }
             } else if is_command_positional(&token) {
-                // The command positional is a `ValueEnum`, so unknown
-                // command words fail here, not in `parse`: map them back
-                // onto the unknown-command surface with typo hints
-                //. A lone `-` still reads as an unknown
-                // option, exactly like the pre-`ValueEnum` tokenizer did.
                 let value = invalid_value(error).unwrap_or(token);
                 if value.starts_with('-') {
                     let option = recover_token(args, Some(value.clone()));
@@ -132,8 +117,6 @@ fn map_clap_error<S: AsRef<OsStr>>(args: &[S], error: &clap::Error) -> ArgsError
                     ArgsError::UnknownOption { option, suggestion }
                 } else {
                     let command = recover_token(args, Some(value.clone()));
-                    // Excluded `doctor`/`configure` always redirect to
-                    // never a clap jaro guess like `docs`.
                     let suggestion = if command.eq_ignore_ascii_case("doctor")
                         || command.eq_ignore_ascii_case("configure")
                     {
@@ -178,22 +161,12 @@ fn parse_tokens<S: AsRef<OsStr>>(args: &[S]) -> Result<Cli, ArgsError> {
 
 pub(crate) fn tokenize<S: AsRef<OsStr>>(args: &[S]) -> Result<(Cli, Vec<String>), ArgsError> {
     if let Some(at) = split_bazel_verbatim(args) {
-        // The prefix holds flags only (the scan stops at the first
-        // positional and bails at `--`), so no positionals are lost; the
-        // command word itself is the `bazel` token the scan stopped at.
-        // The generic prefix borrows `S`; re-materialize it as owned
-        // `OsString` for the clap entry point.
         let prefix: Vec<OsString> = args[..at]
             .iter()
             .map(|arg| arg.as_ref().to_os_string())
             .collect();
         let mut cli = parse_tokens(&prefix)?;
         cli.command = Some(Command::Bazel);
-        // The first `--` still separates (it is dropped, the rest
-        // forwards), exactly like the loop's separator check running
-        // before the verbatim arm did. Verbatim tails are Bazel-owned
-        // bytes: non-UTF8 elements fail as `InvalidScope` with a lossy
-        // rendering instead of panicking, preserving exit 2.
         let mut bazel_options = Vec::new();
         let mut tail = args[at + 1..].iter();
         for arg in tail.by_ref() {

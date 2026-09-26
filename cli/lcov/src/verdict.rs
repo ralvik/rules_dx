@@ -11,7 +11,6 @@ pub struct FileVerdict {
     pub ignored: u64,
 }
 
-/// Whole-gate verdict. `passed` is true only with zero errors, zero uncovered
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct GateVerdict {
     pub files: Vec<FileVerdict>,

@@ -13,14 +13,6 @@ csharp_library(
     srcs = ["Greeter.cs"],
 )
 
-# xUnit v3 4.0.0 mapping: plain csharp_test executable with [Fact]/[Theory]
-# sources plus the checked-in MTP entry-point shims (XunitEntryPoint plus
-# SelfRegisteredExtensions, adapted from `dotnet new xunit3` MSBuild output
-# because rules_dotnet compiles with csc). Deps name the pinned Paket hub
-# labels directly: xunit.v3 4.0.0 plus xunit.analyzers 2.0.0 with the MTP
-# runner closure (core.mtp-v2, assert, extensibility.core, common,
-# runner.common, runner.inproc.console, testing.platform,
-# testing.platform.msbuild, telemetry). Unpinned runner: rejected per.
 csharp_test(
     name = "greeter_test",
     srcs = [

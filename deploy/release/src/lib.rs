@@ -1,18 +1,3 @@
-//! Deterministic SBOM/provenance plus BCR source generators.
-//!
-//! Owning contract: `docs/deploy/release-runbook.md` (SBOM/BCR release path).
-//!
-//! Why `serde_json` pretty plus ASCII escape: Python `json.dumps(indent=2,
-//! sort_keys=True)` sorts keys and escapes non-ASCII (`ensure_ascii`); the
-//! default `serde_json` map orders identically while raw UTF-8 would drift,
-//! so non-ASCII is re-escaped to `\uXXXX` after pretty-printing via the
-//! single owner `dx_fingerprint::{ensure_ascii,to_json_ascii_pretty}`.
-//! See: `deploy/release/sbom.bzl` (genrule `tools`).
-//! Why streaming SHA-256: artifacts hash in 1 MiB chunks like `hashlib`.
-//! See: `cli/digest/src/lib.rs` (SHA-256 shim).
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -26,7 +11,6 @@
 use std::io;
 use std::path::Path;
 
-/// Basename of `path` as UTF-8, matching Python `os.path.basename`.
 fn basename(path: &Path) -> io::Result<String> {
     path.file_name()
         .and_then(|name| name.to_str())
@@ -39,12 +23,10 @@ fn basename(path: &Path) -> io::Result<String> {
         })
 }
 
-/// SHA-256 hex of the file at `path`, streamed in 64KiB chunks.
 fn sha256_file(path: &Path) -> io::Result<String> {
     use sha2::Digest as _;
     let mut hasher = sha2::Sha256::new();
     let mut file = std::fs::File::open(path)?;
-    // Heap buffer: 1MiB on the stack overflows Windows (issue #1207).
     let mut buf = vec![0u8; 64 << 10];
     loop {
         use std::io::Read as _;
@@ -57,43 +39,25 @@ fn sha256_file(path: &Path) -> io::Result<String> {
     Ok(hex::encode(hasher.finalize()))
 }
 
-/// Renders `value` exactly like Python `json.dumps(indent=2, sort_keys=True,
-/// ensure_ascii=True)`.
-///
-/// Delegates to the single ASCII-JSON owner
-/// (`dx_fingerprint::to_json_ascii_pretty`) so the escape rule cannot drift;
-/// the theoretical pretty-serialization failure (maps with non-string keys,
-/// which this schema never has) yields an empty document like before.
-/// See: `cli/fingerprint/src/lib.rs` (`to_json_ascii_pretty`).
 fn render_pretty(value: &serde_json::Value) -> String {
     dx_fingerprint::to_json_ascii_pretty(value).unwrap_or_default()
 }
 
-/// Shared thin-binary helpers (issue #914): every `bin_*_gen` shim
-/// reports usage and write failures through these, so `eprintln!` plus
-/// exit codes cannot drift between generators. See:
-/// `docs/deploy/release-runbook.md`.
 pub fn bin_usage(prog: &str, usage: &str) -> i32 {
     eprintln!("usage: {prog} {usage}");
     1
 }
 
-/// Reports `<prog>: cannot write <target>: <error>` to stderr for a
-/// failed thin-binary operation. Returns the process exit code (1).
 pub fn bin_cannot_write(prog: &str, target: &Path, error: impl std::fmt::Display) -> i32 {
     eprintln!("{prog}: cannot write {}: {error}", target.display());
     1
 }
 
-/// Reports a failed thin-binary diagnostic to stderr. Returns the
-/// process exit code (1). Shared with the human-run release driver so
-/// generator and driver shims render failures identically.
 pub fn bin_error(diagnostic: impl std::fmt::Display) -> i32 {
     eprintln!("{diagnostic}");
     1
 }
 
-/// Renders the SPDX 2.3 document bytes for one artifact.
 pub fn render_spdx(base: &str, digest: &str, package: &str, supplier: &str) -> String {
     render_pretty(&serde_json::json!({
         "SPDXID": "SPDXRef-DOCUMENT",
@@ -137,7 +101,6 @@ pub fn render_spdx(base: &str, digest: &str, package: &str, supplier: &str) -> S
     }))
 }
 
-/// Renders the SLSA v1 provenance statement bytes for one artifact.
 pub fn render_provenance(base: &str, digest: &str, builder: &str) -> String {
     render_pretty(&serde_json::json!({
         "_type": "https://in-toto.io/Statement/v1",
@@ -156,7 +119,6 @@ pub fn render_provenance(base: &str, digest: &str, builder: &str) -> String {
     }))
 }
 
-/// Renders the BCR `source.json` template bytes for one module version.
 pub fn render_bcr_source(module: &str, version: &str) -> String {
     render_pretty(&serde_json::json!({
         "integrity": "<integrity-filled-at-release>",
@@ -165,7 +127,6 @@ pub fn render_bcr_source(module: &str, version: &str) -> String {
     }))
 }
 
-/// Writes the SPDX 2.3 document for `src` to `dst`.
 pub fn write_spdx(src: &Path, dst: &Path, package: &str, supplier: &str) -> io::Result<()> {
     let digest = sha256_file(src)?;
     let base = basename(src)?;
@@ -176,7 +137,6 @@ pub fn write_spdx(src: &Path, dst: &Path, package: &str, supplier: &str) -> io::
     Ok(())
 }
 
-/// Writes the SLSA v1 provenance statement for `src` to `dst`.
 pub fn write_provenance(src: &Path, dst: &Path, builder: &str) -> io::Result<()> {
     if let Err(problem) = provenance_builder_error(builder) {
         return Err(io::Error::other(problem));
@@ -187,41 +147,21 @@ pub fn write_provenance(src: &Path, dst: &Path, builder: &str) -> io::Result<()>
     Ok(())
 }
 
-/// Writes the BCR `source.json` template to `dst`.
 pub fn write_bcr_source(dst: &Path, module: &str, version: &str) -> io::Result<()> {
     std::fs::write(dst, render_bcr_source(module, version).as_bytes())?;
     Ok(())
 }
 
-/// BCR publisher identity pin.
-/// See: `deploy/release/bcr.bzl` (`bcr_source_error`).
 pub const BCR_WANT_MODULE: &str = "rules_dx";
-/// Sigstore trust root for signing.
-/// See: `deploy/release/signing.bzl` (`SIGNING_TRUST_ROOT`).
 pub const SIGNING_TRUST_ROOT: &str = "https://tuf-repo-cdn.sigstore.dev";
-/// Pinned cosign version.
-/// See: `deploy/release/signing.bzl` (`SIGNING_COSIGN_VERSION`).
 pub const SIGNING_COSIGN_VERSION: &str = "v2.4.1";
-/// Sigstore bundle media type.
-/// See: `deploy/release/signing.bzl` (`SIGNING_BUNDLE_MEDIA_TYPE`).
 pub const SIGNING_BUNDLE_MEDIA_TYPE: &str = "application/vnd.dev.sigstore.bundle.v0.3+json";
-/// Default OIDC issuer.
-/// See: `deploy/release/signing.bzl` (`SIGNING_ISSUER`).
 pub const SIGNING_ISSUER_DEFAULT: &str = "https://token.actions.githubusercontent.com";
-/// Allowlisted SLSA builder ids (issue #924): provenance binds exactly
-/// one of these workflow identities, never an arbitrary string. The
-/// dry-run id serves the `sbom_demo` shape check only; real releases
-/// pass the release id explicitly.
-/// See: `deploy/release/sbom.bzl` (`SBOM_BUILDER_DRY_RUN`).
 pub const PROVENANCE_BUILDER_DRY_RUN: &str =
     "https://github.com/ralvik/rules_dx/.github/workflows/publish-dry-run.yml";
-/// Owner-approved release builder id.
-/// See: `deploy/release/sbom.bzl` (`SBOM_BUILDER_RELEASE`).
 pub const PROVENANCE_BUILDER_RELEASE: &str =
     "https://github.com/ralvik/rules_dx/.github/workflows/release.yml";
 
-/// Validates one SLSA builder id against the allowlist, returning the
-/// diagnostic for an unlisted (possibly forged) builder.
 pub fn provenance_builder_error(builder: &str) -> Result<(), String> {
     if builder == PROVENANCE_BUILDER_DRY_RUN || builder == PROVENANCE_BUILDER_RELEASE {
         return Ok(());
@@ -239,7 +179,6 @@ fn basename_of(path: &str) -> String {
         .to_owned()
 }
 
-/// Renders the BCR dry-run would-submit text.
 pub fn render_bcr_dry_run(module: &str, version: &str, inputs: &[String]) -> String {
     let mut out = String::new();
     out.push_str("bcr: dry run (BCR_DRY_RUN=1); would submit, submitting nothing:\n");
@@ -255,7 +194,6 @@ pub fn render_bcr_dry_run(module: &str, version: &str, inputs: &[String]) -> Str
     out
 }
 
-/// Runs the BCR gate, returning stdout text or the stderr diagnostic.
 pub fn bcr_run(
     module: &str,
     version: &str,
@@ -297,7 +235,6 @@ pub fn bcr_run(
     Ok(out)
 }
 
-/// Renders the signing dry-run would-sign text.
 pub fn render_signing_dry_run(identity: &str, issuer: &str, assets: &[String]) -> String {
     let mut out = String::new();
     out.push_str("signing: dry run (RELEASE_SIGN_DRY_RUN=1); would sign, publishing nothing:\n");
@@ -326,11 +263,6 @@ pub fn render_signing_dry_run(identity: &str, issuer: &str, assets: &[String]) -
     out
 }
 
-/// Runs the signing gate: dry-run prints the would-sign plan;
-/// live runs version-pinned `cosign sign-blob --bundle` per asset plus
-/// an immediate `cosign verify-blob --bundle` per bundle.
-/// Host tools resolve at run time with no new module dependencies.
-/// See: `deploy/release/signing.bzl` (signing pins).
 pub fn signing_run(
     identity: &str,
     issuer: &str,
@@ -359,8 +291,6 @@ pub fn signing_run(
     signing_live(identity, issuer, assets)
 }
 
-/// Builds the `cosign sign-blob --bundle` argv for one asset (pure,
-/// unit-tested; [`signing_live`] executes it).
 pub fn signing_sign_argv(asset: &str, bundle: &str, identity: &str, issuer: &str) -> Vec<String> {
     vec![
         "cosign".to_owned(),
@@ -376,9 +306,6 @@ pub fn signing_sign_argv(asset: &str, bundle: &str, identity: &str, issuer: &str
     ]
 }
 
-/// Builds the `cosign verify-blob --bundle` argv for one asset (pure,
-/// unit-tested; [`signing_live`] executes it right after signing so a
-/// bundle that fails verification never ships silently).
 pub fn signing_verify_argv(asset: &str, bundle: &str, identity: &str, issuer: &str) -> Vec<String> {
     vec![
         "cosign".to_owned(),
@@ -393,26 +320,15 @@ pub fn signing_verify_argv(asset: &str, bundle: &str, identity: &str, issuer: &s
     ]
 }
 
-/// Reports whether `cosign version` output names the pinned CLI.
-/// The pin is enforced before any live sign runs, so a drifted cosign
-/// fails closed instead of signing under an unreviewed version.
-/// See: `deploy/release/signing.bzl` (`SIGNING_COSIGN_VERSION`).
 pub fn signing_version_ok(version_output: &str) -> bool {
     version_output.contains(SIGNING_COSIGN_VERSION)
 }
 
-/// Bundle path for one asset: `<basename>.bundle` next to the asset.
 fn signing_bundle_for(asset: &str) -> String {
     format!("{}.bundle", basename_of(asset))
 }
 
-/// Executes the live owner-approved signing path: version-enforced
-/// `cosign sign-blob --bundle` per asset plus an immediate
-/// `cosign verify-blob --bundle` per bundle. Any failure stops before
-/// publish; nothing is printed as signed until verify passes.
 fn signing_live(identity: &str, issuer: &str, assets: &[String]) -> Result<String, String> {
-    // Thin argv configs over the single spawn owner; no direct `Command`.
-    // See: `cli/process/src/lib.rs` (`dx_process::spawn_output`).
     let version_argv = vec!["cosign".to_owned(), "version".to_owned()];
     let version_out =
         dx_process::spawn_output(&version_argv, std::path::Path::new("."), &[], false).map_err(
@@ -457,7 +373,6 @@ fn signing_live(identity: &str, issuer: &str, assets: &[String]) -> Result<Strin
     Ok(out)
 }
 
-/// Renders the human-run release driver dry-run plan.
 pub fn render_release_dry_run(tag: &str, approve: &str) -> String {
     let mut out = String::new();
     out.push_str("release: dry run (RELEASE_DRY_RUN=1); would release, publishing nothing:\n");
@@ -494,12 +409,10 @@ pub fn render_release_dry_run(tag: &str, approve: &str) -> String {
         "  tag creation: git tag {tag} must already exist in the remote (pushed beforehand with owner approval); this program never creates or pushes tags\n"
     ));
     out.push_str("  publishing: nothing (dry run never tags, releases, submits, or pushes)\n");
-    // Keep the legacy ceiling sentence the old verifier greps for.
     out.push_str("  ceiling: this program never creates or pushes tags\n");
     out
 }
 
-/// Runs the release driver gate.
 pub fn release_run(
     tag: &str,
     approve: &str,
@@ -541,7 +454,6 @@ pub fn release_run(
     Ok(out)
 }
 
-/// Verifies one SBOM output pair, returning the OK line.
 pub fn sbom_verify_files(artifact: &Path, spdx: &Path, prov: &Path) -> io::Result<String> {
     let digest = sha256_file(artifact)?;
     let spdx_text = std::fs::read_to_string(spdx)?;
@@ -587,26 +499,15 @@ pub fn sbom_verify_files(artifact: &Path, spdx: &Path, prov: &Path) -> io::Resul
     Ok(format!("sbom OK: SPDX-2.3 + SLSA v1 bind {digest}\n"))
 }
 
-/// One aggregated-NOTICE inventory entry.
-///
-/// See: `deploy/release/notice.bzl` (manifest shape).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NoticeEntry {
-    /// Package name in its owning set.
     pub package: String,
-    /// Owning dependency set.
     pub set: String,
-    /// Locked version.
     pub version: String,
-    /// SPDX license expression text.
     pub license: String,
-    /// Basename of the license-words file in `texts`, empty when missing.
     pub text_basename: String,
 }
 
-/// Parses one NOTICE manifest document.
-///
-/// See: `deploy/release/notice.bzl` (manifest shape).
 pub fn parse_notice_manifest(text: &str) -> Result<Vec<NoticeEntry>, String> {
     let mut entries = Vec::new();
     for (index, raw) in text.lines().enumerate() {
@@ -648,9 +549,6 @@ pub fn parse_notice_manifest(text: &str) -> Result<Vec<NoticeEntry>, String> {
     Ok(entries)
 }
 
-/// Renders aggregated NOTICE bytes for one distributed root.
-///
-/// See: `deploy/release/notice.bzl` (deterministic bytes).
 pub fn render_notice(root: &str, entries: &[(NoticeEntry, String)]) -> String {
     let mut sorted = entries.to_vec();
     sorted.sort_by(|a, b| {
@@ -679,7 +577,6 @@ pub fn render_notice(root: &str, entries: &[(NoticeEntry, String)]) -> String {
     out
 }
 
-/// Reads license-words files keyed by basename.
 fn read_text_map(
     text_files: &[std::path::PathBuf],
 ) -> Result<std::collections::BTreeMap<String, String>, String> {
@@ -706,7 +603,6 @@ fn read_text_map(
     Ok(map)
 }
 
-/// Joins one manifest with its license-words files, failing actionable on missing text.
 fn join_notice_entries(
     manifest_text: &str,
     text_files: &[std::path::PathBuf],
@@ -737,9 +633,6 @@ fn join_notice_entries(
     Ok(joined)
 }
 
-/// Writes the aggregated NOTICE for one manifest plus its license-words files.
-///
-/// See: `deploy/release/notice.bzl` (genrule `tools`).
 pub fn write_notice(
     manifest: &Path,
     dst: &Path,
@@ -752,7 +645,6 @@ pub fn write_notice(
     Ok(())
 }
 
-/// Verifies one NOTICE output binds its manifest plus words, returning the OK line.
 pub fn notice_verify_files(
     notice: &Path,
     manifest: &Path,
@@ -822,10 +714,6 @@ pub fn notice_verify_files(
 mod tests {
     use super::*;
 
-    /// Test-only forged SLSA builder identity (issue #924): `invalid.test`
-    /// (RFC 2606) can never resolve, so it models a forged builder.id
-    /// that verification must reject; writable provenance uses the
-    /// allowlisted dry-run builder instead.
     const FORGED_BUILDER_ID: &str = "https://invalid.test/builder";
 
     fn scratch_dir() -> tempfile::TempDir {
@@ -842,7 +730,6 @@ mod tests {
     fn sha256_matches_hashlib_vectors() {
         let scratch = scratch_dir();
         let src = write_artifact(scratch.path(), "payload.bin", b"abc");
-        // `hashlib.sha256(b"abc").hexdigest()`.
         assert_eq!(
             sha256_file(&src).expect("hash"),
             "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
@@ -866,9 +753,6 @@ mod tests {
 
     #[test]
     fn spdx_bytes_match_python_golden() {
-        // Golden from `sbom_spdx_gen.py` over `hello world\n` (digest below)
-        // with package `dx` plus supplier `rules_dx`; regenerate with
-        // `bazel build //deploy/release:sbom_spdx_gen` output before editing.
         let digest = "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
         let text = render_spdx("artifact.bin", digest, "dx", "rules_dx");
         assert!(text.ends_with('\n'));
@@ -884,7 +768,6 @@ mod tests {
                 "https://github.com/ralvik/rules_dx/releases/artifact.bin-{digest}"
             ))
         );
-        // Sorted keys plus two-space indent pin the Python wire bytes.
         let lines: Vec<&str> = text.lines().collect();
         assert_eq!(lines[1], "  \"SPDXID\": \"SPDXRef-DOCUMENT\",");
         assert!(text.contains("\"filesAnalyzed\": false"));
@@ -894,7 +777,6 @@ mod tests {
 
     #[test]
     fn provenance_bytes_match_python_golden() {
-        // Golden from `sbom_prov_gen.py` over the same digest plus builder.
         let digest = "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
         let text = render_provenance("artifact.bin", digest, PROVENANCE_BUILDER_DRY_RUN);
         assert!(text.ends_with('\n'));
@@ -919,7 +801,6 @@ mod tests {
             value["predicate"]["runDetails"]["builder"]["id"],
             serde_json::json!(PROVENANCE_BUILDER_DRY_RUN)
         );
-        // Underscore key sorts first, matching `sort_keys=True`.
         let lines: Vec<&str> = text.lines().collect();
         assert_eq!(
             lines[1],
@@ -929,7 +810,6 @@ mod tests {
 
     #[test]
     fn bcr_bytes_match_python_golden() {
-        // Golden from `bcr_source_gen.py` with `rules_dx` at `1.2.3`.
         let text = render_bcr_source("rules_dx", "1.2.3");
         assert_eq!(
             text,
@@ -939,17 +819,12 @@ mod tests {
 
     #[test]
     fn render_escapes_non_ascii_like_python() {
-        // Python `ensure_ascii` emits `\u00e9`; raw UTF-8 would drift.
         let digest = "a948904f2f0f479b8f8197694b30184b0d2ed1c1cd2a1ec0fb85d299a192a447";
         let text = render_spdx("artifact.bin", digest, "dx", "caf\u{e9}");
         assert!(text.contains("caf\\u00e9"));
         assert!(!text.contains("caf\u{e9}"));
-        // Astral plane renders as a surrogate pair like Python.
         let astral = render_bcr_source("rules_dx\u{1F600}", "1.2.3");
         assert!(astral.contains("\\ud83d\\ude00"));
-        // Single owner: the SBOM pretty path delegates to
-        // `dx_fingerprint::to_json_ascii_pretty`, so the central escape rule
-        // matches the release bytes byte-for-byte.
         assert_eq!(dx_fingerprint::ensure_ascii("caf\u{e9}"), "caf\\u00e9");
         let value = serde_json::json!({"name": "caf\u{e9}"});
         let central = dx_fingerprint::to_json_ascii_pretty(&value).expect("central pretty");
@@ -1035,7 +910,6 @@ mod tests {
         assert!(out.contains("publishing nothing"));
         assert!(out.contains("dx_verify"));
         assert!(out.contains("notice_demo"));
-        // See: `docs/deploy/release-runbook.md#packaging` (artifact-into-releases packaging).
         assert!(out.contains("release_artifacts"));
         assert!(out.contains("subject digest equal to artifact sha256"));
         assert!(out.contains("signed alongside the SBOM pair"));
@@ -1079,7 +953,6 @@ mod tests {
         assert!(provenance_builder_error(FORGED_BUILDER_ID).is_err());
         assert!(provenance_builder_error("https://example.com/builder").is_err());
         assert!(provenance_builder_error("").is_err());
-        // Unlisted builders never reach disk.
         let scratch = scratch_dir();
         let src = write_artifact(scratch.path(), "artifact.bin", b"hello world\n");
         let dst = scratch.path().join("out.prov.json");
@@ -1094,7 +967,6 @@ mod tests {
         let digest = sha256_file(&artifact).expect("digest");
         let spdx = scratch.path().join("artifact.spdx.json");
         write_spdx(&artifact, &spdx, "dx", "rules_dx").expect("spdx");
-        // Forged builder.id with the right digest still fails closed.
         let prov = scratch.path().join("forged.prov.json");
         let forged = render_provenance("artifact.bin", &digest, FORGED_BUILDER_ID);
         std::fs::write(&prov, forged.as_bytes()).expect("write forged");

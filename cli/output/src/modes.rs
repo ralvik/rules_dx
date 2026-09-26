@@ -1,13 +1,9 @@
 use super::OutputError;
 
-/// Live output mode selecting stdout ownership.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputMode {
-    /// Concise human summaries; preserves subprocess stdout and stderr.
     Text { quiet: bool },
-    /// Stdout carries only the complete unified patch.
     Diff,
-    /// Stdout carries only NDJSON; subprocess output moves to stderr.
     Json,
 }
 
@@ -25,10 +21,6 @@ impl OutputMode {
     }
 }
 
-/// Fieldless `--output` spelling: the `clap::ValueEnum` source of truth
-/// for the accepted mode names (`text|diff|json`). `quiet` cannot live on
-/// the enum (value enums are fieldless), so it resolves separately via
-/// [`OutputModeName::resolve`]: only text mode observes `--quiet`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum OutputModeName {
     Text,
@@ -53,18 +45,11 @@ impl OutputModeName {
     }
 }
 
-/// Who owns stdout under a mode and report selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StdoutOwner {
-    /// `dx` text summaries share stdout with subprocess passthrough.
     DxText,
-    /// Complete unified patch only; summaries and normalized diagnostics
-    /// are suppressed rather than moved to stderr.
     Patch,
-    /// One JSON object per line; no prose or subprocess bytes.
     Ndjson,
-    /// Exactly one standard-report document; summaries and subprocess
-    /// output move to stderr.
     Report,
 }
 
@@ -122,7 +107,6 @@ mod tests {
     #[test]
     fn output_mode_names_are_clap_value_enum() {
         use clap::ValueEnum;
-        // Spellings stay exact: the retired match rejected `TEXT`.
         assert_eq!(
             OutputModeName::parse("text").expect("text"),
             OutputModeName::Text
@@ -149,7 +133,6 @@ mod tests {
             .collect();
         values.sort_unstable();
         assert_eq!(values, ["diff", "json", "text"]);
-        // `quiet` resolves into text mode only.
         assert_eq!(
             OutputModeName::Text.resolve(true),
             OutputMode::Text { quiet: true }

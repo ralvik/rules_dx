@@ -2,7 +2,6 @@
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //powershell/env:*_plan` JSON outputs.
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //powershell/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=Greet.psd1,Greet.psm1

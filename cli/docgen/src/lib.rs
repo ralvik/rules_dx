@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -8,7 +6,6 @@ pub struct IrVersion {
     pub minor: u32,
 }
 
-/// Malformed IR version: versions are explicit, never implicit.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum VersionError {
     #[error("explicit nonzero IR major version is required")]
@@ -35,7 +32,6 @@ pub fn plan_version_compat(
     }
 }
 
-/// Unknown extension payloads are preserved verbatim, never dropped.
 pub fn drops_unknown_extensions() -> bool {
     false
 }
@@ -76,7 +72,6 @@ pub fn plan_overload_id(base: &str, param_types: &[String]) -> String {
     format!("{}({})", base, normalized.join(","))
 }
 
-/// Absolute source paths must never enter the IR.
 pub fn is_workspace_relative(path: &str) -> bool {
     !path.is_empty() && !path.starts_with('/')
 }
@@ -100,7 +95,6 @@ pub fn plan_validation(
     }
 }
 
-/// Partial IR shards are never emitted.
 pub fn emits_partial_shards() -> bool {
     false
 }
@@ -119,17 +113,14 @@ pub fn plan_docs_mode(check: bool) -> DocsMode {
     }
 }
 
-/// Whether the mode selects the render action: build only.
 pub fn mode_selects_render(mode: DocsMode) -> bool {
     mode == DocsMode::Build
 }
 
-/// Check mode never compares IR against committed snapshots.
 pub fn check_compares_committed_ir() -> bool {
     false
 }
 
-/// A cache miss is never a check failure.
 pub fn cache_miss_fails_check() -> bool {
     false
 }
@@ -142,7 +133,6 @@ pub fn docs_build_mutates_sources() -> bool {
     false
 }
 
-/// IR shards, render inputs, and rendered HTML are never committed.
 pub fn commits_ir_shards() -> bool {
     false
 }
@@ -166,14 +156,9 @@ pub fn plan_drift_upgrade(
     }
 }
 
-/// Upstream changes never reach users except through a rules_dx release.
 pub fn drift_reaches_users_without_release() -> bool {
     false
 }
-
-// ---------------------------------------------------------------------------
-// Guides/examples corpus shape (slice 2).
-// ---------------------------------------------------------------------------
 
 pub fn is_known_guide(name: &str) -> bool {
     matches!(name, "quickstart" | "tutorial" | "migration")
@@ -193,7 +178,6 @@ pub fn plan_guide_freshness(all_steps_executed: bool, examples_green: bool) -> G
     }
 }
 
-/// Guide steps are never allowed to go unexecuted.
 pub fn guide_steps_may_go_unexecuted() -> bool {
     false
 }
@@ -205,10 +189,6 @@ pub fn examples_root() -> &'static str {
 pub fn is_under_examples(path: &str) -> bool {
     path == "examples" || path.starts_with("examples/")
 }
-
-// ---------------------------------------------------------------------------
-// Site-build action planning (slice 3).
-// ---------------------------------------------------------------------------
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DocsAction {
@@ -236,7 +216,6 @@ pub fn docs_outputs_allow_timestamps() -> bool {
     false
 }
 
-/// Absolute paths must never appear in IR shards, render inputs, or the
 pub fn docs_outputs_allow_absolute_paths() -> bool {
     false
 }
@@ -245,12 +224,10 @@ pub fn same_producer_requires_byte_equality() -> bool {
     true
 }
 
-/// Cross-serializer or cross-upgrade byte equality is never required.
 pub fn cross_version_requires_byte_equality() -> bool {
     false
 }
 
-/// Planned cache-miss outcome: a miss causes normal execution, never a
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CacheMissOutcome {
     Execute,
@@ -269,10 +246,6 @@ pub fn bare_docs_scope_selects_repository() -> bool {
     true
 }
 
-// ---------------------------------------------------------------------------
-// `dx docs` invocation planning (slice 4).
-// ---------------------------------------------------------------------------
-
 pub fn docs_scope_reuses_workflow_resolution() -> bool {
     true
 }
@@ -285,17 +258,14 @@ pub fn serve_caches_own_outputs() -> bool {
     false
 }
 
-/// `--port` only refines `--serve`; a port flag without serve selects no
 pub fn port_without_serve_allowed() -> bool {
     false
 }
 
-/// `--host` only refines `--serve`; a host flag without serve selects no
 pub fn host_without_serve_allowed() -> bool {
     false
 }
 
-/// `--open` only refines `--serve`; an open flag without serve selects no
 pub fn open_without_serve_allowed() -> bool {
     false
 }
@@ -316,7 +286,6 @@ pub fn first_hour_journey_steps() -> &'static [&'static str] {
     &["demo_site", "docs corpus", "site tests"]
 }
 
-/// Timing proof is one-shot evidence, never a standing benchmark.
 pub fn timing_proof_is_one_shot() -> bool {
     true
 }
@@ -406,7 +375,6 @@ mod tests {
             plan_overload_id(base, &strings(&["AccountInput"])),
             format!("{base}(AccountInput)")
         );
-        // Whitespace trims, empties drop, order and spelling preserved.
         assert_eq!(
             plan_overload_id(base, &strings(&[" int ", "", "string "])),
             format!("{base}(int,string)")

@@ -213,8 +213,6 @@ pub(super) fn audit_live_clean_runs_gitleaks_and_exits_zero() {
     assert_eq!(runner.calls.borrow().len(), 1);
     assert_eq!(runner.calls.borrow()[0][0], "/hermetic/gitleaks");
     assert!(runner.calls.borrow()[0].contains(&"--redact".to_owned()));
-    // Hermetic invocation: absolute tool path plus sanitized `TMPDIR`-only
-    // env, never ambient `PATH` or `GITLEAKS_*`.
     assert_eq!(runner.envs.borrow().len(), 1);
     assert_eq!(runner.envs.borrow()[0].len(), 1);
     assert_eq!(runner.envs.borrow()[0][0].0, "TMPDIR");
@@ -226,10 +224,6 @@ pub(super) fn audit_live_clean_runs_gitleaks_and_exits_zero() {
 
 #[test]
 pub(super) fn audit_live_secrets_findings_fail_with_redacted_summary() {
-    // fingerprints, snippets, and properties) still yields a
-    // redacted summary: rule IDs and counts only, never values.
-    // Sentinels are assembled at runtime so the file never stores
-    // a push-protected token shape verbatim.
     let github = format!("{}{}", "ghp_", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8");
     let generic = format!("{}{}", "sk-live-", "51H7x9yQ2wE4rT6yU8iO0p");
     let sarif = format!(
@@ -253,19 +247,15 @@ pub(super) fn audit_live_secrets_findings_fail_with_redacted_summary() {
     assert_eq!(code, 1, "{out}{err}");
     assert!(err.contains("audit_failed"), "{err}");
     assert!(err.contains("audit security"), "{err}");
-    // Findings fail the audit, but secret values never reach output.
     for secret in ["AKIAIOSFODNN7EXAMPLE", github.as_str(), generic.as_str()] {
         assert!(!out.contains(secret), "{out}");
         assert!(!err.contains(secret), "{err}");
     }
-    // The invocation still pins redaction on the auditor argv.
     assert!(runner.calls.borrow()[0].contains(&"--redact".to_owned()));
 }
 
 #[test]
 pub(super) fn audit_live_without_hermetic_tool_fails_closed() {
-    // No ambient `PATH` fallback: without the declared artifact the
-    // security family reports incomplete with an actionable diagnostic.
     struct NoToolRunner {
         calls: Rc<RefCell<Vec<Vec<String>>>>,
     }
@@ -354,8 +344,6 @@ pub(super) fn audit_live_vuln_findings_fail_and_git_is_incomplete() {
 
 #[test]
 pub(super) fn audit_live_npm_git_and_sibling_locks_are_incomplete() {
-    // `package-lock.json` git entries fail as incomplete while
-    // absent `yarn.lock` siblings are skipped, never required.
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
@@ -383,8 +371,6 @@ pub(super) fn audit_live_npm_git_and_sibling_locks_are_incomplete() {
 
 #[test]
 pub(super) fn audit_live_npm_pnpm_git_resolution_is_incomplete() {
-    // Pnpm `resolution: {type: git}` entries fail as incomplete,
-    // never dropped and never clean.
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
@@ -411,9 +397,6 @@ pub(super) fn audit_live_npm_pnpm_git_resolution_is_incomplete() {
 
 #[test]
 pub(super) fn audit_live_vendored_mirror_analyzes_offline_like_upstream() {
-    // a `file://` identity copied from the offline bundle analyzes
-    // offline under the same sha256 plus same-day freshness gates, so a
-    // mirrored finding still fails instead of passing clean.
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
         &["security", "//go/tests/fixtures/hello:hello"],
@@ -461,7 +444,6 @@ pub(super) fn audit_live_go_advisory_findings_fail_instead_of_empty_clean() {
 
 #[test]
 pub(super) fn audit_live_missing_advisory_fails_never_empty_clean() {
-    // obtained, never clean and never a lockfile upload.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["security", "//rust/tests/fixtures/hello:hello"],
@@ -484,8 +466,6 @@ pub(super) fn audit_live_missing_advisory_fails_never_empty_clean() {
 
 #[test]
 pub(super) fn audit_live_stale_advisory_fails_without_stale_fallback() {
-    // A `retrieved_at` older than today is stale and fails without
-    // analyzing the stale bytes.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["security", "//rust/tests/fixtures/hello:hello"],
@@ -523,8 +503,6 @@ pub(super) fn audit_live_stale_advisory_fails_without_stale_fallback() {
 
 #[test]
 pub(super) fn audit_live_tampered_advisory_fails_on_sha_mismatch() {
-    // Identity `sha256` must match the exact snapshot bytes; a
-    // mismatch fails closed, never analyzed.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["security", "//rust/tests/fixtures/hello:hello"],
@@ -561,9 +539,7 @@ pub(super) fn audit_live_tampered_advisory_fails_on_sha_mismatch() {
 #[test]
 pub(super) fn audit_live_license_clean_and_denied() {
     let runner = AuditRunner::clean();
-    let (code, out, err) = run_with(&["license"], &runner, &|_harness| {
-        // Placeholder replaced below by clean_workspace setup.
-    });
+    let (code, out, err) = run_with(&["license"], &runner, &|_harness| {});
     let _ = (code, out, err);
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(&["license"], &runner, &clean_workspace);
@@ -598,9 +574,6 @@ pub(super) fn audit_live_license_clean_and_denied() {
 
 #[test]
 pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
-    // npm via `package-lock.json` license plus inventory words: clean
-    // when both identify, missing-notice-text fails distributed when
-    // words are absent.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["license", "//javascript/tests/fixtures/hello:hello"],
@@ -619,8 +592,6 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     assert_eq!(code, 0, "{out}{err}");
     assert!(out.contains("audit license: clean"), "{out}");
 
-    // Same npm package without words fails (MIT is allow-listed, so
-    // the failure is the notice check firing, not the license table).
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
         &["license", "//javascript/tests/fixtures/hello:hello"],
@@ -639,7 +610,6 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     assert_eq!(code, 1, "{err}");
     assert!(err.contains("audit_failed"), "{err}");
 
-    // Maven via inventory: clean with words, denied UNKNOWN without.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["license", "//third_party/jvm:maven_install"],
@@ -655,12 +625,9 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
             );
         },
     );
-    // Review still fails distributed without approval; with the
-    // exception above plus words it passes via approval.
     assert_eq!(code, 0, "{out}{err} {code}");
     assert!(out.contains("audit license: clean"), "{out}");
 
-    // NuGet via inventory with words: clean.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["license", "//csharp/tests/fixtures/hello:hello"],
@@ -679,8 +646,6 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     assert_eq!(code, 0, "{out}{err}");
     assert!(out.contains("audit license: clean"), "{out}");
 
-    // Go via inventory with words: clean; without words the BSD
-    // notice fails distributed, inventoried internal stays clean.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["license", "//go/tests/fixtures/hello:hello"],
@@ -699,8 +664,6 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     assert_eq!(code, 0, "{out}{err}");
     assert!(out.contains("audit license: clean"), "{out}");
 
-    // Same Go package without words fails (BSD is allow-listed, so
-    // the failure is the notice check firing).
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
         &["license", "//go/tests/fixtures/hello:hello"],
@@ -728,10 +691,6 @@ pub(super) fn audit_live_target_scopes_to_owning_set_only() {
         &runner,
         &|harness| {
             write_go_mod(harness);
-            // Uninventoried Go licenses stay `UNKNOWN` (fail closed in
-            // `distributed`): scope the root internal so the inventory
-            // stays clean, like `clean_workspace` does for cargo plus
-            // MIT with words.
             harness.write_source(
                 "licenses.toml",
                 "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[distribution]\ninternal = [\"//go/tests/fixtures/hello:hello\"]\n",

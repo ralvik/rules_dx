@@ -27,10 +27,6 @@ pub fn parse_prettier_check(
         if path.starts_with("Code style issues") {
             continue;
         }
-        // No empty-path guard: `path` is the remainder after the
-        // `"[warn] "` prefix on an already-trimmed line, so it cannot be
-        // empty (a bare `"[warn] "` line trims to `"[warn]"` and fails
-        // the prefix match above). Unknown paths fail closed in `known`.
         let normalized = path.strip_prefix("./").unwrap_or(path);
         let checked = known(TOOL, files, normalized)?;
         let (start, end) = point(1, 1);

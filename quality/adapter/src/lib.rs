@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use line_index::{LineIndex, WideEncoding, WideLineCol};
@@ -50,7 +48,6 @@ pub struct Finding {
     pub suggestions: Vec<Suggestion>,
 }
 
-/// Placement failure. Every variant is an action failure, never a skipped
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PlaceError {
     #[error("position {line}:{column} is outside the checked bytes")]
@@ -160,9 +157,6 @@ mod tests {
 
     #[test]
     fn line_col_counts_characters_not_bytes() {
-        // Line 2 is `    let caf\u{e9} = 1;`: `c` sits at character
-        // column 9 but byte offset 20, and `\u{e9}` at column 12 but
-        // byte offset 23.
         assert_eq!(line_col_to_byte(CAFE, 2, 9), Some(20));
         assert_eq!(line_col_to_byte(CAFE, 2, 12), Some(23));
     }

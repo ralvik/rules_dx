@@ -48,7 +48,6 @@ impl UpdateReport {
             .collect()
     }
 
-    /// Dependents reported as blocked without running.
     pub fn blocked(&self) -> Vec<String> {
         self.outcomes
             .iter()
@@ -58,7 +57,6 @@ impl UpdateReport {
     }
 }
 
-/// Aggregation failures. Missing results are a caller error, never a
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum AggregateError {
     #[error("update set {set:?} has no reported result; refusing to guess")]
@@ -95,9 +93,6 @@ pub fn aggregate(
             }
         })
         .collect();
-    // Selected sets with no attempted result are fail-closed. Dependents
-    // of failures report `Blocked` and must not run; an unexplained gap
-    // errors so missing evidence can never read as clean.
     for set in &selected_sets {
         if reported.contains_key(set) {
             continue;
@@ -144,7 +139,6 @@ pub fn depends_on_failed(
     false
 }
 
-/// Selected sets surface as blocked (never successful) when the caller
 pub fn results_missing(set: &str, results: &[SetOutcome]) -> bool {
     !results.iter().any(|result| result.set == set)
 }
@@ -298,10 +292,6 @@ mod tests {
 
     #[test]
     fn execution_gaps_parallelism_stays_sequential() {
-        // Continued updates imply no parallelism and no new
-        // mutation-event API; aggregation is deterministic sorted order
-        // over injected results with no scheduling. Pinned with fixtures
-        // in `cli/cli/tests/fixtures/cli_execution_gaps/`.
         let report = aggregate(
             &sets(&["c-set", "a-set", "b-set"]),
             &outcomes(&[

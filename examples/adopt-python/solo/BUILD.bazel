@@ -10,7 +10,6 @@ python_library(
 python_test(
     name = "pure_test",
     srcs = ["pure_test.py"],
-    # User-owned runtime edges: see app/BUILD.bazel.
     dep_group = "hello",
     imports = ["."],
     deps = [

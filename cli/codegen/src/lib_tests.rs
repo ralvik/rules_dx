@@ -144,7 +144,6 @@ fn expansion_expression_queries_shard_rdeps() {
         expansion_expression("@repo//pkg:schema"),
         "kind('.*codegen_shard rule', rdeps(//..., set(\"@repo//pkg:schema\")))"
     );
-    // Labels quote backslashes and quotes so the expression stays stable.
     assert_eq!(
         expansion_expression("//pkg:a\"b\\c"),
         "kind('.*codegen_shard rule', rdeps(//..., set(\"//pkg:a\\\"b\\\\c\")))"
@@ -153,10 +152,6 @@ fn expansion_expression_queries_shard_rdeps() {
 
 #[test]
 fn quote_matches_json_for_label_alphabet() {
-    // Single-owner parity: for the Bazel label alphabet (plus
-    // backslash/quote in pathological tests) the hand escaper matches
-    // `serde_json::to_string` byte-for-byte, so the query literal stays
-    // canonical JSON quoting without a second escaper.
     for label in [
         "//generation:result_proto",
         "@repo//pkg:schema",
@@ -173,13 +168,10 @@ fn quote_matches_json_for_label_alphabet() {
 
 #[test]
 fn expand_roots_unions_schema_with_projections() {
-    // Empty projections keep the single label (bare schema with no
-    // consumers selects its own empty closure, never a failure).
     assert_eq!(
         expand_roots("//generation:result_proto", &[]),
         vec!["//generation:result_proto".to_owned()]
     );
-    // Projections union with the schema, sorted and deduplicated.
     assert_eq!(
         expand_roots(
             "//generation:result_proto",
@@ -195,8 +187,6 @@ fn expand_roots_unions_schema_with_projections() {
             "//generation:result_proto".to_owned(),
         ]
     );
-    // A shard keeps itself plus downstream shards (deduped, so the
-    // merged plan is unchanged).
     assert_eq!(
         expand_roots(
             "//generation:codegen_shard_beta",
@@ -306,7 +296,6 @@ fn exec_suffix_matches_on_component_boundaries() {
         Path::new("/out/other.lib.rs"),
         "result_proto.lib.rs"
     ));
-    // Suffix matches only on "/" boundaries, never mid-segment.
     assert!(!exec_matches(
         Path::new("/out/xresult_proto.lib.rs"),
         "result_proto.lib.rs"
@@ -367,7 +356,6 @@ fn collect_shards_binds_exec_suffix_to_one_artifact() {
 
 #[test]
 fn collect_shards_rejects_missing_duplicate_and_unreported() {
-    // Missing: exec suffix matches no reported artifact.
     let missing = vec![output(
         "//gen:beta",
         vec![(
@@ -387,7 +375,6 @@ fn collect_shards_rejects_missing_duplicate_and_unreported() {
             exec_path: "beta.lib.rs".to_owned(),
         })
     );
-    // Ambiguous: one suffix matches two reported artifacts.
     let ambiguous = vec![output(
         "//gen:beta",
         vec![
@@ -407,7 +394,6 @@ fn collect_shards_rejects_missing_duplicate_and_unreported() {
         collect_shards(&ambiguous),
         Err(CollectError::DuplicateArtifact { .. })
     ));
-    // Unreported: a non-shard artifact no entry claims.
     let unreported = vec![output(
         "//gen:beta",
         vec![
@@ -428,7 +414,6 @@ fn collect_shards_rejects_missing_duplicate_and_unreported() {
             path: "/out/beta.lib.rs".to_owned(),
         })
     );
-    // Duplicate claim: two entries bind the same artifact.
     let duplicate = vec![output(
         "//gen:beta",
         vec![
@@ -577,12 +562,10 @@ fn fingerprint_escapes_quotes_newlines_and_controls() {
         }],
     }];
     let rendered = fingerprint(&records).expect("fingerprint");
-    // serde_json escaping: quote, newline, backslash, and <0x20.
     assert!(rendered.contains("\\\""), "{rendered}");
     assert!(rendered.contains("\\n"), "{rendered}");
     assert!(rendered.contains("\\\\"), "{rendered}");
     assert!(rendered.contains("\\u0001"), "{rendered}");
-    // Round-trips through a real JSON parser with identical bytes.
     let parsed: serde_json::Value =
         serde_json::from_str(&rendered).expect("fingerprint is valid JSON");
     assert_eq!(
@@ -641,7 +624,6 @@ fn conflict_lists_every_claimant() {
 
 #[test]
 fn replaces_binds_into_merge_conflict_and_fingerprint() {
-    // Identical replacement contracts merge silently.
     let contracted = record(
         "//gen:alpha",
         "rust",
@@ -661,7 +643,6 @@ fn replaces_binds_into_merge_conflict_and_fingerprint() {
         merge_records(&[contracted.clone(), contracted.clone()]).len(),
         1
     );
-    // Divergent replacement contracts conflict: no traversal-order winner.
     assert_eq!(
         conflict_error(&[
             record(
@@ -673,8 +654,6 @@ fn replaces_binds_into_merge_conflict_and_fingerprint() {
         ]),
         "codegen path conflict: logical path 'src/alpha.rs' claimed by //gen:alpha, //gen:alpha"
     );
-    // Contracted and uncontracted fingerprints differ: the plan identity
-    // binds the replacement contract.
     let plain = fingerprint(&[record(
         "//gen:a",
         "rust",
@@ -730,8 +709,6 @@ fn collect_shards_round_trips_replacement_contract() {
 
 #[test]
 fn collect_shards_rejects_bad_replacement_contract() {
-    // Replaces without a backing exec path carries no generated artifact
-    // identity; the shard validation rejects it before collection.
     let bad = DxCodegenShard {
         producer: "//gen:beta".to_owned(),
         language: "rust".to_owned(),
@@ -855,7 +832,6 @@ fn projection_resolves_backed_entries_and_sorts() {
         .iter()
         .map(|entry| (entry.logical_path.as_str(), entry.artifact.as_str()))
         .collect();
-    // Sorted by logical path; logical-only entries hold no leaf.
     assert_eq!(
         summary,
         vec![
@@ -869,7 +845,6 @@ fn projection_resolves_backed_entries_and_sorts() {
 
 #[test]
 fn projection_rejects_bad_indexes() {
-    // Missing: exec suffix matches no reported artifact.
     let missing_records = vec![record(
         "//gen:beta",
         "rust",
@@ -879,7 +854,6 @@ fn projection_rejects_bad_indexes() {
         plan_projection(&missing_records, &[]),
         Err(CollectError::MissingArtifact { .. })
     ));
-    // Unreported: an artifact no entry claims.
     let unreported_outputs = vec![output(
         "//gen:beta",
         vec![

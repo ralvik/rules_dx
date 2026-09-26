@@ -163,9 +163,6 @@ mod tests {
     use super::*;
     use crate::TextPosition;
 
-    // Pinned shape from the upstream patching docs (DeadException error
-    // with caret, `(see ...)` link, `Did you mean ...?`, count summary)
-    // plus a MissingOverride warning, each with its full javac header.
     const ERROR_PRONE_DIRTY: &str = concat!(
         "/s/Hello.java:3: error: [DeadException] Exception created but not thrown\n",
         "    new IllegalArgumentException(\"Missing required argument\");\n",
@@ -214,8 +211,6 @@ mod tests {
         assert!(parse_error_prone(b"", b"", Some(0), &["/s/Hello.java"])
             .expect("parsed")
             .is_empty());
-        // Fail-closed: empty output on a findings exit, unknown files,
-        // and stdout chatter are grammar mismatches.
         assert!(parse_error_prone(b"", b"", Some(1), &["/s/Hello.java"]).is_err());
         assert!(parse_error_prone(
             b"",
@@ -235,10 +230,6 @@ mod tests {
 
     #[test]
     fn error_prone_reports_unbracketed_javac_headers() {
-        // Plain javac diagnostics share the log; they report under the
-        // `javac` rule instead of being silently dropped, with their
-        // indented `symbol:`/`location:` detail skipped like any
-        // continuation.
         let stderr = concat!(
             "/s/Broken.java:5: error: cannot find symbol\n",
             "    symbol:   variable missing\n",
@@ -260,8 +251,6 @@ mod tests {
 
     #[test]
     fn error_prone_survives_colons_inside_the_message() {
-        // Only a left split keeps the severity intact when the message
-        // itself carries colons.
         let stderr =
             "/s/A.java:9: warning: [DefaultCharset] Implicit use of the platform default charset: UTF-8\n";
         let findings =
@@ -277,10 +266,6 @@ mod tests {
 
     #[test]
     fn error_prone_grammar_mismatches_are_fail_closed() {
-        // Split from the former cross-family witness: each family
-        // owns its mismatch battery.
-
-        // Column forms stay unpinned until observed upstream.
         assert!(parse_error_prone(
             b"",
             b"/s/A.java:3:14: error: [DeadException] msg\n",
@@ -288,7 +273,6 @@ mod tests {
             &["/s/A.java"],
         )
         .is_err());
-        // Unknown severities, malformed checks, and bad positions fail.
         assert!(parse_error_prone(
             b"",
             b"/s/A.java:3: note: [DeadException] msg\n",
@@ -326,7 +310,6 @@ mod tests {
         .is_err());
         assert!(parse_error_prone(b"", b"garbage\n", Some(1), &["/s/A.java"],).is_err());
         assert!(parse_error_prone(&[0xff], &[0xff], Some(1), &["/s/A.java"]).is_err());
-        // Plural summaries skip; blank and tab-indented continuations skip.
         let stderr =
             "2 errors\n3 warnings\n\n\tindented\n/s/A.java:1: error: [DeadException] msg\n";
         let findings =

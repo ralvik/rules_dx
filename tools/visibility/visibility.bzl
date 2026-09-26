@@ -1,10 +1,6 @@
 """Package-boundary visibility contract (single source).
 
-Contract: `docs/contributing/build-conventions.md#visibility`.
 """
-
-# Scope spellings (buildifier-sorted; BUILD files load these by name, never
-# re-spell the literals, so the allowlists below stay the only copy).
 
 VIS_PUBLIC = ["//visibility:public"]
 
@@ -12,17 +8,11 @@ VIS_PRIVATE = ["//visibility:private"]
 
 VIS_INTERNAL = ["//:__subpackages__"]
 
-# Rust implementation leaves: visible inside //cli only. Consumers use the
-# //dx facade plus the //cli/cli:dx and //cli/env:env binaries, never the
-# libraries directly (see docs/architecture/facade.md).
 VIS_CLI = [
     "//cli:__pkg__",
     "//cli:__subpackages__",
 ]
 
-# Shared leaves: VIS_CLI plus exactly the observed cross-group consumers
-# (each grant has at least one in-repo dependent; see the guard
-# //tools/ci:visibility_guards). No new entries without a dependent.
 VIS_CLI_ENV_QUALITY = VIS_CLI + [
     "//env:__subpackages__",
     "//quality:__subpackages__",
@@ -65,10 +55,6 @@ VIS_CLI_DOCS_GENERATION_QUALITY = VIS_CLI + [
     "//quality:__subpackages__",
 ]
 
-# Plan-shard libraries: env_shard serves the //env registry root (the
-# rust_env_shard target attribute) plus //cli; codegen_shard also serves
-# //generation (the dx_codegen_shard/prost_codegen_shard attr defaults
-# declared in generation/codegen.bzl).
 VIS_ENV_SHARD = VIS_CLI + [
     "//env:__pkg__",
     "//env:__subpackages__",
@@ -78,8 +64,6 @@ VIS_CLI_GENERATION = VIS_CLI + [
     "//generation:__pkg__",
 ]
 
-# Quality leaves: visible inside //quality only, except markdown (serves
-# the //env registry tool) and result (serves //cli).
 VIS_QUALITY = [
     "//quality:__pkg__",
     "//quality:__subpackages__",
@@ -91,9 +75,6 @@ VIS_QUALITY_ENV = [
 
 VIS_QUALITY_CLI = VIS_CLI + VIS_QUALITY
 
-# External API: packages whose default is public. Language rules wrappers
-# (loaded from //<lang>/rules:defs.bzl), the //config, //env, //generation,
-# //quality roots, plus the //deploy and //modules entry points.
 PUBLIC_PACKAGES = [
     "astro/rules",
     "cc/rules",
@@ -121,8 +102,6 @@ PUBLIC_PACKAGES = [
     "vue/rules",
 ]
 
-# Focused per-language environment plans: no cross-package consumers, so
-# the default stays private.
 PRIVATE_ENV_PACKAGES = [
     "astro/env",
     "cc/env",
@@ -143,8 +122,6 @@ PRIVATE_ENV_PACKAGES = [
     "vue/env",
 ]
 
-# Generated-code infrastructure: private with narrow explicit grants to
-# //gazelle/dispatch and //dx (see each package).
 PRIVATE_GAZELLE_PACKAGES = [
     "gazelle/astro",
     "gazelle/cc",
@@ -166,13 +143,8 @@ PRIVATE_GAZELLE_PACKAGES = [
     "gazelle/vue",
 ]
 
-# Consumer facade: private default with explicit public exports only (see
-# //tools/ci:dx_facade_qualification).
 DX_FACADE_PACKAGE = "dx"
 
-# Scoped packages: package directory to the scope constant it must load.
-# Every multi-entry default_visibility in the tree appears here; anywhere
-# else a multi-entry literal is a guard failure.
 SCOPED_PACKAGES = {
     "cli/adopt": "VIS_CLI",
     "cli/apply": "VIS_CLI",
@@ -213,7 +185,6 @@ SCOPED_PACKAGES = {
     "quality/testdata": "VIS_QUALITY",
 }
 
-# Attribute-level public targets on otherwise scoped packages, plus the
 EXPLICIT_PUBLIC_TARGETS = {
     "cli/cli": ["dx", "man_pages"],
     "cli/env": ["env"],
@@ -221,23 +192,16 @@ EXPLICIT_PUBLIC_TARGETS = {
     "dx": ["codegen", "config", "env", "generate", "generate_check"],
 }
 
-# Packages allowed an explicit public exports_files (Cargo.toml for the
-# workspace build; visibility-exempt loads otherwise).
 EXPLICIT_PUBLIC_EXPORTS = [
     "cli/cli",
     "cli/env",
 ]
 
-# Target-level multi-entry grants: [package, rule kind, extra scope]. Only
-# the CI-owned fixtures below may widen a target beyond its package
-# default (the CI harnesses consume them as data); every other target
-# visibility stays a singleton.
 SCOPED_TARGET_GRANTS = [
     ["quality/artifacts", "exports_files", "//tools/ci:__pkg__"],
     ["quality/testdata", "exports_files", "//tools/ci:__pkg__"],
 ]
 
-# Layering: [consumer package prefix, forbidden label prefix, exempt
 LAYER_FORBIDDEN_DEPS = [
     ["cli/", "//dx:", ["//dx:codegen", "//dx:env"]],
     ["cli/", "//docs:", []],

@@ -36,14 +36,8 @@ pub fn render_preset_fragment() -> String {
         "# Regenerate: `bazel run //tools/bazelrc:preset_update`.".to_owned(),
     ];
     lines.extend(UPSTREAM_FLAGS.iter().map(|s| (*s).to_owned()));
-    lines.push("# Owned extra_presets group: coverage.".to_owned());
     lines.extend(COVERAGE_FLAGS.iter().map(|s| (*s).to_owned()));
-    lines.push("# Owned build profiles.".to_owned());
     lines.extend(BUILD_PROFILES.iter().map(|s| (*s).to_owned()));
-    lines.push(
-        "# Owned Windows execution (runfiles tree; Windows is manifest-only by default)."
-            .to_owned(),
-    );
     lines.extend(WINDOWS_FLAGS.iter().map(|s| (*s).to_owned()));
     let mut out = lines.join("\n");
     out.push('\n');
@@ -120,12 +114,10 @@ fn unified_diff(checked_in: &str, regenerated: &str) -> String {
     out.join("\n")
 }
 
-/// Checks preset freshness without mutating (for `dx update --check`).
 pub fn check_preset(workspace: &Path) -> Result<(), PresetError> {
     let (root_path, fragment_path) = preset_paths(workspace);
     let rendered = render_preset_fragment();
     let rendered_lines = rendered_flag_lines(&rendered);
-    // Collision gate first (mirrors `tools/bazelrc/src/lib.rs` ordering).
     if let Ok(root_content) = std::fs::read_to_string(&root_path) {
         let mut collisions = Vec::new();
         for raw in root_content.lines() {
@@ -218,12 +210,10 @@ mod tests {
         assert!(!rendered.contains("Version-matched to Bazel"));
         assert!(!rendered.contains("Consumer refresh:"));
         assert!(!rendered.contains("Upstream-derived flags"));
-        // Exact inventory counts (mirrors `tools/bazelrc/src/lib.rs` len pins).
         assert_eq!(UPSTREAM_FLAGS.len(), 3);
         assert_eq!(COVERAGE_FLAGS.len(), 8);
         assert_eq!(BUILD_PROFILES.len(), 5);
         assert_eq!(WINDOWS_FLAGS.len(), 1);
-        // Flags present.
         for flag in UPSTREAM_FLAGS
             .iter()
             .chain(COVERAGE_FLAGS.iter())
@@ -232,14 +222,12 @@ mod tests {
         {
             assert!(rendered.contains(flag), "missing {flag}");
         }
-        // Trailing newline, no extra blank line.
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));
     }
 
     #[test]
     fn dx_stamp_tracks_single_version() {
-        // No new pin file: the stamp must equal the delivered version.
         assert_eq!(crate::version::DX_VERSION, "0.0.0");
         assert_eq!(PRESET_BAZEL_VERSION, "9.2.0");
     }
@@ -258,21 +246,18 @@ mod tests {
     fn check_and_update_round_trip_in_scratch() {
         let scratch = dx_test_scratch::scratch("dx-preset-");
         let root = scratch.path().to_path_buf();
-        // Minimal consumer workspace: MODULE marker, root .bazelrc with import.
         std::fs::write(root.join("MODULE.bazel"), "").expect("module");
         std::fs::write(
             root.join(".bazelrc"),
             "import %workspace%/tools/bazelrc/preset.bazelrc\ntry-import %workspace%/user.bazelrc\n",
         )
         .expect("bazelrc");
-        // Missing fragment is stale.
         assert!(matches!(
             check_preset(&root),
             Err(PresetError::Stale { .. })
         ));
         update_preset(&root).expect("update creates fragment");
         assert_eq!(check_preset(&root), Ok(()));
-        // Dirty fragment is stale with a diff.
         let (_, fragment) = preset_paths(&root);
         std::fs::write(&fragment, "# dirty\n").expect("dirty");
         match check_preset(&root) {
@@ -284,7 +269,6 @@ mod tests {
         }
         update_preset(&root).expect("update fixes dirty");
         assert_eq!(check_preset(&root), Ok(()));
-        // Duplicates fail closed on both paths.
         std::fs::write(
             root.join(".bazelrc"),
             "import %workspace%/tools/bazelrc/preset.bazelrc\ncommon --enable_bzlmod\n",

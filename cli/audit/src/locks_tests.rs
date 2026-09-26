@@ -273,8 +273,6 @@ fn pnpm_lock_missing_packages_is_empty_and_invalid_fails() {
 
 #[test]
 fn pnpm_lock_git_resolutions_are_incomplete_never_dropped() {
-    // Git-hosted entries are unsupported revisions, never
-    // silently dropped and never clean.
     let text = "lockfileVersion: '9.0'\npackages:\n  'react@18.2.0':\n    resolution: {integrity: sha512-abc}\n  'git-dep@github:user/repo#abc123':\n    resolution: {repo: 'https://github.com/user/repo.git', commit: abc123}\n  'typed-git@0.0.0':\n    resolution: {type: git, repo: 'https://github.com/user/typed.git', commit: def456}\n  'tarball-git@https://codeload.github.com/user/repo/tar.gz#abc':\n    resolution: {tarball: 'https://codeload.github.com/user/repo/tar.gz#abc'}\n  'local@file:../local':\n    resolution: {directory: ../local}\n";
     let packages = parse_pnpm_lock(text).expect("parses");
     assert!(packages
@@ -288,7 +286,6 @@ fn pnpm_lock_git_resolutions_are_incomplete_never_dropped() {
         assert!(git.is_git, "{name} must be git incomplete");
     }
     assert!(!packages.iter().any(|package| package.name == "local"));
-    // Matching maps every git entry to incomplete, never clean.
     let (findings, unassessed) = crate::vuln::match_packages(&packages, &[]);
     assert!(findings.is_empty());
     assert_eq!(unassessed.len(), 3);
@@ -299,9 +296,6 @@ fn pnpm_lock_git_resolutions_are_incomplete_never_dropped() {
 
 #[test]
 fn pnpm_lock_merges_multi_document_env_plus_project() {
-    // Two-document lockfiles carry the env graph first and the
-    // project graph last; reading only the first document reports
-    // plausible packages with no vulnerabilities.
     let text = "---\nlockfileVersion: '9.0'\npackages:\n  'pnpm-bin@1.0.0':\n    resolution: {integrity: sha512-env}\n---\nlockfileVersion: '9.0'\npackages:\n  'react@18.2.0':\n    resolution: {integrity: sha512-abc}\n";
     let packages = parse_pnpm_lock(text).expect("parses");
     assert!(packages.iter().any(|package| package.name == "react"));
@@ -319,8 +313,6 @@ fn npm_git_reference_markers_are_explicit_only() {
     assert!(is_npm_git_reference(
         "https://github.com/user/repo.git#abc123"
     ));
-    // Registry versions and tarballs never count: a bare `#`
-    // fragment alone is the registry `#sha512-...` shape.
     assert!(!is_npm_git_reference("18.2.0"));
     assert!(!is_npm_git_reference(
         "https://registry.npmjs.org/react/-/react-18.2.0.tgz"
@@ -396,9 +388,6 @@ fn yarn_lock_parses_registry_skips_file_and_flags_git() {
 
 #[test]
 fn npm_private_packages_are_incomplete_never_clean() {
-    // Private registries are byte-identical to public ones in every
-    // npm lock shape, so callers mark `is_private` explicitly and
-    // matching fails those as incomplete, never clean.
     let pkgs = vec![
         LockedPackage {
             name: "@internal/pkg".to_owned(),
@@ -444,8 +433,6 @@ fn paket_lock_parses_nuget_section_only() {
 
 #[test]
 fn paket_lock_git_section_is_incomplete_never_dropped() {
-    // GIT entries are unsupported revisions, never
-    // silently dropped and never clean.
     let text = "NUGET\n  remote: https://api.nuget.org/v3/index.json\n    FSharp.Core (10.1.201)\nGIT\n  remote: https://github.com/example/lib.git\n    Git.Lib (1.0.0)\nHTTP\n  remote: https://example.com\n    Other (9.9.9)\n";
     let packages = parse_paket_lock(text).expect("parses");
     assert_eq!(packages.len(), 2);
@@ -460,7 +447,6 @@ fn paket_lock_git_section_is_incomplete_never_dropped() {
         .expect("git entry");
     assert!(git.is_git);
     assert!(!packages.iter().any(|package| package.name == "Other"));
-    // Matching maps the GIT entry to incomplete, never clean.
     let (findings, unassessed) = crate::vuln::match_packages(&packages, &[]);
     assert!(findings.is_empty());
     assert_eq!(unassessed.len(), 1);
@@ -487,7 +473,6 @@ fn go_mod_parses_require_block_and_single_line_with_comments() {
     assert!(packages
         .iter()
         .any(|package| package.name == "example.com/single" && package.version == "v1.2.3"));
-    // The main module is first-party, never a dependency.
     assert!(!packages
         .iter()
         .any(|package| package.name == "rules_dx/third_party/go"));
@@ -542,7 +527,6 @@ fn go_mod_comment_stripping_keeps_bare_tokens() {
         strip_go_comment("module example.com/root"),
         "module example.com/root"
     );
-    // `//` inside a token (never a comment in `go.mod`) stays in the line.
     assert_eq!(
         strip_go_comment("replace https://example.com => v1.0.0"),
         "replace https://example.com => v1.0.0"
@@ -634,7 +618,6 @@ fn npm_licenses_read_legacy_dependencies_shape() {
             .license,
         "UNKNOWN"
     );
-    // Invalid JSON stays fail-closed to UNKNOWN for every package.
     let fallback = npm_licenses("not json", &packages);
     assert!(fallback.iter().all(|entry| entry.license == "UNKNOWN"));
 }
@@ -646,12 +629,9 @@ fn license_extractors_skip_malformed_entries_without_inventing_ids() {
     let blank = r#"{"packages": {"serde 1.0.100": {"license": "  "}}}"#;
     assert_eq!(cargo_licenses(blank, &cargo_packages)[0].license, "UNKNOWN");
 
-    // Non-object details, missing versions, and blank licenses fall
-    // through without an identity; degenerate dependency keys skip.
     let text = r#"{"packages":{"node_modules/str":"1.0.0","node_modules/nov":{"license":"MIT"},"node_modules/nolic":{"version":"1.0.0","license":" "}},"dependencies":{"  ":{"version":"1.0.0"},"obj":"1.0.0","nover":{"license":"MIT"},"nolic":{"version":"1.0.0","license":""}}}"#;
     let licensed = npm_licenses(text, &[]);
     assert!(licensed.is_empty());
-    // A JSON root that is not an object contributes no entries.
     assert!(npm_licenses("[]", &[]).is_empty());
 }
 
@@ -698,7 +678,6 @@ fn inventory_licenses_resolve_per_ecosystem_with_version_scope() {
     let licensed = inventory_licenses(&npm_pkgs, &inventory, "npm");
     assert_eq!(licensed[0].license, "MIT");
     assert!(inventory_text_present(&npm_pkgs[0], &inventory));
-    // Out-of-range versions never inherit: same package, new major.
     let upgraded = LockedPackage {
         version: "19.0.0".to_owned(),
         ..npm_pkgs[0].clone()
@@ -706,7 +685,6 @@ fn inventory_licenses_resolve_per_ecosystem_with_version_scope() {
     let licensed = inventory_licenses(std::slice::from_ref(&upgraded), &inventory, "npm");
     assert_eq!(licensed[0].license, "UNKNOWN");
     assert!(!inventory_text_present(&upgraded, &inventory));
-    // Maven interval scope matches inside, not outside.
     let maven = LockedPackage {
         name: "junit:junit".to_owned(),
         version: "4.13.2".to_owned(),
@@ -726,7 +704,6 @@ fn inventory_licenses_resolve_per_ecosystem_with_version_scope() {
         inventory_licenses(std::slice::from_ref(&maven_out), &inventory, "maven")[0].license,
         "UNKNOWN"
     );
-    // Uninventoried packages stay UNKNOWN with no words.
     let unknown = LockedPackage {
         name: "other".to_owned(),
         version: "1.0.0".to_owned(),
@@ -743,12 +720,10 @@ fn inventory_licenses_resolve_per_ecosystem_with_version_scope() {
 
 #[test]
 fn regex_pnpm_scoped_peer_and_dash_boundaries() {
-    // Scoped peer suffix strips to the base version.
     assert_eq!(
         split_pnpm_key("@babel/core@7.29.7(@babel/types@7.0.0)"),
         Some(("@babel/core".to_owned(), "7.29.7".to_owned()))
     );
-    // Dashes are literal: `my-jest` never collides with `jest`.
     assert_eq!(
         split_pnpm_key("my-jest@30.2.0"),
         Some(("my-jest".to_owned(), "30.2.0".to_owned()))
@@ -757,8 +732,6 @@ fn regex_pnpm_scoped_peer_and_dash_boundaries() {
         split_pnpm_key("jest@30.2.0"),
         Some(("jest".to_owned(), "30.2.0".to_owned()))
     );
-    // `link:` versions stay skipped by the caller; the splitter itself
-    // still surfaces them so the filter owns the policy.
     assert_eq!(
         split_pnpm_key("some-pkg@link:../some-pkg"),
         Some(("some-pkg".to_owned(), "link:../some-pkg".to_owned()))
@@ -771,12 +744,10 @@ fn regex_paket_line_keeps_greedy_paren_and_remote_guard() {
         split_paket_line("My.Pkg (1.2.3)"),
         Some(("My.Pkg".to_owned(), "1.2.3".to_owned()))
     );
-    // Trailing bytes after `)` are ignored like the historical slice.
     assert_eq!(
         split_paket_line("My.Pkg (1.2.3) extra"),
         Some(("My.Pkg".to_owned(), "1.2.3".to_owned()))
     );
-    // `remote:`-shaped names never count.
     assert!(split_paket_line("remote: foo (1.2.3)").is_none());
     assert!(split_paket_line("no-parens-here").is_none());
 }

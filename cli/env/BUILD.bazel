@@ -8,9 +8,6 @@ load("//tools/visibility:visibility.bzl", "VIS_CLI")
 
 package(default_visibility = VIS_CLI)
 
-# Hand-written binary crate; see docs/generation/rust.md.
-
-# Crate aliases match lockfile; tails hand-maintained, see docs/generation/rust.md.
 rust_library(
     name = "dx_env",
     srcs = [
@@ -91,12 +88,6 @@ rust_test(
     ) + ["//cli/test_scratch:dx_test_scratch"],
 )
 
-# Binary-crate test (dx/cli precedent): compiles `src/main.rs` under the
-# test harness so the thin shim enters the coverage report, where its
-# LCOV exclusion evaluates to zero eligible lines. It runs no tests; the
-# library unit tests live in `dx_env_test`. Hand-maintained: preserved
-# across dependency regenerations like the runfiles and digest tails.
-# keep
 rust_test(
     name = "dx_env_bin_test",
     size = "small",
@@ -107,8 +98,6 @@ rust_test(
     ],
 )
 
-# Authoritative quality identities (pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "dx_env_fmt_test",
     size = "small",
@@ -132,9 +121,6 @@ exports_files(
     visibility = ["//visibility:public"],
 )
 
-# End-to-end bootstrap proof (gazelle sh_test precedent): runs the real
-# `env` binary against a spaced path under Bazel runfiles
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "bootstrap_test",
     size = "small",
@@ -147,7 +133,6 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

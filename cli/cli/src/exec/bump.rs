@@ -72,9 +72,6 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
     } else if verbose {
         let _ = writeln!(out, "{summary}");
     }
-    // Cache-only `--offline`/`--frozen` gate: resolver refreshes that would
-    // fetch fail before any widen (no mutation), while file-only sets and
-    // the pinned Go no-op still succeed.
     if invocation.offline && request.needs_update_refresh() {
         if let Some((set, req, _)) = refresh_target(&request) {
             if let Err(dx_update::backend::BackendError::OfflineRequired { .. }) =
@@ -86,16 +83,13 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
                     err,
                     CODE_OFFLINE_REQUIRED,
                     &format!(
-                        "cannot refresh {} without network: re-run without --offline/--frozen once connected, or use the vendored bundle per docs/deploy/offline-bootstrap.md (no widen performed)",
+                        "cannot refresh {} without network: re-run without --offline once connected (no widen performed)",
                         request.selector,
                     ),
                 );
             }
         }
     }
-    // Live: read the owning manifest, plan the single-requirement edit
-    // over its bytes, and commit atomically. Any failure leaves the tree
-    // untouched and reports `bump_failed` (exit 1).
     let manifest = request.target_manifest();
     let original = match std::fs::read(workspace.join(manifest)) {
         Ok(bytes) => bytes,
@@ -151,16 +145,12 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
             ),
         );
     }
-    // resolver-owned refresh runs without a manual second step. File-only
-    // sets (Bazel, GitHub Actions) have no refresh launch; Cargo/npm/Go
-    // refresh through the approved `dx_update::backend` operations.
     if !request.needs_update_refresh() {
         let mut message = format!(
             "widened {} to {} in {manifest} (then run preset flag-diff review plus `bazel build //...`)",
             request.selector,
             request.version.display()
         );
-        // semver widens carry the missing-manifest hint with exit mapping.
         if request.version.is_semver() {
             message.push_str(&format!("; {}", dx_bump::generic_major_bump_hint()));
         }
@@ -192,9 +182,6 @@ pub(crate) fn execute_bump(invocation: &Invocation, env: Env<'_>) -> i32 {
         }
         return 0;
     }
-    // Resolver-owned refresh: Cargo full, npm selective for the widened
-    // package, Go full noop, Maven full, NuGet full. Never a private
-    // resolver.
     let (update_set, update_request, update_selector) = match refresh_target(&request) {
         Some(target) => target,
         None => {
@@ -396,8 +383,6 @@ fn bump_refresh_failed(
     manifest: &str,
     message: &str,
 ) -> i32 {
-    // Cache-only `offline_required` failures surface their own code so
-    // air-gapped runs are distinguishable from resolver failures.
     let code = if message.contains(CODE_OFFLINE_REQUIRED) {
         CODE_OFFLINE_REQUIRED
     } else {
@@ -405,8 +390,6 @@ fn bump_refresh_failed(
     };
     let _ = writeln!(err, "dx: {code}: {message}");
     if invocation.output == OutputMode::Json {
-        // The widen stays visible: emit the widen notice before the error
-        // so interrupted chaining keeps the preceding widen true.
         let widened_message = format!(
             "widened {} to {} in {manifest}",
             request.selector,
@@ -626,7 +609,6 @@ mod tests {
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("Widen cargo:anyhow"), "{out}");
         assert_eq!(err, "", "{err}");
-        // Dry-run writes nothing.
         assert_eq!(
             std::fs::read_to_string(
                 harness
@@ -650,7 +632,6 @@ mod tests {
 
     #[test]
     fn live_widens_one_cargo_requirement_atomically() {
-        // second step); the fake runner succeeds so the chain exits 0.
         let harness = Harness::new("bump-live-cargo");
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.toml",
@@ -681,7 +662,6 @@ mod tests {
 
     #[test]
     fn live_npm_chains_selective_refresh_automatically() {
-        // (`dx update npm:<pkg>` selective, never a silent full).
         let harness = Harness::new("bump-live-npm-chain");
         harness.write_source(
             "package.json",
@@ -708,7 +688,6 @@ mod tests {
 
     #[test]
     fn live_go_chains_noop_without_launch() {
-        // with no launch (module lock tracks Gazelle).
         let harness = Harness::new("bump-live-go-chain");
         harness.write_source(
             "third_party/go/go.mod",
@@ -734,7 +713,6 @@ mod tests {
 
     #[test]
     fn live_maven_chains_full_refresh_automatically() {
-        // chains the whole-lock pin automatically.
         let harness = Harness::new("bump-live-maven-chain");
         harness.write_source(
             "MODULE.bazel",
@@ -760,7 +738,6 @@ mod tests {
 
     #[test]
     fn live_nuget_chains_full_refresh_automatically() {
-        // whole-folder regen automatically.
         let harness = Harness::new("bump-live-nuget-chain");
         harness.write_source(
             "third_party/dotnet/paket.dependencies",
@@ -790,7 +767,6 @@ mod tests {
 
     #[test]
     fn live_bazel_file_only_has_no_refresh_launch() {
-        // File-only sets keep the flag-diff review with no chaining launch.
         let harness = Harness::new("bump-live-bazel-fileonly");
         harness.write_source(".bazelversion", "9.2.0\n");
         let (code, out, err) = harness.run(&["bump", "bazel:.bazelversion", "9.3.0"]);
@@ -810,8 +786,6 @@ mod tests {
 
     #[test]
     fn dry_run_chains_without_launch_or_write() {
-        // Dry-run plans widen plus automatic refresh without touching the
-        // tree or launching.
         let harness = Harness::new("bump-dryrun-chain");
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.toml",
@@ -840,8 +814,6 @@ mod tests {
 
     #[test]
     fn live_refresh_failure_keeps_widen_and_reports_update_failed() {
-        // The widen stays committed (no rollback); the refresh failure
-        // exits 1 with `update_failed` and the widen-kept hint.
         let mut harness = Harness::new("bump-live-refresh-fail");
         harness.bazel_code = 1;
         harness.write_source(
@@ -854,7 +826,6 @@ mod tests {
         assert!(err.contains("updater exited 1"), "{err}");
         assert!(err.contains("widen kept"), "{err}");
         assert_eq!(harness.seen_env.borrow().len(), 1, "refresh attempted once");
-        // Widen is kept.
         let widened = std::fs::read_to_string(
             harness
                 .workspace
@@ -888,8 +859,6 @@ mod tests {
 
     #[test]
     fn live_json_chained_emits_widened_plus_update_success() {
-        // Resolver JSON carries both the widen and the refresh success
-        // before `command_finished`.
         let harness = Harness::new("bump-live-json-chain");
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.toml",
@@ -1019,8 +988,6 @@ mod tests {
 
     #[test]
     fn major_bump_plans_carry_migrate_hint_with_exit_mapping() {
-        // plus live plans print the missing-manifest hint with exit mapping;
-        // Git shapes never hint.
         let harness = Harness::new("bump-major-hint-dryrun");
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.toml",
@@ -1046,7 +1013,6 @@ mod tests {
     }
     #[test]
     fn offline_dry_run_plans_cache_only_without_writing() {
-        // writes, so offline dry-run plans cache-only and exits 0.
         let harness = Harness::new("bump-offline-dryrun");
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.toml",
@@ -1074,8 +1040,6 @@ mod tests {
 
     #[test]
     fn offline_live_resolver_fails_before_widen_without_mutation() {
-        // would fetch fail with `offline_required` before any widen (no
-        // mutation), while file-only sets and the Go no-op still succeed.
         let harness = Harness::new("bump-offline-resolver");
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.toml",
@@ -1099,14 +1063,12 @@ mod tests {
             "[dependencies]\nanyhow = \"1\"\n",
             "offline must not widen"
         );
-        // File-only Bazel still succeeds offline with no launch.
         let fileonly = Harness::new("bump-offline-fileonly");
         fileonly.write_source(".bazelversion", "9.2.0\n");
         let (code, out, err) = fileonly.run(&["bump", "bazel:.bazelversion", "9.3.0", "--offline"]);
         assert_eq!(code, 0, "{out}{err}");
         assert!(out.contains("widened bazel:.bazelversion"), "{out}");
         assert!(fileonly.seen_env.borrow().is_empty());
-        // Pinned Go no-op still succeeds offline with no launch.
         let go = Harness::new("bump-offline-go");
         go.write_source(
             "third_party/go/go.mod",

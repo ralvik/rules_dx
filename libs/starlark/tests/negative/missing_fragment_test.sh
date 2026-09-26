@@ -1,14 +1,6 @@
 #!/usr/bin/env bash
-# Missing-fragment negative proof: the absent substring
-# must be reported as missing with the exact user-visible diagnostic,
-# while this harness passes. If the fixture stops failing (substring
-# added), this test fails.
-#
-# Mirrors `libs/starlark/defs.bzl` `check_file` (grep -F for required
-# substring). Hermetic: sandbox-only, TEST_TMPDIR scratch, offline.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
 dx_bootstrap "tools/sh/lib.sh"
 
@@ -24,7 +16,6 @@ if [[ ! -f "$fixture" ]]; then
     exit 1
 fi
 
-# Red fixture: required substring absent from the file.
 want="this substring is absent"
 out="$scratch/out.txt"
 if grep -q -F -e "$want" "$fixture" >"$out" 2>&1; then
@@ -32,7 +23,6 @@ if grep -q -F -e "$want" "$fixture" >"$out" 2>&1; then
     exit 1
 fi
 
-# The user-visible result the starlark runner would emit for this failure.
 echo "FAIL: file //libs/starlark/tests/negative:present_fixture.txt is missing substring 1/1" >"$out"
 echo "  substring: $want" >>"$out"
 if ! grep -q -F -e "is missing substring 1/1" "$out"; then

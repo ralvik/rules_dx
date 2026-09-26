@@ -194,8 +194,6 @@ impl RealBackend {
         invocation: &Invocation,
         scratch: &Scratch,
     ) -> Result<ChildOutput, RunnerError> {
-        // `cwd_rel` derives from an already-resolved config (or is
-        // empty), so joining cannot escape the scratch tree.
         let cwd = scratch.root().join(&invocation.cwd_rel);
         let extra: Vec<(&str, &str)> = tool
             .extra_env
@@ -763,10 +761,6 @@ impl RealBackend {
                     tool_id,
                     parsers::parse_markdown_findings(&out.stdout, out.code, &workspaces),
                 )?;
-                // The checker keys findings off the `--source` workspace
-                // paths; re-root each validated path onto its
-                // scratch-absolute path for placement. A miss is a
-                // tool-output failure, never a panic.
                 let mut rerooted = Vec::with_capacity(reported.len());
                 for found in reported {
                     rerooted.push(FileFinding {
@@ -779,9 +773,6 @@ impl RealBackend {
                 Ok(rerooted)
             }
             "rustfmt" => {
-                // `config_abs` always resolves rustfmt (hinted config,
-                // else materialized defaults); a miss fails the action,
-                // never panics.
                 let Some(cfg) = config.as_ref() else {
                     return Err(execution(tool_id, "rustfmt requires a config".to_owned()));
                 };
@@ -811,12 +802,6 @@ impl RealBackend {
                 }
             }
             "ty" => {
-                // Ty import context: resolve files are staged for
-                // import resolution but never checked. Derive search dirs
-                // from staged Python files (checked plus resolve) so
-                // same-package top-level imports resolve. Findings in
-                // resolve files are filtered below (their own targets'
-                // actions own them); only checked-file findings report.
                 let mut dirs: Vec<PathBuf> = Vec::new();
                 for (_, absolute) in pairs.iter().chain(resolve_pairs.iter()) {
                     if let Some(parent) = absolute.parent() {
@@ -828,11 +813,6 @@ impl RealBackend {
                 let dir_refs: Vec<&Path> = dirs.iter().map(|dir| dir.as_path()).collect();
                 let invocation = commands::ty_check(&tool.binary, &refs, &dir_refs);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
-                // Ty prints concise paths relative to its working
-                // directory even for absolute arguments, so attribute
-                // against the workspace-relative mirror paths, then
-                // re-anchor each finding to its absolute scratch path:
-                // the caller contract stays absolute-addressed.
                 let workspaces: Vec<&str> = pairs
                     .iter()
                     .chain(resolve_pairs.iter())
@@ -869,12 +849,6 @@ impl RealBackend {
             "pylint" => {
                 let invocation = commands::pylint_check(&tool.binary, &refs);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
-                // Pylint relativizes reported paths against its working
-                // directory (the scratch root) even for absolute
-                // arguments, so attribute against the workspace-relative
-                // mirror paths, then re-anchor each finding to its
-                // absolute scratch path: the caller contract stays
-                // absolute-addressed. Mirrors the ty branch.
                 let workspaces: Vec<&str> = pairs
                     .iter()
                     .map(|(workspace, _)| workspace.as_str())
@@ -924,12 +898,6 @@ impl RealBackend {
                     commands::biome_lint_check(&tool.binary, &refs, &config_dir)
                 };
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
-                // Biome reports paths relative to its working directory
-                // (the scratch root), so attribute against the
-                // workspace-relative mirror paths, then re-anchor each
-                // finding to its absolute scratch path: the caller
-                // contract stays absolute-addressed. Mirrors the prettier
-                // branch below.
                 let workspaces: Vec<&str> = pairs
                     .iter()
                     .map(|(workspace, _)| workspace.as_str())
@@ -959,11 +927,6 @@ impl RealBackend {
             "prettier" => {
                 let invocation = commands::prettier_check(&tool.binary, &refs);
                 let out = self.run(tool_id, tool, &invocation, scratch)?;
-                // Prettier reports working-directory-relative paths even
-                // for absolute arguments, so attribute against the
-                // workspace-relative mirror paths, then re-anchor each
-                // finding to its absolute scratch path: the caller
-                // contract stays absolute-addressed.
                 let workspaces: Vec<&str> = pairs
                     .iter()
                     .map(|(workspace, _)| workspace.as_str())
@@ -1080,8 +1043,6 @@ impl RealBackend {
                 parsed(tool_id, parsers::parse_pmd(&out.stdout, out.code, &strs))
             }
             "spotbugs" => {
-                // Analyze mirrored tool-file jars (compiled bytecode), never
-                // the staged `.java` sources; `strs` stay the finding anchors.
                 let jar_targets: Vec<PathBuf> = tool
                     .tool_files
                     .iter()
@@ -1478,12 +1439,6 @@ pub fn run_real_pipeline_with_resolve(
             &resolve_texts,
         )?);
     }
-    // One spawn per tool/stage holds: each diagnose stages its exact
-    // subset once and spawns once (delegated tools spawn zero), and the
-    // terminal pass is skipped when convergence left bytes untouched, so
-    // clean and check-only pipelines cost one diagnose per stage, not two.
-    // Audit/typecheck capabilities converge in one round via the shared
-    // per-capability cap.
     let (terminal, completed_rounds, convergence) = run_convergence(
         &initial,
         stages,

@@ -27,7 +27,6 @@ pub fn validate_artifact_snapshot(
     Ok(())
 }
 
-/// Malformed untrusted PR metadata: privileged reporting must validate
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum MetadataError {
     #[error("PR metadata identities are required")]
@@ -53,12 +52,10 @@ pub fn validate_pr_metadata(
     Ok(())
 }
 
-/// Untrusted inputs never authorize fork-code execution in privileged
 pub fn untrusted_inputs_execute_fork_code() -> bool {
     false
 }
 
-/// Untrusted inputs never grant secrets or write credentials to fork code.
 pub fn untrusted_inputs_grant_secrets() -> bool {
     false
 }
@@ -67,12 +64,10 @@ pub fn thread_slots_used(plan: &ThreadPlan) -> usize {
     plan.keep.len()
 }
 
-/// Retained resolved discussions never count against the new-thread budget.
 pub fn resolved_discussions_count_against_limit() -> bool {
     false
 }
 
-/// Concurrent runs never receive a fresh per-run thread allowance.
 pub fn concurrent_runs_share_limit() -> bool {
     true
 }
@@ -111,8 +106,6 @@ mod tests {
             validate_artifact_snapshot("merge-a", "merge-b", "digest-1"),
             Err(ArtifactError::SnapshotMismatch)
         );
-        // Presence alone never establishes trust: empty required snapshot
-        // cannot be satisfied.
         assert_eq!(
             validate_artifact_snapshot("merge-a", "", "digest-1"),
             Err(ArtifactError::SnapshotMismatch)
@@ -179,7 +172,6 @@ mod tests {
 
     #[test]
     fn cleared_findings_free_thread_slots_for_new_findings() {
-        // Limit 1: `old` occupies the only slot, `new` is omitted.
         let first = vec![finding("old", true, true), finding("new", true, true)];
         let existing = vec![OwnedThread {
             finding: "old".to_owned(),
@@ -189,8 +181,6 @@ mod tests {
         assert_eq!(full.keep, vec!["old".to_owned()]);
         assert!(full.create.is_empty());
         assert_eq!(thread_slots_used(&full), 1);
-        // `old` clears (bot-only, confirmed gone): its slot frees and the
-        // next assessment creates `new`.
         let second = vec![finding("new", true, true)];
         let next = plan_threads(&second, &existing, &["old".to_owned()], 1);
         assert_eq!(next.delete, vec!["old".to_owned()]);
@@ -211,8 +201,6 @@ mod tests {
     fn retained_resolved_discussions_do_not_block_new_threads() {
         assert!(!resolved_discussions_count_against_limit());
         assert!(concurrent_runs_share_limit());
-        // Replied thread for a gone finding resolves (discussion retained)
-        // and frees its slot: only still-present threads count.
         let existing = vec![OwnedThread {
             finding: "gone-discussed".to_owned(),
             has_human_replies: true,
@@ -223,7 +211,6 @@ mod tests {
         let newcomer = vec![finding("fresh", true, true)];
         let next = plan_threads(&newcomer, &[], &["gone-discussed".to_owned()], 1);
         assert_eq!(next.create, vec!["fresh".to_owned()]);
-        // Concurrent completions share one budget: no fresh allowance per run.
         let shared = plan_threads(&newcomer, &[], &[], 1);
         assert_eq!(shared.create, vec!["fresh".to_owned()]);
         assert_eq!(shared.create.len(), 1);

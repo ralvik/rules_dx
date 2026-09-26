@@ -1,6 +1,5 @@
 """Experimental minimal Scala wrappers (ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 Upstream: rules_scala 7.3.0 plus Scala 2.13.18 plus ScalaTest 3.2.20 (MODULE.bazel).
 """
 
@@ -16,14 +15,11 @@ _DX_SCALA_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream `JavaInfo`,
 _DX_SCALA_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-# Scala owns `.scala` only; same-unit `.java` stays `java` per the
-# belong in a `java_library`, so mixed targets keep one owner per file.
 _DX_SCALA_SOURCE_SPECS = [("scala", "scala")]
 _DX_SCALA_SOURCE_EXTS = [".scala"]
 
@@ -73,7 +69,6 @@ def scala_scalacopts_with_werror(kwargs):
     """Returns kwargs with -Xfatal-warnings enforced on scalacopts.
 
     Existing flags are kept; a missing flag is appended.
-    See: docs/testing/generation.md.
     """
     upstream_kwargs = dict(kwargs)
     scalacopts = list(upstream_kwargs.get("scalacopts", []))

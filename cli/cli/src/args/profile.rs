@@ -81,17 +81,14 @@ mod tests {
 
     #[test]
     fn profile_precedence_is_flag_over_attr_over_default() {
-        // Explicit flag wins over the deploy target attribute.
         assert_eq!(
             resolve_profile(Some(Profile::Debug), Some(Profile::Release), Profile::Dev),
             Profile::Debug
         );
-        // Target attribute wins over the command default.
         assert_eq!(
             resolve_profile(None, Some(Profile::Release), Profile::Dev),
             Profile::Release
         );
-        // Bare invocation resolves to the command default.
         assert_eq!(resolve_profile(None, None, Profile::Dev), Profile::Dev);
         assert_eq!(
             resolve_profile(None, None, Profile::Release),
@@ -122,7 +119,6 @@ mod tests {
             assert_eq!(release.profile_flag(), Some(Profile::Release));
             assert_eq!(release.profile(), Profile::Release);
         }
-        // Deploy shares the flags with a release default (flag over default).
         let bare = parse(&args(&["deploy"])).expect("bare deploy parse");
         assert_eq!(bare.profile_flag(), None);
         assert_eq!(bare.profile(), Profile::Release);

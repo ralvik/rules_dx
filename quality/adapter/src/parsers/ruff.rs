@@ -190,11 +190,6 @@ mod tests {
 
     #[test]
     fn ruff_grammar_mismatches_are_fail_closed() {
-        // Split from the former cross-family witness: each family
-        // owns its mismatch battery.
-
-        // Ruff warning maps verbatim; unknown severities and zero
-        // positions are grammar mismatches.
         let warning = RUFF_LINT_DIRTY.replace("\"severity\":\"error\"", "\"severity\":\"warning\"");
         let findings = parse_ruff(warning.as_bytes(), Some(1), &["/s/dirty.py"]).expect("parsed");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
@@ -210,8 +205,6 @@ mod tests {
             "\"location\":{\"column\":0,\"row\":1}",
         );
         assert!(parse_ruff(zero_col.as_bytes(), Some(1), &["/s/dirty.py"]).is_err());
-        // Ruff format: non-JSON output and empty output on a findings
-        // exit are grammar mismatches.
         assert!(parse_ruff_format(b"not json", Some(1), &["/s/dirty.py"]).is_err());
         assert!(parse_ruff_format(b"[]", Some(1), &["/s/dirty.py"]).is_err());
     }

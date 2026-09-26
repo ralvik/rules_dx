@@ -1,6 +1,5 @@
 """Experimental minimal MDX wrappers.
 
-Contract: `libs/starlark/wrapper.bzl`.
 """
 
 load("@aspect_rules_js//js:defs.bzl", _js_library = "js_library")
@@ -30,15 +29,11 @@ _mdx_library_forward = dx_library_forward_rule(
 )
 
 def _mdx_wrap_library(name, srcs, visibility = None, **kwargs):
-    # Lane-A: aspect_hints ride the public forwarder via dx_wrap.
     dx_wrap(name, _js_library, _mdx_library_forward, srcs, visibility = visibility, **kwargs)
 
 def mdx_library(name, srcs, visibility = None, **kwargs):
     """Experimental minimal wrapper over `js_library` for MDX documents."""
 
-    # PARITY_DEFERRED (ADR 0019): no adapter claims `mdx` yet. Tag the
-    # public forwarder so the fail-closed deferred pipeline does not fail
-    # analysis for every consumer of this wrapper; remove when an adapter
     tags = list(kwargs.pop("tags", []))
     for tag in ["no-format", "no-lint", "no-typecheck"]:
         if tag not in tags:

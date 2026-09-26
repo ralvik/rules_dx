@@ -1,4 +1,3 @@
-//! Job worker binary: digests its argv on each run.
 use std::env;
 
 fn main() {

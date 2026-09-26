@@ -18,7 +18,6 @@ pub(crate) fn execute_status(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
-    // Dry-run plans instead of executing: no pin read, no check
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
@@ -36,8 +35,6 @@ pub(crate) fn execute_status(
         }
         return 0;
     }
-    // A missing or unreadable pin fails closed: propagate the read
-    // the checks below, where it can never match the module version.
     let pinned = match dx_adopt::read_version_pin(workspace) {
         Ok(pin) => pin,
         Err(error) => {
@@ -69,10 +66,6 @@ pub(crate) fn execute_status(
         }
     };
     let checks = dx_adopt::default_status_checks(&pinned);
-    // Result document: always prints even under `--quiet` (quiet suppresses
-    // summaries, not answers; see `super::summaries_suppressed` and the output
-    // protocol). JSON vs text is the only mode branch here; `--output=diff`
-    // is rejected at parse time because status has no patch to emit.
     if invocation.output == OutputMode::Json {
         if let Ok(event) = command_started(invocation.command.name(), false, "default") {
             if let Err(exit) = emit_event(out, &event) {

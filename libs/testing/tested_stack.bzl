@@ -1,9 +1,7 @@
 """Tested-stack manifest generator (ADR 0014).
 
-Contract: `docs/decisions/0014-tested-platform-release-stack.md`.
 """
 
-# Regenerate the defaults below from the executed module graph (single source
 _TESTED_DEPS = {
     "rules_rust": "0.74.0",
     "rules_cc": "0.2.22",

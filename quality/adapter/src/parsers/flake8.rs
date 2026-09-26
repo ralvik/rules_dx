@@ -116,9 +116,6 @@ mod tests {
         assert!(parse_flake8(b"", Some(0), &["/s/dirty.py"])
             .expect("parsed")
             .is_empty());
-        // Fail-closed: empty output on a findings exit, unknown files,
-        // unknown code families, and malformed lines are grammar
-        // mismatches.
         assert!(parse_flake8(b"", Some(1), &["/s/dirty.py"]).is_err());
         assert!(parse_flake8(FLAKE8_DIRTY.as_bytes(), Some(1), &["/s/other.py"]).is_err());
         assert!(parse_flake8(b"/s/a.py:1:1:X999:made up\n", Some(1), &["/s/a.py"]).is_err());
@@ -127,8 +124,6 @@ mod tests {
 
     #[test]
     fn flake8_survives_colons_inside_the_message() {
-        // E999 syntax errors carry `SyntaxError: ...`, so only a left
-        // split keeps the position intact.
         let stdout = "/s/broken.py:1:1:E999:SyntaxError: invalid syntax\n";
         let findings = parse_flake8(stdout.as_bytes(), Some(1), &["/s/broken.py"]).expect("parsed");
         assert_eq!(findings.len(), 1);
@@ -138,7 +133,6 @@ mod tests {
             (TextPosition { line: 1, column: 1 }, None)
         );
         assert_eq!(findings[0].finding.message, "SyntaxError: invalid syntax");
-        // W/C families are warnings, not errors.
         let stdout = "/s/a.py:1:80:W505:doc line too long: fix it\n/s/a.py:2:1:C901:function is too complex\n";
         let findings = parse_flake8(stdout.as_bytes(), Some(1), &["/s/a.py"]).expect("parsed");
         assert_eq!(findings.len(), 2);
@@ -149,10 +143,6 @@ mod tests {
 
     #[test]
     fn flake8_grammar_mismatches_are_fail_closed() {
-        // Split from the former cross-family witness: each family
-        // owns its mismatch battery.
-
-        // flake8: non-UTF8 output fails; blank lines are skipped.
         assert!(parse_flake8(&[0xff], Some(1), &["/s/dirty.py"]).is_err());
         let blanked_flake8 = "\n/s/dirty.py:3:1:F401:msg\n\n";
         let findings =

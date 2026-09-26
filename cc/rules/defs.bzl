@@ -1,7 +1,4 @@
-"""Experimental minimal C/C++ wrappers (ADR 0019).
-
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`, `docs/quality/quality-sources.md`.
-"""
+"""Experimental minimal C/C++ wrappers (ADR 0019)."""
 
 load("@rules_cc//cc:defs.bzl", _cc_binary = "cc_binary", _cc_library = "cc_library", _cc_test = "cc_test")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
@@ -18,13 +15,11 @@ _DX_CC_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream `CcInfo`,
 _DX_CC_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-# Header ownership is per extension, not per including source: `.h` maps to
 _DX_CC_SOURCE_SPECS = [
     ("c", ["c", "h"]),
     ("cpp", ["cc", "cpp", "cxx", "hh", "hpp", "hxx"]),
@@ -88,8 +83,6 @@ def cc_copts_with_werror(kwargs):
     `-std=` language floors rewrite to MSVC `/std:` spellings on
     Windows plus `/Zc:__cplusplus`, without which `cl.exe` keeps
     reporting 199711L and the C++17 floor proofs fail
-    (qualified runner: `bazel run //tools/ci:googletest_qualification`).
-    See: docs/testing/generation.md.
     """
     upstream_kwargs = dict(kwargs)
     copts = list(upstream_kwargs.get("copts", []))
@@ -98,7 +91,6 @@ def cc_copts_with_werror(kwargs):
 
     def _msvc_opt(flag):
         if flag.startswith("-std=c++") or flag.startswith("-std=gnu++"):
-            # MSVC accepts only `/std:c++14|c++17|c++20|c++latest`.
             if "14" in flag:
                 return "/std:c++14"
             if "20" in flag:
@@ -106,8 +98,6 @@ def cc_copts_with_werror(kwargs):
             return "/std:c++17"
         return flag
 
-    # `/Zc:__cplusplus` makes `__cplusplus` track the `/std:` selection;
-    # without it MSVC reports 199711L and a floor proof fails.
     win_copts = [_msvc_opt(c) for c in copts] + ["/Zc:__cplusplus", "/WX"]
     upstream_kwargs["copts"] = select({
         "@platforms//os:windows": win_copts,

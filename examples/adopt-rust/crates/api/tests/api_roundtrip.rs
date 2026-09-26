@@ -1,4 +1,3 @@
-//! Integration test: the public digest API plus shared support helpers.
 use support::fixture_word;
 
 mod cases;

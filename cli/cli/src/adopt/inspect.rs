@@ -23,8 +23,6 @@ pub(crate) fn execute_inspect(
     }
     let kind = invocation.command.name();
     let is_json = invocation.output == OutputMode::Json;
-    // Dry-run plans each scope without launching: validate the plan for
-    // usage errors, then print the would-run summary.
     if invocation.dry_run {
         for scope in &invocation.targets {
             if let Err(error) = dx_adopt::plan_inspect(kind, scope, invocation.configured) {
@@ -58,8 +56,6 @@ pub(crate) fn execute_inspect(
         return 0;
     }
     if is_json {
-        // Validate all plans before emitting so usage errors stay
-        // pre-exec (exit 2) without JSON.
         for scope in &invocation.targets {
             if let Err(error) = dx_adopt::plan_inspect(kind, scope, invocation.configured) {
                 return pre_exec(err, &error.to_string());
@@ -79,9 +75,6 @@ pub(crate) fn execute_inspect(
             if let Err(exit) =
                 run_inspect_query_json(kind, scope, &plan, workspace, query_runner, out, err)
             {
-                // `Err` here is the terminal exit: `141` on `EPIPE`
-                // breaks the stream, while `1` marks a failed scope
-                // and continues with remaining scopes.
                 if exit == operational_code() {
                     failed = true;
                     continue;
@@ -205,9 +198,6 @@ fn execute_why(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
-    // Parsing guarantees exactly `<file> <label>`, but `execute` is also
-    // reachable with a hand-built `Invocation`: fail closed via `get`
-    // instead of panicking on direct indexing.
     let Some(file) = invocation.targets.first() else {
         return pre_exec(err, "why needs exactly <file> <label>");
     };
@@ -218,9 +208,6 @@ fn execute_why(
         return pre_exec(err, "why needs exactly <file> <label>");
     }
     let is_json = invocation.output == OutputMode::Json;
-    // Dry-run plans without launching: validate both plan shapes, then
-    // print the would-run summary (the `somepath` leg needs the resolved
-    // owner, so live resolution is skipped).
     if invocation.dry_run {
         let owner_plan = match dx_adopt::plan_inspect("owners", file, invocation.configured) {
             Ok(plan) => plan,
@@ -251,9 +238,6 @@ fn execute_why(
     if is_json {
         return execute_why_json(invocation, file, label, workspace, query_runner, out, err);
     }
-    // Step 1: resolve the file's depth-1 owner. `why` never resolves
-    // the raw file path against the target graph: Bazel `somepath`
-    // needs rule-to-rule endpoints.
     let owner_plan = match dx_adopt::plan_inspect("owners", file, invocation.configured) {
         Ok(plan) => plan,
         Err(error) => return pre_exec(err, &error.to_string()),
@@ -297,7 +281,6 @@ fn execute_why(
         }
         Err(error) => return operational(out, err, &error.to_string()),
     };
-    // Step 2: explain one path from the resolved owner to the target.
     let leg = match dx_adopt::plan_somepath(&owner, label, invocation.configured) {
         Ok(leg) => leg,
         Err(error) => return pre_exec(err, &error.to_string()),
@@ -314,8 +297,6 @@ fn execute_why_json(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
-    // Usage errors stay pre-exec without JSON: validate the owner plan
-    // plus the target scope before emitting.
     if let Err(error) = dx_adopt::plan_inspect("owners", file, invocation.configured) {
         return pre_exec(err, &error.to_string());
     }
@@ -776,10 +757,7 @@ mod tests {
             },
         );
         assert_eq!(code, 0);
-        // Sorted and deduplicated.
         assert_eq!(String::from_utf8(out).expect("out"), "//a:one\n//z:two\n");
-        // Exactly one query expression: never double-wrapped in a
-        // second `query` invocation and never shell-quoted.
         let calls = runner.calls.borrow();
         assert_eq!(calls.len(), 1);
         assert_eq!(
@@ -839,8 +817,6 @@ mod tests {
         assert_eq!(code, 0);
         let calls = runner.calls.borrow();
         assert_eq!(calls.len(), 2);
-        // Step 1 resolves the file owner; step 2 explains from the
-        // resolved owner, never from the raw file path.
         assert_eq!(calls[0][2], "kind('rule', rdeps(//..., src/lib.rs, 1))");
         assert_eq!(
             calls[1],
@@ -924,9 +900,6 @@ mod tests {
 
     #[test]
     fn why_malformed_invocation_fails_closed_without_panic() {
-        // `execute` is reachable with a hand-built `Invocation`: malformed
-        // `why` targets must fail pre-exec (exit 2) instead of panicking
-        // on direct indexing.
         let base = invocation(&["why", "src/lib.rs", "//app:server"]);
         for targets in [
             Vec::new(),

@@ -1,22 +1,4 @@
 #!/usr/bin/env bash
-# Offline/airgap bootstrap from a vendored bundle.
-#
-# Installs the pinned Bazelisk launcher and populates the vendored
-# advisory mirror without any network access: no curl, no wget, no
-# Python URL fetch. Every bundle entry verifies against SHA256SUMS
-# manifests before anything installs; any mismatch fails before
-# mutation. Owning contract: `docs/deploy/offline-bootstrap.md`.
-#
-# Bundle layout:
-#   bazelisk/<asset>  per-OS launcher bytes (assets plus sha256 pinned
-#                     in `.devcontainer/Dockerfile.prebuilt` plus
-#                     `docs/contributing/local-workflows.md`)
-#   bazelisk/SHA256SUMS
-#   advisory/<set>.json  vendored advisory snapshot bytes per set
-#   advisory/SHA256SUMS
-#
-# Usage:
-#   bootstrap-offline.sh --bundle <dir> [--install-dir DIR] [--workspace DIR]
 set -euo pipefail
 
 bundle=""
@@ -109,7 +91,6 @@ today_utc() {
   date -u +%F
 }
 
-# Phase 1: verify everything before mutating anything.
 if [[ ! -f "$bundle/bazelisk/$asset" ]]; then
   echo "bootstrap-offline: bundle has no launcher for this host: $asset" >&2
   exit 1
@@ -127,7 +108,6 @@ if [[ "$launcher_got" != "$launcher_want" ]]; then
   exit 1
 fi
 
-# Phase 2: install the launcher plus populate the advisory mirror.
 mkdir -p "$install_dir"
 if [[ "$asset" == *.exe ]]; then
   cp -f "$bundle/bazelisk/$asset" "$install_dir/bazel.exe"

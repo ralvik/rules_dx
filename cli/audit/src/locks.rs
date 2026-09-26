@@ -19,8 +19,6 @@ pub fn parse_cargo_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
             return Err("invalid Cargo.lock: empty package name or version".to_owned());
         }
         let Some(source) = &package.source else {
-            // First-party workspace member (e.g. `dx_* 0.0.0`): skip, not
-            // an upstream dependency with advisory identity.
             continue;
         };
         if source.is_git() {
@@ -34,7 +32,6 @@ pub fn parse_cargo_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
             continue;
         }
         if source.is_path() {
-            // Explicit path source: first-party, not assessed.
             continue;
         }
         out.push(LockedPackage {
@@ -75,7 +72,6 @@ pub fn is_npm_git_reference(text: &str) -> bool {
     if lower.contains("codeload.github.com") || lower.contains("/tarball/") {
         return true;
     }
-    // `.git` URL path (with optional `#commit` fragment or query).
     let without_fragment = lower.split(['#', '?']).next().unwrap_or(&lower);
     if without_fragment.ends_with(".git") || without_fragment.contains(".git/") {
         return true;
@@ -102,9 +98,6 @@ fn pnpm_resolution_is_git(resolution: &yaml_serde::Value) -> bool {
             return true;
         }
     }
-    // `commit` pins git content (the store key is git-hosted rather
-    // than integrity-addressed); `repo` plus `commit` is the canonical
-    // pnpm git shape.
     if let Some(commit) = get_str("commit") {
         if !commit.trim().is_empty() {
             return true;
@@ -137,9 +130,6 @@ fn pnpm_packages_from_value(value: &yaml_serde::Value, out: &mut Vec<LockedPacka
         if key.is_empty() {
             continue;
         }
-        // `link:` entries appear as `name@link:...` keys; `file:`
-        // entries as `name@file:...` keys. Both are first-party
-        // workspace members, skipped, not assessed.
         if key.contains("link:") || key.contains("file:") {
             continue;
         }
@@ -147,8 +137,6 @@ fn pnpm_packages_from_value(value: &yaml_serde::Value, out: &mut Vec<LockedPacka
             if name.is_empty() || version.is_empty() {
                 continue;
             }
-            // Skip workspace `link:`/`file:` versions that slipped
-            // through key filtering.
             if version.starts_with("link:") || version.starts_with("file:") {
                 continue;
             }
@@ -219,9 +207,6 @@ pub fn parse_pnpm_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     if !parsed_any {
         return Ok(Vec::new());
     }
-    // A scalar or sequence document never parses as a mapping with a
-    // clear error above; guard the `packages: [...]` shape explicitly
-    // for a deterministic message.
     if out.is_empty() {
         let single: Result<yaml_serde::Value, _> = yaml_serde::from_str(text);
         if let Ok(value) = single {
@@ -250,8 +235,6 @@ fn package_lock_name(path: &str) -> Option<String> {
         return None;
     }
     if last.contains('/') && !last.starts_with('@') {
-        // Nested non-scope paths still reduce to the final segment;
-        // anything with a remaining `/` outside a scope is malformed.
         if !last.starts_with('@') {
             let segment = last.rsplit('/').next()?.trim();
             if segment.is_empty() {
@@ -261,8 +244,6 @@ fn package_lock_name(path: &str) -> Option<String> {
         }
     }
     if last.contains('/') {
-        // Scoped names carry exactly one `/`; deeper nesting reduces to
-        // the trailing file segment handled above.
         let parts: Vec<&str> = last.split('/').collect();
         if parts.len() == 2 && !parts[0].is_empty() && !parts[1].is_empty() {
             return Some(last.to_owned());
@@ -388,8 +369,6 @@ pub fn parse_package_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
             if resolved.starts_with("file:") {
                 continue;
             }
-            // Deduplicate against the `packages:` map: same name plus
-            // version with the same git disposition is one entry.
             let is_git = is_npm_git_reference(&version)
                 || is_npm_git_reference(&resolved)
                 || is_npm_git_reference(&from);
@@ -418,16 +397,11 @@ fn split_yarn_selector(selector: &str) -> Option<String> {
         return None;
     }
     if let Some((name, _)) = split_pnpm_key(trimmed) {
-        // `split_pnpm_key` strips peer suffixes and splits on the last
-        // `@`; for selectors the trailing part is the range, so only
-        // the name is kept.
         if !name.is_empty() {
             return Some(name);
         }
         return None;
     }
-    // Bare names without a range (`"pkg":`) carry no selector `@`;
-    // the whole header is the name.
     if !trimmed.contains('@') {
         let name = trimmed.trim_end_matches(':').trim().to_owned();
         if !name.is_empty() {
@@ -477,8 +451,6 @@ pub fn parse_yarn_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
         };
         let version_value = version.take().unwrap_or_default();
         let resolved_value = std::mem::take(resolved);
-        // First selector names the stanza; comma-separated alternates
-        // alias the same locked version.
         let first = selector.split(',').next().unwrap_or("").trim();
         let Some(name) = split_yarn_selector(first) else {
             return;
@@ -524,8 +496,6 @@ pub fn parse_yarn_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
             continue;
         }
         if !line.starts_with([' ', '\t']) {
-            // New stanza header: flush the previous stanza when it
-            // carried a version, then start the next header.
             if header.is_some() && version.is_some() {
                 flush(&mut header, &mut version, &mut resolved, &mut out);
             } else if header.is_some() {
@@ -563,8 +533,6 @@ fn scoped_pnpm_re() -> Option<&'static Regex> {
     if let Some(compiled) = RE.get() {
         return Some(compiled);
     }
-    // Last-`@` split (mirrors the historical `rfind`): scope has no `/`,
-    // name takes up to the final `@`, version carries no `@`.
     match Regex::new(r"^@(?P<scope>[^/]+)/(?P<name>.+)@(?P<version>[^@]+)$") {
         Ok(compiled) => {
             let _ = RE.set(compiled);
@@ -579,7 +547,6 @@ fn unscoped_pnpm_re() -> Option<&'static Regex> {
     if let Some(compiled) = RE.get() {
         return Some(compiled);
     }
-    // Last-`@` split for `name@version`.
     match Regex::new(r"^(?P<name>.+)@(?P<version>[^@]+)$") {
         Ok(compiled) => {
             let _ = RE.set(compiled);
@@ -590,8 +557,6 @@ fn unscoped_pnpm_re() -> Option<&'static Regex> {
 }
 
 fn split_pnpm_key(key: &str) -> Option<(String, String)> {
-    // Strip peer suffixes first: `jest@30.2.0(@types/node@22.20.2)` must
-    // split on the version `@`, not the peer `@`.
     let base = key
         .split_once('(')
         .map(|(stem, _)| stem)
@@ -600,9 +565,6 @@ fn split_pnpm_key(key: &str) -> Option<(String, String)> {
     if base.is_empty() {
         return None;
     }
-    // Regex-first: scoped `@scope/name@version` and unscoped
-    // `name@version` via declarative captures. Falls back to the
-    // `find`/`rfind` heuristics when a static pattern fails to compile.
     if base.starts_with('@') {
         if let Some(re) = scoped_pnpm_re() {
             if let Some(caps) = re.captures(base) {
@@ -675,8 +637,6 @@ pub fn parse_maven_install(text: &str) -> Result<Vec<LockedPackage>, String> {
         if key.trim().is_empty() || version.is_empty() {
             continue;
         }
-        // Key is `group:artifact`; keep verbatim for `maven:group:artifact`
-        // identity (see `dx_update::selector`).
         out.push(LockedPackage {
             name: key.clone(),
             version: version.to_owned(),
@@ -713,8 +673,6 @@ pub fn parse_paket_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
         if !in_nuget && !in_git {
             continue;
         }
-        // Package lines are indented `Name (version)`; remote lines are
-        // `remote: ...` and group headers are `GROUP ...`.
         if trimmed.is_empty()
             || trimmed.starts_with("remote:")
             || trimmed.starts_with("GROUP")
@@ -741,8 +699,6 @@ fn paket_line_re() -> Option<&'static Regex> {
     if let Some(compiled) = RE.get() {
         return Some(compiled);
     }
-    // Greedy name up to the last `(` (mirrors `rfind`), version with no
-    // parens, trailing bytes after `)` ignored like the historical slice.
     match Regex::new(r"^(?P<name>.+)\((?P<version>[^()]+)\)") {
         Ok(compiled) => {
             let _ = RE.set(compiled);
@@ -760,8 +716,6 @@ fn split_paket_line(trimmed: &str) -> Option<(String, String)> {
         if name.is_empty() || version.is_empty() {
             return None;
         }
-        // Historical guard: `remote:`-shaped names never count, even when
-        // the paren shape matches.
         if name.contains("remote") {
             return None;
         }
@@ -779,7 +733,6 @@ fn split_paket_line_fallback(trimmed: &str) -> Option<(String, String)> {
     let name = trimmed[..open].trim().to_owned();
     let version = trimmed[open + 1..close].trim().to_owned();
     if name.is_empty() || version.is_empty() || name.contains(' ') && name.contains(':') {
-        // Guard against non-package lines; names never contain `remote:`.
         if name.contains("remote") {
             return None;
         }

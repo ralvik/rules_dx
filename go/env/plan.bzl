@@ -1,6 +1,5 @@
 """Focused Go environment plan (WP2).
 
-Contract: `docs/environments/go.md`.
 """
 
 load("@rules_go//go:def.bzl", _GoArchive = "GoArchive")

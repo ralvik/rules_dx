@@ -339,9 +339,6 @@ fn setup_hex_is_deterministic_lowercase_64() {
     assert_ne!(first, setup_hex(&pair('1', '3')));
     assert_ne!(first, setup_hex(&pair('3', '2')));
     assert!(setup_fingerprint(&pair('1', '2')).starts_with("dx-setup/v0\n"));
-    // Golden pilot: full-fingerprint insta snapshot pins
-    // the versioned encoding; any encoding change must update this
-    // snapshot alongside the managed-state contract.
     insta::assert_snapshot!(setup_fingerprint(&pair('1', '2')), @"dx-setup/v0
 1111111111111111111111111111111111111111111111111111111111111111
 2222222222222222222222222222222222222222222222222222222222222222
@@ -378,7 +375,6 @@ fn fresh_install_noop_and_replacement() {
         read_current_pair(&workspace).expect("read"),
         Some(pair('3', '4'))
     );
-    // The record links are relative, and the pointer names the setup hash.
     let setups = workspace.join(".dx").join("setups");
     let record = setups.join(setup_hex(&pair('3', '4')));
     assert!(record.join("environment").is_symlink());
@@ -476,8 +472,6 @@ fn record_mismatch_preserves_current() {
         commit_ok(&workspace, &pair('1', '2')),
         CommitOutcome::InstalledFresh
     );
-    // Corrupt the record for a different pair, then try to commit it:
-    // the commit must fail without moving the pointer.
     let spoofed = pair('3', '4');
     let setups = workspace.join(".dx").join("setups");
     let record = setups.join(setup_hex(&spoofed));
@@ -566,8 +560,6 @@ fn digest_spoofed_pointer_fails_closed() {
     );
     let setups = workspace.join(".dx").join("setups");
     let current = setups.join("current");
-    // Point at a valid record directory name that does not match the
-    // pair the record links resolve to.
     let other = setup_hex(&pair('3', '4'));
     fs::create_dir_all(setups.join(&other)).expect("other record");
     symlink_dir(
@@ -676,12 +668,6 @@ fn concurrent_commits_serialize_with_idempotent_reuse() {
     };
     let root = scratch.path().to_path_buf();
     let workspace = workspace_of(&root);
-    // Eight racing commits over four distinct pairs: the commit
-    // lock must serialize them so every commit succeeds, every record
-    // installs, and duplicate pairs reuse the installed record
-    // (`AlreadyCurrent` or a same-pair replacement, never a failure
-    // or a lost opposite side). The final pointer names one of the
-    // four pairs.
     let wanted: Vec<SetupPair> = (0..4)
         .map(|i| pair((b'1' + i) as char, (b'a' + i) as char))
         .collect();
@@ -728,10 +714,6 @@ fn staged_directory_preserves_current() {
         commit_ok(&workspace, &pair('1', '2')),
         CommitOutcome::InstalledFresh
     );
-    // An interrupted swap never leaves a directory at the staged
-    // pointer through this code, but a foreign directory there must
-    // refuse the commit with the prior pointer preserved, never be
-    // adopted or silently replaced.
     let setups = workspace.join(".dx").join("setups");
     fs::create_dir_all(setups.join("current.next")).expect("foreign staged dir");
     assert!(matches!(

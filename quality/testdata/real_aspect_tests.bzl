@@ -1,6 +1,5 @@
 """Real aspect evidence tests (WP2).
 
-Contract: `docs/quality/action-model.md`.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

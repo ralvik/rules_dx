@@ -100,7 +100,6 @@ pub fn taplo_lint(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invo
     }
 }
 
-/// Taplo format invocation; `check` selects `--check` instead of the
 pub fn taplo_format(
     binary: &Path,
     files: &[&Path],
@@ -227,7 +226,6 @@ pub fn pydoclint_check(binary: &Path, files: &[&Path]) -> Invocation {
     }
 }
 
-/// flake8 lint check invocation: `--isolated --color=never --jobs=1
 pub fn flake8_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -733,7 +731,6 @@ pub fn qmllint_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--json", "-"], files, "")
 }
 
-/// Interpreted/file-family cohort invocations (seed-only wiring proof
 pub fn cue_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["fmt", "--check", "--diff"], files, "")
 }

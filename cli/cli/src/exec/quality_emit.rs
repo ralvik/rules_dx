@@ -52,7 +52,7 @@ pub(crate) fn emit_findings(
                     .as_ref()
                     .is_some_and(|path| applied.get(path).copied().unwrap_or(false));
                 event_diagnostic.resolution = Some(if is_applied && event_diagnostic.fixable {
-                    Resolution::Fixed // LCOV_EXCL_LINE - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    Resolution::Fixed // LCOV_EXCL_LINE - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 } else if is_applied {
                     Resolution::Remaining
                 } else {
@@ -63,13 +63,13 @@ pub(crate) fn emit_findings(
                 Ok(event) => {
                     let _ = write_event(out, &event);
                 }
-                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 Err(error) => {
                     return Err((
                         CODE_INVALID_BEP,
                         format!("invalid finding for output: {error}"),
                     ));
-                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             }
         }
         for change in changes {
@@ -78,21 +78,21 @@ pub(crate) fn emit_findings(
                     Ok(event) => {
                         let _ = write_event(out, &event);
                     }
-                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                     Err(error) => {
                         return Err((
                             CODE_INVALID_BEP,
                             format!("invalid change for output: {error}"),
                         ));
-                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 },
-                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 Err(reason) => {
                     return Err((
                         CODE_INVALID_BEP,
                         format!("invalid change for {}: {reason}", change.path),
                     ));
-                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             }
         }
         if !invocation.check {
@@ -127,13 +127,13 @@ pub(crate) fn emit_findings(
                         }
                         let _ = write_event(out, &event);
                     }
-                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                     Err(error) => {
                         return Err((
                             CODE_INVALID_BEP,
                             format!("invalid mutation for output: {error}"),
                         ));
-                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 }
             }
         }

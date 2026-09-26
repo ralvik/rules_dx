@@ -1,6 +1,5 @@
 """Focused TypeScript environment plan (WP3).
 
-Contract: `docs/environments/environment.md`.
 """
 
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")

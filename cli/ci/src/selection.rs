@@ -92,7 +92,6 @@ impl CiSelection {
             .any(|check| check.scope == ExecutionScope::PerPlatform)
     }
 
-    /// CI selection never mutates: checks run in consistency modes and
     pub fn is_mutating() -> bool {
         false
     }

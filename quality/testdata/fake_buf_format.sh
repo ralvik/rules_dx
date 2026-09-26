@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Fake Buf format for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics `buf format --diff --exit-code` (exit 0 clean, exit 1 with
-# unified diff headers when dirty) plus `buf format --write` (in-place
-# rewrite, exit 0) over the BADFMT marker. Real-tool behavior stays
-# proven by `quality/tests/fixtures/buf/` (`check_dirty.diff` modeled
-# on real `--diff` output); this fake proves the runner dispatch plus
-# parser plus fix flow without the buf binary.
 set -euo pipefail
 is_diff=0
 is_write=0

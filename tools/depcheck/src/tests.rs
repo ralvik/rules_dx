@@ -709,8 +709,6 @@ fn versions_equal_pads_trailing_zeros() {
 
 #[test]
 fn typed_errors_keep_display_and_source_chain() {
-    // Typed errors keep the historical `unreadable <kind>` display strings
-    // (CLI diagnostics stay stable) while chaining the underlying cause.
     use super::DepcheckError;
     let dir = tempfile::tempdir().expect("scratch");
     let missing = dir.path().join("missing.toml");
@@ -1079,8 +1077,6 @@ fn find_usages_walks_odd_files() {
         use std::os::unix::fs::PermissionsExt;
         let mode = std::fs::Permissions::from_mode(0o000);
         std::fs::set_permissions(&locked, mode).expect("chmod");
-        // macOS filesystems reject non-UTF-8 names with EPERM, so this entry
-        // is best-effort; the walk still sees the unreadable and non-source files.
         let odd = dir.path().join(std::ffi::OsStr::from_bytes(b"bad\xff"));
         let _ = std::fs::write(&odd, "fn odd() {}\n");
     }

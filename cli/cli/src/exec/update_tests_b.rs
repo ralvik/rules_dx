@@ -90,7 +90,6 @@ fn check_stale_fails_with_diff_and_no_mutation() {
     assert!(out.contains("stale"), "{out}");
     assert!(out.contains("checked-in"), "{out}");
     assert_eq!(err, "", "{err}");
-    // Check never writes.
     assert_eq!(
         std::fs::read_to_string(harness.workspace.join("tools/bazelrc/preset.bazelrc"))
             .expect("read"),
@@ -168,8 +167,6 @@ fn check_json_reports_stale_and_clean() {
 
 #[test]
 fn default_updates_preset_atomically() {
-    // Go is a no-op backend (no launch), so the preset fix is the
-    // only mutation; proves default mode regenerates the fragment.
     let harness = Harness::new("update-default-preset");
     harness.write_source(
         ".bazelrc",
@@ -192,9 +189,6 @@ fn default_updates_preset_atomically() {
 
 #[test]
 fn update_json_never_emits_change_or_mutation() {
-    // backends provide no committed-change
-    // manifest and Git/BUILD inference is forbidden, so update JSON
-    // never emits change/mutation events in any mode.
     let runner = ScriptRunner::new(&[]);
     let (code, out, err) = run_with(&["update", "--output=json"], &runner);
     assert_eq!(code, 0, "{out}{err}");
@@ -233,9 +227,6 @@ fn update_json_never_emits_change_or_mutation() {
 
 #[test]
 fn update_json_completeness_is_per_set_plus_finished() {
-    // per-set event per selected set in sorted order, then an
-    // one command_finished. Preceding per-set events stay true with
-    // no automatic rollback; nothing is inferred for unattempted sets.
     let runner = ScriptRunner::new(&[("maven", Some(1))]);
     let (code, out, err) = run_with(&["update", "--output=json"], &runner);
     assert_eq!(code, 1, "{out}{err}");
@@ -250,8 +241,6 @@ fn update_json_completeness_is_per_set_plus_finished() {
         .collect();
     assert_eq!(kinds[0], "command_started");
     assert_eq!(kinds[kinds.len() - 1], "command_finished");
-    // Five selected sets means five terminal per-set events plus one
-    // recovery notice before finished.
     let middle = &events[1..events.len() - 1];
     assert_eq!(middle.len(), 6, "{out}");
     let (per_set, recovery) = (&middle[..5], &middle[5]);
@@ -270,8 +259,6 @@ fn update_json_completeness_is_per_set_plus_finished() {
         .map(|event| {
             let kind = event["event"].as_str().expect("event");
             if kind == "error" {
-                // Per-set failures ride `update_failed`
-                // errors without a scope; the message names the set.
                 assert_eq!(
                     event["code"].as_str().expect("code"),
                     "update_failed",
@@ -294,8 +281,6 @@ fn update_json_completeness_is_per_set_plus_finished() {
     let mut sorted = scopes.clone();
     sorted.sort();
     assert_eq!(scopes, sorted, "per-set events use sorted set order: {out}");
-    // Finished keeps results_complete (every set reached a terminal
-    // report, including the failure) and omits file-level counts.
     let finished = events.last().expect("finished");
     assert_eq!(finished["exit_code"], serde_json::json!(1));
     assert_eq!(finished["results_complete"], serde_json::json!(true));
@@ -306,7 +291,6 @@ fn update_json_completeness_is_per_set_plus_finished() {
 
 #[test]
 fn update_json_check_and_dryrun_emit_no_file_events_or_counts() {
-    // events nor counts.
     let harness = Harness::new("update-586-check-json");
     harness.write_source(
         ".bazelrc",
@@ -339,8 +323,6 @@ fn update_json_check_and_dryrun_emit_no_file_events_or_counts() {
 
 #[test]
 fn update_failure_reports_recovery_in_text_and_json() {
-    // a failed run keeps per-set commits and reports the manual recovery
-    // (idempotent retry plus `git checkout` restore) in both modes.
     let runner = ScriptRunner::new(&[("maven", Some(1))]);
     let (code, out, err) = run_with(&["update"], &runner);
     assert_eq!(code, 1, "{out}{err}");
@@ -359,7 +341,6 @@ fn update_failure_reports_recovery_in_text_and_json() {
 
 #[test]
 fn update_success_emits_no_recovery() {
-    // clean runs need no recovery hint.
     let runner = ScriptRunner::new(&[]);
     let (code, out, err) = run_with(&["update"], &runner);
     assert_eq!(code, 0, "{out}{err}");
@@ -374,7 +355,6 @@ fn update_success_emits_no_recovery() {
 
 #[test]
 fn offline_dry_run_plans_cache_only_without_launching() {
-    // offline dry-run plans cache-only and exits 0.
     let harness = Harness::new("update-offline-dryrun");
     let (code, out, err) = harness.run(&["update", "--offline", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
@@ -396,8 +376,6 @@ fn offline_dry_run_plans_cache_only_without_launching() {
 
 #[test]
 fn offline_live_fails_with_offline_required_without_launching() {
-    // `offline_required` instead of launching; the pinned Go no-op still
-    // succeeds with no launch.
     let runner = ScriptRunner::new(&[]);
     let (code, out, err) = run_with(&["update", "cargo", "--offline"], &runner);
     assert_eq!(code, 1, "{out}{err}");
@@ -408,7 +386,6 @@ fn offline_live_fails_with_offline_required_without_launching() {
     assert_eq!(code, 1, "{out}{err}");
     assert!(out.contains("\"code\":\"offline_required\""), "{out}");
     assert!(!out.contains("\"code\":\"update_failed\""), "{out}");
-    // Go pinned no-op succeeds offline with no launch.
     let go_runner = ScriptRunner::new(&[]);
     let (code, out, err) = run_with(&["update", "go", "--offline"], &go_runner);
     assert_eq!(code, 0, "{out}{err}");
@@ -424,7 +401,6 @@ fn offline_live_fails_with_offline_required_without_launching() {
 
 #[test]
 fn offline_required_code_is_stable_single_source() {
-    // Fixture pins the stable wire code so output-protocol drift fails here.
     assert_eq!(
         crate::exec::common::CODE_OFFLINE_REQUIRED,
         "offline_required"

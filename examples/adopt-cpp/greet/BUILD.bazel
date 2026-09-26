@@ -5,13 +5,6 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
-# Handwritten: the generator never emits cc_test; test-owned `*_test.cc`
-# stays out of the generated library and this rule survives regeneration.
-# GoogleTest v1.18.0 plus explicit -std=c++17 floor over the pinned
-# @googletest hub (hash authority: MODULE.bazel.lock integrity plus
-# per-archive sha256; C/C++ has no ecosystem lockfile). The cc wrapper
-# rewrites `-std=` to MSVC `/std:` plus `/Zc:__cplusplus` on Windows so
-# the `__cplusplus` floor proof below reports the selected standard.
 cc_test(
     name = "greet_test",
     srcs = ["greet_test.cc"],

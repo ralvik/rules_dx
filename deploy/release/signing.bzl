@@ -1,6 +1,5 @@
 """Signing + attestation selection for releases (live successor to closed / for the signing stack).
 
-Contract: `docs/deploy/release-runbook.md`.
 Decision: keep Sigstore keyless `cosign sign-blob --bundle` + GitHub attestations on the TUF trust root; no stack change.
 """
 
@@ -8,11 +7,9 @@ load("//deploy/rules:defs.bzl", "dx_deployment")
 load("//deploy/rules:launcher.bzl", "rlocation_path")
 load("//rust/rules:defs.bzl", "rust_binary")
 
-# Trust root is documented, not self-hosted.
 SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"
 SIGNING_ISSUER = "https://token.actions.githubusercontent.com"
 
-# Selected signing-stack pins: cosign CLI version plus linux-amd64 sha
 SIGNING_COSIGN_VERSION = "v2.4.1"
 SIGNING_COSIGN_SHA256_LINUX_AMD64 = "8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"
 SIGNING_BUNDLE_MEDIA_TYPE = "application/vnd.dev.sigstore.bundle.v0.3+json"
@@ -86,7 +83,6 @@ def _signing_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """// Deploy launcher for `signed_release`. Generated. Do not edit.
-// See: `docs/deploy/release-runbook.md` (signing release path).
 fn run() -> i32 {
     const IDENTITY: &str = \"""" + ctx.attr.identity + """\";
     const ISSUER: &str = \"""" + ctx.attr.issuer + """\";

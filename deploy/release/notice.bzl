@@ -1,6 +1,5 @@
 """Aggregated NOTICE bundling for distributed-tier releases.
 
-Contract: `docs/deploy/release-runbook.md`.
 """
 
 def notice_filenames(name):

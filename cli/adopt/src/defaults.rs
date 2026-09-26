@@ -37,7 +37,6 @@ pub fn env_bool(get: &dyn Fn(&str) -> Option<String>, name: &str) -> Option<bool
     get(name).map(|value| is_truthy(&value))
 }
 
-/// Resolves one string default: flag over env over file over fallback.
 pub fn resolve_string(
     flag: Option<String>,
     env: Option<String>,

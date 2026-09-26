@@ -1,19 +1,8 @@
 #!/usr/bin/env bash
-# WP2 end-to-end bootstrap proof through the real `env` binary:
-# fresh install into a workspace whose path contains spaces, second-run
-# noop, replacement with stale-entry removal, unmanaged-tree refusal,
-# marker presence, and doctor execution via the installed link. Swap
-# atomicity and crash recovery are unit-tested in `src/lib.rs`; this test
-# proves the runfiles-located default tree and the installed surface
-# under Bazel.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers.
-# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
 dx_bootstrap "tools/sh/lib.sh"
-
-# Portable realpath via tools/sh/lib.sh dx_realpath.
 
 env_bin="$(dx_realpath "$1")"
 runfiles="$(dx_runfiles_root)"
@@ -53,8 +42,6 @@ noop="$("${env_bin}" --workspace "${root}")"
   exit 1
 }
 
-# Replacement with a reduced staged tree: the dropped tool's link is
-# stale state and must disappear with the swap.
 staged="$(find "${runfiles}" -name default_tree.metadata.json -print -quit)"
 [[ -n "${staged}" ]] || {
   echo "default staged metadata not found under ${runfiles}" >&2
@@ -62,8 +49,6 @@ staged="$(find "${runfiles}" -name default_tree.metadata.json -print -quit)"
 }
 alt="${TEST_TMPDIR}/staged-alt"
 mkdir -p "${alt}"
-# Portable recursive copy: `cp -a` is GNU-only; `cp -RPp`
-# preserves symlinks, modes, and timestamps on GNU and BSD/macOS.
 cp -RPp "$(dirname "${staged}")/bin" "${alt}/bin"
 command -v python3 >/dev/null || {
   echo "python3 required to derive the reduced tree" >&2
@@ -94,7 +79,6 @@ replace="$("${env_bin}" --workspace "${root}" --staged-bin "${alt}/bin" --metada
   exit 1
 }
 
-# Restoring the default tree replaces back to the full set.
 restore="$("${env_bin}" --workspace "${root}")"
 [[ "${restore}" == *'replaced managed tree with 3 tool(s)'* ]] || {
   echo "unexpected restore output: ${restore}" >&2
@@ -105,7 +89,6 @@ restore="$("${env_bin}" --workspace "${root}")"
   exit 1
 }
 
-# A foreign `.dx/bin` is never adopted and never modified.
 foreign="${TEST_TMPDIR}/foreign"
 mkdir -p "${foreign}/.dx/bin"
 printf 'stale' >"${foreign}/.dx/bin/stale_tool"

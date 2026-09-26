@@ -21,9 +21,6 @@ impl FileSystem for RealFileSystem {
     }
 
     fn write_atomic(&self, path: &Path, content: &[u8]) -> io::Result<()> {
-        // Single write path owned by `dx_atomic_fs`: OS-random
-        // `O_EXCL`-claimed staging file in the target directory with
-        // drop-cleanup and atomic same-filesystem persist.
         dx_atomic_fs::write_atomic(path, content)
     }
 }
@@ -295,7 +292,6 @@ mod tests {
                 message: "hook exploded".to_owned(),
             }
         );
-        // Typed hook detail keeps the display string (no `String` plumbing).
         assert_eq!(
             HookError::new("hook exploded".to_owned()).to_string(),
             "hook exploded"
@@ -318,8 +314,6 @@ mod tests {
             fs.read(&nested).expect("read back"),
             Some(b"hello\n".to_vec())
         );
-        // Staging uses OS-random `O_EXCL` names with drop-cleanup: no
-        // stray staging file remains beside the target after success.
         let entries: Vec<_> = std::fs::read_dir(dir.join("sub"))
             .expect("list target dir")
             .map(|entry| {
@@ -331,7 +325,6 @@ mod tests {
             })
             .collect();
         assert_eq!(entries, vec!["a.txt".to_owned()]);
-        // Overwrites replace the target atomically through the same path.
         fs.write_atomic(&nested, b"updated\n").expect("overwrite");
         assert_eq!(
             fs.read(&nested).expect("read overwrite"),
@@ -349,7 +342,6 @@ mod tests {
             .collect();
         assert_eq!(entries, vec!["a.txt".to_owned()]);
         assert!(fs.read(&dir).is_err());
-        // A bare file name has no parent directory to create.
         let bare = PathBuf::from("dx-apply-bare-tmp.txt");
         fs.write_atomic(&bare, b"bare\n").expect("bare write");
         assert_eq!(fs.read(&bare).expect("bare read"), Some(b"bare\n".to_vec()));

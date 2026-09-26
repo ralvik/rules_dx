@@ -60,9 +60,9 @@ pub fn parse_envelope(json: &str) -> Result<Envelope, EnvelopeError> {
 }
 
 pub fn emit_envelope(envelope: &Envelope) -> Result<String, EnvelopeError> {
-    // LCOV_EXCL_START - reason: unreachable serialize, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_START - reason: unreachable serialize, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     serde_json::to_string(envelope).map_err(|err| EnvelopeError::Unserializable(err.to_string()))
-    // LCOV_EXCL_STOP - reason: end unreachable serialize, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end unreachable serialize, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 }
 
 pub fn sha256_hex(bytes: &[u8]) -> String {

@@ -1,26 +1,8 @@
-//! Validation and codec helpers for the normalized environment plan shard
-//!.
-//!
-//! Contract: `docs/environments/environment.md` (plan collection,
-//! provider-selective aspects, private output group), schema
-//! `//env:plan.proto`. This crate enforces the checks that mirror the
-//! frozen Starlark semantics in `//env:plan.bzl`: producer label shape,
-//! non-empty integration, non-empty entries, single-token keys, non-empty
-//! values, and the optional `exec_path` BEP-matching suffix (empty for
-//! logical-only identity inputs, never the reserved shard suffix).
-//! Cross-record conflict detection and deterministic merge stay in
-//! Starlark (`env_plan_conflict_error`, `env_plan_merge_records`) and in
-//! the `dx` CLI collection; this crate only validates and encodes one
-//! contributor shard.
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub use plan_proto::rules_dx::env as proto;
 use proto::DxEnvShard;
 
-/// Validation or codec failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
     #[error("cannot decode env shard: {0}")]
@@ -94,14 +76,6 @@ fn check_value(producer: &str, key: &str, value: &str) -> Result<(), Error> {
 }
 
 fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
-    // Thin wrapper around `dx_path::classify` (sole ladder owner for
-    // order). Empty exec paths are logical-only identity inputs requiring
-    // no artifact. Non-empty exec paths are BEP-matching suffixes:
-    // workspace-relative, no backslashes or dot segments, and never the
-    // reserved shard suffix so a shard can never back another shard.
-    // Empty/EmptyComponent stay allowed to preserve parity with Starlark
-    // `env_plan_exec_error`; messages mirror `//env:plan.bzl` verbatim and
-    // are pinned by tests below.
     if path.is_empty() {
         return Ok(());
     }
@@ -132,7 +106,6 @@ fn check_exec_path(producer: &str, path: &str) -> Result<(), Error> {
     }
 }
 
-/// Validates one contributor shard, mirroring `env_plan_record_error`.
 pub fn validate(shard: &DxEnvShard) -> Result<(), Error> {
     if shard.producer.is_empty() {
         return Err(Error::EmptyProducer);
@@ -157,8 +130,6 @@ pub fn validate(shard: &DxEnvShard) -> Result<(), Error> {
         check_key(&shard.producer, &entry.key)?;
         check_value(&shard.producer, &entry.key, &entry.value)?;
         check_exec_path(&shard.producer, &entry.exec_path)?;
-        // Shared uniqueness control flow lives in `dx_proto_validate`; only
-        // the crate-local `Error` payload stays here (slice).
         dx_proto_validate::check_unique_insert(&mut seen, &entry.key, |existing| {
             Error::DuplicateKey {
                 producer: shard.producer.clone(),
@@ -169,12 +140,10 @@ pub fn validate(shard: &DxEnvShard) -> Result<(), Error> {
     Ok(())
 }
 
-/// Encodes one validated shard to its binary wire form.
 pub fn encode_validated(shard: &DxEnvShard) -> Result<Vec<u8>, Error> {
     dx_proto_validate::encode_with_validation(shard, validate)
 }
 
-/// Decodes and validates one shard from its binary wire form.
 pub fn decode_validated(bytes: &[u8]) -> Result<DxEnvShard, Error> {
     dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
@@ -214,7 +183,6 @@ mod tests {
         let shard = sample();
         let bytes = encode_validated(&shard).unwrap();
         assert_eq!(decode_validated(&bytes).unwrap(), shard);
-        // Exec paths round-trip as well.
         let mut with_exec = sample();
         with_exec.entries[0] = entry_with_exec("abi", "gnu", "toolchain/rustc");
         let bytes = encode_validated(&with_exec).unwrap();
@@ -273,8 +241,6 @@ mod tests {
                 "value {value:?} must fail",
             );
         }
-        // Empty exec paths are logical-only and valid; non-empty ones
-        // follow the suffix shape rules and never use the shard suffix.
         assert!(validate(&sample()).is_ok());
         for path in ["/out/rustc", "tool\\chain", "src/./rustc", "a.dxenv.pb"] {
             let mut shard = sample();
@@ -291,9 +257,6 @@ mod tests {
 
     #[test]
     fn exec_path_messages_are_pinned_to_dx_path_ladder() {
-        // Thin wrapper over `dx_path::classify`: exact messages (mirroring
-        // `//env:plan.bzl`) plus ladder order are pinned so drift fails
-        // here. Empty/EmptyComponent stay allowed (Starlark parity).
         for (path, reason) in [
             ("/out/rustc", "must not be absolute"),
             ("tool\\chain", "must not contain '\\'"),
@@ -313,7 +276,6 @@ mod tests {
                 "exec path {path:?}"
             );
         }
-        // Empty and empty-component stay allowed for Starlark parity.
         assert!(validate(&sample()).is_ok());
         let mut allowed = sample();
         allowed.entries[0].exec_path = "a//b".into();
@@ -321,7 +283,6 @@ mod tests {
             validate(&allowed).is_ok(),
             "empty-component stays allowed for Starlark parity"
         );
-        // Ladder order: absolute beats backslash/dot.
         let mut ordered = sample();
         ordered.entries[0].exec_path = "/src/./rustc".into();
         assert_eq!(

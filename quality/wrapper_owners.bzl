@@ -1,15 +1,12 @@
 """Wrapper ownership for every quality taxonomy family.
 
-Contract: `docs/quality/quality-sources.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_CLASS_TO_FAMILY")
 
-# Versioned wrapper-ownership schema. Consumers query via
 WRAPPER_SCHEMA_VERSION = 1
 
-# Family -> wrapper owner label or "other" for explicitly uncovered.
 WRAPPER_OWNERS = {
     "astro": "//astro/rules:defs.bzl",
     "cc": "//cc/rules:defs.bzl",

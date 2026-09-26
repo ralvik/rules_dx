@@ -132,7 +132,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     };
     let projected = match project(&manifest) {
         Ok(projected) => projected,
-        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         Err(error) => {
             return operational(
                 invocation,
@@ -141,7 +141,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 CODE_INVALID_RESULT,
                 &format!("invalid generation manifest: {error}"),
             );
-        } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     };
     if invocation.output == OutputMode::Json {
         for file in projected.sorted_files() {
@@ -149,7 +149,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 Ok(event) => {
                     let _ = write_event(env.out, &event);
                 }
-                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 Err(error) => {
                     return operational(
                         invocation,
@@ -158,7 +158,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         CODE_INVALID_RESULT,
                         &format!("invalid change for output: {error}"),
                     );
-                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             }
         }
         if !invocation.check {
@@ -168,7 +168,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                     Some(MutationOutcome::NotApplied) => {
                         (MutationOutcome::NotApplied, file.failure_code.as_deref())
                     }
-                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                     None => {
                         return operational(
                             invocation,
@@ -177,13 +177,13 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                             CODE_INVALID_RESULT,
                             &format!("invalid mutation for output: {}", file.change.path),
                         );
-                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 };
                 match mutation_event(&file.change.path, file.kind(), outcome, reason) {
                     Ok(event) => {
                         let _ = write_event(env.out, &event);
                     }
-                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                     Err(error) => {
                         return operational(
                             invocation,
@@ -192,7 +192,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                             CODE_INVALID_RESULT,
                             &format!("invalid mutation for output: {error}"),
                         );
-                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 }
             }
         }
@@ -201,7 +201,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                 Ok(event) => {
                     let _ = write_event(env.out, &event);
                 }
-                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 Err(error) => {
                     return operational(
                         invocation,
@@ -210,7 +210,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                         CODE_INVALID_RESULT,
                         &format!("invalid notice for output: {error}"),
                     );
-                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             }
         }
         let code = projected.exit_code(bazel_code);
@@ -221,13 +221,11 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
         return code;
     }
     if invocation.output == OutputMode::Diff {
-        // Diff reserves stdout for the validated patch: no summaries,
-        // notices, or diagnostics move anywhere.
         match render_diff(&projected) {
             Ok(patch) => {
                 env.out.write_all(patch.as_bytes()).ok();
             }
-            // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+            // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             Err(error) => {
                 return operational(
                     invocation,
@@ -236,7 +234,7 @@ pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
                     CODE_DIFF_FAILED,
                     &format!("failed to render generate patch: {error}"),
                 );
-            } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+            } // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         }
     } else {
         for line in text_lines(&projected) {
@@ -350,8 +348,6 @@ mod tests {
 
     #[test]
     fn generate_invalid_witness_fails_closed() {
-        // Structurally sound JSON that crate validation rejects: a
-        // check run that did not finish its scope.
         let mut harness = Harness::new("generate-invalid");
         harness.intended = Some(intended_witness("check", false, "", ""));
         let (code, _, err) = harness.run(&["generate", "--check", "--output=text"]);
@@ -361,8 +357,6 @@ mod tests {
 
     #[test]
     fn generate_partial_default_reports_attempted_prefix() {
-        // A late Gazelle failure after a valid witness still reports
-        // the validated prefix, then keeps the Gazelle code.
         let mut harness = generate_witness("xyz\n", "generate-partial");
         harness.bazel_code = 2;
         let (code, out, _) = harness.run(&["generate", "--output=json"]);
@@ -375,9 +369,6 @@ mod tests {
 
     #[test]
     fn generate_not_applied_mutation_fails() {
-        // The workspace disagrees with the intended bytes: Gazelle did
-        // not (or not yet) write them, so the run fails with a
-        // machine-readable reason.
         let harness = generate_witness("stale\n", "generate-not-applied");
         let (code, out, err) = harness.run(&["generate", "--output=json"]);
         assert_eq!(code, 1, "{out}{err}");
@@ -407,9 +398,6 @@ mod tests {
 
     #[test]
     fn generate_check_reports_changes_despite_diff_exit() {
-        // Upstream `-mode diff` exits 1 (`ErrDiff`) exactly when the
-        // witness carries changes, after `AfterResolvingDeps` wrote it:
-        // the complete witness still reports them with no mutations.
         let mut harness = Harness::new("generate-check-diff-exit");
         harness.intended = Some(intended_witness(
             "check",
@@ -455,8 +443,6 @@ mod tests {
 
     #[test]
     fn generate_incomplete_check_reports_nothing() {
-        // Check mode without a successful Gazelle run carries no
-        // trustworthy witness: no changes, Gazelle's code kept.
         let mut harness = Harness::new("generate-incomplete-check");
         harness.write_source("rust/tests/fixtures/hello/BUILD.bazel", "xyz\n");
         harness.intended = Some(intended_witness(
@@ -533,8 +519,6 @@ mod tests {
 
     #[test]
     fn generate_dry_run_plans_without_launching() {
-        // A nonzero Bazel code would surface if the runner launched:
-        // dry-run plans only.
         let mut harness = Harness::new("generate-dryrun");
         harness.bazel_code = 3;
         let (code, out, _) = harness.run(&["generate", "--dry-run", "--output=text"]);

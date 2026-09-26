@@ -1,6 +1,5 @@
 """Experimental minimal PowerShell wrappers (ADR 0032).
 
-Contract: `docs/decisions/0032-ruby-powershell-bandit-swift.md`.
 Upstream: rules_powershell 0.2.0 plus portable pwsh 7.5.4 (MODULE.bazel).
 """
 
@@ -15,13 +14,11 @@ _DX_POWERSHELL_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream `PwshInfo`,
 _DX_POWERSHELL_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-# PowerShell owns `.ps1` scripts plus `.psm1`/`.psd1` modules. All three
 _DX_POWERSHELL_LIBRARY_SPECS = [("powershell", ["ps1", "psm1", "psd1"])]
 _DX_POWERSHELL_LIBRARY_EXTS = [".ps1", ".psm1", ".psd1"]
 _DX_POWERSHELL_EXEC_SPECS = [("powershell", ["ps1"])]
@@ -73,8 +70,8 @@ _pwsh_forward_test = dx_executable_forward_rule(
 def powershell_effective_srcs(srcs):
     """Returns the effective direct sources for a PowerShell binary or test shape.
 
-    None becomes empty (thin entry shape owns no direct sources).
-    See: docs/quality/quality-sources.md."""
+    None becomes empty.
+    """
     return srcs if srcs != None else []
 
 def _pwsh_wrap_library(name, srcs, visibility = None, **kwargs):

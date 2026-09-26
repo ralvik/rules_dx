@@ -4,54 +4,31 @@ use clap::Parser;
 
 use super::command::Command;
 
-/// Raw `dx` command-line tokens as classified by `clap`: flags may appear
-/// before or after the command word, repeated scalars keep the last
-/// occurrence, and slice shapes (`--report`, scopes, Bazel forwards) keep
-/// `argv` order. `--help`/`-h` render from this same grammar definition
-///: one source feeds parsing, help, and completions/man
-/// pages, never hand-maintained usage strings.
-/// Strict parsing (See: `docs/cli/cli-contract.md`): exact `--long` names
-/// only (no prefix inference), `dx help [command]` verb redirects to the
-/// same generated help as `--help`/`-h` (clap keeps
-/// `disable_help_subcommand`, the redirect lives in [`super::help`]),
-/// unknown flags/values fail as
-/// `UnknownOption`/`MissingValue`/`Bad*` through [`super::tokenizer`];
-/// `allow_negative_numbers` stays narrow (numeric `-1`-style values only),
-/// never the thin-shim `allow_hyphen_values` unconditional consumption;
-/// `dx bazel` tails forward verbatim via `split_bazel_verbatim`.
 #[derive(Parser)]
 #[command(
     name = "dx",
-    about = "Transparent UI over Bazel: quality, workflow, and environment commands",
-    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults). --here (--cwd alias) selects the current directory tree instead (//path/...; //... at the root) and cannot be combined with explicit scopes.\n\nExit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.\n\nOutput: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.",
+    about = "Run Bazel workflows",
+    long_about = "dx [global-options] <command> [scope ...] [-- bazel-options ...]\n\nScopes: labels, patterns, files, or dirs. No scope means //... for most commands.\n\nExit codes: 0 success, 2 usage error, 1 failed check.",
     version,
     disable_help_subcommand = true
 )]
 pub(crate) struct Cli {
-    /// Override upward workspace discovery (find MODULE.bazel).
+    /// Use this workspace dir.
     #[arg(long, allow_negative_numbers = true, overrides_with = "workspace")]
     pub(crate) workspace: Option<OsString>,
-    /// Resolve and summarize the plan without executing workflows/mutations.
+    /// Show the plan without running it.
     #[arg(long)]
     pub(crate) dry_run: bool,
-    /// Suppress dx operation summaries (tool diagnostics still print).
+    /// Hide summaries.
     #[arg(long)]
     pub(crate) quiet: bool,
-    /// Enable structured diagnostics on stderr via tracing.
-    /// Default stays byte-identical; `--verbose` adds info-level logs.
-    /// Orthogonal to `--quiet` (summaries vs logs).
-    /// Short `-v`; conflicts with `--log-level` (See: `docs/cli/output-protocol.md`).
+    /// Show more logs.
     #[arg(long, short = 'v')]
     pub(crate) verbose: bool,
-    /// Select color output for logs and human status (`auto|always|never`).
-    /// `auto` stays byte-identical plain unless a TTY without `NO_COLOR`;
-    /// `always` forces color, `never` stays plain.
-    /// See: `docs/cli/cli-contract.md`.
+    /// Set color output.
     #[arg(long, allow_negative_numbers = true, overrides_with = "color")]
     pub(crate) color: Option<String>,
-    /// Select the structured diagnostic level on stderr via tracing.
-    /// Default stays byte-identical (`warn`); `--verbose`/`-v` is `info`.
-    /// `RUST_LOG` overrides when set (See: `docs/cli/output-protocol.md`).
+    /// Set log level.
     #[arg(
         long = "log-level",
         value_name = "LEVEL",
@@ -59,85 +36,69 @@ pub(crate) struct Cli {
         overrides_with = "log_level"
     )]
     pub(crate) log_level: Option<String>,
-    /// Select concise text, unified patches, or versioned NDJSON events.
+    /// Set output format.
     #[arg(long, allow_negative_numbers = true, overrides_with = "output")]
     pub(crate) output: Option<String>,
-    /// Write a standard report (sarif/junit/lcov) to file or -; repeatable.
+    /// Write a report file.
     #[arg(long, allow_negative_numbers = true)]
     pub(crate) report: Vec<String>,
-    /// Lowest diagnostic severity that fails quality commands.
+    /// Fail on this severity.
     #[arg(long, allow_negative_numbers = true, overrides_with = "fail_on")]
     pub(crate) fail_on: Option<String>,
-    /// Required line-coverage percent (coverage only, 0-100).
+    /// Require this coverage percent.
     #[arg(long, allow_negative_numbers = true, overrides_with = "min_coverage")]
     pub(crate) min_coverage: Option<String>,
-    /// Check mode (quality/version plus `update --check` preset gate;
-    /// no mutations in check mode).
+    /// Check without changing files.
     #[arg(long)]
     pub(crate) check: bool,
-    /// Use dx_debug config (build/run/test/deploy only; conflicts with --release).
+    /// Use debug build.
     #[arg(long)]
     pub(crate) debug: bool,
-    /// Use dx_release config (build/run/test/deploy only; conflicts with --debug).
+    /// Use release build.
     #[arg(long)]
     pub(crate) release: bool,
-    /// Additionally forward `bazel clean` after pruning (clean only).
+    /// Also run bazel clean.
     #[arg(long = "bazel")]
     pub(crate) bazel_clean: bool,
-    /// Re-pin to <version> (version only).
+    /// Re-pin to this version.
     #[arg(long, allow_negative_numbers = true, overrides_with = "pin")]
     pub(crate) pin: Option<String>,
-    /// Re-pin the recorded previous release (version only).
+    /// Re-pin the last release.
     #[arg(long)]
     pub(crate) rollback: bool,
-    /// Use cquery instead of query (owners/deps/why only).
+    /// Use cquery instead of query.
     #[arg(long)]
     pub(crate) configured: bool,
-    /// Source version for `dx migrate` plus `dx upgrade` (migrate plus upgrade only).
-    /// See: `docs/cli/commands/new-upgrade.md`.
+    /// Migrate from this version.
     #[arg(long, allow_negative_numbers = true, overrides_with = "from")]
     pub(crate) from: Option<String>,
-    /// Target version for `dx migrate` plus `dx upgrade` (migrate plus upgrade only).
-    /// See: `docs/cli/commands/new-upgrade.md`.
+    /// Migrate to this version.
     #[arg(long, allow_negative_numbers = true, overrides_with = "to")]
     pub(crate) to: Option<String>,
-    /// Select the current directory tree instead of `//...` (`--cwd` alias)
-    /// (audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs
-    /// only; `//path/...`, `//...` at the root; cannot be combined with
-    /// explicit scopes; never implicit: bare invocations in a subdir stay
-    /// `//...`).
+    /// Use the current dir tree.
     #[arg(long, visible_alias = "cwd")]
     pub(crate) here: bool,
-    /// Preview the last docs build outputs locally (docs only).
-    /// See: `docs/cli/commands/docs.md`.
+    /// Serve docs locally.
     #[arg(long)]
     pub(crate) serve: bool,
-    /// Preview port for `dx docs --serve` (docs only; requires `--serve`).
-    /// See: `docs/cli/commands/docs.md`.
+    /// Docs serve port.
     #[arg(long, allow_negative_numbers = true, overrides_with = "port")]
     pub(crate) port: Option<String>,
-    /// Preview bind host for `dx docs --serve` (docs only; requires
-    /// `--serve`). Defaults to `127.0.0.1`.
-    /// See: `docs/cli/commands/docs.md`.
+    /// Docs serve host.
     #[arg(long, allow_negative_numbers = true, overrides_with = "host")]
     pub(crate) host: Option<String>,
-    /// Open the preview URL in a browser after building (docs only;
-    /// requires `--serve`).
-    /// See: `docs/cli/commands/docs.md`.
+    /// Open docs in a browser.
     #[arg(long)]
     pub(crate) open: bool,
-    /// Force cache-only operation without network fetches (audit/update/bump
-    /// only; `--frozen` alias).
-    /// See: `docs/deploy/offline-bootstrap.md`.
+    /// Run without network.
     #[arg(long, visible_alias = "frozen")]
     pub(crate) offline: bool,
-    /// First positional: the command word (a [`Command`] value so the
-    /// same grammar feeds parsing, `--help`, and shell completions).
+    /// Command to run.
     #[arg(value_enum)]
     pub(crate) command: Option<Command>,
-    /// Later positionals: explicit scopes/targets.
+    /// Scopes to run on.
     pub(crate) targets: Vec<OsString>,
-    /// Everything after the first bare `--`, forwarded verbatim.
+    /// Args after --.
     #[arg(last = true)]
     pub(crate) bazel_options: Vec<String>,
 }

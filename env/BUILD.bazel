@@ -11,7 +11,6 @@ load(":plan_tests.bzl", "env_plan_analysis_tests", "env_plan_defs_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
 
-# Fixture host executable backing the environment_tool subjects below.
 sh_binary(
     name = "tool_sh",
     srcs = ["tool.sh"],
@@ -30,8 +29,6 @@ environment_tool(
     executable = ":tool_sh",
 )
 
-# Nested config proving transitive composition: the outer config under
-# test reaches tool_beta only through config_inner.
 environment_config(
     name = "config_inner",
     tools = [":tool_beta"],
@@ -49,8 +46,6 @@ env_defs_unit_tests(name = "env_defs_unit")
 
 env_config_analysis_tests(name = "env_config_analysis")
 
-# Staged tree subject: one symlink per host name plus versioned
-# management metadata, observed for layout and platform rendering.
 environment_tree(
     name = "tree_under_test",
     config = ":config_under_test",
@@ -62,8 +57,6 @@ env_default_config_analysis_tests(name = "env_default_config_analysis")
 
 env_default_tree_analysis_tests(name = "env_default_tree_analysis")
 
-# Frozen marker schema: field numbers are the compatibility
-# surface; see `marker.proto` and the managed-state doc.
 proto_library(
     name = "marker_proto",
     srcs = ["marker.proto"],
@@ -74,10 +67,6 @@ rust_prost_library(
     proto = ":marker_proto",
 )
 
-# Normalized environment plan shard schema: field numbers
-# are the compatibility surface; see `plan.proto` and `plan.bzl`.
-# `EnvironmentInfo` stays PATH-tool-only; this is the internal plan
-# contract collected through the private `dx_env_plans` output group.
 proto_library(
     name = "plan_proto",
     srcs = ["plan.proto"],
@@ -90,10 +79,6 @@ rust_prost_library(
 
 env_plan_defs_unit_tests(name = "env_plan_defs_unit")
 
-# Shard-emission and collection fixtures: two disjoint
-# leaf shards chained through `deps` prove transitive aspect collection,
-# while the Rust adapter fixture proves the narrow rust_library edge
-# through the verified crate source bound by its EXEC_PATH suffix.
 dx_env_shard(
     name = "env_shard_alpha",
     entries = ["runtime|stable-x86_64"],
@@ -126,12 +111,6 @@ env_plan_subject(
 
 env_plan_analysis_tests(name = "env_plan_analysis")
 
-# Default runnable environment (WP2-WP3): the curated doctor probe
-# plus the module-matched `dx` CLI and the user-facing `markdown_check`
-# quality binary, all contributed through the same public
-# `environment_tool` path. Internal pipeline binaries (`quality_runner`,
-# `quality_evaluator`) are intentionally not exposed, per the managed
-# environment tool-exposure contract.
 sh_binary(
     name = "doctor",
     srcs = ["doctor.sh"],
@@ -182,7 +161,6 @@ test_suite(
     ],
 )
 
-# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",
     aspect_hints = ["//:buildifier_config"],

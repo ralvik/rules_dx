@@ -1,16 +1,8 @@
 #!/usr/bin/env bash
-# Gazelle idempotence check (snapshot workflow): compares two
-# fresh generation runs, not a checked-in golden, so UPDATE_EXPECT does not
-# apply. The `diff -u` below is an idempotence assertion (run-to-run
-# equality), not a snapshot refresh path.
 set -euo pipefail
 
-# Shared workspace + runfiles helpers.
-# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
 dx_bootstrap "tools/sh/lib.sh"
-
-# Portable helpers via tools/sh/lib.sh dx_realpath/dx_sha256.
 
 gazelle="$(dx_realpath "$1")"
 root="${TEST_TMPDIR}/workspace"

@@ -103,7 +103,6 @@ fn unlisted_distributables_default_distributed() {
         distribution.tier_of("//services/payments:image"),
         Tier::Distributed
     );
-    // Fail closed: unlisted labels are distributed, never internal.
     assert_eq!(distribution.tier_of("//cli:dx"), Tier::Distributed);
 }
 
@@ -135,8 +134,6 @@ fn unknown_distribution_labels_fail() {
 
 #[test]
 fn promotion_to_distributed_requalifies_under_strict_table() {
-    // The same finding inventoried for an internal root fails once
-    // the root is promoted: tier lookup, not the finding, decides.
     let internal = Distribution {
         distributed: BTreeSet::new(),
         internal: ["//cli:dx"].iter().map(|item| (*item).to_owned()).collect(),
@@ -158,8 +155,6 @@ fn promotion_to_distributed_requalifies_under_strict_table() {
         evaluate(&expr, Tier::Distributed, &lookup, &denied),
         TierOutcome::Review
     );
-    // Identities outside the lookup's named table fall through to the
-    // unlisted arm: inventory in internal, deny in distributed.
     let unlisted = LicenseExpr::Ident("MIT".to_owned());
     assert_eq!(
         evaluate(&unlisted, Tier::Internal, &lookup, &denied),
@@ -196,14 +191,11 @@ fn license_exception_without_finding_is_obsolete() {
     assert!(is_obsolete(&exception(), &[]));
     assert!(check_applies(&exception(), &[]).is_err());
     assert!(!is_obsolete(&exception(), &[finding()]));
-    // Wrong owning set shares no finding: obsolete, never silently
-    // applied across sets.
     let other_set = LicenseFinding {
         set: "npm".to_owned(),
         ..finding()
     };
     assert!(is_obsolete(&exception(), &[other_set]));
-    // Wrong license shares no finding either.
     let other_license = LicenseFinding {
         license: "MIT".to_owned(),
         ..finding()
@@ -213,10 +205,6 @@ fn license_exception_without_finding_is_obsolete() {
 
 #[test]
 fn upgrade_within_range_retains_acceptance_at_identity_match() {
-    // Version-range narrowing calls license_exception_covers in the
-    // resolver-owned slices; an upgrade alone never invalidates: the
-    // finding still carries the same package, set, and license
-    // identity, and an in-range upgrade stays covered.
     let upgraded = LicenseFinding {
         version: "1.9.0".to_owned(),
         ..finding()
@@ -228,9 +216,6 @@ fn upgrade_within_range_retains_acceptance_at_identity_match() {
 
 #[test]
 fn out_of_range_versions_do_not_inherit_acceptance() {
-    // Identity match keeps the exception applicable (not obsolete),
-    // but coverage narrows by version: an out-of-range finding is
-    // not covered, exactly like vulnerability exceptions.
     let out_of_range = LicenseFinding {
         version: "2.0.0".to_owned(),
         ..finding()
@@ -238,7 +223,6 @@ fn out_of_range_versions_do_not_inherit_acceptance() {
     assert!(!is_obsolete(&exception(), &[out_of_range.clone()]));
     check_applies(&exception(), &[out_of_range.clone()]).expect("identity still applies");
     assert!(!license_exception_covers(&exception(), &out_of_range));
-    // Malformed scopes and versions fail closed to uncovered.
     let bad_scope = LicenseException {
         versions: "not a range".to_owned(),
         ..exception()
@@ -253,8 +237,6 @@ fn out_of_range_versions_do_not_inherit_acceptance() {
 
 #[test]
 fn license_exceptions_narrow_per_set_like_vuln() {
-    // Cargo: ranges, carets, tildes, star; bare versions are caret
-    // shorthand, `||` and hyphen stay invalid and fail closed.
     let cargo_exception = |versions: &str| LicenseException {
         package: "serde".to_owned(),
         set: "cargo".to_owned(),
@@ -285,7 +267,6 @@ fn license_exceptions_narrow_per_set_like_vuln() {
         &cargo_exception("1.0.0 || 2.0.0"),
         &cargo_finding("1.0.0")
     ));
-    // npm: `||` unions, hyphen ranges, carets, tildes, bare exact.
     let npm_exception = |versions: &str| LicenseException {
         package: "react".to_owned(),
         set: "npm".to_owned(),
@@ -316,7 +297,6 @@ fn license_exceptions_narrow_per_set_like_vuln() {
         &npm_exception("1.2.3 - 2.3.4"),
         &npm_finding("2.3.5")
     ));
-    // Go: `v`-prefix normalization on scope and version.
     let go_exception = LicenseException {
         package: "example.com/mod".to_owned(),
         set: "go".to_owned(),
@@ -337,8 +317,6 @@ fn license_exceptions_narrow_per_set_like_vuln() {
     };
     assert!(license_exception_covers(&go_exception, &go_covered));
     assert!(!license_exception_covers(&go_exception, &go_missed));
-    // Maven: bare versions use Maven equality, intervals use Maven
-    // ordering with inclusive/exclusive bounds.
     let maven_exception = |versions: &str| LicenseException {
         package: "junit:junit".to_owned(),
         set: "maven".to_owned(),
@@ -369,8 +347,6 @@ fn license_exceptions_narrow_per_set_like_vuln() {
         &maven_exception(">=1.0.0"),
         &maven_finding("1.2.0")
     ));
-    // NuGet: bare versions use NuGet equality, intervals use NuGet
-    // ordering; floating `*` stays invalid and fails closed.
     let nuget_exception = |versions: &str| LicenseException {
         package: "Newtonsoft.Json".to_owned(),
         set: "nuget".to_owned(),
@@ -401,7 +377,6 @@ fn license_exceptions_narrow_per_set_like_vuln() {
         &nuget_exception("1.*"),
         &nuget_finding("1.5.0")
     ));
-    // Identity mismatch never covers, even in range.
     assert!(!license_exception_covers(
         &cargo_exception(">=1.0.0, <2.0.0"),
         &npm_finding("1.5.0")
@@ -493,23 +468,17 @@ fn loader_defaults_missing_sections_to_empty_and_stays_closed() {
             inventory: Vec::new(),
         }
     );
-    // Fail closed: unlisted identities and labels land on the strict side.
     assert_eq!(policy.distribution.tier_of("//cli:dx"), Tier::Distributed);
 }
 
 #[test]
 fn loader_rejects_unknown_fields_typos_and_malformed_toml() {
     for bad in [
-        // Typo'd list key must not silently become an empty list.
         "[policy.distributed]\nalow = [\"MIT\"]\n",
-        // Unknown top-level section.
         "[bogus]\nkey = 1\n",
-        // Unknown exception field.
         "[[exception]]\npackage = \"p\"\nset = \"s\"\nlicense = \"MIT\"\n\
          versions = \"*\"\nreason = \"r\"\nexpires = \"2027-03-01\"\nnote = \"x\"\n",
-        // Malformed TOML.
         "[[exception]\n",
-        // Duplicate keys.
         "[policy.distributed]\nallow = [\"MIT\"]\nallow = [\"ISC\"]\n",
     ] {
         assert!(
@@ -552,7 +521,6 @@ fn loaded_exceptions_validate_against_audit_date() {
 #[test]
 fn schema_version_accepts_v1_and_rejects_other_versions() {
     assert_eq!(LICENSE_POLICY_SCHEMA_VERSION, 1);
-    // Absent version means v1 for pre-versioned files.
     load_licenses_toml("").expect("empty document loads as v1");
     load_licenses_toml("schema_version = 1\n").expect("explicit v1 loads");
     for bad in [
@@ -572,8 +540,6 @@ fn schema_version_accepts_v1_and_rejects_other_versions() {
 
 #[test]
 fn license_additions_need_no_struct_edits() {
-    // New identities are data in the versioned TOML lists, never struct
-    // edits: any string loads and validates as single-listed.
     let policy =
         load_licenses_toml("[policy.distributed]\nallow = [\"MIT\", \"New-Permissive-1.0\"]\n")
             .expect("new allow identity loads");
@@ -634,7 +600,6 @@ text_present = true
         .find(|entry| entry.set == "maven")
         .expect("maven entry");
     assert_eq!(maven.package, "junit:junit");
-    // Absent `text_present` defaults to false (fail closed).
     assert!(!maven.text_present);
     validate_license_inventory(npm).expect("valid entry passes");
 }
@@ -655,7 +620,6 @@ fn loader_rejects_empty_inventory_fields_and_unknown_keys() {
             "{bad:?} must fail on empty inventory field"
         );
     }
-    // Unknown inventory keys fail as invalid TOML, never silent drift.
     let typo = "[[inventory]]\npackage = \"react\"\nset = \"npm\"\nlicense = \"MIT\"\nversions = \"1.0.0\"\nlicence = \"x\"\n";
     assert!(
         matches!(

@@ -1,14 +1,8 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// The explicit `use` keeps the gate dependency visible to the Gazelle Rust
-// scanner, which resolves imports from `use`/`extern crate` items only: the
-// `dx_lcov::run` call path alone yields no import, so generation would
-// strip the `:dx_lcov` dep the binary links.
 use dx_lcov::run;
 
-// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     std::process::exit(run(
@@ -19,4 +13,4 @@ fn main() {
         &mut |line| println!("{line}"),
     ));
 }
-// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md

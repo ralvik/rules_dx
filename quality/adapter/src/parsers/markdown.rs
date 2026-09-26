@@ -18,9 +18,6 @@ pub fn parse_markdown_findings(
 ) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "markdown_check";
     check_output_size(TOOL, stdout)?;
-    // Kebab-case ids emitted by the repo-owned checker
-    // (`quality_markdown::kind_id`): every checker kind must parse here,
-    // otherwise real.rs turns live findings into action failures.
     const KINDS: &[&str] = &[
         "missing-file-target",
         "missing-anchor",
@@ -102,7 +99,6 @@ mod tests {
         );
         assert_eq!(findings[1].finding.rule_id, "missing-anchor");
         assert!(findings[0].finding.suggestions.is_empty());
-        // Clean output is empty stdout on exit 0; blank lines are skipped.
         assert!(parse_markdown_findings(b"\n", Some(0), &["doc/guide.md"])
             .expect("parsed")
             .is_empty());
@@ -110,7 +106,6 @@ mod tests {
 
     #[test]
     fn markdown_accepts_every_current_checker_kind() {
-        // Mirrors `quality_markdown::kind_id`: one line per emitted kind.
         let stdout = concat!(
             "{\"path\":\"doc/guide.md\",\"line\":3,\"kind\":\"missing-file-target\",\"message\":\"t\"}\n",
             "{\"path\":\"doc/guide.md\",\"line\":4,\"kind\":\"missing-anchor\",\"message\":\"a\"}\n",
@@ -122,7 +117,6 @@ mod tests {
             parse_markdown_findings(stdout.as_bytes(), Some(0), &["doc/guide.md"]).expect("parsed");
         assert_eq!(findings.len(), 5);
         assert_eq!(findings[2].finding.rule_id, "heading-hierarchy");
-        // Retired ids stay rejected.
         let stale =
             "{\"path\":\"doc/guide.md\",\"line\":1,\"kind\":\"missing-heading\",\"message\":\"m\"}";
         assert!(parse_markdown_findings(stale.as_bytes(), Some(0), &["doc/guide.md"]).is_err());
@@ -132,12 +126,9 @@ mod tests {
     fn markdown_rejects_exits_kinds_lines_and_files() {
         let clean =
             "{\"path\":\"doc/guide.md\",\"line\":1,\"kind\":\"heading-hierarchy\",\"message\":\"m\"}";
-        // Findings exist only on exit 0: any other exit is an action
-        // failure even with parseable lines.
         assert!(parse_markdown_findings(clean.as_bytes(), Some(1), &["doc/guide.md"]).is_err());
         assert!(parse_markdown_findings(clean.as_bytes(), None, &["doc/guide.md"]).is_err());
         assert!(parse_markdown_findings(b"", Some(2), &["doc/guide.md"]).is_err());
-        // Non-UTF-8 and malformed lines are grammar errors.
         assert!(parse_markdown_findings(b"\xff", Some(0), &["doc/guide.md"]).is_err());
         assert!(parse_markdown_findings(b"{nope", Some(0), &["doc/guide.md"]).is_err());
         let missing_field = r#"{"path":"doc/guide.md","line":1,"kind":"missing-heading"}"#;

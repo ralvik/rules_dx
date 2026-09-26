@@ -4,7 +4,6 @@ External aspects select the workspace policy through `@rules_dx//config:workspac
 instead of hardcoding a consumer-repository label, per ADR 0011. Quality commands
 pass `validate=false` so per-result Bazel evaluators do not stop collection;
 check modes use `validate=true` with a `fail_on` threshold. Contract:
-`docs/cli/cli-contract.md`.
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")

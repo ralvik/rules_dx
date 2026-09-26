@@ -13,7 +13,6 @@ pub struct TrackedRun {
     pub seq: u64,
 }
 
-/// Whether `incoming` supersedes `current` (the old run must cancel).
 pub fn supersedes(current: &TrackedRun, incoming: &TrackedRun) -> bool {
     match (&current.scope, &incoming.scope) {
         (RunScope::PullRequest { pr: current_pr }, RunScope::PullRequest { pr: incoming_pr }) => {

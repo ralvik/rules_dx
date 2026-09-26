@@ -1,10 +1,5 @@
-//! Minimal greeting logic plus an anyhow error path
-//! exercising the external-dependency fixture.
-
 use anyhow::{Context, Result};
 
-/// Returns a greeting for `name`. Empty names are rejected so the error
-/// path stays covered by tests.
 pub fn greet(name: &str) -> Result<String> {
     if name.is_empty() {
         anyhow::bail!("name must not be empty");
@@ -12,13 +7,10 @@ pub fn greet(name: &str) -> Result<String> {
     Ok(format!("Hello, {name}!"))
 }
 
-/// Adds two integers with documented wrapping semantics.
 pub fn add(left: u64, right: u64) -> u64 {
     left.wrapping_add(right)
 }
 
-/// Parses `s` as a u64, attaching context so the anyhow dependency is
-/// exercised beyond attribute macros.
 pub fn parse_count(s: &str) -> Result<u64> {
     s.parse::<u64>()
         .with_context(|| format!("failed to parse count from {s:?}"))

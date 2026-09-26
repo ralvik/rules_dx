@@ -1,6 +1,5 @@
 """Project-owned Starlark testing facade (ADR 0009).
 
-Contract: `docs/decisions/0009-starlark-testing.md`.
 """
 
 load("//libs/starlark:canonical.bzl", "strip_canonical")

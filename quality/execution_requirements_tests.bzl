@@ -1,6 +1,5 @@
 """Unit tests for the execution-requirements helper.
 
-Contract: `docs/quality/action-model.md#outputs-remote-cache-and-execution`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_false", "expect_true", "starlark_test")

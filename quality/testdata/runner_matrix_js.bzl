@@ -1,6 +1,5 @@
 """Matrix JS cases (split from `runner_matrix_cases.bzl`).
 
-Contract: `docs/quality/runner-matrix.md`.
 """
 
 JS_CASES = [
@@ -150,6 +149,3 @@ replacements 0
     },
 ]
 
-# TypeScript/JSX/TSX cells: fixture-policy Biome defaults. TypeScript
-# reuses the real clean/dirty pair; JSX/TSX reuse the real clean files
-# with generated dirty bytes (no aspect-visible dirty subject exists).

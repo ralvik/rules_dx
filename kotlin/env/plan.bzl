@@ -1,6 +1,5 @@
 """Focused Kotlin environment plan (WP2).
 
-Contract: `docs/environments/kotlin.md`.
 """
 
 load("@rules_java//java:defs.bzl", "JavaInfo")

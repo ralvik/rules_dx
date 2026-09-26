@@ -1,10 +1,3 @@
-//! Install-time publisher-identity verifier for standalone `dx`.
-//!
-//! Owning contract: `docs/deploy/authoring.md` (Path H).
-//! There is no checksum-only fallback: a sha256 alone never proves identity.
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -18,40 +11,24 @@
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Sigstore TUF trust root.
-/// See: `deploy/install/dx_verify.sh` (`TRUST_ROOT`).
 pub const TRUST_ROOT: &str = "https://tuf-repo-cdn.sigstore.dev";
-/// Default OIDC issuer.
 pub const DEFAULT_ISSUER: &str = "https://token.actions.githubusercontent.com";
 
-/// Parsed verifier arguments.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct VerifyArgs {
-    /// Standalone binary under verification.
     pub binary: String,
-    /// Sigstore bundle binding the binary bytes.
     pub bundle: String,
-    /// Expected certificate identity.
     pub identity: String,
-    /// Expected OIDC issuer.
     pub issuer: String,
-    /// Optional GitHub attestation path.
     pub attestation: String,
-    /// Owner for the attestation path.
     pub owner: String,
-    /// Optional SBOM file.
     pub sbom: String,
-    /// Bundle binding the SBOM bytes.
     pub sbom_bundle: String,
-    /// Optional aggregated NOTICE file.
     pub notice: String,
-    /// Manifest binding the NOTICE entries.
     pub notice_manifest: String,
-    /// Optional install directory (copy only, never exec).
     pub install_dir: String,
 }
 
-/// Argument parsing failure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ArgsError(pub String);
 
@@ -67,7 +44,6 @@ fn help_text() -> String {
     "usage: dx_verify --binary PATH --bundle PATH --identity ID --issuer ISSUER [--attestation PATH] [--owner OWNER] [--sbom PATH --sbom-bundle PATH] [--notice PATH --notice-manifest PATH] [--install-dir DIR]".to_owned()
 }
 
-/// Parses verifier argv, rejecting checksum-only flags.
 pub fn parse_args(argv: &[String]) -> Result<VerifyArgs, ArgsError> {
     let mut args = VerifyArgs::default();
     let mut i = 1;
@@ -178,9 +154,6 @@ pub fn parse_args(argv: &[String]) -> Result<VerifyArgs, ArgsError> {
     Ok(args)
 }
 
-/// Builds the `cosign verify-blob` argv for one subject (pure,
-/// unit-tested; [`SystemVerifier::cosign_verify`] executes it via the
-/// single spawn owner).
 pub fn cosign_argv(
     cosign: &str,
     bundle: &Path,
@@ -201,9 +174,6 @@ pub fn cosign_argv(
     ]
 }
 
-/// Builds the `gh attestation verify` argv for one subject (pure,
-/// unit-tested; [`SystemVerifier::gh_verify`] executes it via the single
-/// spawn owner).
 pub fn gh_argv(gh: &str, subject: &Path, owner: &str) -> Vec<String> {
     vec![
         gh.to_owned(),
@@ -215,13 +185,9 @@ pub fn gh_argv(gh: &str, subject: &Path, owner: &str) -> Vec<String> {
     ]
 }
 
-/// Filesystem plus subprocess seam for unit tests.
 pub trait Verifier {
-    /// Reports whether `path` is a non-empty regular file.
     fn is_nonempty_file(&self, path: &Path) -> bool;
-    /// Reports whether `path` exists as a file.
     fn is_file(&self, path: &Path) -> bool;
-    /// Runs `cosign verify-blob` for one subject.
     fn cosign_verify(
         &self,
         cosign: &str,
@@ -230,23 +196,15 @@ pub trait Verifier {
         issuer: &str,
         subject: &Path,
     ) -> bool;
-    /// Runs `gh attestation verify` for one subject.
     fn gh_verify(&self, gh: &str, subject: &Path, owner: &str) -> bool;
-    /// Resolves the cosign executable name.
     fn cosign_bin(&self) -> String;
-    /// Resolves the gh executable name.
     fn gh_bin(&self) -> String;
-    /// Reports whether an executable resolves on PATH.
     fn have(&self, bin: &str) -> bool;
-    /// SHA-256 hex of one file.
     fn sha256_file(&self, path: &Path) -> io::Result<String>;
-    /// Copies one file, preserving bytes.
     fn install_copy(&self, src: &Path, dst: &Path) -> io::Result<()>;
-    /// Reads one UTF-8 file, if present.
     fn read_text(&self, path: &Path) -> Option<String>;
 }
 
-/// Real verifier using the host filesystem plus subprocesses.
 pub struct SystemVerifier;
 
 impl Verifier for SystemVerifier {
@@ -266,14 +224,10 @@ impl Verifier for SystemVerifier {
         issuer: &str,
         subject: &Path,
     ) -> bool {
-        // Thin config over the single spawn owner; no direct `Command`.
-        // See: `cli/process/src/lib.rs` (`dx_process::spawn_success`).
         dx_process::spawn_success(&cosign_argv(cosign, bundle, identity, issuer, subject))
     }
 
     fn gh_verify(&self, gh: &str, subject: &Path, owner: &str) -> bool {
-        // Thin config over the single spawn owner.
-        // See: `cli/process/src/lib.rs` (`dx_process::spawn_success`).
         dx_process::spawn_success(&gh_argv(gh, subject, owner))
     }
 
@@ -286,8 +240,6 @@ impl Verifier for SystemVerifier {
     }
 
     fn have(&self, bin: &str) -> bool {
-        // Thin config over the single exe-availability owner.
-        // See: `cli/process/src/lib.rs` (`dx_process::exe_available`).
         dx_process::exe_available(bin)
     }
 
@@ -295,7 +247,6 @@ impl Verifier for SystemVerifier {
         use sha2::Digest as _;
         let mut hasher = sha2::Sha256::new();
         let mut file = std::fs::File::open(path)?;
-        // Heap buffer: 1MiB on the stack overflows Windows (issue #1207).
         let mut buf = vec![0u8; 64 << 10];
         loop {
             use std::io::Read as _;
@@ -326,7 +277,6 @@ impl Verifier for SystemVerifier {
     }
 }
 
-/// One NOTICE manifest entry the verifier binds.
 struct NoticeEntry {
     package: String,
     version: String,
@@ -334,8 +284,6 @@ struct NoticeEntry {
     text_basename: String,
 }
 
-/// Parses the NOTICE manifest the verifier binds.
-/// See: `deploy/release/notice.bzl` (manifest shape).
 fn parse_notice_manifest(text: &str) -> Result<Vec<NoticeEntry>, String> {
     let mut entries = Vec::new();
     for (index, raw) in text.lines().enumerate() {
@@ -368,7 +316,6 @@ fn parse_notice_manifest(text: &str) -> Result<Vec<NoticeEntry>, String> {
     Ok(entries)
 }
 
-/// Binds one NOTICE file to its audited-inventory manifest.
 fn verify_notice(notice_text: &str, manifest_text: &str) -> Result<usize, String> {
     let entries = parse_notice_manifest(manifest_text)?;
     if entries.is_empty() {
@@ -399,7 +346,6 @@ fn verify_notice(notice_text: &str, manifest_text: &str) -> Result<usize, String
     Ok(entries.len())
 }
 
-/// Verifies one standalone binary, returning the success transcript.
 pub fn verify(args: &VerifyArgs, verifier: &dyn Verifier) -> Result<String, String> {
     let mut out = String::new();
     let binary = PathBuf::from(&args.binary);
@@ -601,7 +547,6 @@ mod tests {
             if !self.cosign_ok {
                 return false;
             }
-            // Bundle binds exact subject bytes like the shell stub.
             let subject_data = self.files.get(subject);
             let bundle_data = self.files.get(bundle);
             match (subject_data, bundle_data) {
@@ -685,11 +630,6 @@ mod tests {
 
     #[test]
     fn verifier_argv_are_thin_configs_over_spawn_owner() {
-        // Thin-config parity: the argv builders carry the exact
-        // `cosign verify-blob` / `gh attestation verify` shapes the
-        // `SystemVerifier` executes via `dx_process::spawn_success`, so the
-        // spawn triplication cannot drift.
-        // See: `cli/process/src/lib.rs` (`dx_process::spawn_success`).
         assert_eq!(
             cosign_argv(
                 "cosign",

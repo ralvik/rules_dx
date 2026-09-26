@@ -325,8 +325,6 @@ mod tests {
             r#"{"no-id":true}"#.to_owned(),
             r#"{"id":{"testResult":{}},"testResult":{"testActionOutput":[]}}"#.to_owned(),
             test_result("//a:t", &[("test.xml", "bytestream://remote/1")]),
-            // Non-object event, non-array testActionOutput, non-object entry,
-            // missing name, and missing uri all fail closed.
             "[]".to_owned(),
             r#"{"id":{"testResult":{"label":"//a:t"}},"testResult":{"testActionOutput":{}}}"#
                 .to_owned(),
@@ -346,9 +344,6 @@ mod tests {
 
     #[test]
     fn test_output_malformed_reasons_carry_json_paths() {
-        // Malformed-line corpus: every `testResult`
-        // shape failure names the offending field by JSON path while
-        // keeping the legacy human-readable wording.
         let cases = [
             (
                 r#"{"id":{"testResult":{}},"testResult":{"testActionOutput":[]}}"#,

@@ -1,6 +1,5 @@
 """Credential-free release archives for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
@@ -124,7 +123,6 @@ def archive_deploy(name, app, profile = "release"):
         app = app,
     )
 
-    # The stage is a single file (`<stage>/<exe basename>`), so
     native.genrule(
         name = archive_target,
         srcs = [":" + stage_target],
@@ -149,9 +147,6 @@ def archive_deploy(name, app, profile = "release"):
         checksum = ":" + checksum_target,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     py_binary(
         name = program_target,
         srcs = [":" + launcher_target],

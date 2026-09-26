@@ -1,6 +1,5 @@
 """Matrix Python cases (split from `runner_matrix_cases.bzl`).
 
-Contract: `docs/quality/runner-matrix.md`.
 """
 
 PYTHON_CASES = [
@@ -369,6 +368,3 @@ replacements 0
     },
 ]
 
-# JavaScript cells: fixture-policy defaults (biome lint/format) over the
-# real fixtures, the biome_cfg hinted closure (mirrors
-# fixture_real_javascript_hinted), and the eslint lint opt-in.

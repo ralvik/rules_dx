@@ -162,8 +162,6 @@ mod tests {
 
     #[test]
     fn secrets_plan_rejects_bare_and_relative_tools() {
-        // Hermetic acquisition: `argv[0]` is always the absolute declared
-        // artifact path, never an ambient `PATH` lookup.
         assert_eq!(
             plan_secrets("", "out.sarif", None, "/tmp/dx", false),
             Err(BackendError::MissingTool)
@@ -188,8 +186,6 @@ mod tests {
 
     #[test]
     fn secrets_plan_env_is_sanitized_tmpdir_only() {
-        // Sanitized invocation: exactly `TMPDIR`, never `PATH` and never
-        // ambient `GITLEAKS_*`.
         let plan = plan_secrets(
             "/hermetic/gitleaks",
             "out.sarif",
@@ -237,8 +233,6 @@ mod tests {
 
     #[test]
     fn secrets_plan_is_cache_only_identical_offline() {
-        // hermetic and local, so `--offline`/`--frozen` planning is byte
-        // -identical and never fails: no fetch, no upload.
         let online = plan_secrets("/hermetic/gitleaks", "out.sarif", None, "/tmp/dx", false)
             .expect("online plans");
         let offline = plan_secrets("/hermetic/gitleaks", "out.sarif", None, "/tmp/dx", true)

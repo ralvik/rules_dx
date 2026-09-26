@@ -117,8 +117,6 @@ fn missing_module_lists_searched_and_suggests_override() {
 
 #[test]
 fn nearest_legacy_wins_over_distant_module() {
-    // A legacy marker below a module still resolves to the module:
-    // discovery prefers the nearest MODULE.bazel.
     let fs = FakeFs::with_files(&["/repo/MODULE.bazel", "/repo/sub/WORKSPACE"]);
     let found = discover(Path::new("/repo/sub"), None, &fs).expect("module wins");
     assert_eq!(found, PathBuf::from("/repo"));
@@ -470,10 +468,6 @@ fn workflow_argv_rejects_test_binary_args() {
 
 #[test]
 fn execution_gaps_forwarding_matrix_is_wont_fix() {
-    // Every Bazel startup option plus test-binary args
-    // stays rejected on workflow commands with `dx bazel` guidance;
-    // only `dx bazel` forwards unchanged. Pinned with fixtures in
-    // `cli/cli/tests/fixtures/cli_execution_gaps/`.
     for startup in [
         "--bazelrc=/tmp/rc",
         "--home_rc",
@@ -521,7 +515,6 @@ fn execution_gaps_forwarding_matrix_is_wont_fix() {
             "{binary} produced {err:?}"
         );
     }
-    // The transparent escape hatch forwards even startup options unchanged.
     let passthrough = build_bazel_passthrough(
         "bazel",
         &[
@@ -543,8 +536,6 @@ fn execution_gaps_forwarding_matrix_is_wont_fix() {
 
 #[test]
 fn quality_workflows_reject_nokeep_going() {
-    // Quality callers protect `nokeep_going` unconditionally so a
-    // conflicting `--nokeep_going` weakens no result collection.
     let protected = vec![
         ProtectedFlag {
             name: "keep_going".to_owned(),
@@ -624,8 +615,6 @@ fn exit_mapping_preserves_subprocess_codes() {
 
 #[test]
 fn ci_gate_matrix_is_single_sourced() {
-    // Local-only `dx run`/`dx watch` refusal shares one owner
-    // (`is_ci` over `is_ci_value`): only `CI=true` refuses, every
     assert!(is_ci_value(Some("true")));
     for allowed in [
         None,
@@ -639,8 +628,6 @@ fn ci_gate_matrix_is_single_sourced() {
     ] {
         assert!(!is_ci_value(allowed), "{allowed:?} must not count as CI");
     }
-    // The env probe delegates to the same owner so `run` and `watch`
-    // cannot diverge again.
     assert_eq!(
         is_ci(),
         is_ci_value(std::env::var("CI").ok().as_deref()),
@@ -679,7 +666,6 @@ fn signal_numbers_match_os() {
 #[cfg(unix)]
 #[test]
 fn forward_signal_number_checks_existence_safely() {
-    // Signal zero performs error checking without delivering.
     forward_signal_number(std::process::id(), 0).expect("self exists");
     assert!(forward_signal_number(1 << 30, 0).is_err());
     assert!(forward_signal_number(std::process::id(), -1).is_err());
@@ -688,7 +674,6 @@ fn forward_signal_number_checks_existence_safely() {
 #[cfg(unix)]
 #[test]
 fn forward_signal_propagates_os_errors() {
-    // An unallocated pid fails without delivering any signal.
     assert!(forward_signal(1 << 30, UnixSignal::Terminate).is_err());
 }
 
@@ -767,8 +752,6 @@ fn system_runner_rejects_bad_invocations() {
 
 #[test]
 fn hermetic_runner_clears_parent_environment() {
-    // Secrets auditing never inherits ambient configuration: only the
-    // explicit env reaches the child, so `GITLEAKS_CONFIG` cannot inject
     let runner = SystemRunner;
     std::env::set_var("DX_HERMETIC_PROBE_PARENT", "parent");
     let cleared = runner
@@ -789,10 +772,6 @@ fn hermetic_runner_clears_parent_environment() {
 
 #[test]
 fn hermetic_runner_sets_no_path() {
-    // Hermetic children cannot observe ambient lookup: the spawner sets
-    // no `PATH`, so `printenv PATH` fails inside the cleared
-    // environment (a shell would install its own default, which proves
-    // nothing about the spawner).
     let runner = SystemRunner;
     let no_path = runner
         .run_hermetic(
@@ -806,8 +785,6 @@ fn hermetic_runner_sets_no_path() {
 
 #[test]
 fn gitleaks_tool_defaults_to_absent() {
-    // No ambient `PATH` search: the default seam reports no tool so
-    // callers fail closed instead of launching an unpinned binary.
     let runner = FakeRunner {
         status: ChildStatus { code: Some(0) },
     };
@@ -816,8 +793,6 @@ fn gitleaks_tool_defaults_to_absent() {
 
 #[test]
 fn spawn_success_reports_status_without_triplication() {
-    // Single owner parity: `spawn_success` matches the legacy
-    // `Command::new(...).output().is_ok_and(success)` shape verifiers used.
     assert!(spawn_success(&["/usr/bin/true".to_owned()]));
     assert!(!spawn_success(&["/usr/bin/false".to_owned()]));
     assert!(!spawn_success(&[]));
@@ -826,7 +801,6 @@ fn spawn_success_reports_status_without_triplication() {
 
 #[test]
 fn exe_available_covers_help_file_and_path() {
-    // `--help` success, file probe, and `PATH` search in one owner.
     assert!(exe_available("/usr/bin/true"));
     assert!(!exe_available("/nonexistent-dx-tool-xyz"));
     assert!(!exe_available(""));

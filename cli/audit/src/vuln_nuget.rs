@@ -25,7 +25,6 @@ fn parse_nuget_version(version: &str) -> Option<NugetVersion> {
     if trimmed.contains('*') {
         return None;
     }
-    // Build metadata never affects ordering; strip at the first `+`.
     let (without_metadata, _) = match trimmed.split_once('+') {
         Some((before, _)) => (before, true),
         None => (trimmed, false),
@@ -41,8 +40,6 @@ fn parse_nuget_version(version: &str) -> Option<NugetVersion> {
     if core_str.is_empty() {
         return None;
     }
-    // Core must be one to four dot-separated numeric parts; anything
-    // else (semver operators, brackets, whitespace) fails closed.
     let raw_parts: Vec<&str> = core_str.split('.').collect();
     if raw_parts.is_empty() || raw_parts.len() > 4 {
         return None;
@@ -75,8 +72,6 @@ fn parse_nuget_version(version: &str) -> Option<NugetVersion> {
             if pre.is_empty() {
                 return None;
             }
-            // Prerelease remainder may not carry brackets, commas, or
-            // whitespace; labels split on `.` only.
             if pre.contains([
                 '[', ']', '(', ')', ',', ' ', '\t', '\n', '\r', '+', '>', '<', '=', '^', '~', '!',
                 '|', '&', ':', '/',
@@ -161,8 +156,6 @@ pub fn nuget_compare(left: &str, right: &str) -> std::cmp::Ordering {
                 }
             }
         }
-        // Unparseable inputs have no ordering here; equality and scope
-        // gates fail closed before reaching comparison.
         _ => std::cmp::Ordering::Equal,
     }
 }
@@ -204,8 +197,6 @@ pub fn nuget_in_scope(scope: &str, version: &str) -> bool {
     if !has_brackets {
         return nuget_version_eq(scope_trimmed, version_trimmed);
     }
-    // Single bracketed interval covering the whole scope; NuGet has no
-    // union syntax, so inner brackets fail closed.
     let chars: Vec<char> = scope_trimmed.chars().collect();
     if chars.len() < 3 {
         return false;
@@ -225,8 +216,6 @@ pub fn nuget_in_scope(scope: &str, version: &str) -> bool {
         if bound.is_empty() {
             return false;
         }
-        // Single-version intervals are exact only as `[1.0]`; `(1.0)`
-        // is invalid per NuGet docs, as are mixed `[1.0)`/`(1.0]`.
         if chars[0] != '[' || chars[chars.len() - 1] != ']' {
             return false;
         }

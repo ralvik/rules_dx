@@ -8,7 +8,7 @@
     )
 )]
 
-// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -20,8 +20,6 @@ struct Cli {
 }
 
 #[derive(Subcommand)]
-// `Locks` carries the full workspace lock set; boxing its `PathBuf`s would
-// silence `large_enum_variant` but `clap` has no `ValueParser` for
 #[allow(clippy::large_enum_variant)]
 enum Command {
     Consistency {
@@ -95,7 +93,7 @@ fn unknown_ecosystem(ecosystem: &str) -> i32 {
 
 fn run() -> i32 {
     let cli = Cli::parse();
-    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     match cli.cmd {
         Command::Consistency {
             ecosystem,

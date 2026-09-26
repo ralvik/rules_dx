@@ -1,6 +1,5 @@
 """Aspect evidence tests (WP2c).
 
-Contract: `docs/quality/action-model.md`.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

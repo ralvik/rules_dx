@@ -1,7 +1,5 @@
 use super::OutputError;
 
-/// Normalized diagnostic severity. The rank order mirrors the direct-Bazel
-/// evaluator scale so the CLI maps `--fail-on` to the same comparison.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
     Info,
@@ -38,9 +36,6 @@ impl Severity {
     }
 }
 
-/// Lowest diagnostic severity that fails a quality command. The default is
-/// `warning`; there is no `never` value. The variant spellings double as
-/// the `clap::ValueEnum` source of truth for `--fail-on`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum Threshold {
     Info,

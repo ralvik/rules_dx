@@ -19,8 +19,6 @@ pub(crate) fn apply_collected_changes(
     complete: bool,
     changes: &[FileChange],
 ) -> ApplyOutcome {
-    // Verified source bytes for changed files, read before any
-    // mutation while the workspace still matches the analysis.
     let mut sources: BTreeMap<String, SourceRead> = BTreeMap::new();
     for change in changes {
         sources
@@ -32,7 +30,6 @@ pub(crate) fn apply_collected_changes(
     let mut applied: BTreeMap<String, bool> = BTreeMap::new();
     let mut not_applied: Vec<(String, &'static str)> = Vec::new();
     if check {
-        // Check mode never mutates; any proposed change fails the run.
     } else if !complete {
         for change in changes {
             applied.insert(change.path.clone(), false);
@@ -135,9 +132,6 @@ mod tests {
 
     #[test]
     fn check_mode_writes_nothing() {
-        // Apply-safety battery: check mode never mutates,
-        // so a valid stable candidate leaves the workspace untouched
-        // and reports no applied paths.
         let workspace = write_workspace("apply-check", &[("src/a.rs", b"BAD\n")]);
         let change = full_replace("src/a.rs", b"BAD\n", b"GOOD\n");
         let outcome = apply_collected_changes(workspace.path(), true, true, &[change]);
@@ -151,9 +145,6 @@ mod tests {
 
     #[test]
     fn incomplete_collection_writes_nothing() {
-        // Apply-safety battery: an incomplete result
-        // collection marks every change not-applied with
-        // `incomplete_collection` before any mutation runs.
         let workspace = write_workspace("apply-incomplete", &[("src/a.rs", b"BAD\n")]);
         let change = full_replace("src/a.rs", b"BAD\n", b"GOOD\n");
         let outcome = apply_collected_changes(workspace.path(), false, false, &[change]);
@@ -170,8 +161,6 @@ mod tests {
 
     #[test]
     fn stale_source_untouched_while_valid_file_applies() {
-        // Apply-safety battery: one rejected path never
-        // blocks the others, and the stale file keeps its live bytes.
         let workspace = write_workspace(
             "apply-mixed",
             &[("src/a.rs", b"BAD\n"), ("src/b.rs", b"STALE\n")],
@@ -201,9 +190,6 @@ mod tests {
 
     #[test]
     fn invalid_edits_rejected_without_write() {
-        // Apply-safety battery: a malformed envelope
-        // (inverted range) is rejected with `invalid_edits` and the
-        // file keeps its live bytes.
         let workspace = write_workspace("apply-invalid", &[("src/a.rs", b"BAD\n")]);
         let change = FileChange {
             path: "src/a.rs".to_owned(),

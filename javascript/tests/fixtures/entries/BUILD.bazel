@@ -28,8 +28,6 @@ javascript_binary(
 javascript_test(
     name = "helper_test",
     srcs = ["helper_test.js"],
-    # Match the one-source `*_test.js` naming (jest's default testMatch
-    # only covers `.test.`/`.spec.` infixes).
     config = "jest.config.cjs",
     data = [":helper"],
     node_modules = "//:node_modules",

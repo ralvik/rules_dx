@@ -1,31 +1,16 @@
 """Native cohort matrix cells.
 
-Contract: `docs/quality/runner-matrix.md`.
 Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
-# Recorded clang-tidy text diagnostics for the lint-fail cell, shaped
-# like the parser unit samples
-# (`quality/adapter/src/parsers/clang_tidy.rs`): workspace-relative
-# path, severity, rule plus positions. Injected verbatim.
 CLANG_TIDY_LINT = """matrix/clang_tidy_dirty.c:4:3: warning: do not use 'else' after 'return' [readability-else-after-return]"""
 
-# Recorded cppcheck XML diagnostics for the lint-fail cell, shaped like
-# the parser unit samples (`quality/adapter/src/parsers/cppcheck.rs`).
 CPPCHECK_LINT = """<?xml version="1.0" encoding="UTF-8"?>\n<results version="2">\n  <cppcheck version="2.21.0"/>\n  <errors>\n    <error id="nullPointer" severity="error" msg="Possible null pointer dereference: slot" verbose="Possible null pointer dereference: slot">\n      <location file="matrix/cppcheck_dirty.c" line="7" column="10"/>\n    </error>\n  </errors>\n</results>\n"""
 
-# Recorded staticcheck JSON diagnostics for the lint-fail cell, shaped
-# like the parser unit samples
-# (`quality/adapter/src/parsers/staticcheck.rs`).
 STATICCHECK_LINT = """[{"code": "SA4006", "severity": "warning", "location": {"file": "matrix/staticcheck_dirty.go", "line": 5, "column": 2}, "end": {"line": 5, "column": 3}, "message": "this value of x is never used"}]"""
 
-# Recorded govet text diagnostics for the lint-fail cell, shaped like
-# the parser unit samples (`quality/adapter/src/parsers/govet.rs`).
 GOVET_LINT = """matrix/govet_dirty.go:7:2: non-constant format string in call to fmt.Printf"""
 
-# Recorded errcheck text diagnostics for the lint-fail cell, shaped
-# like the parser unit samples
-# (`quality/adapter/src/parsers/errcheck.rs`).
 ERRCHECK_LINT = """matrix/errcheck_dirty.go:7:2: unchecked error: f.WriteString("hello")"""
 
 NATIVE_CASES = [

@@ -17,7 +17,6 @@ pub fn hook_git_is_hermetic(uses_hermetic_git: bool, uses_ambient_git: bool) -> 
     uses_hermetic_git && !uses_ambient_git
 }
 
-/// Whether a Git path is hermetic (absolute only, never PATH lookup).
 pub fn hook_git_path_is_hermetic(path: &Path) -> bool {
     path.is_absolute()
 }
@@ -82,9 +81,6 @@ pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
                 detail: e.to_string(),
             }
         })?;
-        // Portable route: hook shims need the executable bit
-        // only on unix; Windows runs them through the shell association,
-        // so non-unix skips chmod instead of failing.
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
@@ -115,7 +111,6 @@ pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     Ok(installed)
 }
 
-/// Remove only managed shims; unmanaged files are never touched.
 pub fn uninstall_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     let mut removed = Vec::new();
     for trigger in ["pre-commit", "pre-push"] {
@@ -228,7 +223,6 @@ pub fn hook_check_timed_out(elapsed_secs: f64, budget_secs: u64) -> bool {
     elapsed_secs > budget_secs as f64
 }
 
-/// Measured last-run timings per check (seconds, never hardcoded).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HookTimings {
     pub secs_by_check: BTreeMap<String, f64>,
@@ -407,10 +401,8 @@ mod tests {
         let removed = uninstall_hooks(&root).expect("uninstall");
         assert!(removed.iter().any(|p| p == ".git/hooks/pre-commit"));
         assert!(!root.join(".git/hooks/pre-commit").exists());
-        // Second uninstall is a no-op over absent shims.
         let again = uninstall_hooks(&root).expect("uninstall again");
         assert!(again.is_empty());
-        // Unmanaged files are never touched.
         std::fs::write(root.join(".git/hooks/pre-commit"), "# custom hook\n").expect("unmanaged");
         assert!(uninstall_hooks(&root).is_err());
         assert!(root.join(".git/hooks/pre-commit").exists());
@@ -443,8 +435,6 @@ mod tests {
         assert!(installed.iter().any(|p| p == "dx.local.toml"));
         let written = std::fs::read_to_string(root.join("dx.local.toml")).expect("read overlay");
         assert_eq!(written, render_local_overlay().expect("overlay"));
-        // Writer and parser share the `toml` implementation: the installed
-        // overlay must parse back to an empty `[hooks]` table.
         let parsed: toml::Table = written.parse().expect("valid TOML");
         assert!(parsed.contains_key("hooks"));
         scratch.close().expect("cleanup");

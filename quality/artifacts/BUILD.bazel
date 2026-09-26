@@ -13,10 +13,6 @@ py_binary(
     main = "update.py",
 )
 
-# Generated per-tool/platform metadata (issue #915): one .bzl per tool
-# plus platform from update.py; the export list is a glob so a new tool
-# needs no second edit here. extension.bzl plus metadata_tests.bzl are
-# library sources, not artifact metadata, hence excluded.
 exports_files(glob(
     ["*.bzl"],
     exclude = [
@@ -25,8 +21,6 @@ exports_files(glob(
     ],
 ))
 
-# Canonical tool versions for //tools/ci:config_consistency_test
-# (issue #912): `TOOLS[biome]` owns the Biome `$schema` version.
 exports_files(
     ["update.py"],
     visibility = [

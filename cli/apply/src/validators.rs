@@ -39,10 +39,6 @@ pub enum ValidationError {
 }
 
 pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), ValidationError> {
-    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
-    // Tightens historical checks to also reject backslashes and single-dot
-    // segments as malformed; `..` still maps to EscapesWorkspace. Pinned
-    // tests below prove the rung mapping plus ladder order.
     match dx_path::classify(&op.path) {
         None => {}
         Some(dx_path::PathProblem::Empty) => return Err(ValidationError::EmptyPath),
@@ -92,8 +88,6 @@ pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), Valid
 }
 
 fn extension_of(path: &str) -> Option<String> {
-    // `rsplit` always yields at least one item; `unwrap_or_default` keeps
-    // this total without a panic path.
     let name = path.rsplit('/').next().unwrap_or_default();
     let (_, extension) = name.rsplit_once('.')?;
     if extension.is_empty() {
@@ -168,7 +162,6 @@ mod tests {
 
     #[test]
     fn backslash_and_dot_segment_rejected() {
-        // Tightened to the canonical dx_path ladder.
         assert_eq!(
             validate(&create("a\\b", "hi\n"), None),
             Err(ValidationError::MalformedPath)
@@ -181,8 +174,6 @@ mod tests {
 
     #[test]
     fn path_rungs_are_pinned_to_dx_path_ladder() {
-        // Thin wrapper over `dx_path::classify`: every rung mapping plus
-        // ladder order (first problem wins) is pinned so drift fails here.
         for (path, expected) in [
             ("", ValidationError::EmptyPath),
             ("/etc/x", ValidationError::AbsolutePath),
@@ -200,8 +191,6 @@ mod tests {
                 "path: {path:?}"
             );
         }
-        // Ladder order: absolute beats everything, backslash beats
-        // empty-component/dot, empty-component beats dot, dot beats dot-dot.
         assert_eq!(
             validate(&create("/a//b", "hi\n"), None),
             Err(ValidationError::AbsolutePath)
@@ -218,8 +207,6 @@ mod tests {
             validate(&create("a/./../b", "hi\n"), None),
             Err(ValidationError::MalformedPath)
         );
-        // `..` still escapes even when a malformed rung is also present
-        // below it in the path: dot-dot is its own verdict, not malformed.
         assert_eq!(
             validate(&create("a/../../x", "hi\n"), None),
             Err(ValidationError::EscapesWorkspace)

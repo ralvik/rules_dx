@@ -24,9 +24,6 @@ pub(crate) fn invocation(words: &[&str]) -> Invocation {
 }
 
 pub(crate) fn temp_dir(prefix: &str) -> tempfile::TempDir {
-    // Thin wrapper over the single test scratch policy
-    // (`dx_test_scratch::scratch`, #651): same prefix discipline plus
-    // auto-clean on drop, not a third scratch implementation.
     dx_test_scratch::scratch(&format!("dx-exec-test-{prefix}-"))
 }
 
@@ -263,9 +260,6 @@ impl Harness {
 
     pub(crate) fn run_with_ci(&self, words: &[&str], ci: bool) -> (i32, String, String) {
         let inv = invocation(words);
-        // Mirror `main.rs`: consume `--here` into an explicit directory
-        // scope before dispatch so tests prove the same `//path/...`
-        // selection the binary runs. Unresolvable cwd fails pre-exec.
         let inv = match crate::args::apply_here(&inv, &self.workspace, &self.cwd) {
             Ok(resolved) => resolved,
             Err(detail) => return (2, String::new(), format!("dx: {detail}\n")),

@@ -78,8 +78,6 @@ mod tests {
 
     #[test]
     fn migrate_upgrade_gate_accepts_any_upgrade() {
-        // and patch upgrades qualify; downgrades, equal versions,
-        // and non-semver never qualify.
         assert!(migrate_is_upgrade("1.2.3", "2.0.0"));
         assert!(migrate_is_upgrade("1.2.3", "1.3.0"));
         assert!(migrate_is_upgrade("1.2.3", "1.2.4"));
@@ -91,7 +89,6 @@ mod tests {
         assert!(!migrate_is_upgrade("1.2.3", "1.2.3"));
         assert!(!migrate_is_upgrade("abc", "2.0.0"));
         assert!(!migrate_is_upgrade("1.2.3", ""));
-        // Major bumps stay the coarse subset for major-hop manifests.
         assert!(migrate_is_major_bump("1.2.3", "2.0.0"));
         assert!(migrate_is_major_bump("1.9.9", "2.0.0-alpha.1"));
         assert!(migrate_is_major_bump("0.0.0", "1.0.0"));
@@ -111,7 +108,6 @@ mod tests {
         assert!(plan_migrate("2.0.0", "1.0.0").is_err());
         assert!(plan_migrate("", "2.0.0").is_err());
         assert!(plan_migrate("abc", "2.0.0").is_err());
-        // Typed errors render stably for CLI diagnostics.
         assert_eq!(
             plan_migrate("2.0.0", "1.0.0").unwrap_err().to_string(),
             "migrate is upgrade-only: 2.0.0 -> 1.0.0"
@@ -120,15 +116,11 @@ mod tests {
 
     #[test]
     fn migrate_manifest_selection_is_mechanical_per_major_hop() {
-        // One manifest per major hop, named after the major
-        // versions so selection is mechanical.
         assert_eq!(migrate_manifest_name(0, 1), "migrate-v0-to-v1.json");
         assert_eq!(migrate_manifest_name(1, 2), "migrate-v1-to-v2.json");
         assert_eq!(migrate_manifest_name(2, 3), "migrate-v2-to-v3.json");
         assert_eq!(migrate_manifest_name(1, 3), "migrate-v1-to-v3.json");
         assert_eq!(migrate_manifest_name(10, 11), "migrate-v10-to-v11.json");
-        // Planning selects the manifest from the parsed majors,
-        // preserving the full version strings.
         let plan = plan_migrate("1.2.3", "2.0.0").expect("plan");
         assert_eq!(plan.from, "1.2.3");
         assert_eq!(plan.to, "2.0.0");
@@ -141,10 +133,6 @@ mod tests {
 
     #[test]
     fn migrate_syntax_pins_semver_prerelease_and_errors() {
-        // `dx migrate --from <version> --to <version>` takes
-        // Cargo-flavor semver only; prerelease/build metadata ride the
-        // same upgrade gate, and every rejection renders stably for CLI
-        // usage diagnostics (exit 2).
         assert!(migrate_is_major_bump("1.0.0", "2.0.0-alpha.1"));
         assert!(migrate_is_major_bump("1.0.0+build.1", "2.0.0"));
         assert!(migrate_is_major_bump("1.0.0-alpha", "2.0.0"));
@@ -181,10 +169,6 @@ mod tests {
 
     #[test]
     fn migrate_prerelease_and_build_metadata_table() {
-        // Prerelease and build metadata ride the same `to > from` upgrade
-        // gate (Cargo-flavor semver via the `semver` crate, which orders
-        // build metadata for a total order). Multi-major jumps select one
-        // manifest (`v1-to-v3`), never a chain.
         assert!(migrate_is_upgrade("1.9.9", "2.0.0-alpha.1"));
         assert!(migrate_is_upgrade("1.0.0-alpha", "1.0.0"));
         assert!(migrate_is_upgrade("1.0.0+build.1", "1.0.1"));

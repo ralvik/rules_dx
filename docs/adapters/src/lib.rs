@@ -1,50 +1,26 @@
-//! Thin per-language doc adapters normalizing pinned native inputs into the versioned IR.
-//!
-//! Owning contract: `docs/documentation/doc-ir.md`.
-//! See: `docs/documentation/README.md#contracts` for the pipeline slice.
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use documentation_ir::proto::{
     DocIr, Extension, Param, Relations, SourceRef, Symbol, SymbolKind, Visibility,
 };
 
-/// Pinned nightly rustdoc route (`-Z unstable-options --output-format json`).
 pub const RUST_RUSTDOC_PIN: &str = "nightly-2026-09-01";
-/// Pinned rustdoc JSON format version observed on the pin.
 pub const RUST_FORMAT_VERSION: u32 = 30;
-/// Pinned Griffe (`griffe dump --full`).
 pub const PYTHON_GRIFFE_PIN: &str = "2.2.0";
-/// Pinned TypeDoc (`--json --emit none`).
 pub const TYPESCRIPT_TYPEDOC_PIN: &str = "0.28.20";
-/// Pinned JDK for the custom Doclet route.
 pub const JAVA_JDK_PIN: &str = "25";
-/// Pinned Kotlin for the Dokka route.
 pub const KOTLIN_PIN: &str = "2.2.20";
-/// Pinned Dokka (custom plugin emitting owned JSON).
 pub const KOTLIN_DOKKA_PIN: &str = "2.2.0";
-/// Pinned Go toolchain for the `go/packages` extractor.
 pub const GO_TOOLCHAIN_PIN: &str = "1.26.6";
-/// Pinned `golang.org/x/tools` pseudo-version for `packages.Load`.
 pub const GO_XTOOLS_PIN: &str = "v0.36.0";
-/// Pinned Doxygen XML generator.
 pub const CPP_DOXYGEN_PIN: &str = "1.18.0";
-/// Pinned .NET SDK carrying Roslyn (C# assembly plus `/doc` XML join).
 pub const CSHARP_DOTNET_PIN: &str = "10.0.201";
-/// Pinned .NET SDK for the F# route.
 pub const FSHARP_DOTNET_PIN: &str = "10.0.201";
-/// Pinned compiler-service build for the F# join.
 pub const FSHARP_SERVICE_PIN: &str = "43.9.200";
-/// Pinned `vue-docgen-api` (`parseMulti`, arrays-only).
 pub const VUE_DOCGEN_PIN: &str = "4.79.2";
-/// Pinned `sveld` (compared against compiler plus `svelte2tsx`).
 pub const SVELTE_SVELD_PIN: &str = "0.37.3";
-/// Pinned Scala 3 for the TASTy Inspector spike.
 pub const SCALA_PIN: &str = "3.3.6";
 
-/// Adapter scopes with extraction (twelve) plus the prose-only path.
 pub const ADAPTER_SCOPES: &[&str] = &[
     "rust",
     "python",
@@ -61,8 +37,6 @@ pub const ADAPTER_SCOPES: &[&str] = &[
     "astromdx",
 ];
 
-/// Adapter failure: every malformed or unpinned input fails the run.
-/// Partial shards are never emitted (see `docs/documentation/doc-ir.md`).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum AdapterError {
     #[error("empty native input")]
@@ -121,7 +95,6 @@ fn shard(language: &str, package: &str, symbols: Vec<Symbol>) -> Result<DocIr, A
 }
 
 fn symbol_id(language: &str, package: &str, qualified: &str) -> Result<String, AdapterError> {
-    // Stable `language:package:qualified_name` identity (see `docs/documentation/doc-ir.md`).
     if language.is_empty() || package.is_empty() || qualified.is_empty() {
         return Err(AdapterError::EmptyIdentity);
     }
@@ -129,7 +102,6 @@ fn symbol_id(language: &str, package: &str, qualified: &str) -> Result<String, A
 }
 
 fn overload_id(base: &str, params: &[String]) -> String {
-    // Normalized parameter-type suffix `Base(T1,T2)`; whitespace trims, empties drop.
     let normalized: Vec<&str> = params
         .iter()
         .map(|ty| ty.trim())
@@ -157,8 +129,6 @@ fn kind_of(name: &str) -> i32 {
     }
 }
 
-/// Grouped `make_symbol` inputs so the 8-value symbol constructor takes
-/// one params struct instead of eight positionals.
 struct SymbolSpec<'a> {
     language: &'a str,
     package: &'a str,
@@ -200,8 +170,6 @@ fn make_symbol(spec: SymbolSpec<'_>) -> Result<Symbol, AdapterError> {
     })
 }
 
-/// Rust: pinned nightly rustdoc JSON `index` into IR.
-/// See: `docs/documentation/doc-ir.md#machine-inputs`.
 pub fn normalize_rust(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -251,7 +219,6 @@ pub fn normalize_rust(input: &str, package: &str) -> Result<DocIr, AdapterError>
         if name.is_empty() {
             continue;
         }
-        // Overloads disambiguate by normalized parameter-type list.
         let params: Vec<String> = item
             .get("params")
             .and_then(serde_json::Value::as_array)
@@ -293,7 +260,6 @@ pub fn normalize_rust(input: &str, package: &str) -> Result<DocIr, AdapterError>
     shard("rust", package, symbols)
 }
 
-/// Python: Griffe `--full` model into IR.
 pub fn normalize_python(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -388,7 +354,6 @@ fn collect_griffe(
     Ok(())
 }
 
-/// TypeScript/JavaScript: TypeDoc JSON (`schemaVersion`) into IR.
 pub fn normalize_typescript(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -416,7 +381,6 @@ fn collect_typedoc(
     if let Some(children) = node.get("children").and_then(serde_json::Value::as_array) {
         for child in children {
             let name = text(child.get("name").unwrap_or(&serde_json::Value::Null));
-            // TypeDoc kinds are numeric; map the common class/interface/method set.
             let kind_num = child
                 .get("kind")
                 .and_then(serde_json::Value::as_u64)
@@ -505,7 +469,6 @@ fn collect_typedoc(
     Ok(())
 }
 
-/// Java: owned Doclet JSON (specified-element count reconciles silently dropped APIs).
 pub fn normalize_java(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -551,7 +514,6 @@ pub fn normalize_java(input: &str, package: &str) -> Result<DocIr, AdapterError>
     shard("java", package, symbols)
 }
 
-/// Kotlin: owned Dokka-plugin JSON (Dokka-to-Kotlin lockstep is pinned).
 pub fn normalize_kotlin(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -604,7 +566,6 @@ pub fn normalize_kotlin(input: &str, package: &str) -> Result<DocIr, AdapterErro
     shard("kotlin", package, symbols)
 }
 
-/// Go: thin `go/packages` plus doc-comment AST JSON into IR.
 pub fn normalize_go(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -656,8 +617,6 @@ fn split_pos(pos: &str) -> (String, u64) {
     }
 }
 
-/// C/C++: Doxygen XML first candidate into IR (built-in versus Clang-assisted
-/// comparison stays implementation work; the adapter owns the contract).
 pub fn normalize_cpp(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -747,8 +706,6 @@ fn location_line(block: &str) -> Option<u64> {
         .ok()
 }
 
-/// C#: assembly metadata joined with `/doc` XML into IR.
-/// XML alone is not the model; unresolved IDs keep an empty doc, never drop.
 pub fn normalize_csharp(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -797,7 +754,6 @@ pub fn normalize_csharp(input: &str, package: &str) -> Result<DocIr, AdapterErro
     shard("csharp", package, symbols)
 }
 
-/// F#: compiler-service signatures joined with XML docs into IR.
 pub fn normalize_fsharp(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -852,7 +808,6 @@ pub fn normalize_fsharp(input: &str, package: &str) -> Result<DocIr, AdapterErro
     shard("fsharp", package, symbols)
 }
 
-/// Vue: `vue-docgen-api` `parseMulti` JSON into IR (arrays-only).
 pub fn normalize_vue(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -872,7 +827,6 @@ pub fn normalize_vue(input: &str, package: &str) -> Result<DocIr, AdapterError> 
         .ok_or_else(|| AdapterError::InvalidJson("missing components".to_owned()))?;
     let mut symbols = Vec::new();
     for component in components {
-        // Arrays-only contract: object-shaped props/events/slots/methods fail.
         for key in ["props", "events", "slots", "methods"] {
             if let Some(node) = component.get(key) {
                 if !node.is_array() {
@@ -924,7 +878,6 @@ pub fn normalize_vue(input: &str, package: &str) -> Result<DocIr, AdapterError> 
     shard("vue", package, symbols)
 }
 
-/// Svelte: `sveld` JSON into IR (runes plus legacy, snippets versus slots).
 pub fn normalize_svelte(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -984,8 +937,6 @@ pub fn normalize_svelte(input: &str, package: &str) -> Result<DocIr, AdapterErro
     shard("svelte", package, symbols)
 }
 
-/// Scala: TASTy Inspector spike into IR.
-/// Missing or incompatible TASTy never inventories; it fails closed.
 pub fn normalize_scala(input: &str, package: &str) -> Result<DocIr, AdapterError> {
     if input.trim().is_empty() {
         return Err(AdapterError::EmptyInput);
@@ -1045,7 +996,6 @@ pub fn normalize_scala(input: &str, package: &str) -> Result<DocIr, AdapterError
     shard("scala", package, symbols)
 }
 
-/// Astro/MDX: prose-only confirmation (no extractor; authored markdown flows straight through).
 pub fn confirm_prose_only(package: &str, files: &[&str]) -> Result<DocIr, AdapterError> {
     if package.is_empty() {
         return Err(AdapterError::EmptyIdentity);
@@ -1068,8 +1018,6 @@ pub fn confirm_prose_only(package: &str, files: &[&str]) -> Result<DocIr, Adapte
     shard("markdown", package, Vec::new())
 }
 
-/// Same-producer rebuilds stay byte-identical; cross-version compares decoded semantics.
-/// See: `docs/documentation/site.md`.
 pub fn encode_ir(shard: &DocIr) -> Result<Vec<u8>, AdapterError> {
     documentation_ir::encode_shard(shard).map_err(|err| AdapterError::InvalidIr(format!("{err:?}")))
 }
@@ -1295,7 +1243,6 @@ mod tests {
     fn csharp_joins_metadata_with_docs() {
         let shard = normalize_csharp(&fixture("csharp/input.json"), "Example").unwrap();
         assert_eq!(shard.symbols.len(), 3);
-        // Unresolved IDs keep an empty doc, never drop the symbol.
         assert!(shard
             .symbols
             .iter()

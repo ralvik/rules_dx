@@ -1,6 +1,5 @@
 """JVM tool acquisition inventory."""
 
-# Checked-in inventory of the `jvm_tools` extension repos re-exported by the
 JVM_TOOL_REPOS = [
     "jvm_checkstyle",
     "jvm_google_java_format",
@@ -10,9 +9,6 @@ JVM_TOOL_REPOS = [
     "jvm_spotbugs_dist",
 ]
 
-# Artifact metadata for the `jvm_tools` extension (see extension.bzl).
-# Versions mirror `//modules:java-scala-kotlin.bzl` `JVM_TOOL_VERSIONS`;
-# digests are the trust anchor, URLs availability only.
 JVM_TOOLS = {
     "jvm_google_java_format": {
         "kind": "file",

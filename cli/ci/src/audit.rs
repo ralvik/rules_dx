@@ -14,7 +14,6 @@ pub enum AuditPlacement {
     ReportOnly,
 }
 
-/// Audit never uses a security-only counts mode.
 pub fn audit_uses_counts_only_mode() -> bool {
     false
 }
@@ -23,7 +22,6 @@ pub fn audit_has_disclosure_toggle() -> bool {
     false
 }
 
-/// Safe rendering never assumes all security findings are private: public
 pub fn audit_assumes_private() -> bool {
     false
 }

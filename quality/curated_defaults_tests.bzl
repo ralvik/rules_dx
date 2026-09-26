@@ -1,14 +1,10 @@
 """Unit tests for the versioned curated defaults.
 
-Contract: `docs/tools/tool-baseline.md#curated-differences`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":curated_defaults.bzl", "CURATED_DEFAULTS", "CURATED_SCHEMA_VERSION", "FORMAT_FROZEN", "curated_families", "curated_schema_error")
 
-# Frozen core families: every ID below must stay curated. Additions append
-# to the manifest data without editing this list; removals fail here plus
-# the release-policy harness.
 FROZEN_CURATED_FAMILIES = [
     "javascript",
     "json",

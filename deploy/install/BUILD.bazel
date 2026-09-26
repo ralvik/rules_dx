@@ -6,12 +6,6 @@ load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library",
 
 package(default_visibility = ["//:__subpackages__"])
 
-# Install-time verifier: Sigstore keyless bundle (Fulcio OIDC + Rekor
-# public-good) or GitHub attestation, no checksum-only fallback. Trust
-# root is Sigstore TUF (tuf-repo-cdn.sigstore.dev); verifiers are
-# `cosign verify-blob` / `gh attestation verify` / `slsa-verifier`
-# (documented, not self-hosted). Fails before install/exec; never
-# executes the binary under verification. Portable Rust, no Linux pin.
 rust_library(
     name = "dx_install_tools",
     srcs = ["src/lib.rs"],
@@ -50,10 +44,6 @@ rust_binary(
     ) + [":dx_install_tools"],
 )
 
-# Policy tests: valid accepted; tampered/replaced/unapproved-signer/
-# missing-inputs rejected before install; checksum-only refused; SBOM
-# binding proven. Portable `rust_test` with a fake verifier seam, no
-# network, no stub executables, no Linux pin.
 rust_test(
     name = "dx_install_tools_test",
     size = "small",

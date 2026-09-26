@@ -1,6 +1,5 @@
 """Experimental minimal TypeScript wrappers (ADR 0013).
 
-Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
 
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
@@ -17,15 +16,11 @@ _DX_TS_PROJECT_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: testing.TestEnvironment is returned by the test forwarder (the test
 _DX_TS_TEST_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-# Declaration files (`.d.ts`, `.d.mts`, `.d.cts`) are inert per the
-# generation contract and must not be passed as `srcs`; the exclusion
-# suffixes below keep them out of `QualitySourcesInfo` even if listed.
 _DX_TS_SOURCE_SPECS = [
     ("typescript", ["ts", "mts", "cts"], [".d.ts", ".d.mts", ".d.cts"]),
     ("tsx", "tsx"),
@@ -76,7 +71,6 @@ def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
     if rejection != None:
         fail(rejection)
 
-    # Lane-A: aspect_hints ride the public forwarder via dx_wrap.
     dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 
 def typescript_project(name, srcs, visibility = None, **kwargs):
@@ -86,7 +80,6 @@ def typescript_project(name, srcs, visibility = None, **kwargs):
 def _typescript_test_forward_impl(ctx):
     upstream = ctx.attr.upstream
 
-    # The upstream launcher already bakes fixed_env (JEST_JUNIT_OUTPUT_FILE,
     env_inherit = list(ctx.attr.env_inherit) if ctx.attr.env_inherit else []
     if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
         env_inherit.append("TESTBRIDGE_TEST_ONLY")
@@ -96,7 +89,6 @@ def _typescript_test_forward_impl(ctx):
         dx_quality_sources(ctx.files.srcs, _DX_TS_SOURCE_SPECS, str(ctx.label)),
     ]
 
-    # Upstream jest_test only provides InstrumentedFilesInfo when coverage
     return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo], "typescript_*")
 
 _typescript_test = rule(
@@ -122,7 +114,6 @@ _typescript_test = rule(
 def typescript_test_rejection(kwargs):
     """Returns the contract rejection for forbidden `typescript_test` kwargs, or `None`.
 
-    See: `docs/testing/generation.md`.
     """
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("typescript_test always uses jest with the standard " +
@@ -135,7 +126,6 @@ def typescript_test_rejection(kwargs):
 def typescript_test_env(env_inherit):
     """Computes the effective test-runtime inherited environment.
 
-    See: `docs/testing/generation.md`.
     """
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
@@ -159,10 +149,8 @@ def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig
     attrs. Execution of TypeScript entries reuses `javascript_binary`
     over the compiled output; there is no `typescript_binary`.
 
-    See: `docs/decisions/0013-rust-javascript-typescript-foundations.md`.
     """
 
-    # Declaration sources are inert for the library wrapper and for tests.
     rejection = typescript_srcs_rejection(srcs)
     if rejection != None:
         fail(rejection)
@@ -171,9 +159,6 @@ def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig
         fail(reporter_rejection)
     effective_env = typescript_test_env(env_inherit)
 
-    # Private tsc compilation of the test sources. `aspect_hints` rides
-    # the public forwarder only (quality aspects visit the forwarder);
-    # strip it here. `tags` stay test-only (jest upstream plus forwarder).
     ts_kwargs = {}
     if deps != None:
         ts_kwargs["deps"] = list(deps)
@@ -191,10 +176,6 @@ def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig
         **ts_kwargs
     )
 
-    # Jest runs the compiled test plus the compiled libraries. The
-    # compiled `<name>_ts` target already carries its `deps` closure, but
-    # list `deps` explicitly as well so handwritten `data`-only callers
-    # keep working and the runtime edge stays obvious.
     upstream_data = [":" + name + "_ts"] + list(deps or []) + list(data or [])
     if "//:package_json" not in upstream_data:
         upstream_data.append("//:package_json")

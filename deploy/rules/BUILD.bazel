@@ -61,10 +61,6 @@ exports_files([
     "pypi_tests.bzl",
 ])
 
-# Hermetic build tools for `archive_deploy`: deterministic
-# tar.gz + sha256 via Rust, no host `tar`/`sha256sum`/`shasum`.
-# Declared as genrule `tools` so action keys cover the tool bytes
-# and the sandbox runs no host PATH lookup.
 rust_library(
     name = "dx_deploy_tools",
     srcs = ["src/lib.rs"],
@@ -170,80 +166,60 @@ rust_clippy_test(
 
 exports_files(["Cargo.toml"])
 
-# Shared staging logic for `archive_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "archive_deploy_lib",
     srcs = ["archive_deploy.py"],
     imports = ["."],
 )
 
-# Shared staging logic for `github_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "github_deploy_lib",
     srcs = ["github_deploy.py"],
     imports = ["."],
 )
 
-# Shared vendor logic for `crates_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "crates_deploy_lib",
     srcs = ["crates_deploy.py"],
     imports = ["."],
 )
 
-# Shared file-repo logic for `maven_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "maven_deploy_lib",
     srcs = ["maven_deploy.py"],
     imports = ["."],
 )
 
-# Shared wheelhouse logic for `pypi_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "pypi_deploy_lib",
     srcs = ["pypi_deploy.py"],
     imports = ["."],
 )
 
-# Shared folder-feed logic for `nuget_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "nuget_deploy_lib",
     srcs = ["nuget_deploy.py"],
     imports = ["."],
 )
 
-# Shared layout logic for `oci_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "oci_deploy_lib",
     srcs = ["oci_deploy.py"],
     imports = ["."],
 )
 
-# Shared package-drop logic for `octopus_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "octopus_deploy_lib",
     srcs = ["octopus_deploy.py"],
     imports = ["."],
 )
 
-# Shared promotion logic for `promotion_deploy` launchers plus `py_test`.
-# The launchers expand this template per instance; the test imports it.
 py_library(
     name = "promotion_deploy_lib",
     srcs = ["promotion_deploy.py"],
     imports = ["."],
 )
 
-# Hermetic pack tool for `npm_deploy`: deterministic tgz + feed JSON
-# via the managed Python 3.12 toolchain, no host `tar`, no network.
 py_binary(
     name = "npm_packer",
     srcs = ["npm_pack.py"],
@@ -262,8 +238,6 @@ py_library(
     imports = ["."],
 )
 
-# Pack + feed output per fixture package.json
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "npm_deploy_test",
     srcs = ["npm_deploy_test.py"],
@@ -309,8 +283,6 @@ deploy_debug_analysis_tests(name = "deploy_debug_analysis")
 
 deploy_app_analysis_tests(name = "deploy_app_analysis")
 
-# First deploy macro: credential-free archive releases over
-# the fixture deploy program. The debug variant pins profile passthrough.
 archive_deploy(
     name = "release_demo",
     app = ":deploy_program",
@@ -328,8 +300,6 @@ archive_analysis_tests(name = "archive_analysis")
 
 archive_debug_analysis_tests(name = "archive_debug_analysis")
 
-# Local staging output per release fixture
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "archive_deploy_test",
     srcs = ["archive_deploy_test.py"],
@@ -339,8 +309,6 @@ py_test(
     deps = [":archive_deploy_lib"],
 )
 
-# Tarball contents + checksum validity per release fixture
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "release_demo_verify",
     size = "small",
@@ -356,8 +324,6 @@ sh_test(
         ":release_demo_checksum",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
-    # POSIX deploy fixtures (:deploy_program, :deploy_app) stay portable.
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -376,7 +342,6 @@ sh_test(
         ":release_demo_debug_checksum",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -433,10 +398,6 @@ test_suite(
     ],
 )
 
-# Second deploy macro: draft-only GitHub Releases over the
-# archive fixtures, proving macro composition (archive outputs become
-# release assets). The debug variant pins profile passthrough. Draft
-# verification runs with GH_RELEASE_DRY_RUN=1: no network, no mutation.
 github_deploy(
     name = "github_demo",
     artifacts = [
@@ -460,8 +421,6 @@ github_analysis_tests(name = "github_analysis")
 
 github_debug_analysis_tests(name = "github_debug_analysis")
 
-# Local release staging per demo assets
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "github_deploy_test",
     srcs = ["github_deploy_test.py"],
@@ -471,8 +430,6 @@ py_test(
     deps = [":github_deploy_lib"],
 )
 
-# Would-run command + draft-only flags per release fixture
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 sh_test(
     name = "github_demo_verify",
     size = "small",
@@ -486,13 +443,9 @@ sh_test(
     ],
     data = [":github_demo_program"],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Third deploy macro: local-first PyPI publisher over deterministic
-# dummy distributions. The debug variant pins profile passthrough. The
-# `py_test` below exercises the local wheelhouse build with no network.
 genrule(
     name = "pypi_demo_wheel",
     outs = ["pypi_demo-0.0.0-py3-none-any.whl"],
@@ -524,8 +477,6 @@ pypi_analysis_tests(name = "pypi_analysis")
 
 pypi_debug_analysis_tests(name = "pypi_debug_analysis")
 
-# Local wheelhouse output per demo distribution
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "pypi_deploy_test",
     srcs = ["pypi_deploy_test.py"],
@@ -535,9 +486,6 @@ py_test(
     deps = [":pypi_deploy_lib"],
 )
 
-# Fourth deploy macro: local-first crates.io publisher over deterministic
-# dummy crate sources. The debug variant pins profile passthrough. The
-# `py_test` below exercises the local vendor build with no network.
 genrule(
     name = "crates_demo_manifest",
     outs = ["crates_demo_crate/Cargo.toml"],
@@ -577,8 +525,6 @@ crates_analysis_tests(name = "crates_analysis")
 
 crates_debug_analysis_tests(name = "crates_debug_analysis")
 
-# Local vendor output per demo crate
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "crates_deploy_test",
     srcs = ["crates_deploy_test.py"],
@@ -588,9 +534,6 @@ py_test(
     deps = [":crates_deploy_lib"],
 )
 
-# Fifth deploy macro: hermetic npm pack feed over a fixture
-# package.json. The debug variant pins profile passthrough. Local by
-# default, never publishes; live needs explicit env plus approval.
 npm_deploy(
     name = "npm_demo",
     srcs = ["npm_demo/package.json"],
@@ -610,9 +553,6 @@ npm_analysis_tests(name = "npm_analysis")
 
 npm_debug_analysis_tests(name = "npm_debug_analysis")
 
-# Sixth deploy macro: local-first NuGet folder feed over a deterministic
-# dummy nupkg. The debug variant pins profile passthrough. The `py_test`
-# below exercises the local feed build with no network.
 genrule(
     name = "nuget_demo_nupkg",
     outs = ["nuget_demo.0.0.0.nupkg"],
@@ -636,8 +576,6 @@ nuget_analysis_tests(name = "nuget_analysis")
 
 nuget_debug_analysis_tests(name = "nuget_debug_analysis")
 
-# Local folder-feed output per demo package
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "nuget_deploy_test",
     srcs = ["nuget_deploy_test.py"],
@@ -647,10 +585,6 @@ py_test(
     deps = [":nuget_deploy_lib"],
 )
 
-# Seventh deploy macro: local-first Maven Central publisher over
-# deterministic dummy jar plus pom. The debug variant pins profile
-# passthrough. The `py_test` below exercises the local file-repo build
-# with no network.
 genrule(
     name = "maven_demo_jar",
     outs = ["maven_demo-0.0.0.jar"],
@@ -688,8 +622,6 @@ maven_analysis_tests(name = "maven_analysis")
 
 maven_debug_analysis_tests(name = "maven_debug_analysis")
 
-# Local file-repo output per demo coordinates
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "maven_deploy_test",
     srcs = ["maven_deploy_test.py"],
@@ -699,10 +631,6 @@ py_test(
     deps = [":maven_deploy_lib"],
 )
 
-# Eighth deploy macro: local-first OCI image layout over a deterministic
-# dummy image tar. The debug variant pins profile passthrough. The
-# `py_test` below exercises the local layout build with no daemon and
-# no network.
 genrule(
     name = "oci_demo_tar",
     outs = ["oci_demo.tar"],
@@ -726,8 +654,6 @@ oci_analysis_tests(name = "oci_analysis")
 
 oci_debug_analysis_tests(name = "oci_debug_analysis")
 
-# Local OCI layout output per demo image
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "oci_deploy_test",
     srcs = ["oci_deploy_test.py"],
@@ -737,12 +663,6 @@ py_test(
     deps = [":oci_deploy_lib"],
 )
 
-# Ninth deploy macro: local-first Octopus Deploy automation over the
-# archive fixture, proving macro composition (an archive_deploy tarball
-# becomes the Octopus package). The debug variant pins profile
-# passthrough. The `py_test` below exercises the local package-drop
-# build with no network. Octopus is deploy automation (push plus
-# create-release), not a language registry.
 octopus_deploy(
     name = "octopus_demo",
     channel = "Default",
@@ -768,8 +688,6 @@ octopus_analysis_tests(name = "octopus_analysis")
 
 octopus_debug_analysis_tests(name = "octopus_debug_analysis")
 
-# Local package-drop output per demo package
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "octopus_deploy_test",
     srcs = ["octopus_deploy_test.py"],
@@ -779,12 +697,6 @@ py_test(
     deps = [":octopus_deploy_lib"],
 )
 
-# Tenth deploy macro: staging-to-production promotion over the archive
-# fixture, proving macro composition (an archive_deploy tarball becomes
-# the promoted artifact). The debug variant pins profile passthrough.
-# The `py_test` below exercises the local promotion build with no
-# network. Promotion is deploy automation (promote plus health-gate plus
-# rollback), not a language registry publish.
 promotion_deploy(
     name = "promotion_demo",
     artifact = ":release_demo_archive",
@@ -808,8 +720,6 @@ promotion_analysis_tests(name = "promotion_analysis")
 
 promotion_debug_analysis_tests(name = "promotion_debug_analysis")
 
-# Local promotion output per demo artifact
-# No-coverage: process-spawning test; see docs/contributing/build-conventions.md.
 py_test(
     name = "promotion_deploy_test",
     srcs = ["promotion_deploy_test.py"],

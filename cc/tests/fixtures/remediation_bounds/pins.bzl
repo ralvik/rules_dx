@@ -1,20 +1,9 @@
-"""Bounded remediation pins.
+"""Bounded remediation pins."""
 
-Contract: `docs/native-toolchains.md#qualification-questions-and-delivery`,
-`docs/decisions/0013-rust-javascript-typescript-foundations.md#core-language-completion-and-remediation`,
-`docs/decisions/0014-tested-platform-release-stack.md#decision`, `docs/decisions/0008-dependency-currency.md#decision`.
-Fixture: `cc/tests/fixtures/remediation_bounds/` via
-`bazel run //tools/ci:remediation_bounds_qualification`.
-"""
-
-# Bounded-remediation definition: reproduce each defect, estimate the
-# upstream fix, name the actual owner, and record patch plus
-# upstream-issue plus upgrade tracking with complete-workflow evidence.
 BOUNDED_DEFINITION = "Reproduce defects, estimate each upstream fix, name actual owners, record patch plus upstream issue plus upgrade tracking and complete-workflow evidence"
 BOUNDED_EVIDENCE = "complete-workflow evidence"
 BOUNDED_SCOPE = "Scope only"
 
-# Allowed remediation forms per ADR 0013 plus ADR 0014 plus ADR 0008:
 ALLOWED_FORMS = [
     "focused, tested, pinned patches",
     "bounded integration",
@@ -26,10 +15,6 @@ ALLOWED_FORMS = [
 ]
 ALLOWED_NOTE = "Focused upstream rules patches are allowed when pinned reproducibly and tested against the accepted contracts"
 
-# Defect inventory: source-derived failure paths with reproduction
-# plus estimate plus owner plus tracking plus complete-workflow
-# evidence. Each slice stops instead of growing into a replacement
-# engine when the bound below is exceeded.
 DEFECT_CC_OPTOUT = "kept CC opt-out linker failure path with sysroot rust-lld fallback plus no_cc stubs"
 DEFECT_CC_OPTOUT_SOURCE = "cargo/private/cargo_build_script.bzl no-linker failure path"
 DEFECT_CC_OPTOUT_OWNER = "hermeticbuild/rules_rust"
@@ -59,14 +44,12 @@ DEFECT_FLOORS_EVIDENCE = "glibc 2.28 symbol floor plus deployment 14.0 qualified
 DEFECT_CROSS = "Cross-product expansion only after the initial cohort passes with bounded upstream configuration"
 DEFECT_CROSS_EVIDENCE = "cc/tests/fixtures/cross_routes/pins.bzl via cross_routes_qualification under issue #504"
 
-# Owner plus estimate plus tracking record: actual upstream owner is
 OWNER_NOTE = "name actual owners"
 ESTIMATE_NOTE = "estimate each upstream fix"
 TRACKING_NOTE = "record patch plus upstream issue plus upgrade tracking"
 FAIL_CLOSED_NOTE = "the affected capability fails closed until a compliant remedy passes the required evidence"
 UPSTREAMING_NOTE = "Prefer upstreaming those fixes"
 
-# Stop-slice bound: if fixes require a replacement acquisition engine,
 STOP_SLICE_NOTE = "If fixes require a replacement acquisition engine, compiler backend, Cargo graph or coverage engine, stop that slice and revisit alternatives under the maintenance policy"
 STOP_SLICE_CASES = [
     "replacement acquisition engine",
@@ -76,17 +59,10 @@ STOP_SLICE_CASES = [
 ]
 NO_SHORTCUT_NOTE = "Do not defer required Rust Windows support, admit complete C/C++ prematurely, or weaken hermeticity to make the table green"
 
-# Cross-product bound: do not implement missing infra merely to fill
-# the cross-product. Linux cross is the first priority, not a mandate
-# to build every target from every host; broader cross-builds are
-# desirable only when upstream configuration keeps maintenance bounded.
 CROSS_PRODUCT_NOTE = "Do not implement missing infra merely to fill cross-product"
 CROSS_PRIORITY_NOTE = "Linux cross first priority not mandate every target from every host"
 CROSS_BOUND_NOTE = "Broader cross-builds are desirable when upstream configuration keeps maintenance bounded"
 
-# Rejected substitutes per the issue alternatives: unbounded fork plus
-# engine replacements plus owned-backend plus substitutions plus
-# fallback plus cross-product infra fill plus weakened natives.
 REJECTED_ALTERNATIVES = [
     "unbounded fork",
     "whole ruleset rewrite",
@@ -104,14 +80,9 @@ REJECTED_ALTERNATIVES = [
     "weakened native workflows for a larger table",
 ]
 
-# Backend stays provisional; floors plus coverage plus corpus plus
-# routes stay owned.
 BACKEND_NOTE = "Backends stay provisional"
 OWNED_GAPS = ["#499", "#500", "#501", "#504"]
 
-# Live proof labels: the seed hello builds on the seed host; the corpus
-# plus floors targets prove the fixture is wired without claiming a
-# backend, coverage, or Supported.
 REMEDIATION_BOUNDS_FIXTURE_CORPUS = "//cc/tests/fixtures/remediation_bounds:corpus_starlark"
 REMEDIATION_BOUNDS_LIVE_HELLO = "//cc/tests/fixtures/hello:hello"
 REMEDIATION_BOUNDS_LINUX_CORPUS = "//cc/tests/fixtures/linux_corpus:corpus"

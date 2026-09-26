@@ -1,6 +1,4 @@
 """Concrete action-subjects use case.
-Contract: `docs/testing/starlark.md#future-not-implemented`, `docs/decisions/0009-starlark-testing.md`.
-Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via `bazel run //tools/ci:starlark_futures_qualification`.
 Action observation stays deferred: analysis observes `DxSubjectInfo` fields plus
 `DefaultInfo` output basenames only, not registered actions; the mnemonic-to-outputs
 mapping stays a Starlark-level use case; consumers expose state via `DxSubjectInfo`."""

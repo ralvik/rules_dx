@@ -97,13 +97,7 @@ pub fn validate_snapshot(snapshot: &AdvisorySnapshot) -> Result<(), SnapshotProb
     }
     if crate::exception::check_expiry("2099-01-01", &snapshot.retrieved_at).is_err()
         && snapshot.retrieved_at != "2099-01-01"
-    {
-        // Reuse the strict YYYY-MM-DD shape gate from the exception
-        // lifecycle without importing its error type: any date that
-        // parses as an audit date is a valid retrieval date. The
-        // sentinel above only exercises the parser; expiry itself is
-        // irrelevant here.
-    }
+    {}
     if !is_audit_date(&snapshot.retrieved_at) {
         return Err(SnapshotProblem::BadDate {
             value: snapshot.retrieved_at.clone(),
@@ -144,7 +138,6 @@ pub fn map_refresh(
     }
 }
 
-/// Whether offline matching may proceed for one set: only fresh or
 pub fn may_analyze(outcome: &RefreshOutcome) -> bool {
     matches!(
         outcome,
@@ -213,8 +206,6 @@ mod tests {
 
     #[test]
     fn vendored_file_mirror_validates_like_upstream() {
-        // carry a `file://` provenance URL but enforce the same sha256
-        // byte binding plus same-day freshness plus fail-closed mapping.
         let mut mirror = snapshot();
         mirror.url = "file:///opt/dx-offline/advisory/cargo.json".to_owned();
         validate_snapshot(&mirror).expect("vendored file:// mirror validates");
@@ -320,7 +311,6 @@ mod tests {
             }
         );
         assert!(!may_analyze(&outcome));
-        // Default detail names the set and stale date, never claims clean.
         let defaulted = map_refresh(&snap, "2026-09-19", None, None);
         match &defaulted {
             RefreshOutcome::Failed { detail } => {
@@ -350,8 +340,6 @@ mod tests {
 
     #[test]
     fn advisory_sources_are_https_database_downloads_without_inventory() {
-        // Every registry set owns an OSV GCS database-download source;
-        // unknown sets have none (fail closed, never empty clean).
         for (set, ecosystem) in [
             ("cargo", "crates.io"),
             ("npm", "npm"),
@@ -365,9 +353,6 @@ mod tests {
                 url.contains(ecosystem) && url.ends_with("/all.zip"),
                 "{set} must name its OSV ecosystem bucket"
             );
-            // No inventory in the request: the URL carries no package
-            // names, versions, query parameters, or body. Matching runs
-            // offline after download.
             assert!(!url.contains('?'), "{set} must carry no query");
             assert!(
                 !url.contains("api.osv.dev"),
@@ -392,8 +377,6 @@ mod tests {
         let text = serde_json::to_string(&snap).expect("serialize");
         assert_eq!(parse_identity(&text).expect("parse"), snap);
         assert!(parse_identity("not json").is_err());
-        // Missing required identity fields fail closed at parse time,
-        // never a default identity that could pass as fresh.
         assert!(parse_identity("{}").is_err());
     }
 

@@ -49,8 +49,6 @@ pub fn apply_plan_with_timeout(
         reason: format!("cannot create {}: {e}", dx_dir.display()),
     })?;
     let _lock = acquire_lock(&dx_dir, timeout).map_err(map_lock_error)?;
-    // Re-read the live selection under the lock; fail closed on foreign
-    // state exactly like collection does.
     let live = collect_inventory(workspace_root, &[], &[])?;
     let live_current = live.current_hex;
     let live_pair = match read_current_pair(workspace_root) {
@@ -85,8 +83,6 @@ pub fn apply_plan_with_timeout(
         })?;
         outcome.removed_setup_records.push(hex.clone());
     }
-    // Generations referenced by the live current record are preserved
-    // even when the (older) plan selected them.
     let mut live_referenced: Vec<(GenerationKind, String)> = Vec::new();
     if let Some(pair) = live_pair {
         live_referenced.push((
@@ -276,7 +272,6 @@ mod tests {
         let outcome = apply_plan(&workspace, &plan).expect("apply");
         assert_eq!(outcome.removed_setup_records, vec![stale_hex.clone()]);
         assert_eq!(outcome.removed_generations.len(), 2);
-        // Current record, its generations, and the pointer survive.
         let setups = workspace.join(".dx").join("setups");
         assert!(setups.join(&current_hex).join("environment").is_symlink());
         assert!(workspace
@@ -296,7 +291,6 @@ mod tests {
                 .map(|pair| dx_setup::setup_hex(&pair)),
             Some(current_hex)
         );
-        // Second apply over the same plan is idempotent: nothing left.
         let again = apply_plan(&workspace, &plan).expect("re-apply");
         assert_eq!(again, CleanOutcome::default());
         let _ = fs::remove_dir_all(&root);
@@ -315,12 +309,10 @@ mod tests {
         let second = setup_pair('3', '4');
         dx_setup::commit_pair(&workspace, &first).expect("commit first");
         dx_setup::commit_pair(&workspace, &second).expect("commit second");
-        // Plan built while `second` is current selects `first` for prune.
         let plan = collect_inventory(&workspace, &[], &[])
             .expect("collect")
             .plan();
         assert_eq!(plan.prune_setup_records, vec![dx_setup::setup_hex(&first)]);
-        // A concurrent setup reselects `first` before clean applies.
         dx_setup::commit_pair(&workspace, &first).expect("reselect first");
         let outcome = apply_plan(&workspace, &plan).expect("apply");
         assert!(outcome.removed_setup_records.is_empty());
@@ -341,7 +333,6 @@ mod tests {
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let stale_record = record('3', '4');
-        // Stale plan: no current known, so the stale generations prune.
         let plan = plan_prune(PruneInputs {
             records: &[stale_record],
             generations: &[
@@ -355,8 +346,6 @@ mod tests {
         });
         assert_eq!(plan.prune_setup_records, vec![stale_hex.clone()]);
         assert_eq!(plan.prune_generations.len(), 2);
-        // Live current still references both generations: apply skips them
-        // while removing the unselected record.
         let outcome = apply_plan(&workspace, &plan).expect("apply");
         assert_eq!(outcome.removed_setup_records, vec![stale_hex]);
         assert!(outcome.removed_generations.is_empty());

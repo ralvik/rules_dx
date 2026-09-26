@@ -1,6 +1,5 @@
 """Matrix TS cases (split from `runner_matrix_cases.bzl`).
 
-Contract: `docs/quality/runner-matrix.md`.
 """
 
 TS_CASES = [
@@ -242,6 +241,3 @@ replacement matrix/tsx_dirty.tsx 27 98 " { name: string }) {\\n\\tconst unused =
     },
 ]
 
-# JSON cells: fixture-policy defaults (biome lint, prettier format). The
-# compact dirty document is lint-clean by design (one prettier format
-# finding), so the lint-fail cell uses generated duplicate-key bytes.

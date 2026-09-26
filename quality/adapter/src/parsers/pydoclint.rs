@@ -54,9 +54,6 @@ pub fn parse_pydoclint(
                 detail: format!("violation without a file header: {raw:?}"),
             })?;
             let checked = known(TOOL, files, header)?;
-            // Line 0 marks a whole-file syntax error (DOC002): the file
-            // cannot be parsed, so the finding points at the file top
-            // with the tool's message verbatim.
             let (start, end) = point(number.max(1), 1);
             findings.push(FileFinding {
                 file: checked.to_owned(),
@@ -129,18 +126,8 @@ mod tests {
         );
     }
 
-    // Exact shapes probed from the pinned flake8 7.3.0 / pylint 4.0.8
-    // binaries against the real-pipeline fixtures; the fixtures pin the
-    // grammars above, so a tool upgrade that changes its output fails
-    // here instead of silently shifting findings.
-
     #[test]
     fn pydoclint_grammar_mismatches_are_fail_closed() {
-        // Split from the former cross-family witness: each family
-        // owns its mismatch battery.
-
-        // pydoclint: bad line numbers, malformed rules, non-UTF8
-        // output, and blank lines around violations.
         let bad_number = "/s/a.py\n    x: DOC101: msg\n";
         assert!(parse_pydoclint(bad_number.as_bytes(), Some(1), &["/s/a.py"]).is_err());
         let bad_rule = "/s/a.py\n    4: DOC: msg\n";

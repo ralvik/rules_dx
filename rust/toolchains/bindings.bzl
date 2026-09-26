@@ -1,6 +1,5 @@
 """Authoritative Rust toolchain bindings for quality adapters (WP1, WP3).
 
-Contract: `docs/quality/tool-integrations.md`.
 """
 
 RUST_TOOLCHAIN_TYPE = "@rules_rust//rust:toolchain_type"

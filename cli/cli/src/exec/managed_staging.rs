@@ -103,7 +103,6 @@ mod tests {
         assert!(first.is_dir());
         let second = ensure_generation_dir(&workspace, GENERATED_DIR_NAME, &hex).expect("reuse");
         assert_eq!(first, second);
-        // A present non-directory is never adopted.
         let other = "0".repeat(64);
         std::fs::write(
             workspace.join(".dx").join(GENERATED_DIR_NAME).join(&other),
@@ -117,7 +116,6 @@ mod tests {
             message.contains("not a managed generation directory"),
             "{message}"
         );
-        // Creation failures surface the underlying error.
         let file_workspace = workspace.join("ws-file");
         std::fs::write(&file_workspace, "not a dir").expect("workspace file");
         let (code, message) = ensure_generation_dir(&file_workspace, GENERATED_DIR_NAME, &other)
@@ -130,7 +128,6 @@ mod tests {
     fn managed_generation_dir_create_failure_surfaces() {
         let workspace = temp_dir("managed-gendir-create-ws");
         let workspace = workspace.path();
-        // `.dx/generated` as a file makes directory creation fail.
         std::fs::create_dir_all(workspace.join(".dx")).expect("dx dir");
         std::fs::write(workspace.join(".dx").join(GENERATED_DIR_NAME), "file").expect("blocker");
         let (code, message) =

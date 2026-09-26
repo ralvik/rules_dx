@@ -1,15 +1,12 @@
 """Fail-closed v1 parity gate (WP1/WP3, ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`, `docs/product/support-matrix.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY")
 
-# Versioned parity-gate schema. Consumers query via
 PARITY_SCHEMA_VERSION = 1
 
-# Class -> [owning decision, frozen acquisition route] for every classified
 PARITY_DEFERRED = {
     "astro": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
     "graphql": ["ADR 0019", "private Node graph (Prettier GraphQL parser)"],

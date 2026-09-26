@@ -1,21 +1,12 @@
 """Scala plus.NET cohort matrix cells.
 
-Contract: `docs/quality/runner-matrix.md`.
 Seed-only wiring proof with fake doubles plus recorded diagnostics.
 """
 
-# Recorded Scalafix callback NDJSON for the lint-fail cell, shaped like
-# the parser unit samples (`quality/adapter/src/parsers/scalafix.rs`):
-# workspace-relative path, rule plus positions. Injected verbatim.
 SCALAFIX_LINT = """{"path": "matrix/scalafix_dirty.scala", "line": 4, "column": 3, "rule": "DisableSyntax.var", "message": "mutable state should be avoided", "severity": "error"}"""
 
-# Recorded Roslyn SARIF union for the lint-fail cell, shaped like the
-# parser unit samples (`quality/adapter/src/parsers/roslyn.rs`): single
-# run with one CA1822 result addressing the workspace path.
 ROSLYN_LINT = """{"version": "2.1.0", "runs": [{"results": [{"ruleId": "CA1822", "level": "warning", "message": {"text": "Member 'Greet' does not access instance data"}, "locations": [{"physicalLocation": {"artifactLocation": {"uri": "matrix/roslyn_dirty.cs"}, "region": {"startLine": 6, "startColumn": 28, "endLine": 6, "endColumn": 33}}}]}]}]}"""
 
-# Recorded FSharpLint library NDJSON for the lint-fail cell, shaped like
-# the parser unit samples (`quality/adapter/src/parsers/fsharplint.rs`).
 FSHARPLINT_LINT = """{"path": "matrix/fsharplint_dirty.fs", "rule": "FL0036", "message": "Consider changing `ExampleInterface` to be prefixed with `I`.", "startLine": 4, "startColumn": 6, "endLine": 4, "endColumn": 22}"""
 
 SCALA_DOTNET_CASES = [

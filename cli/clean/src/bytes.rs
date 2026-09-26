@@ -246,7 +246,6 @@ mod tests {
         assert!(listing.contains(&format!(".dx/environments/{}", digest('3'))));
         assert!(listing.contains(&format!(".dx/setups/{}", current.hex)));
         assert!(listing.contains("latest"));
-        // Unmeasured entries render as zero bytes, never omitted.
         assert!(listing.contains("(0 bytes)"));
         assert!(listing.contains("reclaimable total: 0 bytes"));
     }
@@ -263,9 +262,6 @@ mod tests {
 
     #[test]
     fn measure_sums_prune_entries_and_skips_missing() {
-        // Portable route: sizing is symlink-aware without
-        // following links on every host, so this runs everywhere instead
-        // of unix-gating.
         let scratch = {
             let __scratch = dx_test_scratch::scratch("dx-clean-test-measure-");
             std::fs::create_dir_all(__scratch.path().join("ws")).expect("create workspace");
@@ -277,8 +273,6 @@ mod tests {
             .expect("collect")
             .plan();
         let bytes = measure_prune_bytes(&workspace, &plan).expect("measure");
-        // The stale record holds the environment/generated pair links
-        // (measured metadata); the empty generation dirs measure zero.
         let (measured_hex, record_bytes) = bytes
             .setup_record_bytes
             .iter()
@@ -296,8 +290,6 @@ mod tests {
             *record_bytes,
             "empty generation dirs add nothing"
         );
-        // Entries that vanished since planning measure zero; apply treats
-        // them as idempotent successes, so measure and apply agree.
         let ghost = CleanPlan {
             prune_setup_records: vec![digest('a')],
             prune_generations: vec![GenerationView {
@@ -323,8 +315,6 @@ mod tests {
         let workspace = workspace_of(&root);
         dx_setup::commit_pair(&workspace, &setup_pair('1', '2')).expect("commit");
         let dx_dir = workspace.join(".dx");
-        // A fat file behind a link inside a pruned generation: the link
-        // measures, the 1 MiB target never does.
         let outside = root.join("fat.bin");
         fs::write(&outside, vec![7u8; 1 << 20]).expect("fat file");
         let stale_gen = dx_dir.join("generated").join(digest('9'));
@@ -394,8 +384,6 @@ mod tests {
             removed_setup_records: vec![removed_hex],
             removed_generations: vec![removed_generation],
         };
-        // Entries skipped under the lock (reselected current, relinked
-        // generations) never inflate the reported reclaimed total.
         assert_eq!(bytes.reclaimed(&outcome), 400);
         assert_eq!(
             bytes.reclaimed(&CleanOutcome::default()),

@@ -97,8 +97,6 @@ mod tests {
 
     #[test]
     fn tsc_reports_classic_diagnostics() {
-        // Pinned shape from `@npm_typescript//:tsc` 5.9.3 `--noEmit`
-        // `--strict` against a dirty probe: diagnostics on stdout, exit 2.
         let stdout = concat!(
             "/s/dirty.ts(5,14): error TS2322: Type 'string' is not assignable to type 'number'.\n",
             "/s/dirty.ts(6,14): error TS2322: Type 'number' is not assignable to type 'string'.\n",
@@ -133,8 +131,6 @@ mod tests {
 
     #[test]
     fn tsc_reports_syntax_errors_with_the_same_shape() {
-        // Pinned shape from the syntax probe: `TS1109` uses the same
-        // `path(line,col)` grammar as type errors.
         let stdout = "/s/syntax.ts(1,21): error TS1109: Expression expected.\n";
         let findings = parse_tsc(stdout.as_bytes(), Some(2), &["/s/syntax.ts"]).expect("parsed");
         assert_eq!(findings.len(), 1);
@@ -153,8 +149,6 @@ mod tests {
 
     #[test]
     fn tsc_splitting_survives_parens_and_separators_in_text() {
-        // Paths may contain parentheses (last `(` wins); messages may
-        // contain `"): "` (first head split wins).
         let stdout = "/s/weird(name).ts(1,2): error TS1234: unexpected token \"): \" here\n";
         let findings =
             parse_tsc(stdout.as_bytes(), Some(2), &["/s/weird(name).ts"]).expect("parsed");

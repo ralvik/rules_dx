@@ -1,6 +1,5 @@
 """Unit tests for the single-sourced versioned registry.
 
-Contract: `docs/quality/quality-sources.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

@@ -54,9 +54,6 @@ impl OutputError {
 }
 
 pub fn check_path(path: &str) -> Result<(), OutputError> {
-    // Thin wrapper around `dx_path`: ladder order and canonical messages
-    // live in `dx_path::PathProblem::reason` (sole owner); only the error
-    // payload stays crate-local.
     match dx_path::reject_reason(path) {
         None => Ok(()),
         Some(reason) => Err(OutputError::BadPath {
@@ -97,7 +94,6 @@ pub struct Edit {
     pub replacement: String,
 }
 
-/// Validates edit shape without source bytes: the set is non-empty, in
 pub fn check_edits(edits: &[Edit]) -> Result<(), OutputError> {
     if edits.is_empty() {
         return Err(OutputError::BadEdit {
@@ -150,9 +146,6 @@ mod tests {
 
     #[test]
     fn path_messages_are_pinned_to_dx_path_ladder() {
-        // Thin wrapper over `dx_path::reject_reason`: exact messages plus
-        // ladder order (first problem wins) are pinned so order/message
-        // drift fails here, not silently downstream.
         for (path, reason) in [
             ("", "path must be non-empty"),
             ("/abs", "path must be workspace-relative, not absolute"),
@@ -220,7 +213,6 @@ mod tests {
             replacement: String::new(),
         }])
         .is_err());
-        // Shared start offsets are invalid even for pure insertions.
         assert!(check_edits(&[
             Edit {
                 start: 4,
@@ -234,7 +226,6 @@ mod tests {
             },
         ])
         .is_err());
-        // An insertion inside a replaced range is invalid.
         assert!(check_edits(&[
             Edit {
                 start: 2,

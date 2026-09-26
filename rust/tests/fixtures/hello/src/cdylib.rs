@@ -1,7 +1,2 @@
-//! Minimal cdylib crate for the
-//! rust_shared_library wrapper subject.
-
-/// C-compatible greeting entry point proving the shared-library wrapper
-/// forwards a compilable cdylib crate.
 #[no_mangle]
 pub extern "C" fn hello_cdylib() {}

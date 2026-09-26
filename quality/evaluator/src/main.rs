@@ -1,8 +1,6 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 use clap::{error::ErrorKind, Parser};
 use quality_evaluator::{evaluate, parse_threshold, Threshold};
 use quality_result::decode_validated;
@@ -30,17 +28,11 @@ fn invalid_token(error: &clap::Error) -> String {
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
-        // `clap` strips an attached `=value` from the reported token; the
-        // legacy loop echoed the whole `argv` element, so recover it.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown flag {echoed:?}")
         }
         ErrorKind::InvalidValue => {
-            // `clap` renders the pending option as `--flag <VALUE>`; the
-            // legacy message names the bare `--flag`. A missing value
-            // carries no rejected value, so the `--fail_on` threshold
-            // mapping below cannot misfire on it.
             let flag = dx_output::leading_flag(&token);
             if flag == "--fail_on" {
                 if let Some(raw) = rejected_value(&error) {
@@ -52,12 +44,6 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
             format!("missing value for {flag}")
         }
         ErrorKind::ValueValidation => {
-            // Only `--fail_on` carries a custom value parser, so any
-            // validation failure is a rejected threshold: report the legacy
-            // `unknown fail_on …` text through the same `parse_threshold`
-            // the parser wraps. The parser only runs on present values, so
-            // the re-check rejects too — including an empty value, which
-            // carries no value context but rejects the same way.
             let raw = rejected_value(&error).unwrap_or_default();
             match parse_threshold(&raw) {
                 Err(legacy) => legacy.to_string(),
@@ -84,10 +70,6 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
 }
 
 fn main() {
-    // Structured diagnostics: init is idempotent and emits
-    // nothing by default; `RUST_LOG` overrides the warn filter. Failures
-    // report via `tracing::error!` with the legacy message text, so action
-    // diagnostics keep their content while gaining filter control.
     dx_output::init_diagnostics(false);
     if let Err(message) = run() {
         tracing::error!("quality_evaluator: {message}");
@@ -101,7 +83,7 @@ fn run() -> Result<(), String> {
     let result_path = cli.result.ok_or("--result is required")?;
     let threshold = cli.fail_on.ok_or("--fail_on is required")?;
     let output = cli.output.ok_or("--output is required")?;
-    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     let bytes =
         std::fs::read(&result_path).map_err(|e| format!("cannot read {result_path:?}: {e}"))?;
     let result =

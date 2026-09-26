@@ -1,7 +1,5 @@
 """standardrb check plus fix wiring.
 
-Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
-`docs/tools/tool-acquisition.md#initial-artifact-research`.
 """
 
 STANDARDRB_VERSION = "1.56.0"

@@ -58,9 +58,6 @@ fn entry_names(dir: &Path) -> Result<Vec<String>, CleanError> {
         if let Some(name) = entry.file_name().to_str() {
             names.push(name.to_owned());
         } else {
-            // Non-UTF8 names are unmanaged by construction: they
-            // can never be digest-shaped. Record a placeholder so
-            // the plan refuses something rather than ignoring it.
             names.push("<non-utf8-name>".to_owned());
         }
     }
@@ -135,8 +132,6 @@ pub fn collect_inventory(
         ..CollectedInventory::default()
     };
 
-    // Current selection: absent selects nothing; anything present but not
-    // a digest-shaped symlink target fails closed.
     let current_link = setups_dir.join(CURRENT_LINK_NAME);
     match fs::symlink_metadata(&current_link) {
         Err(e) if e.kind() == io::ErrorKind::NotFound => {}
@@ -174,13 +169,6 @@ pub fn collect_inventory(
         }
     }
 
-    // Setup records: digest-shaped names validate against their link
-    // targets; anything else (including the staged `current.next` pointer
-    // and digest-spoofed records) is refused, never pruned.
-    //
-    // The current pointer itself resolves through the record directory
-    // (setup reads links via `current/<link>`), so record validation must
-    // read links relative to each record directory, not the pointer.
     for name in entry_names(&setups_dir)? {
         if name == CURRENT_LINK_NAME || name == CURRENT_STAGE_NAME {
             continue;
@@ -207,7 +195,6 @@ pub fn collect_inventory(
         }
     }
 
-    // Generations: digest-shaped names only; anything else is unmanaged.
     for kind in [GenerationKind::Environment, GenerationKind::Generated] {
         let dir = dx_dir.join(kind.dir_name());
         for name in entry_names(&dir)? {
@@ -241,8 +228,6 @@ mod tests {
 
     #[test]
     fn walk_filtered_skips_gitignored_and_glob_excluded_files() {
-        // Recursive walks honor `.gitignore` (via the
-        // `ignore` crate) plus caller-supplied `globset` exclusions.
         let scratch = dx_test_scratch::scratch("dx-clean-walk-");
         let root = scratch.path();
         fs::write(root.join(".gitignore"), "ignored.txt\n").expect("gitignore");
@@ -293,7 +278,6 @@ mod tests {
             filtered_names.iter().any(|name| name == "kept.txt"),
             "kept file must survive glob filtering: {filtered_names:?}"
         );
-        // Deterministic order for plans.
         let mut sorted = filtered.clone();
         sorted.sort();
         assert_eq!(filtered, sorted, "walks must be sorted");
@@ -378,13 +362,9 @@ mod tests {
         let root = scratch.path().to_path_buf();
         let (workspace, stale_hex, current_hex) = two_record_workspace(&root);
         let dx_dir = workspace.join(".dx");
-        // Unmanaged names under each managed root are refused, never
-        // inventoried as generations.
         fs::create_dir_all(dx_dir.join("environments").join("latest")).expect("unmanaged gen");
         fs::create_dir_all(dx_dir.join("generated").join("not-hex")).expect("unmanaged gen");
         fs::create_dir_all(dx_dir.join("setups").join("scratch")).expect("unmanaged record");
-        // A digest-spoofed record (valid name shape, wrong pair links) is
-        // refused like unmanaged state, never validated.
         let (spoofed_hex, _, _) = pair_env_gen('5', '6');
         let spoofed = dx_dir.join("setups").join(&spoofed_hex);
         fs::create_dir_all(&spoofed).expect("spoof record");
@@ -415,7 +395,6 @@ mod tests {
                 inventory.unmanaged_names
             );
         }
-        // The refused entries never become prune candidates.
         let plan = inventory.plan();
         assert!(!plan.prune_setup_records.contains(&spoofed_hex));
         assert!(!plan

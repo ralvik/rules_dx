@@ -25,13 +25,6 @@ quality_source_target(
     python_srcs = ["clean.py"],
 )
 
-# Dirty synthetic sources (dirty.py/dirty.rs) were live aspect subjects
-# breaking `dx <check> --check //...` (scope 2). Removed:
-# dirty coverage lives in the Layer-2 matrix as provider-less
-# `generated` bytes with `print_result` goldens (both `*_pass`/`*_fail`
-# green), following `tools/depcheck/testdata/` (no live dirty targets).
-# `fixture_mixed_clean` below keeps the multi-family (python+rust) proof.
-
 quality_source_target(
     name = "fixture_mixed_clean",
     python_srcs = ["clean.py"],
@@ -50,9 +43,6 @@ filegroup(
     srcs = ["clean.rs"],
 )
 
-# Single-source fixture copies for //tools/ci:config_consistency_test
-# (issue #912). StylesPath differs per package, so the Vale style file
-# stays synced by byte-identity diff test, not by label sharing.
 exports_files(
     [
         "biome_cfg/biome.json",
@@ -103,8 +93,6 @@ aspect_fixture_tests(
     ],
 )
 
-# Hinted Vale policy for the real-pipeline fixture (strict,
-# Dx.Markers enforced, same style as the workspace corpus.
 vale_config(
     name = "vale_cfg",
     src = "vale_test.ini",
@@ -121,22 +109,11 @@ ruff_config(
     src = "ruff.toml",
 )
 
-# Hinted Biome policy for the real-pipeline fixture (strict, same
-# selection as the workspace `biome.json`): `recommended`
-# plus `style/useTemplate` as error with tab formatting, so the hinted
-# run proves the config closure reaches the tool as --config-path
-# instead of the materialized defaults directory. The config lives in
-# its own subdirectory because Biome rejects a --config-path directory
-# that also contains linted sources.
 biome_config(
     name = "biome_cfg",
     src = "biome_cfg/biome.json",
 )
 
-# ESLint flat config for the JavaScript lint opt-in. Minimal
-# `no-unused-vars` error proves the `-c` closure reaches the js_binary
-# wrapper; the config lives in its own subdirectory so the flat-config
-# base path contains the mirrored sources without shadowing them.
 eslint_config(
     name = "eslint_cfg",
     src = "eslint_cfg/eslint.config.js",
@@ -184,13 +161,6 @@ real_source_target(
     tags = ["no-format"],
 )
 
-# Python fixtures: a clean module passing ruff lint/format,
-# pydoclint, and ty; a dirty module with one deterministic finding per
-# tool (F401, unformatted line, DOC101/DOC103, invalid-argument-type);
-# and a hinted clean module proving the ruff_config closure reaches the
-# tool. Lint/format subjects live in the lint/format presence suite;
-# typecheck subjects (plus the `no-typecheck` opt-out) live in the
-# typecheck suite below.
 real_source_target(
     name = "fixture_real_python",
     python_srcs = ["real_clean.py"],
@@ -213,11 +183,6 @@ real_aspect_subject(
     target = ":fixture_real_rust",
 )
 
-# Generated-shape binding: the default `<tool>_config` name with
-# a direct aspect_hint, exactly as Gazelle emits it. Proves the generated
-# single-tool binding analyzes and binds through the real aspects.
-# (Clippy bindings are gone: Rust lint is upstream-delegated
-# and takes no dx-side config.)
 real_source_target(
     name = "fixture_real_rust_generated_shape",
     aspect_hints = [
@@ -289,11 +254,6 @@ real_aspect_subject(
     target = ":fixture_real_python_hinted",
 )
 
-# JavaScript fixtures: a clean module passing biome
-# lint/format, a dirty module with one deterministic finding per
-# capability (noUnusedVariables lint warning, format diff), and a hinted
-# clean module proving the biome_config closure reaches the tool.
-# Lint/format subjects live in the lint/format presence suite below.
 real_source_target(
     name = "fixture_real_javascript",
     javascript_srcs = ["real_clean.js"],
@@ -315,12 +275,6 @@ real_aspect_subject(
     target = ":fixture_real_javascript_hinted",
 )
 
-# JSON fixtures: a clean document passing biome lint and
-# prettier format, and a compact document with one deterministic prettier
-# format finding (biome lint stays clean). Proves the Prettier js_binary
-# wrapper launch end to end: the json family selects prettier for format
-# by default, so these subjects exercise the `$0.runfiles` +
-# `JS_BINARY__NO_CD_BINDIR=1` path through the real backend.
 real_source_target(
     name = "fixture_real_json",
     json_srcs = ["real_clean.json"],
@@ -331,11 +285,6 @@ real_aspect_subject(
     target = ":fixture_real_json",
 )
 
-# TypeScript/JSX/TSX fixtures: clean modules proving each
-# remaining Biome class, plus a dirty TypeScript module with one
-# deterministic finding per capability (noUnusedVariables lint warning,
-# format diff), mirroring the JavaScript pair. Proves the exact source
-# subsets for the typescript family (typescript/tsx) and the jsx class.
 real_source_target(
     name = "fixture_real_typescript",
     typescript_srcs = ["real_clean.ts"],
@@ -366,14 +315,6 @@ real_aspect_subject(
     target = ":fixture_real_tsx",
 )
 
-# JVM fixtures: clean modules passing the curated format plus lint
-# defaults, plus a hinted Checkstyle closure proving the native-config
-# `-c` reaches the tool. The unhinted java source stays a manual
-# negative (Checkstyle has no usable upstream default, so the subject
-# must fail analysis like fixture_real_markdown_no_config); the green
-# presence suite carries only the hinted java subject plus kotlin.
-# SpotBugs stays target-coupled (no provider-less fixture stage) so no
-# SpotBugs subject appears here.
 real_source_target(
     name = "fixture_real_java",
     java_srcs = ["real_clean.java"],
@@ -417,30 +358,18 @@ real_aspect_subject(
     target = ":plain",
 )
 
-# Manual negative demo: java without a checkstyle_config hint must
-# fail analysis with the actionable config-required error. The red
-# source + subject stay manual (wildcard builds skip them); the
-# expect-failure test below is green and proves the diagnostic.
 failure_test(
     name = "fixture_real_java_no_config_test",
     expected_failure_substring = "applicable Checkstyle requires declared config",
     target = ":fixture_real_java_subject",
 )
 
-# Manual negative demo: markdown without a vale_config hint must
-# fail analysis with the actionable config-required error. The red
-# source + subject stay manual (wildcard builds skip them); the
-# expect-failure test below is green and proves the diagnostic. Build
-# explicitly with --nobuild to observe the raw failure.
 real_aspect_subject(
     name = "fixture_real_markdown_no_config_subject",
     tags = ["manual"],
     target = ":fixture_real_markdown_no_config",
 )
 
-# Green hermetic proof that Vale-no-config fails analysis
-# with the actionable diagnostic. Passes by asserting the failure; the
-# subject stopping to fail fails this test.
 failure_test(
     name = "fixture_real_markdown_no_config_test",
     expected_failure_substring = "applicable Vale requires declared config",
@@ -473,9 +402,6 @@ real_aspect_fixture_tests(
     ],
 )
 
-# Typecheck fixtures: a clean lib root, a root with a
-# deterministic E0308 mismatch, a `no-typecheck` opt-out, and a
-# non-rust target proving rustc stays rust-only.
 real_source_target(
     name = "fixture_real_rust_typecheck_clean",
     rust_srcs = ["typecheck_clean.rs"],
@@ -523,13 +449,8 @@ real_typecheck_fixture_tests(
     ],
 )
 
-# Layer-2 full-matrix runner tests: real runner over provider-less
-# data; goldens live in runner_matrix_cases.bzl.
 runner_matrix_cases(name = "runner_matrix")
 
-# Fake format doubles for the Scala/.NET cohort matrix cells (issue #797,
-# seed-only wiring proof without a JVM/.NET toolchain; real-tool behavior
-# stays proven by the per-tool fixtures).
 sh_binary(
     name = "fake_scalafmt",
     srcs = ["fake_scalafmt.sh"],
@@ -548,9 +469,6 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Fake format doubles for the native cohort matrix cells (issue #798,
-# seed-only wiring proof without an LLVM/Go toolchain; real-tool behavior
-# stays proven by the per-tool fixtures).
 sh_binary(
     name = "fake_clang_format",
     srcs = ["fake_clang_format.sh"],
@@ -563,9 +481,6 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Fake format doubles for the Structured cohort matrix cells (issue #799,
-# seed-only wiring proof without buf/Qt binaries; real-tool behavior stays
-# proven by the per-tool fixtures).
 sh_binary(
     name = "fake_buf_format",
     srcs = ["fake_buf_format.sh"],
@@ -578,9 +493,6 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Fake format doubles for the interpreted/file-family cohort matrix cells
-# (issue #800, seed-only wiring proof without Ruby/pwsh/standalone
-# toolchains; real-tool behavior stays proven by the per-tool fixtures).
 sh_binary(
     name = "fake_cue",
     srcs = ["fake_cue.sh"],
@@ -641,7 +553,6 @@ sh_binary(
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_starlark",
     aspect_hints = ["//:buildifier_config"],

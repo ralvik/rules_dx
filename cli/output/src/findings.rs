@@ -197,9 +197,7 @@ mod tests {
 
     #[test]
     fn diagnostic_resolution_rules() {
-        // Check mode initial omits resolution.
         diagnostic_event(&finding(), false).expect("check initial");
-        // Default mode initial requires it.
         assert_eq!(
             diagnostic_event(&finding(), true).expect_err("missing resolution"),
             OutputError::MissingResolution
@@ -340,14 +338,12 @@ mod tests {
         bad_level.level = "info".to_owned();
         let event = notice_event(&bad_level).expect("plain notice");
         assert_eq!(event["level"], Value::String("info".to_owned()));
-        // Non-import notices may carry scope and a related command.
         let mut scoped = bad_level.clone();
         scoped.related_command = Some("lint".to_owned());
         scoped.scope = Some(vec!["//src/...".to_owned()]);
         let event = notice_event(&scoped).expect("scoped notice");
         assert_eq!(event["related_command"], Value::String("lint".to_owned()));
         assert_eq!(event["scope"][0], Value::String("//src/...".to_owned()));
-        // Import notices must not carry them.
         let mut import = NoticeEvent {
             level: "warning".to_owned(),
             code: "ignored_import".to_owned(),

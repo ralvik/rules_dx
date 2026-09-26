@@ -12,7 +12,6 @@ pub struct RemoteConfig {
 }
 
 impl RemoteConfig {
-    /// Local-only selection: no remote cache, executor, or BES backend.
     pub fn local() -> Self {
         RemoteConfig {
             remote_cache: None,
@@ -21,12 +20,10 @@ impl RemoteConfig {
         }
     }
 
-    /// Reports whether the selection stays local-only.
     pub fn is_local_only(&self) -> bool {
         self.remote_cache.is_none() && self.remote_executor.is_none() && self.bes_backend.is_none()
     }
 
-    /// Fails when any remote endpoint is set (local-only gate).
     pub fn validate_local_only(&self) -> Result<(), BepError> {
         if self.is_local_only() {
             return Ok(());
@@ -41,12 +38,10 @@ impl RemoteConfig {
     }
 }
 
-/// Downloader seam for BEP-reported artifacts. The local-only impl
 pub trait Downloader {
     fn fetch_local(&self, path: &Path) -> std::io::Result<Vec<u8>>;
 }
 
-/// Local-only downloader: the single [`Downloader`] plus
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LocalDownloader;
 
@@ -119,8 +114,6 @@ mod tests {
         assert!(reader
             .read_artifact(&dir.path().join("missing.pb"))
             .is_err());
-        // No network path exists: a remote URI never reaches the reader
-        // because `file_uri_to_path` rejects it first.
         assert!(matches!(
             super::super::file_uri_to_path("bytestream://remote/cache/a.pb"),
             Err(BepError::UnsupportedUri { .. })

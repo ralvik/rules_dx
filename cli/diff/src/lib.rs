@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -86,12 +84,6 @@ fn render_file(out: &mut String, file: &FilePatch<'_>) -> Result<(), DiffError> 
     out.push_str("+++ b/");
     out.push_str(file.path);
     out.push('\n');
-    // Hunk grouping and line bodies delegate to `similar::TextDiff`
-    // (Myers, `CONTEXT` lines of context). Headers stay canonical `dx`
-    // form with always-explicit `start,length` counts; `similar`'s GNU
-    // `UnifiedHunkHeader` omits `,1`, so it is not used. `diff_lines`
-    // preserves trailing newlines in tokens, so a newline-only change
-    // surfaces natively as `Del`+`Ins` with `missing_newline` set.
     let diff = similar::TextDiff::configure()
         .algorithm(similar::Algorithm::Myers)
         .diff_lines(file.original, file.candidate);
@@ -191,8 +183,6 @@ mod tests {
 
     #[test]
     fn canonical_headers_always_carry_counts() {
-        // `similar`'s GNU header would render `@@ -1 +1 @@`; `dx` keeps
-        // the canonical explicit `start,length` form.
         let got = render_patch(&[modify("a.txt", "a\n", "b\n")]).expect("patch");
         assert_eq!(got, "--- a/a.txt\n+++ b/a.txt\n@@ -1,1 +1,1 @@\n-a\n+b\n");
     }

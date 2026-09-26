@@ -7,11 +7,6 @@ load(":roots.bzl", "repository_roots_file", "roots_aggregate")
 
 package(default_visibility = VIS_CLI)
 
-# Leaf-crate pattern via `dx_rust_crate`: emits
-# `dx_roots` + `dx_roots_test` + fmt/clippy tests + `Cargo.toml` export,
-# identical to the hand-written stanzas. Corpus splits (`corpus_starlark`
-# owning `BUILD.bazel` + `roots.bzl`, `corpus_toml` owning `Cargo.toml`)
-# are owned by `dx generate`.
 dx_rust_crate(
     name = "dx_roots",
     package_name = "cli/dx_roots",
@@ -20,10 +15,6 @@ dx_rust_crate(
 
 exports_files(["roots.bzl"])
 
-# Query/aggregate wiring fixtures: the pattern file
-# proves the `repository_roots_file` rule writes one label per line for
-# `--target_pattern_file`, while the monolithic aggregate reserves the
-# one-aggregate identity over the canonical repository-wide selections.
 repository_roots_file(
     name = "roots_pattern_fixture",
     out = "roots_pattern_fixture.txt",

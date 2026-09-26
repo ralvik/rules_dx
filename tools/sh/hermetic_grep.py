@@ -17,17 +17,14 @@ import sys
 
 SKIP_DIRS = ("bazel-*", ".git")
 
-
 def _read_lines(path):
     with open(path, "r", encoding="utf-8", errors="replace") as handle:
         return handle.read().splitlines()
-
 
 def _compile(patterns, fixed):
     if fixed:
         return [(p, None) for p in patterns]
     return [(p, re.compile(p)) for p in patterns]
-
 
 def _line_matches(line, compiled, fixed):
     for literal, rx in compiled:
@@ -37,7 +34,6 @@ def _line_matches(line, compiled, fixed):
         elif rx.search(line):
             return True
     return False
-
 
 def _all_present(lines, patterns, fixed):
     compiled = _compile(patterns, fixed)
@@ -55,7 +51,6 @@ def _all_present(lines, patterns, fixed):
             return False
     return True
 
-
 def cmd_contains(args):
     try:
         lines = _read_lines(args.file)
@@ -64,7 +59,6 @@ def cmd_contains(args):
         return 2
     ok = _all_present(lines, args.pattern, args.fixed)
     return 0 if ok else 1
-
 
 def cmd_absent(args):
     try:
@@ -78,19 +72,16 @@ def cmd_absent(args):
             return 1
     return 0
 
-
 def _skip_dir(name, extra):
     for pat in SKIP_DIRS:
         if fnmatch.fnmatch(name, pat):
             return True
     return name in extra
 
-
 def _include_ok(basename, includes):
     if not includes:
         return True
     return any(fnmatch.fnmatch(basename, pat) for pat in includes)
-
 
 def _iter_tree_files(roots, includes, excludes, exclude_dirs):
     for root in roots:
@@ -110,7 +101,6 @@ def _iter_tree_files(roots, includes, excludes, exclude_dirs):
                 if not _include_ok(name, includes):
                     continue
                 yield os.path.join(base, name)
-
 
 def _tree_scan(args):
     compiled = _compile(args.pattern, args.fixed)
@@ -142,16 +132,13 @@ def _tree_scan(args):
                 return hits
     return hits
 
-
 def cmd_tree_contains(args):
     args.mode = "contains"
     return 0 if _tree_scan(args) else 1
 
-
 def cmd_tree_absent(args):
     args.mode = "absent"
     return 0 if not _tree_scan(args) else 1
-
 
 def cmd_tree_list(args):
     args.mode = "list"
@@ -179,7 +166,6 @@ def cmd_tree_list(args):
         print(rel)
     return 0
 
-
 def cmd_tree_count(args):
     compiled = _compile(args.pattern, args.fixed)
     total = 0
@@ -199,12 +185,10 @@ def cmd_tree_count(args):
     print(total)
     return 0
 
-
 def _anchor_matches(line, anchor, anchor_fixed):
     if anchor_fixed:
         return anchor in line
     return re.search(anchor, line) is not None
-
 
 def _context_scan(args, want_present):
     try:
@@ -222,14 +206,11 @@ def _context_scan(args, want_present):
                 return 0 if want_present else 1
     return 1 if want_present else 0
 
-
 def cmd_context_contains(args):
     return _context_scan(args, True)
 
-
 def cmd_context_absent(args):
     return _context_scan(args, False)
-
 
 def cmd_extract_quoted(args):
     try:
@@ -248,7 +229,6 @@ def cmd_extract_quoted(args):
         return 0
     return 1
 
-
 def cmd_extract_re(args):
     try:
         lines = _read_lines(args.file)
@@ -262,7 +242,6 @@ def cmd_extract_re(args):
             print(found.group(0))
             return 0
     return 1
-
 
 def build_parser():
     parser = argparse.ArgumentParser(
@@ -376,14 +355,12 @@ def build_parser():
 
     return parser
 
-
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
     if args.cmd.startswith("tree-") and not getattr(args, "roots", []):
         args.roots = ["."]
     return args.func(args)
-
 
 if __name__ == "__main__":
     sys.exit(main())

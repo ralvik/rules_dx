@@ -1,6 +1,5 @@
 """Experimental minimal Rust wrappers (ADR 0013).
 
-Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
 
 load("@crates//:crates.bzl", _aliases = "aliases", _crate_deps = "crate_deps")
@@ -9,13 +8,8 @@ load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_clippy_te
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST")
 
-# RUST_EDITION is the single source of truth, defined in
-# `:edition.bzl` so consumer aspects stay crate-free.
 load(":edition.bzl", "RUST_EDITION")
 
-# Advertised providers: Bazel matches aspects on `provides`, not returned
-# providers, so forwarders must advertise or lint aspects skip vacuously.
-# See `libs/starlark/wrapper.bzl`.
 _DX_FORWARD_PROVIDES = [
     _rust_common.crate_info,
     _rust_common.dep_info,
@@ -43,8 +37,6 @@ _rust_forward = dx_library_forward_rule(
     upstream_doc = "The private upstream rust_* target whose providers are preserved.",
 )
 
-# Cc-linking shapes use `TestCrateInfo` (no `CrateInfo` upstream) plus `CcInfo`.
-# See `libs/starlark/wrapper.bzl`.
 _DX_CC_FORWARD_PROVIDES = [
     _rust_common.test_crate_info,
     _rust_common.dep_info,

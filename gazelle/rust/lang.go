@@ -532,7 +532,6 @@ func filterDxCrateCovered(file *rule.File, result language.GenerateResult) langu
 
 // CollectUsedIgnores reports used dx_ignore_import entries visible in c
 // as (path, value) pairs for the composed `//dx:generate` witness.
-// See: docs/cli/commands/generate.md.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

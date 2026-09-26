@@ -40,14 +40,8 @@ pub fn render_fragment() -> String {
         "# Regenerate: `bazel run //tools/bazelrc:preset_update`.".to_owned(),
     ];
     lines.extend(UPSTREAM_FLAGS.iter().map(|flag| (*flag).to_owned()));
-    lines.push("# Owned extra_presets group: coverage.".to_owned());
     lines.extend(COVERAGE_FLAGS.iter().map(|flag| (*flag).to_owned()));
-    lines.push("# Owned build profiles.".to_owned());
     lines.extend(BUILD_PROFILES.iter().map(|flag| (*flag).to_owned()));
-    lines.push(
-        "# Owned Windows execution (runfiles tree; Windows is manifest-only by default)."
-            .to_owned(),
-    );
     lines.extend(WINDOWS_FLAGS.iter().map(|flag| (*flag).to_owned()));
     let mut out = lines.join("\n");
     out.push('\n');
@@ -174,7 +168,6 @@ fn collision_error(collisions: &[String]) -> PresetError {
     }
 }
 
-/// Checks preset freshness without mutating (for `--verify-only`).
 pub fn check_preset(workspace: &Path) -> Result<(), PresetError> {
     let source = source_dir(workspace);
     if !source.is_dir() {
@@ -213,7 +206,6 @@ pub fn check_preset(workspace: &Path) -> Result<(), PresetError> {
     }
 }
 
-/// Regenerates the preset fragment (for `preset.update` without flags).
 pub fn update_preset(workspace: &Path) -> Result<(), PresetError> {
     let source = source_dir(workspace);
     if !source.is_dir() {
@@ -258,7 +250,7 @@ mod tests {
     #[test]
     fn fragment_bytes_match_retired_python() {
         let rendered = render_fragment();
-        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncommon --enable_platform_specific_config\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --enable_runfiles\ncoverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles.\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n# Owned Windows execution (runfiles tree; Windows is manifest-only by default).\nbuild:windows --enable_runfiles\n";
+        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\ncommon --enable_platform_specific_config\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --enable_runfiles\ncoverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\nbuild:windows --enable_runfiles\n";
         assert_eq!(rendered, expected);
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));

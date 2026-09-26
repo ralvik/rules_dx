@@ -1,6 +1,5 @@
 """Thin per-language doc adapters into the versioned IR.
 
-Contract: `docs/documentation/doc-ir.md`.
 """
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")

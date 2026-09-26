@@ -41,7 +41,6 @@ fn taplo_blocks(stderr: &str) -> Result<Vec<TaploBlock>, ParseError> {
             continue;
         }
         if let Some(index) = open {
-            // A missing caret detail is a grammar mismatch, never silent.
             let caret = line.rsplit('^').next().ok_or_else(|| ParseError::Shape {
                 tool: TOOL,
                 detail: "caret detail vanished mid-line".to_owned(),
@@ -155,8 +154,6 @@ pub fn parse_taplo_format_check(
             });
         }
     }
-    // `parse_taplo_lint` runs with a forced clean code so its own
-    // exit-code check cannot fire here; enforce this mode's contract.
     if findings.is_empty() && code != Some(0) {
         return Err(ParseError::Shape {
             tool: TOOL,
@@ -190,7 +187,6 @@ mod tests {
                 .expect("parsed")
                 .is_empty()
         );
-        // Fail-closed: nonzero exit with no blocks is a grammar mismatch.
         assert!(parse_taplo_lint(b" INFO collect\n", Some(1), &["/s/clean.toml"]).is_err());
     }
 
@@ -201,7 +197,6 @@ mod tests {
         assert_eq!(findings.len(), 1);
         assert_eq!(findings[0].finding.message, "file is not formatted");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
-        // Syntax blocks parse in format mode too.
         let mixed = [TAPLO_DIRTY_STDERR.as_bytes(), &stderr[..]].concat();
         let findings = parse_taplo_format_check(&mixed, Some(1), &["/s/dirty.toml", "/s/fmt.toml"])
             .expect("parsed");
@@ -225,7 +220,6 @@ mod tests {
         .is_err());
         assert!(parse_taplo_lint(b"\xff", Some(1), &["/s/x.toml"]).is_err());
         assert!(parse_taplo_format_check(b"\xff", Some(1), &["/s/x.toml"]).is_err());
-        // A format path without a quoted value names no file.
         assert!(parse_taplo_format_check(
             b"ERROR taplo:format_files: the file is not properly formatted\n",
             Some(1),

@@ -19,9 +19,6 @@ load(":wrapper_owners.bzl", "wrapper_unit_tests")
 
 package(default_visibility = ["//visibility:public"])
 
-# Public root: contracts and fixtures referenced repo-wide. Contract:
-# tools/visibility/visibility.bzl.
-
 exports_files([
     "adapters.bzl",
     "applicability.bzl",
@@ -39,17 +36,11 @@ exports_files([
     "sources.bzl",
 ])
 
-# Single-source Vale corpus inputs for //tools/ci:config_consistency_test
-# (issue #912): the fixture copy in //quality/testdata must stay
-# byte-identical (StylesPath differs per package, so the style file itself
-# is synced by diff test, not by label sharing).
 exports_files([
     "corpus_vale.ini",
     "corpus_styles/Dx/Markers.yml",
 ])
 
-# Frozen result schema (WP1): field and enum numbers are the
-# compatibility surface; see `result.proto` and the protocol doc.
 proto_library(
     name = "result_proto",
     srcs = ["result.proto"],
@@ -60,9 +51,6 @@ rust_prost_library(
     proto = ":result_proto",
 )
 
-# Synthetic fixture policy: proves multi-family aggregation and
-# one adapter selected by two families. Tool IDs are synthetic; the real
-# family taxonomy and curated defaults belong to the tool baseline.
 quality_family(
     name = "rust_family",
     family_id = "rust",
@@ -87,17 +75,6 @@ workspace_policy(
     ],
 )
 
-# Real fixture policy: selects the initial-adapter tool IDs for
-# the source classes. Like the synthetic fixture policy, this is a
-# fixture, not curated defaults: the family taxonomy is frozen in
-# quality/adapters.bzl and curated defaults in quality/curated_defaults.bzl.
-# family_id overlap with the synthetic policy above is intentional
-# (issue #915): each workspace_policy resolves its own families, so the
-# synthetic rust/python families never merge with the real ones; the
-# shared ids prove multi-policy aggregation, not a collision.
-# This policy is also the canonical
-# workspace policy — every repository corpus target is checked under it
-# (fixtures keep it too), so dogfood findings reproduce under one policy.
 quality_family(
     name = "real_rust_family",
     family_id = "rust",
@@ -129,10 +106,6 @@ quality_family(
     ],
 )
 
-# Real fixture Python family: curated defaults per the tool
-# baseline (Ruff lint+format, pydoclint lint, Ty typecheck). Flake8 and
-# pylint remain baseline opt-ins owned by WP3. Like the other real
-# families, this is a fixture, not the frozen taxonomy.
 quality_family(
     name = "real_python_family",
     family_id = "python",
@@ -144,14 +117,6 @@ quality_family(
     typecheck = ["ty"],
 )
 
-# Real fixture JavaScript/TypeScript/JSON families: curated
-# defaults per the tool baseline (Biome default linter and formatter for
-# JavaScript and TypeScript, Biome default linter for JSON, Prettier
-# default JSON formatter, tsc typecheck for TypeScript). ESLint stays a
-# lint opt-in for the javascript family and Prettier a format alternative
-# for the javascript and typescript families; both remain selectable but
-# absent below. Like the other real families, this is a fixture, not the
-# frozen taxonomy.
 quality_family(
     name = "real_javascript_family",
     family_id = "javascript",
@@ -174,12 +139,6 @@ quality_family(
     typecheck = ["tsc"],
 )
 
-# Real fixture JVM families: curated defaults per the tool baseline
-# (google-java-format format plus Checkstyle/PMD lint for Java, ktfmt
-# format plus ktlint lint for Kotlin). SpotBugs stays target-coupled
-# (needs JavaInfo, dropped for provider-less fixtures) but remains
-# selectable in the lint list so authoritative java_library targets
-# keep their stage.
 quality_family(
     name = "real_java_family",
     family_id = "java",
@@ -258,22 +217,12 @@ test_suite(
     ],
 )
 
-# Corpus Vale configuration: every Markdown corpus target binds
-# this hint. The style stays narrow (`Dx.Markers` only;
-# wont-fix, pinned by `corpus_vale.ini` plus `corpus_styles/Dx/Markers.yml`):
-# prose rules are out of scope, native-config owns policy with no hidden preset.
-# Strict: the ini carries `[*] BasedOnStyles = Dx` so markers
-# enforce (without it Vale reports {}).
 vale_config(
     name = "corpus_vale_config",
     src = "corpus_vale.ini",
     data = ["corpus_styles/Dx/Markers.yml"],
 )
 
-# Corpus Checkstyle configuration: every applicable Java corpus target
-# binds this hint (Checkstyle has no usable upstream default, so stages
-# fail without it). Narrow unused-imports policy mirrors the Layer-2
-# matrix fixture.
 checkstyle_config(
     name = "corpus_checkstyle_config",
     src = "corpus_checkstyle.xml",

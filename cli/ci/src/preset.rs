@@ -19,12 +19,10 @@ pub fn validate_preset_label(label: &str) -> Result<String, PresetLabelError> {
     Ok(label.to_owned())
 }
 
-/// Stability discipline (` WP6`): preset-affecting changes ship only in
 pub fn preset_affecting_requires_minor_or_major(preset_affecting: bool) -> bool {
     preset_affecting
 }
 
-/// Whether a release level may carry the change: patch releases accept only
 pub fn preset_change_allowed_in_patch(preset_affecting: bool) -> bool {
     !preset_affecting
 }
@@ -41,7 +39,6 @@ pub fn preset_bot_auto_merge_allowed() -> bool {
     false
 }
 
-/// Regen without a reviewed flag diff is not an update.
 pub fn preset_regen_requires_review() -> bool {
     true
 }

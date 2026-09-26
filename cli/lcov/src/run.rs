@@ -5,12 +5,6 @@ fn print_usage(print: &mut dyn FnMut(&str)) {
     print("usage: check --report <combined.lcov> --inventory <inventory.txt> --sources <sources.txt> [--root <dir>]");
 }
 
-/// `argv` tokenizer (reuse pinned `clap`, qualified under
-/// frozen legacy contract). Every value option consumes the
-/// next token unconditionally (even a `--`-led token) via
-/// `allow_hyphen_values`, matching the legacy hand loop; repeats are
-/// last-wins via `overrides_with`. A dangling value (including `--root`
-/// with no value, previously silently ignored) is a usage error (exit 2).
 #[derive(Parser, Debug)]
 #[command(disable_help_flag = true, disable_version_flag = true)]
 struct Cli {
@@ -22,7 +16,6 @@ struct Cli {
     sources: Option<String>,
     #[arg(long, allow_hyphen_values = true, overrides_with = "root")]
     root: Option<String>,
-    /// Legacy `--help`/`-h` arm: prints the usage line (exit 2).
     #[arg(long = "help", short = 'h', action = clap::ArgAction::SetTrue)]
     help: bool,
 }
@@ -34,19 +27,15 @@ fn invalid_token(error: &clap::Error) -> String {
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
-        // `clap` strips an attached `=value` from the reported token; the
-        // legacy loop echoed the whole `argv` element, so recover it.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown argument: {echoed}")
         }
         ErrorKind::InvalidValue => {
-            // `clap` renders the pending option as `--flag <VALUE>`; the
-            // legacy message names the bare `--flag`.
             let flag = dx_output::leading_flag(&token);
             format!("missing value for {flag}")
         }
-        _ => dx_output::first_line(&error), // LCOV_EXCL_LINE - reason: first line keeps CLI error stable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        _ => dx_output::first_line(&error), // LCOV_EXCL_LINE - reason: first line keeps CLI error stable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     }
 }
 

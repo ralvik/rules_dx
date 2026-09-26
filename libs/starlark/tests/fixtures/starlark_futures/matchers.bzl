@@ -1,9 +1,4 @@
-"""Concrete richer-matchers use case.
-
-Contract: `docs/testing/starlark.md#authoring`, `docs/decisions/0009-starlark-testing.md`.
-Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
-`bazel run //tools/ci:starlark_futures_qualification`.
-"""
+"""Concrete richer-matchers use case."""
 
 def greet_report(name):
     return "Hello, " + name + "!"

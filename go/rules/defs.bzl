@@ -1,6 +1,5 @@
 """Experimental minimal Go wrappers (ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 Upstream: rules_go 0.63.0 plus Go SDK 1.26.6 (MODULE.bazel).
 """
 
@@ -16,14 +15,11 @@ _DX_GO_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream `GoArchive`,
 _DX_GO_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-# Go owns `.go` only. `go_module` (`go.mod`/`go.sum`) stays fixture-owned
-# no manifest `srcs`, so `modfmt` runs via matrix fixtures, never these wrappers.
 _DX_GO_SOURCE_SPECS = [("go", "go")]
 _DX_GO_SOURCE_EXTS = [".go"]
 
@@ -72,8 +68,8 @@ _go_forward_test = dx_executable_forward_rule(
 def go_effective_srcs(srcs):
     """Returns the effective direct sources for a go binary or test shape.
 
-    None becomes empty (thin entry shape owns no direct sources).
-    See: docs/quality/quality-sources.md."""
+    None becomes empty.
+    """
     return srcs if srcs != None else []
 
 def _go_wrap_library(name, srcs, visibility = None, **kwargs):

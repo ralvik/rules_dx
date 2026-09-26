@@ -1,12 +1,6 @@
-//! Human-run release driver for `rules_dx`.
-//!
-//! Owning contract: `docs/deploy/release-runbook.md` (human-run path).
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 use std::process::Command;
 
 fn git(args: &[&str]) -> Option<String> {
@@ -47,4 +41,4 @@ fn run(argv: &[String]) -> i32 {
 fn main() {
     std::process::exit(run(&std::env::args().collect::<Vec<_>>()));
 }
-// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md

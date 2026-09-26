@@ -1,7 +1,3 @@
-//! Validation and codec helpers for the Generation Result Protocol.
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use proto::{
@@ -90,9 +86,6 @@ pub fn digest(bytes: &[u8]) -> [u8; DIGEST_LEN] {
 }
 
 fn check_path(at: &str, path: &str) -> Result<(), Error> {
-    // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
-    // Dot/DotDot share the historical "dot component" message, so adoption
-    // stays behavior-preserving; pinned tests below prove the mapping.
     let reason = match dx_path::classify(path) {
         None => None,
         Some(dx_path::PathProblem::Empty) => Some("path must be non-empty"),
@@ -127,8 +120,6 @@ fn validate_scopes(scopes: &[Scope]) -> Result<(), Error> {
     if scopes.is_empty() {
         return Err(Error::EmptyScopes);
     }
-    // Shared uniqueness control flow lives in `dx_proto_validate`; only the
-    // crate-local `Error` payload stays here (proto-validate slice).
     let mut seen = std::collections::BTreeSet::new();
     for (index, scope) in scopes.iter().enumerate() {
         if scope.value.is_empty() {
@@ -174,7 +165,7 @@ fn apply_modification(path: &str, modification: &Modification) -> Result<Vec<u8>
                 index,
             });
         }
-        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         let Ok(start) = usize::try_from(edit.start_byte) else {
             return Err(Error::EditOutOfBounds {
                 path: path.to_owned(),
@@ -187,7 +178,7 @@ fn apply_modification(path: &str, modification: &Modification) -> Result<Vec<u8>
                 index,
             });
         };
-        // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         if end > original.len() {
             return Err(Error::EditOutOfBounds {
                 path: path.to_owned(),
@@ -248,7 +239,6 @@ fn apply_modification(path: &str, modification: &Modification) -> Result<Vec<u8>
     Ok(candidate)
 }
 
-/// Reconstructs the exact candidate after validating the file-local change.
 pub fn candidate(file: &FileResult) -> Result<Vec<u8>, Error> {
     match &file.change {
         Some(file_result::Change::CreateContent(content)) => {
@@ -319,8 +309,6 @@ fn validate_ignored(ignored: &[IgnoredImport], scope_count: usize) -> Result<(),
             item.language.as_str(),
             item.import.as_str(),
         );
-        // Shared sorted-unique control flow lives in `dx_proto_validate`;
-        // only the crate-local `Error` payloads stay here (slice).
         match dx_proto_validate::check_sorted_next(previous.as_ref(), &key) {
             Ok(()) => {}
             Err(dx_proto_validate::OrderViolation::Duplicate) => {
@@ -540,9 +528,6 @@ mod tests {
 
     #[test]
     fn path_messages_are_pinned_to_dx_path_ladder() {
-        // Thin wrapper over `dx_path::classify`: exact messages plus ladder
-        // order (first problem wins) are pinned so drift fails here.
-        // Dot/DotDot intentionally share one message (historical compat).
         for (path, reason) in [
             ("", "path must be non-empty"),
             ("/BUILD", "path must be workspace-relative"),
@@ -556,10 +541,6 @@ mod tests {
         ] {
             let mut manifest = sample(Mode::Check);
             manifest.files[0].path = path.into();
-            // `pkg/BUILD.bazel` shape is bypassed by testing the ignored
-            // path instead for non-BUILD basenames; here paths already end
-            // in BUILD so `BadPath` fires before `BadBuildBasename`.
-            // For `.`/`..` etc. the path check still fires first.
             assert_eq!(
                 validate(&manifest),
                 Err(Error::BadPath {
@@ -570,9 +551,6 @@ mod tests {
                 "path: {path:?}"
             );
         }
-        // Ladder order: absolute beats empty-component, dot beats dot-dot
-        // (both map to the shared dot message, but the winning rung is
-        // still order-determined).
         let mut manifest = sample(Mode::Check);
         manifest.files[0].path = "/a//BUILD".into();
         assert_eq!(

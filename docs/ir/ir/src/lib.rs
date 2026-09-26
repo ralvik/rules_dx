@@ -1,9 +1,3 @@
-//! Validation and codec helpers for the Documentation IR.
-//!
-//! Contract: `docs/documentation/README.md`.
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub use doc_ir_proto::dx::documentation::v1 as proto;
@@ -30,11 +24,6 @@ pub enum Error {
     DuplicateExtension { id: String, key: String },
 }
 
-/// Validate one shard: schema version, identity segments, strictly
-/// increasing symbol IDs, symbol-ID uniqueness, workspace-relative source
-/// paths, and strictly increasing extension keys (symbol and extension
-/// order both keep same-producer rebuilds byte-identical).
-/// Any failure fails the action — partial shards are never emitted.
 pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
     dx_schema::check_major(shard.schema_major)
         .map_err(|found| Error::UnsupportedMajor { found })?;
@@ -47,10 +36,6 @@ pub fn validate_shard(shard: &DocIr) -> Result<(), Error> {
     let mut previous_id: Option<&String> = None;
     for (index, symbol) in shard.symbols.iter().enumerate() {
         validate_symbol(symbol, index)?;
-        // Shared sorted-unique control flow lives in `dx_proto_validate`;
-        // only the crate-local `Error` payloads stay here (slice).
-        // Equal IDs report Duplicate; smaller IDs report Unsorted, matching
-        // the previous explicit order-then-duplicate checks.
         match check_sorted_next(previous_id, &symbol.id) {
             Ok(()) => {}
             Err(OrderViolation::Duplicate) => {
@@ -74,10 +59,6 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
         return Err(Error::EmptySymbolId { index });
     }
     if let Some(source) = symbol.source.as_ref() {
-        // Uses `classify` for ladder order; only Absolute is
-        // rejected to preserve current behavior (empty means no source and
-        // stays valid; backslash/empty-component/dot segments remain allowed
-        // until a future tightening) (slice 7).
         let is_absolute = matches!(classify(&source.file), Some(PathProblem::Absolute));
         if is_absolute {
             return Err(Error::AbsoluteSourcePath {
@@ -88,8 +69,6 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
     }
     let mut previous: Option<&String> = None;
     for extension in symbol.extensions.iter() {
-        // Shared sorted-unique control flow lives in `dx_proto_validate`;
-        // only the crate-local `Error` payloads stay here (slice).
         match check_sorted_next(previous, &extension.key) {
             Ok(()) => {}
             Err(OrderViolation::Duplicate) => {
@@ -109,14 +88,10 @@ fn validate_symbol(symbol: &Symbol, index: usize) -> Result<(), Error> {
     Ok(())
 }
 
-/// Encode a validated shard. Validation failures fail encoding: no partial
-/// shard bytes are ever produced.
 pub fn encode_shard(shard: &DocIr) -> Result<Vec<u8>, Error> {
     encode_with_validation(shard, validate_shard)
 }
 
-/// Decode and validate shard bytes. Decode and encode reject the same
-/// invalid shards: both run [`validate_shard`].
 pub fn decode_shard(bytes: &[u8]) -> Result<DocIr, Error> {
     decode_with_validation(bytes, validate_shard, Error::Decode)
 }
@@ -167,7 +142,6 @@ mod tests {
         let shard = example_shard();
         let bytes = encode_shard(&shard).unwrap();
         assert_eq!(decode_shard(&bytes).unwrap(), shard);
-        // Same producer plus same inputs rebuild byte-identical.
         assert_eq!(encode_shard(&shard).unwrap(), bytes);
     }
 
@@ -217,8 +191,6 @@ mod tests {
             })
         );
 
-        // A structurally valid encoding of an invalid shard is still
-        // rejected on decode: bypass validation via raw prost encode.
         let raw = bad_id.encode_to_vec();
         assert_eq!(decode_shard(&raw), Err(Error::EmptySymbolId { index: 0 }));
         assert!(matches!(decode_shard(&[0xff; 5]), Err(Error::Decode(_))));
@@ -279,7 +251,6 @@ mod tests {
             line: 84,
         });
 
-        // Decreasing IDs fail on encode with the offending ID.
         let mut reversed = example_shard();
         reversed.symbols = vec![second.clone(), reversed.symbols.remove(0)];
         assert_eq!(
@@ -289,15 +260,12 @@ mod tests {
             })
         );
 
-        // Increasing IDs encode, decode, and rebuild byte-identical.
         let mut ordered = example_shard();
         ordered.symbols.push(second);
         let bytes = encode_shard(&ordered).unwrap();
         assert_eq!(decode_shard(&bytes).unwrap(), ordered);
         assert_eq!(encode_shard(&ordered).unwrap(), bytes);
 
-        // Rejection parity: raw prost bytes bypassing validation still
-        // fail on decode.
         let raw = reversed.encode_to_vec();
         assert_eq!(
             decode_shard(&raw),

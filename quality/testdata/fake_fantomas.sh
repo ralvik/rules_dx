@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Fake Fantomas for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics `fantomas check --json` (exit 0 all unchanged, exit 99 with
-# `needs-formatting` files) plus bare in-place format (rewrite, exit 0)
-# over the BADFMT marker. Paths are workspace-relative (relative to the
-# scratch root working directory), like the real tool. Real-tool behavior
-# stays proven by `fsharp/tests/fixtures/fantomas/`; this fake proves
-# dispatch plus parser plus fix flow without .NET.
 set -euo pipefail
 is_check=0
 files=()

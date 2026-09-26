@@ -112,7 +112,6 @@ mod tests {
         let selection =
             plan_selection(&[], &strings(&["linux_x86_64", "macos_arm64"])).expect("plans");
         let schedule = plan_schedule(&selection, SchedulingMode::Parallel);
-        // 9 checks x 2 platforms = 18 cells, all per-platform.
         assert_eq!(schedule.cells.len(), 18);
         assert!(schedule
             .cells
@@ -206,8 +205,6 @@ mod tests {
         assert!(aggregate_outcome(&[Success, Success]));
         assert!(!aggregate_outcome(&[Success, Failure]));
         assert!(!aggregate_outcome(&[Failure]));
-        // Completed results are preserved inputs to aggregation: a lone
-        // failure still reports the sibling success alongside it.
         let outcomes = [Success, Failure, Success];
         assert!(!aggregate_outcome(&outcomes));
         assert_eq!(outcomes.len(), 3);

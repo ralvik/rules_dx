@@ -2,225 +2,6 @@
 
 load("@rules_dx//quality:native_config.bzl", "biome_config", "buildifier_config", "ruff_config", "rustfmt_config", "vale_config")
 
-# Gazelle Rust resolve map (repo-wide directives).
-# gazelle:resolve rust dx_adopt //cli/adopt:dx_adopt
-# gazelle:resolve rust dx_apply //cli/apply:dx_apply
-# gazelle:resolve rust dx_atomic_fs //cli/atomic_fs:dx_atomic_fs
-# gazelle:resolve rust dx_audit //cli/audit:dx_audit
-# gazelle:resolve rust dx_bep //cli/bep:dx_bep
-# gazelle:resolve rust dx_bump //cli/bump:dx_bump
-# gazelle:resolve rust dx_clean //cli/clean:dx_clean
-# gazelle:resolve rust dx_codegen //cli/codegen:dx_codegen
-# gazelle:resolve rust dx_diff //cli/diff:dx_diff
-# gazelle:resolve rust dx_digest //cli/digest:dx_digest
-# gazelle:resolve rust dx_env_plan //cli/env_plan:dx_env_plan
-# gazelle:resolve rust dx_fingerprint //cli/fingerprint:dx_fingerprint
-# gazelle:resolve rust dx_lcov //cli/lcov:dx_lcov
-# gazelle:resolve rust dx_output //cli/output:dx_output
-# gazelle:resolve rust dx_path //cli/path:dx_path
-# gazelle:resolve rust dx_process //cli/process:dx_process
-# gazelle:resolve rust dx_proto_validate //cli/proto_validate:dx_proto_validate
-# gazelle:resolve rust dx_roots //cli/roots:dx_roots
-# gazelle:resolve rust dx_schema //cli/schema:dx_schema
-# gazelle:resolve rust dx_setup //cli/setup:dx_setup
-# gazelle:resolve rust dx_test_scratch //cli/test_scratch:dx_test_scratch
-# gazelle:resolve rust dx_update //cli/update:dx_update
-# gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
-# gazelle:resolve rust documentation_ir //docs/ir/ir:documentation_ir
-# gazelle:resolve rust generation_result //generation/result:generation_result
-# gazelle:resolve rust marker_proto //env:marker_proto_rs
-# gazelle:resolve rust proto //quality:result_proto_rs
-# gazelle:resolve rust result_proto //quality:result_proto_rs
-# gazelle:resolve rust prost @rules_rust_prost//private/3rdparty/crates:prost
-# gazelle:resolve rust quality_adapter //quality/adapter:quality_adapter
-# gazelle:resolve rust quality_result //quality/result:quality_result
-# gazelle:exclude gazelle/rust/testdata
-# Quality/testdata is hand-maintained (generated-shape rustfmt_config
-# plus fixture subjects prove hint bindings analyze). Repo-wide generation
-# demands one config per tool so aspect_hints stays unambiguous; the fixture
-# package is excluded like the Gazelle golden tree above.
-# gazelle:exclude quality/testdata
-# tools/coverage is hand-maintained: the source-only gate CLI links the
-# promoted `//cli/lcov:dx_lcov` library with no manifest of its own, so the
-# package opts out like the fixtures above.
-# gazelle:exclude tools/coverage
-# tools/depcheck/testdata holds depcheck fixtures with intentionally
-# unresolved imports (truth table); Gazelle never owns them.
-# gazelle:exclude tools/depcheck/testdata
-# go/tests/fixtures/cgo holds the handwritten cgo scope fixture with
-# `import "C"`; generation fails closed on cgo, so Gazelle never owns it.
-# gazelle:exclude go/tests/fixtures/cgo
-# cc/tests/fixtures/hello holds the handwritten thin-binary fixture with
-# `main.cc`; thin cc_binary entries stay handwritten, so Gazelle never
-# owns it.
-# gazelle:exclude cc/tests/fixtures/hello
-# cc/ide holds the handwritten thin-binary fixture with `version.cc`
-# defining main; thin cc_binary entries stay handwritten, so Gazelle
-# never owns it.
-# gazelle:exclude cc/ide
-# gazelle/cc/testdata holds the cc generation-test corpus with
-# intentionally ambiguous basenames; Gazelle never owns the golden tree.
-# gazelle:exclude gazelle/cc/testdata
-# rust/tests/fixtures/cxx_identity holds the handwritten mixed Rust/C++
-# bridge fixture; the generated cc_library name collides with the
-# handwritten rust_library by design, so Gazelle never owns it.
-# gazelle:exclude rust/tests/fixtures/cxx_identity
-# csharp/tests/fixtures/hello holds the handwritten thin-binary fixture
-# with `Program.cs`; thin csharp_binary entries stay handwritten, so
-# Gazelle never owns it.
-# gazelle:exclude csharp/tests/fixtures/hello
-# csharp/tests/fixtures/xunit holds the handwritten entry-point fixture
-# with an intentional duplicate namespace; Gazelle never owns it.
-# gazelle:exclude csharp/tests/fixtures/xunit
-# csharp/tests/fixtures/roslyn holds one Sample.cs claimed by three
-# csharp_library pivots (roslyn, roslyn_net8, roslyn_net10); one-owner
-# claims delete the pivots by design, so Gazelle never owns it.
-# gazelle:exclude csharp/tests/fixtures/roslyn
-# fsharp/tests/fixtures/hello holds the handwritten thin-binary fixture
-# with `Program.fs`; thin fsharp_binary entries stay handwritten, so
-# Gazelle never owns it.
-# gazelle:exclude fsharp/tests/fixtures/hello
-# fsharp/tests/fixtures/xunit holds the handwritten entry-point
-# fixture; Gazelle never owns it.
-# gazelle:exclude fsharp/tests/fixtures/xunit
-# fsharp/tests/fixtures/order holds the handwritten mixed-package
-# compile-order fixture (`module Demo` + `module Helper` in one
-# directory); F# mixed packages fail closed, so Gazelle never owns it.
-# gazelle:exclude fsharp/tests/fixtures/order
-# gazelle holds the extension implementations themselves: handwritten
-# Go with framework imports that resolve via MODULE, not a go.mod, so
-# strict generation fails closed and Gazelle never owns them.
-# gazelle:exclude gazelle
-# astro/tests/fixtures/hello holds the handwritten render fixture;
-# the helper edge stays handwritten, so Gazelle never owns it.
-# gazelle:exclude astro/tests/fixtures/hello
-# examples/mixed/hello is the documented non-consumer
-# framework-composition fixture with handwritten owners; Gazelle never
-# owns it.
-# gazelle:exclude examples/mixed/hello
-# go/tests/fixtures/hello holds the handwritten thin-binary fixture
-# with package main; thin go_binary entries stay handwritten, so
-# Gazelle never owns it.
-# gazelle:exclude go/tests/fixtures/hello
-# java/tests/fixtures/hello holds the handwritten thin-binary fixture
-# with `Main.java`; thin java_binary entries stay handwritten, so
-# Gazelle never owns it.
-# gazelle:exclude java/tests/fixtures/hello
-# kotlin/tests/fixtures/hello holds the handwritten thin-binary fixture
-# with `Main.kt`; thin binary entries stay handwritten, so Gazelle never
-# owns it.
-# gazelle:exclude kotlin/tests/fixtures/hello
-# scala/tests/fixtures/hello holds the handwritten thin-binary fixture
-# with `Main.scala`; thin binary entries stay handwritten, so Gazelle
-# never owns it.
-# gazelle:exclude scala/tests/fixtures/hello
-# python/tests/fixtures/hello holds the handwritten entry-point fixture
-# with `main.py`; thin binary entries stay handwritten, so Gazelle never
-# owns it.
-# gazelle:exclude python/tests/fixtures/hello
-# javascript/tests/fixtures/hello holds the handwritten entry-point
-# fixture with `main.js`; thin binary entries stay handwritten, so
-# Gazelle never owns it.
-# gazelle:exclude javascript/tests/fixtures/hello
-# typescript/tests/fixtures/hello holds the handwritten entry-point
-# fixture with `main.ts`; thin binary entries stay handwritten, so
-# Gazelle never owns it.
-# gazelle:exclude typescript/tests/fixtures/hello
-# javascript/tests/fixtures/entries holds the handwritten entry-point
-# ownership fixture; its `helper` stem collides repo-wide by design, so
-# Gazelle never owns it.
-# gazelle:exclude javascript/tests/fixtures/entries
-# python/tests/fixtures/entries holds the handwritten entry-point
-# ownership fixture; helper_test keeps `@pypi//pytest` for the runner
-# hub while gazelle sees no import, so Gazelle never owns it.
-# gazelle:exclude python/tests/fixtures/entries
-# mdx/tests/fixtures/hello holds the handwritten render fixture with a
-# compiler import strict generation rejects; Gazelle never owns it.
-# gazelle:exclude mdx/tests/fixtures/hello
-# svelte/tests/fixtures/hello holds the handwritten render fixture with
-# a compiler import strict generation rejects; Gazelle never owns it.
-# gazelle:exclude svelte/tests/fixtures/hello
-# vue/tests/fixtures/hello holds the handwritten render fixture with a
-# compiler import strict generation rejects; Gazelle never owns it.
-# gazelle:exclude vue/tests/fixtures/hello
-# deploy/rules holds handwritten deploy tooling with upstream py_test
-# owners; the generated python_test kinds collide by design, so Gazelle
-# never owns it.
-# gazelle:exclude deploy/rules
-# quality/artifacts holds handwritten tool manifests with an upstream
-# py_binary owner; Gazelle never owns it.
-# gazelle:exclude quality/artifacts
-# quality/tools/python holds handwritten tool entry points with upstream
-# owners over wheel-only deps; Gazelle never owns it.
-# gazelle:exclude quality/tools/python
-# tools/depcheck is a curated package owned by the depcheck contract
-# (ADR 0027): handwritten lib/binary/test split with a pending
-# Cargo-name alignment, so Gazelle never owns it.
-# gazelle:exclude tools/depcheck
-# go/tests/fixtures/errcheck holds bare lint subjects with no go.mod;
-# importpath is underivable, so Gazelle never owns it.
-# gazelle:exclude go/tests/fixtures/errcheck
-# go/tests/fixtures/gofumpt holds bare format subjects with no go.mod;
-# Gazelle never owns it.
-# gazelle:exclude go/tests/fixtures/gofumpt
-# go/tests/fixtures/govet holds bare lint subjects with no go.mod;
-# Gazelle never owns it.
-# gazelle:exclude go/tests/fixtures/govet
-# go/tests/fixtures/staticcheck holds bare lint subjects with no go.mod;
-# Gazelle never owns it.
-# gazelle:exclude go/tests/fixtures/staticcheck
-# go/tests/fixtures/godeps holds the curated dependency fixture with a
-# handwritten importpath; Gazelle never owns it.
-# gazelle:exclude go/tests/fixtures/godeps
-# rust/tests/fixtures/hello holds curated edition/binary fixtures owned
-# by the rustfmt-edition qualification; Gazelle never owns it.
-# gazelle:exclude rust/tests/fixtures/hello
-# ruby/tests/fixtures/hello holds the handwritten thin-binary fixture
-# with `main.rb`; the directory basename collides with the generated
-# `ruby_library` claim by design, so Gazelle never owns it.
-# gazelle:exclude ruby/tests/fixtures/hello
-# ruby/tests/fixtures/rspec holds handwritten greeter_lib plus
-# spec_helper over a pinned rspec runner; generated same-name claims
-# replace them, so Gazelle never owns it.
-# gazelle:exclude ruby/tests/fixtures/rspec
-# rust/tests/fixtures/bindgen holds the curated header fixture with a
-# pinned non-basename library; Gazelle never owns it.
-# gazelle:exclude rust/tests/fixtures/bindgen
-# cc/tests/fixtures/googletest holds the curated C++17-floor fixture;
-# Gazelle never owns it.
-# gazelle:exclude cc/tests/fixtures/googletest
-# cc/tests/fixtures/lcov_accounting holds the curated accounting
-# fixture; Gazelle never owns it.
-# gazelle:exclude cc/tests/fixtures/lcov_accounting
-# cc/tests/fixtures/linux_corpus holds the curated corpus fixture;
-# Gazelle never owns it.
-# gazelle:exclude cc/tests/fixtures/linux_corpus
-# cc/tests/fixtures/prebuilt_interop holds the curated interop fixture;
-# Gazelle never owns it.
-# gazelle:exclude cc/tests/fixtures/prebuilt_interop
-# cc/tests/fixtures/strict_generation holds the curated strictness
-# fixture; Gazelle never owns it.
-# gazelle:exclude cc/tests/fixtures/strict_generation
-# cc/tests/fixtures/cppcheck holds an intentionally uncompilable
-# static-analysis subject; Gazelle never owns it.
-# gazelle:exclude cc/tests/fixtures/cppcheck
-# scala/tests/fixtures/scalafix holds an intentionally uncompilable
-# rewrite subject; Gazelle never owns it.
-# gazelle:exclude scala/tests/fixtures/scalafix
-# rust/tests/fixtures/cargo_metadata holds Cargo manifests with
-# intentionally missing roots for missing-file diagnostics; Gazelle never
-# owns it.
-# gazelle:exclude rust/tests/fixtures/cargo_metadata
-# quality/tests/fixtures/strict_preset holds lint subjects owned via
-# corpus targets; the shared stem collides across extensions by design,
-# so Gazelle never owns it.
-# gazelle:exclude quality/tests/fixtures/strict_preset
-# tools/sh holds the handwritten hermetic_grep py_binary plus shell
-# helpers; shell is not a Gazelle language here and the generated
-# python_library claim collides with the handwritten owner by design,
-# so Gazelle never owns it.
-# gazelle:exclude tools/sh
-
 load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -228,21 +9,11 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
-# Workspace ESM scope marker. javascript_test adds it to every
-# test's runfiles so jest's ESM detection resolves first-party .js
-# as ESM (see //javascript/rules:defs.bzl). A js_library hop: js rules
-# require data files to live in the target's own package, so tests
-# reference this target, never //:package.json directly. Upstream
-# js_library (not javascript_library): package.json is a scope marker, not
-# a JavaScript source, so it must not enter QualitySourcesInfo.
 js_library(
     name = "package_json",
     srcs = ["package.json"],
 )
 
-# Root importer node_modules facade over the authoritative
-# pnpm store. Gazelle maintains per-importer targets later; the root facade
-# proves the provider-derived layout first.
 npm_link_all_packages(name = "node_modules")
 
 exports_files([
@@ -251,43 +22,20 @@ exports_files([
     ".bazelversion",
     ".gitignore",
     "MODULE.bazel",
-    # Workspace ESM scope marker. javascript_test adds it to every
-    # test's runfiles so jest's ESM detection resolves first-party .js
-    # as ESM (see //javascript/rules:defs.bzl).
     "package.json",
-    # Authoritative pnpm lock for //tools/depcheck:repo_locks_test.
     "pnpm-lock.yaml",
-    # Single-source config inputs for //tools/ci:config_consistency_test
-    # (issue #912): canonical Biome/Ruff plus pnpm workspace, plus the
-    # Vale editor-discovery shim (pinned to the corpus policy).
     ".vale.ini",
     "biome.json",
     "ruff.toml",
     "pnpm-workspace.yaml",
-    # Audit curator data as a declared Bazel input (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
-    # `dx audit license` keeps reading the committed `licenses.toml` bytes;
-    # exposing the same file as a target lets Bazel-owned analysis declare
-    # it as an input so results and cache identity reflect the data
-    # actually analyzed.
     "licenses.toml",
 ])
 
-# Audit curator data as declared Bazel inputs (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #812).
-# The `licenses.toml` policy plus `[[inventory]]` per-package shape is
-# unchanged; exposing it here lets Bazel-owned analysis (NOTICE
-# aggregation in `deploy/release/notice.bzl`, future audit actions)
-# declare the same bytes as inputs so results stay hermetic and cached.
-# Advisory snapshots (`.dx/advisory/<set>.json` plus identity
-# `.dx/advisory/<set>.meta.json`) ride the same contract via
-# `dx_audit::advisory::snapshot_rel` plus `identity_rel`; they are
-# acquired, not committed, so no filegroup lists them here.
 filegroup(
     name = "audit_curator",
     srcs = ["licenses.toml"],
 )
 
-# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
-# Preset parity fixture; see preset_parity_test.sh.
 sh_test(
     name = "preset_parity_test",
     size = "small",
@@ -308,7 +56,6 @@ sh_test(
         "//tools/sh:snapshot",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -318,14 +65,12 @@ rustfmt_config(
     visibility = ["//:__subpackages__"],
 )
 
-# Lane A: direct aspect_hints binding; see docs/contributing/build-conventions.md.
 ruff_config(
     name = "ruff_config",
     src = "ruff.toml",
     visibility = ["//:__subpackages__"],
 )
 
-# Lane A: direct aspect_hints binding; see docs/contributing/build-conventions.md.
 biome_config(
     name = "biome_config",
     src = "biome.json",
@@ -337,11 +82,8 @@ real_source_target(
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_siblings = [
         "//docs:README.md",
-        "//docs:cli/README.md",
         "//docs:cli/commands/README.md",
-        "//docs:contributing/local-workflows.md",
         "//docs:github-ci.md",
-        "//docs:testing/strategy-details.md",
         "//examples:README.md",
         "LICENSE",
     ],

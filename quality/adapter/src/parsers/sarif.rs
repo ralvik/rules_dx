@@ -139,11 +139,6 @@ fn resolve_file<'a>(
     if let Some(hit) = files.iter().find(|file| **file == path) {
         return Ok(*hit);
     }
-    // Suffix fallback for both relative URIs and absolute joins whose
-    // base points outside the scratch tree (ktlint `%SRCROOT%`): match
-    // the unique staged file ending with `/uri` (or `/normalized` for
-    // absolute joins). Bare filenames suffix-match too (e.g. `/Hello.kt`
-    // matches `/scratch/.../matrix/Hello.kt`).
     let suffix = if path.starts_with('/') {
         path.to_owned()
     } else {
@@ -157,8 +152,6 @@ fn resolve_file<'a>(
             }
         }
     }
-    // For absolute joins, also try the raw relative URI suffix (the base
-    // may be wrong but the tail is still the workspace path).
     if path.starts_with('/') {
         let raw = strip_file_uri(uri);
         let raw_suffix = format!("/{raw}");

@@ -8,13 +8,9 @@ package(
     default_visibility = ["//:__subpackages__"],
 )
 
-# F# compile order is significant: Helper.fs provides Helper.suffix for
-# Demo.fs, so the dependency sorts first (alphabetical Demo.fs first would
-# not compile, unlike C# where order is irrelevant).
 fsharp_library(
     name = "order_lib",
     srcs = [
-        # do not sort: F# compile order, dependencies first
         "Helper.fs",
         "Demo.fs",
     ],

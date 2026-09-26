@@ -12,8 +12,6 @@ pub(crate) fn execute_watch(
     err: &mut dyn Write,
 ) -> i32 {
     let wrapped = invocation.targets.first().map(String::as_str).unwrap_or("");
-    // Local-only gate shares the single `dx_process::is_ci` owner with
-    // `dx run` so `CI=1`/`yes`/empty cannot diverge again.
     let ci = dx_process::is_ci();
     match dx_adopt::plan_watch(wrapped, ci) {
         Ok(plan) => {
@@ -25,8 +23,6 @@ pub(crate) fn execute_watch(
                 }
                 return 0;
             }
-            // Single delivered iteration: re-resolve scope each loop in the
-            // real binary (loop omitted under test via DX_WATCH_ONCE).
             if !summaries_suppressed(invocation) {
                 if let Err(exit) = check_stdout_write(writeln!(
                     out,

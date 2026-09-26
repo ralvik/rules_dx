@@ -24,7 +24,6 @@ package(default_visibility = ["//:__subpackages__"])
 sh_library(
     name = "bootstrap",
     srcs = ["bootstrap.sh"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
@@ -32,7 +31,6 @@ sh_library(
     name = "lib",
     srcs = ["lib.sh"],
     data = ["hermetic_grep.py"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
     deps = [":bootstrap"],
 )
@@ -40,7 +38,6 @@ sh_library(
 sh_library(
     name = "snapshot",
     srcs = ["snapshot.sh"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
     deps = [":bootstrap"],
 )
@@ -49,7 +46,6 @@ sh_library(
     name = "guards",
     srcs = ["guards.sh"],
     data = ["hermetic_grep.py"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
     deps = [
         ":bootstrap",
@@ -57,11 +53,6 @@ sh_library(
     ],
 )
 
-# Hermetic grep helper (issue #1006): pure-stdlib python3, no host
-# `grep`/`sed`, identical on Linux/macOS/Windows. Cross-platform on
-# purpose (no `target_compatible_with`): the `py_test` below must prove
-# the helper on every runner, and qualification drivers resolve the
-# script via runfiles (`dx_hermetic_grep_py`) on any host.
 py_library(
     name = "hermetic_grep_lib",
     srcs = ["hermetic_grep.py"],

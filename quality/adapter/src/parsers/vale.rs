@@ -64,7 +64,6 @@ pub fn parse_vale(
         });
     }
     let mut findings = Vec::new();
-    // Sorted iteration keeps multi-file output deterministic.
     let mut paths: Vec<&String> = report.keys().collect();
     paths.sort();
     for path in paths {
@@ -155,7 +154,6 @@ mod tests {
         assert_eq!(findings[0].finding.rule_id, "Test.Cotton");
         assert_eq!(findings[0].finding.message, "Avoid cotton.");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Error);
-        // Span [9,14] is inclusive on both ends; placement is half-open.
         assert_eq!(
             (findings[0].finding.start, findings[0].finding.end),
             (
@@ -206,7 +204,6 @@ mod tests {
             "/s/x.md": [{"Span": [9, 14], "Check": "T.C", "Message": "m", "Severity": "fatal", "Line": 1}]
         }"#;
         assert!(parse_vale(fatal.as_bytes(), Some(1), &["/s/x.md"]).is_err());
-        // A warning maps below error; a suggestion maps to info.
         let levels = r#"{
             "/s/x.md": [
                 {"Span": [1, 2], "Check": "T.W", "Message": "w", "Severity": "warning", "Line": 1},

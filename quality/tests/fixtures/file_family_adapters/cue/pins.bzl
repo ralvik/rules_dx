@@ -1,7 +1,5 @@
 """cue check plus fix wiring.
 
-Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
-`docs/tools/tool-acquisition.md#initial-artifact-research`.
 """
 
 CUE_VERSION = "v0.17.1"

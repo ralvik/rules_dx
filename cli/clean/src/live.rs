@@ -171,10 +171,6 @@ mod tests {
 
     #[cfg(windows)]
     fn stage_symlink(target: &Path, link: &Path) {
-        // Fake proc entries address files/dirs that may not exist (e.g.
-        // the ` (deleted)` suffix case builds the link from display
-        // text); `symlink_file` creates the link without touching the
-        // target, matching the unix behavior below.
         std::os::windows::fs::symlink_file(target, link).expect("stage test link");
     }
 
@@ -290,16 +286,11 @@ mod tests {
         let proc_root = root.join("proc");
         fs::create_dir_all(&proc_root).expect("proc root");
         let env_hex = digest('5');
-        // A (deleted) suffix marks an unlinked-but-open directory: still
-        // an observed address, so the staged link carries the suffix the
-        // kernel appends to `readlink` results.
         let deleted = dx_dir.join("environments").join(&env_hex);
         let deleted_text = format!("{} (deleted)", deleted.display());
         let dir = proc_root.join("7");
         fs::create_dir_all(dir.join("fd")).expect("fd dir");
         stage_symlink(Path::new(&deleted_text), &dir.join("cwd"));
-        // Unmanaged names, non-digest names, and foreign roots
-        // contribute nothing even when observed.
         stage_symlink(
             &dx_dir.join("setups").join("latest"),
             &dir.join("fd").join("0"),
@@ -379,8 +370,6 @@ mod tests {
         let (workspace, stale_hex, _) = two_record_workspace(&root);
         let scanned = collect_inventory_with_scan(&workspace).expect("scan collect");
         let plain = collect_inventory(&workspace, &[], &[]).expect("plain collect");
-        // No test-runner process holds the fixture workspace open, so the
-        // live scan pins nothing and both routes agree.
         assert_eq!(scanned.plan(), plain.plan());
         assert_eq!(scanned.plan().prune_setup_records, vec![stale_hex]);
         let _ = fs::remove_dir_all(&root);

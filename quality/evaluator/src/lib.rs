@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use quality_result::proto::{Convergence, Diagnostic, QualityResult, Severity};
@@ -29,7 +27,6 @@ impl Threshold {
     }
 }
 
-/// Parses a `--fail_on` value. There is no `never`: any spelling outside
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum EvaluatorError {
     #[error("unknown fail_on {value:?}, want info|warning|error")]
@@ -223,13 +220,6 @@ mod tests {
 
     #[test]
     fn formatter_replacement_without_diagnostics_fails_like_check_mode() {
-        // Apply-safety battery: `quality-testing.md` requires
-        // check mode to fail on any proposed change independently of
-        // severity and direct Bazel evaluators to enforce the same rule.
-        // Mirror the runner formatter case (fmt-a trims trailing spaces
-        // with zero diagnostics): one whole-file candidate bound to
-        // digest(original) must fail at every threshold with exactly the
-        // replacement-presence reason, proving evaluator parity.
         use quality_result::proto::Edit;
         let original = b"x  \n";
         let terminal = b"x\n";

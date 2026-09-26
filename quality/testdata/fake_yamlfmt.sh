@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
-# Fake yamlfmt for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics check (diff headers on stdout when dirty, exit 1; empty stdout
-# when clean, exit 0) plus fix (in-place rewrite, exit 0) over the
-# BADFMT marker. Real-tool behavior stays proven by
-# `quality/tests/fixtures/file_family_adapters/yamlfmt/`.
-# See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 set -euo pipefail
 is_fix=0
 files=()
@@ -17,7 +10,6 @@ for arg in "$@"; do
     *) if [[ -f "$arg" ]]; then files+=("$arg"); fi ;;
   esac
 done
-# djlint_format carries --reformat plus --check for check; fix is bare --reformat.
 if [[ "yamlfmt" == "djlint_format" ]]; then
   is_fix=0
   has_reformat=0

@@ -43,7 +43,6 @@ pub fn default_new_name() -> &'static str {
     "my_project"
 }
 
-/// Plan the `dx new` scaffold: absent-only repo wiring under `<name>/`
 pub fn plan_new_files(language: &str, name: &str) -> Result<Vec<ScaffoldFile>, AdoptError> {
     let canonical =
         normalize_new_language(language).ok_or_else(|| AdoptError::NewUnknownLanguage {
@@ -214,7 +213,6 @@ fn new_language_files(canonical: &str, project: &str) -> Vec<(String, String)> {
     }
 }
 
-/// Apply the `dx new` scaffold under `root`, writing absent-only.
 pub fn apply_new(root: &Path, language: &str, name: &str) -> Result<Vec<String>, AdoptError> {
     let mut written = Vec::new();
     let mut refused = Vec::new();
@@ -316,8 +314,6 @@ mod tests {
 
     #[test]
     fn new_templates_are_stdlib_only_for_generate() {
-        // No invented ecosystem semantics: templates carry no external
-        // dependencies, so `dx generate` owns BUILD decisions.
         let rust = plan_new_files("rust", "demo").expect("rust");
         let cargo = rust
             .iter()

@@ -1,6 +1,5 @@
 """Experimental minimal JavaScript wrappers (ADR 0013).
 
-Contract: `docs/decisions/0013-rust-javascript-typescript-foundations.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
 
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
@@ -16,7 +15,6 @@ _DX_JS_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: testing.TestEnvironment is returned by the test forwarder (the test
 _DX_JS_TEST_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
@@ -29,9 +27,6 @@ _DX_JS_BINARY_PROVIDES = [
 
 _JS_EXTS = [".js", ".jsx", ".mjs", ".cjs"]
 
-# JavaScript owns `.js`/`.mjs`/`.cjs`; JSX stays its own class per the
-# `javascript` policy family via the single-sourced registry, so splitting
-# keeps adapter applicability exact (biome/eslint/prettier distinguish them).
 _DX_JS_SOURCE_SPECS = [("javascript", ["js", "mjs", "cjs"]), ("jsx", "jsx")]
 
 _javascript_library_forward = dx_library_forward_rule(
@@ -69,7 +64,7 @@ def javascript_binary_upstream_data(srcs, data):
 
     Upstream `js_binary` has no `srcs` attribute; wrapper `srcs` ride
     upstream as `data` so the `QualitySourcesInfo` owner matches the
-    upstream inputs. See: `docs/quality/quality-sources.md`."""
+    upstream inputs.
     return list(srcs or []) + list(data or [])
 
 def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
@@ -103,14 +98,13 @@ def javascript_binary(name, srcs = None, visibility = None, **kwargs):
     library alone owns the source; the thin binary reports no direct
     sources. Wrapper `srcs` ride upstream as `data` (upstream has no
     `srcs`). Both shapes preserve the upstream providers and execution
-    semantics. See: `docs/quality/quality-sources.md`."""
+    semantics.
     effective_srcs = srcs if srcs != None else []
     _javascript_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def _javascript_test_forward_impl(ctx):
     upstream = ctx.attr.upstream
 
-    # The upstream launcher already bakes fixed_env (JEST_JUNIT_OUTPUT_FILE,
     env_inherit = list(ctx.attr.env_inherit) if ctx.attr.env_inherit else []
     if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
         env_inherit.append("TESTBRIDGE_TEST_ONLY")
@@ -120,7 +114,6 @@ def _javascript_test_forward_impl(ctx):
         dx_quality_sources(ctx.files.srcs, _DX_JS_SOURCE_SPECS, str(ctx.label)),
     ]
 
-    # Upstream jest_test only provides InstrumentedFilesInfo when coverage
     return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo], "javascript_*")
 
 _javascript_test = rule(
@@ -200,7 +193,6 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
     if rejection != None:
         fail(rejection)
 
-    # The private upstream test stays an implementation detail via private
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.pop("aspect_hints", None)
     if tags != None:
@@ -212,9 +204,6 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
     elif "tags" in upstream_kwargs:
         upstream_kwargs.pop("tags")
 
-    # Workspace ESM scope marker (see docstring): must resolve in runfiles
-    # above every first-party test source. Referenced as the root
-    # js_library: js rules reject cross-package source files in data.
     if "//:package_json" not in upstream_data:
         upstream_data.append("//:package_json")
     _jest_test(

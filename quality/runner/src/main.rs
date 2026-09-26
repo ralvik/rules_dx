@@ -1,8 +1,6 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -74,10 +72,6 @@ pub enum RunnerError {
 }
 
 fn main() {
-    // Structured diagnostics: init is idempotent and emits
-    // nothing by default; `RUST_LOG` overrides the warn filter. Failures
-    // report via `tracing::error!` with the legacy message text, so action
-    // diagnostics keep their content while gaining filter control.
     dx_output::init_diagnostics(false);
     if let Err(error) = run() {
         tracing::error!("quality_runner: {error}");
@@ -127,15 +121,11 @@ fn invalid_token(error: &clap::Error) -> String {
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
-        // `clap` strips an attached `=value` from the reported token; the
-        // legacy loop echoed the whole `argv` element, so recover it.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown flag {echoed:?}")
         }
         ErrorKind::InvalidValue => {
-            // `clap` renders the pending option as `--flag <VALUE>`; the
-            // legacy message names the bare `--flag`.
             let flag = dx_output::leading_flag(&token);
             format!("missing value for {flag}")
         }
@@ -327,7 +317,7 @@ fn run() -> Result<(), RunnerError> {
     for spec in &cli.upstream_diagnostics {
         upstream.push(parse_upstream_diagnostics(spec)?);
     }
-    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     let mut files = Vec::with_capacity(sources.len());
     for (workspace, exec) in &sources {
         let bytes = std::fs::read(exec).map_err(|e| RunnerError::UnreadableSource {
@@ -383,10 +373,6 @@ fn run() -> Result<(), RunnerError> {
         if tools.contains_key(&tool_id) {
             return Err(RunnerError::DuplicateToolBinary { tool: tool_id });
         }
-        // Bazel actions pass exec-root-relative tool paths while the backend
-        // spawns from scratch trees under TMPDIR, so resolve relatives against
-        // the startup working directory (the action exec root) now. Absolute
-        // paths pass through unchanged.
         let absolute = if binary.is_absolute() {
             binary
         } else {
@@ -407,11 +393,6 @@ fn run() -> Result<(), RunnerError> {
         );
     }
     for (tool_id, exec) in upstream {
-        // Like binaries, Bazel actions pass exec-root-relative paths
-        // while the backend reads from its startup working directory
-        // (the action exec root). Delegated tools carry no binary: the
-        // entry exists so stage validation resolves, with an empty
-        // binary no delegated path ever spawns.
         let absolute = if exec.is_absolute() {
             exec
         } else {

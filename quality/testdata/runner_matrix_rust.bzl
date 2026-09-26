@@ -1,21 +1,13 @@
 """Layer-2 matrix cases (snapshot workflow): every supported language x capability cell.
 
-Contract: `docs/quality/runner-matrix.md`.
 """
 
-# Recorded upstream diagnostics for the delegated cells, byte-identical to
-# the parser unit samples (`quality/adapter/src/parsers/rust.rs`: CLIPPY_LINT,
-# RUSTC_TYPE_ERROR). Injected verbatim; do not hand-edit.
 CLIPPY_LINT = """{"$message_type":"diagnostic","message":"length comparison to zero","code":{"code":"clippy::len_zero","explanation":null},"level":"warning","spans":[{"file_name":"matrix/clippy_len.rs","byte_start":19,"byte_end":33,"line_start":2,"line_end":2,"column_start":8,"column_end":22,"is_primary":true,"text":[],"label":null,"suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[{"message":"using `is_empty` is clearer and more explicit","code":null,"level":"help","spans":[{"file_name":"matrix/clippy_len.rs","byte_start":19,"byte_end":33,"line_start":2,"line_end":2,"column_start":8,"column_end":22,"is_primary":true,"text":[],"label":null,"suggested_replacement":"\\"x\\".is_empty()","suggestion_applicability":"MachineApplicable","expansion":null}],"children":[],"rendered":null}],"rendered":null}
 {"$message_type":"diagnostic","message":"1 warning emitted","code":null,"level":"warning","spans":[],"children":[],"rendered":null}"""
 
 RUSTC_TYPE_ERROR = """{"$message_type":"diagnostic","message":"mismatched types","code":{"code":"E0308","explanation":null},"level":"error","spans":[{"file_name":"matrix/rustc_type.rs","byte_start":27,"byte_end":32,"line_start":2,"line_end":2,"column_start":9,"column_end":14,"is_primary":true,"text":[],"label":"expected `i32`, found `&str`","suggested_replacement":null,"suggestion_applicability":null,"expansion":null}],"children":[],"rendered":null}
 {"$message_type":"diagnostic","message":"aborting due to 1 previous error","code":null,"level":"error","spans":[],"children":[],"rendered":null}"""
 
-# Rust cells: rustfmt format over real bytes from the pinned toolchain,
-# Clippy lint and rustc typecheck delegated over recorded upstream
-# diagnostics (the upstream aspect/rule owns the invocation; dx never
-# spawns them, per / and the real_aspects.bzl contract).
 RUST_CASES = [
     {
         "name": "matrix_rust_format_pass",
@@ -23,8 +15,6 @@ RUST_CASES = [
         "capability": "format",
         "stages": ["rustfmt;rust;quality/testdata/clean.rs"],
         "rustfmt_from_toolchain": True,
-        # Provider-less matrix input: no CrateInfo, so the edition the
-        # aspect would fall back to (RUST_EDITION) is declared explicitly.
         "edition_tools": ["rustfmt"],
         "edition_values": ["2021"],
         "expected": """producer //quality/testdata:matrix_rust_format_pass
@@ -46,8 +36,6 @@ replacements 0
         "capability": "format",
         "stages": ["rustfmt;rust;matrix/rustfmt_dirty.rs"],
         "rustfmt_from_toolchain": True,
-        # Provider-less matrix input: no CrateInfo, so the edition the
-        # aspect would fall back to (RUST_EDITION) is declared explicitly.
         "edition_tools": ["rustfmt"],
         "edition_values": ["2021"],
         "expected": """producer //quality/testdata:matrix_rust_format_fail
@@ -66,10 +54,6 @@ replacement matrix/rustfmt_dirty.rs 13 37 " i32, b: i32) -> i32 {\\n    a + "
     {
         "name": "matrix_rust_format_edition_2015",
         "generated": {
-            # 2015-only syntax (`async` as a plain identifier): clean under
-            # `--edition 2015`, a syntax error under 2021. Proves the
-            # aspect edition reaches the real toolchain rustfmt
-            # single-edition rustfmt rejected).
             "matrix/rustfmt_edition_2015.rs": "pub fn edition_gate() -> i32 {\n    let async = 1;\n    async\n}\n",
         },
         "capability": "format",
@@ -91,9 +75,6 @@ replacements 0
     {
         "name": "matrix_rust_format_edition_mismatch",
         "generated": {
-            # Same 2015-only bytes as matrix_rust_format_edition_2015 but
-            # checked with the wrong edition: the syntax error finding
-            # proves the edition flag decides parsing.
             "matrix/rustfmt_edition_mismatch.rs": "pub fn edition_gate() -> i32 {\n    let async = 1;\n    async\n}\n",
         },
         "capability": "format",
@@ -202,7 +183,3 @@ replacements 0
     },
 ]
 
-# Python cells: fixture-policy stages (pydoclint+ruff lint, ruff format,
-# ty typecheck) over the real fixtures, stub-class variants over generated
-# `.pyi` bytes, the ruff_cfg hinted closure (mirrors
-# fixture_real_python_hinted), and the flake8/pylint lint opt-ins.

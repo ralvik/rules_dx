@@ -220,8 +220,6 @@ mod tests {
         assert!(reporting_gate(true, true, true));
         assert!(!reporting_gate(true, true, false));
         assert!(!reporting_gate(false, true, true));
-        // Intentionally inapplicable outputs (queue-run PR comments) are
-        // not failures.
         assert!(reporting_gate(true, false, false));
     }
 }

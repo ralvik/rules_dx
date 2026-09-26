@@ -1,9 +1,4 @@
-"""Concrete aspect-subjects use case.
-
-Contract: `docs/testing/starlark.md#analysis`, `docs/decisions/0009-starlark-testing.md`.
-Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
-`bazel run //tools/ci:starlark_futures_qualification`.
-"""
+"""Concrete aspect-subjects use case."""
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 

@@ -36,13 +36,8 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
         ci,
     } = env;
     let umbrella_check = invocation.command == Command::Check;
-    // The umbrella kind dictates the phase mode; an explicit `--check`
-    // additionally forces check mode under `fix` (passthrough).
     let phase_check = umbrella_check || invocation.check;
     let mode = if phase_check { "check" } else { "default" };
-    // Report planning reuses the umbrella registry (SARIF only in):
-    // dry-run conflicts, unsupported formats, and duplicates fail here
-    // before any phase starts.
     if let Err(error) = plan_reports(
         invocation.command,
         &invocation.reports,
@@ -51,8 +46,6 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
     ) {
         return pre_exec(err, &error.to_string());
     }
-    // A stdout report destination would let every phase claim the
-    // reserved stdout document: fail closed before execution.
     for request in &invocation.reports {
         if request.destination == "-" {
             return pre_exec(
@@ -74,14 +67,7 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
     let mut executed: Vec<UmbrellaPhase> = Vec::new();
     let mut stop_code: Option<i32> = None;
     for (index, phase) in UMBRELLA_PHASES.iter().enumerate() {
-        // Phases share the temporary directory, so each phase derives
-        // its own nonce: BEP streams and intended manifests must never
-        // alias across phases, including after a failed phase that
-        // leaves its artifacts behind.
         let phase_nonce = nonce.wrapping_add(index as u64);
-        // Route SARIF requests through one phase-private capture when
-        // the phase registry supports the format; other phases
-        // contribute nothing to that request.
         let mut phase_reports = Vec::new();
         let mut sarif_capture: Option<PathBuf> = None;
         for request in &invocation.reports {
@@ -94,7 +80,7 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                     phase.name()
                 ));
                 let Some(capture_text) = capture.to_str() else {
-                    return pre_exec(err, "temporary report path is not UTF-8"); // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    return pre_exec(err, "temporary report path is not UTF-8"); // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 };
                 phase_reports.push(ReportRequest {
                     format: request.format.clone(),
@@ -106,8 +92,6 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
         let phase_invocation = Invocation {
             command: *phase,
             check: phase_check,
-            // Umbrella phases (format/lint/typecheck/generate) take no
-            // profile flags; the parent check/fix rejects them at parse.
             debug: false,
             release: false,
             workspace: invocation.workspace.clone(),
@@ -128,8 +112,6 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             configured: false,
             from: None,
             to: None,
-            // Parent `--here` is consumed into explicit targets before
-            // dispatch (see `apply_here`); phases always run explicit.
             here: false,
             serve: false,
             port: None,
@@ -168,10 +150,6 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
             break;
         }
     }
-    // Merged standard reports: one document per request over the
-    // executed phases only. Absent or unparsable captures contribute
-    // nothing: a completed phase always leaves a validated capture,
-    // while a stopped phase's partial follows its own collection rule.
     let complete = stop_code.is_none();
     let fs = RealFileSystem;
     let mut reports_ok = true;
@@ -187,13 +165,13 @@ pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
                 continue;
             }
             let Some(capture) = &phase.sarif_capture else {
-                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             };
             let Ok(bytes) = std::fs::read(capture) else {
-                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             };
             let Ok(document) = serde_json::from_slice::<Value>(&bytes) else {
-                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                continue; // LCOV_EXCL_LINE - reason: defensive branch, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             };
             if runs.is_empty() {
                 if let Some(value) = document.get("$schema") {
@@ -480,8 +458,6 @@ mod tests {
 
     #[test]
     fn umbrella_sarif_covers_only_executed_phases() {
-        // The format phase fails before any SARIF-capable phase
-        // runs, so the merged document is a valid empty run list.
         let harness = umbrella_findings("umbrella-sarif-stop");
         let (code, _, _) = harness.run(&["check", "--output=json", "--report=sarif=out.sarif"]);
         assert_eq!(code, 1);

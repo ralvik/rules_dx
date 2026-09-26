@@ -1,22 +1,17 @@
 """Bindgen LLVM-22-vs-23 version pins.
 
-Contract: `docs/native-toolchains.md`, `docs/generation/rust.md#binding-generation`.
 """
 
 RULES_RS_VERSION = "v0.0.109"
 RULES_RS_COMMIT = "b55b132af0c9951807c926768e40222330348632"
 
-# Parser baseline: rules_rs v0.0.109 MODULE declares llvm 0.8.18 (LLVM 22.1.8).
 LLVM_BASELINE_MODULE = "0.8.18"
 LLVM_BASELINE_LLVM = "22.1.8"
 
-# Qualified target: hermetic-llvm v0.8.19 (LLVM 23.1.0).
 LLVM_TARGET_MODULE = "0.8.19"
 LLVM_TARGET_LLVM = "23.1.0"
 LLVM_TARGET_COMMIT = "6314688712edf3a95f78642d80393868256b4ef2"
 
-# Self-contained bindgen executables (statically linked libclang):
-# hermeticbuild/bindgen v0.0.2 ships bindgen 0.72.1 for six platforms.
 BINDGEN_CRATE_VERSION = "0.72.1"
 BINDGEN_PREBUILT_TAG = "v0.0.2"
 BINDGEN_PREBUILT_SHA256 = {
@@ -28,9 +23,6 @@ BINDGEN_PREBUILT_SHA256 = {
     "windows_arm64": "0885047b40b119e58fcca4491a2bd00331de131f41183de2a9b563ca407f9109",
 }
 
-# Standalone route flags: disable include discovery, no formatter.
-# Target compiler context comes from the cc toolchain; the Rust consumer
-# links the native library separately.
 BINDGEN_FLAGS = ["--no-include-path-detection", "--formatter=none"]
 
 BINDGEN_FIXTURE_HEADER = "//rust/tests/fixtures/bindgen:bindgen.h"

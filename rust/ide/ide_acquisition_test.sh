@@ -1,22 +1,8 @@
 #!/usr/bin/env bash
-# Upstream Rust IDE tool acquisition proof.
-#
-# Proves the pinned patched rules_rust supplies the exact IDE binaries the
-# environment contract reuses: rust-analyzer discovery (`gen_rust_project`)
-# and the Bazel flycheck pipeline (`flycheck`). Each tool must answer
-# `--help` with status zero, which proves acquisition from the pinned
-# toolchain without invoking project-owned discovery, codegen, or
-# environment mutation. Focused exact-target projection is proven by the
-# `gen_rust_project //rust/tests/fixtures/hello:hello_lib` run recorded in the
-# completion report (one crate, `hello`).
 set -euo pipefail
 
-# Shared workspace + runfiles helpers.
-# Bootstrap via tools/sh/bootstrap.sh (issue #654): runfiles forest first, then source tree.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
 dx_bootstrap "tools/sh/lib.sh"
-
-# Portable helpers via tools/sh/lib.sh dx_realpath/dx_mkscratch.
 
 discover="$(dx_realpath "$1")"
 flycheck="$(dx_realpath "$2")"

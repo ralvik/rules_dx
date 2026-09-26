@@ -89,10 +89,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Sequential umbrellas (WP4) never build Bazel
-        // invocations of their own; phases reuse their registries
-        // verbatim. The umbrella routes SARIF requests to the
-        // SARIF-capable phases (lint, typecheck) and merges runs.
         Command::Check => CommandSpec {
             command,
             capability: "check",
@@ -107,10 +103,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &["sarif"],
             settings: &[],
         },
-        // Explicit managed-state cleanup: no Bazel
-        // invocation of its own for the prune itself (filesystem
-        // inventory plus the shared commit lock in `dx_clean`); the
-        // optional `bazel clean` forward is planned at execution.
         Command::Clean => CommandSpec {
             command,
             capability: "clean",
@@ -118,10 +110,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Managed environment/codegen/setup selections: one
-        // Bazel collection request behind a canonical selection plus
-        // generation commit, never the quality aspect pipeline and no
-        // standard reports. The capability names the selecting command.
         Command::Codegen | Command::Env | Command::Setup => CommandSpec {
             command,
             capability: command.name(),
@@ -129,10 +117,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Delivered adoption/inspect surfaces: local helpers or
-        // thin query forwarding, never the quality aspect pipeline.
-        // `new` scaffolds a minimal qualified project per language;
-        // `upgrade` composes pin plus migrate plus setup with a recovery
         Command::Init
         | Command::New
         | Command::Upgrade
@@ -150,14 +134,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Security/license surfaces: dependency-set selectors plan
-        // through the `dx_audit` library, never the quality aspect
-        // pipeline. Security exports SARIF findings and license exports
-        // SPDX 2.3 JSON through the shared report contract; both formats
-        // stay accepted on either command and the executor selects the
-        // family payload. Update reports per-set
-        // through live output (text plus `notice`/`error` in JSON, issue
-        // with no `--report` standard report.
         Command::Security | Command::License => CommandSpec {
             command,
             capability: "audit",
@@ -172,9 +148,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Explicit widen-one-requirement: one declared
-        // requirement to a new version through `dx_bump`, never the
-        // quality aspect pipeline and no standard reports.
         Command::Bump => CommandSpec {
             command,
             capability: "bump",
@@ -182,10 +155,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Upgrade migration: `--from`/`--to`
-        // versions through `dx_adopt::plan_migrate`, never the quality
-        // aspect pipeline and no standard reports. Live execution
-        // fails closed until the first manifest lands.
         Command::Migrate => CommandSpec {
             command,
             capability: "migrate",
@@ -193,9 +162,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Docs site build over the Bazel-cached extract to aggregate to
-        // render chain: no aspects, no standard reports; planned at
-        // execution as `bazel build` over the resolved docs targets.
         Command::Docs => CommandSpec {
             command,
             capability: "docs",
@@ -203,9 +169,6 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Raw launcher passthrough (WP4 helper surface): no
-        // aspects, no reports, no scope resolution; planned at
-        // execution as launcher plus forwarded arguments.
         Command::Bazel => CommandSpec {
             command,
             capability: "bazel",

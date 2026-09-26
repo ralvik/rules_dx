@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod advisory;
@@ -58,7 +56,6 @@ impl AuditRequest {
         }
     }
 
-    /// Audit never mutates: pinned here so later tool wiring cannot
     pub fn is_mutating() -> bool {
         false
     }

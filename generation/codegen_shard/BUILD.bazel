@@ -1,7 +1,5 @@
 """Validation/codec helpers plus the shard writer for codegen plan shards."""
 
-# gazelle:resolve rust proto //generation:codegen_proto_rs
-# gazelle:resolve rust codegen_proto //generation:codegen_proto_rs
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_binary", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
@@ -79,8 +77,6 @@ rust_test(
     ],
 )
 
-# Authoritative quality identities (pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "codegen_shard_fmt_test",
     size = "small",

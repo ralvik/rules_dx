@@ -16,7 +16,6 @@ pub struct OutdatedCandidate {
     pub latest: semver::Version,
 }
 
-/// Discovery planning errors (never a partial enumeration).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum DiscoveryError {
     #[error("empty discovery entry; expected `set:package` plus semver")]
@@ -27,7 +26,6 @@ pub enum DiscoveryError {
     InvalidVersion { selector: String, version: String },
 }
 
-/// Upstream registry client owning enumeration for one set (never custom
 pub fn registry_client(set: BumpSet) -> &'static str {
     match set {
         BumpSet::Bazel => "BCR",
@@ -70,8 +68,6 @@ pub fn parse_declared(selector: &str, current: &str) -> Result<Snapshot, Discove
             selector: selector.to_owned(),
         });
     }
-    // Maven carries `group:artifact` after the set prefix; every other
-    // semver set rejects a second colon (mirrors `request.rs`).
     if set != BumpSet::Maven && tail.contains(':') {
         return Err(DiscoveryError::UnknownSelector {
             selector: selector.to_owned(),
@@ -158,7 +154,6 @@ mod tests {
 
     #[test]
     fn semver_sets_parse_declared_with_client_mapping() {
-        // its upstream registry client, never custom HTTP.
         for (selector, client) in [
             ("bazel:rules_rust", "BCR"),
             ("cargo:anyhow", "crates.io"),
@@ -175,7 +170,6 @@ mod tests {
 
     #[test]
     fn github_actions_has_no_semver_current() {
-        // GHA pins are tag/SHA-shaped: discovery lists tags via GitHub
         assert!(matches!(
             parse_declared("github-actions:actions/checkout", "v4"),
             Err(DiscoveryError::UnknownSelector { .. })
@@ -208,8 +202,6 @@ mod tests {
 
     #[test]
     fn latest_stable_proposes_max_above_current() {
-        // Upstream semver orders candidates; the max stable above current
-        // wins via `compare`, never custom ordering.
         let current: semver::Version = "1.2.3".parse().expect("current");
         let available: Vec<semver::Version> = ["1.2.4", "1.10.0", "1.2.3"]
             .iter()
@@ -225,16 +217,12 @@ mod tests {
 
     #[test]
     fn stable_only_prerelease_never_wins() {
-        // Discovery proposes stable only; prereleases stay upstream-governed
-        // and never become the loop candidate.
         let current: semver::Version = "1.2.3".parse().expect("current");
         let available: Vec<semver::Version> = ["1.2.4-alpha.1", "2.0.0-beta.1"]
             .iter()
             .map(|text| text.parse().expect("available"))
             .collect();
         assert_eq!(latest_stable(&current, &available), None);
-        // A stable above current still wins when prereleases sort higher
-        // in mixed snapshots.
         let mixed: Vec<semver::Version> = ["1.2.4-alpha.1", "1.2.4"]
             .iter()
             .map(|text| text.parse().expect("available"))
@@ -255,8 +243,6 @@ mod tests {
 
     #[test]
     fn collect_orders_by_selector_never_batch() {
-        // Two outdated snapshots order by selector text so the weekly run
-        // proposes the same next dep; the loop still takes one (never batch).
         let entries = vec![
             snapshot("npm:jest", "30.2.0", &["30.3.0"]),
             snapshot("cargo:anyhow", "1.0.0", &["1.2.3"]),
@@ -279,9 +265,6 @@ mod tests {
 
     #[test]
     fn serde_json_and_semver_stay_upstream_owned() {
-        // Registry payloads parse through upstream libraries, never custom
-        // parsers: pin the ownership here so a future edit cannot
-        // reimplement JSON or version ordering.
         let payload: serde_json::Value =
             serde_json::from_str(r#"{"name":"jest","version":"30.3.0"}"#).expect("json");
         assert_eq!(payload["version"], serde_json::json!("30.3.0"));

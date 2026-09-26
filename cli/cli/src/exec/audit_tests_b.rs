@@ -401,7 +401,6 @@ fn audit_reports_sarif_and_spdx_to_files() {
     use crate::args::parse;
     use crate::exec::{execute, Env};
     let runner = AuditRunner::clean();
-    // clean_workspace uses UNKNOWN npm which fails distributed; use cargo-only scope for clean reports.
     let harness = Harness::new("audit-reports-cargo");
     harness.write_source(
         "rust/tests/fixtures/hello/Cargo.lock",
@@ -439,12 +438,9 @@ fn audit_reports_sarif_and_spdx_to_files() {
         },
     );
     assert_eq!(runner.calls.borrow().len(), 0);
-    // License-only run launches no subprocess; reports still write.
     let out_text = String::from_utf8(out).expect("stdout");
     let err_text = String::from_utf8(err).expect("stderr");
     assert_eq!(code, 0, "{out_text}{err_text}");
-    // run: SARIF 2.1.0, one deterministically ordered `license` run,
-    // empty results kept, no partial-invocation marker when complete.
     let sarif = std::fs::read_to_string(harness.workspace.join("out.sarif")).expect("sarif");
     let value: serde_json::Value = serde_json::from_str(&sarif).expect("sarif JSON");
     assert_eq!(value["version"], serde_json::json!("2.1.0"));
@@ -464,13 +460,9 @@ fn audit_reports_sarif_and_spdx_to_files() {
         runs[0].get("invocations").is_none(),
         "complete run carries no unsuccessful invocation: {value}"
     );
-    // Typed SARIF parses: the live document is schema-valid.
     let typed: serde_sarif::sarif::Sarif = serde_json::from_str(&sarif).expect("typed SARIF");
     assert_eq!(typed.runs.len(), 1);
     assert_eq!(typed.runs[0].tool.driver.name, "license");
-    // one document per invocation with the frozen envelope, purl
-    // package identity, DESCRIBES from the audited root, and no
-    // CONTAINS edges in V1 (no lock-graph projection yet).
     let spdx = std::fs::read_to_string(harness.workspace.join("out.spdx.json")).expect("spdx");
     let spdx_value: serde_json::Value = serde_json::from_str(&spdx).expect("spdx JSON");
     assert_eq!(spdx_value["spdxVersion"], serde_json::json!("SPDX-2.3"));
@@ -523,7 +515,6 @@ fn audit_reports_sarif_and_spdx_to_files() {
 fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
     use crate::args::parse;
     use crate::exec::{execute, Env};
-    // License-only clean run carries exactly the `license` run.
     let runner = AuditRunner::clean();
     let harness = Harness::new("audit-sarif-license-shape");
     harness.write_source(
@@ -576,8 +567,6 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
         .map(|run| run["tool"]["driver"]["name"].as_str().expect("driver"))
         .collect();
     assert_eq!(names, vec!["license"]);
-    // Security-only clean run carries exactly `gitleaks` plus `vuln`
-    // in deterministic bytewise order with empty runs kept.
     let runner = AuditRunner::clean();
     let harness = Harness::new("audit-sarif-security-shape");
     harness.write_source(
@@ -631,8 +620,6 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
         assert_eq!(run["results"], serde_json::json!([]), "{value}");
         assert!(run.get("invocations").is_none(), "complete: {value}");
     }
-    // Findings keep their stable tool/rule identity with
-    // path-only locations (no byte ranges, hence no regions).
     let sarif_text = r#"{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "gitleaks"}}, "results": [{"ruleId": "gitleaks/aws-key", "message": {"text": "AWS key"}}]}]}"#;
     let runner = AuditRunner::with_sarif(Some(1), sarif_text);
     let (code, _out, _err) = run_with(&["security"], &runner, &|harness| {
@@ -656,9 +643,6 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
 fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
     use crate::args::parse;
     use crate::exec::{execute, Env};
-    // while retaining validated findings. Secrets finding (gitleaks)
-    // plus a missing advisory snapshot (vuln incomplete) yields one
-    // retained result and `executionSuccessful=false` in both runs.
     let github = format!("{}{}", "ghp_", "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8");
     let sarif_in = format!(
         "{{\"version\": \"2.1.0\", \"runs\": [{{\"tool\": {{\"driver\": {{\"name\": \"gitleaks\"}}}}, \"results\": [{{\"ruleId\": \"gitleaks/aws-key\", \"message\": {{\"text\": \"leaked {github}\"}}, \"locations\": [{{\"physicalLocation\": {{\"artifactLocation\": {{\"uri\": \"src/app.py\"}}}}}}]}}]}}]}}"
@@ -676,9 +660,6 @@ fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
         "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
     );
     write_go_mod(&harness);
-    // No advisory snapshots: every vuln set is incomplete, so the
-    // SARIF document is partial even though the secrets finding is
-    // validated.
     let invocation =
         parse(&["security".to_owned(), "--report=sarif=out.sarif".to_owned()]).expect("parse");
     let mut out = Vec::new();
@@ -714,16 +695,13 @@ fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
         serde_json::json!("gitleaks")
     );
     assert_eq!(runs[1]["tool"]["driver"]["name"], serde_json::json!("vuln"));
-    // Validated secrets finding is retained in the partial document.
     let gitleaks_results = runs[0]["results"].as_array().expect("results");
     assert_eq!(gitleaks_results.len(), 1, "{value}");
     assert_eq!(
         gitleaks_results[0]["ruleId"],
         serde_json::json!("gitleaks/aws-key")
     );
-    // Secret values never reach the partial report either.
     assert!(!sarif.contains(&github), "{sarif}");
-    // Every run records the unsuccessful invocation.
     for run in runs {
         assert_eq!(
             run["invocations"],
@@ -731,7 +709,6 @@ fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
             "partial run must mark unsuccessful: {value}"
         );
     }
-    // Rules stay stable per run; locations stay path-only.
     assert_eq!(
         runs[0]["tool"]["driver"]["rules"],
         serde_json::json!([{"id": "gitleaks/aws-key"}])
@@ -746,12 +723,6 @@ fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
 fn audit_spdx_live_golden_is_single_deterministic_document() {
     use crate::args::parse;
     use crate::exec::{execute, Env};
-    // per invocation, never one per package/set/root. Two runs over
-    // the same inputs with different temp nonces agree on packages
-    // plus relationships; only the invocation namespace differs.
-    // Partial reports stay non-authoritative: an incomplete license
-    // run still emits a valid SPDX shape but the report event plus
-    // `command_finished` carry `results_complete=false`.
     fn emit(nonce: u64) -> (serde_json::Value, i32, String) {
         let runner = AuditRunner::clean();
         let harness = Harness::new(&format!("audit-spdx-determinism-{nonce}"));
@@ -791,7 +762,6 @@ fn audit_spdx_live_golden_is_single_deterministic_document() {
         );
         let text = std::fs::read_to_string(harness.workspace.join("out.spdx.json")).expect("spdx");
         let mut value: serde_json::Value = serde_json::from_str(&text).expect("spdx JSON");
-        // Normalize the invocation-unique namespace before comparing.
         value["documentNamespace"] = serde_json::json!("NORMALIZED");
         (value, code, text)
     }
@@ -800,7 +770,6 @@ fn audit_spdx_live_golden_is_single_deterministic_document() {
     assert_eq!(first_code, 0);
     assert_eq!(second_code, 0);
     assert_eq!(first, second, "packages plus relationships deterministic");
-    // The raw texts differ only in the namespace line.
     assert_ne!(first_text, second_text);
     let first_ns = serde_json::from_str::<serde_json::Value>(&first_text).expect("json")
         ["documentNamespace"]
@@ -825,10 +794,6 @@ fn audit_spdx_live_golden_is_single_deterministic_document() {
 
 #[test]
 fn audit_partial_reports_are_not_authoritative() {
-    // (marked `executionSuccessful=false` / `results_complete=false`)
-    // must not be uploaded as an authoritative replacement scan.
-    // Live JSON report events plus `command_finished` gate
-    // authoritative upload on `results_complete=true`.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &["security", "--output=json", "--report=sarif=out.sarif"],
@@ -838,7 +803,6 @@ fn audit_partial_reports_are_not_authoritative() {
                 "rust/tests/fixtures/hello/Cargo.lock",
                 "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
             );
-            // Missing advisory snapshots: incomplete, never clean.
         },
     );
     assert_eq!(code, 1, "{out}{err}");
@@ -861,9 +825,6 @@ fn audit_partial_reports_are_not_authoritative() {
 
 #[test]
 fn audit_errors_stay_typed_with_stable_display() {
-    // instead of `String` plumbing. Displays stay byte-identical so
-    // `audit_failed` diagnostics never drift, while I/O legs keep
-    // their source for `Error::source`.
     use super::AuditError;
     use std::error::Error as _;
     assert_eq!(
@@ -900,7 +861,7 @@ fn audit_errors_stay_typed_with_stable_display() {
             upstream: "https://example.invalid/cargo.zip".to_owned(),
         }
         .to_string(),
-        "advisory_refresh_failed: could not obtain current advisory data for cargo: missing .dx/advisory/cargo.json (refresh via https://example.invalid/cargo.zip, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: missing .dx/advisory/cargo.json (refresh via https://example.invalid/cargo.zip)"
     );
     let snapshot_read = AuditError::AdvisoryRead {
         set: "cargo".to_owned(),
@@ -971,7 +932,7 @@ fn audit_errors_stay_typed_with_stable_display() {
             upstream: "https://example.invalid/cargo.zip".to_owned(),
         }
         .to_string(),
-        "advisory_refresh_failed: could not obtain current advisory data for cargo: stale snapshot 2000-01-01 (want 2026-09-22; refresh via https://example.invalid/cargo.zip, or re-copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
+        "advisory_refresh_failed: could not obtain current advisory data for cargo: stale snapshot 2000-01-01 (want 2026-09-22; refresh via https://example.invalid/cargo.zip)"
     );
     assert_eq!(
         AuditError::AdvisoryShaMismatch {
@@ -1004,12 +965,10 @@ fn audit_errors_stay_typed_with_stable_display() {
         .to_string(),
         "could not parse pnpm-lock.yaml: boom"
     );
-    // Unowned scopes fail typed, never `String` plumbing.
     let unowned = super::resolve_audit_sets(&["python/tests/fixtures/hello/hello.py".to_owned()])
         .expect_err("unowned scope fails");
     assert!(matches!(unowned, AuditError::NoOwningSet { .. }));
     assert!(unowned.to_string().contains("no owning dependency set"));
-    // Missing advisory snapshots fail typed with the refresh hint.
     let harness = Harness::new("audit-typed-missing");
     let missing = super::load_advisories(
         &harness.workspace,
@@ -1019,7 +978,6 @@ fn audit_errors_stay_typed_with_stable_display() {
     .expect_err("missing snapshot fails");
     assert!(matches!(missing, AuditError::AdvisoryMissing { .. }));
     assert!(missing.to_string().contains("advisory_refresh_failed"));
-    // Missing required locks fail typed.
     let lock_missing = super::lock_texts_for_set(&harness.workspace, dx_update::sets::SetId::Cargo)
         .expect_err("missing lock fails");
     assert!(matches!(lock_missing, AuditError::LockMissing { .. }));
@@ -1027,9 +985,6 @@ fn audit_errors_stay_typed_with_stable_display() {
 
 #[test]
 fn audit_sarif_spdx_write_failures_are_fail_closed() {
-    // and fail closed with `report_failed` (exit 1) instead of
-    // silently losing the report. A missing parent never creates
-    // directories.
     use crate::args::parse;
     use crate::exec::{execute, Env};
     for (format, path) in [
@@ -1085,8 +1040,6 @@ fn audit_sarif_spdx_write_failures_are_fail_closed() {
 
 #[test]
 fn audit_report_write_failure_json_reports_error_event() {
-    // JSON report-write failures emit the `report_failed` error event
-    // plus `command_finished` with `results_complete=false`.
     use crate::args::parse;
     use crate::exec::{execute, Env};
     let runner = AuditRunner::clean();
@@ -1136,7 +1089,6 @@ fn audit_report_write_failure_json_reports_error_event() {
 
 #[test]
 fn offline_dry_run_plans_cache_only_without_launching() {
-    // offline dry-run plans cache-only and exits 0.
     let harness = Harness::new("audit-offline-dryrun");
     let (code, out, err) = harness.run(&["security", "--offline", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
@@ -1155,8 +1107,6 @@ fn offline_dry_run_plans_cache_only_without_launching() {
 
 #[test]
 fn offline_live_missing_advisory_fails_with_offline_required() {
-    // refresh advisory data over the network, so a missing snapshot fails
-    // with `offline_required` (wrapping the advisory detail as the cause).
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(&["security", "--offline"], &runner, &|harness| {
         harness.write_source(

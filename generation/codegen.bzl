@@ -1,6 +1,5 @@
 """Normalized codegen plan records.
 
-Contract: `docs/environments/codegen.md`, `docs/product/scope.md`.
 """
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
@@ -24,8 +23,6 @@ DxCodegenPlanInfo = provider(
     },
 )
 
-# Aspect-carried merge: Bazel rejects an aspect re-providing its target's
-# provider ("provided twice"). See `docs/environments/codegen.md`.
 DxCodegenPlanCollectedInfo = provider(
     doc = "Aspect-merged codegen plan records from the traversed closure.",
     fields = {
@@ -33,17 +30,12 @@ DxCodegenPlanCollectedInfo = provider(
     },
 )
 
-# Private output group for collected shards and referenced artifacts.
-# Frozen; see `docs/environments/codegen.md`.
 DX_CODEGEN_PLAN_OUTPUT_GROUP = "dx_codegen_plans"
 
-# Reserved shard suffix for BEP-reported files. See `docs/environments/codegen.md`.
 DX_CODEGEN_SHARD_SUFFIX = ".dxcodegen.pb"
 
-# Versioned codegen-pair schema. Add pairs via this tuple only.
 CODEGEN_SCHEMA_VERSION = 1
 
-# Admitted first-release pairs (slice 1). See `docs/environments/codegen.md`.
 DX_CODEGEN_ADMITTED_PAIRS = (
     ("protobuf", "rust"),
 )
@@ -467,10 +459,6 @@ dx_codegen_shard = rule(
     doc = "Emits one contributor's normalized binary codegen plan shard (issue #506 WP1).",
 )
 
-# Narrow traversal edges for the collecting aspect: the shard rule's own
-# `deps`, the prost library's `proto` edge, and the prost adapter's
-# `proto_rs` edge. No `data`, `srcs`, `DefaultInfo`, or broad unions are
-# traversed: collectors consume only normalized providers.
 _CODEGEN_ASPECT_ATTRS = ["deps", "proto", "proto_rs"]
 
 def _dx_codegen_plan_aspect_impl(target, ctx):

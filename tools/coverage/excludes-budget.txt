@@ -1,11 +1,7 @@
-# LCOV excludes budget (issue #1055).
+# LCOV excludes budget.
 #
-# Blanket `policy:` excludes are bounded here, never unbounded. Every
-# source-level ignore needs a specific `reason:` plus `issue:` tracking
-# (see docs/testing/strategy-details.md#coverage); bare `policy:` without
-# `reason:` plus `issue:` fails the gate. Growing beyond these budgets
-# fails `bazel run //tools/ci:coverage_excludes_qualification` and must
-# bump the budget plus strategy-details in the same reviewed PR.
+# Every source-level ignore needs a specific `reason:` plus `issue:`.
+# Bare `policy:` without `reason:` plus `issue:` fails the gate.
 #
 # Scope: real `LCOV_EXCL_START`/`STOP`/`LINE` comment markers in tracked
 # `*.rs`/`*.go`/`*.sh`, excluding intentional fail-closed fixtures

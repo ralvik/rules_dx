@@ -1,20 +1,13 @@
 """Local-first PyPI publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
-# Versioned name-charset schema. Consumers query via
-# `pypi_name_charset` and `pypi_name_error` instead of duplicating the
-# charset, so any charset evolution edits this one data constant with
-# schema review, never a parallel allowlist.
 PYPI_SCHEMA_VERSION = 1
 
-# Distribution names embed directly in the generated Python launcher, so
-# the charset is restricted to what is safe inside single quotes.
 _VALID_NAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
 PYPI_DEFAULT_REPOSITORY_URL = "https://upload.pypi.org/legacy/"
@@ -201,9 +194,6 @@ def pypi_deploy(name, wheel, sdist = None, repository_url = PYPI_DEFAULT_REPOSIT
         wheel = wheel,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     data = [wheel]
     if sdist != None:
         data.append(sdist)

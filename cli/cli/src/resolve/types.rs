@@ -14,13 +14,11 @@ pub trait QueryRunner {
     fn run_query(&self, argv: &[String], cwd: &Path) -> io::Result<QueryResult>;
 }
 
-// LCOV_EXCL_START - reason: prod spawn, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: prod spawn, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 pub struct ProcessQueryRunner;
 
 impl QueryRunner for ProcessQueryRunner {
     fn run_query(&self, argv: &[String], cwd: &Path) -> io::Result<QueryResult> {
-        // Single captured-spawn owner lives in `dx_process`; this maps
-        // its output onto the query seam so spawn logic cannot drift.
         let output = dx_process::spawn_output(argv, cwd, &[], false).map_err(|error| {
             if error.kind() == io::ErrorKind::InvalidInput {
                 io::Error::new(io::ErrorKind::InvalidInput, "query needs a binary")
@@ -35,9 +33,9 @@ impl QueryRunner for ProcessQueryRunner {
         })
     }
 }
-// LCOV_EXCL_STOP - reason: end prod spawn, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_STOP - reason: end prod spawn, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 
-// LCOV_EXCL_START - reason: test guard, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: test guard, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 #[cfg(test)]
 pub struct NeverQuery;
 
@@ -47,7 +45,7 @@ impl QueryRunner for NeverQuery {
         panic!("resolve tests must not run queries");
     }
 }
-// LCOV_EXCL_STOP - reason: end test guard, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_STOP - reason: end test guard, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ResolvedScope {

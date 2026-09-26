@@ -1,30 +1,19 @@
 """Octopus Deploy publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
-# Versioned project/channel charset schema. Consumers query via
 OCTOPUS_SCHEMA_VERSION = 1
 
-# Project and channel names embed directly in the generated Python
-# launcher, so the charset is restricted to what is safe inside single
-# quotes.
 _VALID_PROJECT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
 _VALID_CHANNEL_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
-# Release versions embed directly in the generated Python launcher, so
-# the charset is restricted to semver-safe characters inside single
-# quotes (`+` covers build metadata).
 _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+"
 
-# Environment and space names embed directly in the generated Python
-# launcher, so the charset is restricted to what is safe inside single
-# quotes.
 _VALID_ENVIRONMENT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
 OCTOPUS_DEFAULT_URL = "https://octopus.example.invalid"
@@ -335,9 +324,6 @@ def octopus_deploy(name, package, project, channel = "Default", version = "0.0.0
         version = version,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     py_binary(
         name = program_target,
         srcs = [":" + launcher_target],

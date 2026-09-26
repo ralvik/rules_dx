@@ -1,6 +1,5 @@
 """Composed multi-language Gazelle witness (canonical `//dx:generate`).
 
-Contract: `docs/cli/commands/generate.md`.
 """
 
 load("@gazelle//:def.bzl", "gazelle_binary")
@@ -43,11 +42,6 @@ go_library(
     ],
 )
 
-# Canonical composed binary: every first-party extension plus the
-# dispatch witness last. The witness observes OtherGen as the union of
-# sibling rules and replays the union loads, so `//dx:generate` refreshes
-# the whole workspace in one traversal. Contract:
-# `docs/cli/commands/generate.md`.
 gazelle_binary(
     name = "gazelle",
     languages = [

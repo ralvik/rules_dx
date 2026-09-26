@@ -70,7 +70,6 @@ mod tests {
                 "run dir {name:?} must carry the dx-run- prefix"
             );
         }
-        // `TempDir` auto-cleans on drop; explicit close asserts removal works.
         first.close().expect("cleanup first");
         second.close().expect("cleanup second");
     }

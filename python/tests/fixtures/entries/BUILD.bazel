@@ -35,7 +35,6 @@ python_test(
     name = "helper_test",
     testonly = True,
     srcs = ["helper_test.py"],
-    # Reuses the hello uv graph (single pypi hub); no separate lock.
     dep_group = "hello",
     imports = ["."],
     deps = [

@@ -16,12 +16,6 @@ package(
     default_visibility = ["//:__subpackages__"],
 )
 
-# C++17 floor: both the library and the test pin `-std=c++17` explicitly so
-# the proof never relies on the compiler default (gcc 13 defaults to
-# gnu++17). GoogleTest 1.18.x requires C++17 or newer per the upstream
-# v1.18.0 release notes; the test source adds `static_assert(__cplusplus)`
-# plus `std::optional` plus structured-bindings plus `if constexpr` floor
-# proofs that fail to compile below C++17.
 cc_library(
     name = "greeter_lib",
     srcs = ["greeter.cc"],

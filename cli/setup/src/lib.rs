@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use std::fs;
@@ -285,7 +283,6 @@ fn generation_from_link_target(target: &Path) -> Option<GenerationId> {
         .and_then(|text| GenerationId::new(text).ok())
 }
 
-/// Reads the currently selected pair without locking (diagnostics and
 pub fn read_current_pair(workspace_root: &Path) -> Result<Option<SetupPair>, CommitError> {
     if !workspace_root.is_dir() {
         return Err(CommitError::WorkspaceRoot {

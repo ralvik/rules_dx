@@ -17,9 +17,6 @@ pwsh_binary(
     deps = [":solo"],
 )
 
-# Handwritten: the generator never emits pwsh_test; test-owned
-# `*.Tests.ps1` stays out of the generated library and this rule survives
-# regeneration.
 pwsh_test(
     name = "pure_test",
     srcs = ["Pure.Tests.ps1"],

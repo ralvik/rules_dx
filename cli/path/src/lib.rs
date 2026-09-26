@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,8 +80,6 @@ mod tests {
 
     #[test]
     fn first_problem_in_ladder_order_wins() {
-        // Absolute beats everything below it; backslash beats empty
-        // components and dot segments.
         assert_eq!(classify("/a//b"), Some(PathProblem::Absolute));
         assert_eq!(classify("a\\//b"), Some(PathProblem::Backslash));
         assert_eq!(classify("a//./b"), Some(PathProblem::EmptyComponent));
@@ -92,8 +88,6 @@ mod tests {
 
     #[test]
     fn canonical_reasons_are_pinned() {
-        // Sole message owner for the canonical wording: wrappers using
-        // `reason`/`reject_reason` inherit these strings verbatim.
         for (problem, reason) in [
             (PathProblem::Empty, "path must be non-empty"),
             (
@@ -125,7 +119,6 @@ mod tests {
             assert_eq!(reject_reason(path), Some(reason), "path: {path:?}");
         }
         assert_eq!(reject_reason("src/lib.rs"), None);
-        // First problem in ladder order wins, including for messages.
         assert_eq!(
             reject_reason("/a//b"),
             Some("path must be workspace-relative, not absolute")

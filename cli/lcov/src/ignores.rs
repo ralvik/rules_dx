@@ -154,7 +154,7 @@ fn slash_scan() -> Option<&'static Regex> {
             let _ = SCAN.set(compiled);
             SCAN.get()
         }
-        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     }
 }
 
@@ -168,7 +168,7 @@ fn hash_scan() -> Option<&'static Regex> {
             let _ = SCAN.set(compiled);
             SCAN.get()
         }
-        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     }
 }
 
@@ -182,7 +182,7 @@ fn directive_suffix() -> Option<&'static Regex> {
             let _ = SUFFIX.set(compiled);
             SUFFIX.get()
         }
-        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        Err(_) => None, // LCOV_EXCL_LINE - reason: static pattern cannot fail, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     }
 }
 
@@ -203,19 +203,19 @@ fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
         }
         if slash_scan().is_some() {
             return None;
-        } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     } else if opener == b"#" {
         if let Some(end) = scan_with(line, hash_scan()) {
             return Some(&line[end..]);
         }
         if hash_scan().is_some() {
             return None;
-        } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-    } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-    line_comment_with_fallback(line, opener) // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
+    } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
+    line_comment_with_fallback(line, opener) // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 }
 
-// LCOV_EXCL_START - reason: compile-fail fallback is unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: compile-fail fallback is unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     let bytes = line.as_bytes();
     let mut index = 0;
@@ -251,7 +251,7 @@ fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a st
     }
     None
 }
-// LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 
 fn line_comment(line: &str) -> Option<&str> {
     line_comment_with(line, b"//")
@@ -300,14 +300,14 @@ fn take_word(rest: &str, word: &str) -> bool {
             Some(matched) => matched.as_str() == word,
             None => false,
         };
-    } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-      // LCOV_EXCL_START - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    } // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
+      // LCOV_EXCL_START - reason: fallback handles compile-fail path, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     if let Some(tail) = rest.strip_prefix(word) {
         !tail.starts_with(|c: char| c == '_' || c.is_alphanumeric())
     } else {
         false
     }
-    // LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 }
 
 pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
@@ -702,8 +702,6 @@ mod tests {
 
     #[test]
     fn regex_comment_scan_skips_string_then_finds_real_marker() {
-        // `"//"` inside the string must not win; the trailing `// MARK`
-        // outside the literal does.
         let line = format!(
             "let s = \"code with // {} inside\"; // {} - reason: real, issue: 1055.",
             marker("_LINE"),
@@ -716,7 +714,6 @@ mod tests {
 
     #[test]
     fn regex_hash_scan_skips_char_literal_hash() {
-        // `'#'` is a char literal; the later `# MARK` is the comment.
         let line = format!(
             "let c = '#'; # {} - reason: after char, issue: 1055.",
             marker("_LINE")
@@ -760,8 +757,6 @@ mod tests {
 
     #[test]
     fn block_comment_markers_are_inert_wontfix() {
-        // Wont-fix: the line-comment textual scan never looks
-        // inside `/* ... */`, so a marker there is inert, not an ignore.
         let source = file_lines(&[
             "fn f() {".to_string(),
             format!("    /* {} - reason: block. */", marker("_LINE")),
@@ -775,8 +770,6 @@ mod tests {
 
     #[test]
     fn raw_string_markers_are_inert_wontfix() {
-        // Wont-fix: raw strings (`r#"..."#`) are not decoded,
-        // so a marker inside one is inert, not an ignore.
         let tricky = format!("let s = r#\"code with // {} inside\"#;", marker("_LINE"));
         let source = file_lines(&[tricky, "real();".to_string()]);
         let ignores = find_ignores("t.rs", &source).unwrap();
@@ -800,7 +793,7 @@ mod tests {
     #[test]
     fn bare_policy_without_reason_is_rejected() {
         let source = file_lines(&[format!(
-            "// {} - policy: docs/testing/strategy-details.md#coverage",
+            "// {} - policy: docs/cli/commands/build-test-coverage.md",
             marker("_LINE")
         )]);
         let err = find_ignores("t.rs", &source).unwrap_err();
@@ -810,7 +803,7 @@ mod tests {
     #[test]
     fn bare_policy_on_previous_line_is_rejected() {
         let source = file_lines(&[
-            "    // policy: docs/testing/strategy-details.md#coverage".to_string(),
+            "    // policy: docs/cli/commands/build-test-coverage.md".to_string(),
             format!("    // {}", marker("_LINE")),
             "    1".to_string(),
         ]);
@@ -830,8 +823,6 @@ mod tests {
 
     #[test]
     fn issue_without_digit_is_rejected() {
-        // `issue:` must carry a digit for budget/expiry tracking; a
-        // non-numeric value fails closed as missing issue.
         let source = file_lines(&[format!(
             "// {} - reason: fixture, issue: no-digit.",
             marker("_LINE")
@@ -843,7 +834,7 @@ mod tests {
     #[test]
     fn reason_plus_issue_plus_policy_is_accepted() {
         let source = file_lines(&[format!(
-            "// {} - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage",
+            "// {} - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md",
             marker("_LINE")
         )]);
         let ignores = find_ignores("t.rs", &source).unwrap();

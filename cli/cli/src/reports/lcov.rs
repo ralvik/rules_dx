@@ -60,7 +60,6 @@ mod tests {
         assert!(validate_lcov(b"end_of_record\n").is_err());
         assert!(validate_lcov(b"SF:/a.rs\nDA:1,1\n").is_err());
         assert!(validate_lcov(b"").is_err());
-        // Blank lines and unknown FN/BRDA lines are ignored.
         let with_noise = "\nSF:/a.rs\nFN:1,fn\nBRDA:1,0,0,1\nDA:1,1\nend_of_record\n";
         assert_eq!(validate_lcov(with_noise.as_bytes()), Ok(()));
     }
@@ -110,8 +109,6 @@ mod tests {
     #[test]
     fn coverage_rate_rejects_invalid_markers() {
         let documents = ["SF:src/a.rs\nDA:1,1\nend_of_record\n"];
-        // Intentional bare marker as test data inside a string literal:
-        // inert for this file's own gate, invalid for the rated source.
         let source = "// LCOV_EXCL_LINE\nfn a() {}\n";
         assert!(rate(&documents, &[("src/a.rs", source)]).is_err());
     }

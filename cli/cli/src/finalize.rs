@@ -145,9 +145,6 @@ fn default_outcome(workspace: &Path, path: &str, intended: &[u8]) -> (i32, Strin
 pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, FinalizeError> {
     let payload: IntendedPayload = serde_json::from_slice(input.intended_json)
         .map_err(|err| FinalizeError::Malformed(format!("invalid intended JSON: {err}")))?;
-    // Minor is forward-compatible within one major: 1.0 witnesses decode
-    // under 1.1 when their bytes satisfy the current rules, and newer
-    // minors decode the same way. Only the breaking major is enforced here.
     if payload.schema_major != generation_result::SCHEMA_MAJOR {
         return Err(FinalizeError::Malformed(format!(
             "unsupported schema {}.{}; want major {}",
@@ -163,14 +160,10 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
             payload.mode,
         )));
     }
-    // A failed check run with an incomplete witness carries nothing
-    // trustworthy; a *complete* witness finalizes despite the nonzero
-    // exit (see the module docs for the `ErrDiff` ordering argument).
     let witnessed_complete = payload.scopes.iter().all(|s| s.results_complete);
     if input.check && !witnessed_complete && !input.gazelle_ok {
         return Err(FinalizeError::IncompleteCheck);
     }
-    // Guard every path before touching the filesystem.
     for file in &payload.files {
         check_joinable(&file.path)?;
     }
@@ -183,10 +176,6 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
         .into_iter()
         .map(|scope| Scope {
             value: scope.value,
-            // Check mode reports what the witness records: a complete
-            // witness stays complete past the expected `ErrDiff` exit.
-            // Default mode ANDs in run success so a late failure still
-            // reports its validated attempted prefix as incomplete.
             results_complete: Some(if input.check {
                 scope.results_complete
             } else {
@@ -216,8 +205,6 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
                         replacement: edit.replacement.clone(),
                     })
                     .collect();
-                // The digest is finalizer-owned: the extension streams
-                // raw original bytes, and stamping the digest here binds them.
                 file_result::Change::Modification(Modification {
                     original_digest: dx_digest::blake3(&original).to_vec(),
                     original_content: original,
@@ -225,9 +212,6 @@ pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, Finaliz
                 })
             }
         };
-        // Reconstruct the candidate through the crate so file-local rules
-        // (UTF-8, edit order/bounds, non-empty change) are enforced by the
-        // same code that will validate the finished manifest.
         let probe = FileResult {
             path: file.path.clone(),
             scope_index: file.scope_index,
@@ -327,7 +311,7 @@ mod tests {
             Some(file_result::Change::Modification(_))
         ));
         let Some(file_result::Change::Modification(modification)) = &file.change else {
-            unreachable!("expected modification change"); // LCOV_EXCL_LINE - reason: unreachable arm, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+            unreachable!("expected modification change"); // LCOV_EXCL_LINE - reason: unreachable arm, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         };
         assert_eq!(modification.original_content, b"abc\n");
         assert_eq!(
@@ -362,7 +346,6 @@ mod tests {
         assert_eq!(missing.outcome, WriteOutcome::NotApplied as i32);
         assert_eq!(missing.failure_code, FAILURE_MISSING_FILE);
 
-        // A directory where the file should be is not a readable file.
         std::fs::create_dir_all(dir.path().join("rust/tests/fixtures/hello/BUILD.bazel.dir"))
             .unwrap();
         std::fs::rename(
@@ -380,7 +363,6 @@ mod tests {
     #[test]
     fn check_mode_reads_no_files_and_marks_unspecified() {
         let dir = dx_test_scratch::scratch("dx-finalize-test-");
-        // No workspace files exist at all: check mode must still succeed.
         let manifest = finalize(&FinalizeInput {
             intended_json: &payload("check", true),
             workspace: dir.path(),
@@ -397,12 +379,7 @@ mod tests {
 
     #[test]
     fn check_mode_complete_witness_finalizes_after_failed_run() {
-        // Upstream `-mode diff` exits 1 (`ErrDiff`) exactly when the
-        // witness carries changes, after `AfterResolvingDeps` wrote it:
-        // a complete check witness is trustworthy despite the failure,
-        // and check mode still reads no workspace files.
         let dir = dx_test_scratch::scratch("dx-finalize-test-");
-        // No workspace files exist at all: the manifest still succeeds.
         let manifest = finalize(&FinalizeInput {
             intended_json: &payload("check", true),
             workspace: dir.path(),
@@ -420,8 +397,6 @@ mod tests {
 
     #[test]
     fn check_mode_rejects_incomplete_scope() {
-        // A check run that did not finish a scope must not produce a manifest
-        // claiming otherwise: crate validation fails the whole artifact.
         let dir = dx_test_scratch::scratch("dx-finalize-test-");
         let err = finalize(&FinalizeInput {
             intended_json: &payload("check", false),
@@ -548,8 +523,6 @@ mod tests {
     #[test]
     fn rejects_unsafe_paths_before_filesystem_access() {
         let dir = dx_test_scratch::scratch("dx-finalize-test-");
-        // Even a workspace containing a matching file must not satisfy an
-        // escaping path: rejection happens before any join.
         std::fs::create_dir_all(dir.path().join("etc")).unwrap();
         std::fs::write(dir.path().join("etc/passwd"), b"xyz\n").unwrap();
         for path in ["../etc/passwd", "/etc/passwd", "", "a//b", "a/./b"] {
@@ -574,8 +547,6 @@ mod tests {
 
     #[test]
     fn crate_validation_still_guards_structural_rules() {
-        // Scope index out of range passes JSON shape checks but must fail
-        // `generation_result::validate`.
         let json = concat!(
             r#"{"schema_major":1,"schema_minor":0,"mode":"default","#,
             r#""scopes":[{"value":"//...","results_complete":true}],"#,
@@ -611,8 +582,6 @@ mod tests {
         );
         assert!(std::error::Error::source(&err).is_none());
 
-        // A scope Gazelle did not finish keeps results_complete false even
-        // when the process exited zero: the witness is authoritative.
         let dir = workspace_with(b"xyz\n");
         let manifest = finalize(&FinalizeInput {
             intended_json: &payload("default", false),
@@ -643,7 +612,6 @@ mod tests {
 
     #[test]
     fn scope_shape_round_trip() {
-        // A scope entry survives with its value and completion flag intact.
         let json = concat!(
             r#"{"schema_major":1,"schema_minor":0,"mode":"default","#,
             r#""scopes":[{"value":"//rust/...","results_complete":true}],"#,

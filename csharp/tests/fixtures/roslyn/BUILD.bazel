@@ -33,12 +33,6 @@ csharp_library(
     srcs = ["Sample.cs"],
 )
 
-# Explicit per-TFM pivots: the wrapper defaults to single-TFM net10.0, so
-# multi-pivot consumers declare one csharp_library per TFM. The net8.0 pivot
-# carries the shared CA1822 finding; the net10.0 pivot additionally compiles
-# the `#if NET10_0` block with the TFM-specific CA1303. RID stays
-# host-driven upstream (see pins.bzl); aggregation is a union over the
-# per-pivot SARIFs, never a pick-one.
 csharp_library(
     name = "roslyn_net8",
     testonly = True,
@@ -53,10 +47,6 @@ csharp_library(
     target_frameworks = ["net10.0"],
 )
 
-# Aggregation wiring: the per-pivot SARIFs plus the concatenated aggregate
-# prove deterministic pivot order with per-pivot provenance and union
-# semantics (see pins.bzl). Depends on the pivot libraries so the pivots
-# stay green alongside the SARIF proof.
 sh_test(
     name = "roslyn_aggregation_test",
     size = "small",
@@ -77,6 +67,5 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )

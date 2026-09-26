@@ -1,6 +1,5 @@
 """Focused Java environment plan (WP2).
 
-Contract: `docs/environments/java.md`.
 """
 
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")

@@ -1,9 +1,3 @@
-//! Standalone `dx` install-time publisher-identity verifier.
-//!
-//! Owning contract: `docs/deploy/authoring.md` (Path H).
-
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -14,7 +8,7 @@
     )
 )]
 
-// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 fn run(argv: &[String]) -> i32 {
     let args = match dx_install_tools::parse_args(argv) {
         Ok(args) => args,
@@ -42,4 +36,4 @@ fn run(argv: &[String]) -> i32 {
 fn main() {
     std::process::exit(run(&std::env::args().collect::<Vec<_>>()));
 }
-// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md

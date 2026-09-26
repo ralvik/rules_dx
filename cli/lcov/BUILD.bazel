@@ -6,9 +6,6 @@ load("//tools/visibility:visibility.bzl", "VIS_CLI_TOOLS")
 
 package(default_visibility = VIS_CLI_TOOLS)
 
-# Leaf-crate pattern via `dx_rust_crate`: emits
-# `dx_lcov` + `dx_lcov_test` + fmt/clippy tests + `Cargo.toml`
-# export + `corpus`, identical to the hand-written stanzas.
 dx_rust_crate(
     name = "dx_lcov",
     package_name = "cli/dx_lcov",

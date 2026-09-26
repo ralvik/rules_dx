@@ -294,16 +294,12 @@ mod tests {
 
     #[test]
     fn complete_subcommand_name_is_stable() {
-        // Shells invoke this spelling; the generators embed the same
         assert_eq!(COMPLETE_SUBCOMMAND, "__complete");
         assert_eq!(DYNAMIC_MARKER, "dx dynamic candidates");
     }
 
     #[test]
     fn fixed_tables_match_their_single_sources() {
-        // Hook verbs match the `execute_hooks` dispatch arms, triggers
-        // match `dx_adopt::is_hook_trigger`, shells match the frozen
-        // completion list, sets match
         assert_eq!(HOOK_VERBS, &["install", "uninstall", "status", "run"]);
         assert_eq!(HOOK_TRIGGERS, &["pre-commit", "pre-push"]);
         for trigger in HOOK_TRIGGERS {
@@ -324,8 +320,6 @@ mod tests {
 
     #[test]
     fn slot_candidates_cover_every_command_without_drift() {
-        // Every registry command classifies its slots here: task slots
-        // return their frozen vocabulary, scope slots allow labels, and
         let empty: Vec<String> = Vec::new();
         for command in Command::value_variants() {
             let (fixed, labels) = slot_candidates(*command, &empty, "");
@@ -383,7 +377,6 @@ mod tests {
                     assert!(labels, "{command:?} must accept label scopes");
                 }
             }
-            // Determinism: repeated calls render identically.
             assert_eq!(
                 slot_candidates(*command, &empty, ""),
                 slot_candidates(*command, &empty, ""),
@@ -395,8 +388,6 @@ mod tests {
 
     #[test]
     fn later_slots_follow_per_command_shapes() {
-        // Second-position rules: `hooks run` completes triggers, `watch`
-        // switches to scopes, single-scope commands close, multi-scope
         let run = vec![String::from("run")];
         let (fixed, labels) = slot_candidates(Command::Hooks, &run, "");
         assert_eq!(fixed, vec!["pre-commit", "pre-push"]);
@@ -441,7 +432,6 @@ mod tests {
                 "{command:?} must stay open for more scopes"
             );
         }
-        // `why` takes exactly `<file> <label>`: open after the first slot,
         let two = vec![String::from("a"), String::from("b")];
         assert_eq!(
             slot_candidates(Command::Why, &two, ""),
@@ -462,8 +452,6 @@ mod tests {
 
     #[test]
     fn label_scan_lists_workspace_packages_and_skips_non_packages() {
-        // Repository-derived labels come from BUILD markers, never
-        // source enumeration; hidden, `bazel-*`, and symlinked dirs
         let scratch = tempfile::tempdir().expect("scratch");
         let root = scratch.path();
         for dir in ["", "pkg/a", "pkg/b", ".hidden", "bazel-out"] {
@@ -498,7 +486,6 @@ mod tests {
 
     #[test]
     fn run_complete_lists_tasks_labels_and_commands_and_fails_open() {
-        // The callback never errors: unknown shapes yield no output,
         let scratch = tempfile::tempdir().expect("scratch");
         let root = scratch.path();
         std::fs::create_dir_all(root.join("pkg")).expect("mkdir");

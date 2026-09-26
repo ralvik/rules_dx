@@ -9,8 +9,6 @@ load("//tools/visibility:visibility.bzl", "VIS_CLI")
 
 package(default_visibility = VIS_CLI)
 
-# Hand-written binary crate; see docs/generation/rust.md.
-
 rust_library(
     name = "dx_cli",
     srcs = [
@@ -195,13 +193,6 @@ rust_binary(
     ],
 )
 
-# Dogfood draft release of the standalone `dx` binary plus the manual
-# page: the macro assembles the seed-host binary plus `man/dx.1` the
-# publish dry-run workflow qualifies, so workflow and macro stay
-# consistent instead of duplicating logic. Draft-only with the dry-run
-# placeholder tag: publishing a real draft needs the tag pushed
-# beforehand and explicit owner approval
-#
 github_deploy(
     name = "github_draft",
     artifacts = [
@@ -210,22 +201,11 @@ github_deploy(
     ],
 )
 
-# Seed-host standalone archive: credential-free tarball +
-# sha256 of the `dx` binary proving standalone packaging without Bazel
-# or Rust at install time. Seed Linux x86_64 is qualified-built-here;
-# the wider matrix (Linux arm64, macOS arm64, Windows x86_64)
-# is qualified with per-host evidence. Publisher-identity verification of the
-# release bytes is `//deploy/install:dx_verify` (Sigstore bundle +
-# identity/issuer, no checksum-only fallback); the bundle itself arrives
-# with the owner-approved release via the human-run signing workflow.
 archive_deploy(
     name = "dx_standalone",
     app = ":dx",
 )
 
-# Manual-page build step: renders man/dx.1 from the clap
-# grammar at build time so the page tracks parsing, `--help`, and
-# completions. Release packaging consumes `:man_pages`.
 rust_binary(
     name = "dx_man",
     srcs = ["src/bin_man.rs"],
@@ -320,8 +300,6 @@ rust_test(
     ],
 )
 
-# Authoritative quality identities (pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "dx_cli_fmt_test",
     size = "small",

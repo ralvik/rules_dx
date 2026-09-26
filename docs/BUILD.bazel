@@ -17,7 +17,6 @@ real_source_target(
         "//:biome.json",
         "//:licenses.toml",
         "//:ruff.toml",
-        "//docs/ir:README.md",
         "//docs/ir:doc_ir.proto",
         "//docs/ir/ir:src/lib.rs",
         "//examples:README.md",
@@ -27,8 +26,6 @@ real_source_target(
     markdown_srcs = [
         "AGENTS.md",
         "README.md",
-        "cli/README.md",
-        "cli/cli-contract.md",
         "cli/commands/README.md",
         "cli/commands/audit-update-bazel.md",
         "cli/commands/build-test-coverage.md",
@@ -45,13 +42,7 @@ real_source_target(
         "cli/commands/scope-defaults.md",
         "cli/commands/status-version.md",
         "cli/commands/watch.md",
-        "cli/output-protocol.md",
-        "cli/standard-reports.md",
-        "cli/target-resolution.md",
-        "contributing/local-workflows.md",
-        "deploy/offline-bootstrap.md",
         "github-ci.md",
-        "testing/strategy-details.md",
     ],
     tags = ["corpus"],
 )
@@ -62,5 +53,3 @@ real_source_target(
     starlark_srcs = ["BUILD.bazel"],
     tags = ["corpus"],
 )
-
-exports_files(["contributing/local-workflows.md"])

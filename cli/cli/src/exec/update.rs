@@ -24,7 +24,6 @@ pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
     }
     let verbose =
         matches!(invocation.output, OutputMode::Text { quiet: false }) && !invocation.quiet;
-    // Preset stale gate: non-mutating, preset-only, no backend launches.
     if invocation.check {
         let Env {
             workspace,
@@ -72,16 +71,11 @@ pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
                     let finished = command_finished(1, &FinishedCounts::default());
                     let _ = write_event(out, &finished);
                 } else {
-                    // Check failure (like `generate --check`): report the
-                    // diff to stdout, exit 1, no stderr.
                     let _ = writeln!(out, "{detail}");
                 }
                 1
             }
-            Err(error) => {
-                // Owned collisions and I/O failures are operational.
-                operational(invocation, out, err, CODE_UPDATE_FAILED, &error.to_string())
-            }
+            Err(error) => operational(invocation, out, err, CODE_UPDATE_FAILED, &error.to_string()),
         }
     } else {
         execute_update_default(invocation, env, verbose)
@@ -114,8 +108,6 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
     } else if verbose {
         let _ = writeln!(out, "{summary}");
     }
-    // Preset first, atomically, preserving overrides (fail fast on
-    // collisions; independent of dependency backends).
     if let Err(error) = dx_adopt::update_preset(workspace) {
         return operational(invocation, out, err, CODE_UPDATE_FAILED, &error.to_string());
     }
@@ -194,10 +186,6 @@ fn run_update_backends(
     Vec<dx_update::outcome::SetOutcome>,
     BTreeMap<dx_update::sets::SetId, SetDetail>,
 ) {
-    // Live: run backends in sorted set order, continuing independent sets
-    // after failures. V1 sets are independent (distinct locks), so the
-    // depends-on relation is empty; `aggregate` still derives `Blocked`
-    // for any future dependent that lacks a result.
     let mut attempted: Vec<dx_update::outcome::SetOutcome> = Vec::new();
     let mut details: BTreeMap<dx_update::sets::SetId, SetDetail> = BTreeMap::new();
     for (set, request) in resolved {
@@ -325,9 +313,6 @@ fn emit_update_json(
     verbose: bool,
     exit: i32,
 ) -> i32 {
-    // Minor-1.1 `correlation` groups each per-set terminal report plus
-    // its file events under `update:<set>`; line order stays
-    // authoritative and v1.0 consumers ignore the field.
     for outcome in &report.outcomes {
         let set_name = outcome.set.as_str();
         let correlation = format!("update:{set_name}");
@@ -351,15 +336,6 @@ fn emit_update_json(
                     import: None,
                 }) {
                     let event = with_correlation(event.clone(), &correlation).unwrap_or(event);
-                    // Validated backend manifests project to
-                    // `change`/`mutation` pairs grouped under the same
-                    // correlation before the per-set terminal report.
-                    // Live backends currently supply manifest bytes only
-                    // for the Go no-op (empty, so no events); other sets
-                    // supply none yet because Git scan/BUILD parse/rerun
-                    // inference stays rejected. Synthetic manifests are
-                    // pinned by unit fixtures plus
-                    // `cli/update/tests/fixtures/correlation_manifest/`.
                     if let Some(manifest) = live_success_manifest(set_name) {
                         if let Ok(file_events) = project_manifest_events(&manifest) {
                             for file_event in &file_events {
@@ -378,8 +354,6 @@ fn emit_update_json(
                         SetDetail::Success { .. } => None,
                     })
                     .unwrap_or_else(|| format!("failed to update {set_name}"));
-                // Cache-only runs surface `offline_required` (not
-                // `update_failed`) when the resolver would need a network
                 let code = if message.contains(CODE_OFFLINE_REQUIRED) {
                     CODE_OFFLINE_REQUIRED
                 } else {
@@ -412,9 +386,6 @@ fn emit_update_json(
             }
         }
     }
-    // Recovery hint (update_recovery): per-set commits are kept (no automatic rollback);
-    // print the idempotent retry plus manual restore so a partial run
-    // never reads as silent success.
     if let Some(plan) = dx_update::recovery::plan(report) {
         if let Ok(event) = notice_event(&NoticeEvent {
             level: "warning".to_owned(),
@@ -454,8 +425,6 @@ fn emit_update_text(
     verbose: bool,
     exit: i32,
 ) -> i32 {
-    // Text mode: successes to stdout when verbose, failures always to
-    // stderr, plus a final aggregate summary when verbose.
     for outcome in &report.outcomes {
         match outcome.status {
             dx_update::outcome::ReportedStatus::Success => {
@@ -486,8 +455,6 @@ fn emit_update_text(
             }
         }
     }
-    // Text recovery hint (update_recovery) on failure: always to stderr (never silent
-    // partial success), even when the per-set summary below is quiet.
     if let Some(plan) = dx_update::recovery::plan(report) {
         let _ = writeln!(
             err,
@@ -584,8 +551,6 @@ pub(crate) fn project_manifest_events(
 }
 
 fn parse_set(name: &str) -> dx_update::sets::SetId {
-    // Aggregate outcomes use canonical set names produced above; fall back
-    // to Cargo only to keep reporting total (unreachable in practice).
     dx_update::sets::SetId::parse(name).unwrap_or(dx_update::sets::SetId::Cargo)
 }
 

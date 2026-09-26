@@ -12,7 +12,6 @@ pub enum Selector {
     Target(String),
 }
 
-/// Selector usage errors (exit 2, never a partial update).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SelectorError {
     #[error("empty selector")]
@@ -39,13 +38,8 @@ pub fn parse_selector(text: &str) -> Result<Selector, SelectorError> {
     if text.is_empty() {
         return Err(SelectorError::Empty);
     }
-    // Package form `set:package` wins over target shapes, except Bazel
-    // labels (`//...`, `//foo:bar`) which start with `/` or `@` and never
-    // match `set:...` with a known set prefix.
     if let Some((head, tail)) = text.split_once(':') {
         if let Some(set) = SetId::parse(head) {
-            // `//foo:bar` never reaches here: it starts with `/`, so `head`
-            // would be `//foo`, not a known set.
             if tail.is_empty() {
                 return Err(SelectorError::InvalidPackage {
                     set: set.name(),
@@ -56,10 +50,6 @@ pub fn parse_selector(text: &str) -> Result<Selector, SelectorError> {
             validate_package(set, tail)?;
             return Ok(Selector::Package(set, tail.to_owned()));
         }
-        // A colon outside `set:...` and outside Bazel labels (which start
-        // with `//`/`@`) is not a valid bare word; fail closed below.
-        // Fall through to target/unknown handling so `//foo:bar` still
-        // resolves as a target.
     }
     if let Some(set) = SetId::parse(text) {
         return Ok(Selector::Set(set));
@@ -275,7 +265,6 @@ fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
 }
 
 pub fn owning_sets(target: &str) -> Vec<SetId> {
-    // Repository-wide and module-declaring selectors cover all sets.
     if target == "//..." {
         return SetId::ALL.to_vec();
     }
@@ -283,17 +272,11 @@ pub fn owning_sets(target: &str) -> Vec<SetId> {
         return SetId::ALL.to_vec();
     }
     let package = package_path(target);
-    // Root package/file handling: `//:target` (empty package) plus root
-    // filenames like `package.json` (file paths with no `/` and no label
-    // prefix) decide by filename spelling, since the root owns several
-    // families. Bazel labels without a slash (e.g. `//quality`) still use
-    // prefix matching below.
     if package.is_empty()
         || (!target.starts_with("//") && !target.starts_with('@') && !target.contains('/'))
     {
         return root_owning_sets(target);
     }
-    // Longest-prefix first so `quality/tools/javascript` beats `quality`.
     if has_prefix(&package, "quality/tools/javascript") {
         return vec![SetId::Npm];
     }
@@ -400,12 +383,9 @@ fn strip_recursive_suffix(text: &str) -> Option<String> {
 
 fn package_path(target: &str) -> String {
     if let Some(rest) = target.strip_prefix("//") {
-        // `//:target` (root package) carries no package path.
         if let Some(colon) = rest.find(':') {
             return rest[..colon].to_owned();
         }
-        // `//foo/...` and `//foo/bar/...` strip the recursive suffix;
-        // `//foo` stays `foo`.
         if let Some(prefix) = strip_recursive_suffix(rest) {
             return prefix;
         }
@@ -415,13 +395,10 @@ fn package_path(target: &str) -> String {
         let _ = rest;
         return String::new();
     }
-    // File/dir path: strip leading `./`, trailing `/`, and a trailing
-    // `/...` pattern suffix when present.
     let mut path = target.to_owned();
     if let Some(re) = dot_slash_prefix_re() {
         if re.is_match(&path) {
             path = re.replacen(&path, 1, "").into_owned();
-            // `replacen` with `(?:\./)+` strips all leading `./` at once.
         }
     } else {
         while let Some(rest) = path.strip_prefix("./") {
@@ -443,8 +420,6 @@ fn package_path(target: &str) -> String {
     if let Some(prefix) = strip_recursive_suffix(&path) {
         return prefix;
     }
-    // For files, match on the full path so `rust/tests/fixtures/hello/Cargo.toml`
-    // matches `rust` via prefix below.
     path
 }
 
@@ -508,9 +483,6 @@ fn root_owning_sets(target: &str) -> Vec<SetId> {
 }
 
 fn has_prefix(package: &str, prefix: &str) -> bool {
-    // `^prefix(?:/|$)` with an escaped prefix: `go` matches
-    // `go` and `go/...` but never `gold`. Falls back to the equality +
-    // `starts_with("{prefix}/")` check when the dynamic pattern fails.
     let pattern = format!(r"^{}(?:/|$)", regex::escape(prefix));
     match Regex::new(&pattern) {
         Ok(re) => re.is_match(package),
@@ -674,8 +646,6 @@ mod tests {
 
     #[test]
     fn bazel_labels_are_targets_not_packages() {
-        // `//foo:bar` contains a colon but starts with `//`, so it must
-        // never parse as `set:package`.
         assert!(matches!(
             parse_selector("//foo:bar"),
             Ok(Selector::Target(_))
@@ -767,9 +737,6 @@ mod tests {
 
     #[test]
     fn maven_selective_parses_group_artifact_and_stays_selective() {
-        // and resolve to `Packages`; the backend owns the wont-fix
-        // `unsupported` call, never a silent full substitution. Bare
-        // group-only shapes stay parse errors.
         assert_eq!(
             parse_selector("maven:org.junit.jupiter:junit-jupiter-api"),
             Ok(Selector::Package(
@@ -799,9 +766,6 @@ mod tests {
 
     #[test]
     fn go_selective_parses_module_path_and_stays_selective() {
-        // hello importpath) and resolve to `Packages`; the backend owns
-        // the wont-fix `unsupported` call, never a silent full
-        // substitution. Bare `go:` stays a parse error.
         assert_eq!(
             parse_selector("go:github.com/google/go-cmp/cmp"),
             Ok(Selector::Package(
@@ -852,8 +816,6 @@ mod tests {
 
     #[test]
     fn regex_prefix_never_matches_sibling_names() {
-        // `^prefix(?:/|$)` must not match `gold` for `go`, `rusty` for
-        // `rust`, or `quality-tools` for `quality`.
         assert!(has_prefix("go", "go"));
         assert!(has_prefix("go/tests/fixtures/hello", "go"));
         assert!(!has_prefix("gold", "go"));

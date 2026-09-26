@@ -5,14 +5,6 @@ use quality_result::proto::FileSnapshot;
 
 #[test]
 fn json_mixed_applied_and_not_applied_fail_together() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // mixed per-file results to emit applied and not_applied together
-    // and fail when any path is rejected, with one deterministic exact
-    // `change` event per valid candidate path in JSON default mode.
-    // The text-mode sibling proves file outcomes; this proves the
-    // machine contract: both changes emit (sorted path order,
-    // byte-exact reconstruction) while mutations split applied vs
-    // stale_source not_applied.
     let mut harness = Harness::new("json-mixed-apply");
     harness.write_source("src/a.py", "x = 1\n");
     harness.write_source("src/b.py", "a = 1\n");
@@ -94,9 +86,6 @@ fn json_mixed_applied_and_not_applied_fail_together() {
         changes[1]["edits"][0]["replacement"],
         serde_json::json!("b")
     );
-    // Reconstruct each candidate from digest plus UTF-8 ranges: the
-    // applied file matches its reconstruction while the stale file
-    // diverges from current bytes, proving the digest guard blocked it.
     let mut planned_a = Vec::new();
     planned_a.extend_from_slice(&original_a[0..0]);
     planned_a.extend_from_slice(b"y");
@@ -147,13 +136,6 @@ fn json_mixed_applied_and_not_applied_fail_together() {
 
 #[test]
 fn json_changes_emit_in_sorted_path_order_despite_reversed_arrival() {
-    // Determinism + apply-safety battery:
-    // `quality-testing.md` requires deterministic path-order commits
-    // (interruption leaves only complete earlier paths in path order)
-    // and randomized report/replacement ordering to yield identical
-    // manifests. The CLI sorts collected changes by path bytes before
-    // mutation and emission, so reversed proto arrival must still emit
-    // sorted changes and mutations.
     let mut harness = Harness::new("json-sorted-order");
     harness.write_source("src/a.py", "x = 1\n");
     harness.write_source("src/b.py", "a = 1\n");
@@ -273,12 +255,6 @@ fn out_of_bounds_edit_is_invalid() {
 
 #[test]
 fn multibyte_split_edit_is_invalid() {
-    // Apply-safety battery: `quality-testing.md`
-    // requires rejecting edits that split multibyte boundaries and
-    // invalid UTF-8 source bytes. The 1..2 edit splits the two-byte
-    // é (bytes 1..3 of "héllo"), so proto validation passes (ordered
-    // UTF-8 replacement) while `apply_to_bytes` fails the char
-    // boundary check: no write, invalid_edits, single Bazel launch.
     let mut harness = Harness::new("multibyte-split");
     harness.write_source("src/a.py", "héllo\n");
     let original = std::fs::read(harness.workspace.join("src/a.py")).expect("source");
@@ -311,14 +287,6 @@ fn multibyte_split_edit_is_invalid() {
 
 #[test]
 fn non_utf8_source_is_invalid_in_default_mode() {
-    // Apply-safety battery: `quality-testing.md`
-    // requires rejecting invalid UTF-8 source bytes. The 0..1 edit
-    // over b"\xff\xfe" passes proto validation (ordered UTF-8
-    // replacement, correct digest) while `apply_to_bytes` fails the
-    // source UTF-8 check: no write, invalid_edits, single Bazel
-    // launch. Diff mode already proves the render arm
-    // (`diff_non_utf8_source_fails`); this proves the default-mode
-    // mutation arm.
     let mut harness = Harness::new("nonutf8-default");
     std::fs::create_dir_all(harness.workspace.join("src")).expect("dirs");
     std::fs::write(harness.workspace.join("src/a.py"), b"\xff\xfe").expect("bytes");
@@ -361,9 +329,6 @@ fn legacy_staging_dir_does_not_block_atomic_write() {
             vec![harness.replacement(b"y")],
         ),
     );
-    // Legacy fixed staging path from before the race-free write:
-    // `write_atomic` now stages via an OS-random `NamedTempFile`, so a
-    // leftover `.dx-apply-tmp` directory must not block the apply.
     std::fs::create_dir_all(harness.workspace.join("src/.a.py.dx-apply-tmp")).expect("staging dir");
     let (code, out, err) = harness.run(&["lint", "--output=text"]);
     assert_eq!(code, 0);
@@ -453,7 +418,6 @@ fn diff_non_utf8_candidate_fails() {
         "src/a.py",
         digest(&original).to_vec(),
         vec![proto::Edit {
-            // Splitting the two-byte é (bytes 1..3) makes the edit unappliable.
             start_byte: 1,
             end_byte: 2,
             replacement: b"X".to_vec(),
@@ -493,12 +457,6 @@ fn diff_identical_candidate_fails_render() {
 
 #[test]
 fn diff_stale_source_fails_render() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // source digests validated before writing and stale outputs
-    // rejected. In diff mode the patch renders from verified sources,
-    // so a stale source fails closed with diff_failed instead of
-    // rendering from mismatched bytes; the file stays at its current
-    // (stale) bytes and no patch emits.
     let mut harness = Harness::new("diff-stale");
     harness.write_source("src/a.py", "x = 1\n");
     harness.results.insert(
@@ -518,13 +476,6 @@ fn diff_stale_source_fails_render() {
 
 #[test]
 fn diff_stale_source_fails_render_in_default_mode() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // source digests validated before writing and stale outputs
-    // rejected, plus a rejected default-mode mutation to remain in the
-    // intended patch while stderr/exit report rejection. A stale source
-    // has no verified bytes to render from, so default-mode diff must
-    // fail closed like check mode: no writes, diff_failed, no patch,
-    // single Bazel launch, never an Applied line.
     let mut harness = Harness::new("diff-stale-default");
     harness.write_source("src/a.py", "x = 1\n");
     harness.results.insert(

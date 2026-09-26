@@ -1,13 +1,4 @@
 #!/usr/bin/env bash
-# Fake CSharpier for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics `csharpier check` (exit 0 clean, exit 1 with unformatted
-# workspace-relative paths when dirty) plus `csharpier format` (in-place
-# rewrite, exit 0) over the BADFMT marker. Paths are reported relative to
-# the working directory (the scratch root), like the real tool, so the
-# backend re-anchors them. Real-tool behavior stays proven by
-# `csharp/tests/fixtures/csharpier/`; this fake proves dispatch plus
-# parser plus fix flow without .NET.
 set -euo pipefail
 mode=""
 files=()

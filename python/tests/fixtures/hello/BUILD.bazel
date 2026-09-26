@@ -12,7 +12,6 @@ package(
 python_library(
     name = "hello_lib",
     srcs = ["hello.py"],
-    # Lane A: direct aspect_hints binding; see docs/contributing/build-conventions.md.
     aspect_hints = ["//:ruff_config"],
     imports = ["."],
 )
@@ -37,10 +36,6 @@ python_test(
     ],
 )
 
-# Retry-semantics fixture (item 3): `flaky = True` must land
-# on the private `:flaky_passthrough_fixture_upstream` target through
-# unfiltered kwargs forwarding. The public target stays an ordinary
-# passing test; `//tools/ci:target_tags` asserts the upstream attribute.
 python_test(
     name = "flaky_passthrough_fixture",
     srcs = ["flaky_passthrough_test.py"],
@@ -58,8 +53,6 @@ exports_files([
     "uv.lock",
 ])
 
-# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
-# Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
     size = "small",
@@ -72,7 +65,6 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

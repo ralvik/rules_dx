@@ -22,7 +22,6 @@ pub struct SetupRecordView {
     pub generated_hex: String,
 }
 
-/// Setup-record validation failure. Invalid records are refused, never
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RecordProblem {
     #[error("malformed digest {value:?}: want 64-character lowercase hex")]
@@ -42,8 +41,6 @@ pub fn validate_record(
     environment_hex: &str,
     generated_hex: &str,
 ) -> Result<SetupRecordView, RecordProblem> {
-    // Each name validates exactly once through one helper, so a malformed
-    // digest fails here instead of panicking at pair construction.
     let environment = validated_generation_id(environment_hex)?;
     let generated = validated_generation_id(generated_hex)?;
     validated_generation_id(hex)?;

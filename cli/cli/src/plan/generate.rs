@@ -21,9 +21,6 @@ fn generate_traversal_dir(target: &str) -> String {
         return String::new();
     }
     let Some(rest) = target.strip_prefix("//") else {
-        // Unreachable through `resolve`, which rejects external scopes
-        // before planning: stay repo-wide rather than deriving a
-        // narrower traversal from a foreign label.
         return String::new();
     };
     if let Some(dir) = rest.strip_suffix("/...") {
@@ -96,8 +93,6 @@ pub fn plan_generate(
         argv.extend(dirs);
     }
     let (scope, _) = workflow_scope_labels(resolved);
-    // `run` verbs are self-describing (`Running generate for ...`):
-    // no phase noun applies.
     let summary = format!("Running generate for {}", describe_scope(&scope));
     Ok(BuildPlan { argv, summary })
 }
@@ -242,8 +237,6 @@ mod tests {
             options(&["a", "b"])
         );
         assert_eq!(generate_traversal_dirs(&resolved(&[])), vec![String::new()]);
-        // Foreign labels are unreachable through `resolve` (external
-        // scopes fail before planning): traversal stays repo-wide.
         assert_eq!(
             generate_traversal_dirs(&resolved(&["@ext//pkg/..."])),
             vec![String::new()]

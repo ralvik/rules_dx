@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Verifies one `github_deploy` deploy program.
-#
-# `$1` is the program rootpath, `$2` the expected tag, `$3...` the
-# expected asset basenames. Runs the program with `GH_RELEASE_DRY_RUN=1`
-# (no network, no mutation) and asserts the reported tag, every asset,
-# and the draft-only flags (`--draft --verify-tag`) appear in the
-# would-run command. Tagged `no-coverage`: process-spawning tests stay
-# out of the coverage denominator per the repo coverage preset.
 set -euo pipefail
 
 prog="$1"

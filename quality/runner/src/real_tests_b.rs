@@ -10,8 +10,6 @@ pub(super) fn markdown_links(
 ) -> io::Result<ChildOutput> {
     assert_hermetic(env);
     let mut out = String::new();
-    // From argv[0]: the binary path takes the non-`--source` branch,
-    // like any non-mapping argument would.
     let mut index = 0;
     while index < argv.len() {
         if argv[index] == "--source" {
@@ -202,11 +200,6 @@ pub(super) fn real_tools_pin_the_dispatched_set() {
             "yamllint",
         ]
     );
-    // tsc is pipeline-only by design (target-coupled, needs a
-    // TsConfig): it keeps an adapter parser
-    // (`quality/adapter/src/parsers/tsc.rs`) with pass plus fail
-    // samples, but has no runner dispatch, so the matrix and
-    // `REAL_TOOLS` intentionally skip it.
     assert!(!REAL_TOOLS.contains(&"tsc"));
 }
 
@@ -245,7 +238,6 @@ pub(super) fn rustfmt_pipeline_fixes_dirty_files_to_stable() {
     assert!(result.terminal_diagnostics.is_empty());
     assert!(result.initial_diagnostics.iter().all(|d| d.fixable));
     assert_eq!(result.replacements.len(), 1);
-    // Byte-minimal: common "x" prefix stays out, so 1..6 rewrites to "\ny".
     assert_eq!(result.replacements[0].edits[0].start_byte, 1);
     assert_eq!(result.replacements[0].edits[0].end_byte, 6);
     assert_eq!(result.replacements[0].edits[0].replacement, b"\ny");
@@ -297,7 +289,6 @@ pub(super) fn markdown_check_reports_workspace_keyed_findings() {
     assert_eq!(findings[0].tool_id, "markdown_check");
     assert_eq!(findings[0].rule_id, "missing-file-target");
     assert_eq!(findings[0].path, "doc/guide.md");
-    // Line 2, column 1 places at the second line's first byte.
     assert_eq!(findings[0].start_byte, Some(8));
     assert_eq!(findings[0].end_byte, Some(8));
     assert!(!findings[0].fixable);
@@ -326,8 +317,6 @@ pub(super) fn markdown_sibling_links(
 ) -> io::Result<ChildOutput> {
     assert_hermetic(env);
     let mut out = String::new();
-    // Sibling mappings trail the source mappings in argv, so
-    // pre-scan for their presence before judging any source.
     let seen_sibling = argv.iter().any(|arg| arg == "--sibling");
     let mut index = 0;
     while index < argv.len() {
@@ -756,9 +745,6 @@ pub(super) fn clippy_delegated_fix_is_check_only() {
 
 #[test]
 pub(super) fn clippy_delegated_missing_file_fails_the_action() {
-    // Guaranteed-absent without pid tricks: a fresh OS-random
-    // scratch dir always exists, so `absent` inside it never does.
-    // same prefix plus auto-clean discipline as `dx_test_scratch`.
     let scratch = tempfile::Builder::new()
         .prefix("dx-delegated-clippy-")
         .tempdir_in(std::env::temp_dir())
@@ -805,8 +791,6 @@ pub(super) fn rustc_delegated_parses_upstream_file_without_spawning() {
     std::fs::remove_file(&path).expect("remove upstream fixture");
     assert_eq!(findings.len(), 1);
     assert_eq!(findings[0].rule_id, "E0308");
-    // Byte offsets derive from the staged text: line 2 starts at
-    // byte 16, so columns 13..17 (the `oops` token) map to 28..32.
     assert_eq!(
         (findings[0].start_byte, findings[0].end_byte),
         (Some(28), Some(32))
@@ -830,9 +814,6 @@ pub(super) fn rustc_delegated_fix_is_check_only() {
 
 #[test]
 pub(super) fn rustc_delegated_missing_file_fails_the_action() {
-    // Guaranteed-absent without pid tricks: a fresh OS-random
-    // scratch dir always exists, so `absent` inside it never does.
-    // same prefix plus auto-clean discipline as `dx_test_scratch`.
     let scratch = tempfile::Builder::new()
         .prefix("dx-delegated-rustc-")
         .tempdir_in(std::env::temp_dir())

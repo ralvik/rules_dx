@@ -1,6 +1,5 @@
 use super::*;
 
-/// Strip one `go.mod` line comment: `//` starts a comment only at the
 pub fn strip_go_comment(line: &str) -> &str {
     let bytes = line.as_bytes();
     let mut index = 0usize;
@@ -9,8 +8,6 @@ pub fn strip_go_comment(line: &str) -> &str {
             if index == 0 || bytes[index - 1].is_ascii_whitespace() {
                 return line[..index].trim_end();
             }
-            // `//` inside a token (never a comment in `go.mod`
-            // requirements) stays part of the line.
             index += 2;
             continue;
         }
@@ -121,8 +118,6 @@ pub fn parse_go_mod(text: &str) -> Result<Vec<LockedPackage>, String> {
             in_skip_block = true;
             continue;
         }
-        // `go`, `toolchain`, single-line `exclude`/`retract`, and unknown
-        // directives carry no dependency identity; skip them.
     }
     if !has_module {
         return Err("invalid go.mod: missing module directive".to_owned());

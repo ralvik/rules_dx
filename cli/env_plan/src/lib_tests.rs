@@ -167,7 +167,6 @@ fn exec_suffix_matches_on_component_boundaries() {
         "env/rustc"
     ));
     assert!(!exec_matches(Path::new("/out/other"), "rustc"));
-    // Suffix matches only on "/" boundaries, never mid-segment.
     assert!(!exec_matches(Path::new("/out/xrustc"), "rustc"));
     assert!(!exec_matches(Path::new("/out/rustc"), ""));
 }
@@ -251,7 +250,6 @@ fn collect_shards_binds_exec_suffix_to_one_artifact() {
 
 #[test]
 fn collect_shards_rejects_missing_ambiguous_and_unreported() {
-    // Missing: exec suffix matches no reported artifact.
     let missing = vec![output(
         "//env:rust",
         vec![(
@@ -271,7 +269,6 @@ fn collect_shards_rejects_missing_ambiguous_and_unreported() {
             exec_path: "toolchain/rustc".to_owned(),
         })
     );
-    // Ambiguous: one suffix matches two reported artifacts.
     let ambiguous = vec![output(
         "//env:rust",
         vec![
@@ -291,7 +288,6 @@ fn collect_shards_rejects_missing_ambiguous_and_unreported() {
         collect_shards(&ambiguous),
         Err(CollectError::AmbiguousArtifact { .. })
     ));
-    // Unreported: a non-shard artifact no entry claims.
     let unreported = vec![output(
         "//env:beta",
         vec![
@@ -312,8 +308,6 @@ fn collect_shards_rejects_missing_ambiguous_and_unreported() {
 
 #[test]
 fn collect_shards_allows_shared_backing_artifact() {
-    // Selective identity dimensions may share one backing artifact:
-    // no duplicate-claim rejection, unlike the codegen file mirror.
     let outputs = vec![output(
         "//env:rust",
         vec![
@@ -461,8 +455,6 @@ fn conflict_lists_every_claimant() {
         ]),
         "env plan conflict: identity key 'runtime' claimed by //env:alpha, //env:evil"
     );
-    // Same key with a different exec path is still a conflict: the
-    // identity binds inputs to artifacts.
     assert_eq!(
         conflict_error(&[
             record_a(),
@@ -577,7 +569,6 @@ fn projection_resolves_backed_entries_and_sorts() {
         .iter()
         .map(|leaf| (leaf.key.as_str(), leaf.artifact.as_str()))
         .collect();
-    // Sorted by key; logical-only entries hold no leaf.
     assert_eq!(
         summary,
         vec![
@@ -625,7 +616,6 @@ fn projection_shares_one_artifact_across_keys() {
 
 #[test]
 fn projection_rejects_bad_indexes() {
-    // Missing: exec suffix matches no reported artifact.
     let missing_records = vec![record(
         "//env:rust",
         "rust",
@@ -635,7 +625,6 @@ fn projection_rejects_bad_indexes() {
         plan_projection(&missing_records, &[]),
         Err(CollectError::MissingArtifact { .. })
     ));
-    // Unreported: an artifact no entry claims.
     let unreported_outputs = vec![output(
         "//env:beta",
         vec![

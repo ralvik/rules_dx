@@ -10,7 +10,6 @@ pub struct BumpRequest {
     pub raw_version: String,
 }
 
-/// Widen usage errors (exit 2, never a partial widen).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum BumpError {
     #[error("empty bump selector or version; expected `dx bump <set:package> <version>`")]
@@ -48,18 +47,11 @@ impl BumpRequest {
         if selector.is_empty() || version.is_empty() {
             return Err(BumpError::Empty);
         }
-        // Bare `//...`, labels, and paths are never packages: fail closed
-        // before set parsing so `//foo:bar` never reads as `set:package`.
         if is_target_shape(selector) {
-            // `MODULE.bazel` and `.bazelversion` are file paths, not
-            // selectors: the bump selector is `bazel:<module>` or
-            // `bazel:.bazelversion`, never a bare filename.
             return Err(BumpError::NotAPackage {
                 target: selector.to_owned(),
             });
         }
-        // Bare sets (e.g. `cargo`) select whole sets: widen needs one
-        // package, never a whole set.
         if let Some(set) = BumpSet::parse(selector) {
             return Err(BumpError::BareSet {
                 set: set.name().to_owned(),
@@ -88,11 +80,6 @@ impl BumpRequest {
                 reason: "package identity is empty",
             });
         }
-        // GitHub Actions `owner/repo:tag` never appears here: the colon
-        // separates `set:package`, so `github-actions:actions/checkout`
-        // carries the slash inside the package. A second colon inside the
-        // package is Maven-only (`group:artifact` in
-        // `maven:group:artifact`); every other set rejects it.
         if set != BumpSet::Maven && tail.contains(':') {
             return Err(BumpError::InvalidPackage {
                 set: set.name(),
@@ -148,7 +135,6 @@ impl BumpRequest {
         }
     }
 
-    /// Human planning summary for `--dry-run` (never argv).
     pub fn summary(&self) -> String {
         let through = if self.needs_update_refresh() {
             format!(

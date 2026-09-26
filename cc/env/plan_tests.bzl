@@ -2,7 +2,6 @@
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //cc/env:*_plan` JSON outputs (WP2).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //cc/env:hello_c_lib_plan
 file hello_c_lib_plan.json
 field direct_sources=hello.c,hello_c.h

@@ -70,7 +70,6 @@ mod tests {
         let rels = curator_input_rels();
         assert_eq!(rels.first().map(String::as_str), Some("licenses.toml"));
         assert_eq!(rels.len(), 1 + CURATOR_ADVISORY_SETS.len() * 2);
-        // Deterministic order: snapshot plus identity per set in set order.
         let mut want = vec!["licenses.toml".to_owned()];
         for set in CURATOR_ADVISORY_SETS {
             want.push(format!(".dx/advisory/{set}.json"));
@@ -81,10 +80,6 @@ mod tests {
 
     #[test]
     fn inventory_shape_stays_per_package_for_notice_aggregation() {
-        // The future declared-inputs delivery keeps the same per-package
-        // shape so NOTICE aggregation stays hermetic and cached: each
-        // entry names its owning set, package, SPDX license, upstream
-        // version scope, and whether the archive delivered words.
         let entry = crate::license_policy::LicenseInventory {
             package: "react".to_owned(),
             set: "npm".to_owned(),

@@ -52,9 +52,6 @@ mod tests {
 
     #[test]
     fn completion_vocabulary_matches_supported_shells() {
-        // Scripts render from the `Cli` grammar via
-        // `clap_complete`, so this gate pins the vocabulary reference
-        // only — every command stays listed, every shell stays supported.
         for shell in SUPPORTED_SHELLS {
             assert!(!shell.is_empty(), "shell name must not be empty");
         }
@@ -67,10 +64,6 @@ mod tests {
 
     #[test]
     fn completion_vocabulary_is_the_final_registry() {
-        // The frozen vocabulary reference
-        // pins the final CLI registry exactly (32 commands including
-        // `deploy` plus `bump` plus `migrate` plus `new` plus `upgrade`
-        // plus `docs`; `doctor` plus `configure` stay rejected as unknown).
         let mut got = ALL_COMMANDS.to_vec();
         got.sort_unstable();
         let mut want = vec![

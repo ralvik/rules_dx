@@ -21,20 +21,12 @@ typescript_project(
     tsconfig = "tsconfig.json",
 )
 
-# The library owns the sources,
-# the binary carries the entry point only (same shape as
-# //javascript/tests/fixtures/hello:hello; see //typescript/rules:defs.bzl — execution
-# reuses the JavaScript wrappers, there is no typescript_binary).
 javascript_binary(
     name = "hello",
     data = [":hello_lib"],
     entry_point = "main.js",
 )
 
-# Seed Jest test over the tsc-compiled output via typescript_test.
-# Matches the //javascript/tests/fixtures/hello:hello_test precedent; the
-# compiled `*_test.js` naming needs the local jest config (same as
-# //javascript/tests/fixtures/entries:helper_test).
 typescript_test(
     name = "hello_test",
     srcs = ["hello_test.ts"],
@@ -47,7 +39,6 @@ typescript_test(
     deps = [":hello_lib"],
 )
 
-# Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
     size = "small",
@@ -60,7 +51,6 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

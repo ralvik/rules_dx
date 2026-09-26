@@ -1,6 +1,5 @@
 """Normalized environment plan records.
 
-Contract: `docs/environments/environment.md`, `docs/environments/managed-state.md`.
 """
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
@@ -25,8 +24,6 @@ DxEnvPlanInfo = provider(
     },
 )
 
-# Aspect-carried merge: Bazel rejects an aspect re-providing its target's
-# provider ("provided twice"). See `docs/environments/environment.md`.
 DxEnvPlanCollectedInfo = provider(
     doc = "Aspect-merged environment plan records from the traversed closure.",
     fields = {
@@ -34,16 +31,10 @@ DxEnvPlanCollectedInfo = provider(
     },
 )
 
-# Private output group carrying collected shards plus every referenced
-# artifact. Frozen here; the aspect requests it.
 DX_ENV_PLAN_OUTPUT_GROUP = "dx_env_plans"
 
-# Reserved controlled filename suffix recognizing shards among
-# BEP-reported files. Frozen here; the CLI rejects unreported,
-# missing, or duplicate artifacts and never scans `bazel-out`.
 DX_ENV_SHARD_SUFFIX = ".dxenv.pb"
 
-# Admitted language integrations: Rust first.
 DX_ENV_ADMITTED_INTEGRATIONS = (
     "rust",
 )
@@ -285,10 +276,6 @@ dx_env_shard = rule(
     doc = "Emits one contributor's normalized binary environment plan shard (issue #506 WP2).",
 )
 
-# Narrow traversal edges for the collecting aspect: the shard rule's own
-# `deps` and the Rust adapter's `target` edge. No `data`, `srcs`,
-# `DefaultInfo`, or broad unions are traversed: collectors consume only
-# normalized providers.
 _ENV_PLAN_ASPECT_ATTRS = ["deps", "target"]
 
 def _dx_env_plan_aspect_impl(target, ctx):
@@ -354,7 +341,6 @@ def _rust_env_shard_impl(ctx):
                 " crate sources, want exactly one",
             )
 
-    # Unlike the codegen prost adapter, there is no exhaustiveness check:
     bound = []
     for entry in entries:
         if entry.exec_path == "":

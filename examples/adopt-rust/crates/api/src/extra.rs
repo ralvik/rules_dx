@@ -1,7 +1,5 @@
-//! Feature-gated digest extras (`digest_extra` feature).
 use super::digest;
 
-/// Hashes two values in order.
 pub fn digest_pair(first: &str, second: &str) -> u64 {
     digest((first, second))
 }

@@ -223,8 +223,6 @@ fn ruff_lint_reports_and_fix_rereads_on_exit_one() {
         findings[0].severity,
         quality_result::proto::Severity::Error as i32
     );
-    // `check --fix` exits 1 with the unfixable marker remaining, but
-    // the applied import strip is kept, not discarded.
     let fixed = backend
         .apply_fix("ruff", "a.py", "import os\n# UNFIXABLE\n", "lint")
         .expect("fixed");
@@ -252,13 +250,10 @@ fn ruff_format_reports_and_rewrites() {
 #[test]
 fn ruff_fix_follows_the_running_capability() {
     let backend = backend_for("ruff", plain_tool(), roundtrip_ruff);
-    // A lint fix strips the unused import but never reformats:
-    // trailing whitespace outside the stripped line survives.
     let fixed = backend
         .apply_fix("ruff", "a.py", "import os\nx = 1  \n", "lint")
         .expect("fixed");
     assert_eq!(fixed, "x = 1  \n");
-    // A format fix trims trailing whitespace but never strips imports.
     let fixed = backend
         .apply_fix("ruff", "a.py", "import os\nx = 1  \n", "format")
         .expect("fixed");
@@ -378,7 +373,6 @@ fn pylint_reports_and_is_check_only() {
         findings[0].severity,
         quality_result::proto::Severity::Warning as i32
     );
-    // 0-based columns 0..9 place as the 1-based range 1..10.
     assert_eq!(
         (findings[0].start_byte, findings[0].end_byte),
         (Some(0), Some(9))
@@ -414,7 +408,6 @@ fn biome_lint_uses_pinned_defaults_and_is_check_only() {
         .diagnose("biome", "lint", &single("src/a.js", "const x = 1;\n"))
         .expect("diagnosed")
         .is_empty());
-    // Biome lint never rewrites: convergence happens on format.
     let text = "const unusedVar = 1;\n";
     assert_eq!(
         backend
@@ -501,8 +494,6 @@ fn eslint_reports_and_fix_rereads_on_exit_1() {
         .diagnose("eslint", "lint", &single("src/a.js", "const x = 1;\n"))
         .expect("diagnosed")
         .is_empty());
-    // The double exits 1 after rewriting: exit 1 still re-reads,
-    // mirroring the Ruff lint-fix contract.
     assert_eq!(
         backend
             .apply_fix("eslint", "src/a.js", "const unusedVar = 1;\n", "lint")
@@ -642,12 +633,6 @@ fn biome_prettier_conflicting_output_reports_oscillation() {
     ];
     let mut initial = BTreeMap::new();
     initial.insert("src/app.js".to_owned(), "compact\n".to_owned());
-    // Stateful normalizers modeling the fixed probes: Biome leaves
-    // tabs unchanged and converts anything else to tabs; Prettier
-    // leaves spaces unchanged and converts anything else to spaces.
-    // No common fixed point exists: round 2 nets to its start after
-    // intermediate changes, so the run is period-1 oscillation, not
-    // last-writer-wins stability (only STABLE may carry replacements).
     let normalize = |tool: &str, _: &str, text: &str| {
         if tool == "biome" {
             if text == "tabs\n" {
@@ -666,8 +651,6 @@ fn biome_prettier_conflicting_output_reports_oscillation() {
     assert_eq!(convergence, Convergence::Oscillation);
     assert_eq!(completed, 2);
     assert_eq!(terminal["src/app.js"], "spaces\n");
-    // The identity arms are live: each formatter already leaves its
-    // own style unchanged.
     assert_eq!(
         normalize("biome", "javascript", "tabs\n").expect("idempotent"),
         "tabs\n"
@@ -703,9 +686,6 @@ fn biome_prettier_reverse_order_reports_oscillation() {
         run_convergence(&initial, &stages, MAX_COMPLETED_ROUNDS, normalize).expect("converged");
     assert_eq!(convergence, Convergence::Oscillation);
     assert_eq!(completed, 2);
-    // Reverse order reaches the other round-end, proving the order is
-    // material and stays frozen in registry order for determinism; both
-    // orders oscillate without a common fixed point.
     assert_eq!(terminal["src/app.js"], "tabs\n");
     assert_eq!(
         normalize("biome", "javascript", "tabs\n").expect("idempotent"),
@@ -782,14 +762,10 @@ fn ty_garbage(argv: &[OsString], _cwd: &Path, env: &[(String, String)]) -> io::R
 #[test]
 fn ruff_format_clean_and_unterminated_fix() {
     let backend = backend_for("ruff", plain_tool(), roundtrip_ruff);
-    // Clean format check reports no findings (the format-check
-    // clean branch).
     assert!(backend
         .diagnose("ruff", "format", &single("a.py", "x = 1\n"))
         .expect("diagnosed")
         .is_empty());
-    // A format fix without a trailing newline trims the last line
-    // without appending one.
     let fixed = backend
         .apply_fix("ruff", "a.py", "x = 1  ", "format")
         .expect("fixed");
@@ -825,9 +801,6 @@ fn ty_output_failure_aborts_diagnose() {
 
 #[test]
 fn reanchor_reports_unstaged_file_without_panicking() {
-    // Defense in depth: parsers already reject unknown paths, but
-    // re-anchoring still reports `UnplaceableFinding` instead of
-    // panicking if a tool ever emits one.
     let pairs = vec![("a.py".to_owned(), PathBuf::from("/scratch/a.py"))];
     let err = reanchor("ty", &pairs, "b.py").expect_err("unknown path fails");
     assert!(matches!(err, RunnerError::UnplaceableFinding { .. }));

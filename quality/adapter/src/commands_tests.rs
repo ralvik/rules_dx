@@ -70,8 +70,6 @@ fn rustfmt_passes_caller_edition_and_config() {
             FILE
         ]
     );
-    // The edition is never defaulted: a different crate edition
-    // flows straight through to the flag.
     let older = rustfmt(
         Path::new(BIN),
         &[file],

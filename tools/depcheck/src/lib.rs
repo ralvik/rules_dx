@@ -466,7 +466,6 @@ fn python_raw_name(item: &str) -> Option<(String, String)> {
         return None;
     }
     let mut head = item[..end].to_owned();
-    // Strip extras `[extra]` from the head for the raw name.
     if let Some(bracket) = head.find('[') {
         head = head[..bracket].to_owned();
     }
@@ -957,7 +956,6 @@ pub fn parse_dotnet_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, D
     Ok(deps)
 }
 
-/// Parse `paket.lock` (native; top-level entries only, never nested constraints).
 pub fn parse_dotnet_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let re = regex::Regex::new(r"^    ([A-Za-z0-9_.\-]+) \(([^)]+)\)")
@@ -1114,7 +1112,6 @@ pub fn parse_ruby_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Dep
     Ok(deps)
 }
 
-/// Parse `Gemfile.lock` (native; top-level specs only, never nested constraints).
 pub fn parse_ruby_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let re = regex::Regex::new(r"^    ([A-Za-z0-9_.\-]+) \(([^)]+)\)")
@@ -1181,7 +1178,6 @@ fn normalize_exception_key(eco: Ecosystem, raw: &str) -> String {
 }
 
 fn collect_sources(root: &Path) -> Vec<PathBuf> {
-    // Action-local walk over the declared owning scope only.
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
@@ -1303,16 +1299,12 @@ pub fn find_usages(
             continue;
         }
         let has_suffix = suffixes.iter().any(|s| fname.ends_with(s));
-        // Python skips non-source extensions entirely (manifests/locks are
-        // not sources); mirror by requiring a known source suffix.
         let ext = Path::new(fname)
             .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("");
         let dotted = format!(".{ext}");
         if !has_suffix && !suffixes.contains(dotted.as_str()) {
-            // Also accept files like `hello.go` via suffix check above;
-            // anything else is not a source.
             let mut matched = false;
             for suffix in suffixes.iter() {
                 if fname.ends_with(suffix) {

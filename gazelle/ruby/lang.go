@@ -264,7 +264,6 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 	return nil
 }
 
-
 // isFixturePath reports whether a Gazelle relative directory is a test-only
 // fixture path: any path containing tests, fixtures, or
 // testdata as a segment generates testonly targets.
@@ -377,7 +376,6 @@ func formatMatches(matches []resolve.FindResult) string {
 
 // CollectUsedIgnores reports used dx_ignore_import entries visible in c
 // as (path, value) pairs for the composed `//dx:generate` witness.
-// See: docs/cli/commands/generate.md.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

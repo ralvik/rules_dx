@@ -1,4 +1,4 @@
-"""Vendored Bazel execution preset. Contract: `docs/contributing/local-workflows.md#preset-update-loop`."""
+"""Vendored Bazel execution preset."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")

@@ -98,8 +98,6 @@ mod tests {
 
     #[test]
     fn adopt_errors_render_byte_identical_to_legacy_strings() {
-        // Pilot gate: typed errors must preserve the historical
-        // user-facing strings so CLI operational diagnostics stay stable.
         assert_eq!(
             AdoptError::WatchRefusesCi.to_string(),
             "dx watch refuses CI (local-only)"
@@ -154,7 +152,6 @@ mod tests {
             .to_string(),
             "read version pin: denied"
         );
-        // Call sites surface the typed errors through `Display`.
         assert_eq!(
             plan_watch("docs", false).unwrap_err().to_string(),
             "not watchable: docs"

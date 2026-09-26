@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub const SCHEMA_MAJOR: u32 = 1;
@@ -26,7 +24,6 @@ impl SchemaVersion {
     }
 }
 
-/// Rejects breaking majors; minor is forward-compatible and never checked.
 pub fn check_major(found: u32) -> Result<(), u32> {
     if found != SCHEMA_MAJOR {
         return Err(found);
@@ -49,7 +46,6 @@ mod tests {
     fn matching_major_passes_regardless_of_minor() {
         assert_eq!(check_major(1), Ok(()));
         assert_eq!(SchemaVersion::new(1, 0).check_major(), Ok(()));
-        // Newer minors are forward-compatible.
         assert_eq!(SchemaVersion::new(1, 7).check_major(), Ok(()));
     }
 

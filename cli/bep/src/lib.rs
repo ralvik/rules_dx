@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod outputs;
@@ -186,7 +184,6 @@ mod tests {
             file_uri_to_path("file://localhost/out/a.pb").expect("localhost"),
             PathBuf::from("/out/a.pb")
         );
-        // Percent-encoded segments decode to local bytes.
         assert_eq!(
             file_uri_to_path("file:///out/a%20b.pb").expect("space"),
             PathBuf::from("/out/a b.pb")
@@ -195,8 +192,6 @@ mod tests {
             file_uri_to_path("file://localhost/out/a%20b.pb").expect("localhost space"),
             PathBuf::from("/out/a b.pb")
         );
-        // Drive-letter form keeps the legacy Unix resolution (`/C:/...`);
-        // on Windows `to_file_path` yields the drive path instead.
         assert_eq!(
             file_uri_to_path("file:///C:/out/a.pb").expect("drive"),
             PathBuf::from(if cfg!(windows) {
@@ -215,8 +210,6 @@ mod tests {
                 "{uri} must fail as UnsupportedUri"
             );
         }
-        // Non-local hosts fail on Unix; on Windows they resolve to UNC
-        // share paths via `to_file_path`.
         if cfg!(windows) {
             assert!(file_uri_to_path("file://otherhost/out/a.pb").is_ok());
         } else {

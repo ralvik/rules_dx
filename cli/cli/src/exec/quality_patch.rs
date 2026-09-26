@@ -45,12 +45,12 @@ pub(crate) fn render_diff_patch(
         };
         let candidate_text = match String::from_utf8(candidate) {
             Ok(text) => text,
-            // LCOV_EXCL_START - reason: utf8 candidate, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+            // LCOV_EXCL_START - reason: utf8 candidate, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
             Err(_) => {
                 return Err(PatchError::NonUtf8Candidate {
                     path: change.path.clone(),
                 });
-            } // LCOV_EXCL_STOP - reason: end utf8 candidate, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+            } // LCOV_EXCL_STOP - reason: end utf8 candidate, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         };
         owned.push((
             change.path.clone(),
@@ -80,9 +80,6 @@ mod tests {
 
     #[test]
     fn diff_patch_is_deterministic_and_untruncated() {
-        // Apply-safety battery: `quality-testing.md` requires
-        // complete deterministic diff-mode patches from the same edit set
-        // without rerunning tools or truncating replacement content.
         let original = b"line one\nline two\n";
         let long_body = format!("{}\n", "x".repeat(10_000));
         let mut sources = BTreeMap::new();
@@ -114,7 +111,6 @@ mod tests {
 
     #[test]
     fn patch_errors_stay_typed_with_stable_display() {
-        // Typed errors keep the historical `diff_failed` detail strings.
         assert_eq!(
             PatchError::MissingSource {
                 path: "src/a.py".to_owned(),
@@ -150,7 +146,6 @@ mod tests {
             .to_string(),
             "failed to render patch: boom"
         );
-        // Missing source fails typed (not `String` plumbing).
         let sources = BTreeMap::new();
         let changes = vec![FileChange {
             path: "src/missing.py".to_owned(),

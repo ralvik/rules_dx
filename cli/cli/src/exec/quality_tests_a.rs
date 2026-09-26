@@ -43,13 +43,6 @@ fn check_mode_clean_run_succeeds() {
 
 #[test]
 fn check_mode_fails_on_replacement_without_diagnostics() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // check mode to fail on any proposed change independently of
-    // diagnostic severity, and direct Bazel evaluators to enforce the
-    // same replacement-presence rule. Mirror the evaluator formatter
-    // case (fmt-a trims trailing spaces with zero diagnostics): one
-    // whole-file candidate with zero diagnostics must fail check mode
-    // with no writes, proving CLI/evaluator parity.
     let mut harness = Harness::new("check-replacement-only");
     harness.write_source("src/a.py", "x = 1\n");
     harness.results.insert(
@@ -93,14 +86,6 @@ fn default_mode_applies_and_hides_fixed_findings() {
 
 #[test]
 fn default_mode_applies_without_rerunning_bazel() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // no Bazel rerun after lint/typecheck/format application; terminal
-    // pipeline findings plus per-file apply failures determine the
-    // current invocation status. Default apply with one fixable finding
-    // must launch Bazel exactly once, apply the candidate, and succeed
-    // without a second verification build; check mode with pending
-    // changes must likewise launch exactly once and fail on the
-    // recorded change without re-executing.
     let mut harness = Harness::new("no-rerun-after-apply");
     harness.write_source("src/a.py", "x = 1\n");
     harness.results.insert(
@@ -146,12 +131,6 @@ fn default_mode_applies_without_rerunning_bazel() {
 
 #[test]
 fn typecheck_and_format_apply_without_rerunning_bazel() {
-    // Apply-safety battery: `quality-testing.md` no-rerun
-    // clause covers lint, typecheck, and format; the prior test proves
-    // lint only. Typecheck and format share `execute_quality` dispatch
-    // but deserve explicit parity: each default apply must launch Bazel
-    // exactly once, apply the candidate, and succeed without a second
-    // verification build.
     for (name, command) in [
         ("no-rerun-typecheck", "typecheck"),
         ("no-rerun-format", "format"),
@@ -328,8 +307,6 @@ fn directory_scope_plans_pattern_without_query() {
 
 #[test]
 fn here_flag_selects_cwd_tree_without_query() {
-    // tree through the same directory-scope path (`//path/...`; `//...`
-    // at the root), never implicitly, and never with explicit scopes.
     let mut harness = Harness::new("here-scope");
     harness.write_source("src/a.py", "x = 1\n");
     harness.cwd = harness.workspace.join("src");
@@ -345,7 +322,6 @@ fn here_flag_selects_cwd_tree_without_query() {
     assert_eq!(code, 0);
     assert!(out.contains("Running lint analysis for //src/..."), "{out}");
 
-    // Workspace root stays repository-wide.
     let root = Harness::new("here-root");
     root.write_source("src/a.py", "x = 1\n");
     let (code, out, _) = root.run(&["lint", "--dry-run", "--here"]);
@@ -388,13 +364,6 @@ fn undecodable_artifact_marks_collection_incomplete() {
 
 #[test]
 fn undecodable_sibling_blocks_valid_mutation() {
-    // Apply-safety battery: `quality-testing.md`
-    // requires rejecting incomplete collection before any path
-    // mutation begins. A valid stable candidate alongside an
-    // undecodable artifact in the same target marks the collection
-    // incomplete and drops the target's staged changes, so default
-    // mode applies nothing: the source keeps its original bytes,
-    // no Applied line emits, and Bazel launches exactly once.
     let mut harness = Harness::new("partial-undecodable");
     harness.write_source("src/a.py", "x = 1\n");
     harness.results.insert(
@@ -492,9 +461,6 @@ fn missing_bep_file_is_operational() {
 #[test]
 #[cfg(unix)]
 fn non_utf8_temp_path_is_operational() {
-    // Fail-fast policy: byte-constructed non-UTF8 paths
-    // exist only on unix (Windows WTF-8 differs), so this stays
-    // gated instead of a portable fake.
     let harness = Harness::new("nonutf8-tmp");
     let mut raw = harness.temp.join("x").into_os_string().into_vec();
     raw.push(0xff);
@@ -668,9 +634,6 @@ fn stale_source_skips_mutation() {
 
 #[test]
 fn mixed_applied_and_not_applied_fail_together() {
-    // Apply-safety battery: `quality-testing.md` requires
-    // mixed per-file results to emit applied and not_applied together
-    // and fail when any path is rejected.
     let mut harness = Harness::new("mixed-apply");
     harness.write_source("src/a.py", "x = 1\n");
     harness.write_source("src/b.py", "a = 1\n");

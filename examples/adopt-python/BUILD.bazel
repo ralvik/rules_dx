@@ -4,8 +4,6 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//:__subpackages__"])
 
-# Arrival files; generator-owned BUILD files, regen must be no-op; see docs/generation/README.md.
-# Corpus: root arrival files only; see docs/contributing/build-conventions.md.
 real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
@@ -26,10 +24,6 @@ real_source_target(
     toml_srcs = ["pyproject.toml"],
 )
 
-# Per-adopt arrival lock (issue #1077): foreign uv.lock resolved from this
-# tree's pyproject.toml (`uv lock`); the Bazel graph keeps using the shared
-# hello uv hub, this pair proves foreign consistency plus fail-closed repin
-# via //tools/depcheck:adopt_locks_test.
 exports_files([
     "pyproject.toml",
     "uv.lock",

@@ -6,7 +6,6 @@ pub fn absent_only_write_allowed(target_exists: bool) -> bool {
     !target_exists
 }
 
-/// Whether `dx init` must refuse one scaffolded path.
 pub fn init_must_refuse(target_exists: bool) -> bool {
     target_exists
 }
@@ -142,7 +141,6 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
     ]
 }
 
-/// Apply the init scaffold under `root`, writing absent-only.
 pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, AdoptError> {
     let mut written = Vec::new();
     let mut refused = Vec::new();
@@ -225,11 +223,6 @@ mod tests {
 
     #[test]
     fn devcontainer_scaffold_runs_bootstrap_not_full_build() {
-        // (snapshot workflow): the scaffolded definition
-        // must stay admissible and bootstrap-shaped. The snapshot with the
-        // checked-in definition lives in
-        // //.devcontainer:devcontainer_parity_test; this pins the
-        // contract fields here so scaffold drift fails at the source.
         let files = plan_init_files("demo");
         let scaffold = files
             .iter()
@@ -355,8 +348,6 @@ mod tests {
 
     #[test]
     fn hooks_scaffold_budget_tracks_hook_budget_const() {
-        // Single source: the scaffolded `dx.hooks.toml` budget must equal
-        // `HOOK_BUDGET_SECS`, not a duplicated literal.
         let files = plan_init_files("demo");
         let hooks = files
             .iter()

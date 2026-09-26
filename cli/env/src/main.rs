@@ -1,8 +1,6 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+// LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -15,8 +13,6 @@ const METADATA_CANDIDATES: &[(&str, &str)] = &[
 ];
 
 fn usage_error(message: &str) -> i32 {
-    // Structured diagnostics: usage failures report via
-    // `tracing::error!` with the legacy message text.
     tracing::error!("dx env: {message}");
     tracing::error!(
         "usage: env [--workspace DIR] [--staged-bin DIR --metadata FILE] [--lock-timeout-ms N]"
@@ -24,12 +20,6 @@ fn usage_error(message: &str) -> i32 {
     2
 }
 
-/// `argv` tokenizer (frozen legacy contract).
-/// Every option keeps the legacyshape: last-wins scalar
-/// repeats and unconditional next-token consumption (even a `--`-led token),
-/// so `--workspace --staged-bin DIR` still binds `--staged-bin` as the
-/// workspace. Only tokenizing moves to `clap`; all value validation below
-/// is untouched.
 #[derive(Parser)]
 #[command(disable_help_flag = true)]
 struct Cli {
@@ -41,7 +31,6 @@ struct Cli {
     metadata: Option<String>,
     #[arg(long, allow_hyphen_values = true, overrides_with = "lock_timeout_ms")]
     lock_timeout_ms: Option<String>,
-    /// Legacy `--help`/`-h` arm: prints the description line plus usage.
     #[arg(long = "help", short = 'h', action = clap::ArgAction::SetTrue)]
     help: bool,
 }
@@ -53,15 +42,11 @@ fn invalid_token(error: &clap::Error) -> String {
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
-        // `clap` strips an attached `=value` from the reported token; the
-        // legacy loop echoed the whole `argv` element, so recover it.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown flag {echoed:?}")
         }
         ErrorKind::InvalidValue => {
-            // `clap` renders the pending option as `--flag <VALUE>`; the
-            // legacy message names the bare `--flag`.
             let flag = dx_output::leading_flag(&token);
             format!("missing value for {flag}")
         }
@@ -99,10 +84,7 @@ fn run() -> i32 {
             Err(_) => return usage_error("--lock-timeout-ms must be a non-negative integer"),
         },
     };
-    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-    // Workspace start: single-sourced via
-    // `dx_process::workspace_start` (shell: `tools/sh/lib.sh`).
-    // An explicit `--workspace` still wins.
+    // LCOV_EXCL_STOP - reason: end thin shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     let start = match workspace {
         Some(dir) => PathBuf::from(dir),
         None => {
@@ -189,8 +171,6 @@ fn locate_default_tree() -> Option<(PathBuf, PathBuf)> {
 }
 
 fn main() {
-    // Structured diagnostics: init is idempotent and emits
-    // nothing by default; `RUST_LOG` overrides the warn filter.
     dx_output::init_diagnostics(false);
     std::process::exit(run());
 }

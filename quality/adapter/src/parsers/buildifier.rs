@@ -182,7 +182,6 @@ mod tests {
             (TextPosition { line: 3, column: 1 }, None)
         );
         assert_eq!(findings[0].finding.message, "syntax error");
-        // Exit code and `success` never decide: findings do.
         assert!(parse_buildifier(b"not json", b"crash", &["/s/broken.bzl"]).is_err());
         assert!(parse_buildifier(BUILDIFIER_CLEAN.as_bytes(), b"", &["/s/other.bzl"]).is_err());
     }
@@ -191,7 +190,6 @@ mod tests {
     fn buildifier_rejects_bytes_and_positions_outside_the_grammar() {
         assert!(parse_buildifier(b"\xff\xfe", b"", &["/s/x.bzl"]).is_err());
         let broken = r#"{"success":false,"files":[{"filename":"/s/broken.bzl","formatted":false,"valid":false,"warnings":[]}]}"#;
-        // Zero line falls through to the 1:1 fallback.
         let fallback = parse_buildifier(
             broken.as_bytes(),
             b"/s/broken.bzl:0:5: bad line\nnoise without prefix\n/s/broken.bzl:a:b: bad numbers\n/s/broken.bzl:nocolons",
@@ -203,7 +201,6 @@ mod tests {
             (fallback[0].finding.start, fallback[0].finding.end),
             (TextPosition { line: 1, column: 1 }, None)
         );
-        // An empty message after the location still names a syntax error.
         let empty = parse_buildifier(broken.as_bytes(), b"/s/broken.bzl:3:1:", &["/s/broken.bzl"])
             .expect("parsed");
         assert_eq!(empty[0].finding.message, "syntax error");

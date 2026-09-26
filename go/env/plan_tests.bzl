@@ -2,7 +2,6 @@
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
-# Pinned from `bazel build //go/env:*_plan` JSON outputs (WP2).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //go/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=hello.go

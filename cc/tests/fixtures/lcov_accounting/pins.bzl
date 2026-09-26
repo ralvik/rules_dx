@@ -1,13 +1,5 @@
-"""LCOV accounting pins.
+"""LCOV accounting pins."""
 
-Contract: `docs/native-toolchains.md#coverage-generation-and-ide-gaps`,
-`docs/native-toolchains.md#qualification-questions-and-delivery`,
-`docs/testing/README.md#coverage`.
-Fixture: `cc/tests/fixtures/lcov_accounting/` via
-`bazel run //tools/ci:lcov_accounting_qualification`.
-"""
-
-# Accounted shapes: Rust-only plus C/C++-only plus mixed/DLL LCOV.
 RUST_ONLY_SHAPE = "Rust-only LCOV via pinned rules_rust llvm-cov"
 RUST_ONLY_FIXTURE = "//rust/tests/fixtures/hello:hello_test"
 CC_ONLY_SHAPE = "C/C++-only LCOV via pinned Bazel LLVM source coverage"
@@ -22,16 +14,9 @@ MIXED_DLL_FIXTURES = [
 MIXED_DLL_NOTE = "Aggregation deduplicates by authored source and unions hits across the cell's tests"
 CXXBRIDGE_CMD_LABEL = "@crates//:cxxbridge-cmd"
 
-# Missed-line tests: a zero-hit eligible line fails with its location,
-# never just a rate dip. Proven by the synthetic uncovered LCOV in the
-# harness plus the deliberately missed-line shape below.
 MISSED_LINE_SHAPE = "missed-line test with uncovered location"
 MISSED_LINE_NOTE = "a zero-hit eligible line fails with its location, not just a rate dip"
 
-# Coverage-tool version pairing: Rust/Clang raw-profile compatibility is
-# the upgrade gate. rules_rs selects llvm-cov plus llvm-profdata from
-# `@llvm` with no override parameters; the paired identities below must
-# move together. Unpinned LLVM stays rejected.
 BAZEL_VERSION = "9.2.0"
 RULES_RUST_VERSION = "0.74.0"
 RULES_CC_VERSION = "0.2.22"
@@ -45,7 +30,6 @@ RULES_RS_VERSION = "v0.0.109"
 PATCHED_RULES_RUST_COMMIT = "e9dd49f22cfa43c75ba30cd9d9bb7d8bdc459dde"
 TOOL_PAIRING_NOTE = "Rust/Clang raw-profile compatibility is the upgrade gate; llvm-cov plus llvm-profdata move with LLVM"
 
-# Native ignores plus denominator validation: `LCOV_EXCL_LINE` for one
 NATIVE_IGNORE_LINE = "LCOV_EXCL_LINE"
 NATIVE_IGNORE_START = "LCOV_EXCL_START"
 NATIVE_IGNORE_STOP = "LCOV_EXCL_STOP"
@@ -54,9 +38,6 @@ NATIVE_IGNORE_ISSUE = "issue:"
 NATIVE_IGNORE_NOTE = "valid ignores exclude their executable lines from the denominator with a nearby specific reason plus issue tracking"
 DENOMINATOR_NOTE = "Non-ignored eligible sources absent from reports or never executed remain in the denominator"
 
-# Rejected substitutes per the issue alternatives: unaccounted lines plus
-# ignored collection failures plus averaged percentages plus cross-cell
-# union plus rounding up.
 REJECTED_ALTERNATIVES = [
     "unaccounted lines",
     "ignored collection failures",
@@ -65,9 +46,6 @@ REJECTED_ALTERNATIVES = [
     "rounding up",
 ]
 
-# Live proof labels: the accounting lib plus test below prove the
-# C/C++-only shape on the seed host; the Rust hello plus cxx_identity
-# bridge plus linux_corpus prove the Rust-only plus mixed shapes.
 LCOV_ACCOUNTING_FIXTURE_LIB = "//cc/tests/fixtures/lcov_accounting:accounting"
 LCOV_ACCOUNTING_FIXTURE_TEST = "//cc/tests/fixtures/lcov_accounting:accounting_test"
 LCOV_ACCOUNTING_RUST_HELLO = "//rust/tests/fixtures/hello:hello_test"

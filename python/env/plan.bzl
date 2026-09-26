@@ -1,6 +1,5 @@
 """Focused Python environment plan (WP3).
 
-Contract: `docs/environments/environment.md`.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")

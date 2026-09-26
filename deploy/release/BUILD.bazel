@@ -31,9 +31,6 @@ exports_files([
     "signing_tests.bzl",
 ])
 
-# Hermetic build tools for SBOM/provenance + BCR source:
-# digest + JSON via Rust, no host
-# `sha256sum`/`shasum`/`python3`. Declared as genrule `tools`.
 rust_library(
     name = "dx_release_tools",
     srcs = ["src/lib.rs"],
@@ -205,8 +202,6 @@ rust_binary(
 
 exports_files(["Cargo.toml"])
 
-# Seed fixture: reuse the portable POSIX deploy program as the SBOM
-# subject (no new binary needed; SBOM binds exact artifact bytes).
 matrix_unit_tests(name = "matrix_unit")
 
 sbom_unit_tests(name = "sbom_unit")
@@ -217,18 +212,11 @@ signing_unit_tests(name = "signing_unit")
 
 bcr_unit_tests(name = "bcr_unit")
 
-# SBOM demo over the seed release tarball: proves SPDX +
-# provenance bind the exact artifact bytes. Verified by the portable
-# `dx_release_tools_test` SBOM unit (no Linux-only shell harness).
 sbom_release(
     name = "sbom_demo",
     artifact = "//deploy/rules:release_demo_archive",
 )
 
-# NOTICE demo over an invented distributed-tier root: proves the
-# aggregated NOTICE bundles the audited-inventory words with
-# byte-identical rebuilds. Verified by the portable
-# `dx_release_tools_test` NOTICE unit plus `dx_verify --notice`.
 notice_bundle(
     name = "notice_demo",
     inventory = ":notice_demo_inventory.txt",
@@ -239,10 +227,6 @@ notice_bundle(
     ],
 )
 
-# Signing demo over the SBOM demo outputs plus the NOTICE bundle:
-# proves the dry-run would-sign path binds Sigstore keyless +
-# attestation for the SBOM pair and the NOTICE without network.
-# Verified by the portable `dx_release_tools_test` signing unit.
 signed_release(
     name = "signing_demo",
     artifacts = [
@@ -253,12 +237,6 @@ signed_release(
     identity = "https://github.com/ralvik/rules_dx/.github/workflows/release.yml@refs/tags/v0.0.0-dryrun",
 )
 
-# Seed releasable unit for artifact-into-releases packaging (See: `docs/deploy/release-runbook.md#packaging`).
-# Aggregates the validated audit curator bytes (`//:audit_curator` over
-# `licenses.toml`) with the seed binary plus man page plus NOTICE bundle
-# plus SBOM/provenance pair so one `bazel build` proves the publishing
-# set travels together; `signing_demo` already binds the SBOM pair plus
-# the NOTICE, and `github_draft` ships the binary plus man page.
 filegroup(
     name = "release_artifacts",
     srcs = [
@@ -270,19 +248,12 @@ filegroup(
     ],
 )
 
-# BCR demo at the unpublishable shape: proves the would-submit PR prints
-# without submitting. Verified by the portable `dx_release_tools_test`
-# BCR unit.
 bcr_check(
     name = "bcr_demo",
     inputs = [":sbom_demo_spdx"],
     module_name = "rules_dx",
     version = "0.0.0",
 )
-
-# Human-run driver dry-run gate (owner approval + tag ceiling). The
-# `release_driver` rust_binary below is the driver; its dry-run plan is
-# pinned by the portable `dx_release_tools_test` release unit.
 
 notice_file_tests(
     name = "notice_demo_contains_words",

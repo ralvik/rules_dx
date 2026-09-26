@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -46,9 +44,6 @@ static CHILD_PID: AtomicU32 = AtomicU32::new(0);
 extern "C" fn forward_to_child(signo: libc::c_int) {
     let pid = CHILD_PID.load(Ordering::SeqCst);
     if pid != 0 {
-        // Handler context: `kill` is async-signal-safe; the return is
-        // deliberately unchecked — a dead child means `wait` below
-        // already owns the outcome.
         unsafe {
             libc::kill(pid as libc::pid_t, signo);
         }
@@ -116,11 +111,6 @@ fn spawn_streamed(
         let _ = pump.join();
     }
     let status = status?;
-    // Fail-fast policy: signal re-raise exists only on
-    // unix (`ExitStatusExt::signal`); Windows reports codes only, so
-    // this stays gated instead of a portable fake. Safe cleanup is
-    // complete (child reaped, pump joined): restore the default
-    // disposition and re-raise so the shell observes the signal death.
     #[cfg(unix)]
     {
         use std::os::unix::process::ExitStatusExt;
@@ -143,8 +133,6 @@ impl Runner for BinaryRunner {
         cwd: &Path,
         env: &[(&str, &str)],
     ) -> io::Result<ChildStatus> {
-        // Secrets path clears ambient configuration before spawning:
-        // only the explicit hermetic env reaches Gitleaks.
         spawn_streamed(argv, cwd, env, true, self.inherit_stdout)
     }
 
@@ -166,8 +154,6 @@ impl Runner for BinaryRunner {
 }
 
 fn usage_error(message: &str) -> i32 {
-    // shares `Command::pipe_list` with `exec/common.rs::pre_exec` and
-    // `args/error.rs` so drift fails the registry fixture.
     let commands = dx_cli::args::Command::pipe_list();
     let _ = writeln!(
         io::stderr(),
@@ -183,15 +169,8 @@ fn main() {
 }
 
 fn run() -> i32 {
-    // LCOV_EXCL_START - reason: thin run shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-    // `args_os` keeps non-UTF8 bytes opaque so they fail as `InvalidScope`
-    // (exit 2) instead of panicking in `args`; `workspace` plus `targets`
-    // travel as `OsString` in the grammar for the same reason.
+    // LCOV_EXCL_START - reason: thin run shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
-    // Hidden completion-time callback for the generated `dx completion`
-    // and task candidates without parsing, workspace gates, or Bazel so
-    // completion stays fast and never breaks typing. Never a `Command`,
-    // never in `--help` or usage.
     if args.first().is_some_and(|first| {
         first.as_os_str() == std::ffi::OsStr::new(dx_cli::args::COMPLETE_SUBCOMMAND)
     }) {
@@ -199,7 +178,6 @@ fn run() -> i32 {
         let stdout = io::stdout();
         let mut out = stdout.lock();
         let code = dx_cli::args::run_complete(&args[1..], &cwd, &mut out);
-        // Completion candidates truncate like any stdout: `EPIPE` is `141`.
         if code != 0 {
             return code;
         }
@@ -208,9 +186,6 @@ fn run() -> i32 {
         }
         return code;
     }
-    // Invocation defaults: flag over env over file over built-in.
-    // The file is `.dx/config.toml` (alias `.dx/config`) found walking up
-    // from the workspace start; values are never logged, only the resolved
     let defaults_cwd = std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
     let defaults_start = dx_process::workspace_start(&defaults_cwd);
     let file_defaults = match load_file_defaults(&defaults_start) {
@@ -221,8 +196,6 @@ fn run() -> i32 {
     let mut invocation = match parse_with(&args, &env_get, &file_defaults) {
         Ok(invocation) => invocation,
         Err(dx_cli::args::ArgsError::Help { text }) => {
-            // `--help`/`-h`: human text on stdout, exit 0,
-            // deliberately outside machine-output guarantees (no NDJSON).
             let stdout = io::stdout();
             let mut out = stdout.lock();
             if let Err(error) = write!(out, "{text}") {
@@ -235,12 +208,7 @@ fn run() -> i32 {
         }
         Err(error) => return usage_error(&error.to_string()),
     };
-    // LCOV_EXCL_STOP - reason: end thin run shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-    // Structured diagnostics: tracing subscriber init is
-    // idempotent and emits nothing by default, keeping runs byte-identical
-    // unless `--verbose`/`--log-level` selects a level or `RUST_LOG`
-    // `--color` selects log/status color (`auto` stays plain unless a TTY
-    // without `NO_COLOR`).
+    // LCOV_EXCL_STOP - reason: end thin run shim, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     dx_output::init_diagnostics_with_color(
         invocation.verbose,
         invocation.log_level,
@@ -252,10 +220,6 @@ fn run() -> i32 {
         quiet = invocation.quiet,
         "dx invocation parsed"
     );
-    // Platform gate: unqualified hosts refuse cleanly with a
-    // qualification pointer before any Bazel work starts, never partial
-    // execution presented as success. Usage errors above still surface so
-    // typos stay diagnosable on every host.
     if let Some(message) = dx_cli::platform::refusal(std::env::consts::OS, std::env::consts::ARCH) {
         let stdout = io::stdout();
         let mut out = stdout.lock();
@@ -292,16 +256,10 @@ fn run() -> i32 {
             return pre_exec_code();
         }
     };
-    // Workspace start: single-sourced via
-    // `dx_process::workspace_start` (shell: `tools/sh/lib.sh`).
     let start = dx_process::workspace_start(&cwd);
     let workspace = match discover_real(&start, invocation.workspace.as_deref().map(Path::new)) {
         Ok(workspace) => workspace,
         Err(error) => {
-            // `dx init` bootstraps a new repository without an existing
-            // to the explicit `--workspace` dir, else the start dir, so
-            // the absent-only scaffold has a root to write under. Every
-            // other command still requires discovery.
             if invocation.command == dx_cli::args::Command::Init {
                 invocation
                     .workspace
@@ -318,14 +276,6 @@ fn run() -> i32 {
             }
         }
     };
-    // Version-skew gate: a drifted `.dx/version` pin refuses
-    // mutating/generating commands before any Bazel work starts, with a
-    // diagnostic naming the three versions and the repair. Read-only
-    // commands warn and proceed; the diagnose/repair path stays usable.
-    // One small file read, no subprocesses.
-    // Consumed here into a directory scope (`//path/...`; `//...` at the
-    // root) so downstream resolution reuses the existing path verbatim.
-    // The no-flag default stays `//...`; explicit scopes never combine.
     if invocation.here {
         match dx_cli::args::apply_here(&invocation, &workspace, &cwd) {
             Ok(resolved) => invocation = resolved,
@@ -381,10 +331,6 @@ fn run() -> i32 {
         }
     }
     let pid = std::process::id();
-    // Unique scratch directory per invocation: `tempfile`
-    // mints an exclusive `dx-run-*` directory so recycled PIDs and
-    // concurrent runs never share BEP/intended state. The same nonce
-    // flows into `Env` so the per-run file names inherit the uniqueness.
     let (temp_dir, nonce) = match create_run_temp_dir(&std::env::temp_dir()) {
         Ok(run) => run,
         Err(error) => {
@@ -416,14 +362,9 @@ fn run() -> i32 {
             nonce,
             out: &mut out,
             err: &mut err,
-            // The local-only `dx run` gate reads the launch
-            // environment once here via the shared owner; execution
-            // below takes the bit by value so tests stay hermetic.
             ci: dx_process::is_ci(),
         },
     );
-    // Truncated stdout overrides the command code: NDJSON consumers
-    // distinguish truncation (`141`) from success. See output protocol.
     if let Err(exit) = flush_out(&mut out) {
         let temp_display = temp_dir.path().display().to_string();
         if let Err(error) = temp_dir.close() {
@@ -434,10 +375,6 @@ fn run() -> i32 {
         }
         return exit;
     }
-    // Cleanup failure is a warning, not silent: a stale `dx-run-*`
-    // directory otherwise accumulates with no signal to the operator.
-    // `TempDir::close` removes explicitly so the warning survives;
-    // dropping without close would clean silently on success.
     let temp_display = temp_dir.path().display().to_string();
     if let Err(error) = temp_dir.close() {
         let _ = writeln!(

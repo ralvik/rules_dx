@@ -74,9 +74,6 @@ pub(crate) fn execute_version(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
-    // `--check` validates without mutating and `--pin`/`--rollback`
-    // mutate without validating: combining them is a usage error, as
-    // is combining the two mutations with each other.
     if invocation.check && (invocation.pin.is_some() || invocation.rollback) {
         return pre_exec(
             err,
@@ -88,11 +85,6 @@ pub(crate) fn execute_version(
     }
     let is_json = invocation.output == OutputMode::Json;
     if invocation.rollback {
-        // Rollback re-pins the previous release recorded by the
-        // ruleset (`dx_adopt::PREVIOUS_VERSION`); there is no deeper
-        // pin history to walk back through. Rolling to the current pin
-        // or to an unknown version is rejected by the admissibility
-        // gate, not silently re-pinned. A missing or unreadable pin
         let previous = dx_adopt::PREVIOUS_VERSION;
         let current = match dx_adopt::read_version_pin(workspace) {
             Ok(pin) => pin,
@@ -239,7 +231,6 @@ pub(crate) fn execute_version(
         }
         return 0;
     }
-    // A missing or unreadable pin fails closed: propagate the read
     let current = match dx_adopt::read_version_pin(workspace) {
         Ok(pin) => pin,
         Err(error) => {
@@ -532,8 +523,6 @@ mod tests {
         let scratch = dx_test_scratch::scratch("dx-adopt-version-rollback-");
         let root = scratch.path().to_path_buf();
         let inv = invocation(&["version", "--rollback"]);
-        // Pin-less tree refuses without creating a pin: a missing pin
-        // fails closed on the read error.
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(
@@ -551,7 +540,6 @@ mod tests {
             .expect("err")
             .contains("read version pin"));
         assert!(!root.join(".dx/version").exists());
-        // An empty pin is also no prior pin: refuse without writing.
         std::fs::create_dir_all(root.join(".dx")).expect("dx");
         std::fs::write(root.join(".dx/version"), "\n").expect("empty pin");
         let mut out = Vec::new();
@@ -570,7 +558,6 @@ mod tests {
         assert!(String::from_utf8(err)
             .expect("err")
             .contains("rollback refused"));
-        // A drifted pin rolls back to the previous release.
         std::fs::write(root.join(".dx/version"), "9.9.9\n").expect("drifted pin");
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -588,8 +575,6 @@ mod tests {
         assert!(String::from_utf8(out).expect("out").contains("rollback"));
         let pinned = std::fs::read_to_string(root.join(".dx/version")).expect("pin");
         assert_eq!(pinned.trim(), dx_adopt::PREVIOUS_VERSION);
-        // Rolling back twice is refused: the pin already equals the
-        // previous release, so there is nothing to restore.
         let mut out = Vec::new();
         let mut err = Vec::new();
         let code = execute_adoption(

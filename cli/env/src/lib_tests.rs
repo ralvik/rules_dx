@@ -357,8 +357,6 @@ fn fresh_install_noop_and_replacement() {
 
 #[test]
 fn workspace_path_with_spaces_installs() {
-    // The installer never shells out, so workspace roots
-    // containing spaces install and resolve exactly like plain paths.
     let scratch = dx_test_scratch::scratch("dx-env-test-with space-");
     let root = scratch.path().to_path_buf();
     let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
@@ -448,10 +446,6 @@ fn unmanaged_states_refuse_without_mutation() {
 #[cfg(unix)]
 #[test]
 fn stale_prev_undeletable_reports_install() {
-    // Fail-fast policy: POSIX read-only bits (0555) have
-    // no Windows ACL equivalent; the generic `Install` error path is
-    // proven portably elsewhere, so this permission fixture stays
-    // unix-gated.
     use std::os::unix::fs::PermissionsExt;
     let scratch = dx_test_scratch::scratch("dx-env-test-stale-prev-perms-");
     let root = scratch.path().to_path_buf();
@@ -461,11 +455,6 @@ fn stale_prev_undeletable_reports_install() {
         refresh(&opts, &probe_symlink),
         Ok(RefreshOutcome::InstalledFresh)
     ));
-    // A previous run crashed after publishing but before clearing
-    // `prev`; a read-only `.dx` makes the stale-prev cleanup fail for
-    // real. The probe is injected because it also needs a writable
-    // `.dx`, and the lock file already exists so opening it needs no
-    // directory write permission.
     let dx = root.join("ws").join(".dx");
     fs::create_dir_all(dx.join(PREV_DIR_NAME)).expect("stale prev");
     fs::set_permissions(&dx, fs::Permissions::from_mode(0o555)).expect("read-only dx");
@@ -481,15 +470,11 @@ fn stale_prev_undeletable_reports_install() {
 #[cfg(unix)]
 #[test]
 fn stale_stage_undeletable_reports_install() {
-    // Fail-fast policy: POSIX read-only bits (0555) have
-    // no Windows ACL equivalent; see the stale-prev test above.
     use std::os::unix::fs::PermissionsExt;
     let scratch = dx_test_scratch::scratch("dx-env-test-stale-stage-perms-");
     let root = scratch.path().to_path_buf();
     let (staged_bin, metadata, _) = write_staged(&root, &[("a", "//o:a", &["a"])]);
     let opts = options(&root, staged_bin, metadata);
-    // Fresh workspace with a pre-seeded `.dx`: the lock file already
-    // exists so the read-only parent only breaks stale-staging cleanup.
     let dx = root.join("ws").join(".dx");
     fs::create_dir_all(&dx).expect("dx dir");
     fs::write(dx.join(LOCK_FILE_NAME), b"").expect("lock file");

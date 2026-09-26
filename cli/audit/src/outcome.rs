@@ -38,7 +38,6 @@ impl AuditReport {
         AuditReport { outcomes: sorted }
     }
 
-    /// True when every family assessed clean: the only passing state.
     pub fn is_clean(&self) -> bool {
         !self.outcomes.is_empty()
             && self
@@ -64,7 +63,6 @@ impl AuditReport {
     }
 }
 
-/// Select the aggregate exit code for one audit run: `0` only for a
 pub fn exit_code(report: &AuditReport) -> i32 {
     if report.outcomes.is_empty() || report.is_clean() {
         EXIT_SUCCESS

@@ -3,7 +3,7 @@
 This repository uses Bazel.
 
 - Treat warnings as errors.
-- Document only what a user needs to run dx. Delete the rest; never maintain design rationale in comments or docs.
-- Comments: only when the why is not obvious from the code. One short plain line, no links, no issue numbers, no `See:`/`Contract:` chains, no restating the code. When in doubt, delete it. Exception: doc comments that generate user-visible text (clap `Parser`/`Args`/`ValueEnum` fields and variants feeding `--help` and completions) stay, one short line each.
-- Keep READMEs short; usage in `docs/cli/commands/`, CI usage in `docs/github-ci.md`, examples in `examples/`. Do not add docs elsewhere.
-- Write plain and human. Short sentences. No filler, no essays, no AI tone.
+- Only user docs. Allowed: `docs/cli/commands/`, `docs/github-ci.md`, short READMEs, `examples/`. Delete anything else. Never write design rationale, history, alternatives, or implementation notes.
+- Comments: max one short plain line, only when the why is not obvious. No links, no issue numbers, no `See:`/`Contract:`/`policy:`, no backtick chains, no restating the code. When in doubt, delete. Examples of what to delete: multi-line `///` rationale blocks, `.bazelrc` paragraphs like the Windows runfiles essay. One line like `# Windows needs the runfiles tree.` is the most ever allowed, and often nothing is better.
+- Two exceptions only: `--help` text stays one short line per flag, and `LCOV_EXCL_*` markers keep their required short `reason:` plus `issue:`.
+- Write plain and human. Short sentences. Commands first. No filler, no essays, no AI tone. If a paragraph explains why something exists, delete it.

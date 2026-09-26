@@ -10,9 +10,6 @@ pub(crate) fn execute_completion(
     out: &mut dyn Write,
     err: &mut dyn Write,
 ) -> i32 {
-    // Scripts render at runtime from the `Cli` grammar:
-    // the same definition feeds parsing, `--help`, and completions, so
-    // output cannot drift from the command reference.
     if invocation.check {
         return execute_completion_check(invocation, out, err);
     }
@@ -137,7 +134,6 @@ mod tests {
     #[test]
     fn completion_renders_from_single_source() {
         use clap::ValueEnum;
-        // Every supported shell renders every command and every grammar
         const FLAGS: &[&str] = &[
             "workspace",
             "dry-run",
@@ -207,8 +203,6 @@ mod tests {
                     );
                 }
             }
-            // Powershell anchor stability: the `'dx'` case plus functional
-            // `CompletionResult` entries must survive template upgrades and
             if shell == "powershell" {
                 assert!(
                     text.contains("'dx' {"),
@@ -231,7 +225,6 @@ mod tests {
                 }
             }
         }
-        // Unknown shells keep the contract error.
         let unknown = crate::args::render_completion("tcsh");
         assert!(unknown.is_err());
         assert!(unknown.unwrap_err().to_string().contains("unknown-shell"));
@@ -240,11 +233,6 @@ mod tests {
     #[test]
     fn completion_embeds_dynamic_callback_without_drift() {
         use clap::ValueEnum;
-        // Every shell carries the completion-time callback into the
-        // binary (`dx __complete`) from the same tables as parsing, so
-        // dynamic label/task candidates cannot drift from the command
-        // table. Fish task payloads stay pinned verbatim here; the
-        // `args::complete` unit fixtures pin the tables themselves to
         for &shell in crate::args::COMPLETION_SHELLS {
             let text = crate::args::render_completion(shell).expect("render");
             assert!(
@@ -290,8 +278,6 @@ mod tests {
                 "fish misses dynamic line {line:?}"
             );
         }
-        // The fish label condition derives from the command table: every
-        // label-taking command stays covered.
         for cmd in crate::args::Command::value_variants() {
             if crate::args::completes_labels(*cmd) {
                 assert!(
@@ -406,7 +392,6 @@ mod tests {
         assert!(String::from_utf8(out)
             .expect("out")
             .contains("completion ok for bash"));
-        // Unknown shells still fail pre-exec in check mode.
         let inv = invocation(&["completion", "tcsh", "--check"]);
         let mut out = Vec::new();
         let mut err = Vec::new();
@@ -424,7 +409,6 @@ mod tests {
         assert!(String::from_utf8(err)
             .expect("err")
             .contains("unknown-shell"));
-        // Dry-run check plans without rendering.
         let inv = invocation(&["completion", "--check", "--dry-run"]);
         let mut out = Vec::new();
         let mut err = Vec::new();

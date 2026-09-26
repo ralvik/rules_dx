@@ -10,11 +10,6 @@ package(
     default_visibility = ["//:__subpackages__"],
 )
 
-# Kept opt-out: pure-Rust script needs no C/C++ toolchain inputs on its
-# execution action. The `# keep` pins the opt-out across regenerations
-# (docs/generation/rust.md#build-scripts); an unkept False is restored to
-# True. The script binary itself still compiles through the normal Rust
-# toolchain; opt-out removes only execution-action CC inputs.
 cargo_build_script(
     name = "cc_optout_build_script",
     testonly = True,

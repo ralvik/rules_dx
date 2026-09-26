@@ -1,6 +1,5 @@
 """BCR submission tooling for `rules_dx`.
 
-Contract: `docs/deploy/release-runbook.md`.
 """
 
 load("//deploy/rules:defs.bzl", "dx_deployment")
@@ -68,7 +67,6 @@ def _bcr_launcher_impl(ctx):
     ctx.actions.write(
         output = launcher,
         content = """// Deploy launcher for `bcr_check`. Generated. Do not edit.
-// See: `docs/deploy/release-runbook.md` (BCR release path).
 fn run() -> i32 {
     const MODULE: &str = \"""" + ctx.attr.module_name + """\";
     const VERSION: &str = \"""" + ctx.attr.version + """\";
@@ -140,10 +138,6 @@ def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], pr
     if src_err != "":
         fail(src_err + " (in " + native.package_name() + ":" + name + ")")
 
-    # BCR source template: archive `source.json` shape (URL + integrity
-    # filled at release time by the human-run path; strip_url_prefix
-    # follows the BCR publish layout). Deterministic, no network, no
-    # host tools (Rust via declared `tools`).
     native.genrule(
         name = name + "_source",
         outs = [name + ".source.json"],

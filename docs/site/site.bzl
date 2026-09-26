@@ -1,11 +1,7 @@
 """Bazel-cached docs site execution (extract to render).
 
-Contract: `docs/documentation/site.md`.
 """
 
-# Pinned renderer version for fixture-scale execution. Production pin
-# bumps ride the per-release drift process; the fixture render stamps
-# this version into site outputs so drift is visible, never silent.
 MDBOOK_VERSION = "0.4.43"
 
 def site_symbol_id(language, package, qualified):

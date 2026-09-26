@@ -1,6 +1,5 @@
 """JVM tool acquisition via a lazy module extension.
 
-Contract: `docs/tools/tool-acquisition.md` (complete-upstream-artifact plus shared-JDK route).
 One lazy repo per tool; registration fetches nothing (no per-platform matrix: JVM tools
 run over the shared JDK).
 """

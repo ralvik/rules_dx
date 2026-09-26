@@ -6,7 +6,6 @@ load("//tools/visibility:visibility.bzl", "VIS_CLI")
 
 package(default_visibility = VIS_CLI)
 
-# Leaf-crate pattern via `dx_rust_crate`.
 dx_rust_crate(
     name = "dx_test_scratch",
     package_name = "cli/dx_test_scratch",

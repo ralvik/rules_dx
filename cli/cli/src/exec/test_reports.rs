@@ -127,11 +127,6 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
             match validate_lcov(&bytes) {
                 Ok(()) => lcov_documents.push(String::from_utf8_lossy(&bytes).into_owned()),
                 Err(error) => {
-                    // Starlark-only analysis tests (e.g. env-plan suites with
-                    // no instrumented sources) emit a zero-byte coverage.dat.
-                    // An empty artifact contributes no lines, so skip it
-                    // instead of failing the whole run; non-empty corrupt
-                    // tracefiles still mark the collection incomplete below.
                     if bytes.iter().all(|b| b.is_ascii_whitespace()) {
                         continue;
                     }
@@ -181,7 +176,7 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
                     Some(combined)
                 }
             }
-            _ => None, // LCOV_EXCL_LINE - reason: defensive arm, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+            _ => None, // LCOV_EXCL_LINE - reason: defensive arm, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         };
         let Some(document) = document else {
             reports_ok = false;
@@ -319,8 +314,6 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
     };
     if invocation.output == OutputMode::Json {
         if bazel_code != 0 {
-            // Failure explainer without argv/secrets: which workflow failed
-            // plus the stderr pointer; Bazel diagnostics stay on stderr.
             if let Ok(event) = dx_output::error_event(
                 "bazel_failed",
                 &format!(
@@ -457,10 +450,6 @@ mod tests {
 
     #[test]
     fn coverage_empty_tracefile_skipped_when_valid_present() {
-        // Starlark-only suites emit a zero-byte coverage.dat with no
-        // instrumented lines (e.g. //astro/env:env_plan_tests). An empty
-        // artifact contributes nothing and must not fail a run that has
-        // valid coverage; only non-empty corrupt files are incomplete.
         let harness = Harness::new("cov-empty-skipped");
         let empty_uri = write_bep_artifact(&harness, "empty.dat", b"");
         let valid_uri = write_bep_artifact(&harness, "valid.dat", MINIMAL_LCOV.as_bytes());
@@ -533,10 +522,6 @@ mod tests {
         let harness = Harness::new("cov-threshold-markers");
         let source = harness.workspace.join("src/lib.rs");
         std::fs::create_dir_all(source.parent().expect("parent")).expect("mkdir");
-        // Intentional bare marker as test data inside a string literal:
-        // inert for this file's own gate (line-comment scan skips string
-        // literals) but invalid for the loaded `src/lib.rs`, so the
-        // `--min-coverage` rate fails closed via `coverage_below_minimum`.
         std::fs::write(&source, "// LCOV_EXCL_LINE\nfn a() {}\n").expect("write");
         let uri = write_bep_artifact(
             &harness,
@@ -716,10 +701,6 @@ mod tests {
 
     #[test]
     fn test_rejects_diff_output_at_parse() {
-        // `test` emits no patch, so `--output=diff` fails
-        // fast at parse (exit 2, usage error) instead of running Bazel
-        // and silently printing text. The report is never written
-        // because execution never starts.
         let err = crate::args::parse(
             &["test", "--output=diff", "--report=junit=out.xml"]
                 .iter()
@@ -770,8 +751,6 @@ mod tests {
 
     #[test]
     fn coverage_render_failure_json_reports_error_event() {
-        // No lcov documents with a requested report triggers render failure;
-        // JSON output must emit the `report_failed` error event.
         let harness = Harness::new("cov-render-json");
         let xml = write_bep_artifact(&harness, "x.xml", MINIMAL_TEST_XML.as_bytes());
         let harness = Harness {

@@ -5,7 +5,6 @@ python_test(
     name = "login_test",
     testonly = True,
     srcs = ["login_test.py"],
-    # User-owned runtime edges: see app/BUILD.bazel.
     dep_group = "hello",
     imports = ["."],
     deps = [

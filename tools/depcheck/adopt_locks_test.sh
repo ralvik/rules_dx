@@ -1,20 +1,6 @@
 #!/usr/bin/env bash
-# Per-adopt consumer lock consistency via depcheck (issue #1077).
-#
-# Each `examples/adopt-*` foreign tree records its manifest plus lock
-# authority in its README; the Bazel graph keeps using the shared hubs
-# (root pnpm, hello uv, third_party go/ruby, workspace cargo) while these
-# arrival pairs prove foreign consistency offline plus fail-closed repin:
-# a stale arrival lock must fail `depcheck consistency` (exit 1) and a
-# missing lock must fail (exit 2), never silently pass.
-#
-# Usage: adopt_locks_test.sh <depcheck> <go-manifest> <go-lock>
-#   <ruby-manifest> <ruby-lock> <rust-manifest> <rust-lock> <js-manifest>
-#   <js-lock> <py-manifest> <py-lock> <pg-js-manifest> <pg-js-lock>
-#   <pg-py-manifest> <pg-py-lock> <pg-rust-manifest> <pg-rust-lock>
 set -euo pipefail
 
-# Shared workspace + runfiles helpers.
 source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
 dx_bootstrap "tools/sh/lib.sh"
 
@@ -40,9 +26,6 @@ check_pair "js" "${12:?usage}" "${13:?usage}" "adopt-polyglot package.json plus 
 check_pair "python" "${14:?usage}" "${15:?usage}" "adopt-polyglot pyproject.toml plus uv.lock"
 check_pair "rust" "${16:?usage}" "${17:?usage}" "adopt-polyglot Cargo.toml plus Cargo.lock"
 
-# Fail-closed negative control: a stale arrival lock must fail consistency
-# (exit nonzero). Copy the adopt-go pair to scratch, bump the require
-# without repinning, and assert depcheck rejects it.
 dx_mkscratch scratch
 cp "${2:?usage}" "$scratch/go.mod"
 cp "${3:?usage}" "$scratch/go.sum"
@@ -53,7 +36,6 @@ else
   ok "stale arrival lock fails closed"
 fi
 
-# Missing-lock negative control: depcheck must fail (exit 2), never pass.
 if "$depcheck" consistency --ecosystem go --manifest "${2:?usage}" --lock "$scratch/does-not-exist.sum" >/dev/null 2>&1; then
   bad "negative control broken: missing lock passed consistency (want failure)"
 else

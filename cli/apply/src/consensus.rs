@@ -13,7 +13,6 @@ pub enum ConsensusError {
     ContentMismatch { path: String },
 }
 
-/// Merges two envelopes that must agree, returning the agreed operations in
 pub fn merge(a: &Envelope, b: &Envelope) -> Result<Envelope, ConsensusError> {
     let paths_a: BTreeSet<&str> = a.operations.iter().map(|op| op.path.as_str()).collect();
     let paths_b: BTreeSet<&str> = b.operations.iter().map(|op| op.path.as_str()).collect();

@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use std::collections::{BTreeMap, HashSet};
@@ -163,10 +161,6 @@ fn run_convergence(
         if !changed {
             return Ok((current, completed_rounds, Convergence::Stable));
         }
-        // A full round whose end bytes equal its start after intermediate
-        // changes (e.g. two formatters undoing each other) is period-1
-        // oscillation, not stability: the next round would repeat the same
-        // fighting work, and only STABLE may carry replacements.
         let id = state_digest(&current);
         if id == prev_id {
             return Ok((current, completed_rounds, Convergence::Oscillation));
@@ -220,8 +214,6 @@ fn minimal_edit(original: &str, terminal: &str) -> Edit {
 }
 
 fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
-    // Full sort key (path,start,end,severity,tool,rule,message) keeps the
-    // order total across concurrent adapters sharing one range.
     diagnostics.sort_by(|a, b| {
         (
             &a.path,
@@ -391,13 +383,6 @@ pub fn run_pipeline(
             initial_diagnostics.extend(collect_diagnostics(&stage.tool_id, path, body));
         }
     }
-    // The synthetic apply closure is infallible, but convergence still
-    // reports `MissingFile` instead of panicking if stage/validation drift
-    // ever desynchronizes the maps, so propagate rather than expect.
-    // Check-only capabilities (audit/typecheck) converge in one round;
-    // one spawn-equivalent per tool/stage holds because diagnostics walk
-    // the staged subset once per pass, and the terminal pass is skipped
-    // entirely when convergence left the bytes untouched.
     let (terminal, completed_rounds, convergence) = run_convergence(
         &initial,
         stages,

@@ -3,7 +3,6 @@
 common --enable_bzlmod
 build --verbose_failures
 test --test_output=errors
-# Owned extra_presets group: coverage.
 common --enable_platform_specific_config
 coverage --test_env=GENERATE_LLVM_LCOV=1
 coverage --combined_report=lcov
@@ -12,11 +11,9 @@ coverage --enable_runfiles
 coverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov
 coverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov
 coverage --instrumentation_filter=^//
-# Owned build profiles.
 build:dx_debug --compilation_mode=dbg
 build:dx_dev --compilation_mode=fastbuild
 build:dx_release --compilation_mode=opt
 build:dx_dev_remote --compilation_mode=fastbuild
 build:dx_toolchain --compilation_mode=fastbuild
-# Owned Windows execution (runfiles tree; Windows is manifest-only by default).
 build:windows --enable_runfiles

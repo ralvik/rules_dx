@@ -73,8 +73,6 @@ mod tests {
 
     #[test]
     fn custom_default_branch_triggers_like_main() {
-        // The default branch may carry any name; opaque spellings pass
-        // through identically.
         let custom = plan_revision(RevisionRequest::PushDefault {
             landed: "landed-sha",
             branch: "trunk",
@@ -100,8 +98,6 @@ mod tests {
                 value: "windows_x86_64".to_owned(),
             })
         );
-        // Single- and multi-platform selections pass through verbatim,
-        // including one without Linux.
         assert_eq!(
             validate_platforms(&["macos_arm64".to_owned()], &supported),
             Ok(vec!["macos_arm64".to_owned()])

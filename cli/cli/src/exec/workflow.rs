@@ -85,10 +85,6 @@ pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     } else {
         None
     };
-    // Build-profile pin: `build`/`test` always carry an
-    // explicit `--config=dx_*` (bare means `dx_dev`); `coverage` has no
-    // profile flags so its argv is unchanged (`None` injects nothing).
-    // `run` returns earlier and never reaches this plan call.
     let profile = if verb == WorkflowVerb::Coverage {
         None
     } else {
@@ -147,8 +143,6 @@ pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     if verb == WorkflowVerb::Build {
         if invocation.output == OutputMode::Json {
             if bazel_code != 0 {
-                // Failure explainer without argv/secrets: which workflow
-                // failed plus the stderr pointer; Bazel diagnostics stay on
                 if let Ok(event) = error_event(
                     "bazel_failed",
                     &format!(
@@ -208,9 +202,6 @@ mod tests {
         use crate::exec::{execute, Env};
         use std::cell::RefCell;
         use std::rc::Rc;
-        // End-to-end pin of the mapping: parse selects the
-        // profile and execution injects the matching `--config=dx_*`
-        // (bare means `dx_dev`).
         for (words, flag) in [
             (vec!["build"], "--config=dx_dev"),
             (vec!["build", "--debug"], "--config=dx_debug"),
@@ -278,10 +269,6 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn workflow_non_utf8_bep_is_operational() {
-        // Fail-fast policy: byte-constructed non-UTF8 paths
-        // (`OsString::from_vec(vec![0xff])`) exist only on unix; Windows
-        // uses WTF-8 with different invalid encodings, so this stays
-        // gated instead of a portable fake.
         let mut harness = Harness::new("wf-nonutf8");
         harness.temp = PathBuf::from(OsString::from_vec(vec![0xff]));
         let (code, _, err) = harness.run(&["build", "--output=text"]);

@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Fake gofumpt for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics `gofumpt -d` (unified diff headers on stdout when dirty, empty
-# stdout when clean, exit 0 either way like `gofmt -d`) plus `gofumpt -w`
-# (in-place rewrite, exit 0) over the BADFMT marker. Real-tool behavior
-# stays proven by `go/tests/fixtures/gofumpt/` (`check_dirty.diff`
-# modeled on the pinned `-d` output); this fake proves the runner
-# dispatch plus parser plus fix flow without a Go toolchain.
 set -euo pipefail
 is_fix=0
 files=()

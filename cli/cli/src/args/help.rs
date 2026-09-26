@@ -73,9 +73,6 @@ pub(crate) fn help_verb_error_in<S: AsRef<OsStr>>(args: &[S]) -> Option<ArgsErro
     while scan < args.len() {
         let raw = args[scan].as_ref();
         let Some(arg) = raw.to_str() else {
-            // Opaque non-UTF8 target cannot be a command word; surface it
-            // as an unknown command with its lossy rendering so typing
-            // never panics and help routing stays total.
             target = Some(raw.to_string_lossy().into_owned());
             break;
         };
@@ -119,9 +116,6 @@ pub(crate) fn help_verb_error_in<S: AsRef<OsStr>>(args: &[S]) -> Option<ArgsErro
 pub(crate) fn render_top_help() -> String {
     use clap::{CommandFactory, ValueEnum};
     let mut out = String::new();
-    // Brand line: `render_long_help` below shows `long_about`
-    // but not `about`, so `--help` would otherwise omit the brand that `-h`
-    // shows. Prepend it so both spellings carry the same identity.
     if let Some(about) = Cli::command().get_about() {
         out.push_str(&format!("dx - {about}\n\n"));
     }
@@ -143,12 +137,11 @@ fn render_env_help() -> String {
     let mut out = String::new();
     out.push_str("\nEnvironment:\n");
     out.push_str("  RUST_LOG=<filter>\n");
-    out.push_str("      Override --verbose/-v and --log-level with a tracing filter (e.g. RUST_LOG=debug).\n");
+    out.push_str("      Override --verbose and --log-level.\n");
     out.push_str("  NO_COLOR=<any>\n");
-    out.push_str("      Disable styled human output when present (any value, per the spec); `--color=always` forces color, `--color=never` stays plain.\n");
+    out.push_str("      Disable color output.\n");
     out.push_str("  BUILD_WORKSPACE_DIRECTORY=<dir>\n");
-    out.push_str("      Workspace start under `bazel run`; falls back to the current directory.\n");
-    out.push_str("  See docs/cli/output-protocol.md and docs/cli/cli-contract.md.\n");
+    out.push_str("      Workspace start under `bazel run`.\n");
     out
 }
 
@@ -375,7 +368,7 @@ mod tests {
             .arg("--help")
             .assert()
             .success()
-            .stdout(predicates::str::contains("Transparent UI over Bazel"));
+            .stdout(predicates::str::contains("Run Bazel workflows"));
     }
 
     #[test]
@@ -517,7 +510,6 @@ mod tests {
             };
             assert_eq!(verb, flag, "help {command} must match --help");
         }
-        // Unknown words after the verb fail as unknown commands.
         assert!(matches!(
             parse(&args(&["help", "bogus"])),
             Err(ArgsError::UnknownCommand { .. })

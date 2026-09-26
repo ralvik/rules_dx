@@ -1,6 +1,5 @@
 """Experimental minimal Python wrappers (ADR 0010).
 
-Contract: `docs/decisions/0010-python-foundation.md`, `docs/decisions/0012-language-toolchain-versions.md`.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo", _PyWheelsInfo = "PyWheelsInfo", _py_binary = "py_binary", _py_library = "py_library", _py_pytest_test = "py_pytest_test")

@@ -14,11 +14,6 @@ pub(super) fn plan_cargo_toml(
             });
         }
     };
-    // Format-preserving edit via `toml_edit::DocumentMut`: locate the dep
-    // by table key (`package = "old"` or `package = { version = "old" }`
-    // or `[dependencies.package] version = "old"`), preserve
-    // comments/whitespace/order, keep fail-closed `git`/`path` behavior
-    // as explicit typed errors, keep 1-match/0-ambiguous counting.
     let mut doc =
         content
             .parse::<toml_edit::DocumentMut>()
@@ -196,8 +191,6 @@ pub(super) fn cargo_table_at_mut<'a>(
 ) -> Option<&'a mut toml_edit::Table> {
     let mut item: &mut toml_edit::Item = doc.as_item_mut();
     for key in path {
-        // `as_table_mut` on the current item, then `get_mut` the next key.
-        // Split borrows so the mutable chain typechecks.
         let table = item.as_table_mut()?;
         item = table.get_mut(key)?;
     }

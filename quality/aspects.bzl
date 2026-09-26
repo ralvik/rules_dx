@@ -1,6 +1,5 @@
 """Target-scoped capability aspects over synthetic adapters (WP2c+WP3).
 
-Contract: `docs/quality/action-model.md`, `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md#adapter-applicability`, `docs/quality/quality-result-protocol.md#transport`, `docs/quality/quality-result-protocol.md#execution-and-policy`, `docs/cli/cli-contract.md`.
 """
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
@@ -61,9 +60,6 @@ def _quality_pipeline_action(target, ctx, capability):
         progress_message = "Dx quality " + capability + " %{label}",
     )
 
-    # One consumer per result, no aggregation: the evaluator reads only the
-    # pipeline result plus the threshold spelling, so analyzer inputs and
-    # keys never mention policy.
     if not ctx.attr._validate[BuildSettingInfo].value:
         return [OutputGroupInfo(dx_results = depset([out]))]
     marker = ctx.actions.declare_file(target.label.name + "-" + capability + ".validated")
@@ -90,8 +86,6 @@ def _make_synthetic_impl(capability):
 
     return _impl
 
-# Single table-driven capability set: one impl per capability over the
-# shared action above; adding a capability edits this table only.
 _SYNTHETIC_CAPABILITIES = ["lint", "format", "typecheck", "audit"]
 
 _SYNTHETIC_DOCS = {

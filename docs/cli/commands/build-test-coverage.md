@@ -1,150 +1,48 @@
 # Build, Test, And Coverage Commands
 
+```sh
+bazel run //cli/cli:dx -- build //...
+bazel run //cli/cli:dx -- test //...
+bazel run //cli/cli:dx -- coverage //...
+```
+
+No scope means `//...`. Pass a label, pattern, file, or dir to narrow it. Use `--here` for the current dir.
+
 ## `dx build` And `dx test`
 
-Accept labels, target patterns, paths, or no scope. Labels and target patterns
-map directly to Bazel. Build paths resolve to all direct source owners. Test file
-paths resolve owners, then select every test in
-`tests(rdeps(//..., set(<owner labels>)))`. An empty mapped test set is an error with
-guidance to pass an explicit test label or pattern. Paths otherwise follow
-[Target Resolution](../target-resolution.md). No-scope build runs
-`bazel build //...`, and no-scope test runs `bazel test //...`; users who need a
-smaller invocation provide a path, label, or target pattern explicitly, or pass
-`--here` (`--cwd` alias) for the current directory tree (`//path/...`; `//...`
-at the root).
+```text
+dx build [scope...]
+dx test [scope...]
+```
 
-`dx test` supports JUnit XML reports through the shared `--report` contract. Bazel test
-results remain authoritative; `dx` normalizes their reported result artifacts into one
-requested document without changing test execution or status. `dx build` has no
-additional standard report format.
+Builds or tests the scope. File scopes build the owning targets. Test file scopes run the owning tests.
 
 ## `dx run`
 
-Status: implemented as specified in this
-section (pinned by `dx_cli` run plus `resolve_run` fixtures, delivered under
-issue #463). Strict single-target execution applies to file/directory
-resolution scopes only. Multiple explicit labels run sequentially in
-scope order (`dx run //demo:frontend //demo:backend`), each as its own
-`bazel run` with the same arguments after `--` forwarded to every
-target (wont-fix: same args to all, no per-target args); explicit target patterns containing `...` or `*`
-(`dx run //demo/...`) expand Bazel-owned through one
-`kind('.*_binary rule', <pattern>)` query each (each expansion sorted,
-concatenated in input order with first-seen dedup across labels and
-patterns, never globally re-sorted, pinned by
-`run_cross_pattern_order_is_input_order_with_sorted_batches`), then run sequentially
-in input order. A file or
-directory scope resolves through the same ownership query as `dx build`,
-then requires exactly one runnable owner, where runnable means a
-depth-1 owner whose rule kind ends in `_binary` (aliases are not
-followed for file scopes: fail-closed with a hint to pass the alias label
-explicitly, pinned by `run_file_alias_is_fail_closed_with_explicit_label_hint`;
-plain labels pass through with no query and Bazel owns alias/executability): zero runnables fail pre-resolution with
-`no_runnable`, multiple with `ambiguous_runnable` listing sorted
-candidates; both are operational failures (exit 1), and an explicit
-pattern expanding to nothing is `no_runnable`. The application
-exit code is preserved verbatim (success included); sequential multirun
-stops on the first required failure and returns that code (wont-fix:
-stop-first-failure, no supervisor table; sequential mode never has more
-than one live child), per the
-[CLI contract](../cli-contract.md#exit-status). Scope/usage
-failures stay pre-exec (exit 2). Each application inherits stdio with
-SIGINT/SIGTERM forwarding to the active child (sequential mode never
-has more than one live child, so no supervisor table); arguments after
-`--` forward verbatim.
-`dx run` accepts `--output=text|json` (`--output=diff` has no patch to emit and is
-rejected pre-exec). Text emits one prose lifecycle line per target on stderr; JSON
-streams `command_started`, one `execute` `operation` per target with its single-label
-scope in execution order, an optional sanitized `bazel_failed` `error` naming the failed
-target, and `command_finished` on stdout with child output routed to stderr so stdout
-stays machine-owned. It takes no `--report`, and refuses when
-env `CI=true` (local-only).
+```text
+dx run <label...> [-- args...]
+```
+
+Runs binaries. Args after `--` go to the app.
 
 ## `dx deploy`
 
-Status: implemented as specified in this section. Strict single-label
-execution: exactly one main-workspace label (`//pkg:target`); patterns
-(`//...`), multiple labels, and file/path scopes are usage failures
-(exit 2). Deployability is checked with one `bazel cquery` before any
-build: the target must return `DxDeployInfo` (see
-Deploy authoring) or be executable
-(`*_binary`/executable; aliases included, Bazel owns executability),
-else `not_deployable` fails pre-exec (exit 2). The flow is resolve,
-cquery, `bazel build --config=...`, then `bazel run --config=...` with
-`DX_PROFILE=debug|dev|release` forwarded to the deploy program.
-`--dry-run` prints the plan (label, app, profile, build/run commands)
-and executes nothing. Arguments after `--` forward verbatim to the
-program. Exit codes preserve Bazel/program status verbatim; stdio is
-inherited with SIGINT/SIGTERM forwarding, like `dx run`. Like `dx run`,
-only `--output=text`, prose on stderr, no `--report`.
+```text
+dx deploy //pkg:target [-- args...]
+```
+
+Builds and runs one deployable target. Takes exactly one label.
 
 ## `dx coverage`
 
-`dx coverage` resolves scope and invokes Bazel coverage. Bazel owns instrumentation,
-test execution, and coverage artifacts. File scope uses the exact same all-owner,
-transitive reverse-dependent test mapping and empty-result behavior as `dx test`.
-Explicit test labels and patterns bypass inference. LCOV is the initial stable report
-format and uses the shared `--report` stdout-or-file destination contract. Additional
-formats require an authoritative adapter or a later compatibility decision. Because
-LCOV has no portable partial marker, failed collection is signaled by command status and
-the live NDJSON or stderr diagnostic while available validated records remain valid LCOV.
+```text
+dx coverage [--min-coverage <percent>] [scope...]
+```
 
-`dx coverage --min-coverage <percent>` additionally enforces a line-coverage
-threshold over the collected LCOV: covered over eligible executable lines must
-reach the integer percent, else the command exits 1. `LCOV_EXCL_*` source
-markers (with a nearby specific `reason:` plus `issue:` comment, line comments outside string literals only; block comments and raw strings stay wont-fix per issue #589, budgeted with expiry in `tools/coverage/excludes-budget.txt` per issue #1055, see [Testing Strategy](../../testing/strategy-details.md#coverage)) exclude lines from the denominator;
-sources that fail to load and non-Rust/Go records count raw. Without the flag,
-coverage collects and reports with no threshold verdict. The threshold is a
-configurable requirement for users per-cell: each required
-configuration/platform cell gates its own report against its own
-`--min-coverage` value (this repository pins `96` for the `//...` rate
-gate, the highest integer the measured tree passes; the versioned inventory
-scope gates exact zero-uncovered separately). Per-cell plus Codecov opt-in plus remote evidence is qualified
-with fixture evidence pinned in
-`tools/coverage/tests/fixtures/per_cell/pins.bzl` via
-`bazel run //tools/ci:coverage_qualification`.
+Runs coverage. `--min-coverage` fails below that percent. LCOV is the report format.
 
-Coverage tools resolve per-host via the registered C++ toolchain. The
-vendored preset pins `GENERATE_LLVM_LCOV=1` (LLVM LCOV where the
-toolchain emits profraw) plus `combined_report=lcov` and
-`COVERAGE_GCOV_PATH=/usr/bin/gcov` so Bazel's collect_cc_coverage.sh has
-the env var it requires when CC instruments under coverage (an unbound
-`COVERAGE_GCOV_PATH` fails every test). `common
---enable_platform_specific_config` scopes that pin to `coverage:linux`
-and `coverage:macos`: Windows resolves coverage tools from `cc_toolchain`
-and pins no host path, and needs `coverage --enable_runfiles` to
-materialize the runfiles trees collect_coverage.sh assumes. Host
-`LLVM_COV`/`LLVM_PROFDATA` still come from `cc_toolchain` where the
-toolchain provides them.
+Coverage ignores use `LCOV_EXCL_LINE` or `LCOV_EXCL_START` / `LCOV_EXCL_STOP` with a short `reason:` and `issue:`. Bare ignores without a reason fail the gate.
 
 ## Build Profiles
 
-Three shared Bazel configs select `compilation_mode` behind stable
-`dx_*` names :
-
-| Config | `compilation_mode` | Intended default |
-| --- | --- | --- |
-| `dx_debug` | `dbg` | Diagnostics |
-| `dx_dev` | `fastbuild` | `build`/`run`/`test` default; equals bare-invocation behavior |
-| `dx_release` | `opt` | `deploy` default |
-
-The configs live in the vendored preset (`tools/bazelrc/preset.bazelrc`,
-reviewed via `tools/bazelrc/src/lib.rs`, wired through the root
-`.bazelrc`) and are additive: bare invocations keep today's behavior.
-
-`dx build`, `dx run`, `dx test`, and `dx deploy` accept
-`--debug`/`--release` to
-select the profile. The flags are mutually exclusive (both passed is a
-usage failure, exit 2) and map to `--config=dx_debug`/`--config=dx_release`
-on the Bazel argv; the bare invocation passes `--config=dx_dev`
-explicitly, except `dx deploy` which passes `--config=dx_release`.
-There is no `--dev` flag: bare already means the middle
-mode. `dx coverage` takes no profile flags; its argv is unchanged.
-Precedence is explicit flag over deploy target `profile` attribute over
-command default. The deploy target `profile` attribute comes from
-`DxDeployInfo` (see Deploy authoring);
-`DX_PROFILE=debug|dev|release` is forwarded to the deploy program.
-Flags plus forwarding are pinned by
-`cli/cli/tests/fixtures/build_profiles/` (`pins.bzl` plus
-`build_profiles.expected`) via
-`bazel run //tools/ci:build_profiles_qualification`
-(qualified seed-only under issue #814 with no Supported claim).
+`--debug` uses `dx_debug`. `--release` uses `dx_release`. No flag uses `dx_dev`, except `dx deploy` which uses `dx_release`.

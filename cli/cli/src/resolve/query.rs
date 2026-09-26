@@ -98,12 +98,6 @@ mod tests {
 
     #[test]
     fn randomized_query_order_yields_identical_argv() {
-        // Determinism battery: `quality-testing.md` requires
-        // randomized query result order to yield identical Bazel argv.
-        // `quote_set` sorts scope labels so shuffled scope orders emit the
-        // same ownership expression, and `parse_owners` sorts and dedups
-        // query stdout so shuffled result lines converge to identical
-        // owners; `run_label_query` must therefore send identical argv.
         let forward = scopes(&["//pkg:b.py", "//pkg:a.py", "//pkg:c.py"]);
         let reversed = scopes(&["//pkg:c.py", "//pkg:a.py", "//pkg:b.py"]);
         let rotated = scopes(&["//pkg:a.py", "//pkg:c.py", "//pkg:b.py"]);

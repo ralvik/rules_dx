@@ -1,4 +1,3 @@
-//! Nested helper module: loaded by `api_roundtrip`, never a test root.
 mod one;
 
 #[test]

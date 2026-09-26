@@ -55,8 +55,6 @@ pub fn parse_pylint(
                 detail: format!("bad line in message {:?}", message.message_id),
             });
         }
-        // Pylint columns are 0-based; the adapter places 1-based
-        // positions, so a reported 0 becomes column 1.
         let column = message.column.unwrap_or(0) + 1;
         let start = TextPosition { line, column };
         let end = match (message.end_line, message.end_column) {
@@ -131,8 +129,6 @@ mod tests {
         assert_eq!(findings[0].finding.rule_id, "W0611");
         assert_eq!(findings[0].finding.message, "Unused import os");
         assert_eq!(findings[0].finding.severity, ToolSeverity::Warning);
-        // Pylint columns are 0-based: 0..9 becomes the 1-based range
-        // 3:1..3:10 covering `import os`.
         assert_eq!(
             (findings[0].finding.start, findings[0].finding.end),
             (
@@ -147,8 +143,6 @@ mod tests {
         assert!(parse_pylint(b"[]", Some(0), &["/s/dirty.py"])
             .expect("parsed")
             .is_empty());
-        // Fail-closed: an empty array on a findings exit, unknown files,
-        // and non-JSON output are grammar mismatches.
         assert!(parse_pylint(b"[]", Some(4), &["/s/dirty.py"]).is_err());
         assert!(parse_pylint(PYLINT_DIRTY.as_bytes(), Some(4), &["/s/other.py"]).is_err());
         assert!(parse_pylint(b"not json", Some(4), &["/s/dirty.py"]).is_err());
@@ -156,7 +150,6 @@ mod tests {
 
     #[test]
     fn pylint_maps_kinds_and_null_ends() {
-        // A null end is a point range; convention maps to a warning.
         let stdout = r#"[
     {
         "type": "convention",
@@ -180,7 +173,6 @@ mod tests {
             (findings[0].finding.start, findings[0].finding.end),
             (TextPosition { line: 1, column: 1 }, None)
         );
-        // fatal/error are errors; unknown kinds and bad lines fail.
         for (kind, severity) in [
             ("fatal", ToolSeverity::Error),
             ("error", ToolSeverity::Error),
@@ -208,11 +200,6 @@ mod tests {
 
     #[test]
     fn pylint_grammar_mismatches_are_fail_closed() {
-        // Split from the former cross-family witness: each family
-        // owns its mismatch battery.
-
-        // pylint: half-open ends and empty symbol/id/text are
-        // grammar mismatches.
         let bad_end = r#"[{"type": "warning", "module": "a", "obj": "", "line": 1, "column": 0, "endLine": 2, "endColumn": null, "path": "/s/a.py", "symbol": "sym", "message": "msg", "message-id": "X0001"}]"#;
         assert!(parse_pylint(bad_end.as_bytes(), Some(1), &["/s/a.py"]).is_err());
         let empty_symbol = r#"[{"type": "warning", "module": "a", "obj": "", "line": 1, "column": 0, "endLine": null, "endColumn": null, "path": "/s/a.py", "symbol": "", "message": "msg", "message-id": "X0001"}]"#;

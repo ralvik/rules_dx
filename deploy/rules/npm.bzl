@@ -1,6 +1,5 @@
 """Hermetic npm pack feed publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@bazel_skylib//lib:shell.bzl", "shell")

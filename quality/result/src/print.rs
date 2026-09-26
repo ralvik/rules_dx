@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use clap::Parser;
@@ -74,9 +72,6 @@ struct Cli {
 }
 
 fn main() {
-    // Structured diagnostics: init is idempotent and emits
-    // nothing by default; `RUST_LOG` overrides the warn filter. Failures
-    // report via `tracing::error!` with the legacy message text.
     dx_output::init_diagnostics(false);
     let cli = match Cli::try_parse() {
         Ok(cli) => cli,

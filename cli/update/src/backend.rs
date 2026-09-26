@@ -17,14 +17,11 @@ pub enum BackendError {
         set: &'static str,
         reason: &'static str,
     },
-    #[error("offline_required: cannot update {set} without network (re-run without --offline/--frozen once connected, or use the vendored bundle per docs/deploy/offline-bootstrap.md)")]
+    #[error("offline_required: cannot update {set} without network (re-run without --offline once connected)")]
     OfflineRequired { set: &'static str },
 }
 
 pub fn plan(set: SetId, request: &SetRequest, offline: bool) -> Result<BackendPlan, BackendError> {
-    // Offline gate for fetch-owned backends: cache-only runs never launch
-    // a resolver that would fetch. Go full stays the pinned no-op success
-    // (no launch, no fetch); unsupported selectives stay unsupported.
     if offline {
         match (set, request) {
             (SetId::Go, SetRequest::Full) => return Ok(BackendPlan::Noop),
@@ -33,8 +30,6 @@ pub fn plan(set: SetId, request: &SetRequest, offline: bool) -> Result<BackendPl
             | (SetId::NuGet, SetRequest::Packages(_))
             | (SetId::Go, SetRequest::Packages(_)) => {}
             _ => {
-                // Any full/selective `Run` below would fetch; fail before
-                // planning argv so no launch is attempted.
                 let would_run = matches!(
                     (set, request),
                     (SetId::Cargo, SetRequest::Full)
@@ -196,10 +191,6 @@ mod tests {
 
     #[test]
     fn cargo_selective_reports_unsupported_never_full() {
-        // but the approved `crate_universe` repin has no per-crate flag,
-        // so execution fails closed with the full-set hint and never
-        // substitutes a full update; private `cargo update -p` stays
-        // rejected (resolver-owned backends only).
         let error = plan(
             SetId::Cargo,
             &SetRequest::Packages(vec!["anyhow".to_owned()]),
@@ -218,10 +209,6 @@ mod tests {
 
     #[test]
     fn nuget_selective_reports_unsupported_never_full() {
-        // but the approved `paket2bazel` regen has no per-id flag, so
-        // execution fails closed with the full-set hint and never
-        // substitutes a full update; private `paket.lock` surgery stays
-        // rejected (resolver-owned backends only).
         let error = plan(
             SetId::NuGet,
             &SetRequest::Packages(vec!["FSharp.Core".to_owned()]),
@@ -240,12 +227,6 @@ mod tests {
 
     #[test]
     fn go_selective_reports_unsupported_never_full() {
-        // selector but the pinned `go_deps.from_file` module lock
-        // (`third_party/go/go.mod` plus `go.sum` tracking Gazelle) has
-        // no per-module update flag, so execution fails closed with the
-        // `dx bump gomod:<module> <version>` hint and never silently
-        // substitutes the full no-op; private `go get` plus `go mod tidy`
-        // stays rejected (resolver-owned backends only).
         let error = plan(
             SetId::Go,
             &SetRequest::Packages(vec!["github.com/google/go-cmp/cmp".to_owned()]),
@@ -262,10 +243,6 @@ mod tests {
 
     #[test]
     fn go_full_is_pinned_noop_success() {
-        // single-module `go_deps.from_file` lock tracks Gazelle, so the
-        // full update is an intentional no-op success with no launch.
-        // Real `go get -u` wiring stays rejected (would diverge the
-        // shared extension); explicit widening runs through `dx bump`.
         assert_eq!(
             plan(SetId::Go, &SetRequest::Full, false).expect("go full"),
             BackendPlan::Noop
@@ -300,9 +277,6 @@ mod tests {
 
     #[test]
     fn maven_selective_reports_unsupported_with_set_hint() {
-        // seed (`junit:junit`) and the Jupiter (`org.junit.jupiter:...`)
-        // identities fail closed with the full-set hint, never a silent
-        // full substitution.
         for artifact in [
             "junit:junit".to_owned(),
             "org.junit.jupiter:junit-jupiter-api".to_owned(),
@@ -342,9 +316,6 @@ mod tests {
 
     #[test]
     fn offline_forces_cache_only_except_go_noop() {
-        // launch a fetching resolver; the pinned Go no-op still succeeds
-        // with no launch, and unsupported selectives stay unsupported so
-        // the full-set hint never hides behind the network gate.
         for set in [SetId::Cargo, SetId::Npm, SetId::Maven, SetId::NuGet] {
             let error = plan(set, &SetRequest::Full, true).expect_err("offline needs network");
             assert!(

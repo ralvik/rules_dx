@@ -36,8 +36,6 @@ impl Scratch {
 
     pub fn resolve(&self, rel: &Path) -> io::Result<PathBuf> {
         let root = self.dir.path();
-        // Encoded bytes keep the shape check exact on non-UTF8 inputs:
-        // null and backslash are ASCII, so byte and lossy views agree.
         let raw = rel.as_os_str().as_encoded_bytes();
         if raw.is_empty() {
             return Err(io::Error::new(
@@ -69,12 +67,6 @@ impl Scratch {
                 Normal(part) => absolute.push(part),
                 CurDir => {}
                 ParentDir => {
-                    // `absolute` starts at the scratch root and every pop
-                    // is range-checked below, so it always has depth to
-                    // pop here; a failed pop would leave `absolute`
-                    // outside the root and fail the check anyway. `pop`
-                    // errors only on a future walk divergence (non-`Normal`/
-                    // non-`RootDir` tail), which fails closed as an escape.
                     if absolute.pop().is_err() {
                         return Err(io::Error::new(
                             io::ErrorKind::InvalidInput,
@@ -96,10 +88,6 @@ impl Scratch {
                 }
             }
         }
-        // Defense in depth beyond the per-pop checks: every component
-        // either descended (Normal), was neutral (CurDir), was
-        // range-checked (ParentDir), or was rejected (RootDir/Prefix),
-        // so this only fires on a future walk divergence.
         if absolute.as_path() != root && !absolute.starts_with(root) {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -113,21 +101,14 @@ impl Scratch {
         let root = self.dir.path();
         for file in files {
             let absolute = self.resolve(&file.mirror_rel)?;
-            // `resolve` only returns paths inside the scratch root, which
-            // always has a parent, so this only fires on a future
-            // resolve/materialize divergence (fail closed, never panic).
             let parent = absolute.parent().ok_or_else(|| {
-                // LCOV_EXCL_LINE - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_LINE - reason: defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 io::Error::new(
                     io::ErrorKind::InvalidInput,
                     format!("scratch path has no parent: {}", absolute.display()),
                 )
             })?;
-            // Lexical resolve cannot see symlinks: refuse to traverse a
-            // symlink prefix before creating parents.
             ensure_no_symlink_prefix(root, parent, &file.mirror_rel)?;
-            // Refuse to follow an existing symlink at the target: a byte
-            // write or a fallback copy through it would land outside.
             if let Ok(meta) = std::fs::symlink_metadata(&absolute) {
                 if meta.file_type().is_symlink() {
                     return Err(io::Error::new(
@@ -140,8 +121,6 @@ impl Scratch {
                 }
             }
             std::fs::create_dir_all(parent)?;
-            // `create_dir_all` follows symlinks, so re-check after
-            // creation (no concurrent actor today, but fail closed).
             ensure_no_symlink_prefix(root, parent, &file.mirror_rel)?;
             match &file.contents {
                 MirrorContents::Bytes(bytes) => std::fs::write(&absolute, bytes)?,
@@ -303,10 +282,6 @@ pub fn spawn_with_timeout(
             Some(status) => break status,
             None => {
                 if Instant::now() >= deadline {
-                    // Fail closed on timeout: kill then reap so no zombie
-                    // remains; join drains (pipes close on kill) so no
-                    // reader outlives the call; the caller surfaces
-                    // TimedOut as an action failure.
                     let _ = child.kill();
                     let _ = child.wait();
                     let _ = join_drain(stdout_reader.take());
@@ -363,8 +338,6 @@ mod tests {
             std::fs::read(root.join("src/main.rs")).expect("read back"),
             b"fn main() {}\n"
         );
-        // Content reads back identically whether the platform linked or
-        // copied the closure entry.
         assert_eq!(
             std::fs::read(root.join("taplo.toml")).expect("closure entry"),
             b"config = true\n"
@@ -374,9 +347,6 @@ mod tests {
             std::fs::read_link(root.join("taplo.toml")).expect("symlink preferred on unix"),
             source,
         );
-        // Portable route: non-unix always copies, so no
-        // symlink must remain; content equality above already proves
-        // the copy branch.
         #[cfg(not(unix))]
         assert!(
             !std::fs::symlink_metadata(root.join("taplo.toml"))
@@ -392,9 +362,6 @@ mod tests {
 
     #[test]
     fn materialize_copies_closure_entry_when_link_path_exists() {
-        // A pre-existing file at the link path makes symlinking fail,
-        // so the closure entry falls back to a copy: identical content,
-        // no symlink left behind.
         let parent_tmp = tempfile::Builder::new()
             .prefix("dx-fallback-")
             .tempdir_in(std::env::temp_dir())
@@ -432,8 +399,6 @@ mod tests {
         let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
         assert!(scratch.resolve(Path::new("../../evil")).is_err());
         assert!(scratch.resolve(Path::new("/absolute")).is_err());
-        // Enough `..` components to pop past the filesystem root fails
-        // the pop itself, not just the containment check.
         assert!(scratch
             .resolve(Path::new("../../../../../../../../evil"))
             .is_err());
@@ -453,9 +418,6 @@ mod tests {
 
     #[test]
     fn resolve_normalizes_dot_segments_via_normpath() {
-        // Fixtures: `a/b/../c`, `./`, trailing-slash,
-        // excessive-`..` (escapes fail closed here, unlike markdown's
-        // clamped sibling-root semantics).
         let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
         assert_eq!(
             scratch.resolve(Path::new("a/b/../c.rs")).expect("a/b/../c"),
@@ -475,9 +437,6 @@ mod tests {
 
     #[test]
     fn resolve_rejects_empty_null_and_backslash() {
-        // Explicit shape guards for the TempDir-internal
-        // lexical boundary — portable across Unix/Windows, fail closed
-        // without on-disk canonicalization.
         let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
         assert!(scratch.resolve(Path::new("")).is_err(), "empty");
         assert!(scratch.resolve(Path::new("a\0b")).is_err(), "null byte");
@@ -490,7 +449,6 @@ mod tests {
             scratch.resolve(Path::new("\\\\server\\share")).is_err(),
             "UNC"
         );
-        // Forward-slash nesting stays inside.
         assert_eq!(
             scratch.resolve(Path::new("a/b/c.rs")).expect("nested"),
             scratch.root().join("a/b/c.rs")
@@ -500,16 +458,6 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn materialize_rejects_symlink_directory_escape() {
-        // Traversal fixture, fail-fast policy:
-        // the symlink-prefix guard only fires when the platform can
-        // plant a symlink. Non-unix `Link` entries always copy, so no
-        // symlink prefix can arise from `Link` there; the copy branch
-        // is proven by `materialize_copies_closure_entry_when_link_path_
-        // exists` plus the non-unix assertion in
-        // `scratch_materializes_and_cleans_up`.
-        // Traversal fixture: a symlink directory prefix from
-        // an earlier entry must not let a later lexically inside path
-        // land outside on disk.
         let parent_tmp = tempfile::Builder::new()
             .prefix("dx-symlink-dir-")
             .tempdir_in(std::env::temp_dir())
@@ -519,7 +467,6 @@ mod tests {
         std::fs::create_dir_all(&outside).expect("outside dir");
         let scratch = Scratch::create(&parent).expect("scratch");
         let root = scratch.root().to_owned();
-        // Plant a directory symlink via the Link entry shape.
         scratch
             .materialize(&[MirrorFile {
                 mirror_rel: PathBuf::from("evil"),
@@ -530,7 +477,6 @@ mod tests {
             std::fs::read_link(root.join("evil")).expect("symlink planted"),
             outside,
         );
-        // A later entry through that prefix fails closed.
         let err = scratch
             .materialize(&[MirrorFile {
                 mirror_rel: PathBuf::from("evil/pwned"),
@@ -546,12 +492,6 @@ mod tests {
     #[test]
     #[cfg(unix)]
     fn materialize_rejects_symlink_file_overwrite() {
-        // Traversal fixture, fail-fast policy:
-        // planting a file symlink needs symlink privilege, unavailable
-        // on non-unix `Link` paths (always copy). See the directory
-        // escape test above for the non-unix cover.
-        // Traversal fixture: an existing symlink at the
-        // target must not be followed by a byte write or fallback copy.
         let parent_tmp = tempfile::Builder::new()
             .prefix("dx-symlink-file-")
             .tempdir_in(std::env::temp_dir())
@@ -587,11 +527,6 @@ mod tests {
 
     #[test]
     fn scratch_claims_distinct_prefixed_trees() {
-        // Collision retries now live inside `tempfile` (`O_EXCL`
-        // claims with OS-random names), so no deterministic suffix
-        // injection point remains: prove the observable contract
-        // instead — concurrent claims never share a tree, every tree
-        // lives under the parent with the recognizable prefix.
         let parent_tmp = tempfile::Builder::new()
             .prefix("dx-distinct-")
             .tempdir_in(std::env::temp_dir())
@@ -636,8 +571,6 @@ mod tests {
         let root = scratch.root().to_owned();
         scratch.close().expect("close removes the tree");
         assert!(!root.exists(), "closed scratch is gone");
-        // A tree that vanished out from under the scratch surfaces its
-        // cleanup failure instead of dropping it in `Drop`.
         let scratch = Scratch::create(&std::env::temp_dir()).expect("scratch");
         let root = scratch.root().to_owned();
         std::fs::remove_dir_all(&root).expect("pre-remove");
@@ -730,9 +663,6 @@ mod tests {
 
     #[test]
     fn spawn_drains_large_output_without_faking_a_timeout() {
-        // A child that writes past the pipe buffer (~64 KiB) must not
-        // block on write; concurrent drain keeps it exiting under the
-        // wall-time budget.
         let env = hermetic_env(&std::env::temp_dir(), &[]);
         let out = spawn_with_timeout(
             &[
@@ -752,8 +682,6 @@ mod tests {
 
     #[test]
     fn spawn_rejects_oversized_output() {
-        // Output past MAX_OUTPUT_BYTES fails closed even when the child
-        // itself exits cleanly.
         let env = hermetic_env(&std::env::temp_dir(), &[]);
         let limit = crate::parsers::MAX_OUTPUT_BYTES;
         let bytes = limit + 1;

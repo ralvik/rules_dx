@@ -45,7 +45,6 @@ impl BumpSet {
         }
     }
 
-    /// Canonical name for reporting (always the full spelling, never an
     pub fn canonical_alias(text: &str) -> Option<&'static str> {
         Self::parse(text).map(|set| set.name())
     }
@@ -81,7 +80,6 @@ impl BumpSet {
         !self.locks().is_empty()
     }
 
-    /// Human updater description (never argv; argv lives in
     pub fn updater(self) -> &'static str {
         match self {
             BumpSet::Bazel => {

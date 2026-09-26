@@ -1,6 +1,5 @@
 """Matrix data cases (split from `runner_matrix_cases.bzl`).
 
-Contract: `docs/quality/runner-matrix.md`.
 """
 
 DATA_CASES = [
@@ -166,4 +165,3 @@ replacement matrix/toml_dirty.toml 1 2 " = "
     },
 ]
 
-# Markdown cells: fixture-policy lint defaults (markdown_check link/structure

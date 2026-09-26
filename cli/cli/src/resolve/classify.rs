@@ -384,9 +384,6 @@ mod tests {
 
     #[test]
     fn build_file_text_is_never_consulted() {
-        // The BUILD file names no target textually: `srcs` hide behind a
-        // glob and a comment points at a decoy owner. Resolution still
-        // succeeds because ownership comes only from query stdout.
         let scratch = dx_test_scratch::scratch("dx-resolve-test-build-text-");
         let workspace = scratch.path().to_path_buf();
         write(
@@ -469,9 +466,6 @@ mod tests {
         let workspace = scratch.path().to_path_buf();
         #[cfg(unix)]
         {
-            // Fail-fast policy: unix-domain sockets exist
-            // only on unix, so this branch stays gated. The non-unix
-            // branch below proves regular files still classify as files.
             use std::os::unix::net::UnixListener;
             let path = workspace.join("sock");
             let _listener = UnixListener::bind(&path).expect("bind socket");
@@ -485,8 +479,6 @@ mod tests {
         }
         #[cfg(not(unix))]
         {
-            // Portable companion: no socket primitive here,
-            // so prove a regular file is never `NotFileOrDir`.
             write(&workspace, "pkg/BUILD.bazel", "");
             write(&workspace, "pkg/regular.py", "x = 1\n");
             let query = FakeQuery::new(vec![FakeQuery::ok("//pkg:regular.py\n")]);
@@ -602,9 +594,6 @@ mod tests {
 
     #[test]
     fn symlinks_are_neither_file_nor_dir() {
-        // Portable route: symlink kind is rejected on every
-        // host; planting uses the OS primitive and fails fast without
-        // privilege instead of gating the test.
         let scratch = dx_test_scratch::scratch("dx-resolve-test-symlink-kind-");
         let workspace = scratch.path().to_path_buf();
         write(&workspace, "target.txt", "x\n");

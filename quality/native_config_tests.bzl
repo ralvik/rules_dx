@@ -1,6 +1,5 @@
 """Unit tests for typed native-config validation (WP2).
 
-Contract: `docs/quality/native-configuration.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -78,7 +77,7 @@ def native_config_unit_tests(name):
                 [".yaml", ".ini", ".ini"],
             ),
             expect_equal(
-                "native_config_extension pins file-family transports (See: docs/quality/tool-integrations.md)",
+                "native_config_extension pins file-family transports",
                 [
                     native_config_extension("stylelint"),
                     native_config_extension("djlint"),

@@ -69,8 +69,6 @@ rust_binary(
     ],
 )
 
-# Authoritative quality identities (pattern): rustfmt and Clippy
-# resolve from the pinned toolchain, never from ambient host tools.
 rustfmt_test(
     name = "quality_markdown_fmt_test",
     size = "small",
@@ -91,7 +89,6 @@ rust_clippy_test(
 
 exports_files(["Cargo.toml"])
 
-# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 rust_test(
     name = "quality_markdown_test",
     aliases = aliases(

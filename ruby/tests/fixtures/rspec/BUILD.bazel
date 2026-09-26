@@ -19,11 +19,6 @@ ruby_library(
     deps = [":greeter_lib"],
 )
 
-# RSpec 3.13.0 mapping: plain ruby_test with `main = "@bundle//bin:rspec"`
-# plus `args` naming the spec file and `deps` on the spec helper plus
-# `@bundle` (no new rule kind; the runner itself needs no new rule, only
-# the lock story in `ruby/tests/fixtures/gems/pins.bzl`). Unpinned runner:
-# rejected per `pins.bzl`.
 ruby_test(
     name = "greeter_spec",
     srcs = ["greeter_spec.rb"],

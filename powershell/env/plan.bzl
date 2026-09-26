@@ -1,6 +1,5 @@
 """Focused PowerShell environment plan (ADR 0032).
 
-Contract: `docs/environments/powershell.md`.
 """
 
 load("//env:focused.bzl", "focused_direct_sources", "focused_simple_plan", "focused_write_plan")

@@ -1,6 +1,5 @@
 """Shared focused environment-plan helpers.
 
-Contract: `docs/environments/environment.md`.
 """
 
 load("//quality:sources.bzl", "QualitySourcesInfo")

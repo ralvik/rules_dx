@@ -1,6 +1,5 @@
 """dx_tools use_repo inventory."""
 
-# Checked-in inventory of the `dx_tools` extension repos re-exported by the
 DX_TOOL_REPOS = [
     "dx_biome_linux_arm64",
     "dx_biome_linux_x86_64",
@@ -32,5 +31,4 @@ DX_TOOL_REPOS = [
     "dx_vale_windows_x86_64",
 ]
 
-# Execution-platform hub re-exported alongside the tool repos.
 DX_TOOL_HUB = "dx_tools"

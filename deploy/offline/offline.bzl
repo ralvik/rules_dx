@@ -1,6 +1,5 @@
 """Vendored offline/airgap bundle manifests.
 
-Contract: `docs/deploy/offline-bootstrap.md`.
 """
 
 def offline_manifest_name(name):

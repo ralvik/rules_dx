@@ -1,6 +1,5 @@
 """Focused F# environment plan (WP2).
 
-Contract: `docs/environments/fsharp.md`.
 """
 
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")

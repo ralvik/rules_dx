@@ -26,7 +26,6 @@ pub fn render_status_text(checks: &[StatusCheck]) -> String {
 pub fn render_status_json(
     checks: &[StatusCheck],
 ) -> Result<String, dx_fingerprint::FingerprintError> {
-    // Single owner for string-only JSON shapes (typed, no `unreachable!`).
     dx_fingerprint::to_json(&StatusPayload { checks })
 }
 
@@ -40,7 +39,6 @@ pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
         StatusCheck {
             name: "toolchain".to_owned(),
             status: "ok".to_owned(),
-            // Mirrors `MODULE.bazel` (`rules_rust 0.74.0`, `versions = ["1.98.0"]`).
             detail: "rust 1.98.0 via rules_rust 0.74.0 (MODULE.bazel)".to_owned(),
             hint: "bazel build //...".to_owned(),
         },
@@ -55,7 +53,6 @@ pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
         StatusCheck {
             name: "tools".to_owned(),
             status: "ok".to_owned(),
-            // Pinned tool hub; Bazel acquires declared artifacts lazily.
             detail: "bazel-resolved pinned tools (//quality/artifacts)".to_owned(),
             hint: "no ambient tools required".to_owned(),
         },
@@ -79,9 +76,6 @@ mod tests {
         assert_eq!(checks.len(), 4);
         let text = render_status_text(&checks);
         assert!(text.contains("pin: ok"));
-        // Single source: the pin hint must track `MODULE_VERSION`, and the
-        // toolchain/tools details must name their Bazel sources, never bare
-        // hardcoded claims.
         let pin = checks.iter().find(|c| c.name == "pin").expect("pin check");
         assert_eq!(pin.hint, format!("dx version --pin {MODULE_VERSION}"));
         let toolchain = checks
@@ -103,9 +97,6 @@ mod tests {
             tools.detail
         );
         let json = render_status_json(&checks).expect("status json");
-        // Golden pilot: full-payload insta snapshot replaces
-        // the contains-asserts; a MODULE_VERSION bump intentionally
-        // updates this snapshot alongside the pin contract.
         insta::assert_snapshot!(json, @r#"{"checks":[{"name":"toolchain","status":"ok","detail":"rust 1.98.0 via rules_rust 0.74.0 (MODULE.bazel)","hint":"bazel build //..."},{"name":"platform","status":"ok","detail":"linux_x86_64 + linux_arm64 glibc plus macos_arm64 plus windows_x86_64 qualified","hint":"see support-matrix for out-of-v1"},{"name":"tools","status":"ok","detail":"bazel-resolved pinned tools (//quality/artifacts)","hint":"no ambient tools required"},{"name":"pin","status":"ok","detail":"dx 0.0.0 vs module 0.0.0","hint":"dx version --pin 0.0.0"}]}"#);
     }
 
@@ -124,9 +115,6 @@ mod tests {
         assert!(json.contains("\\u0001"), "{json}");
         let parsed: serde_json::Value = serde_json::from_str(&json).expect("status JSON is valid");
         assert_eq!(parsed["checks"][0]["name"], "we\"ird");
-        // Re-serializing via `Value` sorts object keys (BTreeMap), while the
-        // struct order stays name,status,detail,hint for byte-stability with
-        // the pre-serde rendering; compare values, not bytes.
         let reparsed: serde_json::Value =
             serde_json::from_str(&serde_json::to_string(&parsed).expect("reserialize"))
                 .expect("reserialized JSON is valid");

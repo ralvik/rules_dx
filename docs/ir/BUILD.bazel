@@ -25,7 +25,7 @@ real_source_target(
         "doc_ir.proto",
         "//docs/ir/ir:src/lib.rs",
     ],
-    markdown_srcs = ["README.md"],
+    markdown_srcs = [],
     tags = ["corpus"],
 )
 

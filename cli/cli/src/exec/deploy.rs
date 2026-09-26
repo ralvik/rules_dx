@@ -214,8 +214,6 @@ mod tests {
     fn deploy_flag_over_attr_precedence() {
         use std::cell::RefCell;
         use std::rc::Rc;
-        // Target default is debug; explicit --release must win and reach
-        // both build and run argv with DX_PROFILE=release on the run.
         let harness = harness_with_deploy("deploy-prec", "True|debug|None|True");
         let seen: Rc<RefCell<Vec<Vec<String>>>> = Rc::new(RefCell::new(Vec::new()));
         let seen_env: Rc<RefCell<Vec<Vec<(String, String)>>>> = Rc::new(RefCell::new(Vec::new()));
@@ -258,7 +256,6 @@ mod tests {
             seen_env[1].contains(&("DX_PROFILE".to_owned(), "release".to_owned())),
             "{seen_env:?}"
         );
-        // Bare invocation inherits the target debug default.
         let harness = harness_with_deploy("deploy-attr", "True|debug|None|True");
         let seen: Rc<RefCell<Vec<Vec<String>>>> = Rc::new(RefCell::new(Vec::new()));
         let seen_env2: Rc<RefCell<Vec<Vec<(String, String)>>>> = Rc::new(RefCell::new(Vec::new()));
@@ -294,10 +291,7 @@ mod tests {
 
     #[test]
     fn deploy_preserves_exit_codes_and_forwards_args() {
-        // Build failure returns verbatim without running.
         let harness = harness_with_deploy("deploy-buildfail", "True|release|None|True");
-        // FakeRunner returns the same code for every launch; use a
-        // recording runner that fails the build only.
         let seen: Rc<RefCell<Vec<Vec<String>>>> = Rc::new(RefCell::new(Vec::new()));
         let probe = FailFirstRunner {
             seen: Rc::clone(&seen),
@@ -325,7 +319,6 @@ mod tests {
             1,
             "run never launches after build failure"
         );
-        // Run failure with app args preserves the program status.
         let harness = harness_with_deploy("deploy-runfail", "True|release|None|True");
         let seen: Rc<RefCell<Vec<Vec<String>>>> = Rc::new(RefCell::new(Vec::new()));
         let probe = SucceedBuildFailRun {

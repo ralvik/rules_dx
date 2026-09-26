@@ -8,11 +8,6 @@ impl super::RealBackend {
         text: &str,
         capability: &str,
     ) -> Result<String, RunnerError> {
-        // Audit and typecheck capabilities are check-only by construction:
-        // audit reports findings without rewriting (Ruff S check path),
-        // and typecheck rides authoritative upstream diagnostics. Short-
-        // circuit here so convergence needs exactly one round and no fix
-        // scratch spawns, independent of the per-tool check-only list.
         if capability == "audit" || capability == "typecheck" {
             self.tool(tool_id)?;
             return Ok(text.to_owned());

@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(
@@ -110,7 +108,6 @@ pub fn build_argv_for_plan(plan: &RepositoryRootPlan) -> Vec<String> {
     )
 }
 
-/// One normalized projection entry. Projections are always read-only
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CodegenEntry {
     pub logical_path: String,
@@ -409,7 +406,6 @@ pub struct ProjectionEntry {
     pub replaces: String,
 }
 
-/// Plans the read-only mirror from merged records and BEP-reported
 pub fn plan_projection(
     records: &[CodegenRecord],
     outputs: &[TargetOutput],

@@ -1,13 +1,9 @@
 """Repository-root candidates for `dx codegen`, `dx env`, and `dx setup`.
 
-Contract: `docs/environments/codegen.md`.
 """
 
 REPOSITORY_PATTERN = "//..."
 
-# Every strategy, baseline first. Order mirrors
-# `RootStrategy::ALL` in `//cli/roots:dx_roots` and is the deterministic
-# tie-break order for fiat selection (ADR 0022): the baseline wins ties.
 REPOSITORY_ROOT_STRATEGIES = [
     "recursive-pattern",
     "query-pattern-file",

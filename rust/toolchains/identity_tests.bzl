@@ -4,11 +4,8 @@
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":bindings.bzl", "RUSTFMT_TOOLCHAIN_TYPE", "RUST_TOOLCHAIN_TYPE")
 
-# Buildifier's canonical-repository lint forbids a literal "@@" in source,
-# so the pin spells it as "@" + "@..."; the observed value keeps "@@".
 _AT = "@"
 
-# Frozen pin: executed owners/paths for Rust 1.98.0 on linux_x86_64.
 EXPECTED_IDENTITY_OBSERVATIONS = """subject //rust/toolchains:identity_under_test
 field clippy.owner=""" + _AT + """@rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools//:rust_toolchain
 field clippy.path=bazel-out/k8-fastbuild/bin/external/rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools/rust_toolchain/bin/clippy-driver

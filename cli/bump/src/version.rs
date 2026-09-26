@@ -8,7 +8,6 @@ pub enum WidenVersion {
 }
 
 impl WidenVersion {
-    /// Human spelling for summaries (never argv).
     pub fn display(&self) -> String {
         match self {
             WidenVersion::Semver(version) => version.to_string(),
@@ -22,7 +21,6 @@ impl WidenVersion {
     }
 }
 
-/// Version-shape errors (exit 2, never a partial widen).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum VersionError {
     #[error("empty version")]
@@ -45,7 +43,6 @@ pub fn is_stable(version: &semver::Version) -> bool {
     version.pre.is_empty()
 }
 
-/// Compares two exact versions with upstream `semver` ordering, never
 pub fn compare(left: &semver::Version, right: &semver::Version) -> std::cmp::Ordering {
     left.cmp(right)
 }
@@ -60,7 +57,6 @@ pub fn major_bump_migrate_hint(from: &str, to: &str, manifest: &str) -> String {
     )
 }
 
-/// Generic major-bump hint for widen plans without a known old version.
 pub fn generic_major_bump_hint() -> &'static str {
     "if major bump, run `dx migrate --from <old> --to <new>` (no manifest yet => migrate_failed exit 1; missing --from/--to => exit 2 missing-versions)"
 }
@@ -82,8 +78,6 @@ pub fn parse(set: BumpSet, text: &str) -> Result<WidenVersion, VersionError> {
 }
 
 fn parse_semver(set: &'static str, text: &str) -> Result<WidenVersion, VersionError> {
-    // Ergonomics only: strip one leading `v`/`=`/`==` plus whitespace.
-    // Comparison and pinning still use upstream `semver` verbatim.
     let mut candidate = text.trim();
     candidate = candidate.strip_prefix("==").unwrap_or(candidate);
     candidate = candidate.strip_prefix('=').unwrap_or(candidate);
@@ -111,8 +105,6 @@ fn parse_git(set: &'static str, text: &str) -> Result<WidenVersion, VersionError
         || candidate.contains(':')
         || candidate.contains('/')
     {
-        // `owner/repo` never appears in the version position; slashes
-        // belong to the selector package, never the version.
         return Err(VersionError::InvalidGit {
             set,
             version: text.to_owned(),
@@ -121,9 +113,6 @@ fn parse_git(set: &'static str, text: &str) -> Result<WidenVersion, VersionError
     if is_commit_sha(candidate) {
         return Ok(WidenVersion::GitCommit(candidate.to_owned()));
     }
-    // Tag shape: `v4`, `v4.1.0`, `9.2.0`, etc. Must be non-empty and
-    // contain no whitespace/colons/slashes (checked above). A 40/64-hex
-    // string is a commit, never a tag (checked first).
     if candidate.len() <= 128 {
         return Ok(WidenVersion::GitTag(candidate.to_owned()));
     }
@@ -134,10 +123,6 @@ fn parse_git(set: &'static str, text: &str) -> Result<WidenVersion, VersionError
 }
 
 fn is_commit_sha(text: &str) -> bool {
-    // Commit-SHA spelling owned by `dx_digest` (`hex::decode` + 20/32-byte
-    // length check, no manual digit loop). Git accepts both cases, so
-    // unlike digests there is no lowercase gate: preserved and pinned
-    // by tests below.
     dx_digest::is_commit_sha(text)
 }
 
@@ -158,7 +143,6 @@ mod tests {
             let parsed = parse(set, "1.2.3").expect("semver");
             assert!(parsed.is_semver());
             assert_eq!(parsed.display(), "1.2.3");
-            // Leading `v`/`=` ergonomics still pin exact semver.
             assert_eq!(parse(set, "v1.2.3").expect("v").display(), "1.2.3");
             assert_eq!(parse(set, "=1.2.3").expect("=").display(), "1.2.3");
             assert!(matches!(parse(set, ""), Err(VersionError::Empty)));
@@ -180,7 +164,6 @@ mod tests {
         match parsed {
             WidenVersion::Semver(version) => {
                 assert!(!is_stable(&version));
-                // Upstream semver orders prereleases below their release.
                 assert_eq!(
                     compare(&version, &"1.2.3".parse().expect("stable")),
                     std::cmp::Ordering::Less
@@ -189,8 +172,6 @@ mod tests {
             _ => panic!("prerelease is semver"),
         }
         assert!(is_stable(&"1.2.3".parse().expect("stable")));
-        // The loop filters stable by default; the explicit operation
-        // still validates shape without inventing a private policy.
         let _ = VersionError::Prerelease {
             version: "1.2.3-alpha.1".to_owned(),
         };
@@ -229,10 +210,6 @@ mod tests {
 
     #[test]
     fn github_actions_commit_sha_keeps_40_64_and_either_case() {
-        // Commit-SHA spelling owned by `dx_digest::is_commit_sha`: 40/64
-        // hex in either case (Git accepts both; digests stay
-        // lowercase-only elsewhere). Uppercase must keep parsing as a
-        // commit, never fall through to a tag.
         let lower40 = "3d3c42e5aac5ba805825da76410c181273ba90b1";
         let upper40 = "3D3C42E5AAC5BA805825DA76410C181273BA90B1";
         for sha in [lower40, upper40] {
@@ -251,7 +228,6 @@ mod tests {
                 "64-char sha {sha:?} must stay a commit",
             );
         }
-        // Non-hex 40/64-length strings stay tags-or-errors, never commits.
         for bad in ["v4", "3d3c42e5", &"z".repeat(40), &"z".repeat(64)] {
             let parsed = parse(BumpSet::GithubActions, bad).expect("non-sha shape");
             assert!(
@@ -274,10 +250,6 @@ mod tests {
 
     #[test]
     fn serde_json_and_toml_stay_upstream_owned() {
-        // Manifest shapes parse through upstream libraries, never custom
-        // parsers: pin the ownership here so a future edit cannot
-        // reimplement JSON/TOML. `toml_edit` owns format-preserving Cargo
-        // edits; `package.json` stays on `serde_json::Value`.
         let package: serde_json::Value =
             serde_json::from_str(r#"{"name":"react","version":"1.2.3"}"#).expect("json");
         assert_eq!(package["version"], serde_json::json!("1.2.3"));

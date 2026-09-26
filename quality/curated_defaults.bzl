@@ -1,17 +1,9 @@
 """Frozen v1 curated quality defaults.
 
-Contract: `docs/tools/tool-baseline.md#curated-differences`, `docs/tools/tool-baseline.md#default-lifecycle-direction`, `docs/quality/quality-testing.md`.
 """
 
-# Versioned curated-defaults schema. Consumers query via
-# `curated_families`, `curated_tools`, and `curated_schema_error` instead
-# of duplicating the manifest, so adding a curated family edits this one
-# data manifest plus compat evidence, never a parallel allowlist.
 CURATED_SCHEMA_VERSION = 1
 
-# Family -> capability -> curated default tool IDs, in stable pipeline
-# order. Families absent from this map have no curated defaults yet
-# (their classes are PARITY_DEFERRED in quality/parity_tests.bzl).
 CURATED_DEFAULTS = {
     "java": {
         "audit": [],
@@ -75,10 +67,6 @@ CURATED_DEFAULTS = {
     },
 }
 
-# Frozen default formatter set per family: changing any entry requires a
-# major release (never a minor). The harness greps this file for the
-# exact lines below, so keep the `FORMAT_FROZEN[<family>] = [...]`
-# shape stable.
 FORMAT_FROZEN = {
     "java": ["google_java_format"],
     "javascript": ["biome"],

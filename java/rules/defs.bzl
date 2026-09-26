@@ -1,6 +1,5 @@
 """Experimental minimal Java wrappers (ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_java//java:defs.bzl", _java_binary = "java_binary", _java_library = "java_library", _java_test = "java_test")
@@ -15,7 +14,6 @@ _DX_JAVA_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream `JavaInfo`,
 _DX_JAVA_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
@@ -70,7 +68,6 @@ def java_javacopts_with_werror(kwargs):
     """Returns kwargs with -Werror plus -Xlint:all enforced on javacopts.
 
     Existing flags are kept; missing ones are appended.
-    See: docs/testing/generation.md.
     """
     upstream_kwargs = dict(kwargs)
     javacopts = list(upstream_kwargs.get("javacopts", []))

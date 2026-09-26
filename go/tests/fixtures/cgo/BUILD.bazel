@@ -28,10 +28,6 @@ go_test(
     embed = [":cgo"],
     pure = "off",
     race = "on",
-    # rules_go race+cgo analysis needs a POSIX C toolchain; Windows MSVC
-    # runners fail validate_mode (issue #1207). Linux-only matches the
-    # qualified cgo scope; the public forwarder takes the same constraint
-    # via dx_test_forward_kwargs.
     target_compatible_with = ["@platforms//os:linux"],
 )
 

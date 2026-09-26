@@ -1,14 +1,9 @@
 """Quality source-ownership boundary (freeze for ADR 0013).
 
-Contract: `docs/quality/quality-sources.md`, `docs/decisions/0013-rust-javascript-typescript-foundations.md`.
 """
 
 QualitySourcesInfo = provider(
-    doc = "Directly owned repository sources keyed by semantic file class. " +
-          "Forgeable by construction (Starlark providers carry no origin): " +
-          "trust comes from `check_direct_sources` shape validation at " +
-          "construction plus aspect-time ownership checks, never from the " +
-          "provider alone. See: issue #928.",
+    doc = "Directly owned repository sources.",
     fields = {
         "direct_sources": (
             "Dict[str, depset[File]]: semantic file-class ID to directly " +
@@ -17,15 +12,8 @@ QualitySourcesInfo = provider(
     },
 )
 
-# Versioned registry schema for the semantic file-class inventory.
-# Consumers query via `is_known_semantic_class` / `sources_schema_error`
-# instead of duplicating the class list, so adding a class edits this one
-# data list plus adapter/parity compat, never a parallel allowlist.
 SOURCES_REGISTRY_SCHEMA_VERSION = 1
 
-# Candidate canonical semantic file-class IDs from
-# docs/quality/quality-sources.md. Provisional pending; adding a class
-# or broadening one requires adapter and policy compatibility tests.
 KNOWN_SEMANTIC_FILE_CLASSES = [
     "text",
     "c",
@@ -76,7 +64,6 @@ KNOWN_SEMANTIC_FILE_CLASSES = [
     "go_module",
 ]
 
-# Semantic file class for Rust sources (proves this one).
 RUST = "rust"
 
 def is_known_semantic_class(class_id):

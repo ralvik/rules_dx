@@ -1,6 +1,5 @@
 """SBOM + provenance generation for releases.
 
-Contract: `docs/tools/tool-acquisition.md`, `docs/deploy/release-runbook.md`.
 """
 
 def sbom_filenames(name):
@@ -21,9 +20,6 @@ def sbom_predicate_error(predicate):
                 "': want 'https://slsa.dev/provenance/v1' (selected wire profile per issue #311)")
     return ""
 
-# of these workflow identities, never an arbitrary string. The dry-run id
-# serves the `sbom_demo` shape check only; real releases pass the release
-# id explicitly. Anything else fails closed at analysis time.
 SBOM_BUILDER_DRY_RUN = "https://github.com/ralvik/rules_dx/.github/workflows/publish-dry-run.yml"
 SBOM_BUILDER_RELEASE = "https://github.com/ralvik/rules_dx/.github/workflows/release.yml"
 
@@ -56,10 +52,6 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
     (spdx, provenance) = sbom_filenames(name)
     src_target = artifact
 
-    # SPDX: hermetic digest + deterministic JSON via Rust
-    # (no host sha256sum/shasum/python3, no network, no Syft
-    # dependency; Syft/CycloneDX output remains compatible input to the
-    # same verify path when owners adopt it per the runbook).
     native.genrule(
         name = name + "_spdx",
         srcs = [src_target],
@@ -68,10 +60,6 @@ def sbom_release(name, artifact, package_name = "dx", supplier = "rules_dx", bui
         cmd = "$(location //deploy/release:sbom_spdx_gen) $(location " + src_target + ") $(OUTS) \"" + package_name + "\" \"" + supplier + "\"",
     )
 
-    # Provenance: in-toto Statement v1 + SLSA v1 predicate, subject =
-    # artifact digest. Builder id is the validated allowlist selection
-    # above: the dry-run default serves the `sbom_demo` shape check only;
-    # real releases pass SBOM_BUILDER_RELEASE explicitly per runbook.
     native.genrule(
         name = name + "_provenance",
         srcs = [src_target],

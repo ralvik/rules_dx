@@ -1,3 +1,17 @@
+Computing main repo mapping: 
+Loading: 
+Loading: 0 packages loaded
+Analyzing: target //cli/cli:dx (0 packages loaded, 0 targets configured)
+Analyzing: target //cli/cli:dx (0 packages loaded, 0 targets configured)
+
+INFO: Analyzed target //cli/cli:dx (0 packages loaded, 0 targets configured).
+INFO: Found 1 target...
+Target //cli/cli:dx up-to-date:
+  bazel-bin/cli/cli/dx
+INFO: Elapsed time: 0.474s, Critical Path: 0.00s
+INFO: 1 process: 1 internal.
+INFO: Build completed successfully, 1 total action
+INFO: Running command line: bazel-bin/cli/cli/dx <args omitted>
 dx clean - prune unselected managed state, never Bazel outputs unless --bazel (no scopes)
 
 Usage: dx [global-options] clean [--dry-run] [--bazel]
@@ -7,10 +21,11 @@ Scopes: none (clean takes no scopes).
 Exit codes: 0 success; 2 usage/scope/owner errors; 1 operational failures; Bazel-authoritative failures preserve Bazel's code.
 Output: --output text|diff|json; --report <format>=<destination> (repeatable).
 
-dx - Transparent UI over Bazel: quality, workflow, and environment commands
+dx - Run Bazel workflows
 
 Commands:
-  audit        run security/license audit over resolved scopes (non-mutating; live Gitleaks plus advisory/vuln/SPDX backends)
+  security     run security audit over resolved scopes (non-mutating; live Gitleaks plus advisory/vuln backends)
+  license      run license audit over resolved scopes (non-mutating; live license-policy plus SPDX backend)
   lint         run lint analysis over resolved scopes (mutating by default; --check is non-mutating)
   typecheck    run typecheck analysis over resolved scopes (mutating by default; --check is non-mutating)
   format       check or rewrite formatting over resolved scopes (mutating by default; --check is non-mutating)
@@ -45,103 +60,101 @@ Commands:
 
 dx [global-options] <command> [scope ...] [-- bazel-options ...]
 
-Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Graph-scope commands select //... when no scope is supplied; other commands follow per-command defaults (see docs/cli/commands/README.md#scope-defaults). --here (--cwd alias) selects the current directory tree instead (//path/...; //... at the root) and cannot be combined with explicit scopes.
+Scopes: labels, patterns, files, or dirs. No scope means //... for most commands.
 
-Exit codes: 0 success; 2 CLI-detected usage/scope/owner errors; 1 operational failures; Bazel-authoritative commands preserve Bazel's code.
-
-Output: --output text|diff|json (NDJSON machine protocol on stdout, human text otherwise). See docs/cli/cli-contract.md.
+Exit codes: 0 success, 2 usage error, 1 failed check.
 
 Usage: dx [OPTIONS] [COMMAND] [TARGETS]... [-- <BAZEL_OPTIONS>...]
 
 Arguments:
   [COMMAND]
-          First positional: the command word (a [`Command`] value so the same grammar feeds parsing, `--help`, and shell completions)
+          Command to run
           
-          [possible values: audit, lint, typecheck, format, generate, build, test, coverage, run, deploy, check, fix, clean, update, bump, migrate, codegen, env, setup, init, new, upgrade, hooks, status, version, watch, owners, deps, why, completion, docs, bazel]
+          [possible values: security, license, lint, typecheck, format, generate, build, test, coverage, run, deploy, check, fix, clean, update, bump, migrate, codegen, env, setup, init, new, upgrade, hooks, status, version, watch, owners, deps, why, completion, docs, bazel]
 
   [TARGETS]...
-          Later positionals: explicit scopes/targets
+          Scopes to run on
 
   [BAZEL_OPTIONS]...
-          Everything after the first bare `--`, forwarded verbatim
+          Args after --
 
 Options:
       --workspace <WORKSPACE>
-          Override upward workspace discovery (find MODULE.bazel)
+          Use this workspace dir
 
       --dry-run
-          Resolve and summarize the plan without executing workflows/mutations
+          Show the plan without running it
 
       --quiet
-          Suppress dx operation summaries (tool diagnostics still print)
+          Hide summaries
 
   -v, --verbose
-          Enable structured diagnostics on stderr via tracing. Default stays byte-identical; `--verbose` adds info-level logs. Orthogonal to `--quiet` (summaries vs logs). Short `-v`; conflicts with `--log-level` (See: `docs/cli/output-protocol.md`)
+          Show more logs
 
       --color <COLOR>
-          Select color output for logs and human status (`auto|always|never`). `auto` stays byte-identical plain unless a TTY without `NO_COLOR`; `always` forces color, `never` stays plain. See: `docs/cli/cli-contract.md`
+          Set color output
 
       --log-level <LEVEL>
-          Select the structured diagnostic level on stderr via tracing. Default stays byte-identical (`warn`); `--verbose`/`-v` is `info`. `RUST_LOG` overrides when set (See: `docs/cli/output-protocol.md`)
+          Set log level
 
       --output <OUTPUT>
-          Select concise text, unified patches, or versioned NDJSON events
+          Set output format
 
       --report <REPORT>
-          Write a standard report (sarif/junit/lcov) to file or -; repeatable
+          Write a report file
 
       --fail-on <FAIL_ON>
-          Lowest diagnostic severity that fails quality commands
+          Fail on this severity
 
       --min-coverage <MIN_COVERAGE>
-          Required line-coverage percent (coverage only, 0-100)
+          Require this coverage percent
 
       --check
-          Check mode (quality/version plus `update --check` preset gate; no mutations in check mode)
+          Check without changing files
 
       --debug
-          Use dx_debug config (build/run/test/deploy only; conflicts with --release)
+          Use debug build
 
       --release
-          Use dx_release config (build/run/test/deploy only; conflicts with --debug)
+          Use release build
 
       --bazel
-          Additionally forward `bazel clean` after pruning (clean only)
+          Also run bazel clean
 
       --pin <PIN>
-          Re-pin to <version> (version only)
+          Re-pin to this version
 
       --rollback
-          Re-pin the recorded previous release (version only)
+          Re-pin the last release
 
       --configured
-          Use cquery instead of query (owners/deps/why only)
+          Use cquery instead of query
 
       --from <FROM>
-          Source version for `dx migrate` plus `dx upgrade` (migrate plus upgrade only). See: `docs/cli/commands/new-upgrade.md`
+          Migrate from this version
 
       --to <TO>
-          Target version for `dx migrate` plus `dx upgrade` (migrate plus upgrade only). See: `docs/cli/commands/new-upgrade.md`
+          Migrate to this version
 
       --here
-          Select the current directory tree instead of `//...` (`--cwd` alias) (audit/lint/typecheck/format/generate/build/test/coverage/check/fix/docs only; `//path/...`, `//...` at the root; cannot be combined with explicit scopes; never implicit: bare invocations in a subdir stay `//...`)
+          Use the current dir tree
           
           [alias: --cwd]
 
       --serve
-          Preview the last docs build outputs locally (docs only). See: `docs/cli/commands/docs.md`
+          Serve docs locally
 
       --port <PORT>
-          Preview port for `dx docs --serve` (docs only; requires `--serve`). See: `docs/cli/commands/docs.md`
+          Docs serve port
 
       --host <HOST>
-          Preview bind host for `dx docs --serve` (docs only; requires `--serve`). Defaults to `127.0.0.1`. See: `docs/cli/commands/docs.md`
+          Docs serve host
 
       --open
-          Open the preview URL in a browser after building (docs only; requires `--serve`). See: `docs/cli/commands/docs.md`
+          Open docs in a browser
 
       --offline
-          Force cache-only operation without network fetches (audit/update/bump only; `--frozen` alias). See: `docs/deploy/offline-bootstrap.md`
+          Run without network
           
           [alias: --frozen]
 
@@ -153,9 +166,8 @@ Options:
 
 Environment:
   RUST_LOG=<filter>
-      Override --verbose/-v and --log-level with a tracing filter (e.g. RUST_LOG=debug).
+      Override --verbose and --log-level.
   NO_COLOR=<any>
-      Disable styled human output when present (any value, per the spec); `--color=always` forces color, `--color=never` stays plain.
+      Disable color output.
   BUILD_WORKSPACE_DIRECTORY=<dir>
-      Workspace start under `bazel run`; falls back to the current directory.
-  See docs/cli/output-protocol.md and docs/cli/cli-contract.md.
+      Workspace start under `bazel run`.

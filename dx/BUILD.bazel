@@ -28,20 +28,6 @@ load("//quality:fixtures.bzl", "real_source_target")
 
 package(default_visibility = ["//visibility:private"])
 
-# Visibility policy (issue #928): this facade defaults private; every
-# consumer-facing target below carries an explicit public export so the
-# public surface never leaks via the package default. Guard:
-# `//tools/ci:dx_facade_qualification`.
-
-# Canonical public generation workflow: composed repository default
-# with scoped traversal from resolved scope. The composed binary runs
-# every first-party extension plus the dispatch witness last, so one
-# traversal refreshes the whole workspace. Contract:
-# `docs/cli/commands/generate.md`. The check
-# twin shares the composed wiring with upstream `-mode diff` encoded in
-# canonical-target wiring (dispatch): same rewrite and intended
-# manifest, no workspace writes, nonzero exit on changes. Guard:
-# `//tools/ci:dx_facade_qualification`.
 gazelle(
     name = "generate",
     gazelle = "//gazelle/dispatch:gazelle",
@@ -55,33 +41,18 @@ gazelle(
     visibility = ["//visibility:public"],
 )
 
-# Canonical managed-environment bootstrap: installs the default
-# staged tool tree into the workspace `.dx/bin` directory.
 alias(
     name = "env",
     actual = "//cli/env:env",
     visibility = ["//visibility:public"],
 )
 
-# Canonical repository-wide codegen selection identity: bare
-# `dx codegen` invokes `//dx:codegen`. Accepted: this empty
-# filegroup reserves the label so the CLI selection identity resolves.
-# It contributes
-# no plan records itself; the real plan collector is the
-# `dx_codegen_plan_aspect` plus the `dx_codegen_plans` output group
-# (frozen in `//generation:codegen.bzl`, mirrored in
-# `//cli/codegen`), and the effective roots stay on the frozen `//...`
-# baseline per `//cli/roots`. Adding `srcs` would build a central
-# eager dependency, which `docs/environments/codegen.md` rejects. Guard:
-# `//tools/ci:dx_facade_qualification`.
 filegroup(
     name = "codegen",
     srcs = [],
     visibility = ["//visibility:public"],
 )
 
-# Accepted: empty `//dx:config` default, see the package
-# docstring. Guard: `//tools/ci:dx_facade_qualification`.
 filegroup(
     name = "config",
     srcs = [],

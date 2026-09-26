@@ -276,16 +276,16 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) error {
 		if a.Path != b.Path {
 			return a.Path < b.Path
 		}
-		// LCOV_EXCL_START - reason: unreachable encode, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+		// LCOV_EXCL_START - reason: unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		if a.Language != b.Language {
 			return a.Language < b.Language
 		}
-		// LCOV_EXCL_STOP - reason: end unreachable encode, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+		// LCOV_EXCL_STOP - reason: end unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		return a.Import < b.Import
 	})
 	data, err := json.Marshal(manifest)
 	if err != nil {
-		return fmt.Errorf("rust: cannot encode intended manifest: %v", err) // LCOV_EXCL_LINE - reason: unreachable encode, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+		return fmt.Errorf("rust: cannot encode intended manifest: %v", err) // LCOV_EXCL_LINE - reason: unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 	}
 	if err := os.WriteFile(r.outPath, data, 0o600); err != nil {
 		return fmt.Errorf("rust: cannot write intended manifest: %v", err)
@@ -331,7 +331,7 @@ func (r *manifestRecorder) witness(rec packageRecord) (intendedFile, bool, error
 	file.OriginalContent = original
 	file.Edits = diffLines(original, intended)
 	if len(file.Edits) == 0 {
-		return file, false, fmt.Errorf("rust: changed package %q produced no edits", rec.rel) // LCOV_EXCL_LINE - reason: unreachable encode, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+		return file, false, fmt.Errorf("rust: changed package %q produced no edits", rec.rel) // LCOV_EXCL_LINE - reason: unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 	}
 	return file, true, nil
 }
@@ -468,11 +468,11 @@ func diffLines(original, intended []byte) []intendedEdit {
 			// string. Normalize to empty so deletions emit "".
 			Replacement: nonNilBytes(bytes.Join(newLines[code.J1:code.J2], nil)),
 		}
-		// LCOV_EXCL_START - reason: unreachable encode, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+		// LCOV_EXCL_START - reason: unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		if bytes.Equal(original[edit.Start:edit.End], edit.Replacement) {
 			continue
 		}
-		// LCOV_EXCL_STOP - reason: end unreachable encode, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+		// LCOV_EXCL_STOP - reason: end unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		edits = append(edits, edit)
 	}
 	return edits

@@ -1,24 +1,15 @@
 """Deterministic synthetic adapter registry (WP2 fixtures).
 
-Contract: `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md`, `docs/decisions/0003-action-granularity.md`.
 """
 
-# Versioned registry schema for the adapter taxonomy.
 ADAPTER_REGISTRY_SCHEMA_VERSION = 1
 
-# Synthetic tool ID to capability to supported semantic file classes.
-# Mirrors the `//quality:fixture_policy` shape: `lint-a` is selected by two
-# families (proves cross-family union into one stage), `lint-b` and `fmt-a`
-# are rust-only (prove exact subsets and python exclusion from format).
 SYNTHETIC_ADAPTERS = {
     "fmt-a": {"format": ["rust"]},
     "lint-a": {"lint": ["python", "rust"]},
     "lint-b": {"lint": ["rust"]},
 }
 
-# WP2 fixture class-to-family assignment. The frozen taxonomy lives in
-# REAL_CLASS_TO_FAMILY below; this minimal map only authorizes the fixture
-# families above.
 SYNTHETIC_CLASS_TO_FAMILY = {
     "python": "python",
     "rust": "rust",
@@ -36,7 +27,6 @@ def adapter_supported_classes(tool_id, capability):
              "': not in the synthetic adapter registry")
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
-# Real adapters: stable tool IDs users select in policy families.
 REAL_ADAPTERS = {
     "biome": {
         "format": ["javascript", "json", "jsx", "typescript", "tsx"],
@@ -99,9 +89,6 @@ REAL_ADAPTERS = {
     "yamllint": {"lint": ["yaml"]},
 }
 
-# Frozen taxonomy: one owning family per class (single-sourced here).
-# Grouping and deferred adapters live in `docs/quality/quality-sources.md`
-# and the parity gate; history lives in git log.
 REAL_CLASS_TO_FAMILY = {
     "astro": "astro",
     "c": "cc",

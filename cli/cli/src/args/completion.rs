@@ -23,7 +23,7 @@ fn update_set_names() -> Vec<&'static str> {
 fn bash_dynamic(text: &mut String) -> Result<(), ArgsError> {
     let anchor = "                *)\n                    COMPREPLY=()\n                    ;;";
     let dynamic = format!(
-        "                *)\n                    #{DYNAMIC_MARKER}: completion-time callback into the binary (See: docs/cli/commands/completion.md).\n                    _dx_words=(\"${{COMP_WORDS[@]:1:COMP_CWORD}}\")\n                    if [[ ${{cur}} == \"\" ]]; then\n                        _dx_words+=(\"\")\n                    fi\n                    if command -v dx >/dev/null 2>&1; then\n                        COMPREPLY=( $(dx {COMPLETE_SUBCOMMAND} \"${{_dx_words[@]}}\" 2>/dev/null) )\n                    else\n                        COMPREPLY=()\n                    fi\n                    return 0\n                    ;;"
+        "                *)\n                    #{DYNAMIC_MARKER}: completion callback.\n                    _dx_words=(\"${{COMP_WORDS[@]:1:COMP_CWORD}}\")\n                    if [[ ${{cur}} == \"\" ]]; then\n                        _dx_words+=(\"\")\n                    fi\n                    if command -v dx >/dev/null 2>&1; then\n                        COMPREPLY=( $(dx {COMPLETE_SUBCOMMAND} \"${{_dx_words[@]}}\" 2>/dev/null) )\n                    else\n                        COMPREPLY=()\n                    fi\n                    return 0\n                    ;;"
     );
     if text.contains(anchor) {
         *text = text.replacen(anchor, &dynamic, 1);
@@ -36,9 +36,8 @@ fn bash_dynamic(text: &mut String) -> Result<(), ArgsError> {
 }
 
 fn zsh_dynamic(text: &mut String) -> Result<(), ArgsError> {
-    let anchor = "*::targets -- Later positionals\\: explicit scopes/targets:_default";
-    let replacement =
-        "*::targets -- Later positionals\\: explicit scopes/targets:_dx_dynamic_targets";
+    let anchor = "*::targets -- Scopes to run on:_default";
+    let replacement = "*::targets -- Scopes to run on:_dx_dynamic_targets";
     if !text.contains(anchor) {
         return Err(ArgsError::UnknownShell {
             shell: "zsh".to_owned(),
@@ -46,16 +45,14 @@ fn zsh_dynamic(text: &mut String) -> Result<(), ArgsError> {
     }
     *text = text.replacen(anchor, replacement, 1);
     text.push_str(&format!(
-        "\n#{DYNAMIC_MARKER}: completion-time callback into the binary (See: docs/cli/commands/completion.md).\n(( $+functions[_dx_dynamic_targets] )) ||\n_dx_dynamic_targets() {{\n    local -a _dx_words _dx_candidates\n    _dx_words=(${{words[2,-1]}})\n    if (( CURRENT > $#words )); then\n        _dx_words+=(\"\")\n    fi\n    _dx_candidates=(\"${{(@f)$(dx {COMPLETE_SUBCOMMAND} \"${{_dx_words[@]}}\" 2>/dev/null)}}\")\n    compadd -a _dx_candidates\n}}\n"
+        "\n#{DYNAMIC_MARKER}: completion callback.\n(( $+functions[_dx_dynamic_targets] )) ||\n_dx_dynamic_targets() {{\n    local -a _dx_words _dx_candidates\n    _dx_words=(${{words[2,-1]}})\n    if (( CURRENT > $#words )); then\n        _dx_words+=(\"\")\n    fi\n    _dx_candidates=(\"${{(@f)$(dx {COMPLETE_SUBCOMMAND} \"${{_dx_words[@]}}\" 2>/dev/null)}}\")\n    compadd -a _dx_candidates\n}}\n"
     ));
     Ok(())
 }
 
 fn fish_dynamic(text: &mut String) {
     use clap::ValueEnum;
-    text.push_str(&format!(
-        "\n#{DYNAMIC_MARKER}: completion-time callback into the binary (See: docs/cli/commands/completion.md)\n"
-    ));
+    text.push_str(&format!("\n#{DYNAMIC_MARKER}: completion callback.\n"));
     let mut line = |condition: &str, names: &[&str], desc: &str| {
         text.push_str(&format!(
             "complete -c dx -f -n '{condition}' -a '{}' -d '{desc}'\n",
@@ -106,7 +103,7 @@ fn fish_dynamic(text: &mut String) {
 
 fn powershell_dynamic(text: &mut String) {
     let block = format!(
-        "    if ($command -ne 'dx') {{\n        #{DYNAMIC_MARKER}: completion-time callback into the binary (See: docs/cli/commands/completion.md).\n        try {{\n            $dxWords = @()\n            for ($i = 1; $i -lt $commandElements.Count; $i++) {{\n                $element = $commandElements[$i]\n                if ($element -is [StringConstantExpressionAst] -and $element.Value -ne $wordToComplete) {{\n                    $dxWords += $element.Value\n                }}\n            }}\n            $dxDynamic = @(dx {COMPLETE_SUBCOMMAND} @dxWords \"$wordToComplete\" 2>$null)\n            foreach ($candidate in $dxDynamic) {{\n                if ($candidate -ne '') {{\n                    $completions += [CompletionResult]::new($candidate, $candidate, [CompletionResultType]::ParameterValue, $candidate)\n                }}\n            }}\n        }} catch {{}}\n    }}\n"
+        "    if ($command -ne 'dx') {{\n        #{DYNAMIC_MARKER}: completion callback.\n        try {{\n            $dxWords = @()\n            for ($i = 1; $i -lt $commandElements.Count; $i++) {{\n                $element = $commandElements[$i]\n                if ($element -is [StringConstantExpressionAst] -and $element.Value -ne $wordToComplete) {{\n                    $dxWords += $element.Value\n                }}\n            }}\n            $dxDynamic = @(dx {COMPLETE_SUBCOMMAND} @dxWords \"$wordToComplete\" 2>$null)\n            foreach ($candidate in $dxDynamic) {{\n                if ($candidate -ne '') {{\n                    $completions += [CompletionResult]::new($candidate, $candidate, [CompletionResultType]::ParameterValue, $candidate)\n                }}\n            }}\n        }} catch {{}}\n    }}\n"
     );
     let anchor = "    $completions.Where{";
     if let Some(pos) = text.find(anchor) {
@@ -135,15 +132,10 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
     let mut text = String::from_utf8(script).map_err(|_| ArgsError::UnknownShell {
         shell: shell.to_owned(),
     })?;
-    // Fish/powershell generators omit positional `ValueEnum` values, so
-    // commands would be missing there while bash/zsh list them. Append
-    // command completions derived from [`Command`] (same source as
-    // parsing), never hand-maintained, so every shell completes every
-    // command.
     match shell {
         "fish" => {
             use clap::ValueEnum;
-            text.push_str("\n# dx commands from the single Command source (issue #202; See: docs/cli/commands/completion.md)\n");
+            text.push_str("\n# dx commands.\n");
             for cmd in Command::value_variants() {
                 let desc = cmd.describe().replace('\'', "\\'");
                 text.push_str(&format!(
@@ -166,17 +158,10 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
                     desc
                 ));
             }
-            // only the exact generator anchor inserts functional entries.
-            // A `clap_complete` upgrade that shifts the template fails
-            // closed here instead of emitting silently-drifted scripts via
-            // whitespace-tolerant/header fallbacks (removed: silent drift).
             let anchor = "            break\n        }\n    })";
             if let Some(pos) = text.find(anchor) {
                 text.insert_str(pos, &additions);
             } else {
-                // Fail closed: never emit non-functional `# dx <cmd>`
-                // comments nor fallback-positioned entries. Pinned by the
-                // anchor-stability fixture.
                 return Err(ArgsError::UnknownShell {
                     shell: shell.to_owned(),
                 });

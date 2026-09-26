@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 pub mod ignores;
@@ -50,7 +48,7 @@ pub enum LcovError {
         lineno: usize,
         directive: String,
     },
-    #[error("coverage ignore reason too long at {path}:{lineno}: {directive} reason is {len} chars, max {max}; keep reason: specific and short with issue: plus policy: docs/testing/strategy-details.md#coverage")]
+    #[error("coverage ignore reason too long at {path}:{lineno}: {directive} reason is {len} chars, max {max}")]
     ReasonTooLong {
         path: String,
         lineno: usize,

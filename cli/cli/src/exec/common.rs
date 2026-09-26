@@ -131,7 +131,7 @@ pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> 
         }
         let head = &original[cursor..start];
         if std::str::from_utf8(head).is_err() {
-            return None; // LCOV_EXCL_LINE - reason: utf8 slice of valid text, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+            return None; // LCOV_EXCL_LINE - reason: utf8 slice of valid text, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         }
         if std::str::from_utf8(replacement).is_err() {
             return None;
@@ -142,7 +142,7 @@ pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> 
     }
     let tail = &original[cursor..];
     if std::str::from_utf8(tail).is_err() {
-        return None; // LCOV_EXCL_LINE - reason: utf8 slice of valid text, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        return None; // LCOV_EXCL_LINE - reason: utf8 slice of valid text, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     }
     candidate.extend_from_slice(tail);
     Some(candidate)
@@ -169,10 +169,6 @@ pub(crate) fn text_diagnostic(diagnostic: &DiagnosticEvent) -> String {
 }
 
 pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
-    // the command list renders from `Command::pipe_list` so `--help`/grammar
-    // drift fails the `fallback_usage_registry_is_single_sourced` fixture.
-    // `--check` is per-command only (status rejects it; see
-    // `dx help <command>`), never a generic flag.
     let commands = crate::args::Command::pipe_list();
     let _ = writeln!(err, "dx: {message}");
     let _ = writeln!(
@@ -278,7 +274,6 @@ mod tests {
 
     #[test]
     fn apply_rejects_boundary_and_encoding_violations() {
-        // Splitting the two-byte é (bytes 1..3 of "héllo") is rejected.
         assert!(apply_to_bytes("héllo".as_bytes(), &[(2, 3, b"X".to_vec())]).is_none());
         assert!(apply_to_bytes("héllo".as_bytes(), &[(1, 2, b"X".to_vec())]).is_none());
         assert!(apply_to_bytes(b"ab", &[(0, 1, b"\xff".to_vec())]).is_none());
@@ -290,10 +285,6 @@ mod tests {
 
     #[test]
     fn change_event_is_deterministic_and_reconstructs_candidate() {
-        // Apply-safety battery: `quality-testing.md` requires
-        // one deterministic exact change event per valid candidate path,
-        // reconstructable from digest plus UTF-8 ranges and replacements
-        // with byte-for-byte equality to default mode planned input.
         let original = b"BAD\n";
         let terminal = b"GOOD\n";
         let change = FileChange {

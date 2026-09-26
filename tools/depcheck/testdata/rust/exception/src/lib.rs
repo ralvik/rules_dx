@@ -7,8 +7,6 @@ pub fn greet(name: &str) -> Result<String> {
     Ok(format!("Hello, {name}!"))
 }
 
-// build-plugin is invoked by build.rs codegen; no direct `use` here
-// by design (non-import use covered by the explained exception).
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

@@ -19,7 +19,6 @@ fn decode_scope(value: &OsStr) -> Result<String, ArgsError> {
     }
 }
 
-/// Parses a full `dx` command line without the executable name.
 pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
     parse_with(args, &|_| None, &super::FileDefaults::default())
 }
@@ -36,7 +35,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
     env_get: &dyn Fn(&str) -> Option<String>,
     file: &super::FileDefaults,
 ) -> Result<Invocation, ArgsError> {
-    // grammar so `help` never reaches the `ValueEnum` positional.
     if let Some(error) = super::help::help_verb_error_in(args) {
         return Err(error);
     }
@@ -71,8 +69,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         targets: targets_os,
         ..
     } = cli;
-    // `workspace` plus `targets` decode here: non-UTF8 bytes fail as
-    // `InvalidScope` with a lossy rendering (exit 2), never a panic.
     let flag_workspace = match workspace_os {
         Some(value) => Some(decode_scope(value.as_os_str())?),
         None => None,
@@ -86,8 +82,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             option: "--workspace".to_owned(),
         });
     }
-    // Invocation defaults: flag over env over file over built-in.
-    // Resolved values are never logged; only the parsed mode flows on.
     use dx_adopt::defaults as invocation_defaults;
     let workspace = invocation_defaults::resolve_workspace(
         flag_workspace,
@@ -192,10 +186,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         host = Some(value.clone());
     }
     let command = command_name.ok_or(ArgsError::MissingCommand)?;
-    // Supported graph-scope commands select `//path/...` (`//...` at the
-    // root) via directory-scope resolution; every other command rejects
-    // it, and it never combines with explicit scopes. The no-flag default
-    // stays `//...`.
     if here && !command.supports_here() {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
@@ -205,16 +195,12 @@ pub fn parse_with<S: AsRef<OsStr>>(
     if here && !targets.is_empty() {
         return Err(ArgsError::ConflictingHere);
     }
-    // without network fetches on audit/update/bump only. Every other
-    // command rejects it pre-exec instead of silently ignoring it.
     if offline && !command.supports_offline() {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
             option: "--offline".to_owned(),
         });
     }
-    // `dx bazel` tails never reach this check: the verbatim forwarding
-    // above owns every token after the command word.
     if command != Command::Bazel {
         for scope in &targets {
             if scope == "-" {
@@ -229,12 +215,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Clean {
-        // `dx clean [--dry-run] [--bazel]` prunes validated unselected
-        // managed state with no scopes and no quality/workflow options:
-        // `--dry-run` deletes nothing (a `--bazel` forward is listed,
-        // never run), and only `--workspace`, `--dry-run`, `--quiet`,
-        // `--output text|json`, and `--bazel` apply (`--output=diff` has
-        // no patch to emit).
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -278,18 +258,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         });
     }
     if command.is_managed() {
-        // Managed environment/codegen/setup commands run one
-        // Bazel collection request behind a canonical selection with
-        // text prose or NDJSON (`--output=json` streams
-        // `command_started`/`operation`/`selection`/`command_finished`):
-        // no check mode, no finding thresholds, no standard reports, and
-        // no version/clean-only flags. `--output=diff` has no patch to
-        // emit. `--bazel` is rejected by the clean-ownership arm above;
-        // `--rollback`/`--configured` by the catch-alls below. Scope is
-        // repository-wide by default or one exact target label, validated
-        // through the shared setup scope rules (identical across the
-        // codegen, env, and setup libs by contract); user Bazel options
-        // after `--` forward to the collection build.
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -324,8 +292,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             return Err(match error {
                 dx_setup::ScopeError::MultipleTargets { count } => ArgsError::UnsupportedOption {
                     command: command.name(),
-                    // The library owns the count: fail closed via `get`
-                    // instead of panicking on direct indexing.
                     option: targets
                         .get(1)
                         .cloned()
@@ -337,14 +303,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Security || command == Command::License {
-        // Security/license plan through `dx_audit`: single-family scope
-        // spellings, non-mutating, with live Gitleaks plus
-        // advisory/vuln/SPDX backends, SARIF/SPDX reports and
-        // `--fail-on` thresholds. `--check` is meaningless (neither
-        // mutates), Bazel forwards do not apply (no Bazel collection
-        // build; live auditors run directly), and version/clean-only
-        // flags do not apply. No family positional exists: every
-        // positional is a scope.
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -363,8 +321,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
                 option: "--".to_owned(),
             });
         }
-        // Scopes use the shared label/path shape. Only package-relative
-        // labels and empty scopes fail here.
         for scope in &targets {
             if scope.is_empty() || scope.starts_with(':') {
                 return Err(scope_error(scope));
@@ -372,26 +328,12 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Update {
-        // Update plans through `dx_update`  plus the vendored
-        // preset fragment: dependency-set / package/target
-        // selectors with exact syntax in `dx_update::selector`, mutating
-        // without confirmation. `dx update --check` is the preset stale
-        // gate (non-mutating, exit 0 clean / 1 stale, copying the
-        // `generate --check` exit contract); it ignores selectors and
-        // checks only the fragment. Thresholds and standard reports do
-        // not apply on this path; aggregate exit/report mappings follow
-        // `dx_update::outcome`/`report` in default mode.
         if fail_on_name != "warning" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
                 option: "--fail-on".to_owned(),
             });
         }
-        // `update` supports `--output=json` (dry-run planning emits
-        // `command_started`/`command_finished`; live execution adds
-        // per-set `notice`/`error` events); `--output=diff` has no patch
-        // to emit so it fails fast here, with the shared `supports_diff`
-        // gate below as backup.
         if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -423,11 +365,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Bump {
-        // Bump plans through `dx_bump`: exactly one
-        // `set:package` selector plus one new version
-        // (`dx bump <selector> <version>`), mutating without confirmation.
-        // Thresholds, standard reports, and check mode do not apply on
-        // this path; never batch (one requirement per invocation).
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -440,11 +377,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
                 option: "--fail-on".to_owned(),
             });
         }
-        // `bump` supports `--output=json` like `update` (dry-run planning
-        // emits `command_started`/`command_finished`; live execution adds
-        // the widen `notice`/`error`); `--output=diff` has no patch to
-        // emit so it fails fast here, with the shared `supports_diff`
-        // gate below as backup.
         if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -481,16 +413,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Migrate {
-        // Migrate plans through `dx_adopt::plan_migrate`:
-        // `dx migrate --from <version> --to <version> [scope ...]`,
-        // both Cargo-flavor semver with an upgrade-only gate plus
-        // one manifest per major hop and one per full version pair
-        // for minor/patch upgrades. Scope selection reuses generation
-        // scope resolution verbatim; external scopes are rejected like
-        // workflow commands during execution. Thresholds, standard
-        // reports, and check mode do not apply on this path; live
-        // execution fails closed until the first manifest
-        // lands (module at `0.0.0`, no releases cut).
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -503,11 +425,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
                 option: "--fail-on".to_owned(),
             });
         }
-        // `migrate` supports `--output=json` like `update`/`bump`
-        // (dry-run planning emits `command_started`/`command_finished`;
-        // live execution fails closed with `migrate_failed`);
-        // `--output=diff` has no patch to emit so it fails fast here,
-        // with the shared `supports_diff` gate below as backup.
         if output_name == "diff" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -543,8 +460,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             }
         }
     }
-    // `--from`/`--to` belong to `migrate` plus `upgrade` only: every
-    // other command fails fast instead of silently ignoring the versions.
     if command != Command::Migrate
         && command != Command::Upgrade
         && (from.is_some() || to.is_some())
@@ -559,11 +474,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         });
     }
     if command == Command::Upgrade {
-        // Upgrade composes pin plus migrate plus setup: `dx upgrade
-        // --from <version> --to <version>` with no positional scopes
-        // (repository-wide composition). Both Cargo-flavor semver with
-        // the migrate upgrade-only gate; live execution fails closed
-        // until the first manifest lands.
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -613,10 +523,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Docs {
-        // Docs builds the Bazel-cached site over the shared
-        // extraction/aggregation graph: `--check` selects extraction plus
-        // shared validation without rendering, the default build validates
-        // and renders, `--serve` previews the last build locally.
         if fail_on_name != "warning" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -671,9 +577,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             }
         }
     }
-    // `--serve`/`--port`/`--host`/`--open` belong to `docs` only: every
-    // other command fails fast instead of silently ignoring the preview
-    // request.
     if command != Command::Docs && serve {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
@@ -699,10 +602,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         });
     }
     if command.is_workflow() {
-        // Workflow commands run Bazel verbs directly with Bazel-owned
-        // status: finding thresholds and check-mode mutation previews do
-        // not apply, so explicit uses fail fast instead of silently
-        // doing nothing.
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -716,9 +615,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             });
         }
     }
-    // `--min-coverage` belongs to `coverage` only: every other command
-    // (workflow siblings, quality, umbrellas, managed, adoption) fails
-    // fast instead of silently ignoring the threshold.
     if min_coverage.is_some() && command != Command::Coverage {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
@@ -732,12 +628,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         value: fail_on_name.clone(),
     })?;
     if command.is_adoption() {
-        // Adoption/inspect surfaces run local helpers or thin query
-        // forwarding: quality-only thresholds/reports and Bazel forwards
-        // do not apply. `--check` belongs to `version` (pin drift) plus
-        // only. `--rollback`
-        // and `--configured` ownership is enforced by the catch-all
-        // below.
         if fail_on_name != "warning" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -790,8 +680,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
                 }
             }
             Command::Completion => {
-                // Without `--check` exactly one shell renders; with
-                // `--check` zero shells verifies all shells and one
                 if check {
                     if targets.len() > 1 {
                         return Err(ArgsError::UnsupportedOption {
@@ -812,34 +700,22 @@ pub fn parse_with<S: AsRef<OsStr>>(
                     option: "<scope>".to_owned(),
                 });
             }
-            // `dx why` resolves one ownership edge per call: exactly one
-            // file scope and one target label, e.g.
-            // `dx why src/main.rs //app:server`.
             Command::Why if targets.len() != 2 => {
                 return Err(ArgsError::MissingValue {
                     option: "<file> <label>".to_owned(),
                 });
             }
-            // `dx init` takes an optional single module name (defaults to
-            // `my_project` when absent); extra positionals are usage
-            // failures instead of silently ignored scopes.
             Command::Init if targets.len() > 1 => {
                 return Err(ArgsError::UnsupportedOption {
                     command: command.name(),
                     option: targets[1].clone(),
                 });
             }
-            // `dx new` takes `<language> [name]` (name defaults to
-            // `my_project` when absent); unknown languages fail at
-            // execution with the supported list, extra positionals fail
             Command::New if targets.is_empty() || targets.len() > 2 => {
                 return Err(ArgsError::MissingValue {
                     option: "<language> [name]".to_owned(),
                 });
             }
-            // `dx upgrade` takes no positional scopes (repository-wide
-            // pin plus migrate plus setup composition); `--from`/`--to`
-            // ownership is enforced above.
             Command::Upgrade if !targets.is_empty() => {
                 return Err(ArgsError::UnsupportedOption {
                     command: command.name(),
@@ -850,13 +726,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Bazel {
-        // `dx bazel` forwards arguments unchanged to the workspace
-        // Bazel launcher: no scope resolution, no quality thresholds or
-        // reports, and text terminal output only (the child inherits
-        // stdio). dx-owned options are rejected only when given before
-        // the command word (everything after it already forwarded
-        // verbatim above); `--rollback` and `--configured` ownership is
-        // enforced by the catch-all below.
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -895,14 +764,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         }
     }
     if command == Command::Run || command == Command::Deploy {
-        // `dx run` is a local-only launcher: text prose lifecycle on
-        // stderr by default, NDJSON (`command_started`, one `operation`
-        // per target, `command_finished`) on stdout under
-        // `--output=json` with child stdout/stderr routed to stderr so
-        // stdout stays machine-owned (see `BinaryRunner`). `--output=diff`
-        // has no patch to emit. `dx deploy` shares the terminal contract
-        // but stays text only (two-phase build+run owns the terminal),
-        // no reports; args after `--` forward verbatim to the program.
         if command == Command::Deploy {
             if !matches!(output, OutputMode::Text { .. }) {
                 return Err(ArgsError::UnsupportedOption {
@@ -923,17 +784,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             });
         }
     }
-    // Uniform `--output` contract: shared `supports_json` /
-    // `supports_diff` gate so no command silently ignores a machine-output
-    // request. Commands with their own output arm above (clean, managed,
-    // update, `bazel`, `run`/`deploy`) already returned the same error;
-    // this gate owns adoption/inspect (only `status` plus `version` plus
-    // `owners`/`deps`/`why` plus `upgrade` support JSON, none supports
-    // diff), `audit` diff, and workflow `build`/`test`/`coverage` diff.
-    // Quality, generate, umbrellas, `audit`/`update`/`bump`/`migrate`/
-    // `upgrade` JSON, workflow `build`/`test`/`coverage`/`run` JSON,
-    // managed/clean JSON, and `status`/`version`/inspect JSON pass through
-    // to streaming NDJSON execution.
     if output_name == "json" && !command.supports_json() {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
@@ -946,10 +796,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             option: "--output=diff".to_owned(),
         });
     }
-    // Profile flags: `--debug`/`--release` are mutually
-    // exclusive and belong to `build`, `run`, `test`, and `deploy`
-    // only (every other command fails fast instead of silently
-    // ignoring the profile).
     if debug && release {
         return Err(ArgsError::ConflictingProfiles);
     }
@@ -968,12 +814,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             },
         });
     }
-    // Flag ownership: `--rollback` belongs to `version` only
-    // and `--configured` to the inspect wrappers only. Command blocks
-    // above already reject them on their own surfaces; this catch-all
-    // keeps every other command (quality, umbrellas, `run`,
-    // `generate`, `clean`, managed) failing fast instead of silently
-    // ignoring them.
     if rollback && command != Command::Version {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),

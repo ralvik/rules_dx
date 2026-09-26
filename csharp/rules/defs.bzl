@@ -1,13 +1,9 @@
 """Experimental minimal C# wrappers (ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_dotnet//dotnet:defs.bzl", _csharp_binary = "csharp_binary", _csharp_library = "csharp_library", _csharp_test = "csharp_test")
 
-# providers live only under @rules_dotnet//dotnet/private, so the wrapper
-# must load them there; the sealed `upstream_providers` plus
-# `required_providers` below keep the boundary fail-closed.
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
@@ -20,7 +16,6 @@ _DX_CSHARP_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream assembly infos,
 _DX_CSHARP_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
@@ -80,7 +75,6 @@ def csharp_tfm_with_defaults(kwargs):
     The default is single-TFM (`net10.0`); multi-pivot consumers declare
     one `csharp_library` per TFM and aggregate per-pivot SARIFs in
     deterministic pivot order.
-    See: docs/testing/generation.md, csharp/tests/fixtures/roslyn/pins.bzl.
     """
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("target_frameworks", ["net10.0"])

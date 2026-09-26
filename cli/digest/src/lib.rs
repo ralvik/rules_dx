@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use sha2::{Digest as _, Sha256};
@@ -162,7 +160,6 @@ mod tests {
 
     #[test]
     fn blake3_empty_matches_official_vector() {
-        // BLAKE3-team/BLAKE3 test_vectors.json, input_len 0, hash prefix.
         let expected = [
             0xaf, 0x13, 0x49, 0xb9, 0xf5, 0xf9, 0xa1, 0xa6, 0xa0, 0x40, 0x4d, 0xea, 0x36, 0xdc,
             0xc9, 0x49, 0x9b, 0xcb, 0x25, 0xc9, 0xad, 0xc1, 0x12, 0xb7, 0xcc, 0x9a, 0x93, 0xca,
@@ -225,20 +222,17 @@ mod tests {
 
     #[test]
     fn commit_sha_accepts_40_and_64_in_either_case() {
-        // Git SHAs accept both cases: 40-char (SHA-1) and 64-char (SHA-256).
         let sha40 = "3d3c42e5aac5ba805825da76410c181273ba90b1";
         let sha64 = to_hex(&blake3(b"commit"));
         assert!(is_commit_sha(sha40));
         assert!(is_commit_sha(&sha40.to_uppercase()));
         assert!(is_commit_sha(&sha64));
         assert!(is_commit_sha(&sha64.to_uppercase()));
-        // Length gate stays: short SHAs, tags, and overlong strings fail.
         assert!(!is_commit_sha("3d3c42e5"));
         assert!(!is_commit_sha("v4"));
         assert!(!is_commit_sha(""));
         assert!(!is_commit_sha(&format!("{sha40}00")));
         assert!(!is_commit_sha(&"zz".repeat(20)));
-        // Generic any-case helper agrees on the byte lengths.
         assert!(is_hex_any_case(sha40, SHA1_LEN));
         assert!(is_hex_any_case(&sha40.to_uppercase(), SHA1_LEN));
         assert!(!is_hex_any_case(sha40, DIGEST_LEN));
@@ -247,18 +241,15 @@ mod tests {
 
     #[test]
     fn pin_sha_stays_40_lowercase_only() {
-        // CI pins are `[0-9a-f]{40}`: lowercase-only over 20 bytes.
         let pin = "3d3c42e5aac5ba805825da76410c181273ba90b1";
         assert!(is_pin_sha(pin));
         assert!(is_lower_hex(pin, SHA1_LEN));
         assert!(!is_pin_sha(&pin.to_uppercase()));
         assert!(!is_lower_hex(&pin.to_uppercase(), SHA1_LEN));
-        // 64-char digests are not pins; short SHAs and tags fail closed.
         assert!(!is_pin_sha(&to_hex(&blake3(b"pin"))));
         assert!(!is_pin_sha("3d3c42e5"));
         assert!(!is_pin_sha("v7"));
         assert!(!is_pin_sha(""));
-        // `is_hex` (64-char digest) still agrees with the generic helper.
         let digest_hex = to_hex(&blake3(b"x"));
         assert!(is_lower_hex(&digest_hex, DIGEST_LEN));
         assert_eq!(is_hex(&digest_hex), is_lower_hex(&digest_hex, DIGEST_LEN));

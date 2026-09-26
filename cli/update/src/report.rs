@@ -69,9 +69,6 @@ mod tests {
 
     #[test]
     fn verdict_follows_overall_flag_not_blocked_presence() {
-        // `aggregate` never produces blocked without a failure, but the
-        // mapping must honor the flag alone: blocked without failure is
-        // not a failure.
         let blocked_only = report(&[("app-set", ReportedStatus::Blocked)], false);
         assert_eq!(exit_code(&blocked_only), 0);
     }

@@ -70,14 +70,14 @@ pub(crate) fn prepare_managed_sides(
                 ..empties()?
             })
         }
-        // LCOV_EXCL_START - reason: unreached command, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: unreached command, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         _ => {
             debug_assert!(false, "managed dispatch guards commands");
             Err((
                 CODE_INVALID_RESULT.to_owned(),
                 "unsupported managed command".to_owned(),
             ))
-        } // LCOV_EXCL_STOP - reason: end unreached command, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        } // LCOV_EXCL_STOP - reason: end unreached command, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     }
 }
 

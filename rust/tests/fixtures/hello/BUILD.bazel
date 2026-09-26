@@ -21,7 +21,6 @@ rust_library(
         package_name = "rust/tests/fixtures/hello",
         normal = True,
     ),
-    # Lane A: direct aspect_hints binding; see docs/contributing/build-conventions.md.
     aspect_hints = ["//:rustfmt_config"],
     crate_name = "hello",
     crate_root = "src/lib.rs",
@@ -49,10 +48,6 @@ rust_binary(
     ) + [":hello_lib"],
 )
 
-# Authoritative quality identities: rustfmt and Clippy resolve from
-# the pinned toolchain, never from ambient host tools. Each wrapper is
-# listed explicitly: lint aspects apply to the wrapper's own CrateInfo and
-# do not traverse the private `_upstream` edge.
 rustfmt_test(
     name = "hello_fmt_test",
     size = "small",
@@ -71,12 +66,6 @@ rust_clippy_test(
     ],
 )
 
-# One subject per new rust_* shape (proc macro,
-# shared library, static library). No external dependencies: the
-# conformance probe pins forwarding, not dependency plumbing. Cargo cannot
-# express these flavors in one package, so each rule is handwritten and
-# kept across regenerations.
-# keep
 rust_proc_macro(
     name = "hello_derive",
     srcs = ["src/derive.rs"],
@@ -84,7 +73,6 @@ rust_proc_macro(
     crate_root = "src/derive.rs",
 )
 
-# keep
 rust_shared_library(
     name = "hello_cdylib",
     srcs = ["src/cdylib.rs"],
@@ -92,7 +80,6 @@ rust_shared_library(
     crate_root = "src/cdylib.rs",
 )
 
-# keep
 rust_static_library(
     name = "hello_staticlib",
     srcs = ["src/staticlib.rs"],
@@ -100,9 +87,6 @@ rust_static_library(
     crate_root = "src/staticlib.rs",
 )
 
-# Separate lint identities: the hello_fmt_test/hello_clippy_test
-# pins stay untouched, so the new shapes get their own lint tests with
-# their own marker sets.
 rustfmt_test(
     name = "hello_flavors_fmt_test",
     size = "small",
@@ -123,8 +107,6 @@ rust_clippy_test(
     ],
 )
 
-# Crate-edition fixture: 2015-only syntax over the
-# 2021 rustfmt config proves the per-crate `--edition` flag wins.
 rust_library(
     name = "edition_2015_lib",
     testonly = True,
@@ -146,8 +128,6 @@ exports_files([
     "Cargo.lock",
 ])
 
-# Conformance subjects: same package as the private `_upstream`
-# targets so the probe can observe both sides of the forwarding boundary.
 dx_wrapper_subject(
     name = "hello_lib_subject",
     testonly = True,
@@ -216,7 +196,6 @@ dx_wrapper_conformance_tests(
     ],
 )
 
-# Corpus: BUILD ownership; see docs/contributing/build-conventions.md.
 rust_test(
     name = "hello_test",
     testonly = True,
@@ -232,7 +211,6 @@ rust_test(
     ),
 )
 
-# Hello smoke test; no-coverage process-spawning, see build-conventions.
 sh_test(
     name = "hello_output_test",
     size = "small",
@@ -245,20 +223,14 @@ sh_test(
         "//tools/sh:lib",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 
-# Documented deploy pattern: deploy targets live next to the
-# app they release. `bazel run //rust/tests/fixtures/hello:release` (or
-# `dx deploy //rust/tests/fixtures/hello:release`) verifies the checksum and copies
-# `release.tar.gz` + `release.tar.gz.sha256` to the output directory.
 archive_deploy(
     name = "release",
     app = ":hello",
 )
 
-# Release checksum on the app binary; no-coverage, see build-conventions.
 sh_test(
     name = "release_verify",
     size = "small",
@@ -274,7 +246,6 @@ sh_test(
         ":release_checksum",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

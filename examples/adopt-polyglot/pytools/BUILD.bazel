@@ -10,7 +10,6 @@ python_library(
 python_test(
     name = "shapes_test",
     srcs = ["shapes_test.py"],
-    # User-owned deps (# keep); see docs/contributing/build-conventions.md.
     dep_group = "hello",
     imports = ["."],
     deps = [

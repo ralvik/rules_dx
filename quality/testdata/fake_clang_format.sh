@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Fake clang-format for Layer-2 matrix cells (seed-only wiring proof).
-#
-# Mimics the pinned clang-format check shape (exit 0 clean, exit 1 with
-# unified diff headers when dirty) plus `-i` in-place fix (rewrite,
-# exit 0) over the BADFMT marker. Real-tool behavior stays proven by
-# `cc/tests/fixtures/clang_format/` (`check_dirty.diff` modeled on the
-# pinned check output); this fake proves the runner dispatch plus parser
-# plus fix flow without an LLVM toolchain.
 set -euo pipefail
 is_fix=0
 files=()

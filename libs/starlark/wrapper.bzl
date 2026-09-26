@@ -1,7 +1,4 @@
-"""Shared wrapper-forwarder plumbing for language rules.
-
-Contract: `docs/quality/quality-sources.md`.
-"""
+"""Shared wrapper-forwarder plumbing for language rules."""
 
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
 
@@ -22,11 +19,11 @@ def dx_forwarded_runtime_providers(upstream, what):
     return out
 
 def dx_missing_optional_names(requested_names, present_names):
-    """Returns the requested names absent from the present names. See"""
+    """Returns the requested names absent from the present names."""
     return [n for n in requested_names if n not in present_names]
 
 def dx_optional_forward_warning(what, upstream_label, requested_names, missing_names):
-    """Returns the skip warning for an optional forward, or None when nothing was skipped. See"""
+    """Returns the skip warning, or None when nothing was skipped."""
     if len(missing_names) == 0:
         return None
     forwarded = len(requested_names) - len(missing_names)
@@ -234,9 +231,6 @@ def _dx_runtime_providers(ctx, upstream, what, runtime, extra_quality_attrs = No
         if InstrumentedFilesInfo in upstream:
             out.append(upstream[InstrumentedFilesInfo])
         else:
-            # Synthesize coverage metadata from direct srcs when upstream
-            # lacks it (e.g., rules_dotnet libraries). Transitive closure
-            # follows the upstream edge; direct srcs are always instrumented.
             src_attrs = ["srcs"] + (list(extra_quality_attrs) if extra_quality_attrs else [])
             out.append(coverage_common.instrumented_files_info(
                 ctx,
@@ -334,7 +328,6 @@ def dx_binary_forward_kwargs(kwargs):
     aspects visit, and `target_compatible_with` rides both shapes so
     an incompatible platform skips the pair together. Remaining kwargs
     stay upstream-only.
-    Contract: `docs/quality/quality-sources.md`.
     """
     out = {}
     if kwargs.get("tags", None) != None:
@@ -351,7 +344,6 @@ def dx_test_upstream_kwargs(kwargs, srcs = None):
     `manual` is stripped so both the private upstream and the public
     wrapper run under `//...` (double-execution is the cost of green
     suites); visibility is forced private; `srcs` is set when given.
-    Contract: `docs/quality/quality-sources.md`.
     """
     out = dict(kwargs)
     if "tags" in out:

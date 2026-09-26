@@ -1,6 +1,5 @@
 """Analysis subject observing the real typecheck dx_results (WP3).
 
-Contract: `docs/quality/action-model.md`.
 """
 
 load("//libs/starlark:canonical.bzl", "strip_canonical")

@@ -1,6 +1,5 @@
 """Focused Rust environment plan (WP3).
 
-Contract: `docs/environments/environment.md`.
 """
 
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")

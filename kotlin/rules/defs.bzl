@@ -1,6 +1,5 @@
 """Experimental minimal Kotlin wrappers (ADR 0019).
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("@rules_java//java:defs.bzl", "JavaInfo")
@@ -15,14 +14,11 @@ _DX_KOTLIN_LIBRARY_PROVIDES = [
     QualitySourcesInfo,
 ]
 
-# NB: binaries and tests forward the upstream `JavaInfo`,
 _DX_KOTLIN_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
-# Kotlin owns `.kt`/`.kts` only; same-unit `.java` stays `java` per the
-# belong in a `java_library`, so mixed targets keep one owner per file.
 _DX_KOTLIN_SOURCE_SPECS = [("kotlin", ["kt", "kts"])]
 _DX_KOTLIN_SOURCE_EXTS = [".kt", ".kts"]
 
@@ -71,8 +67,8 @@ _kotlin_forward_test = dx_executable_forward_rule(
 def kotlin_kotlinc_opts_with_werror(kwargs):
     """Returns kwargs defaulting kotlinc_opts to warnings_as_errors.
 
-    Caller-provided opts win; only a missing key gets the default.
-    See: docs/testing/generation.md."""
+    Caller-provided opts win.
+    """
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("kotlinc_opts", "//kotlin/rules:warnings_as_errors")
     return upstream_kwargs

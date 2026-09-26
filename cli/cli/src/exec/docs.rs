@@ -39,8 +39,6 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
     } = env;
     let json = invocation.output == OutputMode::Json;
     let mode = if invocation.check { "check" } else { "default" };
-    // Scope reuses the shared workflow resolution; bare scope selects
-    // the repository docs site targets below.
     let (labels, scope_text) = if invocation.targets.is_empty() {
         let target = if invocation.check {
             DOCS_CHECK_TARGET
@@ -400,7 +398,6 @@ mod tests {
         );
         assert_eq!(code, 0);
         let calls = seen.borrow();
-        // Bazel build plus browser open plus preview server.
         assert_eq!(calls.len(), 3, "{calls:?}");
         let serve = calls
             .iter()
@@ -498,8 +495,6 @@ mod tests {
 
     #[test]
     fn serve_failed_code_is_stable_single_source() {
-        // Fixture pins the stable wire code so output-protocol drift
-        // fails here, not in automation matching on `code`.
         assert_eq!(CODE_SERVE_FAILED, "serve_failed");
     }
 

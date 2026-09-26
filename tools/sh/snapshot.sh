@@ -1,53 +1,6 @@
 #!/usr/bin/env bash
-# Shared snapshot helper.
-#
-# Single-sources the snapshot-testing workflow for shell golden harnesses:
-# byte-identical snapshot comparison with an UPDATE_EXPECT refresh path,
-# plus canonical-JSON comparison and JSON-schema shape checks so brittle
-# equality becomes an explicit snapshot or a schema contract.
-#
-# Guard maintenance owns shared helpers plus snapshot versus grep policy
-# this file owns golden-byte asserts (UPDATE_EXPECT
-# refresh); `tools/sh/lib.sh` `dx_expect_*` owns fixed-string doc/code
-# contract pins (fail-closed, no refresh). Guards must not reimplement
-# either shape; `//tools/ci:shell_contract` owns the rule.
-#
-# Drivers load this file via the single-sourced bootstrap
-# (`tools/sh/bootstrap.sh` `dx_bootstrap`, issue #654) so both direct
-# execution and Bazel `run`/`test` layouts work with no per-file depth
-# adjustment (`data = ["//tools/sh:snapshot"]` carries it in the runfiles
-# forest):
-#
-#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
-#   dx_bootstrap "tools/sh/snapshot.sh"
-#
-# Workflow:
-#   UPDATE_EXPECT=1 bazel test //:preset_parity_test --test_env=UPDATE_EXPECT
-# refreshes the checked-in golden instead of failing; without the variable
-# the harness fails with a unified diff. Under `bazel run` the update writes
-# through BUILD_WORKSPACE_DIRECTORY; under `bazel test` it resolves the
-# checkout via git and writes the workspace-relative path when given, else
-# stages the refreshed bytes under TEST_UNDECLARED_OUTPUTS_DIR with
-# copy-paste instructions.
-#
-# Provides:
-#   snapshot_diff <expected> <actual> [<workspace_rel>]
-#     byte-identical snapshot assert with UPDATE_EXPECT refresh.
-#   snapshot_canonical_json_diff <expected> <actual> [<workspace_rel>]
-#     canonical-JSON (sorted keys) snapshot assert with UPDATE_EXPECT.
-#   snapshot_json_validates <file>
-#     fails unless the file parses as JSON (python3 stdlib only).
-#
-# Bash-only Linux harness: sourced by `sh_binary` /
-# `sh_test` drivers carrying `target_compatible_with =
-# ["@platforms//os:linux"]`. Bootstrap requires bash by design under issue
-# (`BASH_SOURCE` plus the 5-way runfiles fallback never run under
-# POSIX `sh`).
 set -euo pipefail
 
-# Resolve the checkout root for UPDATE_EXPECT writes: BUILD_WORKSPACE_DIRECTORY
-# under `bazel run`, else the enclosing git top-level. Prints nothing and
-# fails when neither is available.
 _snapshot_workspace_root() {
   if [[ -n "${BUILD_WORKSPACE_DIRECTORY:-}" ]]; then
     printf '%s\n' "$BUILD_WORKSPACE_DIRECTORY"
@@ -56,8 +9,6 @@ _snapshot_workspace_root() {
   git rev-parse --show-toplevel 2>/dev/null
 }
 
-# Stage refreshed bytes when the source cannot be written directly (sandboxed
-# `bazel test` without a workspace-relative path). Prints the staged path.
 _snapshot_stage_update() {
   local actual="$1" label="$2"
   local out_dir="${TEST_UNDECLARED_OUTPUTS_DIR:-}"
@@ -70,10 +21,6 @@ _snapshot_stage_update() {
   printf '%s\n' "$staged"
 }
 
-# snapshot_diff <expected> <actual> [<workspace_rel>]
-# Byte-identical snapshot assert. Passes silently (echoes PASS) when equal.
-# On mismatch: with UPDATE_EXPECT=1 refreshes the golden and passes;
-# otherwise prints `diff -u` and fails with refresh instructions.
 snapshot_diff() {
   local expected="$1" actual="$2" workspace_rel="${3:-}"
   if cmp -s "$expected" "$actual"; then
@@ -89,8 +36,6 @@ snapshot_diff() {
       echo "snapshot UPDATE_EXPECT: refreshed $workspace_rel from actual"
       return 0
     fi
-    # Fall back to overwriting the expected path when writable (direct
-    # execution outside the Bazel sandbox), else stage for manual copy.
     if [[ -w "$expected" ]] && [[ "$expected" != *"/runfiles/"* ]]; then
       cp "$actual" "$expected"
       echo "snapshot UPDATE_EXPECT: refreshed $expected from actual"
@@ -112,22 +57,13 @@ snapshot_diff() {
   return 1
 }
 
-# snapshot_canonical_json_diff <expected> <actual> [<workspace_rel>]
-# Canonical-JSON snapshot assert: both files must parse as JSON; comparison
-# uses sorted keys and 2-space indent so key order and trailing-newline noise
-# do not fail the test. UPDATE_EXPECT refreshes with the canonical form.
-# Scratch discipline (issues #750, #914): function-scoped tmp owns a RETURN trap
-# (not the EXIT-scoped dx_mkscratch in tools/sh/lib.sh, which would leak
-# across calls); mktemp honors TMPDIR with an explicit runner-temp fallback.
-# Raw `mktemp -d` is deliberate here: the EXIT wrapper cannot provide
-# function-scoped RETURN cleanup, so this is the one justified exception.
 snapshot_canonical_json_diff() {
   local expected="$1" actual="$2" workspace_rel="${3:-}"
   local tmp
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/snapshot.XXXXXX")"
-  # LCOV_EXCL_START - reason: trap cleanup, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+  # LCOV_EXCL_START - reason: trap cleanup, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
   trap 'rm -rf "$tmp"' RETURN
-  # LCOV_EXCL_STOP - reason: end trap cleanup, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+  # LCOV_EXCL_STOP - reason: end trap cleanup, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
   if ! python3 -c 'import json,sys; json.load(open(sys.argv[1])); json.load(open(sys.argv[2]))' "$expected" "$actual"; then
     echo "snapshot FAIL: non-JSON input ($expected vs $actual)" >&2
     return 1
@@ -162,9 +98,6 @@ snapshot_canonical_json_diff() {
   return 1
 }
 
-# snapshot_json_validates <file>
-# Fails unless the file parses as JSON. Thin wrapper so harnesses share one
-# python3-only schema precondition without reimplementing it.
 snapshot_json_validates() {
   local file="$1"
   python3 -c 'import json,sys; json.load(open(sys.argv[1]))' "$file"

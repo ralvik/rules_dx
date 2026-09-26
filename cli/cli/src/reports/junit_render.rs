@@ -91,8 +91,6 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> Result<String, super
         report.add_test_suite(suite);
     }
     report.set_time(total_time);
-    // Keep: `quick-junit` renders via its own serializer, not
-    // `serde_json::Serialize`, so the JSON owner cannot cover it.
     report
         .to_string()
         .map_err(|err| super::ReportError::JunitRender {
@@ -173,8 +171,6 @@ mod tests {
         .expect("render junit");
         assert!(doc.contains("&amp;"), "{doc}");
         assert!(doc.contains("&lt;"), "{doc}");
-        // Failure-first precedence: a case carrying both failure and
-        // error renders the failure (quick-junit holds one main status).
         let doc = render_junit(&[(
             "s".to_owned(),
             vec![JunitCase {
@@ -231,12 +227,6 @@ mod tests {
             ),
         ];
         let doc = render_junit(&suites).expect("render junit");
-        // Golden pilot: full-document insta snapshot replaces
-        // the contains-asserts so render changes review as one diff.
-        // Under Bazel snapshots never self-update (read-only sources):
-        // paste the actual document from the failure diff when the
-        // render intentionally changes. Raw string: the XML carries
-        // double quotes but no `"#` sequences.
         insta::assert_snapshot!(doc, @r#"
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="dx" tests="4" skipped="1" failures="1" errors="1" time="0.000">
@@ -261,10 +251,6 @@ mod tests {
 
     #[test]
     fn junit_writer_escapes_specials_and_strips_controls() {
-        // Golden: `&<>"'` plus control bytes must round-trip through the
-        // quick-junit writer as well-formed XML.
-        // quick-junit strips invalid XML chars (plus ANSI escapes) rather
-        // than replacing with U+FFFD.
         let tricky = "a&<>\"'\u{0}\u{1}\u{8}\u{b}\u{c}\u{e}b";
         let doc = render_junit(&[(
             format!("suite&<>\"'{tricky}"),
@@ -285,16 +271,11 @@ mod tests {
             }],
         )])
         .expect("render junit");
-        // Writer escaping for attributes and text.
         assert!(doc.contains("&amp;"), "{doc}");
         assert!(doc.contains("&lt;"), "{doc}");
-        // Raw control bytes must never reach the document; quick-junit
-        // strips them while `\t\n\r` would be preserved.
         for raw in ['\u{0}', '\u{1}', '\u{8}', '\u{b}', '\u{c}', '\u{e}'] {
             assert!(!doc.contains(raw), "{doc}");
         }
-        // The writer output must re-parse as XML (well-formedness proof
-        // for Jenkins/GitLab ingestion).
         let reparsed = parse_test_xml(doc.as_bytes(), 0, 0).expect("reparse");
         assert_eq!(reparsed.len(), 1);
         assert!(reparsed[0].failure.is_some());

@@ -1,5 +1,3 @@
-// Infallible paths must not `expect`/`unwrap`/`unreachable`/`todo` outside tests
-// (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
     not(test),
     deny(

@@ -152,23 +152,19 @@ pub fn project(manifest: &GenerationManifest) -> Result<ProjectedManifest, Error
         .all(|scope| scope.results_complete == Some(true));
     let mut files = Vec::with_capacity(manifest.files.len());
     for file in &manifest.files {
-        // Validated above: candidate, UTF-8, change presence, and outcome
-        // are all well-formed here, so these mappings only fire if a
-        // future `validate` loosens without updating projection (fail
-        // closed, never panic).
         let candidate_bytes = candidate(file)?;
-        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         let change_ref = file.change.as_ref().ok_or(Error::MissingChange {
             path: file.path.clone(),
         })?;
-        // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         let (change, original, candidate_text) = match change_ref {
             file_result::Change::CreateContent(content) => {
-                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 let text = String::from_utf8(content.clone()).map_err(|_| Error::InvalidUtf8 {
                     at: file.path.clone(),
                 })?;
-                // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 let change = ChangeEvent {
                     path: file.path.clone(),
                     kind: ChangeKind::Create,
@@ -182,7 +178,7 @@ pub fn project(manifest: &GenerationManifest) -> Result<ProjectedManifest, Error
                 (change, String::new(), text)
             }
             file_result::Change::Modification(modification) => {
-                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 let original_text = String::from_utf8(modification.original_content.clone())
                     .map_err(|_| Error::InvalidUtf8 {
                         at: file.path.clone(),
@@ -191,17 +187,17 @@ pub fn project(manifest: &GenerationManifest) -> Result<ProjectedManifest, Error
                     String::from_utf8(candidate_bytes.clone()).map_err(|_| Error::InvalidUtf8 {
                         at: file.path.clone(),
                     })?;
-                // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                 let mut edits = Vec::with_capacity(modification.edits.len());
                 for edit in &modification.edits {
-                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    // LCOV_EXCL_START - reason: defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                     let replacement =
                         String::from_utf8(edit.replacement.clone()).map_err(|_| {
                             Error::InvalidUtf8 {
                                 at: file.path.clone(),
                             }
                         })?;
-                    // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+                    // LCOV_EXCL_STOP - reason: end defensive unreachable, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
                     edits.push(Edit {
                         start: edit.start_byte,
                         end: edit.end_byte,
@@ -370,8 +366,6 @@ mod tests {
     }
 
     fn default_manifest() -> GenerationManifest {
-        // Intentionally unsorted attempt order: projection must keep this
-        // order for files/mutations while sorting only for presentation.
         GenerationManifest {
             schema_major: generation_result::SCHEMA_MAJOR,
             schema_minor: generation_result::SCHEMA_MINOR,
@@ -490,7 +484,6 @@ mod tests {
         assert_eq!(projected.modifies(), 1);
         assert_eq!(projected.applied(), 1);
         assert_eq!(projected.not_applied(), 1);
-        // Attempt order preserved.
         assert_eq!(projected.files[0].change.path, "z/BUILD.bazel");
         assert_eq!(projected.files[1].change.path, "a/BUILD.bazel");
         assert_eq!(projected.files[0].outcome, Some(MutationOutcome::Applied));
@@ -502,7 +495,6 @@ mod tests {
         assert_eq!(projected.files[1].failure_code.as_deref(), Some("io_error"));
         assert_eq!(projected.files[0].kind(), ChangeKind::Create);
         assert_eq!(projected.files[0].original, "");
-        // Presentation order sorted.
         let sorted: Vec<&str> = projected
             .sorted_files()
             .iter()

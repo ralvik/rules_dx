@@ -21,25 +21,25 @@ pub(crate) fn collect_managed_env(
         )
     })?;
     let projection = dx_env_plan::plan_projection(&plan.records, &outputs).map_err(|err| {
-        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid env plan: {err}"),
         )
-        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     })?;
     Ok((outputs, plan, projection))
 }
 
 pub(crate) fn empty_env_id() -> Result<dx_setup::GenerationId, (String, String)> {
-    // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     dx_setup::GenerationId::new(&dx_env_plan::plan_hex("[]")).map_err(|err| {
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid empty env plan digest: {err}"),
         )
     })
-    // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+    // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 }
 
 fn validate_env_key(key: &str) -> Result<(), ExecError> {
@@ -98,10 +98,6 @@ pub(crate) fn stage_env_generation(
                 ),
             ));
         }
-        // Reuse mirrors the codegen mirror leaves: a leaf already
-        // pointing at the current BEP-reported artifact stays, any other
-        // existing leaf is reconstructed, and an unreadable leaf falls
-        // through to replacement, which fails closed below.
         let leaf = artifacts.join(&entry.key);
         let needs_link = match std::fs::symlink_metadata(&leaf) {
             Ok(meta) => {
@@ -138,9 +134,6 @@ pub(crate) fn stage_env_generation(
             })?;
         }
     }
-    // `seen` is already a `BTreeMap`, so serializing the key/value
-    // projection preserves sorted keys; `serde_json` owns string
-    // escaping and `dx_atomic_fs` owns crash-safe publishing.
     let values: BTreeMap<&str, &str> = seen
         .iter()
         .map(|(key, (value, _))| (*key, *value))
@@ -167,12 +160,12 @@ pub(crate) fn stage_env_side(
     projection: &[dx_env_plan::ProjectionEntry],
 ) -> Result<dx_setup::GenerationId, (String, String)> {
     let id = dx_setup::GenerationId::new(&plan.hex()).map_err(|err| {
-        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
         (
             CODE_INVALID_RESULT.to_owned(),
             format!("invalid env plan digest: {err}"),
         )
-        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
+        // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
     })?;
     stage_env_generation(workspace, &id, projection)?;
     Ok(id)
@@ -235,20 +228,17 @@ mod tests {
             std::fs::read_link(dir.join("artifacts/k2")).expect("leaf"),
             second
         );
-        // `values.json` is deterministic over sorted keys with JSON escaping.
         let values = std::fs::read_to_string(dir.join("values.json")).expect("values");
         assert_eq!(values, "{\"k1\":\"v1\",\"k2\":\"x\\\"y\"}");
         assert!(
             !dir.join("values.json.next").exists(),
             "staging file is always published"
         );
-        // Restaging reuses exact-identity leaves and republishes values.
         stage_env_generation(&workspace, &id, &projection).expect("restage");
         assert_eq!(
             std::fs::read_link(dir.join("artifacts/k1")).expect("leaf"),
             first
         );
-        // A stale leaf is reconstructed.
         std::fs::remove_file(dir.join("artifacts/k1")).expect("remove leaf");
         symlink_leaf(&second, &dir.join("artifacts/k1")).expect("stale leaf");
         stage_env_generation(&workspace, &id, &projection).expect("repair stale");
@@ -256,7 +246,6 @@ mod tests {
             std::fs::read_link(dir.join("artifacts/k1")).expect("leaf"),
             first
         );
-        // Identical duplicates are one leaf.
         let doubled = vec![env_entry("k1", "v1", &first), env_entry("k1", "v1", &first)];
         stage_env_generation(&workspace, &id, &doubled).expect("identical duplicates");
     }
@@ -290,7 +279,6 @@ mod tests {
                 .expect_err("missing artifact");
         assert_eq!(code, CODE_INVALID_RESULT);
         assert!(message.contains("Bazel owns materialization"), "{message}");
-        // A real directory at a leaf collides within its generation.
         let dir_id = dx_setup::GenerationId::new(&"4".repeat(64)).expect("fixture id");
         let dir = ensure_generation_dir(&workspace, ENVIRONMENTS_DIR_NAME, dir_id.as_str())
             .expect("gen dir");
@@ -304,7 +292,6 @@ mod tests {
             message.contains("collides within its generation"),
             "{message}"
         );
-        // A file where `artifacts/` belongs fails creation.
         let blocked_id = dx_setup::GenerationId::new(&"5".repeat(64)).expect("fixture id");
         let blocked_dir =
             ensure_generation_dir(&workspace, ENVIRONMENTS_DIR_NAME, blocked_id.as_str())
@@ -315,9 +302,6 @@ mod tests {
                 .expect_err("artifacts creation");
         assert_eq!(code, CODE_MANAGED_COMMIT_FAILED);
         assert!(message.contains("cannot create"), "{message}");
-        // A stale `values.json.next` directory (pre- staging
-        // leftover) no longer blocks: atomic staging uses OS-random
-        // sibling names, so the legacy path is ignored.
         let staging_id = dx_setup::GenerationId::new(&"6".repeat(64)).expect("fixture id");
         let staging_dir =
             ensure_generation_dir(&workspace, ENVIRONMENTS_DIR_NAME, staging_id.as_str())
@@ -325,7 +309,6 @@ mod tests {
         std::fs::create_dir_all(staging_dir.join("values.json.next")).expect("blocking dir");
         stage_env_generation(&workspace, &staging_id, &[env_entry("k", "v", &first)])
             .expect("legacy staging leftover ignored");
-        // A directory at `values.json` fails the publish rename.
         let publish_id = dx_setup::GenerationId::new(&"7".repeat(64)).expect("fixture id");
         let publish_dir =
             ensure_generation_dir(&workspace, ENVIRONMENTS_DIR_NAME, publish_id.as_str())
@@ -350,8 +333,6 @@ mod tests {
             .join(".dx")
             .join(ENVIRONMENTS_DIR_NAME)
             .join(id.as_str());
-        // Leaves live under `artifacts/`, so that directory is the leaf
-        // parent under test; `values.json` still publishes above it.
         set_mode(&dir.join("artifacts"), 0o555);
         let (code, message) =
             stage_env_generation(&workspace, &id, &[env_entry("k", "v", &second)])

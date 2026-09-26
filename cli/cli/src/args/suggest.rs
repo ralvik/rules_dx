@@ -33,9 +33,6 @@ pub(crate) fn suggest_option(token: &str) -> Option<String> {
     if bare.is_empty() {
         return None;
     }
-    // Single-character `-q`-style tokens never suggest: jaro("q","quiet")
-    // clears 0.7 but a one-letter flag is a missing-short attempt, not a
-    // `--long` typo. Longer typos (`--ouptut`) still flow to best_match.
     if bare.len() < 2 {
         return None;
     }

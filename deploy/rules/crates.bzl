@@ -1,26 +1,15 @@
 """Local-first crates.io publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
-# Versioned name/version charset schema. Consumers query via
-# `crates_name_charset`, `crates_version_charset`, and `crates_*_error`
-# instead of duplicating the charset, so any charset evolution edits this
-# one data constant with schema review, never a parallel allowlist.
 CRATES_SCHEMA_VERSION = 1
 
-# Crate names embed directly in the generated Python launcher, so the
-# charset is restricted to what is safe inside single quotes. Dots stay
-# out (crates.io names use `-`/`_` only).
 _VALID_NAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
 
-# Crate versions embed directly in the generated Python launcher, so the
-# charset is restricted to semver-safe characters inside single quotes
-# (`+` covers build metadata).
 _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+"
 
 def crates_name_charset():
@@ -211,9 +200,6 @@ def crates_deploy(name, crate, version = "0.0.0", allow_dirty = False, profile =
         version = version,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     py_binary(
         name = program_target,
         srcs = [":" + launcher_target],

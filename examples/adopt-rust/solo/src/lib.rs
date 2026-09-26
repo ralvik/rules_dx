@@ -1,8 +1,5 @@
-//! Manifest-free crate: no Cargo.toml anywhere near `solo/`.
-//! Proves source-only fallback with deterministic naming.
 pub mod net;
 
-/// Joins words for the worker-style digest demo.
 pub fn join(words: &[&str]) -> String {
     words.join(" ")
 }

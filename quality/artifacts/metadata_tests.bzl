@@ -1,6 +1,5 @@
 """Load tests pinning standalone-artifact metadata (WP1).
 
-Contract: `docs/tools/tool-acquisition.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
@@ -35,7 +34,6 @@ load(":vale.linux_x86_64.bzl", _vale_linux_x86_64 = "ARTIFACT")
 load(":vale.macos_arm64.bzl", _vale_macos_arm64 = "ARTIFACT")
 load(":vale.windows_x86_64.bzl", _vale_windows_x86_64 = "ARTIFACT")
 
-# Frozen schema surface (WP1): sorted ARTIFACT keys.
 FROZEN_SCHEMA_KEYS = [
     "abi_floor",
     "archive",
@@ -384,8 +382,6 @@ def metadata_tests(name):
         "24ca0647d8b929d786cc371848fe1153e605361cd7dffa4badac9cdf33f99487",
     )
 
-    # use_repo inventory (see repos.bzl): derived repo names must equal the
-    # checked-in list, so adding a tool means metadata plus inventory together.
     derived_repos = sorted(["dx_%s_%s_%s" % (artifact["tool"], artifact["os"], artifact["cpu"]) for artifact in TOOL_ARTIFACTS])
     checks.append(expect_equal("dx tool repo count", len(DX_TOOL_REPOS), 28))
     checks.append(expect_equal("dx tool repos match metadata", DX_TOOL_REPOS, derived_repos))

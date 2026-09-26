@@ -1,6 +1,5 @@
 """Standalone quality-tool acquisition (WP1).
 
-Contract: `docs/tools/tool-acquisition.md` (checksummed-artifact route).
 Outer plus inner digests fail closed at fetch time; URL is availability only.
 """
 
@@ -64,7 +63,6 @@ _ARTIFACTS = [
     _vale_windows_x86_64,
 ]
 
-# Public aggregate for verified inventories (see repos.bzl, metadata_tests.bzl).
 TOOL_ARTIFACTS = _ARTIFACTS
 
 _PLATFORMS = [
@@ -125,7 +123,6 @@ def _standalone_tool_repo_impl(ctx):
             canonical_id = "dx-tool:" + ctx.attr.url,
         )
 
-        # A bare single-file gzip extracts to the repo root under its
         ctx.extract(ctx.attr.asset)
         ctx.execute(["chmod", "755", ctx.attr.executable])
     elif kind == "tar.gz":
@@ -136,9 +133,6 @@ def _standalone_tool_repo_impl(ctx):
             canonical_id = "dx-tool:" + ctx.attr.url,
         )
 
-        # Upstream tar members already carry 0o755 (see the metadata
-        # `mode`/`is_executable` fields); extraction preserves the mode,
-        # so no host chmod runs.
         ctx.extract(ctx.attr.asset)
     elif kind == "zip":
         ctx.download(
@@ -148,18 +142,10 @@ def _standalone_tool_repo_impl(ctx):
             canonical_id = "dx-tool:" + ctx.attr.url,
         )
 
-        # Zip members carry no reliable unix mode (windows zips record
-        # 0o0; see the metadata `mode` field). Windows execution needs
-        # no chmod, and windows artifacts are never selected on unix,
-        # so extraction alone suffices with no host chmod runs.
         ctx.extract(ctx.attr.asset)
     else:
         fail("unsupported archive format: " + kind)
 
-    # (checksummed-artifact route): the outer sha256 above verifies the
-    # downloaded asset; this re-hashes the extracted executable against
-    # the recorded inner digest, so a substituted archive member fails
-    # the fetch instead of reaching the build.
     _verify_executable_sha256(ctx, ctx.attr.executable, ctx.attr.executable_sha256)
     ctx.file("BUILD.bazel", "\n".join([
         "filegroup(",
@@ -258,8 +244,6 @@ _hub_repo = repository_rule(
         "artifacts": attr.string_list_dict(mandatory = True),
         "cpu_arm64": attr.string(mandatory = True),
         "cpu_x86_64": attr.string(mandatory = True),
-        # Canonical platform labels supplied by the MODULE.bazel tag, so the
-        # generated BUILD references repositories visible from the hub.
         "os_linux": attr.string(mandatory = True),
         "os_macos": attr.string(mandatory = True),
         "os_windows": attr.string(mandatory = True),

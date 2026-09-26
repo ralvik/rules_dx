@@ -1,25 +1,15 @@
 """Local-first NuGet publisher for `dx deploy`.
 
-Contract: `docs/deploy/authoring.md`.
 """
 
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
-# Versioned id/version charset schema. Consumers query via
-# `nuget_id_charset`, `nuget_version_charset`, and `nuget_*_error`
-# instead of duplicating the charset, so any charset evolution edits this
-# one data constant with schema review, never a parallel allowlist.
 NUGET_SCHEMA_VERSION = 1
 
-# Package ids embed directly in the generated Python launcher, so the
-# charset is restricted to what is safe inside single quotes.
 _VALID_ID_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
-# Package versions embed directly in the generated Python launcher, so the
-# charset is restricted to semver-safe characters inside single quotes
-# (`+` covers build metadata).
 _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+"
 
 NUGET_DEFAULT_SOURCE = "https://api.nuget.org/v3/index.json"
@@ -223,9 +213,6 @@ def nuget_deploy(name, nupkg, version = "0.0.0", source = NUGET_DEFAULT_SOURCE, 
         version = version,
     )
 
-    # `py_binary` wrapper: `srcs` is the expanded launcher,
-    # `data` pins the runfiles the launcher resolves via `Rlocation`,
-    # `deps` carries the Python runfiles library. No shell, no `sh_binary`.
     py_binary(
         name = program_target,
         srcs = [":" + launcher_target],

@@ -220,7 +220,6 @@ fn matching_reports_findings_with_and_without_fix() {
     assert_eq!(serde_finding.level, "error");
     assert_eq!(serde_finding.severity, "high");
     assert_eq!(serde_finding.fixed, vec!["1.0.150".to_owned()]);
-    // No fix still reports and still fails (warning/error, not clean).
     let react_finding = findings
         .iter()
         .find(|finding| finding.package == "react")
@@ -252,10 +251,6 @@ fn version_matching_uses_semver_for_cargo_npm_go_and_ranges_for_maven_nuget() {
     assert!(!version_affected("cargo", ">=1.0.0, <2.0.0", "2.0.0"));
     assert!(version_affected("npm", "^18.0.0", "18.2.0"));
     assert!(version_affected("go", ">=1.0.0, <2.0.0", "1.5.0"));
-    // Go `v` prefixes normalize on both sides (see
-    // `go_scopes_normalize_v_prefix` for the full matrix).
-    // Maven uses Maven-native intervals; bare versions use Maven
-    // equality (so `1.0` matches `1.0.0`).
     assert!(version_affected("maven", "1.2.0", "1.2.0"));
     assert!(version_affected("maven", "1.0", "1.0.0"));
     assert!(version_affected("maven", "[1.0,2.0)", "1.5.0"));
@@ -264,9 +259,6 @@ fn version_matching_uses_semver_for_cargo_npm_go_and_ranges_for_maven_nuget() {
     assert!(!version_affected("maven", "(,1.0]", "1.0.1"));
     assert!(version_affected("maven", "[1.0]", "1.0.0"));
     assert!(!version_affected("maven", ">=1.0.0", "1.2.0"));
-    // NuGet uses NuGet-native intervals; bare versions use NuGet
-    // equality (so `1.0` matches `1.0.0` but not `1.5.0`;
-    // `[1.0,)` spells the minimum).
     assert!(version_affected("nuget", "1.2.3", "1.2.3"));
     assert!(version_affected("nuget", "1.0", "1.0.0"));
     assert!(!version_affected("nuget", "1.0", "1.5.0"));
@@ -281,27 +273,21 @@ fn version_matching_uses_semver_for_cargo_npm_go_and_ranges_for_maven_nuget() {
 
 #[test]
 fn go_scopes_normalize_v_prefix() {
-    // `v` on the locked version, the advisory scope, or both.
     assert!(go_in_scope(">=1.0.0, <2.0.0", "v1.5.0"));
     assert!(go_in_scope(">=v1.0.0, <v2.0.0", "1.5.0"));
     assert!(go_in_scope(">=v1.0.0, <v2.0.0", "v1.5.0"));
     assert!(!go_in_scope(">=v1.0.0, <v2.0.0", "v2.0.0"));
     assert!(version_affected("go", ">=v1.0.0, <v2.0.0", "v1.5.0"));
     assert!(!version_affected("go", ">=v1.0.0, <v2.0.0", "v2.0.0"));
-    // Caret and comparator shapes normalize too.
     assert!(go_in_scope("^v1.2.0", "v1.9.0"));
     assert!(!go_in_scope("^v1.2.0", "v2.0.0"));
     assert!(go_in_scope("=v1.2.0", "v1.2.0"));
     assert!(!go_in_scope("=v1.2.0", "v1.2.1"));
-    // Pseudo-versions and `+incompatible` suffixes stay assessable:
-    // the `v` strips and the remainder parses as semver.
     assert!(go_in_scope(
         ">=v0.0.0-20250930140053-2eb4fccefb52, <v99.0.0",
         "v0.0.0-20250930140053-2eb4fccefb52"
     ));
     assert!(go_in_scope(">=v1.0.0, <v3.0.0", "v2.0.0+incompatible"));
-    // Cargo prerelease gate). Cargo still excludes the same prerelease
-    // from a bare range; Go covers it as a regular release.
     assert!(!version_in_scope(
         ">=1.0.0, <2.0.0",
         "1.2.4-0.20240101120000-abcdef123456"
@@ -315,8 +301,6 @@ fn go_scopes_normalize_v_prefix() {
         ">=v1.0.0, <v2.0.0",
         "v1.2.4-0.20240101120000-abcdef123456"
     ));
-    // Pseudo before its release is inside `<release` and outside
-    // `>=release`: ordering, not the gate, decides.
     assert!(go_in_scope(
         ">=v1.0.0, <v1.2.4",
         "v1.2.4-0.20240101120000-abcdef123456"
@@ -325,7 +309,6 @@ fn go_scopes_normalize_v_prefix() {
         ">=v1.2.4, <v2.0.0",
         "v1.2.4-0.20240101120000-abcdef123456"
     ));
-    // Star, caret, and tilde cover pseudos they contain by ordering.
     assert!(go_in_scope("*", "v1.2.4-0.20240101120000-abcdef123456"));
     assert!(go_in_scope(
         "^v1.2.0",
@@ -339,19 +322,15 @@ fn go_scopes_normalize_v_prefix() {
         "~v1.2.3",
         "v1.3.0-0.20240101120000-abcdef123456"
     ));
-    // Exact stays exact: a pseudo is below its release, never equal.
     assert!(!go_in_scope(
         "=v1.2.4",
         "v1.2.4-0.20240101120000-abcdef123456"
     ));
-    // `+incompatible` rides build metadata ignored for precedence;
-    // pseudo plus `+incompatible` still matches bare ranges.
     assert!(go_in_scope("=v2.0.0", "v2.0.0+incompatible"));
     assert!(go_in_scope(
         ">=v1.0.0, <v3.0.0",
         "v2.0.0-0.20240101120000-abcdef123456+incompatible"
     ));
-    // Words containing `v` never mangle; garbage fails closed.
     assert_eq!(strip_go_v("very"), "very");
     assert_eq!(strip_go_v(">=v1.0.0, <v2.0.0"), ">=1.0.0, <2.0.0");
     assert!(!go_in_scope("not a range", "v1.2.0"));
@@ -362,8 +341,6 @@ fn go_scopes_normalize_v_prefix() {
 
 #[test]
 fn npm_ranges_cover_star_or_hyphen_and_prerelease() {
-    // Star, `||` unions, hyphen ranges, and prereleases fire through
-    // `version_affected` instead of looking clean.
     assert!(version_affected("npm", "*", "18.2.0"));
     assert!(version_affected("npm", "1.2.7 || >=1.2.9 <2.0.0", "1.2.7"));
     assert!(version_affected("npm", "1.2.7 || >=1.2.9 <2.0.0", "1.2.9"));
@@ -380,12 +357,9 @@ fn npm_ranges_cover_star_or_hyphen_and_prerelease() {
         ">=1.0.0-alpha, <2.0.0",
         "1.0.0-alpha"
     ));
-    // Cargo keeps Cargo-flavor semantics: bare versions are caret
-    // shorthand, `||` and hyphen stay invalid and fail closed.
     assert!(version_affected("cargo", "1.2.0", "1.2.1"));
     assert!(!version_affected("cargo", "1.0.0 || 2.0.0", "1.0.0"));
     assert!(!version_affected("cargo", "1.2.3 - 2.3.4", "1.5.0"));
-    // Malformed npm scopes fail closed, never a false positive.
     assert!(!version_affected("npm", "", "1.2.3"));
     assert!(!version_affected("npm", "not a range", "1.2.3"));
     assert!(!version_affected("npm", ">=1.2.7 <1.3.0", "banana"));
@@ -393,7 +367,6 @@ fn npm_ranges_cover_star_or_hyphen_and_prerelease() {
 
 #[test]
 fn npm_range_advisories_report_findings() {
-    // Range advisories fire instead of looking clean.
     let packages = vec![LockedPackage {
         name: "react".to_owned(),
         version: "18.2.0".to_owned(),
@@ -471,7 +444,6 @@ fn npm_exceptions_narrow_with_npm_semantics() {
 
 #[test]
 fn go_exceptions_narrow_with_go_semantics() {
-    // Both audit matching and exception scoping share `go_in_scope`
     let packages = vec![LockedPackage {
         name: "example.com/mod".to_owned(),
         version: "v1.2.4-0.20240101120000-abcdef123456".to_owned(),
@@ -515,24 +487,20 @@ fn go_exceptions_narrow_with_go_semantics() {
 
 #[test]
 fn maven_version_ordering_follows_upstream_subset() {
-    // Release equality plus trailing-null trimming.
     assert_eq!(maven_compare("1.0", "1.0.0"), std::cmp::Ordering::Equal);
     assert!(maven_version_eq("1.0", "1.0.0"));
     assert!(maven_version_eq("1.ga", "1"));
     assert!(maven_version_eq("1-final", "1"));
     assert!(maven_version_eq("1.0.0-foo.0.0", "1-foo"));
     assert!(maven_version_eq("1-a1", "1-alpha-1"));
-    // Qualifier ladder.
     assert!(maven_compare("1-alpha", "1-beta") == std::cmp::Ordering::Less);
     assert!(maven_compare("1-beta", "1-milestone") == std::cmp::Ordering::Less);
     assert!(maven_compare("1-milestone", "1-rc") == std::cmp::Ordering::Less);
     assert!(maven_compare("1-rc", "1-snapshot") == std::cmp::Ordering::Less);
     assert!(maven_compare("1-snapshot", "1") == std::cmp::Ordering::Less);
     assert!(maven_compare("1", "1-sp") == std::cmp::Ordering::Less);
-    // Unknown qualifiers sort after known ones, lexically.
     assert!(maven_compare("1", "1-foo") == std::cmp::Ordering::Less);
     assert!(maven_compare("5.aardvark", "5.zebra") == std::cmp::Ordering::Less);
-    // Numbers beat qualifiers; hyphen-numbers sort before dot-numbers.
     assert!(maven_compare("1-K", "1.7") == std::cmp::Ordering::Less);
     assert!(maven_compare("1-foo2", "1-foo10") == std::cmp::Ordering::Less);
     assert_eq!(maven_compare("1.foo", "1-foo"), std::cmp::Ordering::Equal);
@@ -544,16 +512,13 @@ fn maven_version_ordering_follows_upstream_subset() {
 
 #[test]
 fn maven_ranges_cover_intervals_unions_and_edges() {
-    // Bounded intervals, inclusive versus exclusive.
     assert!(maven_in_scope("[1.0,2.0]", "1.0"));
     assert!(maven_in_scope("[1.0,2.0]", "2.0"));
     assert!(!maven_in_scope("(1.0,2.0)", "1.0"));
     assert!(!maven_in_scope("(1.0,2.0)", "2.0"));
     assert!(maven_in_scope("[1.0,2.0)", "1.0"));
     assert!(!maven_in_scope("[1.0,2.0)", "2.0"));
-    // Maven includes pre-releases under an exclusive upper bound.
     assert!(maven_in_scope("[1.0,2.0)", "2.0-rc1"));
-    // Unbounded sides.
     assert!(maven_in_scope("[1.5,)", "1.5"));
     assert!(maven_in_scope("[1.5,)", "9.9"));
     assert!(!maven_in_scope("[1.5,)", "1.4"));
@@ -561,7 +526,6 @@ fn maven_ranges_cover_intervals_unions_and_edges() {
     assert!(!maven_in_scope("(,1.0]", "1.0.1"));
     assert!(maven_in_scope("(,1.0)", "0.9"));
     assert!(!maven_in_scope("(,1.0)", "1.0"));
-    // Single-version intervals and unions.
     assert!(maven_in_scope("[1.0]", "1.0.0"));
     assert!(!maven_in_scope("[1.0]", "1.0.1"));
     assert!(!maven_in_scope("(1.0)", "1.0"));
@@ -571,12 +535,10 @@ fn maven_ranges_cover_intervals_unions_and_edges() {
     assert!(maven_in_scope("(,1.1),(1.1,)", "1.0"));
     assert!(maven_in_scope("(,1.1),(1.1,)", "1.2"));
     assert!(!maven_in_scope("(,1.1),(1.1,)", "1.1"));
-    // Bare versions are Maven equality, not semver ranges.
     assert!(maven_in_scope("1.2.0", "1.2.0"));
     assert!(maven_in_scope("1.0", "1.0.0"));
     assert!(!maven_in_scope("1.2.0", "1.2.1"));
     assert!(!maven_in_scope(">=1.0.0", "1.2.0"));
-    // Malformed and empty inputs fail closed, never a false positive.
     assert!(!maven_in_scope("", "1.0"));
     assert!(!maven_in_scope("[1.0,2.0)", ""));
     assert!(!maven_in_scope("[1.0,2.0", "1.5"));
@@ -587,7 +549,6 @@ fn maven_ranges_cover_intervals_unions_and_edges() {
 
 #[test]
 fn maven_range_advisories_report_findings() {
-    // Range advisories fire instead of looking clean.
     let packages = vec![LockedPackage {
         name: "com.google.guava:guava".to_owned(),
         version: "32.0.0".to_owned(),
@@ -665,8 +626,6 @@ fn maven_exceptions_narrow_with_maven_semantics() {
 
 #[test]
 fn nuget_version_ordering_follows_upstream_subset() {
-    // Four-part equality plus missing-part and leading-zero
-    // normalization.
     assert_eq!(nuget_compare("1.0", "1.0.0"), std::cmp::Ordering::Equal);
     assert_eq!(nuget_compare("1.0", "1.0.0.0"), std::cmp::Ordering::Equal);
     assert!(nuget_version_eq("1.0", "1.0.0"));
@@ -674,34 +633,27 @@ fn nuget_version_ordering_follows_upstream_subset() {
     assert!(nuget_version_eq("1.01.1", "1.1.1"));
     assert!(nuget_version_eq("1.0.0.0", "1.0.0"));
     assert!(nuget_version_eq("10.1.201", "10.1.201.0"));
-    // Build metadata never affects ordering.
     assert!(nuget_version_eq("1.0.7+r3456", "1.0.7"));
     assert_eq!(
         nuget_compare("1.0.0+build", "1.0.0"),
         std::cmp::Ordering::Equal
     );
-    // Numeric ordering without overflow.
     assert!(nuget_compare("1.10", "1.9") == std::cmp::Ordering::Greater);
     assert!(nuget_compare("2.0.0.1", "2.0.0") == std::cmp::Ordering::Greater);
     assert!(nuget_compare("1.0.0", "1.0.0.1") == std::cmp::Ordering::Less);
-    // Release beats prerelease on the same core.
     assert!(nuget_compare("1.0.0", "1.0.0-alpha") == std::cmp::Ordering::Greater);
     assert!(nuget_compare("1.0.0-alpha", "1.0.0") == std::cmp::Ordering::Less);
-    // Prerelease labels: numeric numerically, numeric before alpha,
-    // alpha case-insensitively, shorter prefix first.
     assert!(nuget_compare("1.0.0-alpha.9", "1.0.0-alpha.10") == std::cmp::Ordering::Less);
     assert!(nuget_compare("1.0.0-1", "1.0.0-alpha") == std::cmp::Ordering::Less);
     assert!(nuget_version_eq("1.0.0-alpha", "1.0.0-Alpha"));
     assert!(nuget_version_eq("1.0.0-ALPHA", "1.0.0-alpha"));
     assert!(nuget_compare("1.0.0-alpha", "1.0.0-alpha.1") == std::cmp::Ordering::Less);
     assert!(nuget_compare("1.0.0-beta", "1.0.0-alpha") == std::cmp::Ordering::Greater);
-    // Different cores dominate prerelease.
     assert!(nuget_compare("2.0.0-alpha", "1.9.9") == std::cmp::Ordering::Greater);
 }
 
 #[test]
 fn nuget_ranges_cover_intervals_minimums_and_edges() {
-    // Bounded intervals, inclusive versus exclusive.
     assert!(nuget_in_scope("[1.0,2.0]", "1.0"));
     assert!(nuget_in_scope("[1.0,2.0]", "2.0"));
     assert!(!nuget_in_scope("(1.0,2.0)", "1.0"));
@@ -710,7 +662,6 @@ fn nuget_ranges_cover_intervals_minimums_and_edges() {
     assert!(!nuget_in_scope("[1.0,2.0)", "2.0"));
     assert!(nuget_in_scope("(1.0,2.0]", "2.0"));
     assert!(!nuget_in_scope("(1.0,2.0]", "1.0"));
-    // Minimum/maximum spellings: `[1.0,)` is the `>=` minimum.
     assert!(nuget_in_scope("[1.0,)", "1.0"));
     assert!(nuget_in_scope("[1.0,)", "9.9"));
     assert!(!nuget_in_scope("[1.0,)", "0.9"));
@@ -720,26 +671,18 @@ fn nuget_ranges_cover_intervals_minimums_and_edges() {
     assert!(!nuget_in_scope("(,1.0]", "1.0.1"));
     assert!(nuget_in_scope("(,1.0)", "0.9"));
     assert!(!nuget_in_scope("(,1.0)", "1.0"));
-    // Single-version intervals are exact only as `[1.0]`; `(1.0)`
-    // stays invalid per NuGet docs.
     assert!(nuget_in_scope("[1.0]", "1.0.0"));
     assert!(!nuget_in_scope("[1.0]", "1.0.1"));
     assert!(!nuget_in_scope("(1.0)", "1.0"));
     assert!(!nuget_in_scope("[1.0)", "1.0"));
     assert!(!nuget_in_scope("(1.0]", "1.0"));
-    // Bare versions are NuGet equality, not the dependency `>=`
-    // minimum: `[1.0,)` spells the minimum in advisory scopes.
     assert!(nuget_in_scope("1.2.0", "1.2.0"));
     assert!(nuget_in_scope("1.0", "1.0.0"));
     assert!(!nuget_in_scope("1.0", "1.0.1"));
     assert!(!nuget_in_scope("1.0", "0.9"));
     assert!(!nuget_in_scope(">=1.0.0", "1.2.0"));
-    // Prereleases order normally: an exclusive upper bound still
-    // covers a prerelease below the release.
     assert!(nuget_in_scope("[1.0,2.0)", "2.0.0-beta"));
     assert!(!nuget_in_scope("[1.0,2.0)", "2.0.0"));
-    // Malformed, floating, union, and empty inputs fail closed,
-    // never a false positive.
     assert!(!nuget_in_scope("", "1.0"));
     assert!(!nuget_in_scope("[1.0,2.0)", ""));
     assert!(!nuget_in_scope("[1.0,2.0", "1.5"));
@@ -755,7 +698,6 @@ fn nuget_ranges_cover_intervals_minimums_and_edges() {
 
 #[test]
 fn nuget_malformed_versions_and_bounds_fail_closed() {
-    // Unparseable versions never order; equality gates stay closed.
     assert_eq!(nuget_compare("", "1.0"), std::cmp::Ordering::Equal);
     assert_eq!(
         nuget_compare(&"1".repeat(300), "1.0"),
@@ -764,8 +706,6 @@ fn nuget_malformed_versions_and_bounds_fail_closed() {
     assert_eq!(nuget_compare("banana", "1.0"), std::cmp::Ordering::Equal);
     assert!(!nuget_version_eq("", "1.0"));
     assert!(!nuget_version_eq("1.0", &"1".repeat(300)));
-    // Version-side rejections: floating, metadata-only, empty core,
-    // five-part core, empty or unruly prerelease remainder.
     assert!(!nuget_in_scope("[1.0,2.0)", "1.*"));
     assert!(!nuget_in_scope("[1.0,2.0)", "+"));
     assert!(!nuget_in_scope("[1.0,2.0)", "-1.0"));
@@ -774,12 +714,8 @@ fn nuget_malformed_versions_and_bounds_fail_closed() {
     assert!(!nuget_in_scope("[1.0,2.0)", "1.0-a b"));
     assert!(!nuget_in_scope("[1.0,2.0)", "1.0-a..b"));
     assert!(!nuget_in_scope("[1.0,2.0)", "1.0-a_b"));
-    // All-zero numeric labels normalize to zero, not empty.
     assert!(!nuget_in_scope("[1.0,2.0)", "1.0-00"));
-    // Overlong scope fails closed before any interval reading.
     assert!(!nuget_in_scope(&"1".repeat(5000), "1.0"));
-    // Single-bound and range intervals need non-empty, parseable,
-    // within-length bounds.
     assert!(!nuget_in_scope("[ ]", "1.0"));
     assert!(!nuget_in_scope("[banana]", "1.0"));
     assert!(!nuget_in_scope(
@@ -792,12 +728,10 @@ fn nuget_malformed_versions_and_bounds_fail_closed() {
 
 #[test]
 fn nuget_prerelease_labels_compare_numeric_then_alpha_upstream() {
-    // Equal numeric labels continue into later labels.
     assert_eq!(
         nuget_compare("1.0-1.beta", "1.0-1.beta"),
         std::cmp::Ordering::Equal
     );
-    // Numeric labels sort before alphanumeric labels.
     assert_eq!(
         nuget_compare("1.0-alpha", "1.0-2"),
         std::cmp::Ordering::Greater
@@ -883,7 +817,6 @@ fn nuget_exceptions_narrow_with_nuget_semantics() {
 
 #[test]
 fn unassessed_reasons_are_pinned() {
-    // Wont-fix pins: reason spellings are contract.
     assert_eq!(REASON_GIT, "unsupported git revision");
     assert_eq!(REASON_PRIVATE, "unidentified private package");
 }
@@ -905,8 +838,6 @@ fn git_and_private_packages_are_incomplete_never_clean() {
             is_git: false,
             is_private: true,
         },
-        // Incomplete mapping is set-agnostic; Maven/NuGet
-        // plus Go unassessed deps fail the same way, never clean.
         LockedPackage {
             name: "git-nuget-dep".to_owned(),
             version: "1.0.0".to_owned(),
@@ -999,7 +930,6 @@ fn snapshot_parses_osv_array_and_rejects_malformed() {
 
 #[test]
 fn osv_typed_cargo_projects_interval_and_matches() {
-    // fixed preserves, severity from database_specific, no matcher change.
     let text = r#"[{
         "id": "GHSA-cargo-osv-0001",
         "modified": "2026-09-18T00:00:00Z",
@@ -1023,9 +953,6 @@ fn osv_typed_cargo_projects_interval_and_matches() {
 
 #[test]
 fn osv_explicit_versions_do_not_caret_match_fixed_release() {
-    // GHSA-qx2v-8332-m4fv shape: ranges plus a one-element `versions`
-    // list. Bare cargo list entries must pin exact so fixed `0.4.11+`
-    // never matches via caret (`^0.4.10` would cover `0.4.12`).
     let text = r#"[{
         "id": "GHSA-qx2v-8332-m4fv",
         "modified": "2026-09-18T00:00:00Z",
@@ -1052,7 +979,6 @@ fn osv_explicit_versions_do_not_caret_match_fixed_release() {
 
 #[test]
 fn osv_typed_sets_project_to_native_scopes() {
-    // npm semver, go v-prefix, maven/nuget intervals (no narrowing change).
     let text = r#"[{
         "id": "GHSA-npm-osv-0001",
         "modified": "2026-09-18T00:00:00Z",
@@ -1122,8 +1048,6 @@ fn osv_typed_sets_project_to_native_scopes() {
 
 #[test]
 fn osv_typed_withdrawn_unsupported_and_git_skip() {
-    // Withdrawn, PyPI ecosystem, and GIT ranges yield zero advisories;
-    // explicit versions list yields one scope per version.
     let text = r#"[{
         "id": "GHSA-withdrawn-0001",
         "modified": "2026-09-18T00:00:00Z",
@@ -1158,8 +1082,6 @@ fn osv_typed_withdrawn_unsupported_and_git_skip() {
         }]
     }]"#;
     let parsed = parse_snapshot(text).expect("osv parses");
-    // Only the explicit-versions entry projects (two scopes); cargo bare
-    // list entries pin with `=` so they stay exact, not caret.
     assert_eq!(parsed.len(), 2);
     assert!(parsed.iter().all(|entry| entry.id == "GHSA-explicit-0001"));
     assert!(parsed.iter().any(|entry| entry.versions == "=1.2.3"));
@@ -1171,8 +1093,6 @@ fn osv_typed_withdrawn_unsupported_and_git_skip() {
 
 #[test]
 fn osv_typed_severity_unknown_fails_closed_and_last_affected_inclusive() {
-    // CVSS vectors stay unknown (fail by default); last_affected is
-    // inclusive; unbounded lower/upper map to native all-match scopes.
     let text = r#"[{
         "id": "GHSA-cvss-0001",
         "modified": "2026-09-18T00:00:00Z",
@@ -1215,10 +1135,8 @@ fn osv_typed_severity_unknown_fails_closed_and_last_affected_inclusive() {
 
 #[test]
 fn osv_typed_malformed_fails_closed() {
-    // Missing required OSV `modified` fails (fail-closed, never empty clean).
     assert!(parse_snapshot(r#"[{"id":"GHSA-bad","affected":[]}]"#).is_err());
     assert!(parse_snapshot("not json").is_err());
     assert!(parse_snapshot("").is_err());
-    // Empty array stays empty (no advisories, clean only with assessment).
     assert_eq!(parse_snapshot("[]").expect("empty"), Vec::new());
 }

@@ -9,7 +9,6 @@ pub fn scope_runs_all_selected(docs_only: bool) -> bool {
     true
 }
 
-/// Workflow path filters are never used.
 pub fn uses_path_filters() -> bool {
     false
 }
@@ -67,7 +66,6 @@ pub fn plan_code_scanning(opt_in: bool, complete_scan: bool) -> CodeScanningPlan
     }
 }
 
-/// Coverage aggregation never hides a missing platform or gap.
 pub fn plan_coverage_aggregate(per_platform_ok: &[bool]) -> bool {
     !per_platform_ok.is_empty() && per_platform_ok.iter().all(|ok| *ok)
 }

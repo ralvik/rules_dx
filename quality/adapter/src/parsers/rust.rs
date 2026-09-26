@@ -208,8 +208,6 @@ fn collect_suggestions(
 mod tests {
     use super::*;
 
-    // Builders for rustc-diagnostic JSON lines: the clippy grammar
-    // tests shape raw tool output without checking in fixture files.
     fn diagnostic(message: &str, level: &str, spans: &str, children: &str) -> String {
         format!(
             r#"{{"$message_type": "diagnostic", "message": {message}, "code": null, "level": "{level}", "spans": [{spans}], "children": [{children}], "rendered": null}}"#
@@ -273,7 +271,6 @@ mod tests {
         assert!(parse_clippy(b"", Some(0), &["/s/clean.rs"])
             .expect("parsed")
             .is_empty());
-        // Fail-closed: nonzero exit with only summaries keeps the evidence.
         let err = parse_clippy(
             CLIPPY_LINT.lines().nth(1).expect("summary").as_bytes(),
             Some(1),
@@ -308,8 +305,6 @@ mod tests {
         assert!(parse_rustc(b"", Some(0), &["/s/clean.rs"])
             .expect("parsed")
             .is_empty());
-        // Same fail-closed shape as Clippy: nonzero exit with only a
-        // summary keeps the evidence instead of an empty result.
         let err = parse_rustc(
             RUSTC_TYPE_ERROR.lines().nth(1).expect("summary").as_bytes(),
             Some(1),
@@ -333,7 +328,6 @@ mod tests {
             .is_empty());
         let bare = "{\"$message_type\": \"diagnostic\"}\n";
         assert!(parse_clippy(bare.as_bytes(), Some(0), &["/s/x.rs"]).is_err());
-        // Spans outside the checked files cannot be attributed.
         let outside = diagnostic(
             "\"elsewhere\"",
             "warning",
@@ -341,13 +335,10 @@ mod tests {
             "",
         );
         assert!(parse_clippy(outside.as_bytes(), Some(0), &["/s/x.rs"]).is_err());
-        // Zero positions are a grammar mismatch, never a point range.
         let zero = diagnostic("\"zero\"", "warning", &span("/s/x.rs", 1, 0, true), "");
         assert!(parse_clippy(zero.as_bytes(), Some(0), &["/s/x.rs"]).is_err());
-        // Unknown levels fail closed even when the span would place.
         let noted = diagnostic("\"noted\"", "note", &span("/s/x.rs", 1, 1, true), "");
         assert!(parse_clippy(noted.as_bytes(), Some(0), &["/s/x.rs"]).is_err());
-        // A bare nonzero exit with no diagnostics names the exit.
         let err = parse_clippy(b"", Some(1), &["/s/x.rs"]).expect_err("empty failure");
         assert!(err.to_string().contains('1'));
     }
@@ -370,7 +361,6 @@ mod tests {
             r#""suggested_replacement": null, "suggestion_applicability": null, "#,
             r#""expansion": null}}], "children": [], "rendered": null}}"#
         ));
-        // A non-primary span still places when it is the only in-file span.
         let secondary = span("/s/x.rs", 2, 3, false);
         let line = diagnostic(
             "\"lint\"",
@@ -388,7 +378,6 @@ mod tests {
             )
         );
         assert!(findings[0].finding.suggestions.is_empty());
-        // Inverted suggestion spans are a grammar mismatch.
         let inverted = format!(concat!(
             r#"{{"message": "fix", "code": null, "level": "help", "spans": ["#,
             r#"{{"file_name": "/s/x.rs", "byte_start": 5, "byte_end": 2, "#,
@@ -405,9 +394,4 @@ mod tests {
         );
         assert!(parse_clippy(bad.as_bytes(), Some(0), &["/s/x.rs"]).is_err());
     }
-
-    // Exact outputs probed from the pinned Python binaries (ruff
-    // 0.16.7, ty 0.0.80, pydoclint 0.9.1); the fixtures pin the
-    // grammars above, so a tool upgrade that changes its output fails
-    // here instead of silently shifting findings.
 }

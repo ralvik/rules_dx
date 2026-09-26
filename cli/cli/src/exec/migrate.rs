@@ -65,9 +65,6 @@ pub(crate) fn execute_migrate(invocation: &Invocation, env: Env<'_>) -> i32 {
     } else if verbose {
         let _ = writeln!(out, "{summary}");
     }
-    // Live: no manifests exist yet (module at `0.0.0`), so fail closed
-    // with no writes — the same discipline as the deferred audit/update
-    // paths before backends landed.
     operational(
         invocation,
         out,
@@ -156,8 +153,6 @@ mod tests {
 
     #[test]
     fn missing_versions_and_non_upgrades_are_pre_exec() {
-        // Missing `--to` never reaches execution: `parse` rejects it
-        // with `MissingValue` (exit 2) before any write.
         use crate::args::parse;
         fn args(words: &[&str]) -> Vec<String> {
             words.iter().map(ToString::to_string).collect()
@@ -166,13 +161,10 @@ mod tests {
             parse(&args(&["migrate", "--from=1.2.3", "--dry-run"])),
             Err(crate::args::ArgsError::MissingValue { .. })
         ));
-        // dry-run succeeds with the full-version manifest.
         let harness = Harness::new("migrate-minor");
         let (code, out, err) = harness.run(&["migrate", "--from=1.2.3", "--to=1.3.0", "--dry-run"]);
         assert_eq!(code, 0, "{err}");
         assert!(out.contains("migrate-v1.2.3-to-v1.3.0.json"), "{out}");
-        // Well-formed versions that fail the upgrade gate reach execution
-        // and fail pre-exec with the stable gate diagnostic.
         let harness = Harness::new("migrate-downgrade");
         let (code, _, err) = harness.run(&["migrate", "--from=2.0.0", "--to=1.0.0", "--dry-run"]);
         assert_eq!(code, 2, "{err}");

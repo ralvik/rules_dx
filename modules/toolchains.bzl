@@ -1,6 +1,5 @@
 """Shared toolchain pins plus registration order."""
 
-# Pinned shared toolchains (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_CC_VERSION = "0.2.22"
 GOOGLETEST_VERSION = "1.18.0"
 RULES_GO_VERSION = "0.63.0"
@@ -11,13 +10,8 @@ BAZEL_SKYLIB_VERSION = "1.9.0"
 RULES_PROTO_VERSION = "7.1.0"
 GO_SDK_VERSION = "1.26.6"
 
-# Language floor for third_party/go/go.mod (tracks gazelle's go directive
-# so the shared go_deps extension sees no conflict). The SDK minor stays
-# >= this floor; see MODULE.bazel plus per-split pin_consistency in
-# tools/ci/pin_consistency.sh.
 GO_LANGUAGE_FLOOR = "1.24.12"
 
-# Pinned Go SDK archives (see MODULE.bazel go_sdk.download sdks; per-split
 GO_SDK_SDKS = {
     "darwin_amd64": ["go1.26.6.darwin-amd64.tar.gz", "08b65a63f244115121ced6c3b55ad38d801a7442acad5c949a17aad84ae6d684"],
     "darwin_arm64": ["go1.26.6.darwin-arm64.tar.gz", "2dc95ce4675829f2df0e86b28bcef3283635902062a5f0580ca659bf570f3204"],
@@ -27,8 +21,6 @@ GO_SDK_SDKS = {
     "windows_arm64": ["go1.26.6.windows-arm64.zip", "06dbe785743d534ef8a469dad88adf7f1b2b438507ccfef9b98e7cf8c97b4b68"],
 }
 
-# Standalone quality-tool hosts (see //quality/artifacts:extension.bzl).
-# macOS x86_64 is Not planned per #976 with no artifact.
 DX_TOOL_PLATFORMS = [
     "linux_x86_64",
     "linux_arm64",

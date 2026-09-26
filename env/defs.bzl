@@ -38,10 +38,6 @@ _HOST_RESERVED_STEMS = (
 
 _EXECUTABLE_SUFFIXES = (".bat", ".cmd", ".com", ".exe")
 
-# Version of the staged tree management-metadata schema written by
-# `environment_tree`. The on-disk `.rules_dx_managed` binary Protobuf
-# marker is encoded at install time from this metadata; the schema version
-# travels with both so replacement can refuse metadata it cannot validate.
 ENV_METADATA_SCHEMA_VERSION = 1
 
 def env_host_filename(name, is_windows):
@@ -137,16 +133,12 @@ def _environment_tool_impl(ctx):
     if error != "":
         fail("environment_tool " + str(ctx.label) + ": " + error)
 
-    # Persisted labels use the observation rendering so staged bytes stay
-    # stable and readable across Bazel renderings (see `display_label`).
     owner = display_label(ctx.label)
     return [
         EnvironmentInfo(
             runners = {owner: ctx.attr.executable.files_to_run},
             tools = depset([env_tool_record(owner, ctx.attr.bin_name, ctx.attr.aliases)]),
         ),
-        # The hermetic runtime closure travels through DefaultInfo so
-        # configs and trees compose it without touching provider shapes.
         DefaultInfo(
             runfiles = ctx.attr.executable[DefaultInfo].default_runfiles,
         ),

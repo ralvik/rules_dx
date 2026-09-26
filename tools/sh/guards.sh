@@ -1,75 +1,6 @@
 #!/usr/bin/env bash
-# Table-driven guard library.
-#
-# Single-sources the `{file, must-contain|must-not-contain, reason/issue}`
-# table rows repeated ad-hoc across `tools/ci` guards (`if grep -q ...;
-# then ok else bad "...issue #..."` per file). Each helper is one table
-# row: file (or tree include), expectation kind (function name), pattern,
-# and reason/issue context. Drivers write a vertical list of calls that
-# reads as the guard table instead of copying `grep -q` chains.
-#
-# Requires `tools/sh/lib.sh` counters first (`dx_test_init`, `ok`/`bad`/
-# `dx_test_summary`); load both via the single-sourced bootstrap
-# (`tools/sh/bootstrap.sh` `dx_bootstrap`, issue #654) with no per-file
-# depth adjustment:
-#
-#   source "${RUNFILES_DIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${TEST_SRCDIR:-/dev/null}/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$0.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "${BASH_SOURCE[0]}.runfiles/_main/tools/sh/bootstrap.sh" 2>/dev/null || source "$(git rev-parse --show-toplevel 2>/dev/null)/tools/sh/bootstrap.sh"
-#   dx_bootstrap "tools/sh/lib.sh"
-#   dx_bootstrap "tools/sh/guards.sh"
-#
-# Guard maintenance owns shared helpers plus snapshot versus grep policy
-# (successor to issue #450, owned here under issue #653;
-# `//tools/ci:shell_contract` owns the rule):
-# snapshot (`tools/sh/snapshot.sh` with UPDATE_EXPECT) is for
-# byte-identical golden outputs with refresh (whole-file renderer output,
-# generated fragments, canonical JSON: reviewer sees the diff and refreshes
-# explicitly); `dx_guard_*` fixed-string pins are for doc/code contract
-# sentences/symbols (a few literals per file, fail-closed, no refresh, one
-# `ok`/`bad` per row or per batch with file:pattern plus reason context).
-# Prefer fixed-string (`--fixed`) for contract sentences/symbols; use
-# the `_re` regex forms only for shapes (SHA pins, version
-# alternatives, anchors). Prefer single-file pins when the location is
-# known; use the `tree` forms only for repo-wide presence/absence with an
-# `--include` glob (they skip `bazel-*` plus `.git`). Matching is hermetic
-# (`tools/sh/hermetic_grep.py` via `tools/sh/lib.sh`, issue #1006), never
-# host `grep`. Drivers must not reimplement guard rows; extend this file
-# instead.
-#
-# Provides (all always return 0 so the harness collects every failure):
-#   dx_guard_file <file> <reason>
-#   dx_guard_contains <file> <lit> <reason>
-#   dx_guard_absent <file> <lit> <reason>
-#   dx_guard_re_contains <file> <re> <reason>
-#   dx_guard_re_absent <file> <re> <reason>
-#   dx_guards_contains <file> <reason> <lit>...
-#   dx_guards_absent <file> <reason> <lit>...
-#   dx_guards_re_contains <file> <reason> <re>...
-#   dx_guards_re_absent <file> <reason> <re>...
-#   dx_guard_tree_contains <include> <lit> <reason>
-#   dx_guard_tree_absent <include> <lit> <reason>
-#   dx_guard_tree_contains_re <include> <re> <reason>
-#   dx_guard_tree_absent_re <include> <re> <reason>
-#   dx_guards_tree_contains <include> <reason> <lit>...
-#   dx_guards_tree_absent <include> <reason> <lit>...
-#   dx_guards_tree_contains_re <include> <reason> <re>...
-#   dx_guards_tree_absent_re <include> <reason> <re>...
-#
-# Bash-only Linux harness: sourced by `sh_binary` /
-# `sh_test` drivers carrying `target_compatible_with =
-# ["@platforms//os:linux"]`. Bootstrap requires bash by design under issue
-# #450 (`BASH_SOURCE`, `[[`, `printf -v` plus the 5-way runfiles fallback
-# never run under POSIX `sh`); floor is bash 3.2+. No bare `grep -q`
-# chains in drivers; every guard row carries its reason/issue.
 # Shellcheck/shfmt clean (`shfmt -i 2 -ci`, `.shellcheckrc` bash + all
-# checks).
 set -euo pipefail
-
-# Guard-maintenance table rows: one ok/bad per row with file:pattern plus
-# reason context, always returning 0 so the harness collects every failure
-# before `dx_test_summary`. Matching goes through the hermetic grep helper
-# (`tools/sh/hermetic_grep.py` via `tools/sh/lib.sh` `dx_hermetic_grep`,
-# issue #1006) so guard rows never branch on host BSD/GNU grep variance;
-# drivers must source `tools/sh/lib.sh` before this file (see header).
 
 dx_guard_file() {
   local file="$1" reason="$2"
@@ -136,9 +67,6 @@ dx_guard_re_absent() {
   fi
   return 0
 }
-
-# Batch rows: same file plus same reason, many literals/patterns, one
-# ok/bad. Collapses `grep -q ... && grep -q ...` chains.
 
 dx_guards_contains() {
   local file="$1" reason="$2"
@@ -223,10 +151,6 @@ dx_guards_re_absent() {
   fi
   return 0
 }
-
-# Tree rows: repo-wide presence/absence with an `--include` glob, skipping
-# `bazel-*` plus `.git` outputs. Prefer single-file pins when the location
-# is known. Matching is hermetic via `dx_hermetic_grep` (issue #1006).
 
 dx_guard_tree_contains() {
   local include="$1" lit="$2" reason="$3"

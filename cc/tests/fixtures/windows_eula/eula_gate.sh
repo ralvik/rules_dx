@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Windows EULA acknowledgement gate fixture.
-# Fails before restricted acquisition when acknowledgement is missing.
 set -euo pipefail
 var="BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA"
 val="${BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA:-}"

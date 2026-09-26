@@ -1,6 +1,5 @@
 """Target-scoped real capability aspects over real adapters.
 
-Contract: `docs/quality/tool-integrations.md`, `docs/quality/native-configuration.md`, `docs/quality/quality-sources.md#adapter-applicability`, `docs/quality/quality-result-protocol.md#transport`.
 """
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")
@@ -20,7 +19,6 @@ load("//quality:sources.bzl", "QualitySourcesInfo")
 load("//rust/rules:edition.bzl", "RUST_EDITION")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
-# Cold-server laziness: the shared implementation no longer resolves every
 _REAL_TOOL_TABLE = {
     "biome": {"capabilities": ["format", "lint"], "shard": "core"},
     "buildifier": {"capabilities": ["format", "lint"], "shard": "core"},
@@ -80,10 +78,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         REAL_ADAPTERS,
     )
     if len(resolved) == 0:
-        # Fail-closed deferred: a target with deferred-class sources and no
-        # pipeline must not stay green. Fail with the owning decision plus
-        # frozen route so `dx status` surfaces the honest red via the failed
-        # action; genuinely sourceless or non-deferred targets stay green.
         err = deferred_pipeline_error(target_classes, capability)
         if err != "":
             fail("real_aspect (" + str(target.label) + "): " + err)
@@ -92,13 +86,11 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     if len(resolved) == 0:
         return []
 
-    # Target-coupled tsc: tsc never applies from the class alone;
     if "tsc" in [stage["tool"] for stage in resolved]:
         resolved = drop_pipeline_tool(resolved, "tsc")
         if len(resolved) == 0:
             return []
 
-    # Target-coupled SpotBugs: SpotBugs analyzes compiled classes, never
     spotbugs_jars = []
     if "spotbugs" in [stage["tool"] for stage in resolved]:
         if JavaInfo not in target:
@@ -106,10 +98,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             if len(resolved) == 0:
                 return []
         else:
-            # Workspace-local jars only: external `../repo/...` short_paths
-            # never stage (same `..` rule as first-party sources); SpotBugs
-            # still emits valid SARIF without the full third-party classpath
-            # for these fixtures.
             jars = []
             for jar in target[JavaInfo].transitive_runtime_jars.to_list():
                 if ".." in jar.short_path.split("/"):
@@ -123,7 +111,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             else:
                 spotbugs_jars = jars
 
-    # rustfmt crate context: the edition comes from the
     rustfmt_edition = None
     if "rustfmt" in [stage["tool"] for stage in resolved]:
         if not has_rust_toolchain:
@@ -138,13 +125,8 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         if len(generated) > 0:
             resolved = prune_tool_generated_sources(resolved, generated, "rustfmt")
             if len(resolved) == 0:
-                # Every stage was generated-only (e.g. a rust_binary whose
-                # sole src is a generated launcher): nothing for rustfmt to
-                # format. Return without creating an action so the runner
-                # never sees an empty stage list.
                 return []
 
-    # Delegated Clippy: this aspect requires the upstream
     clippy_diagnostics = []
     if "clippy" in [stage["tool"] for stage in resolved]:
         if not has_rust_toolchain:
@@ -153,7 +135,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             clippy_diagnostics = target[OutputGroupInfo]["clippy_output"].to_list()
     clippy_delegated = len(clippy_diagnostics) > 0
 
-    # Delegated rustc: every Rust rule emits the authoritative
     rustc_diagnostics = []
     if "rustc" in [stage["tool"] for stage in resolved]:
         if not has_rust_toolchain:
@@ -229,12 +210,9 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     ordered_paths = ordered_pipeline_paths(resolved)
     inputs = pipeline_inputs_for_paths(ordered_paths, path_to_file)
 
-    # Markdown link-resolution siblings: unclassified files declared via
     sibling_pairs = {}
     if "markdown_check" in stage_tools and hasattr(ctx.rule.attr, "markdown_siblings"):
         for sibling in ctx.rule.attr.markdown_siblings:
-            # Label entries may be rule targets (with a files depset) or
-            # source files directly.
             if hasattr(sibling, "files"):
                 sibling_files = sibling.files.to_list()
             else:
@@ -263,7 +241,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         args.add("--sibling", ws_path + "=" + f.path)
         inputs.append(f)
 
-    # Ty import context: ty resolves same-package imports through the
     resolve_pairs = {}
     if "ty" in stage_tools and _PyInfo in target:
         transitive = getattr(target[_PyInfo], "transitive_sources", None)
@@ -271,7 +248,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             for f in transitive.to_list():
                 ws_path = f.short_path
 
-                # Third-party wheels (uv/pip install trees) live outside the
                 if ".." in ws_path.split("/"):
                     continue
                 if ws_path in path_to_file or ws_path in sibling_pairs or ws_path in resolve_pairs:
@@ -286,15 +262,8 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     args.add("--real")
     for tool in stage_tools:
         if tool == "clippy" and clippy_delegated:
-            # Delegated Clippy needs no spawned binary and no dx-side
-            # policy: the upstream aspect owns the invocation and its
-            # own `clippy.toml` label flag. The diagnostics file below
-            # creates the runner tool entry.
             continue
         if tool == "rustc" and rustc_delegated:
-            # Delegated rustc needs no spawned binary: the upstream
-            # rule owns the compilation. The diagnostics file below
-            # creates the runner tool entry.
             continue
         binary = tool_binaries[tool]
         args.add("--tool-binary", tool + "=" + binary.path)
@@ -304,18 +273,12 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
                 args.add("--tool-file", "spotbugs=" + jar.short_path + "=" + jar.path)
                 inputs.append(jar)
         if tool == "rustfmt":
-            # Always set when a rustfmt stage survives: provider-less
-            # targets fall back to RUST_EDITION above, so the runner's
-            # mandatory edition always resolves.
             args.add("--tool-edition", "rustfmt=" + rustfmt_edition)
         if tool in configs_by_tool:
             hint = configs_by_tool[tool]
             config_rel = hint.config.short_path
             args.add("--tool-config", tool + "=" + config_rel)
 
-            # Stable workspace-relative keys: sort closure by short_path so
-            # declaration/depset order never perturbs the action key. Config
-            # content itself reaches the key via declared inputs.
             for f in sorted(hint.closure.to_list(), key = lambda f: f.short_path):
                 args.add("--tool-file", tool + "=" + f.short_path + "=" + f.path)
                 inputs.append(f)
@@ -328,7 +291,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             args.add("--upstream-diagnostics", "rustc=" + diagnostics.path)
             inputs.append(diagnostics)
 
-    # The Python venv launchers (pydoclint, flake8, pylint) are static
     run_tools = []
     if "eslint" in stage_tools:
         run_tools.append(ctx.attr._eslint[DefaultInfo].files_to_run)
@@ -361,7 +323,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             "pylint=RUNFILES_DIR=" + ctx.executable._runner.path + ".runfiles",
         )
 
-    # JVM `java_binary` wrappers (google-java-format, Checkstyle, PMD,
     if "google_java_format" in stage_tools:
         run_tools.append(ctx.attr._google_java_format[DefaultInfo].files_to_run)
     if "ktfmt" in stage_tools:
@@ -430,8 +391,6 @@ _REAL_BASE_ATTRS = {
     ),
 }
 
-# Single per-tool attr table: one label per wired tool; shard attr sets
-# derive from the per-tool table above, so adding a tool edits one row.
 _REAL_TOOL_ATTR_DEFS = {
     "biome": attr.label(
         default = "@dx_tools//:biome",
@@ -555,9 +514,6 @@ _REAL_JVM_FORMAT_ATTRS = _real_attrs_for(_JVM_FORMAT_TOOLS)
 _REAL_PY_LINT_ATTRS = _real_attrs_for(_PY_LINT_TOOLS)
 _REAL_RUST_ATTRS = _REAL_BASE_ATTRS
 
-# Single table-driven shard set: one row per aspect with its capability,
-# tools, output suffix, rust-toolchain need, attrs, and doc. Adding a
-# shard edits this table only; impls and aspect objects derive below.
 _REAL_SHARDS = {
     "real_format": {"attrs": _REAL_CORE_ATTRS, "capability": "format", "doc": "Registers the exact-input real format pipeline action in dx_results.", "has_rust": False, "suffix": "", "tools": _CORE_FORMAT_TOOLS},
     "real_js_format": {"attrs": _REAL_JS_FORMAT_ATTRS, "capability": "format", "doc": "Additive JavaScript/JSON format family aspect (Prettier).", "has_rust": False, "suffix": "-js", "tools": _JS_FORMAT_TOOLS},

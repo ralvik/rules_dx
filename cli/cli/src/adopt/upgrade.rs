@@ -291,8 +291,6 @@ mod tests {
 
     #[test]
     fn upgrade_codes_are_stable_single_source() {
-        // Fixture pins the stable wire codes so output-protocol drift
-        // fails here, not in automation matching on `code`.
         assert_eq!(CODE_UPGRADE_FAILED, "upgrade_failed");
         assert_eq!(NOTICE_UPGRADE_PLANNED, "upgrade_planned");
     }

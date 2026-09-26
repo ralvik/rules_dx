@@ -1,6 +1,5 @@
 """Focused Scala environment plan (WP2).
 
-Contract: `docs/environments/scala.md`.
 """
 
 load("@rules_java//java:defs.bzl", "JavaInfo")

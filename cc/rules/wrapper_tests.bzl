@@ -1,6 +1,5 @@
 """Wrapper conformance tests for C/C++.
 
-Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_match", "expect_true", "starlark_test")
