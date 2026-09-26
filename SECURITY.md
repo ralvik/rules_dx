@@ -20,4 +20,4 @@ support beyond the current tree.
 | Version | Supported |
 | --- | --- |
 | Unreleased (`0.0.0`, no release cut) | Yes, current tree |
-| Future releases | Latest release only, per the [maintenance policy](docs/environments/environment.md#distribution) |
+| Future releases | Latest release only |

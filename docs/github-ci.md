@@ -48,13 +48,13 @@ evidence via `bazel run //tools/ci:coverage_qualification`.
 
 The same caller-pin pattern covers documentation: `.github/workflows/reusable-docs.yml`
 is a reusable workflow running `dx lint --check` over a
-caller-selected docs scope, with an opt-in `publish` input that deploys the validated
-docs tree to GitHub Pages. The deployed content is the validated tree, not a rendered
-site; the renderer arrives via the docs-pipeline track (delivered seed-only under closed #780, successor to closed #581, live successor to closed #421).
+caller-selected docs scope (default `//...`, the entire repo) plus `dx docs --check`
+site validation, with an opt-in `publish` input that builds the rendered site
+via `dx docs` and deploys the Bazel-owned bundle to GitHub Pages.
 Third-party reuse is templated in `examples/docs-ci/`; this repository self-calls the
 workflow from `.github/workflows/ci.yml` (check-only on pull requests, publishing on
 `main`). Pages needs source GitHub Actions enabled in repository settings before the
-first publishing run.
+first publishing run. The live site is at `https://ralvik.github.io/rules_dx/`.
 
 ## Check Selection
 
@@ -85,12 +85,12 @@ and [`dx update --check`](cli/commands/audit-update-bazel.md#dx-update).
 empty, or unsupported selections are caller errors, not skipped validation
 or platform substitution.
 
-Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native), `macos_arm64` (native), `windows_x86_64` (native
-MSVC-compatible), and `windows_arm64` (native, `windows-11-arm`).
+Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native), `macos_arm64` (native), and `windows_x86_64` (native
+MSVC-compatible).
 The reusable workflow routes
 `linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
 `macos_arm64` to `macos-14`,
-`windows_x86_64` to `windows-latest`, and `windows_arm64` to `windows-11-arm`.
+and `windows_x86_64` to `windows-latest`.
 macOS arm64 native runs on `macos-14` through the pinned upstream
 toolchains with the hermetic-llvm Apple-SDK backend provisional (immutable
 lazy fetch, no host-installed SDK fallback, no secrets, no interactive
@@ -103,7 +103,7 @@ per-host `bazel-windows-x86_64-` cache scope) through the pinned upstream
 toolchains with the toolchains_msvc clang-cl/Microsoft-STL backend
 provisional (immutable lazy fetch, explicit EULA acceptance never automatic,
 no installed fallback, no secrets). The repository host matrix across these
-five platforms is pinned by `bazel run
+four platforms is pinned by `bazel run
 //tools/ci:ci_matrix_qualification`.
 
 Selection does not change language activation, analyzer applicability, configured no-op
@@ -291,7 +291,7 @@ Floating runners age out and SDK/floor pins go stale with no review owner.
 This section owns the review cadence plus retirement handling.
 
 Qualified runners are `ubuntu-latest` plus `ubuntu-24.04-arm` plus `macos-14`
-plus `windows-latest` plus `windows-11-arm` with per-profile cache scopes.
+plus `windows-latest` with per-profile cache scopes.
 macos-13 retired December 2025, macos x86_64 Not planned per #976 with no
 runner; `ubuntu-latest` plus `windows-latest` float and age out. SDK plus floor scope
 is glibc `2.28` plus MacOSX26.5 via hermetic-llvm `v0.8.19`

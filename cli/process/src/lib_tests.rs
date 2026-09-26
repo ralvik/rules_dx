@@ -307,7 +307,10 @@ fn protected_check_accepts_allowed_extras_beside_required() {
         &protected,
     )
     .expect("blessed extra passes");
-    assert_eq!(kept, vec!["--config=ci".to_owned(), "--config=dx".to_owned()]);
+    assert_eq!(
+        kept,
+        vec!["--config=ci".to_owned(), "--config=dx".to_owned()]
+    );
     let err = check_protected(&["--config=other".to_owned()], &protected).expect_err("conflict");
     assert_eq!(
         err,
@@ -546,12 +549,12 @@ fn quality_workflows_reject_nokeep_going() {
         ProtectedFlag {
             name: "keep_going".to_owned(),
             required: Some("--keep_going".to_owned()),
-        allowed: Vec::new(),
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "nokeep_going".to_owned(),
             required: None,
-        allowed: Vec::new(),
+            allowed: Vec::new(),
         },
     ];
     let err = build_workflow_argv(

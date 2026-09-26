@@ -147,12 +147,11 @@ fn committed_gitleaks_config_produces_a_trust_warning() {
             Some(0),
             r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"gitleaks"}},"results":[]}]}"#,
         );
-        let (code, out, err) =
-            run_with(&["security", "--report=sarif=-"], &runner, &|h| {
-                clean_workspace(h);
-                write_all_empty_advisories(h);
-                h.write_source(config, "title = \"local rules\"\n");
-            });
+        let (code, out, err) = run_with(&["security", "--report=sarif=-"], &runner, &|h| {
+            clean_workspace(h);
+            write_all_empty_advisories(h);
+            h.write_source(config, "title = \"local rules\"\n");
+        });
         assert_eq!(code, 0, "{out}{err}");
         let value: serde_json::Value = serde_json::from_str(&out).expect("sarif");
         assert!(value.to_string().contains("without a hash pin"));
@@ -273,24 +272,20 @@ fn audit_live_unowned_scope_fails_usage() {
 #[test]
 fn audit_live_json_emits_per_family_lifecycle() {
     let runner = AuditRunner::clean();
-    let (code, out, err) = run_with(
-        &["security", "--output=json"],
-        &runner,
-        &|harness| {
-            harness.write_source(
+    let (code, out, err) = run_with(&["security", "--output=json"], &runner, &|harness| {
+        harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
         );
-            harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
-            harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
-            harness.write_source(
-                "third_party/dotnet/paket.lock",
-                "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
-            );
-            write_go_mod(harness);
-            write_all_empty_advisories(harness);
-        },
-    );
+        harness.write_source("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+        harness.write_source("third_party/jvm/maven_install.json", r#"{"artifacts": {}}"#);
+        harness.write_source(
+            "third_party/dotnet/paket.lock",
+            "NUGET\n  remote: https://api.nuget.org/v3/index.json\n",
+        );
+        write_go_mod(harness);
+        write_all_empty_advisories(harness);
+    });
     assert_eq!(code, 0, "{out}{err}");
     let events: Vec<serde_json::Value> = out
         .lines()
@@ -597,11 +592,8 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
     );
     write_go_mod(&harness);
     write_all_empty_advisories(&harness);
-    let invocation = parse(&[
-        "security".to_owned(),
-        "--report=sarif=out.sarif".to_owned(),
-    ])
-    .expect("parse");
+    let invocation =
+        parse(&["security".to_owned(), "--report=sarif=out.sarif".to_owned()]).expect("parse");
     let mut out = Vec::new();
     let mut err = Vec::new();
     let code = execute(
@@ -687,11 +679,8 @@ fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
     // No advisory snapshots: every vuln set is incomplete, so the
     // SARIF document is partial even though the secrets finding is
     // validated.
-    let invocation = parse(&[
-        "security".to_owned(),
-        "--report=sarif=out.sarif".to_owned(),
-    ])
-    .expect("parse");
+    let invocation =
+        parse(&["security".to_owned(), "--report=sarif=out.sarif".to_owned()]).expect("parse");
     let mut out = Vec::new();
     let mut err = Vec::new();
     let code = execute(
@@ -842,11 +831,7 @@ fn audit_partial_reports_are_not_authoritative() {
     // authoritative upload on `results_complete=true`.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &[
-            "security",
-            "--output=json",
-            "--report=sarif=out.sarif",
-        ],
+        &["security", "--output=json", "--report=sarif=out.sarif"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -1155,10 +1140,7 @@ fn offline_dry_run_plans_cache_only_without_launching() {
     let harness = Harness::new("audit-offline-dryrun");
     let (code, out, err) = harness.run(&["security", "--offline", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
-    assert!(
-        out.contains("Running audit security for //..."),
-        "{out}"
-    );
+    assert!(out.contains("Running audit security for //..."), "{out}");
     assert!(out.contains("offline, cache-only"), "{out}");
     assert_eq!(err, "", "{err}");
     assert!(

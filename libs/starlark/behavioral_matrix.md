@@ -1,9 +1,6 @@
 # Starlark Behavioral Matrix
 
-Evidence-backed fallback for Starlark line coverage under the pinned Bazel
-(`9.2.0`), per the [coverage policy](../../docs/testing/starlark.md#coverage) and
-[ADR 0009](../../docs/decisions/0009-starlark-testing.md). Genuine executable-line
-instrumentation of `.bzl` files is infeasible on this Bazel: a probe rule
+Executable-line instrumentation of `.bzl` files is infeasible on this Bazel: a probe rule
 whose implementation provably executed (analysis-produced output file plus a
 passing test) yielded a 0-byte `coverage.dat` and zero `SF` records, no
 Starlark coverage flags exist (`bazel help build` shows only the generic

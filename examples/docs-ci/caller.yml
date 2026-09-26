@@ -1,6 +1,6 @@
 # Docs caller template: pins the qualified reusable docs workflow at a reviewed commit.
 # Copy to .github/workflows/docs.yml in the consumer repo; do not copy per-check logic.
-# Reviewed pin bumps only; customizations (docs_scope, docs_dir, publish) preserved across bumps.
+# Reviewed pin bumps only; customizations (docs_scope, publish) preserved across bumps.
 # Required repository settings (documented separately, not configured here):
 # - Pages source: GitHub Actions (Settings -> Pages), once, before first publish: true run
 # - permissions: contents read; pages/write + id-token/write granted to the publish job only
@@ -16,9 +16,9 @@ jobs:
     uses: rules_dx/.github/workflows/reusable-docs.yml@acbd29ebb1b35586d93c5de7f33c5d55bf798b5b
     with:
       rules_dx_version: "0.0.0"
-      docs_scope: "//docs/..."
-      docs_dir: "docs"
-      # Publishing deploys docs_dir to GitHub Pages. Gate on the default
+      docs_scope: "//..."
+      # Publishing builds the rendered site via `dx docs` and deploys the
+      # Bazel-owned bundle to GitHub Pages. Gate on the default
       # branch so pull requests stay check-only.
       publish: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     # Least privilege: the reusable workflow's publish job needs

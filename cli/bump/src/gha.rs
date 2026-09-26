@@ -18,14 +18,9 @@ pub enum GhaError {
     #[error("empty GHA tag entry; expected `owner/repo` plus tag plus SHA")]
     Empty,
     #[error("invalid package {package:?} for github-actions: expected owner/repo")]
-    InvalidPackage {
-        package: String,
-    },
+    InvalidPackage { package: String },
     #[error("invalid tag {tag:?} for {package:?}: expected a Git tag (e.g. v4)")]
-    InvalidTag {
-        package: String,
-        tag: String,
-    },
+    InvalidTag { package: String, tag: String },
     #[error("invalid SHA {sha:?} for {package:?} tag {tag:?}: expected a 40/64-char commit SHA")]
     InvalidSha {
         package: String,
@@ -33,10 +28,7 @@ pub enum GhaError {
         sha: String,
     },
     #[error("unknown tag {tag:?} for {package:?}: no upstream GitHub releases snapshot (nothing widened; never invent a SHA)")]
-    UnknownTag {
-        package: String,
-        tag: String,
-    },
+    UnknownTag { package: String, tag: String },
 }
 
 pub fn parse_snapshot(package: &str, tag: &str, sha: &str) -> Result<TagSnapshot, GhaError> {

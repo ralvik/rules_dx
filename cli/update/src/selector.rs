@@ -18,9 +18,7 @@ pub enum SelectorError {
     #[error("empty selector")]
     Empty,
     #[error("unknown update selector {selector:?}; expected cargo|npm|maven|nuget|go, set:package, or a label/path")]
-    UnknownSelector {
-        selector: String,
-    },
+    UnknownSelector { selector: String },
     #[error("invalid package {package:?} for set {set}: {reason}")]
     InvalidPackage {
         set: &'static str,
@@ -28,9 +26,7 @@ pub enum SelectorError {
         reason: &'static str,
     },
     #[error("no owning dependency set for {target:?} (python and non-dependency paths are out of V1 update scope)")]
-    NoOwningSet {
-        target: String,
-    },
+    NoOwningSet { target: String },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

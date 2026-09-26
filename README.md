@@ -1,6 +1,6 @@
 # rules_dx
 
-Pre-release. See the [support matrix](docs/product/support-matrix.md) for current status.
+Pre-release.
 
 `rules_dx` is an opinionated Bazel developer platform designed to provide a tested release stack,
 lazy application foundations, Bazel-owned quality workflows, and a thin `dx` CLI. The product aims
@@ -31,21 +31,8 @@ bazel run //cli/cli:dx -- test //...
 ```
 
 Next: [CLI reference](docs/cli/README.md), [Command reference](docs/cli/commands/README.md),
-[consumer examples](examples/README.md), [support matrix](docs/product/support-matrix.md),
-and [product scope](docs/product/scope.md).
-
-## Product
-
-- [Product overview](docs/product/README.md)
-- [Product scope](docs/product/scope.md)
-- [Support matrix](docs/product/support-matrix.md)
-- [Security policy](SECURITY.md)
-
-## Design
-
-- [Documentation index](docs/README.md)
-- [Architecture](docs/architecture/README.md)
-- [Decision records](docs/decisions/README.md)
+[consumer examples](examples/README.md), [CI](docs/github-ci.md), and the
+[docs site](https://ralvik.github.io/rules_dx/).
 
 ## Contributing
 

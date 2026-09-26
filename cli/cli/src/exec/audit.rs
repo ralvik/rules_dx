@@ -776,10 +776,7 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
 
 pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
-        matches!(
-            invocation.command,
-            Command::Security | Command::License
-        ),
+        matches!(invocation.command, Command::Security | Command::License),
         "audit dispatch guards commands"
     );
     let Env {

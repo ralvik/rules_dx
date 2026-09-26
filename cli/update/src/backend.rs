@@ -18,9 +18,7 @@ pub enum BackendError {
         reason: &'static str,
     },
     #[error("offline_required: cannot update {set} without network (re-run without --offline/--frozen once connected, or use the vendored bundle per docs/deploy/offline-bootstrap.md)")]
-    OfflineRequired {
-        set: &'static str,
-    },
+    OfflineRequired { set: &'static str },
 }
 
 pub fn plan(set: SetId, request: &SetRequest, offline: bool) -> Result<BackendPlan, BackendError> {

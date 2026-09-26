@@ -16,9 +16,11 @@ bazel_dep(name = "rules_dx", version = "0.0.0")
 ```
 
 `docs-check` runs `dx lint --check` over
-`docs_scope`; the lint pass is the Markdown link/structure audit, so
-broken relative targets fail before deploy. `publish: true` uploads
-`docs_dir` and deploys it to the `github-pages` environment. Enable
+`docs_scope` (default `//...`, the entire repo) plus `dx docs --check`
+site validation; the lint pass is the Markdown link/structure audit, so
+broken relative targets fail before deploy. `publish: true` builds the
+rendered site via `dx docs` and deploys the Bazel-owned bundle to the
+`github-pages` environment. Enable
 Pages with source GitHub Actions in repository settings before the
 first publishing run. This repository self-calls the workflow in
 `../../.github/workflows/ci.yml` (check-only on pull requests,

@@ -132,9 +132,7 @@ pub fn apply_here(
     let scope = here_scope(workspace, cwd)?;
     let mut next = invocation.clone();
     if !next.targets.is_empty() {
-        return Err(
-            "option \"--here/--cwd\" cannot be combined with explicit scopes".to_owned(),
-        );
+        return Err("option \"--here/--cwd\" cannot be combined with explicit scopes".to_owned());
     }
     next.targets = vec![scope];
     next.here = false;
@@ -214,9 +212,8 @@ mod tests {
         assert_eq!(resolved.targets, vec!["//...".to_owned()]);
 
         // Security/license resolve like every other graph-scope command.
-        let resolved =
-            apply_here(&invocation_for(Command::Security, &[]), workspace, subdir)
-                .expect("resolves");
+        let resolved = apply_here(&invocation_for(Command::Security, &[]), workspace, subdir)
+            .expect("resolves");
         assert_eq!(resolved.targets, vec!["cli/cli".to_owned()]);
         let resolved =
             apply_here(&invocation_for(Command::License, &[]), workspace, root).expect("resolves");

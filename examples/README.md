@@ -24,9 +24,4 @@ commands and expected evidence in its own `README.md`.
 - [adopt-powershell](adopt-powershell/) foreign PowerShell tree adopted by handwritten wrappers with the explicitly scoped no-Gazelle alternative.
 - [adopt-polyglot](adopt-polyglot/) foreign Python+Rust+JS/TS tree adopted package by package.
 
-`mixed/hello` is intentionally not indexed here: it is the mixed-framework
-composition fixture (Vue/Svelte/Astro/MDX over one shared helper, owned by
-the [framework track](../docs/generation/framework-adapters.md#framework-mapping-qualification)),
-not an external-consumer workspace.
-
 Per-foundation external-consumer workspaces plus acquisition/laziness proof are delivered (seed host; platform and remote dimensions are tracked in GitHub issues). Each `adopt-*` workspace records one pinned module dep with its manifest plus lock authority and the generate plus build plus test evidence in its own `README.md`.

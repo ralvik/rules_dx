@@ -340,6 +340,8 @@ real_source_target(
         "//docs:cli/README.md",
         "//docs:cli/commands/README.md",
         "//docs:contributing/local-workflows.md",
+        "//docs:github-ci.md",
+        "//docs:testing/strategy-details.md",
         "//examples:README.md",
         "LICENSE",
     ],

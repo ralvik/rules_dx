@@ -16,9 +16,7 @@ pub enum BumpError {
     #[error("empty bump selector or version; expected `dx bump <set:package> <version>`")]
     Empty,
     #[error("unknown bump selector {selector:?}; expected bazel|cargo|github-actions|go|maven|npm|nuget as `set:package` (e.g. cargo:anyhow, maven:junit:junit)")]
-    UnknownSelector {
-        selector: String,
-    },
+    UnknownSelector { selector: String },
     #[error("invalid package {package:?} for set {set}: {reason}")]
     InvalidPackage {
         set: &'static str,
@@ -26,18 +24,11 @@ pub enum BumpError {
         reason: &'static str,
     },
     #[error("bump needs one package, not a whole set: {set:?} selects the set; use `{set}:<package> <version>`")]
-    BareSet {
-        set: String,
-    },
+    BareSet { set: String },
     #[error("bump needs `set:package`, not a label or path: {target:?}")]
-    NotAPackage {
-        target: String,
-    },
+    NotAPackage { target: String },
     #[error("no declared requirement for {package:?} in {manifest} (nothing widened)")]
-    NotFound {
-        manifest: String,
-        package: String,
-    },
+    NotFound { manifest: String, package: String },
     #[error("ambiguous requirement for {package:?} in {manifest}: {count} matches (nothing widened; widen one requirement per invocation)")]
     Ambiguous {
         manifest: String,
@@ -45,15 +36,9 @@ pub enum BumpError {
         count: usize,
     },
     #[error("unsupported manifest shape in {manifest}: {reason} (nothing widened)")]
-    UnsupportedManifest {
-        manifest: String,
-        reason: String,
-    },
+    UnsupportedManifest { manifest: String, reason: String },
     #[error("github-actions {package:?} tag {tag:?} needs SHA resolution via the upstream GitHub releases client; pass the resolved SHA as <version> (nothing widened)")]
-    NeedsSha {
-        package: String,
-        tag: String,
-    },
+    NeedsSha { package: String, tag: String },
     #[error(transparent)]
     Version(#[from] VersionError),
 }

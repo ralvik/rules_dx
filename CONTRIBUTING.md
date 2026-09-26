@@ -7,8 +7,7 @@ Authoritative product and design contracts live under `docs/`.
 Start with the [local workflow](docs/contributing/local-workflows.md#current-workflow)
 for current checks and tooling gaps. After the green build, run the
 [editor plus direnv plus hooks one-shot](docs/contributing/local-workflows.md#bootstrap)
-(`dx setup`, `hooks install`, `direnv allow`); first-hour evidence lives in
-[First-Hour Timing](docs/contributing/first-hour-timing.md). Agent procedure lives in the root
+(`dx setup`, `hooks install`, `direnv allow`). Agent procedure lives in the root
 [AGENTS.md](AGENTS.md) and applicable scoped instructions.
 
 ## Delivery Flow
@@ -34,13 +33,11 @@ ADR or domain contract.
 
 ## Decisions And Scope
 
-- Accepted constraints live in the [decision records](docs/decisions/README.md).
-  Do not silently decide open questions elsewhere.
-- Product scope follows the [product scope](docs/product/scope.md) and
-  [support matrix](docs/product/support-matrix.md). If implementation requires an architecture
-  or product change, stop the affected work and propose the documentation update
-  with evidence, alternatives, compatibility impact, and blocked work first.
-- Coverage follows the [testing strategy](docs/testing/README.md#coverage): the single exact per-cell gate
+- Do not silently decide open questions elsewhere.
+- If implementation requires an architecture
+or product change, stop the affected work and propose the documentation update
+with evidence, alternatives, compatibility impact, and blocked work first.
+- Coverage follows the [testing strategy](docs/testing/strategy-details.md): the single exact per-cell gate
   with zero uncovered lines over the versioned cell inventories (one gate per cell, no cross-cell
   union; the pinned `dx coverage --min-coverage 97` flag is the user-facing configurable threshold,
   informational only), source-level ignores with short `policy:` reasons plus reviewer approval validated in CI. Bring-up

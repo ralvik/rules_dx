@@ -171,10 +171,7 @@ pub(super) fn audit_dry_run_plans_families_without_launching() {
     let harness = Harness::new("audit-dryrun");
     let (code, out, err) = harness.run(&["security", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
-    assert!(
-        out.contains("Running audit security for //..."),
-        "{out}"
-    );
+    assert!(out.contains("Running audit security for //..."), "{out}");
     assert_eq!(err, "", "{err}");
     assert!(
         harness.seen_env.borrow().is_empty(),
@@ -290,10 +287,7 @@ pub(super) fn audit_live_without_hermetic_tool_fails_closed() {
     let (code, _out, err) = {
         use crate::args::parse;
         use crate::exec::{execute, Env};
-        let words: Vec<String> = ["security"]
-            .iter()
-            .map(ToString::to_string)
-            .collect();
+        let words: Vec<String> = ["security"].iter().map(ToString::to_string).collect();
         let invocation = parse(&words).expect("parse");
         let harness = Harness::new("audit-no-tool");
         harness.write_source(
@@ -609,10 +603,7 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     // words are absent.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &[
-            "license",
-            "//javascript/tests/fixtures/hello:hello",
-        ],
+        &["license", "//javascript/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -632,10 +623,7 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     // the failure is the notice check firing, not the license table).
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
-        &[
-            "license",
-            "//javascript/tests/fixtures/hello:hello",
-        ],
+        &["license", "//javascript/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(

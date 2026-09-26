@@ -18,7 +18,6 @@ real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_siblings = [
-        "//docs:generation/framework-adapters.md",
         "//examples/adopt-cpp:README.md",
         "//examples/adopt-csharp:README.md",
         "//examples/adopt-fsharp:README.md",

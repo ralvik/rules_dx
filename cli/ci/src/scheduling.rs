@@ -114,13 +114,14 @@ mod tests {
         let schedule = plan_schedule(&selection, SchedulingMode::Parallel);
         // 9 checks x 2 platforms = 18 cells, all per-platform.
         assert_eq!(schedule.cells.len(), 18);
-        assert!(
-            schedule
-                .cells
-                .iter()
-                .all(|cell| cell.cell.scope == ExecutionScope::PerPlatform)
-        );
-        assert!(schedule.cells.iter().all(|cell| cell.cell.platform.is_some()));
+        assert!(schedule
+            .cells
+            .iter()
+            .all(|cell| cell.cell.scope == ExecutionScope::PerPlatform));
+        assert!(schedule
+            .cells
+            .iter()
+            .all(|cell| cell.cell.platform.is_some()));
         let per_platform: Vec<_> = schedule
             .cells
             .iter()

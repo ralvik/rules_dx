@@ -58,10 +58,6 @@ javascript_test(
 real_source_target(
     name = "corpus_markdown",
     aspect_hints = ["//quality:corpus_vale_config"],
-    markdown_siblings = [
-        "//docs:generation/framework-adapters.md",
-        "//docs:product/support-matrix.md",
-    ],
     markdown_srcs = ["README.md"],
     tags = ["corpus"],
 )

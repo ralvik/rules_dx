@@ -1,15 +1,9 @@
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RunScope {
-    PullRequest {
-        pr: String,
-    },
+    PullRequest { pr: String },
     DefaultBranch,
-    Manual {
-        id: String,
-    },
-    Queue {
-        id: String,
-    },
+    Manual { id: String },
+    Queue { id: String },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

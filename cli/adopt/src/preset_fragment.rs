@@ -38,10 +38,7 @@ pub fn render_preset_fragment() -> String {
     lines.extend(UPSTREAM_FLAGS.iter().map(|s| (*s).to_owned()));
     lines.push("# Owned extra_presets group: coverage.".to_owned());
     lines.extend(COVERAGE_FLAGS.iter().map(|s| (*s).to_owned()));
-    lines.push(
-        "# Owned build profiles."
-            .to_owned(),
-    );
+    lines.push("# Owned build profiles.".to_owned());
     lines.extend(BUILD_PROFILES.iter().map(|s| (*s).to_owned()));
     lines.push(
         "# Owned Windows execution (runfiles tree; Windows is manifest-only by default)."
@@ -96,18 +93,11 @@ pub fn preset_paths(workspace: &Path) -> (std::path::PathBuf, std::path::PathBuf
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PresetError {
     #[error("root .bazelrc duplicates preset lines; reconcile (remove owned duplicates, keep project overrides explicit): {lines}")]
-    OwnedCollision {
-        lines: String,
-    },
+    OwnedCollision { lines: String },
     #[error("preset stale: {detail}")]
-    Stale {
-        detail: String,
-    },
+    Stale { detail: String },
     #[error("cannot write {path}: {detail}")]
-    Unwritable {
-        path: String,
-        detail: String,
-    },
+    Unwritable { path: String, detail: String },
 }
 
 fn unified_diff(checked_in: &str, regenerated: &str) -> String {

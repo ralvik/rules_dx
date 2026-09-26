@@ -42,10 +42,7 @@ pub fn render_fragment() -> String {
     lines.extend(UPSTREAM_FLAGS.iter().map(|flag| (*flag).to_owned()));
     lines.push("# Owned extra_presets group: coverage.".to_owned());
     lines.extend(COVERAGE_FLAGS.iter().map(|flag| (*flag).to_owned()));
-    lines.push(
-        "# Owned build profiles."
-            .to_owned(),
-    );
+    lines.push("# Owned build profiles.".to_owned());
     lines.extend(BUILD_PROFILES.iter().map(|flag| (*flag).to_owned()));
     lines.push(
         "# Owned Windows execution (runfiles tree; Windows is manifest-only by default)."
@@ -121,16 +118,9 @@ pub fn resolve_workspace() -> std::io::Result<PathBuf> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PresetError {
-    OwnedCollision {
-        lines: String,
-    },
-    Stale {
-        detail: String,
-    },
-    Unwritable {
-        path: String,
-        detail: String,
-    },
+    OwnedCollision { lines: String },
+    Stale { detail: String },
+    Unwritable { path: String, detail: String },
 }
 
 impl std::fmt::Display for PresetError {

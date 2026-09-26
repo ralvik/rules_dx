@@ -64,10 +64,7 @@ pub fn plan_caller(
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PinUpdate {
     NoChange,
-    ReviewedUpdate {
-        from: String,
-        to: String,
-    },
+    ReviewedUpdate { from: String, to: String },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]

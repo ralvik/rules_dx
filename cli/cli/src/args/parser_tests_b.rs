@@ -9,8 +9,8 @@ fn args(words: &[&str]) -> Vec<String> {
 #[test]
 fn command_option_ownership_rejects_every_unsupported_surface() {
     for command in [
-        "security", "license", "update", "bump", "migrate", "upgrade", "docs", "status",
-        "version", "owners", "deps", "hooks", "init", "new",
+        "security", "license", "update", "bump", "migrate", "upgrade", "docs", "status", "version",
+        "owners", "deps", "hooks", "init", "new",
     ] {
         let base = match command {
             "bump" => vec![command, "cargo:demo", "1.0.0"],

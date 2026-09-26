@@ -5,18 +5,15 @@
 # per-check execution or deploy plumbing.
 #
 # Contract: one check, Linux-once. `docs-check` runs `dx lint --check`
-# over the caller-selected docs scope; the lint
+# over the caller-selected docs scope (default `//...`, the entire repo)
+# plus `dx docs --check` site validation; the lint
 # pass is the repository-owned Markdown link/structure audit, so broken
-# relative targets fail before deploy. (`dx docs --check` was removed in
-# issue #31: it validated flag shape, not docs content. Issue #581 (live
-# successor to closed #421; formerly #421) tracks its
-# reintroduction with real extraction/validation.) `docs-publish` runs only when
-# `publish` is true: it uploads `docs_dir` as the Pages artifact and
-# deploys it to the `environment` Pages environment. `publish: false`
-# is pure check-only. The deployed content is the validated docs tree;
-# the rendered mdBook site arrives via issue #581 (live successor to closed
-# #421; formerly #421) without changing this
-# vehicle.
+# relative targets fail before deploy, and the site pass is renderer
+# evidence for the deployed bundle. `docs-publish` runs only when
+# `publish` is true: it builds the rendered site via `dx docs` and
+# deploys the Bazel-owned `bazel-bin/docs/site` bundle to the
+# `environment` Pages environment. `publish: false`
+# is pure check-only.
 #
 # Hygiene (issue #80, deduped under #915): the docs-check bootstrap is
 # an inline no-secrets `actions/checkout` (step 1) plus the pinned
@@ -40,17 +37,12 @@ on:
         required: true
         type: string
       docs_scope:
-        description: "dx scope covered by docs check and lint (e.g. //docs/...)."
+        description: "dx scope covered by docs check and lint (e.g. //...)."
         required: false
-        default: "//docs/..."
-        type: string
-      docs_dir:
-        description: "Repository-relative directory uploaded as the Pages artifact when publish is true."
-        required: false
-        default: "docs"
+        default: "//..."
         type: string
       publish:
-        description: "Deploy the validated docs tree to GitHub Pages. False is check-only."
+        description: "Build the rendered site and deploy it to GitHub Pages. False is check-only."
         required: false
         default: false
         type: boolean
@@ -103,6 +95,7 @@ jobs:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
         run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check ${{ inputs.docs_scope }} -- $BAZEL_CONFIG $BB_ARGS
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- docs --check
   docs-publish:
     name: docs-publish (GitHub Pages)
     needs: [docs-check]
@@ -119,34 +112,34 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Stage stopgap Pages entry point in a temp dir
-        # The artifact is the raw docs tree (Markdown, no index.html) until
-        # the #581 renderer lands. Without an entry point every deployment
-        # 404s (issue #30). Stage a copy plus the generated entry point
-        # under RUNNER_TEMP so the repo tree stays renderer-clean and the
-        # checkout is never left dirty; #581 replaces this with the
-        # rendered site.
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Verify rules_dx pin
         env:
-          DOCS_DIR: ${{ inputs.docs_dir }}
+          RULES_DX_PIN: ${{ inputs.rules_dx_version }}
+        run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
+      - name: Build rendered site
+        run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- docs
+      - name: Stage rendered site in a temp dir
+        # The artifact is the Bazel-owned rendered bundle
+        # (`bazel-bin/docs/site`), never committed sources. Stage a copy
+        # under RUNNER_TEMP so the repo tree stays renderer-clean and the
+        # checkout is never left dirty.
         run: |
           set -euo pipefail
           stage="$RUNNER_TEMP/pages"
           rm -rf "$stage"
-          cp -r "$DOCS_DIR" "$stage"
-          printf '%s\n' \
-            '<!doctype html>' \
-            '<html lang="en">' \
-            '<head><meta charset="utf-8"><title>rules_dx docs (preview)</title></head>' \
-            '<body>' \
-            '<h1>rules_dx docs</h1>' \
-            '<p>Rendered site pending <a href="https://github.com/ralvik/rules_dx/issues/581">issue #581</a>.' \
-            'Meanwhile the validated docs tree is browsable in the' \
-            '<a href="https://github.com/ralvik/rules_dx/tree/main/docs">repository</a>.</p>' \
-            '</body>' \
-            '</html>' \
-            > "$stage/index.html"
+          mkdir -p "$stage"
+          bin="$(bazel info $BAZEL_CONFIG $BB_ARGS bazel-bin)"
+          test -f "$bin/docs/site/demo_site_index.html"
+          test -f "$bin/docs/site/demo_site_searchindex.json"
+          cp "$bin/docs/site/demo_site_index.html" "$stage/index.html"
+          cp "$bin/docs/site/demo_site_searchindex.json" "$stage/searchindex.json"
           echo "PAGES_STAGE=$stage" >> "$GITHUB_ENV"
-      - name: Upload docs tree as Pages artifact
+      - name: Upload rendered site as Pages artifact
         uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: ${{ env.PAGES_STAGE }}

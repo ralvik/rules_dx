@@ -57,30 +57,18 @@ pub enum DiscoverError {
         "workspace_not_found: no MODULE.bazel in {searched_len} directorie(s); pass --workspace <path>",
         searched_len = searched.len()
     )]
-    NotFound {
-        searched: Vec<PathBuf>,
-    },
+    NotFound { searched: Vec<PathBuf> },
     #[error(
         "unsupported_workspace: {dir} has WORKSPACE without MODULE.bazel; migrate to Bzlmod",
         dir = dir.display()
     )]
-    UnsupportedLegacy {
-        dir: PathBuf,
-    },
+    UnsupportedLegacy { dir: PathBuf },
     #[error("workspace_not_found: --workspace {path} has no MODULE.bazel", path = path.display())]
-    InvalidOverride {
-        path: PathBuf,
-    },
+    InvalidOverride { path: PathBuf },
     #[error("workspace_unreadable: --workspace {path} MODULE.bazel is unreadable ({reason}); check the symlink target or permissions", path = path.display())]
-    UnreadableOverride {
-        path: PathBuf,
-        reason: String,
-    },
+    UnreadableOverride { path: PathBuf, reason: String },
     #[error("workspace_unreadable: {path}/MODULE.bazel is unreadable ({reason}); check the symlink target or permissions", path = path.display())]
-    UnreadableMarker {
-        path: PathBuf,
-        reason: String,
-    },
+    UnreadableMarker { path: PathBuf, reason: String },
 }
 
 fn has_module(fs: &dyn Fs, dir: &Path) -> bool {
@@ -228,24 +216,17 @@ pub enum LauncherError {
         "bazel_unavailable: {workspace} has no .bazelversion pin",
         workspace = workspace.display()
     )]
-    MissingPin {
-        workspace: PathBuf,
-    },
+    MissingPin { workspace: PathBuf },
     #[error(
         "bazel_unavailable: {workspace} has an empty .bazelversion pin",
         workspace = workspace.display()
     )]
-    EmptyPin {
-        workspace: PathBuf,
-    },
+    EmptyPin { workspace: PathBuf },
     #[error(
         "bazel_unavailable: cannot read {workspace}/.bazelversion: {reason}",
         workspace = workspace.display()
     )]
-    UnreadablePin {
-        workspace: PathBuf,
-        reason: String,
-    },
+    UnreadablePin { workspace: PathBuf, reason: String },
 }
 
 pub fn pinned_bazel_version(workspace: &Path, fs: &dyn Fs) -> Result<String, LauncherError> {
@@ -322,29 +303,17 @@ pub struct ProtectedFlag {
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ForwardError {
     #[error("conflicting_option: --{flag} conflicts with required workflow policy")]
-    ConflictingOption {
-        flag: String,
-    },
+    ConflictingOption { flag: String },
     #[error("invalid_usage: --{flag} is a startup option; use dx bazel")]
-    StartupOption {
-        flag: String,
-    },
+    StartupOption { flag: String },
     #[error("invalid_usage: --{flag} targets the test binary; use dx bazel")]
-    TestBinaryArgs {
-        flag: String,
-    },
+    TestBinaryArgs { flag: String },
     #[error("internal_error: required workflow option --{flag} is missing")]
-    InvalidRequiredOption {
-        flag: String,
-    },
+    InvalidRequiredOption { flag: String },
     #[error("internal_error: malformed required setting {option}; expected --name=value")]
-    InvalidSetting {
-        option: String,
-    },
+    InvalidSetting { option: String },
     #[error("internal_error: {command} does not support this plan")]
-    UnsupportedCommand {
-        command: String,
-    },
+    UnsupportedCommand { command: String },
 }
 
 fn flag_name(arg: &str) -> Option<String> {
@@ -397,9 +366,7 @@ pub fn check_protected(
         match (guard, name) {
             (Some(guard), _) => match &guard.required {
                 Some(required) if arg == required => kept.push(required.clone()),
-                _ if guard.allowed.iter().any(|allowed| allowed == arg) => {
-                    kept.push(arg.clone())
-                }
+                _ if guard.allowed.iter().any(|allowed| allowed == arg) => kept.push(arg.clone()),
                 Some(_) | None => {
                     return Err(ForwardError::ConflictingOption {
                         flag: guard.name.clone(),
