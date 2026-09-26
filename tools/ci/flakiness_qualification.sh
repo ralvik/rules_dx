@@ -10,17 +10,15 @@
 #   (retry-until-green stays rejected);
 # - timeouts tuned: raw per-cell test/coverage jobs are gone (each cell
 #   compiles once under dx); the surviving ci.yml jobs stay bounded
-#   (musl build/coverage plus dogfood-freshness 60, devcontainer 15,
-#   aggregate 5), no blanket 90-minute timeouts remain;
-#   long-timeouts-only stays rejected;
+#   (dogfood-freshness 60, devcontainer 15, aggregate 5), no blanket
+#   90-minute timeouts remain; long-timeouts-only stays rejected;
 # - reusable parity (issue #932): reusable-consumer.yml timeouts stay pinned
 #   (gate 5, Linux-once 30, per-platform 60, aggregate 10, no 90) with every
 #   job bounded; per-target `size` plus `timeout` on every sh_test keeps the
 #   global cap from masking slowness;
 # - sharding proof: the four-host fan-out rides the dogfood consumer
-#   matrix (seed plus arm64 plus macos arm64 plus windows) with the
-#   static-musl build plus coverage pair kept as its own ci.yml cells
-#   (macOS x86_64 removed per #976); no `strategy.matrix` in ci.yml;
+#   matrix (seed plus arm64 plus macos arm64 plus windows; macOS x86_64
+#   removed per #976); no `strategy.matrix` in ci.yml;
 #   Bazel intra-job test sharding follows ordinary semantics
 #   (docs/testing/starlark.md);
 # - docs in place: `docs/testing/github-ci.md` workflow hygiene plus
@@ -109,15 +107,11 @@ else
   bad "seed test/coverage lost their .bazelrc-owned tuning record (want the three test flags plus no raw seed test/coverage jobs, issue #619)"
 fi
 
-# Every surviving ci.yml job stays capped: the musl build/coverage pair
-# plus dogfood-freshness at 60, devcontainer at 15, no blanket 90
-# anywhere, and no raw per-host test/coverage jobs remain (macOS x86_64
-# removed per #976) (hermetic context search, issue #1006).
-if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  build-musl-x86_64:' -A 3 'timeout-minutes: 60' &&
-  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  build-musl-arm64:' -A 3 'timeout-minutes: 60' &&
-  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-musl-x86_64:' -A 3 'timeout-minutes: 60' &&
-  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  coverage-musl-arm64:' -A 3 'timeout-minutes: 60' &&
-  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  dogfood-freshness:' -A 3 'timeout-minutes: 60' &&
+# Every surviving ci.yml job stays capped: dogfood-freshness at 60,
+# devcontainer at 15, no blanket 90 anywhere, and no raw per-host
+# test/coverage jobs remain (macOS x86_64 removed per #976) (hermetic
+# context search, issue #1006).
+if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  dogfood-freshness:' -A 3 'timeout-minutes: 60' &&
   DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  devcontainer-check:' -A 3 'timeout-minutes: 15' &&
   ! grep -q -F -e 'test-macos-x86_64' "$ci" &&
   ! grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
@@ -129,8 +123,8 @@ else
 fi
 
 # Build timeouts: the raw seed/prove/per-host build jobs are gone (the
-# dogfood self-call plus the musl build cells own the build scope), the
-# aggregate stays at 5, and no blanket long timeout remains
+# dogfood self-call owns the build scope), the aggregate stays at 5, and
+# no blanket long timeout remains
 # (hermetic context search, issue #1006).
 if DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$ci" '^  ci:' -A 20 'timeout-minutes: 5' &&
   ! grep -E -q '^  (build|prove|build-arm64|build-macos-arm64|build-windows-x86_64):' "$ci" &&
@@ -141,21 +135,16 @@ else
 fi
 
 # Sharding proof: the four-host fan-out rides the dogfood consumer
-# matrix while the static-musl build plus coverage pair keeps its own
-# ci.yml cells; no raw per-host test/coverage job remains (macOS x86_64
-# removed per #976).
+# matrix; no raw per-host test/coverage job remains (macOS x86_64 removed
+# per #976).
 if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
   grep -q -F -e 'platform: ${{ fromJSON(' "$consumer" &&
-  grep -q -F -e 'build-musl-x86_64' "$ci" &&
-  grep -q -F -e 'build-musl-arm64' "$ci" &&
-  grep -q -F -e 'coverage-musl-x86_64' "$ci" &&
-  grep -q -F -e 'coverage-musl-arm64' "$ci" &&
   ! grep -q -F -e 'test-macos-x86_64 (bazel test' "$ci" &&
   ! grep -q -F -e 'coverage-macos-x86_64' "$ci" &&
   ! grep -E -q '^  (test|coverage|test-arm64|coverage-arm64|test-macos-arm64|coverage-macos-arm64|test-windows-x86_64|coverage-windows-x86_64):' "$ci"; then
   ok
 else
-  bad "ci.yml lost per-host test/coverage sharding (want the dogfood four-platform consumer matrix plus the musl pair; raw per-host jobs removed, x86_64 per #976, issues #415/#619)"
+  bad "ci.yml lost per-host test/coverage sharding (want the dogfood four-platform consumer matrix; raw per-host jobs removed, x86_64 per #976, issues #415/#619)"
 fi
 
 # No strategy.matrix in ci.yml: plain named jobs stay the sharding shape

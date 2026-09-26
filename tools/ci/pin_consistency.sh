@@ -273,13 +273,6 @@ if grep -q -F -e "rustfmt_version = \"$rustfmt_ver\"" "$module"; then
 else
   bad "MODULE.bazel drifts from modules/rust.bzl RUSTFMT_VERSION=$rustfmt_ver"
 fi
-for triple in x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
-  if grep -q -F -e "\"$triple\"" "$modules_rust" && grep -q -F -e "\"$triple\"" "$module"; then
-    ok
-  else
-    bad "musl triple $triple lost from modules/rust.bzl or MODULE.bazel rust.toolchain"
-  fi
-done
 scala_ver="$(mod_pin "$modules_jvm" SCALA_VERSION)"
 if grep -q -F -e "scala_config.settings(scala_version = \"$scala_ver\")" "$module"; then
   ok

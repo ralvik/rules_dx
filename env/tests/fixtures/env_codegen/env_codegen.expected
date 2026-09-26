@@ -60,7 +60,6 @@ unsupported_platform refusal on unqualified hosts; Windows keeps
 Developer Mode or grant SeBackupPrivilege capability with .exe plus
 .bat plus .cmd plus .com suffix mapping plus case-insensitive
 comparison plus shell bash and no junction or copy fallback;
-static native closure with dynamic musl explicitly out of scope;
 host-installed SDK fallback never approved on macOS with explicit
 EULA acceptance never automatic on Windows; per-cell coverage via
 tools/coverage/cells.txt with no cross-cell union plus

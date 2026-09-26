@@ -10,11 +10,10 @@
 # This harness machine-checks the landed contract on a clean tree: the
 # gate stays enforced, the renderer exists, the consumer coverage job
 # publishes one deduped marker-owned PR comment per cell with fork-safe
-# handling while this repo's musl cells render step-summary only through
-# the shared composite, no third-party coverage action is smuggled in,
-# docs select first-party, and the renderer proves the failure cases
-# (missing report, uncovered lines, partial verdict, rerun dedup) plus
-# the fork/publication semantics statically.
+# handling plus a step-summary copy, no third-party coverage action is
+# smuggled in, docs select first-party, and the renderer proves the
+# failure cases (missing report, uncovered lines, partial verdict, rerun
+# dedup) plus the fork/publication semantics statically.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_report_guards`,
 # following //tools/ci:coverage_spill.
@@ -29,12 +28,13 @@ dx_cd_workspace
 
 dx_test_init
 
-# Gate stays Bazel-owned: the coverage job enforces `dx coverage
+# Gate stays Bazel-owned: the consumer coverage job enforces `dx coverage
 # --min-coverage` (presentation never substitutes for the gate).
-if grep -q -F -e 'coverage --min-coverage' .github/workflows/ci.yml; then
+if grep -q -F -e 'extra=(--min-coverage "$DX_MIN_COVERAGE")' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'coverage "${extra[@]}" //' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "ci coverage job lost the dx coverage gate"
+  bad "consumer coverage job lost the dx coverage gate"
 fi
 
 # The seed-cell source the comment presents stays versioned.
@@ -78,17 +78,14 @@ else
 fi
 
 # First-party comment wired in the consumer coverage job: marker,
-# renderer output, gh publish. This repo's musl cells render through the
-# local composite step-summary only (the one PR comment comes from the
-# dogfood coverage job).
+# rendered summary, step-summary copy, gh publish.
 if grep -q -F -e 'dx-coverage-summary' .github/workflows/reusable-consumer.yml &&
   grep -q -F -e 'coverage_comment' .github/workflows/reusable-consumer.yml &&
   grep -q -F -e 'gh pr comment' .github/workflows/reusable-consumer.yml &&
-  grep -q -F -e 'uses: ./.github/actions/render-coverage-summary' .github/workflows/ci.yml &&
-  grep -q -F -e 'step-summary only' .github/workflows/ci.yml; then
+  grep -q -F -e 'GITHUB_STEP_SUMMARY' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "workflows lost the first-party coverage comment wiring (marker/renderer/gh in reusable-consumer plus composite step-summary-only cells in ci.yml)"
+  bad "workflows lost the first-party coverage comment wiring (marker/summary/gh in reusable-consumer)"
 fi
 
 # First-party comment wired for consumers: per-cell marker, gh publish.
@@ -144,28 +141,18 @@ else
   bad "first-party reporting lost its no-union record"
 fi
 
-# Per-cell visibility contract (issue #1062): every cell renders the same
-# rich shape (coverage_bin verdict plus Uncovered locations plus LCOV note)
-# through the same script; the seed plus arm64 plus macos plus windows
-# cells publish their marker-owned PR comment from the consumer coverage
-# job, while this repo's two musl cells stay step-summary only through the
-# portable composite, which gates its own LCOV via coverage_bin and
-# presents via coverage_comment.sh directly through bash (portable
-# despite the sh_binary Linux-only label). The six-cell registry keeps
-# every versioned inventory.
-if grep -q -F -e 'inventory' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'coverage_bin' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'coverage_comment.sh' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'step-summary only' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'inventory: tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'inventory: tools/coverage/musl-arm64-inventory.txt' .github/workflows/ci.yml &&
+# Per-cell visibility contract (issue #1062): every cell publishes its
+# marker-owned PR comment plus step-summary copy from the consumer
+# coverage job, and the versioned registry keeps one inventory per
+# qualified cell (seed plus arm64 plus macos plus windows).
+if grep -q -F -e 'tools/coverage/seed-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'tools/coverage/arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'tools/coverage/macos-arm64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'tools/coverage/windows-x86_64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'dx-coverage-summary: coverage' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "per-cell coverage reporting lost its visibility contract (same gate plus same script, consumer PR comments plus summary-only musl cells, issue #1062)"
+  bad "per-cell coverage reporting lost its visibility contract (per-cell inventory plus consumer PR comments, issue #1062)"
 fi
 
 # Renderer never turns a failing gate into success.

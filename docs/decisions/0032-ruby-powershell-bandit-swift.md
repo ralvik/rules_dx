@@ -72,7 +72,7 @@ observations, not executed qualification):
   `amazonlinux2`, `ubi9` (each plus `aarch64` variants), with explicit
   per-distribution toolchain registration and `CC=clang` plus host deps
   (ICU, Clang) on Linux. There is no Windows (x86_64/arm64) hermetic
-  route, no static-musl route, no cross-distro auto-selection, and the
+  route, no cross-distro auto-selection, and the
   default remains the host toolchain/Xcode. SwiftFormat v2.8.0 needs a
   host Swift toolchain, which stays forbidden. The spike finds no
   hermetic toolchain covering all
@@ -92,7 +92,7 @@ RSpec (Ruby) and Pester (PowerShell) are confirmed as the provisional
 test runners. Each must pass the same hermetic/Bzlmod/pinning bar:
 Bzlmod-published ruleset, `Gemfile.lock` / Gallery lock fail-closed with
 declared-usage checking and offline proof, lazy fetch with no consumer
-installer, and every required host including musl and MSVC-compatible
+installer, and every required host including MSVC-compatible
 Windows.
 
 Bandit exclusion is revoked. Bandit is selected as a Python source-audit
@@ -141,7 +141,7 @@ an evidence-backed exclusion.
 - Keep the ADR 0019 deferral/exclusions as re-affirmed by ADR 0030/0031:
   rejected; implement-now direction.
 - Admit Swift/SwiftFormat on the standalone toolchain: rejected; the
-  spike shows Windows plus musl plus cross-distro plus host-extract gaps
+  spike shows Windows plus cross-distro plus host-extract gaps
   against the all-required-hosts bar.
 - Leave Bandit excluded with Ruff S alone: rejected; Bandit fits the
   decided wheel-only route and complements Ruff S.

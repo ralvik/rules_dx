@@ -66,6 +66,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
+  # CI flag set (the workspace `.bazelrc` `ci` plus `ci-pr` configs) and
+  # the optional BuildBuddy key, passed inline on every Bazel and dx call.
+  # No key (fork pull request, or a caller that passes no secret): both
+  # stay empty, so no remote-cache flag is set at all and Bazel runs
+  # local-cache only. With a key, pull requests stay read-only via
+  # `ci-pr` and the header rides inline (never in a committed rc file).
+  BAZEL_CONFIG: ${{ secrets.BUILDBUDDY_API_KEY != '' && (github.event_name == 'pull_request' && '--config=ci --config=ci-pr' || '--config=ci') || '' }}
+  BB_ARGS: ${{ secrets.BUILDBUDDY_API_KEY != '' && '--remote_header=x-buildbuddy-api-key=' + secrets.BUILDBUDDY_API_KEY || '' }}
   # Single-sourced Bazelisk pin for the setup-bazel step in this
   # workflow (tracked against .devcontainer/Dockerfile.prebuilt by
   # //tools/ci:pin_consistency_test).
@@ -87,25 +95,6 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Configure BuildBuddy remote cache
-        shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
-            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
-            exit 0
-          fi
-          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
-          {
-            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
-            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
-            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-              echo 'common --noremote_upload_local_results'
-            fi
-          } > "${rc}"
-          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Plan single widen (dry-run, never batch)
         env:
           SELECTOR: ${{ inputs.selector }}
@@ -202,7 +191,7 @@ jobs:
             exit 0
           fi
           # Exactly one requirement per invocation, never batch.
-          bazel run --noshow_progress //cli/cli:dx -- bump "$SELECTOR" "$VERSION" --dry-run
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- bump "$SELECTOR" "$VERSION" --dry-run -- $BAZEL_CONFIG $BB_ARGS
       - name: Widen one requirement plus resolver-owned refresh
         if: inputs.selector != '' && inputs.version != ''
         env:
@@ -234,26 +223,26 @@ jobs:
               RESOLVED_VERSION="$SHA"
             fi
           fi
-          bazel run --noshow_progress //cli/cli:dx -- bump "$SELECTOR" "$RESOLVED_VERSION"
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- bump "$SELECTOR" "$RESOLVED_VERSION" -- $BAZEL_CONFIG $BB_ARGS
           set_name="${SELECTOR%%:*}"
           case "$set_name" in
-            cargo|npm|go|gomod|maven|nuget) bazel run --noshow_progress //cli/cli:dx -- update "$set_name" || exit 1 ;;
+            cargo|npm|go|gomod|maven|nuget) bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- update "$set_name" -- $BAZEL_CONFIG $BB_ARGS || exit 1 ;;
             *) echo "File-only set ($set_name): no resolver refresh; preset flag-diff review plus build below." ;;
           esac
       - name: Bump-PR verification (regen, flag-diff, build, test, coverage, dogfood)
         if: inputs.selector != '' && inputs.version != ''
         run: |
           set -euo pipefail
-          bazel run --noshow_progress //cli/cli:dx -- generate --check //...
-          bazel run --noshow_progress //tools/bazelrc:preset.update -- --verify-only
-          bazel build --noshow_progress //...
-          bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //...
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //...
-          bazel run --noshow_progress //cli/cli:dx -- lint --check //...
-          bazel run --noshow_progress //cli/cli:dx -- typecheck --check //...
-          bazel run --noshow_progress //cli/cli:dx -- format --check //...
-          bazel run --noshow_progress //cli/cli:dx -- audit security //...
-          bazel run --noshow_progress //cli/cli:dx -- audit license //...
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- generate --check //... -- $BAZEL_CONFIG $BB_ARGS
+          bazel run --noshow_progress $BAZEL_CONFIG $BB_ARGS //tools/bazelrc:preset.update -- --verify-only
+          bazel build --noshow_progress //... $BAZEL_CONFIG $BB_ARGS
+          bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //... $BAZEL_CONFIG $BB_ARGS
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... -- $BAZEL_CONFIG $BB_ARGS
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- lint --check //... -- $BAZEL_CONFIG $BB_ARGS
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- typecheck --check //... -- $BAZEL_CONFIG $BB_ARGS
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- format --check //... -- $BAZEL_CONFIG $BB_ARGS
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- audit security //... -- $BAZEL_CONFIG $BB_ARGS
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- audit license //... -- $BAZEL_CONFIG $BB_ARGS
       - name: Open one PR if green (fork-safe, no retry-until-green)
         if: inputs.selector != '' && inputs.version != ''
         env:

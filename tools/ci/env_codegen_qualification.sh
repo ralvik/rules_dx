@@ -403,19 +403,17 @@ if grep -q -F -e 'Developer Mode or grant SeBackupPrivilege' cli/env/src/lib.rs 
   grep -q -F -e '".exe"' cli/env/src/lib.rs &&
   grep -q -F -e 'to_lowercase' cli/env/src/lib.rs &&
   grep -q -F -e 'There is no launcher, junction, copy' "$managed" &&
-  grep -q -F -e 'shell: bash' .github/workflows/ci.yml; then
+  grep -q -F -e 'shell: bash' .github/workflows/reusable-consumer.yml; then
   ok
 else
   bad "Windows host lost its capability plus suffix plus casefold plus shell pins (issue #787)"
 fi
 
 # Per-host CI plus coverage cells with no union: the dogfood self-call runs
-# test plus build plus coverage on all four hosts, ci.yml keeps the musl
-# build plus per-cell coverage jobs, and no-union wording stays frozen.
+# test plus build plus coverage on all four hosts through the consumer
+# matrix, and no-union wording stays frozen.
 if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" .github/workflows/ci.yml &&
   grep -q -F -e 'min_coverage: "97"' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-musl-x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-musl-arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else

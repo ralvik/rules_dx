@@ -51,7 +51,7 @@ observations, not executed qualification):
   execution-platform lazy) is an unqualified download route, not a
   qualified hermetic story meeting the
   [required platforms](0014-tested-platform-release-stack.md#required-platforms)
-  including musl and MSVC-compatible Windows.
+  including MSVC-compatible Windows.
 
 ## Decision
 
@@ -76,7 +76,7 @@ deferral removes no baseline tool.
 - Future admission must qualify wrappers plus providers, Gazelle plus
   naming, env plans, hello builds, Gallery/PSResource lock fail-closed
   plus declared-usage checking with offline proof, quality adapters, and
-  every required platform including musl and MSVC-compatible Windows,
+  every required platform including MSVC-compatible Windows,
   before any promotion claim.
 
 ## Rejected Alternatives

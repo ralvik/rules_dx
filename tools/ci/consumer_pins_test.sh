@@ -71,8 +71,8 @@ fi
 # remote cache is wired through the BuildBuddy secret.
 if grep -q -F -e 'bazelisk-version: ${{ env.BAZELISK_VERSION }}' "$workflow" &&
   grep -q -F -e 'BAZELISK_VERSION: "' "$workflow" &&
-  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$workflow" &&
-  grep -q -F -e 'BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}' "$workflow"; then
+  grep -q -F -e 'BB_ARGS:' "$workflow" &&
+  grep -q -F -e 'secrets.BUILDBUDDY_API_KEY' "$workflow"; then
   ok
 else
   bad "reusable-consumer lost the BAZELISK_VERSION env pin or BuildBuddy remote-cache wiring"

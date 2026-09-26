@@ -75,15 +75,26 @@ build --tool_java_runtime_version=remotejdk_21
 # to `True`.
 build --@rules_rust//cargo/settings:use_default_shell_env=False
 
-# Optional BuildBuddy remote cache (local use): CI writes a per-job rc
-# file with the shared `common --remote_cache` plus API-key lines and
-# exports it through `BAZELRC`, because dx spawns Bazel with
-# `--nohome_rc` (so $HOME/.bazelrc never applies; see
-# docs/testing/workflow-notes.md). To opt in locally, copy those two
-# lines into your gitignored `user.bazelrc` with your own key (keep
-# `common --noremote_upload_local_results` for read-only use). The
-# workspace stays execution-local: no remote executor and no BES
-# backend are wired anywhere in the tree.
+# BuildBuddy shared remote cache plus the CI flag set. Every CI command
+# passes `--config=ci` (plus `--config=ci-pr` on pull requests) through
+# the `BAZEL_CONFIG` workflow env, and the API key rides inline on the
+# command line through `BB_ARGS` (`--remote_header=...`). A run with no
+# key (fork pull request, or a caller that passes no secret) leaves both
+# empty, so no remote-cache flag is set at all and Bazel stays
+# local-cache only. `ci-pr` keeps pull-request runs read-only: they never
+# upload local results (issue #1059). The workspace stays execution-local:
+# no remote executor and no BES backend are wired anywhere in the tree.
+# Opt in locally with `--config=ci` plus your own key in the gitignored
+# `user.bazelrc` (keep `--noremote_upload_local_results` for read-only
+# use); dx spawns Bazel with `--nohome_rc`, so only workspace-level rc
+# files channel flags (see docs/testing/workflow-notes.md).
+common:ci --remote_cache=grpcs://remote.buildbuddy.io
+common:ci --remote_cache_compression
+common:ci --remote_timeout=10m
+common:ci --announce_rc
+common:ci --build_metadata=ROLE=CI
+common:ci --build_metadata=DISABLE_COMMIT_STATUS_REPORTING=true
+common:ci-pr --noremote_upload_local_results
 
 # Carry over per-person local flags when present (never committed).
 # user.bazelrc is resolution-only: per-person registry/flag overrides.

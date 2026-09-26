@@ -40,7 +40,6 @@ evidence live in their owning issues and qualification fixtures, not here.
 - Swift: no hermetic toolchain over all required hosts.
 - macOS x86_64: Not planned, never planned for support (#976).
 - Windows arm64: out of v1 scope.
-- Dynamic musl explicitly out of scope; static musl profiles only.
 - Unqualified hosts: `dx` refuses cleanly with `unsupported_platform`
   before any Bazel work starts.
 

@@ -21,7 +21,6 @@ CI_NO_UPLOAD = "no upload-artifact, no RUNNER_TEMP stage; CI publishes nothing u
 CI_PERMISSIONS = "contents: read only, no id-token, persist-credentials false, publishes nothing"
 CI_SEED_REMOVED = "seed sbom job removed with the sbom job deletion, no regression"
 CI_ARM64_REMOVED = "arm64 sbom-arm64 job removed with the sbom job deletion, no regression"
-CI_MUSL_REMOVED = "musl sbom-musl jobs removed with the sbom job deletion, no regression"
 
 # Promotion-checklist cells for this host: platform plus consumer plus coverage plus release.
 CELL_PLATFORM = "Platform-qualified macOS arm64 native under issue #412"

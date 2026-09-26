@@ -15,8 +15,8 @@
 #   cannot grant it are unsupported with failure before mutation, never a
 #   fallback; junction/launcher/copy fallback evaluated and rejected
 #   (breaks atomic replacement and ownership validation);
-# - backend adoption: hermetic-llvm static-only musl plus Apple-SDK plus
-#   toolchains_msvc clang-cl/Microsoft-STL stay provisional with immutable
+# - backend adoption: hermetic-llvm Apple-SDK plus toolchains_msvc
+#   clang-cl/Microsoft-STL stay provisional with immutable
 #   lazy fetch; hosts are Platform-qualified with an explicit
 #   provisional qualifier, never a shared status; full adoption stays
 #   owned under issues #494-#505 with release evidence under #803-#807.
@@ -97,8 +97,7 @@ else
 fi
 
 # Pins record provisional backends with qualifier plus owned gaps and no Supported claim.
-if grep -q -F -e 'hermetic-llvm static-only musl provisional' "$pins" &&
-  grep -q -F -e 'hermetic-llvm Apple-SDK provisional' "$pins" &&
+if grep -q -F -e 'hermetic-llvm Apple-SDK provisional' "$pins" &&
   grep -q -F -e 'toolchains_msvc clang-cl/Microsoft-STL provisional' "$pins" &&
   grep -q -F -e 'provisional-backend exception' "$pins" &&
   grep -q -F -e 'no Supported claim' "$pins" &&

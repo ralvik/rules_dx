@@ -411,18 +411,6 @@ use_repo(uv, "pypi")
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2021",
-    # Static-musl Rust std for both Linux profiles. The
-    # hermetic-llvm static-only musl targets (native-toolchains.md) are
-    # the provisional C/C++ backend; Rust needs its own musl std here so
-    # static native closures resolve. Build scripts/proc macros keep
-    # execution-platform tools while apps link target musl libs per the
-    # build-script contract (docs/generation/rust.md#build-scripts):
-    # prebuilt glibc libraries never become musl-compatible by linker
-    # change alone. Dynamic musl stays explicitly out of scope.
-    extra_target_triples = [
-        "x86_64-unknown-linux-musl",
-        "aarch64-unknown-linux-musl",
-    ],
     # Couple rustfmt to the selected stable toolchain instead of
     # the rules_rust nightly default, so rustfmt follows toolchain updates
     # exactly like Clippy with no second nightly pin.

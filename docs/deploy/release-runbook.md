@@ -140,26 +140,25 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
 ## CI SBOM Upload
 
 CI runs no SBOM jobs: the former `sbom`, `sbom-arm64`,
-`sbom-musl-x86_64`, `sbom-musl-arm64`, `sbom-macos-arm64`, and
+`sbom-macos-arm64`, and
 `sbom-windows-x86_64` jobs in `.github/workflows/ci.yml` are deleted
-(issues #803 plus #804 plus #805 plus #807; CI upload removed under
+(issues #803 plus #805 plus #807; CI upload removed under
 issue #612), with no
 `RUNNER_TEMP` staging and no artifact upload in CI; CI publishes
 nothing. SBOM plus provenance build locally instead: `bazel build
 //deploy/release:sbom_demo` plus `bazel test
 //deploy/release:dx_release_tools_test` produce SPDX-2.3 plus SLSA v1
 for each cell under `RUNNER_TEMP`, keeping the `sbom-provenance` names
-(`sbom-provenance-linux_arm64`, `sbom-provenance-linux_x86_64_musl`,
-`sbom-provenance-linux_arm64_musl`, `sbom-provenance-macos_arm64`,
+(`sbom-provenance-linux_arm64`,
+`sbom-provenance-macos_arm64`,
 `sbom-provenance-windows_x86_64`) for owner-gated manual upload.
-Per-host release evidence for Linux arm64 glibc (issue #803 closed), the
-two Linux static-musl profiles (issue #804 closed), macOS arm64 native
+Per-host release evidence for Linux arm64 glibc (issue #803 closed),
+macOS arm64 native
 (issue #805 closed), and Windows x86_64 MSVC-compatible (issue #807
 closed) stays recorded by the qualification harnesses; each cell keeps
-its runner (ubuntu-24.04-arm, ubuntu-latest plus ubuntu-24.04-arm,
+its runner (ubuntu-24.04-arm,
 macos-14, windows-latest) with the shared BuildBuddy remote cache only
-and no per-host cache scope. Musl keeps static native closure only with
-dynamic musl explicitly out of scope; macOS keeps the pinned acquired
+and no per-host cache scope. macOS keeps the pinned acquired
 SDK with the hermetic-llvm Apple-SDK backend provisional and no
 host-installed SDK fallback never approved; Windows keeps explicit EULA
 acceptance required never automatic and no installed Build Tools
@@ -171,8 +170,6 @@ CI never signs PR code. Pinned by `bazel run
 `tools/ci/tests/fixtures/sbom_upload/` plus `bazel run
 //tools/ci:release_arm64_qualification` with fixture evidence in
 `tools/ci/tests/fixtures/release_arm64/` plus `bazel run
-//tools/ci:release_musl_qualification` with fixture evidence in
-`tools/ci/tests/fixtures/release_musl/` plus `bazel run
 //tools/ci:release_macos_arm64_qualification` with fixture evidence in
 `tools/ci/tests/fixtures/release_macos_arm64/` plus `bazel run
 //tools/ci:release_windows_qualification` with fixture evidence in

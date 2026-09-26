@@ -29,8 +29,7 @@ plus //generation:codegen_shard_beta with
 
 Platform plus consumer plus release linkage (issue #787, beyond
 seed-host-delivered): platform hosts linux_x86_64 plus linux_arm64
-plus linux_x86_64_musl plus linux_arm64_musl plus macos_arm64 plus
-windows_x86_64 with symlink-only on every required
+plus macos_arm64 plus windows_x86_64 with symlink-only on every required
 host plus unsupported_platform refusal plus per-cell coverage with no
 cross-cell union; consumer via examples/adopt-rust plus
 examples/adopt-python plus examples/adopt-js-ts plus

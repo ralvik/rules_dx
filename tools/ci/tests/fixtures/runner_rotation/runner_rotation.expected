@@ -5,7 +5,7 @@ macos-13 retired December 2025, macos x86_64 Not planned per #976;
 ubuntu-latest plus windows-latest float and age out.
 Review is quarterly plus on retirement notice plus on hermetic-llvm
 release; sole maintainer owns every row until delegation.
-SDK plus floor scope is glibc 2.28 plus musl 1.2.6 plus MacOSX26.5 via
+SDK plus floor scope is glibc 2.28 plus MacOSX26.5 via
 hermetic-llvm v0.8.19 plus MSVC 14.50.35717 plus redist 14.50.35710 plus
 SDK package 10.0.26100.7705 (exact values owned by issues #410-#412 plus
 #414 plus #500, not pinned here); retirement handling updates ci.yml plus

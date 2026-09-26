@@ -154,7 +154,7 @@ status per #976, is defined in
 [ADR 0014](../decisions/0014-tested-platform-release-stack.md#required-platforms);
 this matrix adds no separate host list.
 
-Native-stack fixtures qualify both Linux glibc and static-musl profiles, mixed Rust/C/C++
+Native-stack fixtures qualify both Linux glibc profiles, mixed Rust/C/C++
 dependencies, and the [hermetic Windows baseline](../decisions/0014-tested-platform-release-stack.md#decision).
 Record compiler/SDK/STL/CRT acquisition identities. Run Windows fixtures without host-installed
 Build Tools or SDKs and prove their declared closure supplies all required native inputs. Missing or

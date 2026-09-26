@@ -133,10 +133,10 @@ OWNED_GAPS_NOTE = "platform plus consumer plus release evidence stays owned gap"
 NO_SUPPORTED_CLAIM = "no Supported claim"
 
 # Platform evidence per required host (issue #787, beyond seed-host-delivered).
-# Seed plus arm64 plus musl plus macos plus windows stay the qualified set
+# Seed plus arm64 plus macos plus windows stay the qualified set
 # (macOS x86_64 Not planned per #976 with no cell); every other host refuses
 # cleanly before Bazel work starts.
-PLATFORM_HOSTS = ("linux_x86_64", "linux_arm64", "linux_x86_64_musl", "linux_arm64_musl", "macos_arm64", "windows_x86_64")
+PLATFORM_HOSTS = ("linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64")
 PLATFORM_SYMLINK_ONLY = "symlink-only on every required host"
 PLATFORM_REFUSAL = "unsupported_platform"
 PLATFORM_WINDOWS_CAPABILITY = "Developer Mode or grant SeBackupPrivilege"
@@ -144,8 +144,6 @@ PLATFORM_WINDOWS_SUFFIXES = (".exe", ".bat", ".cmd", ".com")
 PLATFORM_WINDOWS_CASEFOLD = "case-insensitive comparison on Windows"
 PLATFORM_WINDOWS_SHELL = "shell: bash"
 PLATFORM_NO_FALLBACK = "no junction or copy fallback"
-PLATFORM_MUSL_STATIC = "static native closure"
-PLATFORM_MUSL_DYNAMIC_OUT = "dynamic musl explicitly out of scope"
 PLATFORM_MACOS_NO_FALLBACK = "host-installed SDK fallback never approved"
 PLATFORM_WINDOWS_EULA = "explicit EULA acceptance never automatic"
 PLATFORM_COVERAGE_CELLS = "tools/coverage/cells.txt"

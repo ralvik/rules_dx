@@ -3,14 +3,12 @@
 #
 # Every required configuration/platform cell gates its own combined LCOV
 # report: no cross-platform union, no averaged percentages, no rounding
-# up. The seed host plus Linux arm64 native plus the two
-# Linux static-musl profiles plus macOS arm64 native
+# up. The seed host plus Linux arm64 native plus macOS arm64 native
 # plus Windows x86_64 MSVC-compatible native qualify;
 # this harness wires the seed cell end to end through the versioned
 # inventory at tools/coverage/seed-inventory.txt and the `coverage_bin`
 # gate CLI (the arm64 twin gates tools/coverage/arm64-inventory.txt in
-# the CI `coverage-arm64` job, the musl twins gate
-# tools/coverage/musl-*-inventory.txt in the CI `coverage-musl-*` jobs,
+# the CI `coverage-arm64` job,
 # the macOS arm64 twin gates tools/coverage/macos-arm64-inventory.txt
 # in the CI `coverage-macos-arm64` job on `macos-14`, and the Windows x86_64
 # twin gates tools/coverage/windows-x86_64-inventory.txt in the CI
@@ -76,7 +74,7 @@ else
 fi
 
 # The arm64 cell gates the same first-party scope: the same
-# real report passes the arm64 inventory, so all six versioned
+# real report passes the arm64 inventory, so all four versioned
 # inventories stay functionally in sync (the CI coverage-arm64 job gates
 # the arm64 runner's own report per-cell with no union).
 arm64_rc=0
@@ -88,31 +86,8 @@ else
   bad "arm64 cell gate did not pass: rc=$arm64_rc out=$arm64_out"
 fi
 
-# The static-musl cells gate the same first-party scope:
-# the same real report passes both musl inventories, so all six
-# versioned inventories stay functionally in sync (the CI
-# coverage-musl-x86_64 plus coverage-musl-arm64 jobs gate their own
-# runners' reports per-cell with no union; dynamic musl stays out of
-# scope and has no inventory).
-musl_x86_rc=0
-musl_x86_out="$("$check_bin" --report bazel-out/_coverage/_coverage_report.dat \
-  --inventory tools/coverage/musl-x86_64-inventory.txt --sources "$scratch/sources.txt" --root . 2>&1)" || musl_x86_rc=$?
-if [[ "$musl_x86_rc" == "0" ]] && echo "$musl_x86_out" | grep -q 'coverage gate: PASS'; then
-  ok
-else
-  bad "musl x86_64 cell gate did not pass: rc=$musl_x86_rc out=$musl_x86_out"
-fi
-musl_arm64_rc=0
-musl_arm64_out="$("$check_bin" --report bazel-out/_coverage/_coverage_report.dat \
-  --inventory tools/coverage/musl-arm64-inventory.txt --sources "$scratch/sources.txt" --root . 2>&1)" || musl_arm64_rc=$?
-if [[ "$musl_arm64_rc" == "0" ]] && echo "$musl_arm64_out" | grep -q 'coverage gate: PASS'; then
-  ok
-else
-  bad "musl arm64 cell gate did not pass: rc=$musl_arm64_rc out=$musl_arm64_out"
-fi
-
 # The macOS arm64 cell gates the same first-party scope:
-# the same real report passes the macos-arm64 inventory, so all six
+# the same real report passes the macos-arm64 inventory, so all four
 # versioned inventories stay functionally in sync (the CI
 # coverage-macos-arm64 job gates its own macos-14 runner report per-cell
 # with no union; host-installed SDK fallback is never approved).
@@ -126,7 +101,7 @@ else
 fi
 
 # The Windows x86_64 cell gates the same first-party scope:
-# the same real report passes the windows-x86_64 inventory, so all six
+# the same real report passes the windows-x86_64 inventory, so all four
 # versioned inventories stay functionally in sync (the CI
 # coverage-windows-x86_64 job gates its own windows-latest runner report
 # per-cell with no union; toolchains_msvc backend stays provisional with
@@ -253,10 +228,10 @@ else
 fi
 
 # The //... rate flag stays present in CI as the user-facing threshold; the exact gate decides.
-if grep -q -F -e 'coverage --min-coverage' .github/workflows/ci.yml; then
+if grep -q -F -e 'coverage --min-coverage' .github/workflows/bump.yml; then
   ok
 else
-  bad "ci.yml lost the dx coverage --min-coverage rate gate"
+  bad "bump.yml lost the dx coverage --min-coverage rate gate"
 fi
 
 dx_test_summary "coverage cell harness"

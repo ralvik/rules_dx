@@ -5,10 +5,10 @@
 # evidence and owned gaps, without claiming Supported or full-tree green
 # here:
 # - delivered: battery commands pinned in `.github/workflows/ci.yml`
-#   (dogfood four-platform consumer self-call plus the static-musl
-#   build/coverage cells plus prove plus dogfood-freshness plus
-#   devcontainer-check plus aggregate; raw per-host build/test/coverage
-#   jobs are gone, each cell compiles once under dx) plus the docs gate
+#   (dogfood four-platform consumer self-call plus prove plus
+#   dogfood-freshness plus devcontainer-check plus aggregate; raw
+#   per-host build/test/coverage jobs are gone, each cell compiles once
+#   under dx) plus the docs gate
 #   (reusable-docs check-only contract over `//docs/...`, called by the
 #   pinned docs caller, not by ci.yml);
 # - wiring: BUILD target, dogfood-freshness step, Battery accepted record
@@ -37,6 +37,7 @@ ci=".github/workflows/ci.yml"
 build="tools/ci/BUILD.bazel"
 reusable=".github/workflows/reusable-docs.yml"
 consumer=".github/workflows/reusable-consumer.yml"
+bump=".github/workflows/bump.yml"
 docs_caller="examples/docs-ci/caller.yml"
 bazelrc=".bazelrc"
 
@@ -70,12 +71,14 @@ else
   bad "dogfood_freshness.sh lost the closeout_battery_qualification step"
 fi
 
-# Build battery: full build plus the adopt-rust dx_dev smoke.
-if grep -q -F -e 'bazel build --noshow_progress //...' "$ci" &&
+# Build battery: full build in the bump-PR verification plus the
+# adopt-rust dx_dev smoke in ci.yml (the seed full build plus the musl
+# build cells left ci.yml with the deleted static-musl jobs, issue #411).
+if grep -q -F -e 'bazel build --noshow_progress //...' "$bump" &&
   grep -q -F -e 'bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev' "$ci"; then
   ok
 else
-  bad "build battery lost (want bazel build //... plus dx_dev smoke in ci.yml)"
+  bad "build battery lost (want bazel build //... in bump.yml plus dx_dev smoke in ci.yml)"
 fi
 
 # Test battery: raw per-host `bazel test //...` jobs are deliberately gone
@@ -93,12 +96,14 @@ else
   bad "test battery lost (want the four-platform dogfood dx test self-call plus tuned direct bazel test in ci.yml)"
 fi
 
-# Coverage battery: seed gate plus report guards.
-if grep -q -F -e 'coverage --min-coverage 97 //...' "$ci" &&
+# Coverage battery: seed gate in the bump-PR verification plus report
+# guards in ci.yml (the musl coverage cells left ci.yml with the
+# deleted static-musl jobs, issue #411).
+if grep -q -F -e 'coverage --min-coverage 97 //...' "$bump" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_report_guards' "$ci"; then
   ok
 else
-  bad "coverage battery lost (want dx coverage gate plus report guards in ci.yml)"
+  bad "coverage battery lost (want dx coverage gate in bump.yml plus report guards in ci.yml)"
 fi
 
 # Prove battery: the twelve prove harnesses stay wired (prove.sh).
@@ -107,7 +112,6 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:target_tags' "$prove" &
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_cell' "$prove" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_spill' "$prove" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_qualification' "$prove" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:musl_qualification' "$prove" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:macos_qualification' "$prove" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_qualification' "$prove" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:ci_matrix_qualification' "$prove" &&
@@ -145,7 +149,6 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:supported_evidence_gate
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:hello_smoke_qualification' "$dogfood" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:parser_sample_qualification' "$dogfood" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:cli_contract_qualification' "$dogfood" &&
-  grep -q -F -e 'bazel run --noshow_progress //tools/ci:musl_qualification' "$dogfood" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:macos_qualification' "$dogfood" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:windows_qualification' "$dogfood" &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:ci_matrix_qualification' "$dogfood" &&
@@ -153,17 +156,13 @@ if grep -q -F -e 'bazel run --noshow_progress //tools/ci:supported_evidence_gate
   grep -q -F -e 'tools/ci:dogfood_freshness' "$ci"; then
   ok
 else
-  bad "dogfood qualification sweep lost (want supported plus adapters plus env/docs/consumer/file/helper/clap/hello/parser/cli plus musl/macos/windows/matrix plus closeout)"
+  bad "dogfood qualification sweep lost (want supported plus adapters plus env/docs/consumer/file/helper/clap/hello/parser/cli plus macos/windows/matrix plus closeout)"
 fi
 
 # Per-host jobs: the raw per-host triples are gone (each cell compiles
-# once under dx); ci.yml keeps the static-musl build plus coverage pair
-# while the macos arm64 plus windows hosts ride the consumer matrix in
+# once under dx); every host rides the consumer matrix in
 # reusable-consumer.yml (macOS x86_64 removed per #976).
-if grep -q -F -e 'build-musl-x86_64' "$ci" &&
-  grep -q -F -e 'build-musl-arm64' "$ci" &&
-  grep -q -F -e 'coverage-musl-x86_64' "$ci" &&
-  grep -q -F -e 'coverage-musl-arm64' "$ci" &&
+if grep -q -F -e "'ubuntu-24.04-arm'" "$consumer" &&
   grep -q -F -e "'macos-14'" "$consumer" &&
   grep -q -F -e "'windows-latest'" "$consumer" &&
   ! grep -q -F -e 'build-arm64' "$ci" &&
@@ -179,15 +178,15 @@ if grep -q -F -e 'build-musl-x86_64' "$ci" &&
   ! grep -q -F -e 'coverage-windows-x86_64' "$ci"; then
   ok
 else
-  bad "ci.yml lost a per-host job (want the musl build/coverage pair in ci.yml plus macos arm64 plus windows triples via reusable-consumer.yml; raw per-host jobs removed per #976)"
+  bad "reusable-consumer lost a per-host runner (want linux arm64 plus macos arm64 plus windows triples via reusable-consumer.yml; raw per-host jobs removed per #976)"
 fi
 
-# Host matrix stays pinned by ci_matrix_qualification: the Linux pair runs
-# in ci.yml, macOS arm64 plus Windows x86_64 run only through the consumer
-# matrix (freeness policy: no macos-latest, no macos-15-intel, no
-# self-hosted, no larger).
+# Host matrix stays pinned by ci_matrix_qualification: the seed Linux
+# x86_64 runner runs in ci.yml, Linux arm64 plus macOS arm64 plus
+# Windows x86_64 run only through the consumer matrix (freeness policy:
+# no macos-latest, no macos-15-intel, no self-hosted, no larger).
 if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
-  grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
+  grep -q -F -e "'ubuntu-24.04-arm'" "$consumer" &&
   grep -q -F -e "'macos-14'" "$consumer" &&
   grep -q -F -e "'windows-latest'" "$consumer" &&
   ! grep -q -F -e 'runs-on: macos-14' "$ci" &&

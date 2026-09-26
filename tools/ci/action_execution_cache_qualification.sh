@@ -11,9 +11,9 @@
 #   the `cli/bep` remote/downloader interface (`RemoteConfig` plus
 #   `LocalDownloader`) stays local-only;
 # - shared remote cache: every Bazel workflow configures BuildBuddy
-#   (`common --remote_cache` plus API key plus PR read-only uploads)
-#   through a per-job rc file exported via `BAZELRC`; the legacy
-#   actions/cache disk cache stays deleted (no restore-keys, no
+#   (`--config=ci` from `.bazelrc` plus the API-key header) by passing
+#   `$BAZEL_CONFIG $BB_ARGS` inline on every Bazel plus dx call; the
+#   legacy actions/cache disk cache stays deleted (no restore-keys, no
 #   hashFiles keys, no per-host prefixes);
 # - live proof: aquery ExecutionInfo shows the marker on synthetic plus
 #   real lint while lint vs format ActionKeys still differ (capability
@@ -153,28 +153,28 @@ else
 fi
 
 # Branch-scoped poison isolation is preserved on the shared remote cache
-# (issue #1059): PR runs never upload results, the setup-bazel download
-# cache saves only off pull requests, and the rc file is delivered
-# through GITHUB_ENV only when the BuildBuddy key exists.
-if grep -q -F -e 'common --noremote_upload_local_results' "$ci" &&
+# (issue #1059): the `ci-pr` config uploads nothing, the setup-bazel
+# download cache saves only off pull requests, and `BB_ARGS` stays empty
+# (no header sent) whenever the BuildBuddy key is missing.
+if grep -q -F -e 'common:ci-pr --noremote_upload_local_results' .bazelrc &&
   grep -q -F -e "cache-save: \${{ github.event_name != 'pull_request' }}" "$ci" &&
-  grep -q -F -e 'if [ -z "${BUILDBUDDY_API_KEY}" ]' "$ci" &&
-  grep -q -F -e 'echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"' "$ci"; then
+  grep -q -F -e "--config=ci --config=ci-pr" "$ci" &&
+  grep -q -F -e "secrets.BUILDBUDDY_API_KEY !=" "$ci"; then
   ok
 else
-  bad "ci.yml lost the remote-cache poison isolation (want PR read-only uploads plus cache-save off plus keyless skip plus BAZELRC delivery, issue #1059)"
+  bad "ci.yml lost the remote-cache poison isolation (want PR read-only ci-pr config plus cache-save off plus keyless BB_ARGS, issue #1059)"
 fi
 
-# Delivery plus rationale stay explicit: the per-job configure step owns
-# the rc content in every Bazel workflow and the policy note owns the
-# dx --nohome_rc rationale (single-source intent, issue #953).
-if grep -q -F -e 'Configure BuildBuddy remote cache' "$ci" &&
-  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$ci" &&
-  grep -q -F -e 'per-job rc file' "$workflows_readme" &&
+# Delivery plus rationale stay explicit: the workflow env owns the flag
+# pair in every Bazel workflow and the policy note owns the dx
+# --nohome_rc rationale (single-source intent, issue #953).
+if grep -q -F -e 'BAZEL_CONFIG:' "$ci" &&
+  grep -q -F -e 'BB_ARGS:' "$ci" &&
+  grep -q -F -e '$BAZEL_CONFIG $BB_ARGS' "$workflows_readme" &&
   grep -q -F -e 'nohome_rc' "$workflows_readme"; then
   ok
 else
-  bad "ci.yml or workflow notes lost the BuildBuddy rc-delivery record (want configure step plus policy note)"
+  bad "ci.yml or workflow notes lost the BuildBuddy inline-flag record (want BAZEL_CONFIG plus BB_ARGS env plus policy note)"
 fi
 
 # No cache-key hashFiles list survives: the disk cache is deleted, so
@@ -187,15 +187,16 @@ else
   bad "owned workflows regained a cache-key hashFiles list (want BuildBuddy owning invalidation, issue #1004)"
 fi
 
-# Every Bazel workflow carries the full BuildBuddy wiring (URL plus API
-# key plus BAZELRC delivery); the secretless dry run must stay local.
+# Every Bazel workflow carries the full BuildBuddy wiring (the flag
+# pair env plus at least one inline call site); the secretless dry run
+# must stay local.
 for wf in ci reusable-consumer reusable-docs bump; do
-  if grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' ".github/workflows/$wf.yml" &&
-    grep -q -F -e 'BUILDBUDDY_API_KEY' ".github/workflows/$wf.yml" &&
-    grep -q -F -e 'BAZELRC=' ".github/workflows/$wf.yml"; then
+  if grep -q -F -e 'BAZEL_CONFIG:' ".github/workflows/$wf.yml" &&
+    grep -q -F -e 'BB_ARGS:' ".github/workflows/$wf.yml" &&
+    grep -q -F -e '$BAZEL_CONFIG $BB_ARGS' ".github/workflows/$wf.yml"; then
     ok
   else
-    bad ".github/workflows/$wf.yml lost the BuildBuddy remote-cache wiring (want URL plus key plus BAZELRC)"
+    bad ".github/workflows/$wf.yml lost the BuildBuddy remote-cache wiring (want BAZEL_CONFIG plus BB_ARGS plus an inline call site)"
   fi
 done
 if ! grep -q -F -e 'BUILDBUDDY_API_KEY' "$dry_run"; then
@@ -227,7 +228,7 @@ fi
 # Remote cache is wired; remote execution plus BES stay absent
 # (local-only execution; hermetic tree search: BSD grep lacks
 # --exclude-dir, issue #1006).
-if grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$ci" &&
+if grep -q -F -e 'common:ci --remote_cache=grpcs://remote.buildbuddy.io' .bazelrc &&
   dx_tree_absent '--remote_executor' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
   dx_tree_absent '--bes_backend' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/; then
   ok
@@ -252,8 +253,8 @@ fi
 if grep -q -F -e 'locally sandbox-tested but remote behavior remains unverified' "$testing_readme" &&
   grep -q -F -e 'local' "$testing_readme" &&
   grep -q -F -e 'per-cell determinism' "$testing_readme" &&
-  grep -q -F -e 'common --remote_cache' "$test_matrix" &&
-  grep -q -F -e 'BAZELRC' "$test_matrix"; then
+  grep -q -F -e '--config=ci' "$test_matrix" &&
+  grep -q -F -e '$BB_ARGS' "$test_matrix"; then
   ok
 else
   bad "strategy-details or github-ci lost the local-execution plus BuildBuddy remote-cache record"
@@ -265,8 +266,8 @@ if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]] &&
   grep -q -F -e 'no-remote-exec' "$pins" &&
   grep -q -F -e 'execution_requirements.bzl' "$pins" &&
   grep -q -F -e 'cli/bep/src/remote.rs' "$pins" &&
-  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$pins" &&
-  grep -q -F -e 'BAZELRC' "$pins" &&
+  grep -q -F -e 'common:ci --remote_cache=grpcs://remote.buildbuddy.io' "$pins" &&
+  grep -q -F -e 'BAZEL_CONFIG' "$pins" &&
   grep -q -F -e 'noremote_upload_local_results' "$pins" &&
   grep -q -F -e 'no actions/cache, no restore-keys, no hashFiles keys' "$pins" &&
   grep -q -F -e '--remote_executor' "$pins"; then

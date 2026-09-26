@@ -8,31 +8,17 @@ Fixture: `cc/tests/fixtures/cross_routes/` via
 """
 
 # First Linux cross-build cohort: execution platforms plus targets.
-# Linux x86_64 builds Linux x86_64 and arm64, each glibc and static
-# musl; Linux arm64 builds Linux arm64 and x86_64, each glibc and
-# static musl. This is the first Linux cross-build cohort, not an
-# all-cross mandate.
+# Linux x86_64 builds Linux x86_64 and arm64 glibc; Linux arm64 builds
+# Linux arm64 and x86_64 glibc. This is the first Linux cross-build
+# cohort, not an all-cross mandate.
 LINUX_X86_64_EXEC = "Linux x86_64"
 LINUX_ARM64_EXEC = "Linux arm64"
 FIRST_COHORT_TARGETS = [
     "Linux x86_64 glibc",
     "Linux arm64 glibc",
-    "Linux x86_64 static musl",
-    "Linux arm64 static musl",
 ]
 FIRST_COHORT_NOTE = "First Linux cross-build cohort"
 ALL_CROSS_NOTE = "not a mandate to build every target from every host"
-
-# Linux same-arch musl closures Rust musl
-# std via extra_target_triples with exec-platform tools for build
-# scripts and proc macros and target musl libs for apps; CI
-# cross-builds from Linux runners with the shared BuildBuddy remote
-# cache (per-host scopes deleted) plus per-cell coverage for both musl
-# cells with no union.
-MUSL_QUALIFIED_NOTE = "x86_64 static musl qualified under issue #411"
-MUSL_CI_RUNNER_X86_64 = "ubuntu-latest with shared BuildBuddy cache"
-MUSL_CI_RUNNER_ARM64 = "ubuntu-24.04-arm with shared BuildBuddy cache"
-MUSL_EXEC_SEPARATION = "exec-platform tools for build scripts and proc macros with target musl libs for apps"
 
 # Native rows qualified, each with its CI
 # runner on the pinned upstream toolchains (shared remote cache only).
@@ -50,8 +36,8 @@ NATIVE_BACKEND_NOTE = "pinned upstream toolchains with provisional backends"
 # Cross-building alone is insufficient.
 CROSS_ARCH_NOTE = "arm64-to-x86_64 cross stays in the first Linux cross-build cohort"
 CROSS_ARCH_TARGETS = [
-    "Linux x86_64-to-arm64 glibc plus static musl",
-    "Linux arm64-to-x86_64 glibc plus static musl",
+    "Linux x86_64-to-arm64 glibc",
+    "Linux arm64-to-x86_64 glibc",
 ]
 CROSS_ARCH_GATE = "matching native target execution with separate cache and remote evidence"
 
@@ -119,19 +105,15 @@ REJECTED_ALTERNATIVES = [
     "weakened native workflows for a larger table",
 ]
 
-# Native-only boundary: glibc plus static musl on Linux
-# x86_64 and arm64; dynamic musl explicitly out of scope with no
-# cell; no Windows or macOS cross-host claim here.
+# Native-only boundary: glibc on Linux x86_64 and arm64; no Windows or
+# macOS cross-host claim here.
 NATIVE_ONLY_NOTE = "Native only"
-NATIVE_ONLY_PROFILES = "glibc plus static musl on Linux x86_64 and arm64"
-DYNAMIC_MUSL_NOTE = "dynamic musl explicitly out of scope"
+NATIVE_ONLY_PROFILES = "glibc on Linux x86_64 and arm64"
 NO_CROSS_HOST_CLAIM = "no Windows or macOS cross-host claim"
 
-# Live proof labels: the seed hello plus the linux corpus corpus
-# prove the Linux profiles stay green; the musl toolchain query
-# proves Rust musl std still resolves; the fixture corpus target
-# proves this fixture is wired.
+# Live proof labels: the seed hello plus the linux corpus corpus prove
+# the Linux profiles stay green; the fixture corpus target proves this
+# fixture is wired.
 CROSS_ROUTES_FIXTURE_CORPUS = "//cc/tests/fixtures/cross_routes:corpus_starlark"
 CROSS_ROUTES_SEED_HELLO = "//cc/tests/fixtures/hello:hello"
 CROSS_ROUTES_LINUX_CORPUS = "//cc/tests/fixtures/linux_corpus:corpus"
-CROSS_ROUTES_MUSL_TOOLCHAINS = "@rust_toolchains//..."

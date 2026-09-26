@@ -6,20 +6,15 @@
 # qualified floors beyond, qualified coverage beyond issue
 # , or Supported:
 # - first cohort: Linux x86_64 plus Linux arm64 execution each building
-#   Linux x86_64 and arm64 glibc plus static musl; Linux cross is the
-#   first priority, not a mandate to build every target from every host.
+#   Linux x86_64 and arm64 glibc; Linux cross is the first priority, not
+#   a mandate to build every target from every host.
 # - native rows: four native workflows qualified under issues
-# #410/#411/#412/#414 with per-host runners plus the shared BuildBuddy
+# #410/#412/#414 with per-host runners plus the shared BuildBuddy
 #   remote cache (per-host scopes deleted) on
 #   the pinned upstream toolchains; backends stay provisional.
-# - musl closures: Linux same-arch static musl qualified under issue
-# with exec-platform tools for scripts and target musl libs for
-#   apps, cross-built from Linux runners with the shared BuildBuddy cache
-#   plus per-cell coverage with no union.
-# - cross-arch: x86_64-to-arm64 plus arm64-to-x86_64 glibc plus musl
-#   stay in the first cohort with matching native target execution plus
-#   separate cache and remote evidence; cross-building alone is
-#   insufficient.
+# - cross-arch: x86_64-to-arm64 plus arm64-to-x86_64 glibc stay in the
+#   first cohort with matching native target execution plus separate
+#   cache and remote evidence; cross-building alone is insufficient.
 # - optional expansion: macOS arm64 to Linux profiles
 #   only if bounded upstream configuration suffices (macOS x86_64 Not
 #   planned per #976); expand only after the initial cohort passes.
@@ -75,8 +70,8 @@ if grep -q -F -e 'LINUX_X86_64_EXEC = "Linux x86_64"' "$pins" &&
   grep -q -F -e 'LINUX_ARM64_EXEC = "Linux arm64"' "$pins" &&
   grep -q -F -e 'First Linux cross-build cohort' "$pins" &&
   grep -q -F -e 'not a mandate to build every target from every host' "$pins" &&
-  grep -q -F -e '"Linux x86_64 static musl"' "$pins" &&
-  grep -q -F -e '"Linux arm64 static musl"' "$pins"; then
+  grep -q -F -e '"Linux x86_64 glibc"' "$pins" &&
+  grep -q -F -e '"Linux arm64 glibc"' "$pins"; then
   ok
 else
   bad "pins.bzl lost its first Linux cross-build cohort plus not-every-target mandate under issue #504"
@@ -95,16 +90,14 @@ else
   bad "pins.bzl lost its four qualified native rows with runners under issue #504 plus #976"
 fi
 
-# Pins record the qualified Linux same-arch musl closures plus cross-arch cohort gates.
-if grep -q -F -e 'x86_64 static musl qualified under issue #411' "$pins" &&
-  grep -q -F -e 'ubuntu-latest with shared BuildBuddy cache' "$pins" &&
-  grep -q -F -e 'ubuntu-24.04-arm with shared BuildBuddy cache' "$pins" &&
-  grep -q -F -e 'exec-platform tools for build scripts and proc macros with target musl libs for apps' "$pins" &&
+# Pins record the cross-arch cohort gates plus per-host runners.
+if grep -q -F -e 'Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed' "$pins" &&
+  grep -q -F -e 'Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm' "$pins" &&
   grep -q -F -e 'arm64-to-x86_64 cross stays in the first Linux cross-build cohort' "$pins" &&
   grep -q -F -e 'matching native target execution with separate cache and remote evidence' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its qualified musl closures plus cross-arch cohort gates under issue #504"
+  bad "pins.bzl lost its cross-arch cohort gates plus per-host runners under issue #504"
 fi
 
 # Pins record the optional macOS expansion with its gate.
@@ -159,7 +152,7 @@ if grep -q -F -e '"cross-building alone as execution proof"' "$pins" &&
   grep -q -F -e '"compiler-target availability as route proof"' "$pins" &&
   grep -q -F -e '"cross-host Windows inference"' "$pins" &&
   grep -q -F -e 'Native only' "$pins" &&
-  grep -q -F -e 'dynamic musl explicitly out of scope' "$pins" &&
+  grep -q -F -e 'glibc on Linux x86_64 and arm64' "$pins" &&
   grep -q -F -e 'no Windows or macOS cross-host claim' "$pins"; then
   ok
 else
@@ -168,8 +161,8 @@ fi
 
 # Fixture cohort texts cover exec plus targets plus natives plus exclusions.
 if grep -q -F -e 'First Linux cross-build cohort' "$routes" &&
-  grep -q -F -e 'Linux x86_64-to-arm64 glibc plus static musl' "$routes" &&
-  grep -q -F -e 'Linux arm64-to-x86_64 glibc plus static musl' "$routes" &&
+  grep -q -F -e 'Linux x86_64-to-arm64 glibc' "$routes" &&
+  grep -q -F -e 'Linux arm64-to-x86_64 glibc' "$routes" &&
   grep -q -F -e 'Native Windows x86_64 qualified under issue #414 on windows-latest' "$routes" &&
   grep -q -F -e 'Optional first expansion if bounded upstream configuration suffices' "$routes" &&
   grep -q -F -e 'do not require Linux/macOS-to-Windows, Linux/Windows-to-macOS, Windows-to-Linux, or Windows arm64 to complete this cohort' "$routes" &&
@@ -220,14 +213,13 @@ else
   bad "seed hello plus cross routes fixture build failed (want green on the seed host, issue #504)"
 fi
 
-# Live proof: the Linux profiles stay green plus Rust musl std still
-# resolves, proving the first-cohort reference shapes without claiming
-# cross-arch execution from the seed host.
-if bazel query @rust_toolchains//... 2>/dev/null | grep -E -e 'musl' >/dev/null 2>&1 &&
-  bazel build //cc/tests/fixtures/linux_corpus:corpus //cc/tests/fixtures/hello:hello --noshow_progress >/dev/null 2>&1; then
+# Live proof: the Linux profiles stay green, proving the first-cohort
+# reference shapes without claiming cross-arch execution from the seed
+# host.
+if bazel build //cc/tests/fixtures/linux_corpus:corpus //cc/tests/fixtures/hello:hello --noshow_progress >/dev/null 2>&1; then
   ok
 else
-  bad "linux corpus plus musl toolchain proof failed (want musl std plus corpus green, issue #504)"
+  bad "linux corpus proof failed (want corpus green on the seed host, issue #504)"
 fi
 
 dx_test_summary "cross routes qualification harness"

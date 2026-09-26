@@ -8,8 +8,7 @@ SPDX plus in-toto plus SLSA. CI: ci.yml carries no sbom-windows-x86_64 job, no
 upload-artifact, no RUNNER_TEMP stage, no per-host cache scope; publishes
 nothing; contents: read only with persist-credentials false.
 Seed sbom job removed with the sbom job deletion.
-arm64 sbom-arm64 job removed with the sbom job deletion, plus musl sbom-musl
-jobs removed with the sbom job deletion, no regression.
+arm64 sbom-arm64 job removed with the sbom job deletion, no regression.
 Promotion cells: Platform-qualified Windows x86_64 MSVC-compatible native under issue #414 plus
 dogfood consumer self-call covers windows_x86_64 with full dx test plus dx coverage under issue #408
 plus windows x86_64 coverage cell with no union plus

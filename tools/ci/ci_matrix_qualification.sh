@@ -4,9 +4,8 @@
 # Machine-checks the as-built lean CI matrix delivered with the shared
 # BuildBuddy remote cache (issue #415 successors), with fixture evidence
 # and owned gaps:
-# - delivered: seed Linux x86_64 glibc plus Linux arm64 glibc plus the
-#   two Linux static-musl profiles stay raw bazel cells in ci.yml, while
-#   macOS arm64 plus Windows x86_64 MSVC-compatible native run inside
+# - delivered: seed Linux x86_64 glibc plus Linux arm64 glibc plus
+#   macOS arm64 plus Windows x86_64 MSVC-compatible native all run inside
 #   the consumer self-call (four platforms, full dx build plus dx test
 #   plus dx coverage, no disabled checks); docs in support-matrix plus
 #   ADR 0014 plus github-ci plus testing matrix; macOS x86_64 is Not
@@ -57,41 +56,38 @@ else
   bad "ci.yml header lost the issue #415 host-matrix plus closed-#298 plus Windows-qualified record"
 fi
 
-# Per-host runners: seed plus musl x86_64 on ubuntu-latest, arm64 pair on
-# ubuntu-24.04-arm in ci.yml, while macos-14 plus windows-latest run via
-# the consumer self-call ternary (macOS x86_64 Not planned per #976, no
-# macos-15-intel).
+# Per-host runners: ci.yml stays ubuntu-latest only, while ubuntu-24.04-arm
+# plus macos-14 plus windows-latest run via the consumer self-call ternary
+# (macOS x86_64 Not planned per #976, no macos-15-intel).
 if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
-  grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
+  grep -q -F -e 'ubuntu-24.04-arm' "$consumer" &&
   grep -q -F -e 'macos-14' "$consumer" &&
   grep -q -F -e 'windows-latest' "$consumer" &&
   ! grep -q -F -e 'macos-15-intel' "$ci" &&
   ! grep -q -F -e 'macos-15-intel' "$consumer"; then
   ok
 else
-  bad "ci.yml plus reusable-consumer lost a per-host runner (ubuntu-latest plus ubuntu-24.04-arm in ci.yml, macos-14 plus windows-latest in the self-call; macos-15-intel removed per #976)"
+  bad "ci.yml plus reusable-consumer lost a per-host runner (ubuntu-latest in ci.yml, ubuntu-24.04-arm plus macos-14 plus windows-latest in the self-call; macos-15-intel removed per #976)"
 fi
 
-# Per-job cache wiring: every direct-run Bazel job configures the shared
-# BuildBuddy remote cache (six configure steps in ci.yml) while the
-# deleted disk-cache action plus per-host prefixes stay gone.
-if [[ "$(grep -c -F -e 'name: Configure BuildBuddy remote cache' "$ci")" == "6" ]] &&
+# Per-job cache wiring: every direct-run Bazel job passes the shared
+# BuildBuddy flag pair through workflow env (no configure step; the
+# deleted disk-cache action plus per-host prefixes stay gone).
+if [[ "$(grep -c -F -e 'name: Configure BuildBuddy remote cache' "$ci")" == "0" ]] &&
+  grep -q -F -e 'BAZEL_CONFIG:' "$ci" &&
+  grep -q -F -e 'BB_ARGS:' "$ci" &&
   dx_tree_absent 'restore-bazel-cache' -- .github/workflows/ &&
   dx_tree_absent 'prefix: bazel-' -- .github/workflows/; then
   ok
 else
-  bad "ci.yml lost its BuildBuddy configure steps or a deleted disk-cache reference resurfaced (want six configure steps, no restore-bazel-cache, no per-host prefixes)"
+  bad "ci.yml regained a BuildBuddy configure step or lost the BAZEL_CONFIG/BB_ARGS env (want inline flags, no restore-bazel-cache, no per-host prefixes)"
 fi
 
-# Job inventory: dogfood self-call plus the musl build/coverage pairs
-# plus freshness plus devcontainer plus the aggregate gate (macOS plus
-# Windows run only inside the reusable consumer; per-host raw triples
-# left with the deleted jobs, x86_64 removed per #976).
+# Job inventory: dogfood self-call plus freshness plus devcontainer plus
+# the aggregate gate (every host runs only inside the reusable consumer;
+# per-host raw triples left with the deleted jobs, x86_64 removed per
+# #976).
 if grep -q -F -e 'dogfood:' "$ci" &&
-  grep -q -F -e 'build-musl-x86_64:' "$ci" &&
-  grep -q -F -e 'build-musl-arm64:' "$ci" &&
-  grep -q -F -e 'coverage-musl-x86_64:' "$ci" &&
-  grep -q -F -e 'coverage-musl-arm64:' "$ci" &&
   grep -q -F -e 'dogfood-freshness:' "$ci" &&
   grep -q -F -e 'devcontainer-check:' "$ci" &&
   grep -q -F -e 'if: ${{ always() }}' "$ci" &&
@@ -100,7 +96,7 @@ if grep -q -F -e 'dogfood:' "$ci" &&
   ! grep -q -F -e 'build-windows-x86_64:' "$ci"; then
   ok
 else
-  bad "ci.yml lost a lean-shape job (dogfood plus musl pairs plus freshness plus devcontainer plus aggregate; per-host triples removed per #415 successors)"
+  bad "ci.yml lost a lean-shape job (dogfood plus freshness plus devcontainer plus aggregate; per-host triples removed per #415 successors)"
 fi
 
 # Consumer self-call runs the full stack on the four host platforms:
@@ -127,14 +123,12 @@ if grep -q -F -e '("linux", "x86_64")' "$platform" &&
   grep -q -F -e 'windows_x86_64_host_is_qualified' "$platform" &&
   grep -q -F -e 'qualified seed-linux_x86_64' "$cells" &&
   grep -q -F -e 'qualified linux_arm64' "$cells" &&
-  grep -q -F -e 'qualified linux_x86_64_musl' "$cells" &&
-  grep -q -F -e 'qualified linux_arm64_musl' "$cells" &&
   grep -q -F -e 'qualified macos_arm64' "$cells" &&
   ! grep -q -F -e 'qualified macos_x86_64' "$cells" &&
   grep -q -F -e 'qualified windows_x86_64' "$cells"; then
   ok
 else
-  bad "qualified-host expectation lost (platform.rs four qualified, cells six qualified; x86_64 removed per #976)"
+  bad "qualified-host expectation lost (platform.rs four qualified, cells four qualified; x86_64 removed per #976)"
 fi
 
 # Windows qualification-assertion: support-matrix keeps Windows

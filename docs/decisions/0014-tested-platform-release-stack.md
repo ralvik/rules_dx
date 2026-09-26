@@ -29,7 +29,6 @@ nothing below pins a version.
 | --- | --- | --- |
 | Linux x86_64 glibc | Required, primary bootstrap | First host; release CI must cover it |
 | Linux arm64 glibc | Required | Native workflow, not cross-only; native glibc qualified under issue #410 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#412 plus #414, not pinned here) |
-| Linux x86_64/arm64 static musl | Required profiles | Dynamic musl is not an initial requirement; static musl qualified under issue #411 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#412 plus #414, not pinned here) |
 | macOS arm64 | Required | Pinned acquired SDK; SDK version is not the deployment floor; native macOS arm64 qualified under issue #412 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#412 plus #414, not pinned here) |
 | macOS x86_64 | Not planned | Never planned for support (issue #976); no CI, coverage, or artifact footprint; clean `unsupported_platform` refusal |
 | Windows x86_64 MSVC-compatible | Required | Hermetic acquisition + MSVC compatibility; native Windows x86_64 MSVC qualified under issue #414 (exact pins, hosts, floors, and SDK/CRT identities stay owned by issues #410-#412 plus #414, not pinned here) |
@@ -79,10 +78,9 @@ via repository-env for the toolchains_msvc prototype, qualified seed-only under 
 missing-ack fails before fetch with an actionable error, unrelated-workflows-green); this setup step
 does not relax hermetic acquisition, MSVC compatibility, or qualification requirements.
 
-Linux requires glibc and static-musl profiles on x86_64/arm64. Dynamic musl is not an initial
-requirement. Static-musl profiles are qualified under issue #411 on the
-current as-built stack (Rust musl std plus exec/target separation, per-cell
-coverage, CI cross-builds with per-profile cache scopes); exact pins,
+Linux x86_64 and arm64 glibc profiles are qualified on the current
+as-built stack (native runners through the pinned upstream toolchains,
+per-cell coverage with no union); exact pins,
 hosts, floors, and runtime-closure identities stay owned by issues #410-#412 plus #414, not
 pinned here. macOS arm64 is qualified under issue #412 on the current
 as-built stack (native macos-14 runners through the pinned upstream

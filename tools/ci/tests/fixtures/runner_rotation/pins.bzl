@@ -22,7 +22,6 @@ OWNER = "sole maintainer owns every row until delegation"
 
 # SDK plus floor review scope (exact values owned by issues #410-#412 plus #414 plus #500, not pinned here).
 SDK_GLIBC = "glibc 2.28 symbol floor"
-SDK_MUSL = "musl 1.2.6 static closure"
 SDK_APPLE = "MacOSX26.5 via hermetic-llvm v0.8.19 pinned extraction"
 SDK_WINDOWS = "MSVC 14.50.35717 plus redist 14.50.35710 plus SDK package 10.0.26100.7705"
 

@@ -8,13 +8,9 @@ Fixture: `cc/tests/fixtures/linux_corpus/` via
 """
 
 # Linux profiles proved complete by this corpus (native only).
-# Glibc plus static musl on Linux x86_64/arm64; dynamic musl explicitly
-# out of scope with no cell. Hosts stay owned.
+# Glibc on Linux x86_64/arm64; hosts stay owned.
 LINUX_GLIBC_PROFILE = "linux_x86_64/arm64 glibc"
-LINUX_MUSL_PROFILE = "linux_x86_64/arm64 static musl"
-LINUX_MUSL_VERSION = "1.2.6"
 LINUX_NATIVE_ONLY = "Native only"
-LINUX_DYNAMIC_MUSL = "dynamic musl explicitly out of scope"
 
 # Corpus members: pure-Rust plus cc-rs C plus SQLite plus OpenSSL with
 # declared tools plus ring-style C/assembly plus bindgen plus CXX plus
@@ -32,8 +28,7 @@ CORPUS_MEMBERS = [
 ]
 
 # SQLite shape: source-built C amalgamation through declared Bazel
-# native inputs, never a prebuilt glibc binary. Prebuilt glibc
-# libraries never become musl-compatible by linker change alone.
+# native inputs, never a prebuilt glibc binary.
 SQLITE_SHAPE = "source-built SQLite"
 SQLITE_NOTE = "SQLite source-built C amalgamation with declared Bazel native inputs"
 
@@ -46,7 +41,7 @@ OPENSSL_NOTE = "OpenSSL with explicitly declared build tools or Bazel library in
 
 # ring shape: C plus assembly with target-platform libraries.
 # Build scripts and proc macros keep execution-platform tools while
-# applications link target musl libraries.
+# applications link target libraries.
 RING_SHAPE = "ring-style C/assembly with target libs"
 RING_NOTE = "ring-style C plus assembly with target-platform libraries, exec-platform tools for scripts"
 
@@ -77,7 +72,6 @@ CXX_NOTE = "CXX single-graph execution with @crates//:cxxbridge-cmd"
 # plus availability/ancestry-style shortcuts carried from.
 REJECTED_ALTERNATIVES = [
     "single-crate proof",
-    "prebuilt glibc as musl-compatible",
     "ambient host-tool discovery",
 ]
 

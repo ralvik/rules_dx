@@ -21,16 +21,18 @@ REMOTE_INTERFACE = "cli/bep/src/remote.rs"
 REMOTE_CONFIG = "RemoteConfig"
 REMOTE_DOWNLOADER = "LocalDownloader"
 
-# Shared remote cache: BuildBuddy via `common --remote_cache` in every
-# Bazel workflow, delivered through a per-job rc file exported via
-# BAZELRC (dx spawns Bazel with --nohome_rc, so the home rc never
-# applies). PRs upload nothing (issue #1059) and the secretless dry run
-# stays local. The legacy actions/cache disk cache is deleted: no
-# restore-keys, no hashFiles keys, no per-host prefixes.
-CACHE_REMOTE_URL = "common --remote_cache=grpcs://remote.buildbuddy.io"
-CACHE_API_KEY = "common --remote_header=x-buildbuddy-api-key"
-CACHE_PR_READ_ONLY = "common --noremote_upload_local_results"
-CACHE_DELIVERY = "BAZELRC"
+# Shared remote cache: BuildBuddy through the workspace `.bazelrc`
+# `ci` config, passed inline on every Bazel plus dx call as
+# `$BAZEL_CONFIG $BB_ARGS` (dx spawns Bazel with --nohome_rc, so the
+# home rc never applies). PRs upload nothing via the `ci-pr` config
+# (issue #1059), an absent secret sets no remote-cache flag at all, and
+# the secretless dry run stays local. The legacy actions/cache disk
+# cache is deleted:
+# no restore-keys, no hashFiles keys, no per-host prefixes.
+CACHE_REMOTE_URL = "common:ci --remote_cache=grpcs://remote.buildbuddy.io"
+CACHE_API_KEY = "BB_ARGS=--remote_header=x-buildbuddy-api-key"
+CACHE_PR_READ_ONLY = "common:ci-pr --noremote_upload_local_results"
+CACHE_DELIVERY = "BAZEL_CONFIG"
 CACHE_SECRET = "BUILDBUDDY_API_KEY"
 CACHE_NO_DISK = "no actions/cache, no restore-keys, no hashFiles keys"
 

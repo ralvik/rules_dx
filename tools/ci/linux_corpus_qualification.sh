@@ -4,12 +4,10 @@
 # Defines plus proves the corpus slice of the Linux profiles with fixture
 # evidence, without claiming a qualified hermetic-llvm backend, qualified
 # floors, qualified cross routes, or Supported:
-# - profiles: Linux x86_64/arm64 glibc plus static musl, native only
-# (hosts stay owned; dynamic musl explicitly out
-#   of scope with no cell; no Windows/macOS cross-host claim).
+# - profiles: Linux x86_64/arm64 glibc, native only (hosts stay owned;
+#   no Windows/macOS cross-host claim).
 # - SQLite: source-built C amalgamation through declared Bazel native
-#   inputs, never a prebuilt glibc binary (prebuilt glibc never
-#   musl-compatible by linker change alone).
+#   inputs, never a prebuilt glibc binary.
 # - OpenSSL: explicitly declared build tools or Bazel library inputs
 #   (canonical perl plus declared tools); ambient host-tool discovery
 #   rejected.
@@ -66,20 +64,19 @@ else
   bad "linux corpus fixture missing (want $pins plus $pins_build plus sqlite/openssl/ring h/c plus corpus_test.cc)"
 fi
 
-# Pins record the Linux glibc plus static-musl profiles, native only.
+# Pins record the Linux glibc profile, native only.
 if grep -q -F -e 'LINUX_GLIBC_PROFILE = "linux_x86_64/arm64 glibc"' "$pins" &&
-  grep -q -F -e 'LINUX_MUSL_PROFILE = "linux_x86_64/arm64 static musl"' "$pins" &&
   grep -q -F -e 'LINUX_NATIVE_ONLY = "Native only"' "$pins" &&
-  grep -q -F -e 'dynamic musl explicitly out of scope' "$pins"; then
+  ! grep -q -F -e 'musl' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its Linux glibc plus static-musl profiles with native-only plus dynamic-out-of-scope under issue #499"
+  bad "pins.bzl lost its Linux glibc profile with native-only under issue #499"
 fi
 
-# Pins record source-built SQLite (prebuilt glibc never musl-compatible).
+# Pins record source-built SQLite (never a prebuilt glibc binary).
 if grep -q -F -e 'SQLITE_SHAPE = "source-built SQLite"' "$pins" &&
   grep -q -F -e 'SQLite source-built C amalgamation with declared Bazel native inputs' "$pins" &&
-  grep -q -F -e 'never become musl-compatible by linker change alone' "$pins"; then
+  grep -q -F -e 'never a prebuilt glibc binary' "$pins"; then
   ok
 else
   bad "pins.bzl lost its source-built SQLite shape plus prebuilt-glibc rejection under issue #499"
@@ -127,13 +124,12 @@ else
   bad "pins.bzl lost its CXX single-graph execution identity plus cxx.rs rejection under issue #499"
 fi
 
-# Pins record the rejected substitutes (single-crate plus prebuilt plus ambient).
+# Pins record the rejected substitutes (single-crate plus ambient).
 if grep -q -F -e '"single-crate proof"' "$pins" &&
-  grep -q -F -e '"prebuilt glibc as musl-compatible"' "$pins" &&
   grep -q -F -e '"ambient host-tool discovery"' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its single-crate plus prebuilt plus ambient rejection under issue #499"
+  bad "pins.bzl lost its single-crate plus ambient rejection under issue #499"
 fi
 
 # Fixture BUILD composes the corpus lib plus test through the wrapper contracts.

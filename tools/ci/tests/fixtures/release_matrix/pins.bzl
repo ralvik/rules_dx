@@ -14,16 +14,14 @@ MATRIX_UNQUALIFIED_EMPTY = "release_matrix_unqualified() empty via qualified- pr
 
 # Per-host platform evidence: Platform-qualified per the support matrix.
 CELL_PLATFORM_ARM64 = "Platform-qualified Linux arm64 native under issue #410"
-CELL_PLATFORM_MUSL = "Platform-qualified static musl profiles under issue #411"
 CELL_PLATFORM_MACOS_ARM64 = "Platform-qualified macOS arm64 native under issue #412"
 CELL_PLATFORM_WINDOWS = "Platform-qualified Windows x86_64 MSVC-compatible native under issue #414"
 
 # Per-host release evidence: sbom-provenance per host.
 CELL_RELEASE_ARM64 = "linux_arm64 sbom-provenance delivered under issue #803"
-CELL_RELEASE_MUSL = "linux_x86_64_musl plus linux_arm64_musl sbom-provenance delivered under issue #804"
 CELL_RELEASE_MACOS_ARM64 = "macos_arm64 sbom-provenance delivered under issue #805"
 CELL_RELEASE_WINDOWS = "windows_x86_64 sbom-provenance delivered under issue #807"
-CELL_RELEASE_ALL = "every required host landed under closed #803 plus #804 plus #805 plus #807, process #808"
+CELL_RELEASE_ALL = "every required host landed under closed #803 plus #805 plus #807, process #808"
 
 # Workflow parity: publish-dry-run carries the same qualified matrix, seed-only build.
 WORKFLOW_MATRIX = "publish-dry-run.yml release_matrix carries qualified-seed-built-here plus qualified-host-evidence"

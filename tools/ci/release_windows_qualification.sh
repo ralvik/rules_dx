@@ -27,7 +27,7 @@
 # owned gap under #805 plus process #808.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:release_windows_qualification`,
-# following //tools/ci:release_musl_qualification.
+# following //tools/ci:release_arm64_qualification.
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.

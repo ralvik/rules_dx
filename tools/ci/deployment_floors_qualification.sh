@@ -7,9 +7,6 @@
 # - Linux glibc: upstream glibc 2.28 symbol floor with libc++ plus
 #   ordinary dynamic glibc linkage; application implementations come from
 #   deployment systems, not the link stubs.
-# - Linux musl: upstream musl 1.2.6 static native closure, non-PIE first
-#   for Rust compatibility; dynamic/shared musl stays excluded with no
-#   cell and no coverage.
 # - macOS: pinned acquired Apple SDK MacOSX26.5 via hermetic-llvm v0.8.19
 #   plus upstream deployment default 14.0 as the starting point; SDK
 #   version is not deployment floor; oldest-OS execution plus framework
@@ -72,16 +69,6 @@ if grep -q -F -e 'GLIBC_FLOOR = "2.28"' "$pins" &&
   ok
 else
   bad "pins.bzl lost its glibc 2.28 symbol floor plus libc++ plus dynamic linkage under issue #500"
-fi
-
-# Pins record the Linux musl 1.2.6 static closure with non-PIE first plus dynamic exclusion.
-if grep -q -F -e 'MUSL_VERSION = "1.2.6"' "$pins" &&
-  grep -q -F -e 'static native closure' "$pins" &&
-  grep -q -F -e 'non-PIE first for Rust compatibility' "$pins" &&
-  grep -q -F -e 'Dynamic/shared musl stays excluded with no cell and no coverage' "$pins"; then
-  ok
-else
-  bad "pins.bzl lost its musl 1.2.6 static closure plus non-PIE plus dynamic exclusion under issue #500"
 fi
 
 # Pins record the macOS deployment 14.0 starting point with SDK != floor plus MacOSX26.5.
@@ -169,7 +156,6 @@ fi
 
 # Fixture floors.expected plus oldest/current separation covers every floor with split runs.
 if grep -q -F -e 'glibc 2.28 symbol floor' "$floors_expected" &&
-  grep -q -F -e 'musl 1.2.6' "$floors_expected" &&
   grep -q -F -e 'deployment default 14.0' "$floors_expected" &&
   grep -q -F -e 'MacOSX26.5' "$floors_expected" &&
   grep -q -F -e '/MD' "$floors_expected" &&
@@ -180,7 +166,7 @@ if grep -q -F -e 'glibc 2.28 symbol floor' "$floors_expected" &&
   grep -q -F -e 'cross-building alone is insufficient' "$current"; then
   ok
 else
-  bad "floors.expected plus oldest_target plus current_host lost floor coverage with split runs (want glibc/musl/macOS/SDK/CRT plus separation, issue #500)"
+  bad "floors.expected plus oldest_target plus current_host lost floor coverage with split runs (want glibc/macOS/SDK/CRT plus separation, issue #500)"
 fi
 
 # Fixture loader plus framework inspection covers compilers plus tools plus Apple subset.

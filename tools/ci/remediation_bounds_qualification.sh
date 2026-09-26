@@ -122,7 +122,7 @@ fi
 # Pins record the PIE plus ELF plus glibc-symbol bound via existing upstream constraints.
 if grep -q -F -e 'PIE plus ELF-dependency plus glibc-symbol uses existing upstream constraints' "$pins" &&
   grep -q -F -e 'PIE qualification uses existing upstream constraints' "$pins" &&
-  grep -q -F -e 'glibc 2.28 symbol floor plus musl 1.2.6 static closure plus deployment 14.0 qualified seed-only under issue #500' "$pins" &&
+  grep -q -F -e 'glibc 2.28 symbol floor plus deployment 14.0 qualified seed-only under issue #500' "$pins" &&
   grep -q -F -e 'Cross-product expansion only after the initial cohort passes with bounded upstream configuration' "$pins" &&
   grep -q -F -e 'cc/tests/fixtures/cross_routes/pins.bzl via cross_routes_qualification under issue #504' "$pins" &&
   grep -q -F -e 'the affected capability fails closed until a compliant remedy passes the required evidence' "$pins"; then

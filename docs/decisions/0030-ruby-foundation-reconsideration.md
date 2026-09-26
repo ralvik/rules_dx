@@ -32,7 +32,7 @@ observations, not executed qualification):
   [portable Ruby](https://github.com/bazel-contrib/portable-ruby) covers
   Linux/macOS x86_64/arm64 only; Windows falls back to RubyInstaller and
   `portable_ruby` has no effect there or on JRuby/TruffleRuby. No
-  static-musl or MSVC-compatible hermetic story meets the
+  MSVC-compatible hermetic story meets the
   [required platforms](0014-tested-platform-release-stack.md#required-platforms).
 - Bundler packaging still exceeds the bar:
   [`rb_bundle_fetch` fails on git gems](https://github.com/bazel-contrib/rules_ruby/issues/62)
@@ -69,7 +69,7 @@ deferral removes no baseline tool.
 - Future admission must qualify wrappers plus providers, Gazelle plus
   naming, env plans, hello builds, `Gemfile.lock` fail-closed plus
   declared-usage checking with offline proof, quality adapters, and every
-  required platform including musl and MSVC-compatible Windows, before any
+  required platform including MSVC-compatible Windows, before any
   promotion claim.
 
 ## Rejected Alternatives

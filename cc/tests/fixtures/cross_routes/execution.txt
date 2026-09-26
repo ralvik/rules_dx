@@ -18,4 +18,3 @@ remote execution as target execution rejected
 hermetic-llvm CI uses remote execution in Linux jobs and narrower macOS smoke and coverage tests
 rules_rs Windows-labelled lane builds remote GNULVM targets, not native MSVC tests or coverage
 compiler-target availability as route proof rejected
-exec-platform tools for build scripts and proc macros with target musl libs for apps

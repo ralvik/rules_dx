@@ -23,7 +23,7 @@
 #   tag cut).
 #
 # Versioned here, run by CI via `bazel run //tools/ci:macos_qualification`,
-# following //tools/ci:musl_qualification.
+# following //tools/ci:coverage_qualification.
 set -euo pipefail
 
 # Shared workspace + runfiles helpers.
@@ -97,7 +97,7 @@ else
 fi
 
 # Per-cell coverage registry: macos arm64 qualified with no union; macOS
-# x86_64 carries no cell (six qualified, zero unqualified).
+# x86_64 carries no cell (four qualified, zero unqualified).
 if [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
   [[ ! -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' tools/coverage/cells.txt &&

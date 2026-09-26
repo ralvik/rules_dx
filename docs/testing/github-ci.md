@@ -80,10 +80,12 @@ per workflow through `BAZELISK_VERSION` (canonical
 every third-party action reference is pinned to a commit SHA (tag in a trailing comment).
 Verify the `platforms-gate` job rejects missing, empty, or unsupported platform selections
 before any per-platform job queues a runner, and the aggregate still fails when the gate
-does. Verify every Bazel job configures the shared BuildBuddy remote cache
-(`common --remote_cache` plus API key written to an rc file exported through
-`BAZELRC`, dropped when the `BUILDBUDDY_API_KEY` secret is absent, pull
-requests upload nothing via `--noremote_upload_local_results`, issue #1059
+does. Verify every Bazel job passes the shared BuildBuddy remote cache
+config (`--config=ci` from the workspace `.bazelrc` plus the API-key
+header through `$BB_ARGS`, with both vars empty when the
+`BUILDBUDDY_API_KEY` secret is absent so no remote-cache flag is set at
+all, pull requests upload nothing via `--config=ci-pr` and
+`--noremote_upload_local_results`, issue #1059
 policy preserved under the reversal of closed #618) and pulls the
 Bazelisk download cache through `bazelisk-cache: true` with `cache-save`
 off for pull requests (free-tier eligible per the
@@ -107,7 +109,7 @@ plus `test --test_timeout=300` plus `test --local_test_jobs=4`) so every
 entrypoint inherits them, with per-invocation `--flaky_test_attempts=3` plus
 `--test_timeout=300` where a direct `bazel test` runs, for bounded
 transient-flake retries with a per-test 300s
-cap; GitHub `timeout-minutes` stay tuned (musl build/coverage 60, freshness
+cap; GitHub `timeout-minutes` stay tuned (build/coverage 60, freshness
 30, no blanket 90); reusable-consumer timeouts
 stay pinned (gate 5, Linux-once 30, per-platform 60, aggregate 10, no 90)
 with every `sh_test` carrying explicit per-target `size` plus `timeout`

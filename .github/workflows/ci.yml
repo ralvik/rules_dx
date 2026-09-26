@@ -8,6 +8,14 @@ on:
   pull_request:
 
 env:
+  # CI flag set (the workspace `.bazelrc` `ci` plus `ci-pr` configs) and
+  # the optional BuildBuddy key, passed inline on every Bazel and dx call.
+  # No key (fork pull request, or a caller that passes no secret): both
+  # stay empty, so no remote-cache flag is set at all and Bazel runs
+  # local-cache only. With a key, pull requests stay read-only via
+  # `ci-pr` and the header rides inline (never in a committed rc file).
+  BAZEL_CONFIG: ${{ secrets.BUILDBUDDY_API_KEY != '' && (github.event_name == 'pull_request' && '--config=ci --config=ci-pr' || '--config=ci') || '' }}
+  BB_ARGS: ${{ secrets.BUILDBUDDY_API_KEY != '' && '--remote_header=x-buildbuddy-api-key=' + secrets.BUILDBUDDY_API_KEY || '' }}
   # Preserve Bazel labels (`//...`) passed through Git Bash to native
   # Windows binaries, while still converting MSYS paths (`/c/...` to
   # `C:\...`) that tools like tsc.bat require. Excluding only the `//`
@@ -48,206 +56,6 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
-  build-musl-x86_64:
-    name: build-musl-x86_64 (static musl closure, linux x86_64)
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
-        with:
-          bazelisk-version: ${{ env.BAZELISK_VERSION }}
-          bazelisk-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Configure BuildBuddy remote cache
-        shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
-            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
-            exit 0
-          fi
-          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
-          {
-            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
-            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
-            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-              echo 'common --noremote_upload_local_results'
-            fi
-          } > "${rc}"
-          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
-      - name: Prove Rust static-musl std resolves
-        run: bazel query @rust_toolchains//... 2>/dev/null | grep -E -e 'musl' | LC_ALL=C sort -u
-      - name: Build workspace (exec-platform tools)
-        run: bazel build --noshow_progress //...
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### build-musl-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: bazel query musl toolchains plus bazel build //... (linux x86_64 static musl closure, local-only; exec-platform tools for build scripts/proc macros, target musl libs for apps; dynamic musl explicitly out of scope; issue #411)." >> "$GITHUB_STEP_SUMMARY"
-  build-musl-arm64:
-    name: build-musl-arm64 (static musl closure, linux arm64)
-    timeout-minutes: 60
-    runs-on: ubuntu-24.04-arm
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
-        with:
-          bazelisk-version: ${{ env.BAZELISK_VERSION }}
-          bazelisk-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Configure BuildBuddy remote cache
-        shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
-            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
-            exit 0
-          fi
-          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
-          {
-            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
-            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
-            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-              echo 'common --noremote_upload_local_results'
-            fi
-          } > "${rc}"
-          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
-      - name: Prove Rust static-musl std resolves
-        run: bazel query @rust_toolchains//... 2>/dev/null | grep -E -e 'musl' | LC_ALL=C sort -u
-      - name: Build workspace (exec-platform tools)
-        run: bazel build --noshow_progress //...
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### build-musl-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: bazel query musl toolchains plus bazel build //... (linux arm64 static musl closure, local-only; exec-platform tools for build scripts/proc macros, target musl libs for apps; dynamic musl explicitly out of scope; issue #411)." >> "$GITHUB_STEP_SUMMARY"
-  coverage-musl-x86_64:
-    name: coverage-musl-x86_64 (dx coverage gate, musl x86_64 cell)
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
-        with:
-          bazelisk-version: ${{ env.BAZELISK_VERSION }}
-          bazelisk-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Configure BuildBuddy remote cache
-        shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
-            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
-            exit 0
-          fi
-          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
-          {
-            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
-            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
-            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-              echo 'common --noremote_upload_local_results'
-            fi
-          } > "${rc}"
-          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
-      - name: Enforce musl x86_64 coverage cell
-        run: |
-          set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.log"
-          rc=${PIPESTATUS[0]}
-          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_x86.rc"
-          exit $rc
-      - name: Render musl x86_64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #411) plus the
-        # per-cell visibility contract (issue #1062): rendered via
-        # ./.github/actions/render-coverage-summary with cell musl-x86_64 linux_x86_64_musl
-        # plus its versioned inventory. Same coverage_bin gate plus same
-        # coverage_comment.sh shape as the seed cell; step-summary only by
-        # design (only the seed publishes the PR comment).
-        if: always()
-        uses: ./.github/actions/render-coverage-summary
-        with:
-          cell: musl-x86_64 linux_x86_64_musl
-          stem: dx_coverage_musl_x86
-          inventory: tools/coverage/musl-x86_64-inventory.txt
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### coverage-musl-x86_64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: dx coverage --min-coverage 97 //... (musl x86_64 cell only, per-cell no-union; static musl only, dynamic out of scope; issue #411)." >> "$GITHUB_STEP_SUMMARY"
-  coverage-musl-arm64:
-    name: coverage-musl-arm64 (dx coverage gate, musl arm64 cell)
-    timeout-minutes: 60
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
-        with:
-          bazelisk-version: ${{ env.BAZELISK_VERSION }}
-          bazelisk-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Configure BuildBuddy remote cache
-        shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
-            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
-            exit 0
-          fi
-          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
-          {
-            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
-            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
-            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-              echo 'common --noremote_upload_local_results'
-            fi
-          } > "${rc}"
-          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
-      - name: Enforce musl arm64 coverage cell
-        run: |
-          set +e
-          bazel run --noshow_progress //cli/cli:dx -- coverage --min-coverage 97 //... 2>&1 | tee "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.log"
-          rc=${PIPESTATUS[0]}
-          echo "$rc" > "${RUNNER_TEMP:-/tmp}/dx_coverage_musl_arm64.rc"
-          exit $rc
-      - name: Render musl arm64 per-cell summary (same scope, no union)
-        # Per-cell evidence with no cross-cell union (issue #411) plus the
-        # per-cell visibility contract (issue #1062): rendered via
-        # ./.github/actions/render-coverage-summary with cell musl-arm64 linux_arm64_musl
-        # plus its versioned inventory. Same coverage_bin gate plus same
-        # coverage_comment.sh shape as the seed cell; step-summary only by
-        # design (only the seed publishes the PR comment).
-        if: always()
-        uses: ./.github/actions/render-coverage-summary
-        with:
-          cell: musl-arm64 linux_arm64_musl
-          stem: dx_coverage_musl_arm64
-          inventory: tools/coverage/musl-arm64-inventory.txt
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### coverage-musl-arm64 — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Command: dx coverage --min-coverage 97 //... (musl arm64 cell only, per-cell no-union; static musl only, dynamic out of scope; issue #411)." >> "$GITHUB_STEP_SUMMARY"
   dogfood-freshness:
     name: dogfood-freshness (tools, generate --check, corpus audit)
     timeout-minutes: 60
@@ -261,36 +69,17 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Configure BuildBuddy remote cache
-        shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
-            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
-            exit 0
-          fi
-          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
-          {
-            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
-            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
-            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-              echo 'common --noremote_upload_local_results'
-            fi
-          } > "${rc}"
-          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Check preset freshness (issue #332)
         run: |
-          bazel run --noshow_progress //tools/bazelrc:preset_update -- --verify-only
-          bazel run --noshow_progress //cli/cli:dx -- update --check
+          bazel run --noshow_progress $BAZEL_CONFIG $BB_ARGS //tools/bazelrc:preset_update -- --verify-only
+          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- update --check -- $BAZEL_CONFIG $BB_ARGS
       - name: Adopt-rust dx_dev smoke (local_path_override + dx_dev wiring, issue #407)
-        run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev
+        run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev $BAZEL_CONFIG $BB_ARGS
       - name: Prove battery (target tags, coverage, platforms, release, shell)
         # Includes //tools/ci:shell_contract via tools/ci/prove.sh.
         run: tools/ci/prove.sh
       - name: Prove coverage report contract (gate-owned LCOV, first-party comment)
-        run: bazel run --noshow_progress //tools/ci:coverage_report_guards
+        run: bazel run --noshow_progress //tools/ci:coverage_report_guards $BAZEL_CONFIG $BB_ARGS
       - name: Report skip volume (Linux-only sh harness, issue #769)
         if: always()
         run: |
@@ -300,7 +89,7 @@ jobs:
           echo "Cell macos_arm64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
           echo "Cell windows x86_64 budgeted 58 sh_test skips honestly (181 sh_binary build skips, 240 Linux-only labels; budget pinned by bazel run //tools/ci:skip_budget_qualification, issue #769)." >> "$GITHUB_STEP_SUMMARY"
       - name: Run dogfood-freshness battery (tools, freshness, audits)
-        run: bazel run --noshow_progress //tools/ci:dogfood_freshness
+        run: bazel run --noshow_progress //tools/ci:dogfood_freshness $BAZEL_CONFIG $BB_ARGS
       - name: Write job summary
         if: always()
         run: |
@@ -319,27 +108,8 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Configure BuildBuddy remote cache
-        shell: bash
-        env:
-          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
-        run: |
-          set -euo pipefail
-          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
-            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
-            exit 0
-          fi
-          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
-          {
-            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
-            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
-            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
-              echo 'common --noremote_upload_local_results'
-            fi
-          } > "${rc}"
-          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Prove dx init scaffold matches checked-in definition
-        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //.devcontainer:devcontainer_parity_test
+        run: bazel test --noshow_progress --flaky_test_attempts=3 --test_timeout=300 //.devcontainer:devcontainer_parity_test $BAZEL_CONFIG $BB_ARGS
       - name: Validate devcontainer definition shape
         run: |
           python3 --version
@@ -368,10 +138,6 @@ jobs:
     needs:
       [
         dogfood,
-        build-musl-x86_64,
-        build-musl-arm64,
-        coverage-musl-x86_64,
-        coverage-musl-arm64,
         dogfood-freshness,
         devcontainer-check,
       ]
@@ -405,5 +171,5 @@ jobs:
           echo "Aggregate required check over every ci.yml job (branch-protection single gate; skipped needs are non-failing)." >> "$GITHUB_STEP_SUMMARY"
 # BEGIN qualification check strings — must be present for tools/ci/ci_matrix_qualification.sh
 # Host matrix (issue #415): Linux x86_64 glibc (ubuntu-latest with shell bash); Linux arm64 glibc (ubuntu-24.04-arm, issue #410); macOS arm64 (macos-latest with shell bash, issue #412); macOS x86_64 Not planned per #976 with no jobs; Windows x86_64 MSVC-compatible native (windows-latest with shell bash, Platform-qualified under issue #414; WSL/MSYS out of scope for bootstrap per issue #298 (closed; per-host successors own each host)).
-# This workflow keeps seed plus arm64 plus musl build/coverage cells; macOS plus Windows hosts run inside .github/workflows/reusable-consumer.yml (consumer self-call, full dx test plus dx coverage, no disabled checks).
+# This workflow keeps no per-cell raw build/coverage jobs; every host runs inside .github/workflows/reusable-consumer.yml (consumer self-call, full dx test plus dx coverage, no disabled checks).
 # END qualification check strings

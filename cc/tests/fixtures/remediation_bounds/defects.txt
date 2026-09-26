@@ -27,7 +27,7 @@ refresh.template.py Bazel plus preprocessors plus workspace writes plus continue
 exact-target discovery qualified seed-only under issue #475 plus C++ snapshot qualified seed-only under issue #754 via cpp_snapshot_qualification
 PIE plus ELF-dependency plus glibc-symbol uses existing upstream constraints
 PIE qualification uses existing upstream constraints
-glibc 2.28 symbol floor plus musl 1.2.6 static closure plus deployment 14.0 qualified seed-only under issue #500
+glibc 2.28 symbol floor plus deployment 14.0 qualified seed-only under issue #500
 Cross-product expansion only after the initial cohort passes with bounded upstream configuration
 cc/tests/fixtures/cross_routes/pins.bzl via cross_routes_qualification under issue #504
 the affected capability fails closed until a compliant remedy passes the required evidence

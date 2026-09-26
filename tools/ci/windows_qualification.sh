@@ -99,7 +99,7 @@ else
   bad "native-toolchains lost the Windows x86_64 closure plus provisional backend plus EULA/interop record (issue #414)"
 fi
 
-# Per-cell coverage registry: six qualified, zero unqualified, no union.
+# Per-cell coverage registry: four qualified, zero unqualified, no union.
 if [[ -f "tools/coverage/windows-x86_64-inventory.txt" ]] &&
   grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' tools/coverage/cells.txt &&
   grep -q -F -e 'explicit EULA' tools/coverage/windows-x86_64-inventory.txt; then

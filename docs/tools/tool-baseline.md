@@ -131,7 +131,7 @@ SwiftFormat has no proven compliant upstream integration route here, and the v2.
 SwiftFormat integration requires a host Swift toolchain; that route is forbidden. The
 spike finds no hermetic Swift toolchain covering all required hosts
 (rules_swift standalone covers macOS `.pkg` macOS-host-only plus Linux
-distros only; no Windows or musl route). This
+distros only; no Windows route). This
 exclusion is an evidence-backed v1 scope decision, not a pending feasibility assessment,
 and SwiftFormat is not a v1 release blocker. Reconsidering Swift after v1 requires
 a new scope decision.

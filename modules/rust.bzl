@@ -6,12 +6,6 @@ RULES_RUST_PROST_VERSION = "0.74.0"
 RUST_VERSION = "1.98.0"
 RUSTFMT_VERSION = "1.98.0"
 
-# Static-musl Rust std triples for both Linux profiles (see MODULE.bazel rust.toolchain).
-RUST_MUSL_TRIPLES = [
-    "x86_64-unknown-linux-musl",
-    "aarch64-unknown-linux-musl",
-]
-
 # Crate-manifest groups for the single `crates` hub (see MODULE.bazel crate.from_cargo).
 # The hub stays single while one Cargo workspace lock covers every manifest; the groups
 # own the inventory so a future multi-hub split moves whole groups, never single labels.

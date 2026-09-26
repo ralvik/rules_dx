@@ -10,10 +10,9 @@
 #   planned per #976 with no cell), no `unqualified-per-issue-311` remains;
 #   `release_matrix_unqualified()` returns empty via the `qualified-` prefix;
 # - per-host evidence: Platform-qualified per the support matrix
-#   (Linux arm64 #410, static-musl profiles #411, macOS arm64 #412,
-#   Windows x86_64 #414) plus per-host `sbom-provenance` release evidence
-#   (linux_arm64 #803, musl profiles #804, macos_arm64 #805,
-#   windows_x86_64 #807, process #808);
+#   (Linux arm64 #410, macOS arm64 #412, Windows x86_64 #414) plus
+#   per-host `sbom-provenance` release evidence (linux_arm64 #803,
+#   macos_arm64 #805, windows_x86_64 #807, process #808);
 # - workflow parity: `.github/workflows/publish-dry-run.yml` carries the
 #   same four-cell qualified matrix, stays seed-only build with non-seed
 #   cells human-run only, keeps `published: False` plus `submitted: False`;

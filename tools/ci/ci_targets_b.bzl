@@ -299,18 +299,6 @@ def add_b():
         target_compatible_with = ["@platforms//os:linux"],
     )
 
-    # Release-musl harness; see docs/deploy/release-runbook.md.
-    sh_binary(
-        name = "release_musl_qualification",
-        srcs = ["release_musl_qualification.sh"],
-        data = [
-            "//tools/sh:bootstrap",
-            "//tools/sh:lib",
-        ],
-        # Bash-only harness is Linux-only (shell contract).
-        target_compatible_with = ["@platforms//os:linux"],
-    )
-
     # Release-macos-arm64 harness; see docs/deploy/release-runbook.md.
     sh_binary(
         name = "release_macos_arm64_qualification",
@@ -377,18 +365,6 @@ def add_b():
     sh_binary(
         name = "coverage_qualification",
         srcs = ["coverage_qualification.sh"],
-        data = [
-            "//tools/sh:bootstrap",
-            "//tools/sh:lib",
-        ],
-        # Bash-only harness is Linux-only (shell contract).
-        target_compatible_with = ["@platforms//os:linux"],
-    )
-
-    # Musl harness; see tools/ci/musl_qualification.sh.
-    sh_binary(
-        name = "musl_qualification",
-        srcs = ["musl_qualification.sh"],
         data = [
             "//tools/sh:bootstrap",
             "//tools/sh:lib",

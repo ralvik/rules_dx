@@ -42,7 +42,6 @@ bazel run --noshow_progress //tools/ci:backlog_automation_guards
 bazel run --noshow_progress //tools/ci:supported_evidence_gate
 bazel run --noshow_progress //tools/ci:sbom_upload_qualification
 bazel run --noshow_progress //tools/ci:release_arm64_qualification
-bazel run --noshow_progress //tools/ci:release_musl_qualification
 bazel run --noshow_progress //tools/ci:release_macos_arm64_qualification
 bazel run --noshow_progress //tools/ci:release_windows_qualification
 bazel run --noshow_progress //tools/ci:release_packaging_qualification
@@ -61,7 +60,6 @@ bazel run --noshow_progress //tools/ci:parser_sample_qualification
 bazel run --noshow_progress //tools/ci:rustfmt_edition_qualification
 bazel run --noshow_progress //tools/ci:cc_optout_qualification
 bazel run --noshow_progress //tools/ci:cli_contract_qualification
-bazel run --noshow_progress //tools/ci:musl_qualification
 bazel run --noshow_progress //tools/ci:macos_qualification
 bazel run --noshow_progress //tools/ci:windows_qualification
 bazel run --noshow_progress //tools/ci:ci_matrix_qualification

@@ -8,8 +8,7 @@ SPDX plus in-toto plus SLSA. CI: ci.yml carries no sbom-macos-arm64 job, no
 upload-artifact, no RUNNER_TEMP stage, no per-host cache scope; publishes
 nothing; contents: read only with persist-credentials false.
 Seed sbom job removed with the sbom job deletion.
-arm64 sbom-arm64 job removed with the sbom job deletion, plus musl sbom-musl
-jobs removed with the sbom job deletion, no regression.
+arm64 sbom-arm64 job removed with the sbom job deletion, no regression.
 Promotion cells: Platform-qualified macOS arm64 native under issue #412 plus
 dogfood consumer self-call covers macos_arm64 with full dx test plus dx coverage under issue #408
 plus macos arm64 coverage cell with no union plus pinned acquired SDK with

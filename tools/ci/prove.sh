@@ -7,7 +7,6 @@ bazel run --noshow_progress //tools/ci:coverage_cell
 bazel run --noshow_progress //tools/ci:coverage_excludes_qualification
 bazel run --noshow_progress //tools/ci:coverage_spill
 bazel run --noshow_progress //tools/ci:coverage_qualification
-bazel run --noshow_progress //tools/ci:musl_qualification
 bazel run --noshow_progress //tools/ci:macos_qualification
 bazel run --noshow_progress //tools/ci:windows_qualification
 bazel run --noshow_progress //tools/ci:ci_matrix_qualification

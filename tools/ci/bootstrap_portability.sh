@@ -7,8 +7,8 @@
 #   `bazel-contrib/setup-bazel` action (commit SHA plus trailing tag
 #   comment) driven by the single-sourced `BAZELISK_VERSION` env with
 #   `bazelisk-cache` on, and no workflow embeds a Bazelisk download;
-#   job configuration stays runner-temp scoped (RUNNER_TEMP rc plus
-#   GITHUB_ENV export, never a system install); curl hardening extends
+#   job configuration stays workflow-env scoped (`BAZEL_CONFIG` plus
+#   `BB_ARGS`, never an rc file or system install); curl hardening extends
 #   to the Dockerfile plus ghcr cosign fetches with --retry everywhere
 #   (issue #932);
 # - pins: version plus linux-amd64 sha256 stay canonical in
@@ -89,16 +89,18 @@ else
   bad "a bare curl without --retry survives in Dockerfile.prebuilt or ghcr.yml (want --retry everywhere, issue #932)"
 fi
 
-# Job configuration stays runner-temp scoped: the BuildBuddy rc lands
-# under RUNNER_TEMP and joins the environment through GITHUB_ENV, so no
-# workflow mutates a system path or needs a privileged install.
-if grep -q -F -e 'rc="${RUNNER_TEMP}/buildbuddy.bazelrc"' .github/workflows/ci.yml &&
-  grep -q -F -e 'echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"' .github/workflows/ci.yml &&
-  grep -q -F -e 'rc="${RUNNER_TEMP}/buildbuddy.bazelrc"' .github/workflows/reusable-consumer.yml &&
-  grep -q -F -e 'echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"' .github/workflows/reusable-consumer.yml; then
+# Job configuration stays environment-scoped: the BuildBuddy flag pair
+# travels as workflow env (`BAZEL_CONFIG` plus `BB_ARGS`), so no
+# workflow writes a rc file, mutates a system path, or needs a
+# privileged install.
+if grep -q -F -e 'BAZEL_CONFIG:' .github/workflows/ci.yml &&
+  grep -q -F -e 'BB_ARGS:' .github/workflows/ci.yml &&
+  grep -q -F -e 'BAZEL_CONFIG:' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'BB_ARGS:' .github/workflows/reusable-consumer.yml &&
+  dx_tree_absent 'buildbuddy.bazelrc' -- .github/workflows/; then
   ok
 else
-  bad "workflows lost the runner-temp rc plus GITHUB_ENV export (want RUNNER_TEMP buildbuddy.bazelrc plus BAZELRC env, no system install, issue #617)"
+  bad "workflows lost the BAZEL_CONFIG/BB_ARGS env (want inline flags plus no rc file, no system install, issue #617)"
 fi
 
 # No per-OS copy-paste: workflows never embed a Bazelisk download URL

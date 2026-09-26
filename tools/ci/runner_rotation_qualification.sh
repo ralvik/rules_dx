@@ -11,7 +11,7 @@
 #   windows-latest float and age out);
 # - cadence: quarterly review plus on retirement notice plus on
 #   hermetic-llvm release, sole maintainer owns every row until delegation;
-# - SDK scope: glibc 2.28 plus musl 1.2.6 plus MacOSX26.5 via
+# - SDK scope: glibc 2.28 plus MacOSX26.5 via
 #   hermetic-llvm v0.8.19 plus MSVC/redist/SDK identities (exact values
 #   owned by issues #410-#414 plus #500, not pinned here); retirement
 #   handling updates ci.yml plus docs plus pins in one reviewed PR;
@@ -86,12 +86,12 @@ fi
 
 # Pins record the SDK plus floor review scope (exact values owned elsewhere).
 if grep -q -F -e 'glibc 2.28 symbol floor' "$pins" &&
-  grep -q -F -e 'musl 1.2.6 static closure' "$pins" &&
   grep -q -F -e 'MacOSX26.5 via hermetic-llvm v0.8.19' "$pins" &&
-  grep -q -F -e 'MSVC 14.50.35717' "$pins"; then
+  grep -q -F -e 'MSVC 14.50.35717' "$pins" &&
+  ! grep -q -F -e 'musl' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its SDK/floor review scope (glibc plus musl plus MacOSX26.5 plus MSVC, issue #642)"
+  bad "pins.bzl lost its SDK/floor review scope (glibc plus MacOSX26.5 plus MSVC, issue #642)"
 fi
 
 # Pins record customer-flows-only qualification (no new CI job).
@@ -127,7 +127,7 @@ if grep -q -F -e 'ubuntu-latest plus ubuntu-24.04-arm plus macos-14' "$expected"
   grep -q -F -e 'macos-13 retired December 2025' "$expected" &&
   grep -q -F -e 'macos x86_64 Not planned' "$expected" &&
   grep -q -F -e 'quarterly plus on retirement notice plus on hermetic-llvm' "$expected" &&
-  grep -q -F -e 'glibc 2.28 plus musl 1.2.6 plus MacOSX26.5' "$expected" &&
+  grep -q -F -e 'glibc 2.28 plus MacOSX26.5' "$expected" &&
   grep -q -F -e 'bazel build //...' "$expected" &&
   grep -q -F -e 'Permanent rotation job in CI rejected' "$expected" &&
   grep -q -F -e 'Qualified seed-only under issue #642' "$expected"; then
@@ -187,19 +187,21 @@ else
   bad "tools/ci/ci_targets_b.bzl or dogfood_freshness.sh lost the runner_rotation_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# As-built runners plus cache record: ci.yml keeps the Linux pair on the
-# shared BuildBuddy remote cache (per-host cache prefixes are gone), the
-# macOS plus Windows runners live only in the consumer matrix, no paid
-# runner exists, and floors keep their SDK identities.
+# As-built runners plus cache record: ci.yml keeps the seed Linux
+# x86_64 runner on the shared BuildBuddy remote cache (per-host cache
+# prefixes are gone), the Linux arm64, macOS plus Windows runners live
+# only in the consumer matrix, no paid runner exists, and floors keep
+# their SDK identities.
 if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
-  grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
+  grep -q -F -e "'ubuntu-24.04-arm'" "$consumer" &&
   grep -q -F -e "'macos-14'" "$consumer" &&
   grep -q -F -e "'windows-latest'" "$consumer" &&
   ! grep -q -F -e 'runs-on: macos-14' "$ci" &&
   ! grep -q -F -e 'runs-on: windows-latest' "$ci" &&
   ! grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
   ! grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
-  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$ci" &&
+  grep -q -F -e 'BAZEL_CONFIG:' "$ci" &&
+  grep -q -F -e 'BB_ARGS:' "$ci" &&
   ! grep -E -q 'runs-on:.*(self-hosted|larger|macos-latest)' "$ci" &&
   grep -q -F -e 'APPLE_SDK_IDENTITY = "MacOSX26.5"' "$floors" &&
   grep -q -F -e 'GLIBC_FLOOR = "2.28"' "$floors"; then

@@ -6,9 +6,8 @@
 # `tools/coverage/tests/fixtures/per_cell/pins.bzl` (plus
 # `per_cell.expected` plus `codecov_remote.expected`), without claiming
 # qualified floors, qualified accounting, or Supported:
-# - per-cell LCOV gating (seed plus arm64 plus two static-musl plus macos
-#   arm64 plus windows x86_64 qualified, all
-#   required qualified, never unioned),
+# - per-cell LCOV gating (seed plus arm64 plus macos arm64 plus
+#   windows x86_64 qualified, all required qualified, never unioned),
 # - Starlark instrumentation-vs-behavioral-matrix decision with evidence,
 # - Codecov opt-in-only qualification (no activation, no upload wiring),
 # - free-tier quota qualification for the services actually used,
@@ -22,7 +21,7 @@
 # not claimed: local aquery plus execution-log evidence proves cache
 # behavior locally, and docs state remote remains unverified. All required
 # cells are qualified per the platform policy (issues
-# /, arm64 qualified under, static musl under, macos arm64
+# /, arm64 qualified under, macos arm64
 # under, windows x86_64 under
 # with clean refusal for the remaining out-of-v1 hosts plus Not-planned macOS
 # x86_64, never silent
@@ -53,17 +52,14 @@ testing_readme="docs/testing/strategy-details.md"
 github_ci="docs/github-ci.md"
 build_coverage_doc="docs/cli/commands/build-test-coverage.md"
 
-# Per-cell registry exists with exactly six qualified rows (seed x86_64
-# plus arm64 native plus two static-musl profiles under
-# plus macos arm64 native
+# Per-cell registry exists with exactly four qualified rows (seed x86_64
+# plus arm64 native plus macos arm64 native
 # plus windows x86_64 MSVC-compatible
 # native).
 if [[ -f "$cells" ]] &&
-  [[ "$(grep -c -E -e '^qualified ' "$cells")" == "6" ]] &&
+  [[ "$(grep -c -E -e '^qualified ' "$cells")" == "4" ]] &&
   grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' "$cells" &&
-  grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' "$cells" &&
-  grep -q -F -e 'qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' "$cells" &&
   grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' "$cells"; then
   ok
@@ -89,28 +85,22 @@ else
 fi
 
 # Qualified inventories exist and stay Rust-only (no Starlark line data).
-# All six cells gate the same first-party scope; only the header prose differs.
+# All four cells gate the same first-party scope; only the header prose differs.
 if [[ -f "$seed_inventory" ]] &&
   [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
-  [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
-  [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/windows-x86_64-inventory.txt" ]] &&
   ! grep -E -e '\.bzl$' "$seed_inventory" | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/arm64-inventory.txt | grep -q . &&
-  ! grep -E -e '\.bzl$' tools/coverage/musl-x86_64-inventory.txt | grep -q . &&
-  ! grep -E -e '\.bzl$' tools/coverage/musl-arm64-inventory.txt | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/macos-arm64-inventory.txt | grep -q . &&
   ! grep -E -e '\.bzl$' tools/coverage/windows-x86_64-inventory.txt | grep -q . &&
   grep -q -F -e 'eligible cli/lcov/src/lib.rs' "$seed_inventory" &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/arm64-inventory.txt) &&
-  cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/musl-x86_64-inventory.txt) &&
-  cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/musl-arm64-inventory.txt) &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/macos-arm64-inventory.txt) &&
   cmp -s <(grep -E -e '^(eligible|support) ' "$seed_inventory") <(grep -E -e '^(eligible|support) ' tools/coverage/windows-x86_64-inventory.txt); then
   ok
 else
-  bad "seed/arm64/musl/macos/windows inventories missing, non-Rust scope, or out of sync"
+  bad "seed/arm64/macos/windows inventories missing, non-Rust scope, or out of sync"
 fi
 
 # No cross-cell union: renderer, workflows, and docs keep cells separate.
@@ -122,25 +112,18 @@ else
   bad "per-cell no-union record lost (renderer, consumer workflow, or testing README)"
 fi
 
-# Per-cell coverage gate scope as built: the two static-musl cells keep
-# their own ci.yml jobs (cell label plus `dx coverage --min-coverage 97`
-# plus its versioned inventory), while the seed plus arm64 plus macos
+# Per-cell coverage gate scope as built: the seed plus arm64 plus macos
 # arm64 plus windows x86_64 cells gate through the dogfood self-call's
-# per-platform coverage job with the same min_coverage (static musl only,
-# ; dynamic musl has no cell; macos arm64 native on macos-14,
-# ; windows x86_64 MSVC-compatible native on
-# windows-latest,).
-if grep -q -F -e 'coverage-musl-x86_64 (dx coverage gate, musl x86_64 cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-musl-arm64 (dx coverage gate, musl arm64 cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'musl-x86_64 linux_x86_64_musl' .github/workflows/ci.yml &&
-  grep -q -F -e 'musl-arm64 linux_arm64_musl' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage --min-coverage 97' .github/workflows/ci.yml &&
+# per-platform coverage job with the same min_coverage (macos arm64
+# native on macos-14; windows x86_64 MSVC-compatible native on
+# windows-latest).
+if grep -q -F -e 'coverage --min-coverage 97' .github/workflows/reusable-consumer.yml &&
   grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" .github/workflows/ci.yml &&
   grep -q -F -e 'min_coverage: "97"' .github/workflows/ci.yml &&
   grep -q -F -e 'Render first-party coverage summary (per-cell, no union)' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "workflows lost the seed/arm64/musl/macos/windows per-cell coverage gate scope"
+  bad "workflows lost the seed/arm64/macos/windows per-cell coverage gate scope"
 fi
 
 # Consumer coverage stays per-cell with no union and Codecov opt-in only.
@@ -151,21 +134,15 @@ else
   bad "reusable-consumer lost its per-cell no-union coverage shape"
 fi
 
-# Each non-seed cell gates its own LCOV: the two musl cells through the
-# portable composite (issue #1062: same coverage_bin gate plus same
-# coverage_comment.sh shape as the seed, with its versioned inventory
-# wired per job, step-summary only), and the arm64 plus macos arm64 plus
-# windows x86_64 cells through the consumer coverage job's per-platform
-# `dx coverage` gate with its own per-cell render.
-if grep -q -F -e 'inventory: tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'inventory: tools/coverage/musl-arm64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'uses: ./.github/actions/render-coverage-summary' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage_bin' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'coverage_comment.sh' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'extra=(--min-coverage "$DX_MIN_COVERAGE")' .github/workflows/reusable-consumer.yml; then
+# Each cell gates its own LCOV through the consumer coverage job's
+# per-platform `dx coverage` gate with its own per-cell render (one
+# marker-owned PR comment plus step summary per cell, never unioned).
+if grep -q -F -e 'extra=(--min-coverage "$DX_MIN_COVERAGE")' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'marker="dx-coverage-summary: coverage ${{ matrix.platform }}"' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'Render first-party coverage summary (per-cell, no union)' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "workflows lost the per-cell own-LCOV gate wiring (portable composite plus versioned inventories, issue #1062)"
+  bad "workflows lost the per-cell own-LCOV gate wiring (per-platform dx coverage plus per-cell render, issue #1062)"
 fi
 
 # Functional per-cell proof without a full rebuild: two synthetic cell
@@ -286,20 +263,20 @@ else
 fi
 
 # The shared BuildBuddy remote cache is wired in every job while
-# execution stays local: `--remote_cache=grpcs://remote.buildbuddy.io`
-# plus the PR no-upload flag are required in both workflows, and no
-# remote executor or BES backend flag appears in owned config or
-# workflows (hermetic tree search: BSD grep lacks --exclude-dir, issue
-# #1006).
-if grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' .github/workflows/ci.yml &&
-  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' .github/workflows/reusable-consumer.yml &&
-  grep -q -F -e 'common --noremote_upload_local_results' .github/workflows/ci.yml &&
-  grep -q -F -e 'common --noremote_upload_local_results' .github/workflows/reusable-consumer.yml &&
+# execution stays local: the workspace `.bazelrc` `ci` config plus the
+# `ci-pr` no-upload flag are required, both workflows pass the
+# BAZEL_CONFIG plus BB_ARGS pair, and no remote executor or BES backend
+# flag appears in owned config or workflows (hermetic tree search: BSD
+# grep lacks --exclude-dir, issue #1006).
+if grep -q -F -e 'common:ci --remote_cache=grpcs://remote.buildbuddy.io' .bazelrc &&
+  grep -q -F -e 'common:ci-pr --noremote_upload_local_results' .bazelrc &&
+  grep -q -F -e 'BAZEL_CONFIG:' .github/workflows/ci.yml &&
+  grep -q -F -e 'BAZEL_CONFIG:' .github/workflows/reusable-consumer.yml &&
   dx_tree_absent '--remote_executor' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
   dx_tree_absent '--bes_backend' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/; then
   ok
 else
-  bad "remote wiring lost (want BuildBuddy remote cache plus PR no-upload in workflows; no remote executor or BES backend)"
+  bad "remote wiring lost (want BuildBuddy remote cache plus PR no-upload in .bazelrc, flag pair env in workflows; no remote executor or BES backend)"
 fi
 
 # CI header stays local-only with platform qualification owned elsewhere
@@ -344,19 +321,17 @@ else
   bad "per-cell coverage fixture missing (want $pins plus $pins_build plus per_cell.expected plus codecov_remote.expected)"
 fi
 
-# Pins record the per-cell registry with six qualified cells and no union.
-if grep -q -F -e 'PER_CELL_COUNT = 6' "$pins" &&
+# Pins record the per-cell registry with four qualified cells and no union.
+if grep -q -F -e 'PER_CELL_COUNT = 4' "$pins" &&
   grep -q -F -e 'qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified linux_arm64 tools/coverage/arm64-inventory.txt' "$pins" &&
-  grep -q -F -e 'qualified linux_x86_64_musl tools/coverage/musl-x86_64-inventory.txt' "$pins" &&
-  grep -q -F -e 'qualified linux_arm64_musl tools/coverage/musl-arm64-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified macos_arm64 tools/coverage/macos-arm64-inventory.txt' "$pins" &&
   grep -q -F -e 'qualified windows_x86_64 tools/coverage/windows-x86_64-inventory.txt' "$pins" &&
   grep -q -F -e 'no cross-cell union' "$pins" &&
   grep -q -F -e 'coverage --min-coverage 97 //...' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its six-cell registry plus no-union plus rate-gate pins under issue #507"
+  bad "pins.bzl lost its four-cell registry plus no-union plus rate-gate pins under issue #507"
 fi
 
 # Pins record the accepted decision: repo exact gate plus configurable
@@ -434,7 +409,7 @@ else
 fi
 
 # Fixture expected texts cover per-cell plus Codecov plus remote gaps.
-if grep -q -F -e 'Six required cells' "$per_cell_expected" &&
+if grep -q -F -e 'Four required cells' "$per_cell_expected" &&
   grep -q -F -e 'configurable --min-coverage requirement for users per-cell' "$per_cell_expected" &&
   grep -q -F -e 'behavioral matrix' "$per_cell_expected" &&
   grep -q -F -e 'Codecov stays at most opt-in' "$codecov_remote_expected" &&

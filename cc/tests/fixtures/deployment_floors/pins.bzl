@@ -16,14 +16,6 @@ GLIBC_CXX_LIB = "libc++"
 GLIBC_LINK_MODEL = "ordinary dynamic glibc linkage"
 GLIBC_NOTE = "Application glibc implementations come from deployment systems, not the link stubs"
 
-# Linux static musl floor: upstream musl 1.2.6 with a static native
-# closure, non-PIE first for Rust compatibility. Dynamic/shared musl
-# stays excluded with no cell and no coverage.
-MUSL_VERSION = "1.2.6"
-MUSL_CLOSURE = "static native closure"
-MUSL_PIE = "non-PIE first for Rust compatibility"
-MUSL_DYNAMIC_NOTE = "Dynamic/shared musl stays excluded with no cell and no coverage"
-
 # macOS floors: pinned acquired Apple SDK with SDK libc++ headers and
 # system dynamic libc++, plus the upstream deployment default 14.0 as
 # the starting point. SDK version is not deployment floor.

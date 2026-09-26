@@ -19,7 +19,7 @@ no-coverage cohort (coverage-excluded runs):
 - cohort runs under bazel test //... (never manual), skips only under coverage
 - representative matrix_python_lint_fail stays no-coverage but executable
 - target_tags skip proof plus coverage_cell plus coverage_qualification gates
-- six cells seed plus arm64 plus musl plus macos arm64 plus windows, no union (macOS x86_64 removed per #976)
+- four cells seed plus arm64 plus macos arm64 plus windows, no union (macOS x86_64 removed per #976)
 
 shell sources (no quality class by design):
 - shell known class but no shell_srcs owner, corpus BUILD/MODULE/bzl/toml/md only, code ownership code languages only

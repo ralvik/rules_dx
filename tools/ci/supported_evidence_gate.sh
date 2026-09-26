@@ -8,14 +8,12 @@
 # seed languages, generation freshness, adopt-* external-consumer proof,
 # hermetic CLI-contract pins (replaces nested E2E),
 # required-core depcheck fixtures, `dx update` live execution,
-# seed plus arm64 plus static-musl plus macos arm64
-# plus windows x86_64 coverage/remote
+# seed plus arm64 plus macos arm64 plus windows x86_64 coverage/remote
 # qualification; audit live execution,
 # docs-pipeline, env/codegen, remaining out-of-v1 platform cells plus
 # Not-planned macOS x86_64,
-# Linux arm64 release evidence landed under closed #803, static musl under
-# closed #804, macos arm64 under closed #805,
-# windows x86_64 under closed #807
+# Linux arm64 release evidence landed under closed #803, macos arm64
+# under closed #805, windows x86_64 under closed #807
 # (process #808)), admitted depcheck
 # expansion, and release evidence (SBOM/provenance, signing/attestations,
 # BCR submission, GHCR route, consumer verification) remain open gaps
@@ -73,7 +71,6 @@ fi
 # Per-host and per-cell pins live in owning issues, not in the matrix.
 # The matrix keeps only supported-today plus out-of-scope plus issues pointer.
 if grep -q -F -e 'Tracking lives in GitHub issues' docs/product/support-matrix.md &&
-  grep -q -F -e 'Dynamic musl explicitly out of scope' docs/product/support-matrix.md &&
   grep -q -F -e 'Not planned' docs/product/support-matrix.md; then
   ok
 else
@@ -163,27 +160,23 @@ else
   bad "audit/update Delivered lost live codes or guards harness"
 fi
 
-# Coverage seed plus arm64 plus static-musl plus macos arm64 plus windows
-# x86_64 qualified (macOS x86_64 removed per #976)
-# cell gate + versioned inventories and
+# Coverage seed plus arm64 plus macos arm64 plus windows x86_64 qualified
+# (macOS x86_64 removed per #976) cell gate + versioned inventories and
 # registry plus qualification harnesses, no cross-cell union.
 if [[ -f "tools/ci/coverage_cell.sh" ]] &&
   [[ -f "tools/coverage/seed-inventory.txt" ]] &&
   [[ -f "tools/coverage/arm64-inventory.txt" ]] &&
-  [[ -f "tools/coverage/musl-x86_64-inventory.txt" ]] &&
-  [[ -f "tools/coverage/musl-arm64-inventory.txt" ]] &&
   [[ -f "tools/coverage/macos-arm64-inventory.txt" ]] &&
   [[ ! -f "tools/coverage/macos-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/windows-x86_64-inventory.txt" ]] &&
   [[ -f "tools/coverage/cells.txt" ]] &&
   [[ -f "tools/ci/coverage_qualification.sh" ]] &&
-  [[ -f "tools/ci/musl_qualification.sh" ]] &&
   [[ -f "tools/ci/macos_qualification.sh" ]] &&
   [[ -f "tools/ci/windows_qualification.sh" ]] &&
   grep -q -F -e 'seed cell' tools/coverage/seed-inventory.txt; then
   ok
 else
-  bad "coverage seed plus arm64 plus musl plus macos arm64 plus windows lost its cell gate, inventories, registry, or qualification harnesses (x86_64 removed per #976)"
+  bad "coverage seed plus arm64 plus macos arm64 plus windows lost its cell gate, inventories, registry, or qualification harnesses (x86_64 removed per #976)"
 fi
 
 # Env/codegen + docs-pipeline Open: backlog contracts pin frozen halves.

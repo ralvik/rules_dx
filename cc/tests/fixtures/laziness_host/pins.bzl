@@ -28,8 +28,6 @@ BZLMOND_BOUNDARY = [
 CONSUMER_HOSTS = (
     "linux_x86_64",
     "linux_arm64",
-    "linux_x86_64_musl",
-    "linux_arm64_musl",
     "macos_arm64",
     "windows_x86_64",
 )
@@ -91,7 +89,6 @@ FALLBACK_REJECTED = [
 # licensing plus coverage) stays owned under issues #494-#505 with release
 # evidence under #803-#807; no Supported claim here.
 PROVISIONAL_BACKENDS = [
-    "hermetic-llvm static-only musl provisional",
     "hermetic-llvm Apple-SDK provisional",
     "toolchains_msvc clang-cl/Microsoft-STL provisional",
 ]

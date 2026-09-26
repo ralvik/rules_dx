@@ -356,12 +356,10 @@ else
 fi
 
 # Platform evidence linkage: clean refusal plus per-host CI (dogfood
-# self-call over all four hosts plus musl build jobs on both linux hosts)
-# plus no-union (issue #802 promotion, still seed-executed).
+# self-call over all four hosts) plus no-union (issue #802 promotion,
+# still seed-executed).
 if grep -q -F -e 'unsupported_platform' cli/cli/src/platform.rs &&
   grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
-  grep -q -F -e 'build-musl-x86_64' "$ci" &&
-  grep -q -F -e 'build-musl-arm64' "$ci" &&
   grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else

@@ -96,18 +96,17 @@ no quality class by design. The plan stays green via
 
 This project uses first-party coverage PR reporting under the
 [free-infrastructure constraint](#infrastructure-budget). Every required
-cell gates its own combined LCOV through the portable Rust `coverage_bin`
-against its versioned inventory and renders through the same
-`tools/coverage/coverage_comment.sh` script (verdict plus Uncovered
-locations plus LCOV note plus dx rate line), with no cross-cell union.
-The seed cell runs the script via `bazel run` (Linux-only `sh_binary` by
-the shell contract; the seed runs on ubuntu-latest) and publishes one
-integration-owned updated comment per PR; the five non-seed cells run the
-same script directly via `bash` through the portable
-`.github/actions/render-coverage-summary` composite (same output, portable
-across linux plus macos plus windows-latest) and stay step-summary only by
-design to avoid sixfold comment spam. Consumers get the same per-cell
-shape through `reusable-consumer.yml`. A summary comment never turns
+cell gates its own combined LCOV through `dx coverage --min-coverage`
+against its versioned inventory, with no cross-cell union, no averaged
+percentages, and no rounding up. Each cell publishes one marker-owned
+updated comment per PR (deduped, never overwriting human comments; fork
+pull requests stay step-summary only so fork code never gets write
+credentials) plus a step-summary copy, all rendered by the same
+`reusable-consumer.yml` coverage job so every cell keeps the same shape.
+`tools/coverage/coverage_comment.sh` stays the versioned first-party
+renderer (verdict plus Uncovered locations plus LCOV note plus dx rate
+line), proven against fixtures by
+`bazel run //tools/ci:coverage_report_guards`. A summary comment never turns
 missing reports or failing coverage into success, and any Starlark behavioral
 fallback stays separate from measured line coverage. Per-cell, Codecov, and
 remote evidence is qualified by `bazel run //tools/ci:coverage_qualification`

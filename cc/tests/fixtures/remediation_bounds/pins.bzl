@@ -62,7 +62,7 @@ DEFECT_IDE_SOURCE = "refresh.template.py Bazel plus preprocessors plus workspace
 DEFECT_IDE_EVIDENCE = "exact-target discovery qualified seed-only under issue #475 plus C++ snapshot qualified seed-only under issue #754 via cpp_snapshot_qualification"
 DEFECT_FLOORS = "PIE plus ELF-dependency plus glibc-symbol uses existing upstream constraints"
 DEFECT_FLOORS_NOTE = "PIE qualification uses existing upstream constraints"
-DEFECT_FLOORS_EVIDENCE = "glibc 2.28 symbol floor plus musl 1.2.6 static closure plus deployment 14.0 qualified seed-only under issue #500"
+DEFECT_FLOORS_EVIDENCE = "glibc 2.28 symbol floor plus deployment 14.0 qualified seed-only under issue #500"
 DEFECT_CROSS = "Cross-product expansion only after the initial cohort passes with bounded upstream configuration"
 DEFECT_CROSS_EVIDENCE = "cc/tests/fixtures/cross_routes/pins.bzl via cross_routes_qualification under issue #504"
 

@@ -6,17 +6,16 @@ The [workflow index](../../.github/workflows/README.md) stays short; this docume
 The following policy notes lived as header comments in `ci.yml`:
 
 ```yaml
-# Stages: dogfood (four-host consumer self-call), static-musl build plus
-# coverage cells, generation freshness, and devcontainer parity, each a
+# Stages: dogfood (four-host consumer self-call), generation
+# freshness, and devcontainer parity, each a
 # separate job with per-job summaries (issue #210), plus one aggregate
 # `ci` job.
 #
 # Host matrix (issue #415, after portable-shell #323): lean per-stage
-# jobs (seed plus arm64 plus musl cells in ci.yml; macOS plus Windows
+# jobs (seed plus arm64 cells in ci.yml; macOS plus Windows
 # hosts run via the consumer self-call) plus qualified-host expectation.
 # Qualified hosts: Linux x86_64 glibc (ubuntu-latest) plus Linux arm64
-# glibc native (ubuntu-24.04-arm, issue #410) plus Linux static-musl
-# profiles (issue #411, cross-built from Linux runners) plus macOS arm64
+# glibc native (ubuntu-24.04-arm, issue #410) plus macOS arm64
 # native (macos-14, issue #412) plus Windows x86_64 MSVC-compatible
 # native (windows-latest with shell bash, issue #414), local execution, no remote executor.
 # Platform qualification for the remaining ADR 0014 host stays open under
@@ -54,33 +53,36 @@ The following policy notes lived as header comments in `ci.yml`:
 # `.bazelversion`; the Bazelisk version is single-sourced per workflow
 # through `BAZELISK_VERSION` (canonical `.devcontainer/Dockerfile.prebuilt`,
 # enforced by `//tools/ci:pin_consistency_test`).
-# Shared remote cache: BuildBuddy via `common --remote_cache` written to a
-# per-job rc file exported through `BAZELRC` (dx invokes Bazel with
-# `--nohome_rc`, so only the workspace-level rc channels survive; the
-# generated file is dropped when the `BUILDBUDDY_API_KEY` secret is absent,
-# e.g. fork pull requests, which stay local-cache only), and pull requests
-# add `--noremote_upload_local_results` so a poisoned entry can never be
-# published (issue #1059). No `--remote_executor` plus no `--bes_backend`:
+# Shared remote cache: BuildBuddy through the workspace `.bazelrc`
+# `ci` config (`common --remote_cache=grpcs://remote.buildbuddy.io`),
+# passed inline on every Bazel plus dx call as `$BAZEL_CONFIG $BB_ARGS`
+# (dx invokes Bazel with `--nohome_rc`, so only the
+# workspace-level rc channels survive; `BB_ARGS` carries
+# `--remote_header=x-buildbuddy-api-key` only when the
+# `BUILDBUDDY_API_KEY` secret exists, and with no secret both vars stay
+# empty so no remote-cache flag is set at all), and pull requests add
+# `--config=ci-pr` so
+# `--noremote_upload_local_results` keeps a poisoned entry from ever
+# being published (issue #1059). No `--remote_executor` plus no
+# `--bes_backend`:
 # execution stays local (pinned by `coverage_qualification`). CI checkouts
 # never contain `user.bazelrc`
 # (gitignored local-only BCR mirror override), so every run resolves
 # the canonical BCR registry plus MODULE.bazel.lock.
 #
-# Per-cell coverage summaries render through the single
-# `.github/actions/render-coverage-summary` composite (issue #915: cell
-# plus stem plus inventory inputs; no cross-cell union) with the same
-# portable Rust `coverage_bin` gate plus the same
-# `tools/coverage/coverage_comment.sh` shape as the seed cell (issue
-# #1062: verdict plus Uncovered locations plus LCOV note). The seed cell
-# keeps its own first-party block (same gate plus same script via `bazel
-# run` plus the single PR comment); the five non-seed cells stay
-# step-summary only by design under the per-cell visibility contract
-# (issue #1062) to avoid sixfold spam.
+# Per-cell coverage summaries render in the consumer coverage job
+# (issue #1062: one marker-owned PR comment per cell plus a
+# `$GITHUB_STEP_SUMMARY` copy, deduped and never overwriting human
+# comments; fork pull requests stay step-summary only so fork code never
+# gets write credentials). Every cell runs the same
+# `dx coverage --min-coverage` gate against its own versioned inventory
+# with no cross-cell union, and `tools/coverage/coverage_comment.sh`
+# stays the versioned first-party renderer proven by
+# `bazel run //tools/ci:coverage_report_guards`.
 #
 # Sharding policy (issue #210): one logical stage per job for failure
 # attribution without log-grep forensics. Seed jobs stay on ubuntu-latest;
 # Linux arm64 native jobs (issue #410) stay on ubuntu-24.04-arm;
-# static-musl profile jobs (issue #411) cross-build from Linux runners;
 # macOS arm64 native jobs (issue #412) stay on macos-14; Windows x86_64
 # MSVC-compatible native jobs (issue #414) stay on windows-latest with
 # shell bash (all standard free-tier runners, no paid services). The
@@ -93,7 +95,7 @@ The following policy notes lived as header comments in `ci.yml`:
 # live in `.bazelrc` (`test --flaky_test_attempts=3`,
 # `test --test_timeout=300`, `test --local_test_jobs=4`) so every
 # entrypoint inherits them (retry-until-green stays rejected, per-test
-# 300s cap); GitHub `timeout-minutes` stay tuned (musl build/coverage plus
+# 300s cap); GitHub `timeout-minutes` stay tuned (build/coverage plus
 # freshness 60, devcontainer 15, aggregate 5, no blanket 90);
 # long-timeouts-only stays rejected.
 ```

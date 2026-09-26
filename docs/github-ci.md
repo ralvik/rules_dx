@@ -94,11 +94,7 @@ MSVC-compatible, issue #414). The reusable workflow routes
 `linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
 `macos_arm64` to `macos-14`, and
 `windows_x86_64` to `windows-latest`; every other spelling fails closed in
-`platforms-gate` before any per-platform job queues a runner. Static-musl
-target profiles
-(`linux_x86_64_static_musl`, `linux_arm64_static_musl`, issue #411) are
-target closures qualified in `ci.yml` musl jobs, not reusable-consumer
-host platforms; dynamic musl stays explicitly out of scope. macOS arm64
+`platforms-gate` before any per-platform job queues a runner. macOS arm64
 native (issue #412) runs on `macos-14` through the pinned upstream
 toolchains with the hermetic-llvm Apple-SDK backend provisional (immutable
 lazy fetch, no host-installed SDK fallback, no secrets, no interactive
@@ -111,7 +107,7 @@ per-host `bazel-windows-x86_64-` cache scope) through the pinned upstream
 toolchains with the toolchains_msvc clang-cl/Microsoft-STL backend
 provisional (immutable lazy fetch, explicit EULA acceptance never automatic,
 no installed fallback, no secrets). The repository host matrix across these
-five platforms plus the static-musl closures is pinned by `bazel run
+four platforms is pinned by `bazel run
 //tools/ci:ci_matrix_qualification` (issue #415).
 
 Selection does not change language activation, analyzer applicability, configured no-op
@@ -304,7 +300,7 @@ Qualified runners are `ubuntu-latest` plus `ubuntu-24.04-arm` plus `macos-14`
 plus `windows-latest` with per-profile cache scopes.
 macos-13 retired December 2025, macos x86_64 Not planned per #976 with no
 runner; `ubuntu-latest` plus `windows-latest` float and age out. SDK plus floor scope
-is glibc `2.28` plus musl `1.2.6` plus MacOSX26.5 via hermetic-llvm `v0.8.19`
+is glibc `2.28` plus MacOSX26.5 via hermetic-llvm `v0.8.19`
 plus MSVC `14.50.35717` plus redist `14.50.35710` plus SDK package
 `10.0.26100.7705`; exact pins, hosts, floors, and SDK/CRT identities stay
 owned by issues #410-#412 plus #414 plus #500, not pinned here.
