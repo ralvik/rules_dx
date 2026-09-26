@@ -36,16 +36,11 @@ ISOLATION_NO_SHARED_BASE = "do not advertise parallelism while jobs serialize on
 ISOLATION_TIMEOUTS = "timeout-minutes"
 ISOLATION_FAIL_FAST_FALSE = "fail-fast: false"
 
-# Cache stays absent in the reusable workflow; per-host scopes live in ci.yml only.
+# Cache stays absent in the reusable workflow; CI uses the shared
+# BuildBuddy remote cache plus setup-bazel bazelisk cache (the legacy
+# per-host disk-cache scopes are deleted).
 CACHE_NO_REUSABLE_WIRING = "no actions/cache in reusable-consumer"
-CACHE_CI_SCOPES = [
-    "bazel-seed-",
-    "bazel-arm64-",
-    "bazel-musl-x86_64-",
-    "bazel-musl-arm64-",
-    "bazel-macos-arm64-",
-    "bazel-windows-x86_64-",
-]
+CACHE_SHARED_REMOTE = "BuildBuddy shared remote cache, no per-host scopes"
 CACHE_FREE_TIER = "free-tier eligible"
 CACHE_NO_PAID = "no paid services"
 CACHE_NOSHOW = "--noshow_progress"

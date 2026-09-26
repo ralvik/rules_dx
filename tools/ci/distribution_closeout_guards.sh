@@ -175,13 +175,16 @@ else
   bad "GHCR workflow lost its cosign record (#460/#311)"
 fi
 
-# self-call smoke stays wired: dogfood + docs-ci prove the
-# versioned reusable workflows on this repo before consumers use them.
+# self-call smoke stays wired: dogfood in ci.yml proves the versioned
+# consumer workflow on this repo, and the docs workflow stays
+# self-called by its pinned example caller (the docs-ci job left ci.yml;
+# reusable-docs.yml is the gate).
 if grep -q -F -e 'reusable-consumer' .github/workflows/ci.yml &&
-  grep -q -F -e 'reusable-docs' .github/workflows/ci.yml; then
+  grep -q -F -e 'reusable-docs' .github/workflows/reusable-docs.yml &&
+  grep -q -F -e 'reusable-docs.yml@' examples/docs-ci/caller.yml; then
   ok
 else
-  bad "ci.yml lost its dogfood/docs-ci self-call smoke (#5)"
+  bad "ci.yml lost its dogfood self-call plus the reusable-docs caller smoke (#5)"
 fi
 
 # dry-run report record stays explicit (summary + logs report

@@ -5,13 +5,13 @@ Pre-release. No cell is `Supported`. Tracking lives in GitHub issues.
 
 ## Platform-qualified targets
 
-| Consumer | Status | consumer self-call: test-disabled |
+| Consumer | Status | consumer self-call: dx test plus dx coverage |
 | --- | --- | --- |
-| Linux x86_64 glibc | Platform-qualified | test-disabled |
-| Linux arm64 glibc | Platform-qualified (qualified under issue #410) | test-disabled |
-| macOS arm64 | Platform-qualified | test-disabled |
-| macOS x86_64 | Not planned | test-disabled |
-| Windows x86_64 MSVC-compatible | Platform-qualified (issue #414) | test-disabled |
+| Linux x86_64 glibc | Platform-qualified | dx test plus dx coverage |
+| Linux arm64 glibc | Platform-qualified (qualified under issue #410) | dx test plus dx coverage |
+| macOS arm64 | Platform-qualified | dx test plus dx coverage |
+| macOS x86_64 | Not planned | no jobs |
+| Windows x86_64 MSVC-compatible | Platform-qualified (issue #414) | dx test plus dx coverage |
 
 ## Status Lifecycle
 

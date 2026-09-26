@@ -114,14 +114,15 @@ As built today (owner-gated push with signing, no push claimed until dispatch):
 Manual on-demand rebuild plus rotation for the four pins with no rebuild
 owner (issue #647): Ubuntu base digest, Bazelisk launcher, Cosign CLI,
 TUF trust root. Exact pins stay single-sourced in
-`Dockerfile.prebuilt` plus `.github/actions/setup-bazelisk/action.yml`
+`Dockerfile.prebuilt` plus `docs/contributing/local-workflows.md`
 plus `deploy/release/signing.bzl` plus `.github/workflows/ghcr.yml`;
 this section owns only cadence plus handling plus rejection.
 
 As built today: base `ubuntu:24.04@sha256:69cecf4b...` (resolved
 2026-09-17, re-pin deliberately, never `latest`), Bazelisk `v1.29.0`
-(per-OS shas in the setup action, `Dockerfile.prebuilt` tracks the
-linux-amd64 pair, Bazel `9.2.0` via `USE_BAZEL_VERSION`), Cosign
+(canonical version plus linux-amd64 sha in `Dockerfile.prebuilt`, all
+five per-OS shas in `docs/contributing/local-workflows.md`, Bazel `9.2.0`
+via `USE_BAZEL_VERSION`), Cosign
 `v2.4.1` (checksum-verified fetch in `ghcr.yml`, single-sourced with
 `SIGNING_COSIGN_VERSION`), trust root
 `https://tuf-repo-cdn.sigstore.dev` plus issuer

@@ -166,7 +166,7 @@ CONSUMER_NO_IMPLICIT_DEFAULT = "no implicit default"
 CONSUMER_VERSION_PIN = 'rules_dx_version: "0.0.0"'
 CONSUMER_TOOL_API = "environment_tool(name, executable, bin_name)"
 CONSUMER_FOUNDATION_MAPS = "environment plans stay present"
-CONSUMER_SELF_CALL = "self-call test-disabled"
+CONSUMER_SELF_CALL = "self-call dx test plus dx coverage"
 
 # Release evidence per cell (issue #787): SBOM plus provenance plus NOTICE
 # plus signing-first plus BCR shape plus human-run driver plus verifier

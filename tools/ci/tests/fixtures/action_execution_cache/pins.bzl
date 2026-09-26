@@ -1,4 +1,4 @@
-"""Action execution plus disk-cache pins.
+"""Action execution plus shared-cache pins.
 
 Contract: `docs/quality/action-model.md#outputs-remote-cache-and-execution`, `docs/testing/github-ci.md#workflow-hygiene`.
 Fixture: `tools/ci/tests/fixtures/action_execution_cache/` via
@@ -21,41 +21,21 @@ REMOTE_INTERFACE = "cli/bep/src/remote.rs"
 REMOTE_CONFIG = "RemoteConfig"
 REMOTE_DOWNLOADER = "LocalDownloader"
 
-# Disk-cache keys stay exact-only: every Bazel-affecting lock/config is
-# hashed and no prefix fallback reuses a stale entry after a bust. Keys are
-# branch-scoped via github.ref with no restore fallback, so a poisoned PR
-# entry is never reusable by main; PR runs are restore-only via lookup-only
-# while main owns saves (issue #1059).
-CACHE_KEY_FILES = [
-    "MODULE.bazel",
-    "MODULE.bazel.lock",
-    ".bazelrc",
-    "tools/bazelrc/preset.bazelrc",
-    ".bazelversion",
-    "cargo-bazel-lock.json",
-    "Cargo.lock",
-    "Cargo.toml",
-    "pnpm-lock.yaml",
-    "maven_install.json",
-    "go.mod",
-    "go.sum",
-    "uv.lock",
-    "pyproject.toml",
-]
-CACHE_NO_FALLBACK = "exact key only, bust starts cold"
-CACHE_BRANCH_SCOPE = "github.ref"
-CACHE_RESTORE_ONLY = "lookup-only"
-CACHE_SAVE_MAIN_ONLY = "refs/heads/main"
-CACHE_SCOPES = [
-    "bazel-seed-",
-    "bazel-arm64-",
-    "bazel-musl-x86_64-",
-    "bazel-musl-arm64-",
-    "bazel-macos-arm64-",
-    "bazel-windows-x86_64-",
-]
+# Shared remote cache: BuildBuddy via `common --remote_cache` in every
+# Bazel workflow, delivered through a per-job rc file exported via
+# BAZELRC (dx spawns Bazel with --nohome_rc, so the home rc never
+# applies). PRs upload nothing (issue #1059) and the secretless dry run
+# stays local. The legacy actions/cache disk cache is deleted: no
+# restore-keys, no hashFiles keys, no per-host prefixes.
+CACHE_REMOTE_URL = "common --remote_cache=grpcs://remote.buildbuddy.io"
+CACHE_API_KEY = "common --remote_header=x-buildbuddy-api-key"
+CACHE_PR_READ_ONLY = "common --noremote_upload_local_results"
+CACHE_DELIVERY = "BAZELRC"
+CACHE_SECRET = "BUILDBUDDY_API_KEY"
+CACHE_NO_DISK = "no actions/cache, no restore-keys, no hashFiles keys"
 
-# Remote boundary stays local-only: no remote cache/executor/BES flags,
-# aquery plus execution-log evidence is local, remote stays unverified.
-REMOTE_NO_FLAGS = ["--remote_cache", "--remote_executor", "--bes_backend"]
+# Remote boundary: remote cache is wired, but remote execution plus BES
+# stay absent; aquery plus execution-log evidence is local, remote
+# execution stays unverified.
+REMOTE_NO_EXEC = ["--remote_executor", "--bes_backend"]
 REMOTE_ELSE_BRANCH = "locally sandbox-tested but remote behavior remains unverified"

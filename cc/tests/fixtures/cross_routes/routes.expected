@@ -11,10 +11,10 @@
 
 exec: Linux x86_64 -> Linux x86_64 and arm64, each glibc and static musl
 exec: Linux x86_64 -> First Linux cross-build cohort
-exec: Linux x86_64 -> x86_64 static musl qualified under issue #411 on ubuntu-latest with bazel-musl-x86_64- scope
+exec: Linux x86_64 -> x86_64 static musl qualified under issue #411 on ubuntu-latest with shared BuildBuddy cache
 exec: Linux arm64 -> Linux arm64 and x86_64, each glibc and static musl
-exec: Linux arm64 -> Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm with bazel-arm64- scope
-exec: Linux arm64 -> arm64 static musl qualified under issue #411 on ubuntu-24.04-arm with bazel-musl-arm64- scope
+exec: Linux arm64 -> Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm
+exec: Linux arm64 -> arm64 static musl qualified under issue #411 on ubuntu-24.04-arm with shared BuildBuddy cache
 exec: Linux arm64 -> arm64-to-x86_64 cross stays in the first Linux cross-build cohort
 target: Linux x86_64 glibc
 target: Linux arm64 glibc
@@ -23,9 +23,9 @@ target: Linux arm64 static musl
 target: Linux x86_64-to-arm64 glibc plus static musl
 target: Linux arm64-to-x86_64 glibc plus static musl
 native: Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed
-native: Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm with bazel-arm64- scope
-native: Native macOS arm64 qualified under issue #412 on macos-14 with bazel-macos-arm64- scope
-native: Native Windows x86_64 qualified under issue #414 on windows-latest with bazel-windows-x86_64- scope
+native: Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm
+native: Native macOS arm64 qualified under issue #412 on macos-14
+native: Native Windows x86_64 qualified under issue #414 on windows-latest
 expansion: macOS arm64 -> Linux x86_64 and arm64 profiles
 expansion: Optional first expansion if bounded upstream configuration suffices
 expansion: Expand only after the initial cohort passes

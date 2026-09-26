@@ -11,7 +11,7 @@
 #   test skips plus 181 `sh_binary` build skips, 240 Linux-only labels)
 #   with a fail-closed per-host budget (Linux cells 0 skips, non-Linux
 #   cells at most the pinned inventory);
-# - CI reporting: every per-host `test //...` job reports its cell skip
+# - CI reporting: the dogfood-freshness job reports every cell's skip
 #   volume to its step summary (Linux cells as real runs, non-Linux cells
 #   as budgeted skips), so qualification never passes on silent skips;
 # - docs in place: `docs/testing/tools.md` owns the per-host real-runs vs
@@ -130,12 +130,18 @@ else
   bad "portable sh_binary inventory drifted (want exactly the 6 POSIX plus generated shims, found $portable_shbin portable, issue #769)"
 fi
 
-# CI reports skip volume on every per-host test job: seed plus arm64
-# plus macos arm64 plus windows each carry the report step.
-if [[ "$(grep -c -F -e 'Report skip volume (Linux-only sh harness, issue #769)' "$ci")" == "4" ]]; then
+# CI reports skip volume in one consolidated dogfood-freshness step over
+# the four cells: seed plus arm64 as real runs, macos arm64 plus windows
+# as budgeted skips (raw per-host test jobs are gone, issue #976), so
+# qualification never passes on silent skips.
+if [[ "$(grep -c -F -e 'Report skip volume (Linux-only sh harness, issue #769)' "$ci")" == "1" ]] &&
+  grep -q -F -e 'Cell seed linux_x86_64 real run' "$ci" &&
+  grep -q -F -e 'Cell linux_arm64 real run' "$ci" &&
+  grep -q -F -e 'Cell macos_arm64 budgeted' "$ci" &&
+  grep -q -F -e 'Cell windows x86_64 budgeted' "$ci"; then
   ok
 else
-  bad "ci.yml lost a per-host skip-volume report step (want 4 test jobs reporting, issue #769; x86_64 removed per #976)"
+  bad "ci.yml lost a per-host skip-volume report step (want the consolidated four-cell report, issue #769; x86_64 removed per #976)"
 fi
 
 # Linux cells report real runs with 0 skips: seed plus arm64 summaries

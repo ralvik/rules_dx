@@ -17,7 +17,8 @@ SIGNING_ISSUER = "https://token.actions.githubusercontent.com"
 # bundle media type produced by `cosign sign-blob --bundle`. Host tools
 # resolve at run time with no new module dependencies; the pins keep the
 # human-run path, GHCR route, and verifier on one stack. `signing.bzl`
-# owns the version plus sha (canonical like setup-bazelisk `action.yml`);
+# owns the version plus sha (the canonical pin pair, like
+# `.devcontainer/Dockerfile.prebuilt`);
 # `ghcr.yml` tracks both under `COSIGN_VERSION` plus
 # `COSIGN_SHA256_LINUX_AMD64` or drift fails in
 # `signing_distribution_qualification` (see issue #1058).

@@ -28,9 +28,12 @@
 # stay git-ignored, staging happens under RUNNER_TEMP so the checkout is
 # never left dirty, and the default run only reports what *would* publish.
 #
-# Hygiene (issue #80): Bazelisk installs go through the single
-# `.github/actions/setup-bazelisk` composite action; the only third-party
-# action (checkout) is pinned to a commit SHA with its tag trailing.
+# Hygiene (issue #80): Bazelisk installs go through the pinned
+# `bazel-contrib/setup-bazel` action (commit SHA plus trailing tag
+# comment); the other third-party actions are
+# pinned to a commit SHA with their tag trailing. This dry run stays
+# secretless (no secret references at all): no BuildBuddy remote
+# cache here, only the cached Bazelisk launcher download.
 
 name: publish-dry-run
 
@@ -50,6 +53,12 @@ concurrency:
   group: publish-dry-run-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # Single-sourced Bazelisk pin for the setup-bazel step in this
+  # workflow (tracked against .devcontainer/Dockerfile.prebuilt by
+  # //tools/ci:pin_consistency_test).
+  BAZELISK_VERSION: "1.29.0"
+
 jobs:
   dry-run:
     runs-on: ubuntu-latest
@@ -59,7 +68,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
       - name: Build seed-host release binary and standalone archive
         run: bazel build //cli/cli:dx //cli/cli:dx_standalone //deploy/release:all //deploy/release:release_artifacts
       - name: Stage binary and emit dry-run report

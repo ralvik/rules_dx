@@ -179,14 +179,17 @@ else
   bad "matrix.bzl lost its frozen four-cell plus qualified shape (#815 plus #976)"
 fi
 
-# Distribution destinations stay pinned: BCR rules_dx plus GitHub Releases dx binaries.
+# Distribution destinations stay pinned: BCR rules_dx plus GitHub Releases dx
+# binaries with owner-gated qualified publication (#985 dropped the #459
+# qualifier plus harness prose from environment.md; the #459-qualified record
+# stays in authoring plus runbook).
 if grep -q -F -e 'Bazel Central Registry' docs/environments/environment.md &&
   grep -q -F -e 'GitHub Releases for standalone `dx` binaries' docs/environments/environment.md &&
-  grep -q -F -e 'qualified under issue #459' docs/environments/environment.md &&
-  grep -q -F -e 'signing_distribution_qualification' docs/environments/environment.md; then
+  grep -q -F -e 'owner-gated dry-run-first' docs/environments/environment.md &&
+  grep -q -F -e 'qualified release artifacts' docs/environments/environment.md; then
   ok
 else
-  bad "environment.md lost its BCR plus GitHub-Releases plus #459-qualified record"
+  bad "environment.md lost its BCR plus GitHub-Releases plus owner-gated qualified-publication record (want as-built destinations, #985 plus #459)"
 fi
 
 # Deploy authoring keeps distribution artifacts qualified: archive plus draft plus verifier.
@@ -247,13 +250,17 @@ else
   bad "cli-contract.md lost its #459-qualified plus no-binaries-published record"
 fi
 
-# Tool acquisition keeps the boundary: selected stack qualified, deeper profiles provisional.
-if grep -q -F -e 'qualified under issue #459' docs/tools/tool-acquisition.md &&
-  grep -q -F -e 'stay provisional' docs/tools/tool-acquisition.md &&
-  grep -q -F -e 'cosign v2.4.1' docs/tools/tool-acquisition.md; then
+# Tool acquisition keeps the boundary: packaging settled plus candidate wire
+# profiles provisional in the doc, and the selected-qualified stack plus
+# cosign pin stay in the runbook (#985 dropped the #459 plus cosign-pin
+# prose from tool-acquisition.md).
+if grep -q -F -e 'provisional wire-profile recommendation' docs/tools/tool-acquisition.md &&
+  grep -q -F -e 'candidate wire profiles still need qualification' docs/tools/tool-acquisition.md &&
+  grep -q -F -e 'qualified under issue #459' docs/deploy/release-runbook.md &&
+  grep -q -F -e 'cosign v2.4.1' docs/deploy/release-runbook.md; then
   ok
 else
-  bad "tool-acquisition.md lost its selected-qualified plus provisional record (#459)"
+  bad "tool-acquisition.md lost its provisional wire-profile record or runbook lost the #459-qualified plus cosign-pin record (#459)"
 fi
 
 # Planned work lives in GitHub issues only (docs/roadmap.md removed under #981).

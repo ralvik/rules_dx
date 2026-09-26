@@ -139,46 +139,31 @@ plus GitHub Releases (`dx` binaries) with GHCR via the separate
 
 ## CI SBOM Upload
 
-CI builds plus verifies SBOM plus provenance on every push/PR via the
-`sbom` job in `.github/workflows/ci.yml` (issue #612): `bazel build
+CI runs no SBOM jobs: the former `sbom`, `sbom-arm64`,
+`sbom-musl-x86_64`, `sbom-musl-arm64`, `sbom-macos-arm64`, and
+`sbom-windows-x86_64` jobs in `.github/workflows/ci.yml` are deleted
+(issues #803 plus #804 plus #805 plus #807; CI upload removed under
+issue #612), with no
+`RUNNER_TEMP` staging and no artifact upload in CI; CI publishes
+nothing. SBOM plus provenance build locally instead: `bazel build
 //deploy/release:sbom_demo` plus `bazel test
-//deploy/release:dx_release_tools_test`, staged under `RUNNER_TEMP/sbom` with
-`digests.txt` plus `origin.txt` (sha256 bind plus repository, commit, run, ref)
-and uploaded as the `sbom-provenance` artifact (SPDX-2.3 plus SLSA v1, publishes
-nothing). Push-to-main runs additionally attest the staged pair via
-`actions/attest` (Sigstore, fork-safe: PRs never attest); release signing stays
-owner-gated human-run via `//deploy/release:signing_demo`. Per-host release evidence for Linux arm64 glibc lands via the
-`sbom-arm64` job in `.github/workflows/ci.yml` (issue #803 closed): the same
-`sbom_demo` build plus `dx_release_tools_test` verify on the arm64 native
-runner (`ubuntu-24.04-arm`, `bazel-arm64-` cache, `needs: [build-arm64]`,
-local-only), staged under `RUNNER_TEMP/sbom-arm64` and uploaded as the
-`sbom-provenance-linux_arm64` artifact (SPDX-2.3 plus SLSA v1, publishes
-nothing). Per-profile release evidence for the two Linux static-musl profiles
-lands via the `sbom-musl-x86_64` plus `sbom-musl-arm64` jobs in
-`.github/workflows/ci.yml` (issue #804 closed): the same `sbom_demo` build plus
-`dx_release_tools_test` verify on the musl profile runners (`ubuntu-latest`
-with `bazel-musl-x86_64-` cache, `needs: [build-musl-x86_64]`, plus
-`ubuntu-24.04-arm` with `bazel-musl-arm64-` cache, `needs: [build-musl-arm64]`,
-local-only), staged under `RUNNER_TEMP/sbom-musl-x86_64` plus
-`RUNNER_TEMP/sbom-musl-arm64` and uploaded as the
-`sbom-provenance-linux_x86_64_musl` plus `sbom-provenance-linux_arm64_musl`
-artifacts (SPDX-2.3 plus SLSA v1, static native closure only with dynamic musl
-explicitly out of scope, publishes nothing). Per-host release evidence for macOS arm64 native
-lands via the `sbom-macos-arm64` job in `.github/workflows/ci.yml` (issue #805 closed): the same
-`sbom_demo` build plus `dx_release_tools_test` verify on the macos arm64 native
-runner (`macos-14`, `bazel-macos-arm64-` cache, `needs: [build-macos-arm64]`,
-local-only), staged under `RUNNER_TEMP/sbom-macos-arm64` and uploaded as the
-`sbom-provenance-macos_arm64` artifact (SPDX-2.3 plus SLSA v1, pinned acquired SDK
-with hermetic-llvm Apple-SDK backend provisional and no host-installed SDK fallback never approved,
-publishes nothing). Per-host release evidence for Windows
-x86_64 MSVC-compatible lands via the `sbom-windows-x86_64` job in
-`.github/workflows/ci.yml` (issue #807 closed): the same `sbom_demo` build plus
-`dx_release_tools_test` verify on the windows native runner (`windows-latest`
-with shell bash, `bazel-windows-x86_64-` cache, `needs: [build-windows-x86_64]`,
-local-only), staged under `RUNNER_TEMP/sbom-windows-x86_64` and uploaded as the
-`sbom-provenance-windows_x86_64` artifact (SPDX-2.3 plus SLSA v1, hermetic
-acquisition plus MSVC compatibility gates unchanged with explicit EULA acceptance
-required never automatic and no installed Build Tools fallback, publishes nothing).
+//deploy/release:dx_release_tools_test` produce SPDX-2.3 plus SLSA v1
+for each cell under `RUNNER_TEMP`, keeping the `sbom-provenance` names
+(`sbom-provenance-linux_arm64`, `sbom-provenance-linux_x86_64_musl`,
+`sbom-provenance-linux_arm64_musl`, `sbom-provenance-macos_arm64`,
+`sbom-provenance-windows_x86_64`) for owner-gated manual upload.
+Per-host release evidence for Linux arm64 glibc (issue #803 closed), the
+two Linux static-musl profiles (issue #804 closed), macOS arm64 native
+(issue #805 closed), and Windows x86_64 MSVC-compatible (issue #807
+closed) stays recorded by the qualification harnesses; each cell keeps
+its runner (ubuntu-24.04-arm, ubuntu-latest plus ubuntu-24.04-arm,
+macos-14, windows-latest) with the shared BuildBuddy remote cache only
+and no per-host cache scope. Musl keeps static native closure only with
+dynamic musl explicitly out of scope; macOS keeps the pinned acquired
+SDK with the hermetic-llvm Apple-SDK backend provisional and no
+host-installed SDK fallback never approved; Windows keeps explicit EULA
+acceptance required never automatic and no installed Build Tools
+fallback.
 Attestation stays owner-gated human-run via
 `//deploy/release:signing_demo` (Sigstore keyless plus GitHub attestations);
 CI never signs PR code. Pinned by `bazel run

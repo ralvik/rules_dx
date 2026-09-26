@@ -409,11 +409,13 @@ else
   bad "Windows host lost its capability plus suffix plus casefold plus shell pins (issue #787)"
 fi
 
-# Per-host CI plus coverage cells with no union.
-if grep -q -F -e 'build-arm64' .github/workflows/ci.yml &&
-  grep -q -F -e 'build-musl-x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'build-macos-arm64' .github/workflows/ci.yml &&
-  grep -q -F -e 'build-windows-x86_64' .github/workflows/ci.yml &&
+# Per-host CI plus coverage cells with no union: the dogfood self-call runs
+# test plus build plus coverage on all four hosts, ci.yml keeps the musl
+# build plus per-cell coverage jobs, and no-union wording stays frozen.
+if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" .github/workflows/ci.yml &&
+  grep -q -F -e 'min_coverage: "97"' .github/workflows/ci.yml &&
+  grep -q -F -e 'coverage-musl-x86_64' .github/workflows/ci.yml &&
+  grep -q -F -e 'coverage-musl-arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else
@@ -458,12 +460,13 @@ else
   bad "consumer workflow plus caller plus tool-parity linkage lost (issue #787)"
 fi
 
-# Release artifacts stay implemented owner-gated with CI upload.
+# Release artifacts stay implemented owner-gated with the SBOM record in the
+# owner-gated runbook (ci.yml runs no release jobs; issue #787).
 if grep -q -F -e 'name = "sbom_demo"' deploy/release/BUILD.bazel &&
   grep -q -F -e 'name = "signing_demo"' deploy/release/BUILD.bazel &&
   grep -q -F -e 'name = "bcr_demo"' deploy/release/BUILD.bazel &&
   grep -q -F -e 'name = "release_driver"' deploy/release/BUILD.bazel &&
-  grep -q -F -e 'sbom-provenance' .github/workflows/ci.yml; then
+  grep -q -F -e 'sbom-provenance' docs/deploy/release-runbook.md; then
   ok
 else
   bad "release sbom plus signing plus bcr plus driver linkage lost (issue #787)"

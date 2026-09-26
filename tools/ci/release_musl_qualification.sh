@@ -9,18 +9,14 @@
 #   with subject digest equal to artifact sha256, hermetic Rust toolchain
 #   only, //deploy/rules:release_demo_archive as subject fixture, verified
 #   via bazel test //deploy/release:dx_release_tools_test;
-# - CI per-profile upload: ci.yml sbom-musl-x86_64 job builds plus verifies
-#   on every push/PR (ubuntu-latest, bazel-musl-x86_64- cache, needs
-#   build-musl-x86_64) plus sbom-musl-arm64 job builds plus verifies on every
-#   push/PR (ubuntu-24.04-arm, bazel-musl-arm64- cache, needs
-#   build-musl-arm64), stages under RUNNER_TEMP/sbom-musl-*, uploads
-#   sbom-provenance-linux_x86_64_musl plus
-#   sbom-provenance-linux_arm64_musl via actions/upload-artifact pinned SHA
-#   plus tag, contents read only, publishes nothing, fork-safe; seed sbom
-#   plus arm64 sbom jobs kept with no regression; static native closure
-#   only, dynamic musl explicitly out of scope;
+# - CI surface: ci.yml carries no sbom-musl-x86_64 and no sbom-musl-arm64
+#   jobs, no upload-artifact, and no per-host cache prefixes (musl
+#   sbom-provenance stays an owner-gated local release record in
+#   docs/deploy/release-runbook.md; CI never signs PR code and publishes
+#   nothing, fork-safe); static native closure only, dynamic musl
+#   explicitly out of scope;
 # - promotion-checklist cells per profile: Platform-qualified static musl
-#   (#411), dogfood consumer test-disabled plus musl jobs (#408), per-cell
+#   (#411), dogfood consumer all nine checks plus musl jobs (#408), per-cell
 #   musl coverage with no union, tag hygiene at 0.0.0 with no v* tags,
 #   --verify-tag versioning, per-profile sbom-provenance (#804);
 # - attestation stays owner-gated human-run via //deploy/release:signing_demo
@@ -87,78 +83,73 @@ else
   bad "deploy/release/BUILD.bazel lost its sbom_demo plus dx_release_tools_test over release_demo_archive (#804)"
 fi
 
-# CI sbom-musl-x86_64 job builds plus verifies on every push/PR (static musl x86_64, not seed-only).
-if grep -q -F -e 'name: sbom-musl-x86_64 (SBOM + provenance build/verify/upload, linux x86_64 static musl)' "$ci" &&
-  grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
-  grep -q -F -e 'needs: [build-musl-x86_64]' "$ci" &&
-  grep -q -F -e 'prefix: bazel-musl-x86_64-' "$ci" &&
-  grep -q -F -e 'bazel build --noshow_progress //deploy/release:sbom_demo' "$ci" &&
-  grep -q -F -e '//deploy/release:dx_release_tools_test' "$ci"; then
+# CI runs no sbom-musl-x86_64 build or verify: no release-tool targets in
+# ci.yml (x86_64 musl SBOM stays an owner-gated local release record).
+if ! grep -q -F -e 'sbom-musl-x86_64' "$ci" &&
+  ! grep -q -F -e 'sbom_demo' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-musl-x86_64 build plus verify on push/PR (want x86_64 musl job with sbom_demo plus dx_release_tools_test, #804)"
+  bad "ci.yml still carries an sbom-musl-x86_64 build plus verify job (want no sbom-musl-x86_64 job and no sbom_demo in CI; SBOM stays owner-gated local release, #804)"
 fi
 
-# CI sbom-musl-arm64 job builds plus verifies on every push/PR (static musl arm64, not seed-only).
-if grep -q -F -e 'name: sbom-musl-arm64 (SBOM + provenance build/verify/upload, linux arm64 static musl)' "$ci" &&
-  grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
-  grep -q -F -e 'needs: [build-musl-arm64]' "$ci" &&
-  grep -q -F -e 'prefix: bazel-musl-arm64-' "$ci" &&
-  grep -q -F -e 'bazel build --noshow_progress //deploy/release:sbom_demo' "$ci" &&
-  grep -q -F -e '//deploy/release:dx_release_tools_test' "$ci"; then
+# CI runs no sbom-musl-arm64 build or verify: no release-tool test in ci.yml.
+if ! grep -q -F -e 'sbom-musl-arm64' "$ci" &&
+  ! grep -q -F -e 'dx_release_tools_test' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-musl-arm64 build plus verify on push/PR (want arm64 musl job with sbom_demo plus dx_release_tools_test, #804)"
+  bad "ci.yml still carries an sbom-musl-arm64 build plus verify job (want no sbom-musl-arm64 job and no dx_release_tools_test in CI; SBOM stays owner-gated local release, #804)"
 fi
 
-# CI sbom-musl-x86_64 job stages plus uploads as a per-profile artifact for inspection.
-if grep -q -F -e 'RUNNER_TEMP/sbom-musl-x86_64' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_x86_64_musl' "$ci" &&
-  grep -q -F -e 'actions/upload-artifact@' "$ci"; then
+# CI stages no x86_64 musl sbom directory and uploads no provenance artifact.
+if ! grep -q -F -e 'RUNNER_TEMP/sbom-musl-x86_64' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance-linux_x86_64_musl' "$ci" &&
+  ! grep -q -F -e 'actions/upload-artifact' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-musl-x86_64 stage plus upload-artifact sbom-provenance-linux_x86_64_musl (#804)"
+  bad "ci.yml still stages or uploads sbom-provenance-linux_x86_64_musl (want no RUNNER_TEMP/sbom-musl-x86_64 stage and no upload-artifact; CI publishes nothing, #804)"
 fi
 
-# CI sbom-musl-arm64 job stages plus uploads as a per-profile artifact for inspection.
-if grep -q -F -e 'RUNNER_TEMP/sbom-musl-arm64' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64_musl' "$ci" &&
-  grep -q -F -e 'actions/upload-artifact@' "$ci"; then
+# CI stages no arm64 musl sbom directory and uploads no provenance artifact.
+if ! grep -q -F -e 'RUNNER_TEMP/sbom-musl-arm64' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance-linux_arm64_musl' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-musl-arm64 stage plus upload-artifact sbom-provenance-linux_arm64_musl (#804)"
+  bad "ci.yml still stages or uploads sbom-provenance-linux_arm64_musl (want no RUNNER_TEMP/sbom-musl-arm64 stage and no sbom-provenance in CI, #804)"
 fi
 
-# Upload stays pinned plus fail-closed plus least-privilege, publishes nothing.
-if grep -q -F -e 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4' "$ci" &&
-  grep -q -F -e 'if-no-files-found: error' "$ci" &&
+# No upload-artifact pin remains; checkout stays least-privilege plus
+# setup-bazel, and the runbook records publishes-nothing plus CI-never-signs.
+if ! grep -q -F -e 'actions/upload-artifact' "$ci" &&
+  ! grep -q -F -e 'if-no-files-found: error' "$ci" &&
   grep -q -F -e 'persist-credentials: false' "$ci" &&
-  grep -q -F -e 'setup-bazelisk' "$ci" &&
-  grep -q -F -e 'CI never signs PR code, publishes nothing' "$ci"; then
+  grep -q -F -e 'bazel-contrib/setup-bazel' "$ci" &&
+  grep -q -F -e 'publishes nothing' "$runbook" &&
+  grep -q -F -e 'CI never signs PR code' "$runbook"; then
   ok
 else
-  bad "ci.yml lost its pinned upload-artifact plus fail-closed plus publishes-nothing record for sbom-musl jobs (#804)"
+  bad "ci.yml lost its no-upload plus least-privilege setup-bazel record or runbook lost publishes-nothing plus CI-never-signs (want no upload-artifact for the sbom-musl jobs, #804)"
 fi
 
-# Seed plus arm64 sbom jobs stay kept with no regression (all jobs coexist).
-if grep -q -F -e 'name: sbom (SBOM + provenance build/verify/upload, seed host)' "$ci" &&
-  grep -q -F -e 'name: sbom-provenance' "$ci" &&
-  grep -q -F -e 'prefix: bazel-seed-' "$ci" &&
-  grep -q -F -e 'name: sbom-arm64 (SBOM + provenance build/verify/upload, linux arm64)' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64' "$ci" &&
-  grep -q -F -e 'prefix: bazel-arm64-' "$ci"; then
+# No sbom jobs plus no per-host cache prefixes remain in ci.yml (caching is
+# setup-bazel bazelisk cache plus BuildBuddy only).
+if ! grep -q -F -e 'name: sbom' "$ci" &&
+  ! grep -q -F -e 'prefix: bazel-' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance' "$ci"; then
   ok
 else
-  bad "ci.yml lost its seed sbom plus arm64 sbom-arm64 jobs (want all jobs coexisting, #804)"
+  bad "ci.yml still carries sbom jobs or per-host cache prefixes (want none: all sbom jobs deleted, caching is setup-bazel plus BuildBuddy, #804)"
 fi
 
-# Attestation stays owner-gated human-run (fork-safe, no CI signing).
+# Attestation stays owner-gated human-run (fork-safe, no CI signing): the
+# signing_demo target plus runbook own the record, ci.yml never signs.
 if grep -q -F -e 'name = "signing_demo"' "$release_build" &&
-  grep -q -F -e 'CI never signs PR code' "$ci" &&
-  grep -q -F -e '//deploy/release:signing_demo' "$ci"; then
+  grep -q -F -e 'CI never signs PR code' "$runbook" &&
+  ! grep -q -F -e 'signing_demo' "$ci" &&
+  ! grep -q -F -e 'id-token' "$ci"; then
   ok
 else
-  bad "release BUILD or ci.yml lost the owner-gated signing_demo attestation record with CI never signing (#804)"
+  bad "release BUILD or runbook lost the owner-gated signing_demo attestation record with ci.yml never signing (#804)"
 fi
 
 # Runbook records the musl CI uploads plus owner-gated attestation under #804.
@@ -174,13 +165,17 @@ else
   bad "release-runbook.md lost its #804 sbom-musl per-profile uploads plus owner-gated attestation record"
 fi
 
-# Per-cell consumer evidence still covers musl jobs test-disabled (#408).
+# Per-cell consumer evidence: musl build jobs stay plus the dogfood self-call
+# runs every check incl test on all four hosts (min coverage 97, no
+# disabled_checks, #408).
 if grep -q -F -e 'build-musl-x86_64' "$ci" &&
   grep -q -F -e 'build-musl-arm64' "$ci" &&
-  grep -q -F -e 'disabled_checks: "test"' "$ci"; then
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e 'min_coverage: "97"' "$ci" &&
+  ! grep -q -F -e 'disabled_checks' "$ci"; then
   ok
 else
-  bad "ci.yml lost its dogfood consumer test-disabled plus musl-jobs per-cell evidence (#804)"
+  bad "ci.yml lost its dogfood all-nine-checks plus musl-jobs per-cell evidence (want four-platform self-call plus min_coverage 97 plus no disabled_checks, #804)"
 fi
 
 # Per-cell coverage stays two musl cells with no union.
@@ -221,15 +216,15 @@ else
   bad "release-musl fixture missing (want pins.bzl plus release_musl.expected plus corpus BUILD)"
 fi
 
-# Pins record wire plus CI plus cells plus attestation plus rejected plus honesty.
+# Pins record wire plus no-CI-upload plus cells plus attestation plus rejected plus honesty.
 if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'ci.yml sbom-musl-x86_64 job builds //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'ci.yml sbom-musl-arm64 job builds //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'uploads sbom-provenance-linux_x86_64_musl via actions/upload-artifact' "$pins" &&
-  grep -q -F -e 'uploads sbom-provenance-linux_arm64_musl via actions/upload-artifact' "$pins" &&
+  grep -q -F -e 'ci.yml carries no sbom-musl-x86_64 job; SBOM stays a local target under #804' "$pins" &&
+  grep -q -F -e 'ci.yml carries no sbom-musl-arm64 job; SBOM stays a local target under #804' "$pins" &&
+  grep -q -F -e 'no upload-artifact, no RUNNER_TEMP stage; CI publishes nothing under #804' "$pins" &&
+  grep -q -F -e 'no per-host cache scope; disk cache deleted, BuildBuddy remote cache only' "$pins" &&
   grep -q -F -e 'Platform-qualified static musl under issue #411' "$pins" &&
-  grep -q -F -e 'dogfood consumer self-call test-disabled plus musl jobs' "$pins" &&
+  grep -q -F -e 'self-call dx test plus dx coverage plus musl jobs' "$pins" &&
   grep -q -F -e 'via //deploy/release:signing_demo' "$pins" &&
   grep -q -F -e 'Dry-run only forever is rejected' "$pins" &&
   grep -q -F -e 'Compatibility: Release only' "$pins" &&
@@ -237,17 +232,18 @@ if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'no Supported claim' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its wire plus CI plus cells plus attestation plus rejected plus honesty pins under issue #804"
+  bad "pins.bzl lost its wire plus no-CI-upload plus cells plus attestation plus rejected plus honesty pins under issue #804"
 fi
 
-# Expected fixture pins the per-profile uploads plus cells plus rejected plus honesty lines.
+# Expected fixture pins the no-job plus no-upload plus cells plus rejected plus honesty lines.
 if grep -q -F -e 'Release evidence for Linux static-musl profiles (issue #804)' "$expected" &&
   grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$expected" &&
-  grep -q -F -e 'uploads sbom-provenance-linux_x86_64_musl' "$expected" &&
-  grep -q -F -e 'uploads sbom-provenance-linux_arm64_musl' "$expected" &&
-  grep -q -F -e 'pinned SHA plus tag' "$expected" &&
-  grep -q -F -e 'sbom-musl-x86_64 summary' "$expected" &&
-  grep -q -F -e 'sbom-musl-arm64 summary' "$expected" &&
+  grep -q -F -e 'ci.yml carries no sbom-musl-x86_64 job' "$expected" &&
+  grep -q -F -e 'ci.yml carries no sbom-musl-arm64 job' "$expected" &&
+  grep -q -F -e 'no upload-artifact, no RUNNER_TEMP' "$expected" &&
+  grep -q -F -e 'no per-host cache scope' "$expected" &&
+  grep -q -F -e 'Seed sbom job removed with the sbom job deletion' "$expected" &&
+  grep -q -F -e 'arm64 sbom-arm64 job removed with the sbom job deletion' "$expected" &&
   grep -q -F -e 'sbom-provenance delivered under issue' "$expected" &&
   grep -q -F -e 'CI never signs PR' "$expected" &&
   grep -q -F -e 'Dry-run only forever is rejected' "$expected" &&
@@ -256,7 +252,7 @@ if grep -q -F -e 'Release evidence for Linux static-musl profiles (issue #804)' 
   grep -q -F -e 'no Supported claim' "$expected"; then
   ok
 else
-  bad "release_musl.expected lost its per-profile uploads plus cells plus rejected plus honesty lines under #804"
+  bad "release_musl.expected lost its no-CI-upload plus cells plus rejected plus honesty lines under #804"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

@@ -19,8 +19,8 @@
 #
 # This harness machine-checks the verifiable halves on a clean
 # tree today: audit live execution, update live execution, exit-code mappings,
-# dry-run planning, consumer-ci still
-# disabled, depcheck contract green.
+# dry-run planning, consumer-ci enabling all nine checks, depcheck
+# contract green.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:audit_update_guards`,
 # following //tools/ci:depcheck_contract.
@@ -57,17 +57,16 @@ else
   bad "audit outcome lost its aggregate exit-code mapping"
 fi
 
-# /: consumer smoke disables only `test` (its in-file comment: coverage
-# already executes the tests) and both audits run enabled among its
-# checks (re-enabled intentionally, issue #518).
-if grep -q -F -e 'disabled_checks: "test"' .github/workflows/ci.yml &&
-  ! grep -q -F -e 'security-audit' .github/workflows/ci.yml &&
-  ! grep -q -F -e 'license-audit' .github/workflows/ci.yml &&
+# /: consumer smoke disables nothing (all nine checks default on: coverage
+# executes the tests) and both audits run enabled among its checks
+# (re-enabled intentionally, issue #518).
+if ! grep -q -F -e 'disabled_checks' .github/workflows/ci.yml &&
+  grep -q -F -e 'min_coverage: "97"' .github/workflows/ci.yml &&
   grep -q -F -e 'security-audit:' .github/workflows/reusable-consumer.yml &&
   grep -q -F -e 'license-audit:' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "dogfood lost its test-only disable record (want disabled_checks test plus both audit jobs enabled)"
+  bad "dogfood lost its all-nine default (want no disabled_checks plus both audit jobs enabled)"
 fi
 
 # live update executes resolver backends with continuation (no deferred code).

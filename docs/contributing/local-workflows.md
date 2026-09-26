@@ -4,14 +4,15 @@
 
 Fresh clone to green build, copy-paste. Linux x86_64 seed host plus Linux arm64 native (issue #410) plus Linux static-musl profiles (issue #411) plus macOS arm64 native (issue #412) plus Windows x86_64 MSVC-compatible native (issue #414; macOS x86_64 Not planned per #976).
 Pinned versions: Bazel `9.2.0` (canonical `.bazelversion`), Bazelisk
-`v1.29.0` (canonical `.github/actions/setup-bazelisk/action.yml`
-defaults with per-OS sha256), pnpm `10.34.5` (via `packageManager`, use corepack).
-Tracked copies in `.devcontainer/Dockerfile.prebuilt` (linux-amd64 pair) and below must equal
+`v1.29.0` (canonical `.devcontainer/Dockerfile.prebuilt` version plus
+linux-amd64 sha256), pnpm `10.34.5` (via `packageManager`, use corepack).
+Tracked copies in `.github/workflows/*` (`BAZELISK_VERSION`) and below must equal
 their canonical source; `//tools/ci:pin_consistency_test` fails on drift.
 
 ```sh
 # 1. Pinned Bazelisk launcher (portable, retry, checksum, no sudo; issue #617):
-# Canonical pins live in `.github/actions/setup-bazelisk/action.yml` (v1.29.0):
+# Pins record (v1.29.0; canonical version plus linux-amd64 sha in
+# `.devcontainer/Dockerfile.prebuilt`):
 #   bazelisk-linux-amd64         5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992
 #   bazelisk-linux-arm64         e20e8b0f4f240091b7a55bf17b9398bd4f40ee70ae0208dff95dd4c445fb4010
 #   bazelisk-darwin-amd64        16c3d7aa15323a9fb69f56c7ec5733ed18bedb786680d0ba13bb12a3c8083007
@@ -121,8 +122,8 @@ The repository corpus (`real_source_target(name = "corpus_*")` per content
 type per package, issue #15, shared `tags = ["corpus"]`) is checked with the
 real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
-(`.github/workflows/ci.yml`, `dogfood` self-call with test disabled
-(coverage superset, issue #408 plus Phase 1 #607) over
+(`.github/workflows/ci.yml`, `dogfood` self-call with all nine checks
+plus dx test plus dx coverage (issue #408 plus Phase 1 #607) over
 verbatim `//...` per issue #408, plus `dogfood-freshness` for generate
 freshness and audits), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.

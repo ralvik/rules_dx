@@ -8,15 +8,13 @@
 #   with subject digest equal to artifact sha256, hermetic Rust toolchain
 #   only, //deploy/rules:release_demo_archive as subject fixture, verified
 #   via bazel test //deploy/release:dx_release_tools_test;
-# - CI per-host upload: ci.yml sbom-macos-arm64 job builds plus verifies on
-#   every push/PR (macos-14 native, bazel-macos-arm64- cache, needs
-#   build-macos-arm64), stages under RUNNER_TEMP/sbom-macos-arm64, uploads
-#   sbom-provenance-macos_arm64 via actions/upload-artifact pinned SHA plus
-#   tag, contents read only, publishes nothing, fork-safe; seed sbom plus
-#   arm64 sbom plus musl sbom jobs kept with no regression; pinned acquired
+# - CI surface: ci.yml carries no sbom-macos-arm64 job, no upload-artifact,
+#   and no per-host cache prefixes (macos_arm64 sbom-provenance stays an
+#   owner-gated local release record in docs/deploy/release-runbook.md; CI
+#   never signs PR code and publishes nothing, fork-safe); pinned acquired
 #   SDK with the hermetic-llvm Apple-SDK backend provisional and no host-installed SDK fallback never approved;
 # - promotion-checklist cells for this host: Platform-qualified macOS arm64
-#   (#412), dogfood consumer covers macos_arm64 test-disabled (#408),
+#   (#412), dogfood consumer covers macos_arm64 with all nine checks (#408),
 #   macos arm64 coverage cell with no union, tag hygiene at 0.0.0 with no
 #   v* tags, --verify-tag versioning, macos_arm64 sbom-provenance (#805);
 # - attestation stays owner-gated human-run via //deploy/release:signing_demo
@@ -45,6 +43,7 @@ sbom="deploy/release/sbom.bzl"
 verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
+consumer=".github/workflows/reusable-consumer.yml"
 runbook="docs/deploy/release-runbook.md"
 support="docs/product/support-matrix.md"
 platform_rs="cli/cli/src/platform.rs"
@@ -83,58 +82,57 @@ else
   bad "deploy/release/BUILD.bazel lost its sbom_demo plus dx_release_tools_test over release_demo_archive (#805)"
 fi
 
-# CI sbom-macos-arm64 job builds plus verifies on every push/PR (macos arm64 native, not seed-only).
-if grep -q -F -e 'name: sbom-macos-arm64 (SBOM + provenance build/verify/upload, macos arm64)' "$ci" &&
-  grep -q -F -e 'runs-on: macos-14' "$ci" &&
-  grep -q -F -e 'needs: [build-macos-arm64]' "$ci" &&
-  grep -q -F -e 'prefix: bazel-macos-arm64-' "$ci" &&
-  grep -q -F -e 'bazel build --noshow_progress //deploy/release:sbom_demo' "$ci" &&
-  grep -q -F -e '//deploy/release:dx_release_tools_test' "$ci"; then
+# CI runs no sbom-macos-arm64 build or verify: no release-tool targets in
+# ci.yml (macos arm64 SBOM stays an owner-gated local release record).
+if ! grep -q -F -e 'sbom-macos-arm64' "$ci" &&
+  ! grep -q -F -e 'sbom_demo' "$ci" &&
+  ! grep -q -F -e 'dx_release_tools_test' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-macos-arm64 build plus verify on push/PR (want macos arm64 job with sbom_demo plus dx_release_tools_test, #805)"
+  bad "ci.yml still carries an sbom-macos-arm64 build plus verify job (want no sbom-macos-arm64 job and no sbom_demo/dx_release_tools_test in CI; SBOM stays owner-gated local release, #805)"
 fi
 
-# CI sbom-macos-arm64 job stages plus uploads as a per-host artifact for inspection.
-if grep -q -F -e 'RUNNER_TEMP/sbom-macos-arm64' "$ci" &&
-  grep -q -F -e 'sbom-provenance-macos_arm64' "$ci" &&
-  grep -q -F -e 'actions/upload-artifact@' "$ci"; then
+# CI stages no macos sbom directory and uploads no provenance artifact.
+if ! grep -q -F -e 'RUNNER_TEMP/sbom-macos-arm64' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance-macos_arm64' "$ci" &&
+  ! grep -q -F -e 'actions/upload-artifact' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-macos-arm64 stage plus upload-artifact sbom-provenance-macos_arm64 (#805)"
+  bad "ci.yml still stages or uploads sbom-provenance-macos_arm64 (want no RUNNER_TEMP/sbom-macos-arm64 stage and no upload-artifact; CI publishes nothing, #805)"
 fi
 
-# Upload stays pinned plus fail-closed plus least-privilege, publishes nothing.
-if grep -q -F -e 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4' "$ci" &&
-  grep -q -F -e 'if-no-files-found: error' "$ci" &&
+# No upload-artifact pin remains; checkout stays least-privilege plus
+# setup-bazel, and the runbook records publishes-nothing plus CI-never-signs.
+if ! grep -q -F -e 'actions/upload-artifact' "$ci" &&
+  ! grep -q -F -e 'if-no-files-found: error' "$ci" &&
   grep -q -F -e 'persist-credentials: false' "$ci" &&
-  grep -q -F -e 'setup-bazelisk' "$ci" &&
-  grep -q -F -e 'CI never signs PR code, publishes nothing' "$ci"; then
+  grep -q -F -e 'bazel-contrib/setup-bazel' "$ci" &&
+  grep -q -F -e 'publishes nothing' "$runbook" &&
+  grep -q -F -e 'CI never signs PR code' "$runbook"; then
   ok
 else
-  bad "ci.yml lost its pinned upload-artifact plus fail-closed plus publishes-nothing record for sbom-macos-arm64 (#805)"
+  bad "ci.yml lost its no-upload plus least-privilege setup-bazel record or runbook lost publishes-nothing plus CI-never-signs (want no upload-artifact for sbom-macos-arm64, #805)"
 fi
 
-# Seed plus arm64 plus musl sbom jobs stay kept with no regression (all jobs coexist).
-if grep -q -F -e 'name: sbom (SBOM + provenance build/verify/upload, seed host)' "$ci" &&
-  grep -q -F -e 'name: sbom-provenance' "$ci" &&
-  grep -q -F -e 'prefix: bazel-seed-' "$ci" &&
-  grep -q -F -e 'name: sbom-arm64 (SBOM + provenance build/verify/upload, linux arm64)' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_x86_64_musl' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64_musl' "$ci"; then
+# No sbom jobs plus no per-host cache prefixes remain in ci.yml (caching is
+# setup-bazel bazelisk cache plus BuildBuddy only).
+if ! grep -q -F -e 'name: sbom' "$ci" &&
+  ! grep -q -F -e 'prefix: bazel-' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance' "$ci"; then
   ok
 else
-  bad "ci.yml lost its seed sbom plus arm64 sbom-arm64 plus musl jobs (want all jobs coexisting, #805)"
+  bad "ci.yml still carries sbom jobs or per-host cache prefixes (want none: all sbom jobs deleted, caching is setup-bazel plus BuildBuddy, #805)"
 fi
 
-# Attestation stays owner-gated human-run (fork-safe, no CI signing).
+# Attestation stays owner-gated human-run (fork-safe, no CI signing): the
+# signing_demo target plus runbook own the record, ci.yml never signs.
 if grep -q -F -e 'name = "signing_demo"' "$release_build" &&
-  grep -q -F -e 'CI never signs PR code' "$ci" &&
-  grep -q -F -e '//deploy/release:signing_demo' "$ci"; then
+  grep -q -F -e 'CI never signs PR code' "$runbook" &&
+  ! grep -q -F -e 'signing_demo' "$ci" &&
+  ! grep -q -F -e 'id-token' "$ci"; then
   ok
 else
-  bad "release BUILD or ci.yml lost the owner-gated signing_demo attestation record with CI never signing (#805)"
+  bad "release BUILD or runbook lost the owner-gated signing_demo attestation record with ci.yml never signing (#805)"
 fi
 
 # Runbook records the macos arm64 CI upload plus owner-gated attestation under #805.
@@ -148,20 +146,27 @@ else
   bad "release-runbook.md lost its #805 sbom-macos-arm64 sbom-provenance-macos_arm64 plus owner-gated attestation record"
 fi
 
-# Per-cell consumer evidence still covers macos_arm64 test-disabled (#408).
-if grep -q -F -e '"macos_arm64"' "$ci" &&
-  grep -q -F -e 'disabled_checks: "test"' "$ci"; then
+# Per-cell consumer evidence: the dogfood self-call covers macos_arm64 with
+# every check enabled (all four platforms, min coverage 97, test enabled
+# with no disabled_checks, #408).
+if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e 'min_coverage: "97"' "$ci" &&
+  ! grep -q -F -e 'disabled_checks' "$ci"; then
   ok
 else
-  bad "ci.yml lost its dogfood consumer macos_arm64 test-disabled per-cell evidence (#805)"
+  bad "ci.yml lost its dogfood macos_arm64 all-nine-checks per-cell evidence (want four-platform self-call plus min_coverage 97 plus no disabled_checks, #805)"
 fi
 
-# Per-cell coverage stays macos arm64 cell with no union.
+# Per-cell coverage stays the macos arm64 cell with no union: the dogfood
+# matrix coverage job renders the per-cell summary for macos_arm64, and the
+# no-union wording stays frozen in strategy-details.
 if grep -q -F -e 'qualified macos_arm64' "$cells" &&
-  grep -q -F -e 'coverage-macos-arm64 (dx coverage gate, macos arm64 cell)' "$ci"; then
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e 'Render first-party coverage summary (per-cell, no union)' "$consumer" &&
+  grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else
-  bad "coverage cells or ci.yml lost the macos arm64 per-cell gate with no union (#805)"
+  bad "coverage cells or dogfood consumer lost the macos arm64 per-cell gate with no union (#805)"
 fi
 
 # Pinned acquired SDK with provisional Apple-SDK backend; host-installed fallback never approved.
@@ -191,13 +196,15 @@ else
   bad "release-macos-arm64 fixture missing (want pins.bzl plus release_macos_arm64.expected plus corpus BUILD)"
 fi
 
-# Pins record wire plus CI plus cells plus attestation plus rejected plus honesty.
+# Pins record wire plus no-CI-upload plus cells plus attestation plus rejected plus honesty.
 if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'ci.yml sbom-macos-arm64 job builds //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'uploads sbom-provenance-macos_arm64 via actions/upload-artifact' "$pins" &&
+  grep -q -F -e 'ci.yml carries no sbom-macos-arm64 job; SBOM stays a local target under #805' "$pins" &&
+  grep -q -F -e 'no upload-artifact, no RUNNER_TEMP stage; CI publishes nothing under #805' "$pins" &&
+  grep -q -F -e 'no per-host cache scope; disk cache deleted, BuildBuddy remote cache only' "$pins" &&
+  grep -q -F -e 'seed sbom job removed with the sbom job deletion, no regression' "$pins" &&
   grep -q -F -e 'Platform-qualified macOS arm64 native under issue #412' "$pins" &&
-  grep -q -F -e 'dogfood consumer self-call covers macos_arm64' "$pins" &&
+  grep -q -F -e 'dogfood consumer self-call covers macos_arm64 with full dx test plus dx coverage' "$pins" &&
   grep -q -F -e 'macos arm64 coverage cell with no union' "$pins" &&
   grep -q -F -e 'pinned acquired SDK' "$pins" &&
   grep -q -F -e 'via //deploy/release:signing_demo' "$pins" &&
@@ -207,15 +214,17 @@ if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'no Supported claim' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its wire plus CI plus cells plus attestation plus rejected plus honesty pins under issue #805"
+  bad "pins.bzl lost its wire plus no-CI-upload plus cells plus attestation plus rejected plus honesty pins under issue #805"
 fi
 
-# Expected fixture pins the per-host upload plus cells plus rejected plus honesty lines.
+# Expected fixture pins the no-job plus no-upload plus cells plus rejected plus honesty lines.
 if grep -q -F -e 'Release evidence for macOS arm64 (issue #805)' "$expected" &&
   grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$expected" &&
-  grep -q -F -e 'uploads sbom-provenance-macos_arm64' "$expected" &&
-  grep -q -F -e 'pinned SHA plus tag' "$expected" &&
-  grep -q -F -e 'sbom-macos-arm64 summary' "$expected" &&
+  grep -q -F -e 'ci.yml carries no sbom-macos-arm64 job' "$expected" &&
+  grep -q -F -e 'no RUNNER_TEMP stage, no per-host cache scope' "$expected" &&
+  grep -q -F -e 'Seed sbom job removed with the sbom job deletion' "$expected" &&
+  grep -q -F -e 'arm64 sbom-arm64 job removed with the sbom job deletion' "$expected" &&
+  grep -q -F -e 'with full dx test plus dx coverage under issue #408' "$expected" &&
   grep -q -F -e 'macos_arm64 sbom-provenance delivered under issue' "$expected" &&
   grep -q -F -e 'CI never signs PR' "$expected" &&
   grep -q -F -e 'Dry-run only forever is rejected' "$expected" &&
@@ -224,7 +233,7 @@ if grep -q -F -e 'Release evidence for macOS arm64 (issue #805)' "$expected" &&
   grep -q -F -e 'no Supported claim' "$expected"; then
   ok
 else
-  bad "release_macos_arm64.expected lost its per-host upload plus cells plus rejected plus honesty lines under #805"
+  bad "release_macos_arm64.expected lost its no-CI-upload plus cells plus rejected plus honesty lines under #805"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

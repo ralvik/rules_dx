@@ -174,17 +174,19 @@ else
 fi
 
 # lane-A CI scope stays dogfood-like (plus Phase 1):
-# the dogfood self-call runs eight checks with `test` disabled (coverage
-# superset via `resolve_for_test` plus `bazel coverage`) over verbatim
-# `//...` (covering lane-A trees plus fixtures), with dogfood-freshness
-# for generate freshness plus audits. No bespoke corpus converge remains.
+# the dogfood self-call runs all nine checks with none disabled (coverage
+# executes the tests via `resolve_for_test` plus `bazel coverage`) behind
+# min_coverage 97 over verbatim `//...` (covering lane-A trees plus
+# fixtures), with dogfood-freshness for generate freshness plus audits.
+# No bespoke corpus converge remains.
 if grep -q -F -e 'dogfood-freshness' .github/workflows/ci.yml &&
   grep -q -F -e 'dogfood (self-call reusable consumer workflow)' .github/workflows/ci.yml &&
-  grep -q -F -e 'disabled_checks: "test"' .github/workflows/ci.yml &&
+  grep -q -F -e 'min_coverage: "97"' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'disabled_checks' .github/workflows/ci.yml &&
   ! grep -q -F -e 'attr(tags, corpus' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost its dogfood-like consumer scope (#12/#408 plus Phase 1 #607 test-disabled)"
+  bad "ci.yml lost its dogfood-like consumer scope (#12/#408 plus Phase 1 #607 all-nine min-coverage)"
 fi
 
 # Gazelle language extensions stay present: one extension directory
@@ -249,10 +251,13 @@ else
   bad "wrappers lost their lane-A aspect_hints forwarder plumbing (#12)"
 fi
 
-# lane-A CI scope covers the proven language trees via the whole-tree
-# test step plus the rust fixture pin (ruff enforces --fail_on warning).
-if grep -q -F -e '--local_test_jobs=4 //...' .github/workflows/ci.yml &&
-  grep -q -F -e '//rust/tests/fixtures/hello:hello' .github/workflows/ci.yml &&
+# lane-A CI scope covers the proven language trees via the consumer
+# whole-tree test step (`dx test //...` on all four qualified hosts
+# through the dogfood self-call), bounded by the shared .bazelrc test
+# flags; ruff enforces --fail_on warning.
+if grep -q -F -e '-- test //...' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" .github/workflows/ci.yml &&
+  grep -q -F -e 'test --local_test_jobs=4' .bazelrc &&
   grep -q -F -e '--fail_on warning' .bazelrc; then
   ok
 else

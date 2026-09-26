@@ -16,7 +16,7 @@ module(
 
 # Seed pins, frozen from executed runs on the seed host.
 # Bazel itself is pinned via the canonical `.bazelversion` (Bazelisk v1.29.0
-# from `.github/actions/setup-bazelisk/action.yml` -> Bazel 9.2.0);
+# from `.devcontainer/Dockerfile.prebuilt` -> Bazel 9.2.0);
 # `//tools/ci:pin_consistency_test` fails on drift.
 bazel_dep(name = "rules_rust", version = "0.74.0")
 bazel_dep(name = "rules_cc", version = "0.2.22")

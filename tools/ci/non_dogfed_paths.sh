@@ -23,14 +23,15 @@
 #   `failure_test` (`analysistest.expect_failure`). No `manual`, no nested
 #   Bazel; failure lives inside passing bodies. The red subjects stay
 #   `manual` (non-test, so wildcard builds skip them) where the
-#   analysistest contract requires it. Run in CI's `test` job via
-#   `bazel test //...` (no separate prove step).
+#   analysistest contract requires it. Run in CI's dogfood `dx test`
+#   self-call on all four hosts (no separate prove step).
 # - no-coverage cohort: `no-coverage` tests run under `bazel test //...`
 #   (never `manual`) and skip only under `bazel coverage` via the
 #   `test_tag_filters=-no-coverage` preset; `target_tags` proves the skip
 #   semantics on the representative pair, `coverage_cell`/`coverage_spill`/
-#   `coverage_qualification` own the gate halves. Run in CI's `test` job
-#   (execution) plus `coverage`/`prove` jobs (exclusion proof).
+#   `coverage_qualification` own the gate halves. Run in CI's dogfood
+#   `dx test`/`dx coverage` self-call (execution) plus `prove` (exclusion
+#   proof).
 # - shell sources with no quality class: `shell` is a known semantic class
 #   but `real_source_target` owns no shell sources (no adapter), and both
 #   ownership audits intentionally exclude `.sh` (corpus covers only
@@ -193,13 +194,15 @@ else
   bad "green hermetic negative proofs missing (failure_test + 3 sh harnesses + markdown-no-config test)"
 fi
 
-# B4: CI test job runs the green proofs via `bazel test //...` (no separate
-# manual_negatives prove step per). Flags between --noshow_progress and //... allowed.
-if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' .github/workflows/ci.yml &&
+# B4: green proofs run under the dogfood four-platform `dx test` self-call
+# (raw `bazel test //...` jobs are gone; each cell compiles once under dx)
+# with no separate manual_negatives prove step per.
+if grep -q -F -e 'dx -- test //...' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'uses: ./.github/workflows/reusable-consumer.yml' .github/workflows/ci.yml &&
   ! grep -q -F -e 'bazel run --noshow_progress //tools/ci:manual_negatives' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml must run green proofs via test //... with no manual_negatives step (issue #406)"
+  bad "ci.yml must run green proofs via the dogfood dx test self-call with no manual_negatives step (issue #406)"
 fi
 
 # B5: starlark docs own the green-proof record plus the CI pin.
@@ -252,14 +255,18 @@ else
   bad "target_tags lost its no-coverage skip proof (hello_output_test vs hello_test)"
 fi
 
-# C6: gate halves stay wired (execution in test, exclusion proof in prove.sh).
-if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' .github/workflows/ci.yml &&
+# C6: gate halves stay wired (execution in the dogfood dx test plus
+# coverage self-call and the musl coverage cells; exclusion proof in
+# prove.sh).
+if grep -q -F -e 'dx -- test //...' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'dx -- coverage' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'coverage --min-coverage 97 //...' .github/workflows/ci.yml &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:target_tags' tools/ci/prove.sh &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_cell' tools/ci/prove.sh &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:coverage_qualification' tools/ci/prove.sh; then
   ok
 else
-  bad "CI lost a no-coverage gate half (test execution + target_tags + coverage_cell + coverage_qualification)"
+  bad "CI lost a no-coverage gate half (dogfood dx test/coverage execution + target_tags + coverage_cell + coverage_qualification)"
 fi
 
 # C7: cells registry stays seed plus arm64 plus static musl plus macos arm64 plus windows x86_64 with no cross-cell union (macOS x86_64 removed per #976).
@@ -342,13 +349,14 @@ else
   bad "shell ownership broke (want 0 unowned .sh, found $unowned_count: $(tr '\n' ' ' <"$scratch/unowned_sh.txt"))"
 fi
 
-# D5: shell execution paths stay wired (test job for sh tests, no nested suite).
-if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' .github/workflows/ci.yml &&
+# D5: shell execution paths stay wired (dogfood dx test self-call runs
+# the sh tests, no nested suite, shell_contract in prove.sh).
+if grep -q -F -e 'dx -- test //...' .github/workflows/reusable-consumer.yml &&
   ! grep -q -F -e 'bazel test --noshow_progress //tools/ci:e2e' .github/workflows/ci.yml &&
   grep -q -F -e 'bazel run --noshow_progress //tools/ci:shell_contract' tools/ci/prove.sh; then
   ok
 else
-  bad "CI lost a shell execution path (want test //... + shell_contract, no :e2e)"
+  bad "CI lost a shell execution path (want dogfood dx test self-call + shell_contract, no :e2e)"
 fi
 
 # D6: shell_contract owns portability (bash-only harness with Windows shell

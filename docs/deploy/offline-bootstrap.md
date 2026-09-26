@@ -22,7 +22,8 @@ closed with an actionable diagnostic instead of silently degrading.
 The bundle is the `dx_standalone` archive plus the pinned per-OS
 Bazelisk launchers plus the advisory mirror directory, carried with a
 `SHA256SUMS` manifest. Launcher bytes and checksums stay pinned in
-`.github/actions/setup-bazelisk/action.yml`; the manifest binds the exact
+`.devcontainer/Dockerfile.prebuilt` plus
+`docs/contributing/local-workflows.md`; the manifest binds the exact
 bytes the airgapped host installs. Population and verification run
 through `deploy/offline/bootstrap-offline.sh`, which verifies every
 manifest entry before installing anything and performs no download

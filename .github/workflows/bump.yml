@@ -28,10 +28,12 @@
 # docs/contributing/automation.md preserved.
 #
 # Hygiene (issue #80, deduped under #915): the bootstrap is an inline
-# no-secrets `actions/checkout` (step 1; local `./` actions need a
-# checked-out workspace) plus the pinned
-# `.github/actions/setup-bazelisk` installer; every third-party action
-# is pinned to a commit SHA with its tag in a trailing comment.
+# no-secrets `actions/checkout` (step 1) plus the pinned
+# `bazel-contrib/setup-bazel` action (commit SHA plus trailing tag
+# comment); every third-party action
+# is pinned to a commit SHA with its tag in a trailing comment. The
+# optional BuildBuddy remote cache comes from the repository
+# `BUILDBUDDY_API_KEY` secret; absent it, Bazel stays local-cache only.
 
 name: bump
 
@@ -63,6 +65,12 @@ concurrency:
   group: bump-widen-one-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  # Single-sourced Bazelisk pin for the setup-bazel step in this
+  # workflow (tracked against .devcontainer/Dockerfile.prebuilt by
+  # //tools/ci:pin_consistency_test).
+  BAZELISK_VERSION: "1.29.0"
+
 jobs:
   widen-one:
     name: widen-one-requirement loop (one dep per PR)
@@ -74,11 +82,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
-      - name: Restore Bazel disk cache
-        uses: ./.github/actions/restore-bazel-cache
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
         with:
-          prefix: bazel-seed-
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Plan single widen (dry-run, never batch)
         env:
           SELECTOR: ${{ inputs.selector }}

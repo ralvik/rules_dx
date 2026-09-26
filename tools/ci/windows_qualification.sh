@@ -6,9 +6,10 @@
 # toolchains_msvc backend:
 # - delivered: dx qualified_hosts includes windows/x86_64 with macos x86_64
 #   plus windows arm64 staying refused, per-cell coverage for the windows
-#   x86_64 cell with no union, Windows CI jobs natively on windows-latest
-#   runners with shell bash plus a per-host cache scope under the
-#   portable-shell contract, consumer plus per-host release evidence
+#   x86_64 cell with no union, Windows CI via the consumer matrix on
+#   windows-latest runners with shell bash and no per-host cache scope
+#   (setup-bazel plus BuildBuddy remote cache) under the portable-shell
+#   contract, consumer plus per-host release evidence
 #   (sbom-provenance delivered under #807), docs in
 #   support-matrix plus ADR 0014 plus native-toolchains;
 # - MSVC/EULA handling: toolchains_msvc clang-cl/Microsoft-STL backend
@@ -107,18 +108,20 @@ else
   bad "windows per-cell coverage registry lost its qualified cell (issue #414)"
 fi
 
-# CI Windows jobs exist natively on windows-latest with shell bash plus a
-# per-host cache scope.
-if grep -q -F -e 'build-windows-x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'test-windows-x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-windows-x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
-  grep -q -F -e 'shell: bash' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel-windows-x86_64-' .github/workflows/ci.yml &&
-  grep -q -F -e 'windows x86_64' .github/workflows/ci.yml; then
+# CI Windows x86_64 runs natively through the consumer matrix on
+# windows-latest with shell bash; ci.yml only selects the windows_x86_64
+# platform (no Windows runner of its own, no per-host cache scope —
+# hygiene is setup-bazel plus the shared BuildBuddy remote cache).
+if grep -q -F -e 'windows_x86_64' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e "'windows-latest'" .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'shell: bash' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'windows_x86_64' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'bazel-windows-x86_64-' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'prefix: bazel-' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost the Windows x86_64 native jobs with shell bash plus per-host cache scope on windows-latest (issue #414)"
+  bad "ci.yml lost the Windows x86_64 selection or regained a per-host cache scope on windows-latest (issue #414)"
 fi
 
 # CI Windows jobs stay portable-shell clean: no banned forms in the workflow.
@@ -131,17 +134,17 @@ else
   bad "ci.yml windows jobs introduced a non-portable shell form (issue #323)"
 fi
 
-# Explicit EULA acceptance never automatic, never set in CI: no EULA-accept
-# variable assignment, no auto-accept flag, no secrets in the Windows jobs;
-# merely adding the module fetches no restricted payloads (no toolchains_msvc
-# dep wired as a release backend).
+# Explicit EULA acceptance never automatic, never set in CI: the Windows
+# route (consumer matrix on windows-latest) carries no EULA-accept
+# variable and no auto-accept flag; the BuildBuddy cache key is the only
+# CI secret and is by design; merely adding the module fetches no
+# restricted payloads (no toolchains_msvc dep wired as a release backend).
 # Hermetic context search: host grep -A separators diverge (issue #1006).
-if DX_CONTEXT_RE=1 dx_context_absent .github/workflows/ci.yml 'build-windows-x86_64' -A 30 'EULA_ACCEPT|ACCEPT.*EULA|/accept.*eula' &&
-  dx_tree_absent --include='*.yml' --exclude='windows_qualification.sh' 'BAZEL_TOOLCHAINS_MSVC_ACCEPT' -- .github/ &&
-  DX_CONTEXT_RE=1 dx_context_absent .github/workflows/ci.yml 'build-windows-x86_64' -A 30 'secrets\.'; then
+if DX_CONTEXT_RE=1 dx_context_absent .github/workflows/reusable-consumer.yml 'windows-latest' -A 30 'EULA_ACCEPT|ACCEPT.*EULA|/accept.*eula' &&
+  dx_tree_absent --include='*.yml' --exclude='windows_qualification.sh' 'BAZEL_TOOLCHAINS_MSVC_ACCEPT' -- .github/; then
   ok
 else
-  bad "windows jobs auto-accept the Microsoft EULA or leak secrets (explicit acceptance only, issue #414)"
+  bad "windows jobs auto-accept the Microsoft EULA (explicit acceptance only, issue #414)"
 fi
 
 # No installed Build Tools fallback claim anywhere: the only allowed mentions

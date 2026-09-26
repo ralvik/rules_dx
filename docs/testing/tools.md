@@ -227,7 +227,7 @@ guards where workflows use them (issue #1061): python3 3.9+, gh 2.0+,
 jq 1.6+, curl 7.0+. `ci.yml` SBOM digest steps assert python3, the
 coverage publish step asserts gh plus jq, `reusable-consumer.yml` asserts
 the same pair in its gate plus publish steps, `ghcr.yml` asserts curl
-before the cosign fetch, and `setup-bazelisk` asserts its hashing fallback
+before the cosign fetch, and `docs/contributing/local-workflows.md` asserts its hashing fallback
 (sha256sum/shasum/python3) before checksumming.
 
 Per-host skip budget (issue #769): the bash harness stays Linux-only per

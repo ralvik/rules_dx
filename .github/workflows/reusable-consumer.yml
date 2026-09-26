@@ -14,10 +14,12 @@
 # no reviewdog. SARIF Code Scanning publication is opt-in, off by default.
 #
 # Hygiene (issue #80, deduped under #915): job bootstraps are an inline
-# no-secrets `actions/checkout` (must be step 1 — GitHub cannot resolve
-# `./` local actions before checkout) plus the pinned
-# `.github/actions/setup-bazelisk` installer; every third-party
-# action is pinned to a commit SHA with its tag in a trailing comment.
+# no-secrets `actions/checkout` (must be step 1) plus the pinned
+# `bazel-contrib/setup-bazel` action (commit SHA plus trailing tag
+# comment); every third-party action is pinned to a commit SHA with its
+# tag in a trailing comment. The optional BuildBuddy remote cache is
+# configured per job from the caller-provided `BUILDBUDDY_API_KEY`
+# secret; absent the secret, Bazel stays local-cache only.
 # Platform labels never reach `runs-on` unchecked: `platforms-gate`
 # fails closed on missing, empty, or unsupported selections before any
 # per-platform job queues a runner.
@@ -56,6 +58,10 @@ on:
         required: false
         default: ""
         type: string
+    secrets:
+      BUILDBUDDY_API_KEY:
+        description: "BuildBuddy API key enabling the shared remote cache. Optional; jobs skip remote-cache configuration when absent."
+        required: false
 
 permissions:
   contents: read
@@ -65,6 +71,10 @@ env:
   # Windows binaries, while still converting MSYS paths (`/c/...`) for
   # tools like tsc.bat. Exclude only `//`, not `*`.
   MSYS2_ARG_CONV_EXCL: "//"
+  # Single-sourced Bazelisk pin for every setup-bazel step in this
+  # workflow (tracked against .devcontainer/Dockerfile.prebuilt by
+  # //tools/ci:pin_consistency_test).
+  BAZELISK_VERSION: "1.29.0"
 
 concurrency:
   group: dx-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -150,7 +160,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Verify rules_dx pin
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
@@ -168,7 +201,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - run: bazel run @rules_dx//cli/cli:dx -- typecheck --check //...
 
   format:
@@ -182,7 +238,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - run: bazel run @rules_dx//cli/cli:dx -- format --check //...
 
   generate:
@@ -196,7 +275,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - run: bazel run @rules_dx//cli/cli:dx -- generate --check //...
 
   security-audit:
@@ -210,7 +312,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Resolve hermetic Gitleaks
         run: |
           rel="$(bazel cquery --output=files @dx_tools//:gitleaks 2>/dev/null | tail -1)"
@@ -280,7 +405,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - run: bazel run @rules_dx//cli/cli:dx -- audit license //...
 
   test:
@@ -302,7 +450,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: test requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -327,7 +498,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: build requires explicit nonempty platforms; no implicit default" >&2; exit 1'
@@ -353,7 +547,30 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup-bazelisk
+      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
+        with:
+          bazelisk-version: ${{ env.BAZELISK_VERSION }}
+          bazelisk-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Configure BuildBuddy remote cache
+        shell: bash
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BUILDBUDDY_API_KEY}" ]; then
+            echo "BuildBuddy key unavailable (fork pull request or unset secret); Bazel stays local-cache only."
+            exit 0
+          fi
+          rc="${RUNNER_TEMP}/buildbuddy.bazelrc"
+          {
+            echo 'common --remote_cache=grpcs://remote.buildbuddy.io'
+            echo "common --remote_header=x-buildbuddy-api-key=${BUILDBUDDY_API_KEY}"
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              echo 'common --noremote_upload_local_results'
+            fi
+          } > "${rc}"
+          echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"
       - name: Require explicit platforms
         if: ${{ inputs.platforms == '' }}
         run: 'echo "dx-ci: coverage requires explicit nonempty platforms; no implicit default" >&2; exit 1'

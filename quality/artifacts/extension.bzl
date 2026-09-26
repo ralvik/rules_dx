@@ -81,7 +81,7 @@ def _sha256_of(ctx, path):
     """Returns the sha256 hex of one repo-relative file, or "" when unavailable.
 
     Tries the host hashers in portability order (sha256sum, shasum,
-    python3), mirroring `.github/actions/setup-bazelisk`; the caller
+    python3), mirroring `docs/contributing/local-workflows.md`; the caller
     fails closed on "" so an unhashable fetch never ships silently.
     """
     for argv in (

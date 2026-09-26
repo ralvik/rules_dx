@@ -72,42 +72,43 @@ each command's own failure semantics rather than injecting a new CLI scheduling 
 
 ### Workflow Hygiene
 
-Verify Bazelisk installation comes from the single reviewed
-`.github/actions/setup-bazelisk` composite action rather than copied shell blocks, and
+Verify Bazelisk installation comes from the pinned
+`bazel-contrib/setup-bazel` action (commit SHA plus trailing tag comment)
+rather than copied shell blocks, with the Bazelisk version single-sourced
+per workflow through `BAZELISK_VERSION` (canonical
+`.devcontainer/Dockerfile.prebuilt`), and
 every third-party action reference is pinned to a commit SHA (tag in a trailing comment).
 Verify the `platforms-gate` job rejects missing, empty, or unsupported platform selections
 before any per-platform job queues a runner, and the aggregate still fails when the gate
-does. Verify the seed plus arm64 plus musl plus macos arm64 plus windows jobs restore a Bazel disk cache (free-tier eligible per the
-infrastructure budget; arm64 jobs use the separate `bazel-arm64-` scope; musl jobs use per-profile
-`bazel-musl-x86_64-` plus `bazel-musl-arm64-` scopes, issue #411; macos arm64 jobs use the separate
-`bazel-macos-arm64-` scope on `macos-14`, issue #412; windows x86_64 jobs use the separate
-`bazel-windows-x86_64-` scope on `windows-latest` with shell `bash`, issue #414; host matrix pinned by
-`bazel run //tools/ci:ci_matrix_qualification`, issue #415), with cache keys hashing every
-Bazel-affecting lock/config (issue #618: `MODULE.bazel` plus `MODULE.bazel.lock` plus `.bazelrc` plus
-`tools/bazelrc/preset.bazelrc` plus `.bazelversion` plus `.npmrc` plus `cargo-bazel-lock.json` plus
-`Cargo.lock`/`Cargo.toml` plus `pnpm-lock.yaml`/`pnpm-workspace.yaml` plus `maven_install.json` plus
-`go.mod`/`go.sum` plus `paket.dependencies`/`paket.lock` plus `uv.lock`/`pyproject.toml`; `user.bazelrc`
-never hashed because CI checkouts never contain it) with exact hits only
-(no prefix fallback: a lock/config bust starts cold instead of reusing a
-stale entry) scoped by branch via `github.ref` with no restore-keys
-fallback, so a poisoned PR entry is never reusable by main (issue #1059),
-with PR runs restore-only via `lookup-only` and saves owned by main. Dx pipeline plus evaluator actions carry `no-remote-exec`
-(local-only until remote is qualified). Remote cache stays unwired (issue #618 wont-fix):
-local `actions/cache` disk scope only, no `--remote_cache`/`--remote_executor`/`--bes_backend` flags,
-per the free-tier budget plus Apple/MS cache-rights bounds (issues #496/#507). Qualified seed-only via
+does. Verify every Bazel job configures the shared BuildBuddy remote cache
+(`common --remote_cache` plus API key written to an rc file exported through
+`BAZELRC`, dropped when the `BUILDBUDDY_API_KEY` secret is absent, pull
+requests upload nothing via `--noremote_upload_local_results`, issue #1059
+policy preserved under the reversal of closed #618) and pulls the
+Bazelisk download cache through `bazelisk-cache: true` with `cache-save`
+off for pull requests (free-tier eligible per the
+infrastructure budget; host matrix pinned by
+`bazel run //tools/ci:ci_matrix_qualification`, issue #415), with no
+`actions/cache` usage anywhere under `.github/workflows/` (the legacy
+`restore-bazel-cache` disk cache is deleted). Dx pipeline plus evaluator actions carry `no-remote-exec`
+(local-only execution until remote is qualified; `--remote_executor` plus
+`--bes_backend` stay absent). Qualified seed-only via
 `bazel run //tools/ci:action_execution_cache_qualification` (aquery
 `ExecutionInfo` plus `ActionKey` shape plus local execution-log hit/miss;
-remote stays unverified). Pass `--noshow_progress` to Bazel invocations, run the corpus
+remote cache read/write stays unverified by that harness). Pass `--noshow_progress` to Bazel invocations, run the corpus
 ownership audit through `bazel run //tools/ci:corpus_audit`, and never rely on a local
 `user.bazelrc` override. Verify docs publishing stages its artifact outside the checkout
 and leaves the tree clean.
 
 Verify CI flakiness plus timeout tuning (issue #619, qualified seed-only via
 `bazel run //tools/ci:flakiness_qualification`; CI only, no Supported claim):
-every direct `bazel test` invocation carries `--flaky_test_attempts=3` plus
-`--test_timeout=300` for bounded transient-flake retries with a per-test 300s
-cap; GitHub `timeout-minutes` stay tuned (seed test/coverage 45, per-host
-test/coverage 60, builds 30/60, no blanket 90); reusable-consumer timeouts
+bounded retries plus caps live in `.bazelrc` (`test --flaky_test_attempts=3`
+plus `test --test_timeout=300` plus `test --local_test_jobs=4`) so every
+entrypoint inherits them, with per-invocation `--flaky_test_attempts=3` plus
+`--test_timeout=300` where a direct `bazel test` runs, for bounded
+transient-flake retries with a per-test 300s
+cap; GitHub `timeout-minutes` stay tuned (musl build/coverage 60, freshness
+30, no blanket 90); reusable-consumer timeouts
 stay pinned (gate 5, Linux-once 30, per-platform 60, aggregate 10, no 90)
 with every `sh_test` carrying explicit per-target `size` plus `timeout`
 (issue #932); sharding stays per-host/per-stage
@@ -300,7 +301,7 @@ qualified seed-only under issue #509 with fixture evidence
 plus gate/aggregate plus per-gap decisions fixture evidence qualified seed-only under #509
 (`bazel run //tools/ci:consumer_ci_qualification`; nine checks, explicit
 platforms, fail-closed sequential, stable aggregate, hygiene, concurrency,
-permissions, per-cell coverage with fork-safe comments, self-call test-disabled
+permissions, per-cell coverage with fork-safe comments, self-call dx test plus dx coverage
 (issue #408 plus Phase 1 #607 coverage superset, verbatim `//...`), native bump loop (sole updater, issue #461), migrate syntax plus
 manifest selection (delivered CLI with fail-closed execution, issue #462) plus run multirun
 (issue #463 delivered), tag hygiene as-built, with the per-gap decisions above pinned in
@@ -337,7 +338,7 @@ docker build plus devcontainer up with no boot job in CI and no extra CI
 job, non-Linux plus linux/arm64 boot plus arm64 prebuilt variant
 wont-fix; infra only, no Supported claim).
 Consumer CI, devcontainer, and perf honesty
-is delivered for the self-call path with owned gaps elsewhere: self-call test-disabled
+is delivered for the self-call path with owned gaps elsewhere: self-call dx test plus dx coverage
 per #408 plus Phase 1 #607 coverage superset (verbatim `//...`, qualified seed-only under #509 via
 `bazel run //tools/ci:consumer_ci_qualification`; build-only self-call forever
 rejected); devcontainer parity plus definition shape delivered with

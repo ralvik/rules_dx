@@ -4,9 +4,10 @@
 # Canonical sources:
 #   Bazel version: `.bazelversion` (Bazelisk reads it; every other Bazel pin
 #     tracks it).
-#   Bazelisk version + per-OS sha256: `.github/actions/setup-bazelisk/action.yml`
-# defaults (the single portable installer,; Dockerfile tracks
-#     the linux-amd64 pair and docs bootstrap tracks all five hosts).
+#   Bazelisk version + linux-amd64 sha256: `.devcontainer/Dockerfile.prebuilt`
+#     (the single verified installer pair; the workflows single-source the
+#     version through their `BAZELISK_VERSION` env and docs bootstrap records
+#     all five per-OS sha256 pins).
 #   Module pins: `modules/*.bzl` wrappers own per-ecosystem pins
 #     (rust, python, js, java-scala-kotlin, dotnet, toolchains) plus the
 #     crate-manifest groups; `MODULE.bazel` keeps only `bazel_dep` plus
@@ -47,7 +48,7 @@
 # copies in the same reviewed change.
 #
 # Usage: pin_consistency.sh <bazelversion> <module> <preset_rs>
-#   <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod>
+#   <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod>
 #   <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js>
 #   <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains>
 #   <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>
@@ -59,29 +60,29 @@ dx_bootstrap "tools/sh/lib.sh"
 
 dx_test_init
 
-bazelversion="${1:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-module="${2:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-preset_py="${3:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-dockerfile="${4:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-tested_stack="${5:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-action_yml="${6:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-local_workflows="${7:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-go_mod="${8:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-root_pkg="${9:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
-js_pkg="${10:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-modules_rust="${11:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-modules_python="${12:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-modules_js="${13:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-modules_jvm="${14:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-modules_dotnet="${15:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-modules_hubs="${16:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-modules_toolchains="${17:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
-repos_bzl="${18:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
-preset_fragment="${19:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
-root_bazelrc="${20:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
-version_rs="${21:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
-ghcr_yml="${22:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
-jvm_repos_bzl="${23:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <action_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml> <jvm_repos_bzl>}"
+bazelversion="${1:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+module="${2:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+preset_py="${3:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+dockerfile="${4:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+tested_stack="${5:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+ci_yml="${6:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+local_workflows="${7:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+go_mod="${8:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+root_pkg="${9:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg>}"
+js_pkg="${10:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_rust="${11:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_python="${12:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_js="${13:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_jvm="${14:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_dotnet="${15:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_hubs="${16:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+modules_toolchains="${17:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc>}"
+repos_bzl="${18:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+preset_fragment="${19:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+root_bazelrc="${20:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+version_rs="${21:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+ghcr_yml="${22:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml>}"
+jvm_repos_bzl="${23:?usage: pin_consistency.sh <bazelversion> <module> <preset_rs> <dockerfile> <tested_stack> <ci_yml> <local_workflows> <go_mod> <root_pkg> <js_pkg> <modules_rust> <modules_python> <modules_js> <modules_jvm> <modules_dotnet> <modules_hubs> <modules_toolchains> <repos_bzl> <preset_fragment> <root_bazelrc> <version_rs> <ghcr_yml> <jvm_repos_bzl>}"
 
 # --- Bazel canonical ---
 bazel_pin="$(tr -d '[:space:]' <"$bazelversion")"
@@ -117,60 +118,45 @@ check_bazel_pin "Dockerfile USE_BAZEL_VERSION" "$docker_bazel_pin"
 stack_pin="$(grep -A2 -F -e '"bazel_version": attr.string(' "$tested_stack" | grep -o -E -e 'default = "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
 check_bazel_pin "tested_stack.bzl bazel_version default" "$stack_pin"
 
-# --- Bazelisk canonical (action.yml defaults, portable) ---
-# Canonical: version plus per-OS sha256 inputs in setup-bazelisk/action.yml.
-# Dockerfile tracks the linux-amd64 pair; local-workflows.md documents all
-# five qualified hosts.
-action_version="$(grep -A3 -F -e 'version:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
-action_sha_linux_amd64="$(grep -A3 -F -e 'sha256_linux_amd64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
-action_sha_linux_arm64="$(grep -A3 -F -e 'sha256_linux_arm64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
-action_sha_darwin_amd64="$(grep -A3 -F -e 'sha256_darwin_amd64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
-action_sha_darwin_arm64="$(grep -A3 -F -e 'sha256_darwin_arm64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
-action_sha_windows_amd64="$(grep -A3 -F -e 'sha256_windows_amd64:' "$action_yml" | grep -o -E -e 'default: "[^"]+"' | head -1 | cut -d'"' -f2 || true)"
-if [[ -z "$action_version" || -z "$action_sha_linux_amd64" || -z "$action_sha_linux_arm64" || -z "$action_sha_darwin_amd64" || -z "$action_sha_darwin_arm64" || -z "$action_sha_windows_amd64" ]]; then
-  bad "setup-bazelisk action.yml missing version/per-OS sha defaults (issue #617)"
-else
-  ok
-fi
-# Legacy single-sha input must stay absent: per-OS pins replace it.
-if grep -A3 -E -e '^  sha256:' "$action_yml" | grep -q -F -e 'default:'; then
-  bad "setup-bazelisk action.yml still carries legacy single sha256 input (want per-OS sha256_* only, issue #617)"
+# --- Bazelisk canonical (Dockerfile.prebuilt, portable) ---
+# Canonical: version plus linux-amd64 sha256 in Dockerfile.prebuilt (the
+# single machine-verified pair). The workflows single-source the version
+# through their `BAZELISK_VERSION` env; local-workflows.md documents all
+# five per-OS sha256 pins plus the assets (docs-recorded, issue #617).
+docker_bazelisk_version="$(grep -o -E -e 'bazelisk/releases/download/v[0-9.]+/bazelisk-linux-amd64' "$dockerfile" | head -1 | sed -E 's|.*/v([0-9.]+)/.*|\1|' || true)"
+docker_bazelisk_sha="$(grep -o -E -e '[0-9a-f]{64}  /tmp/bazelisk' "$dockerfile" | head -1 | cut -d' ' -f1 || true)"
+if [[ -z "$docker_bazelisk_version" || -z "$docker_bazelisk_sha" ]]; then
+  bad "Dockerfile.prebuilt lost the canonical Bazelisk version or linux-amd64 sha256 (issue #617)"
 else
   ok
 fi
 
-docker_bazelisk_version="$(grep -o -E -e 'bazelisk/releases/download/v[0-9.]+/bazelisk-linux-amd64' "$dockerfile" | head -1 | sed -E 's|.*/v([0-9.]+)/.*|\1|' || true)"
-docker_bazelisk_sha="$(grep -o -E -e '[0-9a-f]{64}  /tmp/bazelisk' "$dockerfile" | head -1 | cut -d' ' -f1 || true)"
-if [[ "$docker_bazelisk_version" == "$action_version" ]]; then
+# Workflow env pin tracks the canonical Dockerfile version (arg6 = ci.yml).
+workflow_bazelisk_version="$(grep -o -E -e 'BAZELISK_VERSION: "[^"]+"' "$ci_yml" | head -1 | cut -d'"' -f2 || true)"
+if [[ -n "$workflow_bazelisk_version" && "$workflow_bazelisk_version" == "$docker_bazelisk_version" ]]; then
   ok
 else
-  bad "Dockerfile Bazelisk v$docker_bazelisk_version drifts from canonical action.yml v$action_version"
-fi
-if [[ "$docker_bazelisk_sha" == "$action_sha_linux_amd64" ]]; then
-  ok
-else
-  bad "Dockerfile Bazelisk sha drifts from canonical action.yml linux-amd64 sha"
+  bad "ci.yml BAZELISK_VERSION=$workflow_bazelisk_version drifts from canonical Dockerfile.prebuilt v$docker_bazelisk_version"
 fi
 
 # Docs bootstrap tracks the canonical version plus all five per-OS shas
 # (portable bootstrap).
-for sha in "$action_sha_linux_amd64" "$action_sha_linux_arm64" "$action_sha_darwin_amd64" "$action_sha_darwin_arm64" "$action_sha_windows_amd64"; do
-  if grep -q -F -e "$sha" "$local_workflows"; then
-    ok
-  else
-    bad "local-workflows.md missing canonical Bazelisk sha $sha (issue #617)"
-  fi
-done
-if grep -q -F -e "v$action_version" "$local_workflows"; then
+if grep -q -F -e "$docker_bazelisk_sha" "$local_workflows"; then
   ok
 else
-  bad "local-workflows.md Bazelisk v drifts from canonical action.yml v$action_version"
+  bad "local-workflows.md missing canonical linux-amd64 sha $docker_bazelisk_sha (issue #617)"
+fi
+if grep -q -F -e "v$docker_bazelisk_version" "$local_workflows"; then
+  ok
+else
+  bad "local-workflows.md Bazelisk v drifts from canonical Dockerfile.prebuilt v$docker_bazelisk_version"
 fi
 for asset in bazelisk-linux-amd64 bazelisk-linux-arm64 bazelisk-darwin-amd64 bazelisk-darwin-arm64 bazelisk-windows-amd64.exe; do
-  if grep -q -F -e "$asset" "$local_workflows"; then
+  asset_sha="$(grep -F -e "$asset" "$local_workflows" | head -1 | grep -o -E -e '[0-9a-f]{64}' | head -1 || true)"
+  if [[ -n "$asset_sha" ]]; then
     ok
   else
-    bad "local-workflows.md missing canonical Bazelisk asset $asset (issue #617)"
+    bad "local-workflows.md missing sha256 pin for Bazelisk asset $asset (issue #617)"
   fi
 done
 

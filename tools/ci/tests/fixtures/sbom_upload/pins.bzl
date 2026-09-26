@@ -2,7 +2,7 @@
 Contract: `docs/deploy/release-runbook.md`.
 Fixture: `tools/ci/tests/fixtures/sbom_upload/` via
 `bazel run //tools/ci:sbom_upload_qualification`.
-SPDX-2.3 plus SLSA v1 via sbom_demo on CI with upload; seed-only, no Supported claim.
+SPDX-2.3 plus SLSA v1 via sbom_demo with no CI upload; seed-only, no Supported claim.
 """
 
 # SBOM wire profile: SPDX-2.3 plus SLSA v1 via the managed toolchain, subject binds artifact.
@@ -13,12 +13,11 @@ SBOM_HERMETIC = "managed Python toolchain only, no host sha256sum/shasum/python3
 SBOM_FIXTURE = "//deploy/rules:release_demo_archive as the SBOM subject fixture"
 SBOM_VERIFY = "bazel test //deploy/release:dx_release_tools_test binds SPDX plus in-toto plus SLSA"
 
-# CI upload: seed-host sbom job builds plus verifies plus stages plus uploads.
-CI_JOB = "ci.yml sbom job builds //deploy/release:sbom_demo plus verifies //deploy/release:dx_release_tools_test"
-CI_STAGE = "stages SPDX-2.3 plus SLSA v1 under RUNNER_TEMP/sbom"
-CI_UPLOAD = "uploads sbom-provenance via actions/upload-artifact pinned SHA plus tag"
+# CI surface removed: no sbom job, no upload, no stage, no cache scope.
+CI_NO_JOB = "ci.yml carries no sbom job; SBOM stays a local target under #612"
+CI_NO_CACHE_SCOPE = "no per-host cache scope; disk cache deleted, BuildBuddy remote cache only"
+CI_NO_UPLOAD = "no upload-artifact, no RUNNER_TEMP stage; CI publishes nothing under #612"
 CI_PERMISSIONS = "contents: read only, no id-token, persist-credentials false, publishes nothing"
-CI_SUMMARY = "sbom summary with build plus verify plus upload commands"
 
 # Attestation stays owner-gated human-run (fork-safe, no CI signing).
 ATTESTATION_OWNER_GATED = "Sigstore keyless cosign sign-blob --bundle plus gh attestation create via //deploy/release:signing_demo"

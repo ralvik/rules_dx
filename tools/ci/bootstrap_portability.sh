@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 # CI bootstrap portability harness.
 #
-# Machine-checks the as-built portable Bazelisk bootstrap with fixture
+# Machine-checks the as-built portable Bazel bootstrap with fixture
 # evidence and owned gaps, without claiming Supported or Windows arm64:
-# - delivered: single `.github/actions/setup-bazelisk` composite action
-#   covers Linux x86_64 plus Linux arm64 plus macOS arm64 plus macOS x86_64
-#   plus Windows x86_64 with retry and no sudo assumption; OS/arch resolve
-#   from RUNNER_OS/RUNNER_ARCH with a uname fallback; download retries;
-#   checksum verifies via sha256sum with shasum plus python3 fallbacks;
-#   install lands under RUNNER_TEMP without sudo and joins GITHUB_PATH;
-#   per-OS copy-paste is rejected; curl hardening extends to the
-#   Dockerfile plus ghcr cosign fetches with --retry everywhere (issue #932);
-# - pins: version plus per-OS sha256 inputs stay canonical in action.yml
-#   (checked by //tools/ci:pin_consistency_test); Dockerfile tracks the
-#   linux-amd64 pair; docs bootstrap documents all five hosts;
-# - docs in place: `docs/contributing/local-workflows.md` bootstrap is
-#   portable with retry plus checksum plus no-sudo install;
+# - delivered: every workflow boots Bazel through the single SHA-pinned
+#   `bazel-contrib/setup-bazel` action (commit SHA plus trailing tag
+#   comment) driven by the single-sourced `BAZELISK_VERSION` env with
+#   `bazelisk-cache` on, and no workflow embeds a Bazelisk download;
+#   job configuration stays runner-temp scoped (RUNNER_TEMP rc plus
+#   GITHUB_ENV export, never a system install); curl hardening extends
+#   to the Dockerfile plus ghcr cosign fetches with --retry everywhere
+#   (issue #932);
+# - pins: version plus linux-amd64 sha256 stay canonical in
+#   `.devcontainer/Dockerfile.prebuilt` (checked by
+#   //tools/ci:pin_consistency_test); Dockerfile tracks the
+#   linux-amd64 pair; docs bootstrap records all five per-OS sha256s;
+# - docs in place: `docs/contributing/local-workflows.md` owns the
+#   copy-paste bootstrap (five-host asset map with fail-closed refusal,
+#   bounded retry, portable checksum plus no-sudo install);
 # - CI only: no product runtime change; Windows arm64 stays the
 #   unqualified gap with clean refusal.
 #
@@ -32,52 +34,42 @@ dx_cd_workspace
 
 dx_test_init
 
-action=".github/actions/setup-bazelisk/action.yml"
 docs="docs/contributing/local-workflows.md"
 dockerfile=".devcontainer/Dockerfile.prebuilt"
 ghcr=".github/workflows/ghcr.yml"
 
-# Single portable action owns the Bazelisk install: per-OS sha inputs exist,
-# legacy single sha256 stays absent.
-if grep -q -F -e 'sha256_linux_amd64:' "$action" &&
-  grep -q -F -e 'sha256_linux_arm64:' "$action" &&
-  grep -q -F -e 'sha256_darwin_amd64:' "$action" &&
-  grep -q -F -e 'sha256_darwin_arm64:' "$action" &&
-  grep -q -F -e 'sha256_windows_amd64:' "$action" &&
-  ! grep -A3 -E -e '^  sha256:' "$action" | grep -q -F -e 'default:'; then
+# Single Bazel bootstrap path: every setup-bazel step is the full-SHA
+# pin with its trailing release-tag comment, takes the single-sourced
+# Bazelisk version, and keeps its cache on; a bare tag pin, a missing
+# version argument, or a dropped setup step fails closed. Eighteen such
+# steps exist today (ci 6 plus reusable-consumer 9 plus bump plus
+# publish-dry-run plus reusable-docs).
+setup_ok=1
+setup_total=0
+for wf in .github/workflows/*.yml; do
+  raw="$(grep -c -F -e 'uses: bazel-contrib/setup-bazel@' "$wf" || true)"
+  pinned="$(grep -c -E -e 'uses: bazel-contrib/setup-bazel@[0-9a-f]{40} # v[0-9]+\.[0-9]+\.[0-9]+' "$wf" || true)"
+  if [[ "$raw" != "$pinned" ]]; then
+    setup_ok=0
+  fi
+  if [[ "$raw" != "0" ]]; then
+    versioned="$(grep -c -F -e 'bazelisk-version: ${{ env.BAZELISK_VERSION }}' "$wf" || true)"
+    cached="$(grep -c -F -e 'bazelisk-cache: true' "$wf" || true)"
+    if [[ "$versioned" -lt "$raw" || "$cached" -lt "$raw" ]]; then
+      setup_ok=0
+    fi
+  fi
+  setup_total=$((setup_total + raw))
+done
+if [[ "$setup_ok" == "1" && "$setup_total" -ge "18" ]]; then
   ok
 else
-  bad "setup-bazelisk lost per-OS sha256 inputs or kept legacy single sha256 (issue #617)"
+  bad "workflows lost the SHA-pinned setup-bazel bootstrap (want bazel-contrib/setup-bazel@<40-hex> plus # vX.Y.Z tag plus BAZELISK_VERSION plus bazelisk-cache, issue #617)"
 fi
 
-# OS/arch map covers all five qualified hosts with the exact upstream assets
-# and fails closed on Windows ARM64.
-if grep -q -F -e 'Linux/X64) asset="bazelisk-linux-amd64"' "$action" &&
-  grep -q -F -e 'Linux/ARM64) asset="bazelisk-linux-arm64"' "$action" &&
-  grep -q -F -e 'macOS/X64) asset="bazelisk-darwin-amd64"' "$action" &&
-  grep -q -F -e 'macOS/ARM64) asset="bazelisk-darwin-arm64"' "$action" &&
-  grep -q -F -e 'Windows/X64) asset="bazelisk-windows-amd64.exe"' "$action" &&
-  grep -q -F -e 'Windows ARM64 is out of scope' "$action" &&
-  grep -q -F -e 'RUNNER_OS' "$action" &&
-  grep -q -F -e 'RUNNER_ARCH' "$action" &&
-  grep -q -F -e 'uname -s' "$action"; then
-  ok
-else
-  bad "setup-bazelisk lost the five-host OS/arch map with uname fallback plus Windows-ARM64 refusal (issue #617)"
-fi
-
-# Retry stays bounded: curl retry flags plus an outer 3-attempt loop.
-if grep -q -F -e 'curl -fsSL --retry 3' "$action" &&
-  grep -q -F -e 'download attempt' "$action" &&
-  grep -q -F -e 'download failed after 3 attempts' "$action"; then
-  ok
-else
-  bad "setup-bazelisk lost bounded download retry (curl --retry plus 3-attempt loop, issue #617)"
-fi
-
-# Curl hardening extends beyond the action (issue #932): the Dockerfile
-# Bazelisk fetch plus the ghcr cosign fetch carry the same fail-closed
-# retry flags, not just presence.
+# Curl hardening extends beyond the bootstrap action (issue #932): the
+# Dockerfile Bazelisk fetch plus the ghcr cosign fetch carry the same
+# fail-closed retry flags, not just presence.
 if grep -q -F -e 'curl -fsSL' "$dockerfile" &&
   grep -q -F -e '--retry 3 --retry-delay 2' "$dockerfile" &&
   grep -q -F -e 'curl -fsSL' "$ghcr" &&
@@ -88,62 +80,42 @@ else
 fi
 
 # No bare curl without retry survives in the fetch sites: every curl
-# invocation (curl with flags) in the action plus Dockerfile plus ghcr
-# cosign fetch carries --retry (fail-closed on flag drift, not presence).
-if grep -h -o -E -e 'curl -[^|;&]*' "$action" "$dockerfile" "$ghcr" 2>/dev/null | grep -q -F -e 'curl -' &&
-  ! grep -h -o -E -e 'curl -[^|;&]*' "$action" "$dockerfile" "$ghcr" 2>/dev/null | grep -v -F -e '--retry' | grep -v -F -e 'curl --version' | grep -q .; then
+# invocation (curl with flags) in the Dockerfile plus ghcr cosign fetch
+# carries --retry (fail-closed on flag drift, not presence).
+if grep -h -o -E -e 'curl -[^|;&]*' "$dockerfile" "$ghcr" 2>/dev/null | grep -q -F -e 'curl -' &&
+  ! grep -h -o -E -e 'curl -[^|;&]*' "$dockerfile" "$ghcr" 2>/dev/null | grep -v -F -e '--retry' | grep -v -F -e 'curl --version' | grep -q .; then
   ok
 else
-  bad "a bare curl without --retry survives in setup-bazelisk, Dockerfile.prebuilt, or ghcr.yml (want --retry everywhere, issue #932)"
+  bad "a bare curl without --retry survives in Dockerfile.prebuilt or ghcr.yml (want --retry everywhere, issue #932)"
 fi
 
-# No sudo assumption: no sudo command in executable lines (comments may name
-# it as the banned form), no /usr/local/bin install; install lands under
-# RUNNER_TEMP and joins GITHUB_PATH via cp plus chmod.
-if ! grep -E -e '^[^#]*\bsudo\b' "$action" | grep -q . &&
-  ! grep -q -F -e '/usr/local/bin/bazel' "$action" &&
-  grep -q -F -e 'RUNNER_TEMP' "$action" &&
-  grep -q -F -e 'GITHUB_PATH' "$action" &&
-  grep -q -F -e 'cp -f' "$action" &&
-  grep -q -F -e 'chmod +x' "$action"; then
+# Job configuration stays runner-temp scoped: the BuildBuddy rc lands
+# under RUNNER_TEMP and joins the environment through GITHUB_ENV, so no
+# workflow mutates a system path or needs a privileged install.
+if grep -q -F -e 'rc="${RUNNER_TEMP}/buildbuddy.bazelrc"' .github/workflows/ci.yml &&
+  grep -q -F -e 'echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"' .github/workflows/ci.yml &&
+  grep -q -F -e 'rc="${RUNNER_TEMP}/buildbuddy.bazelrc"' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "setup-bazelisk kept a sudo or /usr/local/bin assumption or lost RUNNER_TEMP plus GITHUB_PATH install (issue #617)"
+  bad "workflows lost the runner-temp rc plus GITHUB_ENV export (want RUNNER_TEMP buildbuddy.bazelrc plus BAZELRC env, no system install, issue #617)"
 fi
 
-# Portable checksum: sha256sum with shasum plus python3 fallbacks, compared
-# as strings (no bare sha256sum -c assumption).
-if grep -q -F -e 'command -v sha256sum' "$action" &&
-  grep -q -F -e 'shasum -a 256' "$action" &&
-  grep -q -F -e 'hashlib.sha256' "$action" &&
-  grep -q -F -e 'checksum mismatch' "$action" &&
-  ! grep -q -F -e 'sha256sum -c' "$action"; then
-  ok
-else
-  bad "setup-bazelisk lost portable checksum verification (sha256sum plus shasum plus python3, no sha256sum -c, issue #617)"
-fi
-
-# Windows exe handling: .exe asset installs as bazel.exe.
-if grep -q -F -e 'bazelisk-windows-amd64.exe' "$action" &&
-  grep -q -F -e 'out_name="bazel.exe"' "$action" &&
-  grep -q -F -e 'out_name="bazel"' "$action"; then
-  ok
-else
-  bad "setup-bazelisk lost Windows .exe handling (bazelisk-windows-amd64.exe to bazel.exe, issue #617)"
-fi
-
-# No per-OS copy-paste: workflows never embed a Bazelisk download URL;
-# the single action owns it (Dockerfile plus docs are the only tracked
-# copies; ghcr admissibility greps the Dockerfile, not a second installer).
+# No per-OS copy-paste: workflows never embed a Bazelisk download URL
+# or a `curl ... bazelisk` install; the pinned setup-bazel action owns
+# installation (Dockerfile plus docs are the only tracked copies; ghcr
+# admissibility greps the Dockerfile, not a second installer).
 if ! grep -rn -F -e 'bazelisk/releases/download' --include='*.yml' .github/workflows/ 2>/dev/null | grep -q . &&
-  ! grep -rn -i -E -e 'curl.*bazelisk' --include='*.yml' .github/workflows/ 2>/dev/null | grep -v -F -e 'setup-bazelisk' | grep -q .; then
+  ! grep -rn -i -E -e 'curl.*bazelisk' --include='*.yml' .github/workflows/ 2>/dev/null | grep -q .; then
   ok
 else
-  bad "a workflow embedded a Bazelisk download outside the single portable action (issue #617)"
+  bad "a workflow embedded a Bazelisk download outside the SHA-pinned setup-bazel action (issue #617)"
 fi
 
-# Docs in place: portable bootstrap documents all five assets plus shas
-# with retry plus portable hash plus no-sudo install, and no sudo remains.
+# Docs in place: the copy-paste bootstrap is portable over all five
+# assets plus shas with a fail-closed host refusal (Windows arm64 plus
+# unknown hosts exit 1), bounded retry, portable hash comparison with a
+# checksum-mismatch refusal, and no sudo install.
 if grep -q -F -e 'bazelisk-linux-amd64' "$docs" &&
   grep -q -F -e 'bazelisk-linux-arm64' "$docs" &&
   grep -q -F -e 'bazelisk-darwin-amd64' "$docs" &&
@@ -151,13 +123,16 @@ if grep -q -F -e 'bazelisk-linux-amd64' "$docs" &&
   grep -q -F -e 'bazelisk-windows-amd64.exe' "$docs" &&
   grep -q -F -e 'Pinned Bazelisk launcher (portable' "$docs" &&
   grep -q -F -e 'issue #617' "$docs" &&
+  grep -q -F -e 'unsupported host' "$docs" &&
+  grep -q -F -e 'download attempt $i/3 failed' "$docs" &&
+  grep -q -F -e 'checksum mismatch' "$docs" &&
   grep -q -F -e '--retry 3' "$docs" &&
   grep -q -F -e 'shasum -a 256' "$docs" &&
   grep -q -F -e '$HOME/.local/bin' "$docs" &&
   ! grep -q -F -e 'sudo install' "$docs"; then
   ok
 else
-  bad "local-workflows.md lost the portable bootstrap record (five assets plus retry plus portable hash plus no-sudo, issue #617)"
+  bad "local-workflows.md lost the portable bootstrap record (five assets plus refusal plus retry plus portable hash plus no-sudo, issue #617)"
 fi
 
 # Bootstrap git probe stays bounded (issue #932): `timeout` guards the

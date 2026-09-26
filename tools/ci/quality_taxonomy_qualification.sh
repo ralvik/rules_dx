@@ -81,6 +81,7 @@ support="docs/product/support-matrix.md"
 acquisition="docs/tools/tool-acquisition.md"
 module="MODULE.bazel"
 ci=".github/workflows/ci.yml"
+runbook="docs/deploy/release-runbook.md"
 build="tools/ci/BUILD.bazel"
 targets="tools/ci/ci_targets_d.bzl"
 dogfood="tools/ci/dogfood_freshness.sh"
@@ -354,11 +355,13 @@ else
   bad "taxonomy lost its digest policy (want JVM repos.bzl plus standalone per-host digests plus self-reference policy under issue #802)"
 fi
 
-# Platform evidence linkage: per-host artifacts plus coverage cells plus CI
-# matrix plus clean refusal (issue #802 promotion, still seed-executed).
+# Platform evidence linkage: clean refusal plus per-host CI (dogfood
+# self-call over all four hosts plus musl build jobs on both linux hosts)
+# plus no-union (issue #802 promotion, still seed-executed).
 if grep -q -F -e 'unsupported_platform' cli/cli/src/platform.rs &&
-  grep -q -F -e 'build-arm64' "$ci" &&
-  grep -q -F -e 'build-windows-x86_64' "$ci" &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e 'build-musl-x86_64' "$ci" &&
+  grep -q -F -e 'build-musl-arm64' "$ci" &&
   grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else
@@ -374,10 +377,12 @@ else
   bad "taxonomy lost its consumer evidence linkage (want adopt plus reusable-consumer under issue #802)"
 fi
 
-# Release evidence linkage: SBOM plus signing plus
-# supported gate with no Supported claim (issue #802 promotion).
+# Release evidence linkage: SBOM plus signing plus supported gate with no
+# Supported claim (issue #802 promotion). SBOM plus signing records live in
+# the owner-gated runbook now that ci.yml runs no release jobs.
 if [[ -f "tools/ci/supported_evidence_gate.sh" ]] &&
-  grep -q -F -e 'sbom-provenance' "$ci" &&
+  grep -q -F -e 'sbom-provenance' "$runbook" &&
+  grep -q -F -e '//deploy/release:signing_demo' "$runbook" &&
   ! grep -q -E -e '^\| .* \| Supported' "$support"; then
   ok
 else

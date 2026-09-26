@@ -82,13 +82,15 @@ then
 else
   bad "hermetic caller render failed (want temp-repo render plus pin-equality, not grep, issue #926)"
 fi
-# Dogfood self-call stays test-disabled with explicit platforms (coverage
-# superset honesty, not a build-only self-call).
-if grep -q -F -e 'disabled_checks: "test"' "$ci" &&
-  grep -q -F -e "platforms: '[\"linux_x86_64\"" "$ci"; then
+# Dogfood self-call stays all-nine with explicit platforms plus the
+# coverage threshold (coverage superset honesty, not a build-only
+# self-call).
+if ! grep -q -F -e 'disabled_checks' "$ci" &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e 'min_coverage: "97"' "$ci"; then
   ok
 else
-  bad "ci.yml self-call lost test-disabled plus explicit-platforms honesty (want coverage-superset dogfood, issue #926)"
+  bad "ci.yml self-call lost all-nine plus explicit-platforms plus min-coverage honesty (want coverage-superset dogfood, issue #926)"
 fi
 
 # --- Item 8 (negative half): snapshot mismatch fails closed, refresh diffs ---

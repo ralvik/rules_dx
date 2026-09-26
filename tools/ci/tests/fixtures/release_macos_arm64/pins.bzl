@@ -2,7 +2,8 @@
 Contract: `docs/deploy/release-runbook.md`.
 Fixture: `tools/ci/tests/fixtures/release_macos_arm64/` via
 `bazel run //tools/ci:release_macos_arm64_qualification`.
-SPDX-2.3 plus SLSA v1 via sbom_demo on the macos arm64 native runner with per-host upload; Platform-qualified, no Supported claim.
+SPDX-2.3 plus SLSA v1 via sbom_demo on the macos arm64 native runner with no
+CI upload; Platform-qualified, no Supported claim.
 """
 
 # SBOM wire profile: SPDX-2.3 plus SLSA v1 via the managed toolchain, subject binds artifact.
@@ -13,20 +14,18 @@ SBOM_HERMETIC = "managed Rust toolchain only, no host sha256sum/shasum/python3"
 SBOM_FIXTURE = "//deploy/rules:release_demo_archive as the SBOM subject fixture"
 SBOM_VERIFY = "bazel test //deploy/release:dx_release_tools_test binds SPDX plus in-toto plus SLSA"
 
-# CI per-host upload: sbom-macos-arm64 job builds plus verifies plus stages plus uploads.
-CI_JOB_MACOS_ARM64 = "ci.yml sbom-macos-arm64 job builds //deploy/release:sbom_demo plus verifies //deploy/release:dx_release_tools_test on macos-14"
-CI_CACHE_MACOS_ARM64 = "bazel-macos-arm64- cache scope with needs build-macos-arm64, local-only"
-CI_STAGE_MACOS_ARM64 = "stages SPDX-2.3 plus SLSA v1 under RUNNER_TEMP/sbom-macos-arm64"
-CI_UPLOAD_MACOS_ARM64 = "uploads sbom-provenance-macos_arm64 via actions/upload-artifact pinned SHA plus tag"
+# CI surface removed: no sbom-macos-arm64 job, no upload, no stage, no cache scope.
+CI_NO_JOB = "ci.yml carries no sbom-macos-arm64 job; SBOM stays a local target under #805"
+CI_NO_CACHE_SCOPE = "no per-host cache scope; disk cache deleted, BuildBuddy remote cache only"
+CI_NO_UPLOAD = "no upload-artifact, no RUNNER_TEMP stage; CI publishes nothing under #805"
 CI_PERMISSIONS = "contents: read only, no id-token, persist-credentials false, publishes nothing"
-CI_SUMMARY_MACOS_ARM64 = "sbom-macos-arm64 summary with build plus verify plus upload commands"
-CI_SEED_KEPT = "seed sbom job kept with sbom-provenance plus bazel-seed-, no regression"
-CI_ARM64_KEPT = "arm64 sbom-arm64 job kept with sbom-provenance-linux_arm64 plus bazel-arm64-, no regression"
-CI_MUSL_KEPT = "musl sbom-musl jobs kept with sbom-provenance-linux_x86_64_musl plus sbom-provenance-linux_arm64_musl, no regression"
+CI_SEED_REMOVED = "seed sbom job removed with the sbom job deletion, no regression"
+CI_ARM64_REMOVED = "arm64 sbom-arm64 job removed with the sbom job deletion, no regression"
+CI_MUSL_REMOVED = "musl sbom-musl jobs removed with the sbom job deletion, no regression"
 
 # Promotion-checklist cells for this host: platform plus consumer plus coverage plus release.
 CELL_PLATFORM = "Platform-qualified macOS arm64 native under issue #412"
-CELL_CONSUMER = "dogfood consumer self-call covers macos_arm64 with test disabled under issue #408"
+CELL_CONSUMER = "dogfood consumer self-call covers macos_arm64 with full dx test plus dx coverage"
 CELL_COVERAGE = "macos arm64 coverage cell with no union"
 CELL_SDK = "pinned acquired SDK with hermetic-llvm Apple-SDK backend provisional and no host-installed SDK fallback"
 CELL_TAG = 'module version = "0.0.0" with no v* tags, callers pin reviewed commits'

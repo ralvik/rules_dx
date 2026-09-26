@@ -9,11 +9,12 @@
 #   Linux x86_64 and arm64 glibc plus static musl; Linux cross is the
 #   first priority, not a mandate to build every target from every host.
 # - native rows: four native workflows qualified under issues
-# #410/#411/#412/#414 with per-host runners plus cache scopes on
+# #410/#411/#412/#414 with per-host runners plus the shared BuildBuddy
+#   remote cache (per-host scopes deleted) on
 #   the pinned upstream toolchains; backends stay provisional.
 # - musl closures: Linux same-arch static musl qualified under issue
 # with exec-platform tools for scripts and target musl libs for
-#   apps, cross-built from Linux runners with per-profile cache scopes
+#   apps, cross-built from Linux runners with the shared BuildBuddy cache
 #   plus per-cell coverage with no union.
 # - cross-arch: x86_64-to-arm64 plus arm64-to-x86_64 glibc plus musl
 #   stay in the first cohort with matching native target execution plus
@@ -81,23 +82,23 @@ else
   bad "pins.bzl lost its first Linux cross-build cohort plus not-every-target mandate under issue #504"
 fi
 
-# Pins record the four qualified native rows with runners plus cache scopes
-# (macOS x86_64 removed per #976).
+# Pins record the four qualified native rows with runners (shared cache
+# only; macOS x86_64 removed per #976).
 if grep -q -F -e 'Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed' "$pins" &&
-  grep -q -F -e 'Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm with bazel-arm64- scope' "$pins" &&
-  grep -q -F -e 'Native macOS arm64 qualified under issue #412 on macos-14 with bazel-macos-arm64- scope' "$pins" &&
+  grep -q -F -e 'Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm' "$pins" &&
+  grep -q -F -e 'Native macOS arm64 qualified under issue #412 on macos-14' "$pins" &&
   ! grep -q -F -e 'Native macOS x86_64' "$pins" &&
-  grep -q -F -e 'Native Windows x86_64 qualified under issue #414 on windows-latest with bazel-windows-x86_64- scope' "$pins" &&
+  grep -q -F -e 'Native Windows x86_64 qualified under issue #414 on windows-latest' "$pins" &&
   grep -q -F -e 'pinned upstream toolchains with provisional backends' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its four qualified native rows with runners plus cache scopes under issue #504 plus #976"
+  bad "pins.bzl lost its four qualified native rows with runners under issue #504 plus #976"
 fi
 
 # Pins record the qualified Linux same-arch musl closures plus cross-arch cohort gates.
 if grep -q -F -e 'x86_64 static musl qualified under issue #411' "$pins" &&
-  grep -q -F -e 'ubuntu-latest with bazel-musl-x86_64- scope' "$pins" &&
-  grep -q -F -e 'ubuntu-24.04-arm with bazel-musl-arm64- scope' "$pins" &&
+  grep -q -F -e 'ubuntu-latest with shared BuildBuddy cache' "$pins" &&
+  grep -q -F -e 'ubuntu-24.04-arm with shared BuildBuddy cache' "$pins" &&
   grep -q -F -e 'exec-platform tools for build scripts and proc macros with target musl libs for apps' "$pins" &&
   grep -q -F -e 'arm64-to-x86_64 cross stays in the first Linux cross-build cohort' "$pins" &&
   grep -q -F -e 'matching native target execution with separate cache and remote evidence' "$pins"; then
@@ -143,16 +144,13 @@ else
 fi
 
 # Pins record cache plus remote separation with no weakened natives.
-if grep -q -F -e '"bazel-seed-"' "$pins" &&
-  grep -q -F -e '"bazel-musl-x86_64-"' "$pins" &&
-  grep -q -F -e '"bazel-musl-arm64-"' "$pins" &&
-  grep -q -F -e '"bazel-macos-arm64-"' "$pins" &&
-  grep -q -F -e '"bazel-windows-x86_64-"' "$pins" &&
+if grep -q -F -e 'BuildBuddy shared remote cache, no per-host scopes' "$pins" &&
+  grep -q -F -e 'shared cache evidence for every claimed row' "$pins" &&
   grep -q -F -e 'separate cache and remote evidence for every claimed row' "$pins" &&
   grep -q -F -e 'Do not weaken required native workflows to obtain a larger cross-build table' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its cache plus remote separation plus no-weakened-natives under issue #504"
+  bad "pins.bzl lost its shared-cache plus remote separation plus no-weakened-natives record under issue #504"
 fi
 
 # Pins record the rejected substitutes plus native-only boundary.
@@ -172,7 +170,7 @@ fi
 if grep -q -F -e 'First Linux cross-build cohort' "$routes" &&
   grep -q -F -e 'Linux x86_64-to-arm64 glibc plus static musl' "$routes" &&
   grep -q -F -e 'Linux arm64-to-x86_64 glibc plus static musl' "$routes" &&
-  grep -q -F -e 'Native Windows x86_64 qualified under issue #414 on windows-latest with bazel-windows-x86_64- scope' "$routes" &&
+  grep -q -F -e 'Native Windows x86_64 qualified under issue #414 on windows-latest' "$routes" &&
   grep -q -F -e 'Optional first expansion if bounded upstream configuration suffices' "$routes" &&
   grep -q -F -e 'do not require Linux/macOS-to-Windows, Linux/Windows-to-macOS, Windows-to-Linux, or Windows arm64 to complete this cohort' "$routes" &&
   grep -q -F -e 'no Windows or macOS cross-host claim' "$routes"; then
@@ -187,12 +185,12 @@ if grep -q -F -e 'Record the actual action execution platform, not only the Baze
   grep -q -F -e 'Emulation, Rosetta, remote execution and deployment-floor testing are distinct evidence' "$execution" &&
   grep -q -F -e 'rules_rs Windows-labelled lane builds remote GNULVM targets, not native MSVC tests or coverage' "$execution" &&
   grep -q -F -e 'separate cache and remote evidence for every claimed row' "$cache_remote" &&
-  grep -q -F -e 'bazel-musl-x86_64-' "$cache_remote" &&
-  grep -q -F -e 'bazel-musl-arm64-' "$cache_remote" &&
+  grep -q -F -e 'BuildBuddy shared remote cache, no per-host scopes' "$cache_remote" &&
+  grep -q -F -e 'shared cache evidence for every claimed row' "$cache_remote" &&
   grep -q -F -e 'Do not weaken required native workflows to obtain a larger cross-build table' "$cache_remote"; then
   ok
 else
-  bad "execution.txt plus cache_remote.txt lost evidence coverage (want platform plus target plus distinct plus scopes, issue #504)"
+  bad "execution.txt plus cache_remote.txt lost evidence coverage (want platform plus target plus distinct plus shared cache, issue #504)"
 fi
 
 # Native plan owns the qualified cross-routes record plus fixture proof.

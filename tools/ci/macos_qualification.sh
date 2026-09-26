@@ -108,22 +108,22 @@ else
   bad "macos per-cell coverage registry lost the arm64 qualified cell or still carries x86_64 (issue #412 plus #976)"
 fi
 
-# CI macOS jobs exist natively on macos-14 (arm64) with per-host cache
-# scope; no macos-15-intel runner or macos-x86_64 scope remains.
-if grep -q -F -e 'build-macos-arm64' .github/workflows/ci.yml &&
-  grep -q -F -e 'test-macos-arm64' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-macos-arm64' .github/workflows/ci.yml &&
+# CI macOS arm64 runs natively through the consumer matrix on macos-14;
+# ci.yml only selects the macos_arm64 platform (no macOS runner of its
+# own, no macos-15-intel, no x86_64 job, and no per-host cache scope —
+# hygiene is setup-bazel plus the shared BuildBuddy remote cache).
+if grep -q -F -e 'macos_arm64' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'macos-14' .github/workflows/reusable-consumer.yml &&
+  ! grep -q -F -e 'macos-15-intel' .github/workflows/reusable-consumer.yml &&
+  ! grep -q -F -e 'macos_x86_64' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'macos_arm64' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'runs-on: macos' .github/workflows/ci.yml &&
   ! grep -q -F -e 'build-macos-x86_64' .github/workflows/ci.yml &&
-  ! grep -q -F -e 'test-macos-x86_64' .github/workflows/ci.yml &&
-  ! grep -q -F -e 'coverage-macos-x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'runs-on: macos-14' .github/workflows/ci.yml &&
-  ! grep -q -F -e 'runs-on: macos-15-intel' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel-macos-arm64-' .github/workflows/ci.yml &&
-  ! grep -q -F -e 'bazel-macos-x86_64-' .github/workflows/ci.yml &&
-  grep -q -F -e 'macos arm64' .github/workflows/ci.yml; then
+  ! grep -q -F -e 'bazel-macos-' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'bazel-macos-' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "ci.yml lost the macOS arm64 native jobs or still carries x86_64 (issue #412 plus #976)"
+  bad "ci.yml lost the macOS arm64 native selection or still carries x86_64/cache scopes (issue #412 plus #976)"
 fi
 
 # CI macOS jobs stay portable-shell clean: no banned forms in the workflow.
@@ -136,15 +136,15 @@ else
   bad "ci.yml macos jobs introduced a non-portable shell form (issue #323)"
 fi
 
-# Apple-SDK handling leaks no secrets and needs no interactive acceptance:
-# no secret env, no EULA-accept variable, no interactive prompt in the
-# macOS job family or the qualification docs
+# Apple-SDK handling needs no EULA variable and no interactive
+# acceptance in the macOS route (the consumer matrix jobs may reference
+# the BuildBuddy cache secret by design; xcode-select never runs in CI)
 # (hermetic context plus tree search, issue #1006).
-if DX_CONTEXT_RE=1 dx_context_absent .github/workflows/ci.yml 'build-macos-arm64' -A 20 'secrets\.|GH_TOKEN|EULA_ACCEPT|accept.*license' &&
+if DX_CONTEXT_RE=1 dx_context_absent .github/workflows/reusable-consumer.yml 'macos-14' -A 20 'EULA_ACCEPT|ACCEPT.*EULA|accept.*license' &&
   dx_tree_absent --include='*.yml' 'xcode-select --install' -- .github/; then
   ok
 else
-  bad "macos jobs leak secrets or require interactive Apple-SDK acceptance (issue #412)"
+  bad "macos jobs set an EULA-accept variable or require interactive Apple-SDK acceptance (issue #412)"
 fi
 
 # No host-installed SDK fallback claim anywhere: the only allowed mentions

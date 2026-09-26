@@ -4,21 +4,18 @@ https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo with
 https://in-toto.io/Statement/v1 subject digest equal to artifact sha256,
 managed Rust toolchain only, //deploy/rules:release_demo_archive as the
 SBOM subject fixture, bazel test //deploy/release:dx_release_tools_test binds
-SPDX plus in-toto plus SLSA. CI: ci.yml sbom-arm64 job builds
-//deploy/release:sbom_demo plus verifies //deploy/release:dx_release_tools_test
-on ubuntu-24.04-arm with bazel-arm64- cache scope, stages SPDX-2.3 plus SLSA v1
-under RUNNER_TEMP/sbom-arm64, uploads sbom-provenance-linux_arm64 via
-actions/upload-artifact pinned SHA plus tag, contents: read only with
-persist-credentials false, publishes nothing, sbom-arm64 summary with build plus
-verify plus upload commands; seed sbom job kept with sbom-provenance plus
-bazel-seed-, no regression. Promotion cells: Platform-qualified Linux arm64
-native under issue #410 plus dogfood consumer self-call covers linux_arm64 with
-test disabled under issue #408 plus module 0.0.0 with no v* tags plus
---verify-tag everywhere plus linux_arm64 sbom-provenance delivered under issue
-#803. Attestation stays owner-gated human-run via
-//deploy/release:signing_demo (Sigstore keyless cosign sign-blob --bundle
-plus gh attestation create on tuf-repo-cdn.sigstore.dev); CI never signs PR
-code, fork-safe, publishes nothing. Dry-run only forever is rejected, blocks
-Supported; checksum-only verification is not publisher-identity proof;
-Compatibility: Release only. Qualified under issue #803; remaining hosts plus
-tag cut stay owned gap under issues #804-#807 plus process #808; no Supported claim.
+SPDX plus in-toto plus SLSA. CI: ci.yml carries no sbom-arm64 job, no
+upload-artifact, no RUNNER_TEMP stage, no per-host cache scope; publishes
+nothing; contents: read only with persist-credentials false.
+Seed sbom job removed with the sbom job deletion, no regression.
+Promotion cells: Platform-qualified Linux arm64 native under issue #410 plus
+dogfood consumer self-call covers linux_arm64 with full dx test plus dx coverage under issue #408
+plus module 0.0.0 with no v* tags plus --verify-tag everywhere plus
+linux_arm64 sbom-provenance delivered under issue #803. Attestation stays
+owner-gated human-run via //deploy/release:signing_demo (Sigstore keyless
+cosign sign-blob --bundle plus gh attestation create on
+tuf-repo-cdn.sigstore.dev); CI never signs PR code, fork-safe, publishes
+nothing. Dry-run only forever is rejected, blocks Supported; checksum-only
+verification is not publisher-identity proof; Compatibility: Release only.
+Qualified under issue #803; remaining hosts plus tag cut stay owned gap under
+issues #804-#807 plus process #808; no Supported claim.

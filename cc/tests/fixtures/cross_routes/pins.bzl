@@ -26,20 +26,21 @@ ALL_CROSS_NOTE = "not a mandate to build every target from every host"
 # Linux same-arch musl closures Rust musl
 # std via extra_target_triples with exec-platform tools for build
 # scripts and proc macros and target musl libs for apps; CI
-# cross-builds from Linux runners with per-profile cache scopes plus
-# per-cell coverage for both musl cells with no union.
+# cross-builds from Linux runners with the shared BuildBuddy remote
+# cache (per-host scopes deleted) plus per-cell coverage for both musl
+# cells with no union.
 MUSL_QUALIFIED_NOTE = "x86_64 static musl qualified under issue #411"
-MUSL_CI_RUNNER_X86_64 = "ubuntu-latest with bazel-musl-x86_64- scope"
-MUSL_CI_RUNNER_ARM64 = "ubuntu-24.04-arm with bazel-musl-arm64- scope"
+MUSL_CI_RUNNER_X86_64 = "ubuntu-latest with shared BuildBuddy cache"
+MUSL_CI_RUNNER_ARM64 = "ubuntu-24.04-arm with shared BuildBuddy cache"
 MUSL_EXEC_SEPARATION = "exec-platform tools for build scripts and proc macros with target musl libs for apps"
 
 # Native rows qualified, each with its CI
-# runner plus cache scope on the pinned upstream toolchains.
+# runner on the pinned upstream toolchains (shared remote cache only).
 NATIVE_ROWS = [
     "Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed",
-    "Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm with bazel-arm64- scope",
-    "Native macOS arm64 qualified under issue #412 on macos-14 with bazel-macos-arm64- scope",
-    "Native Windows x86_64 qualified under issue #414 on windows-latest with bazel-windows-x86_64- scope",
+    "Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm",
+    "Native macOS arm64 qualified under issue #412 on macos-14",
+    "Native Windows x86_64 qualified under issue #414 on windows-latest",
 ]
 NATIVE_BACKEND_NOTE = "pinned upstream toolchains with provisional backends"
 
@@ -94,19 +95,13 @@ DISTINCT_EVIDENCE_NOTE = "Emulation, Rosetta, remote execution and deployment-fl
 LLVM_CI_NOTE = "hermetic-llvm CI uses remote execution in Linux jobs and narrower macOS smoke and coverage tests"
 RULES_RS_CI_NOTE = "rules_rs Windows-labelled lane builds remote GNULVM targets, not native MSVC tests or coverage"
 
-# Cache plus remote separation: every claimed row carries its own
-# cache scope plus remote evidence; per-cell coverage never unions
-# across cells. Required native workflows are never weakened to
-# obtain a larger cross-build table.
-CACHE_SCOPES = [
-    "bazel-seed-",
-    "bazel-arm64-",
-    "bazel-musl-x86_64-",
-    "bazel-musl-arm64-",
-    "bazel-macos-arm64-",
-    "bazel-windows-x86_64-",
-]
-CACHE_SCOPE_NOTE = "separate cache scope for every claimed row"
+# Cache plus remote separation: every claimed row carries the shared
+# BuildBuddy remote cache (the per-host disk-cache scopes are deleted)
+# plus remote evidence; per-cell coverage never unions across cells.
+# Required native workflows are never weakened to obtain a larger
+# cross-build table.
+CACHE_SHARED = "BuildBuddy shared remote cache, no per-host scopes"
+CACHE_SCOPE_NOTE = "shared cache evidence for every claimed row"
 REMOTE_EVIDENCE_NOTE = "separate cache and remote evidence for every claimed row"
 NATIVE_WEAKENING_NOTE = "Do not weaken required native workflows to obtain a larger cross-build table"
 

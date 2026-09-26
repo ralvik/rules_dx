@@ -172,11 +172,14 @@ else
   bad "no-coverage wiring lost (want preset filter plus target_tags hello_output_test proof)"
 fi
 
-# CI test job runs the smokes via `bazel test //...` (flags between --noshow_progress and //... allowed).
-if grep -E -q 'bazel test --noshow_progress.*//\.\.\.' "$ci"; then
+# CI runs the smokes via the dogfood four-platform `dx test` self-call
+# (raw `bazel test //...` jobs are gone; each cell compiles once under
+# dx, so the seed-host smokes execute under the consumer test check).
+if grep -q -F -e 'dx -- test //...' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci"; then
   ok
 else
-  bad "ci.yml lost bazel test //... (want smokes via the test job)"
+  bad "ci.yml lost bazel test //... (want smokes via the four-platform dogfood dx test self-call)"
 fi
 
 # Every smoke script is listed as its sh_test srcs (shell ownership via deps).

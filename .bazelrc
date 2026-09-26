@@ -5,6 +5,16 @@ import %workspace%/tools/bazelrc/preset.bazelrc
 
 # Project overrides stay explicit here, never in the generated fragment.
 
+# Bounded test execution (issue #619): every `bazel test` / `dx test` /
+# `dx coverage` run retries flakes up to 3 attempts, caps a test at 300
+# seconds, and bounds test parallelism to 4 local jobs. CI used to pass
+# these three flags per direct invocation; with the raw per-cell test jobs
+# folded into the dx consumer stack they live here so one rc covers every
+# path. `user.bazelrc` imports last, so a local override still wins.
+test --flaky_test_attempts=3
+test --test_timeout=300
+test --local_test_jobs=4
+
 # Short Windows output root (issue #1207): MSVC link.exe resolves input paths
 # against MAX_PATH (260) and the default
 # %USERPROFILE%\_bazel_runneradmin\<base>\execroot\_main\bazel-out\... paths
@@ -64,6 +74,16 @@ build --tool_java_runtime_version=remotejdk_21
 # in `MODULE.bazel` (currently zero opt-ins); never flip this global back
 # to `True`.
 build --@rules_rust//cargo/settings:use_default_shell_env=False
+
+# Optional BuildBuddy remote cache (local use): CI writes a per-job rc
+# file with the shared `common --remote_cache` plus API-key lines and
+# exports it through `BAZELRC`, because dx spawns Bazel with
+# `--nohome_rc` (so $HOME/.bazelrc never applies; see
+# docs/testing/workflow-notes.md). To opt in locally, copy those two
+# lines into your gitignored `user.bazelrc` with your own key (keep
+# `common --noremote_upload_local_results` for read-only use). The
+# workspace stays execution-local: no remote executor and no BES
+# backend are wired anywhere in the tree.
 
 # Carry over per-person local flags when present (never committed).
 # user.bazelrc is resolution-only: per-person registry/flag overrides.

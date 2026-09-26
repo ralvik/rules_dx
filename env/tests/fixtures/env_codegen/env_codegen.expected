@@ -73,7 +73,7 @@ proof with .github/workflows/reusable-consumer.yml plus
 examples/consumer-ci/caller.yml at rules_dx_version: "0.0.0" with no
 implicit default plus environment_tool(name, executable, bin_name)
 parity plus environment plans stay present plus self-call
-test-disabled.
+dx test plus dx coverage.
 
 Release evidence per cell (issue #787):
 //deploy/release:sbom_demo plus sbom-provenance plus

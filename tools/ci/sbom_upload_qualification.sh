@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 # SBOM plus provenance upload qualification harness.
 #
-# Owns SBOM plus provenance build plus verify plus upload on CI with fixture
-# evidence pinned in `tools/ci/tests/fixtures/sbom_upload/pins.bzl` (plus
-# `sbom_upload.expected`), without claiming unqualified support:
+# Owns SBOM plus provenance as-built plus owner-gated release evidence with
+# fixture evidence pinned in `tools/ci/tests/fixtures/sbom_upload/pins.bzl`
+# (plus `sbom_upload.expected`), without claiming unqualified support:
 # - delivered as-built: SPDX-2.3 plus SLSA v1 via //deploy/release:sbom_demo
 #   with subject digest equal to artifact sha256, hermetic Rust toolchain
 #   only, //deploy/rules:release_demo_archive as subject fixture, verified
 #   via bazel test //deploy/release:dx_release_tools_test;
-# - CI upload: ci.yml sbom job builds plus verifies on every push/PR (seed
-#   host), stages under RUNNER_TEMP/sbom, uploads sbom-provenance via
-#   actions/upload-artifact pinned SHA plus tag, contents read only,
-#   publishes nothing, fork-safe;
+# - CI surface: ci.yml carries no sbom job, no upload-artifact, and no
+#   per-host cache prefixes (SBOM plus provenance stays an owner-gated
+#   local release path in docs/deploy/release-runbook.md; CI never signs
+#   PR code and publishes nothing, fork-safe);
 # - attestation stays owner-gated human-run via //deploy/release:signing_demo
 #   (Sigstore keyless cosign sign-blob --bundle plus gh attestation create
 #   on the TUF trust root); CI never signs PR code;
@@ -73,33 +73,35 @@ else
   bad "sbom_demo lost its release_demo_archive subject fixture record (#612)"
 fi
 
-# CI sbom job builds plus verifies on every push/PR (seed host, not dispatch-only).
-if grep -q -F -e 'name: sbom (SBOM + provenance build/verify/upload, seed host)' "$ci" &&
-  grep -q -F -e 'bazel build --noshow_progress //deploy/release:sbom_demo' "$ci" &&
-  grep -q -F -e '//deploy/release:dx_release_tools_test' "$ci"; then
+# CI never builds or verifies SBOM: no sbom job plus no release-tool test
+# in ci.yml (SBOM stays an owner-gated local release path, not push/PR).
+if ! grep -q -F -e 'sbom' "$ci" &&
+  ! grep -q -F -e 'dx_release_tools_test' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom build plus verify on push/PR (want sbom job with sbom_demo plus dx_release_tools_test, #612)"
+  bad "ci.yml still carries an sbom build plus verify job (want no sbom job and no dx_release_tools_test in CI; SBOM stays owner-gated local release, #612)"
 fi
 
-# CI sbom job stages plus uploads as an artifact for inspection.
-if grep -q -F -e 'RUNNER_TEMP/sbom' "$ci" &&
-  grep -q -F -e 'actions/upload-artifact@' "$ci" &&
-  grep -q -F -e 'sbom-provenance' "$ci"; then
+# CI stages no sbom directory and uploads no provenance artifact.
+if ! grep -q -F -e 'RUNNER_TEMP/sbom' "$ci" &&
+  ! grep -q -F -e 'actions/upload-artifact' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom stage plus upload-artifact sbom-provenance (#612)"
+  bad "ci.yml still stages or uploads sbom-provenance (want no RUNNER_TEMP/sbom stage and no upload-artifact; CI publishes nothing, #612)"
 fi
 
-# Upload stays pinned plus fail-closed plus least-privilege, publishes nothing.
-if grep -q -F -e 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4' "$ci" &&
-  grep -q -F -e 'if-no-files-found: error' "$ci" &&
+# No upload-artifact pin remains; checkout stays least-privilege plus
+# setup-bazel, and the runbook records publishes-nothing plus CI-never-signs.
+if ! grep -q -F -e 'actions/upload-artifact' "$ci" &&
+  ! grep -q -F -e 'if-no-files-found: error' "$ci" &&
   grep -q -F -e 'persist-credentials: false' "$ci" &&
-  grep -q -F -e 'setup-bazelisk' "$ci" &&
-  grep -q -F -e 'publishes nothing' "$ci"; then
+  grep -q -F -e 'bazel-contrib/setup-bazel' "$ci" &&
+  grep -q -F -e 'publishes nothing' "$runbook" &&
+  grep -q -F -e 'CI never signs PR code' "$runbook"; then
   ok
 else
-  bad "ci.yml lost its pinned upload-artifact plus fail-closed plus publishes-nothing record (#612)"
+  bad "ci.yml lost its no-upload plus least-privilege setup-bazel record or runbook lost publishes-nothing plus CI-never-signs (want no upload-artifact in CI, #612)"
 fi
 
 # Dispatch dry-run still exercises the SBOM demo (owner-gated, publishes nothing).
@@ -152,11 +154,12 @@ else
   bad "sbom-upload fixture missing (want pins.bzl plus sbom_upload.expected plus corpus BUILD)"
 fi
 
-# Pins record wire plus CI plus attestation plus rejected plus honesty.
+# Pins record wire plus no-CI-upload plus attestation plus rejected plus honesty.
 if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'ci.yml sbom job builds //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'uploads sbom-provenance via actions/upload-artifact' "$pins" &&
+  grep -q -F -e 'ci.yml carries no sbom job; SBOM stays a local target under #612' "$pins" &&
+  grep -q -F -e 'no upload-artifact, no RUNNER_TEMP stage; CI publishes nothing under #612' "$pins" &&
+  grep -q -F -e 'no per-host cache scope; disk cache deleted, BuildBuddy remote cache only' "$pins" &&
   grep -q -F -e 'via //deploy/release:signing_demo' "$pins" &&
   grep -q -F -e 'Dry-run only forever is rejected' "$pins" &&
   grep -q -F -e 'Compatibility: Release only' "$pins" &&
@@ -164,14 +167,14 @@ if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'no Supported claim' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its wire plus CI plus attestation plus rejected plus honesty pins under issue #612"
+  bad "pins.bzl lost its wire plus no-CI-upload plus attestation plus rejected plus honesty pins under issue #612"
 fi
 
-# Expected fixture pins the upload plus rejected plus honesty lines.
-if grep -q -F -e 'SBOM plus provenance upload on CI (issue #612)' "$expected" &&
+# Expected fixture pins the no-job plus no-upload plus rejected plus honesty lines.
+if grep -q -F -e 'SBOM plus provenance with no CI upload (issue #612)' "$expected" &&
   grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$expected" &&
-  grep -q -F -e 'uploads sbom-provenance' "$expected" &&
-  grep -q -F -e 'pinned SHA plus tag' "$expected" &&
+  grep -q -F -e 'ci.yml carries no sbom job, no upload-artifact' "$expected" &&
+  grep -q -F -e 'no RUNNER_TEMP stage, no per-host cache scope' "$expected" &&
   grep -q -F -e 'CI never signs PR' "$expected" &&
   grep -q -F -e 'Dry-run only forever is rejected' "$expected" &&
   grep -q -F -e 'Compatibility: Release only' "$expected" &&
@@ -179,7 +182,7 @@ if grep -q -F -e 'SBOM plus provenance upload on CI (issue #612)' "$expected" &&
   grep -q -F -e 'no Supported claim' "$expected"; then
   ok
 else
-  bad "sbom_upload.expected lost its upload plus rejected plus honesty lines under #612"
+  bad "sbom_upload.expected lost its no-CI-upload plus rejected plus honesty lines under #612"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

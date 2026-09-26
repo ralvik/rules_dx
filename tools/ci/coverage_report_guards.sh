@@ -8,12 +8,13 @@
 # presentation only and never the gate.
 #
 # This harness machine-checks the landed contract on a clean tree: the
-# gate stays enforced, the renderer exists, both workflows publish one
-# deduped marker-owned comment per PR cell with fork-safe handling, no
-# third-party coverage action is smuggled in, docs select first-party,
-# and the renderer proves the failure cases (missing report, uncovered
-# lines, partial verdict, rerun dedup) plus the fork/publication
-# semantics statically.
+# gate stays enforced, the renderer exists, the consumer coverage job
+# publishes one deduped marker-owned PR comment per cell with fork-safe
+# handling while this repo's musl cells render step-summary only through
+# the shared composite, no third-party coverage action is smuggled in,
+# docs select first-party, and the renderer proves the failure cases
+# (missing report, uncovered lines, partial verdict, rerun dedup) plus
+# the fork/publication semantics statically.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:coverage_report_guards`,
 # following //tools/ci:coverage_spill.
@@ -76,13 +77,18 @@ else
   bad "workflows lost the step-summary reporting surface"
 fi
 
-# First-party comment wired in this repo: marker, renderer, gh publish.
-if grep -q -F -e 'dx-coverage-summary' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage_comment' .github/workflows/ci.yml &&
-  grep -q -F -e 'gh pr comment' .github/workflows/ci.yml; then
+# First-party comment wired in the consumer coverage job: marker,
+# renderer output, gh publish. This repo's musl cells render through the
+# local composite step-summary only (the one PR comment comes from the
+# dogfood coverage job).
+if grep -q -F -e 'dx-coverage-summary' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'coverage_comment' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'gh pr comment' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'uses: ./.github/actions/render-coverage-summary' .github/workflows/ci.yml &&
+  grep -q -F -e 'step-summary only' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost its first-party coverage comment wiring (marker/renderer/gh)"
+  bad "workflows lost the first-party coverage comment wiring (marker/renderer/gh in reusable-consumer plus composite step-summary-only cells in ci.yml)"
 fi
 
 # First-party comment wired for consumers: per-cell marker, gh publish.
@@ -95,9 +101,8 @@ fi
 
 # Dedup: marker-owned update path preserves human comments (existing
 # lookup plus PATCH, never delete/repost).
-if grep -q -F -e 'existing' .github/workflows/ci.yml &&
-  grep -q -F -e 'PATCH' .github/workflows/ci.yml &&
-  grep -q -F -e 'existing' .github/workflows/reusable-consumer.yml; then
+if grep -q -F -e 'existing' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'PATCH' .github/workflows/reusable-consumer.yml; then
   ok
 else
   bad "workflows lost the marker-dedup update path (existing/PATCH)"
@@ -105,27 +110,27 @@ fi
 
 # Fork safety: fork code never gets write credentials (skip with a
 # visible step-summary note; execution steps run without GH_TOKEN).
-if grep -q -F -e 'head.repo.full_name' .github/workflows/ci.yml &&
-  grep -q -F -e 'Fork PR' .github/workflows/ci.yml &&
-  grep -q -F -e 'head.repo.full_name' .github/workflows/reusable-consumer.yml; then
+if grep -q -F -e 'head.repo.full_name' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'Fork PR' .github/workflows/reusable-consumer.yml; then
   ok
 else
   bad "workflows lost the fork-PR skip guard"
 fi
 
-# Stale runs never overwrite current: concurrency cancels superseded
+# Stale runs never overwrite current: both workflows cancel superseded
 # runs and the publish step updates only the marker-owned comment.
 if grep -q -F -e 'cancel-in-progress: true' .github/workflows/ci.yml &&
-  grep -q -F -e 'never overwrite' .github/workflows/ci.yml; then
+  grep -q -F -e 'cancel-in-progress: true' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'never overwrite' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "ci.yml lost the stale-run guard (concurrency + marker-only update)"
+  bad "workflows lost the stale-run guard (concurrency + marker-only update)"
 fi
 
 # Publication failure fails CI separately: the publish step carries no
 # continue-on-error escape (unlike warn-only advisories), while gate
 # outcomes stay preserved in the summary.
-if grep -A 12 -F -e 'Publish PR summary comment' .github/workflows/ci.yml | grep -q -F -e 'continue-on-error'; then
+if grep -A 12 -F -e 'Publish PR summary comment' .github/workflows/reusable-consumer.yml | grep -q -F -e 'continue-on-error'; then
   bad "coverage publish step must not carry continue-on-error (publication failure fails CI)"
 else
   ok
@@ -141,22 +146,26 @@ fi
 
 # Per-cell visibility contract (issue #1062): every cell renders the same
 # rich shape (coverage_bin verdict plus Uncovered locations plus LCOV note)
-# through the same script; only the seed publishes the PR comment while the
-# five non-seed cells stay step-summary only. The portable composite gates
-# its own LCOV via coverage_bin and presents via coverage_comment.sh
-# directly through bash (portable despite the sh_binary Linux-only label).
+# through the same script; the seed plus arm64 plus macos plus windows
+# cells publish their marker-owned PR comment from the consumer coverage
+# job, while this repo's two musl cells stay step-summary only through the
+# portable composite, which gates its own LCOV via coverage_bin and
+# presents via coverage_comment.sh directly through bash (portable
+# despite the sh_binary Linux-only label). The six-cell registry keeps
+# every versioned inventory.
 if grep -q -F -e 'inventory' .github/actions/render-coverage-summary/action.yml &&
   grep -q -F -e 'coverage_bin' .github/actions/render-coverage-summary/action.yml &&
   grep -q -F -e 'coverage_comment.sh' .github/actions/render-coverage-summary/action.yml &&
   grep -q -F -e 'step-summary only' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'tools/coverage/arm64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'tools/coverage/musl-arm64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'tools/coverage/macos-arm64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'tools/coverage/windows-x86_64-inventory.txt' .github/workflows/ci.yml; then
+  grep -q -F -e 'inventory: tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'inventory: tools/coverage/musl-arm64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'tools/coverage/arm64-inventory.txt' tools/coverage/cells.txt &&
+  grep -q -F -e 'tools/coverage/macos-arm64-inventory.txt' tools/coverage/cells.txt &&
+  grep -q -F -e 'tools/coverage/windows-x86_64-inventory.txt' tools/coverage/cells.txt &&
+  grep -q -F -e 'dx-coverage-summary: coverage' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "per-cell coverage reporting lost its visibility contract (same gate plus same script, seed PR plus non-seed summary-only, issue #1062)"
+  bad "per-cell coverage reporting lost its visibility contract (same gate plus same script, consumer PR comments plus summary-only musl cells, issue #1062)"
 fi
 
 # Renderer never turns a failing gate into success.

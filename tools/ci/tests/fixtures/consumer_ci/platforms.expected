@@ -24,10 +24,10 @@ while jobs serialize on one shared Bazel output-base lock. Each job
 passes --noshow_progress to Bazel invocations.
 
 Cache is absent in the reusable workflow (no actions/cache in
-reusable-consumer): consumers get cold caches per job. Per-host disk-cache
-scopes live in ci.yml only (bazel-seed-, bazel-arm64-, bazel-musl-x86_64-,
-bazel-musl-arm64-, bazel-macos-arm64-,
-bazel-windows-x86_64-), free-tier eligible with no paid services.
+reusable-consumer): consumers get cold caches per job. Bazel jobs use the
+shared BuildBuddy remote cache plus the setup-bazel bazelisk cache; the
+legacy per-host disk-cache scopes are deleted, free-tier eligible with no
+paid services.
 
 Ordering is parallel only: scheduling_mode parallel is the default and
 the template schedules parallel only until sequential ordering is

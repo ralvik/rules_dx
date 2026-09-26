@@ -9,9 +9,9 @@
 #   platforms-gate fail-closed, stable dx-ci aggregate, hygiene, concurrency,
 #   permissions, per-cell coverage with fork-safe comments), caller template
 #   with reviewed SHA pin, four consumer fixture harnesses
-#   (scheduling/aggregate/guards/pins), self-call test-disabled dogfood in
+#   (scheduling/aggregate/guards/pins), self-call all-nine dogfood in
 # ci.yml
-#   disabled as coverage superset via `resolve_for_test` plus `bazel coverage`),
+#   (no checks disabled; coverage superset via `resolve_for_test` plus `bazel coverage`),
 # native widen-one loop (sole updater,), dx migrate syntax
 #   plus manifest selection (delivered CLI with fail-closed execution, issue
 # plus dx run multirun (delivered), tag hygiene as-built;
@@ -165,21 +165,25 @@ else
   bad "caller template lost SHA pin, platforms, parallel, or version match ($caller_version vs $module_version)"
 fi
 
-# Hygiene: SHA pins with tag comments, single setup-bazelisk bootstrap
-# after inline no-secrets checkout, no inline install. Checkout must be
-# step 1 (GitHub cannot resolve `./` local actions before checkout); the
-# pin count covers the workflow plus caller plus the installer action
-# (hermetic match count: host grep -o quirks diverge, issue #1006).
-actions_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40}')"
-commented_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" .github/actions/setup-bazelisk/action.yml -- 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+')"
+# Hygiene: SHA pins with tag comments, one SHA-pinned setup-bazel
+# bootstrap per job after the inline no-secrets checkout, no inline
+# Bazelisk install. Checkout must be step 1 (GitHub cannot resolve `./`
+# local actions before checkout); the pin count covers the workflow plus
+# caller (hermetic match count: host grep -o quirks diverge, issue
+# #1006). The optional BuildBuddy `workflow_call` secret declaration is
+# cache-key only and never widens the per-job no-secrets checkout.
+actions_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" -- 'uses: (actions|bazel-contrib)/[^ ]+@[0-9a-f]{40}')"
+commented_pins="$(dx_hermetic_grep tree-count --re --roots "$workflow" "$caller" -- 'uses: (actions|bazel-contrib)/[^ ]+@[0-9a-f]{40} # v[0-9]+')"
 if [[ "$actions_pins" -gt "0" && "$actions_pins" == "$commented_pins" ]] &&
-  [[ "$(grep -c -F -e './.github/actions/setup-bazelisk' "$workflow")" -ge "9" ]] &&
+  [[ "$(grep -c -F -e 'bazel-contrib/setup-bazel@' "$workflow")" -ge "9" ]] &&
+  grep -q -F -e 'bazelisk-version: ${{ env.BAZELISK_VERSION }}' "$workflow" &&
+  grep -q -F -e 'bazelisk-cache: true' "$workflow" &&
   [[ "$(grep -c -F -e 'persist-credentials: false' "$workflow")" -ge "9" ]] &&
   grep -q -F -e 'actions/checkout@' "$workflow" &&
-  ! grep -e 'setup-bazelisk' "$workflow" | grep -v -F -e './.github/actions/setup-bazelisk' | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
+  ! grep -e 'setup-bazelisk\|restore-bazel-cache\|curl.*bazelisk' "$workflow" | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
   ok
 else
-  bad "hygiene lost (SHA plus tag comments or single setup-bazelisk bootstrap after no-secrets checkout)"
+  bad "hygiene lost (SHA plus tag comments or SHA-pinned setup-bazel bootstrap after no-secrets checkout)"
 fi
 
 # Concurrency cancels superseded PR runs without deleting history.
@@ -194,11 +198,15 @@ fi
 # Permissions stay least-privilege with fork-safe checkout (no-secrets
 # checkout is inline step 1 per job: `./` local actions need a
 # checked-out workspace, so a composite cannot own checkout as step 1).
+# The BuildBuddy key stays an optional `workflow_call` secret (cache
+# key only, `required: false`), so the per-job no-secrets checkout is
+# unchanged (hermetic context search, issue #1006).
 if grep -q -F -e 'contents: read' "$workflow" &&
   grep -q -F -e 'checks: write' "$workflow" &&
   grep -q -F -e 'pull-requests: write' "$workflow" &&
   [[ "$(grep -c -F -e 'persist-credentials: false' "$workflow")" -ge "9" ]] &&
-  [[ "$(grep -c -F -e './.github/actions/setup-bazelisk' "$workflow")" -ge "9" ]]; then
+  [[ "$(grep -c -F -e 'bazel-contrib/setup-bazel@' "$workflow")" -ge "9" ]] &&
+  DX_CONTEXT_ANCHOR_RE=1 dx_context_contains "$workflow" '^      BUILDBUDDY_API_KEY:' -A 3 'required: false'; then
   ok
 else
   bad "permissions lost least-privilege plus no-secrets bootstrap record"
@@ -223,21 +231,22 @@ else
   bad "fork-safe comment wiring lost (marker plus skip plus no-creds)"
 fi
 
-# Self-call in ci.yml runs eight checks with `test` disabled
-# dogfood-like consumer plus Phase 1 coverage superset) on all
-# qualified hosts (seed plus arm64 native plus macOS arm64
-# plus Windows x86_64,). `dx coverage`
+# Self-call in ci.yml runs all nine checks with none disabled
+# (dogfood-like consumer plus Phase 1 coverage superset behind
+# min_coverage 97) on all qualified hosts (seed plus arm64 native plus
+# macOS arm64 plus Windows x86_64,). `dx coverage`
 # resolves scope via `resolve_for_test` (same as `dx test`) and runs `bazel
 # coverage`, which executes the tests. No bespoke corpus scope remains in
 # ci.yml: dogfood is verbatim `//...` via the reusable workflow.
 if grep -q -F -e 'dogfood (self-call reusable consumer workflow)' "$ci" &&
-  grep -q -F -e 'disabled_checks: "test"' "$ci" &&
+  ! grep -q -F -e 'disabled_checks' "$ci" &&
+  grep -q -F -e 'min_coverage: "97"' "$ci" &&
   grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
   ! grep -q -F -e 'attr(tags, corpus' "$ci" &&
   ! grep -q -F -e 'Only build is enabled' "$ci"; then
   ok
 else
-  bad "ci.yml self-call lost test-disabled plus explicit-platforms plus no-corpus honesty (issue #607 coverage superset; x86_64 removed per #976)"
+  bad "ci.yml self-call lost all-nine plus explicit-platforms plus no-corpus honesty (issue #607 coverage superset; x86_64 removed per #976)"
 fi
 
 # Functional gate: sequential fails closed, parallel linux passes.
@@ -415,12 +424,12 @@ else
   bad "dx migrate plus dx run gap lost its delivered owner"
 fi
 
-# Consumer honesty: dogfood self-call stays test-disabled per Phase 1
-# (coverage superset); the starter caller stays all-nine.
-if grep -q -F -e 'self-call test-disabled' "$matrix"; then
+# Consumer honesty: dogfood self-call runs the full dx test plus dx
+# coverage stack (Phase 1 coverage superset); the starter caller stays all-nine.
+if grep -q -F -e 'self-call dx test plus dx coverage' "$matrix"; then
   ok
 else
-  bad "consumer honesty lost (want self-call test-disabled, issue #509)"
+  bad "consumer honesty lost (want self-call dx test plus dx coverage, issue #509)"
 fi
 
 # Fixture files stay present.
@@ -453,7 +462,7 @@ if grep -q -F -e 'persist-credentials: false' "$pins" &&
   grep -q -F -e 'do not advertise parallelism while jobs serialize on one shared Bazel output-base lock' "$pins" &&
   grep -q -F -e 'fail-fast: false' "$pins" &&
   grep -q -F -e 'no actions/cache in reusable-consumer' "$pins" &&
-  grep -q -F -e 'bazel-windows-x86_64-' "$pins" &&
+  grep -q -F -e 'BuildBuddy shared remote cache, no per-host scopes' "$pins" &&
   grep -q -F -e 'free-tier eligible' "$pins" &&
   grep -q -F -e 'scheduling_mode: "parallel"' "$pins" &&
   grep -q -F -e "scheduling_mode 'sequential' is qualification-open" "$pins" &&

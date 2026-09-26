@@ -9,8 +9,9 @@
 # - link and reference checks reuse the existing `//quality/markdown` checker
 #   (pulldown-cmark plus slug plus deunicode) with remote URLs never fetched;
 #   a custom docs linter stays rejected;
-# - CI gate stays the existing `docs-ci` self-call over `//docs/...`
-#   (check-only on pull requests, validated tree publish only on main);
+# - CI gate stays the reusable-docs check-only contract over `//docs/...`
+#   (check-only on pull requests, validated tree publish only on main),
+#   called by the pinned docs caller; ci.yml carries no docs-ci job;
 # - docs only: no rendered mdBook site claimed here (stays open under issue
 # , no `Supported` claim.
 #
@@ -155,15 +156,18 @@ else
   bad "markdown checker lost its pulldown-cmark plus slug plus deunicode libs"
 fi
 
-# CI gate stays the docs-ci self-call over //docs/... with publish on main.
-if grep -q -F -e 'docs-ci (self-call reusable docs workflow)' "$ci" &&
-  grep -q -F -e 'docs_scope:' "$ci" &&
-  grep -q -F -e '//docs/...' "$ci" &&
-  grep -q -F -e 'refs/heads/main' "$ci" &&
-  grep -q -F -e 'lint --check' "$reusable"; then
+# Docs gate lives only in reusable-docs.yml now (the docs-ci job left
+# ci.yml, issue #620): scope plus publish inputs over //docs/... with
+# lint --check, publish-on-main wiring owned by the pinned docs caller.
+if grep -q -F -e 'docs_scope:' "$reusable" &&
+  grep -q -F -e '//docs/...' "$reusable" &&
+  grep -q -F -e 'lint --check' "$reusable" &&
+  grep -q -F -e 'refs/heads/main' examples/docs-ci/caller.yml &&
+  grep -q -F -e 'reusable-docs.yml@' examples/docs-ci/caller.yml &&
+  ! grep -q -F -e 'docs-ci (self-call reusable docs workflow)' "$ci"; then
   ok
 else
-  bad "docs-ci gate lost its reusable-docs plus scope plus publish-on-main wiring (issue #620)"
+  bad "docs-ci gate lost its reusable-docs plus scope plus publish-on-main wiring (issue #620; gate lives only in reusable-docs.yml)"
 fi
 
 # Reusable docs stays check-only with a clean checkout and no rendered site.

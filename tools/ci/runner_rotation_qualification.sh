@@ -2,8 +2,10 @@
 # Runner plus SDK rotation qualification harness.
 #
 # Owns the review cadence plus retirement handling left without an owner:
-# - runners: ubuntu-latest plus ubuntu-24.04-arm plus macos-14 plus
-#   windows-latest with per-profile cache scopes; macos x86_64 is Not
+# - runners: ubuntu-latest plus ubuntu-24.04-arm in ci.yml plus macos-14
+#   plus windows-latest only via the reusable consumer matrix, hygiene via
+#   setup-bazel plus the shared BuildBuddy remote cache (no per-profile
+#   cache scopes); macos x86_64 is Not
 #   planned per #976 with no runner (macos-13 retired December 2025,
 #   macos-15-intel sunset history stays docs-only, ubuntu-latest plus
 #   windows-latest float and age out);
@@ -44,6 +46,7 @@ native="docs/native-toolchains.md"
 test_matrix="docs/testing/github-ci.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
+consumer=".github/workflows/reusable-consumer.yml"
 floors="cc/tests/fixtures/deployment_floors/pins.bzl"
 
 # Fixture files stay present.
@@ -184,15 +187,20 @@ else
   bad "tools/ci/ci_targets_b.bzl or dogfood_freshness.sh lost the runner_rotation_qualification wiring (want target plus dogfood-freshness)"
 fi
 
-# As-built runners plus caches stay pinned with no paid runner, and floors keep SDK identities.
+# As-built runners plus cache record: ci.yml keeps the Linux pair on the
+# shared BuildBuddy remote cache (per-host cache prefixes are gone), the
+# macOS plus Windows runners live only in the consumer matrix, no paid
+# runner exists, and floors keep their SDK identities.
 if grep -q -F -e 'runs-on: ubuntu-latest' "$ci" &&
   grep -q -F -e 'runs-on: ubuntu-24.04-arm' "$ci" &&
-  grep -q -F -e 'runs-on: macos-14' "$ci" &&
-  ! grep -q -F -e 'runs-on: macos-15-intel' "$ci" &&
-  grep -q -F -e 'runs-on: windows-latest' "$ci" &&
-  grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
-  grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
-  ! grep -E -e 'runs-on:.*(self-hosted|larger|macos-latest)' "$ci" | grep -q . &&
+  grep -q -F -e "'macos-14'" "$consumer" &&
+  grep -q -F -e "'windows-latest'" "$consumer" &&
+  ! grep -q -F -e 'runs-on: macos-14' "$ci" &&
+  ! grep -q -F -e 'runs-on: windows-latest' "$ci" &&
+  ! grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
+  ! grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
+  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$ci" &&
+  ! grep -E -q 'runs-on:.*(self-hosted|larger|macos-latest)' "$ci" &&
   grep -q -F -e 'APPLE_SDK_IDENTITY = "MacOSX26.5"' "$floors" &&
   grep -q -F -e 'GLIBC_FLOOR = "2.28"' "$floors"; then
   ok

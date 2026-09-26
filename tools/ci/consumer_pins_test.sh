@@ -4,7 +4,8 @@
 # Pins the supply-chain half of the contract statically: the starter
 # caller references the reusable workflow by full-length commit SHA,
 # every third-party action pins to a SHA with a `# vN` tag comment,
-# all Bazel setup flows through the in-repo setup-bazelisk action,
+# all Bazel setup flows through the pinned bazel-contrib/setup-bazel
+# action,
 # `rules_dx_version` matches the `module()` version in MODULE.bazel,
 # and the coverage threshold fragment maps DX_MIN_COVERAGE to a
 # `--min-coverage` flag only for well-formed decimals.
@@ -20,7 +21,6 @@ dx_bootstrap "tools/sh/lib.sh"
 workflow="$1"
 caller="$2"
 module="$3"
-bootstrap="$4"
 
 command -v python3 >/dev/null || {
   echo "python3 is required" >&2
@@ -39,34 +39,43 @@ else
 fi
 
 # No floating `uses: owner/repo@tag` anywhere in either file.
-if grep -E -e 'uses: [^ ]+@(v[0-9]|main|master|latest)' "$workflow" "$caller" "$bootstrap" >/dev/null; then
+if grep -E -e 'uses: [^ ]+@(v[0-9]|main|master|latest)' "$workflow" "$caller" >/dev/null; then
   bad "floating action tag found"
 else
   ok
 fi
 
 # Every actions/* pin carries a `# vN` tag comment; every pin is a full SHA.
-# Checkout pins are inline per job (step 1; `./` local actions need a
-# checked-out workspace), so pin counting covers the workflow plus caller
-# plus the installer action.
-actions_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40}' "$workflow" "$caller" "$bootstrap" | wc -l)"
-commented_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+' "$workflow" "$caller" "$bootstrap" | wc -l)"
+# Checkout pins are inline per job (step 1), so pin counting covers the
+# workflow plus caller.
+actions_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40}' "$workflow" "$caller" | wc -l)"
+commented_pins="$(grep -h -o -E -e 'uses: actions/[^ ]+@[0-9a-f]{40} # v[0-9]+' "$workflow" "$caller" | wc -l)"
 if [[ "$actions_pins" -gt "0" && "$actions_pins" == "$commented_pins" ]]; then
   ok
 else
   bad "actions/* pins must be full SHAs with a # vN tag comment ($commented_pins/$actions_pins)"
 fi
 
-# Single-source Bazel setup (issue #915): every non-comment setup-bazelisk
-# mention is a use of the in-repo action; each job starts with inline
-# no-secrets checkout then that installer
-# (its pinned BAZELISK_VERSION lives in .github/actions/setup-bazelisk/).
-setup_uses="$(grep -c -F -e './.github/actions/setup-bazelisk' "$workflow" || true)"
+# Single-source Bazel setup (issue #915): every non-comment setup mention
+# is a use of the pinned bazel-contrib/setup-bazel action; each job starts
+# with inline no-secrets checkout then that action
+# (its pinned BAZELISK_VERSION lives in .github/workflows/*.yml).
+setup_uses="$(grep -c -F -e 'bazel-contrib/setup-bazel@' "$workflow" || true)"
 checkout_uses="$(grep -c -F -e 'persist-credentials: false' "$workflow" || true)"
-if [[ "$setup_uses" -ge "9" && "$checkout_uses" -ge "9" ]] && ! grep -e 'setup-bazelisk' "$workflow" | grep -v -F -e './.github/actions/setup-bazelisk' | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
+if [[ "$setup_uses" -ge "9" && "$checkout_uses" -ge "9" ]] && ! grep -e 'setup-bazelisk\|restore-bazel-cache' "$workflow" | grep -v -E -e '^[[:space:]]*#' | grep -q .; then
   ok
 else
-  bad "setup-bazelisk must be the only Bazel setup path with no-secrets checkout first (uses=$setup_uses checkouts=$checkout_uses)"
+  bad "setup-bazel must be the only Bazel setup path with no-secrets checkout first (uses=$setup_uses checkouts=$checkout_uses)"
+fi
+# Bazelisk version is single-sourced through the workflow env pin and the
+# remote cache is wired through the BuildBuddy secret.
+if grep -q -F -e 'bazelisk-version: ${{ env.BAZELISK_VERSION }}' "$workflow" &&
+  grep -q -F -e 'BAZELISK_VERSION: "' "$workflow" &&
+  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$workflow" &&
+  grep -q -F -e 'BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}' "$workflow"; then
+  ok
+else
+  bad "reusable-consumer lost the BAZELISK_VERSION env pin or BuildBuddy remote-cache wiring"
 fi
 # No-secrets checkout is inline per job (step 1).
 if [[ "$checkout_uses" -ge "9" ]]; then

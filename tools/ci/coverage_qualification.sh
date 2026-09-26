@@ -12,8 +12,10 @@
 # - Starlark instrumentation-vs-behavioral-matrix decision with evidence,
 # - Codecov opt-in-only qualification (no activation, no upload wiring),
 # - free-tier quota qualification for the services actually used,
-# - remote-cache plus remote-execution local-only evidence (else branch:
-#   hermeticity designed and locally sandbox-tested, remote unverified).
+# - remote-execution local-only evidence plus the optional shared
+#   BuildBuddy remote cache (read-only, PR uploads disabled; else
+#   branch: hermeticity designed and locally sandbox-tested, remote
+#   unverified).
 #
 # First-party Bazel-owned coverage stays the gate (adopted);
 # Codecov stays opt-in only and is never required. Remote correctness is
@@ -120,27 +122,25 @@ else
   bad "per-cell no-union record lost (renderer, consumer workflow, or testing README)"
 fi
 
-# Seed coverage job stays seed-cell scoped in CI, with per-cell arm64 plus
-# musl plus macos plus windows twins (static musl only,
+# Per-cell coverage gate scope as built: the two static-musl cells keep
+# their own ci.yml jobs (cell label plus `dx coverage --min-coverage 97`
+# plus its versioned inventory), while the seed plus arm64 plus macos
+# arm64 plus windows x86_64 cells gate through the dogfood self-call's
+# per-platform coverage job with the same min_coverage (static musl only,
 # ; dynamic musl has no cell; macos arm64 native on macos-14,
 # ; windows x86_64 MSVC-compatible native on
 # windows-latest,).
-if grep -q -F -e 'coverage (dx coverage gate, seed cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-arm64 (dx coverage gate, arm64 cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-musl-x86_64 (dx coverage gate, musl x86_64 cell)' .github/workflows/ci.yml &&
+if grep -q -F -e 'coverage-musl-x86_64 (dx coverage gate, musl x86_64 cell)' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-musl-arm64 (dx coverage gate, musl arm64 cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-macos-arm64 (dx coverage gate, macos arm64 cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage-windows-x86_64 (dx coverage gate, windows x86_64 cell)' .github/workflows/ci.yml &&
-  grep -q -F -e 'seed linux_x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'arm64 linux_arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'musl-x86_64 linux_x86_64_musl' .github/workflows/ci.yml &&
   grep -q -F -e 'musl-arm64 linux_arm64_musl' .github/workflows/ci.yml &&
-  grep -q -F -e 'macos-arm64 macos_arm64' .github/workflows/ci.yml &&
-  grep -q -F -e 'windows-x86_64 windows_x86_64' .github/workflows/ci.yml &&
-  grep -q -F -e 'coverage --min-coverage' .github/workflows/ci.yml; then
+  grep -q -F -e 'coverage --min-coverage 97' .github/workflows/ci.yml &&
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" .github/workflows/ci.yml &&
+  grep -q -F -e 'min_coverage: "97"' .github/workflows/ci.yml &&
+  grep -q -F -e 'Render first-party coverage summary (per-cell, no union)' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "ci.yml lost the seed/arm64/musl/macos/windows per-cell coverage gate scope"
+  bad "workflows lost the seed/arm64/musl/macos/windows per-cell coverage gate scope"
 fi
 
 # Consumer coverage stays per-cell with no union and Codecov opt-in only.
@@ -151,20 +151,21 @@ else
   bad "reusable-consumer lost its per-cell no-union coverage shape"
 fi
 
-# Each non-seed cell gates its own LCOV through the portable composite
-# (issue #1062): same coverage_bin gate plus same coverage_comment.sh shape
-# as the seed, with its versioned inventory wired per job, step-summary
-# only (only the seed publishes the PR comment).
-if grep -q -F -e 'inventory: tools/coverage/arm64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'inventory: tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
+# Each non-seed cell gates its own LCOV: the two musl cells through the
+# portable composite (issue #1062: same coverage_bin gate plus same
+# coverage_comment.sh shape as the seed, with its versioned inventory
+# wired per job, step-summary only), and the arm64 plus macos arm64 plus
+# windows x86_64 cells through the consumer coverage job's per-platform
+# `dx coverage` gate with its own per-cell render.
+if grep -q -F -e 'inventory: tools/coverage/musl-x86_64-inventory.txt' .github/workflows/ci.yml &&
   grep -q -F -e 'inventory: tools/coverage/musl-arm64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'inventory: tools/coverage/macos-arm64-inventory.txt' .github/workflows/ci.yml &&
-  grep -q -F -e 'inventory: tools/coverage/windows-x86_64-inventory.txt' .github/workflows/ci.yml &&
+  grep -q -F -e 'uses: ./.github/actions/render-coverage-summary' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage_bin' .github/actions/render-coverage-summary/action.yml &&
-  grep -q -F -e 'coverage_comment.sh' .github/actions/render-coverage-summary/action.yml; then
+  grep -q -F -e 'coverage_comment.sh' .github/actions/render-coverage-summary/action.yml &&
+  grep -q -F -e 'extra=(--min-coverage "$DX_MIN_COVERAGE")' .github/workflows/reusable-consumer.yml; then
   ok
 else
-  bad "ci.yml lost the per-cell own-LCOV gate wiring (portable composite plus versioned inventories, issue #1062)"
+  bad "workflows lost the per-cell own-LCOV gate wiring (portable composite plus versioned inventories, issue #1062)"
 fi
 
 # Functional per-cell proof without a full rebuild: two synthetic cell
@@ -259,17 +260,19 @@ else
 fi
 
 # Free-tier qualification: only standard runners, no paid services.
-# windows-latest is qualified (standard free runner with
-# a per-host cache scope); macos-latest stays banned (unpinned), as do
-# self-hosted/larger (paid)
+# windows-latest is qualified (standard free runner; the Bazel setup
+# cache rides setup-bazel plus the shared remote cache); macos-latest
+# stays banned (unpinned), as do self-hosted/larger (paid). No
+# actions/cache wiring remains anywhere under .github/workflows/ (the
+# setup-bazel cache is internal to that action, never workflow YAML)
 # (hermetic tree search: host grep -rn variance, issue #1006).
 if DX_TREE_RE=1 dx_tree_absent 'runs-on:.*(self-hosted|larger|macos-latest)' -- .github/workflows/ &&
   grep -q -F -e 'runs-on: ubuntu-latest' .github/workflows/ci.yml &&
-  grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
-  grep -q -F -e 'actions/cache' .github/actions/restore-bazel-cache/action.yml; then
+  grep -q -F -e "'windows-latest'" .github/workflows/reusable-consumer.yml &&
+  dx_tree_absent 'actions/cache' -- .github/workflows/; then
   ok
 else
-  bad "workflows gained a non-standard runner (paid or unqualified)"
+  bad "workflows gained a non-standard runner (paid or unqualified) or actions/cache wiring"
 fi
 
 # Free-tier quotas stay recorded in the infrastructure budget.
@@ -282,14 +285,21 @@ else
   bad "testing README lost its free-tier quota record (runners, cache, artifact)"
 fi
 
-# No remote execution or cache flags in owned config or workflows
-# (hermetic tree search: BSD grep lacks --exclude-dir, issue #1006).
-if dx_tree_absent '--remote_cache' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
+# The shared BuildBuddy remote cache is wired in every job while
+# execution stays local: `--remote_cache=grpcs://remote.buildbuddy.io`
+# plus the PR no-upload flag are required in both workflows, and no
+# remote executor or BES backend flag appears in owned config or
+# workflows (hermetic tree search: BSD grep lacks --exclude-dir, issue
+# #1006).
+if grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' .github/workflows/ci.yml &&
+  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'common --noremote_upload_local_results' .github/workflows/ci.yml &&
+  grep -q -F -e 'common --noremote_upload_local_results' .github/workflows/reusable-consumer.yml &&
   dx_tree_absent '--remote_executor' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
   dx_tree_absent '--bes_backend' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/; then
   ok
 else
-  bad "a remote cache/executor flag appeared (local-only execution)"
+  bad "remote wiring lost (want BuildBuddy remote cache plus PR no-upload in workflows; no remote executor or BES backend)"
 fi
 
 # CI header stays local-only with platform qualification owned elsewhere

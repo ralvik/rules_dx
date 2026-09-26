@@ -8,16 +8,13 @@
 #   with subject digest equal to artifact sha256, hermetic Rust toolchain
 #   only, //deploy/rules:release_demo_archive as subject fixture, verified
 #   via bazel test //deploy/release:dx_release_tools_test;
-# - CI per-host upload: ci.yml sbom-windows-x86_64 job builds plus verifies
-#   on every push/PR (windows-latest with shell bash, bazel-windows-x86_64-
-#   cache, needs build-windows-x86_64), stages under
-#   RUNNER_TEMP/sbom-windows-x86_64, uploads sbom-provenance-windows_x86_64
-#   via actions/upload-artifact pinned SHA plus tag, contents read only,
-#   publishes nothing, fork-safe; seed plus arm64 plus musl sbom jobs kept
-#   with no regression;
+# - CI surface: ci.yml carries no sbom-windows-x86_64 job, no upload-artifact,
+#   and no per-host cache prefixes (windows sbom-provenance stays an
+#   owner-gated local release record in docs/deploy/release-runbook.md; CI
+#   never signs PR code and publishes nothing, fork-safe);
 # - promotion-checklist cells for this host: Platform-qualified Windows
 #   x86_64 MSVC-compatible (#414), dogfood consumer covers windows_x86_64
-#   test-disabled (#408), windows x86_64 coverage cell with no union,
+#   with all nine checks (#408), windows x86_64 coverage cell with no union,
 #   explicit EULA never automatic with no installed fallback, prebuilt-MSVC
 #   interop fixtures incl mixed Rust/C/C++ plus linux corpus seed-only
 #   (#499), tag hygiene at 0.0.0 with no v* tags, --verify-tag versioning,
@@ -48,6 +45,7 @@ sbom="deploy/release/sbom.bzl"
 verify="deploy/release/src/lib.rs"
 release_build="deploy/release/BUILD.bazel"
 ci=".github/workflows/ci.yml"
+consumer=".github/workflows/reusable-consumer.yml"
 runbook="docs/deploy/release-runbook.md"
 support="docs/product/support-matrix.md"
 cells="tools/coverage/cells.txt"
@@ -78,59 +76,57 @@ else
   bad "deploy/release/BUILD.bazel lost its sbom_demo plus dx_release_tools_test over release_demo_archive (#807)"
 fi
 
-# CI sbom-windows-x86_64 job builds plus verifies on every push/PR (windows native, not seed-only).
-if grep -q -F -e 'name: sbom-windows-x86_64 (SBOM + provenance build/verify/upload, windows x86_64)' "$ci" &&
-  grep -q -F -e 'runs-on: windows-latest' "$ci" &&
-  grep -q -F -e 'needs: [build-windows-x86_64]' "$ci" &&
-  grep -q -F -e 'prefix: bazel-windows-x86_64-' "$ci" &&
-  grep -q -F -e 'shell: bash' "$ci" &&
-  grep -q -F -e 'bazel build --noshow_progress //deploy/release:sbom_demo' "$ci" &&
-  grep -q -F -e '//deploy/release:dx_release_tools_test' "$ci"; then
+# CI runs no sbom-windows-x86_64 build or verify: no release-tool targets in
+# ci.yml (windows SBOM stays an owner-gated local release record).
+if ! grep -q -F -e 'sbom-windows-x86_64' "$ci" &&
+  ! grep -q -F -e 'sbom_demo' "$ci" &&
+  ! grep -q -F -e 'dx_release_tools_test' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-windows-x86_64 build plus verify on push/PR (want windows job with shell bash plus sbom_demo plus dx_release_tools_test, #807)"
+  bad "ci.yml still carries an sbom-windows-x86_64 build plus verify job (want no sbom-windows-x86_64 job and no sbom_demo/dx_release_tools_test in CI; SBOM stays owner-gated local release, #807)"
 fi
 
-# CI sbom-windows-x86_64 job stages plus uploads as a per-host artifact for inspection.
-if grep -q -F -e 'RUNNER_TEMP/sbom-windows-x86_64' "$ci" &&
-  grep -q -F -e 'sbom-provenance-windows_x86_64' "$ci" &&
-  grep -q -F -e 'actions/upload-artifact@' "$ci"; then
+# CI stages no windows sbom directory and uploads no provenance artifact.
+if ! grep -q -F -e 'RUNNER_TEMP/sbom-windows-x86_64' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance-windows_x86_64' "$ci" &&
+  ! grep -q -F -e 'actions/upload-artifact' "$ci"; then
   ok
 else
-  bad "ci.yml lost its sbom-windows-x86_64 stage plus upload-artifact sbom-provenance-windows_x86_64 (#807)"
+  bad "ci.yml still stages or uploads sbom-provenance-windows_x86_64 (want no RUNNER_TEMP/sbom-windows-x86_64 stage and no upload-artifact; CI publishes nothing, #807)"
 fi
 
-# Upload stays pinned plus fail-closed plus least-privilege, publishes nothing.
-if grep -q -F -e 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4' "$ci" &&
-  grep -q -F -e 'if-no-files-found: error' "$ci" &&
+# No upload-artifact pin remains; checkout stays least-privilege plus
+# setup-bazel, and the runbook records publishes-nothing plus CI-never-signs.
+if ! grep -q -F -e 'actions/upload-artifact' "$ci" &&
+  ! grep -q -F -e 'if-no-files-found: error' "$ci" &&
   grep -q -F -e 'persist-credentials: false' "$ci" &&
-  grep -q -F -e 'setup-bazelisk' "$ci" &&
-  grep -q -F -e 'CI never signs PR code, publishes nothing' "$ci"; then
+  grep -q -F -e 'bazel-contrib/setup-bazel' "$ci" &&
+  grep -q -F -e 'publishes nothing' "$runbook" &&
+  grep -q -F -e 'CI never signs PR code' "$runbook"; then
   ok
 else
-  bad "ci.yml lost its pinned upload-artifact plus fail-closed plus publishes-nothing record for sbom-windows-x86_64 (#807)"
+  bad "ci.yml lost its no-upload plus least-privilege setup-bazel record or runbook lost publishes-nothing plus CI-never-signs (want no upload-artifact for sbom-windows-x86_64, #807)"
 fi
 
-# Seed plus arm64 plus musl sbom jobs stay kept with no regression (all jobs coexist).
-if grep -q -F -e 'name: sbom (SBOM + provenance build/verify/upload, seed host)' "$ci" &&
-  grep -q -F -e 'name: sbom-provenance' "$ci" &&
-  grep -q -F -e 'prefix: bazel-seed-' "$ci" &&
-  grep -q -F -e 'name: sbom-arm64 (SBOM + provenance build/verify/upload, linux arm64)' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_x86_64_musl' "$ci" &&
-  grep -q -F -e 'sbom-provenance-linux_arm64_musl' "$ci"; then
+# No sbom jobs plus no per-host cache prefixes remain in ci.yml (caching is
+# setup-bazel bazelisk cache plus BuildBuddy only).
+if ! grep -q -F -e 'name: sbom' "$ci" &&
+  ! grep -q -F -e 'prefix: bazel-' "$ci" &&
+  ! grep -q -F -e 'sbom-provenance' "$ci"; then
   ok
 else
-  bad "ci.yml lost its seed sbom plus arm64 plus musl sbom jobs (want all jobs coexisting, #807)"
+  bad "ci.yml still carries sbom jobs or per-host cache prefixes (want none: all sbom jobs deleted, caching is setup-bazel plus BuildBuddy, #807)"
 fi
 
-# Attestation stays owner-gated human-run (fork-safe, no CI signing).
+# Attestation stays owner-gated human-run (fork-safe, no CI signing): the
+# signing_demo target plus runbook own the record, ci.yml never signs.
 if grep -q -F -e 'name = "signing_demo"' "$release_build" &&
-  grep -q -F -e 'CI never signs PR code' "$ci" &&
-  grep -q -F -e '//deploy/release:signing_demo' "$ci"; then
+  grep -q -F -e 'CI never signs PR code' "$runbook" &&
+  ! grep -q -F -e 'signing_demo' "$ci" &&
+  ! grep -q -F -e 'id-token' "$ci"; then
   ok
 else
-  bad "release BUILD or ci.yml lost the owner-gated signing_demo attestation record with CI never signing (#807)"
+  bad "release BUILD or runbook lost the owner-gated signing_demo attestation record with ci.yml never signing (#807)"
 fi
 
 # Runbook records the windows CI upload plus owner-gated attestation under #807.
@@ -144,20 +140,27 @@ else
   bad "release-runbook.md lost its #807 sbom-windows-x86_64 sbom-provenance-windows_x86_64 plus owner-gated attestation record"
 fi
 
-# Per-cell consumer evidence still covers windows_x86_64 test-disabled (#408).
-if grep -q -F -e '"windows_x86_64"' "$ci" &&
-  grep -q -F -e 'disabled_checks: "test"' "$ci"; then
+# Per-cell consumer evidence: the dogfood self-call covers windows_x86_64
+# with every check enabled (all four platforms, min coverage 97, test
+# enabled with no disabled_checks, #408).
+if grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e 'min_coverage: "97"' "$ci" &&
+  ! grep -q -F -e 'disabled_checks' "$ci"; then
   ok
 else
-  bad "ci.yml lost its dogfood consumer windows_x86_64 test-disabled per-cell evidence (#807)"
+  bad "ci.yml lost its dogfood windows_x86_64 all-nine-checks per-cell evidence (want four-platform self-call plus min_coverage 97 plus no disabled_checks, #807)"
 fi
 
-# Per-cell coverage stays the windows x86_64 cell with no union.
+# Per-cell coverage stays the windows x86_64 cell with no union: the dogfood
+# matrix coverage job renders the per-cell summary for windows_x86_64, and
+# the no-union wording stays frozen in strategy-details.
 if grep -q -F -e 'qualified windows_x86_64' "$cells" &&
-  grep -q -F -e 'coverage-windows-x86_64 (dx coverage gate, windows x86_64 cell)' "$ci"; then
+  grep -q -F -e "platforms: '[\"linux_x86_64\", \"linux_arm64\", \"macos_arm64\", \"windows_x86_64\"]'" "$ci" &&
+  grep -q -F -e 'Render first-party coverage summary (per-cell, no union)' "$consumer" &&
+  grep -q -F -e 'no cross-cell union' docs/testing/strategy-details.md; then
   ok
 else
-  bad "coverage cells or ci.yml lost the windows x86_64 per-cell gate with no union (#807)"
+  bad "coverage cells or dogfood consumer lost the windows x86_64 per-cell gate with no union (#807)"
 fi
 
 # Hermetic acquisition plus MSVC compat gates unchanged; EULA never automatic, no installed fallback.
@@ -181,13 +184,15 @@ else
   bad "release-windows fixture missing (want pins.bzl plus release_windows.expected plus corpus BUILD)"
 fi
 
-# Pins record wire plus CI plus cells plus attestation plus rejected plus honesty.
+# Pins record wire plus no-CI-upload plus cells plus attestation plus rejected plus honesty.
 if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'ci.yml sbom-windows-x86_64 job builds //deploy/release:sbom_demo' "$pins" &&
-  grep -q -F -e 'uploads sbom-provenance-windows_x86_64 via actions/upload-artifact' "$pins" &&
+  grep -q -F -e 'ci.yml carries no sbom-windows-x86_64 job; SBOM stays a local target under #807' "$pins" &&
+  grep -q -F -e 'no upload-artifact, no RUNNER_TEMP stage; CI publishes nothing under #807' "$pins" &&
+  grep -q -F -e 'no per-host cache scope; disk cache deleted, BuildBuddy remote cache only' "$pins" &&
+  grep -q -F -e 'seed sbom job removed with the sbom job deletion, no regression' "$pins" &&
   grep -q -F -e 'Platform-qualified Windows x86_64 MSVC-compatible native under issue #414' "$pins" &&
-  grep -q -F -e 'dogfood consumer self-call covers windows_x86_64' "$pins" &&
+  grep -q -F -e 'dogfood self-call covers windows_x86_64 with full dx test plus dx coverage' "$pins" &&
   grep -q -F -e 'explicit EULA acceptance required never automatic' "$pins" &&
   grep -q -F -e 'prebuilt-MSVC interop fixtures' "$pins" &&
   grep -q -F -e 'via //deploy/release:signing_demo' "$pins" &&
@@ -197,15 +202,17 @@ if grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$pins" &&
   grep -q -F -e 'no Supported claim' "$pins"; then
   ok
 else
-  bad "pins.bzl lost its wire plus CI plus cells plus attestation plus rejected plus honesty pins under issue #807"
+  bad "pins.bzl lost its wire plus no-CI-upload plus cells plus attestation plus rejected plus honesty pins under issue #807"
 fi
 
-# Expected fixture pins the per-host upload plus cells plus rejected plus honesty lines.
+# Expected fixture pins the no-job plus no-upload plus cells plus rejected plus honesty lines.
 if grep -q -F -e 'Release evidence for Windows x86_64 MSVC-compatible (issue #807)' "$expected" &&
   grep -q -F -e 'SPDX-2.3 via //deploy/release:sbom_demo' "$expected" &&
-  grep -q -F -e 'uploads sbom-provenance-windows_x86_64' "$expected" &&
-  grep -q -F -e 'pinned SHA plus tag' "$expected" &&
-  grep -q -F -e 'sbom-windows-x86_64 summary' "$expected" &&
+  grep -q -F -e 'ci.yml carries no sbom-windows-x86_64 job' "$expected" &&
+  grep -q -F -e 'no RUNNER_TEMP stage, no per-host cache scope' "$expected" &&
+  grep -q -F -e 'Seed sbom job removed with the sbom job deletion' "$expected" &&
+  grep -q -F -e 'arm64 sbom-arm64 job removed with the sbom job deletion' "$expected" &&
+  grep -q -F -e 'with full dx test plus dx coverage under issue #408' "$expected" &&
   grep -q -F -e 'windows_x86_64 sbom-provenance delivered under issue' "$expected" &&
   grep -q -F -e 'explicit EULA acceptance required never automatic' "$expected" &&
   grep -q -F -e 'prebuilt-MSVC interop fixtures' "$expected" &&
@@ -216,7 +223,7 @@ if grep -q -F -e 'Release evidence for Windows x86_64 MSVC-compatible (issue #80
   grep -q -F -e 'no Supported claim' "$expected"; then
   ok
 else
-  bad "release_windows.expected lost its per-host upload plus cells plus rejected plus honesty lines under #807"
+  bad "release_windows.expected lost its no-CI-upload plus cells plus rejected plus honesty lines under #807"
 fi
 
 # Live proof: the fixture package builds green on the seed host.

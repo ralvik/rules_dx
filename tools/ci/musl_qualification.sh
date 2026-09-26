@@ -6,8 +6,9 @@
 # - delivered: Rust musl std via extra_target_triples, dx
 #   qualified_static_musl_profiles plus musl_profile_refusal with dynamic
 #   explicitly refused, per-cell coverage for both musl cells with no
-#   union, musl CI jobs cross-building from Linux runners with per-profile
-#   cache scopes under the portable-shell contract, consumer plus per-profile
+#   union, musl CI jobs cross-building from Linux runners without
+#   per-profile cache scopes (setup-bazel plus BuildBuddy remote cache)
+#   under the portable-shell contract, consumer plus per-profile
 #   release evidence (sbom-provenance delivered under #804),
 #   docs in support-matrix plus ADR 0014 plus native-toolchains;
 # - open with honest records: full hermetic-llvm backend, prebuilt glibc
@@ -104,17 +105,21 @@ else
   bad "musl per-cell coverage registry lost its two qualified cells (issue #411)"
 fi
 
-# CI musl jobs exist on Linux runners with per-profile cache scopes.
+# CI musl jobs exist on Linux runners: build plus coverage pair on both
+# architectures, with no per-profile cache scopes (hygiene is setup-bazel
+# plus the shared BuildBuddy remote cache instead).
 if grep -q -F -e 'build-musl-x86_64' .github/workflows/ci.yml &&
   grep -q -F -e 'build-musl-arm64' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-musl-x86_64' .github/workflows/ci.yml &&
   grep -q -F -e 'coverage-musl-arm64' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel-musl-x86_64-' .github/workflows/ci.yml &&
-  grep -q -F -e 'bazel-musl-arm64-' .github/workflows/ci.yml &&
-  grep -q -F -e 'static musl' .github/workflows/ci.yml; then
+  grep -q -F -e 'static musl' .github/workflows/ci.yml &&
+  grep -q -F -e 'bazelisk-cache: true' .github/workflows/ci.yml &&
+  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'bazel-musl-' .github/workflows/ci.yml &&
+  ! grep -q -F -e 'prefix: bazel-' .github/workflows/ci.yml; then
   ok
 else
-  bad "ci.yml lost the static-musl profile jobs with per-profile cache scopes (issue #411)"
+  bad "ci.yml lost the static-musl profile jobs or regained per-profile cache scopes (issue #411)"
 fi
 
 # CI musl jobs stay portable-shell clean: no banned forms in the workflow.

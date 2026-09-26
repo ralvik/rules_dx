@@ -4,8 +4,9 @@
 # Owns the manual on-demand rebuild plus rotation left without an owner:
 # - base image: ubuntu:24.04 digest-pinned FROM (resolved 2026-09-17,
 #   re-pin deliberately, never latest);
-# - Bazelisk: v1.29.0 launcher (per-OS shas in setup-bazelisk/action.yml,
-#   Dockerfile tracks the linux-amd64 pair, Bazel 9.2.0 via
+# - Bazelisk: v1.29.0 launcher (canonical version plus linux-amd64 sha
+#   in Dockerfile.prebuilt, all five per-OS shas in
+#   docs/contributing/local-workflows.md, Bazel 9.2.0 via
 #   USE_BAZEL_VERSION);
 # - Cosign: v2.4.1 checksum-verified fetch (single-sourced across
 #   signing.bzl plus ghcr.yml plus sign_deploy.sh);
@@ -50,7 +51,6 @@ test_matrix="docs/testing/github-ci.md"
 build="tools/ci/BUILD.bazel"
 ci=".github/workflows/ci.yml"
 dockerfile=".devcontainer/Dockerfile.prebuilt"
-action=".github/actions/setup-bazelisk/action.yml"
 ghcr=".github/workflows/ghcr.yml"
 signing="deploy/release/signing.bzl"
 sign_deploy="deploy/release/src/lib.rs"
@@ -75,7 +75,7 @@ fi
 if grep -q -F -e 'v1.29.0 pinned Bazelisk launcher' "$pins" &&
   grep -q -F -e '5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992' "$pins" &&
   grep -q -F -e '9.2.0 via USE_BAZEL_VERSION' "$pins" &&
-  grep -q -F -e 'canonical source .github/actions/setup-bazelisk/action.yml' "$pins"; then
+  grep -q -F -e 'canonical source .devcontainer/Dockerfile.prebuilt' "$pins"; then
   ok
 else
   bad "pins.bzl lost its Bazelisk plus Bazel delegation (v1.29.0 plus sha plus 9.2.0 plus canonical, issue #647)"
@@ -200,7 +200,7 @@ fi
 if grep -q -E -e '^FROM [^ ]+@sha256:[0-9a-f]{64}' "$dockerfile" &&
   grep -q -F -e 'USE_BAZEL_VERSION=9.2.0' "$dockerfile" &&
   grep -q -F -e 'sha256sum -c' "$dockerfile" &&
-  grep -q -F -e 'default: "1.29.0"' "$action" &&
+  grep -q -F -e 'bazelisk/releases/download/v1.29.0/bazelisk-linux-amd64' "$dockerfile" &&
   grep -q -F -e 'COSIGN_VERSION="v2.4.1"' "$ghcr" &&
   grep -q -F -e 'COSIGN_SHA256_LINUX_AMD64="8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"' "$ghcr" &&
   grep -q -F -e 'SIGNING_COSIGN_VERSION = "v2.4.1"' "$signing" &&

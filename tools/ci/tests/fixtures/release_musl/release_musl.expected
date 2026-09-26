@@ -4,28 +4,22 @@ https://slsa.dev/provenance/v1 via //deploy/release:sbom_demo with
 https://in-toto.io/Statement/v1 subject digest equal to artifact sha256,
 managed Rust toolchain only, //deploy/rules:release_demo_archive as the
 SBOM subject fixture, bazel test //deploy/release:dx_release_tools_test binds
-SPDX plus in-toto plus SLSA. CI: ci.yml sbom-musl-x86_64 job builds
-//deploy/release:sbom_demo plus verifies //deploy/release:dx_release_tools_test
-on ubuntu-latest with bazel-musl-x86_64- cache scope, stages SPDX-2.3 plus SLSA v1
-under RUNNER_TEMP/sbom-musl-x86_64, uploads sbom-provenance-linux_x86_64_musl via
-actions/upload-artifact pinned SHA plus tag, plus ci.yml sbom-musl-arm64 job builds
-//deploy/release:sbom_demo plus verifies //deploy/release:dx_release_tools_test
-on ubuntu-24.04-arm with bazel-musl-arm64- cache scope, stages SPDX-2.3 plus SLSA v1
-under RUNNER_TEMP/sbom-musl-arm64, uploads sbom-provenance-linux_arm64_musl via
-actions/upload-artifact pinned SHA plus tag, contents: read only with
-persist-credentials false, publishes nothing, sbom-musl-x86_64 summary with build plus
-verify plus upload commands plus sbom-musl-arm64 summary with build plus verify
-plus upload commands; seed sbom job kept with sbom-provenance plus bazel-seed- plus
-arm64 sbom-arm64 job kept with sbom-provenance-linux_arm64 plus bazel-arm64-, no
-regression. Promotion cells: Platform-qualified static musl under issue #411 plus
-dogfood consumer self-call test-disabled plus musl jobs under issue #408 plus musl
-x86_64 plus musl arm64 coverage cells with no union plus static native closure only
-with dynamic musl explicitly out of scope plus module 0.0.0 with no v* tags plus
---verify-tag everywhere plus linux_x86_64_musl sbom-provenance delivered under issue
-#804 plus linux_arm64_musl sbom-provenance delivered under issue #804. Attestation stays owner-gated human-run via
-//deploy/release:signing_demo (Sigstore keyless cosign sign-blob --bundle
-plus gh attestation create on tuf-repo-cdn.sigstore.dev); CI never signs PR
-code, fork-safe, publishes nothing. Dry-run only forever is rejected, blocks
-Supported; checksum-only verification is not publisher-identity proof;
-Compatibility: Release only. Qualified under issue #804; remaining hosts plus
-tag cut stay owned gap under issues #805-#807 plus process #808; no Supported claim.
+SPDX plus in-toto plus SLSA. CI: ci.yml carries no sbom-musl-x86_64 job,
+ci.yml carries no sbom-musl-arm64 job, no upload-artifact, no RUNNER_TEMP
+stage, no per-host cache scope; publishes nothing; contents: read only with
+persist-credentials false. Seed sbom job removed with the sbom job deletion,
+plus arm64 sbom-arm64 job removed with the sbom job deletion, no regression.
+Promotion cells: Platform-qualified static musl under issue #411 plus
+self-call dx test plus dx coverage plus musl jobs under issue #408 plus musl
+x86_64 plus musl arm64 coverage cells with no union plus static native closure
+only with dynamic musl explicitly out of scope plus module 0.0.0 with no v*
+tags plus --verify-tag everywhere plus
+linux_x86_64_musl sbom-provenance delivered under issue #804 plus linux_arm64_musl
+sbom-provenance delivered under issue #804. Attestation stays owner-gated
+human-run via //deploy/release:signing_demo (Sigstore keyless cosign
+sign-blob --bundle plus gh attestation create on tuf-repo-cdn.sigstore.dev);
+CI never signs PR code, fork-safe, publishes nothing.
+Dry-run only forever is rejected, blocks Supported; checksum-only verification
+is not publisher-identity proof; Compatibility: Release only.
+Qualified under issue #804; remaining hosts plus tag cut stay owned gap under
+issues #805-#807 plus process #808; no Supported claim.

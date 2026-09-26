@@ -9,7 +9,8 @@
 #
 # Bundle layout:
 #   bazelisk/<asset>  per-OS launcher bytes (assets plus sha256 pinned
-#                     in `.github/actions/setup-bazelisk/action.yml`)
+#                     in `.devcontainer/Dockerfile.prebuilt` plus
+#                     `docs/contributing/local-workflows.md`)
 #   bazelisk/SHA256SUMS
 #   advisory/<set>.json  vendored advisory snapshot bytes per set
 #   advisory/SHA256SUMS

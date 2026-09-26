@@ -10,11 +10,11 @@ BASE_IMAGE = "ubuntu:24.04@sha256:69cecf4bbf72d2d44a9eef1b71fb98c7fb973d78af1139
 BASE_RESOLVED = "resolved 2026-09-17 from tag ubuntu:24.04"
 BASE_POLICY = "re-pin deliberately with evidence, never latest"
 
-# Bazelisk plus Bazel pins (canonical source is setup-bazelisk/action.yml).
+# Bazelisk plus Bazel pins (canonical source is Dockerfile.prebuilt).
 BAZELISK_VERSION = "v1.29.0 pinned Bazelisk launcher"
 BAZELISK_SHA_LINUX_AMD64 = "5a408715e932c0250d28bd84555f12edbf70117de42f9181691c736eacc4a992"
 BAZEL_VERSION = "9.2.0 via USE_BAZEL_VERSION"
-BAZELISK_CANONICAL = "canonical source .github/actions/setup-bazelisk/action.yml"
+BAZELISK_CANONICAL = "canonical source .devcontainer/Dockerfile.prebuilt"
 
 # Cosign pin (single-sourced across signing stack plus GHCR fetch plus dry-run).
 COSIGN_VERSION = "v2.4.1 checksum-verified fetch"

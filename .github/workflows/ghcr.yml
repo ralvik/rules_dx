@@ -18,8 +18,9 @@
 # to containers today) — qualified in docs/contributing/devcontainer.md and
 # docs/testing/README.md, not assumed. Build-only PRs consume no quota.
 #
-# Hygiene (issue #80): Bazelisk installs go through the single
-# `.github/actions/setup-bazelisk` composite action where Bazel is needed;
+# Hygiene (issue #80): where Bazel is needed, Bazelisk installs go
+# through the pinned `bazel-contrib/setup-bazel` action (commit SHA plus
+# trailing tag comment);
 # this workflow builds Docker only, so the sole third-party action
 # (checkout) is pinned to a commit SHA with its tag trailing. No
 # `docker/*` actions and no `sigstore/*` installer actions: plain

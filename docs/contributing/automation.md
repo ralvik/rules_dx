@@ -68,7 +68,7 @@ when enabled it is update-only as gated above.
 
 Pin single-sourcing plus stale-docs wording completed under issue #326:
 Bazel pins track canonical `.bazelversion` and Bazelisk pins track canonical
-`.github/actions/setup-bazelisk/action.yml` defaults (enforced by
+`.devcontainer/Dockerfile.prebuilt` pins (enforced by
 `//tools/ci:pin_consistency_test`); caller-pin shape validation is symmetric
 between `dx_ci::plan_pin_update` and the shell pin harnesses; native-only
 updater policy is decided above (issue #461); sharding, Codecov, and sequential

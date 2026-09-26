@@ -220,15 +220,17 @@ else
   bad "a Windows harness shell artifact appeared (harness stays bash-only under issue #414, no ps1/bat/powershell outside the ADR 0032 product PowerShell foundation)"
 fi
 
-# Windows CI jobs run bash-only: every windows-latest job sets shell bash
-# and stays portable-shell clean (no pwsh, no banned forms). This resolves
+# Windows CI jobs run bash-only: the windows-latest runner selection
+# lives in the reusable consumer's per-platform matrix, every
+# per-platform job there declares shell bash, and no workflow selects a
+# Windows shell. This resolves
 # the Windows bash-only Linux-only harness gap here, not by
 # papering over: the harness stays Linux-only (labels above) while Windows
 # execution goes through bash explicitly.
-if grep -q -F -e 'runs-on: windows-latest' .github/workflows/ci.yml &&
-  grep -q -F -e 'shell: bash' .github/workflows/ci.yml &&
-  [[ "$(grep -c -F -e 'runs-on: windows-latest' .github/workflows/ci.yml)" == "$(grep -c -F -e 'shell: bash' .github/workflows/ci.yml)" ]] &&
-  ! grep -A30 -e 'runs-on: windows-latest' .github/workflows/ci.yml | grep -E -e 'shell: (pwsh|powershell|cmd)' | grep -q .; then
+if grep -q -F -e "'windows-latest'" .github/workflows/reusable-consumer.yml &&
+  grep -q -F -e 'shell: bash' .github/workflows/reusable-consumer.yml &&
+  [[ "$(grep -c -F -e 'shell: bash' .github/workflows/reusable-consumer.yml)" -ge "3" ]] &&
+  ! grep -rn -E -e 'shell: (pwsh|powershell|cmd)' .github/workflows/ | grep -q .; then
   ok
 else
   bad "windows-latest jobs must run shell bash with portable forms (issue #414 resolves the #323 Windows gap)"

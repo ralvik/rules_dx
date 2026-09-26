@@ -1,26 +1,27 @@
 #!/usr/bin/env bash
-# Action execution constraints plus cache-key correctness harness.
+# Action execution constraints plus cache correctness harness.
 #
-# Machine-checks the as-built local-only execution boundary plus exact-key
-# disk cache delivered here, without claiming remote execution or remote
-# cache support:
+# Machine-checks the as-built local-only execution boundary plus the
+# shared BuildBuddy remote cache delivered here, without claiming remote
+# execution support:
 # - delivered: every Dx pipeline plus evaluator action carries
 #   `no-remote-exec` via the single `quality/execution_requirements.bzl`
 #   helper (locally cacheable, never remotely executed until
 #   remote is qualified); no cache-disabling `no-remote` marker appears;
 #   the `cli/bep` remote/downloader interface (`RemoteConfig` plus
 #   `LocalDownloader`) stays local-only;
-# - disk cache: keys hash every Bazel-affecting lock/config with exact-key
-#   hits only (a bust starts cold, no stale prefix reuse) across per-host
-#   scopes; reusable-consumer stays cache-free;
+# - shared remote cache: every Bazel workflow configures BuildBuddy
+#   (`common --remote_cache` plus API key plus PR read-only uploads)
+#   through a per-job rc file exported via `BAZELRC`; the legacy
+#   actions/cache disk cache stays deleted (no restore-keys, no
+#   hashFiles keys, no per-host prefixes);
 # - live proof: aquery ExecutionInfo shows the marker on synthetic plus
 #   real lint while lint vs format ActionKeys still differ (capability
 #   isolation holds); the execution-log hit/miss half stays wired in
-#   quality_cache_aquery; remote execution plus remote cache stay
-#   unverified and unwired;
+#   quality_cache_aquery; remote execution stays unverified;
 # - docs in place: action-model owns the remote boundary, testing README
-#   owns the local-only else branch, github-ci matrix owns the exact-key
-#   record, fixture pins own the markers.
+#   owns the local-only else branch, github-ci matrix owns the
+#   BuildBuddy record, fixture pins own the markers.
 # - CI only: no product runtime change beyond the action marker.
 #
 # Versioned here, run by CI via `bazel run //tools/ci:action_execution_cache_qualification`,
@@ -43,8 +44,7 @@ real="quality/real_aspects.bzl"
 helper="quality/execution_requirements.bzl"
 remote="cli/bep/src/remote.rs"
 ci=".github/workflows/ci.yml"
-bump=".github/workflows/bump.yml"
-cache_action=".github/actions/restore-bazel-cache/action.yml"
+dry_run=".github/workflows/publish-dry-run.yml"
 workflows_readme="docs/testing/workflow-notes.md"
 action_model="docs/quality/action-model.md"
 testing_readme="docs/testing/strategy-details.md"
@@ -144,84 +144,76 @@ else
   bad "real lint vs format ActionKeys must differ with the marker (capability isolation)"
 fi
 
-# Exact-key disk cache: no prefix fallback in owned workflows or the shared
-# restore action.
-if ! grep -q -F -e 'restore-keys:' "$ci" &&
-  ! grep -q -F -e 'restore-keys:' "$bump" &&
-  ! grep -q -F -e 'restore-keys:' "$cache_action"; then
+# Exact-key spirit survives as absence: no restore-keys prefix fallback
+# anywhere in owned workflows (the legacy disk cache is deleted).
+if dx_tree_absent 'restore-keys:' -- .github/workflows/; then
   ok
 else
-  bad "workflows regained a prefix fallback (want exact key only, bust starts cold)"
+  bad "workflows regained a restore-keys prefix fallback (want the deleted disk cache gone)"
 fi
 
-# Branch-scoped poison isolation (issue #1059): the key carries github.ref
-# so a PR entry is never reusable by main on the same lock hash, with no
-# restore fallback; PR runs are restore-only via lookup-only while main owns
-# saves.
-if grep -q -F -e 'github.ref' "$cache_action" &&
-  grep -q -F -e 'lookup-only' "$cache_action" &&
-  grep -q -F -e "refs/heads/main" "$cache_action"; then
+# Branch-scoped poison isolation is preserved on the shared remote cache
+# (issue #1059): PR runs never upload results, the setup-bazel download
+# cache saves only off pull requests, and the rc file is delivered
+# through GITHUB_ENV only when the BuildBuddy key exists.
+if grep -q -F -e 'common --noremote_upload_local_results' "$ci" &&
+  grep -q -F -e "cache-save: \${{ github.event_name != 'pull_request' }}" "$ci" &&
+  grep -q -F -e 'if [ -z "${BUILDBUDDY_API_KEY}" ]' "$ci" &&
+  grep -q -F -e 'echo "BAZELRC=${rc}" >> "${GITHUB_ENV}"' "$ci"; then
   ok
 else
-  bad "restore-bazel-cache lost branch-scoped poison isolation (want github.ref key plus lookup-only restore-only off main, issue #1059)"
+  bad "ci.yml lost the remote-cache poison isolation (want PR read-only uploads plus cache-save off plus keyless skip plus BAZELRC delivery, issue #1059)"
 fi
 
-# Exact-key record stays explicit in the single-source restore action plus
-# the policy note (issue #953): the hashFiles list lives once in the
-# composite while ci.yml passes only per-host prefixes.
-if grep -q -F -e 'exact key only, bust starts cold' "$cache_action" &&
-  [[ "$(grep -c -F -e './.github/actions/restore-bazel-cache' "$ci")" -ge "20" ]] &&
-  grep -q -F -e 'exact key only with no prefix fallback' "$workflows_readme"; then
+# Delivery plus rationale stay explicit: the per-job configure step owns
+# the rc content in every Bazel workflow and the policy note owns the
+# dx --nohome_rc rationale (single-source intent, issue #953).
+if grep -q -F -e 'Configure BuildBuddy remote cache' "$ci" &&
+  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$ci" &&
+  grep -q -F -e 'per-job rc file' "$workflows_readme" &&
+  grep -q -F -e 'nohome_rc' "$workflows_readme"; then
   ok
 else
-  bad "restore-bazel-cache plus ci.yml plus workflow notes lost the exact-key-only single-source record"
+  bad "ci.yml or workflow notes lost the BuildBuddy rc-delivery record (want configure step plus policy note)"
 fi
 
-# Single-source cache key (issue #1004): the functional hashFiles list lives
-# exactly once across owned workflows plus the shared restore action, so the
-# list cannot drift across jobs; invalidation behavior stays owned by the
-# composite (hermetic line count: BSD grep lacks --include, issue #1006).
-if [[ "$(dx_hermetic_grep tree-count --fixed --roots .github/workflows .github/actions -- "hashFiles('")" == "1" ]] &&
-  grep -q -F -e "hashFiles('" "$cache_action" &&
-  ! grep -q -F -e "hashFiles('" "$ci" &&
-  ! grep -q -F -e "hashFiles('" "$bump"; then
+# No cache-key hashFiles list survives: the disk cache is deleted, so
+# invalidation belongs to BuildBuddy and no owned workflow keys an
+# actions/cache entry (hermetic line count: BSD grep lacks --include,
+# issue #1006).
+if [[ "$(dx_hermetic_grep tree-count --fixed --roots .github/workflows .github/actions -- "hashFiles('")" == "0" ]]; then
   ok
 else
-  bad "cache-key hashFiles list duplicated outside restore-bazel-cache (want single source in the composite, issue #1004)"
+  bad "owned workflows regained a cache-key hashFiles list (want BuildBuddy owning invalidation, issue #1004)"
 fi
 
-# Cache keys stay comprehensive across locks plus configs plus toolchains
-# (single-sourced in the restore action, issue #953).
-if grep -q -F -e "MODULE.bazel.lock" "$cache_action" &&
-  grep -q -F -e ".bazelrc" "$cache_action" &&
-  grep -q -F -e "tools/bazelrc/preset.bazelrc" "$cache_action" &&
-  grep -q -F -e ".bazelversion" "$cache_action" &&
-  grep -q -F -e "cargo-bazel-lock.json" "$cache_action" &&
-  grep -q -F -e "Cargo.lock" "$cache_action" &&
-  grep -q -F -e "pnpm-lock.yaml" "$cache_action" &&
-  grep -q -F -e "maven_install.json" "$cache_action" &&
-  grep -q -F -e "go.mod" "$cache_action" &&
-  grep -q -F -e "uv.lock" "$cache_action" &&
-  grep -q -F -e "pyproject.toml" "$cache_action"; then
+# Every Bazel workflow carries the full BuildBuddy wiring (URL plus API
+# key plus BAZELRC delivery); the secretless dry run must stay local.
+for wf in ci reusable-consumer reusable-docs bump; do
+  if grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' ".github/workflows/$wf.yml" &&
+    grep -q -F -e 'BUILDBUDDY_API_KEY' ".github/workflows/$wf.yml" &&
+    grep -q -F -e 'BAZELRC=' ".github/workflows/$wf.yml"; then
+    ok
+  else
+    bad ".github/workflows/$wf.yml lost the BuildBuddy remote-cache wiring (want URL plus key plus BAZELRC)"
+  fi
+done
+if ! grep -q -F -e 'BUILDBUDDY_API_KEY' "$dry_run"; then
   ok
 else
-  bad "restore-bazel-cache lost a comprehensive lock/config key (want MODULE plus bazelrc plus toolchain plus resolver locks)"
+  bad "publish-dry-run.yml gained the BuildBuddy key (dry run stays secretless)"
 fi
 
-# Per-host cache scopes stay pinned per platform family: ci.yml passes the
-# prefix per job while the shared action owns the exact-key shape
-# (macOS x86_64 removed per #976).
-if grep -q -F -e 'bazel-seed-' "$ci" &&
-  grep -q -F -e 'bazel-arm64-' "$ci" &&
-  grep -q -F -e 'bazel-musl-x86_64-' "$ci" &&
-  grep -q -F -e 'bazel-musl-arm64-' "$ci" &&
-  grep -q -F -e 'bazel-macos-arm64-' "$ci" &&
-  ! grep -q -F -e 'bazel-macos-x86_64-' "$ci" &&
-  grep -q -F -e 'bazel-windows-x86_64-' "$ci" &&
-  grep -q -F -e 'actions/cache' "$cache_action"; then
+# Per-host disk-cache scopes stay deleted: no prefix keys and no
+# actions/cache usage remain, and the setup-bazel bazelisk cache is the
+# only GitHub-hosted cache left (keyed by .bazelversion, saves off PRs).
+if dx_tree_absent 'prefix: bazel-' -- .github/workflows/ &&
+  dx_tree_absent 'actions/cache' -- .github/workflows/ &&
+  grep -q -F -e 'bazelisk-cache: true' "$ci" &&
+  grep -q -F -e "cache-save: \${{ github.event_name != 'pull_request' }}" "$ci"; then
   ok
 else
-  bad "ci.yml lost a per-host Bazel disk-cache scope (seed plus arm64 plus musl pair plus macos arm64 plus windows; x86_64 removed per #976)"
+  bad "workflows lost the no-disk-cache record (want no prefix scopes plus no actions/cache plus setup-bazel bazelisk cache)"
 fi
 
 # Local execution-log half stays wired next to the aquery shape half.
@@ -232,14 +224,15 @@ else
   bad "quality_cache_aquery lost its local execution-log hit/miss half"
 fi
 
-# No remote flags in owned config or workflows (local-only execution;
-# hermetic tree search: BSD grep lacks --exclude-dir, issue #1006).
-if dx_tree_absent '--remote_cache' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
+# Remote cache is wired; remote execution plus BES stay absent
+# (local-only execution; hermetic tree search: BSD grep lacks
+# --exclude-dir, issue #1006).
+if grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$ci" &&
   dx_tree_absent '--remote_executor' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/ &&
   dx_tree_absent '--bes_backend' -- .bazelrc tools/bazelrc/preset.bazelrc .github/workflows/; then
   ok
 else
-  bad "a remote cache/executor flag appeared (local-only execution)"
+  bad "the BuildBuddy remote cache or the local-only boundary broke (want remote_cache wired, executor plus BES absent)"
 fi
 
 # Action model owns the remote boundary: what is safe vs local-only, with
@@ -255,30 +248,31 @@ else
   bad "action-model lost its local-only remote-boundary record with the no-remote-exec marker"
 fi
 
-# Testing README plus matrix own the exact-key plus local-only record.
+# Testing README plus matrix own the local-execution plus BuildBuddy record.
 if grep -q -F -e 'locally sandbox-tested but remote behavior remains unverified' "$testing_readme" &&
   grep -q -F -e 'local' "$testing_readme" &&
   grep -q -F -e 'per-cell determinism' "$testing_readme" &&
-  grep -q -F -e 'exact' "$test_matrix" &&
-  grep -q -F -e 'no `--remote_cache`' "$test_matrix"; then
+  grep -q -F -e 'common --remote_cache' "$test_matrix" &&
+  grep -q -F -e 'BAZELRC' "$test_matrix"; then
   ok
 else
-  bad "testing README or github-ci matrix lost the exact-key plus local-only remote record"
+  bad "strategy-details or github-ci lost the local-execution plus BuildBuddy remote-cache record"
 fi
 
-# Fixture files stay present with the marker plus helper/interface plus cache pins.
+# Fixture files stay present with the marker plus helper/interface plus
+# remote-cache pins.
 if [[ -f "$pins" && -f "$pins_build" && -f "$expected" ]] &&
   grep -q -F -e 'no-remote-exec' "$pins" &&
   grep -q -F -e 'execution_requirements.bzl' "$pins" &&
   grep -q -F -e 'cli/bep/src/remote.rs' "$pins" &&
-  grep -q -F -e 'exact key only, bust starts cold' "$pins" &&
-  grep -q -F -e 'github.ref' "$pins" &&
-  grep -q -F -e 'lookup-only' "$pins" &&
-  grep -q -F -e 'refs/heads/main' "$pins" &&
-  grep -q -F -e 'bazel-seed-' "$pins"; then
+  grep -q -F -e 'common --remote_cache=grpcs://remote.buildbuddy.io' "$pins" &&
+  grep -q -F -e 'BAZELRC' "$pins" &&
+  grep -q -F -e 'noremote_upload_local_results' "$pins" &&
+  grep -q -F -e 'no actions/cache, no restore-keys, no hashFiles keys' "$pins" &&
+  grep -q -F -e '--remote_executor' "$pins"; then
   ok
 else
-  bad "action_execution_cache fixture missing (want pins.bzl plus BUILD.bazel plus expected with marker plus cache pins)"
+  bad "action_execution_cache fixture missing (want pins.bzl plus BUILD.bazel plus expected with marker plus remote-cache pins)"
 fi
 
 # Live proof: the fixture package builds green on the seed host.
