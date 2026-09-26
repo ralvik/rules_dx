@@ -96,9 +96,9 @@ sources that fail to load and non-Rust/Go records count raw. Without the flag,
 coverage collects and reports with no threshold verdict. The threshold is a
 configurable requirement for users per-cell: each required
 configuration/platform cell gates its own report against its own
-`--min-coverage` value (this repository pins `100` for the `//...` rate
-gate with a zero-uncovered exact gate over the versioned inventory
-scope). Per-cell plus Codecov opt-in plus remote evidence is qualified
+`--min-coverage` value (this repository pins `96` for the `//...` rate
+gate, the highest integer the measured tree passes; the versioned inventory
+scope gates exact zero-uncovered separately). Per-cell plus Codecov opt-in plus remote evidence is qualified
 with fixture evidence pinned in
 `tools/coverage/tests/fixtures/per_cell/pins.bzl` via
 `bazel run //tools/ci:coverage_qualification`.

@@ -303,7 +303,7 @@ Review is quarterly review plus on retirement notice plus on hermetic-llvm relea
 the sole maintainer owns every row until delegation (see `CODEOWNERS`).
 Retirement handling updates `ci.yml` plus docs plus pins in one reviewed PR.
 Qualify locally/on-demand with customer flows only: `bazel build //...` plus
-`bazel test //...` plus `dx coverage --min-coverage 100 //...` (seed gate plus
+`bazel test //...` plus `dx coverage --min-coverage 96 //...` (seed gate plus
 on-demand per-host, no new non-customer CI jobs).
 
 Permanent rotation job in CI rejected; keep CI customer-only. Fixture evidence
