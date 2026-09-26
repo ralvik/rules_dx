@@ -1,10 +1,3 @@
-//! Staticcheck output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
@@ -35,14 +28,6 @@ fn position(value: &serde_json::Value, what: &str) -> Result<TextPosition, Parse
     Ok(TextPosition { line, column })
 }
 
-/// Parses `staticcheck -f json` stdout. `files` are the
-/// workspace-relative mirror paths.
-///
-/// Stdout is a JSON array, one object per finding with `code`,
-/// `severity` (`error` or `warning`), `location` (`file`, `line`,
-/// `column`), an optional `end` position, and `message`. A missing
-/// `end` is a point range. Clean is `[]` on exit 0; findings exit 1.
-/// Any other shape is a grammar mismatch, never a silent pass.
 pub fn parse_staticcheck(
     stdout: &[u8],
     code: Option<i32>,

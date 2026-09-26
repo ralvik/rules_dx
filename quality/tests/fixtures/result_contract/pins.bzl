@@ -73,11 +73,6 @@ EDIT_NOOP_REJECTED = "no-op edits plus candidates rejected"
 EDIT_UTF8_REQUIRED = "invalid UTF-8 source plus replacement rejected"
 
 # Fixability mapping: fixable true only for an initial diagnostic with
-# a workspace path when the same converged result carries an exact
-# replacement for that path and the finding is absent from the terminal
-# set because of it; terminal diagnostics always fixable false;
-# conservative duplicate merging with one false contributor makes the
-# public finding unfixable; never inferred from another change.
 FIXABLE_GUARANTEE = "fixable true only with exact same-file candidate plus absent terminal"
 FIXABLE_TERMINAL_FALSE = "terminal diagnostics always fixable false"
 FIXABLE_DEDUP_CONSERVATIVE = "conservative duplicate merging with one false makes false"
@@ -114,10 +109,6 @@ THRESHOLD_NON_STABLE_FAILS = "non-stable convergence fails"
 THRESHOLD_FIXABLE_FAILS = "fixable still fails without apply"
 
 # Collection mapping: dx_results output group via BEP named sets;
-# decode_validated per artifact; failed targets plus undecodable
-# results mark incomplete while retaining validated findings; no
-# mutation while incomplete; deterministic sort independent of BEP
-# order; one evaluator per result with no aggregate action.
 COLLECTION_GROUP = "dx_results output group via BEP named sets"
 COLLECTION_DECODE_VALIDATED = "decode_validated per artifact"
 COLLECTION_INCOMPLETE_NO_MUTATION = "incomplete collection emits no change plus no mutation"

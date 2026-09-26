@@ -1,18 +1,5 @@
-//! SpotBugs output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! SpotBugs `-sarif` prints a SARIF 2.1.0 log to its output file with
-//! ranged regions; `level` maps error/warning. The adapter is
-//! target-coupled (it analyzes compiled classes from the authoritative
-//! `JavaInfo`, never bare sources), so provider-less matrix cases never
-//! exercise it; the parser is still fail-closed on the pinned grammar.
-
 use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
-/// Parses SpotBugs `-sarif` output. `files` are the absolute scratch
-/// paths passed to the tool.
 pub fn parse_spotbugs(
     stdout: &[u8],
     code: Option<i32>,

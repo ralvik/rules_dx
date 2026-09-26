@@ -1,14 +1,14 @@
 # `dx check`, `dx fix`, And `dx clean`
 
-Owning decision: [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md).
+Owning decision: ADR 0018.
 Umbrella mechanics are implemented as specified below; cleanup mechanics are
 implemented as specified under [`dx clean`](#dx-clean).
 
 ## `dx check` And `dx fix`
 
 ```text
-dx check [scope ...] [-- bazel-options ...]
-dx fix [scope ...] [-- bazel-options ...]
+dx check [scope...] [-- bazel-options...]
+dx fix [scope...] [-- bazel-options...]
 ```
 
 Thin sequential umbrellas over the existing quality and generation
@@ -31,7 +31,7 @@ resulting workspace.
 
 > First-hour surprise: `dx fix` does not promise a clean tree. Fixes apply
 > once in phase order with no post-apply rerun by design (see
-> [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md));
+> ADR 0018);
 > a later phase can still fail after an earlier fix. Run `dx check` again
 > to validate the resulting workspace. `dx fix --help` names this same
 > no-rerun contract.
@@ -73,14 +73,14 @@ dx clean [--dry-run] [--bazel]
 
 Explicit managed-state cleanup. By default it prunes only validated
 unselected and unused `.dx` generations and setup records as defined by
-[Managed Environment State](../../environments/managed-state.md#retention-and-recovery).
+Managed Environment State.
 It never deletes `.dx/setups/current`, its selected generations, tracked
 sources, BUILD files, Bazel outputs, shell profiles, or global PATH entries,
 and it refuses unmanaged or digest-spoofed paths.
 
 > First-hour surprise: `dx clean` alone never touches Bazel outputs. It
 > prunes only validated unselected `.dx` generations by design (see
-> [ADR 0018](../../decisions/0018-umbrella-check-fix-cleanup-clean.md));
+> ADR 0018);
 > pass `dx clean --bazel` to additionally forward `bazel clean`.
 > `dx clean --help` names this same default.
 
@@ -104,7 +104,7 @@ record references it and no active process uses it. Unmanaged or
 digest-spoofed paths are refused, and malformed current state fails closed
 with nothing pruned. Apply runs under the shared workspace commit lock
 (ten-second deadline; see
-[managed-state locking](../../environments/managed-state.md#commit-lock-and-concurrency)),
+managed-state locking),
 re-reads the live selection under the
 lock, skips entries that became current or referenced, treats missing
 entries as idempotent, and never touches the current pointer. `--dry-run`

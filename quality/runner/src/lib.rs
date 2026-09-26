@@ -1,15 +1,3 @@
-//! Deterministic shared quality pipeline runner (WP2b).
-//!
-//! Contract: `docs/quality/quality-result-protocol.md`,
-//! `docs/quality/tool-integrations.md`, schema `//quality:result.proto`.
-//! The runner executes one ordered lint/typecheck/format pipeline (or one
-//! audit tool set) over exact input bytes with the synthetic WP2 tool
-//! behaviors (`fmt-a`, `lint-a`, `lint-b` from `//quality:adapters.bzl`),
-//! iterates the convergence protocol to a terminal state, and emits a
-//! normalized `QualityResult` that passes `quality_result::validate`.
-//! Real tool process execution lands with later adapters; the convergence,
-//! snapshot, diagnostic, and edit-derivation semantics here are final.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -27,16 +15,8 @@ use quality_result::{
 
 pub mod real;
 
-/// Synthetic tool IDs executed by this runner (WP2 adapters).
 pub const SYNTHETIC_TOOLS: &[&str] = &["fmt-a", "lint-a", "lint-b"];
 
-/// Per-capability round cap per result (per target/capability pipeline),
-/// not workspace or target configuration, contributing to the action key.
-/// Audit and typecheck backends are check-only by construction (no fix
-/// command rewrites), so they converge in a single round; lint and format
-/// keep the full ten-round oscillation budget per the ADR 0003 fixed policy.
-/// See: `docs/decisions/0003-action-granularity.md`,
-/// `docs/quality/tool-integrations.md#initial-adapter-qualification`
 pub fn max_rounds_for_capability(capability: &str) -> u32 {
     if capability == "audit" || capability == "typecheck" {
         1
@@ -45,7 +25,6 @@ pub fn max_rounds_for_capability(capability: &str) -> u32 {
     }
 }
 
-/// One ordered pipeline stage: tool identity plus its fixed source subset.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StageSpec {
     pub tool_id: String,
@@ -53,17 +32,12 @@ pub struct StageSpec {
     pub source_paths: Vec<String>,
 }
 
-/// One exact input file: workspace path plus original bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileInput {
     pub path: String,
     pub bytes: Vec<u8>,
 }
 
-/// Pipeline construction or execution failure. Tool launch,
-/// configuration, or protocol failure fails the action instead of
-/// producing a result, so every error here is an action failure, never a
-/// stored diagnostic.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RunnerError {
     #[error("empty producer: want a non-empty producer")]
@@ -86,14 +60,10 @@ pub enum RunnerError {
     InvalidUtf8 { path: String },
     #[error("missing file {path:?}")]
     MissingFile { path: String },
-    /// Tool launch, scratch, or I/O failure in a real backend.
     #[error("tool execution failed for {tool_id}: {detail}")]
     ToolExecution { tool_id: String, detail: String },
-    /// Real tool output outside the pinned grammar, or non-UTF-8 bytes
-    /// where the protocol needs text.
     #[error("invalid tool output for {tool_id}: {detail}")]
     ToolOutput { tool_id: String, detail: String },
-    /// A parsed finding positions outside the bytes just checked.
     #[error("unplaceable finding for {tool_id}: {detail}")]
     UnplaceableFinding { tool_id: String, detail: String },
 }
@@ -155,12 +125,6 @@ fn collect_diagnostics(tool_id: &str, path: &str, text: &str) -> Vec<Diagnostic>
     out
 }
 
-/// Canonical identity of one converged-run state: BLAKE3 over the
-/// concatenation of per-file `(digest(path), digest(body))` pairs in
-/// sorted-path order. Keys never change within a run, so equal maps
-/// hash equal; distinct maps collide only by breaking BLAKE3. Hashing
-/// borrows the map, so the oscillation history stores 32-byte ids
-/// instead of full-map clones and probes in O(1).
 fn state_digest(files: &BTreeMap<String, String>) -> [u8; 32] {
     let mut canonical = Vec::with_capacity(files.len() * 2 * DIGEST_LEN);
     for (path, body) in files {
@@ -203,7 +167,6 @@ fn run_convergence(
         // changes (e.g. two formatters undoing each other) is period-1
         // oscillation, not stability: the next round would repeat the same
         // fighting work, and only STABLE may carry replacements.
-        // See: `docs/quality/quality-testing.md#determinism`.
         let id = state_digest(&current);
         if id == prev_id {
             return Ok((current, completed_rounds, Convergence::Oscillation));
@@ -226,13 +189,6 @@ fn snapshot(files: &BTreeMap<String, String>) -> Vec<FileSnapshot> {
         .collect()
 }
 
-/// Derives one byte-minimal single-hunk edit from original to terminal
-/// bytes. Trims the longest common byte prefix and suffix snapped back
-/// to UTF-8 char boundaries, so whole-file replacements shrink to the
-/// changed middle (insertions, deletions, and single-span rewrites).
-/// Multi-hunk changes stay one spanning edit covering the outer
-/// divergence; callers needing per-hunk minimality split further.
-/// See: `docs/quality/quality-result-protocol.md`
 fn minimal_edit(original: &str, terminal: &str) -> Edit {
     let orig = original.as_bytes();
     let term = terminal.as_bytes();
@@ -266,7 +222,6 @@ fn minimal_edit(original: &str, terminal: &str) -> Edit {
 fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
     // Full sort key (path,start,end,severity,tool,rule,message) keeps the
     // order total across concurrent adapters sharing one range.
-    // See: `docs/quality/quality-result-protocol.md#diagnostics`.
     diagnostics.sort_by(|a, b| {
         (
             &a.path,
@@ -289,10 +244,6 @@ fn sort_diagnostics(diagnostics: &mut [Diagnostic]) {
     });
 }
 
-/// Validates one pipeline request and decodes the exact input bytes.
-/// `tool_known` decides the stage tool set: the synthetic registry for
-/// [`run_pipeline`], backend resolution for real pipelines. Path shape
-/// itself is validated by `quality_result::validate` at encode time.
 fn validate_request(
     producer: &str,
     capability: &str,
@@ -345,15 +296,6 @@ fn validate_request(
     Ok((capability_value, initial))
 }
 
-/// Assembles the normalized result from a converged run: sorted
-/// diagnostics, byte-minimal single-hunk replacements for stable changed
-/// files, and fixability for initial findings that the terminal state
-/// resolves. Shared by synthetic and real pipelines so the semantics
-/// cannot drift. Diagnostics and outcome travel as pairs so the shared
-/// helper stays under the complexity budget without splitting its single
-/// purpose. Stage paths absent from either map fail with
-/// [`RunnerError::MissingFile`] instead of panicking, so validation drift
-/// surfaces as an action error.
 fn assemble(
     producer: &str,
     capability_value: i32,
@@ -416,9 +358,6 @@ fn assemble(
     })
 }
 
-/// One exact input file's text within a converged run. A stage path
-/// absent from the map fails with [`RunnerError::MissingFile`] instead of
-/// panicking, so validation drift surfaces as an action error.
 fn stage_subset(
     stage: &StageSpec,
     files: &BTreeMap<String, String>,
@@ -433,9 +372,6 @@ fn stage_subset(
     Ok(out)
 }
 
-/// Executes one ordered pipeline over exact input bytes and returns the
-/// normalized result. The result passes `quality_result::validate` for
-/// well-formed workspace paths; path shape itself is validated there.
 pub fn run_pipeline(
     producer: &str,
     capability: &str,

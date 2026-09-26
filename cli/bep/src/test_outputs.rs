@@ -1,19 +1,3 @@
-//! BEP test-action output collection (`testResult` events).
-//!
-//! Owns the `collect_test_outputs` domain of the streaming BEP collector:
-//! one record per `testActionOutput` entry of every `testResult` event,
-//! sorted by label bytes, then name bytes, then 1-based run, shard, and
-//! attempt. Entries without a label, name, or `file://` URI fail the whole
-//! collection with a JSON-path-annotated [`crate::BepError::MalformedEvent`];
-//! unknown event kinds are ignored. Remote URIs fail with
-//! [`crate::BepError::UnsupportedUri`]: the CLI never fetches
-//! unmaterialized outputs over the network.
-//!
-//! Shared collection shape (malformed-line helper, `file://` URI parsing,
-//! [`crate::BepError`]) stays in the facade and is shared via `pub(crate)`
-//! re-exports; the output-group/named-set collection (`collect`,
-//! `RawFile`/`RawSet`/`PendingTarget`) stays in the facade.
-
 use std::io::BufRead;
 use std::path::PathBuf;
 
@@ -21,16 +5,6 @@ use serde_json::Value;
 
 use super::{file_uri_to_path, malformed, BepError};
 
-/// One test-action output file reported by a BEP `testResult` event:
-/// the owning test label plus the output entry name (such as
-/// `test.xml`, `test.log`, or `test.lcov`) and the local path parsed
-/// from its reported `file://` URI. `run`, `shard`, and `attempt` carry
-/// the 1-based BEP `testResult` identity (`id.testResult.{run,shard,
-/// attempt}`, defaulting to 1 when absent) so JUnit normalization can
-/// order retries/shards deterministically and suffix zero-based
-/// `[shard=…,attempt=…]` display names. Bytes are read later through
-/// [`crate::ArtifactReader`] by the report collector that owns the name
-/// contract, so collection here stays name-agnostic.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TestOutputFile {
     pub label: String,
@@ -41,18 +15,6 @@ pub struct TestOutputFile {
     pub attempt: u32,
 }
 
-/// Typed view of a BEP `id.testResult` object: the owning test label
-/// plus the 1-based run/shard/attempt identity. Unknown fields are
-/// ignored so newer Bazel servers stay forward compatible; only the
-/// consumed shape is validated, with failures annotated by JSON path
-/// (see [`malformed`]).
-///
-/// `serde_path_to_error` evaluation: rejected. The path
-/// annotation here needs no new dependency and no manifest/lock churn,
-/// while derived `Deserialize` would still require `default` on every
-/// forward-compatible field and could not express the "absent means 1"
-/// identity rule or the "missing `testResult` means ignore" filter as
-/// directly as this targeted parser.
 struct TestResultId<'a> {
     label: &'a str,
     run: u32,
@@ -75,10 +37,6 @@ impl<'a> TestResultId<'a> {
     }
 }
 
-/// Typed view of one `testResult.testActionOutput` entry: the output
-/// name plus its reported URI. Parsing stays name-agnostic: the report
-/// collector that owns the name contract reads bytes later through
-/// [`crate::ArtifactReader`].
 struct TestActionOutput<'a> {
     name: &'a str,
     uri: &'a str,
@@ -108,16 +66,6 @@ impl<'a> TestActionOutput<'a> {
     }
 }
 
-/// Collects test-action outputs from one BEP JSON stream.
-///
-/// `reader` yields one JSON build event per line. Returns one record
-/// per `testActionOutput` entry of every `testResult` event, sorted by
-/// label bytes, then name bytes, then 1-based run, shard, and attempt.
-/// Entries without a label, name, or `file://` URI fail the whole
-/// collection with a JSON-path-annotated [`BepError::MalformedEvent`]
-/// (such as `testResult.testActionOutput[2].uri`); unknown event kinds
-/// are ignored. Remote URIs fail with [`BepError::UnsupportedUri`]: the
-/// CLI never fetches unmaterialized outputs over the network.
 pub fn collect_test_outputs(reader: impl BufRead) -> Result<Vec<TestOutputFile>, BepError> {
     let mut outputs = Vec::new();
     for (index, line) in reader.lines().enumerate() {
@@ -180,10 +128,6 @@ pub fn collect_test_outputs(reader: impl BufRead) -> Result<Vec<TestOutputFile>,
     Ok(outputs)
 }
 
-/// Parses a 1-based BEP `testResult` identity field (`run`, `shard`,
-/// or `attempt`). Absent fields default to 1; present fields must be
-/// integers >= 1, otherwise the whole collection fails with a
-/// JSON-path-annotated [`BepError::MalformedEvent`] at `path`.
 fn test_index(
     result_id: &serde_json::Map<String, Value>,
     field: &str,

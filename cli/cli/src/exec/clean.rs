@@ -1,5 +1,3 @@
-//! Managed-state cleanup (`dx clean`) execution.
-
 use super::common::*;
 use crate::args::Invocation;
 use dx_clean::{
@@ -11,27 +9,6 @@ use dx_output::{
     FinishedCounts, NoticeEvent, OutputMode,
 };
 
-/// Runs `dx clean [--dry-run] [--bazel]`: collects the
-/// workspace managed-state inventory with the process scan (live shells
-/// or actions holding `.dx` paths pin their hexes as active), plans the
-/// prune set over validated unselected records and generations, and
-/// either renders the `--dry-run` listing with reclaimable bytes
-/// (deleting nothing, holding no lock) or applies the prune set under
-/// the shared commit lock. An explicit `--bazel` additionally forwards
-/// exactly `bazel clean` after pruning and prints the dangling-link
-/// recovery guidance; under `--dry-run` the forward is listed, never
-/// run. Argument parsing guarantees text output with no scopes,
-/// reports, or quality options on this path.
-///
-/// Exits `0` on success (including an empty prune set), `1` on
-/// inventory, lock, or prune failures, and propagates the Bazel exit
-/// code for the explicit forward.
-///
-/// JSON mode streams `command_started`, one `collect` `operation`, per-entry
-/// `clean_planned` (dry-run) or `clean_pruned` (live) `notice` events, and
-/// `command_finished` (see `docs/cli/output-protocol.md`). Text prose stays
-/// on stdout only in text mode; Bazel output remains on stderr in every mode
-/// so stdout stays machine-owned under `--output=json`.
 pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,
@@ -140,7 +117,6 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
         if bazel_code != 0 {
             // Failure explainer without argv/secrets: which phase failed plus
             // the stderr pointer; Bazel diagnostics stay on stderr.
-            // See: `docs/cli/output-protocol.md#operational-error`.
             if let Ok(event) = error_event(
                 "bazel_failed",
                 &format!(
@@ -165,9 +141,6 @@ pub(crate) fn execute_clean(invocation: &Invocation, env: Env<'_>) -> i32 {
     bazel_code
 }
 
-/// Emits one `clean_planned` notice per prune entry for dry-run JSON.
-/// Messages carry workspace-relative paths plus measured bytes only;
-/// no argv, env values, or absolute paths (see output-protocol redaction).
 fn emit_clean_notices(
     out: &mut dyn std::io::Write,
     plan: &dx_clean::CleanPlan,
@@ -233,7 +206,6 @@ fn emit_clean_notices(
     }
 }
 
-/// Emits one `clean_pruned` notice per removed entry for live JSON.
 fn emit_clean_pruned(
     out: &mut dyn std::io::Write,
     outcome: &dx_clean::CleanOutcome,

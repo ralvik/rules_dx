@@ -68,10 +68,6 @@ BEYOND_DEFAULT_REJECTED = "beyond-default switches rejected: auto presets, --ena
 STRUCTURED_CROSSLINK = "protobuf plus qml stay owned by issue #488 plus issue #419, cross-linked here never double-claimed"
 
 # Live proof shape (no file-family hello bazel test exists for the deferred
-# families: cue/jsonnet/pkl/css/html_template/gherkin/sql/xml/go_module/
-# terraform/yaml/text foundations are feasibility or N/A, so the fixture pair
-# plus grep contract checks plus bazel build of the fixture is the live proof;
-# quality adapters claim nothing yet).
 FILE_FAMILY_PROOF = "bazel build //quality/tests/fixtures/file_family_quality:corpus_starlark"
 
 # Rejected: hidden presets plus unpinned versions plus suffix inference.

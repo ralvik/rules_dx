@@ -126,12 +126,6 @@ def _standalone_tool_repo_impl(ctx):
         )
 
         # A bare single-file gzip extracts to the repo root under its
-        # recorded member name; no output directory is used. Gzip stores
-        # no unix mode, so the extracted file lands 644 and needs one
-        # deterministic mode fix (taplo only; tar.gz members already carry
-        # 0o755). See: `docs/tools/tool-acquisition.md`
-        # (checksummed-artifact route): the explicit 755 keeps the fetch
-        # hermetic instead of inheriting host umask via `+x`.
         ctx.extract(ctx.attr.asset)
         ctx.execute(["chmod", "755", ctx.attr.executable])
     elif kind == "tar.gz":
@@ -162,7 +156,6 @@ def _standalone_tool_repo_impl(ctx):
     else:
         fail("unsupported archive format: " + kind)
 
-    # Inner-digest enforcement. See: `docs/tools/tool-acquisition.md`
     # (checksummed-artifact route): the outer sha256 above verifies the
     # downloaded asset; this re-hashes the extracted executable against
     # the recorded inner digest, so a substituted archive member fails

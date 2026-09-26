@@ -1,20 +1,6 @@
-//! RuboCop output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `rubocop --format json` stdout over the release-assembled
-/// Ruby closure. `files` are the workspace-relative mirror paths.
-///
-/// Pinned shape is `{files:[{path, offenses:[{severity, message,
-/// cop_name, location:{line, column}}]}]}`. Severity `error`/`warning`
-/// map onto [`ToolSeverity`]; `convention`/`refactor` map onto warning.
-/// Clean is empty offenses on exit 0; findings exit non-zero.
 pub fn parse_rubocop(
     stdout: &[u8],
     code: Option<i32>,

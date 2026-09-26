@@ -214,12 +214,6 @@ SCOPED_PACKAGES = {
 }
 
 # Attribute-level public targets on otherwise scoped packages, plus the
-# public-package binaries that carry an explicit export for documentation:
-# package directory to the target names allowed an explicit public
-# visibility. Binaries (plus the man-page doc) are the only public Rust
-# surface; the //dx entries are the Starlark facade exports; the
-# //deploy/rules entries are the hermetic archive tools consumed as
-# genrule tools by downstream macros.
 EXPLICIT_PUBLIC_TARGETS = {
     "cli/cli": ["dx", "man_pages"],
     "cli/env": ["env"],
@@ -244,10 +238,6 @@ SCOPED_TARGET_GRANTS = [
 ]
 
 # Layering: [consumer package prefix, forbidden label prefix, exempt
-# labels]. The //dx facade sits above the //cli implementation, which sits
-# above the registries; //tools is a downstream consumer of //cli leaves,
-# never a dependency of them. Exemptions are fixtures or shell-contract
-# data with their own guards.
 LAYER_FORBIDDEN_DEPS = [
     ["cli/", "//dx:", ["//dx:codegen", "//dx:env"]],
     ["cli/", "//docs:", []],

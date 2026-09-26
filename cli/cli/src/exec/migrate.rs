@@ -1,6 +1,3 @@
-//! Migrate command execution: upgrade-only planning plus
-//! fail-closed execution.
-
 use super::common::*;
 use crate::args::{Command, Invocation};
 use crate::reports::plan_reports;
@@ -9,18 +6,6 @@ use dx_output::{
     OutputMode,
 };
 
-/// Runs `dx migrate --from <version> --to <version> [scope ...]`
-///: validates the version pair through
-/// `dx_adopt::plan_migrate` (Cargo-flavor semver, upgrade-only
-/// gate, one manifest per major hop
-/// `migrate-v<from_major>-to-v<to_major>.json` plus one manifest per
-/// full version pair for minor/patch upgrades
-/// `migrate-v<from>-to-v<to>.json`), then fails closed
-/// because no manifests exist yet (module at `0.0.0`, no releases
-/// cut). `--dry-run` plans without touching the tree; live execution
-/// reports `migrate_failed` (exit 1) with no writes. Usage errors
-/// (missing `--from`/`--to`, non-semver, downgrades/equal versions) exit `2`
-/// before any write.
 pub(crate) fn execute_migrate(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
         invocation.command == Command::Migrate,
@@ -181,7 +166,6 @@ mod tests {
             parse(&args(&["migrate", "--from=1.2.3", "--dry-run"])),
             Err(crate::args::ArgsError::MissingValue { .. })
         ));
-        // Minor/patch upgrades plan like major hops (issue #671; See: `docs/cli/commands/migrate.md`):
         // dry-run succeeds with the full-version manifest.
         let harness = Harness::new("migrate-minor");
         let (code, out, err) = harness.run(&["migrate", "--from=1.2.3", "--to=1.3.0", "--dry-run"]);

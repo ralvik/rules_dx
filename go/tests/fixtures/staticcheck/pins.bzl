@@ -4,12 +4,9 @@ Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
 `docs/tools/tool-acquisition.md#initial-artifact-research`.
 """
 
-# Pinned reference version (qualified seed-only under issue #487; living
-# at head rejected; digests stay owned under issue #798).
 STATICCHECK_VERSION = "2026.2"
 
 # Distribution identity (standalone checksummed release artifact; digests
-# stay owned under issue #798).
 STATICCHECK_ARTIFACT = "standalone checksummed release artifact"
 
 # Invocation shapes (check-only with the provisional sandbox-apply-and-diff
@@ -19,7 +16,6 @@ STATICCHECK_FIX = "check-only with the provisional sandbox-apply-and-diff fix fl
 STATICCHECK_CONFIG_POLICY = "default checks are the upstream built-in default checks, not an SA-only preset; SA-only shortcut rejected without qualification"
 
 # Live proof labels (foundation consumers stay green; adapter dispatch
-# owned under issue #798).
 GO_FIXTURE_HELLO = "//go/tests/fixtures/hello:hello_test"
 
 # Rejected: SA-only shortcut preset, -all maxima, SARIF ingestion.

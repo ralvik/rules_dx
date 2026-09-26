@@ -1,40 +1,9 @@
-//! Version validation for `dx bump`.
-//!
-//! Library-first: version parsing and comparison delegate to the upstream
-//! `semver` crate, never to custom version code. Registry discovery (BCR,
-//! crates.io, npm, Go proxy, GitHub releases) and manifest parsing
-//! (`serde_json`, `toml`, `toml_edit`) are upstream-owned; this module only validates
-//! the operator-supplied new version shape and pins the stable-only
-//! discovery policy. Custom code is limited to the thin
-//! single-requirement edit in [`crate::request`].
-//!
-//! Policy (matching the issue):
-//! - Discovery proposes stable versions only; prerelease eligibility
-//!   follows the upstream resolver and project configuration, never a
-//!   private `dx` policy.
-//! - The explicit `dx bump <selector> <version>` operation accepts the
-//!   operator-supplied version verbatim after shape validation: exact
-//!   semver for Bazel/Cargo/npm/Go/Maven/NuGet (pinned exactly per ADR
-//!   0008), Git tag/commit shapes for GitHub Actions and Git-backed
-//!   requirements.
-//! - Transitive versions stay resolver-governed; bump never forces every
-//!   transitive package to newest.
-
 use super::sets::BumpSet;
 
-/// Validated new version for one widen edit.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum WidenVersion {
-    /// Exact stable semver (Bazel modules, `.bazelversion`, Cargo, npm,
-    /// Go, Maven, NuGet). Pinned exactly per ADR 0008; comparison uses
-    /// upstream `semver`, never custom ordering.
     Semver(semver::Version),
-    /// Git tag shape (GitHub Actions pins, Git-backed requirements).
-    /// SHA resolution runs through the upstream GitHub releases / Git
-    /// client, never custom fetch code.
     GitTag(String),
-    /// Explicit commit SHA (40- or 64-char hex). Locked commits stay
-    /// unchanged unless explicitly bumped here.
     GitCommit(String),
 }
 
@@ -48,7 +17,6 @@ impl WidenVersion {
         }
     }
 
-    /// True for exact semver (ADR 0008 exact-pin path).
     pub fn is_semver(&self) -> bool {
         matches!(self, WidenVersion::Semver(_))
     }
@@ -57,68 +25,43 @@ impl WidenVersion {
 /// Version-shape errors (exit 2, never a partial widen).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum VersionError {
-    /// Empty version string.
     #[error("empty version")]
     Empty,
-    /// Invalid semver for a semver-owned set.
     #[error(
         "invalid version {version:?} for set {set}: expected exact stable semver (e.g. 1.2.3)"
     )]
     InvalidSemver {
-        /// Owning set name.
         set: &'static str,
-        /// Offending spelling.
         version: String,
     },
-    /// Prerelease supplied where discovery proposes stable only.
-    /// Explicit bumps may still carry prereleases when the upstream
-    /// resolver/project config allows them; this pin exists so the loop
-    /// filters stable by default without inventing a private policy.
     #[error("prerelease version {version:?} follows upstream resolver and project config, never a private dx policy")]
     Prerelease {
-        /// Offending spelling.
         version: String,
     },
-    /// Invalid Git tag/commit shape for a Git-owned set.
     #[error("invalid version {version:?} for set {set}: expected a Git tag (e.g. v4) or a 40/64-char commit SHA")]
     InvalidGit {
-        /// Owning set name.
         set: &'static str,
-        /// Offending spelling.
         version: String,
     },
 }
 
-/// Prerelease eligibility follows the upstream resolver and project
-/// configuration, never a private `dx` policy. There is no private
-/// prerelease rule to configure; this pin exists so a future integration
-/// cannot invent one.
 pub fn prerelease_follows_upstream() -> bool {
     true
 }
 
-/// True when a parsed semver is stable (no prerelease). Build metadata is
-/// allowed: it does not affect precedence and stays pinned verbatim.
 pub fn is_stable(version: &semver::Version) -> bool {
     version.pre.is_empty()
 }
 
 /// Compares two exact versions with upstream `semver` ordering, never
-/// custom comparison. Used by the loop to order outdated candidates.
 pub fn compare(left: &semver::Version, right: &semver::Version) -> std::cmp::Ordering {
     left.cmp(right)
 }
 
-/// Whether a widen crosses a major version (new major exceeds old major).
-/// See: `docs/cli/commands/migrate.md` (issue #931 major-bump=>migrate hint).
 pub fn is_major_bump(from: &semver::Version, to: &semver::Version) -> bool {
     to.major > from.major
 }
 
-/// Missing-manifest hint for major bumps.
-/// See: `docs/cli/commands/migrate.md` (issue #931).
-/// Live `dx migrate` without a manifest fails `migrate_failed` (exit 1);
-/// missing `--from`/`--to` fails pre-exec (exit 2, missing-versions).
 pub fn major_bump_migrate_hint(from: &str, to: &str, manifest: &str) -> String {
     format!(
         "major bump {from} -> {to} via {manifest}; no manifest yet => migrate_failed (exit 1); missing --from/--to => exit 2 (missing-versions)"
@@ -126,16 +69,10 @@ pub fn major_bump_migrate_hint(from: &str, to: &str, manifest: &str) -> String {
 }
 
 /// Generic major-bump hint for widen plans without a known old version.
-/// See: `docs/cli/commands/migrate.md` (issue #931).
 pub fn generic_major_bump_hint() -> &'static str {
     "if major bump, run `dx migrate --from <old> --to <new>` (no manifest yet => migrate_failed exit 1; missing --from/--to => exit 2 missing-versions)"
 }
 
-/// Parses the operator-supplied new version for one set. Bazel, Cargo,
-/// npm, Go, Maven, and NuGet require exact stable semver (leading `v`/`=`
-/// stripped for ergonomics, e.g. `v1.2.3` means `1.2.3`); GitHub Actions
-/// accepts a Git tag or commit SHA. Prereleases parse but callers treat
-/// them as upstream-governed (see [`prerelease_follows_upstream`]).
 pub fn parse(set: BumpSet, text: &str) -> Result<WidenVersion, VersionError> {
     let trimmed = text.trim();
     if trimmed.is_empty() {
@@ -362,7 +299,6 @@ mod tests {
 
     #[test]
     fn major_bump_hint_pins_exit_mapping() {
-        // See: `docs/cli/commands/migrate.md` (issue #931).
         let old: semver::Version = "1.2.3".parse().expect("old");
         let new: semver::Version = "2.0.0".parse().expect("new");
         let minor: semver::Version = "1.3.0".parse().expect("minor");

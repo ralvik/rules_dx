@@ -13,11 +13,6 @@ FANTOMAS_LINE = "7.x stable"
 FSHARPLINT_VERSION = "0.27.0"
 
 # Upstream distribution identities (managed-JVM route for Scalafmt/Scalafix
-# over the shared managed JDK plus the Scala Maven-lock story; exact-package
-# plus shared-.NET-runtime route for CSharpier/Fantomas/FSharpLint as
-# declared DLLs over one managed .NET cohort; Roslyn is SDK-coupled with no
-# separate artifact; digests stay owned, never reconstructed
-# from modules and never installed via `dotnet tool install`).
 SCALAFMT_ARTIFACT = "compatible JVM artifact over the shared managed JDK"
 SCALAFIX_ARTIFACT = "semantic-rule artifacts over the shared managed JDK"
 CSHARPIER_ARTIFACT = "exact official tool package as declared DLLs (targets .NET 8.0)"

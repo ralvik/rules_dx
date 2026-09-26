@@ -7,12 +7,6 @@ Fixture: `quality/tests/fixtures/layer2_opens/` via
 """
 
 # Adapter-less inventory (verification-matrix Layer-2 Open adapter-less).
-# No admitted language stays adapter-less: provider wrappers plus Gazelle
-# plus hello plus locks plus test runners stay qualified with defaults
-# qualified, but every admitted quality class now rides an adapter
-# (Scala plus C# plus F# delivered under #797, Java plus Kotlin under
-# #796, C plus C++ plus Go under #798). Closed only for required core;
-# adapters partially under -420 with digests plus adapters staying owned.
 
 # Framework inventory (verification-matrix Layer-2 Open regions plus
 # Examples Open composition plus Depcheck Open).

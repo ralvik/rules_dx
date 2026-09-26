@@ -1,8 +1,3 @@
-//! Ruff (lint and format share the JSON envelope) output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -52,10 +47,6 @@ fn ruff_position(
     })
 }
 
-/// Parses Ruff `check --output-format json` stdout into one finding per
-/// diagnostic. `fix` edits are ignored (the runner converges via
-/// `check --fix`); suggestions stay empty and the convergence pass marks
-/// fixability, never the parser.
 pub fn parse_ruff(
     stdout: &[u8],
     code: Option<i32>,
@@ -95,10 +86,6 @@ pub fn parse_ruff(
     Ok(findings)
 }
 
-/// Parses Ruff `format --check --output-format json` stdout: the same
-/// envelope as lint, but every entry must carry `code: "unformatted"`
-/// (one entry per unformatted file at its first-differing hunk). Message
-/// and severity map verbatim like lint.
 pub fn parse_ruff_format(
     stdout: &[u8],
     code: Option<i32>,

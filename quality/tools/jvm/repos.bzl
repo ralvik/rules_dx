@@ -1,15 +1,6 @@
-"""JVM tool acquisition inventory. Contract: docs/tools/tool-acquisition.md."""
+"""JVM tool acquisition inventory."""
 
 # Checked-in inventory of the `jvm_tools` extension repos re-exported by the
-# root MODULE.bazel `use_repo` block. Single source for the JVM
-# complete-upstream-artifact plus shared-JDK route (see extension.bzl);
-# `//quality/tools/jvm:metadata` fails when this list drifts from the
-# `JVM_TOOLS` keys, and MODULE.bazel must match this list (drift breaks
-# acquisition). Unlike `dx_tools` there is no per-platform matrix and no hub:
-# each tool is a single platform-independent JAR or binary distribution
-# run over the shared JDK, so one repository per tool suffices and
-# registration fetches nothing; each repository downloads only when an
-# action needs its artifact.
 JVM_TOOL_REPOS = [
     "jvm_checkstyle",
     "jvm_google_java_format",

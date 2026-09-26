@@ -25,7 +25,6 @@ PESTER_FIXTURE_TEST = "//powershell/tests/fixtures/pester:greeter_test"
 # Rejected: unpinned or floating Pester runner; consumer Install-Module.
 PESTER_REJECTED = "unpinned runner rejected: exact Gallery lock plus explicit-path import only, no Install-Module"
 
-# Currency recheck (issue #932 pattern): runner below was verified current
 # on this date (Pester 5.7.1 stable plus 6.1.0 observed per ADR 0008
 # latest-stable). Refresh the date with each dependency-currency pass.
 PESTER_CURRENCY_RECHECK = "2026-09-22"

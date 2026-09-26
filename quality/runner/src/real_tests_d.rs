@@ -1,6 +1,3 @@
-//! Dispatch coverage for the tool rounds no dedicated sample exercises.
-//! Split from `real.rs`.
-
 use super::real_tests_a::*;
 use super::*;
 
@@ -110,8 +107,6 @@ fn delegated_findings_are_reanchored_to_the_staged_source() {
     }
 }
 
-/// Empty clean report: the arm runs spawn plus parse over nothing, so
-/// the dispatch body executes without a per-tool output sample.
 fn empty_report(
     argv: &[OsString],
     _cwd: &Path,
@@ -126,8 +121,6 @@ fn empty_report(
     })
 }
 
-/// Delegated diagnostics never launch the binary: a spawn double that
-/// panics turns "reached the recorded-diagnostics reader" into the test.
 fn must_not_spawn(
     argv: &[OsString],
     _cwd: &Path,

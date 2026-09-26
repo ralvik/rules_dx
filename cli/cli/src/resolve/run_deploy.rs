@@ -1,15 +1,3 @@
-//! `dx run` / `dx deploy` scope resolution.
-//!
-//! Split from `super` (`resolve.rs`): owns [`resolve_run`],
-//! [`resolve_deploy`], [`DeployInfo`], and [`check_deployable`] plus the
-//! run-only query-expression helpers. Re-exported through `super` so the
-//! public paths stay `crate::resolve::{resolve_run, resolve_deploy,
-//! check_deployable, DeployInfo}`. Shares the query core in `super`
-//! ([`super::PackageCache`], [`super::classify_scopes`],
-//! [`super::run_label_query`], [`super::QueryRunner`]); the
-//! `dx_run`/`dx_deploy` planning carve in `plan.rs` moves with the same
-//! unscramble.
-
 use std::path::Path;
 
 use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
@@ -20,10 +8,6 @@ use super::{
     first_line, ownership_set_expression, quote_set, run_label_query, QueryRunner, ResolveError,
 };
 
-/// Batched runnable file-owner expression: depth-1 reverse
-/// dependencies constrained to rules whose kind ends in `_binary`, with
-/// every file label quoted into one deterministic set. Aliases are not
-/// followed for file scopes: only direct `_binary` owners qualify.
 fn runnable_set_expression(labels: &[String]) -> String {
     format!(
         "kind('.*_binary rule', rdeps(//..., set({}), 1))",
@@ -31,39 +15,14 @@ fn runnable_set_expression(labels: &[String]) -> String {
     )
 }
 
-/// Runnable directory expression: every `_binary` rule under the
-/// recursive pattern. Recursion is performed by Bazel, never by
-/// filesystem traversal.
 fn dir_runnable_expression(pattern: &str) -> String {
     format!("kind('.*_binary rule', {pattern})")
 }
 
-/// True for explicit `dx run` target patterns needing Bazel-owned
-/// expansion (multirun): labels containing `...` or `*` such as
-/// `//demo/...` or `//demo:*`. Plain labels (`//demo:frontend`)
-/// pass through without a query; Bazel owns their alias and
-/// executability.
 fn is_run_pattern(label: &str) -> bool {
     label.contains("...") || label.contains('*')
 }
 
-/// Resolves `dx run` scope to exact Bazel targets (multirun).
-///
-/// Explicit labels pass through unchanged in order (Bazel owns alias
-/// and executability) without any query. Explicit target patterns
-/// (labels containing `...` or `*`, e.g. `//demo/...`) expand through
-/// one Bazel-owned `kind('.*_binary rule', <pattern>)` query each into
-/// their runnable labels, in input order. Once any file or directory
-/// scope is present, every file maps to its depth-1 `_binary` owners
-/// and every directory to its `_binary` rules under the recursive
-/// pattern; explicit labels join the candidate set. Exactly one
-/// candidate must remain on that inference path: zero is
-/// [`ResolveError::NoRunnable`] and multiple is
-/// [`ResolveError::AmbiguousRunnable`], both operational failures
-/// (exit 1). An empty expansion of explicit patterns is likewise
-/// [`ResolveError::NoRunnable`]. An empty scope is
-/// [`ResolveError::EmptyScope`] (pre-exec, exit 2): `bazel run`
-/// needs an explicit target.
 pub fn resolve_run(
     scopes: &[String],
     workspace: &Path,
@@ -147,13 +106,6 @@ pub fn resolve_run(
     Ok(candidates)
 }
 
-/// Resolves `dx deploy` scope to exactly one main-workspace label.
-///
-/// Exactly one positional is required; patterns (`//...`,
-/// `//pkg/...`), file/directory paths, external labels (`@repo//...`),
-/// and package-relative labels (`:target`) are usage failures with
-/// guidance to pass a deploy label. No filesystem access and no Bazel
-/// query: label shape alone decides.
 pub fn resolve_deploy(scopes: &[String]) -> Result<String, ResolveError> {
     if scopes.len() != 1 {
         return Err(ResolveError::DeployCount {
@@ -174,30 +126,15 @@ pub fn resolve_deploy(scopes: &[String]) -> Result<String, ResolveError> {
     })
 }
 
-/// Deploy target identity from one `bazel cquery` Starlark evaluation:
-/// the `DxDeployInfo` provider fields plus raw executability. Bazel
-/// owns executability, so aliases resolve before this observation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DeployInfo {
-    /// The deploy label as passed.
     pub label: String,
-    /// True when the target returns `DxDeployInfo`.
     pub has_provider: bool,
-    /// Raw `profile` attribute (`debug`/`dev`/`release`, `None` when the
-    /// provider omits it, `NONE` when no provider). Callers parse with
-    /// `Profile::parse_attr`.
     pub profile_raw: String,
-    /// Raw `app` attribute (canonical label, `None` when the program
-    /// itself deploys, `NONE` when no provider).
     pub app_raw: String,
-    /// True when `files_to_run.executable` exists.
     pub executable: bool,
 }
 
-/// Starlark expression behind [`check_deployable`]: `has|profile|app|exe`.
-/// `NONE` marks a missing provider; `None` marks a provider field set
-/// to None. Single expression so one cquery answers deployability,
-/// profile default, and app identity together.
 fn deploy_starlark_expr() -> String {
     const PROVIDER: &str = "//deploy/rules:defs.bzl%DxDeployInfo";
     format!(
@@ -208,11 +145,6 @@ fn deploy_starlark_expr() -> String {
     )
 }
 
-/// Exact cquery argv for a deployability probe: launcher, startup
-/// options, `cquery`, canonical workspace policy, the label, and the
-/// Starlark deploy observation. No user Bazel options leak into
-/// resolution; no `--config` pin (deployability is configuration
-/// independent).
 fn deploy_query_argv(label: &str) -> Vec<String> {
     let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 6);
     argv.push(launcher_argv0().to_owned());
@@ -225,12 +157,6 @@ fn deploy_query_argv(label: &str) -> Vec<String> {
     argv
 }
 
-/// Checks deployability for one resolved deploy label via `bazel cquery`.
-///
-/// Deployable means the target returns `DxDeployInfo` or is executable
-/// (any `*_binary`/executable; Bazel owns executability, aliases
-/// included). Otherwise returns [`ResolveError::NotDeployable`].
-/// Query failures become [`ResolveError::QueryFailed`].
 pub fn check_deployable(
     label: &str,
     workspace: &Path,
@@ -320,8 +246,6 @@ mod tests {
     use std::io;
     use std::path::PathBuf;
 
-    /// Scripted query runner: records argv/cwd and replays canned
-    /// outputs per expression in call order.
     struct FakeQuery {
         calls: RefCell<Vec<(Vec<String>, PathBuf)>>,
         outputs: RefCell<Vec<QueryResult>>,
@@ -364,8 +288,6 @@ mod tests {
             Ok(self.outputs.borrow_mut().remove(0))
         }
     }
-
-    // Shared test guard: `crate::resolve::NeverQuery` (See: `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()
@@ -498,7 +420,6 @@ mod tests {
 
     #[test]
     fn run_cross_pattern_order_is_input_order_with_sorted_batches() {
-        // See: `docs/cli/commands/build-test-coverage.md#dx-run`.
         // Each `...`/`*` pattern expands Bazel-owned (sorted per batch),
         // batches concatenate in input order with first-seen dedup — never
         // globally re-sorted. Same `--` args forward to each target and
@@ -526,7 +447,6 @@ mod tests {
 
     #[test]
     fn run_file_alias_is_fail_closed_with_explicit_label_hint() {
-        // See: `docs/cli/commands/build-test-coverage.md#dx-run`.
         // Plain labels pass through (Bazel owns alias/executability) without
         // a query; file scopes match only direct `*_binary` owners (aliases
         // not followed) and fail closed with a hint to pass the alias label

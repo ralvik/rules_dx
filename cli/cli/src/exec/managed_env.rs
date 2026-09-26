@@ -1,32 +1,14 @@
-//! Managed environment collection and staging.
-//!
-//! Split from [`super::managed`]: owns the env side of managed
-//! generation ([`collect_managed_env`], [`empty_env_id`],
-//! [`stage_env_generation`], and [`stage_env_side`]) — BEP shard
-//! collection over the env output group, key validation, and
-//! immutable `artifacts/` plus `values.json` staging.
-//! [`super::managed`] keeps the `codegen`/`env`/`setup` dispatch plus
-//! side preparation; shared staging primitives live in
-//! [`super::managed_staging`]; the codegen mirror lives in
-//! [`super::managed_codegen`].
-
 use super::common::*;
 use super::managed_staging::{collect_managed_group, ensure_generation_dir, symlink_leaf};
 use std::collections::BTreeMap;
 use std::path::Path;
 
-/// Validated managed environment collection, mirroring
-/// [`ManagedCodegenCollection`](super::managed_codegen::ManagedCodegenCollection)
-/// over the env output group.
 pub(crate) type ManagedEnvCollection = (
     Vec<dx_bep::TargetOutput>,
     dx_env_plan::CollectedPlan,
     Vec<dx_env_plan::ProjectionEntry>,
 );
 
-/// Collects and validates one managed environment plan, mirroring
-/// [`collect_managed_codegen`](super::managed_codegen::collect_managed_codegen)
-/// over the env output group.
 pub(crate) fn collect_managed_env(bep: &Path) -> Result<ManagedEnvCollection, (String, String)> {
     let outputs = collect_managed_group(bep, dx_env_plan::OUTPUT_GROUP)?;
     let plan = dx_env_plan::collect_plan(&outputs).map_err(|err| {
@@ -46,10 +28,6 @@ pub(crate) fn collect_managed_env(bep: &Path) -> Result<ManagedEnvCollection, (S
     Ok((outputs, plan, projection))
 }
 
-/// Managed empty environment identity: the deterministic empty-plan
-/// digest (`"[]"` fingerprint) pairing a first independent codegen
-/// selection with a real immutable identity, per
-/// `docs/environments/managed-state.md`.
 pub(crate) fn empty_env_id() -> Result<dx_setup::GenerationId, (String, String)> {
     // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     dx_setup::GenerationId::new(&dx_env_plan::plan_hex("[]")).map_err(|err| {
@@ -61,8 +39,6 @@ pub(crate) fn empty_env_id() -> Result<dx_setup::GenerationId, (String, String)>
     // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
-/// Rejects env keys that are not safe single-path filenames before any
-/// mutation.
 fn validate_env_key(key: &str) -> Result<(), ExecError> {
     if key.is_empty() {
         return Err(ExecError::EmptyEnvKey);
@@ -75,13 +51,6 @@ fn validate_env_key(key: &str) -> Result<(), ExecError> {
     Ok(())
 }
 
-/// Stages one immutable environment generation: validates every backing
-/// leaf against the current BEP result and installs deterministic
-/// symlinks to Bazel-owned artifacts under `artifacts/` plus a
-/// deterministic `values.json` carrying the key-to-value identity
-/// inputs. Layout mirrors the codegen mirror leaf shape so selection
-/// commits one deterministic link tree; language-native facades and
-/// `.dx/bin` refresh stay outside this layer.
 pub(crate) fn stage_env_generation(
     workspace: &Path,
     id: &dx_setup::GenerationId,
@@ -189,9 +158,6 @@ pub(crate) fn stage_env_generation(
     Ok(())
 }
 
-/// Stages one validated environment side, mirroring
-/// [`stage_codegen_side`](super::managed_codegen::stage_codegen_side)
-/// over the env generation layout.
 pub(crate) fn stage_env_side(
     workspace: &Path,
     plan: &dx_env_plan::CollectedPlan,

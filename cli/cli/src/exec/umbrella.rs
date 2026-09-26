@@ -1,5 +1,3 @@
-//! Sequential `dx check` / `dx fix` umbrella over the quality phases plus generate.
-
 use super::common::*;
 use super::execute;
 use super::generate::execute_generate;
@@ -13,8 +11,6 @@ use dx_output::{
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
-/// Umbrella phases in contract order (WP4): format, lint,
-/// typecheck, then generate freshness or mutation.
 const UMBRELLA_PHASES: [Command; 4] = [
     Command::Format,
     Command::Lint,
@@ -22,23 +18,11 @@ const UMBRELLA_PHASES: [Command; 4] = [
     Command::Generate,
 ];
 
-/// One executed umbrella phase: the phase identity plus the
-/// phase-private SARIF capture when the phase supports the format.
 struct UmbrellaPhase {
     command: Command,
     sarif_capture: Option<PathBuf>,
 }
 
-/// Sequential `dx check` / `dx fix` umbrella (WP4): each phase
-/// reuses its wrapped command's scope resolution, Bazel invocation,
-/// result collection, mutation, reporting, and exit-status behavior
-/// verbatim through [`execute`] with captured streams. The first
-/// nonzero phase stops the umbrella; its exit code is preserved. One
-/// umbrella `command_started`/`command_finished` pair brackets the
-/// verbatim per-phase streams in phase order, `--output diff`
-/// concatenates each executed phase's validated patch in phase order,
-/// and each SARIF request merges the executed SARIF-capable phases'
-/// `runs` in phase order into one document.
 pub(crate) fn execute_umbrella(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,
@@ -469,10 +453,6 @@ mod tests {
         assert!(harness.seen_env.borrow().is_empty(), "no phase launched");
     }
 
-    /// Only lint and typecheck carry SARIF in their registries:
-    /// format and generate contribute no runs to the merged
-    /// document, which concatenates one run per executed
-    /// SARIF-capable phase in phase order.
     #[test]
     fn umbrella_sarif_merges_executed_phases_in_order() {
         let harness = umbrella_clean("umbrella-sarif");

@@ -1,4 +1,4 @@
-"""Pinned Ruby foundation. Contract: docs/decisions/0032-ruby-powershell-bandit-swift.md."""
+"""Pinned Ruby foundation."""
 
 # Pinned Ruby foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_RUBY_VERSION = "0.28.0"

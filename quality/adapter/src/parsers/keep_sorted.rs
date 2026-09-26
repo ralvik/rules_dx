@@ -1,20 +1,6 @@
-//! Keep-sorted output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `keep-sorted` text diagnostics on stdout. `files` are the
-/// workspace-relative mirror paths.
-///
-/// Each finding is one line `<path>:<line>: <message>` at line
-/// granularity (keep-sorted reports unsorted blocks, not columns).
-/// Every diagnostic is a warning. Clean is exit 0 with no lines;
-/// findings exit non-zero. Check-only with sandbox-apply-and-diff.
 pub fn parse_keep_sorted(
     stdout: &[u8],
     code: Option<i32>,

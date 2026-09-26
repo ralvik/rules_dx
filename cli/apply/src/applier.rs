@@ -1,27 +1,14 @@
-//! Atomic applier: validates every operation, then writes each file via a
-//! temporary sibling plus rename, running post-write hooks per file.
-//!
-//! The filesystem and the hook runner are seams so tests run without touching
-//! disk or spawning processes. Paths reaching the filesystem are the
-//! validator-approved workspace-relative form joined onto the workspace root,
-//! so validated operations cannot escape the root.
-
 use std::io;
 use std::path::Path;
 
 use super::envelope::{sha256_hex, Envelope};
 use super::validators::{validate, ValidationError};
 
-/// Filesystem seam: read current bytes and atomically replace file content.
 pub trait FileSystem {
-    /// Current bytes, or `None` when the file does not exist.
     fn read(&self, path: &Path) -> io::Result<Option<Vec<u8>>>;
-    /// Replace `path` with `content` atomically (temp file + rename), creating
-    /// parent directories as needed.
     fn write_atomic(&self, path: &Path, content: &[u8]) -> io::Result<()>;
 }
 
-/// Real filesystem implementation.
 pub struct RealFileSystem;
 
 impl FileSystem for RealFileSystem {
@@ -41,12 +28,6 @@ impl FileSystem for RealFileSystem {
     }
 }
 
-/// Post-write hook failure.
-///
-/// Typed hook detail (thiserror) with source chaining at the trait
-/// boundary: `Display` keeps the historical hook string so
-/// [`ApplyError::Hook`] stays byte-identical while callers gain matchable
-/// structure instead of `String` plumbing.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("{message}")]
 pub struct HookError {
@@ -54,12 +35,10 @@ pub struct HookError {
 }
 
 impl HookError {
-    /// Creates a hook failure with the hook-provided detail.
     pub fn new(message: String) -> Self {
         Self { message }
     }
 
-    /// The hook-provided detail.
     pub fn message(&self) -> &str {
         &self.message
     }
@@ -71,14 +50,10 @@ impl From<String> for HookError {
     }
 }
 
-/// Post-write hook seam (formatters, linters). The no-op implementation
-/// always succeeds.
 pub trait HookRunner {
-    /// Runs after `path` was written; `Err` aborts the apply.
     fn run(&self, path: &Path) -> Result<(), HookError>;
 }
 
-/// Hook runner that runs nothing.
 pub struct NoHooks;
 
 impl HookRunner for NoHooks {
@@ -87,39 +62,30 @@ impl HookRunner for NoHooks {
     }
 }
 
-/// One applied file plus the digest of its new bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppliedFile {
     pub path: String,
     pub sha256: String,
 }
 
-/// Per-envelope application report, in envelope order.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ApplyReport {
     pub applied: Vec<AppliedFile>,
 }
 
-/// Application failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ApplyError {
-    /// Operation validation failed; nothing was written for this operation.
     #[error("validation failed for {path}: {cause}")]
     Validation {
         path: String,
         cause: ValidationError,
     },
-    /// Filesystem I/O failed.
     #[error("I/O failed for {path}: {message}")]
     Io { path: String, message: String },
-    /// A post-write hook failed after the file was written.
     #[error("hook failed for {path}: {message}")]
     Hook { path: String, message: String },
 }
 
-/// Validates then atomically applies every envelope operation under
-/// `workspace_root`, running `hooks` after each write. Operations apply in
-/// envelope order; the first failure aborts the remainder.
 pub fn apply_envelope(
     envelope: &Envelope,
     workspace_root: &Path,
@@ -163,7 +129,6 @@ mod tests {
     use super::super::envelope::{FileOperation, ENVELOPE_VERSION};
     use super::*;
 
-    /// In-memory filesystem recording writes for assertions.
     struct FakeFs {
         files: Mutex<HashMap<PathBuf, Vec<u8>>>,
     }
@@ -199,8 +164,6 @@ mod tests {
         }
     }
 
-    /// Filesystem with injectable read/write failures; every line runs across
-    /// the failure tests below plus the success case.
     struct FlakyFs {
         fail_read: bool,
         fail_write: bool,

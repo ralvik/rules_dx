@@ -3,7 +3,7 @@
 Implementation status: implemented.
 User reference for the consolidated diagnostics surface and single-version
 pin/launcher with rollback. Internals live in
-[Diagnostics And Versioning](../../contributing/diagnostics-versioning.md);
+Diagnostics And Versioning;
 this page owns invocation, output shapes, and exit codes.
 
 ## `dx status`
@@ -47,7 +47,7 @@ errors exit `2`.
 
 ## Failure explainer
 
-There is no `dx doctor` per [ADR 0006](../../decisions/0006-cli-command-surface.md).
+There is no `dx doctor` per ADR 0006.
 `dx status` plus sanitized JSON `error` events are the failure explainer:
 a nonzero Bazel subprocess emits `bazel_failed` with `phase: execute` (managed:
 `collect`) before `command_finished`, naming the failed command and phase plus
@@ -109,11 +109,11 @@ Fail vs warn follows command class (decided under closed issue #457,
 implemented in `cli/cli/src/skew.rs`):
 
 - Proceed silently: `version`, `status` (the diagnose/repair path),
-  `completion` (no version semantics).
+ `completion` (no version semantics).
 - Warn on stderr and proceed: `check`, `audit`, `owners`, `deps`, `why`
-  (read-only), plus any `--dry-run` preview (never mutates).
+ (read-only), plus any `--dry-run` preview (never mutates).
 - Refuse (exit `1`, with a `version_skew` error event in JSON mode):
-  every other command.
+ every other command.
 
 A missing or empty pin is a never-pinned tree, not skew, so fresh
 checkouts proceed through the gate to `init`; `version` and `status`

@@ -1,33 +1,6 @@
-//! Real-tool fix application (split from `real.rs`). No behavior change.
-//! `RealBackend::apply_fix` plus fix scratch helpers, moved verbatim.
-//!
-//! JVM notes: google-java-format and ktfmt rewrite in place via the
-//! shared `run_fix` (re-read on exit 0); ktlint lint fixes via
-//! `--format` (re-read on exit 0 or 1 like ESLint); Checkstyle, PMD,
-//! and SpotBugs are check-only and return their input. Scala/.NET
-//! notes: Scalafmt, CSharpier, and Fantomas rewrite in place;
-//! Scalafix, Roslyn, and FSharpLint are check-only. Structured notes:
-//! Buf format plus qmlformat rewrite in place; Buf lint plus qmllint
-//! are check-only with the provisional sandbox-apply-and-diff fix flow.
-
 use super::*;
 
 impl super::RealBackend {
-    /// Applies one fix round to a single file's bytes and returns the
-    /// result. Format tools run their in-place fix and the bytes are
-    /// re-read; Ruff follows the running capability (`check --fix` for
-    /// lint, `format` for format) and its lint fix re-reads on exit 0
-    /// or 1 (exit 1 signals remaining unfixable findings after the
-    /// fixable ones were applied); ESLint likewise re-reads on exit 0
-    /// or 1; Clippy is check-only (its suggestions ride the frozen
-    /// upstream diagnostics and cannot track converged bytes, so fixes
-    /// never rewrite); Biome lint is
-    /// check-only and converges on format; Clippy, Vale, the Markdown
-    /// checker, rustc typecheck, Ty, pydoclint, flake8, and pylint return
-    /// their input. The native lint cohort (clang-tidy, cppcheck,
-    /// staticcheck, govet, errcheck) is check-only with the provisional
-    /// sandbox-apply-and-diff fix flow and returns its input; the
-    /// native formatters (clang-format, gofumpt) rewrite in place.
     pub fn apply_fix(
         &self,
         tool_id: &str,
@@ -40,7 +13,6 @@ impl super::RealBackend {
         // and typecheck rides authoritative upstream diagnostics. Short-
         // circuit here so convergence needs exactly one round and no fix
         // scratch spawns, independent of the per-tool check-only list.
-        // See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
         if capability == "audit" || capability == "typecheck" {
             self.tool(tool_id)?;
             return Ok(text.to_owned());
@@ -107,8 +79,6 @@ impl super::RealBackend {
         }
     }
 
-    /// Stages one fix scratch tree with the exact file bytes plus the
-    /// tool files, returning the scratch and the file's absolute path.
     fn fix_scratch(
         &self,
         tool_id: &str,
@@ -127,8 +97,6 @@ impl super::RealBackend {
         Ok((scratch, absolute))
     }
 
-    /// Re-reads a fixed file as UTF-8. Re-read failures fail the action;
-    /// non-UTF-8 fix output is a tool-output failure, never silent bytes.
     fn reread_fixed(tool_id: &str, absolute: &Path) -> Result<String, RunnerError> {
         let fixed = std::fs::read(absolute)
             .map_err(|err| execution(tool_id, format!("re-read fixed file: {err}")))?;
@@ -179,12 +147,6 @@ impl super::RealBackend {
         cleaned(tool_id, scratch, fixed)
     }
 
-    /// Runs one Ruff fix round: `format` for format pipelines,
-    /// `check --fix` for everything else. The format fix re-reads only
-    /// on exit 0 like every other format tool; the lint fix re-reads on
-    /// exit 0 or 1 because exit 1 signals remaining unfixable findings
-    /// after the fixable ones were applied. Any other exit keeps the
-    /// input: the check diagnostics report the cause.
     fn run_ruff_fix(
         &self,
         tool: &RealTool,
@@ -214,9 +176,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one Biome format fix round: `format --write` (in-place).
-    /// Re-reads only on exit 0 like every other format tool; any other
-    /// exit keeps the input and the check diagnostics report the cause.
     fn run_biome_format_fix(
         &self,
         tool: &RealTool,
@@ -236,8 +195,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one Prettier format fix round: `--write` (in-place).
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_prettier_fix(
         &self,
         tool: &RealTool,
@@ -256,11 +213,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one ESLint lint fix round: `-c <config> --fix` (in-place).
-    /// Re-reads on exit 0 or 1 because exit 1 signals remaining
-    /// unfixable findings after the fixable ones were applied, mirroring
-    /// the Ruff lint-fix contract. Any other exit keeps the input; a
-    /// missing config fails the action (ESLint has no usable defaults).
     fn run_eslint_fix(
         &self,
         tool: &RealTool,
@@ -283,8 +235,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one Scalafmt format fix round: in-place rewrite.
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_scalafmt_fix(
         &self,
         tool: &RealTool,
@@ -304,8 +254,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one CSharpier format fix round: `format` (in-place).
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_csharpier_fix(
         &self,
         tool: &RealTool,
@@ -325,8 +273,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one Fantomas format fix round: in-place format.
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_fantomas_fix(
         &self,
         tool: &RealTool,
@@ -345,11 +291,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one ktlint lint fix round: `--relative --format`
-    /// (in-place). Re-reads on exit 0 or 1 because exit 1 signals
-    /// remaining unfixable findings after the fixable ones were
-    /// applied, mirroring the ESLint/Ruff lint-fix contract. Any other
-    /// exit keeps the input.
     fn run_ktlint_fix(
         &self,
         tool: &RealTool,
@@ -368,8 +309,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one Buf format fix round: `format --write` (in-place).
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_buf_format_fix(
         &self,
         tool: &RealTool,
@@ -388,8 +327,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one clang-format fix round: `-i` (in-place).
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_clang_format_fix(
         &self,
         tool: &RealTool,
@@ -409,8 +346,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one gofumpt fix round: `-w` (in-place).
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_gofumpt_fix(
         &self,
         tool: &RealTool,
@@ -429,8 +364,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// Runs one qmlformat fix round: `-i` (in-place).
-    /// Re-reads only on exit 0; any other exit keeps the input.
     fn run_qmlformat_fix(
         &self,
         tool: &RealTool,
@@ -449,8 +382,6 @@ impl super::RealBackend {
         cleaned(TOOL_ID, scratch, fixed)
     }
 
-    /// File-family format fix rounds: in-place rewrite, re-read on
-    /// exit 0 only. See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
     fn run_cue_fix(&self, tool: &RealTool, path: &str, text: &str) -> Result<String, RunnerError> {
         const TOOL_ID: &str = "cue";
         let (scratch, absolute) = self.fix_scratch(TOOL_ID, tool, path, text)?;

@@ -1,4 +1,4 @@
-"""Rust foundation pins plus crate-manifest groups. Contract: docs/decisions/0019-first-release-additional-foundations.md."""
+"""Rust foundation pins plus crate-manifest groups."""
 
 # Pinned Rust foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_RUST_VERSION = "0.74.0"
@@ -9,7 +9,6 @@ RUSTFMT_VERSION = "1.98.0"
 # Crate-manifest groups for the single `crates` hub (see MODULE.bazel crate.from_cargo).
 # The hub stays single while one Cargo workspace lock covers every manifest; the groups
 # own the inventory so a future multi-hub split moves whole groups, never single labels.
-# See: //modules:npm-uv-crates.bzl (target hub layout).
 CRATE_FIXTURE_MANIFESTS = [
     "//rust/tests/fixtures/hello:Cargo.toml",
 ]

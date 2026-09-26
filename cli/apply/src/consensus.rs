@@ -1,31 +1,19 @@
-//! Two-agent consensus: two independently produced envelopes merge into one
-//! only when they agree.
-//!
-//! Agreement means the same operation path set and byte-identical content
-//! (and expected digests) per path. Anything else is a conflict the caller
-//! must resolve; consensus never picks a winner.
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::envelope::Envelope;
 
-/// Consensus failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ConsensusError {
-    /// The envelopes target different file sets. Both sides are reported
-    /// sorted so conflicts are reproducible.
     #[error("envelope path sets differ")]
     PathSetMismatch {
         only_a: Vec<String>,
         only_b: Vec<String>,
     },
-    /// Both target `path` but disagree on content or expected digest.
     #[error("envelope content differs: {path}")]
     ContentMismatch { path: String },
 }
 
 /// Merges two envelopes that must agree, returning the agreed operations in
-/// `a`'s order.
 pub fn merge(a: &Envelope, b: &Envelope) -> Result<Envelope, ConsensusError> {
     let paths_a: BTreeSet<&str> = a.operations.iter().map(|op| op.path.as_str()).collect();
     let paths_b: BTreeSet<&str> = b.operations.iter().map(|op| op.path.as_str()).collect();

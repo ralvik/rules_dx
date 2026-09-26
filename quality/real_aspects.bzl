@@ -21,23 +21,6 @@ load("//rust/rules:edition.bzl", "RUST_EDITION")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_rustc", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 # Cold-server laziness: the shared implementation no longer resolves every
-# ecosystem on every visit. Each aspect declares only its own tool labels
-# and filters the resolved pipeline to `allowed_tools`; `select()` and
-# toolchain indirection cannot do this (all branches resolve), only separate
-# aspects avoid loading. Base handles single-file `dx_tools` artifacts plus
-# repo-owned markdown; JS/Python/Rust/JVM families are additive opt-ins.
-# Every entry below stays a subset of the single-sourced registry
-# (See: //quality:registry.bzl); adding a tool edits the registry data
-# plus the single per-tool table below, never a parallel allowlist.
-# JVM tools run as `java_binary` wrappers over the complete upstream
-# artifacts plus the shared managed JDK (remotejdk_21 via
-# `--java_runtime_version`); SpotBugs is target-coupled (needs the
-# authoritative `JavaInfo` classes, dropped for provider-less targets
-# like tsc without `TsConfigInfo`).
-#
-# Single per-tool capability table: one row per wired tool with its
-# capabilities and owning shard. Shard `allowed_tools` lists below derive
-# from this table, so capability x ecosystem wiring edits one table only.
 _REAL_TOOL_TABLE = {
     "biome": {"capabilities": ["format", "lint"], "shard": "core"},
     "buildifier": {"capabilities": ["format", "lint"], "shard": "core"},
@@ -63,7 +46,7 @@ _REAL_TOOL_TABLE = {
 }
 
 def _shard_tools(shard, capability):
-    """Lists wired tools for one shard/capability from the per-tool table (See: registry.bzl)."""
+    """Lists wired tools for one shard/capability from the per-tool table ("""
     return sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == shard and capability in _REAL_TOOL_TABLE[tool]["capabilities"]])
 
 _CORE_LINT_TOOLS = _shard_tools("core", "lint")
@@ -110,31 +93,12 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         return []
 
     # Target-coupled tsc: tsc never applies from the class alone;
-    # it requires the authoritative typescript_project context
-    # (TsConfigInfo). Fixture QualitySourcesInfo-only targets carry no
-    # TsConfigInfo, so drop tsc stages there (unfetched, keys unchanged
-    # per the target-coupled laziness row). Authoritative targets delegate
-    # tsc to the upstream build and test: `transpiler = "tsc"` fails the
-    # `bazel build //...` (and `dx build //...`) compilation on type errors,
-    # and `<name>_upstream_typecheck_test` runs under `bazel test //...`
-    # (and `dx test //...`); see quality/tools/typescript/BUILD.bazel (never
-    # a bare tsc file invocation, which would lose tsconfig/declaration
-    # context). Drop tsc here so `dx typecheck --check //...` stays green
-    # while TS type safety is proven by the build plus test checks.
     if "tsc" in [stage["tool"] for stage in resolved]:
         resolved = drop_pipeline_tool(resolved, "tsc")
         if len(resolved) == 0:
             return []
 
     # Target-coupled SpotBugs: SpotBugs analyzes compiled classes, never
-    # bare sources, so it requires the authoritative `JavaInfo` (its
-    # `transitive_runtime_jars` feed the `-textui` analysis). Fixture
-    # QualitySourcesInfo-only targets carry no `JavaInfo`, so drop
-    # SpotBugs stages there (unfetched, keys unchanged per the
-    # target-coupled laziness row). Authoritative `java_library` targets
-    # keep stage sources as the workspace `.java` files (SARIF finding
-    # anchors); the workspace-local runtime jars reach the runner as
-    # binary-safe `--tool-file` entries (stage `--source` is UTF-8-only).
     spotbugs_jars = []
     if "spotbugs" in [stage["tool"] for stage in resolved]:
         if JavaInfo not in target:
@@ -160,12 +124,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
                 spotbugs_jars = jars
 
     # rustfmt crate context: the edition comes from the
-    # authoritative `CrateInfo` (or the test crate's inner `CrateInfo`,
-    # exactly as upstream `_get_rustfmt_ready_crate_info`), and generated
-    # files never reach the tool (upstream formats `is_source` files
-    # only). Provider-less fixture targets carry no crate context, so
-    # they fall back to `RUST_EDITION` (single source of truth).
-    # `no-format` skips the stage via `_capability_tags` above.
     rustfmt_edition = None
     if "rustfmt" in [stage["tool"] for stage in resolved]:
         if not has_rust_toolchain:
@@ -187,15 +145,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
                 return []
 
     # Delegated Clippy: this aspect requires the upstream
-    # `rust_clippy_aspect`, which emits the authoritative
-    # `.clippy.diagnostics` file into the `clippy_output` output group
-    # when `--@rules_rust//rust/settings:clippy_output_diagnostics` is
-    # set (`dx lint` sets it; see `cli/cli/src/plan.rs`). The runner
-    # parses that file instead of spawning Clippy, so dependency
-    # context, edition, and crate type always match the real build.
-    # Without the group (non-Rust-rule targets) the clippy stage runs
-    # with no upstream file and reports no findings; the legacy
-    # self-run path is gone, so Clippy takes no dx-side config.
     clippy_diagnostics = []
     if "clippy" in [stage["tool"] for stage in resolved]:
         if not has_rust_toolchain:
@@ -205,14 +154,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     clippy_delegated = len(clippy_diagnostics) > 0
 
     # Delegated rustc: every Rust rule emits the authoritative
-    # `.rustc-output` JSON file into the `rustc_output` output group
-    # when `--@rules_rust//rust/settings:rustc_output_diagnostics` is
-    # set (`dx typecheck` sets it; see `cli/cli/src/plan.rs`). The
-    # runner parses that file instead of spawning rustc, so dependency
-    # context, edition, and crate type always match the real build.
-    # Without the group (non-Rust-rule targets) the rustc stage runs
-    # with no upstream file and reports no findings; the legacy
-    # self-run path is gone, so rustc takes no dx-side invocation.
     rustc_diagnostics = []
     if "rustc" in [stage["tool"] for stage in resolved]:
         if not has_rust_toolchain:
@@ -289,12 +230,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     inputs = pipeline_inputs_for_paths(ordered_paths, path_to_file)
 
     # Markdown link-resolution siblings: unclassified files declared via
-    # `markdown_siblings` on the visited rule. Only collected when a
-    # markdown_check stage runs, so non-Markdown actions stay
-    # byte-identical. Fail-closed: a sibling shadowing a checked source or
-    # another sibling fails analysis instead of first-wins, so the wrong
-    # link-resolution closure cannot silently win. `..` escapes fail here,
-    # not in the runner.
     sibling_pairs = {}
     if "markdown_check" in stage_tools and hasattr(ctx.rule.attr, "markdown_siblings"):
         for sibling in ctx.rule.attr.markdown_siblings:
@@ -329,14 +264,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         inputs.append(f)
 
     # Ty import context: ty resolves same-package imports through the
-    # filesystem, but actions stage only direct sources, so `import handlers`
-    # in a direct source fails when `handlers.py` comes from `deps`. The
-    # Python forwarders preserve upstream `PyInfo`, whose transitive sources
-    # cover deps; stage transitive-minus-direct Python sources as
-    # resolution-only inputs (never checked, never reported; their own
-    # targets' actions own their findings). The runner derives ty search
-    # dirs from staged files. Transitive (not just direct) deps are covered
-    # via `PyInfo`; non-Python targets without `PyInfo` simply stage nothing.
     resolve_pairs = {}
     if "ty" in stage_tools and _PyInfo in target:
         transitive = getattr(target[_PyInfo], "transitive_sources", None)
@@ -345,10 +272,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
                 ws_path = f.short_path
 
                 # Third-party wheels (uv/pip install trees) live outside the
-                # workspace via `../repo/...` short_paths. They are resolution
-                # context only and are never first-party sources, so skip them
-                # instead of failing; first-party sources already fail closed
-                # in aspect_direct_maps above.
                 if ".." in ws_path.split("/"):
                     continue
                 if ws_path in path_to_file or ws_path in sibling_pairs or ws_path in resolve_pairs:
@@ -393,7 +316,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             # Stable workspace-relative keys: sort closure by short_path so
             # declaration/depset order never perturbs the action key. Config
             # content itself reaches the key via declared inputs.
-            # See: `docs/quality/action-model.md#deterministic-arguments`.
             for f in sorted(hint.closure.to_list(), key = lambda f: f.short_path):
                 args.add("--tool-file", tool + "=" + f.short_path + "=" + f.path)
                 inputs.append(f)
@@ -407,17 +329,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
             inputs.append(diagnostics)
 
     # The Python venv launchers (pydoclint, flake8, pylint) are static
-    # stubs that locate their interpreter and site-packages through the
-    # runfiles forest (adjacent `<stub>.runfiles/`, else `RUNFILES_DIR`):
-    # the loose closure files alone leave them unable to initialize.
-    # Staging a launcher as a tool merges its runfiles into the runner's
-    # forest, and `RUNFILES_DIR` points the stub at that forest. The
-    # directory is action-local and transient; it never enters findings
-    # or snapshots. The Node js_binary wrappers (eslint, prettier) likewise
-    # resolve their runtime through `$0.runfiles`, so they are staged as
-    # tools; the runner spawns them from scratch trees under TMPDIR, so
-    # `JS_BINARY__NO_CD_BINDIR=1` keeps the wrapper from changing directory
-    # into BAZEL_BINDIR (the devserver uses the same flag for custom cwd).
     run_tools = []
     if "eslint" in stage_tools:
         run_tools.append(ctx.attr._eslint[DefaultInfo].files_to_run)
@@ -451,11 +362,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         )
 
     # JVM `java_binary` wrappers (google-java-format, Checkstyle, PMD,
-    # SpotBugs, ktfmt, ktlint) locate their managed JDK plus tool JARs
-    # through their runfiles forest (adjacent `$0.runfiles`), so each
-    # staged wrapper gets its runfiles merged into the runner's forest
-    # like the Python/Node launchers above. No extra tool-env: the
-    # wrappers respect the runner's scratch cwd.
     if "google_java_format" in stage_tools:
         run_tools.append(ctx.attr._google_java_format[DefaultInfo].files_to_run)
     if "ktfmt" in stage_tools:
@@ -475,7 +381,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
         tools = run_tools,
         outputs = [out],
         arguments = [args],
-        # Local-only via the shared helper (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
         execution_requirements = dx_execution_requirements(),
         mnemonic = "DxRealQuality" + capability.capitalize(),
         progress_message = "Dx real quality " + capability + " %{label}",
@@ -484,7 +389,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     return [OutputGroupInfo(dx_results = depset([out]))]
 
 def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain):
-    """Makes one shard impl over the shared real pipeline action (See: quality-sources.md#adapter-applicability)."""
+    """Makes one shard impl over the shared real pipeline action ("""
 
     def _impl(target, ctx):
         return _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain)
@@ -492,7 +397,7 @@ def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain
     return _impl
 
 def real_allowed_tools_error():
-    """Validates aspect shards stay registry subsets (See: //quality:registry.bzl)."""
+    """Validates aspect shards stay registry subsets ("""
     allowed = (
         _CORE_LINT_TOOLS + _CORE_FORMAT_TOOLS + _CORE_TYPECHECK_TOOLS +
         _JS_LINT_TOOLS + _JS_FORMAT_TOOLS + _PY_LINT_TOOLS +
@@ -639,7 +544,7 @@ _REAL_TOOL_ATTR_DEFS = {
 }
 
 def _real_attrs_for(tools):
-    """Builds one shard attr set from the per-tool attr table (See: registry.bzl)."""
+    """Builds one shard attr set from the per-tool attr table ("""
     return _REAL_BASE_ATTRS | {"_" + tool: _REAL_TOOL_ATTR_DEFS[tool] for tool in tools}
 
 _REAL_CORE_ATTRS = _real_attrs_for(sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == "core"]))
@@ -668,7 +573,7 @@ _REAL_SHARDS = {
 }
 
 def _make_real_aspect(shard_name):
-    """Builds one shard aspect from the shard table (See: tool-integrations.md)."""
+    """Builds one shard aspect from the shard table ("""
     shard = _REAL_SHARDS[shard_name]
     if shard["has_rust"] and shard_name == "real_rust_lint":
         return aspect(

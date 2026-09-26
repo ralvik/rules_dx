@@ -21,7 +21,6 @@ def sbom_predicate_error(predicate):
                 "': want 'https://slsa.dev/provenance/v1' (selected wire profile per issue #311)")
     return ""
 
-# Allowlisted SLSA builder ids (issue #924): provenance binds exactly one
 # of these workflow identities, never an arbitrary string. The dry-run id
 # serves the `sbom_demo` shape check only; real releases pass the release
 # id explicitly. Anything else fails closed at analysis time.

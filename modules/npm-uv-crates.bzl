@@ -1,4 +1,4 @@
-"""Registry and hub inventory for the lock dialects. Contract: docs/tools/tool-acquisition.md."""
+"""Registry and hub inventory for the lock dialects."""
 
 # npm registry hubs (see //modules:js.bzl; authoritative plus private tool graph).
 NPM_REGISTRY_HUBS = {

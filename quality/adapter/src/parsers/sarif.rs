@@ -1,16 +1,3 @@
-//! Shared SARIF 2.1.0 grammar for the JVM lint adapters.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! Checkstyle (`-f sarif`), PMD (`-f sarif`), SpotBugs (`-sarif`), and
-//! ktlint (`--reporter=sarif`) all emit SARIF 2.1.0 logs with
-//! `runs[].results[]` carrying `ruleId`, `level`, `message.text`, and
-//! `locations[].physicalLocation` (`artifactLocation.uri` plus
-//! `region` with `startLine`/`startColumn`/`endLine`/`endColumn`).
-//! Checkstyle emits `file:` URIs with point regions; the other tools
-//! follow the same envelope with full ranges where available.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, FileFinding, ParseError};
@@ -101,16 +88,12 @@ fn sarif_severity(tool: &'static str, level: Option<&str>) -> Result<ToolSeverit
     }
 }
 
-/// Strips `file:` / `file://` URI schemes to a filesystem path.
 fn strip_file_uri(uri: &str) -> &str {
     uri.strip_prefix("file://")
         .or_else(|| uri.strip_prefix("file:"))
         .unwrap_or(uri)
 }
 
-/// Lexically normalizes a `/`-separated path, resolving `.` and `..`
-/// segments without touching the filesystem (SARIF `uriBaseId`
-/// joins, e.g. ktlint `%SRCROOT%`, routinely contain `..`).
 fn normalize_path(path: &str) -> String {
     let absolute = path.starts_with('/');
     let mut parts: Vec<&str> = Vec::new();
@@ -131,14 +114,6 @@ fn normalize_path(path: &str) -> String {
     }
 }
 
-/// Resolves a SARIF `uri` (plus optional `uriBaseId`, e.g. ktlint
-/// `%SRCROOT%`) against the checked `files` (absolute scratch paths).
-/// Exact matches win; otherwise the unique absolute path suffixed by
-/// `/uri` wins (tools relativize against the scratch cwd even for
-/// absolute arguments, mirroring the Biome re-anchor; ktlint's
-/// `%SRCROOT%` points at the home dir, never the scratch root, so the
-/// joined absolute path suffix-matches the staged file). Zero or
-/// ambiguous suffix matches fail closed.
 fn resolve_file<'a>(
     tool: &'static str,
     files: &[&'a str],
@@ -202,8 +177,6 @@ fn resolve_file<'a>(
     })
 }
 
-/// Parses one SARIF log (stdout) into one finding per result location.
-/// `files` are the absolute scratch paths passed to the tool.
 pub fn parse_sarif(
     tool: &'static str,
     stdout: &[u8],

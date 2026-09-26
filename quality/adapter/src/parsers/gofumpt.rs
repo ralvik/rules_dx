@@ -1,22 +1,6 @@
-//! Gofumpt output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `gofumpt -d` stdout. `files` are the scratch-absolute paths
-/// the tool checked.
-///
-/// `gofumpt -d` exits 0 whether or not a diff exists (like `gofmt -d`),
-/// so the diff markers decide, never the exit code alone: unified diff
-/// markers (`--- ` headers) mentioning at least one checked file yield
-/// one `1:1` format finding per file; empty output on exit 0 is clean.
-/// Empty output on any other exit, or a nonzero exit with no markers,
-/// is a grammar mismatch, never a silent pass.
 pub fn parse_gofumpt(
     stdout: &[u8],
     code: Option<i32>,

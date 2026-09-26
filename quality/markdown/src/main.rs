@@ -1,17 +1,3 @@
-//! Thin CLI shim over the checker library.
-//! Check semantics, JSON output, and exit codes live in the library and are
-//! unit-tested there.
-//!
-//! Contract: `docs/quality/tool-integrations.md`.
-//!
-//! Usage:
-//! ```text
-//! quality_markdown --source WS_PATH=EXEC_PATH [--source ...]
-//!     [--sibling WS_PATH=EXEC_PATH ...]
-//! ```
-//! Exit `0` when every source was checked (findings print as JSON lines on
-//! stdout); exit `2` on bad arguments, unreadable files, or non-UTF-8 input.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(

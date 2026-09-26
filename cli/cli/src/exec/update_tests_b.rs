@@ -1,6 +1,3 @@
-//! Split from `update.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::super::test_support::*;
 use super::update_tests_a::*;
 
@@ -195,7 +192,6 @@ fn default_updates_preset_atomically() {
 
 #[test]
 fn update_json_never_emits_change_or_mutation() {
-    // Wont-fix, Issue #586 (See: `docs/cli/output-protocol.md#mutation`):
     // backends provide no committed-change
     // manifest and Git/BUILD inference is forbidden, so update JSON
     // never emits change/mutation events in any mode.
@@ -237,11 +233,7 @@ fn update_json_never_emits_change_or_mutation() {
 
 #[test]
 fn update_json_completeness_is_per_set_plus_finished() {
-    // Event-completeness contract, Issue #586 (See:
-    // `docs/cli/output-protocol.md#mutation`): exactly one terminal
     // per-set event per selected set in sorted order, then an
-    // `update_recovery` notice on failure (issue #772, See:
-    // `docs/cli/commands/audit-update-bazel.md#dx-update`), then exactly
     // one command_finished. Preceding per-set events stay true with
     // no automatic rollback; nothing is inferred for unattempted sets.
     let runner = ScriptRunner::new(&[("maven", Some(1))]);
@@ -314,8 +306,6 @@ fn update_json_completeness_is_per_set_plus_finished() {
 
 #[test]
 fn update_json_check_and_dryrun_emit_no_file_events_or_counts() {
-    // The wont-fix holds for --check and --dry-run too, Issue #586 (See:
-    // `docs/cli/output-protocol.md#mutation`); neither emits file-level
     // events nor counts.
     let harness = Harness::new("update-586-check-json");
     harness.write_source(
@@ -349,7 +339,6 @@ fn update_json_check_and_dryrun_emit_no_file_events_or_counts() {
 
 #[test]
 fn update_failure_reports_recovery_in_text_and_json() {
-    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`):
     // a failed run keeps per-set commits and reports the manual recovery
     // (idempotent retry plus `git checkout` restore) in both modes.
     let runner = ScriptRunner::new(&[("maven", Some(1))]);
@@ -370,7 +359,6 @@ fn update_failure_reports_recovery_in_text_and_json() {
 
 #[test]
 fn update_success_emits_no_recovery() {
-    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`):
     // clean runs need no recovery hint.
     let runner = ScriptRunner::new(&[]);
     let (code, out, err) = run_with(&["update"], &runner);
@@ -386,7 +374,6 @@ fn update_success_emits_no_recovery() {
 
 #[test]
 fn offline_dry_run_plans_cache_only_without_launching() {
-    // See: `docs/deploy/offline-bootstrap.md`. Dry-run never launches, so
     // offline dry-run plans cache-only and exits 0.
     let harness = Harness::new("update-offline-dryrun");
     let (code, out, err) = harness.run(&["update", "--offline", "--dry-run"]);
@@ -409,7 +396,6 @@ fn offline_dry_run_plans_cache_only_without_launching() {
 
 #[test]
 fn offline_live_fails_with_offline_required_without_launching() {
-    // See: `docs/deploy/offline-bootstrap.md`. Fetching resolvers fail with
     // `offline_required` instead of launching; the pinned Go no-op still
     // succeeds with no launch.
     let runner = ScriptRunner::new(&[]);
@@ -439,7 +425,6 @@ fn offline_live_fails_with_offline_required_without_launching() {
 #[test]
 fn offline_required_code_is_stable_single_source() {
     // Fixture pins the stable wire code so output-protocol drift fails here.
-    // See: `docs/cli/output-protocol.md#operational-error`.
     assert_eq!(
         crate::exec::common::CODE_OFFLINE_REQUIRED,
         "offline_required"

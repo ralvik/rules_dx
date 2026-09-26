@@ -1,89 +1,38 @@
-//! Outdated discovery planning for the `dx bump` loop.
-//!
-//! Contract: `docs/cli/commands/audit-update-bazel.md#dx-bump`.
-//!
-//! Library-first (ADR 0008): registry enumeration uses upstream registry
-//! clients (BCR / crates.io / npm registry / Go proxy / Maven Central /
-//! NuGet / GitHub releases), never custom HTTP. Version parsing and
-//! comparison delegate to upstream `semver`, never custom version code.
-//! This module plans over injected version snapshots only, so discovery
-//! stays deterministic and unit-testable without a workspace, a Bazel
-//! server, registries, or any upstream updater. Fetching stays in the
-//! upstream clients plus the scheduled `bump.yml` runner; custom code here
-//! is limited to stable-only filtering, semver ordering, and the next-candidate
-//! selection for the one-dep-per-PR loop.
-//!
-//! Policy (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #639):
-//! - Discovery proposes stable versions only; prerelease eligibility
-//!   follows the upstream resolver and project configuration, never a
-//!   private `dx` policy (`version::prerelease_follows_upstream`).
-//! - Candidates order via upstream `semver` comparison
-//!   (`version::compare`), never custom ordering; the loop takes the
-//!   first candidate in selector order (never batch).
-//! - Transitive versions stay resolver-governed; discovery never forces
-//!   every transitive to newest.
-//! - Manual selector only is rejected: scheduled discovery enumerates
-//!   outdated via the upstream clients, never requires an operator
-//!   `selector`/`version` pair to make progress.
-//! - GitHub Actions tags need SHA resolution through the upstream GitHub
-//!   releases client before the file edit (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #640 owns the auto
-//!   resolution); discovery lists the tag candidate but never invents a SHA.
-
 use super::sets::BumpSet;
 use super::version::{compare, is_stable};
 
-/// Declared requirement plus its registry snapshot: the pinned current
-/// version and the available versions reported by the upstream registry
-/// client for this selector.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Snapshot {
-    /// Full widen selector (`set:package`, e.g. `cargo:anyhow`).
     pub selector: String,
-    /// Owning set (selects the upstream registry client).
     pub set: BumpSet,
-    /// Pinned current version (semver sets only; GHA resolves via SHA).
     pub current: semver::Version,
-    /// Available versions reported by the upstream client (injected).
     pub available: Vec<semver::Version>,
 }
 
-/// One outdated candidate: the declared selector is behind its latest
-/// stable available version.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OutdatedCandidate {
-    /// Full widen selector (`set:package`).
     pub selector: String,
-    /// Pinned current version.
     pub current: semver::Version,
-    /// Latest stable available version above current.
     pub latest: semver::Version,
 }
 
 /// Discovery planning errors (never a partial enumeration).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum DiscoveryError {
-    /// Empty selector or version text.
     #[error("empty discovery entry; expected `set:package` plus semver")]
     Empty,
-    /// Unknown set or malformed `set:package` shape.
     #[error("unknown discovery selector {selector:?}; expected bazel|cargo|go|maven|npm|nuget as `set:package`")]
     UnknownSelector {
-        /// Offending spelling.
         selector: String,
     },
-    /// Invalid semver for a semver-owned set.
     #[error("invalid version {version:?} for selector {selector:?}: expected exact semver")]
     InvalidVersion {
-        /// Offending selector.
         selector: String,
-        /// Offending spelling.
         version: String,
     },
 }
 
 /// Upstream registry client owning enumeration for one set (never custom
-/// HTTP). GitHub Actions enumerates tags via the upstream GitHub releases
-/// client; SHA resolution stays owned under issue #640 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`).
 pub fn registry_client(set: BumpSet) -> &'static str {
     match set {
         BumpSet::Bazel => "BCR",
@@ -96,9 +45,6 @@ pub fn registry_client(set: BumpSet) -> &'static str {
     }
 }
 
-/// Parses one semver discovery entry (`selector` plus pinned `current`
-/// text). GitHub Actions has no semver current (SHA-plus-tag pins), so it
-/// fails closed here; its tag enumeration stays owned under issue #640 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`).
 pub fn parse_declared(selector: &str, current: &str) -> Result<Snapshot, DiscoveryError> {
     if selector.is_empty() || current.is_empty() {
         return Err(DiscoveryError::Empty);
@@ -153,11 +99,6 @@ pub fn parse_declared(selector: &str, current: &str) -> Result<Snapshot, Discove
     })
 }
 
-/// Latest stable available version above `current`, ordered via upstream
-/// `semver` comparison. Prereleases in `available` never win: discovery
-/// proposes stable only while prerelease eligibility follows the upstream
-/// resolver and project configuration. Returns `None` when current is
-/// already latest (nothing outdated).
 pub fn latest_stable(
     current: &semver::Version,
     available: &[semver::Version],
@@ -182,8 +123,6 @@ pub fn latest_stable(
     best.cloned()
 }
 
-/// Plans the outdated candidate for one snapshot, if any. `None` means
-/// up-to-date (no widen proposed for this selector).
 pub fn outdated_from_snapshot(snapshot: &Snapshot) -> Option<OutdatedCandidate> {
     latest_stable(&snapshot.current, &snapshot.available).map(|latest| OutdatedCandidate {
         selector: snapshot.selector.clone(),
@@ -192,11 +131,6 @@ pub fn outdated_from_snapshot(snapshot: &Snapshot) -> Option<OutdatedCandidate> 
     })
 }
 
-/// Collects outdated candidates across snapshots, ordered deterministically
-/// by selector (loop takes the first; never batch). Ordering within a
-/// selector uses upstream `semver` comparison via [`latest_stable`]; the
-/// cross-selector order is plain selector text so the weekly run proposes
-/// the same next dep on a fixed snapshot.
 pub fn collect_outdated(snapshots: &[Snapshot]) -> Vec<OutdatedCandidate> {
     let mut out: Vec<OutdatedCandidate> = snapshots
         .iter()
@@ -210,8 +144,6 @@ pub fn collect_outdated(snapshots: &[Snapshot]) -> Vec<OutdatedCandidate> {
     out
 }
 
-/// Next single widen for the loop (first in selector order), if any. One
-/// dep per run, never batch; `None` means nothing outdated.
 pub fn next_outdated(candidates: &[OutdatedCandidate]) -> Option<&OutdatedCandidate> {
     candidates.first()
 }
@@ -231,7 +163,6 @@ mod tests {
 
     #[test]
     fn semver_sets_parse_declared_with_client_mapping() {
-        // Issue #639 (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`): discovery covers the six semver sets; each maps to
         // its upstream registry client, never custom HTTP.
         for (selector, client) in [
             ("bazel:rules_rust", "BCR"),
@@ -250,7 +181,6 @@ mod tests {
     #[test]
     fn github_actions_has_no_semver_current() {
         // GHA pins are tag/SHA-shaped: discovery lists tags via GitHub
-        // releases but never invents a SHA here (issue #640 owns auto; See: `docs/cli/commands/audit-update-bazel.md#dx-bump`).
         assert!(matches!(
             parse_declared("github-actions:actions/checkout", "v4"),
             Err(DiscoveryError::UnknownSelector { .. })

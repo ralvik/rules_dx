@@ -1,113 +1,65 @@
-//! Typed adoption failure (pilot, split).
-//!
-//! Split from `super` (`lib.rs`): owns [`AdoptError`]. Re-exported
-//! through `super` so the public path stays
-//! `dx_adopt::AdoptError`.
-//!
-//! Every variant renders byte-identical to the historical `String` error
-//! it replaces, so CLI operational diagnostics stay stable while callers
-//! gain matchable structure instead of `format!` string plumbing.
-//! Binary edges (`dx` mains) keep rendering via `Display` (`to_string()`).
-
-/// Typed adoption failure (pilot).
-///
-/// Every variant renders byte-identical to the historical `String` error
-/// it replaces, so CLI operational diagnostics stay stable while callers
-/// gain matchable structure instead of `format!` string plumbing.
-/// Binary edges (`dx` mains) keep rendering via `Display` (`to_string()`).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum AdoptError {
-    /// Failed to create a parent directory for scaffolding output.
     #[error("create parent {parent}: {detail}")]
     CreateParent { parent: String, detail: String },
-    /// Failed to write a scaffolded or pin file.
     #[error("write {path}: {detail}")]
     WriteFile { path: String, detail: String },
-    /// Failed to create `.git/hooks`.
     #[error("create hooks dir: {detail}")]
     CreateHooksDir { detail: String },
-    /// Failed to read an existing hook shim.
     #[error("read hook {trigger}: {detail}")]
     ReadHook { trigger: String, detail: String },
-    /// Existing unmanaged hook refuses install.
     #[error("unmanaged hook refuses install: {trigger}")]
     UnmanagedInstall { trigger: String },
-    /// Failed to write a hook shim.
     #[error("write hook {trigger}: {detail}")]
     WriteHook { trigger: String, detail: String },
-    /// Failed to stat a hook shim for chmod.
     #[error("stat hook {trigger}: {detail}")]
     StatHook { trigger: String, detail: String },
-    /// Failed to chmod a hook shim.
     #[error("chmod hook {trigger}: {detail}")]
     ChmodHook { trigger: String, detail: String },
-    /// Failed to write the `dx.local.toml` overlay.
     #[error("write overlay: {detail}")]
     WriteOverlay { detail: String },
-    /// Failed to render the `dx.local.toml` overlay via the TOML crate.
     #[error("render overlay: {detail}")]
     RenderOverlay { detail: String },
-    /// Existing unmanaged hook refuses uninstall.
     #[error("unmanaged hook refuses uninstall: {trigger}")]
     UnmanagedUninstall { trigger: String },
-    /// Failed to remove a hook shim.
     #[error("remove hook {trigger}: {detail}")]
     RemoveHook { trigger: String, detail: String },
-    /// Failed to read the `.dx/version` pin.
     #[error("read version pin: {detail}")]
     ReadVersionPin { detail: String },
-    /// Refused an empty version pin write.
     #[error("refuses empty version")]
     EmptyVersion,
-    /// Failed to create `.dx`.
     #[error("create .dx: {detail}")]
     CreateDxDir { detail: String },
-    /// Failed to write the version pin.
     #[error("write version pin: {detail}")]
     WriteVersionPin { detail: String },
-    /// `dx watch` refuses CI (local-only).
     #[error("dx watch refuses CI (local-only)")]
     WatchRefusesCi,
-    /// Command is not watchable.
     #[error("not watchable: {command}")]
     NotWatchable { command: String },
-    /// Inspect scope rejected.
     #[error("rejected scope: {scope}")]
     RejectedScope { scope: String },
-    /// `dx why` called without the file-owner resolution leg.
     #[error("dx why needs <file> <label>: resolve the file owner first, then plan_somepath")]
     WhyNeedsOwner,
-    /// Unknown inspect kind.
     #[error("unknown inspect: {kind}")]
     UnknownInspect { kind: String },
-    /// Unknown completion shell.
     #[error("unknown-shell: {shell}")]
     UnknownShell { shell: String },
-    /// Failed to spawn the filesystem watcher.
     #[error("watch spawn failed: {detail}")]
     WatchSpawn { detail: String },
-    /// Filesystem watcher reported errors.
     #[error("watch failed: {detail}")]
     WatchFailed { detail: String },
-    /// `dx migrate` requires distinct valid semver versions.
     #[error("migrate needs distinct versions: {detail}")]
     MigrateVersions { detail: String },
-    /// `dx migrate` needs an upgrade (`to` exceeds `from` semver).
     #[error("migrate is upgrade-only: {from} -> {to}")]
     MigrateNotUpgrade { from: String, to: String },
-    /// `dx new` needs a supported language template.
     #[error("unknown language for dx new: {language} (want one of rust, python, javascript, typescript, go, java, kotlin, scala, csharp, fsharp, c, cc, cpp)")]
     NewUnknownLanguage { language: String },
-    /// Hooks baseline/overlay TOML does not parse as a `[hooks]` table.
     #[error("invalid hooks config: {detail}")]
     InvalidHooks { detail: String },
-    /// Hook timings TOML does not parse as a `[timings]` table.
     #[error("invalid hooks timings: {detail}")]
     InvalidTimings { detail: String },
-    /// Failed to render hook timings via the TOML crate.
     #[error("render timings: {detail}")]
     RenderTimings { detail: String },
-    /// Invocation-defaults file is unreadable or not valid TOML.
     #[error("invalid invocation defaults: {detail}")]
     InvalidDefaults { detail: String },
 }

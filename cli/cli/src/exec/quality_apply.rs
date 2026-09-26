@@ -1,12 +1,3 @@
-//! Quality mutation and status projection: verified
-//! source reads plus check/complete-gated atomic apply, and
-//! check-mode vs default-mode status with the fail-closed flag.
-//!
-//! Extracted from [`super::quality`] without behavior change: the
-//! execution root still owns Bazel launch, result collection, patch
-//! rendering, event emission, and report writing; this module owns
-//! only mutation plus status projection.
-
 use super::common::{
     apply_to_bytes, read_verified, FileChange, SourceRead, REASON_INCOMPLETE_COLLECTION,
     REASON_INVALID_EDITS, REASON_STALE_SOURCE, REASON_UNREADABLE_SOURCE,
@@ -16,23 +7,12 @@ use dx_output::{meets_threshold, DiagnosticEvent, Threshold};
 use std::collections::BTreeMap;
 use std::path::Path;
 
-/// Verified sources plus per-file apply outcome for one quality run.
 pub(crate) struct ApplyOutcome {
     pub(crate) sources: BTreeMap<String, SourceRead>,
     pub(crate) applied: BTreeMap<String, bool>,
     pub(crate) not_applied: Vec<(String, &'static str)>,
 }
 
-/// Reads verified source bytes for every changed file, then applies
-/// stable candidates per the check/complete gate:
-///
-/// * check mode never mutates; any proposed change fails the run
-///   downstream via the non-empty change set.
-/// * incomplete collection marks every change not-applied with
-///   `incomplete_collection`.
-/// * otherwise each change applies against its verified bytes; stale,
-///   unreadable, or invalid edits mark that file not-applied with the
-///   stable reason while other files still apply.
 pub(crate) fn apply_collected_changes(
     workspace: &Path,
     check: bool,
@@ -91,14 +71,6 @@ pub(crate) fn apply_collected_changes(
     }
 }
 
-/// Projects status findings under the command policy: every initial
-/// diagnostic in check mode; terminal diagnostics for applied files
-/// plus initial diagnostics for all other files in default mode.
-/// Fixed initials (applied guaranteed fixes) leave all projections.
-///
-/// Returns the projected status plus the fail-closed `failed` flag:
-/// any status finding at or above `fail_on` fails, and check mode with
-/// a non-empty change set always fails.
 pub(crate) fn project_status(
     check: bool,
     initial: &[DiagnosticEvent],

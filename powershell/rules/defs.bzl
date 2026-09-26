@@ -16,24 +16,12 @@ _DX_POWERSHELL_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream `PwshInfo`,
-# `InstrumentedFilesInfo`, `OutputGroupInfo`, and `RunEnvironmentInfo`
-# at runtime when present, but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a PowerShell
-# library, so no consumer matches on the forwarded providers.
-# `QualitySourcesInfo` is advertised so quality aspects can gate on it.
-# Coverage reads `InstrumentedFilesInfo` from the test target, not via
-# `provides` (same shape as the `go_*` test forwarder).
 _DX_POWERSHELL_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
 # PowerShell owns `.ps1` scripts plus `.psm1`/`.psd1` modules. All three
-# map to the single `powershell` semantic class (See:
-# docs/quality/quality-sources.md): upstream `pwsh_library` takes all
-# three, upstream `pwsh_binary`/`pwsh_test` take `.ps1` only, so the
-# executable forwarders allow `.ps1` while the library forwarder allows
-# the full module closure.
 _DX_POWERSHELL_LIBRARY_SPECS = [("powershell", ["ps1", "psm1", "psd1"])]
 _DX_POWERSHELL_LIBRARY_EXTS = [".ps1", ".psm1", ".psd1"]
 _DX_POWERSHELL_EXEC_SPECS = [("powershell", ["ps1"])]

@@ -6,7 +6,6 @@ Fixture: `cli/bump/tests/fixtures/bump_gha/` via
 """
 
 # Disposition: tags auto-resolve to SHA via the upstream GitHub releases
-# client (issue #640, never manual SHA only).
 BUMP_GHA = "auto"
 
 # Upstream registry client owning tag enumeration plus SHA resolution

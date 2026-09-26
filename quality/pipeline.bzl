@@ -149,15 +149,15 @@ def runfiles_subject_paths(checked_paths, runfiles_paths):
     return sorted(seen.keys())
 
 def aspect_capability_blocked(rule_attr, capability):
-    """Reports whether `no-<capability>` blocks the aspect (See: quality-sources.md#tags)."""
+    """Reports whether `no-<capability>` blocks the aspect ("""
     return ("no-" + capability) in getattr(rule_attr, "tags", [])
 
 def aspect_family_selections(policy, capability):
-    """Expands one capability across policy families (See: quality-sources.md#adapter-applicability)."""
+    """Expands one capability across policy families ("""
     return {family_id: getattr(policy.families[family_id], capability) for family_id in policy.families.keys()}
 
 def aspect_direct_maps(direct_sources, what):
-    """Splits provider sources into class/file/path maps (See: quality-sources.md#adapter-applicability).
+    """Splits provider sources into class/file/path maps (
 
     Fail-closed multi-config boundary: duplicate workspace paths across
     classes and `..` escapes fail analysis instead of first-wins or late
@@ -180,16 +180,16 @@ def aspect_direct_maps(direct_sources, what):
     return (sorted(direct_files.keys()), direct_files, direct_paths, path_to_file)
 
 def filter_pipeline_by_tools(resolved, allowed_tools):
-    """Keeps only stages whose tool is in `allowed_tools` (See: quality-sources.md#adapter-applicability)."""
+    """Keeps only stages whose tool is in `allowed_tools` ("""
     allow = {tool: True for tool in allowed_tools}
     return [stage for stage in resolved if stage["tool"] in allow]
 
 def drop_pipeline_tool(resolved, tool):
-    """Drops one target-coupled tool from resolved stages (See: tool-integrations.md)."""
+    """Drops one target-coupled tool from resolved stages ("""
     return [stage for stage in resolved if stage["tool"] != tool]
 
 def ordered_pipeline_paths(resolved):
-    """Unions resolved stage sources into sorted workspace paths (See: action-model.md#outputs-remote-cache-and-execution)."""
+    """Unions resolved stage sources into sorted workspace paths ("""
     union = {}
     for stage in resolved:
         for path in stage["sources"]:
@@ -197,15 +197,15 @@ def ordered_pipeline_paths(resolved):
     return sorted(union.keys())
 
 def pipeline_inputs_for_paths(ordered_paths, path_to_file):
-    """Maps ordered workspace paths to action input files (See: action-model.md#outputs-remote-cache-and-execution)."""
+    """Maps ordered workspace paths to action input files ("""
     return [path_to_file[path] for path in ordered_paths if path in path_to_file]
 
 def stage_flag(stage):
-    """Renders one resolved stage as a `--stage` flag value (See: action-model.md#deterministic-arguments)."""
+    """Renders one resolved stage as a `--stage` flag value ("""
     return stage["tool"] + ";" + ",".join(stage["classes"]) + ";" + ",".join(stage["sources"])
 
 def prune_tool_generated_sources(resolved, generated_paths, tool):
-    """Drops generated paths from one tool's stages, omitting emptied stages (See: tool-integrations.md)."""
+    """Drops generated paths from one tool's stages, omitting emptied stages ("""
     kept = []
     for stage in resolved:
         if stage["tool"] != tool:
@@ -219,7 +219,7 @@ def prune_tool_generated_sources(resolved, generated_paths, tool):
     return kept
 
 def generated_source_paths(direct_files):
-    """Collects non-source (`is_source == False`) workspace paths (See: tool-integrations.md)."""
+    """Collects non-source (`is_source == False`) workspace paths ("""
     generated = {}
     for class_id in direct_files:
         for f in direct_files[class_id]:

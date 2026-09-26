@@ -6,7 +6,6 @@ Fixture: `cli/bump/tests/fixtures/bump_chain/` via
 `bazel run //tools/ci:bump_chain_qualification`.
 """
 
-# Disposition: widen chains the resolver refresh automatically (issue #638).
 BUMP_CHAIN = "automatic"
 
 # Per-set chaining (widen then refresh, never a manual second step).
@@ -28,7 +27,6 @@ BUMP_CHAIN_GO_SELECTOR = "go:example.com/mod refreshes go"
 BUMP_CHAIN_MAVEN_SELECTOR = "maven:junit:junit refreshes maven"
 BUMP_CHAIN_NUGET_SELECTOR = "nuget:FSharp.Core refreshes nuget"
 
-# File-only sets stay without a refresh launch (issue #638).
 BUMP_CHAIN_BAZEL = "file-only (preset flag-diff review plus bazel build //...)"
 BUMP_CHAIN_GHA = "file-only (preset flag-diff review plus bazel build //...)"
 
@@ -36,11 +34,9 @@ BUMP_CHAIN_GHA = "file-only (preset flag-diff review plus bazel build //...)"
 BUMP_CHAIN_BACKEND = "dx_update::backend::plan"
 BUMP_CHAIN_RUNNER = "runner.run"
 
-# Failure keeps the widen with no rollback (issue #638).
 BUMP_CHAIN_FAILURE = "widen kept in manifest"
 BUMP_CHAIN_FAILURE_CODE = "update_failed"
 
-# Major-bump=>migrate hint (issue #931): semver widens carry the
 # missing-manifest hint with exit mapping; Git shapes never hint.
 BUMP_MAJOR_HINT = "major bump"
 BUMP_MAJOR_MIGRATE = "dx migrate --from <old> --to <new>"

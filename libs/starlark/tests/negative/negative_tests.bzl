@@ -5,11 +5,6 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//libs/starlark:failure_test.bzl", "failure_test")
 
 # Deliberately wrong fixtures (red data, never live failing targets):
-# - "deliberately wrong sum": 1 + 1 vs 3
-# - "deliberately wrong product": 2 * 2 vs 5
-# - observation with field sum=43 (actual sum=0 from :negative_subject)
-# - absent substring "this substring is absent" in :present_fixture.txt
-# The passing harnesses below assert these fail exactly as documented.
 
 def failing_check_demo(name):
     sh_test(

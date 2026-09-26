@@ -1,6 +1,3 @@
-//! Quality execution tests (part 1/3) — split from `exec/quality.rs` with no behavior change.
-//! Originally the inline `mod tests` of `quality.rs`.
-
 use super::super::test_support::*;
 use crate::exec::{execute, Env};
 use dx_digest::blake3 as digest;
@@ -331,7 +328,6 @@ fn directory_scope_plans_pattern_without_query() {
 
 #[test]
 fn here_flag_selects_cwd_tree_without_query() {
-    // Issue #699: `--here` (`--cwd` alias) selects the current directory
     // tree through the same directory-scope path (`//path/...`; `//...`
     // at the root), never implicitly, and never with explicit scopes.
     let mut harness = Harness::new("here-scope");

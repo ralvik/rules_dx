@@ -22,11 +22,11 @@ def dx_forwarded_runtime_providers(upstream, what):
     return out
 
 def dx_missing_optional_names(requested_names, present_names):
-    """Returns the requested names absent from the present names. See issue #943."""
+    """Returns the requested names absent from the present names. See"""
     return [n for n in requested_names if n not in present_names]
 
 def dx_optional_forward_warning(what, upstream_label, requested_names, missing_names):
-    """Returns the skip warning for an optional forward, or None when nothing was skipped. See issue #943."""
+    """Returns the skip warning for an optional forward, or None when nothing was skipped. See"""
     if len(missing_names) == 0:
         return None
     forwarded = len(requested_names) - len(missing_names)
@@ -237,7 +237,6 @@ def _dx_runtime_providers(ctx, upstream, what, runtime, extra_quality_attrs = No
             # Synthesize coverage metadata from direct srcs when upstream
             # lacks it (e.g., rules_dotnet libraries). Transitive closure
             # follows the upstream edge; direct srcs are always instrumented.
-            # See: docs/product/support-matrix.md (Coverage Planned for C#/F#).
             src_attrs = ["srcs"] + (list(extra_quality_attrs) if extra_quality_attrs else [])
             out.append(coverage_common.instrumented_files_info(
                 ctx,

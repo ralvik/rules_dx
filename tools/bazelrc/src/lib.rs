@@ -1,49 +1,18 @@
-//! Vendored preset fragment renderer for `preset.update`.
-//!
-//! Owning contract: `docs/contributing/local-workflows.md` (preset update loop).
-//!
-//! Why minimal headers: the fragment carries only `GENERATED` plus the
-//! regenerate command; version and consumer provenance live in the pin
-//! constants plus `preset_tests.bzl` file checks.
-//! See: `tools/bazelrc/preset_tests.bzl`.
-//! Why workspace env: under `bazel run` the binary lives in `bazel-bin`,
-//! so the source tree resolves via `BUILD_WORKSPACE_DIRECTORY` with a
-//! current-directory fallback for direct runs.
-//! See: `tools/bazelrc/BUILD.bazel`.
-
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-/// Bazel pin tracked by the preset (must equal `.bazelversion`).
 pub const PRESET_BAZEL_VERSION: &str = "9.2.0";
 
-/// Per-release stamp tracking the delivered `dx` single version.
 pub const PRESET_DX_VERSION: &str = "0.0.0";
 
-/// Reviewed upstream-derived execution flags (mirrors old `UPSTREAM_FLAGS`).
-/// Why `enable_bzlmod` stays explicit: Bzlmod is default since Bazel 7,
-/// so the flag is a no-op on the canonical 9.2.0 (see `.bazelversion`);
-/// it is retained so the Bzlmod selection stays visible instead of
-/// relying on an implicit default (See: `docs/contributing/local-workflows.md`, issue #912).
 const UPSTREAM_FLAGS: [&str; 3] = [
     "common --enable_bzlmod",
     "build --verbose_failures",
     "test --test_output=errors",
 ];
 
-/// Owned coverage flags (mirrors old `EXTRA_PRESETS["coverage"]`).
-/// `common --enable_platform_specific_config` scopes the `COVERAGE_GCOV_PATH`
-/// pin to `coverage:linux`/`coverage:macos` hosts: Bazel's
-/// collect_cc_coverage.sh exits `COVERAGE_GCOV_PATH: unbound variable` when
-/// CC instruments without it, while Windows resolves coverage tools from
-/// `cc_toolchain` and has no `/usr/bin/gcov` to pin.
-/// `coverage --enable_runfiles` materializes runfiles trees on Windows
-/// (manifest-only by default), which collect_coverage.sh's
-/// `cd "$TEST_SRCDIR/$TEST_WORKSPACE"` and runfiles-path tests require.
-/// Toolchain llvm-cov still wins via `GENERATE_LLVM_LCOV=1` where present.
-/// See: `docs/cli/commands/build-test-coverage.md`.
 const COVERAGE_FLAGS: [&str; 8] = [
     "common --enable_platform_specific_config",
     "coverage --test_env=GENERATE_LLVM_LCOV=1",
@@ -55,11 +24,6 @@ const COVERAGE_FLAGS: [&str; 8] = [
     "coverage --instrumentation_filter=^//",
 ];
 
-/// Owned build profiles (stable `dx_*` configs over `compilation_mode`).
-/// `dx_dev_remote` reserves the remote-execution lane and `dx_toolchain`
-/// the toolchain-resolution lane; both share the dev mode until executor
-/// plus toolchain flags qualify, so selecting them equals `dx_dev` today.
-/// See: `docs/decisions/0021-build-profiles.md`.
 const BUILD_PROFILES: [&str; 5] = [
     "build:dx_debug --compilation_mode=dbg",
     "build:dx_dev --compilation_mode=fastbuild",
@@ -68,17 +32,8 @@ const BUILD_PROFILES: [&str; 5] = [
     "build:dx_toolchain --compilation_mode=fastbuild",
 ];
 
-/// Owned Windows execution flags.
-/// `build:windows` auto-applies on Windows hosts via
-/// `common --enable_platform_specific_config` above. Runfiles stay
-/// manifest-only on Windows by default, so `js_binary` tools (notably
-/// `tsc` through `ts_project`) fail with `entry_point not found` when
-/// their entry point lives in unmaterialized runfiles. Forcing the
-/// runfiles tree fixes `dx build`/`dx test` on Windows; coverage
-/// already carries its own `--enable_runfiles` for the same reason.
 const WINDOWS_FLAGS: [&str; 1] = ["build:windows --enable_runfiles"];
 
-/// Renders the fragment byte-identical to the retired Python generator.
 pub fn render_fragment() -> String {
     let mut lines = vec![
         "# Vendored Bazel execution preset -- GENERATED, do not edit.".to_owned(),
@@ -88,7 +43,7 @@ pub fn render_fragment() -> String {
     lines.push("# Owned extra_presets group: coverage.".to_owned());
     lines.extend(COVERAGE_FLAGS.iter().map(|flag| (*flag).to_owned()));
     lines.push(
-        "# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md)."
+        "# Owned build profiles."
             .to_owned(),
     );
     lines.extend(BUILD_PROFILES.iter().map(|flag| (*flag).to_owned()));
@@ -102,7 +57,6 @@ pub fn render_fragment() -> String {
     out
 }
 
-/// Flag lines owned by the preset (non-comment, non-empty).
 pub fn rendered_flag_lines(rendered: &str) -> BTreeSet<String> {
     rendered
         .lines()
@@ -116,10 +70,6 @@ pub fn rendered_flag_lines(rendered: &str) -> BTreeSet<String> {
         .collect()
 }
 
-/// Root `.bazelrc` lines duplicating preset flag lines.
-///
-/// Project overrides stay explicit only for non-preset flags; `import`,
-/// `try-import`, comments, and blanks are ignored.
 pub fn owned_collisions_in_content(root_content: &str, rendered: &str) -> Vec<String> {
     let owned = rendered_flag_lines(rendered);
     let mut collisions = Vec::new();
@@ -139,7 +89,6 @@ pub fn owned_collisions_in_content(root_content: &str, rendered: &str) -> Vec<St
     collisions
 }
 
-/// Preset file locations under a workspace root.
 pub fn preset_paths(workspace: &Path) -> (PathBuf, PathBuf) {
     (
         workspace.join(".bazelrc"),
@@ -147,33 +96,20 @@ pub fn preset_paths(workspace: &Path) -> (PathBuf, PathBuf) {
     )
 }
 
-/// Source directory holding the preset package under a workspace root.
 pub fn source_dir(workspace: &Path) -> PathBuf {
     workspace.join("tools/bazelrc")
 }
 
-/// Shared thin-binary helpers (See: `docs/contributing/local-workflows.md`, issue #914): the `preset.update` shim
-/// reports usage and failures through these so `eprintln!` plus exit
-/// codes stay single-sourced. See: `docs/contributing/local-workflows.md`.
 pub fn bin_usage() -> i32 {
     eprintln!("usage: preset.update [--verify-only]");
     1
 }
 
-/// Reports a failed `preset.update` operation to stderr. Returns the
-/// process exit code (1). Callers pass the full message: `PresetError`
-/// already carries its `preset.update:` prefix, while I/O failures are
-/// formatted with one by the caller.
 pub fn bin_cannot(error: impl std::fmt::Display) -> i32 {
     eprintln!("{error}");
     1
 }
 
-/// Workspace root for the update binary.
-///
-/// Under `bazel run` the workspace comes from
-/// `BUILD_WORKSPACE_DIRECTORY`; direct runs fall back to the current
-/// directory.
 pub fn resolve_workspace() -> std::io::Result<PathBuf> {
     if let Ok(workspace) = std::env::var("BUILD_WORKSPACE_DIRECTORY") {
         if !workspace.is_empty() {
@@ -183,24 +119,16 @@ pub fn resolve_workspace() -> std::io::Result<PathBuf> {
     std::env::current_dir()
 }
 
-/// Preset freshness failure.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum PresetError {
-    /// Root `.bazelrc` duplicates preset-owned lines.
     OwnedCollision {
-        /// Duplicated lines, sorted.
         lines: String,
     },
-    /// Fragment is missing or differs from the rendered inventory.
     Stale {
-        /// Human detail plus unified diff.
         detail: String,
     },
-    /// Fragment or workspace cannot be read or written.
     Unwritable {
-        /// Workspace-relative path or source directory.
         path: String,
-        /// I/O detail.
         detail: String,
     },
 }
@@ -222,7 +150,6 @@ impl std::fmt::Display for PresetError {
 
 impl std::error::Error for PresetError {}
 
-/// Simple unified diff (checked-in vs regenerated) for flag-diff review.
 pub fn unified_diff(checked_in: &str, regenerated: &str) -> String {
     let old: Vec<&str> = checked_in.lines().collect();
     let new: Vec<&str> = regenerated.lines().collect();
@@ -341,7 +268,7 @@ mod tests {
     #[test]
     fn fragment_bytes_match_retired_python() {
         let rendered = render_fragment();
-        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncommon --enable_platform_specific_config\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --enable_runfiles\ncoverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md).\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n# Owned Windows execution (runfiles tree; Windows is manifest-only by default).\nbuild:windows --enable_runfiles\n";
+        let expected = "# Vendored Bazel execution preset -- GENERATED, do not edit.\n# Regenerate: `bazel run //tools/bazelrc:preset_update`.\ncommon --enable_bzlmod\nbuild --verbose_failures\ntest --test_output=errors\n# Owned extra_presets group: coverage.\ncommon --enable_platform_specific_config\ncoverage --test_env=GENERATE_LLVM_LCOV=1\ncoverage --combined_report=lcov\ncoverage --test_tag_filters=-no-coverage\ncoverage --enable_runfiles\ncoverage:linux --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage:macos --test_env=COVERAGE_GCOV_PATH=/usr/bin/gcov\ncoverage --instrumentation_filter=^//\n# Owned build profiles.\nbuild:dx_debug --compilation_mode=dbg\nbuild:dx_dev --compilation_mode=fastbuild\nbuild:dx_release --compilation_mode=opt\nbuild:dx_dev_remote --compilation_mode=fastbuild\nbuild:dx_toolchain --compilation_mode=fastbuild\n# Owned Windows execution (runfiles tree; Windows is manifest-only by default).\nbuild:windows --enable_runfiles\n";
         assert_eq!(rendered, expected);
         assert!(rendered.ends_with('\n'));
         assert!(!rendered.ends_with("\n\n"));

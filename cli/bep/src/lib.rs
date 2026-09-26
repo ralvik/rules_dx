@@ -1,35 +1,3 @@
-//! Streaming Bazel Build Event Protocol collector for the `dx` CLI
-//! (WP2).
-//!
-//! Contract: `docs/quality/quality-result-protocol.md` (transport and
-//! collection) and `docs/testing/environments.md` (BEP and projection
-//! tests). The collector parses one newline-delimited JSON build-event
-//! stream incrementally, resolves the requested output group (such as
-//! `dx_results`) through BEP named sets, and reads exactly the reported
-//! artifact bytes through an injected reader.
-//!
-//! The collector never walks `bazel-out`, never constructs artifact paths
-//! from output-tree layout, and never fetches over the network: Bazel
-//! materializes requested remote outputs before local collection, so a
-//! non-`file://` URI (such as `bytestream://`) fails instead of triggering
-//! a CLI download. Unknown event kinds are ignored for forward
-//! compatibility within one stream; malformed lines, references to
-//! undefined named sets, and unreadable reported files fail the whole
-//! collection.
-//!
-//! Memory is bounded by the stream index, not by artifact contents: only
-//! named-set ids with their reported URIs and one record per matching
-//! completed label are retained while streaming. Artifact bytes are read
-//! after the stream ends, one file at a time, so peak memory is the index
-//! plus the collected result bytes. Returned records sort by label bytes
-//! and artifacts sort by path bytes, so consensus never depends on BEP
-//! arrival order.
-//!
-//! Remote/cache enabling flips one [`remote::RemoteConfig`] plus one
-//! [`remote::Downloader`] impl, never every call site; the local-only
-//! [`remote::LocalDownloader`] stays the default until remote qualifies.
-//! See: `docs/quality/action-model.md#outputs-remote-cache-and-execution`.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -44,13 +12,10 @@ pub use test_outputs::{collect_test_outputs, TestOutputFile};
 
 use std::path::{Path, PathBuf};
 
-/// Reads reported artifact bytes from the local filesystem. Bazel owns
-/// remote materialization; this seam performs no network fetch.
 pub trait ArtifactReader {
     fn read_artifact(&self, path: &Path) -> std::io::Result<Vec<u8>>;
 }
 
-/// Which output group to collect, such as `dx_results`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CollectorConfig {
     output_group: String,
@@ -71,18 +36,12 @@ impl CollectorConfig {
     }
 }
 
-/// One collected artifact: the local path parsed from its reported
-/// `file://` URI plus its exact bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CollectedArtifact {
     pub exec_path: PathBuf,
     pub bytes: Vec<u8>,
 }
 
-/// One completed label in the requested output group. `success=false`
-/// records a failed action whose results are unavailable; valid results
-/// from other keep-going actions stay available for partial reports, but
-/// no mutation is allowed until complete collection is validated.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TargetOutput {
     pub label: String,
@@ -90,40 +49,20 @@ pub struct TargetOutput {
     pub artifacts: Vec<CollectedArtifact>,
 }
 
-/// BEP collection failure (slice).
-///
-/// Every variant renders human-readable via `Display` for CLI
-/// operational diagnostics; binaries render via `to_string()`, never
-/// Rust `Debug`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum BepError {
-    /// The requested output group name is empty.
     #[error("empty output group: want a non-empty output group name")]
     EmptyOutputGroup,
-    /// A stream line is not a JSON build-event object with the required
-    /// shape. `reason` carries the parse or shape detail without secrets.
     #[error("malformed event at line {line}: {reason}")]
     MalformedEvent { line: u64, reason: String },
-    /// A referenced artifact URI that is not a local `file://` URI, such
-    /// as a remote `bytestream://` that Bazel never materialized. The CLI
-    /// performs no network fetch.
     #[error("unsupported artifact URI {uri:?}: want a local file:// URI")]
     UnsupportedUri { uri: String },
-    /// A completed target references a named set the stream never defined.
-    /// `line` is the completion line holding the dangling reference.
     #[error("missing named set {id:?} referenced at line {line}")]
     MissingNamedSet { id: String, line: u64 },
-    /// A reported local file cannot be read.
     #[error("unreadable artifact {path:?}: {message}")]
     UnreadableArtifact { path: String, message: String },
 }
 
-/// JSON-path-annotated shape failure for one BEP stream line (issue
-///). `path` is a JSON-pointer-style location such as
-/// `id.testResult.label` or `testResult.testActionOutput[2].uri`, so
-/// malformed-line diagnostics name the offending field. `detail` keeps
-/// the legacy human-readable wording, so existing reason-text
-/// assertions keep matching.
 pub(crate) fn malformed(line: u64, path: &str, detail: &str) -> BepError {
     BepError::MalformedEvent {
         line,
@@ -131,13 +70,6 @@ pub(crate) fn malformed(line: u64, path: &str, detail: &str) -> BepError {
     }
 }
 
-/// Parses a reported `file://` URI into a local path without touching the
-/// filesystem. Any other scheme (notably remote `bytestream://`) fails so
-/// the CLI never performs a network fetch for unmaterialized outputs.
-/// `Url::parse` validates URI structure first (scheme `file`); path
-/// derivation goes through `Url::to_file_path`, which enforces an empty
-/// or `localhost` host (plus Windows UNC/share forms on Windows) and
-/// percent-decodes path segments.
 pub(crate) fn file_uri_to_path(uri: &str) -> Result<PathBuf, BepError> {
     let unsupported = || BepError::UnsupportedUri {
         uri: uri.to_owned(),
@@ -149,25 +81,12 @@ pub(crate) fn file_uri_to_path(uri: &str) -> Result<PathBuf, BepError> {
     parsed.to_file_path().map_err(|_| unsupported())
 }
 
-/// Reports whether a BEP-reported artifact path is a plan shard, by
-/// reserved filename suffix on the raw path bytes.
-///
-/// Single owner for the env/codegen shard split (see `dx_env_plan` and
-/// `dx_codegen`): both collectors recognize shards by their own frozen
-/// suffix and never scan `bazel-out`; only the suffix differs.
 pub fn is_shard_artifact(path: &Path, suffix: &str) -> bool {
     path.as_os_str()
         .as_encoded_bytes()
         .ends_with(suffix.as_bytes())
 }
 
-/// Reports whether a BEP-reported artifact path satisfies an entry's
-/// exec suffix: exact equality or a "/"-boundary suffix match, so
-/// different output bases still resolve without scanning `bazel-out`.
-/// Mirrors `_exec_matches` in `//env:plan.bzl` and
-/// `//generation:codegen.bzl`.
-///
-/// Single owner for the env/codegen artifact index.
 pub fn exec_matches(artifact_path: &Path, exec_path: &str) -> bool {
     if exec_path.is_empty() {
         return false;
@@ -176,19 +95,10 @@ pub fn exec_matches(artifact_path: &Path, exec_path: &str) -> bool {
     rendered.as_ref() == exec_path || rendered.ends_with(&format!("/{exec_path}"))
 }
 
-/// String form of [`exec_matches`] over rendered BEP paths: exact
-/// equality or a "/"-boundary suffix match.
-///
-/// Single owner for the env/codegen artifact index.
 pub fn suffix_matches(artifact: &str, exec_path: &str) -> bool {
     artifact == exec_path || artifact.ends_with(&format!("/{exec_path}"))
 }
 
-/// Lists every BEP-reported non-shard artifact path: the backing files
-/// the entry `exec_path` suffixes index into. Shard files are
-/// recognized by `suffix` and excluded.
-///
-/// Single owner for the env/codegen artifact index.
 pub fn non_shard_artifact_paths(outputs: &[TargetOutput], suffix: &str) -> Vec<String> {
     let mut paths = Vec::new();
     for output in outputs {

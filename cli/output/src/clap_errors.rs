@@ -1,20 +1,7 @@
-//! Shared `clap` tokenizing-failure primitives (frozen legacy contract).
-//!
-//! See: `docs/cli/cli-contract.md` for the unknown-flag/missing-value
-//! message shapes. The thin shims (`generation/codegen_shard`,
-//! `env/env_shard`, `cli/env`, `cli/lcov`, `quality/evaluator`,
-//! `quality/runner`, `quality/markdown`, `cli/cli`) keep their own
-//! `parse_error` message formats (usage routing, `unknown flag` vs
-//! `unknown argument`, per-flag value parsers); only the context reads
-//! below are shared so the `InvalidArg`/`InvalidValue` plumbing has one
-//! owner.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
-/// Empty when the error carries no invalid-argument context.
 pub fn invalid_token(error: &clap::Error) -> String {
     match error.get(clap::error::ContextKind::InvalidArg) {
         Some(clap::error::ContextValue::String(token)) => token.clone(),
@@ -25,9 +12,6 @@ pub fn invalid_token(error: &clap::Error) -> String {
     }
 }
 
-/// Rejected option value behind a [`clap::Error`], if the error carries a
-/// non-empty one. Missing values carry none (or an empty one), which the
-/// caller treats as missing rather than rejected.
 pub fn rejected_value(error: &clap::Error) -> Option<String> {
     let invalid = error.get(clap::error::ContextKind::InvalidValue)?;
     let raw = match invalid {
@@ -42,9 +26,6 @@ pub fn rejected_value(error: &clap::Error) -> Option<String> {
     }
 }
 
-/// Recovers the exact offending `argv` element for an unknown option:
-/// `clap` strips an attached `=value` from the reported token while the
-/// legacy loop echoed the whole `argv` element.
 pub fn recover_unknown_token(args: &[String], token: &str) -> String {
     args.iter()
         .find(|arg| *arg == token)
@@ -55,8 +36,6 @@ pub fn recover_unknown_token(args: &[String], token: &str) -> String {
         .map_or(token.to_owned(), Clone::clone)
 }
 
-/// Extracts the leading `--flag` from a `clap` missing-value render such
-/// as `--output <OUTPUT>`; the legacy message names the bare `--flag`.
 pub fn leading_flag(token: &str) -> &str {
     token.split_whitespace().next().unwrap_or(token)
 }

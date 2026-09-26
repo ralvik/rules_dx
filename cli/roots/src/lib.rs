@@ -1,7 +1,3 @@
-//! Repository-root strategy planning for `dx codegen`, `dx env`, and `dx setup`.
-//!
-//! Contract: `docs/environments/codegen.md` and `docs/environments/environment.md`; selection by fiat per ADR 0022.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -9,66 +5,18 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-/// Correctness-baseline repository pattern: the plan-collection aspects
-/// apply to the whole declared BUILD graph. Handles top-level visibility,
-/// test-only targets, platform-incompatible skipping, and repository
-/// membership, at the cost of recursive package discovery.
 pub const REPOSITORY_PATTERN: &str = "//...";
 
-/// Bazel flag carrying the query-produced repository roots: Bazel reads the
-/// labels from the file, so command-line length limits do not apply and no
-/// central eager `label_list` dependency node is created.
 pub const PATTERN_FILE_FLAG: &str = "--target_pattern_file";
 
-/// Warm weight in the fiat decision score (`cold_ms + WARM_WEIGHT *
-/// warm_ms`); frozen by fiat per ADR 0022.
 pub const WARM_WEIGHT: u64 = 2;
 
-/// Frozen repository-root strategy: the `//...` correctness baseline.
-///
-/// Historical reference (pre-ADR-0022, 2026-09-14, Linux x86_64, Bazel 9.2.0 via Bazelisk
-/// v1.29.0, warm persistent server unless noted), codegen plan aspect
-/// (`//generation:codegen.bzl%dx_codegen_plan_aspect`) with the
-/// `dx_codegen_plans` output group throughout:
-/// - `recursive-pattern`: `bazel build //...` — cold 8457 ms (after
-///   `bazel shutdown`), warm 335/410 ms, 685 analyzed targets with 764
-///   aspect applications.
-/// - `query-pattern-file`: pattern file holding `//...` (the
-///   `roots_pattern_fixture` shape) via `--target_pattern_file` — cold
-///   8983 ms, warm 278/381/391 ms, same 685 analyzed targets: equivalent
-///   semantics with a file-indirection cost, never faster than direct
-///   `//...` on cold.
-/// - `monolithic-aggregate`: `//cli/roots:roots_monolith_fixture`
-///   (filegroup over the two empty canonical selections) — warm
-///   294/329/346 ms over 1 analyzed target: it drops the 685 designated
-///   roots, so [`check_semantic_coverage`] fails it closed and
-///   [`select_strategy`] excludes it however fast (same for the
-///   placeholder canonical-only invocation: cold 2294 ms, warm
-///   207/231/245 ms, 1 target).
-/// - `package-shards`: no codegen shard fixtures exist yet; unmeasured
-///   and therefore excluded as non-equivalent.
-///
-/// Weighted scores (`cold_ms + WARM_WEIGHT * warm_ms`, warm medians 372
-/// vs 350): baseline 8457 + 2*372 = 9201 beats query-file 8983 + 2*350 =
-/// 9683 outright; the baseline also wins every tie by [`RootStrategy::ALL`]
-/// order. The incrementality rows now land in [`INCREMENTALITY_EVIDENCE`]
-/// and confirm the freeze: the query-file control matches the
-/// baseline on every dimension within noise. Concurrency, interruption,
-/// remote materialization, and reuse certification land in later WP4 slices
-/// and no row here can displace this freeze; per ADR 0022 the freeze stands by fiat
-/// and no new measurements are taken.
 pub const FROZEN_STRATEGY: RootStrategy = RootStrategy::RecursivePattern;
 
 pub fn frozen_strategy() -> RootStrategy {
     FROZEN_STRATEGY
 }
 
-/// Historical headline samples behind the freeze, in [`RootStrategy::ALL`]
-/// order: historical cold/warm wall times in milliseconds with the
-/// equivalence flags from the evidence above. [`select_strategy`] over
-/// these samples returns [`frozen_strategy`]; the test
-/// `frozen_evidence_selects_the_frozen_strategy` pins that implication so
-/// the numbers and the freeze cannot drift apart silently.
 pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
     (RootStrategy::RecursivePattern, true, 8457, 372),
     (RootStrategy::QueryPatternFile, true, 8983, 350),
@@ -76,100 +24,31 @@ pub const FROZEN_EVIDENCE: [(RootStrategy, bool, u64, u64); 4] = [
     (RootStrategy::PackageShards, false, 2000, 300),
 ];
 
-/// Historical incrementality reference for the frozen baseline: steady-state warm-server wall times and executed actions
-/// per edit/churn selection dimension, as `(dimension,
-/// baseline_wall_ms, queryfile_wall_ms, actions_executed)`.
-///
-/// Methodology (2026-09-15, Linux x86_64, Bazel 9.2.0 via Bazelisk
-/// v1.29.0): scratch copy of the workspace (rsync, `.git`/`bazel-*`
-/// excluded) with its own warm persistent server, so the live repo is
-/// never dirtied. Every cell applies one probe edit, builds the codegen
-/// plan aspect (`//generation:codegen.bzl%dx_codegen_plan_aspect`) with the
-/// `dx_codegen_plans` output group, records `Elapsed time` plus the
-/// executed-action summary, then reverts to pristine. Probes are
-/// comment-only (source: `//` line on `generation/codegen.proto`; BUILD:
-/// `#` line on `generation/BUILD.bazel`) except churn, which adds/removes
-/// a trivial `filegroup`; each rep carries a unique comment tag so no rep
-/// action-cache-hits a previous one, and a throwaway warm-up probe per
-/// dimension absorbs the first-probe package-reload artifact (see below).
-/// Reported walls are historical medians over 3 pre-ADR-0022 reps. The query-file
-/// candidate reads the `roots_pattern_fixture` shape (holding `//...`)
-/// via `--target_pattern_file`, so it is an equivalent-semantics control:
-/// it matches the baseline on every row within noise and cannot displace
-/// the freeze.
-///
-/// Findings pinned below:
-/// - Source edits re-execute exactly 2 actions (`GenProtoDescriptorSet`
-///   and `ProstGenProto` on `//generation:codegen_proto`). Comment-only
-///   probes leave outputs byte-identical (md5-verified, 0 bytes
-///   rewritten), so these walls are a LOWER BOUND: semantic edits cost at
-///   least this plus downstream propagation.
-/// - BUILD edits cost re-analysis only at steady state (0 actions). The
-///   discarded warm-up probe deterministically re-executed the same 2
-///   proto actions once (package reload coinciding with a restored source
-///   mtime); reps 1-3 with unique comments execute nothing.
-/// - Target add/remove cost re-analysis only (0 actions); remove is
-///   marginally slower than add.
-/// - `TargetAddRemove` rows keep the slower of the add/remove medians
-///   (add: 524/542 ms, remove: 531/535 ms baseline/query-file).
 pub const INCREMENTALITY_EVIDENCE: [(BenchmarkDimension, u64, u64, u64); 3] = [
     (BenchmarkDimension::SourceEdit, 446, 471, 2),
     (BenchmarkDimension::BuildEdit, 442, 469, 0),
     (BenchmarkDimension::TargetAddRemove, 531, 542, 0),
 ];
 
-/// Files materialized in `bazel-bin` for the `dx_codegen_plans` output
-/// group over `//...`: 3 `.dxcodegen.pb` shards (see [`PLAN_MATERIALIZED_BYTES`]).
 pub const PLAN_MATERIALIZED_FILES: u64 = 3;
 
-/// Bytes materialized for the plan output group: the 3 shards total 238
-/// bytes. Per-probe re-materialization is 0 bytes at steady state: edit
-/// probes reproduce byte-identical outputs, which Bazel leaves in place.
 pub const PLAN_MATERIALIZED_BYTES: u64 = 238;
 
-/// Warm wall time (median ms) materializing only the plan output group:
-/// the Bazel-layer projection cost behind `dx codegen` selection.
 pub const PLAN_GROUP_WARM_MS: u64 = 413;
 
-/// Warm wall time (median ms) building `//...` default outputs with the
-/// aspect applied but no output group requested. Excludes the one-time
-/// 130543 ms first build of never-built default outputs in the scratch
-/// workspace; the plan group (`PLAN_GROUP_WARM_MS`) stays cheaper than
-/// full default outputs. CLI-layer link-tree projection timing is not
-/// implemented yet and stays open.
 pub const DEFAULT_OUTPUTS_WARM_MS: u64 = 502;
 
-/// Bazel server peak resident set (VmHWM KiB) after the historical reference run
-/// matrix plus one full default-outputs build: ~2.5 GiB retained for the
-/// `//...` analysis graph. An upper bound for plan-only iteration, which
-/// never approaches it (warm plan builds sit near 0.4 s with 0 executed
-/// actions).
 pub const SERVER_PEAK_RSS_KB: u64 = 2628812;
 
-/// Repository-root strategy candidates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum RootStrategy {
-    /// Correctness baseline: apply the collecting aspects to `//...`.
     RecursivePattern,
-    /// Optimization candidate: pass a Bazel-query-produced label list via
-    /// `--target_pattern_file`; Bazel interprets every label and configured
-    /// closure, preserving top-level treatment of private, test-only, and
-    /// incompatible targets.
     QueryPatternFile,
-    /// Rejected alternative (ADR 0022): one monolithic aggregate rule. Must explicitly
-    /// propagate aspect providers and expose artifacts through a requested
-    /// output group; central-dependency visibility, test-only, platform,
-    /// cycle, and fan-out concerns apply.
     MonolithicAggregate,
-    /// Rejected alternative (ADR 0022): package-local aggregate shards. Same
-    /// propagation and output-group obligations as the monolithic
-    /// aggregate, scoped per package.
     PackageShards,
 }
 
 impl RootStrategy {
-    /// Every candidate, baseline first. Iteration order is the deterministic
-    /// tie-break order for fiat selection: the baseline wins ties.
     pub const ALL: [RootStrategy; 4] = [
         RootStrategy::RecursivePattern,
         RootStrategy::QueryPatternFile,
@@ -177,13 +56,10 @@ impl RootStrategy {
         RootStrategy::PackageShards,
     ];
 
-    /// The correctness baseline, and the selected strategy by fiat per ADR 0022
-    /// WP4 evidence freezes a winner.
     pub fn baseline() -> RootStrategy {
         RootStrategy::RecursivePattern
     }
 
-    /// Stable machine-readable identity for reports and selection rows.
     pub fn name(&self) -> &'static str {
         match self {
             RootStrategy::RecursivePattern => "recursive-pattern",
@@ -194,25 +70,14 @@ impl RootStrategy {
     }
 }
 
-/// Planned repository roots for one Bazel invocation behind a canonical
-/// repository-wide selection (`//dx:codegen`, `//dx:env`, or their union in
-/// `dx setup`). Exact-target scopes bypass root selection entirely and never
-/// construct this plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RepositoryRootPlan {
-    /// Candidate strategy this plan invokes.
     pub strategy: RootStrategy,
-    /// Target patterns or aggregate labels passed on the Bazel command
-    /// line. Empty for the query-pattern-file candidate: Bazel reads the
-    /// labels from [`RepositoryRootPlan::pattern_file`] instead.
     pub roots: Vec<String>,
-    /// Query-produced label file for the pattern-file candidate, passed via
-    /// [`PATTERN_FILE_FLAG`]. `None` for every other strategy.
     pub pattern_file: Option<PathBuf>,
 }
 
 impl RepositoryRootPlan {
-    /// Plans the correctness baseline: aspects apply to `//...`.
     pub fn baseline() -> RepositoryRootPlan {
         RepositoryRootPlan {
             strategy: RootStrategy::RecursivePattern,
@@ -221,9 +86,6 @@ impl RepositoryRootPlan {
         }
     }
 
-    /// Plans the query-pattern-file candidate: no command-line patterns,
-    /// Bazel reads `path` (one label per line) through
-    /// [`PATTERN_FILE_FLAG`].
     pub fn query_pattern_file(path: &Path) -> RepositoryRootPlan {
         RepositoryRootPlan {
             strategy: RootStrategy::QueryPatternFile,
@@ -232,9 +94,6 @@ impl RepositoryRootPlan {
         }
     }
 
-    /// Plans the monolithic-aggregate candidate: Bazel builds the one
-    /// aggregate label, which must propagate aspect providers and expose a
-    /// requested output group.
     pub fn monolithic_aggregate(label: &str) -> RepositoryRootPlan {
         RepositoryRootPlan {
             strategy: RootStrategy::MonolithicAggregate,
@@ -243,8 +102,6 @@ impl RepositoryRootPlan {
         }
     }
 
-    /// Plans the package-shards candidate: Bazel builds one aggregate label
-    /// per package.
     pub fn package_shards(labels: &[String]) -> RepositoryRootPlan {
         RepositoryRootPlan {
             strategy: RootStrategy::PackageShards,
@@ -253,8 +110,6 @@ impl RepositoryRootPlan {
         }
     }
 
-    /// Renders the `--target_pattern_file` argument for the pattern-file
-    /// candidate, or `None` when this plan carries no pattern file.
     pub fn pattern_file_arg(&self) -> Option<String> {
         self.pattern_file
             .as_ref()
@@ -262,42 +117,15 @@ impl RepositoryRootPlan {
     }
 }
 
-/// Plans the repository-wide roots behind a canonical selection
-/// (`//dx:codegen`, `//dx:env`, or their union in `dx setup`): the frozen
-/// WP4 strategy's plan. The freeze (see [`frozen_strategy`]) selects the
-/// `//...` baseline, so this is the baseline plan; composing a future
-/// non-baseline winner (pattern-file path, aggregate labels) needs its
-/// invocation-time inputs and lands with that freeze change, not here.
-/// Exact-target scopes bypass root selection entirely and never call this.
 pub fn repository_plan() -> RepositoryRootPlan {
     debug_assert_eq!(frozen_strategy(), RootStrategy::baseline());
     RepositoryRootPlan::baseline()
 }
 
-/// Composes a root plan into the Bazel command-line patterns behind one
-/// canonical repository-wide selection: the baseline plan keeps the
-/// canonical selection identity (so `//dx:codegen` keeps resolving while
-/// the fiat selection stands); every other candidate passes its own roots
-/// through. The query-pattern-file candidate carries no command-line
-/// patterns: Bazel reads the labels from [`PATTERN_FILE_FLAG`] (see
-/// [`RepositoryRootPlan::pattern_file_arg`]).
-///
-/// Single-source plan helper for `#651`: `dx_codegen` and `dx_env_plan`
-/// reuse this directly; `dx_setup` reuses [`invocation_targets_union`]
-/// (same baseline/pattern-file policy over both canonical selections).
 pub fn invocation_targets(plan: &RepositoryRootPlan, canonical: &str) -> Vec<String> {
     invocation_targets_union(plan, &[canonical])
 }
 
-/// Composes a root plan into the Bazel command-line patterns behind the
-/// union of canonical repository-wide selections: the baseline plan keeps
-/// every selection identity (so `dx setup` keeps `//dx:codegen` plus
-/// `//dx:env` while the fiat selection stands); every other candidate
-/// passes its own roots through. The query-pattern-file candidate carries
-/// no command-line patterns.
-///
-/// Single-source union helper for `#651`: `dx_setup` reuses this instead
-/// of a third copy of the baseline/pattern-file checks.
 pub fn invocation_targets_union(plan: &RepositoryRootPlan, canonicals: &[&str]) -> Vec<String> {
     if plan.pattern_file.is_some() {
         return Vec::new();
@@ -313,20 +141,10 @@ pub fn invocation_targets_union(plan: &RepositoryRootPlan, canonicals: &[&str]) 
     plan.roots.clone()
 }
 
-/// Validated single-exact-target scope shared by
-/// `dx_setup`/`dx_codegen`/`dx_env_plan` (`#651`).
-///
-/// Returns `None` for the empty repository scope and `Some(label)` for one
-/// exact `//` or `@` label. Each caller maps this to its noun-specific
-/// `Scope` enum and `ScopeError` so `dx setup`/`dx codegen`/`dx env`
-/// keep distinct messages while sharing the validation logic.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExactScopeError {
-    /// More than one positional target.
     MultipleTargets { count: usize },
-    /// A target pattern (`...`, `*`, `?`).
     TargetPattern { value: String },
-    /// Anything that is not an exact target label.
     NotTargetLabel { value: String },
 }
 
@@ -348,7 +166,6 @@ impl std::fmt::Display for ExactScopeError {
 
 impl std::error::Error for ExactScopeError {}
 
-/// Shared single-exact-target validation behind every `resolve_scope`.
 pub fn resolve_exact_target(targets: &[String]) -> Result<Option<String>, ExactScopeError> {
     match targets {
         [] => Ok(None),
@@ -371,13 +188,6 @@ pub fn resolve_exact_target(targets: &[String]) -> Result<Option<String>, ExactS
     }
 }
 
-/// Composes a root plan into a `bazel build` command line: `build` plus
-/// [`invocation_targets`], one `--aspects=` flag per collecting aspect,
-/// one `--output_groups=` flag per plan output group, and the
-/// [`PATTERN_FILE_FLAG`] argument when the plan carries a pattern file.
-///
-/// Single-source argv helper for `#651`: `dx_codegen` and `dx_env_plan`
-/// reuse this directly; `dx_setup` reuses [`build_argv_union`].
 pub fn build_argv(
     plan: &RepositoryRootPlan,
     canonical: &str,
@@ -387,14 +197,6 @@ pub fn build_argv(
     build_argv_union(plan, &[canonical], aspects, output_groups)
 }
 
-/// Composes a root plan into a `bazel build` command line behind the union
-/// of canonical selections: `build` plus [`invocation_targets_union`],
-/// one `--aspects=` flag per collecting aspect, one `--output_groups=` flag
-/// per output group, and the [`PATTERN_FILE_FLAG`] argument when the plan
-/// carries a pattern file.
-///
-/// Single-source union argv helper for `#651`: `dx_setup` reuses this
-/// instead of a third copy of the argv assembly.
 pub fn build_argv_union(
     plan: &RepositoryRootPlan,
     canonicals: &[&str],
@@ -415,31 +217,18 @@ pub fn build_argv_union(
     argv
 }
 
-/// Designated-root coverage report: whether a candidate's roots list every
-/// semantic root the repository-wide selection must analyze. Comparison is
-/// over sorted deduplicated label sets; Bazel deduplicates identical
-/// configured targets downstream, so duplicate entries are inert.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CoverageReport {
-    /// Designated semantic roots absent from the candidate. Non-empty means
-    /// the candidate reduces the selection (for example from an
-    /// unconfigured query graph alone) and fails closed.
     pub missing: Vec<String>,
-    /// Candidate roots outside the designated set. Tolerated: aspects stay
-    /// provider-selective, so irrelevant targets contribute no plan records;
-    /// reported so selection can attribute discovery cost.
     pub extra: Vec<String>,
 }
 
 impl CoverageReport {
-    /// True when the candidate covers every designated semantic root.
     pub fn is_covered(&self) -> bool {
         self.missing.is_empty()
     }
 }
 
-/// Designated-root coverage failure: the candidate drops required semantic
-/// roots.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error(
     "root candidate drops {missing_len} designated root(s): {missing_list}",
@@ -447,7 +236,6 @@ impl CoverageReport {
     missing_list = missing.join(", ")
 )]
 pub struct CoverageError {
-    /// Sorted deduplicated designated roots absent from the candidate.
     pub missing: Vec<String>,
 }
 
@@ -455,11 +243,6 @@ fn sorted_set(labels: &[String]) -> BTreeSet<String> {
     labels.iter().cloned().collect()
 }
 
-/// Checks that `candidate_roots` lists every one of `designated_roots`.
-/// An empty candidate never covers a nonempty designated set: a
-/// query-produced list must name every designated semantic root and let
-/// Bazel deduplicate identical configured targets, never silently narrow
-/// the selection. Extra candidate roots are tolerated and reported.
 pub fn check_semantic_coverage(
     candidate_roots: &[String],
     designated_roots: &[String],
@@ -474,10 +257,6 @@ pub fn check_semantic_coverage(
     Ok(CoverageReport { missing, extra })
 }
 
-/// Selection dimensions every root candidate reports, per the codegen
-/// performance model: cold and warm loading/analysis, source and BUILD
-/// edits, target add/remove, generator actions, materialized bytes,
-/// projection time, and retained memory.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BenchmarkDimension {
     ColdBuild,
@@ -492,7 +271,6 @@ pub enum BenchmarkDimension {
 }
 
 impl BenchmarkDimension {
-    /// Every selection dimension, in stable report order (historical reference, no new measurements).
     pub const ALL: [BenchmarkDimension; 9] = [
         BenchmarkDimension::ColdBuild,
         BenchmarkDimension::WarmBuild,
@@ -505,7 +283,6 @@ impl BenchmarkDimension {
         BenchmarkDimension::RetainedMemory,
     ];
 
-    /// Stable machine-readable identity for selection rows.
     pub fn name(&self) -> &'static str {
         match self {
             BenchmarkDimension::ColdBuild => "cold-build",
@@ -521,34 +298,19 @@ impl BenchmarkDimension {
     }
 }
 
-/// One candidate's historical headline sample.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BenchmarkSample {
-    /// Candidate strategy this sample measures.
     pub strategy: RootStrategy,
-    /// Whether the candidate selected equivalent effective roots and
-    /// produced equivalent outputs to the baseline run. Non-equivalent
-    /// candidates never win, however fast.
     pub equivalent: bool,
-    /// Cold Bazel time in milliseconds.
     pub cold_ms: u64,
-    /// Warm Bazel time in milliseconds (persistent server, warm action cache).
     pub warm_ms: u64,
 }
 
-/// Fiat decision score: `cold_ms + WARM_WEIGHT * warm_ms`, saturating. Warm
-/// dominates, so a candidate trading slower cold for much faster warm can
-/// win.
 pub fn weighted_score(sample: &BenchmarkSample) -> u128 {
     u128::from(sample.cold_ms)
         .saturating_add(u128::from(sample.warm_ms).saturating_mul(u128::from(WARM_WEIGHT)))
 }
 
-/// Selects the repository-root strategy from headline samples: among
-/// equivalent-semantics candidates the lowest weighted score wins, with
-/// warm weighted above cold. Ties break toward the baseline-first
-/// [`RootStrategy::ALL`] order, and an empty or fully non-equivalent sample
-/// set keeps the `//...` baseline.
 pub fn select_strategy(samples: &[BenchmarkSample]) -> RootStrategy {
     let order = |strategy: &RootStrategy| {
         RootStrategy::ALL

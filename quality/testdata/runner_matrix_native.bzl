@@ -1,4 +1,4 @@
-"""Native cohort matrix cells (issue #798).
+"""Native cohort matrix cells.
 
 Contract: `docs/quality/runner-matrix.md`.
 Seed-only wiring proof with fake doubles plus recorded diagnostics.

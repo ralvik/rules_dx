@@ -1,16 +1,6 @@
-//! tsc output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Splits a `<path>(<line>,<col>): <severity> <rule>: <message>` diagnostic.
-///
-/// The head split is from the left because messages may contain `"): "`,
-/// while the position paren is the last `(` so reported paths may contain
-/// parentheses.
 fn tsc_diagnostic(line: &str) -> Result<(&str, u64, u64, &str, String), ParseError> {
     const TOOL: &str = "tsc";
     let (head, tail) = line
@@ -58,10 +48,6 @@ fn tsc_diagnostic(line: &str) -> Result<(&str, u64, u64, &str, String), ParseErr
     Ok((path, line_no, column, rule, message.to_owned()))
 }
 
-/// Parses pinned `tsc --noEmit` stdout. Diagnostics are start points
-/// (classic tsc carries no end); every diagnostic is an error. Blank lines
-/// are skipped; anything else on stdout is a grammar mismatch. Check-only:
-/// findings never carry suggestions.
 pub fn parse_tsc(
     stdout: &[u8],
     code: Option<i32>,

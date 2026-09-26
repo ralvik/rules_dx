@@ -1,8 +1,3 @@
-//! Thin CLI shim over the depcheck library.
-//!
-//! Owning contract: `docs/quality/quality-testing.md` (CLI args, exit codes,
-//! offline/no-network, category/exception/obsolete semantics).
-
 #![cfg_attr(
     not(test),
     deny(
@@ -27,10 +22,8 @@ struct Cli {
 #[derive(Subcommand)]
 // `Locks` carries the full workspace lock set; boxing its `PathBuf`s would
 // silence `large_enum_variant` but `clap` has no `ValueParser` for
-// `Box<PathBuf>`, so the variant stays inline (See: `docs/quality/quality-testing.md`).
 #[allow(clippy::large_enum_variant)]
 enum Command {
-    /// Verify manifest vs lock (offline, non-mutating).
     Consistency {
         #[arg(long, value_parser = parse_eco)]
         ecosystem: String,
@@ -39,7 +32,6 @@ enum Command {
         #[arg(long)]
         lock: PathBuf,
     },
-    /// Verify declared deps are used in owning scope.
     Usage {
         #[arg(long, value_parser = parse_eco)]
         ecosystem: String,
@@ -50,7 +42,6 @@ enum Command {
         #[arg(long)]
         exceptions: Option<PathBuf>,
     },
-    /// Verify all six workspace locks in one invocation (see `//tools:repin-all`).
     Locks {
         #[arg(long)]
         cargo_manifest: PathBuf,
@@ -97,9 +88,6 @@ fn parse_eco(text: &str) -> Result<String, String> {
     }
 }
 
-/// Shared unknown-ecosystem failure (See: `docs/quality/quality-testing.md`, issue #914): both subcommands
-/// reject unparsed ecosystems identically instead of copy-pasting the
-/// `eprintln!` plus exit code.
 fn unknown_ecosystem(ecosystem: &str) -> i32 {
     eprintln!("depcheck: ERROR: unknown ecosystem: {ecosystem}");
     2

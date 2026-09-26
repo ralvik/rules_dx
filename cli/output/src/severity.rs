@@ -1,9 +1,3 @@
-//! Normalized severity and fail-on threshold.
-//!
-//! Split from `super` (`lib.rs`): owns `Severity`, `Threshold`, and
-//! `meets_threshold`. Re-exported through `super` so the public path stays
-//! `dx_output::{...}`.
-
 use super::OutputError;
 
 /// Normalized diagnostic severity. The rank order mirrors the direct-Bazel
@@ -79,8 +73,6 @@ impl Threshold {
     }
 }
 
-/// Reports whether a finding at `severity` fails under `threshold`, using
-/// the same rank comparison as direct-Bazel evaluation.
 pub fn meets_threshold(severity: Severity, threshold: Threshold) -> bool {
     severity.rank() >= threshold.rank()
 }

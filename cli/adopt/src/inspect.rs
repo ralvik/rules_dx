@@ -1,37 +1,15 @@
-//! Thin inspect forwarding for `owners`/`deps`/`why`.
-//!
-//! Split from `super` (`lib.rs`): owns `inspect_scope_allowed`,
-//! `InspectPlan`, `plan_inspect`, and `plan_somepath`. Re-exported
-//! through `super` so the public path stays
-//! `dx_adopt::{inspect_scope_allowed, InspectPlan, plan_inspect,
-//! plan_somepath}`.
-
 use super::AdoptError;
 
-/// Whether an inspect scope is admissible.
-///
-/// Inspect wrappers (`owners`/`deps`/`why`) forward canonically to
-/// `bazel query`/`cquery` with deterministic sorting and no custom graph
-/// engine. External scopes are rejected like workflow commands; the empty
-/// scope is rejected as well.
 pub fn inspect_scope_allowed(scope: &str, external: bool) -> bool {
     !scope.is_empty() && !external
 }
 
-/// Planned thin inspect forwarding (frozen): the Bazel verb plus
-/// the single query expression, executed as `bazel <verb> <expr>` with
-/// bytewise-sorted deduplicated canonical labels and no custom graph
-/// engine. The verb and expression stay separate so the caller cannot
-/// double-wrap the expression in a second `query` invocation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct InspectPlan {
-    /// `query` by default, `cquery` under `--configured`.
     pub verb: String,
-    /// Single query expression (no verb prefix, no surrounding shell).
     pub expr: String,
 }
 
-/// Plan one inspect query (frozen).
 pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<InspectPlan, AdoptError> {
     if !inspect_scope_allowed(scope, scope.starts_with('@')) {
         return Err(AdoptError::RejectedScope {
@@ -57,11 +35,6 @@ pub fn plan_inspect(kind: &str, scope: &str, configured: bool) -> Result<Inspect
     })
 }
 
-/// Plan the `somepath` leg of `dx why <file> <label>` (frozen).
-///
-/// `from` is the resolved file owner (a depth-1 owner label, never the
-/// raw file path) and `to` is the target label, both passed through
-/// verbatim. External scopes are rejected like workflow commands.
 pub fn plan_somepath(from: &str, to: &str, configured: bool) -> Result<InspectPlan, AdoptError> {
     if !inspect_scope_allowed(from, from.starts_with('@')) {
         return Err(AdoptError::RejectedScope {

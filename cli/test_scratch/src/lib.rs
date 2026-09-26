@@ -1,28 +1,3 @@
-//! Test-only scratch directories: the single test scratch policy.
-//!
-//! Contract: `docs/testing/README.md`.
-//!
-//! Single scratch policy for the repo (`#651`):
-//! * Prod hermetic mirrors stay in `quality_adapter::exec::Scratch`
-//!   (scratch-relative resolve/materialize/close with symlink-prefix
-//!   guards; `quality_runner` reuses that type via `fresh_scratch`).
-//! * Prod per-run temp dirs stay in `dx_cli::plan::create_run_temp_dir`
-//!   (nonce plus `dx-run-` prefix discipline, explicit-parent `tempdir_in`).
-//! * Every unit-test scratch dir uses this crate's [`scratch`]: a unique
-//!   prefixed directory under the ambient temp base that auto-cleans on
-//!   drop. It replaces the repeated
-//!   `tempfile::Builder::new().prefix(..).tempdir_in(..).expect(..)`
-//!   chains in `dx_cli`, `dx_env`, `dx_adopt`, and `dx_process` tests.
-//!   `dx_cli::exec::test_support::temp_dir` is a thin wrapper over
-//!   [`scratch`] (same prefix discipline, `dx-exec-test-`), not a third
-//!   policy: pid-suffixed persistent dirs are gone.
-//!
-//! Dependency evaluation (adopted): creation uses the upstream
-//! `tempfile` crate directly (`Builder::new().prefix(..).tempdir()` plus the
-//! `TempDir` handle); this crate stays a thin test-only discipline wrapper so
-//! call sites name one prefix-plus-auto-clean path instead of repeating the
-//! builder chain.
-
 // Infallible paths must not `expect`/`unwrap`/`unreachable`/`todo` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
@@ -35,18 +10,8 @@
     )
 )]
 
-/// Scratch-directory handle; re-exported so tests name the type without
-/// depending on `tempfile` directly.
 pub use tempfile::TempDir;
 
-/// Creates a unique `prefix`-prefixed scratch directory under the ambient
-/// temp base.
-///
-/// Creation failure (missing temp base) aborts the test process with the
-/// OS detail: scratch creation is test-only setup (never prod workflow
-/// logic), so a typed `Result` would only push `expect` into every test
-/// body. The `panic!` names the invariant instead of `unreachable!` so
-/// the `unreachable`/`todo` deny stays green.
 pub fn scratch(prefix: &str) -> TempDir {
     tempfile::Builder::new()
         .prefix(prefix)

@@ -1,20 +1,6 @@
-//! Clang-format output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses clang-format check stdout. `files` are the scratch-absolute
-/// paths the tool checked.
-///
-/// Clean is exit 0 with no diff markers. Dirty is exit 1 with unified
-/// diff markers (`--- ` plus `+++ `) mentioning at least one checked
-/// file; each mentioned file becomes one `1:1` format finding. Any
-/// other shape is a grammar mismatch, never a silent pass.
 pub fn parse_clang_format(
     stdout: &[u8],
     code: Option<i32>,

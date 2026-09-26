@@ -1,48 +1,19 @@
-//! Per-set commit boundary plus manual recovery planning for `dx update`.
-//!
-//! See: `docs/cli/commands/audit-update-bazel.md#dx-update`.
-//! Owning contract: `docs/cli/output-protocol.md#mutation`.
-//!
-//! Atomicity boundary is per-set commit, never repository-wide
-//! (AUTOMATIC_ROLLBACK = False): each backend success
-//! commits that set's locks immediately (sorted `SetId::ALL` execution
-//! with independent-set continuation in [`crate::outcome`]); a later
-//! failure or interruption keeps preceding successes and never rolls
-//! them back automatically. Backends provide no committed-change
-//! manifest and Git-scan/BUILD-parse/rerun inference stays rejected, so
-//! automatic rollback would have to guess; recovery is therefore manual
-//! (`git checkout -- <locks>` to discard kept successes when the tree is
-//! version-controlled) plus idempotent retry (`dx update <retry sets>`).
-
 use std::collections::BTreeSet;
 
 use super::outcome::{ReportedStatus, UpdateReport};
 use super::sets::SetId;
 
-/// Stable notice code for the recovery hint emitted alongside a failed
-/// update run (minor-compatible addition next to `update_set_success` /
-/// `update_set_blocked`).
 pub const RECOVERY_CODE: &str = "update_recovery";
 
-/// Planned manual recovery for one failed or interrupted update run.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RecoveryPlan {
-    /// Failed plus blocked sets to retry, sorted (empty only when the
-    /// caller plans an interrupted run with nothing left to attempt).
     pub retry_sets: Vec<String>,
-    /// Lock paths of succeeded sets that a manual restore would discard,
-    /// sorted and deduplicated (empty when nothing was kept).
     pub restore_paths: Vec<String>,
-    /// Idempotent retry invocation (rerunning only the sets that did not
-    /// reach success).
     pub retry_command: String,
-    /// Manual restore invocation when successes were kept, if any.
     pub restore_command: Option<String>,
-    /// Human-readable one-line recovery hint shared by text and JSON.
     pub message: String,
 }
 
-/// Sets to retry: failed plus blocked members of the report, sorted.
 pub fn retry_sets(report: &UpdateReport) -> Vec<String> {
     let mut sets = BTreeSet::new();
     for outcome in &report.outcomes {
@@ -56,9 +27,6 @@ pub fn retry_sets(report: &UpdateReport) -> Vec<String> {
     sets.into_iter().collect()
 }
 
-/// Lock paths kept by succeeded sets, sorted and deduplicated. Unknown
-/// set spellings contribute nothing (aggregate reports use canonical
-/// names produced by execution, so this is unreachable in practice).
 pub fn restore_paths(report: &UpdateReport) -> Vec<String> {
     let mut paths = BTreeSet::new();
     for outcome in &report.outcomes {
@@ -74,7 +42,6 @@ pub fn restore_paths(report: &UpdateReport) -> Vec<String> {
     paths.into_iter().collect()
 }
 
-/// Idempotent retry invocation for the given retry sets.
 pub fn retry_command(retry: &[String]) -> String {
     if retry.is_empty() {
         return "dx update".to_owned();
@@ -87,9 +54,6 @@ pub fn retry_command(retry: &[String]) -> String {
     command
 }
 
-/// Manual restore invocation for kept lock paths, if any. The command
-/// never runs inside `dx` (Git inspection stays rejected); it is printed
-/// for the operator to run when the tree is version-controlled.
 pub fn restore_command(paths: &[String]) -> Option<String> {
     if paths.is_empty() {
         return None;
@@ -102,7 +66,6 @@ pub fn restore_command(paths: &[String]) -> Option<String> {
     Some(command)
 }
 
-/// Human-readable one-line recovery hint shared by text and JSON.
 pub fn recovery_message(plan: &RecoveryPlan, succeeded: usize, failed: usize) -> String {
     let mut message = format!(
         "recovery: rerun `{}` for {} not-updated set(s) ({} succeeded, {} failed); retry is idempotent",
@@ -122,9 +85,6 @@ pub fn recovery_message(plan: &RecoveryPlan, succeeded: usize, failed: usize) ->
     message
 }
 
-/// Plan manual recovery for a failed aggregate report. Returns `None`
-/// when the report has no failure (success needs no recovery; blocked
-/// without failure is unreachable via [`crate::outcome::aggregate`]).
 pub fn plan(report: &UpdateReport) -> Option<RecoveryPlan> {
     if !report.overall_failure {
         return None;
@@ -163,12 +123,6 @@ pub fn plan(report: &UpdateReport) -> Option<RecoveryPlan> {
     })
 }
 
-/// Plan recovery for an interrupted run with no aggregate report (signal
-/// termination promises no `command_finished`): `selected` lists every
-/// selected set, `succeeded` lists the sets whose preceding per-set
-/// events already reported success. Unattempted sets (selected minus
-/// succeeded) are retried; kept successes restore manually. Idempotent:
-/// rerunning the retry command converges without re-applying successes.
 pub fn plan_interrupted(selected: &[String], succeeded: &[String]) -> RecoveryPlan {
     let done: BTreeSet<&str> = succeeded.iter().map(String::as_str).collect();
     let mut retry_set = BTreeSet::new();
@@ -246,7 +200,6 @@ mod tests {
 
     #[test]
     fn failed_report_plans_retry_plus_restore() {
-        // See: `docs/cli/commands/audit-update-bazel.md#dx-update`.
         let plan = plan(&report()).expect("failed report plans recovery");
         assert_eq!(plan.retry_sets, vec!["maven".to_owned()]);
         assert_eq!(plan.retry_command, "dx update maven");
@@ -293,7 +246,6 @@ mod tests {
 
     #[test]
     fn interrupted_run_retries_unattempted_and_restores_kept() {
-        // See: `docs/cli/output-protocol.md#mutation`.
         let plan = plan_interrupted(
             &["cargo".to_owned(), "maven".to_owned(), "npm".to_owned()],
             &["cargo".to_owned()],

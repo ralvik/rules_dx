@@ -355,11 +355,6 @@ def _rust_env_shard_impl(ctx):
             )
 
     # Unlike the codegen prost adapter, there is no exhaustiveness check:
-    # environment identity inputs are selective dimensions, not a closed
-    # manifest of every upstream artifact, so unclaimed crate sources are
-    # normal. Likewise two keys may share one backing artifact, so no
-    # duplicate-claim rejection. The closed-world missing/duplicate/
-    # unreported BEP check stays at collection time over the output group.
     bound = []
     for entry in entries:
         if entry.exec_path == "":

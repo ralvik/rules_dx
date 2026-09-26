@@ -1,15 +1,3 @@
-//! Real-tool finding model shared by the initial adapters.
-//!
-//! Contract: `docs/quality/tool-integrations.md`.
-//!
-//! Each adapter parses its tool's check output into [`Finding`] values over
-//! tool-native 1-based line/column positions, then [`place_finding`]
-//! converts those positions into the half-open UTF-8 byte ranges the frozen
-//! result schema requires. Findings without a tool-given extent become
-//! point ranges at the reported position: the range locates the finding,
-//! the message describes it. Nothing here spawns processes; execution lives
-//! in `exec`, command shapes in `commands`, per-tool grammars in `parsers`.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -21,8 +9,6 @@ pub mod commands;
 pub mod exec;
 pub mod parsers;
 
-/// Tool-native severity. Maps onto the frozen [`Severity`] one to one;
-/// unknown tool severities are a parse error, never a silent downgrade.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToolSeverity {
     Warning,
@@ -31,7 +17,6 @@ pub enum ToolSeverity {
 }
 
 impl ToolSeverity {
-    /// Converts to the frozen result-schema severity.
     pub fn proto(self) -> i32 {
         match self {
             ToolSeverity::Warning => Severity::Warning as i32,
@@ -41,16 +26,12 @@ impl ToolSeverity {
     }
 }
 
-/// One-based line/column position as reported by a tool. Columns count
-/// Unicode scalar values, matching the probed Buildifier and Clippy
-/// behavior on non-ASCII lines.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TextPosition {
     pub line: u64,
     pub column: u64,
 }
 
-/// One byte-range replacement against the exact bytes the tool checked.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Suggestion {
     pub start: u64,
@@ -58,7 +39,6 @@ pub struct Suggestion {
     pub replacement: Vec<u8>,
 }
 
-/// One parsed tool finding before range placement.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Finding {
     pub tool_id: String,
@@ -66,17 +46,11 @@ pub struct Finding {
     pub message: String,
     pub severity: ToolSeverity,
     pub start: TextPosition,
-    /// End position when the tool reports an extent; [`None`] places a
-    /// point range at `start`.
     pub end: Option<TextPosition>,
-    /// Machine-applicable replacements offered by the tool, all against
-    /// the checked bytes of the finding's file.
     pub suggestions: Vec<Suggestion>,
 }
 
 /// Placement failure. Every variant is an action failure, never a skipped
-/// finding: positions come from the bytes just checked, so an unmappable
-/// position means the adapter, not the source, is broken.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum PlaceError {
     #[error("position {line}:{column} is outside the checked bytes")]
@@ -85,20 +59,6 @@ pub enum PlaceError {
     InvertedRange,
 }
 
-/// Converts a 1-based line/column position to a UTF-8 byte offset into
-/// `text`. Columns count Unicode scalar values (UTF-32 code units), so
-/// `é` and `💖` each count as one column; lines split only on `'\n'`
-/// with `'\r'` as an ordinary character. A column one past the last
-/// character (the newline or end of file) is valid; anything further
-/// out returns [`None`]. An empty file has a single `(1, 1)` at offset
-/// 0 and a trailing `'\n'` opens an empty final line, matching SARIF
-/// byte-to-line round-trips.
-///
-/// Backed by rust-analyzer `line-index`: the 1-based UTF-32 position
-/// becomes a [`WideLineCol`], `to_utf8` maps it to UTF-8, and `offset`
-/// yields bytes. The line's scalar budget is checked first so columns
-/// past the newline or EOF stay [`None`]. Files at or above `u32::MAX`
-/// bytes use the legacy scan.
 pub fn line_col_to_byte(text: &str, line: u64, column: u64) -> Option<u64> {
     if line == 0 || column == 0 {
         return None;
@@ -153,9 +113,6 @@ fn legacy_line_col_to_byte(text: &str, line: u64, column: u64) -> Option<u64> {
     None
 }
 
-/// Places a parsed finding onto exact file bytes as a normalized
-/// [`Diagnostic`] with `fixable` cleared. Range presence is guaranteed;
-/// the convergence pass marks fixability, never the parsers.
 pub fn place_finding(finding: &Finding, path: &str, text: &str) -> Result<Diagnostic, PlaceError> {
     let start = line_col_to_byte(text, finding.start.line, finding.start.column).ok_or(
         PlaceError::UnmappablePosition {

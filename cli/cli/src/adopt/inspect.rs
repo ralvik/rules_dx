@@ -1,10 +1,3 @@
-//! Adoption inspect execution (`owners`/`deps`/`why`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_inspect`] plus the
-//! `bazel query` forwarding helper and the two-step `why` resolution
-//! (file owner then `somepath`). Re-exported through `super` so the
-//! dispatch path stays `crate::adopt::execute_adoption`.
-
 use std::io::Write;
 
 use crate::args::{Command, Invocation};
@@ -18,12 +11,6 @@ use dx_process::operational_code;
 
 use super::{operational, pre_exec, summaries_suppressed};
 
-/// Runs one inspect command (`owners`/`deps`/`why`) via `bazel query`
-/// forwarding. `why` resolves the file owner first, then explains one
-/// path from the resolved owner to the target. `--dry-run` plans without
-/// launching Bazel. JSON reuses the status envelope (`command_started`,
-/// one `status` event per label, optional `error`, `command_finished`
-/// with only `exit_code`); dry-run JSON is lifecycle-only.
 pub(crate) fn execute_inspect(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -122,12 +109,6 @@ pub(crate) fn execute_inspect(
     code
 }
 
-/// Runs one planned inspect query in JSON mode: emits one `status`
-/// event per sorted deduplicated label (`name` is the command,
-/// `detail` is the label, `hint` is the requesting scope). Query
-/// failures emit `bazel_failed` (`phase: query`) and return `1` so the
-/// caller continues with remaining scopes; stdout truncation returns
-/// `141` immediately.
 fn run_inspect_query_json(
     kind: &str,
     scope: &str,
@@ -181,10 +162,6 @@ fn run_inspect_query_json(
     }
 }
 
-/// Runs one planned inspect query as `bazel <verb> <expr>` and prints
-/// bytewise-sorted deduplicated labels. The verb and expression stay
-/// separate argv elements so the expression is never double-wrapped
-/// in a second `query` invocation.
 fn run_inspect_query(
     verb: &str,
     expr: &str,
@@ -328,11 +305,6 @@ fn execute_why(
     run_inspect_query(&leg.verb, &leg.expr, workspace, query_runner, out, err)
 }
 
-/// JSON `why`: reuses the status envelope with one `status` event per
-/// `somepath` label (`name: why`, `detail: label`,
-/// `hint: "<file> -> <label>"`). Owner query failures emit
-/// `bazel_failed` (`phase: query`), an empty owner emits `no_owner`,
-/// and a derived `somepath` plan failure emits `invalid_result`.
 fn execute_why_json(
     invocation: &Invocation,
     file: &str,
@@ -996,7 +968,6 @@ mod tests {
 
     #[test]
     fn inspect_json_streams_status_per_label() {
-        // See: `docs/cli/output-protocol.md#status`.
         let runner = ScriptedQuery::with(&["//z:two\n//a:one\n//z:two\n"]);
         let inv = invocation(&["owners", "//a:one", "--output=json"]);
         let scratch = dx_test_scratch::scratch("dx-adopt-inspect-json-");

@@ -1,13 +1,4 @@
 // LCOV_EXCL_START - reason: re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-//! `dx_cli`: quality command planning for the `dx` CLI.
-//!
-//! Contract: `docs/cli/cli-contract.md`.
-//!
-//! WP1 owns invocation parsing ([`args`]) and Bazel workflow planning
-//! with canonical workspace policy selection ([`plan`]). Result projection
-//! (WP2) and repository dogfood wiring (WP3) build on these plans. WP1
-//! adds scope resolution ([`resolve`]): labels pass through while files
-//! resolve to owning targets through Bazel query.
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).

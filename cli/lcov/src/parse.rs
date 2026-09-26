@@ -1,33 +1,12 @@
-//! Combined-LCOV parsing for the coverage gate.
-//!
-//! Split from `super` (`lib.rs`): owns [`FileHits`], [`parse_lcov`], and
-//! [`validate_lcov_report`] (the `SF`/`DA` record parser that unions
-//! duplicate records and ignores non-`DA` summaries). Re-exported through
-//! `super` so the public paths stay
-//! `dx_lcov::{FileHits, parse_lcov, validate_lcov_report}`. Distinct from
-//! the `ignores` module (source-level exclusion markers), the `verdict`
-//! module (gate evaluation), and the `inventory`/`run` modules (repo
-//! inventory and CLI).
-
 use std::collections::BTreeMap;
 
 use super::LcovError;
 
-/// Executable line hits for one source file, unioned across duplicate records.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct FileHits {
-    /// Line number (1-based) to hit count. A line is covered when hits > 0.
     pub lines: BTreeMap<u32, u64>,
 }
 
-/// Parse combined LCOV text into `SF` path to [`FileHits`].
-///
-/// Implemented on `lcov` records: duplicate `SF` records for
-/// the same path are unioned per line (the maximum hit count wins,
-/// preserving covered-ness). Only `DA` records define executable lines;
-/// `FN`/`FNDA`/`BRDA`/`LH`/`LF` summaries are informational and ignored.
-/// An empty report parses to an empty map; callers treat that as a missing
-/// report.
 pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, LcovError> {
     let mut files: BTreeMap<String, FileHits> = BTreeMap::new();
     let mut current: Option<String> = None;
@@ -119,12 +98,6 @@ pub fn parse_lcov(report: &str) -> Result<BTreeMap<String, FileHits>, LcovError>
     Ok(files)
 }
 
-/// Merges several combined-LCOV documents into one `SF` path to
-/// [`FileHits`] map with maximum hits winning per line. Single owner for
-/// cross-document union; per-document union already lives in
-/// [`parse_lcov`], so coverage-rate callers delegate here instead of
-/// re-implementing the max-wins loop.
-/// See: `docs/testing/README.md#coverage`.
 pub fn merge_lcov_reports(documents: &[String]) -> Result<BTreeMap<String, FileHits>, LcovError> {
     let mut merged: BTreeMap<String, FileHits> = BTreeMap::new();
     for document in documents {
@@ -142,13 +115,6 @@ pub fn merge_lcov_reports(documents: &[String]) -> Result<BTreeMap<String, FileH
     Ok(merged)
 }
 
-/// Strict structural validation for combined LCOV tracefiles.
-///
-/// Implemented on `lcov` records for the `dx coverage`
-/// validator: requires at least one `SF` record, well-formed
-/// `DA:<line>,<hits>` counters with `line >= 1`, no `DA` outside an `SF`
-/// section, and that every `SF` section closes with `end_of_record`.
-/// Unknown `FN`/`BRDA`/summary lines are ignored like the lenient parser.
 pub fn validate_lcov_report(report: &str) -> Result<(), LcovError> {
     let mut sections = 0u64;
     let mut open = false;

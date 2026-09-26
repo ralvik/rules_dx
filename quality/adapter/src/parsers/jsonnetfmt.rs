@@ -1,18 +1,6 @@
-//! Jsonnetfmt output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `jsonnetfmt` diff stdout over the whole stage file list.
-///
-/// Whole-file rewrite with check/diff mode: unified diff markers
-/// (`--- ` headers) yield one `1:1` format finding per file; empty
-/// output on exit 0 is clean. Any other shape is a grammar mismatch.
 pub fn parse_jsonnetfmt(
     stdout: &[u8],
     code: Option<i32>,

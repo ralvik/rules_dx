@@ -1,4 +1,4 @@
-"""Analysis tests proving configuration subjects (issue #793).
+"""Analysis tests proving configuration subjects.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

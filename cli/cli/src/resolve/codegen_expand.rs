@@ -1,28 +1,7 @@
-//! Bare-schema reverse-dependent expansion for `dx codegen`/`dx setup`.
-//!
-//! Split from `super` (`resolve.rs`): owns the single-label expansion
-//! query plus [`expand_codegen_roots`]. Re-exported through `super` so
-//! the public path stays `crate::resolve::expand_codegen_roots`. Shares
-//! the query plumbing ([`super::QueryRunner`], [`super::run_label_query`])
-//! with the scope classification in `super`; the expression and merge
-//! live in `dx_codegen` so the kind filter stays with the provider
-//! contract.
-
 use std::path::Path;
 
 use super::{run_label_query, QueryRunner, ResolveError};
 
-/// Expands one exact `dx codegen`/`dx setup` target to the deterministic
-/// Bazel roots to analyze: the target plus every registered
-/// `*_codegen_shard` projection transitively depending on it in `//...`,
-/// via one unconfigured `bazel query` invocation.
-///
-/// Returned roots are sorted and deduplicated with the schema first in
-/// sort order; an empty projection set keeps the single label so a bare
-/// schema with no consumers still selects its own (empty) exact closure
-/// instead of failing. Consumer and shard targets keep their own closure
-/// plus any downstream shards (deduped, so the merged plan is unchanged).
-/// Query failures become [`ResolveError::QueryFailed`].
 pub fn expand_codegen_roots(
     label: &str,
     workspace: &Path,
@@ -41,8 +20,6 @@ mod tests {
     use std::io;
     use std::path::PathBuf;
 
-    /// Scripted query runner: records argv/cwd and replays canned
-    /// outputs in call order.
     struct FakeQuery {
         calls: RefCell<Vec<(Vec<String>, PathBuf)>>,
         outputs: RefCell<Vec<QueryResult>>,

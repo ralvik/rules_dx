@@ -1,148 +1,6 @@
-//! Exact tool invocations for the initial adapters plus Python plus Scala/.NET
-//! plus the native cohort (C/C++/Go) plus Structured plus interpreted/file-family.
-//!
-//! Every flag here was probed against the pinned binaries; probing notes
-//! live in the completion evidence (Python probes in the
-//! evidence). Rules the builders encode:
-//!
-//! * Absolute binary and file paths only; no `PATH` lookup, ever.
-//! * One invocations shape per (tool, mode); config is always explicit:
-//!   `--config=off` for unhinted Buildifier (blocks upward discovery),
-//!   `--config-path` (real or empty-defaults) for rustfmt, `-c` or
-//!   `--no-auto-config` for Taplo, and `--config` for Vale.
-//!   Upstream-owned tools need no builder here: Clippy findings arrive
-//!   via the `rust_clippy_aspect` diagnostics file, never via a
-//!   spawned invocation.
-//! * `rustc` compiles one file per invocation (it accepts a single
-//!   input root); every other tool takes the whole stage file list.
-//!   `rustc` typechecks each root as a `lib` crate (`--crate-type=lib`):
-//!   direct sources are usually library files without a `main` entry
-//!   point, and the default `bin` crate type would mask real diagnostics
-//!   behind a spurious "no main function" failure.
-//! * The repo-owned Markdown checker takes one `--source WS_PATH=EXEC_PATH`
-//!   mapping per stage file (its union-closure sibling rule keys off the
-//!   workspace paths) and needs no config: it performs no discovery, so
-//!   `cwd_rel` is always the scratch root.
-//! * Ruff takes the whole stage file list with `--no-cache` and
-//!   `--no-respect-gitignore` (never observes VCS state or cache); the
-//!   config is `--isolated` unhinted (pinned upstream defaults, no upward
-//!   discovery) or `--config <hint>` hinted. Lint check uses `check
-//!   --output-format json`; lint fix uses `check --fix` (in-place,
-//!   re-read even on exit 1, which signals remaining unfixable findings);
-//!   format check uses `format --check --output-format json`; format fix
-//!   uses `format` (in-place).
-//! * Ty takes the whole stage file list as `check --output-format concise
-//!   --no-progress --no-respect-ignore-files` (never observes VCS state);
-//!   it performs no config discovery from flags, so `cwd_rel` is always
-//!   the scratch root. Ty is check-only: the runner never passes `--fix`
-//!   (which would rewrite) nor `--add-ignore` (never used by default).
-//! * pydoclint takes the whole stage file list as `--quiet <files>`
-//!   (violations on stderr, stdout empty; `--quiet` suppresses only the
-//!   checked-filename log, never findings). It runs pinned upstream
-//!   defaults (numpy style); there is no native-config rule, so no config
-//!   flag and scratch-root cwd. Check-only, never rewrites.
-//! * flake8 takes the whole stage file list as `--isolated --color=never
-//!   --jobs=1 --format <template> <files>` (findings on stdout, stderr
-//!   empty; `--isolated` blocks all config discovery, `--jobs=1` keeps
-//!   output order deterministic instead of the default auto parallel fan,
-//!   `--color=never` blocks ANSI). Pinned upstream defaults, no config
-//!   flag, scratch-root cwd. Check-only, never rewrites.
-//! * pylint takes the whole stage file list as `--persistent=n --reports=n
-//!   --score=n --output-format=json --jobs=1 <files>` (findings as a JSON
-//!   array on stdout; `--persistent=n` disables the cache, `--reports=n`
-//!   and `--score=n` suppress the human report/score). The cleared child
-//!   environment (no `HOME`) plus scratch-root cwd leaves no discoverable
-//!   `pylintrc`/`pyproject.toml`, so pinned upstream defaults apply.
-//!   Check-only, never rewrites.
-//! * Biome lint takes the whole stage file list as `lint --reporter=json
-//!   --colors=off --error-on-warnings --vcs-enabled=false --config-path
-//!   <dir> <files>` over scratch-root-relative paths. The config dir holds
-//!   exactly one `biome.json` (hinted config or materialized `{}` defaults),
-//!   so `--config-path` disables default resolution and no upward discovery
-//!   can observe ambient state. Biome reports paths relative to its working
-//!   directory, so backends re-anchor to the workspace-relative mirror paths
-//!   (exit codes per probing: clean 0, findings 1). Biome lint is
-//!   check-only: safe `--write` does not fix the fixable rules (needs
-//!   `--unsafe`), so the runner never passes it and converges on format.
-//! * Biome format takes the whole stage file list as `format
-//!   --reporter=json --colors=off --config-path <dir> <files>` (check);
-//!   format fix is `format --config-path <dir> --write <files>` (in-place,
-//!   re-read on exit 0).
-//! * ESLint takes the whole stage file list as `-c <config> -f json
-//!   <files>` (check); fix is `-c <config> -f json --fix <files>`
-//!   (in-place, re-read on exit 0 or 1, which signals remaining unfixable
-//!   findings after the fixable ones were applied). The config is always
-//!   explicit (no defaults exist); `cwd_rel` is the scratch root so the
-//!   flat-config base path contains the mirrored sources.
-//! * Prettier takes the whole stage file list as `--no-config
-//!   --no-editorconfig --check <files>` (check); fix is `--no-config
-//!   --no-editorconfig --write <files>` (in-place, re-read on exit 0).
-//! * google-java-format takes the whole stage file list as
-//!   `--dry-run --set-exit-if-changed <files>` (check; stdout lists
-//!   paths that would change); fix is `--replace <files>` (in-place,
-//!   re-read on exit 0).
-//! * ktfmt takes the whole stage file list as `--kotlinlang-style
-//!   --dry-run <files>` (check; stdout lists paths that would change);
-//!   fix is `--kotlinlang-style <files>` (in-place, re-read on exit 0).
-//!   kotlinlang-style (4-space) matches ktlint's default indent so
-//!   format and lint never fight on the same file.
-//! * Checkstyle takes the whole stage file list as `-c <config> -f
-//!   sarif <files>` (check; SARIF on stdout, chatter on stderr).
-//!   Check-only, never rewrites; the config is always explicit
-//!   (Checkstyle has no usable upstream default).
-//! * PMD takes the whole stage file list as `check --dir <file>
-//!   --format sarif` plus `--rulesets <config>` when hinted (without
-//!   a hint PMD runs the upstream quickstart default).
-//!   Check-only, never rewrites.
-//! * SpotBugs takes the whole stage file list as `-textui
-//!   -effort:default -sarif <files>` (check; SARIF on stdout).
-//!   Check-only, never rewrites; target-coupled (the aspect supplies
-//!   compiled classes from `JavaInfo`).
-//! * ktlint takes the whole stage file list as `--relative
-//!   --reporter=sarif <files>` (check; SARIF on stdout); fix is
-//!   `--relative --format <files>` (in-place, re-read on exit 0 or 1
-//!   like ESLint `--fix`).
-//!   `--no-editorconfig` stays mandatory because the `editorconfig`
-//!   package is absent from the runfiles forest, so `.editorconfig` files
-//!   are currently inert; the flag freezes that behavior against future
-//!   dependency additions.
-//! * Error Prone check takes the whole stage file list as `javac
-//!   -Xplugin:ErrorProne <files>` (diagnostics on stderr in the pinned
-//!   javac shape, stdout empty; default severities with no `-Werror`,
-//!   no `-verbose`, and no patch flags). Check-only: no files written,
-//!   scratch-root cwd.
-//! * Error Prone patch takes the same compile plus
-//!   `-XepPatchChecks:<checks> -XepPatchLocation:<declared-dir>` over
-//!   the whole stage file list. The declared dir is the per-target Bazel
-//!   output directory holding `error-prone.patch` (unified diff relative
-//!   to the source root, applied with `patch -p0 -u`); the runner
-//!   validates the declared file and normalizes hunks to the edit
-//!   contract. The `IN_PLACE` location is rejected: it mutates inputs in
-//!   place, breaking sandbox immutability, action caching, and remote
-//!   execution (and is experimental upstream).
-//! * Buf lint takes the whole stage file list as `lint
-//!   --error-format=json <files>` (JSONL on stdout, one object per line
-//!   with `path,start_line,start_column,end_line,end_column,type,
-//!   message`; no SARIF). Exit 1 with records is findings; exit 0 is
-//!   clean. Check-only: the runner never passes a fix flag.
-//! * Buf format takes the whole stage file list as `format --diff
-//!   --exit-code <files>` (check; unified diff on stdout); fix is
-//!   `format --write <files>` (in-place, re-read on exit 0).
-//! * qmlformat takes the whole stage file list as `--check <files>`
-//!   (check; stdout lists unformatted paths, one per line); fix is `-i
-//!   <files>` (in-place, re-read on exit 0). `.qmlformat.ini` applies
-//!   natively; `--ignore-settings` stays transport-only.
-//! * qmllint takes the whole stage file list as `--json - <files>`
-//!   (check; JSON `{diagnostics:[]}` on stdout). Exit 1 with
-//!   diagnostics is findings; exit 0 is clean. Check-only with the
-//!   provisional sandbox-apply-and-diff fix flow.
-
 use std::ffi::OsString;
 use std::path::Path;
 
-/// One tool invocation: absolute argv plus the scratch-relative working
-/// directory that makes the tool's native config discovery behave exactly
-/// as in a real checkout.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Invocation {
     pub argv: Vec<OsString>,
@@ -160,10 +18,6 @@ fn invocation(binary: &Path, args: &[&str], files: &[&Path], cwd_rel: &str) -> I
     }
 }
 
-/// Buildifier check invocation. With a hint, `cwd_rel` is the mirrored
-/// config directory so upward discovery from the working directory finds
-/// exactly the hinted config; without one, `--config=off` blocks any
-/// ambient discovery and `cwd_rel` is the scratch root.
 pub fn buildifier_check(
     binary: &Path,
     files: &[&Path],
@@ -190,7 +44,6 @@ pub fn buildifier_check(
     }
 }
 
-/// Buildifier in-place fix invocation, mirroring the check's config rule.
 pub fn buildifier_fix(binary: &Path, files: &[&Path], config_dir_rel: Option<&str>) -> Invocation {
     match config_dir_rel {
         Some(dir) => invocation(binary, &["--mode=fix", "--lint=fix"], files, dir),
@@ -203,13 +56,6 @@ pub fn buildifier_fix(binary: &Path, files: &[&Path], config_dir_rel: Option<&st
     }
 }
 
-/// rustfmt invocation. `config` is always explicit: the hinted config or
-/// a scratch-materialized empty defaults file, so no upward discovery
-/// can observe ambient state. `edition` is always explicit too: the
-/// caller passes the crate's real edition (read from `CrateInfo` by the
-/// quality aspect, never guessed or defaulted here), because the CLI
-/// flag silently wins over any config `edition` key. `check` selects
-/// `--check` instead of the in-place rewrite.
 pub fn rustfmt(
     binary: &Path,
     files: &[&Path],
@@ -235,8 +81,6 @@ pub fn rustfmt(
     }
 }
 
-/// Taplo lint invocation. `config` selects `-c`; without one,
-/// `--no-auto-config` plus `--no-schema` leave syntax only.
 pub fn taplo_lint(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![
         OsString::from(binary.as_os_str()),
@@ -257,8 +101,6 @@ pub fn taplo_lint(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invo
 }
 
 /// Taplo format invocation; `check` selects `--check` instead of the
-/// in-place rewrite. The diff is never requested: the adapter compares
-/// bytes itself.
 pub fn taplo_format(
     binary: &Path,
     files: &[&Path],
@@ -285,10 +127,6 @@ pub fn taplo_format(
     }
 }
 
-/// Vale check invocation. `cwd_rel` is the mirrored config directory so
-/// relative `StylesPath` and package layouts resolve as in a checkout.
-/// `--no-exit` is never passed: the exit code separates findings (`1`
-/// with valid JSON) from crashes (`2` or unparsable output).
 pub fn vale_check(binary: &Path, ini: &Path, files: &[&Path], ini_dir_rel: &str) -> Invocation {
     invocation(
         binary,
@@ -305,12 +143,6 @@ pub fn vale_check(binary: &Path, ini: &Path, files: &[&Path], ini_dir_rel: &str)
     )
 }
 
-/// Ruff shared prefix: `binary`, the subcommand, then hermetic flags plus
-/// the config selection (`--isolated` unhinted, `--config <hint>` hinted).
-/// Flags follow the subcommand because Ruff only accepts `--no-cache` and
-/// `--no-respect-gitignore` as per-command flags (pre-subcommand placement
-/// exits 2 with empty stdout). Callers append the subcommand-specific flags
-/// and files.
 fn ruff_base(binary: &Path, subcommand: &str, config: Option<&Path>) -> Vec<OsString> {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from(subcommand)];
     if let Some(path) = config {
@@ -324,9 +156,6 @@ fn ruff_base(binary: &Path, subcommand: &str, config: Option<&Path>) -> Vec<OsSt
     argv
 }
 
-/// Ruff lint check invocation: `check --output-format json` over the whole
-/// stage file list. Exit 1 with valid JSON is findings; exit 0 with `[]`
-/// is clean; any other shape is a grammar mismatch.
 pub fn ruff_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = ruff_base(binary, "check", config);
     argv.push(OsString::from("--output-format"));
@@ -338,9 +167,6 @@ pub fn ruff_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invo
     }
 }
 
-/// Ruff lint fix invocation: `check --fix` (in-place). The caller re-reads
-/// the files even on exit 1 (remaining unfixable findings); only spawn or
-/// re-read failures fail the action.
 pub fn ruff_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = ruff_base(binary, "check", config);
     argv.push(OsString::from("--fix"));
@@ -351,9 +177,6 @@ pub fn ruff_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invoca
     }
 }
 
-/// Ruff format check invocation: `format --check --output-format json`
-/// over the whole stage file list. JSON findings carry `code:
-/// "unformatted"`; clean is `[]`.
 pub fn ruff_format_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = ruff_base(binary, "format", config);
     argv.push(OsString::from("--check"));
@@ -366,9 +189,6 @@ pub fn ruff_format_check(binary: &Path, files: &[&Path], config: Option<&Path>) 
     }
 }
 
-/// Ruff format fix invocation: `format` (in-place). The caller re-reads on
-/// exit 0 and returns its input otherwise, mirroring the other format
-/// tools.
 pub fn ruff_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = ruff_base(binary, "format", config);
     argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
@@ -378,12 +198,6 @@ pub fn ruff_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) ->
     }
 }
 
-/// Ty typecheck invocation: `check --output-format concise --no-progress
-/// --no-respect-ignore-files` plus one `--extra-search-path DIR` per import
-/// search dir (ty dep context,) over the whole stage file list.
-/// Exit 1 with concise diagnostics is findings; `All checks passed!`
-/// exit 0 is clean. Check-only: the runner never passes `--fix` or
-/// `--add-ignore`.
 pub fn ty_check(binary: &Path, files: &[&Path], search_paths: &[&Path]) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -404,11 +218,6 @@ pub fn ty_check(binary: &Path, files: &[&Path], search_paths: &[&Path]) -> Invoc
     }
 }
 
-/// pydoclint lint check invocation: `--quiet` over the whole stage file
-/// list. Violations print as a `path` header plus `    line: DOCxxx: msg`
-/// lines on stderr (stdout empty); clean prints nothing under `--quiet`.
-/// Exit 1 with parsable violations is findings; exit 0 is clean.
-/// Check-only: pydoclint offers no fix mode.
 pub fn pydoclint_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--quiet")];
     argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
@@ -419,10 +228,6 @@ pub fn pydoclint_check(binary: &Path, files: &[&Path]) -> Invocation {
 }
 
 /// flake8 lint check invocation: `--isolated --color=never --jobs=1
-/// --format <template>` over the whole stage file list. One
-/// `path:row:col:code:text` line per finding on stdout (stderr empty);
-/// clean prints nothing. Exit 1 with parsable lines is findings; exit 0
-/// is clean. Check-only: no fix flag exists.
 pub fn flake8_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -439,13 +244,6 @@ pub fn flake8_check(binary: &Path, files: &[&Path]) -> Invocation {
     }
 }
 
-/// pylint lint check invocation: `--persistent=n --reports=n --score=n
-/// --output-format=json --jobs=1` over the whole stage file list. A JSON
-/// array on stdout (one object per message); clean prints `[]`. Exit code
-/// is a bit-encoded message-class mask (1 fatal, 2 error, 4 warning, 8
-/// refactor, 16 convention, 32 usage error), so nonzero with parsable JSON
-/// is findings and exit 0 is clean. Check-only: the runner never passes a
-/// fix flag.
 pub fn pylint_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -462,8 +260,6 @@ pub fn pylint_check(binary: &Path, files: &[&Path]) -> Invocation {
     }
 }
 
-/// Biome shared prefix: `binary`, the subcommand, then machine flags plus
-/// the explicit config selection (`--config-path <dir>`).
 fn biome_base(binary: &Path, subcommand: &str, config_dir: &Path) -> Vec<OsString> {
     vec![
         binary.as_os_str().to_owned(),
@@ -475,11 +271,6 @@ fn biome_base(binary: &Path, subcommand: &str, config_dir: &Path) -> Vec<OsStrin
     ]
 }
 
-/// Biome lint check invocation: `lint --error-on-warnings
-/// --vcs-enabled=false` over the whole stage file list. Exit 1 with valid
-/// JSON is findings; exit 0 is clean. Check-only: the runner never passes
-/// `--write` (safe write does not fix the fixable lint rules; only
-/// `--unsafe` would, and it is never used).
 pub fn biome_lint_check(binary: &Path, files: &[&Path], config_dir: &Path) -> Invocation {
     let mut argv = biome_base(binary, "lint", config_dir);
     argv.push(OsString::from("--error-on-warnings"));
@@ -491,8 +282,6 @@ pub fn biome_lint_check(binary: &Path, files: &[&Path], config_dir: &Path) -> In
     }
 }
 
-/// Biome format check invocation: `format` over the whole stage file list.
-/// Exit 1 with valid JSON is findings; exit 0 is clean.
 pub fn biome_format_check(binary: &Path, files: &[&Path], config_dir: &Path) -> Invocation {
     let mut argv = biome_base(binary, "format", config_dir);
     argv.extend(files.iter().map(|path| path.as_os_str().to_owned()));
@@ -502,8 +291,6 @@ pub fn biome_format_check(binary: &Path, files: &[&Path], config_dir: &Path) -> 
     }
 }
 
-/// Biome format fix invocation: `format --write` (in-place). The caller
-/// re-reads on exit 0 and returns its input otherwise.
 pub fn biome_format_fix(binary: &Path, files: &[&Path], config_dir: &Path) -> Invocation {
     let mut argv = biome_base(binary, "format", config_dir);
     argv.push(OsString::from("--write"));
@@ -514,11 +301,6 @@ pub fn biome_format_fix(binary: &Path, files: &[&Path], config_dir: &Path) -> In
     }
 }
 
-/// ESLint lint check invocation: `-c <config> -f json` over the whole
-/// stage file list. Exit 1 with valid JSON is findings; exit 0 is clean.
-/// The config is always explicit: without one ESLint hard-fails
-/// (`couldn't find an eslint.config.* file`), so the caller resolves it
-/// first and fails the action when absent.
 pub fn eslint_check(binary: &Path, files: &[&Path], config: &Path) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -534,10 +316,6 @@ pub fn eslint_check(binary: &Path, files: &[&Path], config: &Path) -> Invocation
     }
 }
 
-/// ESLint lint fix invocation: `-c <config> -f json --fix` (in-place).
-/// The caller re-reads on exit 0 or 1 (exit 1 signals remaining unfixable
-/// findings after the fixable ones were applied) and keeps its input on
-/// any other exit, mirroring the Ruff lint-fix contract.
 pub fn eslint_fix(binary: &Path, files: &[&Path], config: &Path) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -554,9 +332,6 @@ pub fn eslint_fix(binary: &Path, files: &[&Path], config: &Path) -> Invocation {
     }
 }
 
-/// Prettier shared prefix: `binary` plus the frozen hermetic flags
-/// (`--no-config --no-editorconfig`, never observing config files).
-/// Callers append the mode flag and files.
 fn prettier_base(binary: &Path) -> Vec<OsString> {
     vec![
         binary.as_os_str().to_owned(),
@@ -565,9 +340,6 @@ fn prettier_base(binary: &Path) -> Vec<OsString> {
     ]
 }
 
-/// Prettier format check invocation: `--check` over the whole stage file
-/// list. Exit 1 with `[warn] <file>` stderr lines is findings; exit 0 is
-/// clean.
 pub fn prettier_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = prettier_base(binary);
     argv.push(OsString::from("--check"));
@@ -578,8 +350,6 @@ pub fn prettier_check(binary: &Path, files: &[&Path]) -> Invocation {
     }
 }
 
-/// Prettier format fix invocation: `--write` (in-place). The caller
-/// re-reads on exit 0 and returns its input otherwise.
 pub fn prettier_fix(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = prettier_base(binary);
     argv.push(OsString::from("--write"));
@@ -590,14 +360,6 @@ pub fn prettier_fix(binary: &Path, files: &[&Path]) -> Invocation {
     }
 }
 
-/// Repo-owned Markdown link/structure check invocation. One `--source`
-/// `workspace=absolute` mapping per stage file, in stage order, then one
-/// `--sibling` mapping per unclassified link-resolution sibling; the
-/// checker reads the absolute bytes but keys sibling resolution and its
-/// finding paths off the workspace paths, so the caller re-roots reported
-/// paths onto scratch-absolute paths before placement. Siblings are never
-/// linted and never appear in findings. No config exists and the checker
-/// performs no discovery, so `cwd_rel` is always empty.
 pub fn markdown_check(
     binary: &Path,
     sources: &[(&str, &Path)],
@@ -625,11 +387,6 @@ pub fn markdown_check(
     }
 }
 
-/// Scalafmt check invocation: `scalafmt --check` over the whole stage
-/// file list plus `--config <hint>` when hinted. Exit 0 clean, exit 1
-/// with unified diff on stdout when dirty. Scratch-root cwd blocks
-/// ambient `.scalafmt.conf` discovery; the hinted config directory is
-/// passed explicitly, never discovered.
 pub fn scalafmt_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--check")];
     if let Some(path) = config {
@@ -643,8 +400,6 @@ pub fn scalafmt_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> 
     }
 }
 
-/// Scalafmt fix invocation: in-place rewrite over the whole stage file
-/// list. The caller re-reads on exit 0 and returns its input otherwise.
 pub fn scalafmt_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned()];
     if let Some(path) = config {
@@ -658,13 +413,6 @@ pub fn scalafmt_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> In
     }
 }
 
-/// Scalafix check invocation: custom Java entrypoint binding
-/// `scalafix.interfaces.ScalafixMainCallback` over semantic-rule
-/// artifacts. Target-coupled `--classpath` plus `--sourceroot` plus
-/// `--semanticdb-targetroots` come from the authoritative target;
-/// syntactic-only runs pass none. Console-parse rejected: diagnostics
-/// arrive as callback NDJSON on stdout, never console text.
-/// Check-only with sandbox-apply-and-diff fix flow and declared outputs.
 pub fn scalafix_check(
     binary: &Path,
     files: &[&Path],
@@ -692,11 +440,6 @@ pub fn scalafix_check(
     }
 }
 
-/// CSharpier check invocation: `check` over the whole stage file list
-/// plus `--config-path <hint>` when hinted. Exit 0 clean, exit 1 with
-/// unformatted paths on stdout when dirty. Scratch-root cwd blocks
-/// ambient config discovery. Declared DLLs over the managed .NET
-/// runtime, never `dotnet tool install`.
 pub fn csharpier_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("check")];
     if let Some(path) = config {
@@ -710,8 +453,6 @@ pub fn csharpier_check(binary: &Path, files: &[&Path], config: Option<&Path>) ->
     }
 }
 
-/// CSharpier fix invocation: `format` (in-place). The caller re-reads
-/// on exit 0 and returns its input otherwise.
 pub fn csharpier_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("format")];
     if let Some(path) = config {
@@ -725,37 +466,18 @@ pub fn csharpier_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> I
     }
 }
 
-/// Fantomas check invocation: `check --json` over the whole stage file
-/// list. Exit 0 all unchanged, exit 99 with `needs-formatting` files,
-/// exit 1 operational failure. JSON on stdout carries per-file status;
-/// the caller re-anchors workspace-relative paths. Declared DLLs over
-/// the managed .NET runtime, never `dotnet tool install`.
 pub fn fantomas_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["check", "--json"], files, "")
 }
 
-/// Fantomas fix invocation: in-place format over the whole stage file
-/// list. The caller re-reads on exit 0 and returns its input otherwise.
 pub fn fantomas_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &[], files, "")
 }
 
-/// Roslyn check invocation shape: `csc /errorlog:<sarif>` per pivot.
-/// The adapter never spawns this directly in the runner: per-pivot
-/// SARIF files are declared action inputs from the authoritative
-/// target, concatenated into one log in deterministic pivot order and
-/// parsed via `parsers::parse_roslyn`. Single-SARIF and merged-run
-/// rejected. Check-only with sandbox-apply-and-diff fix flow.
 pub fn roslyn_errorlog(sarif: &Path) -> OsString {
     OsString::from(format!("/errorlog:{}", sarif.to_string_lossy()))
 }
 
-/// FSharpLint check invocation: custom .NET entrypoint binding
-/// `FSharpLint.Application.Lint` with `ReceivedWarning` over exact
-/// package artifacts. Target-coupled `.fsproj`/`.sln` plus
-/// `fsharplint.json` come from the authoritative target. Console-parse
-/// rejected: diagnostics arrive as library NDJSON on stdout, never
-/// console text. Check-only with sandbox-apply-and-diff fix flow.
 pub fn fsharplint_check(
     binary: &Path,
     files: &[&Path],
@@ -778,11 +500,6 @@ pub fn fsharplint_check(
     }
 }
 
-/// Clang-format check invocation: `--dry-run --Werror` over the whole
-/// stage file list plus `--style=file:<hint>` when hinted. Exit 0
-/// clean, exit 1 with unified diff markers on stdout when dirty.
-/// Scratch-root cwd blocks ambient `.clang-format` discovery; the
-/// hinted config is passed explicitly, never discovered.
 pub fn clang_format_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -802,8 +519,6 @@ pub fn clang_format_check(binary: &Path, files: &[&Path], config: Option<&Path>)
     }
 }
 
-/// Clang-format fix invocation: `-i` (in-place). The caller re-reads
-/// on exit 0 and returns its input otherwise.
 pub fn clang_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("-i")];
     if let Some(path) = config {
@@ -819,27 +534,14 @@ pub fn clang_format_fix(binary: &Path, files: &[&Path], config: Option<&Path>) -
     }
 }
 
-/// Gofumpt check invocation: `-d` over the whole stage file list.
-/// Unified diff markers on stdout when dirty, empty stdout when clean;
-/// exit 0 either way (like `gofmt -d`). No config file exists upstream,
-/// so no config flag and scratch-root cwd.
 pub fn gofumpt_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-d"], files, "")
 }
 
-/// Gofumpt fix invocation: `-w` (in-place). The caller re-reads on
-/// exit 0 and returns its input otherwise.
 pub fn gofumpt_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-w"], files, "")
 }
 
-/// Clang-tidy check invocation: `--quiet` over the whole stage file
-/// list plus `--config-file <hint>` when hinted and `-p
-/// <compile-commands-dir>` when the authoritative target supplies
-/// compile commands. Text `file:line:col: warning|error: message
-/// [check]` diagnostics on stderr; exit 0 clean, exit 1 with
-/// findings. Check-only: no `--fix` and no `--export-fixes`; the
-/// runner never rewrites.
 pub fn clang_tidy_check(
     binary: &Path,
     files: &[&Path],
@@ -862,11 +564,6 @@ pub fn clang_tidy_check(
     }
 }
 
-/// Cppcheck check invocation: `--xml --xml-version=2` over the whole
-/// stage file list plus `--suppressions-list <hint>` when hinted.
-/// Diagnostics XML on stderr; exit 0 with no `<error ` elements clean,
-/// exit 1 dirty. Default enablement only, never `--enable=all`.
-/// Check-only: the runner never rewrites.
 pub fn cppcheck_check(binary: &Path, files: &[&Path], suppressions: Option<&Path>) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -886,12 +583,6 @@ pub fn cppcheck_check(binary: &Path, files: &[&Path], suppressions: Option<&Path
     }
 }
 
-/// Staticcheck check invocation: `-f json` over the whole stage file
-/// list. `cwd_rel` is the mirrored config directory when hinted so
-/// upward `staticcheck.conf` discovery finds exactly the hinted
-/// config, else the scratch root. JSON array on stdout; exit 0 clean,
-/// exit 1 dirty. Default checks only, never `-all`. Check-only: the
-/// runner never rewrites.
 pub fn staticcheck_check(
     binary: &Path,
     files: &[&Path],
@@ -903,58 +594,28 @@ pub fn staticcheck_check(
     }
 }
 
-/// Govet check invocation over the whole stage file list. Text
-/// `file:line:col: message` diagnostics on stderr; exit 0 clean,
-/// exit 1 dirty. Default analyzers only, never all-analyzer or
-/// vettool maxima. Check-only: the runner never rewrites.
 pub fn govet_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &[], files, "")
 }
 
-/// Errcheck check invocation over the whole stage file list. Text
-/// `file:line:col: message` diagnostics on stdout; exit 0 clean,
-/// exit 1 dirty. Check-only and complementary to govet: the runner
-/// never rewrites.
 pub fn errcheck_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &[], files, "")
 }
 
-/// Declared Error Prone patch-file name: the patch invocation writes
-/// exactly this file into the declared output directory as a unified
-/// diff relative to the source root.
 pub const ERROR_PRONE_PATCH_FILE: &str = "error-prone.patch";
 
-/// Error Prone check invocation: `javac -Xplugin:ErrorProne` over the
-/// whole stage file list. Diagnostics print to stderr in the pinned
-/// javac shape (`parsers::parse_error_prone`); stdout stays empty.
-/// Default severities with no `-Werror`, no `-verbose`, and no patch
-/// flags: check-only, no files written, scratch-root cwd.
 pub fn error_prone_check(javac: &Path, files: &[&Path]) -> Invocation {
     invocation(javac, &["-Xplugin:ErrorProne"], files, "")
 }
 
-/// google-java-format check invocation: `--dry-run --set-exit-if-changed`
-/// over the whole stage file list. Stdout lists the absolute paths that
-/// would change, one per line (clean prints nothing); exit 1 with listed
-/// paths is findings, exit 0 is clean.
 pub fn google_java_format_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--dry-run", "--set-exit-if-changed"], files, "")
 }
 
-/// google-java-format fix invocation: `--replace` (in-place). The
-/// caller re-reads on exit 0 and returns its input otherwise,
-/// mirroring the other format tools.
 pub fn google_java_format_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--replace"], files, "")
 }
 
-/// ktfmt check invocation: `--kotlinlang-style --dry-run
-/// --set-exit-if-changed` over the whole stage file list. Stdout lists
-/// the absolute paths that would change, one per line (clean prints
-/// nothing); exit 1 with listed paths is findings, exit 0 is clean.
-/// The style flag is always explicit so no ambient style can leak in
-/// (`.editorconfig` stays opt-in via `--enable-editorconfig`, never
-/// passed here). kotlinlang-style (4-space) matches ktlint default.
 pub fn ktfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(
         binary,
@@ -964,20 +625,10 @@ pub fn ktfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
     )
 }
 
-/// ktfmt fix invocation: `--kotlinlang-style` (in-place). The caller
-/// re-reads on exit 0 and returns its input otherwise.
 pub fn ktfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--kotlinlang-style"], files, "")
 }
 
-/// Checkstyle lint check invocation: `-c <config> -f sarif` over the
-/// whole stage file list. SARIF goes to stdout; operational chatter
-/// (Reflections scan, `Checkstyle ends with N errors.`) goes to
-/// stderr and is ignored by the parser. Exit 1 with a non-empty
-/// results log is findings; exit 0 is clean. Check-only: the runner
-/// never passes a fix flag. The config is always explicit: Checkstyle
-/// has no usable upstream default, so the caller resolves it first
-/// and fails the action when absent (mirroring ESLint/Vale).
 pub fn checkstyle_check(binary: &Path, files: &[&Path], config: &Path) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -993,11 +644,6 @@ pub fn checkstyle_check(binary: &Path, files: &[&Path], config: &Path) -> Invoca
     }
 }
 
-/// PMD lint check invocation: `check --dir <files> --format sarif`
-/// over the whole stage file list, plus `--rulesets <config>` when
-/// hinted (without a hint PMD runs the upstream quickstart default).
-/// SARIF goes to stdout; exit 1 with a non-empty results log is
-/// findings, exit 0 is clean. Check-only: the runner never passes a fix flag.
 pub fn pmd_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("check")];
     for file in files {
@@ -1017,14 +663,6 @@ pub fn pmd_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invoc
     }
 }
 
-/// SpotBugs lint check invocation: `-textui -effort:default -sarif`
-/// over the analysis target list (workspace-local runtime jars from
-/// `JavaInfo`, delivered as tool-files). SARIF goes to stdout; exit 1
-/// with a non-empty results log is findings, exit 0 is clean. Check-only:
-/// the runner never passes a fix flag. Target-coupled: provider-less
-/// targets carry no classes, so the stage is dropped (mirroring the
-/// target-coupled tsc laziness row); staged `.java` sources are finding
-/// anchors only, never analysis inputs.
 pub fn spotbugs_check(binary: &Path, files: &[&Path]) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -1039,13 +677,6 @@ pub fn spotbugs_check(binary: &Path, files: &[&Path]) -> Invocation {
     }
 }
 
-/// ktlint lint check invocation: `--relative --log-level=none
-/// --reporter=sarif` over the whole stage file list. SARIF goes to
-/// stdout; exit 1 with a non-empty results log is findings, exit 0 is
-/// clean. `--relative` keeps URIs stable across scratch roots (the
-/// parser also accepts absolute `file:` URIs); `--log-level=none`
-/// suppresses the autocorrect WARN preamble so stdout stays pure
-/// SARIF (probed: without it the WARN line precedes the JSON).
 pub fn ktlint_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(
         binary,
@@ -1055,26 +686,10 @@ pub fn ktlint_check(binary: &Path, files: &[&Path]) -> Invocation {
     )
 }
 
-/// ktlint lint fix invocation: `--relative --format` (in-place). The
-/// caller re-reads on exit 0 or 1 (exit 1 signals remaining unfixable
-/// findings after the fixable ones were applied, mirroring the
-/// ESLint/Ruff lint-fix contract) and keeps its input on any other
-/// exit.
 pub fn ktlint_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--relative", "--format"], files, "")
 }
 
-/// Error Prone patch invocation: the check compile plus
-/// `-XepPatchChecks:<checks>` with `-XepPatchLocation:<patch_dir>`.
-/// `patch_dir` is the per-target declared output directory that will
-/// hold `error-prone.patch`; the runner validates the declared file
-/// and normalizes hunks to the edit contract. The `IN_PLACE` location
-/// is rejected: it mutates inputs in place, breaking sandbox
-/// immutability, action caching, and remote execution (and is
-/// experimental upstream). `checks` is the comma-separated Error Prone
-/// check list (for example `MissingOverride,DefaultCharset`);
-/// `patch_dir` renders verbatim, so callers pass the declared dir,
-/// never the `IN_PLACE` literal.
 pub fn error_prone_patch(
     javac: &Path,
     files: &[&Path],
@@ -1094,150 +709,103 @@ pub fn error_prone_patch(
     }
 }
 
-/// Buf lint check invocation: `lint --error-format=json` over the whole
-/// stage file list. JSONL goes to stdout; exit 1 with records is
-/// findings, exit 0 is clean. Check-only: the runner never passes a fix
-/// flag. Whole-file rewrite versus check-only per the tool-integrations
-/// fix flow.
 pub fn buf_lint_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["lint", "--error-format=json"], files, "")
 }
 
-/// Buf format check invocation: `format --diff --exit-code` over the
-/// whole stage file list. Unified diff goes to stdout; exit 1 with diff
-/// is findings, exit 0 is clean.
 pub fn buf_format_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["format", "--diff", "--exit-code"], files, "")
 }
 
-/// Buf format fix invocation: `format --write` (in-place). The caller
-/// re-reads on exit 0 and returns its input otherwise.
 pub fn buf_format_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["format", "--write"], files, "")
 }
 
-/// qmlformat check invocation: `--check` over the whole stage file
-/// list. Stdout lists unformatted paths, one per line; exit 1 with
-/// listed paths is findings, exit 0 is clean.
 pub fn qmlformat_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--check"], files, "")
 }
 
-/// qmlformat fix invocation: `-i` (in-place). The caller re-reads on
-/// exit 0 and returns its input otherwise.
 pub fn qmlformat_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-i"], files, "")
 }
 
-/// qmllint lint check invocation: `--json -` over the whole stage file
-/// list. JSON `{diagnostics:[]}` goes to stdout; exit 1 with
-/// diagnostics is findings, exit 0 is clean. Check-only: the runner
-/// never passes a fix flag.
 pub fn qmllint_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--json", "-"], files, "")
 }
 
 /// Interpreted/file-family cohort invocations (seed-only wiring proof
-/// with fake doubles plus delegated records; real-tool behavior stays
-/// proven by per-tool fixtures).
-///
-/// Formatters are whole-file rewrite with check/diff plus in-place fix;
-/// lint tools are check-only with sandbox-apply-and-diff. All take the
-/// whole stage file list with scratch-root cwd and no ambient discovery.
-///
-/// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-/// Cue check: `fmt --check --diff` (diff on stdout when dirty).
 pub fn cue_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["fmt", "--check", "--diff"], files, "")
 }
 
-/// Cue fix: `fmt --write` (in-place).
 pub fn cue_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["fmt", "--write"], files, "")
 }
 
-/// Jsonnetfmt check: `--test` (diff on stdout when dirty).
 pub fn jsonnetfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--test"], files, "")
 }
 
-/// Jsonnetfmt fix: `-i` (in-place).
 pub fn jsonnetfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-i"], files, "")
 }
 
-/// Pkl check: `--check` (diff on stdout when dirty).
 pub fn pkl_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--check"], files, "")
 }
 
-/// Pkl fix: `--write` (in-place).
 pub fn pkl_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--write"], files, "")
 }
 
-/// Modfmt check: `-d` (diff on stdout when dirty, exit 0 either way).
 pub fn modfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-d"], files, "")
 }
 
-/// Modfmt fix: `-w` (in-place).
 pub fn modfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-w"], files, "")
 }
 
-/// Terraform check: `fmt -check -diff` (diff on stdout when dirty).
 pub fn terraform_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["fmt", "-check", "-diff"], files, "")
 }
 
-/// Terraform fix: `fmt -write` (in-place).
 pub fn terraform_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["fmt", "-write"], files, "")
 }
 
-/// Yamlfmt check: `-lint` (diff on stdout when dirty).
 pub fn yamlfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-lint"], files, "")
 }
 
-/// Yamlfmt fix: `-write` (in-place).
 pub fn yamlfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-write"], files, "")
 }
 
-/// Shfmt check: `-d` (diff on stdout when dirty).
 pub fn shfmt_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-d"], files, "")
 }
 
-/// Shfmt fix: `-w` (in-place).
 pub fn shfmt_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["-w"], files, "")
 }
 
-/// StandardRB check: `--check` (diff on stdout when dirty).
 pub fn standardrb_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--check"], files, "")
 }
 
-/// StandardRB fix: `--fix` (in-place).
 pub fn standardrb_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--fix"], files, "")
 }
 
-/// Djlint format check: `--reformat --check` (diff on stdout).
 pub fn djlint_format_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--reformat", "--check"], files, "")
 }
 
-/// Djlint format fix: `--reformat` (in-place).
 pub fn djlint_format_fix(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--reformat"], files, "")
 }
 
-/// Djlint lint check: `--lint` (text diagnostics on stdout).
-/// Check-only: the runner never rewrites.
 pub fn djlint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![binary.as_os_str().to_owned(), OsString::from("--lint")];
     if let Some(path) = config {
@@ -1251,8 +819,6 @@ pub fn djlint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> In
     }
 }
 
-/// Stylelint check: `--formatter json` (JSON on stdout).
-/// Check-only: the runner never rewrites.
 pub fn stylelint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -1270,20 +836,14 @@ pub fn stylelint_check(binary: &Path, files: &[&Path], config: Option<&Path>) ->
     }
 }
 
-/// RuboCop check: `--format json` (JSON on stdout).
-/// Check-only over the release-assembled Ruby closure.
 pub fn rubocop_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--format", "json"], files, "")
 }
 
-/// PSScriptAnalyzer check: console text on stdout.
-/// Check-only over the exact module plus portable runtime.
 pub fn psscriptanalyzer_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &[], files, "")
 }
 
-/// Yamllint check: text diagnostics on stdout.
-/// Check-only over upstream built-in defaults.
 pub fn yamllint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> Invocation {
     let mut argv = vec![
         binary.as_os_str().to_owned(),
@@ -1301,14 +861,10 @@ pub fn yamllint_check(binary: &Path, files: &[&Path], config: Option<&Path>) -> 
     }
 }
 
-/// ShellCheck check: `--format=gcc` (gcc lines on stdout).
-/// Check-only: the runner never rewrites.
 pub fn shellcheck_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &["--format=gcc"], files, "")
 }
 
-/// Keep-sorted check: text diagnostics on stdout.
-/// Check-only with sandbox-apply-and-diff.
 pub fn keep_sorted_check(binary: &Path, files: &[&Path]) -> Invocation {
     invocation(binary, &[], files, "")
 }

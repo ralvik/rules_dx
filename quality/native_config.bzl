@@ -17,57 +17,6 @@ DxNativeConfigInfo = provider(
 )
 
 # Tool-owned config filename extensions. The extension is part of the
-# transport: it selects the tool's native parser, so a mismatch fails
-# analysis instead of silently changing behavior. Ruff recognizes only
-# the dedicated `ruff.toml`/`.ruff.toml` basenames (never `pyproject.toml`);
-# basename recognition is Gazelle's job, the `.toml` extension check here
-# matches the rustfmt precedent. Biome takes `biome.json` only (wont-fix:
-# `.jsonc` is rejected; the `.json` extension check here
-# pins the JSON transport with no hidden preset): the adapter passes the
-# config's directory as `--config-path`, so the directory must hold
-# exactly one `biome.json` and never linted sources. ESLint takes the
-# flat-config `eslint.config.js`: the adapter passes it as `-c`, so the
-# `.js` extension pins the JavaScript module transport. Checkstyle takes
-# the XML configuration (`checkstyle.xml`): the adapter passes it as
-# `-c`, so the `.xml` extension pins the XML transport (Checkstyle has
-# no usable upstream default; applicable stages fail without a hinted
-# config, mirroring ESLint/Vale). Buf takes `buf.yaml` (or `buf.yml`
-# via the same `.yaml` transport here, pinned to `.yaml`): the adapter
-# passes no config flag (buf discovers `buf.yaml` upward), so the
-# binding only records the closure. qmlformat/qmllint take
-# `.qmlformat.ini`/`.qmllint.ini` (`.ini` transport, Vale precedent).
-# clang-format takes
-# the extensionless `.clang-format` dotfile via `--style=file:<path>` and
-# clang-tidy the extensionless `.clang-tidy` dotfile via `--config-file`,
-# so the required suffix is the whole dotfile name. cppcheck takes a
-# suppressions list (`.txt`) via `--suppressions-list`, staticcheck the
-# `staticcheck.conf` (`.conf`) discovered upward from the working
-# directory. gofumpt, govet, and errcheck take no native config file:
-# gofumpt has no rule selection, govet runs default analyzers only, and
-# errcheck stays complementary with flags only, so no typed rule exists
-# for them by design. The file-family cohort adds stylelint (`.json`),
-# djlint (`.toml`), and yamllint (`.yaml`): each runs upstream built-in
-# defaults unhinted and interprets the hinted config natively; the
-# remaining cohort tools (cue, jsonnetfmt, pkl, modfmt, terraform,
-# yamlfmt, keep_sorted, shfmt, shellcheck, rubocop, standardrb,
-# psscriptanalyzer) take no typed config by design (whole-file rewrite
-# or check-only with upstream defaults, no hidden preset). Prettier,
-# flake8, pylint, pydoclint, ty, and the repo-owned markdown checker
-# likewise take no typed config by design: prettier runs `--no-config`
-# plus `--no-editorconfig`, flake8 runs `--isolated`, pylint runs with a
-# cleared environment plus scratch cwd, pydoclint plus ty run pinned
-# upstream defaults with no discovery, and markdown_check performs no
-# discovery, so every stage uses pinned upstream defaults with no hidden
-# preset. The remaining JVM/structured adapters without an entry
-# (google_java_format, ktfmt, ktlint, pmd, spotbugs, fantomas, roslyn,
-# tsc) likewise run pinned upstream defaults or delegated records with no
-# hinted config by design. Clippy plus
-# rustc likewise take no typed config: the upstream rust_clippy_aspect plus
-# the Rust rules own their invocations and read clippy.toml via their own
-# label flags (See: quality/real_aspects.bzl, clippy_delegated/the
-# rustc-owned compilation); dx never spawns them with a hinted config, so
-# no native_config entry exists by design.
-# See `docs/quality/tool-integrations.md`.
 _NATIVE_CONFIG_EXTENSIONS = {
     "biome": ".json",
     "buf": ".yaml",

@@ -1,17 +1,5 @@
-//! Checkstyle output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! Checkstyle `-f sarif` prints a SARIF 2.1.0 log to stdout (operational
-//! chatter such as the Reflections scan line and the `Checkstyle ends
-//! with N errors.` summary goes to stderr and is ignored here). URIs
-//! are `file:` paths with point regions; `level` maps error/warning.
-
 use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
-/// Parses Checkstyle `-f sarif` stdout. `files` are the absolute
-/// scratch paths passed to the tool.
 pub fn parse_checkstyle(
     stdout: &[u8],
     code: Option<i32>,

@@ -1,27 +1,9 @@
-//! Direct-Bazel per-result threshold evaluator (WP3).
-//!
-//! Contract: `docs/cli/cli-contract.md` (direct Bazel CI) and result
-//! semantics in `docs/quality/quality-result-protocol.md#execution-and-policy`.
-//! One evaluator consumes one validated `QualityResult` (one target/capability
-//! pipeline) and fails when any initial or terminal diagnostic meets the
-//! `--fail_on` threshold, when the result proposes any replacement
-//! independently of severity, or when convergence is not `STABLE`.
-//! Replacement and convergence failures are intentional check parity, not a
-//! threshold bypass: `dx lint --check` fails on any proposed change even with
-//! zero diagnostics, so evaluators enforce the same rule at every threshold.
-//! Round caps stay fixed ruleset policy (ten rounds per ADR 0003), not
-//! per-result configuration. `fixable` never weakens evaluation: direct
-//! Bazel applies no fix, so every original finding still counts, exactly as
-//! CLI check mode evaluates every original finding including
-//! guaranteed-fixable ones.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use quality_result::proto::{Convergence, Diagnostic, QualityResult, Severity};
 
-/// Lowest diagnostic severity that fails evaluation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Threshold {
     Info,
@@ -30,7 +12,6 @@ pub enum Threshold {
 }
 
 impl Threshold {
-    /// Numeric rank on the frozen `Severity` scale.
     pub fn rank(self) -> i32 {
         match self {
             Threshold::Info => Severity::Info as i32,
@@ -39,7 +20,6 @@ impl Threshold {
         }
     }
 
-    /// Canonical flag spelling, matching `@rules_dx//config:fail_on`.
     pub fn name(self) -> &'static str {
         match self {
             Threshold::Info => "info",
@@ -50,10 +30,8 @@ impl Threshold {
 }
 
 /// Parses a `--fail_on` value. There is no `never`: any spelling outside
-/// `info|warning|error` is an evaluator failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum EvaluatorError {
-    /// Unknown `--fail_on` value.
     #[error("unknown fail_on {value:?}, want info|warning|error")]
     UnknownThreshold { value: String },
 }
@@ -69,7 +47,6 @@ pub fn parse_threshold(text: &str) -> Result<Threshold, EvaluatorError> {
     }
 }
 
-/// Policy outcome for one result.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Evaluation {
     pub passed: bool,
@@ -88,10 +65,6 @@ fn describe(set: &str, diagnostic: &Diagnostic) -> String {
     )
 }
 
-/// Applies the threshold policy to one validated result. Malformed results
-/// never reach this function: the binary decodes with
-/// `quality_result::decode_validated` first, so decode failure fails the
-/// evaluator action at every threshold before any comparison runs.
 pub fn evaluate(result: &QualityResult, threshold: Threshold) -> Evaluation {
     let mut reasons = Vec::new();
     if result.convergence != Convergence::Stable as i32 {

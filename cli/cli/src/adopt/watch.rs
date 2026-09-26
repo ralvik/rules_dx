@@ -1,10 +1,3 @@
-//! Adoption watch execution (`watch`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_watch`], the thin
-//! wrapper over `dx_adopt::plan_watch` (dry-run plans are summaries,
-//! suppressed under `--quiet`). Re-exported through `super` so the
-//! dispatch path stays `crate::adopt::execute_adoption`.
-
 use std::io::Write;
 
 use crate::args::Invocation;
@@ -12,9 +5,6 @@ use crate::exec::common::check_stdout_write;
 
 use super::{pre_exec, summaries_suppressed};
 
-/// Runs `dx watch`: plans the wrapped command via `dx_adopt::plan_watch`
-/// and prints one delivered iteration (the real binary re-resolves scope
-/// each loop; the loop is omitted under test via `DX_WATCH_ONCE`).
 pub(crate) fn execute_watch(
     invocation: &Invocation,
     _workspace: &std::path::Path,
@@ -24,7 +14,6 @@ pub(crate) fn execute_watch(
     let wrapped = invocation.targets.first().map(String::as_str).unwrap_or("");
     // Local-only gate shares the single `dx_process::is_ci` owner with
     // `dx run` so `CI=1`/`yes`/empty cannot diverge again.
-    // See: `docs/cli/commands/watch.md`.
     let ci = dx_process::is_ci();
     match dx_adopt::plan_watch(wrapped, ci) {
         Ok(plan) => {

@@ -1,12 +1,3 @@
-//! Adoption status execution (`status`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_status`], the result
-//! document that always prints even under `--quiet` (quiet suppresses
-//! summaries, not answers; dry-run plans are summaries, suppressed under
-//! `--quiet`). JSON streams the NDJSON envelope via `write_event`.
-//! Re-exported through `super` so the dispatch path stays
-//! `crate::adopt::execute_adoption`.
-
 use std::io::Write;
 
 use crate::args::Invocation;
@@ -17,23 +8,10 @@ use dx_output::{
 };
 use dx_process::operational_code;
 
-/// Stable operational error code for `dx status` pin failures: any check
-/// reporting `error` (today pin mismatch) fails closed with this code in
-/// JSON mode so machine consumers match on code, not message text.
-// See: `docs/cli/output-protocol.md#operational-error`.
 pub(crate) const CODE_STATUS_PIN_MISMATCH: &str = "status_pin_mismatch";
 
 use super::summaries_suppressed;
 
-/// Runs `dx status`: prints the pin plus default status checks as NDJSON
-/// vs text (the only mode branch; `--output=diff` is rejected at parse
-/// time because status has no patch to emit). JSON streams
-/// `command_started` plus one `status` event per check plus an optional
-/// `error` (`status_pin_mismatch`) before `command_finished` via
-/// `write_event`; `--dry-run` plans without reading the pin or computing
-/// checks. Returns operational failure when any check reports `error`.
-/// Stdout truncation returns `141` on `EPIPE`, else operational.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub(crate) fn execute_status(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -41,7 +19,6 @@ pub(crate) fn execute_status(
     err: &mut dyn Write,
 ) -> i32 {
     // Dry-run plans instead of executing: no pin read, no check
-    // computation (See: `docs/cli/output-protocol.md#dry-run`).
     if invocation.dry_run {
         if invocation.output == OutputMode::Json {
             if let Ok(event) = command_started(invocation.command.name(), true, "default") {
@@ -60,8 +37,6 @@ pub(crate) fn execute_status(
         return 0;
     }
     // A missing or unreadable pin fails closed: propagate the read
-    // error instead of forging a default ok (See:
-    // `docs/cli/commands/status-version.md`). An empty pin flows into
     // the checks below, where it can never match the module version.
     let pinned = match dx_adopt::read_version_pin(workspace) {
         Ok(pin) => pin,
@@ -499,7 +474,6 @@ mod tests {
 
     #[test]
     fn status_broken_pipe_returns_141() {
-        // See: `docs/cli/output-protocol.md#exit-codes`.
         for words in [vec!["status"], vec!["status", "--output=json"]] {
             let inv = invocation(&words);
             let scratch = dx_test_scratch::scratch("dx-adopt-status-broken-");

@@ -17,21 +17,12 @@ _DX_RUBY_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream `RubyFilesInfo` plus
-# `BundlerInfo`, `InstrumentedFilesInfo`, `OutputGroupInfo`, and
-# `RunEnvironmentInfo` at runtime when present (mirroring upstream, which
-# advertises only `RubyFilesInfo`), but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a Ruby library,
-# so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so quality aspects can gate on it. Coverage reads
-# `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `go_*` test forwarder).
 _DX_RUBY_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
 # Ruby owns `.rb` only. `Gemfile`/`Gemfile.lock` stay fixture-owned
-# ad-hoc (See: docs/quality/quality-sources.md): upstream `rb_*` rules take
 # no manifest `srcs`, so Bundler manifests run via depcheck fixtures,
 # never these wrappers.
 _DX_RUBY_SOURCE_SPECS = [("ruby", "rb")]

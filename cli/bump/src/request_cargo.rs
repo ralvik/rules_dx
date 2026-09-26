@@ -1,8 +1,3 @@
-//! Cargo manifest widen edits for `dx bump` (split from `request.rs`).
-//!
-//! `plan_cargo_toml` plus the `cargo_*` table-shape helpers. No
-//! behavior change: moved verbatim.
-
 use super::*;
 
 pub(super) fn plan_cargo_toml(
@@ -94,21 +89,13 @@ pub(super) fn plan_cargo_toml(
     }
 }
 
-/// Dependency shapes for `plan_cargo_toml`: registry-owned (widenable)
-/// versus fail-closed shapes (explicit typed errors, never guessed).
 pub(super) enum CargoDepShape {
-    /// `package = "old"`, `package = { version = "old", .. }`, or
-    /// `[table.package] version = "old"`.
     Registry,
-    /// `git =` / `path =` present (v1 widens registry versions only).
     GitOrPath,
-    /// `workspace = true` inheritance (version lives in `[workspace]`).
     Workspace,
-    /// No string `version` to widen (table shapes fail closed).
     NoVersion,
 }
 
-/// Classifies one dep entry by table key, never by line text.
 pub(super) fn cargo_dep_shape(item: &toml_edit::Item) -> CargoDepShape {
     match item {
         toml_edit::Item::Value(toml_edit::Value::String(_)) => CargoDepShape::Registry,
@@ -118,7 +105,6 @@ pub(super) fn cargo_dep_shape(item: &toml_edit::Item) -> CargoDepShape {
     }
 }
 
-/// Classifies `package = { ... }` inline tables.
 pub(super) fn cargo_inline_shape(table: &toml_edit::InlineTable) -> CargoDepShape {
     if table.contains_key("git") || table.contains_key("path") {
         return CargoDepShape::GitOrPath;
@@ -135,7 +121,6 @@ pub(super) fn cargo_inline_shape(table: &toml_edit::InlineTable) -> CargoDepShap
     }
 }
 
-/// Classifies `[table.package] ...` tables.
 pub(super) fn cargo_table_shape(table: &toml_edit::Table) -> CargoDepShape {
     if table.contains_key("git") || table.contains_key("path") {
         return CargoDepShape::GitOrPath;
@@ -152,12 +137,6 @@ pub(super) fn cargo_table_shape(table: &toml_edit::Table) -> CargoDepShape {
     }
 }
 
-/// All dependency-like tables that may own `package`: top-level
-/// `dependencies`/`dev-dependencies`/`build-dependencies`,
-/// `workspace.dependencies`, per-target
-/// `target.<cfg>.{dependencies,dev-dependencies,build-dependencies}`,
-/// and `patch.<source>` (matched by old line surgery, kept here so the
-/// rewrite is strictly fewer false `NotFound`s).
 pub(super) fn cargo_dependency_table_paths(doc: &toml_edit::DocumentMut) -> Vec<Vec<String>> {
     let mut paths: Vec<Vec<String>> = Vec::new();
     for name in ["dependencies", "dev-dependencies", "build-dependencies"] {
@@ -200,7 +179,6 @@ pub(super) fn cargo_dependency_table_paths(doc: &toml_edit::DocumentMut) -> Vec<
     paths
 }
 
-/// Immutable lookup of a dependency-like table by path.
 pub(super) fn cargo_table_at<'a>(
     doc: &'a toml_edit::DocumentMut,
     path: &[String],
@@ -212,7 +190,6 @@ pub(super) fn cargo_table_at<'a>(
     item.as_table()
 }
 
-/// Mutable lookup of a dependency-like table by path.
 pub(super) fn cargo_table_at_mut<'a>(
     doc: &'a mut toml_edit::DocumentMut,
     path: &[String],
@@ -227,9 +204,6 @@ pub(super) fn cargo_table_at_mut<'a>(
     item.as_table_mut()
 }
 
-/// Sets the registry version for one dep entry, preserving decor
-/// (comments/whitespace) and sibling keys. Returns false when the entry
-/// is not registry-shaped (caller already classified it).
 pub(super) fn cargo_set_version(table: &mut toml_edit::Table, package: &str, new: &str) -> bool {
     let Some(item) = table.get_mut(package) else {
         return false;

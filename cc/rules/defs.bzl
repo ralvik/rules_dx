@@ -19,28 +19,12 @@ _DX_CC_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream `CcInfo`,
-# `InstrumentedFilesInfo`, `OutputGroupInfo`, and `RunEnvironmentInfo`
-# at runtime when present, but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a C++ library,
-# so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so quality aspects can gate on it. Coverage reads
-# `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `go_*` test forwarder).
 _DX_CC_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
 # Header ownership is per extension, not per including source: `.h` maps to
-# `c` and `.hh`/`.hpp`/`.hxx` map to `cpp` (See: docs/quality/quality-sources.md).
-# `hdrs` stays library-only by design: upstream `cc_binary`/`cc_test` take no
-# `hdrs`, headers arrive via library `deps`, so binaries/tests own `srcs`
-# only. `cuda` (`.cu`/`.cuh`) is owned here as its own `cuda` class (See:
-# docs/quality/quality-sources.md; Owning contract:
-# docs/decisions/0019-first-release-additional-foundations.md): `.cu` sources
-# and `.cuh` headers ride the same `cc_*` wrappers plus the authoritative
-# `clang-format` toolchain binding, additive with no change to the existing
-# `c`/`cpp` shapes.
 _DX_CC_SOURCE_SPECS = [
     ("c", ["c", "h"]),
     ("cpp", ["cc", "cpp", "cxx", "hh", "hpp", "hxx"]),

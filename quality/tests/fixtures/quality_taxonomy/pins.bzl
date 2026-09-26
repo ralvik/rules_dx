@@ -37,11 +37,6 @@ CURATED_TOML = "toml family lint taplo plus format taplo"
 CURATED_TYPESCRIPT = "typescript family lint biome plus format biome plus typecheck tsc"
 
 # Adapter-backed execution: 39 classes ride 53 real adapters with
-# runner-matrix pass plus fail plus parser plus native-config plus
-# aspect evidence. Java plus Kotlin delivered under #796; Scala plus
-# C# plus F# delivered under #797; C plus C++ plus CUDA plus Go delivered
-# under #798; Protobuf plus QML delivered under #799; interpreted/file-family
-# delivered under #800 (successors to closed #416-#420).
 BACKED_CLASSES = "39 adapter-backed classes: c plus cpp plus cuda plus csharp plus fsharp plus go plus java plus javascript plus json plus jsx plus kotlin plus markdown plus protobuf plus python plus python_stub plus qml plus rust plus scala plus starlark plus toml plus tsx plus typescript plus css plus cue plus gherkin plus go_module plus html_template plus jsonnet plus less plus pkl plus powershell plus ruby plus scss plus shell plus sql plus terraform plus text plus xml plus yaml"
 BACKED_TOOLS = "53 real adapters: biome plus buf plus buildifier plus checkstyle plus clang_format plus clang_tidy plus clippy plus cppcheck plus csharpier plus cue plus djlint plus errcheck plus eslint plus fantomas plus flake8 plus fsharplint plus gofumpt plus google_java_format plus govet plus jsonnetfmt plus keep_sorted plus ktfmt plus ktlint plus markdown_check plus modfmt plus pkl plus pmd plus prettier plus psscriptanalyzer plus pydoclint plus pylint plus qmlformat plus qmllint plus roslyn plus rubocop plus ruff plus rustc plus rustfmt plus scalafix plus scalafmt plus shellcheck plus shfmt plus spotbugs plus standardrb plus staticcheck plus stylelint plus taplo plus terraform plus tsc plus ty plus vale plus yamlfmt plus yamllint"
 
@@ -100,12 +95,6 @@ REJECTED_ALTERNATIVES = [
 ]
 
 # Owned gaps stay explicit: deferred adapters delivered under #796
-# plus #797 plus #798 plus #799 plus #800 (successors to closed
-# #416-#420); remaining framework plus json5/jsonc owned
-# under ADR 0019 plus #307; digests plus rule-sets owned by their
-# cohort qualifications; platform plus consumer plus release evidence
-# stays owned gap linked under #802 with support-matrix promotion;
-# no Supported claim.
 OWNED_DEFERRED = "deferred adapters delivered under 796 plus 797 plus 798 plus 799 plus 800 with remaining owned under ADR 0019 plus 307"
 OWNED_DIGESTS = "digests plus rule-sets stay owned by their cohort qualifications"
 OWNED_DIGEST_POLICY = "digest policy with JVM digests pinned in quality/tools/jvm/repos.bzl plus standalone per-host digests in quality/artifacts plus rule-sets qualified under 485 through 489"

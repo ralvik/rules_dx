@@ -3,19 +3,19 @@
 ## Scope
 
 This document specifies the user-facing output API for every `dx` command. The durable
-surface is established by [ADR 0006](../decisions/0006-cli-command-surface.md); exact
+surface is established by ADR 0006; exact
 event schemas and report profiles are implemented as specified below and pinned by protocol fixtures. It
 covers human output, newline-delimited JSON (NDJSON), standard report exports, stream
 ownership, ordering, partial results, and operational errors. It does not expose the
 Bazel Build Event Protocol (BEP) or the internal action-result Protobuf described in
-[Quality Result Protocol](../quality/quality-result-protocol.md).
+Quality Result Protocol.
 
 The protocol has four outputs:
 
 - Text is the default live interface for people.
 - Diff is a complete human-readable unified patch for reportable validated workspace changes.
 - NDJSON is the common live machine interface for JSON-capable commands (listed below).
-  Text-only commands reject `--output=json` pre-exec (exit 2) instead of silently ignoring it.
+ Text-only commands reject `--output=json` pre-exec (exit 2) instead of silently ignoring it.
 - Standard reports are complete domain documents such as SARIF, JUnit XML, and LCOV.
 
 Selecting a standard report does not change workflow execution, diagnostics, mutation
@@ -156,7 +156,7 @@ pattern's expansion:
 - A directory remains a canonical recursive pattern such as `//src/auth/...`.
 - Explicit labels and target patterns remain canonical labels and patterns.
 - A file scope lists the sorted canonical owner labels, or mapped test/coverage labels,
-  because those labels are the result of graph resolution.
+ because those labels are the result of graph resolution.
 
 Internal aspect, toolchain, compiler, dependency, and external-repository labels are not
 part of structured scope. Workflow commands reject explicit external-repository scopes.
@@ -369,7 +369,7 @@ one notice. Ignored-import notices sort by path, language, and import bytes. Lif
 plus manual restore hint, warning with `related_command: update` and retry sets as scope, see
 [dx update](commands/audit-update-bazel.md#dx-update)), and `audit_<family>_clean`
 (`audit_security_clean`, `audit_license_clean` for per-family clean, see
-[dx audit](commands/audit-update-bazel.md#dx-audit)), plus `clean_planned` (dry-run per-entry
+[dx security and dx license](commands/audit-update-bazel.md#dx-security-and-dx-license)), plus `clean_planned` (dry-run per-entry
 prune plan, info with `related_command: clean` and the workspace-relative prune path)
 and `clean_pruned` (live per-entry removal, same shape, see
 [dx clean](commands/check-fix-clean.md#dx-clean)). Clean notices carry workspace-relative
@@ -441,7 +441,7 @@ and never writes a workspace file.
 ```
 
 ```json
-{"schema":{"major":1,"minor":0},"event":"change","path":"new/package/BUILD.bazel","kind":"create","edits":[{"start_byte":0,"end_byte":0,"replacement":"py_library(\n    name = \"package\",\n)\n"}]}
+{"schema":{"major":1,"minor":0},"event":"change","path":"new/package/BUILD.bazel","kind":"create","edits":[{"start_byte":0,"end_byte":0,"replacement":"py_library(\n name = \"package\",\n)\n"}]}
 ```
 
 ## Mutation
@@ -552,7 +552,7 @@ Only file reports produce this NDJSON event, after atomic replacement. A stdout 
 cannot coexist with NDJSON; successful document output plus process status is its
 confirmation in text mode.
 
-The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
+The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#dx-license-license-family)
 is specified in the license-family contract; its shared-report format identifier
 and event mapping add no new profile here.
 
@@ -712,7 +712,7 @@ Stable codes are:
 | `no_capability` | Exact setup scope provides neither environment nor codegen capability |
 | `coverage_below_minimum` | Coverage is below the configured minimum |
 | `audit_failed` | Live audit per-family failure (unexempted findings, incomplete assessment, advisory refresh failure, or auditor launch failure) |
-| `advisory_refresh_failed` | Advisory snapshot could not be obtained or refreshed (missing, empty, invalid, stale, or unsupported set; detail prefix inside `audit_failed`, see [dx audit](commands/audit-update-bazel.md#dx-audit)) |
+| `advisory_refresh_failed` | Advisory snapshot could not be obtained or refreshed (missing, empty, invalid, stale, or unsupported set; detail prefix inside `audit_failed`, see [dx security and dx license](commands/audit-update-bazel.md#dx-security-and-dx-license)) |
 | `update_failed` | Live update per-set failure (resolver reported failure, unsupported selection, launch failure, or signal) |
 | `bump_failed` | Live bump widen failure (missing, ambiguous, or unsupported manifest shape, or unreadable/unwritable manifest, see [dx bump](commands/audit-update-bazel.md#dx-bump)) |
 | `offline_required` | Cache-only `--offline`/`--frozen` run would need network (advisory refresh, resolver update, or bump refresh; detail prefix inside `audit_failed` for audit, operational code for update/bump, see [Offline Bootstrap](../deploy/offline-bootstrap.md)) |
@@ -798,8 +798,8 @@ Durable events follow actual phase order. Check-mode JSON order is:
 2. `command_started` when initialization succeeds.
 3. `operation` events in execution order.
 4. Deterministically sorted `diagnostic` events after result collection and applicable
-   `notice` events when their condition is known, followed by sorted `change` events in JSON
-   mode.
+ `notice` events when their condition is known, followed by sorted `change` events in JSON
+ mode.
 5. Post-commit `report` and `selection` events in normalized order.
 6. Exactly one `command_finished` event.
 
@@ -808,9 +808,9 @@ Default mutating JSON order is:
 1. Optional initialization `error`, then `command_started` and `operation` as above.
 2. Sorted `change` events for the validated intended changes.
 3. Post-attempt `mutation` events. Quality paths use normalized path order; generate mutations use
-   deterministic Gazelle attempt order after the reportable manifest records are validated.
+ deterministic Gazelle attempt order after the reportable manifest records are validated.
 4. Deterministically sorted `diagnostic` events with required resolution after terminal file
-   outcomes, plus applicable notices.
+ outcomes, plus applicable notices.
 5. Post-commit `report` and `selection` events in normalized order.
 6. Exactly one `command_finished` event.
 

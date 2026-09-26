@@ -1,15 +1,6 @@
-//! Cppcheck output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, FileFinding, ParseError};
 use crate::{Finding, TextPosition, ToolSeverity};
 
-/// Finds the value of `name="..."` inside one XML element tag.
-/// Returns the unescaped value or `None` when absent or unterminated.
 fn attribute(tag: &str, name: &str) -> Option<String> {
     let key = format!("{name}=\"");
     let start = tag.find(&key)? + key.len();
@@ -25,16 +16,6 @@ fn attribute(tag: &str, name: &str) -> Option<String> {
     )
 }
 
-/// Parses `cppcheck --xml --xml-version=2` diagnostics on stderr.
-/// `files` are the scratch-absolute paths the tool checked.
-///
-/// Each `<error id severity msg>` element with its first `<location
-/// file line column>` becomes one finding; locations without a column
-/// place at column 1. Severity maps `error` onto error, `warning`,
-/// `style`, `performance`, and `portability` onto warning, and
-/// `information` onto info; anything else is a grammar mismatch.
-/// Clean is exit 0 with no `<error ` elements; findings exit 1. Any
-/// other shape is a grammar mismatch, never a silent pass.
 pub fn parse_cppcheck(
     stderr: &[u8],
     code: Option<i32>,

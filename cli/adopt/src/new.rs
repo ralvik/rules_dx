@@ -1,25 +1,7 @@
-//! `dx new` minimal project scaffolding per language.
-//!
-//! Split from `super` (`lib.rs`): owns `SUPPORTED_NEW_LANGUAGES`,
-//! `normalize_new_language`, `new_is_known_language`, `plan_new_files`,
-//! and `apply_new`. Re-exported through `super` so the public path stays
-//! `dx_adopt::{plan_new_files, apply_new, ...}`.
-//!
-//! Templates stay stdlib-only so `dx generate` mappings accept them
-//! without ecosystem manifests/locks: one hello source plus the minimal
-//! foreign-layout marker (`Cargo.toml`, `pyproject.toml`, `package.json`,
-//! `go.mod`, `pom.xml`, `build.sbt`, SDK-style project, or C++ pair).
-//! See: `docs/cli/commands/new-upgrade.md`.
-
 use std::path::Path;
 
 use super::{AdoptError, ScaffoldFile};
 
-/// Languages `dx new` scaffolds, matching the `dx generate` mappings.
-///
-/// `c`/`cc` are aliases for `cpp` (C/C++ share the `cc` Gazelle path);
-/// `c#`/`f#` spellings are accepted for ergonomics and normalize to
-/// `csharp`/`fsharp`.
 pub const SUPPORTED_NEW_LANGUAGES: &[&str] = &[
     "rust",
     "python",
@@ -36,10 +18,6 @@ pub const SUPPORTED_NEW_LANGUAGES: &[&str] = &[
     "cpp",
 ];
 
-/// Normalize a user-supplied language to its canonical template key.
-///
-/// Returns `None` for unsupported spellings (rejected pre-exec, never
-/// defaulted silently).
 pub fn normalize_new_language(language: &str) -> Option<&'static str> {
     match language {
         "rust" => Some("rust"),
@@ -57,22 +35,15 @@ pub fn normalize_new_language(language: &str) -> Option<&'static str> {
     }
 }
 
-/// Whether `language` is a known `dx new` template.
 pub fn new_is_known_language(language: &str) -> bool {
     normalize_new_language(language).is_some()
 }
 
-/// Default project directory when `dx new <lang>` omits the name.
 pub fn default_new_name() -> &'static str {
     "my_project"
 }
 
 /// Plan the `dx new` scaffold: absent-only repo wiring under `<name>/`
-/// (the `dx init` files, prefixed) plus one minimal stdlib-only project
-/// for `language`.
-///
-/// All writes are absent-only like `dx init`; the caller refuses existing
-/// paths (there is no overwrite flag). Contents are pinned (no network).
 pub fn plan_new_files(language: &str, name: &str) -> Result<Vec<ScaffoldFile>, AdoptError> {
     let canonical =
         normalize_new_language(language).ok_or_else(|| AdoptError::NewUnknownLanguage {
@@ -99,11 +70,6 @@ pub fn plan_new_files(language: &str, name: &str) -> Result<Vec<ScaffoldFile>, A
     Ok(files)
 }
 
-/// Minimal stdlib-only sources per canonical language.
-///
-/// Each pair mirrors the corresponding `examples/adopt-*` foreign layout
-/// and `*/tests/fixtures/hello/` seed shape at stdlib-only scope, so the
-/// Gazelle extensions own BUILD decisions on first `dx generate`.
 fn new_language_files(canonical: &str, project: &str) -> Vec<(String, String)> {
     match canonical {
         "rust" => vec![
@@ -249,9 +215,6 @@ fn new_language_files(canonical: &str, project: &str) -> Vec<(String, String)> {
 }
 
 /// Apply the `dx new` scaffold under `root`, writing absent-only.
-///
-/// Returns the written workspace-relative paths with `refused:` entries
-/// after a `---` separator, mirroring [`super::apply_init`].
 pub fn apply_new(root: &Path, language: &str, name: &str) -> Result<Vec<String>, AdoptError> {
     let mut written = Vec::new();
     let mut refused = Vec::new();
@@ -301,7 +264,6 @@ mod tests {
 
     #[test]
     fn new_plans_init_wiring_plus_language_sources() {
-        // See: `docs/cli/commands/new-upgrade.md`.
         for lang in SUPPORTED_NEW_LANGUAGES {
             let files = plan_new_files(lang, "demo").expect("plans");
             assert!(

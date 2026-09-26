@@ -1,51 +1,3 @@
-//! Intended-manifest finalizer (WP1).
-//!
-//! The Gazelle extension ([`gazelle/dispatch/manifest.go`](../../gazelle/dispatch/manifest.go))
-//! witnesses the *intended* file contents for a `//dx:generate` run as JSON on
-//! `DX_GENERATE_INTENDED` (candidate bytes, original bytes, and byte-offset
-//! edits, all base64) plus `DX_GENERATE_SCOPE` and `DX_GENERATE_MODE`.
-//! [`finalize`] turns that witness into a [`GenerationManifest`]: it decodes
-//! the payload, reconstructs the candidate bytes and stamps the BLAKE3
-//! original digest through `generation_result::candidate`, and reads the
-//! workspace once per file to determine the write outcome in default mode:
-//!
-//! * workspace bytes equal the intended bytes → [`WriteOutcome::Applied`],
-//! * anything else (mismatch, missing, unreadable) →
-//!   [`WriteOutcome::NotApplied`] with a machine-readable `failure_code`
-//!   (`"write_mismatch"`, `"missing_file"`, `"unreadable_file"`).
-//!
-//! In check mode no workspace file is read at all: the manifest carries
-//! [`WriteOutcome::Unspecified`] outcomes, and every scope must witness
-//! `results_complete` (a check run that did not finish every scope fails
-//! validation rather than producing a manifest that claims otherwise).
-//! A complete check witness finalizes even when the Gazelle run exits
-//! nonzero: upstream writes the witness in `AfterResolvingDeps` before
-//! the emit loop, and without `-patch` the only post-witness failure is
-//! `ErrDiff` ("changes found") — the expected check signal, reported as
-//! exit 1 with the changes listed. Malformed payloads fail closed with [`FinalizeError`] before any filesystem
-//! access beyond the (guarded) outcome reads; paths that are not safe to join
-//! under the workspace root are rejected without being touched.
-//!
-//! Wire shape (base64 `[]byte` fields mirror the Go structs field-for-field):
-//! ```json
-//! {
-//!   "schema_major": 1, "schema_minor": 0, "mode": "check",
-//!   "scopes": [{"value": "//...", "results_complete": true}],
-//!   "files": [{
-//!     "path": "rust/tests/fixtures/hello/BUILD.bazel", "scope_index": 0,
-//!     "original_content": "<base64>", "create_content": "<base64>",
-//!     "edits": [{"start_byte": 0, "end_byte": 5, "replacement": "<base64>"}]
-//!   }],
-//!   "ignored_imports": [{
-//!     "path": "rust/tests/fixtures/hello/BUILD.bazel", "language": "rust",
-//!     "import": "serde", "scope_index": 0
-//!   }]
-//! }
-//! ```
-//!
-//! A file carries `create_content` (create) or `original_content` plus `edits`
-//! (modify); carrying both is a contradiction and rejected.
-
 use generation_result::proto::{
     file_result, Edit, FileResult, GenerationManifest, IgnoredImport, Mode, Modification, Scope,
     WriteOutcome,
@@ -53,46 +5,27 @@ use generation_result::proto::{
 use serde::Deserialize;
 use std::path::Path;
 
-/// Failure codes recorded on [`WriteOutcome::NotApplied`] file results.
 pub const FAILURE_WRITE_MISMATCH: &str = "write_mismatch";
 pub const FAILURE_MISSING_FILE: &str = "missing_file";
 pub const FAILURE_UNREADABLE_FILE: &str = "unreadable_file";
 
-/// Input to [`finalize`].
 pub struct FinalizeInput<'a> {
-    /// Raw bytes of the `DX_GENERATE_INTENDED` payload.
     pub intended_json: &'a [u8],
-    /// Workspace root the gazelle run operated on; outcome reads join here.
     pub workspace: &'a Path,
-    /// Whether the wrapper ran gazelle with `--mode=check`.
     pub check: bool,
-    /// Whether the gazelle subprocess exited successfully.
     pub gazelle_ok: bool,
 }
 
-/// Ways finalization can fail. IO problems reading workspace files are *not*
-/// errors: they become [`WriteOutcome::NotApplied`] results with a
-/// `failure_code`, because a concurrent workspace mutation must degrade to a
-/// failing manifest rather than a CLI crash.
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum FinalizeError {
-    /// Payload is not well-formed JSON of the expected shape (includes bad
-    /// base64, schema or mode mismatch, contradictory create+modify, and
-    /// paths unsafe to join under the workspace root).
     #[error("malformed intended manifest: {0}")]
     Malformed(String),
-    /// A check run whose gazelle subprocess failed carries no trustworthy
-    /// witness, so there is nothing to finalize.
     #[error("check run cannot be finalized: gazelle did not complete successfully")]
     IncompleteCheck,
-    /// A structurally complete manifest failed `generation_result` validation.
     #[error("invalid generation manifest: {0}")]
     Invalid(#[from] generation_result::Error),
 }
 
-/// Decode strict standard base64 (RFC 4648 alphabet with `=` padding).
-/// Whitespace and non-alphabet bytes are rejected: the payload is
-/// machine-generated, so leniency would only mask corruption.
 fn decode_b64(value: &str) -> Result<Vec<u8>, ()> {
     use base64::{engine::general_purpose::STANDARD, Engine as _};
     if value.is_empty() {
@@ -174,10 +107,6 @@ struct IntendedIgnored {
     scope_index: u32,
 }
 
-/// Reject paths that are unsafe to join under the workspace root before any
-/// filesystem access: absolute paths, `..` escapes, and empty components all
-/// fail closed. (Full naming rules such as the no-`./`-prefix convention are
-/// enforced by `generation_result::validate` on the finished manifest.)
 fn check_joinable(path: &str) -> Result<(), FinalizeError> {
     if path.is_empty() || path.starts_with('/') {
         return Err(FinalizeError::Malformed(format!(
@@ -195,10 +124,6 @@ fn check_joinable(path: &str) -> Result<(), FinalizeError> {
     Ok(())
 }
 
-/// Determine the default-mode outcome by comparing workspace bytes against the
-/// intended bytes: equal means Gazelle already wrote them ([`Applied`]),
-/// anything else degrades to [`NotApplied`] with a machine-readable
-/// `failure_code`.
 fn default_outcome(workspace: &Path, path: &str, intended: &[u8]) -> (i32, String) {
     match std::fs::read(workspace.join(path)) {
         Ok(actual) if actual == intended => (WriteOutcome::Applied as i32, String::new()),
@@ -217,15 +142,12 @@ fn default_outcome(workspace: &Path, path: &str, intended: &[u8]) -> (i32, Strin
     }
 }
 
-/// Build a validated [`GenerationManifest`] from a Gazelle intended-manifest
-/// witness. See the [module-level documentation](self) for the protocol.
 pub fn finalize(input: &FinalizeInput<'_>) -> Result<GenerationManifest, FinalizeError> {
     let payload: IntendedPayload = serde_json::from_slice(input.intended_json)
         .map_err(|err| FinalizeError::Malformed(format!("invalid intended JSON: {err}")))?;
     // Minor is forward-compatible within one major: 1.0 witnesses decode
     // under 1.1 when their bytes satisfy the current rules, and newer
     // minors decode the same way. Only the breaking major is enforced here.
-    // See: `docs/cli/output-protocol.md#ndjson-envelope`.
     if payload.schema_major != generation_result::SCHEMA_MAJOR {
         return Err(FinalizeError::Malformed(format!(
             "unsupported schema {}.{}; want major {}",
@@ -360,8 +282,6 @@ mod tests {
     use super::*;
     use std::fmt::Write as _;
 
-    /// Base64 of the witness Go emits for `original "abc\n"` replaced by
-    /// `"xyz\n"` inside one scope.
     fn payload(mode: &str, results_complete: bool) -> Vec<u8> {
         format!(
             concat!(

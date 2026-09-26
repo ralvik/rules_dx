@@ -3,11 +3,6 @@
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 # Pinned from `bazel build //python/env:*_plan` JSON outputs (WP3).
-# Source-only targets project no wheels and no venv; binaries and tests
-# project the upstream `py_venv` VIRTUAL_ENV directory. The pytest target
-# projects the six uv wheel records (coverage, iniconfig, packaging,
-# pluggy, pygments, pytest) its venv assembles. Adopt-python/app proves
-# the same closure on a real consumer (`handlers_test` venv plus wheels).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //python/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=hello.py

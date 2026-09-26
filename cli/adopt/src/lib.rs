@@ -1,19 +1,3 @@
-//! Delivered adoption behavior (: `dx init` scaffolding, hermetic hook
-//! runner, devcontainer admission, `dx status` diagnostics, single-version
-//! `dx version` with rollback, local watch loop, thin inspect forwarding,
-//! and single-source completion generation).
-//!
-//! Contract: `docs/cli/README.md`.
-//!
-//! Planning predicates below own the adoption shape; the I/O helpers after
-//! them deliver it: absent-only scaffolding, unmanaged refusal, pin files
-//! that equal the `rules_dx` module version, hermetic-only hook Git,
-//! two-layer hook configuration, pinned Bazel-delegated devcontainers, the
-//! consolidated status surface (never `doctor`), local-only re-resolved
-//! watch iterations, thin `query`/`cquery` forwarding, and completion
-//! scripts generated from the single command table. Helpers operate on
-//! injected paths only and touch no network.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]

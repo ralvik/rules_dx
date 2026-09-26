@@ -1,6 +1,3 @@
-//! Combined setup request planning tests (split from `lib.rs`).
-//! Originally the inline `mod tests` of `lib.rs`.
-
 use super::*;
 
 #[test]

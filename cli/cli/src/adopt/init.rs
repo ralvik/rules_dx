@@ -1,10 +1,3 @@
-//! Adoption init execution (`init`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_init`], the
-//! absent-only scaffolding apply (dry-run plans are summaries,
-//! suppressed under `--quiet`). Re-exported through `super` so the
-//! dispatch path stays `crate::adopt::execute_adoption`.
-
 use std::io::Write;
 
 use crate::args::Invocation;
@@ -12,9 +5,6 @@ use crate::exec::common::check_stdout_write;
 
 use super::{operational, summaries_suppressed};
 
-/// Runs `dx init`: dry-run lists the files that would be written,
-/// otherwise applies the scaffolding absent-only (existing files are
-/// left untouched with a `refused:` note on stderr).
 pub(crate) fn execute_init(
     invocation: &Invocation,
     workspace: &std::path::Path,

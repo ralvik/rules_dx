@@ -1,19 +1,8 @@
-//! Raw `dx bazel` launcher passthrough.
-
 use super::common::*;
 use crate::args::Invocation;
 use crate::plan::plan_bazel;
 use dx_output::OutputMode;
 
-/// Executes `dx bazel`: raw launcher passthrough for the WP4
-/// helper surface (`dx bazel version`, `dx bazel audit`/
-/// `dx bazel update` when those helpers exist).
-///
-/// The child inherits stdio and its exit code forwards verbatim: no
-/// scope resolution, no quality thresholds or reports, no BEP
-/// stream, and no dx-owned output beyond the dry-run/quiet summary
-/// line. Argument parsing guarantees text output, so only quiet
-/// suppresses the summary.
 pub(crate) fn execute_bazel(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,

@@ -1,14 +1,3 @@
-//! Quality finding/change/mutation emission: human text,
-//! unified patch, and NDJSON event projection for one quality run.
-//!
-//! Extracted from [`super::quality`] without behavior change: the
-//! execution root still owns Bazel launch, result collection, mutation
-//! plus status projection ([`super::quality_apply`]), diff-patch
-//! rendering ([`super::quality_patch`]), and standard-report writing
-//! ([`super::quality_reports`]); this module owns only the
-//! output-mode emission of status findings, validated changes, and
-//! mutation outcomes plus the applied/not-applied counts.
-
 use std::collections::BTreeMap;
 use std::io::Write;
 
@@ -22,9 +11,6 @@ use super::common::{
 };
 use crate::args::Invocation;
 
-/// Shared inputs for one emission pass. Bundled so the entry point
-/// stays under the clippy argument limit without changing call-site
-/// behavior.
 pub(crate) struct EmitInputs<'a> {
     pub(crate) invocation: &'a Invocation,
     pub(crate) status: &'a [DiagnosticEvent],
@@ -35,21 +21,11 @@ pub(crate) struct EmitInputs<'a> {
     pub(crate) stdout_report: bool,
 }
 
-/// Mutation counts for the `command_finished` event. In JSON mode both
-/// counters advance per emitted mutation event; in text mode they are
-/// derived from the apply outcome; in diff mode both stay zero.
 pub(crate) struct EmitCounts {
     pub(crate) applied_count: u64,
     pub(crate) not_applied_count: u64,
 }
 
-/// Emits status findings, changes, and mutations for one quality run.
-///
-/// Returns the applied/not-applied counts, or the operational
-/// `invalid_bep` detail when a validated finding/change/mutation
-/// fails event rendering (defense-in-depth: unreachable on validated
-/// results; the caller maps the error to `operational` so stderr/exit
-/// paths are unchanged).
 pub(crate) fn emit_findings(
     inputs: EmitInputs<'_>,
     out: &mut dyn Write,

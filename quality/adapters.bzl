@@ -4,12 +4,6 @@ Contract: `docs/quality/tool-integrations.md`, `docs/quality/quality-sources.md`
 """
 
 # Versioned registry schema for the adapter taxonomy.
-# This file owns the data (`REAL_ADAPTERS`, `REAL_CLASS_TO_FAMILY`); query
-# helpers for families/tools live once in `//quality:registry.bzl`, so adding
-# a language/tool edits this one data registry plus parity/compat, never a
-# parallel allowlist. `tsc` stays pipeline-only by design (target-coupled via
-# `TsConfigInfo`); the runner dispatch parity (`REAL_TOOLS` == registry tools
-# minus `tsc`) is pinned by the runner backend tests (See: quality/runner/src/real_tests_b.rs).
 ADAPTER_REGISTRY_SCHEMA_VERSION = 1
 
 # Synthetic tool ID to capability to supported semantic file classes.
@@ -43,18 +37,6 @@ def adapter_supported_classes(tool_id, capability):
     return sorted(SYNTHETIC_ADAPTERS[tool_id].get(capability, []))
 
 # Real adapters: stable tool IDs users select in policy families.
-# Stages order by sorted tool ID; rustc and roslyn are upstream-delegated,
-# tsc and spotbugs are target-coupled, scalafix/fsharplint are
-# callback/library-wired check-only, buf lint plus qmllint plus
-# clang-tidy/cppcheck/staticcheck/govet/errcheck are
-# recorded-diagnostics/delegated-record check-only in the matrix
-# (spawned in production), ruff audit is check-only over the S ruleset
-# via the same hermetic `check` JSON path as lint (native-config sole
-# policy, no hidden preset), and the interpreted/file-family cohort rides
-# fake doubles plus delegated records seed-only (formatters whole-file rewrite,
-# lint check-only via sandbox-apply-and-diff). Lint-only adapters stay check-only by
-# design (ktlint lint fixes via `--format` like ESLint `--fix`).
-# See `docs/quality/tool-integrations.md`.
 REAL_ADAPTERS = {
     "biome": {
         "format": ["javascript", "json", "jsx", "typescript", "tsx"],

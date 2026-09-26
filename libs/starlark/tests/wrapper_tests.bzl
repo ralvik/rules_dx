@@ -1,4 +1,4 @@
-"""Unit tests proving optional-provider forwarding warns instead of silently skipping (issue #943).
+"""Unit tests proving optional-provider forwarding warns instead of silently skipping.
 """
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")

@@ -72,13 +72,13 @@ pointer above makes the retry idempotent.
 
 ## Editor coverage
 
-Dispositions follow the [automatic-workflow
-policy](../../product/scope.md#automatic-workflows): automatic where
+Dispositions follow the automatic-workflow
+policy: automatic where
 upstream supports it without a custom watcher or resolver engine,
 otherwise an explicit snapshot, projection, or manual wiring. The
 scaffolded `.vscode/settings.json`, `.vscode/extensions.json`, and
 devcontainer extensions cover every row; see
-[Ownership And Refresh](../../environments/environment.md#ownership-and-refresh)
+Ownership And Refresh
 for the managed drivers. Scaffolding is VSCode-only by contract:
 `.idea/` plus Neovim layouts stay manual and are never generated.
 Go plus TypeScript are covered through `.dx` projections: `golang.go`

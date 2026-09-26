@@ -1,19 +1,6 @@
-//! Djlint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `djlint --lint` text diagnostics on stdout. `files` are the
-/// workspace-relative mirror paths.
-///
-/// Each finding is one line `<path>:<line>:<col>: <rule> <message>`.
-/// Findings are points at the reported position; every diagnostic is
-/// a warning. Clean is exit 0 with no lines; findings exit 1.
 pub fn parse_djlint(
     stderr: &[u8],
     code: Option<i32>,
@@ -82,11 +69,6 @@ pub fn parse_djlint(
     Ok(findings)
 }
 
-/// Parses `djlint --reformat --check` diff stdout.
-///
-/// Whole-file rewrite with check/diff mode: unified diff markers
-/// yield one `1:1` format finding per file; empty output on exit 0
-/// is clean.
 pub fn parse_djlint_format(
     stdout: &[u8],
     code: Option<i32>,

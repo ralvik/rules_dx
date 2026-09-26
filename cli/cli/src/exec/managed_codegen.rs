@@ -1,33 +1,14 @@
-//! Managed codegen collection and staging.
-//!
-//! Split from [`super::managed`]: owns the codegen side of managed
-//! generation ([`collect_managed_codegen`], [`empty_generated_id`],
-//! [`stage_codegen_generation`], and [`stage_codegen_side`]) — BEP
-//! shard collection over the codegen output group, plan validation,
-//! and immutable mirror-leaf staging. [`super::managed`] keeps the
-//! `codegen`/`env`/`setup` dispatch plus side preparation; shared
-//! staging primitives live in [`super::managed_staging`]; the env
-//! mirror lives in [`super::managed_env`].
-
 use super::common::*;
 use super::managed_staging::{collect_managed_group, ensure_generation_dir, symlink_leaf};
 use std::collections::BTreeMap;
 use std::path::Path;
 
-/// Validated managed codegen collection: raw group outputs plus the
-/// merged plan and its read-only projection. The raw outputs stay
-/// alongside so exact-scope callers can tell a capability-absent side
-/// (no contributing target) from a present but empty plan.
 pub(crate) type ManagedCodegenCollection = (
     Vec<dx_bep::TargetOutput>,
     dx_codegen::CollectedPlan,
     Vec<dx_codegen::ProjectionEntry>,
 );
 
-/// Collects and validates one managed codegen plan: decodes shards,
-/// rejects conflicts, merges deterministically, and plans the read-only
-/// projection through the same index collection validates. An empty
-/// shard set validates as an empty plan.
 pub(crate) fn collect_managed_codegen(
     bep: &Path,
 ) -> Result<ManagedCodegenCollection, (String, String)> {
@@ -49,8 +30,6 @@ pub(crate) fn collect_managed_codegen(
     Ok((outputs, plan, projection))
 }
 
-/// Managed empty generated-code identity, mirroring
-/// [`empty_env_id`](super::managed_env::empty_env_id).
 pub(crate) fn empty_generated_id() -> Result<dx_setup::GenerationId, (String, String)> {
     // LCOV_EXCL_START - reason: defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
     dx_setup::GenerationId::new(&dx_codegen::plan_hex("[]")).map_err(|err| {
@@ -62,8 +41,6 @@ pub(crate) fn empty_generated_id() -> Result<dx_setup::GenerationId, (String, St
     // LCOV_EXCL_STOP - reason: end defensive diverge, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
-/// Rejects workspace-absolute, escaping, or empty logical paths before
-/// any mutation.
 fn validate_logical_path(logical_path: &str) -> Result<(), ExecError> {
     if logical_path.is_empty() {
         return Err(ExecError::EmptyLogicalPath);
@@ -87,16 +64,6 @@ fn validate_logical_path(logical_path: &str) -> Result<(), ExecError> {
     Ok(())
 }
 
-/// Stages one immutable codegen generation: validates every mirror leaf
-/// against the current BEP result, refuses logical paths colliding with
-/// checked-in sources unless the entry carries the explicit replacement
-/// contract (`replaces` equal to the logical path with a backing
-/// artifact), and installs deterministic symlinks to Bazel-owned
-/// artifacts. Missing artifacts fail before selection; Bazel owns remote
-/// materialization and the CLI performs no fetch. Leaves install
-/// idempotently so concurrent preparation of one generation never fails;
-/// a leaf pointing elsewhere is reconstructed.
-/// See: `docs/environments/codegen.md` (provider contract).
 pub(crate) fn stage_codegen_generation(
     workspace: &Path,
     id: &dx_setup::GenerationId,
@@ -209,9 +176,6 @@ pub(crate) fn stage_codegen_generation(
     Ok(())
 }
 
-/// Stages one validated codegen side: derives its immutable identity
-/// from the plan digest and installs the mirror leaves. Returns the
-/// prepared generation identity.
 pub(crate) fn stage_codegen_side(
     workspace: &Path,
     plan: &dx_codegen::CollectedPlan,

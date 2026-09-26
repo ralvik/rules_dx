@@ -17,11 +17,6 @@ _DX_JS_LIBRARY_PROVIDES = [
 ]
 
 # NB: testing.TestEnvironment is returned by the test forwarder (the test
-# runner reads it from the target) but cannot be listed here: it is a
-# constructor value, not a Provider object. InstrumentedFilesInfo is
-# likewise returned only when coverage is enabled (matching upstream
-# jest_test) and so cannot be advertised unconditionally; coverage still
-# works because the runner reads it from the target, not via provides.
 _DX_JS_TEST_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
@@ -35,7 +30,6 @@ _DX_JS_BINARY_PROVIDES = [
 _JS_EXTS = [".js", ".jsx", ".mjs", ".cjs"]
 
 # JavaScript owns `.js`/`.mjs`/`.cjs`; JSX stays its own class per the
-# admissibility table (See: docs/quality/quality-sources.md). Both map to the
 # `javascript` policy family via the single-sourced registry, so splitting
 # keeps adapter applicability exact (biome/eslint/prettier distinguish them).
 _DX_JS_SOURCE_SPECS = [("javascript", ["js", "mjs", "cjs"]), ("jsx", "jsx")]
@@ -117,10 +111,6 @@ def _javascript_test_forward_impl(ctx):
     upstream = ctx.attr.upstream
 
     # The upstream launcher already bakes fixed_env (JEST_JUNIT_OUTPUT_FILE,
-    # snapshot flags) into its executable, which we symlink with runfiles
-    # merged below. Only env_inherit (notably TESTBRIDGE_TEST_ONLY for
-    # sharding/--test_filter) lives solely in TestEnvironment, so rebuild
-    # it from the mirrored env_inherit attribute.
     env_inherit = list(ctx.attr.env_inherit) if ctx.attr.env_inherit else []
     if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
         env_inherit.append("TESTBRIDGE_TEST_ONLY")
@@ -131,10 +121,6 @@ def _javascript_test_forward_impl(ctx):
     ]
 
     # Upstream jest_test only provides InstrumentedFilesInfo when coverage
-    # is enabled, so forward it conditionally (unlike the library case).
-    # NB: no explicit RunEnvironmentInfo forward: constructing
-    # testing.TestEnvironment above already contributes the runtime
-    # environment provider, and returning both conflicts.
     return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo], "javascript_*")
 
 _javascript_test = rule(
@@ -215,10 +201,6 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
         fail(rejection)
 
     # The private upstream test stays an implementation detail via private
-    # visibility; both it and the public wrapper run under `bazel test //...`
-    # (no manual; double-execution is the cost of green suites).
-    # `aspect_hints` rides the public forwarder only (quality aspects visit
-    # the forwarder); strip it from the upstream jest_test kwargs.
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.pop("aspect_hints", None)
     if tags != None:

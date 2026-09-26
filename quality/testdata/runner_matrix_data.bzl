@@ -167,7 +167,3 @@ replacement matrix/toml_dirty.toml 1 2 " = "
 ]
 
 # Markdown cells: fixture-policy lint defaults (markdown_check link/structure
-# plus strict Dx.Markers Vale) with the vale_test.ini closure,
-# over the real clean file, generated broken-link bytes, and the sibling
-# link-resolution pair. Clean files carry no TODO markers so Vale stays
-# clean; the dirty link case fails via markdown_check only.

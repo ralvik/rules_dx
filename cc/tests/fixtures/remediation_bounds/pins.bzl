@@ -15,13 +15,6 @@ BOUNDED_EVIDENCE = "complete-workflow evidence"
 BOUNDED_SCOPE = "Scope only"
 
 # Allowed remediation forms per ADR 0013 plus ADR 0014 plus ADR 0008:
-# focused upstream rules patches when pinned reproducibly and tested
-# against the accepted contracts and required platforms, with
-# upstreaming preferred; small missing integration pieces owned by
-# rules_dx only with a clearly bounded scope and maintenance
-# responsibility while preserving upstream language semantics and
-# verified public provider boundaries; established alternative
-# comparison with explicit contract and API review before any adoption.
 ALLOWED_FORMS = [
     "focused, tested, pinned patches",
     "bounded integration",
@@ -67,10 +60,6 @@ DEFECT_CROSS = "Cross-product expansion only after the initial cohort passes wit
 DEFECT_CROSS_EVIDENCE = "cc/tests/fixtures/cross_routes/pins.bzl via cross_routes_qualification under issue #504"
 
 # Owner plus estimate plus tracking record: actual upstream owner is
-# named per defect above; each fix stays narrow with patch plus
-# upstream-issue plus upgrade tracking and complete-workflow evidence
-# before admission. Affected capability fails closed until a compliant
-# remedy passes the required evidence.
 OWNER_NOTE = "name actual owners"
 ESTIMATE_NOTE = "estimate each upstream fix"
 TRACKING_NOTE = "record patch plus upstream issue plus upgrade tracking"
@@ -78,10 +67,6 @@ FAIL_CLOSED_NOTE = "the affected capability fails closed until a compliant remed
 UPSTREAMING_NOTE = "Prefer upstreaming those fixes"
 
 # Stop-slice bound: if fixes require a replacement acquisition engine,
-# compiler backend, Cargo graph or coverage engine, stop that slice and
-# revisit alternatives under the maintenance policy. Do not defer
-# required Rust Windows support, admit complete C/C++ prematurely, or
-# weaken hermeticity to make the table green.
 STOP_SLICE_NOTE = "If fixes require a replacement acquisition engine, compiler backend, Cargo graph or coverage engine, stop that slice and revisit alternatives under the maintenance policy"
 STOP_SLICE_CASES = [
     "replacement acquisition engine",

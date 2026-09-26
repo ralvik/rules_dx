@@ -8,10 +8,6 @@ load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
 # Versioned coordinate-charset schema. Consumers query via
-# `maven_group_charset`, `maven_artifact_charset`,
-# `maven_version_charset`, and `maven_*_error` instead of duplicating
-# the charset, so any charset evolution edits this one data constant
-# with schema review, never a parallel allowlist.
 MAVEN_SCHEMA_VERSION = 1
 
 # Group and artifact ids embed directly in the generated Python

@@ -1,13 +1,3 @@
-//! `dx_man` build step: renders the `dx` manual page from
-//! the clap grammar so it can never drift from `--help`.
-//!
-//! Usage: `dx_man <output-file>`. The `man_pages` genrule wires this
-//! into the build (`bazel build //cli/cli:man_pages` emits `man/dx.1`);
-//! release packaging  consumes that target. The CLI is a
-//! single clap command with a command-word value enum rather than
-//! subcommands, so the grammar yields one page; per-command pages arrive
-//! if the grammar ever gains subcommands.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]

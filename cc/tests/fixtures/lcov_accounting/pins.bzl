@@ -8,13 +8,6 @@ Fixture: `cc/tests/fixtures/lcov_accounting/` via
 """
 
 # Accounted shapes: Rust-only plus C/C++-only plus mixed/DLL LCOV.
-# Rust-only is the pinned rules_rust llvm-cov integration over
-# `rust/tests/fixtures/hello` (DA union with maximum hits winning).
-# C/C++-only is the pinned Bazel LLVM source coverage over the
-# accounting lib plus test below (DA records for `.c`/`.cc`/`.cpp`/
-# `.cxx`/`.h`/`.hh`/`.hpp`/`.hxx`, blank plus comment-only lines never
-# executable). Mixed/DLL unions hits across the cell's tests by authored
-# source, proven by the cxx_identity bridge plus linux_corpus corpus.
 RUST_ONLY_SHAPE = "Rust-only LCOV via pinned rules_rust llvm-cov"
 RUST_ONLY_FIXTURE = "//rust/tests/fixtures/hello:hello_test"
 CC_ONLY_SHAPE = "C/C++-only LCOV via pinned Bazel LLVM source coverage"
@@ -53,13 +46,6 @@ PATCHED_RULES_RUST_COMMIT = "e9dd49f22cfa43c75ba30cd9d9bb7d8bdc459dde"
 TOOL_PAIRING_NOTE = "Rust/Clang raw-profile compatibility is the upgrade gate; llvm-cov plus llvm-profdata move with LLVM"
 
 # Native ignores plus denominator validation: `LCOV_EXCL_LINE` for one
-# line plus `LCOV_EXCL_START`/`LCOV_EXCL_STOP` for a range, each with a
-# specific nearby `reason:` plus `issue:` on the same or previous line (see
-# `docs/testing/strategy-details.md#coverage`, issue #1055). Valid ignores
-# exclude their lines from the denominator; missing reasons, bare policy:
-# without reason: plus issue:, missing issue: tracking, plus malformed
-# directives fail. A target with no executable lines is listed as no-code,
-# never an implicit pass; an empty denominator is never a pass.
 NATIVE_IGNORE_LINE = "LCOV_EXCL_LINE"
 NATIVE_IGNORE_START = "LCOV_EXCL_START"
 NATIVE_IGNORE_STOP = "LCOV_EXCL_STOP"

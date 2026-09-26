@@ -1,20 +1,3 @@
-//! Single-source completion vocabulary for `dx completion`.
-//!
-//! Split from `super` (`lib.rs`): owns `ALL_COMMANDS`,
-//! `SUPPORTED_SHELLS`, and `completion_source_is_single`.
-//! Re-exported through `super` so the public path stays
-//! `dx_adopt::{ALL_COMMANDS, SUPPORTED_SHELLS, completion_source_is_single}`.
-//!
-//! Production `dx completion` renders from the `Cli` grammar via
-//! `clap_complete` (`cli/cli/src/args/completion.rs::render_completion`),
-//! so the grammar feeding parsing and `--help` is the single completion
-//! source. The `ALL_COMMANDS`/`SUPPORTED_SHELLS` tables here
-//! remain as the frozen vocabulary reference only; they render nothing.
-
-/// Single command-definition source (frozen).
-///
-/// Every `dx completion <shell>` script renders from this table so new
-/// commands cannot drift from the command reference.
 pub const ALL_COMMANDS: &[&str] = &[
     "audit",
     "lint",
@@ -50,15 +33,8 @@ pub const ALL_COMMANDS: &[&str] = &[
     "bazel",
 ];
 
-/// Shells covered by `dx completion` (frozen).
 pub const SUPPORTED_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
 
-/// Whether a completion script source is admissible.
-///
-/// Completion scripts ship as generated output from the single CLI
-/// command-definition source: handwritten per-shell scripts are rejected so
-/// new commands and flags cannot drift from the command reference. The single source owns
-/// the shell list, mechanics, and drift fixtures.
 pub fn completion_source_is_single(generated_from_single_source: bool, handwritten: bool) -> bool {
     generated_from_single_source && !handwritten
 }
@@ -95,8 +71,6 @@ mod tests {
         // pins the final CLI registry exactly (32 commands including
         // `deploy` plus `bump` plus `migrate` plus `new` plus `upgrade`
         // plus `docs`; `doctor` plus `configure` stay rejected as unknown).
-        // See: `docs/cli/commands/new-upgrade.md` plus
-        // `docs/cli/commands/docs.md`.
         let mut got = ALL_COMMANDS.to_vec();
         got.sort_unstable();
         let mut want = vec![

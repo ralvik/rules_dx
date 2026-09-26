@@ -1,6 +1,3 @@
-//! Split from `update.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::super::test_support::*;
 use dx_process::{ChildStatus, Runner};
 use std::cell::RefCell;
@@ -162,7 +159,6 @@ pub(super) fn live_independent_failure_preserves_success_and_exits_one() {
     assert!(out.contains("4 succeeded, 1 failed, 0 blocked"), "{out}");
     assert!(err.contains("update_failed"), "{err}");
     assert!(err.contains("failed to update maven"), "{err}");
-    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`):
     // partial runs report the recovery plan, never silent success.
     assert!(err.contains("update_recovery"), "{err}");
     assert!(err.contains("dx update maven"), "{err}");
@@ -199,7 +195,6 @@ pub(super) fn live_unsupported_selective_fails_without_launch() {
 
 #[test]
 pub(super) fn live_unsupported_nuget_selective_fails_without_launch() {
-    // Issue #635: `nuget:FSharp.Core` parses then fails closed as
     // `BackendError::Unsupported` with no updater launch and never a
     // silent full substitution.
     let runner = ScriptRunner::new(&[]);
@@ -213,7 +208,6 @@ pub(super) fn live_unsupported_nuget_selective_fails_without_launch() {
 
 #[test]
 pub(super) fn live_unsupported_go_selective_fails_without_launch() {
-    // Issue #636: `go:github.com/google/go-cmp/cmp` parses then fails
     // closed as `BackendError::Unsupported` with no updater launch
     // and never a silent full (no-op) substitution; widen via `dx bump`.
     let runner = ScriptRunner::new(&[]);
@@ -261,12 +255,10 @@ pub(super) fn live_json_emits_per_set_notices_and_finished() {
     assert!(kinds.contains(&"notice"));
     assert!(kinds.contains(&"error"));
     assert!(err.contains("update_failed"), "{err}");
-    // Issue #772 (See: `docs/cli/commands/audit-update-bazel.md#dx-update`).
     assert!(out.contains("\"code\":\"update_recovery\""), "{out}");
     assert!(err.contains("update_recovery"), "{err}");
     // Minor-1.1 correlation groups each per-set report under
     // `update:<set>`; line order stays authoritative.
-    // See: `docs/cli/output-protocol.md#ndjson-envelope`.
     for event in &events {
         let code = event
             .get("code")
@@ -286,7 +278,6 @@ pub(super) fn live_json_emits_per_set_notices_and_finished() {
 
 #[test]
 pub(super) fn manifest_projects_to_correlated_change_and_mutation() {
-    // See: `docs/cli/output-protocol.md#mutation`.
     const DIGEST: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     let manifest = dx_update::manifest::CommittedManifest {
         set: "npm".to_owned(),

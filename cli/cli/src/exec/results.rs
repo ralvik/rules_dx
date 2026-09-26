@@ -1,13 +1,3 @@
-//! BEP results collection and proto mapping.
-//!
-//! Split from [`super::common`]: owns the `dx_results` collection
-//! domain — [`Collected`], [`map_severity`], [`map_diagnostic`],
-//! [`map_change`], [`collect_results`], and [`collect_results_in`] —
-//! BEP shard collection over the quality output group plus validated
-//! proto-to-event mapping. [`super::common`] keeps the execution
-//! environment, stable codes, source verification, and status helpers;
-//! the sole production caller is [`super::quality::execute_quality`].
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::BufReader;
 use std::path::Path;
@@ -19,10 +9,6 @@ use quality_result::{decode_validated, proto};
 
 use super::common::{FileChange, FsArtifacts, CODE_INVALID_BEP, CODE_UNREADABLE_BEP};
 
-/// Normalized collection: current findings, validated changes, and the
-/// executed tool set. `complete` is false when Bazel failed, a target
-/// failed, or any result was undecodable; default mode never mutates
-/// while incomplete.
 pub(crate) struct Collected {
     pub(crate) tools: Vec<String>,
     pub(crate) initial: Vec<DiagnosticEvent>,
@@ -80,16 +66,10 @@ pub(crate) fn map_change(change: &proto::FileEdits) -> Option<FileChange> {
     })
 }
 
-/// Collects, decodes, and maps every `dx_results` artifact in the BEP
-/// stream at `bep`. Undecodable results and failed targets mark the
-/// collection incomplete while retaining validated findings.
 pub(crate) fn collect_results(bep: &Path) -> Result<Collected, (String, String)> {
     collect_results_in(bep, OUTPUT_GROUP)
 }
 
-/// Collects artifacts for one output group. Split from
-/// [`collect_results`] so unit tests can prove the invalid-group arm
-/// without touching the pinned production group.
 pub(crate) fn collect_results_in(bep: &Path, group: &str) -> Result<Collected, (String, String)> {
     let file = std::fs::File::open(bep).map_err(|err| {
         (

@@ -1,11 +1,4 @@
 // LCOV_EXCL_START - reason: re-export only, issue: 1055, policy: docs/testing/strategy-details.md#coverage
-//! `dx_apply`: validated, consensus-gated file mutations for the `dx` CLI.
-//!
-//! Contract: `docs/architecture/README.md`.
-//!
-//! Agents propose mutations as JSON [`envelope`]s; two agents must reach
-//! [`consensus`] before anything applies; every operation passes
-//! [`validators`] and is written atomically by the [`applier`].
 
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).

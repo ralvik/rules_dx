@@ -1,14 +1,3 @@
-//! Canonical JSON rendering for plan fingerprints.
-//!
-//! Contract: `docs/environments/codegen.md`.
-//!
-//! `dx_codegen` and `dx_env_plan` fingerprint the same way: project merged
-//! records onto a `Serialize` view of strings, booleans, and vecs, then
-//! render it as JSON. This crate owns the single typed call site
-//! ([`to_json`]/[`to_json_ascii_pretty`]) instead of repeating
-//! `.expect(...)`/`unreachable!` at every fingerprint function, and owns
-//! the Python `ensure_ascii` escape rule (see also).
-
 // Infallible paths must not `expect`/`unwrap`/`unreachable`/`todo` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
@@ -21,10 +10,8 @@
     )
 )]
 
-/// Fingerprint rendering failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum FingerprintError {
-    /// The fingerprint view failed to serialize as JSON.
     #[error("fingerprint JSON serializes: {detail}")]
     Json { detail: String },
 }
@@ -37,22 +24,10 @@ impl From<serde_json::Error> for FingerprintError {
     }
 }
 
-/// Renders a fingerprint view as canonical JSON.
-///
-/// The view types are strings, booleans, and vecs thereof, which
-/// `serde_json` always serializes for the pinned shapes; serialization
-/// failure is a typed [`FingerprintError`] (with the serde detail as
-/// display, no panic) so callers propagate instead of trapping.
 pub fn to_json<T: serde::Serialize>(view: &T) -> Result<String, FingerprintError> {
     serde_json::to_string(view).map_err(FingerprintError::from)
 }
 
-/// Re-escapes non-ASCII as `\uXXXX` (surrogate pairs above U+FFFF).
-///
-/// Single owner for Python `json.dumps(ensure_ascii=True)` parity:
-/// `serde_json` emits raw UTF-8 while Python escapes non-ASCII, so SBOM
-/// pretty output re-escapes after rendering.
-/// See: `deploy/release/src/lib.rs` (`render_pretty`).
 pub fn ensure_ascii(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
@@ -71,12 +46,6 @@ pub fn ensure_ascii(text: &str) -> String {
     out
 }
 
-/// Renders `value` as Python `json.dumps(indent=2, sort_keys=True,
-/// ensure_ascii=True)` bytes (pretty plus trailing newline).
-///
-/// Single owner for the SBOM/provenance wire bytes; `deploy/release`
-/// delegates here so the ASCII-escape rule cannot drift.
-/// See: `deploy/release/src/lib.rs` (`render_pretty`).
 pub fn to_json_ascii_pretty(value: &serde_json::Value) -> Result<String, FingerprintError> {
     let pretty = serde_json::to_string_pretty(value).map_err(FingerprintError::from)?;
     Ok(ensure_ascii(&pretty) + "\n")

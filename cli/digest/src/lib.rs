@@ -1,94 +1,45 @@
-//! Unified digest identities for `rules_dx`.
-//!
-//! Contract: `docs/architecture/README.md`.
-//!
-//! Split history: `quality/result` + `generation/result` + `cli/env`
-//! (`identity_digest`) + `cli/setup` hashed with BLAKE3-256 while
-//! `dx_apply::envelope` hashed with SHA-256, plus hand `hex_digest` /
-//! `parse_digest` helpers in `dx_cli` and `dx_output` and a repeated
-//! `DIGEST_LEN = 32` constant.
-//!
-//! This crate is the single owner of the digest algorithm surface:
-//!
-//! * [`DIGEST_LEN`] — 32-byte digest length shared by both algorithms.
-//! * [`SHA1_LEN`] — 20-byte Git SHA-1 commit length for pin/commit shapes.
-//! * [`Digest`] — `[u8; 32]` wrapper with hex/parse helpers.
-//! * [`blake3`] — canonical content identity (snapshots, setup, env).
-//! * [`sha256_hex`] / [`is_sha256_hex`] — compat shim for the frozen
-//!   `dx_apply` envelope contract (`original_sha256` stays SHA-256 hex).
-//! * [`to_hex`] / [`parse_hex`] — lowercase-hex spelling shared by CLI,
-//!   output, and clean/setup record names.
-//! * [`is_lower_hex`] / [`is_hex_any_case`] — length-parameterized hex
-//!   spelling checks owning the `hex::decode` + length (+ lowercase
-//!   re-encode) policy so Git SHA call sites never hand-roll digit loops.
-//! * [`is_commit_sha`] — 40/64-char Git commit shape (either case, per Git).
-//! * [`is_pin_sha`] — 40-char lowercase pin shape (`[0-9a-f]{40}`).
-//!
-//! Canonical algorithm is BLAKE3-256. The SHA-256 envelope bytes are a
-//! frozen contract and are kept byte-identical through this shim; see the
-//! migration note on [`sha256_hex`].
-//!
-//! Dependency evaluation (adopted): hex spelling and parsing use
-//! the upstream `hex` crate (`hex::encode`/`hex::decode` plus the length and
-//! lowercase re-encode check, no manual digit loop), content identity uses
-//! upstream `blake3`, and the envelope shim uses upstream `sha2`. The
-//! `[u8; 32]` wrapper plus lowercase-only policy stays hand-rolled because it
-//! is the repo's digest-identity contract, not an upstream type.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 use sha2::{Digest as _, Sha256};
 
-/// Digest length in bytes (BLAKE3-256 and SHA-256 are both 32 bytes).
 pub const DIGEST_LEN: usize = 32;
 
-/// Git SHA-1 commit length in bytes (40 lowercase hex digits as a pin).
 pub const SHA1_LEN: usize = 20;
 
-/// Raw 32-byte digest.
 pub type RawDigest = [u8; DIGEST_LEN];
 
-/// Digest parse/validation failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DigestError {
-    /// Text is not 64 lowercase hex digits.
     #[error("invalid digest {value:?}: want 64-character lowercase hex")]
     BadDigest { value: String },
 }
 
-/// Fixed 32-byte digest with hex helpers.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Digest(pub RawDigest);
 
 impl Digest {
-    /// Wraps raw bytes.
     pub fn new(bytes: RawDigest) -> Self {
         Self(bytes)
     }
 
-    /// Raw bytes.
     pub fn as_bytes(&self) -> &RawDigest {
         &self.0
     }
 
-    /// Consumes into raw bytes.
     pub fn into_bytes(self) -> RawDigest {
         self.0
     }
 
-    /// BLAKE3-256 over `bytes`: the canonical content identity.
     pub fn blake3(bytes: &[u8]) -> Self {
         Self(blake3(bytes))
     }
 
-    /// Lowercase hex spelling.
     pub fn to_hex(&self) -> String {
         to_hex(&self.0)
     }
 
-    /// Parses exactly 64 lowercase hex digits.
     pub fn parse_hex(text: &str) -> Result<Self, DigestError> {
         parse_hex(text).map(Self)
     }
@@ -106,40 +57,20 @@ impl From<Digest> for RawDigest {
     }
 }
 
-/// BLAKE3-256 over exact bytes: the canonical snapshot/setup/env identity.
-/// There is no algorithm negotiation.
 pub fn blake3(bytes: &[u8]) -> RawDigest {
     *blake3::hash(bytes).as_bytes()
 }
 
-/// Lowercase hex SHA-256 of `bytes`.
-///
-/// Compat shim for the frozen `dx_apply` envelope contract
-/// (`original_sha256`): envelope bytes stay SHA-256 while every new
-/// identity uses [`blake3`]. Do not use for new identities.
 pub fn sha256_hex(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
     hex::encode(hasher.finalize())
 }
 
-/// True for exactly 64 lowercase hex digits (the [`sha256_hex`] and
-/// [`to_hex`] output form).
-///
-/// Decode round-trip: `hex` accepts any even-length hex (including
-/// uppercase), so the re-encode comparison is what pins the lowercase-only,
-/// 32-byte form instead of re-implementing the digit loop.
 pub fn is_hex(text: &str) -> bool {
     is_lower_hex(text, DIGEST_LEN)
 }
 
-/// True for `byte_len` bytes encoded as exactly `2 * byte_len` lowercase
-/// hex digits.
-///
-/// Single owner of the lowercase-hex policy: `hex::decode` plus the length
-/// and lowercase re-encode check, no manual digit loop. Generalizes
-/// [`is_hex`] for Git SHA shapes ([`is_pin_sha`]) without duplicating the
-/// policy per call site.
 pub fn is_lower_hex(text: &str, byte_len: usize) -> bool {
     match hex::decode(text) {
         Ok(bytes) => bytes.len() == byte_len && hex::encode(&bytes) == text,
@@ -147,12 +78,6 @@ pub fn is_lower_hex(text: &str, byte_len: usize) -> bool {
     }
 }
 
-/// True for `byte_len` bytes encoded as hex in either case.
-///
-/// Same `hex::decode` + length check as [`is_lower_hex`] without the
-/// lowercase re-encode gate: Git commit SHAs accept both cases (per Git),
-/// while digests stay lowercase-only via [`is_hex`]/[`is_lower_hex`].
-/// Backs [`is_commit_sha`] for the 40/64 bump shape.
 pub fn is_hex_any_case(text: &str, byte_len: usize) -> bool {
     match hex::decode(text) {
         Ok(bytes) => bytes.len() == byte_len,
@@ -160,46 +85,26 @@ pub fn is_hex_any_case(text: &str, byte_len: usize) -> bool {
     }
 }
 
-/// True for a Git commit SHA: 40- (SHA-1) or 64- (SHA-256) char hex in
-/// either case.
-///
-/// Single owner of the bump commit shape (`cli/bump`): Git accepts both
-/// cases, so unlike digests there is no lowercase re-encode gate. Case
-/// policy is pinned by tests in both `dx_digest` and `dx_bump`.
 pub fn is_commit_sha(text: &str) -> bool {
     is_hex_any_case(text, SHA1_LEN) || is_hex_any_case(text, DIGEST_LEN)
 }
 
-/// True for a full-length lowercase pin SHA (`[0-9a-f]{40}`).
-///
-/// Single owner of the CI pin shape (`cli/ci`): same lowercase re-encode
-/// policy as [`is_hex`] but over [`SHA1_LEN`] bytes, matching the shell
-/// pin harnesses. Uppercase stays rejected; pinned by tests here and in
-/// `dx_ci`.
 pub fn is_pin_sha(text: &str) -> bool {
     is_lower_hex(text, SHA1_LEN)
 }
 
-/// Compat alias for the envelope spelling check.
 pub fn is_sha256_hex(text: &str) -> bool {
     is_hex(text)
 }
 
-/// Lowercase hexadecimal over 32 raw digest bytes.
 pub fn to_hex(bytes: &RawDigest) -> String {
     hex::encode(bytes)
 }
 
-/// Lowercase hexadecimal over a byte slice (convenience for CLI helpers
-/// that previously hex-encoded `&[u8]`).
 pub fn to_hex_bytes(bytes: &[u8]) -> String {
     hex::encode(bytes)
 }
 
-/// Parses exactly 64 lowercase hex digits into 32 raw bytes.
-///
-/// Single `hex::decode` plus the length and lowercase re-encode check
-/// (the same contract as [`is_hex`]); no manual digit loop.
 pub fn parse_hex(text: &str) -> Result<RawDigest, DigestError> {
     let bad = || DigestError::BadDigest {
         value: text.to_owned(),
@@ -217,10 +122,6 @@ mod tests {
     use proptest::prelude::*;
 
     proptest! {
-        /// Property pilot: hex encoding round-trips every
-        /// 32-byte input, and the wrapper agrees with the free functions.
-        /// Fixed official vectors stay as plain asserts above; properties
-        /// own the shape (`is_hex`, length, round-trip).
         #[test]
         fn hex_round_trip_any_bytes(bytes in prop::array::uniform32(any::<u8>())) {
             let hex = to_hex(&bytes);
@@ -233,9 +134,6 @@ mod tests {
             prop_assert_eq!(Digest::parse_hex(&hex).unwrap().into_bytes(), bytes);
         }
 
-        /// Uppercase spellings stay rejected whenever the encoding
-        /// actually contains a hex letter; digit-only encodings are
-        /// case-neutral, so they are assumed away.
         #[test]
         fn uppercase_rejected_when_letters_present(
             bytes in prop::array::uniform32(any::<u8>()),
@@ -246,7 +144,6 @@ mod tests {
             prop_assert!(parse_hex(&hex.to_uppercase()).is_err());
         }
 
-        /// Length and alphabet mutations of a valid encoding never parse.
         #[test]
         fn mutated_encodings_rejected(
             bytes in prop::array::uniform32(any::<u8>()),

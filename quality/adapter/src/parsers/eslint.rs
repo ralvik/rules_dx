@@ -1,8 +1,3 @@
-//! ESLint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -41,9 +36,6 @@ fn eslint_severity(severity: u64) -> Result<ToolSeverity, ParseError> {
     }
 }
 
-/// Parses ESLint `-f json` stdout. Null-`ruleId` fatal messages are
-/// syntax errors (empty rule ID); null-`ruleId` non-fatal messages are
-/// ignored files and fail as grammar mismatches.
 pub fn parse_eslint(
     stdout: &[u8],
     code: Option<i32>,

@@ -23,11 +23,6 @@ PER_CELL_RATE_GATE = "coverage --min-coverage"
 PER_CELL_RATE_PIN = "coverage --min-coverage 97 //..."
 
 # Accepted decision (issue comment): 100% non-ignored lines in this repo
-# via the seed exact gate (zero uncovered lines in the versioned
-# inventory scope), configurable `--min-coverage` requirement for users
-# per-cell. Codecov stays opt-in only, never required. Seed-cell
-# enforcement lives in `tools/coverage/seed-inventory.txt`; cells,
-# languages, and metrics stay separate with no cross-cell union.
 DECISION_REPO_EXACT = "zero uncovered lines"
 DECISION_USER_CONFIGURABLE = "configurable requirement for users per-cell"
 DECISION_CODECOV_OPT_IN = "Codecov stays opt-in only"

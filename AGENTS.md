@@ -2,9 +2,8 @@
 
 This repository uses Bazel.
 
-Code rules:
-
 - Treat warnings as errors.
-- Keep all documentation simple and to the point.
-- Keep READMEs short; details in `docs/`, code examples in `examples/`.
-- In-code docs: one-line purpose plus `Contract:` link in `.bzl` headers; Rust keeps only why-not-obvious notes with `See:`/`Owning contract:` link; `LCOV_EXCL_*` reasons stay short specific (`reason:` plus `issue:` plus `policy: docs/testing/strategy-details.md#coverage`). No bare `Issue #` in non-test source (see `docs/AGENTS.md`).
+- Document only what a user needs to run dx. Delete the rest; never maintain design rationale in comments or docs.
+- Comments: only when the why is not obvious from the code. One short plain line, no links, no issue numbers, no `See:`/`Contract:` chains, no restating the code. When in doubt, delete it. Exception: doc comments that generate user-visible text (clap `Parser`/`Args`/`ValueEnum` fields and variants feeding `--help` and completions) stay, one short line each.
+- Keep READMEs short; usage in `docs/cli/commands/`, CI usage in `docs/github-ci.md`, examples in `examples/`. Do not add docs elsewhere.
+- Write plain and human. Short sentences. No filler, no essays, no AI tone.

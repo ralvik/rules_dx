@@ -31,11 +31,6 @@ BUILDIFIER_HERMETIC_REWRITE = "x=1 to x = 1"
 BUILDIFIER_HERMETIC_TOOL = "@dx_tools//:buildifier"
 
 # Full consumer wiring is wont-fix, smoke-only: a full adopt-* consumer
-# matrix is not exercised in CI. The hermetic customer path is the
-# adopt-rust `dx_dev` smoke in normal CI (`local_path_override` plus
-# `dx_dev` wiring) with retained hermetic pins
-# `//quality/testdata:real_aspect_presence` (`DxSubjectInfo`) plus
-# `//:preset_parity_test` (preset check to update to recheck).
 WIRING_HERMETIC_SMOKE = "bazel build //examples/adopt-rust/... --config=dx_dev"
 WIRING_HERMETIC_ASPECT = "//quality/testdata:real_aspect_presence"
 WIRING_HERMETIC_PRESET = "//:preset_parity_test"

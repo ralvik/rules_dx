@@ -1,14 +1,3 @@
-//! Quality standard-report writing: SARIF documents over
-//! current findings with snapshot line regions, written atomically
-//! after validation.
-//!
-//! Extracted from [`super::quality`] without behavior change: the
-//! execution root still owns Bazel launch, result collection, mutation
-//! plus status projection ([`super::quality_apply`]), diff-patch
-//! rendering ([`super::quality_patch`]), event emission, and exit-code
-//! selection; this module owns only standard-report snapshot collection,
-//! SARIF rendering, atomic writes, and the `report_failed` diagnostics.
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
 use std::path::Path;
@@ -21,9 +10,6 @@ use super::common::CODE_REPORT_FAILED;
 use super::results::Collected;
 use crate::reports::{render_sarif, Destination, PlannedReport, ReportError};
 
-/// Shared inputs for one standard-report write pass. Bundled so the
-/// entry point stays under the clippy argument limit without changing
-/// call-site behavior.
 pub(crate) struct StandardReports<'a> {
     pub(crate) workspace: &'a Path,
     pub(crate) collected: &'a Collected,
@@ -33,16 +19,6 @@ pub(crate) struct StandardReports<'a> {
     pub(crate) stdout_report: bool,
 }
 
-/// Writes every planned standard report and returns whether all
-/// reports succeeded.
-///
-/// Snapshot bytes are read from `workspace` and validated against the
-/// terminal digests before SARIF rendering; missing, stale, or
-/// non-UTF-8 snapshots fail that report with `report_failed` while
-/// other reports still attempt. File destinations write atomically and
-/// require an existing parent directory; stdout destinations own stdout.
-/// Human notes follow the output-mode routing (`report_event` in JSON
-/// mode, stdout text, stderr for diff).
 pub(crate) fn write_standard_reports(
     inputs: StandardReports<'_>,
     out: &mut dyn Write,

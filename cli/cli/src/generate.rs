@@ -1,15 +1,3 @@
-//! Generation result projection (WP2).
-//!
-//! Contract: `docs/cli/commands/generate.md` and
-//! `docs/cli/output-protocol.md`. Projects the validated Gazelle-owned
-//! result manifest into check/default/diff/text/NDJSON forms without
-//! rerunning Gazelle, comparing trees, or reading BUILD syntax.
-//!
-//! The manifest is the sole source of truth: `change` events, unified
-//! diffs, `mutation` outcomes, and `ignored_import` notices all derive
-//! from its exact edits and audit records. Malformed or contradictory
-//! manifests fail closed with no change or mutation records.
-
 use dx_diff::{render_patch, DiffError, FilePatch, PatchKind};
 use dx_output::{ChangeEvent, ChangeKind, Edit, FinishedCounts, MutationOutcome, NoticeEvent};
 use generation_result::{
@@ -18,16 +6,11 @@ use generation_result::{
     validate, Error,
 };
 
-/// Stable notice identity for accepted `# gazelle:dx_ignore_import` uses.
 pub const IGNORED_IMPORT_CODE: &str = "ignored_import";
-/// Ignored-import notices are user-facing warnings, never failures.
 pub const IGNORED_IMPORT_LEVEL: &str = "warning";
-/// Human message for ignored-import notices, matching the protocol example.
 pub const IGNORED_IMPORT_MESSAGE: &str =
     "Static import intentionally contributes no Bazel dependency";
 
-/// One projected file: its public change, exact bytes for diff, and its
-/// terminal write outcome (`None` in check mode).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectedFile {
     pub change: ChangeEvent,
@@ -38,15 +21,11 @@ pub struct ProjectedFile {
 }
 
 impl ProjectedFile {
-    /// Public change kind: `Create` for new files, `Modify` otherwise.
     pub fn kind(&self) -> ChangeKind {
         self.change.kind
     }
 }
 
-/// Projected manifest: files in Gazelle attempt order, notices in
-/// manifest order (already path/language/import sorted), plus the
-/// aggregate completion state.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProjectedManifest {
     pub files: Vec<ProjectedFile>,
@@ -56,7 +35,6 @@ pub struct ProjectedManifest {
 }
 
 impl ProjectedManifest {
-    /// Number of `create` changes.
     pub fn creates(&self) -> u64 {
         self.files
             .iter()
@@ -64,7 +42,6 @@ impl ProjectedManifest {
             .count() as u64
     }
 
-    /// Number of `modify` changes.
     pub fn modifies(&self) -> u64 {
         self.files
             .iter()
@@ -72,7 +49,6 @@ impl ProjectedManifest {
             .count() as u64
     }
 
-    /// Number of `applied` terminal outcomes.
     pub fn applied(&self) -> u64 {
         self.files
             .iter()
@@ -80,7 +56,6 @@ impl ProjectedManifest {
             .count() as u64
     }
 
-    /// Number of `not_applied` terminal outcomes.
     pub fn not_applied(&self) -> u64 {
         self.files
             .iter()
@@ -88,17 +63,12 @@ impl ProjectedManifest {
             .count() as u64
     }
 
-    /// Files in normalized path UTF-8 byte order for `change` events,
-    /// diff rendering, and text summaries. Mutations keep manifest
-    /// (attempt) order via [`ProjectedManifest::files`].
     pub fn sorted_files(&self) -> Vec<&ProjectedFile> {
         let mut ordered: Vec<&ProjectedFile> = self.files.iter().collect();
         ordered.sort_by(|a, b| a.change.path.as_bytes().cmp(b.change.path.as_bytes()));
         ordered
     }
 
-    /// Aggregate counts for `command_finished`: `changes` always present,
-    /// `mutations` only in default mode, no `diagnostics` for generate.
     pub fn finished_counts(&self) -> FinishedCounts {
         FinishedCounts {
             results_complete: Some(self.results_complete),
@@ -112,9 +82,6 @@ impl ProjectedManifest {
         }
     }
 
-    /// Exit selection: preserves a nonzero Bazel code, fails incomplete
-    /// collection, fails check mode with any change, fails default mode
-    /// with any `not_applied` mutation, else succeeds.
     pub fn exit_code(&self, bazel_code: i32) -> i32 {
         if bazel_code != 0 {
             return bazel_code;
@@ -136,18 +103,14 @@ impl ProjectedManifest {
     }
 }
 
-/// Lowercase hexadecimal over 32 raw digest bytes (owned by `dx_digest`).
 fn hex_digest(bytes: &[u8]) -> String {
     dx_digest::to_hex_bytes(bytes)
 }
 
-/// True when the manifest carries check-mode semantics.
 pub fn manifest_is_check(manifest: &GenerationManifest) -> bool {
     manifest.mode == Mode::Check as i32
 }
 
-/// Fails when the manifest mode disagrees with the invocation mode:
-/// `--check` requires `CHECK`, default requires `DEFAULT`.
 pub fn ensure_mode(manifest: &GenerationManifest, check: bool) -> Result<(), Error> {
     let want = if check {
         Mode::Check as i32
@@ -180,11 +143,6 @@ fn map_outcome(
     }
 }
 
-/// Projects a validated manifest into public changes, outcomes, and
-/// notices. Validates closed: any malformed or contradictory record
-/// fails without partial output. Check-mode manifests carry no
-/// outcomes; default-mode manifests carry terminal outcomes in
-/// Gazelle attempt order.
 pub fn project(manifest: &GenerationManifest) -> Result<ProjectedManifest, Error> {
     validate(manifest)?;
     let is_check = manifest_is_check(manifest);
@@ -293,9 +251,6 @@ pub fn project(manifest: &GenerationManifest) -> Result<ProjectedManifest, Error
     })
 }
 
-/// Renders the complete unified patch for every projected change in
-/// normalized path order, without truncation or outcome filtering.
-/// Empty projections render no bytes.
 pub fn render_diff(projected: &ProjectedManifest) -> Result<String, DiffError> {
     let sorted = projected.sorted_files();
     let patches: Vec<FilePatch<'_>> = sorted
@@ -313,8 +268,6 @@ pub fn render_diff(projected: &ProjectedManifest) -> Result<String, DiffError> {
     render_patch(&patches)
 }
 
-/// Concise human lines: one per affected path in sorted order, then one
-/// per ignored-import notice in manifest (sorted) order.
 pub fn text_lines(projected: &ProjectedManifest) -> Vec<String> {
     let mut lines = Vec::with_capacity(projected.files.len() + projected.notices.len());
     for file in projected.sorted_files() {

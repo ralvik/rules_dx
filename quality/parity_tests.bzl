@@ -7,19 +7,9 @@ load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY")
 
 # Versioned parity-gate schema. Consumers query via
-# `parity_schema_error`, `adapter_backed_classes`, and `deferred_classes`
-# instead of duplicating the deferral inventory, so adding a deferred
-# class edits this one data map plus its owning decision, never a parallel
-# allowlist.
 PARITY_SCHEMA_VERSION = 1
 
 # Class -> [owning decision, frozen acquisition route] for every classified
-# class no adapter claims yet. Owners are open-decision IDs (ADR 0019 owns the
-# deferred adapter backlog; ADR 0019 owns the frozen Ruby/PowerShell tool routes;
-# /// own the framework quality regions) or ADR 0019 for
-# exclusions. Routes name the frozen delivery class from tool acquisition;
-# exact versions, digests, rule sets, and adapter mappings stay pending
-# under the owning decision.
 PARITY_DEFERRED = {
     "astro": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
     "graphql": ["ADR 0019", "private Node graph (Prettier GraphQL parser)"],

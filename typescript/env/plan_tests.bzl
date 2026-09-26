@@ -3,10 +3,6 @@
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 # Pinned from `bazel build //typescript/env:*_plan` JSON outputs (WP3).
-# Every wrapper preserves `TsConfigInfo`; the projection names the exact
-# `tsconfig.json` deps closure. The pnpm store stays empty for
-# standard-library-only closures. Adopt-js-ts/web proves the same
-# `TsConfigInfo` projection on a real consumer (`app` via `util`).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //typescript/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=hello.ts,main.ts

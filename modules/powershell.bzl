@@ -1,4 +1,4 @@
-"""Pinned PowerShell foundation. Contract: docs/decisions/0032-ruby-powershell-bandit-swift.md."""
+"""Pinned PowerShell foundation."""
 
 # Pinned PowerShell foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_POWERSHELL_VERSION = "0.2.0"

@@ -1,4 +1,4 @@
-"""JVM foundation pins (Java, Kotlin, Scala managed route). Contract: docs/decisions/0019-first-release-additional-foundations.md."""
+"""JVM foundation pins (Java, Kotlin, Scala managed route)."""
 
 # Pinned JVM foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_JAVA_VERSION = "9.7.0"

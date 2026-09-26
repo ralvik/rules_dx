@@ -5,7 +5,7 @@
 With no argument, `dx codegen` invokes canonical `//dx:codegen` and atomically selects
 the repository-wide generated-source projection, including registered production,
 test, example, and development generators. The workflow uses the frozen `//...`
-Bazel root mechanism documented in [Generated Code](../../environments/codegen.md).
+Bazel root mechanism documented in Generated Code.
 
 `dx codegen <target>` accepts exactly one explicit target label and selects generated
 sources from that configured target's transitive provider closure plus its
@@ -21,7 +21,7 @@ than retaining unrelated generated imports.
 
 `dx codegen` neither invokes `dx generate` nor prepares language environments. It may
 warn when the selected environment has a different scope. See
-[Generated Code](../../environments/codegen.md) for providers, projections, and root selection.
+Generated Code for providers, projections, and root selection.
 
 ## `dx env`
 
@@ -43,8 +43,8 @@ the matching workflow, without rendering command-line arguments.
 In NDJSON mode this warning is a `notice` with code `selection_scope_mismatch`; it does not
 affect diagnostics, `--fail-on`, or exit status.
 
-See [Developer Environments](../../environments/environment.md) and
-[Python Environment](../../environments/python-environment.md) for the complete environment
+See Developer Environments and
+Python Environment for the complete environment
 contracts.
 
 ## `dx setup`
@@ -92,13 +92,13 @@ The CLI plans the collection request, runs one live Bazel build, validates
 the collected plan shards, stages the immutable generations, and commits the
 selection through one atomic `.dx/setups/current` replacement under the
 shared workspace commit lock (see
-[managed-state locking](../../environments/managed-state.md#commit-lock-and-concurrency)). `--dry-run` plans only and exits 0. Build, staging,
+managed-state locking). `--dry-run` plans only and exits 0. Build, staging,
 validation, or commit failure leaves the current setup unchanged (exit 1
 with `managed_commit_failed`, or `no_capability` when an exact scope provides
 neither capability); staged-but-unselected generations remain as retained
-cache. See [Generated Code](../../environments/codegen.md),
-[Developer Environments](../../environments/environment.md), and
-[Managed Environment State](../../environments/managed-state.md) for the
+cache. See Generated Code,
+Developer Environments, and
+Managed Environment State for the
 owning contracts.
 
 `dx codegen`, `dx env`, and `dx setup` accept `--output=text|json`

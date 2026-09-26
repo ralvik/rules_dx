@@ -1,77 +1,35 @@
-//! Hermetic hook runner and merged status view.
-//!
-//! Split from `super` (`lib.rs`): owns `HOOK_BUDGET_SECS`,
-//! `hook_git_is_hermetic`, `hook_shim_overwrite_allowed`,
-//! `hook_status_shows_merged`, `HOOK_MANAGED_MARKER`,
-//! `LOCAL_OVERLAY_COMMENT`, `render_hook_shim`, `render_local_overlay`,
-//! `install_hooks`, `uninstall_hooks`, and
-//! `render_hooks_status`. Re-exported through `super` so the public
-//! path stays `dx_adopt::{HOOK_BUDGET_SECS, hook_git_is_hermetic,
-//! hook_shim_overwrite_allowed, hook_status_shows_merged,
-//! HOOK_MANAGED_MARKER, LOCAL_OVERLAY_COMMENT, render_hook_shim,
-//! render_local_overlay, install_hooks,
-//! uninstall_hooks, render_hooks_status}`.
-
 use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::AdoptError;
 
-/// Hook per-check budget seconds (frozen: blocking timeout).
-/// See: `docs/cli/commands/hooks.md#timeout-policy`.
-///
-/// Authority: CLI-owned timeout policy over hermetic checks, not Bazel graph
-/// semantics; the configured `budget_secs` in either hooks layer overrides
-/// this default.
 pub const HOOK_BUDGET_SECS: u64 = 120;
 
-/// Hermetic Git env var (absolute path only, never PATH fallback).
-/// See: `docs/cli/commands/hooks.md#dx-hooks`.
 pub const HOOK_GIT_ENV_VAR: &str = "DX_GIT_BIN";
 
-/// Committed baseline relative path.
 pub const HOOK_BASELINE_REL: &str = "dx.hooks.toml";
 
-/// Personal overlay relative path (gitignored, local-only).
 pub const HOOK_OVERLAY_REL: &str = "dx.local.toml";
 
-/// Last-run timings relative path (gitignored, measured, never hardcoded).
-/// See: `docs/cli/commands/hooks.md#dx-hooks`.
 pub const HOOK_TIMINGS_REL: &str = ".dx/hooks-timings.toml";
 
-/// Whether hook Git sourcing is hermetic.
-///
-/// Hook Git operations use hermetically acquired Git only, never ambient
-/// Git. Any ambient fallback fails the gate; this compares injected flags
-/// and acquires nothing.
 pub fn hook_git_is_hermetic(uses_hermetic_git: bool, uses_ambient_git: bool) -> bool {
     uses_hermetic_git && !uses_ambient_git
 }
 
 /// Whether a Git path is hermetic (absolute only, never PATH lookup).
-/// See: `docs/cli/commands/hooks.md#dx-hooks`.
 pub fn hook_git_path_is_hermetic(path: &Path) -> bool {
     path.is_absolute()
 }
 
-/// Whether a trigger name is a hook trigger.
-/// See: `docs/cli/commands/hooks.md#triggers-and-default-checks`.
 pub fn is_hook_trigger(trigger: &str) -> bool {
     trigger == "pre-commit" || trigger == "pre-push"
 }
 
-/// Whether installing a managed hook shim may overwrite the existing file.
-///
-/// Only a managed shim may be refreshed; unmanaged hooks are never
-/// overwritten (there is no `--force` flag to override this).
 pub fn hook_shim_overwrite_allowed(existing_managed: bool) -> bool {
     existing_managed
 }
 
-/// Whether `dx hooks status` shows the effective merged configuration.
-///
-/// Status must show the committed baseline, the personal overlay, and
-/// per-check timings together. Any missing layer fails the gate.
 pub fn hook_status_shows_merged(
     shows_baseline: bool,
     shows_overlay: bool,
@@ -80,18 +38,10 @@ pub fn hook_status_shows_merged(
     shows_baseline && shows_overlay && shows_timings
 }
 
-/// Managed hook-shim marker.
 pub const HOOK_MANAGED_MARKER: &str = "# managed by dx hooks";
 
-/// `dx.local.toml` overlay comment header (gitignored, local-only).
 pub const LOCAL_OVERLAY_COMMENT: &str = "# Local-only overrides (gitignored).";
 
-/// Render the gitignored `dx.local.toml` overlay via the `toml` crate.
-///
-/// Serializes the empty `[hooks]` table through `toml` so the writer and
-/// parser share one TOML implementation, then prepends the stable comment
-/// header. Output stays byte-identical to the historical literal
-/// (`# Local-only overrides (gitignored).\n[hooks]\n`).
 pub fn render_local_overlay() -> Result<String, AdoptError> {
     let mut root = toml::Table::new();
     root.insert("hooks".to_owned(), toml::Value::Table(toml::Table::new()));
@@ -101,17 +51,12 @@ pub fn render_local_overlay() -> Result<String, AdoptError> {
     Ok(format!("{LOCAL_OVERLAY_COMMENT}\n{body}"))
 }
 
-/// Render one hook shim for `trigger`.
 pub fn render_hook_shim(trigger: &str) -> String {
     format!(
         "#!/bin/sh\n{HOOK_MANAGED_MARKER} {trigger}\nexec bazel run //cli/cli:dx -- hooks run {trigger} -- \"$@\"\n"
     )
 }
 
-/// Install `pre-commit` + `pre-push` shims under `root/.git/hooks`.
-///
-/// Refuses unmanaged existing hooks (no overwrite flag). Bootstraps the
-/// gitignored `dx.local.toml` overlay absent-only. Returns installed paths.
 pub fn install_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     let hooks_dir = root.join(".git/hooks");
     std::fs::create_dir_all(&hooks_dir).map_err(|e| AdoptError::CreateHooksDir {
@@ -196,42 +141,29 @@ pub fn uninstall_hooks(root: &Path) -> Result<Vec<String>, AdoptError> {
     Ok(removed)
 }
 
-/// Effective hook configuration after baseline/overlay merge.
-/// See: `docs/cli/commands/hooks.md#two-layer-configuration`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HooksConfig {
-    /// Effective `pre-commit` checks in order.
     pub pre_commit: Vec<String>,
-    /// Effective `pre-push` checks in order.
     pub pre_push: Vec<String>,
-    /// Effective per-check budget seconds.
     pub budget_secs: u64,
 }
 
-/// Single `[hooks]` table with optional overrides.
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize)]
 struct HooksTable {
-    /// Override for `pre-commit` checks when present.
     #[serde(default)]
     pre_commit: Option<Vec<String>>,
-    /// Override for `pre-push` checks when present.
     #[serde(default)]
     pre_push: Option<Vec<String>>,
-    /// Override for per-check budget when present.
     #[serde(default)]
     budget_secs: Option<u64>,
 }
 
-/// One hooks file (`dx.hooks.toml` or `dx.local.toml`).
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize)]
 struct HooksFile {
-    /// `[hooks]` table when present.
     #[serde(default)]
     hooks: Option<HooksTable>,
 }
 
-/// Default effective configuration (matches `dx init` scaffold).
-/// See: `docs/cli/commands/hooks.md#triggers-and-default-checks`.
 pub fn default_hooks_config() -> HooksConfig {
     HooksConfig {
         pre_commit: vec!["format --check".to_owned(), "lint --check".to_owned()],
@@ -243,14 +175,12 @@ pub fn default_hooks_config() -> HooksConfig {
     }
 }
 
-/// Parse one hooks file text into its partial table.
 fn parse_hooks_file(text: &str) -> Result<HooksFile, AdoptError> {
     toml::from_str(text).map_err(|e| AdoptError::InvalidHooks {
         detail: e.to_string(),
     })
 }
 
-/// Merge baseline with overlay (overlay `Some` wins, else baseline, else default).
 fn merge_hooks_config(baseline: &HooksFile, overlay: &HooksFile) -> HooksConfig {
     let defaults = default_hooks_config();
     let base = baseline.hooks.as_ref();
@@ -271,7 +201,6 @@ fn merge_hooks_config(baseline: &HooksFile, overlay: &HooksFile) -> HooksConfig 
     }
 }
 
-/// Load effective config from optional file texts (missing means absent).
 pub fn load_hooks_config(
     baseline_text: Option<&str>,
     overlay_text: Option<&str>,
@@ -287,7 +216,6 @@ pub fn load_hooks_config(
     Ok(merge_hooks_config(&baseline, &overlay))
 }
 
-/// Effective checks for one trigger in order.
 pub fn checks_for_trigger(config: &HooksConfig, trigger: &str) -> Vec<String> {
     match trigger {
         "pre-commit" => config.pre_commit.clone(),
@@ -296,8 +224,6 @@ pub fn checks_for_trigger(config: &HooksConfig, trigger: &str) -> Vec<String> {
     }
 }
 
-/// Whether an elapsed check exceeds its budget (blocking, no warn-and-pass).
-/// See: `docs/cli/commands/hooks.md#timeout-policy`.
 pub fn hook_check_timed_out(elapsed_secs: f64, budget_secs: u64) -> bool {
     elapsed_secs > budget_secs as f64
 }
@@ -305,11 +231,9 @@ pub fn hook_check_timed_out(elapsed_secs: f64, budget_secs: u64) -> bool {
 /// Measured last-run timings per check (seconds, never hardcoded).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HookTimings {
-    /// Check string to last measured seconds.
     pub secs_by_check: BTreeMap<String, f64>,
 }
 
-/// Parse timings TOML (`[timings]` table of check to seconds).
 fn parse_timings_file(text: &str) -> Result<HookTimings, AdoptError> {
     #[derive(serde::Deserialize, Default)]
     struct TimingsFile {
@@ -331,7 +255,6 @@ fn parse_timings_file(text: &str) -> Result<HookTimings, AdoptError> {
     })
 }
 
-/// Load timings (missing means no runs yet; invalid fails closed).
 pub fn load_hook_timings(text: Option<&str>) -> Result<HookTimings, AdoptError> {
     match text {
         Some(body) => parse_timings_file(body),
@@ -339,7 +262,6 @@ pub fn load_hook_timings(text: Option<&str>) -> Result<HookTimings, AdoptError> 
     }
 }
 
-/// Render timings via the `toml` crate (sorted keys, shared implementation).
 pub fn render_hook_timings(timings: &HookTimings) -> Result<String, AdoptError> {
     #[derive(serde::Serialize)]
     struct TimingsFile<'a> {
@@ -354,11 +276,6 @@ pub fn render_hook_timings(timings: &HookTimings) -> Result<String, AdoptError> 
     Ok(body)
 }
 
-/// Render the merged `dx hooks status` view.
-///
-/// Shows the effective merged result plus measured timings, never raw
-/// concatenation or hardcoded p95 values.
-/// See: `docs/cli/commands/hooks.md#dx-hooks`.
 pub fn render_hooks_status_merged(
     config: &HooksConfig,
     timings: &HookTimings,
@@ -399,7 +316,6 @@ pub fn render_hooks_status_merged(
     view
 }
 
-/// Render the merged `dx hooks status` view.
 pub fn render_hooks_status(baseline: &str, overlay: &str, timings: &str) -> String {
     format!("baseline:\n{baseline}\noverlay:\n{overlay}\ntimings:\n{timings}\n")
 }

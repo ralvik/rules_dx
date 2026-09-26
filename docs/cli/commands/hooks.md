@@ -14,7 +14,7 @@ execution lands.
 `dx init` scaffolds a new repository: module and `//dx` target wiring, workspace config,
 CI caller template, hermetic hook installation, devcontainer, the single-version `dx`
 pin (the `dx` version equals the pinned `rules_dx` module version), the committed direnv `.envrc` defined in
-[Direnv Integration](../../environments/environment.md#direnv-integration), and generated
+Direnv Integration, and generated
 VSCode configuration. The `.envrc` follows the same absent-only rule
 as every other scaffolded file: an existing unmanaged copy is refused,
 never overwritten. The VSCode output is
@@ -96,7 +96,7 @@ local-only overrides with a `[hooks]` table, readable without Bazel analysis so 
 shims can merge it before and around Bazel execution. TOML is used (not JSON)
 because it supports comments and matches `ruff.toml`/`Cargo.toml` conventions;
 both layers parse through the shared `toml` implementation with the committed
-[`licenses.toml`](audit-update-bazel.md#license-family-dx-audit-license). The overlay uses the same schema as the
+[`licenses.toml`](audit-update-bazel.md#dx-license-license-family). The overlay uses the same schema as the
 baseline and may add checks (for example, enabling affected tests) or locally relax
 them; a present overlay field replaces the baseline field, absent fields inherit.
 Local relaxation affects only that machine; it cannot weaken the shared gate.

@@ -5,7 +5,6 @@ Contract: `docs/deploy/release-runbook.md`.
 
 # (name, os, cpu, status, notes). Status is one of
 # `qualified-seed-built-here` or `qualified-host-evidence`.
-# macOS x86_64 is Not planned, never planned for support (issue #976);
 # it carries no matrix cell.
 RELEASE_MATRIX = [
     ("dx-linux-x86_64", "linux", "x86_64", "qualified-seed-built-here", "Seed host; built + verified in publish dry-run"),

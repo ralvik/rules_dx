@@ -1,13 +1,3 @@
-//! Source-owner to test-target mapping.
-//!
-//! Split from `super` (`resolve.rs`): owns [`map_owners_to_tests`] and
-//! its `kind(..._test ... rdeps(...))` expression helper. Re-exported
-//! through `super` so the public path stays
-//! [`crate::resolve::map_owners_to_tests`]. Shares the query plumbing
-//! ([`super::QueryRunner`], [`super::QueryResult`],
-//! [`super::quote_set`], [`super::parse_owners`], [`super::first_line`])
-//! with the scope classification in `super`.
-
 use std::path::Path;
 
 use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
@@ -21,16 +11,6 @@ fn tests_expression(owners: &[String]) -> String {
     )
 }
 
-/// Maps direct source owners to every transitive reverse-dependent test
-/// target through one unconfigured `bazel query` invocation.
-///
-/// Returned tests are canonicalized, deduplicated, and bytewise sorted;
-/// no distance limit or package-location heuristic is applied, so
-/// `select()`-gated branches stay conservatively included. An empty
-/// mapping is [`ResolveError::NoTests`], never silent success: callers
-/// must not pass a source-owning library to `bazel test` or
-/// `bazel coverage` merely because it owns the file. An empty owner
-/// set maps to no tests without touching Bazel.
 pub fn map_owners_to_tests(
     owners: &[String],
     workspace: &Path,
@@ -76,8 +56,6 @@ mod tests {
     use std::io;
     use std::path::PathBuf;
 
-    /// Scripted query runner: records argv/cwd and replays canned
-    /// outputs per expression in call order.
     struct FakeQuery {
         calls: RefCell<Vec<(Vec<String>, PathBuf)>>,
         outputs: RefCell<Vec<QueryResult>>,
@@ -120,8 +98,6 @@ mod tests {
             Ok(self.outputs.borrow_mut().remove(0))
         }
     }
-
-    // Shared test guard: `crate::resolve::NeverQuery` (See: `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

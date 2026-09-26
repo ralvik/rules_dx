@@ -1,14 +1,3 @@
-//! Source-level exclusion markers for the coverage gate.
-//!
-//! Split from `super` (`lib.rs`): owns [`Ignores`], [`is_ignored`], and
-//! [`find_ignores`] plus the comment-style scanner (`CommentStyle`,
-//! `comment_style`, `line_comment_with`, `line_comment`, `hash_comment`,
-//! `html_comments`, `comment_text`, `take_word`, `reason_value`,
-//! `nearby_reason`). Re-exported through `super` so the public path
-//! stays `dx_lcov::{Ignores, is_ignored, find_ignores}`. Distinct from the
-//! `parse` module (combined-LCOV parsing), the `verdict` module (gate
-//! evaluation), and the `inventory`/`run` modules (repo inventory and CLI).
-
 use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
@@ -16,16 +5,12 @@ use regex::Regex;
 
 use super::LcovError;
 
-/// Validated source-level exclusions for one file.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct Ignores {
-    /// Singly excluded lines with their reason text.
     pub singles: BTreeMap<u32, String>,
-    /// Excluded ranges (inclusive start/end) with the opening reason text.
     pub ranges: Vec<(u32, u32, String)>,
 }
 
-/// Whether `line` (1-based) is excluded by `ignores`.
 pub fn is_ignored(ignores: &Ignores, line: u32) -> bool {
     if ignores.singles.contains_key(&line) {
         return true;
@@ -38,17 +23,8 @@ pub fn is_ignored(ignores: &Ignores, line: u32) -> bool {
     false
 }
 
-/// Short-reason cap for exclusion markers (`reason:` plus `issue:` plus `policy:`).
-///
-/// Full rationale lives once in `docs/testing/strategy-details.md#coverage`;
-/// marker reasons stay short and specific so the coverage denominator is
-/// argued away nowhere. Paragraph-long reasons fail the gate via
-/// [`LcovError::ReasonTooLong`]. Bare `policy:` pointers without a specific
-/// `reason:` fail via [`LcovError::BarePolicyWithoutReason`]; reasons without
-/// `issue:` tracking fail via [`LcovError::MissingIssue`].
 pub const MAX_REASON_LEN: usize = 120;
 
-/// Non-empty value text after `key` (`reason:`/`policy:`/`issue:`) on `line`, if present.
 fn key_value(line: &str, key: &str) -> Option<String> {
     let offset = line.find(key)?;
     let value = line[offset + key.len()..].trim().to_string();
@@ -59,19 +35,10 @@ fn key_value(line: &str, key: &str) -> Option<String> {
     }
 }
 
-/// Non-empty reason text after `reason:` on `line`, if present.
-///
-/// Only `reason:` counts: a bare `policy:` pointer without a specific
-/// `reason:` is rejected (see [`LcovError::BarePolicyWithoutReason`]).
 fn reason_value(line: &str) -> Option<String> {
     key_value(line, "reason:")
 }
 
-/// Non-empty issue tracking text after `issue:` on `line`, if present.
-///
-/// The value must reference the tracking issue number (contains a digit)
-/// so blanket excludes stay budgeted with expiry review (see
-/// `tools/coverage/excludes-budget.txt`).
 fn issue_value(line: &str) -> Option<String> {
     let value = key_value(line, "issue:")?;
     if value.chars().any(|c| c.is_ascii_digit()) {
@@ -81,18 +48,10 @@ fn issue_value(line: &str) -> Option<String> {
     }
 }
 
-/// Whether `line` carries a `policy:` pointer (optional companion to `reason:`).
 fn has_policy(line: &str) -> bool {
     line.contains("policy:")
 }
 
-/// Reason for `directive` at 1-based `lineno`: specific `reason:` plus
-/// `issue:` tracking on the same line or the line directly above it.
-///
-/// Both keys must appear across the two nearby lines (split form allowed:
-/// `reason:` on one line and `issue:` on the other). A bare `policy:`
-/// pointer without `reason:` fails closed; a specific `reason:` without
-/// `issue:` fails closed for budget/expiry review.
 fn nearby_reason(
     path: &str,
     directive: &str,
@@ -157,20 +116,13 @@ fn nearby_reason(
     Ok(reason)
 }
 
-/// Comment style for marker extraction, selected by source extension.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum CommentStyle {
-    /// `//` line comments (Rust, Go, C-family, Java/Kotlin/Scala, C#/F#,
-    /// JavaScript/TypeScript including `.mjs`/`.cjs`/`.mts`/`.cts`).
     SlashSlash,
-    /// `#` line comments (Python including `.pyi` stubs, Starlark, TOML, shell, YAML).
     Hash,
-    /// `<!-- ... -->` segments (Markdown, HTML).
     Html,
 }
 
-/// Marker comment style for `path`, by file extension. Unknown extensions
-/// keep the historical `//` behavior.
 fn comment_style(path: &str) -> CommentStyle {
     if path.ends_with(".py")
         || path.ends_with(".pyi")
@@ -192,13 +144,6 @@ fn comment_style(path: &str) -> CommentStyle {
     }
 }
 
-/// Compiled comment scanners: the leading alternatives skip
-/// `"`/`'` literals (with backslash escapes) so the trailing `marker`
-/// group only matches a comment opener outside literals. `OnceLock`
-/// caching keeps the per-line scan allocation-free after the first use;
-/// `None` (impossible for these static patterns) falls back to the
-/// byte-loop below so the crate stays infallible without `expect`/`unwrap`
-/// (crate denies both outside tests).
 fn slash_scan() -> Option<&'static Regex> {
     static SCAN: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = SCAN.get() {
@@ -227,9 +172,6 @@ fn hash_scan() -> Option<&'static Regex> {
     }
 }
 
-/// Word-boundary check for directive suffixes (`_LINE`/`_START`/`_STOP`):
-/// `^_(LINE|START|STOP)\b` replaces the hand-rolled
-/// `strip_prefix` + `is_alphanumeric/_` test with declarative `\b`.
 fn directive_suffix() -> Option<&'static Regex> {
     static SUFFIX: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = SUFFIX.get() {
@@ -244,9 +186,6 @@ fn directive_suffix() -> Option<&'static Regex> {
     }
 }
 
-/// Regex-first comment scan: first `marker` capture outside literals wins.
-/// Falls back to the byte loop when the static pattern fails to compile
-/// (unreachable; keeps the non-test build `expect`/`unwrap`-free).
 fn scan_with(line: &str, compiled: Option<&Regex>) -> Option<usize> {
     let re = compiled?;
     for captures in re.captures_iter(line) {
@@ -257,9 +196,6 @@ fn scan_with(line: &str, compiled: Option<&Regex>) -> Option<usize> {
     None
 }
 
-/// Comment text after the `opener` comment start, honoring `"`/`'`
-/// literals and backslash escapes. Returns `None` when the line has no
-/// line comment.
 fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     if opener == b"//" {
         if let Some(end) = scan_with(line, slash_scan()) {
@@ -279,8 +215,6 @@ fn line_comment_with<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     line_comment_with_fallback(line, opener) // LCOV_EXCL_LINE - reason: fallback handles compile-fail path, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
-/// Byte-loop fallback for [`line_comment_with`] (unreachable unless the
-/// static `regex` patterns fail to compile).
 // LCOV_EXCL_START - reason: compile-fail fallback is unreachable, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a str> {
     let bytes = line.as_bytes();
@@ -319,22 +253,14 @@ fn line_comment_with_fallback<'a>(line: &'a str, opener: &[u8]) -> Option<&'a st
 }
 // LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 
-/// Comment text after the `//` comment start, honoring `"`/`'` literals and
-/// backslash escapes. Returns `None` when the line has no line comment.
 fn line_comment(line: &str) -> Option<&str> {
     line_comment_with(line, b"//")
 }
 
-/// Comment text after the `#` comment start, with the same literal
-/// handling as [`line_comment`]. Returns `None` when the line has no
-/// `#` comment.
 fn hash_comment(line: &str) -> Option<&str> {
     line_comment_with(line, b"#")
 }
 
-/// Concatenated `<!-- ... -->` comment segments on one line. An opening
-/// marker without a closer runs to end of line; text outside segments is
-/// code and never scanned for directives.
 fn html_comments(line: &str) -> String {
     let mut out = String::new();
     let mut rest = line;
@@ -360,8 +286,6 @@ fn html_comments(line: &str) -> String {
     out
 }
 
-/// Scannable comment text for one source `line` of `path`, dispatching on
-/// the extension-selected [`CommentStyle`].
 fn comment_text(path: &str, line: &str) -> String {
     match comment_style(path) {
         CommentStyle::SlashSlash => line_comment(line).unwrap_or_default().to_string(),
@@ -370,11 +294,6 @@ fn comment_text(path: &str, line: &str) -> String {
     }
 }
 
-/// Whether `rest` (text right after the common marker prefix) is `word`
-/// followed by a non-word character or end of text. Declarative `\b`
-/// via [`directive_suffix`]; the byte fallback preserves
-/// the historical `is_alphanumeric/_` semantics when the static pattern
-/// fails to compile.
 fn take_word(rest: &str, word: &str) -> bool {
     if let Some(re) = directive_suffix() {
         return match re.find(rest) {
@@ -391,19 +310,6 @@ fn take_word(rest: &str, word: &str) -> bool {
     // LCOV_EXCL_STOP - reason: end compile-fail fallback, issue: 1055, policy: docs/testing/strategy-details.md#coverage
 }
 
-/// Validate the exclusion markers in the `source` of `path`.
-///
-/// Every LINE/START/STOP directive needs a nearby specific non-empty short
-/// (`MAX_REASON_LEN`) `reason:` plus `issue:` tracking on the same or
-/// previous line; bare `policy:` pointers without `reason:` fail via
-/// [`LcovError::BarePolicyWithoutReason`] and reasons without `issue:` fail
-/// via [`LcovError::MissingIssue`]. Ranges must open and close exactly once;
-/// any other spelling of the marker prefix is an unrecognized directive and
-/// fails. Markers are honored only inside the extension-selected comment
-/// style (see [`comment_style`]) outside literals. Block comments
-/// (`/* ... */`) and raw strings (`r#"..."#`) stay wont-fix out of scope:
-/// the scan is line-comment textual only and no eligible source uses those
-/// shapes, so markers there are inert.
 pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
     let lines: Vec<&str> = source.lines().collect();
     let mut ignores = Ignores::default();
@@ -462,10 +368,6 @@ pub fn find_ignores(path: &str, source: &str) -> Result<Ignores, LcovError> {
 mod tests {
     use super::*;
 
-    /// Build a marker suffix without spelling the contiguous literal in this
-    /// file: the gate scans its own sources, so test data must not contribute
-    /// directives. Every marker below lives inside string literals, which the
-    /// comment scanner ignores.
     fn marker(kind: &str) -> String {
         ["LCOV", "_EXCL", kind].concat()
     }

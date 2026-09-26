@@ -1,15 +1,6 @@
-//! Error Prone (javac-diagnostic) output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Validates a bracket rule from a javac header: ASCII letters, digits,
-/// and underscores starting with a letter. Covers Error Prone check
-/// names (`DeadException`, `MissingOverride`) and javac keys
-/// (`unchecked`, `deprecation`); anything else is a grammar mismatch.
 fn error_prone_rule(rule: &str) -> bool {
     let mut chars = rule.chars();
     match chars.next() {
@@ -20,10 +11,6 @@ fn error_prone_rule(rule: &str) -> bool {
         .all(|char| char.is_ascii_alphanumeric() || char == '_')
 }
 
-/// Reports whether a column-zero log line is a javac count summary
-/// (`1 error`, `2 errors`, `1 warning`, `N warnings`). Summaries carry
-/// no positions and are skipped; anything else at column zero must
-/// parse as a diagnostic header.
 fn is_summary(line: &str) -> bool {
     let Some((count, rest)) = line.split_once(' ') else {
         return false;
@@ -34,13 +21,6 @@ fn is_summary(line: &str) -> bool {
     matches!(rest, "error" | "errors" | "warning" | "warnings")
 }
 
-/// Splits a `<path>:<line>: <severity>: [Rule] <message>` javac header
-/// from the left: the runner always passes scratch-absolute paths
-/// (colons cannot appear), while messages routinely contain colons, so
-/// right-splitting misreads the severity whenever the message does.
-/// Column forms (`path:line:col: ...`) are grammar mismatches until
-/// observed upstream; unbracketed javac headers report under the
-/// `javac` rule instead of being silently dropped.
 fn error_prone_header(line: &str) -> Result<(&str, u64, ToolSeverity, &str, String), ParseError> {
     const TOOL: &str = "error_prone";
     let (path, rest) = line
@@ -116,15 +96,6 @@ fn error_prone_header(line: &str) -> Result<(&str, u64, ToolSeverity, &str, Stri
     Ok((path, line_no, severity, rule, message))
 }
 
-/// Parses the Error Prone javac log: diagnostics on stderr, stdout
-/// blank. Findings are line points at column 1 (javac headers carry no
-/// end extent); suggestions stay empty because fixes travel as declared
-/// `error-prone.patch` outputs, never as parsed edits. Indented
-/// continuations (source echo, `^` caret, `(see ...)` link,
-/// `Did you mean ...?`, `symbol:`/`location:` detail), `Note:` lines,
-/// and count summaries are skipped; anything else at column zero is a
-/// grammar mismatch. Clean is empty output on exit 0; empty output on
-/// any other exit is a grammar mismatch.
 pub fn parse_error_prone(
     stdout: &[u8],
     stderr: &[u8],

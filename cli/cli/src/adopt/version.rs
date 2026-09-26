@@ -1,9 +1,3 @@
-//! Adoption version execution (`version`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_version`] — pin,
-//! rollback, check, and report. Re-exported through `super` so the
-//! dispatch path stays `crate::adopt::execute_adoption`.
-
 use std::io::Write;
 
 use crate::args::Invocation;
@@ -17,9 +11,6 @@ use dx_process::operational_code;
 use super::status::CODE_STATUS_PIN_MISMATCH;
 use super::{operational, pre_exec, summaries_suppressed};
 
-/// Emits lifecycle-only JSON for dry-run plans: `command_started`
-/// (`dry_run=true`) plus `command_finished`, no `status` events.
-/// See: `docs/cli/output-protocol.md#status`.
 fn json_dry_run(invocation: &Invocation, out: &mut dyn Write) -> i32 {
     if let Ok(event) = command_started(invocation.command.name(), true, "default") {
         if let Err(exit) = emit_event(out, &event) {
@@ -32,10 +23,6 @@ fn json_dry_run(invocation: &Invocation, out: &mut dyn Write) -> i32 {
     0
 }
 
-/// Emits operational failure JSON reusing the status envelope:
-/// `command_started` plus `status_pin_mismatch` `error` plus
-/// `command_finished`, with the diagnostic on stderr.
-/// See: `docs/cli/output-protocol.md#status`.
 fn json_error(
     invocation: &Invocation,
     out: &mut dyn Write,
@@ -63,7 +50,6 @@ fn json_error(
     operational_code()
 }
 
-/// Emits one `status` event, mapping stdout truncation to `141`.
 fn json_status(
     out: &mut dyn Write,
     name: &str,
@@ -82,14 +68,6 @@ fn json_status(
     Ok(())
 }
 
-/// Runs `dx version`: `--pin` / `--rollback` mutate the pin (dry-run
-/// plans are summaries, suppressed under `--quiet`), `--check`
-/// validates without mutating, bare reports the binary, module, and
-/// pin. Flag combinations that mix check with mutation (or the two
-/// mutations with each other) are usage errors. JSON reuses the status
-/// envelope (`command_started`, `status` events, optional
-/// `status_pin_mismatch` `error`, `command_finished` with only
-/// `exit_code`); dry-run JSON is lifecycle-only.
 pub(crate) fn execute_version(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -115,8 +93,6 @@ pub(crate) fn execute_version(
         // pin history to walk back through. Rolling to the current pin
         // or to an unknown version is rejected by the admissibility
         // gate, not silently re-pinned. A missing or unreadable pin
-        // fails closed without forging a default (See:
-        // `docs/cli/commands/status-version.md`).
         let previous = dx_adopt::PREVIOUS_VERSION;
         let current = match dx_adopt::read_version_pin(workspace) {
             Ok(pin) => pin,
@@ -264,8 +240,6 @@ pub(crate) fn execute_version(
         return 0;
     }
     // A missing or unreadable pin fails closed: propagate the read
-    // error instead of forging a default ok (See:
-    // `docs/cli/commands/status-version.md`).
     let current = match dx_adopt::read_version_pin(workspace) {
         Ok(pin) => pin,
         Err(error) => {
@@ -764,7 +738,6 @@ mod tests {
 
     #[test]
     fn version_json_streams_status_envelope() {
-        // See: `docs/cli/output-protocol.md#status`.
         let scratch = dx_test_scratch::scratch("dx-adopt-version-json-");
         let root = scratch.path().to_path_buf();
         std::fs::create_dir_all(root.join(".dx")).expect("dx");

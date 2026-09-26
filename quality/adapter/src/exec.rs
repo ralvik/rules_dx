@@ -1,37 +1,3 @@
-//! Hermetic scratch mirrors and child execution.
-//!
-//! Tools never observe the real workspace: the adapter materializes the
-//! exact input bytes plus native-closure files into a fresh scratch
-//! directory, then spawns the tool with an empty-derived environment
-//! (no `PATH`, no inherited config variables, pinned `LANG`/`TZ`)
-//! and a pinned working directory. Native-closure entries follow the portable
-//! route: symlinked where the platform allows and copied otherwise, so
-//! Windows works without privileges. The copy fallback is intentional
-//! (tools only read these entries); `materialize_copies_closure_entry_
-//! when_link_path_exists` plus the non-unix no-symlink assertion in
-//! `scratch_materializes_and_cleans_up` prove both branches.
-//! `Scratch` removes its tree on drop as a best-effort fallback;
-//! owners call [`Scratch::close`] on success paths so cleanup failures
-//! surface as action errors instead of vanishing.
-//!
-//! Dependency evaluation (rejected): no `strict-path` — the
-//! scratch threat model stays TempDir-internal (fresh OS-random `TempDir`
-//! plus internal `mirror_rel` from Bazel action inputs, never untrusted
-//! archives/HTTP/LLM paths), so the lexical `Component` walk plus
-//! `starts_with` boundary plus the explicit empty/null/backslash guards
-//! and the on-disk symlink-prefix guard below own the 19+ CVE-pattern
-//! class here. Adopting `strict-path 0.2` (`PathBoundary`/`StrictPath`
-//! over `soft-canonicalize` plus `dunce`, single maintainer, on-disk
-//! resolve per join, `interop_path`/`StrictPath` API churn) would add
-//! supply-chain review, lockfile churn, and `MODULE.bazel` manifests for
-//! zero behavior gain today; `soft-canonicalize` alone carries no
-//! boundary policy. `normpath` is adopted for lexical accumulation only
-//! (`BasePathBuf` owns Windows `Prefix`/verbatim edge semantics
-//! instead of the former hand `PathBuf`); on-disk symlink escapes stay owned
-//! by the symlink-prefix guard below, not by normalization. Re-evaluate with
-//! `VirtualRoot`-style boundary plus safe-I/O only if adapters ever accept
-//! untrusted entries.
-
 use normpath::BasePathBuf;
 use std::ffi::OsStr;
 use std::io::{self, Read};
@@ -39,49 +5,24 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
-/// Contents of one mirror entry, at a scratch-relative path.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MirrorContents {
-    /// Exact bytes to write (virtual source or generated defaults).
     Bytes(Vec<u8>),
-    /// Absolute path to symlink (checked-in native-closure files).
     Link(PathBuf),
 }
 
-/// One scratch-relative mirror entry. Parent directories are created on
-/// materialization; `mirror_rel` must stay inside the scratch root.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MirrorFile {
     pub mirror_rel: PathBuf,
     pub contents: MirrorContents,
 }
 
-/// A fresh scratch tree, removed on drop.
-///
-/// Single prod scratch policy for `#651`: this is the hermetic mirror
-/// (`resolve`/`materialize`/`close` with symlink-prefix guards).
-/// `quality_runner` reuses this type (no second `Scratch`); unit-test
-/// scratch dirs use `dx_test_scratch::scratch`, and `dx` per-run temp dirs
-/// use `dx_cli::plan::create_run_temp_dir`.
-/// Scratch discipline (See: `docs/testing/README.md`, issue #750): test
-/// parents below stay on `tempfile::Builder` directly because they are the
-/// explicit parents under test for `Scratch::create`, not second policies.
-///
-/// The tree is a `tempfile::TempDir`: OS-random `O_EXCL`-claimed names
-/// with internal collision retries replace the former
-/// wall-clock/pid/counter suffix mixer, and `TempDir`'s own drop is the
-/// best-effort removal fallback. Owners still call [`Scratch::close`] on
-/// success paths so cleanup failures surface as action errors.
 #[derive(Debug)]
 pub struct Scratch {
     dir: tempfile::TempDir,
 }
 
 impl Scratch {
-    /// Creates `parent/dx-scratch-<os-random>`. Parent is normally
-    /// `TMPDIR`, already action-scoped under Bazel. Fails when the
-    /// parent is unusable; name collisions retry inside `tempfile`
-    /// instead of a caller-visible suffix loop.
     pub fn create(parent: &Path) -> io::Result<Scratch> {
         let dir = tempfile::Builder::new()
             .prefix("dx-scratch-")
@@ -89,21 +30,10 @@ impl Scratch {
         Ok(Scratch { dir })
     }
 
-    /// Absolute scratch root.
     pub fn root(&self) -> &Path {
         self.dir.path()
     }
 
-    /// Resolves a scratch-relative path, rejecting escapes.
-    ///
-    /// Lexical boundary (`normpath::BasePathBuf` accumulation
-    /// owns Windows `Prefix`/verbatim edge semantics instead of hand
-    /// `PathBuf`) plus explicit shape guards (empty, null byte, backslash
-    /// for portable Unix/Windows behavior) plus a final containment check.
-    /// On-disk symlink escapes are owned by [`Scratch::materialize`]'s
-    /// symlink-prefix guard, not by this lexical join: this returns the
-    /// lexical location, materialize refuses to traverse a symlink to
-    /// reach it.
     pub fn resolve(&self, rel: &Path) -> io::Result<PathBuf> {
         let root = self.dir.path();
         // Encoded bytes keep the shape check exact on non-UTF8 inputs:
@@ -179,17 +109,6 @@ impl Scratch {
         Ok(absolute.into_path_buf())
     }
 
-    /// Writes byte entries and links closure entries, creating parents.
-    /// Closure entries prefer symlinks but fall back to copies, so
-    /// platforms without symlinks (or without the privilege to create
-    /// them) still materialize working trees.
-    ///
-    /// Boundary enforcement is lexical (`resolve`) plus on-disk: the
-    /// symlink-prefix guard refuses to traverse a symlink directory
-    /// created by an earlier entry, and an existing symlink at the
-    /// target itself is rejected instead of followed. Fresh scratch
-    /// trees start symlink-free, so the guard only fires on escape
-    /// attempts or future `Link`-to-directory misuse.
     pub fn materialize(&self, files: &[MirrorFile]) -> io::Result<()> {
         let root = self.dir.path();
         for file in files {
@@ -232,23 +151,11 @@ impl Scratch {
         Ok(())
     }
 
-    /// Removes the tree, surfacing cleanup failures to the caller.
-    /// Owners call this on success paths; early-error paths rely on the
-    /// best-effort `TempDir` drop fallback (which cannot return errors).
-    /// Consuming `self` skips that fallback: the removal below already
-    /// ran, and a second attempt could only mask this result.
     pub fn close(self) -> io::Result<()> {
         self.dir.close()
     }
 }
 
-/// Rejects on-disk symlink prefixes between `root` (exclusive) and
-/// `path` (inclusive): any existing prefix that is a symlink would make
-/// a lexically inside `absolute` land outside on disk.
-///
-/// Missing prefixes cannot be symlinks yet; they become real directories
-/// via `create_dir_all` after this guard. `root` itself is the fresh
-/// `TempDir` and is never a symlink, so only its children are checked.
 fn ensure_no_symlink_prefix(root: &Path, path: &Path, rel: &Path) -> io::Result<()> {
     let suffix = path.strip_prefix(root).map_err(|_| {
         io::Error::new(
@@ -287,13 +194,6 @@ fn ensure_no_symlink_prefix(root: &Path, path: &Path, rel: &Path) -> io::Result<
     Ok(())
 }
 
-/// Links `target` at `link`, copying the file when symlinks are
-/// unavailable (non-Unix platforms, or missing privileges): tools only
-/// ever read these native-closure entries. portable route:
-/// the copy fallback is intentional, not a silent privilege-gap hide;
-/// directory targets fail fast via the `copy` error instead of a
-/// half-materialized tree. Non-unix always copies; unix prefers a
-/// symlink and copies only when linking fails.
 #[cfg(unix)]
 fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
     match std::os::unix::fs::symlink(target, link) {
@@ -302,20 +202,11 @@ fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
     }
 }
 
-/// Links `target` at `link`, copying the file when symlinks are
-/// unavailable (non-Unix platforms, or missing privileges): tools only
-/// ever read these native-closure entries. portable route:
-/// the copy fallback is intentional, not a silent privilege-gap hide;
-/// directory targets fail fast via the `copy` error instead of a
-/// half-materialized tree. Non-unix always copies; unix prefers a
-/// symlink and copies only when linking fails.
 #[cfg(not(unix))]
 fn link_or_copy(target: &Path, link: &Path) -> io::Result<()> {
     std::fs::copy(target, link).map(|_| ())
 }
 
-/// Captured child outcome. `code` is [`None`] when a signal killed the
-/// child; callers treat that as an action failure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChildOutput {
     pub code: Option<i32>,
@@ -323,16 +214,6 @@ pub struct ChildOutput {
     pub stderr: Vec<u8>,
 }
 
-/// Builds the hermetic child environment: exactly one `TMPDIR` (the
-/// scratch root) plus pinned `LANG=C.UTF-8` and `TZ=UTC` plus caller
-/// extras (such as `LD_LIBRARY_PATH` for toolchain binaries). `PATH`
-/// is never set; every argv element is absolute, so tools cannot
-/// observe or depend on ambient lookup. The locale/time pin keeps
-/// locale/time-sensitive tools (prettier, buf, clang-format, vale)
-/// deterministic across runners (See: `docs/testing/tools.md`).
-/// Extras naming `TMPDIR`, `LANG`, or `TZ` are dropped: the scratch
-/// root owns temp files and the pinned locale/timezone own
-/// determinism, never shadowable by tool configuration.
 pub fn hermetic_env(tmpdir: &Path, extra: &[(&str, &str)]) -> Vec<(String, String)> {
     let mut env = Vec::with_capacity(3 + extra.len());
     env.push(("TMPDIR".to_owned(), tmpdir.to_string_lossy().into_owned()));
@@ -346,13 +227,8 @@ pub fn hermetic_env(tmpdir: &Path, extra: &[(&str, &str)]) -> Vec<(String, Strin
     env
 }
 
-/// Maximum tool output wall-time plus max output size guard.
-/// Tools that exceed either fail closed as action errors, never silent.
-/// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 pub const SPAWN_TIMEOUT: Duration = Duration::from_secs(120);
 
-/// Rejects oversized child output (max output size guard, output-byte
-/// budget for check plus sandbox-apply-and-diff spawns).
 fn check_child_output_size(stdout: &[u8], stderr: &[u8]) -> io::Result<()> {
     let limit = crate::parsers::MAX_OUTPUT_BYTES;
     if stdout.len() > limit || stderr.len() > limit {
@@ -364,11 +240,6 @@ fn check_child_output_size(stdout: &[u8], stderr: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
-/// Drains one child pipe on a helper thread so a chatty child never
-/// fills the pipe buffer and blocks on write (which would fake a
-/// timeout). Stores at most `MAX_OUTPUT_BYTES + 1` so the size guard
-/// still fails closed without unbounded memory; keeps reading past that
-/// without storing so the child can finish or be reaped on kill.
 fn drain_pipe<R: Read + Send + 'static>(mut pipe: R) -> std::thread::JoinHandle<Vec<u8>> {
     std::thread::spawn(move || {
         let limit = crate::parsers::MAX_OUTPUT_BYTES;
@@ -390,7 +261,6 @@ fn drain_pipe<R: Read + Send + 'static>(mut pipe: R) -> std::thread::JoinHandle<
     })
 }
 
-/// Joins one drain thread, mapping a reader panic to an action error.
 fn join_drain(handle: Option<std::thread::JoinHandle<Vec<u8>>>) -> io::Result<Vec<u8>> {
     match handle {
         None => Ok(Vec::new()),
@@ -400,7 +270,6 @@ fn join_drain(handle: Option<std::thread::JoinHandle<Vec<u8>>>) -> io::Result<Ve
     }
 }
 
-/// Spawns one absolute tool binary with a cleared environment.
 pub fn spawn(
     argv: &[impl AsRef<OsStr>],
     cwd: &Path,
@@ -409,8 +278,6 @@ pub fn spawn(
     spawn_with_timeout(argv, cwd, env, SPAWN_TIMEOUT)
 }
 
-/// Spawns with an explicit timeout (fuzz/property harness uses short
-/// timeouts; production uses [`SPAWN_TIMEOUT`]).
 pub fn spawn_with_timeout(
     argv: &[impl AsRef<OsStr>],
     cwd: &Path,

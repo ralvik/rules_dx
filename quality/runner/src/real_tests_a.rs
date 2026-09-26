@@ -1,6 +1,3 @@
-//! Split from `real.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::*;
 
 pub(super) type Spawn = SpawnFn;
@@ -30,9 +27,6 @@ pub(super) fn plain_tool() -> RealTool {
     }
 }
 
-/// rustfmt test tool: the aspect always passes a crate edition, so
-/// every test that reaches the rustfmt check/fix dispatch carries
-/// one; only the missing-edition test uses `plain_tool()` directly.
 pub(super) fn rustfmt_tool() -> RealTool {
     RealTool {
         edition: Some("2021".to_owned()),
@@ -40,14 +34,6 @@ pub(super) fn rustfmt_tool() -> RealTool {
     }
 }
 
-/// Writes `body` to a unique temp file for delegated-tool tests and
-/// returns it. Bazel scopes `TMPDIR` per test action; the
-/// OS-random `O_EXCL`-claimed name additionally survives parallel
-/// same-name tests sharing a directory, and the guard removes the
-/// file on scope exit (including panics). Callers keep their
-/// explicit removal as success-path failure surfacing.
-/// Scratch discipline (See: `docs/testing/README.md`, issue #750): a file
-/// fixture stays on `tempfile::NamedTempFile`; `dx_test_scratch` owns dirs only.
 pub(super) fn upstream_file(name: &str, body: &str) -> tempfile::NamedTempFile {
     let mut file = tempfile::Builder::new()
         .prefix(format!("dx-delegated-{name}-").as_str())
@@ -131,8 +117,6 @@ pub(super) fn trim_end(line: &[u8]) -> &[u8] {
     &line[..end]
 }
 
-/// Content-aware rustfmt double: check reports a diff exactly when
-/// the materialized file has trailing whitespace, fix trims it.
 pub(super) fn roundtrip_rustfmt(
     argv: &[OsString],
     _cwd: &Path,
@@ -241,7 +225,6 @@ pub(super) const BIOME_FMT_DIRTY: &str = r#"{"summary":{"changed":0,"unchanged":
 pub(super) const BIOME_FMT_CLEAN: &str = r#"{"summary":{},"diagnostics":[],"command":"format"}"#;
 pub(super) const ESLINT_DIRTY: &str = r#"[{"filePath":"FILE","messages":[{"ruleId":"no-unused-vars","severity":2,"message":"'unusedVar' is assigned a value but never used.","line":1,"column":7,"endLine":1,"endColumn":16}],"errorCount":1,"warningCount":0}]"#;
 
-/// Reads the `--config-path <dir>` value from a Biome argv.
 pub(super) fn biome_config_dir_arg(argv: &[OsString]) -> String {
     argv.windows(2)
         .find(|pair| pair[0] == "--config-path")
@@ -249,13 +232,6 @@ pub(super) fn biome_config_dir_arg(argv: &[OsString]) -> String {
         .expect("--config-path is always passed")
 }
 
-/// Content-aware Biome double: `lint` reports
-/// `noUnusedVariables` exactly when the materialized file contains
-/// `unusedVar`; `format` (check) reports `format` exactly when it
-/// contains `BADFMT`; `format --write` rewrites `BADFMT` away and
-/// exits 0. Asserts the pinned JSON flags on every launch. Like the
-/// real binary, findings address files relative to the working
-/// directory (the scratch root), so the backend re-anchors them.
 pub(super) fn roundtrip_biome(
     argv: &[OsString],
     cwd: &Path,
@@ -342,8 +318,6 @@ pub(super) fn roundtrip_biome(
     })
 }
 
-/// Biome double asserting the pinned `{}` defaults: the config dir is
-/// the materialized `dx-biome-default` directory holding exactly that.
 pub(super) fn biome_defaults(
     argv: &[OsString],
     cwd: &Path,
@@ -360,7 +334,6 @@ pub(super) fn biome_defaults(
     roundtrip_biome(argv, cwd, env)
 }
 
-/// Biome double asserting a hinted config wins over the defaults.
 pub(super) fn biome_hinted(
     argv: &[OsString],
     cwd: &Path,
@@ -380,12 +353,6 @@ pub(super) fn biome_hinted(
     roundtrip_biome(argv, cwd, env)
 }
 
-/// Content-aware ESLint double: reports `no-unused-vars` exactly
-/// when the materialized file contains `unusedVar`, else the clean
-/// array. `--fix` rewrites the marker away and exits 1 (remaining
-/// unfixable findings after the fixable ones were applied), proving
-/// the backend re-reads on exit 1. Asserts the explicit `-c` config
-/// and `-f json` on every launch.
 pub(super) fn roundtrip_eslint(
     argv: &[OsString],
     _cwd: &Path,
@@ -436,13 +403,6 @@ pub(super) fn roundtrip_eslint(
     })
 }
 
-/// Content-aware Prettier double: `--check` reports `[warn]
-/// <workspace-relative>` exactly when the materialized file contains
-/// `BADFMT`, else exit 0; `--write` rewrites `BADFMT` away and exits
-/// 0. Reports the scratch-relative path like the real Prettier, which
-/// relativizes checked paths against its working directory even for
-/// absolute arguments. Asserts the hermetic `--no-config`
-/// `--no-editorconfig` flags on every launch.
 pub(super) fn roundtrip_prettier(
     argv: &[OsString],
     cwd: &Path,
@@ -505,8 +465,6 @@ pub(super) fn missing_spawn(
     Err(io::Error::new(io::ErrorKind::NotFound, "no such binary"))
 }
 
-/// Fix double that fails outside the ESLint exit-1 re-read, so the
-/// ESLint fix path must keep the original text.
 pub(super) fn fatal_fix(
     argv: &[OsString],
     _cwd: &Path,
@@ -560,9 +518,6 @@ pub(super) fn taplo_garbage(
     })
 }
 
-/// Asserts the Ruff hermetic flags shared by every shape, so a
-/// dropped flag fails here instead of silently observing ambient
-/// state.
 pub(super) fn assert_ruff_hermetic(argv: &[OsString], env: &[(String, String)]) {
     assert_hermetic(env);
     assert!(
@@ -575,12 +530,6 @@ pub(super) fn assert_ruff_hermetic(argv: &[OsString], env: &[(String, String)]) 
     );
 }
 
-/// Content-aware Ruff double: lint check reports F401 exactly when
-/// the materialized file imports `os`; `check --fix` strips that
-/// import and exits 1 when `UNFIXABLE` remains (the pinned
-/// partial-fix semantic), else 0; `format --check` reports
-/// unformatted exactly on trailing whitespace; `format` trims it.
-/// Unhinted runs assert `--isolated` (pinned upstream defaults).
 pub(super) fn roundtrip_ruff(
     argv: &[OsString],
     _cwd: &Path,
@@ -594,8 +543,6 @@ pub(super) fn roundtrip_ruff(
     ruff_behavior(argv)
 }
 
-/// Hinted Ruff double: asserts the `--config` selection (never
-/// `--isolated`) before delegating to [`ruff_behavior`].
 pub(super) fn roundtrip_ruff_hinted(
     argv: &[OsString],
     _cwd: &Path,
@@ -687,11 +634,6 @@ pub(super) fn ruff_behavior(argv: &[OsString]) -> io::Result<ChildOutput> {
     })
 }
 
-/// Content-aware Ty double: reports invalid-assignment exactly when
-/// the materialized file contains BADTYPE, else `All checks passed!`.
-/// The reported path is working-directory-relative like the real Ty,
-/// which relativizes concise paths against its working directory even
-/// for absolute arguments.
 pub(super) fn roundtrip_ty(
     argv: &[OsString],
     cwd: &Path,
@@ -726,8 +668,6 @@ pub(super) fn roundtrip_ty(
     })
 }
 
-/// Content-aware pydoclint double: reports DOC201 exactly when the
-/// materialized file contains NODOC, on stderr under a path header.
 pub(super) fn roundtrip_pydoclint(
     argv: &[OsString],
     _cwd: &Path,
@@ -758,11 +698,6 @@ pub(super) fn roundtrip_pydoclint(
     })
 }
 
-/// Content-aware flake8 double: reports F401 exactly when the
-/// materialized file imports `os`, on stdout as
-/// `path:row:col:code:message`. Asserts the hermetic flags
-/// (`--isolated` blocks config discovery, `--jobs=1` keeps output
-/// order deterministic, `--color=never` blocks ANSI).
 pub(super) fn roundtrip_flake8(
     argv: &[OsString],
     _cwd: &Path,
@@ -799,14 +734,6 @@ pub(super) fn roundtrip_flake8(
     })
 }
 
-/// Content-aware pylint double: reports W0611 exactly when the
-/// materialized file imports `os`, on stdout as the pinned JSON
-/// array with 0-based columns. The reported path is
-/// working-directory-relative like the real pylint, which relativizes
-/// concise paths against its working directory even for absolute
-/// arguments. Asserts the hermetic flags
-/// (`--persistent=n` disables the cache, `--reports=n`/`--score=n`
-/// suppress the human report).
 pub(super) fn roundtrip_pylint(
     argv: &[OsString],
     cwd: &Path,

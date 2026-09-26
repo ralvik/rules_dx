@@ -1,32 +1,15 @@
-//! Memoized Bazel package-marker probes.
-//!
-//! Thin label synthesis for Bazel query input only: probes marker
-//! existence to build file labels, never reads BUILD contents, never
-//! infers dependencies. Ownership comes from the bounded `rdeps` query.
-//! See: `docs/cli/target-resolution.md` (file ownership).
-
 use std::path::Path;
 
 use super::ResolveError;
 
-/// Package markers: a directory is a Bazel package when it holds one.
-/// Only existence is probed; contents are never read.
-/// See: `docs/cli/target-resolution.md` (file ownership).
 const PACKAGE_FILES: [&str; 2] = ["BUILD.bazel", "BUILD"];
 
-/// Memoized package-marker probes for one resolver call. Only ancestor
-/// directories of input files are ever probed: label and directory
-/// scopes never trigger package walks, and each directory's marker
-/// existence is probed at most once no matter how many files share the
-/// enclosing package.
 #[derive(Default)]
 pub(crate) struct PackageCache {
-    /// Directory ("" for the workspace root) to marker presence.
     is_package: std::collections::HashMap<String, bool>,
 }
 
 impl PackageCache {
-    /// Reports whether `dir` holds a package marker, probing once.
     fn is_package(&mut self, workspace: &Path, dir: &str) -> bool {
         if let Some(hit) = self.is_package.get(dir) {
             return *hit;
@@ -43,11 +26,6 @@ impl PackageCache {
         found
     }
 
-    /// Finds the nearest enclosing Bazel package for a normalized relative
-    /// file path by walking from the parent directory up to the workspace
-    /// root. Returns `(package, path_in_package)`, where the root package
-    /// is `""`. Returns `None` when no directory in the chain holds a
-    /// package marker.
     fn enclosing(&mut self, workspace: &Path, rel: &str) -> Option<(String, String)> {
         let mut dir = match rel.rfind('/') {
             Some(index) => &rel[..index],
@@ -72,11 +50,6 @@ impl PackageCache {
         }
     }
 
-    /// Maps a normalized relative file path to its source label through
-    /// the nearest enclosing package (`pkg/src/deep/a.py` to
-    /// `//pkg:src/deep/a.py`, root files to `//:file`). Files with no
-    /// enclosing package are [`ResolveError::NotAPackage`], never an
-    /// invalid label: Bazel file labels require a package.
     pub(crate) fn file_label(
         &mut self,
         workspace: &Path,
@@ -156,7 +129,6 @@ mod tests {
     fn file_label_ignores_build_contents() {
         // Existence-only probe: invalid BUILD syntax still yields a label
         // because contents are never read; ownership comes from Bazel query.
-        // See: `docs/cli/target-resolution.md` (file ownership).
         let scratch = dx_test_scratch::scratch("dx-resolve-packages-contents-");
         let workspace = scratch.path().to_path_buf();
         write(

@@ -1,20 +1,6 @@
-//! CSharpier output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses CSharpier `check` stdout. `files` are the workspace-relative
-/// mirror paths (the tool reports working-directory-relative paths, so
-/// the caller re-anchors them like Prettier).
-///
-/// Clean is exit 0 with no output lines. Dirty is exit 1 with one
-/// unformatted path per non-empty stdout line; each becomes one `1:1`
-/// format finding. Any other shape is a grammar mismatch.
 pub fn parse_csharpier(
     stdout: &[u8],
     code: Option<i32>,

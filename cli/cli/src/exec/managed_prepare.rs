@@ -1,15 +1,3 @@
-//! Managed side preparation and commit-error mapping.
-//!
-//! Split from [`super::managed`] (`managed.rs`): owns
-//! [`prepare_managed_sides`] plus [`map_commit_error`]. Re-exported
-//! through `super` so the public path stays
-//! `crate::exec::managed_prepare::{prepare_managed_sides,
-//! map_commit_error}` via `pub(crate)`. Shares the codegen/env
-//! collection and staging in [`super::managed_codegen`],
-//! [`super::managed_env`], and the error codes in [`super::common`];
-//! the managed dispatch ([`super::managed::execute_managed`]) calls back
-//! in.
-
 use std::path::Path;
 
 use super::common::*;
@@ -17,9 +5,6 @@ use super::managed_codegen::{collect_managed_codegen, empty_generated_id, stage_
 use super::managed_env::{collect_managed_env, empty_env_id, stage_env_side};
 use crate::args::Command;
 
-/// Maps a setup commit failure into the stable managed error vocabulary.
-/// Only the capability error carries its own code; every other commit
-/// failure preserves the prior pointer and reports `managed_commit_failed`.
 pub(crate) fn map_commit_error(error: dx_setup::CommitError) -> (String, String) {
     match error {
         dx_setup::CommitError::NoCapability => (
@@ -30,15 +15,6 @@ pub(crate) fn map_commit_error(error: dx_setup::CommitError) -> (String, String)
     }
 }
 
-/// Collects, validates, and stages the prepared sides for one managed
-/// command without committing: independent commands always prepare
-/// their own side (even an empty plan, which clears a stale selection,
-/// paired downstream with the managed empty counterpart), while an
-/// exact `dx setup` leaves a side with no contributing target
-/// unprepared so the commit carries the current generation forward (or
-/// the managed empty generation on first selection). Repository setup
-/// always prepares both canonical sides. Staged-but-unselected
-/// generations are ordinary retained cache, never selection state.
 pub(crate) fn prepare_managed_sides(
     command: Command,
     repository: bool,

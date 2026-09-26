@@ -1,20 +1,6 @@
-//! Cue output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `cue fmt` diff stdout. `files` are the scratch-absolute paths
-/// the tool checked.
-///
-/// Whole-file rewrite with check/diff mode: unified diff markers
-/// (`--- ` headers) mentioning at least one checked file yield one
-/// `1:1` format finding per file; empty output on exit 0 is clean.
-/// Any other exit shape is a grammar mismatch, never a silent pass.
 pub fn parse_cue(
     stdout: &[u8],
     code: Option<i32>,

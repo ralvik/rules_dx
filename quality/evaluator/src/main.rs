@@ -1,17 +1,3 @@
-//! Thin CLI shim over the evaluator library.
-//! Threshold semantics live in the library and are unit-tested there.
-//!
-//! Contract: `docs/cli/cli-contract.md`, `docs/quality/quality-result-protocol.md#execution-and-policy`.
-//!
-//! Usage:
-//! ```text
-//! quality_evaluator --result RESULT.pb --fail_on info|warning|error --output MARKER
-//! ```
-//! The result is decoded and validated before any threshold comparison, so
-//! malformed results fail at every threshold. A passing evaluation writes a
-//! deterministic validation marker; a failing one exits nonzero with reasons
-//! on stderr and writes no output.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -21,19 +7,11 @@ use clap::{error::ErrorKind, Parser};
 use quality_evaluator::{evaluate, parse_threshold, Threshold};
 use quality_result::decode_validated;
 
-/// `argv` tokenizer (frozen legacy contract).
-/// Scalars keep last-wins repeats; every value option consumes the next
-/// token unconditionally (even a `--`-led token), matching the legacy loop.
 #[derive(Parser)]
 #[command(disable_help_flag = true)]
 struct Cli {
-    /// Materialized result protobuf (`--result` keeps last-wins repeats).
     #[arg(long, allow_hyphen_values = true, overrides_with = "result")]
     result: Option<String>,
-    /// Threshold policy name (`--fail_on` keeps last-wins repeats).
-    /// Values validate through the canonical [`parse_threshold`] surface
-    ///: only `info|warning|error` tokenize; anything else maps
-    /// back onto the legacy `unknown fail_on …` text in [`parse_error`].
     #[arg(
         long = "fail_on",
         allow_hyphen_values = true,
@@ -41,30 +19,19 @@ struct Cli {
         value_parser = parse_fail_on
     )]
     fail_on: Option<Threshold>,
-    /// Marker file written on pass (`--output` keeps last-wins repeats).
     #[arg(long, allow_hyphen_values = true, overrides_with = "output")]
     output: Option<String>,
 }
 
-/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
-/// Shared plumbing; message formats stay local to the frozen contract.
-/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
     dx_output::invalid_token(error)
 }
 
-/// Map `clap` tokenizing failures onto the legacy `run()` error surface.
-/// Reachable kinds: [`ErrorKind::UnknownArgument`] (incl. `--help`, which
-/// was never a real flag here), [`ErrorKind::InvalidValue`] (a present flag
-/// with no consumable value), and [`ErrorKind::ValueValidation`] (a
-/// `--fail_on` value rejected by [`parse_fail_on`], the only custom value
-/// parser). No other parser, conflict, or count error can fire.
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
-        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown flag {echoed:?}")
@@ -101,18 +68,10 @@ fn parse_error(error: clap::Error, args: &[String]) -> String {
     }
 }
 
-/// Rejected `--fail_on` value behind a [`clap::Error`], if the error
-/// carries a non-empty one. Missing values carry none (or an empty one),
-/// which the caller treats as missing rather than rejected.
-/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn rejected_value(error: &clap::Error) -> Option<String> {
     dx_output::rejected_value(error)
 }
 
-/// `clap` value parser for `--fail_on`: the single source is
-/// [`parse_threshold`], so tokenizing accepts exactly `info|warning|error`
-/// and rejections already carry the legacy `unknown fail_on …` text that
-/// [`parse_error`] recovers from the error context.
 fn parse_fail_on(raw: &str) -> Result<Threshold, String> {
     parse_threshold(raw).map_err(|error| error.to_string())
 }

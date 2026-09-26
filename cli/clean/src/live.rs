@@ -1,17 +1,3 @@
-//! Live process scan for `dx clean`.
-//!
-//! Split from `super` (`lib.rs`): owns [`LiveHexes`] (setup-record and
-//! generation hexes observed live), [`scan_live_hexes`] (the `/proc`
-//! sweep over working directories plus open file descriptors), and
-//! [`collect_inventory_with_scan`] (inventory augmented with the live
-//! `/proc` pin set). Re-exported through `super` so the public paths
-//! stay `dx_clean::{LiveHexes, scan_live_hexes,
-//! collect_inventory_with_scan}`. Distinct from the `flags` module
-//! (frozen flag shapes), the `records` module (setup-record
-//! validation), the `planning` module (pure prune selection), the
-//! `inventory` module (filesystem collection), and the apply/bytes
-//! modules.
-
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -22,23 +8,12 @@ use super::planning::GenerationView;
 use super::records::GenerationKind;
 use super::CleanError;
 
-/// Setup-record and generation hexes observed live by the process scan
-/// ([`scan_live_hexes`]): never pruned while in use. Deterministic:
-/// outputs sort ascending.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LiveHexes {
-    /// Live setup-record hexes (paths under `.dx/setups/`).
     pub setup: Vec<String>,
-    /// Live generations (paths under `.dx/environments/` or
-    /// `.dx/generated/`).
     pub generations: Vec<GenerationView>,
 }
 
-/// Classifies one observed absolute path: strips the `dx_dir` prefix and
-/// returns the addressed setup hex or generation when the first two
-/// components are a managed root plus a digest-shaped name. Anything
-/// else (foreign paths, unmanaged names, the `current` pointer itself)
-/// contributes nothing.
 fn classify_managed_path(
     dx_dir: &Path,
     observed: &Path,
@@ -79,10 +54,6 @@ fn classify_managed_path(
     }
 }
 
-/// Observes one process directory: its current working directory plus
-/// every open file-descriptor target. Unreadable entries (exited
-/// process, foreign owner, dangling link) contribute nothing; the scan
-/// fails open per process, never aborting the whole sweep.
 fn observe_process(dir: &Path, dx_dir: &Path, live: &mut LiveHexes) {
     let mut targets: Vec<PathBuf> = Vec::new();
     if let Ok(cwd) = fs::read_link(dir.join("cwd")) {
@@ -108,29 +79,6 @@ fn observe_process(dir: &Path, dx_dir: &Path, live: &mut LiveHexes) {
     }
 }
 
-/// Scans `proc_root` (the live `/proc` on Linux) for processes whose
-/// working directory or open files sit under `dx_dir`, and reports the
-/// addressed setup and generation hexes as live (in-use).
-///
-/// Only numeric process directories are inspected; anything else under
-/// `proc_root` is ignored, so a missing `/proc` (non-Linux hosts)
-/// scans empty rather than failing (fail open to over-retention, never
-/// abort the sweep). Over-retention is the only failure
-/// direction: a hex observed anywhere under the managed roots is
-/// preserved, whether or not it is still referenced. Deterministic:
-/// outputs sort ascending with duplicates removed.
-///
-/// Keep the manual `/proc` sweep over `procfs` (spike):
-/// `all_processes_with_root`/`new_with_root` keeps the fake-`proc_root`
-/// fixtures testable, but `cwd` still appends `" (deleted)"` and `fd()`
-/// still fails per process, so both hand-owned edges stay; PID-reuse
-/// safety costs a held fd per `Process` (exhaustion risk the sweep
-/// avoids by holding none); default features pull `chrono`/`flate2`
-/// plus `procfs-core`/`rustix` for PID/cwd/fd reads only; and the
-/// Linux-only crate needs cfg-gated deps plus `select()` to keep the
-/// portable build running everywhere — new dep, lockfile churn, and
-/// supply-chain review for zero prune-decision change (over-retention
-/// is already the safe direction; typed diagnostics stay unsurfaced).
 pub fn scan_live_hexes(proc_root: &Path, dx_dir: &Path) -> LiveHexes {
     let mut live = LiveHexes::default();
     let entries = match fs::read_dir(proc_root) {
@@ -156,11 +104,6 @@ pub fn scan_live_hexes(proc_root: &Path, dx_dir: &Path) -> LiveHexes {
     live
 }
 
-/// Collects the clean inventory for `workspace_root`, augmenting
-/// caller-visible state with the [`scan_live_hexes`] process scan over
-/// the live `/proc`: shells, editors, or build actions whose working
-/// directory or open files sit under the workspace `.dx` roots pin
-/// their setup and generation hexes as active (never pruned).
 pub fn collect_inventory_with_scan(
     workspace_root: &Path,
 ) -> Result<CollectedInventory, CleanError> {
@@ -204,9 +147,6 @@ mod tests {
         root.join("ws")
     }
 
-    /// Commits two setup pairs (stale `('3','4')`, then current
-    /// `('1','2')`) and materializes all four generation directories.
-    /// Returns the workspace path plus the (stale, current) setup hexes.
     fn two_record_workspace(root: &Path) -> (PathBuf, String, String) {
         use crate::records::GenerationKind as Kind;
         let workspace = workspace_of(root);
@@ -229,11 +169,6 @@ mod tests {
         (workspace, stale_hex, current_hex)
     }
 
-    /// Portable symlink planter for the fake `/proc` tree
-    /// portable route): the scan itself is portable (missing `/proc`
-    /// fails open to empty), so its fixtures must run everywhere instead
-    /// of unix-gating. Windows planting fails fast with the OS privilege
-    /// error rather than silently skipping cover.
     #[cfg(windows)]
     fn stage_symlink(target: &Path, link: &Path) {
         // Fake proc entries address files/dirs that may not exist (e.g.
@@ -243,8 +178,6 @@ mod tests {
         std::os::windows::fs::symlink_file(target, link).expect("stage test link");
     }
 
-    /// Portable symlink planter for the fake `/proc` tree
-    /// portable route): see the windows variant above.
     #[cfg(not(windows))]
     fn stage_symlink(target: &Path, link: &Path) {
         std::os::unix::fs::symlink(target, link).expect("stage test link");

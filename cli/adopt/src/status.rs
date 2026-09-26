@@ -1,25 +1,12 @@
-//! Consolidated `dx status` surface.
-//!
-//! Split from `super` (`lib.rs`): owns `StatusCheck`,
-//! `render_status_text`, `render_status_json`, and
-//! `default_status_checks`. Re-exported through `super` so the public
-//! path stays `dx_adopt::{StatusCheck, render_status_text,
-//! render_status_json, default_status_checks}`.
-
 use serde::Serialize;
 
 use super::{version_pin_matches_module, MODULE_VERSION};
 
-/// One diagnostics check in the consolidated `dx status` surface.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct StatusCheck {
-    /// Check name (toolchain, platform, tools, pin).
     pub name: String,
-    /// One of `ok|warn|error`.
     pub status: String,
-    /// Human detail.
     pub detail: String,
-    /// Actionable hint.
     pub hint: String,
 }
 
@@ -28,7 +15,6 @@ struct StatusPayload<'a> {
     checks: &'a [StatusCheck],
 }
 
-/// Render text status: one line per check.
 pub fn render_status_text(checks: &[StatusCheck]) -> String {
     checks
         .iter()
@@ -37,23 +23,13 @@ pub fn render_status_text(checks: &[StatusCheck]) -> String {
         .join("\n")
 }
 
-/// Render legacy JSON payload (single object, not the NDJSON envelope).
-/// See: `docs/cli/output-protocol.md#status` for the CLI envelope.
 pub fn render_status_json(
     checks: &[StatusCheck],
 ) -> Result<String, dx_fingerprint::FingerprintError> {
     // Single owner for string-only JSON shapes (typed, no `unreachable!`).
-    // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
     dx_fingerprint::to_json(&StatusPayload { checks })
 }
 
-/// Default local status checks (toolchain + platform + tools + pin).
-/// See: `docs/cli/commands/status-version.md#dx-status`.
-///
-/// Authority: CLI-owned diagnostics vocabulary reporting Bazel/MODULE facts
-/// statically (no Bazel subprocess; startup and dry-run stay cheap).
-/// Toolchain/platform/tools details mirror their Bazel sources below;
-/// live Bazel resolution stays open and is never claimed here.
 pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
     let pin_status = if version_pin_matches_module(pinned, MODULE_VERSION) {
         "ok"
@@ -65,7 +41,6 @@ pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
             name: "toolchain".to_owned(),
             status: "ok".to_owned(),
             // Mirrors `MODULE.bazel` (`rules_rust 0.74.0`, `versions = ["1.98.0"]`).
-            // See: `docs/product/support-matrix.md#minimal-required-core`.
             detail: "rust 1.98.0 via rules_rust 0.74.0 (MODULE.bazel)".to_owned(),
             hint: "bazel build //...".to_owned(),
         },
@@ -81,7 +56,6 @@ pub fn default_status_checks(pinned: &str) -> Vec<StatusCheck> {
             name: "tools".to_owned(),
             status: "ok".to_owned(),
             // Pinned tool hub; Bazel acquires declared artifacts lazily.
-            // See: `docs/tools/tool-acquisition.md`.
             detail: "bazel-resolved pinned tools (//quality/artifacts)".to_owned(),
             hint: "no ambient tools required".to_owned(),
         },
@@ -108,7 +82,6 @@ mod tests {
         // Single source: the pin hint must track `MODULE_VERSION`, and the
         // toolchain/tools details must name their Bazel sources, never bare
         // hardcoded claims.
-        // See: `docs/cli/commands/status-version.md#dx-status`.
         let pin = checks.iter().find(|c| c.name == "pin").expect("pin check");
         assert_eq!(pin.hint, format!("dx version --pin {MODULE_VERSION}"));
         let toolchain = checks

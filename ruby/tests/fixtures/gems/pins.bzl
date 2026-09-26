@@ -33,7 +33,6 @@ GEMS_FIXTURE_RSPEC = "//ruby/tests/fixtures/rspec:greeter_spec"
 # in favor of the separate `gem_checksums` attribute).
 GEMS_REJECTED = "consumer Bundler rejected: lock plus depcheck only; git gems rejected per rules_ruby#62"
 
-# Currency recheck (issue #932): directives below were verified current on
 # this date (rspec 3.13.0 per ADR 0008 latest-stable). Refresh the date with
 # each dependency-currency pass; pin_consistency.sh fails when absent or stale.
 GEMS_CURRENCY_RECHECK = "2026-09-22"

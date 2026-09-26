@@ -1,6 +1,3 @@
-//! Update command execution: live resolver backends with continuation
-//! plus the vendored preset fragment.
-
 use super::common::*;
 use crate::args::{Command, Invocation};
 use crate::reports::plan_reports;
@@ -11,16 +8,6 @@ use dx_output::{
 };
 use std::collections::BTreeMap;
 
-/// Runs `dx update`  with the preset fragment:
-/// default mode updates dependency-set/package/target selectors through
-/// `dx_update` (mutating without confirmation) plus the preset fragment
-/// atomically; `--check` is the non-mutating preset stale gate (exit `0`
-/// clean / `1` stale, copying the `generate --check` exit contract) and
-/// ignores selectors. `--dry-run` plans without launching or touching
-/// the tree. `--offline` (`--frozen` alias) forces cache-only: every
-/// fetching resolver fails with `offline_required` instead of launching,
-/// while the pinned Go no-op still succeeds. Usage errors exit `2`
-/// before any launch.
 pub(crate) fn execute_update(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
         invocation.command == Command::Update,
@@ -153,9 +140,6 @@ fn execute_update_default(invocation: &Invocation, env: Env<'_>, verbose: bool) 
     }
 }
 
-/// Dry-run notice for `execute_update_default`: plans without launching
-/// or touching the tree. Extracted so the default path stays under the
-/// `too_many_lines` budget.
 fn emit_update_dry_run(
     invocation: &Invocation,
     out: &mut dyn std::io::Write,
@@ -175,7 +159,6 @@ fn emit_update_dry_run(
     0
 }
 
-/// Records one failed set outcome with its user-facing detail.
 fn record_set_failed(
     attempted: &mut Vec<dx_update::outcome::SetOutcome>,
     details: &mut BTreeMap<dx_update::sets::SetId, SetDetail>,
@@ -189,7 +172,6 @@ fn record_set_failed(
     details.insert(set, SetDetail::Failed { message });
 }
 
-/// Records one successful set outcome with its user-facing detail.
 fn record_set_success(
     attempted: &mut Vec<dx_update::outcome::SetOutcome>,
     details: &mut BTreeMap<dx_update::sets::SetId, SetDetail>,
@@ -203,13 +185,6 @@ fn record_set_success(
     details.insert(set, SetDetail::Success { message });
 }
 
-/// Live backend execution over the resolved sets in sorted order.
-/// Extracted from `execute_update_default` so the orchestrator stays
-/// under the `too_many_lines` budget; continuing independent sets after
-/// failures preserves the V1 independence contract. `offline` forces
-/// cache-only: fetching resolvers fail with `offline_required` instead
-/// of launching, while the Go pinned no-op still succeeds.
-/// See: `docs/deploy/offline-bootstrap.md`.
 fn run_update_backends(
     resolved: &BTreeMap<dx_update::sets::SetId, dx_update::selector::SetRequest>,
     runner: &dyn dx_process::Runner,
@@ -277,10 +252,6 @@ fn run_update_backends(
     (attempted, details)
 }
 
-/// Runs one `Run` backend plan, recording success or the launch/exit/
-/// signal failure. Extracted so `run_update_backends` stays focused on
-/// planning and dispatch. Grouped as one params struct so the 8-value
-/// backend run takes one argument instead of eight positionals.
 struct BackendRun<'a> {
     attempted: &'a mut Vec<dx_update::outcome::SetOutcome>,
     details: &'a mut BTreeMap<dx_update::sets::SetId, SetDetail>,
@@ -346,10 +317,6 @@ fn run_update_backend(run: BackendRun<'_>) {
     }
 }
 
-/// JSON report emission for `execute_update_default`: per-set terminal
-/// reports plus recovery hint plus `command_finished`. Extracted so the
-/// orchestrator stays under the `too_many_lines` budget.
-/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
 fn emit_update_json(
     out: &mut dyn std::io::Write,
     err: &mut dyn std::io::Write,
@@ -361,7 +328,6 @@ fn emit_update_json(
     // Minor-1.1 `correlation` groups each per-set terminal report plus
     // its file events under `update:<set>`; line order stays
     // authoritative and v1.0 consumers ignore the field.
-    // See: `docs/cli/output-protocol.md#ndjson-envelope`.
     for outcome in &report.outcomes {
         let set_name = outcome.set.as_str();
         let correlation = format!("update:{set_name}");
@@ -394,7 +360,6 @@ fn emit_update_json(
                     // inference stays rejected. Synthetic manifests are
                     // pinned by unit fixtures plus
                     // `cli/update/tests/fixtures/correlation_manifest/`.
-                    // See: `docs/cli/output-protocol.md#mutation`.
                     if let Some(manifest) = live_success_manifest(set_name) {
                         if let Ok(file_events) = project_manifest_events(&manifest) {
                             for file_event in &file_events {
@@ -415,7 +380,6 @@ fn emit_update_json(
                     .unwrap_or_else(|| format!("failed to update {set_name}"));
                 // Cache-only runs surface `offline_required` (not
                 // `update_failed`) when the resolver would need a network
-                // fetch. See: `docs/deploy/offline-bootstrap.md`.
                 let code = if message.contains(CODE_OFFLINE_REQUIRED) {
                     CODE_OFFLINE_REQUIRED
                 } else {
@@ -482,10 +446,6 @@ fn emit_update_json(
     exit
 }
 
-/// Text report emission for `execute_update_default`: successes to stdout
-/// when verbose, failures always to stderr, plus the recovery hint and
-/// the aggregate summary. Extracted so the orchestrator stays under the
-/// `too_many_lines` budget.
 fn emit_update_text(
     out: &mut dyn std::io::Write,
     err: &mut dyn std::io::Write,
@@ -565,12 +525,6 @@ enum SetDetail {
     Failed { message: String },
 }
 
-/// Live manifest bytes for one successful set: the Go pinned no-op owns
-/// an empty manifest (no file delta, so no events); other backends own
-/// no CLI-readable manifest yet because the protocol forbids Git scan,
-/// BUILD parse, and rerun inference. Returns `None` when no manifest is
-/// available so the CLI emits no forged `change`/`mutation` events.
-/// See: `docs/cli/output-protocol.md#mutation`.
 fn live_success_manifest(set_name: &str) -> Option<dx_update::manifest::CommittedManifest> {
     if set_name == "go" {
         Some(dx_update::manifest::CommittedManifest {
@@ -582,13 +536,6 @@ fn live_success_manifest(set_name: &str) -> Option<dx_update::manifest::Committe
     }
 }
 
-/// Projects one validated backend manifest to its NDJSON `change` plus
-/// terminal `applied` `mutation` pairs, grouped under `update:<set>`.
-/// Each file emits its `change` first, then its `applied` mutation, in
-/// normalized path order; empty manifests emit nothing, preserving v1.0.
-/// Returns the ordered event values (callers stream them before the
-/// per-set terminal report). Fails closed on any manifest shape violation.
-/// See: `docs/cli/output-protocol.md#mutation`.
 pub(crate) fn project_manifest_events(
     manifest: &dx_update::manifest::CommittedManifest,
 ) -> Result<Vec<serde_json::Value>, dx_update::manifest::ManifestError> {

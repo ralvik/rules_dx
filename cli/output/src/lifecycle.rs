@@ -1,25 +1,9 @@
-//! Command lifecycle NDJSON events for the `dx` CLI.
-//!
-//! Split from `super` (`lib.rs`): owns the stream schema version,
-//! `schema`, the `command_started` / `operation` / `report` / `selection` /
-//! `error` / `command_finished` constructors, `FinishedCounts`, and
-//! `write_event`, plus the shared `nonempty` / `base` helpers (crate-visible
-//! for the remaining diagnostic/change/mutation constructors still on the
-//! facade). Re-exported through `super` so the public path stays
-//! `dx_output::{...}`.
-
 use crate::validation::{check_correlation, check_path, parse_digest, OutputError};
 use serde_json::{json, Value};
 
-/// Breaking semantic version of the NDJSON stream. One invocation never
-/// mixes schema versions; removing a field, making an optional field
-/// required, or changing semantics requires a new major version.
 pub use dx_schema::SCHEMA_MAJOR;
-/// Additive feature version: producers may add fields and event kinds and
-/// consumers must ignore unknown ones within one major version.
 pub use dx_schema::SCHEMA_MINOR;
 
-/// The `schema` object shared by every event in one invocation.
 pub fn schema() -> Value {
     json!({"major": SCHEMA_MAJOR, "minor": SCHEMA_MINOR})
 }
@@ -38,14 +22,6 @@ pub(crate) fn base(event: &str) -> serde_json::Map<String, Value> {
     map
 }
 
-/// Attaches the optional minor-1.1 `correlation` grouping identifier to any
-/// already-constructed NDJSON event. Producers omit it for v1.0 behavior;
-/// consumers must tolerate its absence and ignore unknown values.
-/// Line order stays authoritative; correlation is advisory grouping for
-/// interleaved operations (run multirun targets, update per-set
-/// continuation, umbrella phases).
-/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
-/// Owning contract: `docs/cli/output-protocol.md`.
 pub fn with_correlation(event: Value, correlation: &str) -> Result<Value, OutputError> {
     check_correlation(correlation)?;
     match event {
@@ -63,7 +39,6 @@ pub fn with_correlation(event: Value, correlation: &str) -> Result<Value, Output
     }
 }
 
-/// First event of every successfully initialized JSON stream.
 pub fn command_started(command: &str, dry_run: bool, mode: &str) -> Result<Value, OutputError> {
     nonempty("command", command)?;
     if mode != "default" && mode != "check" {
@@ -78,9 +53,6 @@ pub fn command_started(command: &str, dry_run: bool, mode: &str) -> Result<Value
     Ok(Value::Object(map))
 }
 
-/// Announces a durable workflow phase before it begins (or would begin
-/// under dry-run). `scope` is the compact effective main-workspace scope,
-/// omitted before graph resolution.
 pub fn operation_event(
     command: &str,
     phase: &str,
@@ -100,8 +72,6 @@ pub fn operation_event(
     Ok(Value::Object(map))
 }
 
-/// Confirms a successfully emitted file report after atomic replacement.
-/// A stdout report cannot coexist with NDJSON, so this event is file-only.
 pub fn report_event(
     format: &str,
     path: &str,
@@ -116,8 +86,6 @@ pub fn report_event(
     Ok(Value::Object(map))
 }
 
-/// Confirms the successfully validated state selected by `env`, `codegen`,
-/// or `setup`. All identities are 64 lowercase hexadecimal characters.
 pub fn selection_event(
     setup_id: &str,
     environment_id: &str,
@@ -139,8 +107,6 @@ pub fn selection_event(
     Ok(Value::Object(map))
 }
 
-/// One consolidated `dx status` check as an NDJSON event.
-/// See: `docs/cli/output-protocol.md#status`, Owning contract: `docs/cli/output-protocol.md`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StatusEvent {
     pub name: String,
@@ -149,8 +115,6 @@ pub struct StatusEvent {
     pub hint: String,
 }
 
-/// Renders one `status` event (`ok|warn|error` closed set).
-/// See: `docs/cli/output-protocol.md#status`.
 pub fn status_event(check: &StatusEvent) -> Result<Value, OutputError> {
     nonempty("name", &check.name)?;
     nonempty("status", &check.status)?;
@@ -170,8 +134,6 @@ pub fn status_event(check: &StatusEvent) -> Result<Value, OutputError> {
 }
 
 /// CLI, orchestration, protocol, or infrastructure failure. Never carries
-/// argv, option values, environment values, external labels, or raw tool
-/// output; `code` is stable machine data while `message` is for people.
 pub fn error_event(
     code: &str,
     message: &str,
@@ -205,10 +167,6 @@ pub fn error_event(
     Ok(Value::Object(map))
 }
 
-/// Optional aggregate counts for the final event. Presence follows the
-/// protocol: each object appears exactly for the commands and modes that
-/// produce it, including zero values. Callers select presence; this crate
-/// only renders.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FinishedCounts {
     pub results_complete: Option<bool>,
@@ -217,8 +175,6 @@ pub struct FinishedCounts {
     pub mutations: Option<[u64; 2]>,
 }
 
-/// Last event of every normally terminating JSON invocation. There is no
-/// textual status: `exit_code == 0` means success.
 pub fn command_finished(exit_code: i32, counts: &FinishedCounts) -> Value {
     let mut map = base("command_finished");
     map.insert("exit_code".to_owned(), Value::from(exit_code));
@@ -246,9 +202,6 @@ pub fn command_finished(exit_code: i32, counts: &FinishedCounts) -> Value {
     Value::Object(map)
 }
 
-/// Writes one NDJSON line: exactly one complete UTF-8 JSON object followed
-/// by `\n`. Rejects values that are not event objects so prose can never
-/// leak into a machine-only stream.
 pub fn write_event(writer: &mut dyn std::io::Write, event: &Value) -> Result<(), OutputError> {
     match event {
         Value::Object(map) => {
@@ -263,7 +216,6 @@ pub fn write_event(writer: &mut dyn std::io::Write, event: &Value) -> Result<(),
     // Serialize first so the only I/O is one atomic line write: `EPIPE`
     // surfaces from `write_all` with its `broken pipe` text intact for
     // `OutputError::is_broken_pipe` instead of wrapped in `serde_json::Error`.
-    // See: `docs/cli/output-protocol.md#exit-codes`.
     let mut buf = serde_json::to_vec(event).map_err(|e| OutputError::Io(e.to_string()))?;
     buf.push(b'\n');
     writer
@@ -439,7 +391,6 @@ mod tests {
 
     #[test]
     fn correlation_attaches_and_validates() {
-        // See: `docs/cli/output-protocol.md#ndjson-envelope`.
         let operation =
             operation_event("run", "execute", Some(&["//app:bin".to_owned()])).expect("operation");
         assert!(operation.get("correlation").is_none());
@@ -492,7 +443,6 @@ mod tests {
 
     #[test]
     fn write_event_reports_broken_pipe() {
-        // See: `docs/cli/output-protocol.md#exit-codes`.
         struct BrokenPipe;
         impl std::io::Write for BrokenPipe {
             fn write(&mut self, _buf: &[u8]) -> std::io::Result<usize> {

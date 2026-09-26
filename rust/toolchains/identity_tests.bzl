@@ -9,11 +9,6 @@ load(":bindings.bzl", "RUSTFMT_TOOLCHAIN_TYPE", "RUST_TOOLCHAIN_TYPE")
 _AT = "@"
 
 # Frozen pin: executed owners/paths for Rust 1.98.0 on linux_x86_64.
-# All executables live in authoritative toolchain repositories; any change
-# (toolchain update, rules_rust layout change, vendored copy) fails review.
-# rustc (WP3) shares the main toolchain repository with clippy-driver.
-# Windows/arm64/macOS runners get the linux_x86_64 goldens only on that
-# platform (issue #1207); the observation subject still builds everywhere.
 EXPECTED_IDENTITY_OBSERVATIONS = """subject //rust/toolchains:identity_under_test
 field clippy.owner=""" + _AT + """@rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools//:rust_toolchain
 field clippy.path=bazel-out/k8-fastbuild/bin/external/rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools/rust_toolchain/bin/clippy-driver

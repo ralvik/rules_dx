@@ -4,13 +4,10 @@ Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
 `docs/tools/tool-acquisition.md#initial-artifact-research`.
 """
 
-# Pinned reference version (qualified seed-only under issue #487; living
-# at head rejected; digests stay owned under issue #798).
 ERRCHECK_VERSION = "v1.20.0"
 
 # Distribution identity (standalone checksummed release artifact;
 # complementary for unhandled errors, not a default selection; digests
-# stay owned under issue #798).
 ERRCHECK_ARTIFACT = "standalone checksummed release artifact; complementary for unhandled errors"
 
 # Invocation shapes (check-only with the provisional sandbox-apply-and-diff
@@ -20,7 +17,6 @@ ERRCHECK_FIX = "check-only with the provisional sandbox-apply-and-diff fix flow"
 ERRCHECK_CONFIG_POLICY = "complementary for unhandled errors, not a default selection; check-only"
 
 # Live proof labels (foundation consumers stay green; adapter dispatch
-# owned under issue #798).
 GO_FIXTURE_HELLO = "//go/tests/fixtures/hello:hello_test"
 
 # Rejected: default-selection claim, exit-code-only classification.

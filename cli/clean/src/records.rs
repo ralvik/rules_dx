@@ -1,19 +1,5 @@
-//! Setup-record validation for `dx clean`.
-//!
-//! Split from `super` (`lib.rs`): owns [`GenerationKind`],
-//! [`SetupRecordView`], [`RecordProblem`], and [`validate_record`]
-//! (digest-shaped name checks plus the [`dx_setup`] pair-identity check
-//! that refuses unmanaged/spoofed records). Re-exported through `super`
-//! so the public paths stay
-//! `dx_clean::{GenerationKind, SetupRecordView, RecordProblem,
-//! validate_record}`. Distinct from the `flags` module (frozen flag
-//! shapes) and the planning/inventory/apply/bytes modules.
-
 use dx_setup::{setup_hex, GenerationId, SetupPair, ENVIRONMENTS_DIR_NAME, GENERATED_DIR_NAME};
 
-/// Which managed generation tree a prunable directory belongs to.
-/// Generations are link trees into Bazel outputs, never artifact
-/// copies, so pruning one only removes metadata plus links.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GenerationKind {
     Environment,
@@ -21,9 +7,6 @@ pub enum GenerationKind {
 }
 
 impl GenerationKind {
-    /// Directory name under `.dx` holding this generation kind.
-    /// Matches `ENVIRONMENTS_DIR_NAME` / `GENERATED_DIR_NAME` in
-    /// `dx_setup`.
     pub fn dir_name(&self) -> &'static str {
         match self {
             GenerationKind::Environment => ENVIRONMENTS_DIR_NAME,
@@ -32,50 +15,28 @@ impl GenerationKind {
     }
 }
 
-/// One validated setup record: a hash-addressed directory under
-/// `.dx/setups` whose links resolve to exactly the pair its name
-/// addresses. Validation happens in [`validate_record`]; only
-/// validated records reach `plan_prune`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SetupRecordView {
-    /// Record directory name: lowercase hex of the setup digest.
     pub hex: String,
-    /// Environment generation digest the record's `environment` link
-    /// addresses.
     pub environment_hex: String,
-    /// Generated-code generation digest the record's `generated` link
-    /// addresses.
     pub generated_hex: String,
 }
 
 /// Setup-record validation failure. Invalid records are refused, never
-/// adopted or repaired: the operator removes the offending path or
-/// re-runs setup from a clean selection.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RecordProblem {
-    /// Record, environment, or generated name is not a 64-character
-    /// lowercase hexadecimal digest.
     #[error("malformed digest {value:?}: want 64-character lowercase hex")]
     MalformedDigest { value: String },
-    /// Record links resolve to a pair whose digest differs from the
-    /// record directory name (digest-spoofed path).
     #[error("spoofed record {record:?}: links resolve to {pair:?}")]
     Spoofed { record: String, pair: String },
 }
 
-/// Parses one digest-shaped name, refusing malformed values instead of
-/// panicking at the call site.
 fn validated_generation_id(hex: &str) -> Result<GenerationId, RecordProblem> {
     GenerationId::new(hex).map_err(|_| RecordProblem::MalformedDigest {
         value: hex.to_owned(),
     })
 }
 
-/// Validates one setup record against the [`dx_setup`] pair identity:
-/// every name must be digest-shaped and the record name must equal the
-/// digest of the linked pair. Returns the validated view or the reason
-/// the record is refused as unmanaged/spoofed (never pruned by
-/// `plan_prune`).
 pub fn validate_record(
     hex: &str,
     environment_hex: &str,

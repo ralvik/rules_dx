@@ -31,10 +31,6 @@ EULA_MECHANISM = "repository-env"
 EULA_README_MISMATCH = True
 
 # Deliberate acknowledgement UX: consumer exports the variable plus passes
-# it as repository environment (export VAR=1 plus --repo_env=VAR=1) after
-# reviewing the applicable Microsoft terms. Never automatic via .bazelrc or
-# wrapper defaults, never bypassing upstream controls, never pre-seeded
-# payloads or patched extension checks.
 ACK_HOW = "export BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1 plus --repo_env=BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1"
 ACK_NEVER_AUTOMATIC = "never automatic via .bazelrc or wrapper defaults"
 ACK_NEVER_BYPASS = "never bypassing upstream controls"
@@ -74,7 +70,6 @@ REJECTED_ALTERNATIVES = [
 
 # Not in scope: the usage-vs-redistribution rights review itself (issue
 # #496), redistribution permission, or the hermetic-llvm SDK EULA variable
-# (also issue #496, reviewed not inferred).
 NOT_IN_SCOPE = [
     "rights review itself under issue #496",
     "redistribution permission",
@@ -82,7 +77,6 @@ NOT_IN_SCOPE = [
 ]
 
 # Release linkage: per-host Windows release evidence stays owned under
-# issue #807; this UX is the EULA cell of that row, never Supported alone.
 RELEASE_EVIDENCE = "windows_x86_64 sbom-provenance delivered under issue #807"
 
 # Live proof labels: seed hello builds without acceptance; the gate plus

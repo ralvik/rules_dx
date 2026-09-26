@@ -1,22 +1,6 @@
-//! Clang-tidy output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses clang-tidy text diagnostics on stderr. `files` are the
-/// scratch-absolute paths the tool checked.
-///
-/// Each finding is one line shaped
-/// `<path>:<line>:<col>: <warning|error>: <message> [<check>]`.
-/// The trailing `[check]` names the rule; lines without it report
-/// under an empty rule. Findings are start points. Clean is exit 0
-/// with no diagnostic lines; findings exit 1. Any other shape is a
-/// grammar mismatch, never a silent pass.
 pub fn parse_clang_tidy(
     stderr: &[u8],
     code: Option<i32>,

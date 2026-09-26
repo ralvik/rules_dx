@@ -1,19 +1,3 @@
-//! Delivered adoption/inspect execution (WPs 2-4, 6-7).
-//!
-//! Contract: `docs/cli/commands/init.md`, `hooks.md`, `status.md`,
-//! `version.md`, `watch.md`, `inspect.md`, `completion.md`.
-//! Adoption commands run local helpers from `dx_adopt` or thin
-//! `bazel query`/`cquery` forwarding; they never enter the quality aspect
-//! pipeline. Exit codes follow the CLI contract: `0` success, `1`
-//! operational failure, `2` pre-execution usage failure.
-//!
-//! Domain split: each execution domain lives in its own
-//! module — [`inspect`] (`owners`/`deps`/`why`), [`status`], [`version`],
-//! [`watch`], [`completion`], [`init`], [`new`], [`upgrade`], [`hooks`];
-//! this facade keeps dispatch plus shared helpers. The public path stays
-//! `crate::adopt::{execute_adoption, AdoptEnv}`.
-//! See: `docs/cli/commands/new-upgrade.md`.
-
 mod completion;
 mod hooks;
 mod init;
@@ -32,7 +16,6 @@ use crate::resolve::QueryRunner;
 use dx_output::OutputMode;
 use dx_process::{operational_code, pre_exec_code};
 
-/// Execution environment subset needed by adoption commands.
 pub struct AdoptEnv<'a> {
     pub workspace: &'a std::path::Path,
     pub query_runner: &'a dyn QueryRunner,
@@ -49,30 +32,16 @@ fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
 fn operational(out: &mut dyn Write, err: &mut dyn Write, message: &str) -> i32 {
     let _ = writeln!(err, "dx: {message}");
     // Stdout truncation fails with `141` on `EPIPE`, else operational.
-    // See: `docs/cli/output-protocol.md#exit-codes`.
     if let Err(exit) = flush_out(out) {
         return exit;
     }
     operational_code()
 }
 
-/// True when stdout prose summaries should be suppressed.
-/// `--quiet` (and its `Text { quiet: true }` encoding) suppresses `dx`
-/// lifecycle summaries but never result documents: `status` / `version`
-/// (except dry-run plans, which are summaries) / inspect labels
-/// / completion scripts / `hooks status` views always print because they
-/// are the answer, not a summary. Summary owners (`init`, `new`,
-/// `upgrade` dry-run plans, `hooks install` / `uninstall` / `run`,
-/// `watch`, dry-run plans including `status`, `version`, `hooks status`,
-/// `completion`, `owners` / `deps` / `why`) check this; result owners do
-/// not, and that non-suppression is documented in the output protocol
-/// rather than a silent ignore.
 fn summaries_suppressed(invocation: &Invocation) -> bool {
     invocation.quiet || matches!(invocation.output, OutputMode::Text { quiet: true })
 }
 
-/// Runs one adoption/inspect command. The caller guarantees
-/// `invocation.command.is_adoption()`; other commands are rejected.
 pub fn execute_adoption(invocation: &Invocation, env: AdoptEnv<'_>) -> i32 {
     let AdoptEnv {
         workspace,

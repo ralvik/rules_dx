@@ -1,22 +1,11 @@
-//! Per-operation validators: path shape, extension blocklist,
-//! prompt-injection scan, byte cap, and digest/existence checks.
-//!
-//! Checks run in that order and the first failure wins, so callers get one
-//! deterministic error per operation.
-
 use super::envelope::{is_sha256_hex, sha256_hex, FileOperation};
 
-/// Maximum accepted new-content size per operation (1 MiB).
 pub const MAX_OPERATION_BYTES: usize = 1024 * 1024;
 
-/// File extensions that are never written (executables, objects, archives).
-/// Compared case-insensitively against the text after the final dot of the
-/// final path segment; names without a dot are always allowed.
 pub const BLOCKED_EXTENSIONS: &[&str] = &[
     "a", "bin", "com", "dll", "dylib", "exe", "lib", "o", "obj", "so",
 ];
 
-/// Case-insensitive content markers treated as prompt-injection attempts.
 const INJECTION_PATTERNS: &[&str] = &[
     "ignore previous instructions",
     "ignore all prior instructions",
@@ -25,45 +14,30 @@ const INJECTION_PATTERNS: &[&str] = &[
     "reveal your system prompt",
 ];
 
-/// Per-operation validation failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ValidationError {
-    /// Operation path is empty.
     #[error("empty path")]
     EmptyPath,
-    /// Operation path is absolute; only workspace-relative paths apply.
     #[error("absolute path")]
     AbsolutePath,
-    /// Operation path contains a `..` segment and could escape the workspace.
     #[error("path escapes workspace")]
     EscapesWorkspace,
-    /// Operation path has an empty segment (`a//b`, trailing slash),
-    /// a backslash, or a `.` segment; only canonical forward-slash paths apply.
     #[error("malformed path")]
     MalformedPath,
-    /// The final extension is blocklisted.
     #[error("blocked extension: {extension}")]
     BlockedExtension { extension: String },
-    /// New content exceeds [`MAX_OPERATION_BYTES`].
     #[error("operation too large: {bytes} bytes")]
     TooLarge { bytes: usize },
-    /// New content matches a prompt-injection marker.
     #[error("prompt injection pattern: {pattern}")]
     PromptInjection { pattern: String },
-    /// `original_sha256` does not match the current file bytes.
     #[error("digest mismatch: {path}")]
     DigestMismatch { path: String },
-    /// `original_sha256` is `None` (create) but the file already exists.
     #[error("file exists: {path}")]
     FileExists { path: String },
-    /// `original_sha256` is `Some` (update) but the file is missing.
     #[error("missing file: {path}")]
     MissingFile { path: String },
 }
 
-/// Validates one operation against the current file bytes (`None` = the file
-/// does not exist). Path checks precede content checks; digest/existence
-/// checks run last.
 pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), ValidationError> {
     // Thin wrapper around `dx_path::classify` (sole ladder owner for order).
     // Tightens historical checks to also reject backslashes and single-dot
@@ -117,8 +91,6 @@ pub fn validate(op: &FileOperation, existing: Option<&[u8]>) -> Result<(), Valid
     }
 }
 
-/// Lowercased text after the final dot of the final segment, or `None` when
-/// the name has no dot (or ends with one).
 fn extension_of(path: &str) -> Option<String> {
     // `rsplit` always yields at least one item; `unwrap_or_default` keeps
     // this total without a panic path.

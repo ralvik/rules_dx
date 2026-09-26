@@ -1,4 +1,4 @@
-"""Coverage cell registry tests. Contract: docs/testing/README.md#coverage."""
+"""Coverage cell registry tests."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 

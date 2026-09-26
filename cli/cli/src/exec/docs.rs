@@ -1,13 +1,3 @@
-//! Docs site build/check/serve execution over the Bazel-cached pipeline.
-//!
-//! Contract: `docs/cli/commands/docs.md`.
-//!
-//! Check selects extraction plus shared validation without rendering;
-//! the default build validates and renders; `--serve` previews the last
-//! build outputs locally without caching of its own. Both modes share
-//! the same validation and reject the same invalid IR and references.
-//! See: `docs/documentation/site.md`.
-
 use super::common::*;
 use crate::args::Invocation;
 use crate::resolve::resolve;
@@ -16,35 +6,19 @@ use dx_output::{
     OutputMode,
 };
 
-/// Fixture-scale docs site targets proving the extract to render chain.
-/// Bare scope selects the repository docs site; explicit scopes resolve
-/// through the shared workflow resolution instead.
-/// See: `docs/documentation/site.md`.
 const DOCS_CHECK_TARGET: &str = "//docs/site:demo_aggregate";
 const DOCS_BUILD_TARGET: &str = "//docs/site:demo_site";
 
-/// Default preview port when `--serve` runs without `--port`.
-/// See: `docs/cli/commands/docs.md`.
 const DOCS_DEFAULT_PORT: u16 = 8000;
 
-/// Default preview bind host when `--serve` runs without `--host`.
-/// Loopback only so authoring previews never bind publicly by default.
-/// See: `docs/cli/commands/docs.md`.
 const DOCS_DEFAULT_HOST: &str = "127.0.0.1";
 
-/// Stable operational error code for `dx docs --serve` preview failures:
-/// the local preview server failed to launch or exited nonzero after a
-/// successful build (including bind failures like a port in use).
-// See: `docs/cli/output-protocol.md#operational-error`.
 pub(crate) const CODE_SERVE_FAILED: &str = "serve_failed";
 
-/// Preview URL for `host`/`port` (`http://<host>:<port>/`).
 fn preview_url(host: &str, port: u16) -> String {
     format!("http://{host}:{port}/")
 }
 
-/// Browser opener argv reusing the preview `python3` dependency:
-/// `webbrowser.open` works cross-platform without `xdg-open`/`open`.
 fn opener_argv(url: &str) -> Vec<String> {
     vec![
         "python3".to_owned(),
@@ -54,13 +28,6 @@ fn opener_argv(url: &str) -> Vec<String> {
     ]
 }
 
-/// Runs `dx docs [--check] [--serve [--port <n>] [--host <addr>] [--open]] [scope ...]`: resolves
-/// the scope through the shared workflow resolution (bare scope selects
-/// the repository docs site), builds the Bazel-cached extract to
-/// aggregate to render chain, and optionally previews the last build
-/// outputs locally. The build is non-mutating: only Bazel outputs and
-/// cache entries are written, never sources or committed IR.
-/// See: `docs/cli/commands/docs.md`.
 pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,
@@ -74,7 +41,6 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
     let mode = if invocation.check { "check" } else { "default" };
     // Scope reuses the shared workflow resolution; bare scope selects
     // the repository docs site targets below.
-    // See: `docs/documentation/site.md`.
     let (labels, scope_text) = if invocation.targets.is_empty() {
         let target = if invocation.check {
             DOCS_CHECK_TARGET
@@ -534,7 +500,6 @@ mod tests {
     fn serve_failed_code_is_stable_single_source() {
         // Fixture pins the stable wire code so output-protocol drift
         // fails here, not in automation matching on `code`.
-        // See: `docs/cli/output-protocol.md#operational-error`.
         assert_eq!(CODE_SERVE_FAILED, "serve_failed");
     }
 

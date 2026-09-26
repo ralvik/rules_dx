@@ -1,7 +1,3 @@
-//! Preset update binary for `bazel run //tools/bazelrc:preset_update`.
-//!
-//! Owning contract: `docs/contributing/local-workflows.md` (preset update loop).
-
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
 // LCOV_EXCL_START - reason: thin shim, issue: 1055, policy: docs/testing/strategy-details.md#coverage

@@ -1,25 +1,10 @@
-//! Repo inventory for the coverage gate.
-//!
-//! Split from `super` (`lib.rs`): owns the inventory dispositions
-//! ([`ELIGIBLE`], [`SUPPORT`]) and [`parse_inventory`] (the
-//! `<disposition> <path>` file parser). Re-exported through `super` so
-//! the public paths stay `dx_lcov::{ELIGIBLE, SUPPORT, parse_inventory}`.
-//! Distinct from the `parse` module (combined-LCOV parsing), the
-//! `ignores` module (source-level exclusion markers), the `verdict`
-//! module (gate evaluation), and the `run` module (gate CLI).
-
 use std::collections::BTreeMap;
 
 use super::LcovError;
 
-/// Inventory disposition for authored first-party implementation.
 pub const ELIGIBLE: &str = "eligible";
-/// Inventory disposition for classified non-implementation (build
-/// declarations, schemas, fixtures, tooling inputs). Never in the denominator.
 pub const SUPPORT: &str = "support";
 
-/// Parse the inventory file: `<disposition> <repo-relative path>` per line;
-/// blank lines and `#` comments are skipped.
 pub fn parse_inventory(text: &str) -> Result<BTreeMap<String, String>, LcovError> {
     let mut inventory = BTreeMap::new();
     for (index, raw) in text.lines().enumerate() {

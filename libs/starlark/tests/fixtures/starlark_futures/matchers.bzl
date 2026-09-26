@@ -1,4 +1,4 @@
-"""Concrete richer-matchers use case (issue #790).
+"""Concrete richer-matchers use case.
 
 Contract: `docs/testing/starlark.md#authoring`, `docs/decisions/0009-starlark-testing.md`.
 Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via

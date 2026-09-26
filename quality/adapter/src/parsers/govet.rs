@@ -1,23 +1,6 @@
-//! Govet output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `go vet` text diagnostics on stderr. `files` are the
-/// workspace-relative mirror paths (vet reports working-directory
-/// relative paths, so the caller re-anchors them like Prettier).
-///
-/// Each finding is one line shaped `<path>:<line>:<col>: <message>`
-/// (split from the left because messages contain colons). Findings
-/// are points at the reported 1-based position; every diagnostic is
-/// a warning. Clean is exit 0 with no diagnostic lines; findings
-/// exit 1. Any other shape is a grammar mismatch, never a silent
-/// pass.
 pub fn parse_govet(
     stderr: &[u8],
     code: Option<i32>,

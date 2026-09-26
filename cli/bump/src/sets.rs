@@ -1,51 +1,15 @@
-//! V1 widen-one-requirement set registry for `dx bump`.
-//!
-//! Pure registry over the seven v1 manager sets named in the issue,
-//! covering the native updater scope: Bazel modules plus
-//! `.bazelversion`, Cargo, npm/pnpm (both lock graphs), Go (`gomod`),
-//! GitHub Actions, Maven (`group:artifact` in `MODULE.bazel`), and NuGet
-//! (`paket.dependencies`). Each set owns its declared-requirement
-//! manifests; lock refresh stays resolver-owned through `dx update`
-//! (`dx_update::backend`) for Cargo/npm/Go/Maven/NuGet, while Bazel and
-//! GitHub Actions are file-only (verified through
-//! `preset.update --verify-only` plus `bazel build //...`).
-//!
-//! Set identity, manifests, and locks are pinned here so selector
-//! resolution, widen-edit planning, and per-set reporting agree on one
-//! source of truth without a CLI filesystem scan. This registry never
-//! fetches registries, compares versions, or resolves locks: registry
-//! discovery and version comparison use upstream libraries (`semver` for
-//! version parsing, `serde_json`/`toml` for manifest shapes, upstream
-//! resolver backends for lock refresh), never custom HTTP/version/solver
-//! code. Custom code is limited to the thin single-requirement edit
-//! planned in [`crate::request`].
-//!
-//! Independence: widen edits exactly one declared requirement per
-//! invocation (never batch). Sets sharing a lockfile or resolver
-//! workspace must never be treated as independent merely because they
-//! have different labels (see `dx_update::outcome` for the update half).
-
-/// V1 widen set identity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum BumpSet {
-    /// Bazel modules plus `.bazelversion` (`.bazelversion`, `MODULE.bazel`).
     Bazel,
-    /// Rust/Cargo (`rust/tests/fixtures/hello/Cargo.toml`).
     Cargo,
-    /// GitHub Actions (`.github/workflows/*.yml`, SHA-plus-tag pins).
     GithubActions,
-    /// Go (`third_party/go/go.mod` via `go_deps.from_file`).
     Go,
-    /// JVM/Maven (`MODULE.bazel` `maven.install` artifacts).
     Maven,
-    /// JS/TS/npm (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`).
     Npm,
-    /// .NET/NuGet (`third_party/dotnet/paket.dependencies`).
     NuGet,
 }
 
 impl BumpSet {
-    /// All seven v1 sets, in deterministic alphabetical order.
     pub const ALL: [BumpSet; 7] = [
         BumpSet::Bazel,
         BumpSet::Cargo,
@@ -56,8 +20,6 @@ impl BumpSet {
         BumpSet::NuGet,
     ];
 
-    /// Stable selector spelling for this set (with `go` covering the
-    /// `gomod` spelling).
     pub fn name(self) -> &'static str {
         match self {
             BumpSet::Bazel => "bazel",
@@ -70,9 +32,6 @@ impl BumpSet {
         }
     }
 
-    /// Parses a set selector spelling. Case-sensitive; no aliases except
-    /// `gomod` for `go` and `gha` for
-    /// `github-actions` (workflow shorthand).
     pub fn parse(text: &str) -> Option<BumpSet> {
         match text {
             "bazel" => Some(BumpSet::Bazel),
@@ -87,14 +46,10 @@ impl BumpSet {
     }
 
     /// Canonical name for reporting (always the full spelling, never an
-    /// alias: `gomod` reports as `go`, `gha` as `github-actions`).
     pub fn canonical_alias(text: &str) -> Option<&'static str> {
         Self::parse(text).map(|set| set.name())
     }
 
-    /// Workspace-relative manifests owning declared requirements for this
-    /// set. Verbatim paths; the widen edit touches exactly one requirement
-    /// in one of these files per invocation.
     pub fn manifests(self) -> &'static [&'static str] {
         match self {
             BumpSet::Bazel => &[".bazelversion", "MODULE.bazel"],
@@ -107,10 +62,6 @@ impl BumpSet {
         }
     }
 
-    /// Workspace-relative lockfiles refreshed resolver-owned after the
-    /// widen edit (via `dx update <set>`). Empty means file-only (Bazel,
-    /// GitHub Actions): verification runs `preset.update --verify-only`
-    /// plus `bazel build //...` with no resolver refresh.
     pub fn locks(self) -> &'static [&'static str] {
         match self {
             BumpSet::Bazel => &[],
@@ -126,16 +77,11 @@ impl BumpSet {
         }
     }
 
-    /// Whether lock refresh runs resolver-owned after widening (Cargo,
-    /// npm, Go, Maven, NuGet) or the set is file-only (Bazel, GitHub
-    /// Actions).
     pub fn needs_update_refresh(self) -> bool {
         !self.locks().is_empty()
     }
 
     /// Human updater description (never argv; argv lives in
-    /// `dx_update::backend` for resolver sets and in the widen loop docs
-    /// for file-only sets).
     pub fn updater(self) -> &'static str {
         match self {
             BumpSet::Bazel => {

@@ -17,21 +17,12 @@ _DX_GO_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream `GoArchive`,
-# `InstrumentedFilesInfo`, `OutputGroupInfo`, and `RunEnvironmentInfo`
-# at runtime when present (mirroring upstream, which advertises only
-# `GoArchive`), but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a Go library,
-# so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so quality aspects can gate on it. Coverage reads
-# `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `javascript_*` test forwarder).
 _DX_GO_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
 # Go owns `.go` only. `go_module` (`go.mod`/`go.sum`) stays fixture-owned
-# ad-hoc (See: docs/quality/quality-sources.md): upstream `go_*` rules take
 # no manifest `srcs`, so `modfmt` runs via matrix fixtures, never these wrappers.
 _DX_GO_SOURCE_SPECS = [("go", "go")]
 _DX_GO_SOURCE_EXTS = [".go"]

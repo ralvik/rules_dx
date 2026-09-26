@@ -1,19 +1,6 @@
-//! Yamllint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `yamllint` text diagnostics on stdout. `files` are the
-/// workspace-relative mirror paths.
-///
-/// Each finding is one line `<path>:<line>:<col>: [<rule>] <message>`.
-/// Severity is warning by design over upstream built-in defaults.
-/// Clean is exit 0 with no lines; findings exit non-zero.
 pub fn parse_yamllint(
     stdout: &[u8],
     code: Option<i32>,

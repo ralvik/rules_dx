@@ -1,23 +1,9 @@
-//! Managed staging primitives.
-//!
-//! Split from [`super::managed`]: owns the shared staging primitives
-//! both generation sides build on ([`collect_managed_group`],
-//! [`ensure_generation_dir`], and [`symlink_leaf`]). [`super::managed`]
-//! keeps the `codegen`/`env`/`setup` dispatch plus side preparation;
-//! the codegen mirror lives in [`super::managed_codegen`] and the env
-//! mirror in [`super::managed_env`].
-
 use super::common::*;
 use dx_bep::{collect, CollectorConfig};
 use std::io;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-/// Collects BEP-reported artifacts for one managed output group.
-/// Shared by [`collect_managed_codegen`](super::managed_codegen::collect_managed_codegen)
-/// and [`collect_managed_env`](super::managed_env::collect_managed_env)
-/// so each selection proves its own group transport without touching
-/// the other group's stream.
 pub(crate) fn collect_managed_group(
     bep: &Path,
     group: &str,
@@ -42,11 +28,6 @@ pub(crate) fn collect_managed_group(
     })
 }
 
-/// Ensures the hash-addressed generation directory exists as a managed
-/// directory. A present file, symlink, or other non-directory fails
-/// closed so foreign state is never adopted; any other inspection
-/// failure falls through to creation, which fails closed with the
-/// underlying error.
 pub(crate) fn ensure_generation_dir(
     workspace: &Path,
     dir_name: &str,
@@ -83,9 +64,6 @@ pub(crate) fn ensure_generation_dir(
     Ok(dir)
 }
 
-/// Platform symlink primitive for generation mirror leaves: one entry
-/// point with the OS primitive selected inside, instead of two
-/// cfg-gated twin functions with identical call shapes.
 pub(crate) fn symlink_leaf(target: &Path, link: &Path) -> io::Result<()> {
     #[cfg(windows)]
     {

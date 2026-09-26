@@ -8,11 +8,6 @@ load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
 # Versioned project/channel charset schema. Consumers query via
-# `octopus_project_charset`, `octopus_channel_charset`,
-# `octopus_version_charset`, `octopus_environment_charset`, and
-# `octopus_*_error` instead of duplicating the charset, so any charset
-# evolution edits this one data constant with schema review, never a
-# parallel allowlist.
 OCTOPUS_SCHEMA_VERSION = 1
 
 # Project and channel names embed directly in the generated Python

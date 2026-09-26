@@ -1,9 +1,3 @@
-//! Shared execution plumbing for every `dx` command family: stable error codes, the execution environment, source verification, and mutation helpers.
-//!
-//! BEP results collection and proto mapping live in [`super::results`]
-//!; this module keeps the environment, codes, and
-//! apply/status helpers.
-
 use crate::args::Invocation;
 use crate::resolve::QueryRunner;
 use dx_bep::ArtifactReader;
@@ -16,8 +10,6 @@ use dx_process::{broken_pipe_code, operational_code, pre_exec_code, stdout_io_co
 use std::io::{self, Write};
 use std::path::Path;
 
-/// Maps stdout `write_event` failure to `141` on `EPIPE`, else operational.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub(crate) fn stdout_output_code(error: &dx_output::OutputError) -> i32 {
     if error.is_broken_pipe() {
         broken_pipe_code()
@@ -26,60 +18,39 @@ pub(crate) fn stdout_output_code(error: &dx_output::OutputError) -> i32 {
     }
 }
 
-/// Checks one stdout `write_event`: `Ok` continues, `Err` is the exit code.
 pub(crate) fn emit_event(out: &mut dyn Write, event: &serde_json::Value) -> Result<(), i32> {
     write_event(out, event).map_err(|error| stdout_output_code(&error))
 }
 
-/// Checks one stdout text write (`writeln!`/`write!`/`write_all`).
 pub(crate) fn check_stdout_write(result: io::Result<()>) -> Result<(), i32> {
     result.map_err(|error| stdout_io_code(&error))
 }
 
-/// Checks `out.flush()`: `141` on `EPIPE`, else operational.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub(crate) fn flush_out(out: &mut dyn Write) -> Result<(), i32> {
     out.flush().map_err(|error| stdout_io_code(&error))
 }
 
-/// Stable per-file reason: the workspace source changed or vanished
-/// after analysis, so recorded byte ranges no longer apply.
 pub const REASON_STALE_SOURCE: &str = "stale_source";
-/// Stable per-file reason: the workspace source cannot be read.
 pub const REASON_UNREADABLE_SOURCE: &str = "unreadable_source";
-/// Stable per-file reason: replacement bytes cannot be applied to the
-/// verified source bytes.
 pub const REASON_INVALID_EDITS: &str = "invalid_edits";
-/// Stable per-file reason: incomplete collection prevents all mutation.
 pub const REASON_INCOMPLETE_COLLECTION: &str = "incomplete_collection";
 
-/// Execution helper failure.
-///
-/// Variants render the legacy reason strings verbatim so operational
-/// diagnostics stay byte-identical while callers gain a matchable type.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub(crate) enum ExecError {
-    /// Replacement bytes are not valid UTF-8.
     #[error("invalid_edits")]
     InvalidEdits,
-    /// Generated logical path is empty.
     #[error("generated logical path is empty")]
     EmptyLogicalPath,
-    /// Generated logical path is absolute.
     #[error("generated logical path {path:?} is absolute")]
     AbsoluteLogicalPath { path: String },
-    /// Generated logical path escapes its generation.
     #[error("generated logical path {path:?} escapes its generation")]
     EscapingLogicalPath { path: String },
-    /// Env identity key is empty.
     #[error("env identity key is empty")]
     EmptyEnvKey,
-    /// Env identity key is not a single filename.
     #[error("env identity key {key:?} is not a single filename")]
     BadEnvKey { key: String },
 }
 
-/// Stable operational error codes for NDJSON `error` events.
 pub(crate) const CODE_LAUNCH_FAILED: &str = "launch_failed";
 pub(crate) const CODE_BAZEL_SIGNALLED: &str = "bazel_signalled";
 pub(crate) const CODE_UNREADABLE_BEP: &str = "unreadable_bep";
@@ -87,62 +58,16 @@ pub(crate) const CODE_INVALID_BEP: &str = "invalid_bep";
 pub(crate) const CODE_DIFF_FAILED: &str = "diff_failed";
 pub(crate) const CODE_REPORT_FAILED: &str = "report_failed";
 pub(crate) const CODE_COVERAGE_BELOW_MINIMUM: &str = "coverage_below_minimum";
-/// Stable operational error code for managed-state cleanup failures:
-/// a malformed current selection, commit-lock contention, or a prune
-/// mutation error all fail closed with nothing adopted or repaired.
 pub(crate) const CODE_CLEAN_FAILED: &str = "clean_failed";
-/// Stable operational error code for well-formed requests the current
-/// result transport cannot serve: a missing, unreadable, or
-/// contradictory generation manifest fails closed with no change or
-/// mutation output.
 pub(crate) const CODE_INVALID_RESULT: &str = "invalid_result";
-/// Stable operational error code for managed-state commit failures:
-/// lock contention, malformed current selection, record mismatch, or a
-/// generation staging mutation error all fail closed with the prior
-/// pointer preserved.
 pub(crate) const CODE_MANAGED_COMMIT_FAILED: &str = "managed_commit_failed";
-/// Stable operational error code for exact setup scopes that provide
-/// neither environment nor codegen capability: committing an empty or
-/// recycled pair would hide the usage error.
 pub(crate) const CODE_MANAGED_NO_CAPABILITY: &str = "no_capability";
-/// Stable operational error code for live audit per-family failures:
-/// unexempted findings, incomplete assessment, advisory refresh failure,
-/// or auditor launch failure. Planning (`--dry-run`) succeeds; live runs
-/// execute qualified auditors per family over resolved scopes with
-/// per-family reporting.
 pub(crate) const CODE_AUDIT_FAILED: &str = "audit_failed";
-/// Stable operational error code for live update per-set failures:
-/// a resolver backend reported failure, was unsupported, failed to launch,
-/// or terminated by signal. Planning (`--dry-run`) succeeds; live runs
-/// continue independent sets, preserve successes, and fail overall.
 pub(crate) const CODE_UPDATE_FAILED: &str = "update_failed";
-/// Stable operational error code for live bump widen failures:
-/// the single declared requirement was missing, ambiguous, in an
-/// unsupported manifest shape, needed upstream SHA resolution, or the
-/// manifest could not be read/written. Planning (`--dry-run`) succeeds;
-/// live runs widen exactly one requirement atomically.
 pub(crate) const CODE_BUMP_FAILED: &str = "bump_failed";
-/// Stable operational error code for live migrate failures:
-/// no migrate manifest exists yet (module at `0.0.0`, no releases
-/// cut), so every live run fails closed with no writes. Planning
-/// (`--dry-run`) succeeds; live runs select one manifest per major hop
-/// (`migrate-v<from>-to-v<to>.json`) or per full version pair for
-/// minor/patch upgrades once published.
 pub(crate) const CODE_MIGRATE_FAILED: &str = "migrate_failed";
-/// Stable operational error code for cache-only `--offline`/`--frozen`
-/// runs that would need network: the selected advisory refresh, resolver
-/// update, or bump refresh cannot proceed without fetches, so the run
-/// fails closed with no launch and no mutation.
-/// See: `docs/deploy/offline-bootstrap.md`.
 pub(crate) const CODE_OFFLINE_REQUIRED: &str = "offline_required";
 
-/// Execution environment: resolved workspace, process seams for the
-/// workflow and for ownership queries, temporary directory for the BEP
-/// stream, owned output streams, and the CI refusal bit for the
-/// local-only `dx run` gate. `ci` is resolved once at process startup
-/// from the `CI` environment variable so unit tests never mutate
-/// shared process state (parallel test threads would otherwise race
-/// on `set_var`).
 pub struct Env<'a> {
     pub workspace: &'a Path,
     pub runner: &'a dyn Runner,
@@ -155,8 +80,6 @@ pub struct Env<'a> {
     pub ci: bool,
 }
 
-/// Reads reported artifact bytes from the local filesystem. Bazel owns
-/// remote materialization; this seam performs no network fetch.
 pub(crate) struct FsArtifacts;
 
 impl ArtifactReader for FsArtifacts {
@@ -165,14 +88,12 @@ impl ArtifactReader for FsArtifacts {
     }
 }
 
-/// One validated replacement set against verified original bytes.
 pub(crate) struct FileChange {
     pub(crate) path: String,
     pub(crate) original_digest: [u8; 32],
     pub(crate) edits: Vec<(u64, u64, Vec<u8>)>,
 }
 
-/// Lowercase hexadecimal over the 32 raw digest bytes (owned by `dx_digest`).
 pub(crate) fn hex_digest(bytes: &[u8; 32]) -> String {
     dx_digest::to_hex(bytes)
 }
@@ -196,9 +117,6 @@ pub(crate) fn read_verified(workspace: &Path, path: &str, expected: &[u8; 32]) -
     }
 }
 
-/// Applies validated edits to verified original bytes. Order,
-/// non-overlap, and UTF-8 boundaries are rechecked against the source
-/// bytes; any violation fails the file without writing.
 pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> Option<Vec<u8>> {
     let text = std::str::from_utf8(original).ok()?;
     let mut candidate = Vec::with_capacity(original.len());
@@ -230,8 +148,6 @@ pub(crate) fn apply_to_bytes(original: &[u8], edits: &[(u64, u64, Vec<u8>)]) -> 
     Some(candidate)
 }
 
-/// One human text line for a status diagnostic. Text is concise and
-/// task-oriented, never a machine-stable grammar.
 pub(crate) fn text_diagnostic(diagnostic: &DiagnosticEvent) -> String {
     let mut line = format!("{} ", diagnostic.severity.name());
     if let Some(path) = &diagnostic.path {
@@ -252,9 +168,7 @@ pub(crate) fn text_diagnostic(diagnostic: &DiagnosticEvent) -> String {
     line
 }
 
-/// Pre-execution usage failure: stderr only, exit code 2.
 pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
-    // Single-sourced fallback registry (See: `docs/cli/commands/README.md`):
     // the command list renders from `Command::pipe_list` so `--help`/grammar
     // drift fails the `fallback_usage_registry_is_single_sourced` fixture.
     // `--check` is per-command only (status rejects it; see
@@ -268,10 +182,6 @@ pub(crate) fn pre_exec(err: &mut dyn Write, message: &str) -> i32 {
     pre_exec_code()
 }
 
-/// Operational failure after planning: stderr diagnostic, JSON
-/// `error` and `command_finished` events in JSON mode, exit code 1.
-/// Stdout truncation fails with `141` on `EPIPE`, else operational.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub(crate) fn operational(
     invocation: &Invocation,
     out: &mut dyn Write,
@@ -438,7 +348,6 @@ mod tests {
 
     #[test]
     fn stdout_helpers_map_broken_pipe_to_141() {
-        // See: `docs/cli/output-protocol.md#exit-codes`.
         assert_eq!(dx_process::broken_pipe_code(), 128 + 13);
         let broken = io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe");
         assert_eq!(stdout_io_code(&broken), 128 + 13);

@@ -20,7 +20,7 @@ _starlark_failure_test = analysistest.make(
 )
 
 def failure_test(name, target, expected_failure_substring, **kwargs):
-    """Asserts one analysis-time `fail()` fires with the expected diagnostic.
+    """Asserts one analysis-time `fail` fires with the expected diagnostic.
 
     The target under test must carry `tags = ["manual"]` so wildcard builds
     skip it; this test (non-manual) depends on it via the

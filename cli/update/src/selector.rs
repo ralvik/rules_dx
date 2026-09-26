@@ -1,34 +1,3 @@
-//! Exact selector syntax and target-to-set resolution for `dx update`.
-//!
-//! V1 syntax (`dx update [selector ...]`):
-//! - `cargo` | `npm` | `maven` | `nuget` | `go`: a dependency set (full update).
-//! - `set:package`: a package within a set through the upstream updater
-//!   (e.g. `npm:react`, `cargo:anyhow`, `maven:junit:junit`,
-//!   `nuget:FSharp.Core`, `go:rules_dx/go/tests/fixtures/hello`). Identity mappings are
-//!   upstream-native, never a private solver.
-//! - Bazel labels/patterns (`//...`, `//rust/tests/fixtures/hello:hello`, `//go/...`),
-//!   files (`rust/tests/fixtures/hello/Cargo.toml`, `package.json`), and directories
-//!   (`go/tests/fixtures/hello`): resolved to owning sets via the prefix table below.
-//!   Bare `//...` selects all sets; `MODULE.bazel` selects all sets because
-//!   it declares every ecosystem.
-//!
-//! Target resolution is a pure prefix mapping over the approved set
-//! registry, never a CLI filesystem scan. File ownership uses directory
-//! prefixes (e.g. `rust/...` is Cargo); Bazel labels use their package
-//! path (e.g. `//cli/...` is Cargo). Python (`python/...`,
-//! `quality/tools/python/...`) has no owning set in V1 and fails closed as
-//! usage error; `docs` (except `docs/ir`), `libs`, and other non-dependency
-//! paths likewise have none. Unknown bare words (e.g. legacy `crates`)
-//! fail closed rather than guessing.
-//!
-//! Resolution combines selectors deterministically: set/target selectors
-//! request full updates for their sets; package selectors request package
-//! updates for theirs. When a set is both fully selected and package
-//! selected, the full update wins (it includes the packages). Package-only
-//! sets run selective updates where the backend supports them (V1: npm
-//! only); other backends report `unsupported` at execution time rather than
-//! silently substituting a full update.
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::OnceLock;
 
@@ -36,58 +5,40 @@ use regex::Regex;
 
 use super::sets::SetId;
 
-/// One parsed selector.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Selector {
-    /// Full update for a set (e.g. `cargo`).
     Set(SetId),
-    /// Package update within a set (e.g. `npm:react`).
     Package(SetId, String),
-    /// Bazel label/pattern/file/dir to resolve to owning sets.
     Target(String),
 }
 
 /// Selector usage errors (exit 2, never a partial update).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SelectorError {
-    /// Empty selector.
     #[error("empty selector")]
     Empty,
-    /// Unknown bare word (not a set, package, or target shape).
     #[error("unknown update selector {selector:?}; expected cargo|npm|maven|nuget|go, set:package, or a label/path")]
     UnknownSelector {
-        /// Offending spelling.
         selector: String,
     },
-    /// Invalid package identity for its set.
     #[error("invalid package {package:?} for set {set}: {reason}")]
     InvalidPackage {
-        /// Owning set name.
         set: &'static str,
-        /// Offending package spelling.
         package: String,
-        /// Why it is invalid.
         reason: &'static str,
     },
-    /// Target has no owning dependency set in V1.
     #[error("no owning dependency set for {target:?} (python and non-dependency paths are out of V1 update scope)")]
     NoOwningSet {
-        /// Offending target spelling.
         target: String,
     },
 }
 
-/// Requested update per set after resolution.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SetRequest {
-    /// Full update (set/target selected, or bare run).
     Full,
-    /// Package-only update (selective; V1 executes for npm, reports
-    /// unsupported for other sets rather than silently widening).
     Packages(Vec<String>),
 }
 
-/// Parses one selector spelling.
 pub fn parse_selector(text: &str) -> Result<Selector, SelectorError> {
     if text.is_empty() {
         return Err(SelectorError::Empty);
@@ -125,10 +76,6 @@ pub fn parse_selector(text: &str) -> Result<Selector, SelectorError> {
     })
 }
 
-/// True for Bazel labels/patterns and file/dir paths. The `//`/`@`
-/// prefix plus `/`/`.` containment is a declarative
-/// `^(//|@)|[/.]`; `...` is subsumed by the `.` branch but
-/// kept explicit so the intent stays readable.
 fn target_shape_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -154,10 +101,6 @@ fn is_target_shape(text: &str) -> bool {
         || text == "..."
 }
 
-/// Validates an ecosystem package identity (upstream-native, no versions).
-/// Character classes are declarative `regex`; structural
-/// splits (`:`/`/` scope handling) stay textual. Falls back to the
-/// historical char loops when a static pattern fails to compile.
 fn dotted_name_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -234,7 +177,6 @@ fn is_cargo_name(text: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
-/// Validates an ecosystem package identity (upstream-native, no versions).
 fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
     let invalid = |reason: &'static str| SelectorError::InvalidPackage {
         set: set.name(),
@@ -336,7 +278,6 @@ fn validate_package(set: SetId, package: &str) -> Result<(), SelectorError> {
     }
 }
 
-/// Owning sets for one target selector (pure prefix mapping).
 pub fn owning_sets(target: &str) -> Vec<SetId> {
     // Repository-wide and module-declaring selectors cover all sets.
     if target == "//..." {
@@ -408,11 +349,6 @@ pub fn owning_sets(target: &str) -> Vec<SetId> {
     vec![]
 }
 
-/// Package path for prefix matching: Bazel labels use their package,
-/// files/dirs use their normalized path. Recursive `/...` and trailing
-/// `/` stripping is declarative (`/...$`, `/+$`, `(./)+`); the `//`
-/// label split and `:` cut stay textual because they branch on syntax,
-/// not character classes.
 fn recursive_suffix_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -516,9 +452,6 @@ fn package_path(target: &str) -> String {
     path
 }
 
-/// Root (`""` package) owning sets by filename/target spelling.
-/// Case-insensitive `package.json | pnpm-lock.yaml | ...` alternatives
-/// replace the `to_lowercase` + `contains` chain.
 fn root_npm_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -589,11 +522,6 @@ fn has_prefix(package: &str, prefix: &str) -> bool {
     }
 }
 
-/// Resolves selectors to per-set requests (deterministic, sorted).
-///
-/// Empty input means every supported set (`Full`). Otherwise set/target
-/// selectors request `Full` for their sets; package selectors request
-/// `Packages` unless their set is also fully selected (full wins).
 pub fn resolve(selectors: &[String]) -> Result<BTreeMap<SetId, SetRequest>, SelectorError> {
     if selectors.is_empty() {
         return Ok(SetId::ALL
@@ -843,7 +771,6 @@ mod tests {
 
     #[test]
     fn maven_selective_parses_group_artifact_and_stays_selective() {
-        // Issue #634 (See: `docs/decisions/0024-selective-update.md`): per-artifact identities parse (seed plus Jupiter)
         // and resolve to `Packages`; the backend owns the wont-fix
         // `unsupported` call, never a silent full substitution. Bare
         // group-only shapes stay parse errors.
@@ -876,7 +803,6 @@ mod tests {
 
     #[test]
     fn go_selective_parses_module_path_and_stays_selective() {
-        // Issue #636 (See: `docs/decisions/0024-selective-update.md`): per-module identities parse (pinned `go-cmp` plus
         // hello importpath) and resolve to `Packages`; the backend owns
         // the wont-fix `unsupported` call, never a silent full
         // substitution. Bare `go:` stays a parse error.

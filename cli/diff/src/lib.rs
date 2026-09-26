@@ -1,42 +1,13 @@
-//! Complete unified-diff renderer for validated workspace changes (WP2).
-//!
-//! Contract: `docs/cli/output-protocol.md`, Diff Output section. The
-//! renderer takes validated file changes with exact original and candidate
-//! bytes and emits one concatenated unified diff in normalized path UTF-8
-//! byte order. It computes presentation-only line hunks in memory with three
-//! context lines; it never touches the workspace, invokes an external
-//! `diff`, or uses patch fuzz.
-//!
-//! Canonical `dx` hunk form: headers always carry explicit `start,length`
-//! counts (`@@ -os,ol +ns,nl @@`), existing files use `--- a/<path>` and
-//! `+++ b/<path>` headers, created files use `--- /dev/null`, and a final
-//! line without a line-feed byte gets the conventional
-//! `\ No newline at end of file` marker. An invocation with no changes
-//! writes no bytes. Paths containing a tab, carriage return, or line feed
-//! cannot be represented unambiguously and fail before any output.
-//!
-//! Dependency evaluation (adopted): hunk grouping and line bodies
-//! delegate to the upstream `similar` crate (`TextDiff`, Myers, `CONTEXT`
-//! lines of context). Canonical `dx` headers with always-explicit
-//! `start,length` counts plus path ordering and validation stay hand-rolled
-//! because they are the frozen `dx` diff contract, not upstream GNU form.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-/// Whether a patch entry modifies an existing file or creates a new one.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PatchKind {
     Modify,
     Create,
 }
 
-/// One validated file change to render.
-///
-/// `original` is the exact analyzed bytes (`""` for [`PatchKind::Create`]);
-/// `candidate` is the exact proposed bytes. Both must be valid UTF-8; UTF-8
-/// shape is validated upstream when change events are constructed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct FilePatch<'a> {
     pub path: &'a str,
@@ -45,28 +16,18 @@ pub struct FilePatch<'a> {
     pub candidate: &'a str,
 }
 
-/// Diff rendering failure (slice, follow-up).
-///
-/// Every variant renders human-readable via `Display` for CLI
-/// operational diagnostics; binaries render via `to_string()`, never
-/// Rust `Debug`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DiffError {
-    /// A path cannot be represented unambiguously in unified form.
     #[error("unrepresentable path {path:?}: paths with tab, carriage return, or line feed cannot be rendered")]
     UnrepresentablePath { path: String },
-    /// The same path was supplied twice.
     #[error("duplicate path {path:?}")]
     DuplicatePath { path: String },
-    /// A create entry carries original bytes.
     #[error("create {path:?} carries original bytes")]
     CreateWithOriginal { path: String },
-    /// A modify entry whose candidate is byte-identical to its original.
     #[error("no change for {path:?}: candidate is identical to original")]
     NoopPatch { path: String },
 }
 
-/// Number of context lines around each hunk.
 const CONTEXT: usize = 3;
 
 fn check_path(path: &str) -> Result<(), DiffError> {
@@ -78,11 +39,6 @@ fn check_path(path: &str) -> Result<(), DiffError> {
     Ok(())
 }
 
-/// Renders one concatenated unified diff for `files`.
-///
-/// Files are emitted in path UTF-8 byte order regardless of input order.
-/// Duplicate paths, unrepresentable paths, creates with original bytes, and
-/// byte-identical modify candidates fail; an empty input renders `""`.
 pub fn render_patch(files: &[FilePatch<'_>]) -> Result<String, DiffError> {
     let mut ordered: Vec<&FilePatch<'_>> = files.iter().collect();
     ordered.sort_by(|a, b| a.path.as_bytes().cmp(b.path.as_bytes()));

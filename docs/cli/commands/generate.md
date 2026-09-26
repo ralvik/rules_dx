@@ -9,7 +9,7 @@ paths, labels, or target patterns selecting the Gazelle subtree to refresh, or `
 it refreshes the repository. Accepted: the canonical target is the
 composed repository default (`//gazelle/dispatch:gazelle` wiring every
 first-party extension plus the dispatch witness last), so one traversal
-refreshes the whole workspace. The repo-wide promise in [scope](../../product/scope.md)
+refreshes the whole workspace. The repo-wide promise in scope
 stays delivered. It may create or modify Gazelle-maintained `BUILD` and `BUILD.bazel` files
 within the selected scope. Exact scope syntax and scoped freshness semantics are
 implemented as specified below and pinned by resolver-mapping and scope-edge fixtures.
@@ -50,18 +50,18 @@ generated targets.
 
 The command delegates BUILD semantics to Gazelle. The authoritative generation contracts are:
 
-- [Common generation](../../generation/common.md): resolution, exceptions, ownership, naming,
-  merge and lifecycle behavior, resources, executable entries, and sidecars.
-- [Rust](../../generation/rust.md): crates, Cargo metadata, tests, examples, benchmarks, and build
-  scripts.
-- [Python](../../generation/python.md): sources, stubs, tests, and uv dependency scope.
-- [JavaScript and TypeScript](../../generation/javascript-typescript.md): core sources, pnpm scope,
-  runtime loads, and tests.
-- [Framework adapters](../../generation/framework-adapters.md): Vue, Svelte, Astro, and MDX
-  boundaries and support gates.
+- Common generation: resolution, exceptions, ownership, naming,
+ merge and lifecycle behavior, resources, executable entries, and sidecars.
+- Rust: crates, Cargo metadata, tests, examples, benchmarks, and build
+ scripts.
+- Python: sources, stubs, tests, and uv dependency scope.
+- JavaScript and TypeScript: core sources, pnpm scope,
+ runtime loads, and tests.
+- Framework adapters: Vue, Svelte, Astro, and MDX
+ boundaries and support gates.
 
 Native quality configuration can create Bazel package boundaries and generated config bindings as
-defined by [Native Configuration](../../quality/native-configuration.md). Removing the final
+defined by Native Configuration. Removing the final
 generated rule does not delete the existing BUILD file or collapse its package boundary.
 
 ## Modes
@@ -94,7 +94,7 @@ An effective `# gazelle:dx_ignore_import` exception produces one `ignored_import
 distinct source path, language, and exact ignored literal dependency. Notices are shown in text and
 JSON modes, do not by themselves fail the command, and are suppressed in diff mode. Directive
 syntax, validation, precedence, and resolution behavior belong to the
-[common generation contract](../../generation/common.md#resolution).
+common generation contract.
 
 ## Result And Failure Semantics
 

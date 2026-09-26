@@ -6,11 +6,6 @@ Fixture: `cc/tests/fixtures/laziness_host/` via
 """
 
 # Bzlmod eager-resolution boundary: version-resolution cost, not payload.
-# Extension declarations plus lock size are that cost; Maven, npm, uv, and
-# crate payloads download only when analyzed targets need their repos.
-# Live-manifest fetches must use fixed-manifest plus package-index inputs,
-# and deferred EULA failure never proves laziness since extension
-# evaluation already fetches manifests.
 BZLMOND_BOUNDARY = [
     "version-resolution cost",
     "MODULE.bazel.lock size is version-resolution metadata",
@@ -21,10 +16,6 @@ BZLMOND_BOUNDARY = [
 ]
 
 # Per-host no-fetch in the consumer graph: adding an unused foundation
-# pulls no EULA/SDK payload on any required host. Consumer proof rides the
-# single-foundation adopt-* workspaces (adopt-rust, adopt-python,
-# adopt-js-ts, adopt-go, adopt-cpp, adopt-java, adopt-kotlin, adopt-scala,
-# adopt-csharp, adopt-fsharp) with per-host static pins; seed-executed.
 CONSUMER_HOSTS = (
     "linux_x86_64",
     "linux_arm64",
@@ -83,11 +74,6 @@ FALLBACK_REJECTED = [
 ]
 
 # Backend adoption: hermetic backends stay provisional with immutable lazy
-# fetch, never a qualified claim. Hosts are Platform-qualified with an
-# explicit provisional qualifier; the qualifier is the exception, never a
-# shared status. Full adoption (compiler/SDK/STL/CRT identities plus
-# licensing plus coverage) stays owned under issues #494-#505 with release
-# evidence under #803-#807; no Supported claim here.
 PROVISIONAL_BACKENDS = [
     "hermetic-llvm Apple-SDK provisional",
     "toolchains_msvc clang-cl/Microsoft-STL provisional",

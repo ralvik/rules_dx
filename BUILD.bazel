@@ -2,7 +2,7 @@
 
 load("@rules_dx//quality:native_config.bzl", "biome_config", "buildifier_config", "ruff_config", "rustfmt_config", "vale_config")
 
-# Gazelle Rust resolve map (repo-wide directives); see docs/generation/rust.md.
+# Gazelle Rust resolve map (repo-wide directives).
 # gazelle:resolve rust dx_adopt //cli/adopt:dx_adopt
 # gazelle:resolve rust dx_apply //cli/apply:dx_apply
 # gazelle:resolve rust dx_atomic_fs //cli/atomic_fs:dx_atomic_fs
@@ -337,18 +337,9 @@ real_source_target(
     aspect_hints = ["//quality:corpus_vale_config"],
     markdown_siblings = [
         "//docs:README.md",
-        "//docs:architecture/README.md",
         "//docs:cli/README.md",
         "//docs:cli/commands/README.md",
-        "//docs:contributing/first-hour-timing.md",
         "//docs:contributing/local-workflows.md",
-        "//docs:decisions/README.md",
-        "//docs:environments/environment.md",
-        "//docs:generation/framework-adapters.md",
-        "//docs:product/README.md",
-        "//docs:product/scope.md",
-        "//docs:product/support-matrix.md",
-        "//docs:testing/README.md",
         "//examples:README.md",
         "LICENSE",
     ],

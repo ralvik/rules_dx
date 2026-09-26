@@ -33,11 +33,6 @@ AMBIGUOUS_NOTE = "two libraries owning the same header basename are ambiguous an
 AMBIGUOUS_REJECTED = "ambiguity can select a first candidate"
 
 # Macro includes: `#include HDR` after `#define HDR "foo.h"` carries no
-# literal identity, so it contributes no edge and synthesizes no ignore.
-# Generation never evaluates the expression, guesses an edge, or emits a
-# notice solely because the identity is computed. Callers keep a
-# user-authored Bazel dependency behind `# keep` where a computed form is
-# recognized.
 MACRO_INCLUDE_NOTE = "macro include contributes no edge and synthesizes no ignore"
 MACRO_INCLUDE_EXAMPLE = '#define HDR "foo.h" plus #include HDR contributes no edge'
 
@@ -49,10 +44,6 @@ INERT_NOTE = "comments, string literals, character literals, and raw strings are
 CONTINUATION_NOTE = "backslash-newline continuations are joined before matching"
 
 # Authoritative dependency metadata: for C/C++ there is no ecosystem
-# lockfile. Resolution order is exact `# gazelle:resolve` mapping, then the
-# local rule index, then the exact `# gazelle:dx_ignore_import` exception,
-# else fail. The gazelle_cc module index is not the consumer's resolved
-# graph.
 RESOLUTION_ORDER = [
     "exact # gazelle:resolve mapping",
     "local rule index",
@@ -91,35 +82,17 @@ MODULE_PCH_NOTE = "named C++ modules, header units and PCH have no complete gene
 MODULE_PCH_REJECTED = "compiler flags as complete support"
 
 # Union of literal includes: a literal reference contributes an ordinary
-# unconditional edge even under `#ifdef`, platform checks, or exception
-# handling. The extension collects the deduplicated union per target and
-# derives no `select()`, feature semantics, or platform selection. The
-# preprocessor-derived platform selections are not the approved Go-only
-# generation exception.
 UNION_NOTE = "generated dependencies are the deduplicated union of literal identities"
 UNION_REJECTED = "preprocessor-derived platform selections"
 
 # Names: one directory holds one reusable `cc_library` named after the
-# directory basename, normalized (ASCII letters/digits plus internal
-# underscores, runs of other characters collapse to one underscore, edge
-# underscores trimmed, empty rejected). Same-package normalized-name
-# collisions fail with every claimant; no affix is invented.
 NAMING_NOTE = "basename-derived names normalize deterministically and collisions fail with every claimant"
 
 # Merge and lifecycle: the extension uses desired plus empty-rule APIs with
-# explicit owned attributes, matches conservatively, preserves `# keep` and
-# unfamiliar user content, leaves BUILD syntax to Gazelle, emits a matching
-# empty rule when the last owning source disappears, and never deletes a
-# BUILD file. A rename is guarded stale-target removal plus generation.
 LIFECYCLE_NOTE = "stale generated targets clean through normal merge with keep protection"
 LIFECYCLE_REJECTED = "deleting a BUILD file"
 
 # Bounded strictness: unresolved imports fail with an actionable diagnostic,
-# ambiguous imports fail with every resolver, stale ignores fail as obsolete
-# detection, mapping-plus-ignore conflicts fail, kind mismatches fail, and
-# `main`-defining library sources fail instead of inferring a thin binary.
-# Reuse is parser plus generation capability with output adaptation only:
-# log parsing plus a replacement C++ preprocessor stay rejected.
 STRICT_NOTE = "every unknown or ambiguous literal reference fails with actionable context"
 STRICT_REJECTED = [
     "unknown angle includes may disappear",

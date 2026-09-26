@@ -1,14 +1,3 @@
-//! JUnit XML parsing for Bazel-reported test artifacts.
-//!
-//! Rewritten on [`quick_junit::Report`]: deserialization uses the
-//! nextest data model instead of the hand-rolled `quick-xml` state
-//! machine. Re-exported through [`super::junit`] so the public paths
-//! stay `crate::reports::{parse_test_xml}` and
-//! `crate::reports::junit::{parse_test_xml}`. Shares the normalized
-//! case types ([`JunitCase`], [`JunitMessage`]) from
-//! [`super::junit_types`] with the rendering side in
-//! [`super::junit_render`].
-
 use super::junit_types::{JunitCase, JunitMessage};
 use super::ReportError;
 
@@ -18,16 +7,6 @@ fn junit_error(detail: impl Into<String>) -> ReportError {
     }
 }
 
-/// Parses one Bazel-reported `test.xml` artifact into normalized cases.
-///
-/// `shard` and `attempt` are the zero-based indices for every case in
-/// `bytes` (derived from the BEP identity). Names, durations,
-/// `<failure>`, `<error>`, `<skipped>`, `<system-out>`, and
-/// `<system-err>` content are preserved via `quick-junit`
-/// deserialization (which strips invalid XML chars and ANSI escapes);
-/// suite structure is ignored because the caller groups by Bazel target
-/// label. Malformed XML fails the whole artifact so the caller can
-/// mark collection partial.
 pub fn parse_test_xml(
     bytes: &[u8],
     shard: u32,
@@ -102,13 +81,6 @@ pub fn parse_test_xml(
     Ok(cases)
 }
 
-/// Deserializes via `quick-junit`, accepting both `<testsuites>` roots
-/// and bare `<testsuite>` artifacts (Bazel emits the latter).
-///
-/// Legacy fixtures (and some Bazel emitters) use nameless `<testsuite>`
-/// roots, which quick-junit rejects (`name` is required). Nameless
-/// suites are normalized to `name="dx"` so parsing stays total; real
-/// artifacts already carry names and are unaffected.
 fn deserialize_report(text: &str) -> Result<quick_junit::Report, ReportError> {
     // Jest (and other emitters) write `timestamp="2026-09-19T21:10:02"`
     // without a timezone; quick-junit 0.8 validates timestamps as RFC3339
@@ -260,15 +232,6 @@ fn is_xml_whitespace(byte: u8) -> bool {
     matches!(byte, b' ' | b'\r' | b'\n' | b'\t')
 }
 
-/// Removes `timestamp="..."` attributes from one start/empty tag's raw
-/// content (`name` + attributes, without `<`, `>`, `/>`).
-///
-/// Returns `None` when the tag carries no `timestamp` attribute so the
-/// caller can pass the original event through untouched. Parsing respects
-/// single/double quotes, so `timestamp`-like text inside other attribute
-/// values is preserved. Only the exact attribute name `timestamp` is
-/// dropped; surrounding whitespace is collapsed by removing the whitespace
-/// run preceding the attribute.
 fn remove_timestamp_from_tag(content: &[u8], name_len: usize) -> Option<Vec<u8>> {
     if name_len > content.len() {
         return None;
@@ -375,8 +338,6 @@ fn remove_timestamp_from_tag(content: &[u8], name_len: usize) -> Option<Vec<u8>>
     Some(out)
 }
 
-/// Replaces negative `time="..."` values with `time="0"` in
-/// `<testsuite*`/`<testcase*` start tags (see `deserialize_report`).
 fn clamp_negative_times(text: &str) -> String {
     fn clamp_one(tag: &mut String) -> bool {
         let mut search_from = 0;

@@ -1,8 +1,3 @@
-//! Buildifier output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, known, point, FileFinding, ParseError};
@@ -35,8 +30,6 @@ struct BuildifierPosition {
     column: u64,
 }
 
-/// Parses Buildifier check stdout. The exit code is always 0 and
-/// `success` is false whenever findings exist, so both are ignored.
 pub fn parse_buildifier(
     stdout: &[u8],
     stderr: &[u8],
@@ -113,8 +106,6 @@ pub fn parse_buildifier(
     Ok(findings)
 }
 
-/// Positions a `valid:false` file from its `<path>:<line>:<col>: <msg>`
-/// stderr line, falling back to 1:1 when the tool names no position.
 fn buildifier_syntax(stderr: &str, filename: &str) -> (u64, u64, String) {
     let prefix = format!("{filename}:");
     for line in stderr.lines() {

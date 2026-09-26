@@ -1,8 +1,3 @@
-//! Biome output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
@@ -64,8 +59,6 @@ fn biome_position(
     })
 }
 
-/// Parses Biome `lint --reporter=json` stdout. Every diagnostic is one
-/// finding under its category; positions must be nonzero.
 pub fn parse_biome_lint(
     stdout: &[u8],
     code: Option<i32>,
@@ -116,9 +109,6 @@ pub fn parse_biome_lint(
     Ok(findings)
 }
 
-/// Parses Biome `format --reporter=json` (check) stdout. Each `format`
-/// diagnostic at `0:0` becomes one `1:1` format finding; any other
-/// category or nonzero position is a grammar mismatch.
 pub fn parse_biome_format(
     stdout: &[u8],
     code: Option<i32>,

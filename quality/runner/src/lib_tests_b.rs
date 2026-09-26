@@ -1,6 +1,3 @@
-//! Split from `lib.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::*;
 use quality_result::{assert_all_equal, encode_validated, validate};
 

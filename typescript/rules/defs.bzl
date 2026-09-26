@@ -18,11 +18,6 @@ _DX_TS_PROJECT_PROVIDES = [
 ]
 
 # NB: testing.TestEnvironment is returned by the test forwarder (the test
-# runner reads it from the target) but cannot be listed here: it is a
-# constructor value, not a Provider object. InstrumentedFilesInfo is
-# likewise returned only when coverage is enabled (matching upstream
-# jest_test) and so cannot be advertised unconditionally; coverage still
-# works because the runner reads it from the target, not via provides.
 _DX_TS_TEST_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
@@ -92,10 +87,6 @@ def _typescript_test_forward_impl(ctx):
     upstream = ctx.attr.upstream
 
     # The upstream launcher already bakes fixed_env (JEST_JUNIT_OUTPUT_FILE,
-    # snapshot flags) into its executable, which we symlink with runfiles
-    # merged below. Only env_inherit (notably TESTBRIDGE_TEST_ONLY for
-    # sharding/--test_filter) lives solely in TestEnvironment, so rebuild
-    # it from the mirrored env_inherit attribute.
     env_inherit = list(ctx.attr.env_inherit) if ctx.attr.env_inherit else []
     if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
         env_inherit.append("TESTBRIDGE_TEST_ONLY")
@@ -106,10 +97,6 @@ def _typescript_test_forward_impl(ctx):
     ]
 
     # Upstream jest_test only provides InstrumentedFilesInfo when coverage
-    # is enabled, so forward it conditionally (unlike the library case).
-    # NB: no explicit RunEnvironmentInfo forward: constructing
-    # testing.TestEnvironment above already contributes the runtime
-    # environment provider, and returning both conflicts.
     return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo], "typescript_*")
 
 _typescript_test = rule(

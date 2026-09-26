@@ -1,55 +1,27 @@
-//! Invocation defaults for `dx` (flag > env > file).
-//!
-//! Contract: `docs/cli/cli-contract.md#invocation-defaults`.
-
 use std::path::{Path, PathBuf};
 
-/// Env var selecting the workspace directory when `--workspace` is absent.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub const DX_WORKSPACE_ENV: &str = "DX_WORKSPACE";
-/// Env var selecting the output mode when `--output` is absent.
 pub const DX_OUTPUT_ENV: &str = "DX_OUTPUT";
-/// Env var enabling verbose diagnostics when `--verbose` is absent.
 pub const DX_VERBOSE_ENV: &str = "DX_VERBOSE";
-/// Env var selecting the color mode when `--color` is absent.
 pub const DX_COLOR_ENV: &str = "DX_COLOR";
-/// Env var suppressing operation summaries when `--quiet` is absent.
 pub const DX_QUIET_ENV: &str = "DX_QUIET";
-/// Env var enabling dry-run planning when `--dry-run` is absent.
 pub const DX_DRY_RUN_ENV: &str = "DX_DRY_RUN";
-/// Env var selecting the fail-on threshold when `--fail-on` is absent.
 pub const DX_FAIL_ON_ENV: &str = "DX_FAIL_ON";
 
-/// Committed-shape config file searched upward from the invocation start.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub const CONFIG_TOML_REL: &str = ".dx/config.toml";
-/// Legacy alias for the config file (same TOML content).
 pub const CONFIG_REL: &str = ".dx/config";
 
-/// File-layer defaults from `.dx/config.toml` (or `.dx/config`).
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct FileDefaults {
-    /// Workspace override when no flag or env selects one.
     pub workspace: Option<String>,
-    /// Output mode name when no flag or env selects one.
     pub output: Option<String>,
-    /// Verbose default when neither flag nor env enables it.
     pub verbose: Option<bool>,
-    /// Color mode name when no flag or env selects one.
     pub color: Option<String>,
-    /// Quiet default when neither flag nor env enables it.
     pub quiet: Option<bool>,
-    /// Dry-run default when neither flag nor env enables it.
     pub dry_run: Option<bool>,
-    /// Fail-on threshold name when no flag or env selects one.
     pub fail_on: Option<String>,
 }
 
-/// Reports whether an env bool spelling enables the flag.
-/// Truthy (case-insensitive, trimmed): `1`, `true`, `yes`, `y`, `on`.
-/// Everything else (including empty and unset) counts as disabled, so a
-/// typo never silently enables verbose output.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn is_truthy(value: &str) -> bool {
     matches!(
         value.trim().to_ascii_lowercase().as_str(),
@@ -57,24 +29,15 @@ pub fn is_truthy(value: &str) -> bool {
     )
 }
 
-/// Reads one string env default, ignoring missing and empty values so an
-/// empty export behaves like an unset variable.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn env_string(get: &dyn Fn(&str) -> Option<String>, name: &str) -> Option<String> {
     get(name).filter(|value| !value.is_empty())
 }
 
-/// Reads one bool env default: `Some(true)` for truthy spellings,
-/// `Some(false)` for any other present value (including empty), and
-/// `None` when unset. Present-but-falsy wins over a file `true` so
-/// `DX_VERBOSE=0` can disable a file default.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn env_bool(get: &dyn Fn(&str) -> Option<String>, name: &str) -> Option<bool> {
     get(name).map(|value| is_truthy(&value))
 }
 
 /// Resolves one string default: flag over env over file over fallback.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn resolve_string(
     flag: Option<String>,
     env: Option<String>,
@@ -84,8 +47,6 @@ pub fn resolve_string(
     flag.or(env).or(file).unwrap_or_else(|| fallback.to_owned())
 }
 
-/// Resolves one workspace default: flag over env over file.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn resolve_workspace(
     flag: Option<String>,
     env: Option<String>,
@@ -94,10 +55,6 @@ pub fn resolve_workspace(
     flag.or(env).or(file)
 }
 
-/// Resolves one opt-in bool default: an explicit flag wins, otherwise env
-/// wins over file, otherwise disabled. There is no `--no-*` spelling, so a
-/// `false` flag means absent and env/file decide.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn resolve_bool(flag: bool, env: Option<bool>, file: Option<bool>) -> bool {
     if flag {
         return true;
@@ -147,12 +104,6 @@ fn non_empty(value: Option<String>) -> Option<String> {
     value.filter(|text| !text.is_empty())
 }
 
-/// Parses `.dx/config.toml` text into file-layer defaults.
-/// Unknown keys are ignored for forward compatibility; known keys with the
-/// wrong TOML type fail closed. Empty strings count as absent.
-/// The `[dx]` table is canonical; top-level keys are accepted as an alias
-/// with the table winning on conflict.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn parse_file_text(text: &str) -> Result<FileDefaults, super::AdoptError> {
     let parsed: ConfigFile =
         toml::from_str(text).map_err(|e| super::AdoptError::InvalidDefaults {
@@ -170,10 +121,6 @@ pub fn parse_file_text(text: &str) -> Result<FileDefaults, super::AdoptError> {
     })
 }
 
-/// Finds the nearest invocation-defaults file walking up from `start`.
-/// Checks `.dx/config.toml` before `.dx/config` in each directory so the
-/// suffixed name wins when both exist side by side.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn find_config(start: &Path) -> Option<PathBuf> {
     for dir in start.ancestors() {
         let toml = dir.join(CONFIG_TOML_REL);
@@ -188,11 +135,6 @@ pub fn find_config(start: &Path) -> Option<PathBuf> {
     None
 }
 
-/// Loads file-layer defaults for an invocation starting at `start`.
-/// Missing files yield empty defaults; unreadable or invalid files fail
-/// closed so a typo never silently runs with the wrong mode.
-/// Returns the defaults plus the file that supplied them, if any.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn load_defaults(start: &Path) -> Result<(FileDefaults, Option<PathBuf>), super::AdoptError> {
     let Some(path) = find_config(start) else {
         return Ok((FileDefaults::default(), None));

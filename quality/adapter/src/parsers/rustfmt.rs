@@ -1,13 +1,6 @@
-//! rustfmt output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses rustfmt `--check` output. `code` is the process exit status:
-/// nonzero without any parsed finding is a grammar mismatch.
 pub fn parse_rustfmt(
     stdout: &[u8],
     stderr: &[u8],
@@ -84,7 +77,6 @@ pub fn parse_rustfmt(
     Ok(findings)
 }
 
-/// Splits a `Diff in <path>:<line>:` header.
 fn rustfmt_header(header: &str) -> Result<(&str, u64), ParseError> {
     let (rest, tail) = header
         .rsplit_once(':')
@@ -111,7 +103,6 @@ fn rustfmt_header(header: &str) -> Result<(&str, u64), ParseError> {
     Ok((path, line))
 }
 
-/// Splits a ` --> <path>:<line>:<col>` location.
 fn rustfmt_location(arrow: &str) -> Result<(&str, u64, u64), ParseError> {
     let (rest, column_text) = arrow
         .rsplit_once(':')

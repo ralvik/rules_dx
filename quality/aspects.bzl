@@ -56,7 +56,6 @@ def _quality_pipeline_action(target, ctx, capability):
         inputs = depset(inputs),
         outputs = [out],
         arguments = [args],
-        # Local-only via the shared helper (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
         execution_requirements = dx_execution_requirements(),
         mnemonic = "DxQuality" + capability.capitalize(),
         progress_message = "Dx quality " + capability + " %{label}",
@@ -77,7 +76,6 @@ def _quality_pipeline_action(target, ctx, capability):
         inputs = depset([out]),
         outputs = [marker],
         arguments = [eval_args],
-        # Local-only via the shared helper (See: docs/quality/action-model.md#outputs-remote-cache-and-execution).
         execution_requirements = dx_execution_requirements(),
         mnemonic = "DxQualityEval",
         progress_message = "Dx quality evaluate " + capability + " %{label}",
@@ -85,7 +83,7 @@ def _quality_pipeline_action(target, ctx, capability):
     return [OutputGroupInfo(dx_results = depset([out, marker]))]
 
 def _make_synthetic_impl(capability):
-    """Makes one capability impl over the shared pipeline action (See: quality-sources.md#adapter-applicability)."""
+    """Makes one capability impl over the shared pipeline action ("""
 
     def _impl(target, ctx):
         return _quality_pipeline_action(target, ctx, capability)

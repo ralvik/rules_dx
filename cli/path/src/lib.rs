@@ -1,28 +1,7 @@
-//! Workspace-relative path shape checks shared by every shard validator.
-//!
-//! Contract: `docs/architecture/README.md`.
-//!
-//! The empty → absolute → backslash → empty-component → `.` → `..`
-//! ladder lives here only (sole owner). Every shard validator
-//! (`quality/result`, `generation/result`, `codegen_shard`, `docs/ir`,
-//! `env_shard`, `dx_output`, `dx_apply/validators`, `dx_update/manifest`)
-//! is a thin wrapper around [`classify`]: it keeps its own error payload
-//! and, where its contract needs different wording or allowed rungs, its
-//! own message map, but never its own shape checks.
-//! Check order is pinned: the first problem in ladder order wins.
-//!
-//! Dependency evaluation (stays hand-rolled): the ladder is a
-//! workspace-relative shape classifier with pinned order and machine-readable
-//! [`PathProblem`], not lexical normalization (`path-clean`) nor a UTF-8 path
-//! type (`camino`). Adopting those crates would add supply-chain review,
-//! lockfile churn, and `MODULE.bazel` manifests for zero behavior gain while
-//! changing classifier semantics, so the hand-rolled ladder stays.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-/// One workspace-relative path shape violation, in pinned check order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PathProblem {
     Empty,
@@ -34,12 +13,6 @@ pub enum PathProblem {
 }
 
 impl PathProblem {
-    /// Canonical human-readable reason for one ladder rung.
-    ///
-    /// Sole message owner for the `quality/result` + `dx_output` wording;
-    /// other contracts keep their own wording (or allowed rungs) and only
-    /// reuse [`classify`] for order, with pinned message tests proving
-    /// parity or documenting the intentional difference.
     pub fn reason(self) -> &'static str {
         match self {
             PathProblem::Empty => "path must be non-empty",
@@ -52,8 +25,6 @@ impl PathProblem {
     }
 }
 
-/// Classifies the first shape violation in pinned ladder order, or `None`
-/// when the path is a well-formed workspace-relative path.
 pub fn classify(path: &str) -> Option<PathProblem> {
     if path.is_empty() {
         return Some(PathProblem::Empty);
@@ -76,11 +47,6 @@ pub fn classify(path: &str) -> Option<PathProblem> {
     None
 }
 
-/// Canonical reason for the first ladder violation, or `None` when valid.
-///
-/// Thin-wrapper shortcut for contracts using the canonical wording
-/// (`quality/result`, `dx_output`); other contracts map [`classify`]
-/// to their own messages instead.
 pub fn reject_reason(path: &str) -> Option<&'static str> {
     classify(path).map(PathProblem::reason)
 }

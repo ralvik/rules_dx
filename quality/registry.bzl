@@ -87,10 +87,6 @@ def registry_schema_error():
         return err
 
     # Cross-registry singularity without duplicating inventories: every
-    # known source class has a family assignment, every adapter-backed
-    # class is classified, every curated family is a registry family,
-    # every curated tool is a registry tool, and every taxonomy family
-    # carries a wrapper owner or an explicit uncovered verdict.
     for class_id in KNOWN_SEMANTIC_FILE_CLASSES:
         if class_id not in REAL_CLASS_TO_FAMILY:
             return "registry: known class '" + class_id + "' has no owning family"

@@ -1,22 +1,9 @@
-//! Query plumbing for scope resolution.
-//!
-//! Split from `super` (`resolve.rs`): owns the query argv builder,
-//! the label/expression quoting helpers, and [`run_label_query`].
-//! Shared across the classification ([`super::classify`]), run/deploy
-//! ([`super::run_deploy`]), and test-mapping ([`super::test_map`])
-//! domains via `pub(crate)` re-exports through `super`; the entry
-//! points ([`super::resolve`], [`super::resolve_for_test`]) stay in
-//! `super` and call back in.
-
 use std::path::Path;
 
 use dx_process::{launcher_argv0, WORKFLOW_STARTUP_OPTS};
 
 use super::{first_line, parse_owners, QueryRunner, ResolveError};
 
-/// Quotes every item into one deterministic space-separated set literal:
-/// items are bytewise sorted so the query expression is stable and
-/// inspectable no matter the input order.
 pub(crate) fn quote_set(items: &[String]) -> String {
     let mut sorted: Vec<&String> = items.iter().collect();
     sorted.sort();
@@ -27,26 +14,14 @@ pub(crate) fn quote_set(items: &[String]) -> String {
         .join(" ")
 }
 
-/// Batched ownership expression: depth-1 reverse dependencies
-/// constrained to rules over the main-workspace universe, with every file
-/// label quoted into one deterministic set. One bounded query per
-/// resolver call no matter how many files share the scope; an empty
-/// mapping names the first file scope so the diagnostic stays actionable.
 pub(crate) fn ownership_set_expression(labels: &[String]) -> String {
     format!("kind('rule', rdeps(//..., set({}), 1))", quote_set(labels))
 }
 
-/// Quotes a label as a double-quoted query string literal.
-/// Single owner is `dx_codegen::quote_label`; this delegates so ownership
-/// and expansion expressions share one escaping rule.
-/// See: `docs/cli/target-resolution.md` (query safety).
 pub(crate) fn quote_label(label: &str) -> String {
     dx_codegen::quote_label(label)
 }
 
-/// Exact query argv for an arbitrary unconfigured query expression.
-/// Used by runnable and test-mapping queries; no user Bazel options
-/// leak into resolution.
 fn query_argv(expression: &str) -> Vec<String> {
     let mut argv = Vec::with_capacity(WORKFLOW_STARTUP_OPTS.len() + 4);
     argv.push(launcher_argv0().to_owned());
@@ -57,9 +32,6 @@ fn query_argv(expression: &str) -> Vec<String> {
     argv
 }
 
-/// Runs one unconfigured `bazel query` for `expression` and parses
-/// stdout into sorted deduplicated labels. Query failures and non-UTF-8
-/// output become [`ResolveError::QueryFailed`].
 pub(crate) fn run_label_query(
     expression: &str,
     workspace: &Path,
@@ -87,7 +59,6 @@ mod tests {
     use crate::resolve::{resolve, QueryResult};
     use std::cell::RefCell;
 
-    /// Scripted query runner: replays canned outputs in call order.
     struct FakeQuery {
         outputs: RefCell<Vec<QueryResult>>,
     }

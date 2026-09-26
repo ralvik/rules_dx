@@ -1,6 +1,3 @@
-//! Normalized env plan collection tests (split from `lib.rs`).
-//! Originally the inline `mod tests` of `lib.rs`.
-
 use super::*;
 
 use std::path::PathBuf;

@@ -1,5 +1,3 @@
-//! Shared fakes and helpers for the exec family unit tests.
-
 use super::{execute, Env};
 use crate::args::parse;
 use crate::args::Invocation;
@@ -35,13 +33,8 @@ pub(crate) fn temp_dir(prefix: &str) -> tempfile::TempDir {
 pub(crate) struct Harness {
     pub(crate) workspace: PathBuf,
     pub(crate) temp: PathBuf,
-    /// Simulated process cwd for `--here` tests; defaults to the workspace
-    /// root (so bare `--here` means `//...`), tests set it to a subdir to
-    /// prove `//path/...` selection.
     pub(crate) cwd: PathBuf,
-    /// Retains the workspace `TempDir` so `workspace` auto-cleans on drop.
     pub(crate) _workspace_guard: tempfile::TempDir,
-    /// Retains the scratch `TempDir` so `temp` auto-cleans on drop.
     pub(crate) _temp_guard: tempfile::TempDir,
     pub(crate) results: HashMap<String, Vec<u8>>,
     pub(crate) bazel_code: i32,
@@ -51,18 +44,10 @@ pub(crate) struct Harness {
     pub(crate) skip_bep: bool,
     pub(crate) raw_bep: Option<Vec<String>>,
     pub(crate) query: ScriptQuery,
-    /// Canned `DX_GENERATE_INTENDED` witness the fake runner writes
-    /// for generate runs; `None` exercises the missing-witness
-    /// paths.
     pub(crate) intended: Option<Vec<u8>>,
-    /// Dispatch environments observed by the fake runner, one entry
-    /// per launch in call order.
     pub(crate) seen_env: Rc<RefCell<Vec<Vec<(String, String)>>>>,
 }
 
-/// Scripted ownership-query runner: replays canned outputs in call
-/// order and records argv. Empty outputs panic, so tests that never
-/// resolve file scopes prove they issue no queries.
 pub(crate) struct ScriptQuery {
     pub(crate) calls: RefCell<Vec<Vec<String>>>,
     pub(crate) outputs: RefCell<Vec<QueryResult>>,
@@ -276,9 +261,6 @@ impl Harness {
         self.run_with_ci(words, false)
     }
 
-    /// `dx run` CI-gate probe: drives `execute` with the startup
-    /// refusal bit set, without touching process-global
-    /// environment (parallel tests share one process).
     pub(crate) fn run_with_ci(&self, words: &[&str], ci: bool) -> (i32, String, String) {
         let inv = invocation(words);
         // Mirror `main.rs`: consume `--here` into an explicit directory
@@ -352,8 +334,6 @@ impl Runner for FakeRunner {
     }
 }
 
-/// Canned `DX_GENERATE_INTENDED` witness: one scope, the given file
-/// entries, and the given ignored-import entries.
 pub(crate) fn intended_witness(mode: &str, complete: bool, files: &str, ignored: &str) -> Vec<u8> {
     let files_value: Vec<serde_json::Value> = if files.trim().is_empty() {
         Vec::new()
@@ -376,8 +356,6 @@ pub(crate) fn intended_witness(mode: &str, complete: bool, files: &str, ignored:
     .expect("witness JSON")
 }
 
-/// One modify entry replacing `original` with `candidate` through a
-/// single full-span edit.
 pub(crate) fn intended_modify(path: &str, original: &[u8], candidate: &[u8]) -> String {
     serde_json::json!({
         "path": path,
@@ -392,7 +370,6 @@ pub(crate) fn intended_modify(path: &str, original: &[u8], candidate: &[u8]) -> 
     .to_string()
 }
 
-/// One ignored-import audit entry.
 pub(crate) fn intended_ignored(path: &str, language: &str, import: &str) -> String {
     serde_json::json!({
         "path": path,
@@ -403,9 +380,6 @@ pub(crate) fn intended_ignored(path: &str, language: &str, import: &str) -> Stri
     .to_string()
 }
 
-/// Argv-recording launcher probe for passthrough tests: the
-/// shared `FakeRunner` never observes argv, which is the whole
-/// contract under test here.
 pub(crate) struct ArgvProbe {
     pub(crate) code: Option<i32>,
     pub(crate) seen: Rc<RefCell<Vec<Vec<String>>>>,
@@ -462,9 +436,6 @@ pub(crate) fn coverage_harness(name: &str, tracefile: &[u8]) -> Harness {
     }
 }
 
-/// Default-mode witness for one `rust/tests/fixtures/hello/BUILD.bazel` modify
-/// (`abc` to `xyz`); the workspace holds `workspace_text` so the
-/// caller selects the write outcome.
 pub(crate) fn generate_witness(workspace_text: &str, name: &str) -> Harness {
     let mut harness = Harness::new(name);
     harness.write_source("rust/tests/fixtures/hello/BUILD.bazel", workspace_text);
@@ -477,11 +448,6 @@ pub(crate) fn generate_witness(workspace_text: &str, name: &str) -> Harness {
     harness
 }
 
-/// Managed-state fixture for the `dx clean` exec tests (issue
-///): commits `pair` through the real `dx_setup` commit path and
-/// materializes both generation directories, returning the setup
-/// record hex. Digest tags mirror the `dx_clean` fixtures (one
-/// lowercase-hex character repeated to 64).
 pub(crate) fn commit_clean_pair(harness: &Harness, env: char, gen: char) -> String {
     let pair = SetupPair {
         environment: GenerationId::new(&env.to_string().repeat(64)).expect("environment digest"),
@@ -501,8 +467,6 @@ pub(crate) fn commit_clean_pair(harness: &Harness, env: char, gen: char) -> Stri
     setup_hex(&pair)
 }
 
-/// Canned BEP stream referencing one shard file for one managed
-/// output group: the fake runner writes these lines verbatim.
 pub(crate) fn managed_shard_bep(shard: &Path, group: &str) -> Vec<String> {
     vec![
         serde_json::json!({
@@ -521,10 +485,6 @@ pub(crate) fn managed_shard_bep(shard: &Path, group: &str) -> Vec<String> {
     ]
 }
 
-/// Fresh managed workspace plus two real artifact files the tests
-/// stage mirror leaves against. Both `TempDir` guards are returned so
-/// the directories auto-clean on drop; `first`/`second` live inside
-/// the artifacts guard.
 pub(crate) struct ManagedStageFixture {
     pub(crate) workspace_guard: tempfile::TempDir,
     pub(crate) _artifacts_guard: tempfile::TempDir,
@@ -584,9 +544,6 @@ pub(crate) fn env_entry(key: &str, value: &str, artifact: &Path) -> dx_env_plan:
     }
 }
 
-/// Sets Unix permission bits; the managed suites run on Linux-only
-/// CI, so filesystem-failure injection through read-only
-/// directories is deterministic.
 pub(crate) fn set_mode(path: &Path, mode: u32) {
     let mut permissions = std::fs::metadata(path)
         .expect("mode metadata")
@@ -595,8 +552,6 @@ pub(crate) fn set_mode(path: &Path, mode: u32) {
     std::fs::set_permissions(path, permissions).expect("set mode");
 }
 
-/// Umbrella fixture: clean quality results plus a clean
-/// check-mode generation witness, so every phase succeeds.
 pub(crate) fn umbrella_clean(name: &str) -> Harness {
     let mut harness = Harness::new(name);
     harness.write_source("src/a.py", "x = 1\n");
@@ -608,9 +563,6 @@ pub(crate) fn umbrella_clean(name: &str) -> Harness {
     harness
 }
 
-/// Umbrella fixture: one fixable lint finding, so the format
-/// phase reports changes in check mode and applies them in
-/// default mode (staling the replayed fixture downstream).
 pub(crate) fn umbrella_findings(name: &str) -> Harness {
     let mut harness = Harness::new(name);
     harness.write_source("src/a.py", "x = 1\n");

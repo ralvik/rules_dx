@@ -1,65 +1,26 @@
-//! Pure documentation-delivery planning (slices 1-4: doc-IR version,
-//! identity, validation, mode shape; guides/examples corpus shape;
-//! site-build action planning; `dx docs` invocation planning).
-//!
-//! Contract: `docs/documentation/README.md`.
-//!
-//! This crate owns the documentation pipeline shape before any extractor,
-//! schema-number freeze, adapter, site-build rule, or `dx docs` command
-//! lands: IR version compatibility, stable symbol identities, the
-//! extraction-validation gate, check-vs-build mode selection, the drift
-//! upgrade gate, the guides/examples corpus shape, the site-build action
-//! graph, and the `dx docs` invocation mapping (scope, serve/port, shared
-//! graph, failure identities). It plans over injected argument strings
-//! only, so the rules stay deterministic and unit-testable without
-//! extractors, toolchains, a Bazel server, or any renderer.
-//!
-//! Out of scope here (qualification): exact `.proto` field/enum numbers
-//! and reserved ranges, per-language input pins and adapter mappings,
-//! per-language overload-disambiguation schemes, link/reference completeness
-//! proofs, renderer behavior, exact guide-step/CI wiring, rule labels,
-//! check/serve combination semantics, and any YAML/rule/CLI implementation.
-//! Those stay deferred; this crate preserves spellings verbatim and never
-//! substitutes an implicit default.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-/// One versioned documentation-IR identity (`schema_major`/`schema_minor`
-/// on [`docs/ir/doc_ir.proto`](../../../docs/ir/doc_ir.proto)).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct IrVersion {
-    /// Major version: breaking changes increment it with a recorded migration.
     pub major: u32,
-    /// Minor version: additive-only within a major.
     pub minor: u32,
 }
 
 /// Malformed IR version: versions are explicit, never implicit.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum VersionError {
-    /// Major version zero carries no compatibility meaning (no implicit v0).
     #[error("explicit nonzero IR major version is required")]
     MissingMajor,
 }
 
-/// Whether a produced IR shard is readable by a consumer at another version.
-///
-/// Same major versions are compatible in either minor direction: minor
-/// versions are additive-only and unknown extension data is preserved
-/// verbatim, so an older reader ignores what it does not know and a newer
-/// reader accepts older shards. Different majors require the recorded
-/// migration — never silent acceptance.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VersionCompat {
-    /// Readable as-is (same major; minor skew is additive-only).
     Compatible,
-    /// Blocked until the recorded major migration runs.
     RequiresMigration,
 }
 
-/// Plan IR version compatibility between producer and reader.
 pub fn plan_version_compat(
     produced: IrVersion,
     reader: IrVersion,
@@ -79,26 +40,16 @@ pub fn drops_unknown_extensions() -> bool {
     false
 }
 
-/// Malformed symbol identity: every segment is explicit.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SymbolError {
-    /// Language segment missing or empty.
     #[error("symbol language is required")]
     MissingLanguage,
-    /// Package segment missing or empty.
     #[error("symbol package is required")]
     MissingPackage,
-    /// Qualified-name segment missing or empty.
     #[error("symbol qualified name is required")]
     MissingQualifiedName,
 }
 
-/// Plan the stable symbol ID: `language:package:qualified_name`.
-///
-/// IDs are stable across rebuilds; source paths stay workspace-relative
-/// (callers must not pass absolute paths). Per-language overload
-/// disambiguation schemes freeze under; use [`plan_overload_id`] for
-/// the explicit normalized parameter-type suffix.
 pub fn plan_symbol_id(
     language: &str,
     package: &str,
@@ -116,12 +67,6 @@ pub fn plan_symbol_id(
     Ok(format!("{language}:{package}:{qualified}"))
 }
 
-/// Plan the overload-disambiguated symbol ID by appending the normalized
-/// parameter-type list (`Base(T1,T2)`).
-///
-/// Normalization here is only whitespace trimming with empty entries
-/// dropped; per-language type normalization freezes under. Types pass
-/// through verbatim otherwise.
 pub fn plan_overload_id(base: &str, param_types: &[String]) -> String {
     let normalized: Vec<&str> = param_types
         .iter()
@@ -136,22 +81,12 @@ pub fn is_workspace_relative(path: &str) -> bool {
     !path.is_empty() && !path.starts_with('/')
 }
 
-/// Planned validation outcome for one extraction unit.
-///
-/// Protocol failures fail the extraction action rather than emitting
-/// partial shards: every gate below must hold before any shard is emitted.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ValidationOutcome {
-    /// All gates hold: the shard may be emitted.
     Emit,
-    /// A gate failed: the action fails with no partial shard.
     FailAction,
 }
 
-/// Plan extraction validation: IR decodes against the schema, the
-/// symbol-count inventory shows no silent omission, IDs/links are stable,
-/// and references resolve. Any failure fails the action — partial shards
-/// are never emitted.
 pub fn plan_validation(
     decodes_against_schema: bool,
     inventory_complete: bool,
@@ -170,23 +105,12 @@ pub fn emits_partial_shards() -> bool {
     false
 }
 
-/// Planned `dx docs` mode selection.
-///
-/// `--check` performs extraction plus shared validation without rendering;
-/// normal build performs the same validation and then renders. Both modes
-/// run the same validation and reject the same invalid IR and references;
-/// check mode never compares against committed IR or previous cache
-/// contents, and a cache miss is never a check failure.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DocsMode {
-    /// Extraction plus shared validation, no rendering.
     Check,
-    /// Same validation, then render.
     Build,
 }
 
-/// Plan the mode from the `--check` flag: the flag selects check mode,
-/// its absence selects build mode.
 pub fn plan_docs_mode(check: bool) -> DocsMode {
     if check {
         DocsMode::Check
@@ -210,14 +134,10 @@ pub fn cache_miss_fails_check() -> bool {
     false
 }
 
-/// `--serve` previews the last build outputs locally; it is not a build
-/// action and performs no caching of its own.
 pub fn serve_is_build_action() -> bool {
     false
 }
 
-/// The docs build is non-mutating: Bazel outputs and cache writes are
-/// permitted, source-tree writes are not.
 pub fn docs_build_mutates_sources() -> bool {
     false
 }
@@ -227,22 +147,12 @@ pub fn commits_ir_shards() -> bool {
     false
 }
 
-/// Planned drift-upgrade gate.
-///
-/// Pinned extractor/toolchain upgrades arrive only through rules_dx
-/// releases: the contract suite, golden fixtures, and determinism evidence
-/// must be green plus explicit review. An upstream change may turn release
-/// preparation red but never reaches users outside a release — users stay
-/// on pinned, checksummed inputs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DriftDecision {
-    /// All gates hold: the pin bump may ship in the release.
     Ship,
-    /// A gate failed: the bump is held out of the release.
     Hold,
 }
 
-/// Plan whether a pinned-input upgrade may ship.
 pub fn plan_drift_upgrade(
     contract_suite_green: bool,
     golden_fixtures_green: bool,
@@ -265,28 +175,16 @@ pub fn drift_reaches_users_without_release() -> bool {
 // Guides/examples corpus shape (slice 2).
 // ---------------------------------------------------------------------------
 
-/// Frozen release-blocking guide identities: quickstart, tutorial, and
-/// migration (from existing Bazel setups). Spellings pass through verbatim;
-/// no extra guide is claimed and no implicit default is substituted. Exact
-/// guide-step text and CI wiring freeze under.
 pub fn is_known_guide(name: &str) -> bool {
     matches!(name, "quickstart" | "tutorial" | "migration")
 }
 
-/// Planned guide-freshness outcome.
-///
-/// Every guide step is CI-executed so docs cannot rot: a guide is fresh
-/// only when every step ran in CI and the `examples/` corpus run stayed
-/// green. Any gap leaves the guide stale — never silently fresh.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum GuideFreshness {
-    /// Every step CI-executed and the examples corpus green.
     Fresh,
-    /// A step went unexecuted or the examples run failed: docs may have rotted.
     Stale,
 }
 
-/// Plan guide freshness from the injected CI-execution record.
 pub fn plan_guide_freshness(all_steps_executed: bool, examples_green: bool) -> GuideFreshness {
     if all_steps_executed && examples_green {
         GuideFreshness::Fresh
@@ -300,14 +198,10 @@ pub fn guide_steps_may_go_unexecuted() -> bool {
     false
 }
 
-/// Examples corpus root: worked examples live under `examples/` and are the
-/// executable backing for guide steps. Paths pass through verbatim; this
-/// crate never remaps them onto source or output trees.
 pub fn examples_root() -> &'static str {
     "examples/"
 }
 
-/// Whether a workspace-relative path selects the examples corpus.
 pub fn is_under_examples(path: &str) -> bool {
     path == "examples" || path.starts_with("examples/")
 }
@@ -316,27 +210,13 @@ pub fn is_under_examples(path: &str) -> bool {
 // Site-build action planning (slice 3).
 // ---------------------------------------------------------------------------
 
-/// Planned site-build action in the extract → aggregate → render chain.
-///
-/// One `Extract` runs per (language, package) unit and emits one IR shard;
-/// one `Aggregate` consumes shards plus prose plus theme/config with shared
-/// validation and emits render inputs; one `Render` runs the pinned mdBook
-/// artifact and emits the static site tree. No watcher or refresh engine:
-/// Bazel incrementality is the only rebuild mechanism.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DocsAction {
-    /// Per-unit extraction to one cached IR shard.
     Extract,
-    /// Shared-validation aggregation to render inputs.
     Aggregate,
-    /// Pinned-renderer site emission.
     Render,
 }
 
-/// Plan the action chain for a `dx docs` mode: check selects extraction
-/// plus shared-validation aggregation without rendering; build selects the
-/// same validation and then renders. Both modes reject the same invalid IR
-/// and references; only build exercises renderer failures.
 pub fn plan_mode_actions(mode: DocsMode) -> &'static [DocsAction] {
     match mode {
         DocsMode::Check => &[DocsAction::Extract, DocsAction::Aggregate],
@@ -348,27 +228,19 @@ pub fn plan_mode_actions(mode: DocsMode) -> &'static [DocsAction] {
     }
 }
 
-/// Extraction actions declare every input and never touch the network;
-/// required upstream data arrives as declared inputs.
 pub fn docs_actions_use_network() -> bool {
     false
 }
 
-/// Outputs are deterministic by construction: sorted keys and symbol order,
-/// workspace-relative paths only, no timestamps, no absolute paths, no host
-/// environment in outputs, locale-independent ordering, UTF-8.
 pub fn docs_outputs_allow_timestamps() -> bool {
     false
 }
 
 /// Absolute paths must never appear in IR shards, render inputs, or the
-/// site tree.
 pub fn docs_outputs_allow_absolute_paths() -> bool {
     false
 }
 
-/// Same pinned producer plus same declared inputs rebuild byte-identical;
-/// cross-version compatibility compares decoded semantics, never bytes.
 pub fn same_producer_requires_byte_equality() -> bool {
     true
 }
@@ -379,29 +251,20 @@ pub fn cross_version_requires_byte_equality() -> bool {
 }
 
 /// Planned cache-miss outcome: a miss causes normal execution, never a
-/// freshness failure. IR shards, render inputs, and HTML are ordinary
-/// generated Bazel artifacts — never committed files or source-adjacent
-/// snapshots, with no snapshot refresh/apply step and no separate docs cache.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CacheMissOutcome {
-    /// Re-execute the action normally.
     Execute,
-    /// Freshness failure (never selected).
     FailFreshness,
 }
 
-/// Plan the cache-miss outcome: always re-execute.
 pub fn plan_cache_miss() -> CacheMissOutcome {
     CacheMissOutcome::Execute
 }
 
-/// Documentation follows normal target scope with no language enable lists:
-/// units from unused foundations emit nothing unless selected.
 pub fn unused_units_emit_without_selection() -> bool {
     false
 }
 
-/// Bare scope selects the repository.
 pub fn bare_docs_scope_selects_repository() -> bool {
     true
 }
@@ -410,73 +273,54 @@ pub fn bare_docs_scope_selects_repository() -> bool {
 // `dx docs` invocation planning (slice 4).
 // ---------------------------------------------------------------------------
 
-/// Scope follows the same label/pattern/path resolution as the other
-/// workflow commands; no docs-specific scope syntax is introduced.
 pub fn docs_scope_reuses_workflow_resolution() -> bool {
     true
 }
 
-/// Check and build select the shared Bazel extraction/aggregation graph,
-/// never separate checker implementations. must prove the pre-render
-/// checks are complete; if a required check depended on rendered output,
-/// that conflict is reported before any weaker check mode lands.
 pub fn check_uses_separate_graph() -> bool {
     false
 }
 
-/// `--serve` builds once and previews the last build outputs locally for
-/// authoring. It performs no caching of its own and stays outside the Bazel
-/// action graph; the served bytes are exactly the last build outputs.
 pub fn serve_caches_own_outputs() -> bool {
     false
 }
 
 /// `--port` only refines `--serve`; a port flag without serve selects no
-/// preview and is rejected rather than silently ignored.
 pub fn port_without_serve_allowed() -> bool {
     false
 }
 
 /// `--host` only refines `--serve`; a host flag without serve selects no
-/// preview and is rejected rather than silently ignored.
 pub fn host_without_serve_allowed() -> bool {
     false
 }
 
 /// `--open` only refines `--serve`; an open flag without serve selects no
-/// preview and is rejected rather than silently ignored.
 pub fn open_without_serve_allowed() -> bool {
     false
 }
 
-/// Preview ports are 1-65535; `0` is rejected rather than silently
-/// selecting an ephemeral port.
 pub fn port_zero_allowed() -> bool {
     false
 }
 
-/// Failures name the affected (language, package) unit.
 pub fn failure_names_unit() -> bool {
     true
 }
 
-/// On extractor drift, failures additionally name the pinned input whose
-/// schema changed.
 pub fn drift_failure_names_pinned_input() -> bool {
     true
 }
 
-/// First-hour journey steps for the built site/docs flow. See `docs/documentation/site.md`.
 pub fn first_hour_journey_steps() -> &'static [&'static str] {
     &["demo_site", "docs corpus", "site tests"]
 }
 
-/// Timing proof is one-shot evidence, never a standing benchmark. See ADR 0022.
+/// Timing proof is one-shot evidence, never a standing benchmark.
 pub fn timing_proof_is_one_shot() -> bool {
     true
 }
 
-/// No CI timing budget is enforced for the first-hour proof. See ADR 0022.
 pub fn timing_proof_enforces_budget() -> bool {
     false
 }

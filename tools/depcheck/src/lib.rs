@@ -1,18 +1,3 @@
-//! Hermetic lockfile-consistency and declared-dependency usage checker.
-//!
-//! Owning contract: `docs/quality/quality-testing.md` (dependency-check truth
-//! table, offline, non-mutating, exception/category/obsolete clauses).
-//!
-//! Fixture truth only (minimal hermetic compatibility, no registry query):
-//! live advisory matching with upstream crates lives in `cli/audit`,
-//! never duplicated here.
-//! See: `cli/audit/src/locks.rs` (live audit).
-//!
-//! Why a direct port: the checker must keep CLI args, exit codes, and
-//! diagnostic sentences stable for CI callers while running on all platforms
-//! as a single native binary with no interpreter startup.
-//! See: `tools/depcheck/BUILD.bazel` (rust targets).
-
 #![cfg_attr(
     not(test),
     deny(
@@ -26,66 +11,42 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-/// Dependency-check failure.
-///
-/// Typed dependency-check failure (thiserror) with source chaining for
-/// the I/O, TOML, JSON, and regex legs: `Display` keeps the historical
-/// `unreadable <kind>: <detail>` strings byte-identical so CLI
-/// diagnostics stay stable while callers gain matchable structure
-/// instead of `String` plumbing.
 #[derive(Debug, thiserror::Error)]
 pub enum DepcheckError {
-    /// A manifest file could not be read.
     #[error("unreadable manifest: {0}")]
     ManifestIo(#[source] std::io::Error),
-    /// A manifest file is not valid TOML.
     #[error("unreadable manifest: {0}")]
     ManifestToml(#[source] toml::de::Error),
-    /// A manifest file is not valid JSON.
     #[error("unreadable manifest: {0}")]
     ManifestJson(#[source] serde_json::Error),
-    /// A manifest pattern failed to compile.
     #[error("unreadable manifest: {0}")]
     ManifestRegex(#[source] regex::Error),
-    /// A lock file could not be read.
     #[error("unreadable lock: {0}")]
     LockIo(#[source] std::io::Error),
-    /// A lock file is not valid TOML.
     #[error("unreadable lock: {0}")]
     LockToml(#[source] toml::de::Error),
-    /// A lock file is not valid JSON.
     #[error("unreadable lock: {0}")]
     LockJson(#[source] serde_json::Error),
-    /// A lock pattern failed to compile.
     #[error("unreadable lock: {0}")]
     LockRegex(#[source] regex::Error),
-    /// An exceptions file could not be read.
     #[error("unreadable exceptions: {0}")]
     ExceptionsIo(#[source] std::io::Error),
-    /// An exceptions file is not valid TOML.
     #[error("unreadable exceptions: {0}")]
     ExceptionsToml(#[source] toml::de::Error),
-    /// A source-usage pattern failed to compile.
     #[error("unreadable sources: {0}")]
     SourcesRegex(#[source] regex::Error),
-    /// A JVM manifest entry has no group/artifact.
     #[error("jvm dep entry without group/artifact")]
     JvmEntry,
-    /// A CC manifest entry has no name.
     #[error("cc dep entry without name")]
     CcEntry,
-    /// An exceptions entry has no dependency name.
     #[error("exception entry without dependency")]
     ExceptionEntry,
-    /// The exceptions file does not exist.
     #[error("exceptions file missing: {0}")]
     ExceptionsMissing(String),
-    /// A Maven artifacts list holds no coordinates.
     #[error("unreadable manifest: no maven coordinates")]
     NoMavenCoords,
 }
 
-/// Dependency declaration from a manifest.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DepInfo {
     pub spec: String,
@@ -97,14 +58,12 @@ pub struct DepInfo {
     pub sha256: String,
 }
 
-/// Narrow dependency-scoped exception with an explanatory reason.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Exception {
     pub raw: String,
     pub reason: String,
 }
 
-/// Usage flags for one declaration across the owning scope.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Usage {
     pub src: bool,
@@ -112,7 +71,6 @@ pub struct Usage {
     pub build: bool,
 }
 
-/// Supported ecosystems (CLI `--ecosystem` values).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Ecosystem {
     Rust,
@@ -217,9 +175,6 @@ fn version_tuple(value: &str) -> Vec<i64> {
         .collect()
 }
 
-/// Numeric dotted versions compare equal when zero-padded forms match
-/// (NuGet records `4.0` for manifest `4.0.0`; every managed resolver pads
-/// the same way). Prerelease or build segments stay string-exact.
 fn versions_equal(spec: &str, locked: &str) -> bool {
     if spec.contains(['-', '+']) || locked.contains(['-', '+']) {
         return spec == locked;
@@ -261,7 +216,6 @@ fn is_full_version(text: &str) -> bool {
         && c.chars().next().is_some_and(|c| c.is_ascii_digit())
 }
 
-/// Minimal semver compatibility for fixtures (no registry query).
 pub fn satisfies(spec: &str, locked: &str) -> bool {
     let mut s = spec
         .trim()
@@ -370,7 +324,6 @@ fn parse_toml_file(path: &Path) -> Result<toml::Value, DepcheckError> {
     toml::from_str(&text).map_err(DepcheckError::ManifestToml)
 }
 
-/// Parse Rust `Cargo.toml` declarations.
 pub fn parse_rust_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let data = parse_toml_file(path)?;
     let mut deps = BTreeMap::new();
@@ -452,7 +405,6 @@ pub fn parse_rust_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Dep
     Ok(deps)
 }
 
-/// Parse Rust `Cargo.lock` packages.
 pub fn parse_rust_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::LockToml)?;
@@ -525,7 +477,6 @@ fn python_raw_name(item: &str) -> Option<(String, String)> {
     Some((head, rest))
 }
 
-/// Parse Python `pyproject.toml` declarations.
 pub fn parse_python_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let data = parse_toml_file(path)?;
     let mut deps = BTreeMap::new();
@@ -611,7 +562,6 @@ pub fn parse_python_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, D
     Ok(deps)
 }
 
-/// Parse Python `uv.lock` packages.
 pub fn parse_python_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::LockToml)?;
@@ -638,7 +588,6 @@ pub fn parse_python_lock(path: &Path) -> Result<BTreeMap<String, String>, Depche
     Ok(pkgs)
 }
 
-/// Parse JS/TS `package.json` declarations.
 pub fn parse_js_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let data: serde_json::Value =
@@ -711,7 +660,6 @@ pub fn parse_js_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Depch
     Ok(deps)
 }
 
-/// Minimal `pnpm-lock.yaml` parser for fixtures (no yaml dep).
 pub fn parse_pnpm_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let section_re = regex::Regex::new(r"^\S+:\s*$").map_err(DepcheckError::LockRegex)?;
@@ -772,7 +720,6 @@ pub fn parse_pnpm_lock(path: &Path) -> Result<BTreeMap<String, String>, Depcheck
     Ok(pkgs)
 }
 
-/// Parse `go.mod` requires (fixture subset with depcheck markers).
 pub fn parse_go_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let mut deps = BTreeMap::new();
@@ -859,7 +806,6 @@ pub fn parse_go_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Depch
     Ok(deps)
 }
 
-/// Parse `go.sum` (native lock).
 pub fn parse_go_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let mut pkgs = BTreeMap::new();
@@ -883,7 +829,6 @@ pub fn parse_go_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckEr
     Ok(pkgs)
 }
 
-/// Parse `jvm_deps.toml` fixture manifest.
 pub fn parse_jvm_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::ManifestToml)?;
@@ -943,7 +888,6 @@ pub fn parse_jvm_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Depc
     Ok(deps)
 }
 
-/// Parse `maven_install.json` (native lock).
 pub fn parse_jvm_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let data: serde_json::Value = serde_json::from_str(&text).map_err(DepcheckError::LockJson)?;
@@ -961,7 +905,6 @@ pub fn parse_jvm_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckE
     Ok(pkgs)
 }
 
-/// Parse `paket.dependencies` (native Paket subset).
 pub fn parse_dotnet_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let mut deps = BTreeMap::new();
@@ -1028,7 +971,6 @@ pub fn parse_dotnet_lock(path: &Path) -> Result<BTreeMap<String, String>, Depche
     Ok(pkgs)
 }
 
-/// Parse `cc_deps.toml` fixture manifest (sha256 authority).
 pub fn parse_cc_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let data: toml::Value = toml::from_str(&text).map_err(DepcheckError::ManifestToml)?;
@@ -1087,7 +1029,6 @@ pub fn parse_cc_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, Depch
     Ok(deps)
 }
 
-/// Parse `cc_lock.json`.
 pub fn parse_cc_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::LockIo)?;
     let data: serde_json::Value = serde_json::from_str(&text).map_err(DepcheckError::LockJson)?;
@@ -1105,7 +1046,6 @@ pub fn parse_cc_lock(path: &Path) -> Result<BTreeMap<String, String>, DepcheckEr
     Ok(pkgs)
 }
 
-/// CC lock sha256 map (hash authority side channel).
 pub fn parse_cc_lock_sha(path: &Path) -> BTreeMap<String, String> {
     let Ok(text) = std::fs::read_to_string(path) else {
         return BTreeMap::new();
@@ -1127,7 +1067,6 @@ pub fn parse_cc_lock_sha(path: &Path) -> BTreeMap<String, String> {
     out
 }
 
-/// Parse `Gemfile` fixture manifest (Bundler authority).
 pub fn parse_ruby_manifest(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let gem_re = regex::Regex::new(r#"(?m)^\s*gem\s+["']([^"']+)["']\s*(?:,\s*["']([^"']*)["'])?"#)
@@ -1189,7 +1128,6 @@ pub fn parse_ruby_lock(path: &Path) -> Result<BTreeMap<String, String>, Depcheck
     Ok(pkgs)
 }
 
-/// Parse `depcheck_exceptions.toml` (raw key uses lower plus dash-to-underscore).
 pub fn parse_exceptions(path: Option<&Path>) -> Result<BTreeMap<String, Exception>, DepcheckError> {
     let Some(path) = path else {
         return Ok(BTreeMap::new());
@@ -1244,7 +1182,6 @@ fn normalize_exception_key(eco: Ecosystem, raw: &str) -> String {
 
 fn collect_sources(root: &Path) -> Vec<PathBuf> {
     // Action-local walk over the declared owning scope only.
-    // See: `docs/product/scope.md` (Bazel owns sources).
     let mut out = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
@@ -1268,7 +1205,6 @@ fn collect_sources(root: &Path) -> Vec<PathBuf> {
     out
 }
 
-/// Whether a path is a test file for the ecosystem.
 pub fn is_test_file(eco: Ecosystem, path: &Path) -> bool {
     let s = path.to_string_lossy().replace('\\', "/");
     let name = path
@@ -1346,7 +1282,6 @@ fn regex_escape(text: &str) -> String {
     regex::escape(text)
 }
 
-/// Usage across the owning scope (all sources under `sources_root`).
 pub fn find_usages(
     eco: Ecosystem,
     sources_root: &Path,
@@ -1510,7 +1445,6 @@ fn load_lock(eco: Ecosystem, lock: &Path) -> Result<BTreeMap<String, String>, De
     }
 }
 
-/// Verify manifest versus lock (offline, non-mutating). Returns exit code.
 pub fn cmd_consistency(
     eco: Ecosystem,
     manifest: &Path,
@@ -1559,8 +1493,6 @@ pub fn cmd_consistency(
     check_maps(eco, &deps, &pkgs, &cc_lock_sha, stdout, stderr)
 }
 
-/// Compare declared deps against locked versions (shared by the single-pair
-/// and workspace-locks commands; callers own file loading).
 fn check_maps(
     eco: Ecosystem,
     deps: &BTreeMap<String, DepInfo>,
@@ -1628,7 +1560,6 @@ fn check_maps(
     0
 }
 
-/// Parse the `MAVEN_ARTIFACTS` coordinate list (see `third_party/jvm/pins.bzl`).
 pub fn parse_maven_artifacts_list(path: &Path) -> Result<BTreeMap<String, DepInfo>, DepcheckError> {
     let text = std::fs::read_to_string(path).map_err(DepcheckError::ManifestIo)?;
     let re = regex::Regex::new(r#""([^":\s]+:[^":\s]+:[^":\s]+)""#)
@@ -1664,7 +1595,6 @@ pub fn parse_maven_artifacts_list(path: &Path) -> Result<BTreeMap<String, DepInf
     Ok(deps)
 }
 
-/// Workspace lock pairs for the six managed dialects (see `//tools:repin-all`).
 pub struct WorkspaceLocks<'a> {
     pub cargo_manifest: &'a Path,
     pub cargo_lock: &'a Path,
@@ -1771,8 +1701,6 @@ fn check_maven_pair(
     )
 }
 
-/// Verify all six workspace locks in one invocation (offline, non-mutating).
-/// Returns the worst per-dialect code: 0 clean, 1 stale, 2 unreadable.
 pub fn cmd_locks(
     locks: &WorkspaceLocks,
     stdout: &mut dyn std::fmt::Write,
@@ -1829,7 +1757,6 @@ pub fn cmd_locks(
     worst
 }
 
-/// Verify declared deps are used in the owning scope. Returns exit code.
 pub fn cmd_usage(
     eco: Ecosystem,
     manifest: &Path,

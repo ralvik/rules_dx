@@ -1,8 +1,3 @@
-//! Vale output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -34,8 +29,6 @@ fn vale_severity(level: &str) -> Result<ToolSeverity, ParseError> {
     }
 }
 
-/// Parses Vale `--output=JSON` stdout. Config envelopes (`Code`
-/// `E100`/`E201`) become [`ParseError::ValeConfig`].
 pub fn parse_vale(
     stdout: &[u8],
     code: Option<i32>,

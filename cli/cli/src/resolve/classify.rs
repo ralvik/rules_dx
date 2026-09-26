@@ -1,25 +1,9 @@
-//! Scope classification and file-ownership resolution.
-//!
-//! Split from `super` (`resolve.rs`): owns path normalization, the
-//! query-output helpers ([`first_line`],
-//! [`parse_owners`]), [`ClassifiedScopes`]/[`classify_scopes`], and
-//! [`resolve_file_owners`]. The memoized [`PackageCache`] lives in
-//! the [`super::packages`] sibling. The entry points ([`super::resolve`],
-//! [`super::resolve_for_test`], [`super::run_deploy::resolve_run`])
-//! stay in `super` and call back in; the query plumbing
-//! ([`super::ownership_set_expression`], [`super::run_label_query`])
-//! and the test mapping ([`super::test_map::map_owners_to_tests`])
-//! stay shared in `super`.
-
 use std::io;
 use std::path::{Component, Path};
 
 use super::packages::PackageCache;
 use super::{ownership_set_expression, run_label_query, QueryRunner, ResolveError};
 
-/// Normalizes a workspace-relative scope path lexically (no filesystem
-/// access): drops `.` and empty segments, rejects absolute paths and
-/// `..` escapes. An empty result addresses the workspace root.
 fn normalize_rel(raw: &str) -> Result<String, ResolveError> {
     if raw.is_empty() {
         return Err(ResolveError::EmptyScope);
@@ -45,9 +29,6 @@ fn normalize_rel(raw: &str) -> Result<String, ResolveError> {
     Ok(parts.join("/"))
 }
 
-/// Maps a normalized relative directory path to its recursive pattern:
-/// the workspace root becomes `//...`, anything else `//path/...`.
-/// Recursion is performed by Bazel, never by filesystem traversal.
 fn dir_pattern(rel: &str) -> String {
     if rel.is_empty() {
         "//...".to_owned()
@@ -56,7 +37,6 @@ fn dir_pattern(rel: &str) -> String {
     }
 }
 
-/// First non-empty stderr line, bounded for diagnostics.
 pub(crate) fn first_line(bytes: &[u8]) -> String {
     const LIMIT: usize = 300;
     let text = String::from_utf8_lossy(bytes);
@@ -69,8 +49,6 @@ pub(crate) fn first_line(bytes: &[u8]) -> String {
     }
 }
 
-/// Parses query stdout into canonical owner labels: trims lines, drops
-/// empties, sorts bytewise, and deduplicates.
 pub(crate) fn parse_owners(stdout: &[u8], label: &str) -> Result<Vec<String>, ResolveError> {
     let text = std::str::from_utf8(stdout).map_err(|_| ResolveError::QueryFailed {
         label: label.to_owned(),
@@ -87,38 +65,18 @@ pub(crate) fn parse_owners(stdout: &[u8], label: &str) -> Result<Vec<String>, Re
     Ok(owners)
 }
 
-/// One file scope after classification: the original scope text for
-/// diagnostics and the source label through the nearest enclosing
-/// package for queries.
 pub(crate) struct FileScope {
-    /// Original scope positional, for [`ResolveError::NoOwner`].
     pub(crate) scope: String,
-    /// Source label addressing the file in query syntax.
     pub(crate) label: String,
 }
 
-/// Scope positionals classified once per resolver call and shared by the
-/// plain, test, and run paths so they cannot drift apart: labels pass
-/// through, directories become recursive patterns without filesystem
-/// enumeration, and files carry their source labels for one batched
-/// ownership query.
 pub(crate) struct ClassifiedScopes {
-    /// Main-workspace labels passing through in input order.
     pub(crate) labels: Vec<String>,
-    /// File scopes in input order with their source labels.
     pub(crate) files: Vec<FileScope>,
-    /// Recursive patterns for directory scopes in input order.
     pub(crate) patterns: Vec<String>,
-    /// Original file and directory positionals in input order, for
-    /// [`ResolveError::NoRunnable`].
     pub(crate) paths: Vec<String>,
 }
 
-/// Classifies every scope positional: main-workspace labels pass
-/// through, external and package-relative labels fail, and anything else
-/// is a workspace-relative file or directory path. Package-marker walks
-/// run only for file scopes through the shared cache, so directory and
-/// label scopes never trigger enclosing-package probes.
 pub(crate) fn classify_scopes(
     scopes: &[String],
     workspace: &Path,
@@ -178,11 +136,6 @@ pub(crate) fn classify_scopes(
     Ok(classified)
 }
 
-/// Resolves every classified file scope to its direct source owners
-/// through one bounded `bazel query` invocation over the batched label
-/// set. The file content and BUILD text are never read: ownership is a
-/// graph fact reported on query stdout. An empty mapping names the first
-/// file scope, since per-file attribution is not observable from a union.
 pub(crate) fn resolve_file_owners(
     files: &[FileScope],
     workspace: &Path,
@@ -213,8 +166,6 @@ mod tests {
     use crate::resolve::NeverQuery;
     use crate::resolve::QueryResult;
 
-    /// Scripted query runner: records argv/cwd and replays canned
-    /// outputs per expression in call order.
     struct FakeQuery {
         calls: RefCell<Vec<(Vec<String>, PathBuf)>>,
         outputs: RefCell<Vec<QueryResult>>,
@@ -250,8 +201,6 @@ mod tests {
         }
     }
 
-    // Shared test guard: `crate::resolve::NeverQuery` (See: `types.rs`, issue #914).
-
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()
     }
@@ -262,7 +211,6 @@ mod tests {
         std::fs::write(full, text).expect("write file");
     }
 
-    /// Test-only one-shot label lookup without a shared cache.
     fn file_label(workspace: &Path, rel: &str, scope: &str) -> Result<String, ResolveError> {
         PackageCache::default().file_label(workspace, rel, scope)
     }

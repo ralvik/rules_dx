@@ -1,6 +1,3 @@
-//! Normalized codegen plan collection tests (split from `lib.rs`).
-//! Originally the inline `mod tests` of `lib.rs`.
-
 use super::*;
 
 use std::path::PathBuf;
@@ -160,7 +157,6 @@ fn quote_matches_json_for_label_alphabet() {
     // backslash/quote in pathological tests) the hand escaper matches
     // `serde_json::to_string` byte-for-byte, so the query literal stays
     // canonical JSON quoting without a second escaper.
-    // See: `cli/cli/src/resolve/query.rs` (`quote_label` delegates here).
     for label in [
         "//generation:result_proto",
         "@repo//pkg:schema",

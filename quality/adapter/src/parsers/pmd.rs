@@ -1,15 +1,5 @@
-//! PMD output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! PMD `-f sarif` prints a SARIF 2.1.0 log to stdout with ranged
-//! regions; `level` maps error/warning.
-
 use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
-/// Parses PMD `-f sarif` stdout. `files` are the absolute scratch
-/// paths passed to the tool.
 pub fn parse_pmd(
     stdout: &[u8],
     code: Option<i32>,

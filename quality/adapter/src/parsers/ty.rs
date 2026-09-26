@@ -1,16 +1,6 @@
-//! Ty output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Splits a `<path>:<line>:<col>: <severity>[<code>] <message>` concise
-/// diagnostic from the left: the runner always passes mirror-relative paths
-/// (colons cannot appear), while messages routinely contain colons
-/// (`... is incorrect: Expected ...`), so right-splitting misreads the
-/// severity whenever the message does.
 fn ty_diagnostic(line: &str) -> Result<(&str, u64, u64, ToolSeverity, &str, String), ParseError> {
     const TOOL: &str = "ty";
     let mut parts = line.splitn(4, ':');
@@ -61,10 +51,6 @@ fn ty_diagnostic(line: &str) -> Result<(&str, u64, u64, ToolSeverity, &str, Stri
     }
 }
 
-/// Parses Ty `check --output-format concise` stdout. Diagnostics are
-/// start points (concise carries no end); the `Found N diagnostic(s)`
-/// summary and `All checks passed!` are skipped. Anything else on stdout
-/// is a grammar mismatch. Check-only: findings never carry suggestions.
 pub fn parse_ty(
     stdout: &[u8],
     code: Option<i32>,

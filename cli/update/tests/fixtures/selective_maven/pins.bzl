@@ -1,4 +1,4 @@
-"""Selective Maven `dx update` wont-fix fixture (issue #634).
+"""Selective Maven `dx update` wont-fix fixture.
 
 Contract: `docs/decisions/0024-selective-update.md`.
 Fixture: `cli/update/tests/fixtures/selective_maven/` via `bazel run //tools/ci:selective_maven_qualification`.

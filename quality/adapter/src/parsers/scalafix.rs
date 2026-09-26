@@ -1,16 +1,3 @@
-//! Scalafix library-API output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! Console-parse is rejected: rewritable rules emit patch-only diff
-//! with no rule attribution, so the adapter wires via
-//! `scalafix.interfaces.ScalafixMainCallback` over semantic-rule
-//! artifacts. The entrypoint emits one JSON object per line (NDJSON)
-//! with per-file rule IDs plus positions.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -42,13 +29,6 @@ fn scalafix_severity(level: &str) -> Result<ToolSeverity, ParseError> {
     }
 }
 
-/// Parses Scalafix callback NDJSON stdout. `files` are the
-/// scratch-absolute paths the entrypoint checked.
-///
-/// Clean is exit 0 with empty output. Findings exit 0 with at least
-/// one record; any nonzero exit is an operational failure, never
-/// findings. Missing ends are point ranges. Unknown paths and
-/// malformed lines fail closed.
 pub fn parse_scalafix(
     stdout: &[u8],
     code: Option<i32>,

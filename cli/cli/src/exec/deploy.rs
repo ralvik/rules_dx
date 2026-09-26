@@ -1,5 +1,3 @@
-//! `dx deploy` single-label build+run execution.
-
 use super::common::*;
 use crate::args::{resolve_profile, Command, Invocation, Profile, DX_PROFILE_ENV};
 use crate::plan::{plan_deploy_build, plan_deploy_run};
@@ -7,11 +5,6 @@ use crate::reports::plan_reports;
 use crate::resolve::{check_deployable, resolve_deploy};
 use dx_output::{command_finished, command_started, write_event, FinishedCounts, OutputMode};
 
-/// Executes `dx deploy`: resolve one deploy label, cquery deployability,
-/// `bazel build --config=...`, then `bazel run --config=...` with
-/// `DX_PROFILE` forwarded. Exit codes preserve Bazel/program status
-/// verbatim; stdio and signal forwarding belong to the process runner
-/// (same contract as `dx run`).
 pub(crate) fn execute_deploy(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,

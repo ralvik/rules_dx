@@ -1,14 +1,3 @@
-//! SARIF 2.1.0 projection for normalized findings.
-//!
-//! [`render_sarif`] projects normalized [`DiagnosticEvent`] findings onto
-//! the SARIF 2.1.0 document consumed through the shared `--report`
-//! contract (`docs/cli/standard-reports.md`,
-//! `docs/cli/commands/quality.md`); [`byte_to_line`] maps canonical
-//! UTF-8 byte offsets to 1-based line/column pairs over the same source
-//! snapshot. Rendering uses the schema-typed [`serde_sarif::sarif`]
-//! builders instead of hand-rolled `serde_json`. Re-exported through
-//! the `crate::reports` facade so the public path is unchanged.
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::ReportError;
@@ -19,19 +8,6 @@ use serde_sarif::sarif::{
     Result as SarifResult, ResultLevel, Run, Sarif, Tool, ToolComponent,
 };
 
-/// Converts a canonical UTF-8 byte offset into a 1-based
-/// `(line, column)` pair over the same source snapshot. Columns count
-/// Unicode scalar values (UTF-32 code units) from the line start, so
-/// `é` and `💖` each count as one column. Lines split only on `'\n'`;
-/// `'\r'` is an ordinary character, so `"\r\n"` counts `'\r'` in the
-/// column. An empty file has a single line 1; a trailing `'\n'` opens
-/// an empty final line. Offsets past the end of the snapshot or inside
-/// a character fail rather than misreport a scanner location.
-///
-/// Backed by rust-analyzer `line-index`: `try_line_col` maps the byte
-/// offset to a UTF-8 line/column, then `to_wide` with [`WideEncoding::Utf32`]
-/// converts the column to scalar units. Files at or above `u32::MAX`
-/// bytes use the legacy scan to avoid `LineIndex`'s length assertion.
 pub fn byte_to_line(path: &str, text: &str, offset: u64) -> Result<(u64, u64), ReportError> {
     let bad = || ReportError::BadOffset {
         path: path.to_owned(),
@@ -59,9 +35,6 @@ pub fn byte_to_line(path: &str, text: &str, offset: u64) -> Result<(u64, u64), R
     Ok((wide.line as u64 + 1, wide.col as u64 + 1))
 }
 
-/// Validates the finding shape SARIF export requires, independent of
-/// the tool registry: stable tool identity, a message, and a
-/// well-formed located range.
 fn check_shape(finding: &DiagnosticEvent) -> Result<(), ReportError> {
     if finding.tool.is_empty() {
         return Err(ReportError::InvalidFinding {
@@ -173,21 +146,6 @@ fn result(
     }
 }
 
-/// Renders normalized current findings as a SARIF 2.1.0 document.
-///
-/// One deterministically ordered run per tool adapter carries stable
-/// tool and rule IDs with workspace-relative artifact URIs; severity
-/// maps to SARIF `note`, `warning`, and `error`, and line/column
-/// regions derive from the same source snapshots as canonical byte
-/// ranges. `findings` are the current results under the command policy
-/// (check mode passes every initial diagnostic; default mutating mode
-/// omits successfully fixed findings and retains remaining or
-/// not-applied ones), so the renderer applies no fixability filter
-/// itself. `tools` lists every executed adapter so runs with no
-/// remaining findings stay present with an empty `results` array. A
-/// partial collection (`complete=false`) records an unsuccessful
-/// invocation in every run while retaining validated findings. V1
-/// emits no `baselineState` and no `fixes`.
 pub fn render_sarif(
     tools: &[String],
     findings: &[DiagnosticEvent],
@@ -249,7 +207,6 @@ pub fn render_sarif(
         .version(serde_json::Value::String("2.1.0".to_owned()))
         .build();
     // Single owner for string-only JSON shapes (typed, no `unreachable!`).
-    // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
     Ok(dx_fingerprint::to_json(&document)?)
 }
 

@@ -45,7 +45,6 @@ RSPEC_FIXTURE_TEST = "//ruby/tests/fixtures/rspec:greeter_spec"
 # `rspec` without the Bundler lock).
 RSPEC_REJECTED = "unpinned runner rejected: no floating version or head"
 
-# Currency recheck (issue #932): directives below were verified current on
 # this date (rspec 3.13.0 per ADR 0008 latest-stable). Refresh the date with
 # each dependency-currency pass; pin_consistency.sh fails when absent or stale.
 RSPEC_CURRENCY_RECHECK = "2026-09-22"

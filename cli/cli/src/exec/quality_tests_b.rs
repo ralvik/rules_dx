@@ -1,6 +1,3 @@
-//! Quality execution tests (part 2/3) — split from `exec/quality.rs` with no behavior change.
-//! Originally the inline `mod tests` of `quality.rs`.
-
 use super::super::test_support::*;
 use dx_digest::blake3 as digest;
 use quality_result::proto;

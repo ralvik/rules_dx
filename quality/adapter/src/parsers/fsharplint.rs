@@ -1,16 +1,3 @@
-//! FSharpLint library-API output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! Console-parse is rejected (both standard and `-f msbuild` shapes
-//! drop fix plus typecheck context or end positions). The adapter
-//! wires via `FSharpLint.Application.Lint` with the `ReceivedWarning`
-//! callback; the entrypoint emits one JSON object per line (NDJSON)
-//! with per-warning rule IDs plus full ranges plus fix metadata.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -31,14 +18,6 @@ struct FSharpLintRecord {
     end_column: u64,
 }
 
-/// Parses FSharpLint library NDJSON stdout. `files` are the
-/// scratch-absolute paths the entrypoint checked.
-///
-/// Clean is exit 0 with empty output. Findings exit 0 with at least
-/// one record; any nonzero exit is an operational failure, never
-/// findings. Every record needs a nonempty rule plus a nonzero full
-/// range; unknown paths and malformed lines fail closed. All findings
-/// are warnings: FSharpLint reports warnings only.
 pub fn parse_fsharplint(
     stdout: &[u8],
     code: Option<i32>,

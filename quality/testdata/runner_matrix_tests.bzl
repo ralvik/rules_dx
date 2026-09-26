@@ -164,12 +164,6 @@ def _runner_matrix_test_impl(ctx):
         run.append(_prefixed_file_ref(ctx, tool + "=" + rel + "=", f))
 
     # Launcher env mirrors real_aspects.bzl: the Python venv stubs locate
-    # their interpreter through the runfiles forest, so each staged
-    # launcher gets RUNFILES_DIR pointing at this test's runfiles root
-    # (the analogue of the aspect's `<runner>.runfiles`); the Node
-    # wrappers likewise need JS_BINARY__NO_CD_BINDIR=1. Duplicates resolve
-    # last-wins in the runner's cleared env, so explicit case tool_env
-    # entries come after the mirrors and win.
     for launcher in ["pydoclint", "flake8", "pylint"]:
         if launcher in tools:
             run.append(shell.quote("--tool-env"))
@@ -404,7 +398,6 @@ def runner_matrix_suite(name, cases):
             upstream_generated = case.get("upstream_generated", {}),
             expected = case["expected"],
             tags = ["no-coverage"],
-            # Goldens pin linux_x86_64 tool output (issue #1207); arm64/macOS
             # runners skip rather than drift.
             target_compatible_with = ["@platforms//os:linux", "@platforms//cpu:x86_64"],
         )

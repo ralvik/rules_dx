@@ -1,14 +1,3 @@
-//! Test/coverage report collection and rendering.
-//!
-//! Split from [`super::workflow`]: owns the `test`/`coverage` report
-//! tail of the workflow pipeline ([`TestReportsRequest`] and
-//! [`execute_test_reports`]) — JUnit/LCOV collection from the BEP
-//! stream, report rendering, the `--min-coverage` gate, and exit-code
-//! selection. [`super::workflow::execute_workflow`] plans and runs
-//! Bazel, then dispatches here; `build` returns its Bazel status
-//! verbatim and `run`/`deploy` forward to their own executors before
-//! this stage.
-
 use super::common::*;
 use crate::args::Invocation;
 use crate::plan::WorkflowVerb;
@@ -23,9 +12,6 @@ use std::collections::BTreeMap;
 use std::io::{BufReader, Write};
 use std::path::Path;
 
-/// Inputs to [`execute_test_reports`]: CLI plumbing plus the report plan
-/// and Bazel outcome. Grouped so the 9-argument dispatch takes one value
-/// instead of nine positional arguments.
 pub(crate) struct TestReportsRequest<'a> {
     pub(crate) invocation: &'a Invocation,
     pub(crate) workspace: &'a Path,
@@ -38,9 +24,6 @@ pub(crate) struct TestReportsRequest<'a> {
     pub(crate) bazel_code: i32,
 }
 
-/// bytes, renders requested reports, and selects the workflow exit
-/// code: Bazel's exact nonzero code is preserved; success with
-/// incomplete collection or failed reports exits 1.
 pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
     let TestReportsRequest {
         invocation,
@@ -336,7 +319,6 @@ pub(crate) fn execute_test_reports(request: TestReportsRequest<'_>) -> i32 {
         if bazel_code != 0 {
             // Failure explainer without argv/secrets: which workflow failed
             // plus the stderr pointer; Bazel diagnostics stay on stderr.
-            // See: `docs/cli/output-protocol.md#operational-error`.
             if let Ok(event) = dx_output::error_event(
                 "bazel_failed",
                 &format!(

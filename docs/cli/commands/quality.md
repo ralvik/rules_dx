@@ -93,8 +93,8 @@ Ty initially runs per compatible Python target, propagates over dependencies, an
 uses provider-derived transitive sources and import roots for resolution. Its
 `--fix` behavior produces cacheable proposed replacements. Suppression insertion,
 including Ty's `--add-ignore`, is not a normal fix and is excluded. Final Ty action
-granularity follows [ADR 0003](../../decisions/0003-action-granularity.md) as amended by
-[ADR 0022](../../decisions/0022-no-benchmarking.md).
+granularity follows ADR 0003 as amended by
+ADR 0022.
 
 `dx typecheck --check` is non-mutating and requests the same genuine proposed fixes as
 default mode. It shows all original findings and marks only guaranteed fixes as fixable. It
@@ -132,7 +132,7 @@ effective sources creates no stage, action of its own, or tool fetch.
 converged format-pipeline results, validates recorded source digests, and atomically applies each
 agreed stable candidate per file. It does not apply non-formatting lint fixes. Pipeline order,
 fixed source subsets, convergence, and rejection behavior are defined by the
-[Quality Action Model](../../quality/action-model.md); this command consumes those results rather
+Quality Action Model; this command consumes those results rather
 than reimplementing the algorithm. Incomplete or globally invalid result collection writes nothing.
 
 With no scope, format selects `//...`; only checked-in Bazel-owned direct sources included in at

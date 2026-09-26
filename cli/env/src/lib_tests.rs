@@ -1,9 +1,5 @@
-//! Managed `.dx/bin` bootstrap tests (split from `lib.rs`).
-//! Originally the inline `mod tests` of `lib.rs`.
-
 use super::*;
 
-/// One tool plan with a single host name.
 fn plan(bin_name: &str, owner: &str) -> ToolPlan {
     ToolPlan {
         bin_name: bin_name.to_string(),
@@ -12,9 +8,6 @@ fn plan(bin_name: &str, owner: &str) -> ToolPlan {
     }
 }
 
-/// Builds a staged tree on disk: real executable files under
-/// `targets/`, one symlink per host name under `staged/`, and metadata
-/// JSON. Returns `(staged_bin, metadata_path, metadata_text)`.
 fn write_staged(root: &Path, tools: &[(&str, &str, &[&str])]) -> (PathBuf, PathBuf, String) {
     let targets = root.join("targets");
     let staged_bin = root.join("staged");
@@ -46,9 +39,6 @@ fn write_staged(root: &Path, tools: &[(&str, &str, &[&str])]) -> (PathBuf, PathB
     (staged_bin, metadata_path, text)
 }
 
-/// Refresh options over a fresh workspace with a 10s lock timeout.
-/// The workspace directory itself always exists (the shim runs inside
-/// a real workspace); only `.dx` starts absent.
 fn options(root: &Path, staged_bin: PathBuf, metadata: PathBuf) -> RefreshOptions {
     fs::create_dir_all(root.join("ws")).expect("create workspace");
     RefreshOptions {
@@ -60,7 +50,6 @@ fn options(root: &Path, staged_bin: PathBuf, metadata: PathBuf) -> RefreshOption
     }
 }
 
-/// Refreshes with the real symlink probe and unwraps success.
 fn refresh_ok(options: &RefreshOptions) -> RefreshOutcome {
     refresh(options, &probe_symlink).expect("refresh succeeds")
 }

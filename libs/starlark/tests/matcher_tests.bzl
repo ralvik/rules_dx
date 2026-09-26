@@ -1,4 +1,4 @@
-"""Unit tests proving richer matchers over the futures fixture (issue #790).
+"""Unit tests proving richer matchers over the futures fixture.
 """
 
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_false", "expect_match", "expect_true", "starlark_test")

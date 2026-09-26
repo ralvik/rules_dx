@@ -1,19 +1,7 @@
-//! Gate verdict for the coverage gate.
-//!
-//! Split from `super` (`lib.rs`): owns [`FileVerdict`], [`GateVerdict`],
-//! [`is_covered_language`], [`evaluate`], and [`render`] plus the
-//! per-file checker (`check_file`). Re-exported through `super` so the
-//! public paths stay `dx_lcov::{FileVerdict, GateVerdict,
-//! is_covered_language, evaluate, render}`. Distinct from the `parse`
-//! module (combined-LCOV parsing), the `ignores` module (source-level
-//! exclusion markers), and the `inventory`/`run` modules (repo inventory
-//! and CLI).
-
 use std::collections::BTreeMap;
 
 use super::{find_ignores, is_ignored, FileHits, LcovError, ELIGIBLE, SUPPORT};
 
-/// Per-file verdict with exact counts and uncovered locations.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct FileVerdict {
     pub path: String,
@@ -24,7 +12,6 @@ pub struct FileVerdict {
 }
 
 /// Whole-gate verdict. `passed` is true only with zero errors, zero uncovered
-/// lines, and a non-empty denominator.
 #[derive(Debug, Default, PartialEq, Eq, Clone)]
 pub struct GateVerdict {
     pub files: Vec<FileVerdict>,
@@ -32,26 +19,9 @@ pub struct GateVerdict {
     pub eligible: u64,
     pub passed: bool,
     pub errors: Vec<String>,
-    /// Instrumented sources outside the covered languages, observed in the
-    /// report but counted nowhere.
     pub other_sources: Vec<String>,
 }
 
-/// Whether LCOV `SF` records for `path` carry gated line data. Rust and Go
-/// use the pinned Bazel llvm-cov/go integrations; C/C++ uses the pinned
-/// Bazel LLVM source coverage (rules_cc plus LLVM tools,);
-/// Python and JavaScript/TypeScript participate in `bazel coverage`
-/// through the repo's pytest/jest wrappers (`.py`; `.js`/`.jsx`/`.mjs`/`.cjs`
-/// plus `.ts`/`.tsx`/`.mts`/`.cts`; see
-/// `docs/testing/generation.md`). JVM languages participate through the
-/// repo's `java_*`/`kotlin_*`/`scala_*` wrappers via Bazel JaCoCo collection
-/// merged to LCOV (`.java`/`.kt`/`.scala`); .NET languages participate
-/// through the `csharp_*`/`fsharp_*` wrappers via Bazel Coverlet collection
-/// merged to LCOV (`.cs`/`.fs`/`.fsi`). Any other extension (including
-/// `.pyi` stubs, `.d.ts` declarations, `.svelte`/`.vue`/`.astro`/`.mdx`
-/// components) lands in
-/// `other_sources` and counts nowhere; Starlark line data stays a hard
-/// error until the measurement route exists.
 pub fn is_covered_language(path: &str) -> bool {
     if path.ends_with(".d.ts") || path.ends_with(".d.mts") || path.ends_with(".d.cts") {
         return false;
@@ -87,7 +57,6 @@ fn is_starlark(path: &str) -> bool {
     path.ends_with(".bzl")
 }
 
-/// Evaluate one eligible file against its report hits.
 fn check_file(
     path: &str,
     hits: &FileHits,
@@ -139,16 +108,6 @@ fn check_file(
     })
 }
 
-/// Evaluate the gate.
-///
-/// `inventory` maps repo-owned paths to [`ELIGIBLE`] or [`SUPPORT`];
-/// `bazel_sources` lists the repo-owned sources declared by
-/// Bazel; `report` is the parsed combined LCOV; `load_source` reads workspace
-/// sources. Support files with hits are skipped silently; report entries
-/// outside the covered languages are listed separately and never merged
-/// into gated counts, except
-/// that Starlark entries carrying line data fail until a measurement route
-/// and classification exist.
 pub fn evaluate(
     inventory: &BTreeMap<String, String>,
     bazel_sources: &[String],
@@ -232,8 +191,6 @@ pub fn evaluate(
     verdict
 }
 
-/// Render the verdict with exact counts, uncovered locations, and errors.
-/// The informational rate never decides; only exact counts do.
 pub fn render(verdict: &GateVerdict) -> String {
     let mut out = String::new();
     if verdict.passed {
@@ -295,10 +252,6 @@ pub fn render(verdict: &GateVerdict) -> String {
 mod tests {
     use super::*;
 
-    /// Build a marker suffix without spelling the contiguous literal in this
-    /// file: the gate scans its own sources, so test data must not contribute
-    /// directives. Every marker below lives inside string literals, which the
-    /// comment scanner ignores.
     fn marker(kind: &str) -> String {
         ["LCOV", "_EXCL", kind].concat()
     }

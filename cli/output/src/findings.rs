@@ -1,25 +1,14 @@
-//! Diagnostic and notice NDJSON events for the `dx` CLI.
-//!
-//! Split from `super` (`lib.rs`): owns `Snapshot`, `Resolution`,
-//! `DiagnosticEvent`, `diagnostic_event`, `sort_diagnostics`, `NoticeEvent`,
-//! and `notice_event`. Re-exported through `super` so the public path stays
-//! `dx_output::{...}`. Distinct from the `diagnostics` module, which owns
-//! human status emission and tracing setup.
-
 use crate::lifecycle::{base, nonempty};
 use crate::severity::Severity;
 use crate::validation::{check_path, OutputError};
 use serde_json::{json, Value};
 
-/// Which pipeline snapshot a diagnostic addresses.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Snapshot {
     Initial,
     Terminal,
 }
 
-/// Resolution of a default-mode initial diagnostic after terminal apply
-/// outcomes are known.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Resolution {
     Fixed,
@@ -37,9 +26,6 @@ impl Resolution {
     }
 }
 
-/// One normalized source finding. Terminal diagnostics always use
-/// `fixable=false`; `resolution` is required exactly for initial
-/// diagnostics in default mutating mode (`mutating=true`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DiagnosticEvent {
     pub severity: Severity,
@@ -118,11 +104,6 @@ pub fn diagnostic_event(
     Ok(Value::Object(map))
 }
 
-/// Sorts diagnostics into the deterministic protocol order: initial before
-/// terminal, present paths before pathless findings, path by UTF-8 bytes,
-/// absent range before present range, start byte, end byte, severity rank,
-/// tool, absent rule before present rule, rule, then message. Fixability
-/// and resolution do not alter ordering.
 pub fn sort_diagnostics(diagnostics: &mut [DiagnosticEvent]) {
     diagnostics.sort_by(|a, b| {
         a.snapshot
@@ -140,9 +121,6 @@ pub fn sort_diagnostics(diagnostics: &mut [DiagnosticEvent]) {
     });
 }
 
-/// Non-fatal user-facing information that is neither a source finding nor
-/// an operational failure. `ignored_import` notices require
-/// path/language/import and omit scope and related command.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoticeEvent {
     pub level: String,

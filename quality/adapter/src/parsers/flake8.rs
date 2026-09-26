@@ -1,15 +1,6 @@
-//! flake8 output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Maps a flake8 code family onto a severity: `E` (pycodestyle errors)
-/// and `F` (pyflakes) are errors, `W` (pycodestyle warnings) and `C`
-/// (mccabe complexity) are warnings. The pinned flake8 ships no plugins,
-/// so any other family is a grammar mismatch, never a silent downgrade.
 fn flake8_severity(code: &str) -> Result<ToolSeverity, ParseError> {
     const TOOL: &str = "flake8";
     match code.chars().next() {
@@ -22,10 +13,6 @@ fn flake8_severity(code: &str) -> Result<ToolSeverity, ParseError> {
     }
 }
 
-/// Splits a `path:row:col:code:message` line from the left: the runner
-/// always passes scratch-absolute paths (colons cannot appear), while
-/// messages routinely contain colons, so right-splitting misreads the
-/// position whenever the message does.
 fn flake8_line(line: &str) -> Result<(&str, u64, u64, &str, &str), ParseError> {
     const TOOL: &str = "flake8";
     let mut parts = line.splitn(5, ':');
@@ -54,11 +41,6 @@ fn flake8_line(line: &str) -> Result<(&str, u64, u64, &str, &str), ParseError> {
     }
 }
 
-/// Parses flake8 `--format` stdout: one `path:row:col:code:message` line
-/// per finding. Findings are points (flake8 reports no extent);
-/// suggestions stay empty because flake8 is check-only. Clean is empty
-/// output on exit 0; empty output on any other exit is a grammar
-/// mismatch.
 pub fn parse_flake8(
     stdout: &[u8],
     code: Option<i32>,

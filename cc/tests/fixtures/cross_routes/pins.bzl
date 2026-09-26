@@ -66,10 +66,6 @@ EXCLUDED_NOTE = "do not require Linux/macOS-to-Windows, Linux/Windows-to-macOS, 
 EXCLUSION_SCOPE = "outside the initial qualification cohort, not claims of impossibility"
 
 # Execution evidence: record the actual action execution platform,
-# not only the Bazel client or CI runner OS. Run resulting artifacts
-# on matching native target workers; cross-building alone is
-# insufficient. Emulation, Rosetta, remote execution and
-# deployment-floor testing are distinct evidence.
 EXECUTION_PLATFORM_NOTE = "Record the actual action execution platform, not only the Bazel client or CI runner OS"
 TARGET_EXECUTION_NOTE = "Run resulting artifacts on matching native target workers; cross-building alone is insufficient"
 DISTINCT_EVIDENCE_NOTE = "Emulation, Rosetta, remote execution and deployment-floor testing are distinct evidence"
@@ -82,10 +78,6 @@ LLVM_CI_NOTE = "hermetic-llvm CI uses remote execution in Linux jobs and narrowe
 RULES_RS_CI_NOTE = "rules_rs Windows-labelled lane builds remote GNULVM targets, not native MSVC tests or coverage"
 
 # Cache plus remote separation: every claimed row carries the shared
-# BuildBuddy remote cache (the per-host disk-cache scopes are deleted)
-# plus remote evidence; per-cell coverage never unions across cells.
-# Required native workflows are never weakened to obtain a larger
-# cross-build table.
 CACHE_SHARED = "BuildBuddy shared remote cache, no per-host scopes"
 CACHE_SCOPE_NOTE = "shared cache evidence for every claimed row"
 REMOTE_EVIDENCE_NOTE = "separate cache and remote evidence for every claimed row"

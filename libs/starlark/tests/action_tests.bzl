@@ -1,4 +1,4 @@
-"""Unit tests proving the action-subjects use case (issue #795).
+"""Unit tests proving the action-subjects use case.
 """
 
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_equal", "expect_false", "expect_match", "expect_true", "starlark_test")

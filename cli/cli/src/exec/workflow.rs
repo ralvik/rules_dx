@@ -1,11 +1,3 @@
-//! Build/test/coverage workflow execution: plans and runs Bazel, then collects reports.
-//!
-//! Test/coverage report collection and rendering lives in
-//! [`super::test_reports`]; this module keeps the workflow dispatch
-//! ([`execute_workflow`]) — `run`/`deploy` forwarding, scope
-//! resolution, Bazel planning/launch, and the `build` verbatim-status
-//! path.
-
 use super::common::*;
 use super::deploy::execute_deploy;
 use super::run::execute_run;
@@ -19,10 +11,6 @@ use dx_output::{
 };
 use dx_process::ForwardError;
 
-/// Workflow dispatch: `build`/`test`/`coverage` preserve Bazel status
-/// with JUnit/LCOV collection; `run` preserves the application status
-/// verbatim. Pre-execution usage failures exit 2; operational failures
-/// exit 1.
 pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command == Command::Run {
         return execute_run(invocation, env);
@@ -161,7 +149,6 @@ pub(crate) fn execute_workflow(invocation: &Invocation, env: Env<'_>) -> i32 {
             if bazel_code != 0 {
                 // Failure explainer without argv/secrets: which workflow
                 // failed plus the stderr pointer; Bazel diagnostics stay on
-                // stderr. See: `docs/cli/output-protocol.md#operational-error`.
                 if let Ok(event) = error_event(
                     "bazel_failed",
                     &format!(

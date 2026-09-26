@@ -1,8 +1,3 @@
-//! pylint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -38,11 +33,6 @@ fn pylint_severity(kind: &str) -> Result<ToolSeverity, ParseError> {
     }
 }
 
-/// Parses pylint `--output-format=json` stdout into one finding per
-/// message. Pylint columns are 0-based, so placement adds one (a null
-/// column is a line-level point at column 1); a null end is a point
-/// range. Check-only: suggestions stay empty. Clean is `[]` on exit 0;
-/// an empty array on any other exit is a grammar mismatch.
 pub fn parse_pylint(
     stdout: &[u8],
     code: Option<i32>,

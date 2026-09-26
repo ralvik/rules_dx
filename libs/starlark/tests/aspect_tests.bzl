@@ -1,4 +1,4 @@
-"""Analysis tests proving aspect subjects (issue #791).
+"""Analysis tests proving aspect subjects.
 """
 
 load("//libs/starlark:defs.bzl", "starlark_test")

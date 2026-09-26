@@ -1,24 +1,3 @@
-//! Scope resolution: labels, patterns, files, directories, and
-//! test/coverage mapping (WP1+WP2).
-//!
-//! Contract: `docs/cli/target-resolution.md#input-classification` and
-//! `#file-ownership`. Main-workspace labels and target patterns pass
-//! through after workspace validation; existing files resolve to every
-//! direct source owner through one unconfigured `bazel query` invocation
-//! per resolver call, with every file label quoted into a single
-//! deterministic set and addressed by the nearest enclosing package;
-//! directories become recursive Bazel patterns without
-//! filesystem enumeration. This module never reads BUILD files and never
-//! lists directories: the only filesystem calls are existence/kind probes
-//! (`symlink_metadata`), and ownership facts come solely from Bazel
-//! query stdout.
-//!
-//! Run/deploy resolution (`resolve_run`, `resolve_deploy`,
-//! `check_deployable`) lives in the [`run_deploy`](self::run_deploy)
-//! domain submodule; the public path stays
-//! `crate::resolve::{...}` via the re-exports below. See the matching
-//! note in `plan.rs` for the planning carve.
-
 pub mod classify;
 pub mod codegen_expand;
 pub mod entry;
@@ -44,8 +23,6 @@ mod tests {
     use super::*;
     use std::io;
     use std::path::Path;
-
-    // Shared test guard: `super::NeverQuery` (See: `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

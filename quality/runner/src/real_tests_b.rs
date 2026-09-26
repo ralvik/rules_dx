@@ -1,20 +1,8 @@
-//! Split from `real.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::real_tests_a::*;
 use super::*;
 use quality_result::encode_validated;
 use quality_result::proto::Convergence;
 
-/// Repo-owned Markdown checker double: reports one
-/// `missing-file-target` finding per `--source` workspace path whose
-/// materialized bytes contain the `BROKEN` marker, keyed by workspace
-/// path exactly like the real binary.
-///
-/// The `argv` scan below stays hand-rolled (fallback): this
-/// is a test double inspecting the invocation it received, not
-/// user-facing parsing, so a parsing library would couple the fake to
-/// grammar internals for no fidelity gain.
 pub(super) fn markdown_links(
     argv: &[OsString],
     _cwd: &Path,
@@ -331,13 +319,6 @@ pub(super) fn markdown_check_pipeline_is_stable_without_rewriting() {
     assert!(encode_validated(&result).is_ok());
 }
 
-/// Sibling-aware markdown double: a BROKEN link resolves exactly when
-/// at least one `--sibling` mapping reaches the invocation, proving
-/// the backend threads siblings through to the checker.
-///
-/// The `argv` scan below stays hand-rolled (fallback): like
-/// [`markdown_links`], this test double inspects its invocation rather
-/// than parsing user input.
 pub(super) fn markdown_sibling_links(
     argv: &[OsString],
     _cwd: &Path,
@@ -671,9 +652,6 @@ pub(super) fn rustfmt_without_hint_gets_materialized_defaults() {
     assert!(findings.is_empty());
 }
 
-/// rustfmt double asserting the caller edition reaches `--edition`
-/// verbatim: the backend passes the aspect value through, never a
-/// default.
 pub(super) fn rustfmt_edition_passthrough(
     argv: &[OsString],
     _cwd: &Path,
@@ -780,7 +758,6 @@ pub(super) fn clippy_delegated_fix_is_check_only() {
 pub(super) fn clippy_delegated_missing_file_fails_the_action() {
     // Guaranteed-absent without pid tricks: a fresh OS-random
     // scratch dir always exists, so `absent` inside it never does.
-    // Scratch discipline (See: `docs/testing/README.md`, issue #750):
     // same prefix plus auto-clean discipline as `dx_test_scratch`.
     let scratch = tempfile::Builder::new()
         .prefix("dx-delegated-clippy-")
@@ -855,7 +832,6 @@ pub(super) fn rustc_delegated_fix_is_check_only() {
 pub(super) fn rustc_delegated_missing_file_fails_the_action() {
     // Guaranteed-absent without pid tricks: a fresh OS-random
     // scratch dir always exists, so `absent` inside it never does.
-    // Scratch discipline (See: `docs/testing/README.md`, issue #750):
     // same prefix plus auto-clean discipline as `dx_test_scratch`.
     let scratch = tempfile::Builder::new()
         .prefix("dx-delegated-rustc-")

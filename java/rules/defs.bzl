@@ -16,13 +16,6 @@ _DX_JAVA_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream `JavaInfo`,
-# `InstrumentedFilesInfo`, `OutputGroupInfo`, and `RunEnvironmentInfo`
-# at runtime when present, but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a Java library,
-# so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so quality aspects can gate on it. Coverage reads
-# `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `go_*` test forwarder).
 _DX_JAVA_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,

@@ -1,18 +1,3 @@
-//! Managed `.dx/bin` bootstrap core (WP2).
-//!
-//! Refresh semantics for the runnable environment: adopt nothing, install
-//! the staged `environment_tree` output set atomically, and prove
-//! provenance with a binary marker so later runs can no-op or replace.
-//!
-//! Contract: `docs/environments/environment.md` (Tool Exposure, Ownership
-//! and Refresh) and `docs/environments/managed-state.md` (Installation and
-//! Ownership, Commit Lock and Concurrency, Windows Symlink Pre-Check,
-//! Marker Encoding and Versioning).
-//!
-//! The binary shim (`main.rs`) owns process concerns only: flag parsing,
-//! workspace discovery, staged-input location, and exit codes. Everything
-//! here is unit-tested.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -26,56 +11,34 @@ use marker_proto::dx::env::v1::{EnvIdentity, EnvMarker, ToolEntry};
 use prost::Message;
 use serde::Deserialize;
 
-/// Name of the provenance marker file inside the installed tree.
 pub const MARKER_FILE_NAME: &str = ".rules_dx_managed";
-/// Marker schema version written by this installer. Markers with any other
-/// version are refused, never migrated.
 pub const MARKER_SCHEMA_VERSION: u32 = 1;
-/// Staged-metadata schema version this installer validates. It must equal
-/// the Starlark `ENV_METADATA_SCHEMA_VERSION`; mismatches fail closed.
 pub const STAGED_METADATA_SCHEMA_VERSION: u32 = 1;
-/// Installed tool directory name under `.dx`.
 pub const BIN_DIR_NAME: &str = "bin";
-/// Commit-lock file name under `.dx`.
 pub const LOCK_FILE_NAME: &str = ".commit.lock";
-/// Staging directory name under `.dx`. Staging beside the target keeps
-/// both renames on one filesystem, so each stays atomic.
 pub const STAGE_DIR_NAME: &str = "bin.next";
-/// Previous-tree directory name under `.dx` during the atomic swap.
 pub const PREV_DIR_NAME: &str = "bin.prev";
-/// Provenance identity digest length in bytes (BLAKE3-256).
 pub const IDENTITY_LEN: usize = 32;
-/// How long refresh contends for the commit lock before failing.
 pub const LOCK_TIMEOUT: Duration = Duration::from_secs(10);
-/// Host-name suffixes the installer refuses to materialize. Mirrors the
-/// Starlark registry so hand-edited staged metadata cannot smuggle an
-/// executable suffix past the boundary.
 const EXECUTABLE_SUFFIXES: &[&str] = &[".exe", ".bat", ".cmd", ".com"];
-/// Host-name stems reserved on Windows. Mirrors the Starlark registry.
 const WINDOWS_RESERVED_STEMS: &[&str] = &[
     "con", "prn", "aux", "nul", "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8",
     "com9", "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
 ];
 
-/// One validated tool awaiting installation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ToolPlan {
-    /// Primary host command name.
     pub bin_name: String,
-    /// Configured producer target label (internal identity).
     pub owner: String,
-    /// Host names materialized as links, in staged order.
     pub host_names: Vec<String>,
 }
 
-/// Staged tree management metadata as written by `environment_tree`.
 #[derive(Deserialize)]
 struct StagedMetadata {
     schema_version: u32,
     tools: Vec<StagedTool>,
 }
 
-/// One tool record inside the staged metadata.
 #[derive(Deserialize)]
 struct StagedTool {
     bin_name: String,
@@ -83,85 +46,54 @@ struct StagedTool {
     host_names: Vec<String>,
 }
 
-/// Refresh failure. Every variant is operational (exit 1 at the shim);
-/// usage errors live in the shim and never surface as this type.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
-    /// Workspace root is missing or not a directory.
     #[error("workspace root {path} is not a directory", path = path.display())]
     WorkspaceRoot { path: PathBuf },
-    /// Staged inputs are missing, unreadable, or structurally invalid.
     #[error("staged tree is unusable: {reason}")]
     Staged { reason: String },
-    /// Staged metadata carries an unsupported schema version.
     #[error(
         "staged metadata schema {found} is unsupported (installer handles {STAGED_METADATA_SCHEMA_VERSION}); regenerate the tree"
     )]
     UnsupportedStagedSchema { found: u32 },
-    /// A staged tool record fails validation.
     #[error("staged tool is invalid: {reason}")]
     InvalidTool { reason: String },
-    /// `.dx/bin` exists but is not a tree this installer wrote. Never
-    /// adopted, never modified: the operator removes or renames it.
     #[error("refusing to touch unmanaged {path}: {detail}", path = path.display())]
     Unmanaged { path: PathBuf, detail: String },
-    /// The installed marker carries an unsupported schema version,
-    /// typically written by a newer installer. Upgrade, do not delete.
     #[error(
         "installed marker schema {found} is unsupported (installer handles {MARKER_SCHEMA_VERSION}); upgrade dx instead of deleting state"
     )]
     UnsupportedMarkerSchema { found: u32 },
-    /// The installed marker is present but undecodable.
     #[error("installed marker is invalid: {reason}")]
     MarkerInvalid { reason: String },
-    /// Another refresh holds the commit lock past the deadline.
     #[error(
         "another refresh holds {path}; giving up after the commit-lock deadline",
         path = path.display()
     )]
     Busy { path: PathBuf },
-    /// The commit lock cannot be opened or locked.
     #[error("cannot lock {path}: {reason}", path = path.display())]
     LockFailed { path: PathBuf, reason: String },
-    /// The host cannot create symlinks. Reported before any mutation.
     #[error("symlinks are unusable on this host: {detail}")]
     SymlinkUnsupported { detail: String },
-    /// A workspace mutation failed. Staging is cleaned; the managed tree
-    /// is either untouched (pre-commit failure) or fully swapped (the
-    /// swap itself is two atomic renames).
     #[error("installation failed: {reason}")]
     Install { reason: String },
 }
 
-/// Refresh inputs. `os` selects the symlink-failure guidance
-/// (`std::env::consts::OS` at the call site) and `lock_timeout` bounds
-/// commit-lock contention.
 pub struct RefreshOptions {
-    /// Workspace root owning the `.dx` directory.
     pub workspace_root: PathBuf,
-    /// Staged tree `bin` directory (one symlink per host name).
     pub staged_bin: PathBuf,
-    /// Staged tree metadata JSON file.
     pub staged_metadata: PathBuf,
-    /// Host operating system for failure guidance.
     pub os: &'static str,
-    /// How long to contend for the commit lock.
     pub lock_timeout: Duration,
 }
 
-/// Refresh outcome for operator messaging.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RefreshOutcome {
-    /// Installed marker already matches the candidate set; nothing changed.
     AlreadyCurrent,
-    /// No managed tree existed; the candidate set is now installed.
     InstalledFresh,
-    /// A managed tree with a different set existed; it was replaced.
     InstalledReplacement,
 }
 
-/// Deterministic encoding of the installed set: tools sorted by
-/// `(bin_name, owner)`, so configuration order never affects identity.
 pub fn canonical_identity_bytes(tools: &[ToolPlan]) -> Vec<u8> {
     let mut sorted: Vec<&ToolPlan> = tools.iter().collect();
     sorted.sort_by(|a, b| {
@@ -183,19 +115,14 @@ pub fn canonical_identity_bytes(tools: &[ToolPlan]) -> Vec<u8> {
     identity.encode_to_vec()
 }
 
-/// BLAKE3-256 over the canonical identity bytes: the snapshot identity,
-/// with no algorithm negotiation. Routed through `dx_digest` so the digest
-/// algorithm has one owner.
 fn identity_digest(canonical: &[u8]) -> [u8; 32] {
     dx_digest::blake3(canonical)
 }
 
-/// Lowercase hex of the identity digest, for operator messaging.
 pub fn identity_hex(tools: &[ToolPlan]) -> String {
     dx_digest::to_hex(&identity_digest(&canonical_identity_bytes(tools)))
 }
 
-/// Encodes a provenance marker for `identity`.
 pub fn encode_marker(identity: &[u8; 32]) -> Vec<u8> {
     EnvMarker {
         schema_version: MARKER_SCHEMA_VERSION,
@@ -204,7 +131,6 @@ pub fn encode_marker(identity: &[u8; 32]) -> Vec<u8> {
     .encode_to_vec()
 }
 
-/// Decodes and validates a provenance marker.
 pub fn decode_marker(bytes: &[u8]) -> Result<[u8; 32], Error> {
     let marker = EnvMarker::decode(bytes).map_err(|e| Error::MarkerInvalid {
         reason: format!("not a valid marker: {e}"),
@@ -227,7 +153,6 @@ pub fn decode_marker(bytes: &[u8]) -> Result<[u8; 32], Error> {
     Ok(identity)
 }
 
-/// Parses and validates staged tree metadata into installable plans.
 pub fn parse_staged(text: &str) -> Result<Vec<ToolPlan>, Error> {
     let metadata: StagedMetadata = serde_json::from_str(text).map_err(|e| Error::Staged {
         reason: format!("metadata is not valid JSON: {e}"),
@@ -273,9 +198,6 @@ pub fn parse_staged(text: &str) -> Result<Vec<ToolPlan>, Error> {
         .collect()
 }
 
-/// Validates one host name before it becomes a symlink. Mirrors the
-/// Starlark registry so staged metadata that bypassed analysis still
-/// cannot plant path traversal or platform-hostile names.
 fn validate_host_name(bin_name: &str, name: &str) -> Result<(), Error> {
     let bad = |why: &str| Error::InvalidTool {
         reason: format!("tool '{bin_name}' has invalid host name '{name}': {why}"),
@@ -306,11 +228,6 @@ fn validate_host_name(bin_name: &str, name: &str) -> Result<(), Error> {
     Ok(())
 }
 
-/// Opens (creating) the commit-lock file and contends for an exclusive
-/// flock until `timeout`. Only contention retries; any other flock failure
-/// aborts immediately so platform errors are never misreported as busy.
-/// The contention loop is owned by `dx_atomic_fs::lock_exclusive`;
-/// this function owns only the lock-file open.
 pub fn acquire_lock(dx_dir: &Path, timeout: Duration) -> Result<File, Error> {
     let path = dx_dir.join(LOCK_FILE_NAME);
     // The lock file's bytes are never read; open-or-create must leave any
@@ -337,28 +254,22 @@ pub fn acquire_lock(dx_dir: &Path, timeout: Duration) -> Result<File, Error> {
     }
 }
 
-/// Default symlink probe: proves link creation works in `dir` before the
-/// installer mutates anything. The probe target is intentionally dangling:
-/// link creation itself is what is under test.
 pub fn probe_symlink(dir: &Path) -> io::Result<()> {
     let link = dir.join("symlink.probe");
     symlink_entry(&PathBuf::from("symlink.target"), &link)?;
     fs::remove_file(&link)
 }
 
-/// Platform symlink primitive for staged and probe links.
 #[cfg(windows)]
 fn symlink_entry(target: &Path, link: &Path) -> io::Result<()> {
     std::os::windows::fs::symlink_file(target, link)
 }
 
-/// Platform symlink primitive for staged and probe links.
 #[cfg(not(windows))]
 fn symlink_entry(target: &Path, link: &Path) -> io::Result<()> {
     std::os::unix::fs::symlink(target, link)
 }
 
-/// Symlink-failure guidance for `os` (`std::env::consts::OS` values).
 fn symlink_guidance(os: &str) -> &'static str {
     if os == "windows" {
         return "enable Developer Mode or grant SeBackupPrivilege so symlink creation works, then retry; no changes were made";
@@ -366,13 +277,6 @@ fn symlink_guidance(os: &str) -> &'static str {
     "symlink creation failed: check the filesystem and permissions, then retry; no changes were made"
 }
 
-/// Refreshes `.dx/bin` to the staged candidate set.
-///
-/// Order is the contract: validate staged inputs before inspecting the
-/// workspace (corrupt inputs report `Staged` regardless of workspace
-/// state), prove the workspace and symlinks before locking, and hold the
-/// commit lock across every inspection and mutation so concurrent
-/// refreshes serialize.
 pub fn refresh(
     options: &RefreshOptions,
     probe: &dyn Fn(&Path) -> io::Result<()>,
@@ -424,11 +328,6 @@ pub fn refresh(
     }
 }
 
-/// Resolves every promised host name to its staged content before the
-/// workspace is touched, so input failures stay mutation-free. Targets
-/// canonicalize to absolute Bazel output paths: installed links survive
-/// working-directory changes. They still reference Bazel outputs, so a
-/// `bazel clean` wants a fresh refresh.
 fn read_staged_links(
     staged_bin: &Path,
     tools: &[ToolPlan],
@@ -456,8 +355,6 @@ fn read_staged_links(
     Ok(staged)
 }
 
-/// Inspects the installed tree: absent means fresh, a valid marker yields
-/// its identity, and anything else is foreign state we refuse to adopt.
 fn read_current_identity(bin_dir: &Path) -> Result<Option<[u8; 32]>, Error> {
     let meta = match fs::symlink_metadata(bin_dir) {
         Ok(meta) => meta,
@@ -503,7 +400,6 @@ fn read_current_identity(bin_dir: &Path) -> Result<Option<[u8; 32]>, Error> {
     }
 }
 
-/// Refusal constructor for foreign `.dx/bin` states.
 fn unmanaged(bin_dir: &Path, detail: &str) -> Error {
     Error::Unmanaged {
         path: bin_dir.to_path_buf(),
@@ -513,9 +409,6 @@ fn unmanaged(bin_dir: &Path, detail: &str) -> Error {
     }
 }
 
-/// Recovers the single crash window: a run that died between retiring the
-/// old tree and publishing the staged one leaves `prev` without `bin`.
-/// The retired tree is the last good state, so it comes back first.
 fn recover_crashed_swap(prev_dir: &Path, bin_dir: &Path) -> Result<(), Error> {
     if !prev_dir.exists() {
         return Ok(());
@@ -531,8 +424,6 @@ fn recover_crashed_swap(prev_dir: &Path, bin_dir: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-/// Stages links plus the provenance marker into a clean staging directory.
-/// The marker travels with the tree so the swap publishes both atomically.
 fn stage_tree(
     stage_dir: &Path,
     staged: &[(String, PathBuf)],
@@ -563,8 +454,6 @@ fn stage_tree(
     Ok(())
 }
 
-/// Publishes staging over the managed tree as two same-directory renames;
-/// each is atomic, so a crash lands in a recoverable state.
 fn commit_swap(bin_dir: &Path, prev_dir: &Path, stage_dir: &Path) -> Result<(), Error> {
     if bin_dir.exists() {
         fs::rename(bin_dir, prev_dir).map_err(|e| Error::Install {
@@ -581,7 +470,6 @@ fn commit_swap(bin_dir: &Path, prev_dir: &Path, stage_dir: &Path) -> Result<(), 
     Ok(())
 }
 
-/// Best-effort staging cleanup: leftovers are reclaimed on the next refresh.
 fn clean_stage(stage_dir: &Path) {
     if stage_dir.exists() {
         let _ = fs::remove_dir_all(stage_dir);

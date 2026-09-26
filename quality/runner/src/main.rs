@@ -1,41 +1,3 @@
-//! Thin CLI shim over the runner library.
-//! All pipeline semantics live in the library and are unit-tested there.
-//!
-//! Contract: `docs/quality/quality-result-protocol.md`.
-//!
-//! Usage:
-//! ```text
-//! quality_runner --producer LABEL --capability CAP --output OUT.pb \
-//!   --stage TOOL;class,class;path,path [--stage ...] \
-//!   --source WORKSPACE_PATH=EXEC_PATH [--source ...] \
-//!   [--sibling WORKSPACE_PATH=EXEC_PATH [--sibling ...]] \
-//!   [--resolve WORKSPACE_PATH=EXEC_PATH [--resolve ...]] \
-//!   [--real --tool-binary TOOL=ABS_PATH [--tool-binary ...] \
-//!    [--tool-config TOOL=MIRROR_REL] [--tool-edition TOOL=EDITION] \
-//!    [--tool-file TOOL=MIRROR_REL=EXEC_PATH] \
-//!    [--upstream-diagnostics TOOL=EXEC_PATH] \
-//!    [--tool-env TOOL=KEY=VALUE] [--scratch-parent PATH]]
-//! ```
-//! Stages run in argument order. Each `--source` maps one workspace path
-//! to the action-local file holding its bytes. Each `--sibling` maps one
-//! unclassified link-resolution file (Markdown `--sibling` inputs): sibling
-//! bytes are never linted and never enter snapshots. Each `--resolve` maps
-//! one resolution-only file (ty dep sources,): resolve bytes are
-//! staged for import resolution, never checked, and never enter findings
-//! or snapshots. Without `--real` the
-//! synthetic pipeline runs. With `--real` the real backend runs
-//! `run_real_pipeline` over the resolved tools: each stage tool needs one
-//! `--tool-binary`, configs are mirror-relative `--tool-config` paths whose
-//! bytes arrive via `--tool-file`, crate editions arrive via
-//! `--tool-edition` (rustfmt only: the aspect passes the `CrateInfo`
-//! edition, `RUST_EDITION` for provider-less targets; the runner itself
-//! never guesses), and extra hermetic env entries arrive
-//! via `--tool-env`. Delegated tools (Clippy,) take no binary:
-//! each `--upstream-diagnostics` maps one authoritative upstream
-//! diagnostics file the backend parses without spawning. Scratch trees
-//! default under `TMPDIR`. Failures exit
-//! nonzero with a message on stderr and write no output.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -51,93 +13,62 @@ use quality_runner::{
     run_pipeline, FileInput, StageSpec,
 };
 
-/// Pipeline runner failure.
-///
-/// Every variant renders the legacy operational message verbatim so
-/// action diagnostics stay byte-identical while callers gain a matchable
-/// type.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum RunnerError {
-    /// `clap` tokenizing failure mapped onto the legacy surface.
     #[error("{message}")]
     Args { message: String },
-    /// `--stage` value without `TOOL;classes;paths` shape.
     #[error("malformed --stage {spec:?}, want TOOL;classes;paths")]
     BadStage { spec: String },
-    /// `--tool-binary` value without `TOOL=ABS_PATH` shape.
     #[error("malformed --tool-binary {spec:?}, want TOOL=ABS_PATH")]
     BadToolBinary { spec: String },
-    /// `--tool-config` value without `TOOL=MIRROR_REL` shape.
     #[error("malformed --tool-config {spec:?}, want TOOL=MIRROR_REL")]
     BadToolConfig { spec: String },
-    /// `--tool-edition` value without `TOOL=EDITION` shape.
     #[error("malformed --tool-edition {spec:?}, want TOOL=EDITION")]
     BadToolEdition { spec: String },
-    /// `--tool-file` value without `TOOL=MIRROR_REL=EXEC` shape.
     #[error("malformed --tool-file {spec:?}, want TOOL=MIRROR_REL=EXEC")]
     BadToolFile { spec: String },
-    /// `--tool-env` value without `TOOL=KEY=VALUE` shape.
     #[error("malformed --tool-env {spec:?}, want TOOL=KEY=VALUE")]
     BadToolEnv { spec: String },
-    /// `--upstream-diagnostics` value without `TOOL=EXEC_PATH` shape.
     #[error("malformed --upstream-diagnostics {spec:?}, want TOOL=EXEC_PATH")]
     BadUpstreamDiagnostics { spec: String },
-    /// Required scalar flag missing.
     #[error("--{flag} is required")]
     MissingRequired { flag: &'static str },
-    /// `--source` mapping without `WS_PATH=EXEC` shape.
     #[error("malformed --source {mapping:?}, want WS_PATH=EXEC")]
     BadSource { mapping: String },
-    /// `--sibling` mapping without `WS_PATH=EXEC` shape.
     #[error("malformed --sibling {mapping:?}, want WS_PATH=EXEC")]
     BadSibling { mapping: String },
-    /// `--resolve` mapping without `WS_PATH=EXEC` shape.
     #[error("malformed --resolve {mapping:?}, want WS_PATH=EXEC")]
     BadResolve { mapping: String },
-    /// Source bytes unreadable.
     #[error("cannot read {workspace:?}: {detail}")]
     UnreadableSource { workspace: String, detail: String },
-    /// Sibling bytes unreadable.
     #[error("cannot read sibling {workspace:?}: {detail}")]
     UnreadableSibling { workspace: String, detail: String },
-    /// Resolve bytes unreadable.
     #[error("cannot read resolve {workspace:?}: {detail}")]
     UnreadableResolve { workspace: String, detail: String },
-    /// Pipeline execution failed.
     #[error("pipeline failed: {detail}")]
     PipelineFailed { detail: String },
-    /// Result encoding failed validation.
     #[error("invalid result: {detail}")]
     InvalidResult { detail: String },
-    /// Output write failed.
     #[error("cannot write {output:?}: {detail}")]
     UnwritableOutput { output: String, detail: String },
-    /// Duplicate `--tool-binary` for one tool.
     #[error("duplicate --tool-binary for {tool:?}")]
     DuplicateToolBinary { tool: String },
-    /// `--tool-config` without a preceding `--tool-binary`.
     #[error("--tool-config for unknown tool {tool:?}: pass --tool-binary first")]
     UnknownToolConfig { tool: String },
-    /// Duplicate `--tool-config` for one tool.
     #[error("duplicate --tool-config for {tool:?}")]
     DuplicateToolConfig { tool: String },
-    /// `--tool-edition` without a preceding `--tool-binary`.
     #[error("--tool-edition for unknown tool {tool:?}: pass --tool-binary first")]
     UnknownToolEdition { tool: String },
-    /// Duplicate `--tool-edition` for one tool.
     #[error("duplicate --tool-edition for {tool:?}")]
     DuplicateToolEdition { tool: String },
-    /// Tool file bytes unreadable.
     #[error("cannot read tool file {rel:?} for {tool:?}: {detail}")]
     UnreadableToolFile {
         rel: String,
         tool: String,
         detail: String,
     },
-    /// `--tool-file` without a preceding `--tool-binary`.
     #[error("--tool-file for unknown tool {tool:?}: pass --tool-binary first")]
     UnknownToolFile { tool: String },
-    /// `--tool-env` without a preceding `--tool-binary`.
     #[error("--tool-env for unknown tool {tool:?}: pass --tool-binary first")]
     UnknownToolEnv { tool: String },
 }
@@ -154,16 +85,6 @@ fn main() {
     }
 }
 
-/// `argv` tokenizer (frozen legacy contract).
-/// Repeatable options append in argument order (stages
-/// run in that order); scalars keep last-wins repeats; every value option
-/// consumes the next token unconditionally (even a `--`-led token), matching
-/// the legacy hand loop. Only tokenizing moves to `clap`; all value-shape
-/// validation (`parse_stage`, `parse_tool_*`, mapping splits) is untouched:
-/// it stays post-parse (fallback) because it is stateful across
-/// values -- duplicate detection, `--tool-config` requiring a preceding
-/// `--tool-binary`, stage ordering -- while `value_parser`s see one value
-/// in isolation and cannot emit the legacy cross-flag errors.
 #[derive(Parser)]
 #[command(disable_help_flag = true)]
 struct Cli {
@@ -199,23 +120,15 @@ struct Cli {
     upstream_diagnostics: Vec<String>,
 }
 
-/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
-/// Shared plumbing; message formats stay local to the frozen contract.
-/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
     dx_output::invalid_token(error)
 }
 
-/// Map `clap` tokenizing failures onto the legacy `run()` error surface.
-/// Only [`ErrorKind::UnknownArgument`] and [`ErrorKind::InvalidValue`] (a
-/// present flag with no consumable value) are reachable: every option takes
-/// plain strings, so no value parser, conflict, or count error can fire.
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
-        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown flag {echoed:?}")

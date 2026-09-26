@@ -1,55 +1,3 @@
-//! Real-tool pipeline backend (WP2).
-//!
-//! Contract: `docs/quality/tool-integrations.md`,
-//! `docs/tools/tool-acquisition.md`, `docs/quality/native-configuration.md`
-//! (sole behavioral policy; without a hint every tool runs its pinned
-//! upstream defaults, except Vale, which has no defaults and requires a
-//! config). The backend executes the pinned check/fix invocations from
-//! `quality_adapter::commands` over exact input bytes materialized into a
-//! fresh hermetic scratch tree (`quality_adapter::exec`), parses the
-//! pinned grammars (`quality_adapter::parsers`), places findings onto the
-//! checked bytes, and folds everything into the frozen convergence
-//! protocol and result assembly shared with the synthetic runner. Every
-//! tool launch, grammar, or placement failure is an action failure
-//! (`RunnerError`), never a skipped finding.
-//!
-//! Capability mapping: each tool owns its capability slice outright
-//! except Buildifier, whose single check reports both format findings
-//! (empty rule: unformatted or syntax) and lint warnings (the rule
-//! carries the category). The backend keeps only the findings matching
-//! the running capability, so lint results never carry format findings
-//! while format fixes converge them away. Taplo selects its mode by
-//! command instead: `lint` for lint pipelines, `format --check` for
-//! format pipelines. Ruff likewise: `check` for lint pipelines,
-//! `format --check` for format pipelines, and its fix mode follows the
-//! same capability split (`check --fix` versus `format`). Biome
-//! likewise: `lint` for lint pipelines, `format` check for format
-//! pipelines, with format fix via `format --write`; Biome lint is
-//! check-only and converges on format. ESLint is lint-only with
-//! `--fix` re-read on exit 0 or 1; Prettier is format-only with
-//! `--write` re-read on exit 0.
-//!
-//! Fix application is best-effort per file: a nonzero fix exit leaves
-//! the bytes unchanged and the check diagnostics report the cause, so
-//! syntax-broken files surface findings instead of failing the action.
-//! The exceptions are Ruff lint fix, ESLint fix, and ktlint lint fix:
-//! they exit 1 when unfixable findings remain *after* applying the
-//! fixable ones, so the backend re-reads the bytes on exit 0 or 1 and
-//! keeps its input only on any other exit. Spawn, materialization, and
-//! re-read failures still fail the action.
-//! Clippy has no fix command and is check-only: its suggestions
-//! ride the frozen authoritative upstream diagnostics and never
-//! rewrite. Vale, the Markdown checker, rustc typecheck, Ty,
-//! pydoclint, flake8, pylint, Checkstyle, PMD, SpotBugs, Scalafix,
-//! Roslyn, FSharpLint, Buf lint, qmllint, and Biome lint are check-only
-//! and never rewrite. google-java-format, ktfmt, Scalafmt, CSharpier,
-//! Fantomas, Buf format, and qmlformat rewrite in place like the other
-//! format tools. The native lint cohort and the file-family lint cohort
-//! (stylelint, rubocop, psscriptanalyzer, yamllint, shellcheck,
-//! keep_sorted, djlint lint) are check-only with sandbox-apply-and-diff;
-//! the file-family format cohort (cue, jsonnetfmt, pkl, modfmt, terraform,
-//! yamlfmt, shfmt, standardrb, djlint format) rewrites in place.
-
 use std::collections::BTreeMap;
 use std::ffi::{OsStr, OsString};
 use std::io;
@@ -66,30 +14,6 @@ use crate::{
 };
 use quality_result::proto::Diagnostic;
 
-/// Real tool IDs for the initial adapters plus the rustc
-/// typecheck adapter, the Python adapters (Ruff, Ty, pydoclint,
-/// flake8, pylint), the JavaScript/TypeScript/JSON adapters
-/// (Biome, ESLint, Prettier; target-coupled tsc stays pipeline-only and
-/// never runs as a bare backend invocation), the JVM cohort
-/// (google-java-format format, Checkstyle/PMD/SpotBugs lint, ktfmt
-/// format, ktlint lint; SpotBugs target-coupled), the Scala/.NET cohort
-/// (Scalafmt format, Scalafix lint via callback, CSharpier format,
-/// Fantomas format, Roslyn lint via delegated SARIF, FSharpLint lint
-/// via library API), the native cohort (clang-format format,
-/// gofumpt format, clang-tidy/cppcheck/staticcheck/govet/errcheck
-/// lint check-only via delegated recorded diagnostics like
-/// Clippy/rustc), the Structured cohort (Buf format plus lint
-/// via native JSONL/diff, qmlformat format, qmllint lint via JSON),
-/// and the interpreted/file-family cohort (cue, jsonnetfmt, pkl, modfmt,
-/// terraform, yamlfmt, shfmt, standardrb, djlint format plus
-/// stylelint/rubocop/psscriptanalyzer/yamllint/shellcheck/keep_sorted
-/// lint check-only via delegated records).
-/// Mirrors `REAL_ADAPTERS`
-/// in `//quality:adapters.bzl`; the Starlark registry stays authoritative
-/// for pipeline construction, this list pins the dispatch the backend
-/// implements.
-///
-/// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 pub const REAL_TOOLS: &[&str] = &[
     "biome",
     "buf",
@@ -145,31 +69,11 @@ pub const REAL_TOOLS: &[&str] = &[
     "yamllint",
 ];
 
-/// Scratch-relative home for the materialized rustfmt defaults: without
-/// a hinted config the tool still gets an explicit `--config-path`, so
-/// no upward discovery can observe ambient state.
 const RUSTFMT_DEFAULTS_REL: &str = "dx-rustfmt-default.toml";
 
-/// Scratch-relative home for the materialized Biome defaults: without a
-/// hinted config the tool still gets an explicit `--config-path` dir
-/// holding exactly one `biome.json` (`{}`), so no upward discovery can
-/// observe ambient state. The directory must never contain linted
-/// sources; workspace sources live at their mirror paths while this dir
-/// holds only the defaults file.
 const BIOME_DEFAULTS_REL: &str = "dx-biome-default/biome.json";
-/// Pinned Biome defaults bytes: empty object selects pinned upstream
-/// defaults.
 const BIOME_DEFAULTS_BYTES: &[u8] = b"{}";
 
-/// One resolved real tool: absolute binary, extra hermetic environment
-/// entries, optional mirror-relative config, optional crate edition
-/// (rustfmt only: read from `CrateInfo` by the quality aspect, so the
-/// CLI `--edition` flag matches what the crate compiles as), and extra
-/// mirrored files (hinted configs, Vale styles). The action maps its
-/// inputs to the mirror paths through the CLI. Delegated tools (Clippy,
-///) carry authoritative upstream diagnostics files instead of a
-/// spawned binary: the aspect declares the files as action inputs and
-/// maps them here, and the backend parses them without spawning.
 pub struct RealTool {
     pub binary: PathBuf,
     pub extra_env: Vec<(String, String)>,
@@ -179,16 +83,10 @@ pub struct RealTool {
     pub upstream_diagnostics: Vec<PathBuf>,
 }
 
-/// Injected tool spawner: absolute argv, scratch working directory,
-/// and hermetic environment. Production uses [`real_spawn`].
 pub type SpawnFn = fn(&[OsString], &Path, &[(String, String)]) -> io::Result<ChildOutput>;
 
-/// One staged file: workspace path plus its scratch-absolute path.
 type StagedPair = (String, PathBuf);
 
-/// One staged scratch tree: the scratch plus checked, sibling, and
-/// resolve pairs. Resolve pairs (ty dep context,) are staged for
-/// import resolution but never checked.
 struct StagedScratch {
     scratch: Scratch,
     pairs: Vec<StagedPair>,
@@ -196,18 +94,12 @@ struct StagedScratch {
     resolve_pairs: Vec<StagedPair>,
 }
 
-/// Executable backend over resolved real tools. `spawn` is injected so
-/// unit tests prove the materialize/parse/place chain against canned
-/// tool outputs; production uses [`real_spawn`].
 pub struct RealBackend {
     tools: BTreeMap<String, RealTool>,
     scratch_parent: PathBuf,
     spawn: SpawnFn,
 }
 
-/// Production spawner: one absolute tool binary with a cleared
-/// environment. `PATH` is never set and `LANG`/`TZ` stay pinned for
-/// determinism; see `exec::hermetic_env`.
 pub fn real_spawn(
     argv: &[OsString],
     cwd: &Path,
@@ -230,10 +122,6 @@ fn parsed<T>(tool_id: &str, result: Result<T, ParseError>) -> Result<T, RunnerEr
     })
 }
 
-/// Re-anchors a parsed finding's workspace path onto its staged
-/// scratch-absolute path. Parsers already reject unknown paths, so a
-/// miss is a tool-output failure surfaced as
-/// [`RunnerError::UnplaceableFinding`], never a panic.
 fn reanchor(
     tool_id: &str,
     pairs: &[(String, PathBuf)],
@@ -259,11 +147,6 @@ fn write_all(scratch: &Scratch, tool_id: &str, mirrors: &[MirrorFile]) -> Result
         .map_err(|err| execution(tool_id, format!("materialize: {err}")))
 }
 
-/// Closes `scratch`, surfacing cleanup failures as action errors, and
-/// returns `value`. Owners use this for every success return so a
-/// failed cleanup fails the action instead of vanishing in `Drop`;
-/// early-error paths propagate their primary error and rely on the
-/// best-effort `Drop` fallback.
 fn cleaned<T>(tool_id: &str, scratch: Scratch, value: T) -> Result<T, RunnerError> {
     scratch
         .close()
@@ -271,10 +154,6 @@ fn cleaned<T>(tool_id: &str, scratch: Scratch, value: T) -> Result<T, RunnerErro
     Ok(value)
 }
 
-/// Selects the working directory for tools with no config flag that
-/// discover native config upward from the working directory (Buildifier,
-/// Clippy): the mirrored config's parent when hinted, so discovery finds
-/// exactly the hint.
 fn hint_dir<'a>(config_rel: Option<&'a str>, cwd_rel: &'a str) -> Option<&'a str> {
     config_rel.map(|_| cwd_rel)
 }
@@ -288,9 +167,6 @@ fn parent_rel(rel: &str) -> String {
 }
 
 impl RealBackend {
-    /// Resolves production execution over `tools` with scratch trees
-    /// under `scratch_parent` (normally `TMPDIR`, already action-scoped
-    /// under Bazel).
     pub fn new(tools: BTreeMap<String, RealTool>, scratch_parent: PathBuf) -> Self {
         Self {
             tools,
@@ -299,8 +175,6 @@ impl RealBackend {
         }
     }
 
-    /// Reports whether `tool_id` has a resolution. Unknown stage tools
-    /// fail validation as `UnknownTool`, never as silent omissions.
     pub fn supports(&self, tool_id: &str) -> bool {
         self.tools.contains_key(tool_id)
     }
@@ -356,15 +230,6 @@ impl RealBackend {
         mirrors
     }
 
-    /// Materializes one scratch tree with the exact source bytes plus
-    /// the tool files, returning the scratch and the absolute path per
-    /// workspace path in sorted order. Siblings mirror alongside the
-    /// sources so link-resolution siblings exist on disk, but they stay
-    /// out of `pairs`: they are never linted and findings can never
-    /// address them. Resolve files (ty dep context,) mirror alongside
-    /// for import resolution but stay out of `pairs`: they are never
-    /// checked and their findings are filtered by the ty branch, never
-    /// reported (their own targets' actions own them).
     fn stage_scratch(
         &self,
         tool_id: &str,
@@ -420,11 +285,6 @@ impl RealBackend {
         })
     }
 
-    /// Resolves the tool config to an absolute scratch path. rustfmt
-    /// always resolves: the hinted config, else the materialized
-    /// defaults. Every other file-config tool resolves only its hint;
-    /// Biome resolves its config directory separately (see
-    /// [`Self::biome_config_dir`]).
     fn config_abs(
         &self,
         tool_id: &str,
@@ -448,12 +308,6 @@ impl RealBackend {
             .transpose()
     }
 
-    /// Resolves the rustfmt crate edition: authoritative context from
-    /// the aspect (`CrateInfo.edition`), never guessed here. Defaulting
-    /// would silently reformat e.g. Edition 2015/2024 crates with the
-    /// wrong rules, and the adapter must not reconstruct rustc/edition
-    /// state. A missing edition fails the action so the wiring
-    /// gap surfaces instead of producing wrong diffs.
     fn rustfmt_edition(tool: &RealTool) -> Result<&str, RunnerError> {
         const TOOL_ID: &str = "rustfmt";
         tool.edition.as_deref().ok_or_else(|| {
@@ -464,11 +318,6 @@ impl RealBackend {
         })
     }
 
-    /// Resolves the Biome `--config-path` directory to an absolute
-    /// scratch path: the hinted config's parent directory, else the
-    /// materialized defaults directory. The directory holds exactly one
-    /// `biome.json` and never the linted sources (sources mirror at
-    /// their workspace paths).
     fn biome_config_dir(tool: &RealTool, scratch: &Scratch) -> Result<PathBuf, RunnerError> {
         const TOOL_ID: &str = "biome";
         let rel = tool.config_rel.as_deref().unwrap_or(BIOME_DEFAULTS_REL);
@@ -486,11 +335,6 @@ impl RealBackend {
         Ok(dir)
     }
 
-    /// Scratch working directory for check commands: Buildifier and
-    /// Vale discover native config upward from the working directory,
-    /// so with a hint the command runs from the mirrored config
-    /// directory; staticcheck discovers `staticcheck.conf` upward the
-    /// same way. Every other tool runs from the scratch root.
     fn cwd_rel(tool_id: &str, config_rel: Option<&str>) -> String {
         match tool_id {
             "buildifier" | "vale" | "staticcheck" => config_rel.map(parent_rel).unwrap_or_default(),
@@ -498,11 +342,6 @@ impl RealBackend {
         }
     }
 
-    /// Clippy check: parses the authoritative upstream
-    /// diagnostics files the aspect declared as action inputs. Upstream
-    /// spans already address workspace paths, so findings are
-    /// re-addressed to the staged scratch-absolute paths the
-    /// diagnose caller remaps back to workspace paths. Nothing spawns.
     fn check_clippy_delegated(
         &self,
         tool_id: &str,
@@ -529,11 +368,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// rustc check: parses the authoritative upstream
-    /// diagnostics files the aspect declared as action inputs. Upstream
-    /// spans already address workspace paths, so findings are
-    /// re-addressed to the staged scratch-absolute paths the
-    /// diagnose caller remaps back to workspace paths. Nothing spawns.
     fn check_rustc_delegated(
         &self,
         tool_id: &str,
@@ -560,11 +394,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Roslyn check: parses the authoritative per-pivot SARIF files the
-    /// aspect declared as action inputs (one `/errorlog` SARIF per
-    /// TFM/RID pivot, concatenated as a union with per-pivot provenance).
-    /// Artifact URIs already address workspace paths, so findings are
-    /// re-addressed to staged scratch-absolute paths. Nothing spawns.
     fn check_roslyn_delegated(
         &self,
         tool_id: &str,
@@ -588,12 +417,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Scalafix check via recorded callback NDJSON: parses the
-    /// authoritative upstream diagnostics files the aspect declared as
-    /// action inputs (one JSON record per line from the
-    /// `ScalafixMainCallback` entrypoint). Records address workspace
-    /// paths, so findings are re-addressed to staged scratch-absolute
-    /// paths like Clippy/Roslyn. Nothing spawns.
     fn check_scalafix_delegated(
         &self,
         tool_id: &str,
@@ -620,12 +443,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// FSharpLint check via recorded library NDJSON: parses the
-    /// authoritative upstream diagnostics files the aspect declared as
-    /// action inputs (one JSON record per line from the
-    /// `FSharpLint.Application.Lint` entrypoint). Records address
-    /// workspace paths, so findings are re-addressed to staged
-    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
     fn check_fsharplint_delegated(
         &self,
         tool_id: &str,
@@ -652,11 +469,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Buf lint check via recorded JSONL: parses the authoritative
-    /// upstream diagnostics files the aspect declared as action inputs
-    /// (one JSON object per line from `buf lint --error-format=json`).
-    /// Records address workspace paths, so findings are re-addressed to
-    /// staged scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
     fn check_buf_lint_delegated(
         &self,
         tool_id: &str,
@@ -688,11 +500,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// qmllint check via recorded JSON: parses the authoritative
-    /// upstream diagnostics files the aspect declared as action inputs
-    /// (one `{diagnostics:[]}` object from `qmllint --json -`). Records
-    /// address workspace paths, so findings are re-addressed to staged
-    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
     fn check_qmllint_delegated(
         &self,
         tool_id: &str,
@@ -725,12 +532,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Clang-tidy check via recorded text diagnostics: parses the
-    /// authoritative upstream diagnostics files the aspect declared as
-    /// action inputs (one `file:line:col: severity: message [check]`
-    /// line per finding). Records address workspace paths, so findings
-    /// are re-addressed to staged scratch-absolute paths like
-    /// Clippy/Roslyn. Nothing spawns.
     fn check_clang_tidy_delegated(
         &self,
         tool_id: &str,
@@ -757,11 +558,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Cppcheck check via recorded XML diagnostics: parses the
-    /// authoritative upstream diagnostics files the aspect declared as
-    /// action inputs (`--xml --xml-version=2` on stderr). Records
-    /// address workspace paths, so findings are re-addressed to staged
-    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
     fn check_cppcheck_delegated(
         &self,
         tool_id: &str,
@@ -788,11 +584,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Staticcheck check via recorded JSON diagnostics: parses the
-    /// authoritative upstream diagnostics files the aspect declared as
-    /// action inputs (`-f json` array on stdout). Records address
-    /// workspace paths, so findings are re-addressed to staged
-    /// scratch-absolute paths like Clippy/Roslyn. Nothing spawns.
     fn check_staticcheck_delegated(
         &self,
         tool_id: &str,
@@ -819,12 +610,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Govet check via recorded text diagnostics: parses the
-    /// authoritative upstream diagnostics files the aspect declared as
-    /// action inputs (one `file:line:col: message` line per finding).
-    /// Records address workspace paths, so findings are re-addressed
-    /// to staged scratch-absolute paths like Clippy/Roslyn. Nothing
-    /// spawns.
     fn check_govet_delegated(
         &self,
         tool_id: &str,
@@ -851,12 +636,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Errcheck check via recorded text diagnostics: parses the
-    /// authoritative upstream diagnostics files the aspect declared as
-    /// action inputs (one `file:line:col: message` line per finding).
-    /// Records address workspace paths, so findings are re-addressed
-    /// to staged scratch-absolute paths like Clippy/Roslyn. Nothing
-    /// spawns.
     fn check_errcheck_delegated(
         &self,
         tool_id: &str,
@@ -883,10 +662,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// File-family lint via recorded diagnostics: parses the authoritative
-    /// upstream diagnostics files without spawning, re-addressing workspace
-    /// paths onto staged scratch-absolute paths like Clippy/Roslyn.
-    /// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
     fn check_file_family_delegated(
         &self,
         tool_id: &str,
@@ -925,10 +700,6 @@ impl RealBackend {
         Ok(findings)
     }
 
-    /// Runs one check over the staged files and returns the parsed
-    /// findings still addressed by absolute scratch path. Sibling pairs
-    /// reach only the Markdown checker as `--sibling` mappings; every
-    /// other tool ignores them.
     fn run_check(
         &self,
         tool_id: &str,
@@ -1573,9 +1344,6 @@ impl RealBackend {
         }
     }
 
-    /// Runs one check over the exact file bytes and returns normalized
-    /// diagnostics with `fixable` cleared; the convergence pass marks
-    /// fixability, never the backend.
     pub fn diagnose(
         &self,
         tool_id: &str,
@@ -1585,9 +1353,6 @@ impl RealBackend {
         self.diagnose_with_siblings(tool_id, capability, files, &BTreeMap::new())
     }
 
-    /// Sibling-aware [`Self::diagnose`]: siblings mirror into the scratch
-    /// tree for Markdown link resolution but stay out of findings,
-    /// snapshots, and fixes.
     pub fn diagnose_with_siblings(
         &self,
         tool_id: &str,
@@ -1598,12 +1363,6 @@ impl RealBackend {
         self.diagnose_with_resolve(tool_id, capability, files, siblings, &BTreeMap::new())
     }
 
-    /// Resolve-aware [`Self::diagnose_with_siblings`]: resolve files (ty
-    /// dep context,) mirror into the scratch tree for import
-    /// resolution but stay out of findings, snapshots, and fixes. Findings
-    /// addressing resolve files are filtered by the ty branch (their own
-    /// targets' actions own them); findings addressing truly unstaged files
-    /// still fail as tool-output errors.
     pub fn diagnose_with_resolve(
         &self,
         tool_id: &str,
@@ -1647,10 +1406,6 @@ impl RealBackend {
     }
 }
 
-/// Executes one ordered pipeline over exact input bytes through real
-/// tool binaries and returns the normalized result, sharing validation,
-/// convergence, and assembly with [`crate::run_pipeline`] so the
-/// semantics cannot drift between synthetic and real modes.
 pub fn run_real_pipeline(
     producer: &str,
     capability: &str,
@@ -1661,11 +1416,6 @@ pub fn run_real_pipeline(
     run_real_pipeline_with_siblings(producer, capability, stages, files, &[], backend)
 }
 
-/// Sibling-aware [`run_real_pipeline`]: siblings are unclassified
-/// link-resolution bytes for the Markdown checker. They must be UTF-8,
-/// must not collide with a checked path or each other, and never enter
-/// snapshots, stages, or fixes, so a stage naming a sibling still fails
-/// `MissingFile`.
 pub fn run_real_pipeline_with_siblings(
     producer: &str,
     capability: &str,
@@ -1677,12 +1427,6 @@ pub fn run_real_pipeline_with_siblings(
     run_real_pipeline_with_resolve(producer, capability, stages, files, siblings, &[], backend)
 }
 
-/// Resolve-aware [`run_real_pipeline_with_siblings`]: resolve files are ty
-/// dep-context bytes. They must be UTF-8, must not collide with a
-/// checked, sibling, or fellow resolve path, and never enter snapshots,
-/// stages, or fixes, so a stage naming a resolve path still fails
-/// `MissingFile`. Findings addressing resolve files are filtered (their
-/// own targets' actions own them).
 pub fn run_real_pipeline_with_resolve(
     producer: &str,
     capability: &str,

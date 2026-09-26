@@ -1,13 +1,3 @@
-//! Quality command execution: runs the planned Bazel workflow, collects results, projects reports, and applies stable candidates.
-//!
-//! Mutation (verified-source collection plus check/incomplete/apply
-//! handling) and status projection live in [`super::quality_apply`]
-//!; diff-patch rendering lives in
-//! [`super::quality_patch`]; finding/change/mutation emission lives in
-//! [`super::quality_emit`]; standard-report writing lives in
-//! [`super::quality_reports`]; this module keeps the dispatch and
-//! exit-code selection.
-
 use super::common::*;
 use super::quality_apply::{apply_collected_changes, project_status};
 use super::quality_emit::{emit_findings, EmitInputs};
@@ -22,11 +12,6 @@ use dx_output::{
     command_finished, command_started, write_event, FinishedCounts, OutputMode, Severity,
 };
 
-/// Runs the quality command to completion and returns the process exit
-/// code. All dx-owned bytes go to `out` except operational diagnostics
-/// (always `err`); diff mode never emits dx-owned prose or diagnostics
-/// on stdout, and a stdout report owns stdout while human text moves
-/// to stderr.
 pub(crate) fn execute_quality(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,

@@ -1,26 +1,9 @@
-//! Local-only remote/cache abstraction for BEP collection.
-//!
-//! Owning contract: `docs/quality/action-model.md#outputs-remote-cache-and-execution`.
-//! See: `docs/environments/codegen.md`, `docs/product/scope.md`.
-//!
-//! Why a separate module: enabling remote/cache later flips one
-//! [`RemoteConfig`] plus one downloader impl, never every call site.
-//! Bazel stays authoritative for remote materialization; the CLI never
-//! implements a second remote-cache downloader, so remote URIs fail
-//! instead of triggering a network fetch.
-
 use std::path::Path;
 
 use super::{ArtifactReader, BepError};
 
-/// Bazel remote flags the CLI never emits (local-only until qualified).
-/// Single owner for the unwired-flag inventory checked by
-/// `action_execution_cache_qualification`.
 pub const UNWIRED_REMOTE_FLAGS: [&str; 3] = ["remote_cache", "remote_executor", "bes_backend"];
 
-/// Remote/cache selection for one Bazel invocation. Today always
-/// [`RemoteConfig::local`]; qualifying remote fills these plus the
-/// matching toolchain inputs instead of editing call sites.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RemoteConfig {
     remote_cache: Option<String>,
@@ -44,7 +27,6 @@ impl RemoteConfig {
     }
 
     /// Fails when any remote endpoint is set (local-only gate).
-    /// Future qualification replaces this gate with endpoint wiring.
     pub fn validate_local_only(&self) -> Result<(), BepError> {
         if self.is_local_only() {
             return Ok(());
@@ -60,19 +42,11 @@ impl RemoteConfig {
 }
 
 /// Downloader seam for BEP-reported artifacts. The local-only impl
-/// ([`LocalDownloader`]) reads Bazel-materialized `file://` paths;
-/// a future remote impl downloads `bytestream://` URIs behind a
-/// qualified [`RemoteConfig`]. Call sites depend on this trait, never
-/// on a concrete reader, so enabling remote adds one impl.
 pub trait Downloader {
-    /// Reads one Bazel-materialized local artifact.
     fn fetch_local(&self, path: &Path) -> std::io::Result<Vec<u8>>;
 }
 
 /// Local-only downloader: the single [`Downloader`] plus
-/// [`ArtifactReader`] impl used by collection. Performs no network
-/// fetch; unmaterialized remote URIs already fail at URI parsing
-/// before this reader is reached.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LocalDownloader;
 

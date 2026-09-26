@@ -3,10 +3,6 @@
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 # Pinned from `bazel build //javascript/env:*_plan` JSON outputs (WP3).
-# Standard-library-only closures carry no npm sources and no pnpm store
-# entries; the managed `node_modules` facade stays empty without a second
-# resolution. Adopt-js-ts/app proves the same transitive closure on a real
-# consumer (`greet` via `format`).
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //javascript/env:hello_lib_plan
 file hello_lib_plan.json
 field direct_sources=hello.js

@@ -1,4 +1,4 @@
-"""Concrete configuration-subjects use case (issue #793).
+"""Concrete configuration-subjects use case.
 
 Contract: `docs/testing/starlark.md#modes`, `docs/decisions/0009-starlark-testing.md`.
 Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via
@@ -9,7 +9,7 @@ load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//libs/starlark:defs.bzl", "DxConfigInfo", "DxSubjectInfo")
 
 def _config_flip_transition_impl(_settings, _attr):
-    """Flips the futures config_value setting for deps. See: `docs/testing/starlark.md#modes`."""
+    """Flips the futures config_value setting for deps."""
     return {"//libs/starlark/tests/fixtures/starlark_futures:config_value": "flipped"}
 
 config_flip_transition = transition(

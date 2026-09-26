@@ -37,7 +37,7 @@ telemetry. It does not change transparent `dx bazel` forwarding.
 ## Invocation Shape
 
 ```text
-dx [global-options] <command> [scope ...] [-- bazel-options ...]
+dx [global-options] <command> [scope...] [-- bazel-options...]
 ```
 
 Global options:
@@ -196,7 +196,7 @@ binaries published yet). When published, v1
 destinations are the Bazel Central Registry for the `rules_dx` module and GitHub
 Releases for standalone binaries, with install-time publisher-identity verification
 (no checksum-only fallback). The CLI and rules module share
-[Semantic Versioning](../environments/environment.md#distribution) but use the
+Semantic Versioning but use the
 documented result-schema compatibility policy rather than requiring exact patch-
 version equality at runtime.
 
@@ -259,47 +259,46 @@ an explicit label-representation contract.
 ## Exit Status
 
 - `0` means success. CLI-detected pre-execution usage, workspace, scope, owner, and empty-
-  test-mapping errors use `2`. Quality-policy and other CLI-originated operational
-  failures use `1`.
+ test-mapping errors use `2`. Quality-policy and other CLI-originated operational
+ failures use `1`.
 - Except for the `dx update` aggregation exception below, when a required Bazel
-  subprocess fails, `dx` returns its exact nonzero exit code. Bazel-
-  authoritative commands therefore preserve Bazel's code; quality commands may return
-  `1` after successful Bazel execution when normalized findings cross `--fail-on`.
+ subprocess fails, `dx` returns its exact nonzero exit code. Bazel-
+ authoritative commands therefore preserve Bazel's code; quality commands may return
+ `1` after successful Bazel execution when normalized findings cross `--fail-on`.
 - For ordinary multi-invocation plans, `dx` stops on the first required subprocess failure and
-  returns that process's exit code. It starts no dependent operation or mutation after
-  that failure. Already-running independent subprocesses are interrupted or allowed to
-  settle only as required for safe cleanup; their later outcomes do not replace the first
-  required failure. Bazel's internal `--keep_going` behavior remains contained within one
-  quality invocation and does not make the CLI launch later dependent subprocesses.
-  `dx run` sequential multirun follows this ordinary plan (issue #463; see
-  [dx run](commands/build-test-coverage.md#dx-run)).
+ returns that process's exit code. It starts no dependent operation or mutation after
+ that failure. Already-running independent subprocesses are interrupted or allowed to
+ settle only as required for safe cleanup; their later outcomes do not replace the first
+ required failure. Bazel's internal `--keep_going` behavior remains contained within one
+ quality invocation and does not make the CLI launch later dependent subprocesses.
+ `dx run` sequential multirun follows this ordinary plan ).
 - `dx update` is the narrow exception: after a selected dependency set fails, continue
-  independent selected sets, skip operations dependent on the failed set, preserve
-  successful changes, and fail the invocation overall. The
-  [update contract](commands/audit-update-bazel.md#dx-update) owns dependency-set
-  independence and partial-success semantics. Aggregate exit-code selection,
-  backend mapping, and per-set reporting are specified in that contract; live
-  resolver-backend execution runs `dx_update::backend` per set with continuation
-  in `dx_update::outcome`.
-  Ordinary fail-fast behavior, including `dx check` and
-  `dx fix`, is unchanged.
+ independent selected sets, skip operations dependent on the failed set, preserve
+ successful changes, and fail the invocation overall. The
+ [update contract](commands/audit-update-bazel.md#dx-update) owns dependency-set
+ independence and partial-success semantics. Aggregate exit-code selection,
+ backend mapping, and per-set reporting are specified in that contract; live
+ resolver-backend execution runs `dx_update::backend` per set with continuation
+ in `dx_update::outcome`.
+ Ordinary fail-fast behavior, including `dx check` and
+ `dx fix`, is unchanged.
 - Signals are forwarded to the active Bazel process; interruption should preserve
-  conventional shell behavior. On Unix, `dx` re-raises the signal after safe cleanup.
-  Forwarding contract (`cli/cli/src/main.rs`, pinned by its doc comments):
-  `SIGINT`/`SIGTERM` only to the active child; `SIGHUP`/`SIGQUIT`/`SIGPIPE`
-  keep default disposition (SIGHUP not forwarded: terminal hangup kills the
-  shim without forwarding, matching direct Bazel invocation). The handler is
-  async-signal-safe (atomic pid load plus `kill` only). Pid `0` (startup
-  before spawn, teardown after reap) swallows the signal, so Ctrl-C during
-  startup needs a second interrupt once the child registers. Teardown is
-  reap, clear pid registration, join the stdout pump, then reset to
-  `SIG_DFL` and re-raise (unix-only; Windows reports codes only, no
-  re-raise). The `wait`-to-clear window may forward to an already-reaped
-  (possibly recycled) pid: accepted two-store race, never shim state.
-  Raw `libc::signal` stays over `signal-hook`/`sigaction`/`pidfd` (spike in
-  `main.rs`): the hook thread adds forward latency for zero safety win
-  (`kill` stays `unsafe libc` either way), and `pidfd` adds Linux-only
-  complexity for the same accepted race.
+ conventional shell behavior. On Unix, `dx` re-raises the signal after safe cleanup.
+ Forwarding contract (`cli/cli/src/main.rs`, pinned by its doc comments):
+ `SIGINT`/`SIGTERM` only to the active child; `SIGHUP`/`SIGQUIT`/`SIGPIPE`
+ keep default disposition (SIGHUP not forwarded: terminal hangup kills the
+ shim without forwarding, matching direct Bazel invocation). The handler is
+ async-signal-safe (atomic pid load plus `kill` only). Pid `0` (startup
+ before spawn, teardown after reap) swallows the signal, so Ctrl-C during
+ startup needs a second interrupt once the child registers. Teardown is
+ reap, clear pid registration, join the stdout pump, then reset to
+ `SIG_DFL` and re-raise (unix-only; Windows reports codes only, no
+ re-raise). The `wait`-to-clear window may forward to an already-reaped
+ (possibly recycled) pid: accepted two-store race, never shim state.
+ Raw `libc::signal` stays over `signal-hook`/`sigaction`/`pidfd` (spike in
+ `main.rs`): the hook thread adds forward latency for zero safety win
+ (`kill` stays `unsafe libc` either way), and `pidfd` adds Linux-only
+ complexity for the same accepted race.
 
 The common mapping and machine-output behavior are defined in
 [Output Protocol](output-protocol.md#exit-codes); the update aggregate mapping above
@@ -348,7 +347,7 @@ hand-rolled with owned reasons: atomic write plus lock via
 `std::fs::File::try_lock` plus `tempfile`, path-ladder classifier,
 LCOV ignore scanner with inventory plus verdict, SPDX lattice plus date shape gate
 plus scratch discipline wrappers; upstream re-evaluation plus any future migration
-follows the [helper upstream policy](helper-upstream-policy.md) under issue #973).
+follows the helper upstream policy under issue #973).
 
 Date engine stays `chrono` under issue #398
 (`bazel run //tools/ci:helper_qualification`; `jiff 0.2` spike rejected:
@@ -385,7 +384,7 @@ Final command registry plus mutating-vs-check semantics pinned under issues
 #457/#462 plus #776 plus #786 (`bazel run //tools/ci:cli_contract_qualification`; final registry
 holds exactly the 32 parsed commands including `deploy` plus `bump` plus
 `migrate` plus `new` plus `upgrade` plus `docs` (`--from`/`--to` with upgrade-only gate plus manifest
-selection, issue #462 with upgrade scope under issue #671; absent-only `new` plus
+selection with upgrade scope under issue #671; absent-only `new` plus
 one-shot `upgrade` composition, see [new/upgrade](commands/new-upgrade.md); docs
 build/check/serve over the Bazel-cached site, see [dx docs](commands/docs.md)), with `doctor` plus
 `configure` rejected as unknown suggesting `dx status` (see [status/version](commands/status-version.md#failure-explainer));
@@ -396,28 +395,27 @@ umbrella stays the sequential `format` then `lint` then `typecheck` then
 `generate` phases with stop-on-first-failure and no parallel, caching,
 scheduling, or daemon behavior).
 
-Execution/reporting gaps pinned under issue #590
-(`bazel run //tools/ci:cli_execution_gaps_qualification`; fixtures in
+Execution/reporting gaps (`bazel run //tools/ci:cli_execution_gaps_qualification`; fixtures in
 `cli/cli/tests/fixtures/cli_execution_gaps/` plus `dx_adopt::plan_watch`
 plus `dx_process::build_workflow_argv` plus `dx_cli::plan_reports` plus
 `dx_update::aggregate`; CLI-only, no Bazel semantics change; seed only, no
 Supported claim; silent substitution across commands stays rejected):
 
 - Watch stays 8 watchable (`build`, `test`, `run`, `lint`, `typecheck`,
-  `format`, `check`, `fix`) with 22 fail-closed not watchable plus CI
-  refusal (see [dx watch](commands/watch.md#execution-gaps)).
+ `format`, `check`, `fix`) with 22 fail-closed not watchable plus CI
+ refusal (see [dx watch](commands/watch.md#execution-gaps)).
 - Arg-forwarding stays wont-fix: Bazel startup options (`bazelrc`,
-  `home_rc`/`nohome_rc`, `system_rc`/`nosystem_rc`, `output_base`,
-  `output_user_root`, `host_jvm_args`, `server_jvm_out`) and test-binary
-  args (`test_arg`) are rejected on workflow commands with guidance to use
-  `dx bazel`; only `dx bazel` forwards unchanged, while `dx run` forwards
-  after `--` to the application binary, not to Bazel.
+ `home_rc`/`nohome_rc`, `system_rc`/`nosystem_rc`, `output_base`,
+ `output_user_root`, `host_jvm_args`, `server_jvm_out`) and test-binary
+ args (`test_arg`) are rejected on workflow commands with guidance to use
+ `dx bazel`; only `dx bazel` forwards unchanged, while `dx run` forwards
+ after `--` to the application binary, not to Bazel.
 - Report matrix stays wont-fix: `lint`/`typecheck`/`check`/`fix` accept
-  `sarif`, `test` accepts `junit`, `coverage` accepts `lcov`,
-  `audit` accepts `sarif`/`spdx`, and every other command has no standard
-  report (`format` included); unsupported combos fail fast with
-  `UnsupportedFormat`, never silently substituted.
+ `sarif`, `test` accepts `junit`, `coverage` accepts `lcov`,
+ `audit` accepts `sarif`/`spdx`, and every other command has no standard
+ report (`format` included); unsupported combos fail fast with
+ `UnsupportedFormat`, never silently substituted.
 - Parallelism stays wont-fix: `check`/`fix` run
-  `format`→`lint`→`typecheck`→`generate` sequentially, `watch` runs one
-  iteration at a time, `update` runs per-set sequentially with continuation,
-  and `run` multirun runs sequentially in scope order.
+ `format`→`lint`→`typecheck`→`generate` sequentially, `watch` runs one
+ iteration at a time, `update` runs per-set sequentially with continuation,
+ and `run` multirun runs sequentially in scope order.

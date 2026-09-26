@@ -1,12 +1,6 @@
-//! Taplo output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// One `error:` / `┌─ <path>:<line>:<col>` block plus its caret detail.
 struct TaploBlock {
     file: String,
     line: u64,
@@ -14,9 +8,6 @@ struct TaploBlock {
     message: String,
 }
 
-/// Scans stderr for Taplo error blocks. The opener line supplies the
-/// base message; the first caret line carrying text after `^` appends
-/// the tool's own detail (such as `expected value`).
 fn taplo_blocks(stderr: &str) -> Result<Vec<TaploBlock>, ParseError> {
     const TOOL: &str = "taplo";
     let mut blocks: Vec<TaploBlock> = Vec::new();
@@ -69,8 +60,6 @@ fn taplo_blocks(stderr: &str) -> Result<Vec<TaploBlock>, ParseError> {
     Ok(blocks)
 }
 
-/// Splits a `<path>:<line>:<col>` location from the right so absolute
-/// paths survive.
 fn taplo_location(location: &str) -> Result<(&str, u64, u64), ParseError> {
     let (rest, column_text) = location
         .rsplit_once(':')
@@ -91,7 +80,6 @@ fn taplo_location(location: &str) -> Result<(&str, u64, u64), ParseError> {
     }
 }
 
-/// Parses Taplo `lint` stderr into one error finding per block.
 pub fn parse_taplo_lint(
     stderr: &[u8],
     code: Option<i32>,
@@ -129,8 +117,6 @@ pub fn parse_taplo_lint(
     Ok(findings)
 }
 
-/// Parses Taplo `format --check` stderr: syntax blocks plus one format
-/// finding per `not properly formatted` line.
 pub fn parse_taplo_format_check(
     stderr: &[u8],
     code: Option<i32>,

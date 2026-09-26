@@ -1,6 +1,3 @@
-//! Bump widen planning tests (split from `request.rs`).
-//! Originally the inline `mod tests` of `request.rs`.
-
 use super::*;
 
 #[test]
@@ -441,7 +438,6 @@ fn summary_names_selector_version_and_next_step() {
 
 #[test]
 fn summary_carries_major_bump_migrate_hint_for_semver() {
-    // Issue #931 (See: `docs/cli/commands/migrate.md`): semver plans print
     // the missing-manifest hint with exit mapping; Git shapes never hint.
     let bump = BumpRequest::parse("cargo:anyhow", "2.0.0").expect("cargo major");
     let summary = bump.summary();
@@ -456,7 +452,6 @@ fn summary_carries_major_bump_migrate_hint_for_semver() {
 
 #[test]
 fn major_bump_hint_needs_old_major_crossing() {
-    // Issue #931: major hint fires only when new major exceeds old major.
     let bump = BumpRequest::parse("cargo:anyhow", "2.0.0").expect("major");
     let hint = bump.major_bump_hint("1.2.3").expect("hint");
     assert!(hint.contains("major bump 1.2.3 -> 2.0.0"), "{hint}");
@@ -474,7 +469,6 @@ fn major_bump_hint_needs_old_major_crossing() {
 
 #[test]
 fn refresh_selector_chains_automatically_per_set() {
-    // Issue #638: Cargo full, npm selective, Go noop, Maven full, NuGet
     // full; file-only empty.
     let bump = BumpRequest::parse("cargo:anyhow", "1.2.3").expect("cargo");
     assert_eq!(bump.refresh_selector(), "cargo");

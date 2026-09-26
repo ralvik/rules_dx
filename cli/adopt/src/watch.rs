@@ -1,22 +1,10 @@
-//! Local watch loop for wrapped commands.
-//!
-//! Split from `super` (`lib.rs`): owns `WATCH_DEBOUNCE_MS`,
-//! `WATCHABLE_COMMANDS`, `watch_iteration_accepts`, `plan_watch`,
-//! `should_watch_path`, `coalesce_watch_paths`, and `watch_for_change`.
-//! Re-exported through `super` so the public path stays
-//! `dx_adopt::{WATCH_DEBOUNCE_MS, WATCHABLE_COMMANDS,
-//! watch_iteration_accepts, plan_watch, should_watch_path,
-//! coalesce_watch_paths, watch_for_change}`.
-
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use super::AdoptError;
 
-/// Watch debounce milliseconds (frozen).
 pub const WATCH_DEBOUNCE_MS: u64 = 200;
 
-/// Commands watchable under ADR 0017/0018 (frozen).
 pub const WATCHABLE_COMMANDS: &[&str] = &[
     "build",
     "test",
@@ -28,14 +16,6 @@ pub const WATCHABLE_COMMANDS: &[&str] = &[
     "fix",
 ];
 
-/// Whether one watch iteration may run.
-///
-/// Watch is a thin local loop reusing the wrapped command verbatim (no
-/// daemon, cache, graph, or remote): each iteration re-resolves its scope,
-/// holds the `run` selection rule for that scope (single-runnable for
-/// file/directory scopes, sequential multirun for explicit labels and
-/// patterns), and refuses when running under
-/// CI. Any violation blocks the iteration.
 pub fn watch_iteration_accepts(
     scope_reresolved: bool,
     local_only: bool,
@@ -44,7 +24,6 @@ pub fn watch_iteration_accepts(
     scope_reresolved && local_only && single_runnable_held
 }
 
-/// Validate one watch invocation (frozen).
 pub fn plan_watch(command: &str, ci: bool) -> Result<String, AdoptError> {
     if ci {
         return Err(AdoptError::WatchRefusesCi);
@@ -57,9 +36,6 @@ pub fn plan_watch(command: &str, ci: bool) -> Result<String, AdoptError> {
     Ok(format!("watch:{command}:debounce={WATCH_DEBOUNCE_MS}ms"))
 }
 
-/// Whether a changed path re-triggers the loop (frozen ignore set).
-///
-/// See: `docs/decisions/0017-dx-watch.md`.
 pub fn should_watch_path(path: &Path) -> bool {
     if path.file_name().is_some_and(|name| name == "dx.local.toml") {
         return false;
@@ -73,12 +49,6 @@ pub fn should_watch_path(path: &Path) -> bool {
     true
 }
 
-/// Coalesces debounced watcher paths into a single deterministic
-/// rebuild trigger: frozen ignores dropped, rapid create/modify/delete
-/// bursts for one path collapse to one entry; outputs sort ascending with
-/// duplicates removed so repeated runs render identically.
-///
-/// See: `docs/decisions/0017-dx-watch.md`.
 pub fn coalesce_watch_paths(mut paths: Vec<PathBuf>) -> Vec<PathBuf> {
     paths.retain(|path| should_watch_path(path));
     paths.sort();
@@ -86,16 +56,6 @@ pub fn coalesce_watch_paths(mut paths: Vec<PathBuf>) -> Vec<PathBuf> {
     paths
 }
 
-/// Blocks up to `timeout` for one debounced filesystem change under
-/// `watch_root` returning the coalesced trigger paths.
-///
-/// Implemented over [`notify`] 8.x plus `notify-debouncer-mini`
-/// (200 ms debounce per [`WATCH_DEBOUNCE_MS`]): create, modify, and
-/// delete events all feed the same rebuild trigger. An empty vector
-/// means the timeout elapsed with no changes (the caller re-arms);
-/// only watcher setup and channel failures surface as [`AdoptError`].
-/// Callers must validate via [`plan_watch`] first (local-only refusal
-/// stays there, not here).
 pub fn watch_for_change(watch_root: &Path, timeout: Duration) -> Result<Vec<PathBuf>, AdoptError> {
     use notify::RecursiveMode;
     let (tx, rx) = std::sync::mpsc::channel();

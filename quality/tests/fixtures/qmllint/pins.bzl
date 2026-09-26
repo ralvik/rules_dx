@@ -7,12 +7,10 @@ Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
 # Pinned reference version (follows the qualified Qt distribution pin;
 # Qt 6.11.1 observed; living at head rejected; digests plus distribution
 # identity plus licensing plus platform artifacts stay owned under
-# issue #799).
 QMLLINT_QT_OBSERVED = "Qt 6.11.1"
 
 # Distribution identity (authoritative-toolchain route from the qualified
 # Qt distribution tool targets, Qt-last ordering decided; no separate
-# acquisition; digests stay owned under issue #799).
 QMLLINT_ARTIFACT = "qualified Qt distribution tool targets"
 
 # Invocation shapes (check-only with provisional sandbox-apply-and-diff
@@ -20,7 +18,6 @@ QMLLINT_ARTIFACT = "qualified Qt distribution tool targets"
 QMLLINT_CHECK = "qmllint --json - (exit 0 clean, exit 1 with JSON diagnostics when dirty)"
 QMLLINT_CONFIG_POLICY = "upstream built-in defaults without .qmllint.ini, native interpretation with .qmllint.ini; //qmllint enable/disable scoping native"
 
-# Live proof labels (adapter dispatch owned under issue #799; QML
 # foundations are not admitted as build/test targets, so the fixture
 # pair plus matrix cells are the live proof).
 STRUCTURED_FIXTURE_QMLLINT = "//quality/tests/fixtures/qmllint:corpus_starlark"

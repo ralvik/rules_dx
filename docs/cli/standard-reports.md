@@ -2,7 +2,7 @@
 
 ## Contract
 
-The durable report surface follows [ADR 0006](../decisions/0006-cli-command-surface.md).
+The durable report surface follows ADR 0006.
 Exact profiles and partial-document rules below are implemented as specified and pinned by
 golden and schema fixtures.
 
@@ -16,7 +16,7 @@ The live-stream interaction, `report` NDJSON event, exit codes, and partial-resu
 are defined in [Output Protocol](output-protocol.md). `--dry-run` conflicts with every
 report request.
 
-The initial mapping is (wont-fix matrix, issue #590, pinned by fixtures in
+The initial mapping is (wont-fix matrix, pinned by fixtures in
 `cli/cli/tests/fixtures/cli_execution_gaps/` plus
 `bazel run //tools/ci:cli_execution_gaps_qualification`):
 
@@ -27,16 +27,15 @@ The initial mapping is (wont-fix matrix, issue #590, pinned by fixtures in
 | `coverage` | LCOV | Validated Bazel combined tracefile |
 | `audit` | SPDX 2.3 JSON | License inventory (see license-family contract) |
 
-The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#license-family-dx-audit-license)
+The license family's [SPDX 2.3 JSON report](commands/audit-update-bazel.md#dx-license-license-family)
 is specified in the license-family contract. Audit SARIF run shape plus live SPDX emission are
-pinned under issue #632 (pairs with #511); SPDX parsing, policy-table loading,
+(pairs with #511); SPDX parsing, policy-table loading,
 and proof artifacts stay owned under issue #511. This table is not an exhaustive prohibition
 of that report.
 
 `build`, `format`, `update`, `generate`, `codegen`, `env`, `setup`,
 `run`, `deploy`, `clean`, `bump`, `migrate`, and every adoption/inspect
-command have no initial standard report (issue #590 wont-fix; `format`
-included). `dx bazel` uses native Bazel options for BEP or other Bazel-owned output.
+command have no initial standard report. `dx bazel` uses native Bazel options for BEP or other Bazel-owned output.
 New formats require an established standard or authoritative upstream output.
 Unsupported command/format combos fail fast with `UnsupportedFormat`;
 silent substitution across commands stays rejected.

@@ -1,7 +1,7 @@
 # Testing Strategy Details
 
 Test layers, coverage, infrastructure, and evidence contracts.
-The [Testing index](README.md) stays short; this document owns the detail record.
+The Testing index stays short; this document owns the detail record.
 
 ## Test Layers
 
@@ -10,7 +10,7 @@ The [Testing index](README.md) stays short; this document owns the detail record
 Use the project-owned `starlark_test` facade from the `rules_dx` module under the
 pinned Bazel version, with explicit load, unit, and analysis modes over real
 Bazel mechanisms. Full mode, assertion, negative-test, filtering, orchestration,
-and protocol detail lives in [Starlark Testing](starlark.md).
+and protocol detail lives in Starlark Testing.
 
 ### Consumer Fixtures
 
@@ -77,12 +77,12 @@ behavioral, consumer, or platform suites.
 ### End-to-End Tests
 
 End-to-end suites use the real Bazel launcher and external consumer fixtures. The
-[CLI](cli.md), [GitHub CI](github-ci.md), [Generation](generation.md), [Environments](environments.md),
-[Tools](tools.md), and [Quality Workflow](../quality/quality-testing.md) matrices
-define their required behavior and evidence. Flakiness plus timeout tuning lives in [GitHub CI](github-ci.md).
+CLI, GitHub CI, Generation, Environments,
+Tools, and Quality Workflow matrices
+define their required behavior and evidence. Flakiness plus timeout tuning lives in GitHub CI.
 
 Tests cover only implemented commands. Open work is tracked in GitHub issues;
-the [support matrix](../product/support-matrix.md) stays the status source.
+the support matrix stays the status source.
 
 Non-dogfed paths never run under the standard dogfood gates by design; each has
 an explicit execution path: CLI-contract via hermetic pins under `bazel test //...`,
@@ -166,20 +166,20 @@ Completion reports classify every exercised capability without conflating these
 states:
 
 - **Bootstrap-maintained** evidence is currently unused: there are no temporary
-  seed tools.
+ seed tools.
 - **Dogfooded** evidence identifies the repository corpus and classes exercised,
-  exact invocation, exclusions, action counts, no-op and narrow/config-change
-  behavior, cache observations, and parity deviations. It proves repository use,
-  not the complete adapter or release matrix.
+ exact invocation, exclusions, action counts, no-op and narrow/config-change
+ behavior, cache observations, and parity deviations. It proves repository use,
+ not the complete adapter or release matrix.
 - **Adapter-tested** evidence identifies the adapter and acquisition identity and
-  links its external-consumer, exact-input, native-config/no-config, isolation,
-  diagnostics/edit, cache, laziness, and applicable platform cells. It does not
-  imply supported status.
+ links its external-consumer, exact-input, native-config/no-config, isolation,
+ diagnostics/edit, cache, laziness, and applicable platform cells. It does not
+ imply supported status.
 - **Supported** evidence links every required adapter, external-consumer,
-  interoperability, platform, packaging, documentation, and release-acceptance
-  cell, plus remote-cache or remote-execution evidence for each corresponding
-  public claim. A missing cell remains an explicit gap and blocks that support
-  claim.
+ interoperability, platform, packaging, documentation, and release-acceptance
+ cell, plus remote-cache or remote-execution evidence for each corresponding
+ public claim. A missing cell remains an explicit gap and blocks that support
+ claim.
 
 There are no temporary seed checks and no seed-to-adapter parity gate. Missing
 adapters are accepted gaps until they land, not failures of a temporary check.

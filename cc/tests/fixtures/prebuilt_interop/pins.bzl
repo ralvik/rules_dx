@@ -17,10 +17,6 @@ WINDOWS_RUNTIME_LIBS = ["UCRT", "VCRuntime"]
 WINDOWS_REDIST_NOTE = "Align Rust CRT mode, iterator-debug settings, system libraries and redistributable deployment"
 
 # Explicit Windows STL/CRT/linker/library combos (single-combo rejected).
-# Host-to-target build routes plus target execution qualify separately;
-# compiler-target availability alone is not proof. Independently compiled
-# MSVC static/import libraries plus DLLs incl STL values carry the
-# exceptions plus RTTI plus allocation-ownership proof below.
 WINDOWS_COMBOS = [
     "clang-cl + Microsoft STL + /MD + lld-link + static .lib",
     "clang-cl + Microsoft STL + /MD + lld-link + import .lib + DLL",
@@ -55,14 +51,6 @@ ABI_PROOF = [
 ]
 
 # Mixed Rust plus C/C++ wiring: the decided single-graph CXX identity
-# (`cxx == cxxbridge-cmd == 1.0.200` from the single `crates` graph with
-# `@crates//:cxxbridge-cmd`, never a `cxx.rs` second graph, decided under
-# is the Rust/C++ bridge shape; full `cxxbridge-cmd`
-# execution plus corpus wiring stays owned, never
-# double-claimed here. Path transport (batch wrappers, response files,
-# `/external:I` vs `/imsvc`, `.lib`/`.obj` bare paths, spaces, SDK
-# libraries, cc-rs discovery/assembly, proc-macro DLLs) stays owned under
-# without host Visual Studio state.
 CXX_IDENTITY_VERSION = "1.0.200"
 CXXBRIDGE_CMD_LABEL = "@crates//:cxxbridge-cmd"
 MIXED_NOTE = "mixed Rust/C/C++ host-to-target plus target execution qualify separately"

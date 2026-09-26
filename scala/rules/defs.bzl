@@ -17,20 +17,12 @@ _DX_SCALA_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream `JavaInfo`,
-# `InstrumentedFilesInfo`, `OutputGroupInfo`, and `RunEnvironmentInfo`
-# at runtime when present, but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a Scala library,
-# so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so quality aspects can gate on it. Coverage reads
-# `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `java_*` test forwarder).
 _DX_SCALA_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,
 ]
 
 # Scala owns `.scala` only; same-unit `.java` stays `java` per the
-# admissibility table (See: docs/quality/quality-sources.md). Java sources
 # belong in a `java_library`, so mixed targets keep one owner per file.
 _DX_SCALA_SOURCE_SPECS = [("scala", "scala")]
 _DX_SCALA_SOURCE_EXTS = [".scala"]

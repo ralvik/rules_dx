@@ -1,33 +1,13 @@
-//! Backend committed-change manifest for `dx update`.
-//!
-//! See: `docs/cli/commands/audit-update-bazel.md#dx-update`.
-//! Owning contract: `docs/cli/output-protocol.md#mutation`.
-//!
-//! V1 backends refresh standard locks through approved resolver
-//! integrations. Each backend declares its committed lockfiles in
-//! [`crate::sets::SetId::locks`]; this module validates the backend-owned
-//! manifest derived from those declared paths (never a CLI filesystem scan,
-//! Git inspection, BUILD parse, or rerun). A validated manifest projects to
-//! NDJSON `change`/`mutation` events in the CLI layer (`cli/cli/src/exec/update.rs`)
-//! as a minor-1.1 addition; absent or unchanged files project to no events,
-//! preserving the v1.0 per-set `notice`/`error` contract. Directory hubs
-//! (such as `third_party/dotnet/deps`) are not file changes and never
-//! appear here; their owning lock (`paket.lock`) carries the report.
-
 use super::sets::SetId;
 use std::collections::BTreeSet;
 
-/// Whether a committed file modifies an existing lock or creates a new one.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CommittedKind {
-    /// Existing lock replaced by exact new bytes.
     Modify,
-    /// New lock created with complete content.
     Create,
 }
 
 impl CommittedKind {
-    /// Stable protocol spelling shared with NDJSON `change.kind`.
     pub fn name(self) -> &'static str {
         match self {
             CommittedKind::Modify => "modify",
@@ -36,58 +16,39 @@ impl CommittedKind {
     }
 }
 
-/// One backend-committed lockfile: intended bytes for NDJSON projection,
-/// not whether the CLI has written them (the backend already committed).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommittedChange {
-    /// Normalized workspace-relative lock path from [`SetId::locks`].
     pub path: String,
-    /// Modify for a replaced lock, create for a new lock.
     pub kind: CommittedKind,
-    /// BLAKE3-256 hex of the pre-commit bytes for `modify`, `None` for `create`.
     pub source_digest: Option<String>,
-    /// Pre-commit byte length for `modify`, `0` for `create`.
     pub old_len: u64,
-    /// Exact post-commit UTF-8 content for the spanning replacement.
     pub new_content: String,
 }
 
-/// Backend-owned manifest for one successful set update.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CommittedManifest {
-    /// Owning set selector spelling (for example `cargo`).
     pub set: String,
-    /// Committed file changes in normalized path-byte order.
     pub changes: Vec<CommittedChange>,
 }
 
-/// Manifest validation failure.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ManifestError {
-    /// Unknown owning set spelling.
     #[error("unknown set {set:?}: want cargo, go, maven, npm, or nuget")]
     UnknownSet { set: String },
-    /// Path is not a normalized workspace-relative lock path.
     #[error("invalid path {path:?}: {reason}")]
     BadPath { path: String, reason: &'static str },
-    /// Path is not a declared lock of the owning set.
     #[error("undeclared lock {path:?} for set {set:?}: want one of {locks:?}")]
     UndeclaredLock {
         set: String,
         path: String,
         locks: Vec<String>,
     },
-    /// Duplicate committed path.
     #[error("duplicate committed path {path:?}")]
     DuplicatePath { path: String },
-    /// Changes are not in normalized path-byte order.
     #[error("unordered manifest: changes must be in normalized path-byte order")]
     Unordered,
-    /// Digest spelling or kind pairing is invalid.
     #[error("invalid digest for {path:?}: {reason}")]
     BadDigest { path: String, reason: &'static str },
-    /// New content is not valid UTF-8 text (caller passes decoded text;
-    /// this guards empty create content only when explicitly empty).
     #[error("invalid content for {path:?}: replacement must be valid UTF-8")]
     BadContent { path: String },
 }
@@ -123,34 +84,16 @@ fn check_digest_hex(digest: &str) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 
-/// One validated file projection: the exact full-file spanning edit for
-/// NDJSON `change` plus its terminal `applied` mutation. The CLI layer
-/// (`cli/cli/src/exec/update.rs`) converts this leaf-pure shape into
-/// `dx_output` events so `dx_update` keeps no `dx_output` dependency.
-/// See: `docs/cli/output-protocol.md#mutation`.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ProjectedFile {
-    /// Normalized workspace-relative lock path.
     pub path: String,
-    /// Stable `change.kind` spelling (`modify` or `create`).
     pub kind: CommittedKind,
-    /// Pre-commit digest for `modify`, `None` for `create`.
     pub source_digest: Option<String>,
-    /// Inclusive start of the single spanning edit (`0` always).
     pub start_byte: u64,
-    /// Exclusive end of the spanning edit (`old_len` for `modify`, `0` for `create`).
     pub end_byte: u64,
-    /// Exact post-commit text for the spanning replacement.
     pub replacement: String,
 }
 
-/// Validates one backend committed-change manifest: owning set is known,
-/// every path is a normalized declared file lock of that set, paths are unique
-/// and in normalized byte order, `modify` carries a valid digest with its
-/// pre-commit length while `create` carries none with zero length, and new
-/// content is the exact post-commit text (full-file spanning replacement).
-/// Directory hubs (such as `third_party/dotnet/deps`) never validate as
-/// file changes; their owning lock (`paket.lock`) carries the report.
 pub fn validate(manifest: &CommittedManifest) -> Result<(), ManifestError> {
     let set = SetId::parse(manifest.set.as_str()).ok_or_else(|| ManifestError::UnknownSet {
         set: manifest.set.clone(),
@@ -228,12 +171,6 @@ pub fn validate(manifest: &CommittedManifest) -> Result<(), ManifestError> {
     Ok(())
 }
 
-/// Projects one validated manifest to its ordered file records: each
-/// `modify` becomes one `0..old_len` spanning replacement with its
-/// post-commit text, each `create` becomes one `0..0` insertion.
-/// Absent or empty manifests project to no records, preserving the v1.0
-/// per-set `notice`/`error` contract. Callers must [`validate`] first;
-/// this re-validates and fails closed on any shape violation.
 pub fn project(manifest: &CommittedManifest) -> Result<Vec<ProjectedFile>, ManifestError> {
     validate(manifest)?;
     Ok(manifest
@@ -279,7 +216,6 @@ mod tests {
     #[test]
     fn empty_manifest_is_valid_no_changes() {
         // Go no-op success with no file delta projects to no events.
-        // See: `docs/cli/output-protocol.md#mutation`.
         let manifest = CommittedManifest {
             set: "go".to_owned(),
             changes: vec![],
@@ -403,7 +339,6 @@ mod tests {
         // `deps` is a declared output folder but a directory hub; the
         // manifest fails closed here so no file event is ever forged.
         // Their owning lock (`paket.lock`) carries the report.
-        // See: `docs/cli/output-protocol.md#mutation`.
         assert!(matches!(validate(&dir), Err(ManifestError::BadPath { .. })));
         assert!(project(&dir).is_err());
     }
@@ -441,7 +376,6 @@ mod tests {
 
     #[test]
     fn projection_spans_full_file_in_path_order() {
-        // See: `docs/cli/output-protocol.md#mutation`.
         let manifest = CommittedManifest {
             set: "cargo".to_owned(),
             changes: vec![

@@ -1,17 +1,5 @@
-//! ktlint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! ktlint `--reporter=sarif` prints a SARIF 2.1.0 log to stdout with
-//! ranged regions; `level` maps error/warning. Lint fixes run
-//! `ktlint --format` in place (re-read like ESLint `--fix`); the
-//! format capability itself stays owned by ktfmt in curated defaults.
-
 use super::{check_output_size, sarif::parse_sarif, FileFinding, ParseError};
 
-/// Parses ktlint `--reporter=sarif` stdout. `files` are the absolute
-/// scratch paths passed to the tool.
 pub fn parse_ktlint(
     stdout: &[u8],
     code: Option<i32>,

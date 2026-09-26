@@ -1,4 +1,4 @@
-"""Pinned .NET foundation (C#, F#). Contract: docs/decisions/0019-first-release-additional-foundations.md."""
+"""Pinned.NET foundation (C#, F#)."""
 
 # Pinned .NET foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_DOTNET_VERSION = "0.22.1"

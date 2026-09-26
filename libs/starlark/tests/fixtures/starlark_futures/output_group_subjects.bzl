@@ -1,4 +1,4 @@
-"""Concrete output-group-subjects use case (issue #794).
+"""Concrete output-group-subjects use case.
 Contract: `docs/testing/starlark.md#future-not-implemented`, `docs/decisions/0009-starlark-testing.md`.
 Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via `bazel run //tools/ci:starlark_futures_qualification`.
 Output-group observation stays deferred: analysis observes `DxSubjectInfo` fields plus

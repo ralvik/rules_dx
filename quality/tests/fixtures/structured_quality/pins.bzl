@@ -11,12 +11,6 @@ QMLFORMAT_QT_OBSERVED = "Qt 6.11.2"
 QMLLINT_QT_OBSERVED = "Qt 6.11.1"
 
 # Upstream distribution identities (checksummed native/self-contained
-# artifact route for buf as self-contained per-platform binaries with
-# published checksums, no target compiler context, execution-platform lazy;
-# authoritative-toolchain route for qmlformat/qmllint from the qualified Qt
-# distribution, Qt-last ordering decided; exact Qt distribution identity,
-# licensing, and platform artifact qualification plus all digests stay owned
-# , never reconstructed from modules).
 BUF_ARTIFACT = "self-contained per-platform binaries with published checksums"
 QMLFORMAT_ARTIFACT = "qualified Qt distribution tool targets"
 QMLLINT_ARTIFACT = "qualified Qt distribution tool targets"

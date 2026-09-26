@@ -1,13 +1,3 @@
-//! Scope entry points for resolution.
-//!
-//! Split from `super` (`resolve.rs`): owns [`resolve`] and
-//! [`resolve_for_test`], which compose classification
-//! ([`super::classify`]) with ownership and test-mapping queries
-//! ([`super::query`], [`super::test_map`]). The classification,
-//! query-plumbing, run/deploy, and test-mapping domains live in
-//! sibling submodules; shared types stay in `super` and every public
-//! path is preserved via re-exports.
-
 use std::path::Path;
 
 use dx_process::Scope;
@@ -17,12 +7,6 @@ use super::{
     ResolveError, ResolvedScope,
 };
 
-/// Resolves explicit scope positionals into exact Bazel targets.
-///
-/// Empty input selects the repository scope (`//...`). Label-only input
-/// passes through in order. Once any file or directory resolves, every
-/// target is canonicalized, deduplicated, and bytewise sorted under
-/// [`Scope::ResolvedOwners`].
 pub fn resolve(
     scopes: &[String],
     workspace: &Path,
@@ -55,15 +39,6 @@ pub fn resolve(
     })
 }
 
-/// Resolves test/coverage scope: labels, patterns, and directories pass
-/// through, while file scopes map through every direct owner to all
-/// transitive reverse-dependent tests.
-///
-/// Returns the exact Bazel targets for `bazel test` / `bazel coverage`.
-/// File owners with no reverse-dependent test are
-/// [`ResolveError::NoTests`], never silent success. Directory scopes
-/// stay recursive patterns for Bazel to expand; label scopes pass
-/// through in order. With no file scope, this matches [`resolve`].
 pub fn resolve_for_test(
     scopes: &[String],
     workspace: &Path,
@@ -113,8 +88,6 @@ mod tests {
     use std::cell::RefCell;
     use std::path::PathBuf;
 
-    /// Scripted query runner: records argv/cwd and replays canned
-    /// outputs per expression in call order.
     struct FakeQuery {
         calls: RefCell<Vec<(Vec<String>, PathBuf)>>,
         outputs: RefCell<Vec<QueryResult>>,
@@ -149,8 +122,6 @@ mod tests {
             Ok(self.outputs.borrow_mut().remove(0))
         }
     }
-
-    // Shared test guard: `crate::resolve::NeverQuery` (See: `types.rs`, issue #914).
 
     fn scopes(words: &[&str]) -> Vec<String> {
         words.iter().map(ToString::to_string).collect()

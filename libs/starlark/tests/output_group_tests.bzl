@@ -1,4 +1,4 @@
-"""Unit tests proving the output-group-subjects use case (issue #794).
+"""Unit tests proving the output-group-subjects use case.
 """
 
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_equal", "expect_false", "expect_match", "expect_true", "starlark_test")

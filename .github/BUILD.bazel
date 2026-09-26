@@ -23,9 +23,6 @@ real_source_target(
     markdown_siblings = [
         "//docs:contributing/local-workflows.md",
         "//docs:github-ci.md",
-        "//docs:testing/README.md",
-        "//docs:testing/github-ci.md",
-        "//docs:testing/workflow-notes.md",
     ],
     markdown_srcs = [
         "ISSUE_TEMPLATE/bug_report.md",

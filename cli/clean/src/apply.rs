@@ -1,19 +1,3 @@
-//! Locked apply for `dx clean`.
-//!
-//! Split from `super` (`lib.rs`): owns [`CLEAN_LOCK_TIMEOUT`],
-//! [`CleanOutcome`], [`apply_plan`], and [`apply_plan_with_timeout`]
-//! (deleting exactly the prune sets under the shared workspace commit
-//! lock, re-validating the live selection under the lock). Re-exported
-//! through `super` so the public paths stay
-//! `dx_clean::{CLEAN_LOCK_TIMEOUT, CleanOutcome, apply_plan,
-//! apply_plan_with_timeout}`. The [`super::CleanError`] vocabulary stays
-//! on the facade (shared with the inventory/live/bytes modules).
-//! Distinct from the `flags` module (frozen flag shapes), the `records`
-//! module (setup-record validation), the `planning` module (pure prune
-//! selection), the `inventory` module (filesystem collection), the
-//! `live` module (process scan), and the bytes module (reclaimable-bytes
-//! measurement).
-
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -27,14 +11,8 @@ use super::planning::{CleanPlan, GenerationView};
 use super::records::GenerationKind;
 use super::CleanError;
 
-/// How long a clean apply contends for the workspace commit lock before
-/// failing with a busy diagnostic. Mirrors `dx_env::LOCK_TIMEOUT`
-/// (ten-second deadline); pinned equal by test, never drifted silently.
 pub const CLEAN_LOCK_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// Maps the shared commit-lock failure into the clean vocabulary.
-/// Only contention reports busy; every other lock failure aborts
-/// immediately so platform errors are never misreported.
 fn map_lock_error(error: Error) -> CleanError {
     match error {
         Error::Busy { path } => CleanError::Busy { path },
@@ -46,32 +24,16 @@ fn map_lock_error(error: Error) -> CleanError {
     }
 }
 
-/// Outcome of [`apply_plan`]: exactly which prune entries were removed.
-/// The current pointer is never touched, so selection is unchanged.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CleanOutcome {
-    /// Setup-record hexes removed from `.dx/setups`.
     pub removed_setup_records: Vec<String>,
-    /// Generations removed from `.dx/environments` / `.dx/generated`.
     pub removed_generations: Vec<GenerationView>,
 }
 
-/// Applies `plan` to `workspace_root`: deletes exactly its prune sets
-/// under the shared workspace commit lock, then releases the lock.
-/// `--dry-run` plans never reach this function (rendering deletes
-/// nothing and holds no lock).
-///
-/// Race safety: the current selection is re-read under the lock and any
-/// prune entry that is now current (or referenced by the now-current
-/// record) is skipped rather than deleted, so a concurrently completed
-/// `dx env` / `dx codegen` / `dx setup` is never uninstalled. Every prune
-/// name is re-validated as digest-shaped before deletion; missing entries
-/// (already pruned) are idempotent successes.
 pub fn apply_plan(workspace_root: &Path, plan: &CleanPlan) -> Result<CleanOutcome, CleanError> {
     apply_plan_with_timeout(workspace_root, plan, CLEAN_LOCK_TIMEOUT)
 }
 
-/// [`apply_plan`] with an injectable lock deadline (tests only).
 pub fn apply_plan_with_timeout(
     workspace_root: &Path,
     plan: &CleanPlan,
@@ -214,9 +176,6 @@ mod tests {
         root.join("ws")
     }
 
-    /// Commits two setup pairs (stale `('3','4')`, then current
-    /// `('1','2')`) and materializes all four generation directories.
-    /// Returns the workspace path plus the (stale, current) setup hexes.
     fn two_record_workspace(root: &Path) -> (PathBuf, String, String) {
         let workspace = workspace_of(root);
         let stale = setup_pair('3', '4');

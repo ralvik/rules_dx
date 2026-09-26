@@ -37,7 +37,6 @@ GALLERY_FIXTURE_PESTER = "//powershell/tests/fixtures/pester:greeter_test"
 # requirements; ambient module discovery.
 GALLERY_REJECTED = "Install-Module rejected: exact lock plus explicit-path import only"
 
-# Currency recheck (issue #932 pattern): modules below were verified
 # current on this date (Pester 5.7.1 plus PSScriptAnalyzer 1.25.0 per ADR
 # 0008 latest-stable, Pester 6.1.0 plus pwsh 7.6.5 observed). Refresh the
 # date with each dependency-currency pass.

@@ -1,21 +1,3 @@
-//! `env` binary: thin CLI shim over the managed-environment bootstrap library.
-//!
-//! Contract: `docs/environments/environment.md`.
-//!
-//! Refresh semantics, marker validation, and the atomic swap live in the
-//! library and are unit-tested there. This shim owns process concerns
-//! only: flag parsing, workspace discovery, staged-input location (explicit
-//! flags or runfiles lookup of the default tree), outcome messaging, and
-//! exit codes (0 success, 1 operational failure, 2 usage error per the CLI
-//! output protocol).
-//!
-//! Usage:
-//! ```text
-//! env [--workspace DIR] [--staged-bin DIR --metadata FILE] [--lock-timeout-ms N]
-//! ```
-//! With no staged-input flags the default `environment_tree` travels in
-//! this binary's runfiles; pass both flags to install any other tree.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -27,12 +9,6 @@ use std::time::Duration;
 use clap::{error::ErrorKind, Parser};
 use dx_env::{identity_hex, parse_staged, probe_symlink, refresh, RefreshOptions, RefreshOutcome};
 
-/// Default tree metadata rlocation candidates, in order.
-/// Single source for the default-tree lookup: the metadata file has a
-/// stable name while tool link names vary, so one lookup locates the
-/// staged tree (parent plus `bin`). Uses the standard `runfiles` library
-/// (`rlocation_from`); prod code never reads `TEST_SRCDIR` directly.
-/// Two entries cover Bzlmod (`_main/`) plus legacy (`rules_dx/`) layouts.
 const METADATA_CANDIDATES: &[(&str, &str)] = &[
     ("rules_dx/env/default_tree.metadata.json", "_main"),
     ("_main/env/default_tree.metadata.json", "_main"),
@@ -70,23 +46,15 @@ struct Cli {
     help: bool,
 }
 
-/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
-/// Shared plumbing; message formats stay local to the frozen contract.
-/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
     dx_output::invalid_token(error)
 }
 
-/// Map `clap` tokenizing failures onto [`usage_error`] messages. Only
-/// [`ErrorKind::UnknownArgument`] and [`ErrorKind::InvalidValue`] (a present
-/// flag with no consumable value) are reachable: every option takes plain
-/// strings, so no value parser, conflict, or count error can fire.
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
-        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown flag {echoed:?}")
@@ -203,9 +171,6 @@ fn run() -> i32 {
     }
 }
 
-/// Locates the default staged tree through the runfiles manifest: the
-/// metadata file has a stable name, and the staged links sit in the `bin`
-/// directory beside it.
 fn locate_default_tree() -> Option<(PathBuf, PathBuf)> {
     let runfiles = runfiles::Runfiles::create().ok()?;
     for (path, source_repo) in METADATA_CANDIDATES {

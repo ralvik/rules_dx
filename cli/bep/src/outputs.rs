@@ -1,21 +1,3 @@
-//! BEP output-group collection (`namedSetOfFiles`/`completed` events).
-//!
-//! Owns the `collect` domain of the streaming BEP collector: named-set
-//! definitions (`namedSet`/`namedSetOfFiles` ids with direct file URIs
-//! plus nested child references) resolved through their transitive
-//! closure for every completed label that requested the configured
-//! output group (such as `dx_results`). Records sort by label bytes,
-//! artifacts sort by path bytes and deduplicate; failed or aborted
-//! labels report `success=false` with no artifacts, and labels that
-//! never requested the group are skipped.
-//!
-//! Shared collection shape ([`crate::ArtifactReader`],
-//! [`crate::CollectorConfig`], [`crate::CollectedArtifact`],
-//! [`crate::TargetOutput`], [`crate::BepError`], `file://` URI parsing,
-//! malformed-line helper) stays in the facade and is shared via
-//! `pub(crate)` re-exports; the `testResult` collection
-//! (`collect_test_outputs`) lives in `test_outputs`.
-
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::BufRead;
 
@@ -30,9 +12,6 @@ struct RawFile {
     uri: Option<String>,
 }
 
-/// One named file set definition: direct file entries plus child set
-/// references. Bazel splits large sets into nested children, so
-/// collection resolves the transitive closure.
 struct RawSet {
     line: u64,
     files: Vec<RawFile>,
@@ -46,9 +25,6 @@ struct PendingTarget {
     set_ids: Vec<String>,
 }
 
-/// Reads the named-set id from a build-event id object. The pinned Bazel
-/// emits `namedSet`; older servers emit `namedSetOfFiles`. Both name the
-/// same immutable file-set definition.
 fn named_set_id(id: &serde_json::Map<String, Value>) -> Option<&str> {
     for key in ["namedSet", "namedSetOfFiles"] {
         if let Some(set_id) = id
@@ -63,14 +39,6 @@ fn named_set_id(id: &serde_json::Map<String, Value>) -> Option<&str> {
     None
 }
 
-/// Collects the requested output group from one BEP JSON stream.
-///
-/// `reader` yields one JSON build event per line. Returns one record per
-/// completed label that requested the output group, sorted by label bytes
-/// with artifacts sorted by path bytes and deduplicated. Labels that never
-/// requested the group are skipped; failed or aborted labels (including
-/// completions without a `success` field) report `success=false` with no
-/// artifacts.
 pub fn collect(
     reader: impl BufRead,
     config: &CollectorConfig,
@@ -280,9 +248,6 @@ pub fn collect(
     Ok(outputs)
 }
 
-/// Reports whether a completed object mentions the requested output group
-/// by name, distinguishing "no artifacts requested" from "requested but
-/// the file set list is empty".
 fn mentions_group(completed: &serde_json::Map<String, Value>, group: &str) -> bool {
     completed
         .get("outputGroup")
@@ -444,9 +409,6 @@ mod tests {
         assert!(got[0].artifacts.is_empty());
     }
 
-    /// Set definition in the pinned Bazel's `namedSet` id shape (Bazel 9),
-    /// as opposed to the legacy `namedSetOfFiles` id built by
-    /// [`named_set`].
     fn modern_set(id: &str, body: &str) -> String {
         format!(r#"{{"id": {{"namedSet": {{"id": "{id}"}}}}, "namedSetOfFiles": {body}}}"#)
     }

@@ -1,5 +1,3 @@
-//! `dx run` single-target launcher with explicit-label multirun.
-
 use super::common::*;
 use crate::args::Invocation;
 use crate::plan::plan_run;
@@ -12,7 +10,6 @@ use dx_output::{
 use std::io::Write;
 use std::path::Path;
 
-/// Stable operational codes for workflow failures.
 const CODE_NO_RUNNABLE: &str = "no_runnable";
 const CODE_AMBIGUOUS_RUNNABLE: &str = "ambiguous_runnable";
 const CODE_NO_TESTS: &str = "no_tests";
@@ -26,16 +23,6 @@ fn resolve_code(error: &ResolveError) -> &'static str {
     }
 }
 
-/// Executes `dx run`: local-only launcher with verbatim application
-/// exit codes. One resolved target runs one `bazel run`; multiple
-/// explicit labels/patterns (multirun) run sequential `bazel run`s
-/// in scope order with the same `--` args forwarded to each. Lifecycle
-/// prose goes to stderr prefixed per target; each application keeps
-/// stdio through the process runner (which forwards SIGINT/SIGTERM to
-/// the active child — sequential mode never has more than one live
-/// child, so no supervisor fan-out table). First required failure
-/// stops the sequence and returns that process's code verbatim, per
-/// the frozen multi-invocation contract.
 pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
     let Env {
         workspace,
@@ -81,12 +68,6 @@ pub(crate) fn execute_run(invocation: &Invocation, env: Env<'_>) -> i32 {
     execute_run_multi(invocation, workspace, runner, out, err, &targets)
 }
 
-/// Emits one `execute` `operation` per target with its single-label scope.
-/// Scope is always present (run never runs repository-wide); line order is
-/// the sequential execution order. Each operation carries the minor-1.1
-/// `correlation` grouping identifier `run:<target>` so multirun targets stay
-/// attributable when operations interleave.
-/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
 fn emit_run_operations(out: &mut dyn Write, command: &str, targets: &[String]) {
     use dx_output::with_correlation;
     for target in targets {
@@ -99,12 +80,6 @@ fn emit_run_operations(out: &mut dyn Write, command: &str, targets: &[String]) {
     }
 }
 
-/// Single-target `bazel run`: plan, optional dry-run, launch with
-/// verbatim exit-code preservation.
-///
-/// JSON mode streams `command_started`, one `execute` `operation` with the
-/// single-label scope, and `command_finished`; child stdout/stderr stay on
-/// stderr via `BinaryRunner` so stdout stays machine-owned.
 fn execute_run_single(
     invocation: &Invocation,
     workspace: &Path,
@@ -160,7 +135,6 @@ fn execute_run_single(
         if code != 0 {
             // Failure explainer without argv/secrets: which target failed
             // plus the stderr pointer; application output stays on stderr.
-            // See: `docs/cli/output-protocol.md#operational-error`.
             if let Ok(event) = error_event(
                 "bazel_failed",
                 &format!("application {target} failed with exit {code} (see stderr diagnostics)"),
@@ -180,17 +154,6 @@ fn execute_run_single(
     run_plan(invocation, out, err, workspace, runner, &plan.argv)
 }
 
-/// Multi-target sequential `bazel run`s (multirun): Bazel-owned
-/// execution with no supervisor. Each target gets its own `bazel run`
-/// plan with identical app args; lifecycle lines prefix per target so
-/// sequential output stays attributable while each child owns the
-/// terminal. Stops on the first required failure and returns that
-/// code verbatim; launch/signal failures map to the same operational
-/// codes as single-run.
-///
-/// JSON mode streams `command_started`, one `execute` `operation` per
-/// target in execution order, an `error` for the failed target when the
-/// sequence stops early, and `command_finished`.
 fn execute_run_multi(
     invocation: &Invocation,
     workspace: &Path,
@@ -274,9 +237,6 @@ fn execute_run_multi(
     0
 }
 
-/// Launches one planned `bazel run` argv and maps launch/signal
-/// outcomes to the single-run operational codes, preserving the
-/// application exit code verbatim (success included).
 fn run_plan(
     invocation: &Invocation,
     out: &mut dyn Write,
@@ -435,7 +395,6 @@ mod tests {
         assert_eq!(op["phase"], serde_json::json!("execute"));
         assert_eq!(op["scope"], serde_json::json!(["//app:bin"]));
         // Minor-1.1 correlation groups the operation under its target.
-        // See: `docs/cli/output-protocol.md#ndjson-envelope`.
         assert_eq!(op["correlation"], serde_json::json!("run://app:bin"));
         assert_eq!(
             events.last().expect("finished")["exit_code"],

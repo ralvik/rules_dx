@@ -13,7 +13,6 @@ GO_SDK_VERSION = "1.26.6"
 # Language floor (go directive in third_party/go/go.mod, owned by
 # //modules:toolchains.bzl GO_LANGUAGE_FLOOR). Tracks gazelle 0.52.2's
 # go 1.24.12 so the shared go_deps extension sees no version conflict;
-# the SDK minor stays >= this floor (issue #1003).
 GO_LANGUAGE_FLOOR = "1.24.12"
 
 # Gazelle ruleset pin (go_deps extension owner).
@@ -53,7 +52,6 @@ GODEPS_GENERATION = "consumes never writes"
 # as preferred); go.work for single-module layouts.
 GODEPS_REJECTED = "hand module tags rejected: from_file preferred; go.work only for multi-module"
 
-# Currency recheck (issue #932): directives below were verified current on
 # this date (go language floor plus SDK plus buildtools per ADR 0008
 # latest-stable). Refresh the date with each dependency-currency pass;
 # pin_consistency.sh fails when absent or stale.

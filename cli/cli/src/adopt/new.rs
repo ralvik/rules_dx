@@ -1,12 +1,3 @@
-//! Adoption new execution (`new`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_new`], the
-//! absent-only per-language scaffolding apply (dry-run plans are
-//! summaries, suppressed under `--quiet`). Re-exported through `super`
-//! so the dispatch path stays `crate::adopt::execute_adoption`.
-//!
-//! See: `docs/cli/commands/new-upgrade.md`.
-
 use std::io::Write;
 
 use crate::args::Invocation;
@@ -15,10 +6,6 @@ use crate::exec::common::check_stdout_write;
 use super::{operational, summaries_suppressed};
 use dx_process::pre_exec_code;
 
-/// Runs `dx new <language> [name]`: dry-run lists the files that would
-/// be written, otherwise applies the scaffolding absent-only (existing
-/// files are left untouched with a `refused:` note on stderr).
-/// Unknown languages fail pre-exec with the supported list.
 pub(crate) fn execute_new(
     invocation: &Invocation,
     workspace: &std::path::Path,

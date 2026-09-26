@@ -5,7 +5,7 @@ Implementation status: delivered CLI (`dx migrate --from <version>
 gate plus manifest selection); live execution fails closed with
 `migrate_failed` until the first manifest lands. Owned
 under issue #462 (live successor to closed #4), upgrade scope under
-issue #671 per [ADR 0025](../../decisions/0025-migrate-upgrade-scope.md).
+issue #671 per ADR 0025.
 
 ## Direction
 
@@ -15,7 +15,7 @@ this page owns the migrate rewrite contract.
 
 ## Syntax
 
-`dx migrate --from <version> --to <version> [scope ...]`: both
+`dx migrate --from <version> --to <version> [scope...]`: both
 versions are required Cargo-flavor semver. The pair must be an
 upgrade (target exceeds source under the `semver` crate `to > from`
 gate); downgrades and equal
@@ -71,7 +71,7 @@ applied through the same write-outcome and completion reporting as
 
 No manifests exist yet (module at `0.0.0`, no releases cut), so live
 execution fails closed with `migrate_failed` — the same discipline as
-`audit_failed` (`dx audit` plus `dx update` execute live with
+`audit_failed` (`dx security`/`dx license` plus `dx update` execute live with
 per-family and per-set failures). Syntax plus manifest selection is
 pinned by `dx_adopt` unit tests (`migrate_is_upgrade`,
 `migrate_is_major_bump`, `migrate_manifest_name`,
@@ -81,7 +81,7 @@ fixtures and `bazel run //tools/ci:migrate_qualification` (issue
 
 ## Bump Cross-Hint
 
-Major dependency widens hint this command (issue #931): `dx bump`
+Major dependency widens hint this command : `dx bump`
 semver plans print `if major bump, run dx migrate --from <old> --to
 <new>` with the missing-manifest mapping (`migrate_failed` exit `1`
 live without a manifest; missing `--from`/`--to` exit `2`

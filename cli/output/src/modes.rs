@@ -1,10 +1,3 @@
-//! Live output modes and stdout ownership.
-//!
-//! Split from `super` (`lib.rs`): owns `OutputMode`, `OutputModeName`,
-//! `StdoutOwner`, `stdout_owner`, `dx_text_visible`, and
-//! `check_output_conflict`. Re-exported through `super` so the public path
-//! stays `dx_output::{...}`.
-
 use super::OutputError;
 
 /// Live output mode selecting stdout ownership.
@@ -19,13 +12,10 @@ pub enum OutputMode {
 }
 
 impl OutputMode {
-    /// Parses a `--output` value. `quiet` comes from `--quiet` and only
-    /// affects text mode.
     pub fn parse(text: &str, quiet: bool) -> Result<Self, OutputError> {
         Ok(OutputModeName::parse(text)?.resolve(quiet))
     }
 
-    /// Canonical mode name for summaries and errors.
     pub fn name(&self) -> &'static str {
         match self {
             OutputMode::Text { .. } => "text",
@@ -47,8 +37,6 @@ pub enum OutputModeName {
 }
 
 impl OutputModeName {
-    /// Parses one `--output` spelling, case-sensitively like the retired
-    /// match: `Text` still rejects `TEXT`.
     pub fn parse(text: &str) -> Result<Self, OutputError> {
         use clap::ValueEnum;
         Self::from_str(text, false).map_err(|_| OutputError::UnknownOutputMode {
@@ -56,7 +44,6 @@ impl OutputModeName {
         })
     }
 
-    /// Resolves the spelling against `--quiet` into the live mode.
     pub fn resolve(self, quiet: bool) -> OutputMode {
         match self {
             OutputModeName::Text => OutputMode::Text { quiet },
@@ -81,9 +68,6 @@ pub enum StdoutOwner {
     Report,
 }
 
-/// Selects the stdout owner. `stdout_report` reports whether exactly one
-/// standard report targets `-`; multiple stdout reports are rejected by
-/// [`check_output_conflict`] before this is consulted.
 pub fn stdout_owner(mode: &OutputMode, stdout_report: bool) -> StdoutOwner {
     if stdout_report {
         return StdoutOwner::Report;
@@ -95,15 +79,10 @@ pub fn stdout_owner(mode: &OutputMode, stdout_report: bool) -> StdoutOwner {
     }
 }
 
-/// Reports whether `dx` operation summaries are visible. `--quiet`
-/// suppresses them in text mode; diff mode never shows them.
 pub fn dx_text_visible(mode: &OutputMode) -> bool {
     matches!(mode, OutputMode::Text { quiet: false })
 }
 
-/// Rejects incompatible live-mode and stdout-report combinations: a stdout
-/// report conflicts with `--output diff`, `--output json`, and any second
-/// stdout report. File reports may accompany any live mode.
 pub fn check_output_conflict(mode: &OutputMode, stdout_reports: usize) -> Result<(), OutputError> {
     if stdout_reports > 1 {
         return Err(OutputError::SecondStdoutReport);

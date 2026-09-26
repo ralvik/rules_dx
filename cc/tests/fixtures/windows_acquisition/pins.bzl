@@ -50,10 +50,6 @@ MUTABLE_REJECTED = [
 ]
 
 # Laziness: merely adding the module requires no acceptance and fetches
-# no restricted payloads; unrelated workflows fetch nothing; missing
-# acceptance breaks only Windows acquisition, never unrelated builds.
-# Deferred acceptance failure does not prove laziness: extension
-# evaluation already fetches manifests.
 LAZY_CONTRACT = [
     "adding the module requires no acceptance",
     "adding the module fetches no restricted payloads",

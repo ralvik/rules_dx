@@ -1,10 +1,3 @@
-//! Layer-2 matrix harness printer: decodes one validated
-//! `QualityResult` protobuf into deterministic text for golden diffing.
-//!
-//! Test-only tooling: prints the producer, capability, stages,
-//! convergence, initial/terminal diagnostics, and replacements. Snapshots
-//! and digests are omitted (input-identity noise, not behavior).
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -71,16 +64,11 @@ fn print_diagnostics(prefix: &str, diagnostics: &[proto::Diagnostic]) {
     }
 }
 
-/// `argv` tokenizer (reuse pinned `clap`). One positional
-/// input; extra positionals are a usage error (exit 2), unlike the legacy
-/// `args().nth(1)` which silently ignored them.
 #[derive(Parser, Debug)]
 #[command(disable_help_flag = true, disable_version_flag = true)]
 struct Cli {
-    /// Validated result protobuf to decode.
     #[arg(value_name = "OUT.pb")]
     input: Option<String>,
-    /// Legacy `--help`/`-h` arm: prints usage (exit 2).
     #[arg(long = "help", short = 'h', action = clap::ArgAction::SetTrue)]
     help: bool,
 }

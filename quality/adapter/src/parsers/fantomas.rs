@@ -1,10 +1,3 @@
-//! Fantomas output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
@@ -22,13 +15,6 @@ struct FantomasFile {
     status: String,
 }
 
-/// Parses Fantomas `check --json` stdout. `files` are the
-/// workspace-relative mirror paths.
-///
-/// Clean is exit 0 with every file `unchanged`. Dirty is exit 99 with
-/// at least one `needs-formatting` file; each becomes one `1:1` format
-/// finding. Exit 1 is always an operational failure, never findings.
-/// Unknown statuses and unknown paths fail closed.
 pub fn parse_fantomas(
     stdout: &[u8],
     code: Option<i32>,

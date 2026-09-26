@@ -1,4 +1,4 @@
-"""Concrete toolchain-subjects use case (issue #792).
+"""Concrete toolchain-subjects use case.
 Contract: `docs/testing/starlark.md#future-not-implemented`, `docs/decisions/0009-starlark-testing.md`.
 Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via `bazel run //tools/ci:starlark_futures_qualification`.
 Toolchain resolution needs platform plus toolchain context beyond provider-field

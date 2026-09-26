@@ -1,17 +1,3 @@
-//! qmllint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! qmllint verifies syntax plus anti-patterns with `--json <file>`
-//! (`-` for stdout). The pinned JSON shape is an object with a
-//! `diagnostics` array, one entry per finding with `file,line,column,
-//! rule,message,severity`. `.qmllint.ini` plus `//qmllint
-//! enable/disable` comments scope natively. Check-only with the
-//! provisional sandbox-apply-and-diff fix flow.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -56,12 +42,6 @@ fn qmllint_severity(level: &str) -> Result<ToolSeverity, ParseError> {
     }
 }
 
-/// Parses `qmllint --json -` stdout. `files` are the workspace-relative
-/// mirror paths.
-///
-/// Clean is exit 0 with empty diagnostics. Findings exit 1 with at
-/// least one diagnostic; every diagnostic needs a nonempty rule plus
-/// nonzero positions. Unknown paths and malformed shapes fail closed.
 pub fn parse_qmllint(
     stdout: &[u8],
     code: Option<i32>,

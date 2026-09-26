@@ -13,7 +13,7 @@ advisory snapshot download through supported upstream tooling, and the
 standalone `dx` release fetch. Steady-state offline needs none of them:
 the launcher installs from the vendored bundle, `dx setup`/`env`/`codegen`
 reuse already-fetched Bazel inputs with no new fetch when inputs are
-unchanged, and `dx audit` matches locally against the vendored advisory
+unchanged, and `dx security`/`dx license` match locally against the vendored advisory
 mirror with no fetch at all. Anything that still needs network fails
 closed with an actionable diagnostic instead of silently degrading.
 
@@ -32,7 +32,7 @@ entry, or an unknown argument fails before mutation.
 
 ```sh
 deploy/offline/bootstrap-offline.sh --bundle <dir> \
-  [--install-dir "$HOME/.local/bin"] [--workspace "$PWD"]
+ [--install-dir "$HOME/.local/bin"] [--workspace "$PWD"]
 ```
 
 The script installs the launcher as `bazel` and populates
@@ -51,12 +51,12 @@ same fail-closed mapping: a missing, invalid, tampered, or stale
 mirror snapshot fails with `advisory_refresh_failed`, never clean and
 never a stale fallback. The `retrieved_at` stamp is written at populate
 time from the bundle bytes, so re-copying a refreshed bundle is the
-mirror refresh. Live `dx audit` performs no network fetch on either
+mirror refresh. Live `dx security`/`dx license` perform no network fetch on either
 path and never uploads lockfiles or inventories.
 
 ## Offline flag
 
-`dx audit`, `dx update`, and `dx bump` accept `--offline` (`--frozen`
+`dx security`, `dx license`, `dx update`, and `dx bump` accept `--offline` (`--frozen`
 alias) to force cache-only operation without network fetches. `--dry-run`
 plans without launching and never fails for offline; live runs fail closed
 with `offline_required` (exit `1`, no launch and — except for bump refresh

@@ -7,21 +7,9 @@ load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_CLASS_TO_FAMILY")
 
 # Versioned wrapper-ownership schema. Consumers query via
-# `wrapper_owner`, `wrapper_owned_families`, `uncovered_families`, and
-# `wrapper_schema_error` instead of duplicating the owner inventory, so
-# adding a wrapper moves its family from "other" to its label here plus
-# quality_specs cover, never a parallel allowlist.
 WRAPPER_SCHEMA_VERSION = 1
 
 # Family -> wrapper owner label or "other" for explicitly uncovered.
-# Covered families name the single wrapper owning their classes via
-# quality_specs (cuda shares the cc wrapper; javascript covers
-# javascript plus jsx; typescript covers typescript plus tsx; python
-# covers python plus python_stub; cc covers c plus cpp).
-# Uncovered families are explicitly "other": fixture- and matrix-owned
-# ad-hoc with no wrapper (file-family adapters run via fixtures and the
-# runner matrix; deferred classes stay owned via the parity gate), never
-# silently missing. See docs/quality/quality-sources.md.
 WRAPPER_OWNERS = {
     "astro": "//astro/rules:defs.bzl",
     "cc": "//cc/rules:defs.bzl",

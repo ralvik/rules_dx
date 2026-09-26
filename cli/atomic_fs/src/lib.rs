@@ -1,45 +1,3 @@
-//! Race-free atomic filesystem writes shared by every apply/commit path.
-//!
-//! Contract: `docs/environments/managed-state.md`.
-//!
-//! `dx_apply::RealFileSystem::write_atomic`
-//! (sibling+rename) duplicated the staging discipline that
-//! `quality_adapter::exec::Scratch`, `dx_process::Fs`, and
-//! `dx_env::acquire_lock` each reimplement around `tempfile`.
-//! This crate owns the single write path plus the single lock-contention
-//! loop (`try_lock` + timeout); `dx_env::acquire_lock` owns the lock-file
-//! open, `dx_setup` reuses that route, so no new lock file, mechanism, or
-//! deadline appears elsewhere.
-//!
-//! Contract: stage in the target directory so the final persist stays an
-//! atomic same-filesystem rename; OS-random `O_EXCL`-claimed staging names
-//! so concurrent writers never collide; `NamedTempFile` drop-cleanup so a
-//! crash leaves no stale sibling; preserve the existing file mode on
-//! overwrite (new files get `0644` on unix to match `std::fs::write`
-//! defaults, since `NamedTempFile` creates `0600`).
-//!
-//! Newline contract: bytes are preserved byte-for-byte with no
-//! normalization. LF, CRLF, and missing-final-newline variants stay
-//! distinct and round-trip exactly; the runner proves this with
-//! `newline_variants_yield_distinct_manifests` and whole-file splice
-//! checks, and every apply path writes the candidate bytes verbatim.
-//!
-//! Lock contract: contention-only retry on `WouldBlock` until the deadline;
-//! any other flock failure aborts immediately so platform errors are never
-//! misreported as busy. Locks release when the holding `File` drops
-//! (fd close).
-//!
-//! Dependency evaluation (rejected;
-//! stays hand-rolled): no `fs2`/`fslock` — the
-//! stable `std::fs::File::try_lock` API is the upstreamed equivalent and
-//! already owns the flock here, so the crates would add supply-chain
-//! review, lockfile churn, and `MODULE.bazel` manifests for zero behavior
-//! gain. No `fs-err` either: every `write_atomic` call site maps failures
-//! into typed errors carrying the target path (e.g. `cannot publish
-//! <path>`, `WriteFile { path, .. }`, `LockFailed { path, .. }`), so
-//! runtime path-wrapping would duplicate the existing discipline at the
-//! same dependency cost. This crate owns only the timeout loop.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -49,13 +7,6 @@ use std::io;
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-/// Atomically replaces `path` with `content`, creating parent directories
-/// as needed.
-///
-/// Stages via an OS-random `O_EXCL`-claimed `NamedTempFile` in the target
-/// directory, then persists with an atomic same-filesystem rename.
-/// Bare file names (no parent) stage in the current directory for the
-/// same reason.
 pub fn write_atomic(path: &Path, content: &[u8]) -> io::Result<()> {
     use std::io::Write as _;
     let parent = path
@@ -92,17 +43,8 @@ pub fn write_atomic(path: &Path, content: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
-/// Poll interval while contending for an exclusive file lock.
 pub const LOCK_POLL: Duration = Duration::from_millis(50);
 
-/// Contends for an exclusive lock on the already-opened `file` until
-/// `timeout`.
-///
-/// Returns `Ok(())` once this `File` holds the lock. Returns
-/// `Err(TryLockError::WouldBlock)` when another holder keeps the lock past
-/// the deadline (busy); any other `TryLockError` aborts immediately so
-/// platform errors are never misreported as busy. The caller keeps the
-/// returned `File` alive: dropping it releases the lock.
 pub fn lock_exclusive(file: &File, timeout: Duration) -> Result<(), std::fs::TryLockError> {
     let start = Instant::now();
     loop {

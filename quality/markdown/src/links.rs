@@ -5,8 +5,6 @@ use pulldown_cmark::LinkType;
 use super::check::{push_finding, CheckOutcome, FindingKind};
 use super::frontmatter::slugs_in;
 
-/// One link candidate in document order: a resolved destination or an
-/// explicitly broken reference label.
 pub(crate) enum DocLink {
     Dest {
         line: u32,
@@ -36,18 +34,12 @@ impl DocLink {
 
 pub(crate) type Span = std::ops::Range<usize>;
 
-/// An unresolved reference from the broken-link callback: byte span of the
-/// source form plus its kind and normalized label.
 pub(crate) struct BrokenRef {
     pub(crate) span: Span,
     pub(crate) link_type: LinkType,
     pub(crate) reference: String,
 }
 
-/// Display label for an explicitly broken reference, read back off the
-/// source span so messages keep the author's spelling: the second bracket
-/// group of `[text][label]` (or the inner text of collapsed `[text][]`,
-/// whose callback span covers only `[text]`).
 pub(crate) fn broken_label(text: &str, broken_ref: &BrokenRef) -> String {
     let span = text.get(broken_ref.span.clone()).unwrap_or("");
     let span = span.strip_prefix('!').unwrap_or(span);
@@ -141,8 +133,6 @@ pub(crate) fn check_target(
     }
 }
 
-/// `scheme:` prefix with a multi-character scheme (single letters are
-/// Windows drive paths, not remote targets).
 fn has_scheme(target: &str) -> bool {
     let Some(colon) = target.find(':') else {
         return false;
@@ -155,23 +145,6 @@ fn has_scheme(target: &str) -> bool {
         })
 }
 
-/// Resolve `target` against the parent directory of `source`, lexically
-/// normalizing `.`/`..`. A leading `/` resolves from the sibling root.
-///
-/// Dependency evaluation (stays hand-rolled for this call
-/// site): repo-relative sibling targets are virtual forward-slash strings
-/// with clamped `..` (excessive `..` stays at the root, never errors) and
-/// no filesystem access. `normpath::BasePathBuf` cannot represent relative
-/// virtual paths on Windows (requires a `Prefix`), `PathExt::normalize`
-/// needs on-disk existence (`canonicalize` on Unix, `GetFullPathNameW` on
-/// Windows) and `normalize_virtually` is Windows-only, and `BasePathBuf::push`
-/// is a plain `PathBuf::push` on Unix (no `..` normalization), so adopting it
-/// would add lockfile churn plus `MODULE.bazel` manifests for zero behavior
-/// gain while breaking portable `/` output and clamped semantics. The small
-/// string walk below owns those semantics explicitly, mirroring `dx_path`
-/// staying hand-rolled per; `normpath` is adopted in `quality/adapter`
-/// where absolute scratch roots (with prefix) benefit from its OS-correct
-/// `Prefix`/verbatim handling.
 pub fn resolve_target(source: &str, target: &str) -> String {
     fn normalize<I>(segments: I) -> String
     where
@@ -208,15 +181,6 @@ pub fn resolve_target(source: &str, target: &str) -> String {
     normalize(combined)
 }
 
-/// Relative `<autolink>` targets on one unscanned line. The parser emits no
-/// event for these (only absolute URIs and emails are CommonMark
-/// autolinks), so the retired `<...>` rule is kept as a fallback: a `<`
-/// closed on the same line whose trimmed content is non-empty with no
-/// whitespace. Email autolinks are skipped via overlap with the parser's
-/// Email span (recorded as a link span with no finding), so `@` in a
-/// relative target still resolves fail-closed. Candidates overlapping a
-/// code span, a link the parser already emitted, or an inline HTML tag
-/// are skipped.
 pub(crate) fn scan_bare_autolinks(
     line: &str,
     base: usize,
@@ -257,7 +221,6 @@ pub(crate) fn scan_bare_autolinks(
     links
 }
 
-/// Whether two byte spans share at least one byte.
 fn overlaps(first: &Span, second: &Span) -> bool {
     first.start.max(second.start) < first.end.min(second.end)
 }

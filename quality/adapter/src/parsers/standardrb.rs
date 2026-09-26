@@ -1,18 +1,6 @@
-//! StandardRB output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `standardrb --check` diff stdout over the Ruby closure.
-///
-/// Whole-file rewrite with check/diff mode: unified diff markers
-/// yield one `1:1` format finding per file; empty output on exit 0
-/// is clean. Any other shape is a grammar mismatch.
 pub fn parse_standardrb(
     stdout: &[u8],
     code: Option<i32>,

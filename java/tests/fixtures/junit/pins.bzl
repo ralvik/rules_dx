@@ -46,13 +46,6 @@ JUNIT5_FALLBACK_ARTIFACTS = [
 ]
 
 # Runner mapping: default Bazel runner over the JUnit 4 seed today;
-# qualified Jupiter upgrade is use_testrunner=False plus ConsoleLauncher
-# `execute --select-class` with the pinned Jupiter/Platform deps (primary
-# 6.1.3, fallback 5.14.x on JDK <17); Vintage runs JUnit 4 on the Platform
-# (deprecated). Kotlin `suspend` is natively supported by JUnit 6 but needs
-# kotlinx-coroutines-core plus kotlin-reflect on the classpath; it stays a
-# documented capability, not fixture-proven here (coroutines are not in the
-# Maven lock).
 JUNIT_RUNNER_MAIN_CLASS = "org.junit.platform.console.ConsoleLauncher"
 JUNIT_RUNNER_USE_TESTRUNNER = False
 

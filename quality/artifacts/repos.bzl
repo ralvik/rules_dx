@@ -1,12 +1,6 @@
-"""dx_tools use_repo inventory. Contract: docs/tools/tool-acquisition.md."""
+"""dx_tools use_repo inventory."""
 
 # Checked-in inventory of the `dx_tools` extension repos re-exported by the
-# root MODULE.bazel `use_repo` block. Single source stays the artifact
-# metadata loaded by `extension.bzl`; `//quality/artifacts:metadata`
-# fails when this list drifts from the derived `dx_<tool>_<os>_<cpu>`
-# names, and MODULE.bazel must match this list (drift breaks acquisition).
-# Add a tool here only with its four platform
-# metadata files plus extension coverage (macOS x86_64 removed per #976).
 DX_TOOL_REPOS = [
     "dx_biome_linux_arm64",
     "dx_biome_linux_x86_64",

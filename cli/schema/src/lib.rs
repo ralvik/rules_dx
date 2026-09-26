@@ -1,66 +1,32 @@
-//! Shared schema-version helpers for versioned shard protocols.
-//!
-//! Contract: `docs/architecture/README.md`.
-//!
-//! `quality/result`, `generation/result`, `docs/ir`, and `cli/output`
-//! all version their wire form with `schema_major = 1` / `schema_minor = 1`.
-//! Major bumps are breaking (decode must fail); minor bumps are
-//! forward-compatible (newer minors decode when their bytes satisfy the
-//! current rules). [`SchemaVersion`] carries a decoded `(major, minor)` pair;
-//! [`check_major`] enforces the breaking axis only, so callers keep their own
-//! `UnsupportedMajor`-style payloads and messages.
-//!
-//! Minor 1.1 adds the optional NDJSON `correlation` grouping field plus the
-//! backend committed-change manifest for update reporting.
-//! See: `docs/cli/output-protocol.md#ndjson-envelope`.
-//! Owning contract: `docs/cli/output-protocol.md`.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
 
-/// Frozen schema major accepted by every versioned shard protocol.
 pub const SCHEMA_MAJOR: u32 = 1;
-/// Schema minor the crates were written against. Newer minors decode when
-/// their bytes satisfy the current rules. Minor 1 carries the `correlation`
-/// grouping field and the update committed-change manifest.
-/// See: `docs/cli/output-protocol.md#ndjson-envelope`.
 pub const SCHEMA_MINOR: u32 = 1;
 
-/// One decoded `(schema_major, schema_minor)` pair.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SchemaVersion {
-    /// Decoded `schema_major` wire field.
     pub major: u32,
-    /// Decoded `schema_minor` wire field.
     pub minor: u32,
 }
 
 impl SchemaVersion {
-    /// The current `(1, 1)` version every shard is written against.
     pub const CURRENT: Self = Self {
         major: SCHEMA_MAJOR,
         minor: SCHEMA_MINOR,
     };
 
-    /// Builds one version pair from decoded wire fields.
     pub const fn new(major: u32, minor: u32) -> Self {
         Self { major, minor }
     }
 
-    /// Rejects breaking majors; minor is forward-compatible and always passes.
-    ///
-    /// Returns the offending major on failure so callers can keep their own
-    /// error payloads.
     pub fn check_major(self) -> Result<(), u32> {
         check_major(self.major)
     }
 }
 
 /// Rejects breaking majors; minor is forward-compatible and never checked.
-///
-/// Returns the offending major on failure so callers can keep their own
-/// error payloads.
 pub fn check_major(found: u32) -> Result<(), u32> {
     if found != SCHEMA_MAJOR {
         return Err(found);

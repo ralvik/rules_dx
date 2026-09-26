@@ -1,4 +1,4 @@
-"""Concrete aspect-subjects use case (issue #791).
+"""Concrete aspect-subjects use case.
 
 Contract: `docs/testing/starlark.md#analysis`, `docs/decisions/0009-starlark-testing.md`.
 Fixture: `libs/starlark/tests/fixtures/starlark_futures/` via

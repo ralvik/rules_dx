@@ -8,10 +8,6 @@ load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
 # Versioned environment/version charset schema. Consumers query via
-# `promotion_environment_charset`, `promotion_version_charset`, and
-# `promotion_*_error` instead of duplicating the charset, so any charset
-# evolution edits this one data constant with schema review, never a
-# parallel allowlist.
 PROMOTION_SCHEMA_VERSION = 1
 
 # Environment names embed directly in the generated Python launcher, so

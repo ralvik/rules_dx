@@ -1,55 +1,13 @@
-//! V1 dependency-set registry for `dx update`.
-//!
-//! Pure registry over the five supported sets named in the issue:
-//! Cargo, npm, Maven, NuGet, and Go. Each set is resolver-owned through
-//! its approved Bazel integration, refreshes standard locks or equivalent
-//! resolved files within declared requirements, and owns no `dx` lockfile
-//! or private resolver. Set identity, manifests, and locks are pinned here
-//! so selector resolution, backend argv, and per-set reporting agree on
-//! one source of truth without a CLI filesystem scan.
-//!
-//! Manifest/lock paths are workspace-relative and verbatim:
-//! - Cargo shares one `crate_universe` lock: manifests under
-//!   `rust/tests/fixtures/hello/Cargo.toml` (plus the workspace Rust crates listed in
-//!   `MODULE.bazel` sharing `rust/tests/fixtures/hello/Cargo.lock`), lock
-//!   `rust/tests/fixtures/hello/Cargo.lock`, derived `cargo-bazel-lock.json` regenerated
-//!   via the documented repin.
-//! - npm is the root JS/TS graph: manifest `package.json`, lock
-//!   `pnpm-lock.yaml` via the Bazel-pinned pnpm.
-//! - Maven declares artifacts in `MODULE.bazel`, lock
-//!   `third_party/jvm/maven_install.json` via `REPIN=1 bazel run @maven//:pin`.
-//! - NuGet declares `third_party/dotnet/paket.dependencies`, lock
-//!   `third_party/dotnet/paket.lock`, derived hub under
-//!   `third_party/dotnet/deps` via the documented `paket2bazel` run.
-//! - Go is the single-module `go_deps.from_file` lock: manifest
-//!   `third_party/go/go.mod`, lock `third_party/go/go.mod` plus
-//!   `third_party/go/go.sum`. Versions intentionally track Gazelle's
-//!   `go.mod` for the shared extension (see
-//!   `go/tests/fixtures/godeps/pins.bzl`); explicit changes widen via
-//!   `dx bump` plus the pinned SDK tidy.
-//!
-//! Independence: the five sets use distinct lockfiles/resolver workspaces,
-//! so they are independent for continuation. Sets sharing a lockfile or
-//! resolver workspace must never be treated as independent merely because
-//! they have different Bazel labels (see [`crate::outcome`]).
-
-/// V1 dependency-set identity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum SetId {
-    /// Rust/Cargo via `crate_universe` (`rust/tests/fixtures/hello/Cargo.lock`).
     Cargo,
-    /// Go via `go_deps.from_file` (`third_party/go/go.mod` plus `go.sum`).
     Go,
-    /// JVM/Maven via `rules_jvm_external` (`third_party/jvm/maven_install.json`).
     Maven,
-    /// JS/TS/npm via `npm_translate_lock` (`pnpm-lock.yaml`).
     Npm,
-    /// .NET/NuGet via Paket (`third_party/dotnet/paket.lock`).
     NuGet,
 }
 
 impl SetId {
-    /// All five supported sets, in deterministic alphabetical order.
     pub const ALL: [SetId; 5] = [
         SetId::Cargo,
         SetId::Go,
@@ -58,7 +16,6 @@ impl SetId {
         SetId::NuGet,
     ];
 
-    /// Stable selector spelling for this set.
     pub fn name(self) -> &'static str {
         match self {
             SetId::Cargo => "cargo",
@@ -69,7 +26,6 @@ impl SetId {
         }
     }
 
-    /// Parses a set selector spelling. Case-sensitive; no aliases.
     pub fn parse(text: &str) -> Option<SetId> {
         match text {
             "cargo" => Some(SetId::Cargo),
@@ -81,7 +37,6 @@ impl SetId {
         }
     }
 
-    /// Workspace-relative manifests owned by this set.
     pub fn manifests(self) -> &'static [&'static str] {
         match self {
             SetId::Cargo => &["rust/tests/fixtures/hello/Cargo.toml"],
@@ -92,7 +47,6 @@ impl SetId {
         }
     }
 
-    /// Workspace-relative lockfiles refreshed by this set.
     pub fn locks(self) -> &'static [&'static str] {
         match self {
             SetId::Cargo => &[

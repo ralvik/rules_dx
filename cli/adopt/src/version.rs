@@ -1,34 +1,11 @@
-//! Single-version pin and rollback for `dx version`.
-//!
-//! Split from `super` (`lib.rs`): owns `DX_VERSION`, `MODULE_VERSION`,
-//! `PREVIOUS_VERSION`, `version_pin_matches_module`,
-//! `rollback_re_pins_previous`, `read_version_pin`, and
-//! `write_version_pin`. Re-exported through `super` so the public path
-//! stays `dx_adopt::{DX_VERSION, MODULE_VERSION, PREVIOUS_VERSION,
-//! version_pin_matches_module, rollback_re_pins_previous,
-//! read_version_pin, write_version_pin}`.
-
 use std::path::Path;
 
 use super::AdoptError;
 
-/// Delivered `dx` / `rules_dx` single version (frozen).
-/// See: `MODULE.bazel` (`version = "0.0.0"`); the const mirrors the module
-/// version at build time so the startup skew gate stays subprocess-free.
 pub const DX_VERSION: &str = "0.0.0";
-/// Pinned `rules_dx` module version; `dx version` must equal this.
-/// See: `MODULE.bazel` plus `docs/contributing/diagnostics-versioning.md`.
 pub const MODULE_VERSION: &str = "0.0.0";
-/// Previous release for rollback demonstration.
 pub const PREVIOUS_VERSION: &str = "0.0.0";
 
-/// Whether the single-version pin holds.
-///
-/// Per direction the `dx` version equals the pinned `rules_dx` module
-/// version: both must parse as Cargo-flavor semver (via the `semver`
-/// crate,) and compare exactly equal. Self-update bumps
-/// that pin from verified release artifacts; anything else is rejected here.
-/// Empty strings and non-semver text never match, even when equal.
 pub fn version_pin_matches_module(dx_version: &str, module_version: &str) -> bool {
     if dx_version.is_empty() || module_version.is_empty() {
         return false;
@@ -44,16 +21,10 @@ pub fn version_pin_matches_module(dx_version: &str, module_version: &str) -> boo
     dx == module
 }
 
-/// Whether a rollback target is admissible.
-///
-/// Rollback is re-pinning the previous release: the target must equal the
-/// known previous version and differ from the current pin. Rolling to the
-/// current pin or to an unknown version is rejected.
 pub fn rollback_re_pins_previous(current: &str, target: &str, known_previous: &str) -> bool {
     !known_previous.is_empty() && target == known_previous && target != current
 }
 
-/// Read the `.dx/version` pin under `root`.
 pub fn read_version_pin(root: &Path) -> Result<String, AdoptError> {
     let raw = std::fs::read_to_string(root.join(".dx/version")).map_err(|e| {
         AdoptError::ReadVersionPin {

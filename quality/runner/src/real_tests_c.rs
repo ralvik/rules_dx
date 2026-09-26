@@ -1,6 +1,3 @@
-//! Split from `real.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::real_tests_a::*;
 use super::real_tests_b::*;
 use super::*;
@@ -161,9 +158,6 @@ fn check_ok_fix_missing(
     Err(io::Error::new(io::ErrorKind::NotFound, "fix binary gone"))
 }
 
-/// Check double that poisons the file on fix: the initial check
-/// succeeds, convergence applies the poison, and the terminal check
-/// fails on the poisoned bytes.
 fn check_ok_fix_poisons(
     argv: &[OsString],
     _cwd: &Path,
@@ -624,16 +618,6 @@ fn eslint_fix_failure_keeps_original_text() {
     );
 }
 
-/// Biome/Prettier composition fixture. Models the fixed
-/// direct-probe behavior: Biome formats with tabs, Prettier with two
-/// spaces (pinned defaults, no native config), so the same JS input
-/// has no common fixed point while JSON inputs agree. The lexical
-/// ruleset order (biome, prettier) is the frozen order: it is
-/// deterministic and independent of user declaration order. Both
-/// orders converge stable with the last writer winning, so the order
-/// is material and stays frozen; genuine cycles and iteration limits
-/// remain certified by the shared convergence protocol and fail
-/// closed.
 #[test]
 fn biome_prettier_identical_output_converges_stable() {
     let stages = vec![
@@ -664,7 +648,6 @@ fn biome_prettier_conflicting_output_reports_oscillation() {
     // No common fixed point exists: round 2 nets to its start after
     // intermediate changes, so the run is period-1 oscillation, not
     // last-writer-wins stability (only STABLE may carry replacements).
-    // See: `docs/quality/quality-testing.md#determinism`.
     let normalize = |tool: &str, _: &str, text: &str| {
         if tool == "biome" {
             if text == "tabs\n" {

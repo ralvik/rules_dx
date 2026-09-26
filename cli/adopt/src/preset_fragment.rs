@@ -1,37 +1,14 @@
-//! Consumer `.bazelrc` preset fragment rendering.
-//!
-//! Single source for the vendored execution preset consumed via
-//! `dx update` (regenerate) and `dx update --check` (stale gate).
-//! The rendered bytes must stay byte-identical to
-//! `tools/bazelrc/src/lib.rs::render_fragment` (the repository's own
-//! `tools/bazelrc/preset.bazelrc` is the snapshot proving parity via
-//! `//:preset_parity_test`); a drift in either inventory fails the
-//! parity test, not silently.
-//!
-//! Version and consumer provenance live in the pin constants plus
-//! `preset_tests.bzl` file checks, not in the fragment header (minimal
-//! `GENERATED` plus regenerate command only).
-//! See: `tools/bazelrc/preset_tests.bzl`.
-
 use std::collections::BTreeSet;
 use std::path::Path;
 
-/// Bazel pin tracked by the preset (`PRESET_BAZEL_VERSION` in
-/// `tools/bazelrc/src/lib.rs`; must equal `.bazelversion`).
 pub const PRESET_BAZEL_VERSION: &str = "9.2.0";
 
-/// Reviewed upstream-derived execution flags (mirrors `UPSTREAM_FLAGS`).
 const UPSTREAM_FLAGS: [&str; 3] = [
     "common --enable_bzlmod",
     "build --verbose_failures",
     "test --test_output=errors",
 ];
 
-/// Owned coverage flags (mirrors `EXTRA_PRESETS["coverage"]`).
-/// `common --enable_platform_specific_config` scopes the `COVERAGE_GCOV_PATH`
-/// pin to `coverage:linux`/`coverage:macos` hosts (Windows resolves coverage
-/// tools from `cc_toolchain`); `coverage --enable_runfiles` materializes
-/// runfiles trees on Windows. See: `tools/bazelrc/src/lib.rs`.
 const COVERAGE_FLAGS: [&str; 8] = [
     "common --enable_platform_specific_config",
     "coverage --test_env=GENERATE_LLVM_LCOV=1",
@@ -43,10 +20,6 @@ const COVERAGE_FLAGS: [&str; 8] = [
     "coverage --instrumentation_filter=^//",
 ];
 
-/// Owned build profiles (mirrors `BUILD_PROFILES`).
-/// `dx_dev_remote` plus `dx_toolchain` reserve the remote plus toolchain
-/// lanes on the dev mode until executor plus toolchain flags qualify.
-/// See: `tools/bazelrc/src/lib.rs`.
 const BUILD_PROFILES: [&str; 5] = [
     "build:dx_debug --compilation_mode=dbg",
     "build:dx_dev --compilation_mode=fastbuild",
@@ -55,13 +28,8 @@ const BUILD_PROFILES: [&str; 5] = [
     "build:dx_toolchain --compilation_mode=fastbuild",
 ];
 
-/// Owned Windows execution flags (mirrors `WINDOWS_FLAGS`).
-/// Forces the runfiles tree on Windows hosts (manifest-only by
-/// default) so `js_binary` tools such as `tsc` find their entry point.
-/// See: `tools/bazelrc/src/lib.rs`.
 const WINDOWS_FLAGS: [&str; 1] = ["build:windows --enable_runfiles"];
 
-/// Renders the preset fragment byte-identical to `tools/bazelrc/src/lib.rs`.
 pub fn render_preset_fragment() -> String {
     let mut lines = vec![
         "# Vendored Bazel execution preset -- GENERATED, do not edit.".to_owned(),
@@ -71,7 +39,7 @@ pub fn render_preset_fragment() -> String {
     lines.push("# Owned extra_presets group: coverage.".to_owned());
     lines.extend(COVERAGE_FLAGS.iter().map(|s| (*s).to_owned()));
     lines.push(
-        "# Owned build profiles (issue #177; See: docs/decisions/0021-build-profiles.md)."
+        "# Owned build profiles."
             .to_owned(),
     );
     lines.extend(BUILD_PROFILES.iter().map(|s| (*s).to_owned()));
@@ -85,7 +53,6 @@ pub fn render_preset_fragment() -> String {
     out
 }
 
-/// Flag lines owned by the preset (non-comment, non-empty).
 fn rendered_flag_lines(rendered: &str) -> BTreeSet<String> {
     rendered
         .lines()
@@ -99,11 +66,6 @@ fn rendered_flag_lines(rendered: &str) -> BTreeSet<String> {
         .collect()
 }
 
-/// Root `.bazelrc` lines duplicating preset flag lines.
-///
-/// Project overrides stay explicit only for non-preset flags; `import`,
-/// `try-import`, comments, and blanks are ignored (mirrors
-/// `_owned_collisions`).
 pub fn owned_collisions_in_content(root_content: &str, rendered: &str) -> Vec<String> {
     let rendered_lines = rendered_flag_lines(rendered);
     let mut collisions = Vec::new();
@@ -124,7 +86,6 @@ pub fn owned_collisions_in_content(root_content: &str, rendered: &str) -> Vec<St
     collisions
 }
 
-/// Preset file locations under a workspace root.
 pub fn preset_paths(workspace: &Path) -> (std::path::PathBuf, std::path::PathBuf) {
     (
         workspace.join(".bazelrc"),
@@ -132,32 +93,23 @@ pub fn preset_paths(workspace: &Path) -> (std::path::PathBuf, std::path::PathBuf
     )
 }
 
-/// Preset freshness failure.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PresetError {
-    /// Root `.bazelrc` duplicates preset-owned lines.
     #[error("root .bazelrc duplicates preset lines; reconcile (remove owned duplicates, keep project overrides explicit): {lines}")]
     OwnedCollision {
-        /// Duplicated lines, sorted.
         lines: String,
     },
-    /// Fragment is missing or differs from the rendered inventory.
     #[error("preset stale: {detail}")]
     Stale {
-        /// Human detail plus unified diff.
         detail: String,
     },
-    /// Fragment cannot be written.
     #[error("cannot write {path}: {detail}")]
     Unwritable {
-        /// Workspace-relative path.
         path: String,
-        /// I/O detail.
         detail: String,
     },
 }
 
-/// Simple unified diff (checked-in vs regenerated) for flag-diff review.
 fn unified_diff(checked_in: &str, regenerated: &str) -> String {
     let old: Vec<&str> = checked_in.lines().collect();
     let new: Vec<&str> = regenerated.lines().collect();
@@ -179,10 +131,6 @@ fn unified_diff(checked_in: &str, regenerated: &str) -> String {
 }
 
 /// Checks preset freshness without mutating (for `dx update --check`).
-///
-/// Returns `Ok(())` when clean, `Err(PresetError::Stale)` when the
-/// fragment is missing or differs, `Err(PresetError::OwnedCollision)`
-/// when the root duplicates preset lines.
 pub fn check_preset(workspace: &Path) -> Result<(), PresetError> {
     let (root_path, fragment_path) = preset_paths(workspace);
     let rendered = render_preset_fragment();
@@ -227,11 +175,6 @@ pub fn check_preset(workspace: &Path) -> Result<(), PresetError> {
     }
 }
 
-/// Regenerates the preset fragment atomically (for `dx update`).
-///
-/// Preserves project overrides (`/.bazelrc` untouched) and `user.bazelrc`
-/// (still `try-import`ed last); fails closed on owned collisions.
-/// Creates `tools/bazelrc/` when absent (consumer workspaces).
 pub fn update_preset(workspace: &Path) -> Result<(), PresetError> {
     let (root_path, fragment_path) = preset_paths(workspace);
     let rendered = render_preset_fragment();

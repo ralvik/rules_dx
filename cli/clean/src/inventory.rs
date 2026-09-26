@@ -1,16 +1,3 @@
-//! Filesystem inventory for `dx clean`.
-//!
-//! Split from `super` (`lib.rs`): owns [`CollectedInventory`] (with
-//! [`CollectedInventory::prune_inputs`] and [`CollectedInventory::plan`]),
-//! [`walk_filtered`] (ignore-aware workspace walks), and
-//! [`collect_inventory`] (validating every setup record against the
-//! [`dx_setup`] pair identity). Re-exported through `super` so the
-//! public paths stay `dx_clean::{CollectedInventory, walk_filtered,
-//! collect_inventory}`. Distinct from the `flags` module (frozen flag
-//! shapes), the `records` module (setup-record validation), the
-//! `planning` module (pure prune selection), and the live/apply/bytes
-//! modules.
-
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -24,30 +11,17 @@ use super::planning::{plan_prune, CleanPlan, GenerationView, PruneInputs};
 use super::records::{validate_record, GenerationKind, SetupRecordView};
 use super::CleanError;
 
-/// Owned filesystem inventory behind [`PruneInputs`]: validated setup
-/// records, digest-shaped generations, the current selection, and refused
-/// unmanaged names. Active (in-use) sets combine caller-provided hexes
-/// with the process scan; unknown-live entries prune
-/// exactly as the pure plan selects.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct CollectedInventory {
-    /// Validated setup records (see [`validate_record`]).
     pub records: Vec<SetupRecordView>,
-    /// Digest-shaped generations present under the managed roots.
     pub generations: Vec<GenerationView>,
-    /// Currently selected setup record hex, if any.
     pub current_hex: Option<String>,
-    /// Setup-record hexes still referenced by an active process.
     pub active_setup_hexes: Vec<String>,
-    /// Generation hexes still referenced by an active process.
     pub active_generation_hexes: Vec<String>,
-    /// Directory names under the managed roots that are not
-    /// digest-shaped (or fail record validation): refused, never deleted.
     pub unmanaged_names: Vec<String>,
 }
 
 impl CollectedInventory {
-    /// Borrows this inventory as the pure planner input.
     pub fn prune_inputs(&self) -> PruneInputs<'_> {
         PruneInputs {
             records: &self.records,
@@ -59,22 +33,11 @@ impl CollectedInventory {
         }
     }
 
-    /// Selects the prune set from this inventory.
     pub fn plan(&self) -> CleanPlan {
         plan_prune(self.prune_inputs())
     }
 }
 
-/// Reads directory entry names under `dir`, sorted ascending. A missing
-/// directory contributes nothing (first selection has no generations
-/// yet); any other listing failure reports through [`CleanError`].
-///
-/// Implemented over [`walkdir::WalkDir`] at depth 1 (qualified
-/// adopted): the
-/// managed `.dx` roots stay a direct-children listing with identical
-/// semantics to the historical `read_dir` loop (sorted names,
-/// non-UTF8 placeholder), while recursive and ignore-aware traversal
-/// lives in [`walk_filtered`].
 fn entry_names(dir: &Path) -> Result<Vec<String>, CleanError> {
     if !dir.exists() {
         match fs::read_dir(dir) {
@@ -105,16 +68,6 @@ fn entry_names(dir: &Path) -> Result<Vec<String>, CleanError> {
     Ok(names)
 }
 
-/// Recursively walks `root` honoring `.gitignore` and related ignore
-/// files (adopted), skipping hidden entries and git-ignored paths
-/// via the [`ignore`] crate (ripgrep family), with additional
-/// caller-supplied glob exclusions via [`globset`].
-///
-/// `exclude_globs` are gitignore-style globs matched against paths
-/// relative to `root` (for example `["*.log", "target/**"]`); invalid
-/// globs fail through [`CleanError::Install`]. The returned paths are
-/// sorted ascending for deterministic plans. A missing root walks
-/// empty; any other traversal failure reports through [`CleanError`].
 pub fn walk_filtered(root: &Path, exclude_globs: &[String]) -> Result<Vec<PathBuf>, CleanError> {
     let mut builder = globset::GlobSetBuilder::new();
     for pattern in exclude_globs {
@@ -156,8 +109,6 @@ pub fn walk_filtered(root: &Path, exclude_globs: &[String]) -> Result<Vec<PathBu
     Ok(paths)
 }
 
-/// Extracts a generation digest from a record link target: the final path
-/// component must be digest-shaped.
 fn generation_hex_from_link_target(target: &Path) -> Option<String> {
     target
         .file_name()
@@ -166,11 +117,6 @@ fn generation_hex_from_link_target(target: &Path) -> Option<String> {
         .map(str::to_owned)
 }
 
-/// Collects the clean inventory for `workspace_root`, validating every
-/// setup record against the [`dx_setup`] pair identity. Present-but-
-/// malformed current state fails closed ([`CleanError::CurrentInvalid`],
-/// nothing prunable); digest-spoofed or otherwise invalid records join
-/// the refused unmanaged set (never pruned, never adopted).
 pub fn collect_inventory(
     workspace_root: &Path,
     active_setup_hexes: &[String],
@@ -401,9 +347,6 @@ mod tests {
         root.join("ws")
     }
 
-    /// Commits two setup pairs (stale `('3','4')`, then current
-    /// `('1','2')`) and materializes all four generation directories.
-    /// Returns the workspace path plus the (stale, current) setup hexes.
     fn two_record_workspace(root: &Path) -> (PathBuf, String, String) {
         let workspace = workspace_of(root);
         let stale = setup_pair('3', '4');

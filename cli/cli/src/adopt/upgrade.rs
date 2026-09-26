@@ -1,12 +1,3 @@
-//! Adoption upgrade execution (`upgrade`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_upgrade`], the
-//! one-shot pin plus migrate plus setup composition (dry-run plans are
-//! summaries, suppressed under `--quiet`). Re-exported through `super`
-//! so the dispatch path stays `crate::adopt::execute_adoption`.
-//!
-//! See: `docs/cli/commands/new-upgrade.md`.
-
 use std::io::Write;
 
 use crate::args::Invocation;
@@ -20,26 +11,10 @@ use dx_process::operational_code;
 
 use super::{operational, pre_exec, summaries_suppressed};
 
-/// Stable operational error code for live `dx upgrade` failures: no
-/// upgrade manifest exists yet (module at `0.0.0`, no releases cut), so
-/// live execution fails closed with no writes.
-// See: `docs/cli/output-protocol.md#operational-error`.
 pub(crate) const CODE_UPGRADE_FAILED: &str = "upgrade_failed";
 
-/// Stable notice code for `dx upgrade --dry-run` plans: the pin plus
-/// migrate plus setup composition without touching the tree.
-// See: `docs/cli/output-protocol.md#notice`.
 pub(crate) const NOTICE_UPGRADE_PLANNED: &str = "upgrade_planned";
 
-/// Runs `dx upgrade --from <version> --to <version>`: validates the pair
-/// through `dx_adopt::plan_upgrade` (Cargo-flavor semver, upgrade-only
-/// gate, migrate manifest selection), then fails closed because no
-/// manifests exist yet (module at `0.0.0`, no releases cut).
-/// `--dry-run` plans the pin plus migrate plus setup composition without
-/// touching the tree; live execution reports `upgrade_failed` (exit 1)
-/// with the recovery pointer and no writes. Usage errors (missing
-/// `--from`/`--to`, non-semver, downgrades/equal versions) exit `2`
-/// before any write.
 pub(crate) fn execute_upgrade(
     invocation: &Invocation,
     _workspace: &std::path::Path,
@@ -318,7 +293,6 @@ mod tests {
     fn upgrade_codes_are_stable_single_source() {
         // Fixture pins the stable wire codes so output-protocol drift
         // fails here, not in automation matching on `code`.
-        // See: `docs/cli/output-protocol.md#operational-error`.
         assert_eq!(CODE_UPGRADE_FAILED, "upgrade_failed");
         assert_eq!(NOTICE_UPGRADE_PLANNED, "upgrade_planned");
     }

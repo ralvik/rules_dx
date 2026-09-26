@@ -1,27 +1,7 @@
-//! LCOV report validation and line-rate computation.
-//!
-//! Split from `super` (`reports.rs`): owns `validate_lcov` and
-//! `coverage_line_rate`. Re-exported through `super` so the public path
-//! stays `crate::reports::{validate_lcov, coverage_line_rate}`. Both are
-//! thin projections over `dx_lcov`: validation delegates to
-//! `dx_lcov::validate_lcov_report`, rate computation merges via
-//! `dx_lcov::merge_lcov_reports`, so the `lcov`-crate `SF`/`DA` union
-//! lives once in `//cli/lcov`.
-//! See: `docs/testing/README.md#coverage`.
-
 use dx_lcov::{find_ignores, is_covered_language, is_ignored, merge_lcov_reports};
 
 use super::ReportError;
 
-/// Validates that `bytes` are a syntactically complete LCOV tracefile.
-///
-/// The exact bytes are preserved for the report; validation only
-/// checks UTF-8 via [`std::str::from_utf8`] and delegates the structural
-/// `SF`/`DA`/`end_of_record` checks to `dx_lcov::validate_lcov_report`
-/// (the shared `lcov`-crate parser,). Unknown
-/// `FN`/`BRDA`/summary lines are ignored like the gate parser.
-/// Failures return [`ReportError::InvalidLcov`] so callers emit no LCOV
-/// report.
 pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
     let invalid = |detail: String| ReportError::InvalidLcov { detail };
     let text =
@@ -29,21 +9,6 @@ pub fn validate_lcov(bytes: &[u8]) -> Result<(), ReportError> {
     dx_lcov::validate_lcov_report(text).map_err(|e| invalid(e.to_string()))
 }
 
-/// Line-coverage rate over validated LCOV documents for
-/// `dx coverage --min-coverage`.
-///
-/// Returns `(covered, eligible)` executable-line counts. Documents union
-/// per `SF` path with maximum hits winning; source-level exclusion markers
-/// are honored for the covered languages (`.rs`, `.go`, `.py`, `.js`,
-/// `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`, JVM
-/// `.java`/`.kt`/`.scala`, .NET `.cs`/`.fs`/`.fsi`, plus C/C++ `.c`/`.cc`/`.cpp`/`.cxx`/`.h`/`.hh`/`.hpp`/`.hxx`
-///) through the shared `dx_lcov` scanner (a specific `reason:` plus
-/// `issue:` tracking comment stays required (see the marker syntax in
-/// `docs/testing/strategy-details.md#coverage`). Sources that fail to load
-/// count raw: Bazel may
-/// instrument generated or external files outside the workspace.
-/// Records outside the covered languages have no marker language and count
-/// raw. Invalid markers fail the computation.
 pub fn coverage_line_rate(
     documents: &[String],
     load: &dyn Fn(&str) -> Option<String>,

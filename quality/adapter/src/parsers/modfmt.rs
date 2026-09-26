@@ -1,18 +1,6 @@
-//! Modfmt output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `modfmt` diff stdout for `go.mod` plus `go.work`.
-///
-/// Whole-file rewrite with check/diff mode: unified diff markers
-/// yield one `1:1` format finding per file; empty output on exit 0
-/// is clean. Any other shape is a grammar mismatch.
 pub fn parse_modfmt(
     stdout: &[u8],
     code: Option<i32>,

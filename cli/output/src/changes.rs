@@ -1,15 +1,7 @@
-//! Change and mutation NDJSON events for the `dx` CLI.
-//!
-//! Split from `super` (`lib.rs`): owns `ChangeKind`, `ChangeEvent`,
-//! `change_event`, `MutationOutcome`, and `mutation_event`. Re-exported
-//! through `super` so the public path stays `dx_output::{...}`.
-
 use crate::lifecycle::base;
 use crate::validation::{check_edits, check_path, parse_digest, Edit, OutputError};
 use serde_json::{json, Value};
 
-/// Whether a change modifies an existing file or creates a new one.
-/// Generate-only creates are the sole v1 source of new files.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChangeKind {
     Modify,
@@ -25,9 +17,6 @@ impl ChangeKind {
     }
 }
 
-/// One exact workspace file change: intended bytes, not whether they were
-/// written. A `create` omits `source_digest` and holds exactly one `0..0`
-/// insertion with the complete new file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChangeEvent {
     pub path: String,
@@ -93,9 +82,6 @@ pub fn change_event(change: &ChangeEvent) -> Result<Value, OutputError> {
     Ok(Value::Object(map))
 }
 
-/// Terminal outcome of one handled workspace file. Post-commit records
-/// omit `reason`; `not_applied` records carry the stable per-file or
-/// terminal operational error code.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MutationOutcome {
     Applied,

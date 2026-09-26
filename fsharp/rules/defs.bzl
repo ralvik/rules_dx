@@ -5,7 +5,6 @@ Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 
 load("@rules_dotnet//dotnet:defs.bzl", _fsharp_binary = "fsharp_binary", _fsharp_library = "fsharp_library", _fsharp_test = "fsharp_test")
 
-# Intentional upstream-private load (issue #928): the .NET assembly
 # providers live only under @rules_dotnet//dotnet/private, so the wrapper
 # must load them there; the sealed `upstream_providers` plus
 # `required_providers` below keep the boundary fail-closed.
@@ -22,13 +21,6 @@ _DX_FSHARP_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream assembly infos,
-# `InstrumentedFilesInfo`, `OutputGroupInfo`, and `RunEnvironmentInfo`
-# at runtime when present, but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a F# library,
-# so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so quality aspects can gate on it. Coverage reads
-# `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `java_*` test forwarder).
 _DX_FSHARP_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,

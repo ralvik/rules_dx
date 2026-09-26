@@ -1,13 +1,3 @@
-//! Result-side validation, digest, and codec helpers for the Quality
-//! Result Protocol (WP1).
-//!
-//! Contract: `docs/quality/quality-result-protocol.md`, schema
-//! `//quality:result.proto`. This crate enforces the checks that need no
-//! source bytes: schema version, enum presence, snapshot shape, diagnostic
-//! range presence, edit ordering, and convergence gating. Byte-length,
-//! UTF-8-boundary, digest-match, and end-to-end re-application checks run
-//! in the `dx` CLI, which owns the source bytes, in.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -18,27 +8,15 @@ use proto::{
 };
 pub use result_proto::dx::quality::v1 as proto;
 
-/// Frozen schema major accepted by this crate (re-exported from `dx_schema`).
 pub use dx_schema::SCHEMA_MAJOR;
-/// Schema minor this crate was written against (re-exported from `dx_schema`).
-/// Newer minors decode when their bytes satisfy these rules.
 pub use dx_schema::SCHEMA_MINOR;
-/// Upper bound on `completed_rounds` from the convergence protocol.
 pub const MAX_COMPLETED_ROUNDS: u32 = 10;
-/// BLAKE3-256 digest length in bytes (single owner: `dx_digest`).
 pub use dx_digest::DIGEST_LEN;
 
-/// BLAKE3-256 over exact file bytes. The 32-byte digest is the snapshot
-/// identity; there is no algorithm negotiation.
 pub fn digest(bytes: &[u8]) -> [u8; 32] {
     dx_digest::blake3(bytes)
 }
 
-/// Validation or codec failure (slice).
-///
-/// Every variant renders human-readable via `Display` for CLI
-/// operational diagnostics; binaries render via `to_string()`, never
-/// Rust `Debug`.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum Error {
     #[error("cannot decode quality result: {0}")]
@@ -221,8 +199,6 @@ fn check_edits(file: &FileEdits) -> Result<(), Error> {
     Ok(())
 }
 
-/// Enforces every result-side rule from the protocol compatibility
-/// section. Returns `Ok(())` exactly for storable results.
 pub fn validate(result: &QualityResult) -> Result<(), Error> {
     dx_schema::check_major(result.schema_major)
         .map_err(|found| Error::UnsupportedMajor { found })?;
@@ -294,24 +270,14 @@ fn validate_stage(stage: &Stage, index: usize) -> Result<(), Error> {
     Ok(())
 }
 
-/// Validates then encodes. Stored bytes always decode back to an equal
-/// message: encoding is deterministic for identical bytes.
 pub fn encode_validated(result: &QualityResult) -> Result<Vec<u8>, Error> {
     dx_proto_validate::encode_with_validation(result, validate)
 }
 
-/// Decodes (unknown fields ignored) then validates. Unknown major
-/// versions fail; newer minors pass when their bytes satisfy these rules.
 pub fn decode_validated(bytes: &[u8]) -> Result<QualityResult, Error> {
     dx_proto_validate::decode_with_validation(bytes, validate, Error::Decode)
 }
 
-/// Asserts every item equals the first; fails on empty.
-///
-/// Single shared helper for determinism batteries (See: `docs/quality/quality-testing.md`, issue #914):
-/// replaces the copy-pasted `for other in items.iter().skip(1)`
-/// loops, which panic on empty vectors with an indexing panic instead
-/// of an actionable assertion. See: `docs/quality/quality-testing.md`.
 pub fn assert_all_equal<T: PartialEq + std::fmt::Debug>(items: &[T]) {
     assert!(
         !items.is_empty(),

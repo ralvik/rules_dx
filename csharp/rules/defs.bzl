@@ -5,7 +5,6 @@ Contract: `docs/decisions/0019-first-release-additional-foundations.md`.
 
 load("@rules_dotnet//dotnet:defs.bzl", _csharp_binary = "csharp_binary", _csharp_library = "csharp_library", _csharp_test = "csharp_test")
 
-# Intentional upstream-private load (issue #928): the .NET assembly
 # providers live only under @rules_dotnet//dotnet/private, so the wrapper
 # must load them there; the sealed `upstream_providers` plus
 # `required_providers` below keep the boundary fail-closed.
@@ -22,13 +21,6 @@ _DX_CSHARP_LIBRARY_PROVIDES = [
 ]
 
 # NB: binaries and tests forward the upstream assembly infos,
-# `InstrumentedFilesInfo`, `OutputGroupInfo`, and `RunEnvironmentInfo`
-# at runtime when present, but advertise only `DefaultInfo` plus
-# `QualitySourcesInfo`: neither shape is depended on as a C# library,
-# so no consumer matches on the forwarded providers. `QualitySourcesInfo`
-# is advertised so quality aspects can gate on it. Coverage reads
-# `InstrumentedFilesInfo` from the test target, not via `provides`
-# (same shape as the `java_*` test forwarder).
 _DX_CSHARP_EXEC_PROVIDES = [
     DefaultInfo,
     QualitySourcesInfo,

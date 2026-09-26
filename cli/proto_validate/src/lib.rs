@@ -1,12 +1,3 @@
-//! Shared validated-codec helpers for proto shards.
-//!
-//! Contract: `docs/architecture/README.md`.
-//!
-//! Five crates repeat the same three patterns: validate-then-encode,
-//! decode-then-validate, and sorted-unique key checks over a `BTreeSet` or a
-//! `previous` cursor. The per-crate `Error` types stay local; this crate only
-//! provides the control flow so every shard keeps its own messages.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -14,18 +5,12 @@
 use prost::Message;
 use std::collections::BTreeSet;
 
-/// How a sorted-unique sequence broke its contract.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OrderViolation {
     Duplicate,
     Unsorted,
 }
 
-/// Check one step of a sorted-unique sequence.
-///
-/// `previous` is the last accepted key (`None` for the first item).
-/// Equal keys report [`OrderViolation::Duplicate`]; a key smaller than its
-/// predecessor reports [`OrderViolation::Unsorted`].
 pub fn check_sorted_next<T: Ord>(previous: Option<&T>, current: &T) -> Result<(), OrderViolation> {
     match previous {
         Some(prev) if prev == current => Err(OrderViolation::Duplicate),
@@ -34,18 +19,6 @@ pub fn check_sorted_next<T: Ord>(previous: Option<&T>, current: &T) -> Result<()
     }
 }
 
-/// Insert one key into a uniqueness set, mapping a repeat to the caller's
-/// error. Reads naturally inside validation loops that also check each item:
-///
-/// ```ignore
-/// let mut seen = std::collections::BTreeSet::new();
-/// for entry in &shard.entries {
-///     check_value(&entry.value)?;
-///     check_unique_insert(&mut seen, &entry.key, |key| Error::Duplicate {
-///         key: (*key).clone(),
-///     })?;
-/// }
-/// ```
 pub fn check_unique_insert<T: Ord, E>(
     seen: &mut BTreeSet<T>,
     item: T,
@@ -58,7 +31,6 @@ pub fn check_unique_insert<T: Ord, E>(
     Ok(())
 }
 
-/// Run `validate` on an already-built message, then encode it.
 pub fn encode_with_validation<M: Message, E>(
     msg: &M,
     validate: impl FnOnce(&M) -> Result<(), E>,
@@ -67,8 +39,6 @@ pub fn encode_with_validation<M: Message, E>(
     Ok(msg.encode_to_vec())
 }
 
-/// Decode a message, then run `validate` on it. Decode failures map through
-/// `map_decode_error` so each crate keeps its own `Error::Decode` shape.
 pub fn decode_with_validation<M: Message + Default, E>(
     bytes: &[u8],
     validate: impl Fn(&M) -> Result<(), E>,

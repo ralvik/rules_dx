@@ -1,19 +1,6 @@
-//! google-java-format output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! `google-java-format --dry-run --set-exit-if-changed` prints the
-//! absolute paths of files that would change, one per line, to stdout
-//! (clean prints nothing). Each listed path becomes one `1:1` format
-//! finding (empty rule, `file is not formatted`, warning), mirroring
-//! Prettier.
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses google-java-format `--dry-run --set-exit-if-changed` stdout.
-/// `files` are the absolute scratch paths passed to the tool.
 pub fn parse_google_java_format(
     stdout: &[u8],
     code: Option<i32>,

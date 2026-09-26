@@ -41,10 +41,6 @@ WINDOWS_REJECTED_CRT = ["/MT", "debug CRT"]
 WINDOWS_CRT_NOTE = "/MT plus debug CRT are not assumed interchangeable"
 
 # Oldest-target vs current-host separation: the oldest-target fixture
-# records the minimum deployment floor while the current-host fixture
-# records the seed-host plus CI-runner execution floors. They run
-# separately, never as one merged proof; cross-building alone is
-# insufficient without matching native target execution.
 OLDEST_TARGET_NOTE = "oldest-target and current-host fixtures run separately"
 OLDEST_TARGET_CASES = [
     "glibc 2.28 oldest-target symbols",

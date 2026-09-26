@@ -1,19 +1,3 @@
-//! Reclaimable-bytes measurement and dry-run rendering for `dx clean`.
-//!
-//! Split from `super` (`lib.rs`): owns [`PruneBytes`] (per-entry
-//! on-disk sizes plus [`PruneBytes::total`] and
-//! [`PruneBytes::reclaimed`]), [`measure_prune_bytes`] (symlink-aware
-//! sizing without following links), and [`render_dry_run`] (the
-//! `--dry-run` listing with per-entry sizes and the reclaimable
-//! total). Re-exported through `super` so the public paths stay
-//! `dx_clean::{PruneBytes, measure_prune_bytes, render_dry_run}`. The
-//! [`super::CleanError`] vocabulary stays on the facade (shared with
-//! the inventory/live/bytes modules). Distinct from the `flags`
-//! module (frozen flag shapes), the `records` module (setup-record
-//! validation), the `planning` module (pure prune selection), the
-//! `inventory` module (filesystem collection), the `live` module
-//! (process scan), and the `apply` module (locked deletion).
-
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -24,22 +8,13 @@ use super::apply::CleanOutcome;
 use super::planning::{CleanPlan, GenerationView};
 use super::CleanError;
 
-/// Measured reclaimable bytes behind one [`CleanPlan`]: per-entry
-/// on-disk sizes for exactly the prune sets. Generations are link trees
-/// into Bazel outputs, never artifact copies, so sizes count metadata
-/// plus links only: symlinks are measured, never followed, and Bazel
-/// outputs behind the links contribute nothing. Deterministic: entries
-/// sort ascending like the plan.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PruneBytes {
-    /// `(setup-record hex, bytes)` for each pruned record, ascending.
     pub setup_record_bytes: Vec<(String, u64)>,
-    /// `(generation, bytes)` for each pruned generation, ascending.
     pub generation_bytes: Vec<(GenerationView, u64)>,
 }
 
 impl PruneBytes {
-    /// Total reclaimable bytes across the whole prune set.
     pub fn total(&self) -> u64 {
         let mut total = 0u64;
         for (_, bytes) in &self.setup_record_bytes {
@@ -51,10 +26,6 @@ impl PruneBytes {
         total
     }
 
-    /// Bytes attributable to entries [`apply_plan`](super::apply::apply_plan) actually removed:
-    /// measured sizes for the outcome's entries only, so entries skipped
-    /// under the lock (reselected current, relinked generations) never
-    /// inflate the reported reclaimed total.
     pub fn reclaimed(&self, outcome: &CleanOutcome) -> u64 {
         let mut total = 0u64;
         for removed in &outcome.removed_setup_records {
@@ -75,14 +46,6 @@ impl PruneBytes {
     }
 }
 
-/// Sums `symlink_metadata` sizes under `dir` without following symlinks.
-/// A missing directory measures zero (already pruned: idempotent); any
-/// other failure reports through [`CleanError`].
-///
-/// Implemented over [`walkdir::WalkDir`] (qualified as adopted):
-/// recursive traversal without following symlinks, matching the historical
-/// manual stack (directories contribute nothing, files contribute
-/// `symlink_metadata` length, saturating).
 fn dir_bytes(dir: &Path) -> Result<u64, CleanError> {
     let fail = |reason: String| CleanError::Install { reason };
     if fs::read_dir(dir).is_err_and(|e| e.kind() == io::ErrorKind::NotFound) {
@@ -105,10 +68,6 @@ fn dir_bytes(dir: &Path) -> Result<u64, CleanError> {
     Ok(total)
 }
 
-/// Measures reclaimable bytes for `plan` under `workspace_root`.
-/// Entries that vanished since planning measure zero; the apply step
-/// treats missing entries as idempotent successes, so measure and
-/// apply agree without holding the lock.
 pub fn measure_prune_bytes(
     workspace_root: &Path,
     plan: &CleanPlan,
@@ -136,11 +95,6 @@ pub fn measure_prune_bytes(
     Ok(measured)
 }
 
-/// Renders the `--dry-run` listing for `plan` with measured reclaimable
-/// bytes (`bytes`): reclaimable setup records and generation links with
-/// per-entry sizes, the preserved current selection, refused unmanaged
-/// paths, and the reclaimable total. Deletes nothing; [`apply_plan`](super::apply::apply_plan)
-/// deletes exactly the listed prune sets.
 pub fn render_dry_run(plan: &CleanPlan, bytes: &PruneBytes) -> String {
     let mut lines = vec!["dx clean --dry-run: reclaimable managed state".to_owned()];
     if plan.prune_setup_records.is_empty() && plan.prune_generations.is_empty() {
@@ -241,25 +195,16 @@ mod tests {
         root.join("ws")
     }
 
-    /// Portable symlink planter for the no-follow fixture
-    /// portable route): sizing never follows links on any host, so the
-    /// fixture must run everywhere. Windows planting fails fast with the
-    /// OS privilege error rather than silently skipping cover.
     #[cfg(windows)]
     fn test_symlink(target: &Path, link: &Path) {
         std::os::windows::fs::symlink_file(target, link).expect("link");
     }
 
-    /// Portable symlink planter for the no-follow fixture
-    /// portable route): see the windows variant above.
     #[cfg(not(windows))]
     fn test_symlink(target: &Path, link: &Path) {
         std::os::unix::fs::symlink(target, link).expect("link");
     }
 
-    /// Commits two setup pairs (stale `('3','4')`, then current
-    /// `('1','2')`) and materializes all four generation directories.
-    /// Returns the workspace path plus the (stale, current) setup hexes.
     fn two_record_workspace(root: &Path) -> (PathBuf, String, String) {
         let workspace = workspace_of(root);
         let stale = setup_pair('3', '4');

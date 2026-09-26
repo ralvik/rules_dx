@@ -1,13 +1,3 @@
-//! Gate CLI for the coverage gate.
-//!
-//! Split from `super` (`lib.rs`): owns [`run`] (the `check --report
-//! --inventory --sources [--root]` entry point returning 0 on pass, 1 on
-//! gate failure, 2 on usage/configuration errors). Re-exported through
-//! `super` so the public path stays `dx_lcov::run`. Distinct from the
-//! `parse` module (combined-LCOV parsing), the `ignores` module
-//! (source-level exclusion markers), the `verdict` module (gate
-//! evaluation), and the `inventory` module (repo inventory).
-
 use super::{evaluate, parse_inventory, parse_lcov, render, LcovError};
 use clap::{error::ErrorKind, Parser};
 
@@ -37,24 +27,15 @@ struct Cli {
     help: bool,
 }
 
-/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
-/// Shared plumbing; message formats stay local to the frozen contract.
-/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
     dx_output::invalid_token(error)
 }
 
-/// Map `clap` tokenizing failures onto the legacy usage-routed surface:
-/// every failure prints its reason plus the usage line (exit `2`).
-/// Reachable kinds: [`ErrorKind::UnknownArgument`] and
-/// [`ErrorKind::InvalidValue`] (a present flag with no consumable value).
-/// No other parser, conflict, or count error can fire.
 fn parse_error(error: clap::Error, args: &[String]) -> String {
     let token = invalid_token(&error);
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
-        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             format!("unknown argument: {echoed}")
@@ -74,9 +55,6 @@ fn parse_args(args: &[String]) -> Result<Cli, String> {
         .map_err(|error| parse_error(error, args))
 }
 
-/// Run the gate CLI. Returns 0 on pass, 1 on gate failure, 2 on usage or
-/// configuration errors. Missing report *evidence* fails the gate (1);
-/// unreadable inventory/sources configuration is a usage error (2).
 pub fn run(
     args: &[String],
     read_file: &dyn Fn(&str) -> Result<String, LcovError>,

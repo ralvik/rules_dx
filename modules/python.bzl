@@ -1,4 +1,4 @@
-"""Python foundation pins plus uv projects. Contract: docs/decisions/0010-python-foundation.md."""
+"""Python foundation pins plus uv projects."""
 
 # Pinned Python foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 RULES_PYTHON_VERSION = "1.9.0"

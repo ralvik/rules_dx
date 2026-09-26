@@ -34,7 +34,7 @@ DxConfigInfo = provider(
 )
 
 def _dx_aspect_note_impl(target, ctx):
-    """Derives one aspect note without subject cooperation. See: `docs/testing/starlark.md#modes`."""
+    """Derives one aspect note without subject cooperation."""
     fields = {
         "aspect_seen": "True",
         "subject_label": _display_label(target.label),
@@ -77,7 +77,7 @@ def expect_equal(name, actual, expected):
     })
 
 def expect_true(name, actual):
-    """Builds one boolean-true record. See: `docs/testing/starlark.md#authoring`."""
+    """Builds one boolean-true record."""
     return json.encode({
         "actual": actual,
         "kind": "true",
@@ -86,7 +86,7 @@ def expect_true(name, actual):
     })
 
 def expect_false(name, actual):
-    """Builds one boolean-false record. See: `docs/testing/starlark.md#authoring`."""
+    """Builds one boolean-false record."""
     return json.encode({
         "actual": actual,
         "kind": "false",
@@ -95,7 +95,7 @@ def expect_false(name, actual):
     })
 
 def expect_contains(name, haystack, needle):
-    """Builds one membership record (string substring, list/tuple element, dict key). See: `docs/testing/starlark.md#authoring`."""
+    """Builds one membership record (string substring, list/tuple element, dict key)."""
     haystack_type = type(haystack)
     if haystack_type == "string":
         if type(needle) != "string":
@@ -116,7 +116,7 @@ def expect_contains(name, haystack, needle):
     })
 
 def expect_match(name, value, want):
-    """Builds one stringified-substring record. See: `docs/testing/starlark.md#authoring`."""
+    """Builds one stringified-substring record."""
     if type(want) != "string":
         fail("expect_match: want must be string, got " + type(want))
     return json.encode({
@@ -150,7 +150,7 @@ def _shell_quote(s):
     return "'" + s.replace("'", "'\\''") + "'"
 
 def _parse_check(raw):
-    """Parses one JSON check record into a struct. See: `docs/testing/starlark.md#authoring`."""
+    """Parses one JSON check record into a struct."""
     record = json.decode(raw)
     kind = record["kind"] if "kind" in record else "equal"
     if kind == "equal":

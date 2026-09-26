@@ -1,7 +1,3 @@
-//! Thin `dx` process shim over the CLI library.
-//!
-//! Contract: `docs/cli/README.md`.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
@@ -28,8 +24,6 @@ use dx_process::{
     Runner,
 };
 
-/// Maps stdout `write_event` failure to `141` on `EPIPE`, else operational.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 fn stdout_output_code(error: &dx_output::OutputError) -> i32 {
     if error.is_broken_pipe() {
         broken_pipe_code()
@@ -38,37 +32,16 @@ fn stdout_output_code(error: &dx_output::OutputError) -> i32 {
     }
 }
 
-/// Checks one stdout `write_event`; returns the exit code on failure.
 fn emit_event(out: &mut dyn Write, event: &serde_json::Value) -> Result<(), i32> {
     write_event(out, event).map_err(|error| stdout_output_code(&error))
 }
 
-/// Checks `out.flush()`; `141` on `EPIPE`, else operational.
 fn flush_out(out: &mut dyn Write) -> Result<(), i32> {
     out.flush().map_err(|error| stdout_io_code(&error))
 }
 
-/// Active Bazel child for signal forwarding; see `forward_to_child`.
 static CHILD_PID: AtomicU32 = AtomicU32::new(0);
 
-/// Signal-forwarding contract (Unix only; Windows has no `libc::kill`
-/// and installs no handler — See: `docs/cli/cli-contract.md`):
-///
-/// - Forwards SIGINT and SIGTERM only, to the active child if one is
-///   registered. Any other signal keeps its default disposition.
-/// - Async-signal-safe: the handler performs an atomic load and `kill`
-///   only; no allocation, no locking, no I/O.
-/// - If no child is registered (pid 0: startup, or teardown after the
-///   child was reaped) the signal is swallowed by the handler — the
-///   shim itself never dies from a forwarded signal.
-/// - Death semantics live in the runner, not the handler: after the
-///   child is reaped and the pump thread joined, a signal death resets
-///   that signal to `SIG_DFL` and re-raises, so the shell observes the
-///   same signal death as a direct Bazel invocation.
-/// - Known residual race: a signal landing between `wait` returning and
-///   the pid clear forwards to an already-reaped pid. The window is two
-///   stores wide and accepted like any supervisor's; the kill target is
-///   at worst a recycled pid, never shim state.
 #[cfg(unix)]
 extern "C" fn forward_to_child(signo: libc::c_int) {
     let pid = CHILD_PID.load(Ordering::SeqCst);
@@ -82,12 +55,6 @@ extern "C" fn forward_to_child(signo: libc::c_int) {
     }
 }
 
-/// Keep raw `libc::signal` over `signal-hook` (spike):
-/// `signal-hook` delivers on a spawned thread through a pipe, adding
-/// latency to the forward-to-child kill and re-implementation of the
-/// pid-0 swallow above, while the `kill` itself stays `unsafe libc`
-/// either way — no safety win for a new dependency, lockfile churn,
-/// and supply-chain review on the -hardened forwarding path.
 #[cfg(unix)]
 fn install_forwarding() {
     unsafe {
@@ -102,32 +69,13 @@ fn install_forwarding() {
     }
 }
 
-/// Windows has no Unix signal handler; forwarding is a no-op.
 #[cfg(not(unix))]
 fn install_forwarding() {}
 
-/// Runner used by the `dx` binary: inherits stderr always, inherits
-/// stdout in text mode without a stdout report (subprocess output is
-/// preserved passthrough), and otherwise pipes child stdout to `dx`
-/// stderr through a pump thread so stdout stays machine-owned. Forwards
-/// SIGINT/SIGTERM to the child; when the child dies from a signal, the
-/// disposition is reset and the signal re-raised so shell semantics
-/// hold.
-/// Pump-thread teardown contract: the child is reaped first, then the
-/// pid registration is cleared so late signals cannot target a reaped
-/// pid, then the pump is joined so all piped stdout reaches stderr
-/// before the exit status is inspected. Only after the join may a
-/// signal death reset the disposition and re-raise.
 struct BinaryRunner {
     inherit_stdout: bool,
 }
 
-/// Single streamed-spawn owner for the binary runner: spawns `argv[0]`
-/// with piped-or-inherited stdout, stderr always inherited, through the
-/// `CHILD_PID` registration plus stdout-to-stderr pump and signal
-/// re-raise teardown. `clear_env` selects the hermetic secrets path
-/// (only explicit env reaches the child); otherwise the parent
-/// environment is inherited.
 fn spawn_streamed(
     argv: &[String],
     cwd: &Path,
@@ -218,7 +166,6 @@ impl Runner for BinaryRunner {
 }
 
 fn usage_error(message: &str) -> i32 {
-    // Single-sourced fallback registry (See: `docs/cli/commands/README.md`):
     // shares `Command::pipe_list` with `exec/common.rs::pre_exec` and
     // `args/error.rs` so drift fails the registry fixture.
     let commands = dx_cli::args::Command::pipe_list();
@@ -242,7 +189,6 @@ fn run() -> i32 {
     // travel as `OsString` in the grammar for the same reason.
     let args: Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
     // Hidden completion-time callback for the generated `dx completion`
-    // scripts (See: `docs/cli/commands/completion.md`): answers scope
     // and task candidates without parsing, workspace gates, or Bazel so
     // completion stays fast and never breaks typing. Never a `Command`,
     // never in `--help` or usage.
@@ -254,7 +200,6 @@ fn run() -> i32 {
         let mut out = stdout.lock();
         let code = dx_cli::args::run_complete(&args[1..], &cwd, &mut out);
         // Completion candidates truncate like any stdout: `EPIPE` is `141`.
-        // See: `docs/cli/output-protocol.md#exit-codes`.
         if code != 0 {
             return code;
         }
@@ -266,7 +211,6 @@ fn run() -> i32 {
     // Invocation defaults: flag over env over file over built-in.
     // The file is `.dx/config.toml` (alias `.dx/config`) found walking up
     // from the workspace start; values are never logged, only the resolved
-    // mode flows on. See: `docs/cli/cli-contract.md#invocation-defaults`.
     let defaults_cwd = std::env::current_dir().unwrap_or_else(|_| Path::new(".").to_path_buf());
     let defaults_start = dx_process::workspace_start(&defaults_cwd);
     let file_defaults = match load_file_defaults(&defaults_start) {
@@ -295,7 +239,6 @@ fn run() -> i32 {
     // Structured diagnostics: tracing subscriber init is
     // idempotent and emits nothing by default, keeping runs byte-identical
     // unless `--verbose`/`--log-level` selects a level or `RUST_LOG`
-    // overrides the filter (See: `docs/cli/output-protocol.md`).
     // `--color` selects log/status color (`auto` stays plain unless a TTY
     // without `NO_COLOR`).
     dx_output::init_diagnostics_with_color(
@@ -356,7 +299,6 @@ fn run() -> i32 {
         Ok(workspace) => workspace,
         Err(error) => {
             // `dx init` bootstraps a new repository without an existing
-            // MODULE.bazel (see `docs/cli/commands/hooks.md`): fall back
             // to the explicit `--workspace` dir, else the start dir, so
             // the absent-only scaffold has a root to write under. Every
             // other command still requires discovery.
@@ -381,7 +323,6 @@ fn run() -> i32 {
     // diagnostic naming the three versions and the repair. Read-only
     // commands warn and proceed; the diagnose/repair path stays usable.
     // One small file read, no subprocesses.
-    // `--here` (`--cwd` alias, See: `docs/cli/target-resolution.md`, issue #699): explicit cwd scope only.
     // Consumed here into a directory scope (`//path/...`; `//...` at the
     // root) so downstream resolution reuses the existing path verbatim.
     // The no-flag default stays `//...`; explicit scopes never combine.
@@ -478,7 +419,6 @@ fn run() -> i32 {
             // The local-only `dx run` gate reads the launch
             // environment once here via the shared owner; execution
             // below takes the bit by value so tests stay hermetic.
-            // See: `docs/cli/commands/watch.md`.
             ci: dx_process::is_ci(),
         },
     );

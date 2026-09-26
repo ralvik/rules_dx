@@ -1,21 +1,6 @@
-//! Stylelint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `stylelint --formatter json` stdout. `files` are the
-/// workspace-relative mirror paths.
-///
-/// Pinned shape is a JSON array, one object per checked file:
-/// `{source, warnings:[{line, column, rule, text, severity}]}`.
-/// Severity `error` maps onto error, `warning` onto warning; anything
-/// else is a grammar mismatch. Clean is empty warnings on exit 0;
-/// findings exit non-zero. Unrecognized output fails the action.
 pub fn parse_stylelint(
     stdout: &[u8],
     code: Option<i32>,

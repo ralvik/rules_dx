@@ -1,8 +1,3 @@
-//! Clippy output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, FileFinding, ParseError};
@@ -49,9 +44,6 @@ fn clippy_level(tool: &'static str, level: &str) -> Result<ToolSeverity, ParseEr
     }
 }
 
-/// Parses Clippy `--error-format=json` stderr, one diagnostic per line.
-/// Span-less summaries are skipped; a nonzero exit with no placed
-/// finding keeps the first skipped message as evidence.
 pub fn parse_clippy(
     stderr: &[u8],
     code: Option<i32>,
@@ -61,10 +53,6 @@ pub fn parse_clippy(
     parse_rust_diagnostics("clippy", stderr, code, files)
 }
 
-/// Parses rustc `--error-format=json` typecheck stderr. The grammar is
-/// the shared `rustc` diagnostic shape Clippy also emits; only the
-/// `tool_id` differs. Suggestions parse identically but the runner
-/// never applies them: typecheck is check-only.
 pub fn parse_rustc(
     stderr: &[u8],
     code: Option<i32>,
@@ -185,7 +173,6 @@ fn parse_rust_diagnostics(
     Ok(findings)
 }
 
-/// Harvests `MachineApplicable` child spans for the diagnostic's file.
 fn collect_suggestions(
     tool: &'static str,
     messages: &[ClippyMessage],

@@ -1,15 +1,3 @@
-//! Adoption admissibility policy.
-//!
-//! Split from `super` (`lib.rs`): owns `devcontainer_is_admissible`
-//! and `diagnostics_command_allowed`. Re-exported through `super` so
-//! the public paths stay
-//! `dx_adopt::{devcontainer_is_admissible, diagnostics_command_allowed}`.
-
-/// Whether a devcontainer definition is admissible.
-///
-/// Setup uses only pinned artifacts and every tool execution delegates to
-/// Bazel actions: pinned bootstrap plus Bazel delegation with no ambient
-/// tools. Any ambient tool use fails the gate.
 pub fn devcontainer_is_admissible(
     pinned_bootstrap: bool,
     delegates_to_bazel: bool,
@@ -18,11 +6,6 @@ pub fn devcontainer_is_admissible(
     pinned_bootstrap && delegates_to_bazel && !uses_ambient_tools
 }
 
-/// Whether a diagnostics command name is admissible.
-///
-/// Per ADR 0006 there is no `dx doctor`: that name is rejected outright and
-/// the consolidated status surface must ship under another name. The
-/// empty name is rejected as well; vocabulary and shape stay gated.
 pub fn diagnostics_command_allowed(name: &str) -> bool {
     !name.is_empty() && name != "doctor"
 }

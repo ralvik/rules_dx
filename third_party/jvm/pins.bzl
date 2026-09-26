@@ -17,7 +17,6 @@ MAVEN_REPIN = "REPIN=1 bazel run @maven//:pin"
 # Primary Maven coordinates pinned in MODULE.bazel plus maven_install.json
 # (JUnit 6.1.3 line plus 4.13.2 seed; the 5.14.x fallback stays a swap,
 # never a second lock; ScalaTest 3.2.20 plus Scalactic 3.2.20 for the Scala
-# hello closure via the shared lock, issue #1080).
 MAVEN_ARTIFACTS = [
     "junit:junit:4.13.2",
     "org.junit.jupiter:junit-jupiter-api:6.1.3",
@@ -64,7 +63,6 @@ MAVEN_FIXTURE_SCALA_SEED = "//scala/tests/fixtures/hello:hello_test"
 # Rejected: non-fail-closed lock wiring.
 MAVEN_REJECTED = "non-fail-closed rejected: no lock without fail_if_repin_required, no floating coordinates, no hand-edited lock"
 
-# Currency recheck (issue #932): coordinates below were verified current on
 # this date (JUnit 4.13.2 plus 6.1.3 line plus ScalaTest 3.2.20 per ADR 0008 latest-stable).
 # Refresh the date with each dependency-currency pass; pin_consistency.sh
 # fails when absent or stale.

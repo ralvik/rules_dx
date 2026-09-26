@@ -40,7 +40,6 @@ SOURCE_VS_ECOSYSTEM = "per-language source audit distinct from ecosystem dx audi
 
 # Rejected substitutes: leaving under taxonomy rejected with mismatched
 # scope; Bandit re-selection rejected here (stays excluded by ADR 0019,
-# reconsideration owned under issue #970, never silent).
 REJECTED_TAXONOMY_UNDER = "leaving under taxonomy rejected with mismatched scope"
 REJECTED_BANDIT_RESELECT = "Bandit re-selection rejected here with ADR 0019 exclusion standing"
 
@@ -58,7 +57,6 @@ CONSUMER_ADOPT_PYTHON = "examples/adopt-python consumer with lazy audit opt-in"
 # no Supported claim until platform plus consumer plus release passes.
 RELEASE_CHECKLIST = "promotion-checklist plus SBOM plus signing linkage with no Supported claim"
 
-# Owned gaps stay explicit: selection owned under issue #801 (successor
 # to closed #613); taxonomy stays taxonomy-only under closed #512;
 # adapter execution plus digests plus platform plus consumer plus release
 # promotion stays owned gap under #802 plus #808; no Supported claim.

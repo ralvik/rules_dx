@@ -1,27 +1,3 @@
-//! Public output modes and versioned NDJSON protocol for the `dx` CLI
-//! (WP2).
-//!
-//! Contract: `docs/cli/output-protocol.md`. This crate owns live-mode
-//! selection (`text`/`diff`/`json`), stdout-ownership policy, the v1 NDJSON
-//! event shapes with exact field presence and omission rules, deterministic
-//! diagnostic ordering, and protocol-shape validation (workspace paths,
-//! digest spellings, edit ordering). It never renders subprocess argv,
-//! option values, credentials, or original source bytes: replacement text
-//! appears only inside validated `change` events built by the caller.
-//!
-//! JSON objects serialize with `serde_json`'s default key ordering; NDJSON
-//! validity never depends on key order. Consumers parse values, not bytes.
-//!
-//! Domain split: structured diagnostics and human status
-//! emission live in the `diagnostics` module, live output modes and stdout
-//! ownership live in the `modes` module, normalized severity and fail-on
-//! threshold live in the `severity` module, protocol-shape validation
-//! (paths, digests, edits, `OutputError`) lives in the `validation`
-//! module, command lifecycle NDJSON events live in the `lifecycle` module,
-//! change and mutation NDJSON events live in the `changes` module,
-//! diagnostic and notice NDJSON events live in the `findings` module. This
-//! facade only re-exports; the public path stays `dx_output::{...}`.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]

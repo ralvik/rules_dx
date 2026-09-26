@@ -1,13 +1,3 @@
-//! Managed generation staging and commit (`codegen`/`env`/`setup`) execution.
-//!
-//! Codegen collection/staging lives in [`super::managed_codegen`]
-//! and env collection/staging in [`super::managed_env`]; shared
-//! staging primitives (BEP group collection, generation directories,
-//! mirror-leaf symlinks) live in [`super::managed_staging`]; side
-//! preparation plus commit-error mapping live in
-//! [`super::managed_prepare`]. This
-//! module keeps the managed dispatch ([`execute_managed`]).
-
 use super::common::*;
 use super::managed_prepare::{map_commit_error, prepare_managed_sides};
 use crate::args::{Command, Invocation};
@@ -19,29 +9,6 @@ use dx_output::{
 };
 use dx_process::ForwardError;
 
-/// Runs `dx codegen`, `dx env`, and `dx setup`:
-/// validates the label-only scope through the shared setup scope rules,
-/// expands exact `codegen`/`setup` targets through the bare-schema
-/// reverse-dependent query (see [`expand_codegen_roots`]), plans the
-/// Bazel collection request with [`plan_managed`] (repository/`env`) or
-/// [`plan_managed_with_roots`] (expanded exact `codegen`/`setup`), and either
-/// renders the `--dry-run` summary (planning nothing else, launching
-/// nothing) or runs the live Bazel build, collects and validates the
-/// plan shards, stages the immutable generations, and commits the
-/// selection through one atomic `.dx/setups/current` replacement under
-/// the shared commit lock. Independent commits re-read the current
-/// pair under the lock, so a concurrently completed opposite side is
-/// carried forward instead of lost. Build, staging, validation, or
-/// commit failure leaves the current setup unchanged; staged but
-/// unselected generations may remain as retained cache. Argument
-/// parsing guarantees text output with no quality-only options on this
-/// path.
-///
-/// Exits `0` on `--dry-run` and on committed selection (including an
-/// already-current reselection), the Bazel exit code verbatim when the
-/// live build fails, `1` on operational, collection, staging, or commit
-/// failures (including a scope with neither capability), and `2` on
-/// scope or policy conflicts found before execution.
 pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
         invocation.command.is_managed(),
@@ -88,7 +55,6 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
     // projection; `env` needs no codegen expansion. An empty projection
     // set keeps the single label so a bare schema with no consumers
     // still selects its own empty closure. Query failures are pre-exec.
-    // See: `docs/environments/codegen.md` (bare-schema expansion).
     let expanded: Option<Vec<String>> = match (invocation.command, &scope) {
         (Command::Codegen | Command::Setup, dx_setup::SetupScope::Exact(label)) => {
             match expand_codegen_roots(label, workspace, query_runner) {
@@ -180,7 +146,6 @@ pub(crate) fn execute_managed(invocation: &Invocation, env: Env<'_>) -> i32 {
         if json {
             // Failure explainer without argv/secrets: which collection
             // failed plus the stderr pointer; Bazel diagnostics stay on stderr.
-            // See: `docs/cli/output-protocol.md#operational-error`.
             let scope_text = op_scope
                 .as_deref()
                 .map(|scope| scope.join(" "))
@@ -395,7 +360,6 @@ mod tests {
         // projections consuming the schema, the plan analyzes the union,
         // and dry-run shows the full analyzed set without launching a
         // build. Live runs with the same expansion still commit.
-        // See: `docs/environments/codegen.md` (bare-schema expansion).
         let harness = Harness::new("managed-expand-dryrun");
         harness
             .query

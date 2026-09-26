@@ -1,24 +1,5 @@
-//! JUnit report rendering on `quick-junit`.
-//!
-//! Replaces the hand-rolled `quick-xml` writer (`sanitize_xml`,
-//! `format_junit_time`, `emit_junit`, `finish_junit`,
-//! `junit_message_element`) with the nextest data model
-//! ([`quick_junit::Report`], [`quick_junit::TestSuite`],
-//! [`quick_junit::TestCase`]). Invalid XML chars and ANSI escapes are
-//! stripped by [`quick_junit::XmlString`]; times render as seconds with
-//! three decimals via the crate. Re-exported through [`super::junit`]
-//! so the public paths stay
-//! `crate::reports::{render_junit, junit_infrastructure_case}` and
-//! `crate::reports::junit::{render_junit, junit_infrastructure_case}`.
-//! Shares the normalized case types from [`super::junit_types`].
-
 use super::junit_types::{JunitCase, JunitMessage};
 
-/// Display name for one case: the Bazel-provided name, plus a
-/// zero-based `[shard=…,attempt=…]` suffix when either index is
-/// nonzero. Ordering uses the original name plus indices, so an
-/// existing identical display name stays disambiguated by indices
-/// rather than encounter order.
 fn junit_display_name(name: &str, shard: u32, attempt: u32) -> String {
     if shard == 0 && attempt == 0 {
         name.to_owned()
@@ -70,14 +51,6 @@ fn junit_status(case: &JunitCase) -> quick_junit::TestCaseStatus {
     }
 }
 
-/// Renders normalized Bazel test cases as one JUnit XML document.
-///
-/// `suites` groups parsed cases by Bazel target label; every case in
-/// one group shares that label. Suites order bytewise by label; cases
-/// order bytewise by original name, then shard, then attempt. Retries
-/// and shards stay separate cases with zero-based suffixes. Root and
-/// suite `tests`, `failures`, `errors`, `skipped`, and `time` counts
-/// are aggregated by `quick-junit` from the normalized cases.
 pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> Result<String, super::ReportError> {
     let mut ordered: Vec<(String, Vec<JunitCase>)> = suites.to_vec();
     for (_, cases) in &mut ordered {
@@ -120,7 +93,6 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> Result<String, super
     report.set_time(total_time);
     // Keep: `quick-junit` renders via its own serializer, not
     // `serde_json::Serialize`, so the JSON owner cannot cover it.
-    // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
     report
         .to_string()
         .map_err(|err| super::ReportError::JunitRender {
@@ -128,11 +100,6 @@ pub fn render_junit(suites: &[(String, Vec<JunitCase>)]) -> Result<String, super
         })
 }
 
-/// Renders one partial-infrastructure suite for JUnit collection that
-/// lost at least one `test.xml` artifact. The suite is named
-/// `dx.infrastructure` with one error case named `incomplete_results`;
-/// callers add it to the normalized suite list before
-/// [`render_junit`] so aggregate counts include the error.
 pub fn junit_infrastructure_case(detail: &str) -> (String, Vec<JunitCase>) {
     (
         "dx.infrastructure".to_owned(),

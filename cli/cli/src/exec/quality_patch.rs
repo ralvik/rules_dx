@@ -1,44 +1,21 @@
-//! Quality diff-patch rendering: unified patch over
-//! verified sources for `--output=diff`.
-//!
-//! Extracted from [`super::quality`] without behavior change: the
-//! execution root still owns Bazel launch, result collection, event
-//! emission, and report writing; this module owns only the verified-
-//! source to unified-patch projection.
-
 use super::common::{apply_to_bytes, FileChange, SourceRead};
 use dx_diff::{render_patch, FilePatch, PatchKind};
 use std::collections::BTreeMap;
 
-/// Diff-patch rendering failure.
-///
-/// Typed rendering failure (thiserror) with source chaining for the
-/// `dx_diff` renderer: `Display` keeps the historical operational detail
-/// for `diff_failed` byte-identical while callers gain matchable
-/// structure instead of `String` plumbing.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub(crate) enum PatchError {
-    /// No verified source bytes for the changed path.
     #[error("cannot render patch without verified source for {path}")]
     MissingSource { path: String },
-    /// The verified source bytes are not UTF-8 text.
     #[error("source for {path} is not UTF-8 text")]
     NonUtf8Source { path: String },
-    /// The recorded edits do not apply to the verified source.
     #[error("cannot apply recorded edits for {path}")]
     Unappliable { path: String },
-    /// The rendered candidate bytes are not UTF-8 text.
     #[error("candidate for {path} is not UTF-8 text")]
     NonUtf8Candidate { path: String },
-    /// The unified-patch renderer failed.
     #[error("failed to render patch: {detail}")]
     Render { detail: String },
 }
 
-/// Renders the unified patch for `collected.changes` against verified
-/// `sources`. Returns the rendered patch, or the typed [`PatchError`]
-/// for `diff_failed` when a source is missing, non-UTF-8, unappliable,
-/// or unrenderable.
 pub(crate) fn render_diff_patch(
     sources: &BTreeMap<String, SourceRead>,
     changes: &[FileChange],

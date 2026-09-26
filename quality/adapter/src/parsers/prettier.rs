@@ -1,14 +1,6 @@
-//! Prettier output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses Prettier `--check` stderr. `files` are the workspace-relative
-/// mirror paths (Prettier reports working-directory-relative paths even
-/// for absolute arguments, so the caller re-anchors them like Ty).
 pub fn parse_prettier_check(
     stderr: &[u8],
     code: Option<i32>,

@@ -1,60 +1,22 @@
-//! `dx init` absent-only scaffolding.
-//!
-//! Split from `super` (`lib.rs`): owns `absent_only_write_allowed`,
-//! `init_must_refuse`, `ScaffoldFile`, `DEVCONTAINER_JSON`,
-//! `plan_init_files`, and `apply_init`.
-//! Re-exported through `super` so the public path stays
-//! `dx_adopt::{absent_only_write_allowed, init_must_refuse,
-//! ScaffoldFile, DEVCONTAINER_JSON, plan_init_files,
-//! apply_init}`.
-
 use std::path::Path;
 
 use super::{AdoptError, DX_VERSION, HOOK_BUDGET_SECS};
 
-/// Whether `dx init` may write one scaffolded file.
-///
-/// Init writes absent-only: a missing path may be written, an existing path
-/// is left untouched (tracked files are never mutated). The caller checks
-/// each path independently.
 pub fn absent_only_write_allowed(target_exists: bool) -> bool {
     !target_exists
 }
 
 /// Whether `dx init` must refuse one scaffolded path.
-///
-/// An existing file is always refused: an unmanaged `.envrc` or any
-/// other present file is never overwritten by scaffolding (there is no
-/// `--force` flag). Absent paths go
-/// through [`absent_only_write_allowed`].
 pub fn init_must_refuse(target_exists: bool) -> bool {
     target_exists
 }
 
-/// One scaffolded file planned by [`plan_init_files`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ScaffoldFile {
-    /// Workspace-relative path.
     pub path: String,
-    /// Exact bytes to write when absent.
     pub content: String,
 }
 
-/// `dx init` devcontainer definition (snapshot workflow).
-///
-/// Single source for the scaffolded `.devcontainer/devcontainer.json`:
-/// the repository's own `.devcontainer/devcontainer.json` is a snapshot of
-/// this string held by `//.devcontainer:devcontainer_parity_test`
-/// (schema plus byte snapshot, UPDATE_EXPECT refreshes the golden), so the
-/// definition we ship is the one we boot. `postCreateCommand` runs the user-path bootstrap
-/// (`bazel run //dx:env`, then `dx setup`) instead of a full build, so
-/// container create pays only the managed-environment setup.
-///
-/// Extensions cover the Rust automatic driver plus the admitted-language
-/// editors (see [`editor_disposition`]): C++ via managed clangd snapshot,
-/// JVM/.NET/Scala via manual setup-projection wiring. The parity test pins
-/// `rust-lang.rust-analyzer` presence, never exclusivity.
-/// See: `docs/environments/environment.md#ownership-and-refresh`.
 pub const DEVCONTAINER_JSON: &str = concat!(
     "{\n",
     "  \"name\": \"rules_dx\",\n",
@@ -71,17 +33,8 @@ pub const DEVCONTAINER_JSON: &str = concat!(
     "}\n",
 );
 
-/// `dx init` direnv entry (absent-only single source).
-///
-/// Committed `.envrc` next to `MODULE.bazel`: `PATH_add` for `.dx/bin`
-/// only, `watch_file` on `.dx/bin`, missing-directory guard pointing at
-/// `dx env` regeneration. Never invokes Bazel and never exports beyond
-/// `PATH`, preserving the PATH-tools-only boundary; an existing unmanaged
-/// `.envrc` is refused via [`init_must_refuse`] (no `--force`).
-/// See: `docs/environments/environment.md#direnv-integration`.
 pub const ENVRC_CONTENT: &str = concat!(
     "# Committed direnv entry scaffolded absent-only by `dx init`.\n",
-    "# See docs/environments/environment.md#direnv-integration.\n",
     "# PATH-tools-only: adds managed `.dx/bin` to PATH, nothing else; never invokes Bazel.\n",
     "if [ ! -d \".dx/bin\" ]; then\n",
     "  echo \"dx: missing .dx/bin; run `dx env` or `bazel run //dx:env` to regenerate\" >&2\n",
@@ -91,17 +44,6 @@ pub const ENVRC_CONTENT: &str = concat!(
     "watch_file .dx/bin\n",
 );
 
-/// Editor disposition per language, following the automatic-first policy.
-///
-/// Automatic Bazel-backed drivers stay preferred where the upstream
-/// supports them without a custom watcher/resolver engine: Rust
-/// (`rust-analyzer` discovery plus `flycheck`) and Go (upstream
-/// `GOPACKAGESDRIVER`) are automatic; C++ is an action-derived snapshot
-/// read by managed clangd with manual `dx setup` refresh; JVM (Java,
-/// Kotlin), Scala (Metals), and .NET (C#, F#) are manual setup-projection
-/// wiring with no automatic Bazel-backed driver yet; Python/JS/TS are
-/// setup projections (`.venv`, `node_modules`, `tsdk`).
-/// See: `docs/environments/environment.md#ownership-and-refresh`.
 pub fn editor_disposition(language: &str) -> &'static str {
     match language {
         "rust" => "automatic: rust-analyzer discovery plus flycheck (Bazel-backed, separate IDE output base)",
@@ -125,11 +67,6 @@ pub fn editor_disposition(language: &str) -> &'static str {
     }
 }
 
-/// Whether `language` has a scaffolded editor entry (settings or bootstrap).
-///
-/// Covers the core plus admitted foundations: Rust/Python/JS/TS plus
-/// Go plus C/C++ plus Java/Kotlin/Scala/C#/F#. Unknown spellings stay
-/// rejected by `dx new` instead of silently scaffolding a bare tree.
 pub fn editor_language_supported(language: &str) -> bool {
     matches!(
         language,
@@ -151,12 +88,6 @@ pub fn editor_language_supported(language: &str) -> bool {
     )
 }
 
-/// Plan the `dx init` scaffold for a module name.
-///
-/// All writes are absent-only; the caller refuses existing paths
-/// (see [`init_must_refuse`]; there is no overwrite flag). Contents are pinned (no network) and
-/// point editors at `.dx` projections, checked-in native configs, and
-/// managed `.dx/bin` tools.
 pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
     let module = if module_name.is_empty() {
         "my_project"
@@ -212,10 +143,6 @@ pub fn plan_init_files(module_name: &str) -> Vec<ScaffoldFile> {
 }
 
 /// Apply the init scaffold under `root`, writing absent-only.
-///
-/// Returns the written workspace-relative paths. Existing files are left
-/// untouched and reported as refusals in the returned `Vec` prefix
-/// `refused:` entries follow written entries after a `---` separator.
 pub fn apply_init(root: &Path, module_name: &str) -> Result<Vec<String>, AdoptError> {
     let mut written = Vec::new();
     let mut refused = Vec::new();
@@ -283,7 +210,6 @@ mod tests {
 
     #[test]
     fn envrc_scaffold_is_path_only_with_watch_and_regeneration_guard() {
-        // See: `docs/environments/environment.md#direnv-integration`.
         let files = plan_init_files("demo");
         let envrc = files
             .iter()
@@ -333,7 +259,6 @@ mod tests {
 
     #[test]
     fn init_scaffold_covers_admitted_editors() {
-        // See: `docs/environments/environment.md#ownership-and-refresh`.
         let files = plan_init_files("demo");
         let settings = files
             .iter()
@@ -378,7 +303,6 @@ mod tests {
 
     #[test]
     fn editor_disposition_names_driver_or_snapshot_per_lang() {
-        // See: `docs/environments/environment.md#ownership-and-refresh`.
         assert!(editor_disposition("rust").starts_with("automatic:"));
         assert!(editor_disposition("go").starts_with("automatic:"));
         assert!(editor_disposition("cpp").starts_with("snapshot:"));
@@ -433,7 +357,6 @@ mod tests {
     fn hooks_scaffold_budget_tracks_hook_budget_const() {
         // Single source: the scaffolded `dx.hooks.toml` budget must equal
         // `HOOK_BUDGET_SECS`, not a duplicated literal.
-        // See: `docs/cli/commands/hooks.md#timeout-policy`.
         let files = plan_init_files("demo");
         let hooks = files
             .iter()

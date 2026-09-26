@@ -132,7 +132,6 @@ ENV_CODEGEN_SEED_PROOFS = [
 OWNED_GAPS_NOTE = "platform plus consumer plus release evidence stays owned gap"
 NO_SUPPORTED_CLAIM = "no Supported claim"
 
-# Platform evidence per required host (issue #787, beyond seed-host-delivered).
 # Seed plus arm64 plus macos plus windows stay the qualified set
 # (macOS x86_64 Not planned per #976 with no cell); every other host refuses
 # cleanly before Bazel work starts.
@@ -153,7 +152,6 @@ PLATFORM_FLOORS = "deployment_floors_qualification"
 PLATFORM_ROUTES = "cross_routes_qualification"
 PLATFORM_PROVISIONAL = "backends stay provisional"
 
-# Consumer evidence (issue #787): adopt workspaces plus reusable workflow
 # plus public PATH-tool parity, all exercised on real Bzlmod consumers.
 CONSUMER_ADOPT_RUST = "examples/adopt-rust"
 CONSUMER_ADOPT_PYTHON = "examples/adopt-python"
@@ -166,7 +164,6 @@ CONSUMER_TOOL_API = "environment_tool(name, executable, bin_name)"
 CONSUMER_FOUNDATION_MAPS = "environment plans stay present"
 CONSUMER_SELF_CALL = "self-call dx test plus dx coverage"
 
-# Release evidence per cell (issue #787): SBOM plus provenance plus NOTICE
 # plus signing-first plus BCR shape plus human-run driver plus verifier
 # refusal plus tag hygiene, owned by the promotion checklist process.
 RELEASE_SBOM_DEMO = "//deploy/release:sbom_demo"
@@ -187,7 +184,6 @@ OUT_OF_SCOPE_BARE_SCHEMA = "bare-schema expansion stays open under #751"
 OUT_OF_SCOPE_COLLISION = "collision replacement contract stays open under #752"
 OUT_OF_SCOPE_CONCURRENCY = "concurrency plus NFS plus relock stays open under #753"
 
-# Admitted-pairs evolution plus new generator onboarding (issue #788):
 # the frozen registry plus the per-pair fixture plus checklist linkage that
 # each newly admitted pair must satisfy.
 ONBOARDING_DOC = "docs/environments/codegen.md#admitted-pairs-evolution-and-new-generator-onboarding"

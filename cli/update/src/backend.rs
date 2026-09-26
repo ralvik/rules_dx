@@ -1,89 +1,28 @@
-//! Resolver-owned backend operations for `dx update`.
-//!
-//! Pure argv planning over [`crate::sets::SetId`]: every changed file and
-//! invoked operation is attributable to the underlying updater, never to a
-//! `dx` lockfile or private resolver (there is none). Backends refresh
-//! standard locks or equivalent resolved files within declared requirements
-//! ([`crate::semantics`]): exact pins stay constraints, lockfile-only
-//! entries may advance, prereleases follow upstream configuration, Git
-//! branches may advance while tags/commit pins stay unchanged, and path
-//! dependencies are upstream-owned no-ops. Transitive changes remain
-//! permitted under upstream resolver semantics; a newer release outside the
-//! declared requirements is never a failure.
-//!
-//! V1 operations (all through approved Bazel integrations, never a CLI
-//! filesystem scan):
-//! - Cargo (full only): `CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello`
-//!   regenerates `cargo-bazel-lock.json` from `Cargo.lock` via
-//!   `crate_universe`. Selective `cargo:crate` is unsupported in V1 and
-//!   reports `unsupported` rather than silently substituting a full update.
-//! - npm (full + selective): `bazel run @pnpm//:pnpm -- update [...]`
-//!   through the Bazel-pinned pnpm, refreshing `pnpm-lock.yaml`.
-//! - Maven (full only): `REPIN=1 bazel run @maven//:pin` refreshes
-//!   `maven_install.json` from `MODULE.bazel` pins (exact pins stay).
-//!   Selective `maven:group:artifact` is unsupported in V1.
-//! - NuGet (full only): the documented `paket2bazel` regeneration
-//!   refreshes `third_party/dotnet/deps` from `paket.dependencies`/
-//!   `paket.lock` (exact pin stays). Selective is unsupported in V1.
-//! - Go (full only): the pinned `go_deps.from_file` module lock
-//!   (`third_party/go/go.mod` plus `go.sum`) intentionally tracks
-//!   Gazelle's `go.mod` for the shared extension, so a full update is a
-//!   no-op success with no launch; selective is unsupported (explicit
-//!   widening runs through `dx bump` plus the pinned SDK tidy).
-//!
-//! Summaries never render argv, option values, or environment values; the
-//! vectors below are passed directly to the process runner.
-
 use super::selector::SetRequest;
 use super::sets::SetId;
 
-/// Planned backend operation for one set.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum BackendPlan {
-    /// Invoke the updater (`argv[0]` is the binary).
     Run {
-        /// Argument vector passed directly to the runner.
         argv: Vec<String>,
-        /// Extra environment (parent environment is always inherited).
         env: Vec<(String, String)>,
     },
-    /// No-op success (Go full: the pinned module lock tracks Gazelle,
-    /// nothing to refresh).
     Noop,
 }
 
-/// Backend planning failure (execution-time per-set failure, exit 1 for
-/// the invocation overall via [`crate::outcome`]/[`crate::report`], never
-/// a silent success and never a full-update substitution).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum BackendError {
-    /// Selective update is not supported for this set in V1.
     #[error("unsupported selective update for {set}: {reason}")]
     Unsupported {
-        /// Owning set name.
         set: &'static str,
-        /// Why selective is unsupported.
         reason: &'static str,
     },
-    /// Cache-only `--offline`/`--frozen` run would need network for this
-    /// set: re-run without the flag once connected, or use the vendored
-    /// bundle per `docs/deploy/offline-bootstrap.md`.
-    /// See: `docs/deploy/offline-bootstrap.md`.
     #[error("offline_required: cannot update {set} without network (re-run without --offline/--frozen once connected, or use the vendored bundle per docs/deploy/offline-bootstrap.md)")]
     OfflineRequired {
-        /// Owning set name.
         set: &'static str,
     },
 }
 
-/// Plans one set's backend operation.
-///
-/// `offline` forces cache-only: every `Run` plan that would fetch fails
-/// with [`BackendError::OfflineRequired`] instead of launching, while the
-/// Go pinned no-op still succeeds (no fetch, no launch). Unsupported
-/// selective shapes stay [`BackendError::Unsupported`] regardless of
-/// `offline` so the full-set hint never hides behind the network gate.
-// See: `docs/deploy/offline-bootstrap.md`.
 pub fn plan(set: SetId, request: &SetRequest, offline: bool) -> Result<BackendPlan, BackendError> {
     // Offline gate for fetch-owned backends: cache-only runs never launch
     // a resolver that would fetch. Go full stays the pinned no-op success
@@ -259,7 +198,6 @@ mod tests {
 
     #[test]
     fn cargo_selective_reports_unsupported_never_full() {
-        // Issue #633 (See: `docs/decisions/0024-selective-update.md`): per-crate `cargo:<crate>` parses in the selector
         // but the approved `crate_universe` repin has no per-crate flag,
         // so execution fails closed with the full-set hint and never
         // substitutes a full update; private `cargo update -p` stays
@@ -282,7 +220,6 @@ mod tests {
 
     #[test]
     fn nuget_selective_reports_unsupported_never_full() {
-        // Issue #635 (See: `docs/decisions/0024-selective-update.md`): per-package `nuget:<id>` parses in the selector
         // but the approved `paket2bazel` regen has no per-id flag, so
         // execution fails closed with the full-set hint and never
         // substitutes a full update; private `paket.lock` surgery stays
@@ -305,7 +242,6 @@ mod tests {
 
     #[test]
     fn go_selective_reports_unsupported_never_full() {
-        // Issue #636 (See: `docs/decisions/0024-selective-update.md`): per-module `go:<module-path>` parses in the
         // selector but the pinned `go_deps.from_file` module lock
         // (`third_party/go/go.mod` plus `go.sum` tracking Gazelle) has
         // no per-module update flag, so execution fails closed with the
@@ -328,7 +264,6 @@ mod tests {
 
     #[test]
     fn go_full_is_pinned_noop_success() {
-        // Issue #636 (See: `docs/decisions/0024-selective-update.md`): the main workspace has no `go.mod` by design; the
         // single-module `go_deps.from_file` lock tracks Gazelle, so the
         // full update is an intentional no-op success with no launch.
         // Real `go get -u` wiring stays rejected (would diverge the
@@ -367,7 +302,6 @@ mod tests {
 
     #[test]
     fn maven_selective_reports_unsupported_with_set_hint() {
-        // Issue #634 (See: `docs/decisions/0024-selective-update.md`): per-artifact selective is wont-fix in V1. Both the
         // seed (`junit:junit`) and the Jupiter (`org.junit.jupiter:...`)
         // identities fail closed with the full-set hint, never a silent
         // full substitution.
@@ -410,7 +344,6 @@ mod tests {
 
     #[test]
     fn offline_forces_cache_only_except_go_noop() {
-        // See: `docs/deploy/offline-bootstrap.md`. Cache-only runs never
         // launch a fetching resolver; the pinned Go no-op still succeeds
         // with no launch, and unsupported selectives stay unsupported so
         // the full-set hint never hides behind the network gate.

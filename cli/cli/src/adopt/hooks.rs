@@ -1,11 +1,3 @@
-//! Adoption hooks execution (`hooks`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_hooks`] — install,
-//! uninstall, status, and run. Install/uninstall/run summaries are
-//! suppressed under `--quiet`; the status view is the answer and
-//! always prints. Re-exported through `super` so the dispatch path
-//! stays `crate::adopt::execute_adoption`.
-
 use std::io::Write;
 use std::time::Instant;
 
@@ -16,10 +8,6 @@ use crate::resolve::{QueryResult, QueryRunner};
 
 use super::{operational, pre_exec, summaries_suppressed};
 
-/// Runs `dx hooks <install|uninstall|status|run>`: mutating verbs print
-/// prose summaries (suppressed under `--quiet`), `status` prints the
-/// merged baseline/overlay/timings view as the result document.
-/// `--dry-run` plans without mutating or reading config.
 pub(crate) fn execute_hooks(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -106,9 +94,6 @@ fn read_file_opt(root: &std::path::Path, rel: &str) -> Option<String> {
     std::fs::read_to_string(root.join(rel)).ok()
 }
 
-/// Status prints the effective merged baseline/overlay result with measured
-/// timings. Missing files fall back to defaults/empty; invalid TOML fails
-/// closed through the merged gate below.
 fn execute_status(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -178,8 +163,6 @@ fn execute_status(
     0
 }
 
-/// Run executes the affected closure checks hermetically with per-check
-/// budget enforcement. Any check failure or budget overrun blocks (exit 1).
 fn execute_run(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -331,7 +314,6 @@ fn execute_run(
     0
 }
 
-/// Staged file set via hermetic Git only (never ambient `PATH` lookup).
 fn staged_files(
     git: &std::path::Path,
     workspace: &std::path::Path,
@@ -360,7 +342,6 @@ fn staged_files(
         .collect())
 }
 
-/// Affected-target closure over worktree content for staged paths.
 fn affected_targets(
     staged: &[String],
     workspace: &std::path::Path,
@@ -379,7 +360,6 @@ fn affected_targets(
         .map_err(|error| error.to_string())
 }
 
-/// Check argv re-invoking the current `dx` binary (no `PATH` lookup).
 fn check_argv(dx_exe: &str, check: &str, targets: &[String]) -> Vec<String> {
     let mut argv = vec![dx_exe.to_owned()];
     argv.extend(check.split_whitespace().map(ToOwned::to_owned));
@@ -387,7 +367,6 @@ fn check_argv(dx_exe: &str, check: &str, targets: &[String]) -> Vec<String> {
     argv
 }
 
-/// Merge measured timings into the persisted timings file.
 fn record_timings(workspace: &std::path::Path, measured: &[(String, f64)]) -> Result<(), String> {
     let path = workspace.join(dx_adopt::HOOK_TIMINGS_REL);
     let existing = std::fs::read_to_string(&path).ok();
@@ -675,8 +654,6 @@ mod tests {
         assert!(String::from_utf8(out).expect("out").is_empty());
     }
 
-    /// Scripted query runner: first call answers hermetic `git diff`,
-    /// later calls answer Bazel ownership queries in order.
     struct ScriptQuery {
         outputs: RefCell<Vec<crate::resolve::QueryResult>>,
         seen: RefCell<Vec<Vec<String>>>,
@@ -709,7 +686,6 @@ mod tests {
         }
     }
 
-    /// Recording check runner with an explicit hermetic Git tool.
     struct ScriptRunner {
         git: Option<PathBuf>,
         codes: RefCell<Vec<Option<i32>>>,

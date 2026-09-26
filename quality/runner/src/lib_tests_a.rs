@@ -1,6 +1,3 @@
-//! Split from `lib.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::*;
 use quality_result::{decode_validated, encode_validated, validate};
 
@@ -627,7 +624,6 @@ fn full_round_revert_reports_oscillation_not_stability() {
     // oscillation, not false stability (only STABLE may carry replacements).
     // Two stages undoing each other in one round net to the start with
     // changed==true, so the run must be OSCILLATION at round 1.
-    // See: issue #919 multi-config determinism.
     let stages = vec![
         stage("lint-a", &["rust"], &["src/lib.rs"]),
         stage("lint-b", &["rust"], &["src/lib.rs"]),
@@ -664,7 +660,6 @@ fn diagnostics_sort_includes_severity_and_rule() {
     // order total when concurrent adapters share one range with different
     // severities or rules. Same path/offsets with different severity must
     // order by severity, then tool, then rule, then message.
-    // See: `docs/quality/quality-result-protocol.md#diagnostics`.
     fn diag(severity: i32, tool: &str, rule: &str, message: &str) -> Diagnostic {
         Diagnostic {
             severity,

@@ -829,7 +829,6 @@ fn structured_checks_encode_pinned_shapes() {
     );
 }
 
-// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 #[test]
 fn file_family_format_checks_are_diff_and_fixes_are_write() {
     let cue_file = Path::new("/scratch/Sample.cue");
@@ -871,7 +870,6 @@ fn file_family_format_checks_are_diff_and_fixes_are_write() {
     );
 }
 
-// See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
 #[test]
 fn file_family_lint_checks_are_check_only() {
     let css = Path::new("/scratch/style.css");

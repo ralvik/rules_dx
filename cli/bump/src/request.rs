@@ -1,13 +1,6 @@
-//! Single-requirement widen planning for `dx bump`.
-//!
-//! Contract: `docs/cli/commands/audit-update-bazel.md`.
-
 use super::sets::BumpSet;
 use super::version::{self, VersionError, WidenVersion};
 
-/// Planned widen-one-requirement request: which single declared
-/// requirement to rewrite to which new version. Spellings preserved
-/// verbatim for planning summaries.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct BumpRequest {
     pub set: BumpSet,
@@ -20,82 +13,52 @@ pub struct BumpRequest {
 /// Widen usage errors (exit 2, never a partial widen).
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum BumpError {
-    /// Empty selector or version.
     #[error("empty bump selector or version; expected `dx bump <set:package> <version>`")]
     Empty,
-    /// Unknown set or malformed `set:package` shape.
     #[error("unknown bump selector {selector:?}; expected bazel|cargo|github-actions|go|maven|npm|nuget as `set:package` (e.g. cargo:anyhow, maven:junit:junit)")]
     UnknownSelector {
-        /// Offending spelling.
         selector: String,
     },
-    /// Invalid package identity for its set.
     #[error("invalid package {package:?} for set {set}: {reason}")]
     InvalidPackage {
-        /// Owning set name.
         set: &'static str,
-        /// Offending package spelling.
         package: String,
-        /// Why it is invalid.
         reason: &'static str,
     },
-    /// Bare set without a package (never batch, never widen a whole set).
     #[error("bump needs one package, not a whole set: {set:?} selects the set; use `{set}:<package> <version>`")]
     BareSet {
-        /// Offending set spelling.
         set: String,
     },
-    /// Target/label/path passed where `set:package` belongs.
     #[error("bump needs `set:package`, not a label or path: {target:?}")]
     NotAPackage {
-        /// Offending spelling.
         target: String,
     },
-    /// Declared requirement not found in its manifest (nothing widened).
     #[error("no declared requirement for {package:?} in {manifest} (nothing widened)")]
     NotFound {
-        /// Manifest searched.
         manifest: String,
-        /// Package sought.
         package: String,
     },
-    /// Ambiguous requirement (multiple matches; nothing widened, never
-    /// batch).
     #[error("ambiguous requirement for {package:?} in {manifest}: {count} matches (nothing widened; widen one requirement per invocation)")]
     Ambiguous {
-        /// Manifest searched.
         manifest: String,
-        /// Package sought.
         package: String,
-        /// Match count.
         count: usize,
     },
-    /// Manifest shape out of v1 widen scope (nothing widened).
     #[error("unsupported manifest shape in {manifest}: {reason} (nothing widened)")]
     UnsupportedManifest {
-        /// Manifest searched.
         manifest: String,
-        /// Why it is unsupported.
         reason: String,
     },
-    /// GitHub Actions tag needs SHA resolution through the upstream
-    /// GitHub releases client before the file edit (nothing widened).
-    /// Pass the resolved 40/64-char SHA as `<version>` instead.
     #[error("github-actions {package:?} tag {tag:?} needs SHA resolution via the upstream GitHub releases client; pass the resolved SHA as <version> (nothing widened)")]
     NeedsSha {
-        /// Action sought (`owner/repo`).
         package: String,
-        /// Tag supplied.
         tag: String,
     },
-    /// Version-shape failure from upstream validation.
     #[error(transparent)]
     Version(#[from] VersionError),
 }
 
 impl BumpRequest {
-    /// Plans one widen edit from the two positionals after `dx bump`.
-    /// Nothing is probed, fetched, or resolved.
     pub fn parse(selector: &str, version: &str) -> Result<BumpRequest, BumpError> {
         if selector.is_empty() || version.is_empty() {
             return Err(BumpError::Empty);
@@ -163,26 +126,14 @@ impl BumpRequest {
         })
     }
 
-    /// This operation owns the single-requirement rewrite: it widens the
-    /// declared requirement to the new version. `dx update` keeps its
-    /// never-rewrites contract; bump is the explicit exception. Pinned
-    /// here so a future refactor cannot silently merge the two.
     pub fn may_be_rewritten() -> bool {
         true
     }
 
-    /// Whether lock refresh chains automatically resolver-owned after this
-    /// widen edit (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638: Cargo full, npm selective, Go noop, Maven
-    /// full, NuGet full) or the set is file-only (Bazel, GitHub Actions:
-    /// preset flag-diff review plus build, no launch).
     pub fn needs_update_refresh(&self) -> bool {
         self.set.needs_update_refresh()
     }
 
-    /// Refresh selector chained automatically after the widen (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638):
-    /// `cargo` full, `npm:<package>` selective, `go` noop, `maven` full,
-    /// `nuget` full. File-only sets have no refresh selector (verification
-    /// stays flag-diff plus build).
     pub fn refresh_selector(&self) -> String {
         match self.set {
             BumpSet::Cargo => "cargo".to_owned(),
@@ -194,8 +145,6 @@ impl BumpRequest {
         }
     }
 
-    /// Workspace-relative manifest owning the declared requirement.
-    /// Exactly one requirement in this file widens per invocation.
     pub fn target_manifest(&self) -> &'static str {
         match self.set {
             BumpSet::Bazel => {
@@ -215,9 +164,6 @@ impl BumpRequest {
     }
 
     /// Human planning summary for `--dry-run` (never argv).
-    /// Resolver sets chain automatically (See: `docs/cli/commands/audit-update-bazel.md#dx-bump`, issue #638); file-only sets
-    /// still need the flag-diff review plus build. Semver widens carry the
-    /// major-bump=>migrate hint (See: `docs/cli/commands/migrate.md`, issue #931).
     pub fn summary(&self) -> String {
         let through = if self.needs_update_refresh() {
             format!(
@@ -240,10 +186,6 @@ impl BumpRequest {
         }
     }
 
-    /// Major-bump cross-command hint for a known old version.
-    /// See: `docs/cli/commands/migrate.md` (issue #931).
-    /// Returns the missing-manifest hint when `old` parses as semver and the
-    /// widen crosses a major version; otherwise None. Git shapes never hint.
     pub fn major_bump_hint(&self, old: &str) -> Option<String> {
         let new = match &self.version {
             version::WidenVersion::Semver(new) => new,
@@ -268,10 +210,6 @@ impl BumpRequest {
         ))
     }
 
-    /// Plans the single-requirement file edit over injected manifest bytes.
-    /// Returns the widened file bytes; fails closed (nothing widened) when
-    /// the requirement is missing, ambiguous, or in an unsupported shape.
-    /// Exactly one requirement widens per invocation (never batch).
     pub fn plan_edit(&self, content: &str) -> Result<String, BumpError> {
         match self.set {
             BumpSet::Bazel => {

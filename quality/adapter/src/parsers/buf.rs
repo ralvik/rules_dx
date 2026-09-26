@@ -1,17 +1,3 @@
-//! Buf output grammar (protobuf format plus lint).
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! `buf lint --error-format=json` emits JSONL, one object per line with
-//! `path,start_line,start_column,end_line,end_column,type,message`
-//! (`COMPILE` for build errors; no SARIF in 1.71.0, so the native JSON
-//! parser is the faithful shape, never SARIF ingestion). `buf format
-//! --diff --exit-code` emits unified diff with `--- a/<path>` headers;
-//! `--write` applies formatting in place.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
@@ -33,14 +19,6 @@ struct BufLintRecord {
     message: String,
 }
 
-/// Parses `buf lint --error-format=json` JSONL stdout. `files` are the
-/// scratch-absolute paths the tool checked.
-///
-/// Clean is exit 0 with empty output. Findings exit 1 with at least one
-/// JSONL record; each record needs a nonempty `type` plus nonzero
-/// positions. Unknown paths and malformed lines fail closed. All
-/// findings are errors: buf lint has no severity field and fails the
-/// action on any finding.
 pub fn parse_buf_lint(
     stdout: &[u8],
     code: Option<i32>,
@@ -137,13 +115,6 @@ pub fn parse_buf_lint(
     Ok(findings)
 }
 
-/// Parses `buf format --diff --exit-code` stdout. `files` are the
-/// scratch-absolute paths the tool checked.
-///
-/// Clean is exit 0 with no diff markers. Dirty is exit 1 with unified
-/// diff markers (`--- ` plus `+++ `) mentioning at least one checked
-/// file; each mentioned file becomes one `1:1` format finding. Any
-/// other shape is a grammar mismatch, never a silent pass.
 pub fn parse_buf_format(
     stdout: &[u8],
     code: Option<i32>,

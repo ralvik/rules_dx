@@ -1,16 +1,3 @@
-//! Roslyn SARIF output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! Roslyn emits SARIF 2.1 per `csc /errorlog` invocation (one run per
-//! TFM/RID pivot). The adapter concatenates per-pivot runs into one
-//! log with a single schema plus version in deterministic pivot order
-//! and unions results with per-pivot provenance; single-SARIF and
-//! merged-single-run are rejected.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use serde::Deserialize;
 
 use super::{check_output_size, known, FileFinding, ParseError};
@@ -99,14 +86,6 @@ fn roslyn_severity(level: Option<&str>) -> Result<ToolSeverity, ParseError> {
     }
 }
 
-/// Parses aggregated Roslyn SARIF bytes. `files` are the
-/// workspace-relative paths the pivots checked (artifact URIs are
-/// re-rooted to workspace-relative form before lookup).
-///
-/// Clean is a log with no results. Every result needs exactly one
-/// location with a known artifact plus a nonzero start line; missing
-/// ends are point ranges. Unknown artifacts and malformed regions
-/// fail closed.
 pub fn parse_roslyn(sarif: &[u8], files: &[&str]) -> Result<Vec<FileFinding>, ParseError> {
     const TOOL: &str = "roslyn";
     check_output_size(TOOL, sarif)?;

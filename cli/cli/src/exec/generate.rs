@@ -1,5 +1,3 @@
-//! Generate command execution: witness-driven codegen freshness checks and mutation.
-
 use super::common::*;
 use crate::args::Invocation;
 use crate::finalize::{finalize, FinalizeError, FinalizeInput};
@@ -16,11 +14,6 @@ use dx_output::{
 };
 use std::io::Write;
 
-/// Closes a generate run that produced no reportable manifest: JSON
-/// mode finishes the envelope with `results_complete: false` and no
-/// change, mutation, or notice events; other modes stay silent. The
-/// caller-supplied code (Gazelle's failure or the Bazel status) is
-/// preserved.
 fn finish_incomplete_generate(invocation: &Invocation, out: &mut dyn Write, code: i32) -> i32 {
     if invocation.output == OutputMode::Json {
         let _ = write_event(
@@ -37,30 +30,6 @@ fn finish_incomplete_generate(invocation: &Invocation, out: &mut dyn Write, code
     code
 }
 
-/// Runs `dx generate` through the canonical `//dx:generate` Gazelle
-/// runner, or `//dx:generate_check` for `--check` (WP1,
-/// dispatch). Contract: `docs/cli/commands/generate.md` for the
-/// target surface. Scope positionals resolve through the canonical
-/// target resolution and narrow the runner traversal to the resolved
-/// directories; empty scope stays repo-wide (`//...`).
-///
-/// Dispatch sets the private protocol environment on the Gazelle run:
-/// `DX_GENERATE_INTENDED` (witness destination under the temp dir),
-/// `DX_GENERATE_SCOPE` (resolved scope JSON), and `DX_GENERATE_MODE`
-/// (`check` or `default`). The extension witnesses its exact BUILD
-/// changes there; [`finalize`] turns the witness into the versioned
-/// manifest and text, diff, and NDJSON render from that manifest
-/// without rerunning Gazelle.
-///
-/// Gazelle owns its output and exit status: a nonzero Bazel code is
-/// preserved through the projection, and a structurally valid manifest
-/// that ends after a late failure still reports its validated
-/// attempted prefix. A missing witness after a failed run degrades to
-/// the incomplete envelope; a missing or contradictory witness after a
-/// successful run fails closed (`invalid_result`) with no change or
-/// mutation output, even if Gazelle changed workspace files first.
-/// Scope resolution failures (unknown paths, external scopes) fail
-/// pre-execution like every other command.
 pub(crate) fn execute_generate(invocation: &Invocation, env: Env<'_>) -> i32 {
     match plan_reports(
         invocation.command,

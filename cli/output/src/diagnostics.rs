@@ -1,7 +1,3 @@
-//! Structured diagnostics and human status emission.
-//!
-//! Contract: `docs/cli/output-protocol.md`.
-
 pub const DEFAULT_LOG_FILTER: &str = "warn";
 pub const VERBOSE_LOG_FILTER: &str = "info";
 
@@ -19,7 +15,6 @@ pub enum ColorMode {
 }
 
 impl ColorMode {
-    /// Canonical lowercase spelling (`auto|always|never`).
     pub fn as_str(self) -> &'static str {
         match self {
             ColorMode::Auto => "auto",
@@ -28,7 +23,6 @@ impl ColorMode {
         }
     }
 
-    /// Parses one `--color` spelling, case-sensitively.
     pub fn parse(text: &str) -> Result<Self, crate::OutputError> {
         match text {
             "auto" => Ok(ColorMode::Auto),
@@ -41,13 +35,8 @@ impl ColorMode {
     }
 }
 
-/// Global `--color` override for the `dx` CLI (`auto` by default).
-/// Other binaries keep `auto` by never setting it.
 static COLOR_OVERRIDE: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
 
-/// Records the process-wide `--color` choice so [`color_enabled`] and
-/// [`styled_status`] follow the flag without threading a mode through
-/// every caller. Idempotent; last write wins.
 pub fn set_color_override(mode: ColorMode) {
     let value = match mode {
         ColorMode::Auto => 0,
@@ -57,7 +46,6 @@ pub fn set_color_override(mode: ColorMode) {
     COLOR_OVERRIDE.store(value, std::sync::atomic::Ordering::SeqCst);
 }
 
-/// Reports the process-wide `--color` choice (`auto` unless set).
 pub fn color_override() -> ColorMode {
     match COLOR_OVERRIDE.load(std::sync::atomic::Ordering::SeqCst) {
         1 => ColorMode::Always,
@@ -77,7 +65,6 @@ pub enum LogLevel {
 }
 
 impl LogLevel {
-    /// Canonical lowercase spelling (`error|warn|info|debug|trace`).
     pub fn name(self) -> &'static str {
         match self {
             LogLevel::Error => "error",
@@ -88,12 +75,10 @@ impl LogLevel {
         }
     }
 
-    /// Tracing filter for the level (same spelling as [`LogLevel::name`]).
     pub fn filter(self) -> &'static str {
         self.name()
     }
 
-    /// Parses one `--log-level` spelling, case-sensitively.
     pub fn parse(text: &str) -> Result<Self, crate::OutputError> {
         use clap::ValueEnum;
         Self::from_str(text, false).map_err(|_| crate::OutputError::BadLogLevel {
@@ -102,9 +87,6 @@ impl LogLevel {
     }
 }
 
-/// Resolves the default tracing filter: explicit `--log-level` wins,
-/// else `info` under `--verbose`, else `warn`. `RUST_LOG` still
-/// overrides the result inside [`init_diagnostics_with_level`].
 pub fn resolve_log_filter(verbose: bool, level: Option<LogLevel>) -> &'static str {
     match level {
         Some(level) => level.filter(),
@@ -113,23 +95,10 @@ pub fn resolve_log_filter(verbose: bool, level: Option<LogLevel>) -> &'static st
     }
 }
 
-/// Initialises structured diagnostics via `tracing-subscriber`.
-///
-/// Idempotent (`try_init` errors are ignored so tests and repeated calls do
-/// not panic). Honors `RUST_LOG` when set; otherwise `warn` by default and
-/// `info` under `--verbose`. Output goes to stderr so stdout stays
-/// machine-owned per the output protocol. ANSI colors follow
-/// [`color_enabled`] (TTY-aware, `NO_COLOR` respected); default runs emit
-/// nothing, keeping output byte-identical.
 pub fn init_diagnostics(verbose: bool) {
     init_diagnostics_with_level(verbose, None);
 }
 
-/// Initialises diagnostics with an explicit `--log-level` override.
-///
-/// Same contract as [`init_diagnostics`], except the default filter comes
-/// from [`resolve_log_filter`] (`--log-level` over `--verbose` over `warn`);
-/// `RUST_LOG` still wins when set.
 pub fn init_diagnostics_with_level(verbose: bool, level: Option<LogLevel>) {
     use tracing_subscriber::{fmt, EnvFilter};
     let default = resolve_log_filter(verbose, level);
@@ -143,15 +112,10 @@ pub fn init_diagnostics_with_level(verbose: bool, level: Option<LogLevel>) {
     tracing::debug!(verbose, ?level, "dx diagnostics initialised");
 }
 
-/// Pure color gate for tests: no color without a TTY or when `NO_COLOR` is
-/// present. Production probes TTY via [`color_enabled`].
 pub fn colors_allowed(no_color_present: bool, tty: bool) -> bool {
     colors_allowed_for(ColorMode::Auto, no_color_present, tty)
 }
 
-/// Pure `--color` gate for tests: `always` forces color even with
-/// `NO_COLOR` or without a TTY, `never` stays plain, `auto` follows
-/// [`colors_allowed`].
 pub fn colors_allowed_for(mode: ColorMode, no_color_present: bool, tty: bool) -> bool {
     match mode {
         ColorMode::Always => true,
@@ -160,12 +124,6 @@ pub fn colors_allowed_for(mode: ColorMode, no_color_present: bool, tty: bool) ->
     }
 }
 
-/// Reports whether styled human output may use color for `mode`.
-///
-/// `always` forces color (overrides `NO_COLOR`/TTY), `never` stays plain,
-/// `auto` returns false when `NO_COLOR` is present (any value, per the
-/// spec) or when stderr is not a TTY (via `console`, which also honors
-/// `CLICOLOR`, `TERM=dumb`, and Windows VT).
 pub fn color_enabled_for(mode: ColorMode) -> bool {
     match mode {
         ColorMode::Always => true,
@@ -179,17 +137,10 @@ pub fn color_enabled_for(mode: ColorMode) -> bool {
     }
 }
 
-/// Reports whether styled human output may use color.
-///
-/// Follows the process-wide [`color_override`] (`auto` unless the CLI set
-/// `--color`): `always` forces color, `never` stays plain, `auto` is
-/// `NO_COLOR`/TTY-aware so default non-TTY runs stay byte-identical.
 pub fn color_enabled() -> bool {
     color_enabled_for(color_override())
 }
 
-/// Renders `status` with explicit color control: plain when `enabled` is
-/// false (byte-identical), green bold via `console` when true.
 pub fn styled_status_for(status: &str, enabled: bool) -> String {
     if !enabled {
         return status.to_owned();
@@ -197,24 +148,14 @@ pub fn styled_status_for(status: &str, enabled: bool) -> String {
     console::style(status).green().bold().to_string()
 }
 
-/// Renders a human status word, colored only when [`color_enabled`].
-/// Default (non-TTY or `NO_COLOR`) output is byte-identical plain text.
 pub fn styled_status(status: &str) -> String {
     styled_status_for(status, color_enabled())
 }
 
-/// Formats one human status line as `{status} {message}` with TTY-aware
-/// styling. Plain (byte-identical) unless colors are enabled.
 pub fn format_status(status: &str, message: &str) -> String {
     format!("{} {message}", styled_status(status))
 }
 
-/// Emits one human status line to a TTY-aware stderr stream via `anstream`
-///  and mirrors it as a structured `tracing::info!` event for
-/// future JSON-log consumers. `anstream` passes plain text through
-/// unchanged, so default output stays byte-identical. `--color=always`
-/// writes ANSI directly so `auto` stripping never drops the forced color;
-/// `--color=never` stays plain.
 pub fn emit_status(status: &str, message: &str) {
     use std::io::Write;
     let line = format_status(status, message);
@@ -231,11 +172,6 @@ pub fn emit_status(status: &str, message: &str) {
     tracing::info!(status, message, "dx status");
 }
 
-/// Initialises diagnostics with an explicit `--color` override.
-///
-/// Sets the process-wide [`color_override`] before delegating to
-/// [`init_diagnostics_with_level`] so both tracing ANSI (`with_ansi`) and
-/// [`styled_status`] follow the flag. Idempotent like the wrapped init.
 pub fn init_diagnostics_with_color(verbose: bool, level: Option<LogLevel>, color: ColorMode) {
     set_color_override(color);
     init_diagnostics_with_level(verbose, level);

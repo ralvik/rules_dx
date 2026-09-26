@@ -1,18 +1,6 @@
-//! Terraform fmt output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `terraform fmt -check -diff` stdout.
-///
-/// Whole-file rewrite with check/diff mode: unified diff markers
-/// yield one `1:1` format finding per file; empty output on exit 0
-/// is clean. Findings exit non-zero with diff markers.
 pub fn parse_terraform(
     stdout: &[u8],
     code: Option<i32>,

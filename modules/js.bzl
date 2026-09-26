@@ -1,4 +1,4 @@
-"""JavaScript/TypeScript foundation pins plus npm hubs. Contract: docs/decisions/0013-rust-javascript-typescript-foundations.md."""
+"""JavaScript/TypeScript foundation pins plus npm hubs."""
 
 # Pinned JS/TS foundation (see MODULE.bazel; per-split pin_consistency in tools/ci/pin_consistency.sh).
 ASPECT_RULES_JS_VERSION = "3.4.1"

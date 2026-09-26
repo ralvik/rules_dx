@@ -1,20 +1,6 @@
-//! ShellCheck output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `shellcheck --format=gcc` diagnostics on stdout. `files`
-/// are the workspace-relative mirror paths.
-///
-/// Each finding is one line
-/// `<path>:<line>:<col>: <warning|error|info|note>: <message> [<code>]`.
-/// The trailing `[code]` names the rule. Clean is exit 0 with no
-/// lines; findings exit non-zero. Check-only by design.
 pub fn parse_shellcheck(
     stdout: &[u8],
     code: Option<i32>,

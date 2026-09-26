@@ -18,7 +18,6 @@ SCALACTIC_VERSION = "3.2.20"
 # (single version per the ScalaTest 3.2.20 release; covers 2.10-2.13 and 3.x
 # per the release notes; the Coursier `scala_deps.scalatest()` runner
 # classpath stays while the hello closure's explicit `@maven` deps are the
-# fail-closed lock authority, issue #1080).
 SCALATEST_ARTIFACTS = [
     "org.scalactic:scalactic_2.13:3.2.20",
     "org.scalatest:scalatest_2.13:3.2.20",

@@ -50,9 +50,6 @@ pub(crate) fn check_headings(headings: &[Heading], outcome: &mut CheckOutcome) {
     }
 }
 
-/// Heading slugs in a sibling file, without cross-file `-1` numbering: only
-/// the base slug of each heading is trusted outside its own file. Fenced and
-/// indented code regions (per [`code_regions`]) contribute no headings.
 pub(crate) fn slugs_in(content: &str) -> BTreeSet<String> {
     let starts = line_starts(content);
     let mut suppressed: BTreeSet<u32> = BTreeSet::new();
@@ -73,7 +70,6 @@ pub(crate) fn slugs_in(content: &str) -> BTreeSet<String> {
     slugs
 }
 
-/// Byte offset where each line starts; `starts[0]` is always `0`.
 pub(crate) fn line_starts(text: &str) -> Vec<usize> {
     let mut starts = vec![0];
     for (index, byte) in text.bytes().enumerate() {
@@ -84,24 +80,16 @@ pub(crate) fn line_starts(text: &str) -> Vec<usize> {
     starts
 }
 
-/// 1-based line number containing `offset`.
 pub(crate) fn line_of(starts: &[usize], offset: usize) -> u32 {
     starts.partition_point(|start| *start <= offset) as u32
 }
 
-/// One pulldown-cmark code region (fenced or indented), in 1-based lines
-/// covering the opening marker through the closing marker (or end of input
-/// when never closed). `fence_info` is the fenced info string, or `None`
-/// for indented blocks.
 pub(crate) struct CodeRegion {
     pub(crate) start_line: u32,
     pub(crate) end_line: u32,
     pub(crate) fence_info: Option<String>,
 }
 
-/// Code regions from pulldown-cmark block events (`Options::empty()`: no
-/// extensions, so tables and strikethrough stay plain paragraphs exactly as
-/// the line scanner expects).
 pub(crate) fn code_regions(text: &str, starts: &[usize]) -> Vec<CodeRegion> {
     let mut regions = Vec::new();
     let mut open: Option<(u32, Option<String>)> = None;
@@ -133,9 +121,6 @@ pub(crate) fn code_regions(text: &str, starts: &[usize]) -> Vec<CodeRegion> {
     regions
 }
 
-/// Whether a fenced region ends with a compatible closing marker: a strictly
-/// later line whose marker shares the opener's run character, runs at least
-/// as long, and carries no info string (the retired line scanner's rule).
 pub(crate) fn is_closed_fence(source_lines: &[&str], region: &CodeRegion) -> bool {
     if region.end_line <= region.start_line {
         return false;
@@ -159,14 +144,10 @@ pub(crate) fn is_closed_fence(source_lines: &[&str], region: &CodeRegion) -> boo
     }
 }
 
-/// Anchor slug via `slug::slugify` over `deunicode` transliteration (issue
-///): ASCII `a-z`/`0-9`/`-` only, collapsed and trimmed; non-ASCII
-/// headings transliterate instead of stripping.
 pub fn slug(text: &str) -> String {
     slug::slugify(deunicode::deunicode(text))
 }
 
-/// ` ``` ` or `~~~` fence marker: (run char, run length, info string).
 fn fence_marker(line: &str) -> Option<(char, usize, &str)> {
     let stripped = line.trim_start();
     if line.len() - stripped.len() > 3 {
@@ -187,7 +168,6 @@ fn fence_marker(line: &str) -> Option<(char, usize, &str)> {
     Some((run_char, run_len, info.trim_end()))
 }
 
-/// ATX heading: (level, text with closing hashes stripped).
 pub(crate) fn heading(line: &str) -> Option<(usize, String)> {
     let stripped = line.trim_start();
     if line.len() - stripped.len() > 3 {

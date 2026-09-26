@@ -1,4 +1,4 @@
-"""Scala plus .NET cohort matrix cells (issue #797).
+"""Scala plus.NET cohort matrix cells.
 
 Contract: `docs/quality/runner-matrix.md`.
 Seed-only wiring proof with fake doubles plus recorded diagnostics.

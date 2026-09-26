@@ -46,12 +46,6 @@ RING_SHAPE = "ring-style C/assembly with target libs"
 RING_NOTE = "ring-style C plus assembly with target-platform libraries, exec-platform tools for scripts"
 
 # Bindgen shapes: standalone rust_bindgen plus build-script routes.
-# Parser baseline LLVM-22 vs target LLVM-23 pinned.
-# Standalone derives the target compiler context with
-# --no-include-path-detection --formatter=none plus explicit flags and
-# the Rust consumer separately links the native library; the
-# build-script route needs an explicit execution-platform libclang
-# closure and target parsing flags.
 BINDGEN_BASELINE_LLVM = "22.1.8"
 BINDGEN_TARGET_LLVM = "23.1.0"
 BINDGEN_FLAGS = ["--no-include-path-detection", "--formatter=none"]

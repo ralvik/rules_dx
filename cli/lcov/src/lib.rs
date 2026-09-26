@@ -1,58 +1,3 @@
-//! Implementation-coverage gate.
-//!
-//! Contract: `docs/testing/README.md#coverage`.
-//!
-//! Bazel-owned enforcement for the resolved coverage policy over the
-//! eligible scope. The gate parses the combined LCOV report from
-//! `bazel coverage --combined_report=lcov`, validates source-level exclusion
-//! markers carrying nearby specific `reason:` plus `issue:` tracking,
-//! reconciles the repository-owned inventory against Bazel-declared sources,
-//! and requires exact 100% covered-over-eligible executable lines. Only `DA`
-//! records define executable lines; blank and comment-only lines are not
-//! executable. Missing reports, unowned or absent sources, and any uncovered
-//! non-excluded executable line fail the gate. Percentages are informational
-//! only and never decide the verdict.
-//!
-//! Marker recognition is textual per-extension comment syntax: `//` line
-//! comments for C-like sources, `#` line comments for Python, Starlark,
-//! TOML, shell, and YAML, and `<!-- ... -->` segments for Markdown and
-//! HTML. A marker is honored only inside its language's comments and
-//! outside string or char literals (byte-level scan honoring `"`/`'`
-//! and backslash escapes). Markers inside block comments or raw strings
-//! stay wont-fix out of scope (gate-owned: line-comment
-//! textual scan only; no eligible source uses those shapes). The
-//! `reason:` plus `issue:` lookup itself is a textual per-line match on the
-//! marker line or the line directly above it (split form allowed), and the
-//! reason text after the colon must be non-empty specific and short (at most
-//! `MAX_REASON_LEN` chars; full rationale lives once in
-//! `docs/testing/strategy-details.md#coverage`). Bare `policy:` pointers
-//! without `reason:` fail closed.
-//!
-//! Domain split: combined-LCOV parsing (`FileHits`,
-//! `parse_lcov`, `validate_lcov_report`) lives in the `parse` module,
-//! source-level exclusion markers (`Ignores`, `is_ignored`, `find_ignores`)
-//! live in the `ignores` module, gate evaluation (`FileVerdict`,
-//! `GateVerdict`, `is_covered_language`, `evaluate`, `render`) lives in the
-//! `verdict` module, repo inventory (`ELIGIBLE`, `SUPPORT`,
-//! `parse_inventory`) lives in the `inventory` module, and the gate CLI
-//! (`run`) lives in the `run` module. This facade keeps the shared error;
-//! the public paths stay `dx_lcov::{FileHits, parse_lcov,
-//! validate_lcov_report, Ignores, is_ignored, find_ignores, FileVerdict,
-//! GateVerdict, is_covered_language, evaluate, render, ELIGIBLE, SUPPORT,
-//! parse_inventory, run}` via the re-exports below.
-//!
-//! Dependency evaluation (parser adopted):
-//! the gate needs the combined-LCOV `SF`/`DA` union via the `lcov` crate
-//! plus per-extension comment-syntax marker scanning outside string literals
-//! with the nearby short `reason:` plus `issue:` gate plus the repo inventory
-//! and the exact 100%
-//! eligible verdict. `cargo-llvm-cov` is a coverage-tool binary rather than
-//! a parser library, and the `lcov` crate provides none of the marker,
-//! inventory, or verdict semantics, so each stays hand-rolled with owned
-//! reasons; `parse_lcov`/`validate_lcov_report` keep the maximum-hits union,
-//! ignore non-`DA` summaries, and preserve empty-report semantics over `lcov`
-//! records.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(not(test), deny(clippy::expect_used, clippy::unwrap_used))]
@@ -69,60 +14,42 @@ pub use parse::{merge_lcov_reports, parse_lcov, validate_lcov_report, FileHits};
 pub use run::run;
 pub use verdict::{evaluate, is_covered_language, render, FileVerdict, GateVerdict};
 
-/// Typed LCOV gate failure.
-///
-/// Every variant renders byte-identical to the historical `String` error
-/// it replaces, so CLI operational diagnostics stay stable while callers
-/// gain matchable structure instead of `format!` string plumbing.
-/// Binary edges keep rendering via `Display` (`to_string()`).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LcovError {
-    /// `SF:` record carries no path.
     #[error("LCOV record with empty SF path")]
     EmptySfPath,
-    /// `DA:` record appears before any `SF:` record.
     #[error("LCOV DA record outside any SF record: {line}")]
     DaOutsideSf { line: String },
-    /// `DA:` line number is not a positive integer.
     #[error("malformed LCOV DA line number in {path}: {line}")]
     MalformedLineNumber { path: String, line: String },
-    /// `DA:` hit count is not an integer.
     #[error("malformed LCOV DA hit count in {path}: {line}")]
     MalformedHitCount { path: String, line: String },
-    /// `SF:` appears before the open section closes with `end_of_record`.
     #[error("LCOV SF record before end_of_record")]
     SfBeforeEndOfRecord,
-    /// `end_of_record` appears outside any `SF:` section.
     #[error("LCOV end_of_record outside any SF record")]
     EndOfRecordOutsideSf,
-    /// Report carries no `SF:` records.
     #[error("LCOV has no SF records")]
     NoSfRecords,
-    /// Open `SF:` section never closes with `end_of_record`.
     #[error("LCOV SF record without end_of_record")]
     SfWithoutEndOfRecord,
-    /// Exclusion directive lacks a nearby non-empty `reason:`.
     #[error("coverage ignore without nearby reason at {path}:{lineno}: {directive} requires a reason: comment on the same or previous line")]
     MissingReason {
         path: String,
         lineno: usize,
         directive: String,
     },
-    /// Exclusion carries only a bare `policy:` pointer without a specific `reason:`.
     #[error("coverage ignore with bare policy at {path}:{lineno}: {directive} requires reason: plus issue: (bare policy: without reason: is rejected)")]
     BarePolicyWithoutReason {
         path: String,
         lineno: usize,
         directive: String,
     },
-    /// Exclusion lacks nearby `issue:` tracking for budget/expiry review.
     #[error("coverage ignore without issue tracking at {path}:{lineno}: {directive} requires issue: <number> on the same or previous line for budget/expiry review")]
     MissingIssue {
         path: String,
         lineno: usize,
         directive: String,
     },
-    /// Exclusion reason exceeds the short-reason cap (`MAX_REASON_LEN`).
     #[error("coverage ignore reason too long at {path}:{lineno}: {directive} reason is {len} chars, max {max}; keep reason: specific and short with issue: plus policy: docs/testing/strategy-details.md#coverage")]
     ReasonTooLong {
         path: String,
@@ -131,23 +58,16 @@ pub enum LcovError {
         len: usize,
         max: usize,
     },
-    /// `START` opens while another range is open.
     #[error("nested range START at {path}:{lineno}")]
     NestedStart { path: String, lineno: usize },
-    /// `STOP` closes with no open range.
     #[error("range STOP without START at {path}:{lineno}")]
     StopWithoutStart { path: String, lineno: usize },
-    /// Marker prefix spells no known directive.
     #[error("unrecognized coverage ignore directive at {path}:{lineno}")]
     UnrecognizedDirective { path: String, lineno: usize },
-    /// `START` never closes.
     #[error("unclosed range START at {path}:{start}")]
     UnclosedStart { path: String, start: usize },
-    /// Inventory line is not `<disposition> <path>`.
     #[error("malformed inventory line {lineno}: {raw:?}")]
     MalformedInventory { lineno: usize, raw: String },
-    /// Injected file read failed; carries the reader's message verbatim
-    /// so gate output stays byte-identical.
     #[error("{message}")]
     Io { message: String },
 }

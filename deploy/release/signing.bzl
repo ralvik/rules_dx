@@ -13,15 +13,6 @@ SIGNING_TRUST_ROOT = "https://tuf-repo-cdn.sigstore.dev"
 SIGNING_ISSUER = "https://token.actions.githubusercontent.com"
 
 # Selected signing-stack pins: cosign CLI version plus linux-amd64 sha
-# fetched checksum-verified in `.github/workflows/ghcr.yml` plus the Sigstore
-# bundle media type produced by `cosign sign-blob --bundle`. Host tools
-# resolve at run time with no new module dependencies; the pins keep the
-# human-run path, GHCR route, and verifier on one stack. `signing.bzl`
-# owns the version plus sha (the canonical pin pair, like
-# `.devcontainer/Dockerfile.prebuilt`);
-# `ghcr.yml` tracks both under `COSIGN_VERSION` plus
-# `COSIGN_SHA256_LINUX_AMD64` or drift fails in
-# `signing_distribution_qualification` (see issue #1058).
 SIGNING_COSIGN_VERSION = "v2.4.1"
 SIGNING_COSIGN_SHA256_LINUX_AMD64 = "8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b"
 SIGNING_BUNDLE_MEDIA_TYPE = "application/vnd.dev.sigstore.bundle.v0.3+json"

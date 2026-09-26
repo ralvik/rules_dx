@@ -1,14 +1,6 @@
-//! pydoclint output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Splits a `<line>: <DOCxxx>: <message>` violation line. Line `0` is
-/// the whole-file `DOC002` unparseable marker (no line exists); the
-/// caller places it at 1:1 with the tool's message verbatim.
 fn pydoclint_violation(line: &str) -> Result<(u64, &str, String), ParseError> {
     const TOOL: &str = "pydoclint";
     let (line_text, rest) = line
@@ -38,11 +30,6 @@ fn pydoclint_violation(line: &str) -> Result<(u64, &str, String), ParseError> {
     Ok((number, rule, message.to_owned()))
 }
 
-/// Parses pydoclint `--quiet` stderr: bare `<path>` header lines plus
-/// indented violation lines. Findings are line-level points at column 1
-/// and every violation is an error. Clean is empty output on exit 0;
-/// empty output on any other exit is a grammar mismatch. Check-only:
-/// pydoclint offers no fix mode, so suggestions stay empty.
 pub fn parse_pydoclint(
     stderr: &[u8],
     code: Option<i32>,

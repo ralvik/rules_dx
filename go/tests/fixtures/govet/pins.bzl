@@ -6,7 +6,6 @@ Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
 
 # Pinned reference version (ships with the qualified Go toolchain
 # rules_go 0.63.0 plus Go SDK 1.26.6, no separate acquisition; living at
-# head rejected; digests stay owned under issue #798).
 GOVET_TOOLCHAIN_VERSION = "1.26.6"
 
 # Distribution identity (ships with the qualified Go toolchain, no
@@ -20,7 +19,6 @@ GOVET_FIX = "check-only with the provisional sandbox-apply-and-diff fix flow"
 GOVET_CONFIG_POLICY = "default analyzers are the upstream built-in default analyzers; all-analyzer and vettool maxima never enabled"
 
 # Live proof labels (foundation consumers stay green; adapter dispatch
-# owned under issue #798).
 GO_FIXTURE_HELLO = "//go/tests/fixtures/hello:hello_test"
 
 # Rejected: all-analyzer maxima, exit-code-only classification.

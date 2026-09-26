@@ -5,12 +5,10 @@ Contract: `docs/quality/tool-integrations.md#initial-adapter-qualification`,
 """
 
 # Pinned reference line (7.x stable; 8.0.0 alphas rejected; digests stay
-# owned under issue #797).
 FANTOMAS_LINE = "7.x stable"
 
 # Distribution identity (exact official tool package as declared DLLs over
 # the one managed .NET cohort; no consumer runs `dotnet tool install`;
-# digests plus runtime bounds stay owned under issue #797).
 FANTOMAS_ARTIFACT = "exact official tool package as declared DLLs over the managed .NET cohort"
 FANTOMAS_RUNTIME = "shared managed .NET runtime cohort; no dotnet tool install"
 
@@ -20,7 +18,6 @@ FANTOMAS_FIX = "fantomas in-place format (re-read on exit 0, keep input otherwis
 FANTOMAS_CONFIG_POLICY = "upstream built-in defaults without config, native .editorconfig interpretation with config"
 
 # Live proof labels (foundation consumers stay green; adapter dispatch
-# owned under issue #797).
 FSHARP_FIXTURE_HELLO = "//fsharp/tests/fixtures/hello:hello_lib"
 
 # Rejected: installer on the consumer path, non-JSON console-parse,

@@ -61,10 +61,6 @@ ACCEPTANCE_NOT_REDISTRIBUTION = "acceptance is not permission to redistribute"
 DOWNLOAD_USE_REDISTRIBUTE_SEPARATE = "Direct SDK downloads, permission to use, and permission to redistribute are separate checks"
 
 # Cache, mirror, and remote-worker boundaries: review actual package
-# terms, deliberate acceptance, extraction, mirrors, redistribution,
-# internal caches and remote workers. Official download availability is
-# not permission. License-approved boundaries stay recorded separately
-# from technical download success.
 CACHE_RIGHTS = [
     "mirrors need terms review",
     "redistribution needs terms review",

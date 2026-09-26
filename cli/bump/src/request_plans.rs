@@ -1,16 +1,8 @@
-//! Single-requirement widen plan edits for `dx bump` (split from `request.rs`).
-//!
-//! Every `plan_*` file-edit helper plus the validation and small
-//! replace helpers they use. No behavior change: moved verbatim.
-
 use super::*;
 
 use regex::Regex;
 use std::sync::OnceLock;
 
-/// Thin widen edits below rewrite exactly one quoted version string per
-/// invocation, preserving all other bytes. Each helper counts matches and
-/// fails closed on zero or multiple (never batch, never guess).
 pub(super) fn plan_bazelversion(
     content: &str,
     version: &WidenVersion,
@@ -566,9 +558,6 @@ pub(super) fn replace_gha_sha(line: &str, needle: &str, sha: &str) -> Option<Str
     Some(replaced)
 }
 
-/// Replaces the quoted value of the `version = "old"` attribute on one
-/// `bazel_dep(...)` line with `"new"`, preserving the `name` attr and all
-/// other bytes.
 pub(super) fn version_attr_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -612,8 +601,6 @@ pub(super) fn replace_version_attr_fallback(line: &str, new: &str) -> Option<Str
     Some(replaced)
 }
 
-/// Replaces the quoted version after the first `:` on a JSON line
-/// (`"package": "old"` -> `"package": "new"`), preserving spacing.
 pub(super) fn json_version_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -663,7 +650,6 @@ pub(super) fn replace_first_quoted_version_after_colon_fallback(
     Some(replaced)
 }
 
-/// True for Bazel labels/patterns and file/dir paths (never `set:package`).
 pub(super) fn target_prefix_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -711,12 +697,6 @@ pub(super) fn is_target_shape(text: &str) -> bool {
         || text == "Cargo.toml"
 }
 
-/// Validates an ecosystem package identity (upstream-native, no versions).
-/// Character classes are declarative `regex` patterns;
-/// structural checks (`:`/`/`/space placement, scope splits) stay textual.
-/// Each helper falls back to the historical char loop when its static
-/// pattern fails to compile (unreachable; keeps non-test builds
-/// `expect`/`unwrap`-free).
 pub(super) fn dotted_name_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {

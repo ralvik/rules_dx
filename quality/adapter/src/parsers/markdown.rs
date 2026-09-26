@@ -1,15 +1,8 @@
-//! Markdown checker output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-
 use serde::Deserialize;
 
 use super::{check_output_size, code_name, known, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// One newline-delimited JSON finding line from the repo-owned Markdown
-/// checker, keyed by the `--source` workspace path.
 #[derive(Debug, Deserialize)]
 struct MarkdownLine {
     path: String,
@@ -18,14 +11,6 @@ struct MarkdownLine {
     message: String,
 }
 
-/// Parses Markdown checker stdout. `files` are the workspace paths from
-/// the `--source` mappings, in stage order: the checker keys sibling
-/// resolution and finding paths off those keys, so the backend re-roots
-/// each validated path onto its scratch-absolute path before placement.
-/// Findings are line-level points at column 1 with the kebab-case kind as
-/// the rule; every kind is an error (broken links and structure fail the
-/// lint gate). Clean output is empty stdout on exit 0; any other exit is
-/// an operational failure, never a partial result.
 pub fn parse_markdown_findings(
     stdout: &[u8],
     code: Option<i32>,

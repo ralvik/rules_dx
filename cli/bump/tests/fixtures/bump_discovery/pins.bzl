@@ -6,7 +6,6 @@ Fixture: `cli/bump/tests/fixtures/bump_discovery/` via
 """
 
 # Disposition: scheduled discovery enumerates outdated via upstream
-# registry clients (issue #639, never manual selector only).
 BUMP_DISCOVERY = "enumerate"
 
 # Per-set upstream registry clients (never custom HTTP).
@@ -34,7 +33,6 @@ BUMP_DISCOVERY_NUGET_SELECTOR = "nuget:FSharp.Core outdated when NuGet reports s
 BUMP_DISCOVERY_BAZEL_SELECTOR = "bazel:rules_rust outdated when BCR reports stable above current"
 
 # GitHub Actions tags enumerate via GitHub releases but need SHA
-# resolution before the file edit (issue #640 owns auto).
 BUMP_DISCOVERY_GHA_NOTE = "github-actions tags need SHA resolution via the upstream GitHub releases client"
 
 # Up-to-date means no candidate (nothing widened for the selector).

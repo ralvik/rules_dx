@@ -2,16 +2,9 @@
 """
 
 # Standard `runfiles.bash` initialization v3, copy-pasted from the Bazel
-# Bash runfiles library
-# (bazel_tools/tools/bash/runfiles/runfiles.bash). Handles
-# `RUNFILES_DIR`, `RUNFILES_MANIFEST_FILE`, `$0.runfiles`, and
-# `$0.runfiles_manifest` plus Bzlmod repo mapping. Replaces every
-# custom `RF`/`MANIFEST`/`rloc()` probe.
 RUNFILES_BASH_INIT = """# --- begin runfiles.bash initialization v3 ---
 # Copy-pasted from the Bazel Bash runfiles library v3.
-# shellcheck disable=SC1090 (issue #914): single file-level pragma covers the
 # five runfiles-layout probes below, which only exist under `bazel run` /
-# `bazel test` (see `.shellcheckrc`, issue #319).
 set -uo pipefail; set +e; f=bazel_tools/tools/bash/runfiles/runfiles.bash
 source "${RUNFILES_DIR:-/dev/null}/$f" 2>/dev/null || \\
   source "$(grep -sm1 "^$f " "${RUNFILES_MANIFEST_FILE:-/dev/null}" | cut -f2- -d' ')" 2>/dev/null || \\

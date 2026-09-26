@@ -1,20 +1,6 @@
-//! PSScriptAnalyzer output grammar.
-//!
-//! Per-family module of [`crate::parsers`]: the pinned-shape contract
-//! and [`ParseError`] semantics live in the parent module docs.
-//!
-//! See: `docs/quality/tool-integrations.md#initial-adapter-qualification`
-
 use super::{check_output_size, code_name, known, missing, point, FileFinding, ParseError};
 use crate::{Finding, ToolSeverity};
 
-/// Parses `Invoke-ScriptAnalyzer` console text on stdout. `files` are
-/// the workspace-relative mirror paths.
-///
-/// Each finding is one line `<path>:<line>:<col>: [<rule>] <message>`
-/// (rule in brackets, console-parse binding). Severity is warning by
-/// design; library-API binding stays open. Clean is exit 0 with no
-/// lines; findings exit non-zero.
 pub fn parse_psscriptanalyzer(
     stdout: &[u8],
     code: Option<i32>,

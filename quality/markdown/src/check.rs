@@ -10,8 +10,6 @@ use super::frontmatter::{
 };
 use super::links::{broken_label, check_target, scan_bare_autolinks, BrokenRef, DocLink, Span};
 
-/// Structural finding kinds. Every variant is a finding; skipped remote
-/// targets are reported separately in [`CheckOutcome::skipped_remotes`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum FindingKind {
     MissingFileTarget,
@@ -21,7 +19,6 @@ pub enum FindingKind {
     UnclosedCodeFence,
 }
 
-/// One structural finding at a 1-based source line.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Finding {
     pub line: u32,
@@ -29,21 +26,14 @@ pub struct Finding {
     pub message: String,
 }
 
-/// Outcome of [`check_markdown`]: findings ordered by line plus deduplicated
-/// remote targets that were recorded but never fetched.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct CheckOutcome {
     pub findings: Vec<Finding>,
     pub skipped_remotes: Vec<String>,
 }
 
-/// Markdown checker failure.
-///
-/// The injected file reader surfaces I/O failures verbatim so CLI
-/// diagnostics stay byte-identical while callers gain a matchable type.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum MarkdownError {
-    /// Injected file read failed; carries the reader's message verbatim.
     #[error("{message}")]
     Io { message: String },
 }
@@ -54,12 +44,6 @@ impl From<String> for MarkdownError {
     }
 }
 
-/// Check one Markdown source.
-///
-/// `source_path` is the source's repo-relative path; relative link targets
-/// resolve against its parent directory. `siblings` maps repo-relative paths
-/// to file contents for files a relative target may resolve to (the source
-/// itself is never read from `siblings`).
 pub fn check_markdown(
     source_path: &str,
     text: &str,
@@ -287,8 +271,6 @@ pub(crate) fn push_finding(
     });
 }
 
-/// One NDJSON finding line on stdout, serialized with serde_json. Field
-/// order is part of the stable output shape.
 #[derive(Serialize)]
 pub(crate) struct FindingLine<'a> {
     pub(crate) path: &'a str,
@@ -296,7 +278,6 @@ pub(crate) struct FindingLine<'a> {
     pub(crate) kind: &'static str,
     pub(crate) message: &'a str,
 }
-/// Stable kebab-case identifier for a [`FindingKind`], used in JSON output.
 pub fn kind_id(kind: FindingKind) -> &'static str {
     match kind {
         FindingKind::MissingFileTarget => "missing-file-target",
@@ -311,19 +292,12 @@ fn usage() -> String {
     "usage: quality_markdown --source WS_PATH=EXEC_PATH [--source ...] [--sibling WS_PATH=EXEC_PATH ...]".into()
 }
 
-/// `WS_PATH=EXEC_PATH` mapping behind `--source`/`--sibling`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Mapping {
     ws: String,
     exec: String,
 }
 
-/// `argv` tokenizer (frozen legacy contract). `--source`/`--sibling` append in argument
-/// order; every value option consumes the next token unconditionally (even
-/// a `--`-led token), matching the legacy hand loop. Mapping values validate
-/// through [`parse_source_mapping`]/[`parse_sibling_mapping`] at tokenize
-/// time; shape failures map back onto the legacy `malformed …` text via
-/// [`parse_error`].
 #[derive(ClapParser)]
 #[command(disable_help_flag = true)]
 struct Cli {
@@ -333,26 +307,14 @@ struct Cli {
     sibling: Vec<Mapping>,
 }
 
-/// Raw `argv` token behind a [`clap::Error`], e.g. `--bogus` or `oops`.
-/// Shared plumbing; message formats stay local to the frozen contract.
-/// See: `cli/output/src/clap_errors.rs` (`dx_output::invalid_token`).
 fn invalid_token(error: &clap::Error) -> String {
     dx_output::invalid_token(error)
 }
 
-/// Rejected mapping value behind a [`clap::Error`], if the error carries a
-/// non-empty one. Empty values (`--source ""`, `--source=`) carry none (or
-/// an empty one); the caller resolves those via [`empty_rejection`].
-/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn rejected_value(error: &clap::Error) -> Option<String> {
     dx_output::rejected_value(error)
 }
 
-/// Empty-value rejection with no carried value: mirrors the legacy
-/// left-to-right scan for the first empty shape in `argv`. Attached
-/// (`--source=`) was the whole flag word to the legacy loop, so it keeps
-/// the unknown-argument form; an explicit empty value token in flag-value
-/// position malformed under its flag.
 enum EmptyRejection {
     Attached(String),
     Separate(&'static str),
@@ -376,9 +338,6 @@ fn empty_rejection(args: &[String]) -> EmptyRejection {
     EmptyRejection::Neither
 }
 
-/// Report the legacy `malformed …` text for `raw` under `flag` by re-running
-/// the tokenizing parser (which rejects again), falling back to the raw
-/// `clap` first line if it unexpectedly accepts.
 fn check_mapping(flag: &str, raw: &str, error: &clap::Error) -> Vec<String> {
     let legacy = if flag == "--sibling" {
         parse_sibling_mapping(raw)
@@ -391,11 +350,6 @@ fn check_mapping(flag: &str, raw: &str, error: &clap::Error) -> Vec<String> {
     }
 }
 
-/// Flag whose mapping `raw` rejected, recovered from `argv`: the first
-/// occurrence with a known flag before it (a separate value), or the
-/// `--flag=` prefix of an attached value. Falls back to `--source`,
-/// reachable only for values clap reports that appear in neither form
-/// (impossible for real `argv`).
 fn rejecting_flag(args: &[String], raw: &str) -> &'static str {
     for (index, arg) in args.iter().enumerate() {
         if arg == raw && index > 0 {
@@ -415,19 +369,11 @@ fn rejecting_flag(args: &[String], raw: &str) -> &'static str {
     "--source"
 }
 
-/// Map `clap` tokenizing failures onto the legacy [`usage`]-routed surface:
-/// every failure prints its reason plus the usage line (exit `2`).
-/// Reachable kinds: [`ErrorKind::UnknownArgument`], [`ErrorKind::InvalidValue`]
-/// (a present flag with no consumable value), and [`ErrorKind::ValueValidation`]
-/// (a mapping rejected by [`parse_source_mapping`]/[`parse_sibling_mapping`],
-/// the only custom value parsers). No other parser, conflict, or count error
-/// can fire.
 fn parse_error(error: clap::Error, args: &[String]) -> Vec<String> {
     let token = invalid_token(&error);
     match error.kind() {
         // `clap` strips an attached `=value` from the reported token; the
         // legacy loop echoed the whole `argv` element, so recover it.
-        // See: `cli/output/src/clap_errors.rs`.
         ErrorKind::UnknownArgument => {
             let echoed = dx_output::recover_unknown_token(args, &token);
             vec![format!("unknown argument: {echoed}"), usage()]
@@ -468,9 +414,6 @@ fn parse_args(args: &[String]) -> Result<Cli, Vec<String>> {
     .map_err(|error| parse_error(error, args))
 }
 
-/// Shared `WS_PATH=EXEC_PATH` shape behind [`parse_source_mapping`] and
-/// [`parse_sibling_mapping`]: exactly one `=` with non-empty sides, or the
-/// legacy `malformed {flag} …` text naming the rejecting flag.
 fn parse_mapping(flag: &'static str, raw: &str) -> Result<Mapping, String> {
     match raw.split_once('=') {
         Some((ws, exec)) if !ws.is_empty() && !exec.is_empty() => Ok(Mapping {
@@ -481,21 +424,14 @@ fn parse_mapping(flag: &'static str, raw: &str) -> Result<Mapping, String> {
     }
 }
 
-/// `clap` value parser for `--source`: rejections already carry
-/// the legacy `malformed --source …` text that [`parse_error`] recovers.
 fn parse_source_mapping(raw: &str) -> Result<Mapping, String> {
     parse_mapping("--source", raw)
 }
 
-/// `clap` value parser for `--sibling`: rejections already carry
-/// the legacy `malformed --sibling …` text that [`parse_error`] recovers.
 fn parse_sibling_mapping(raw: &str) -> Result<Mapping, String> {
     parse_mapping("--sibling", raw)
 }
 
-/// Check workspace sources against a sibling closure (WP3 binary
-/// contract). Returns the process exit code: `0` when every source was
-/// checked, `2` on bad arguments, unreadable files, or non-UTF-8 input.
 pub fn run_cli(
     args: &[String],
     read_file: &dyn Fn(&str) -> Result<Vec<u8>, MarkdownError>,
@@ -563,7 +499,6 @@ pub fn run_cli(
             };
             match dx_fingerprint::to_json(&line) {
                 // Single owner for string-only JSON shapes (typed, no `unreachable!`).
-                // See: `cli/fingerprint/src/lib.rs` (`dx_fingerprint::to_json`).
                 Ok(rendered) => print_out(&rendered),
                 Err(error) => print_err(&error.to_string()),
             }

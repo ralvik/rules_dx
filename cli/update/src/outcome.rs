@@ -1,86 +1,37 @@
-//! Per-set update outcome aggregation.
-//!
-//! Pure planning for the accepted continuation policy in the update
-//! contract (`docs/cli/commands/audit-update-bazel.md`): failure in one
-//! dependency set does not stop updates to independent selected sets.
-//! Successful changes are preserved, each failure is reported, and the
-//! run returns an overall failure status when any selected update fails.
-//! Operations depending on a failed update are reported as blocked, not
-//! run and never reported successful. This is not a repository-wide
-//! transaction or rollback: each success commits its set immediately and
-//! recovery is manual plus idempotent retry (see [`super::recovery`]).
-//!
-//! Independence follows the approved upstream integration, not label
-//! distinctness: sets sharing a lockfile or resolver workspace cannot be
-//! treated as independent merely because they have different Bazel
-//! labels. Set identity lives in [`super::sets`] and backend operation
-//! boundaries in [`super::backend`]; this module aggregates over injected
-//! per-set results and an injected depends-on relation only, so outcome
-//! combination stays deterministic and unit-testable without any updater.
-//!
-//! Out of scope here: parallel-execution scheduling
-//! wont-fix, sequential per-set with continuation is contract).
-//! Aggregate exit-status selection over these reports lives in
-//! [`super::report`]. Continued updates imply no parallelism and no
-//! new mutation-event API.
-
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Terminal result of one selected dependency set's update attempt, as
-/// reported by the upstream integration. `Blocked` is never an input:
-/// the planner derives it for dependents of failed sets that were not
-/// attempted.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SetStatus {
-    /// The set updated; its changes are preserved.
     Success,
-    /// The set failed; its failure is reported and the run fails overall.
     Failed,
 }
 
-/// One selected set's reported result.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SetOutcome {
-    /// Owning dependency-set identity (selector spelling, verbatim).
     pub set: String,
-    /// Reported terminal status (success or failure only).
     pub status: SetStatus,
 }
 
-/// Aggregated per-set report: attempted results plus planner-derived
-/// blocked entries for unattempted dependents of failures.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ReportedStatus {
-    /// Attempted and updated; changes preserved.
     Success,
-    /// Attempted and failed; reported, fails the run overall.
     Failed,
-    /// Not attempted because a dependency failed; reported as blocked,
-    /// never as successful.
     Blocked,
 }
 
-/// One entry in the aggregated report.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ReportedOutcome {
-    /// Dependency-set identity.
     pub set: String,
-    /// Aggregated status, including derived `Blocked`.
     pub status: ReportedStatus,
 }
 
-/// Aggregated update run: per-set report plus the overall failure flag.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UpdateReport {
-    /// One entry per selected set, in sorted set order for determinism.
     pub outcomes: Vec<ReportedOutcome>,
-    /// True when any selected update failed (blocked alone never sets
-    /// this; only an actual failure does, and any failure implies it).
     pub overall_failure: bool,
 }
 
 impl UpdateReport {
-    /// Preserved successes: sets that updated and keep their changes.
     pub fn successes(&self) -> Vec<String> {
         self.outcomes
             .iter()
@@ -89,7 +40,6 @@ impl UpdateReport {
             .collect()
     }
 
-    /// Reported failures.
     pub fn failures(&self) -> Vec<String> {
         self.outcomes
             .iter()
@@ -109,33 +59,12 @@ impl UpdateReport {
 }
 
 /// Aggregation failures. Missing results are a caller error, never a
-/// silent success: the planner refuses to guess an outcome the upstream
-/// integration did not report.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum AggregateError {
-    /// A selected set has no attempted result and no failed dependency
-    /// to explain the gap. Dependents of failures report `Blocked`
-    /// instead; only an unexplained gap errors.
     #[error("update set {set:?} has no reported result; refusing to guess")]
     MissingResult { set: String },
 }
 
-/// Aggregate one update run.
-///
-/// * `selected` lists every selected set (sorted output follows this
-///   membership, deduplicated).
-/// * `results` carries the attempted per-set outcomes. Sets with no
-///   result that depend (transitively) on a failed set are reported as
-///   `Blocked` and never run; a selected set with no result and no
-///   failed dependency is an [`AggregateError::MissingResult`] caller
-///   error rather than a guessed success.
-/// * `depends_on` maps each set to the sets it directly depends on
-///   (operation ordering under the upstream integration). Only
-///   failed-ancestor propagation is computed here; scheduling and
-///   parallelism are explicitly out of scope.
-///
-/// Independent failures never remove other sets' results: every
-/// attempted outcome is preserved verbatim in the report.
 pub fn aggregate(
     selected: &[String],
     results: &[SetOutcome],
@@ -194,10 +123,6 @@ pub fn aggregate(
     })
 }
 
-/// True when any transitive dependency of `set` (through `depends_on`)
-/// is in `failed`. Cycles terminate via the visited set and count as
-/// depending on the failure only when the failure is actually reached.
-/// Public so callers can explain *why* an entry reports blocked.
 pub fn depends_on_failed(
     set: &str,
     depends_on: &BTreeMap<String, Vec<String>>,
@@ -220,9 +145,6 @@ pub fn depends_on_failed(
 }
 
 /// Selected sets surface as blocked (never successful) when the caller
-/// supplies no result for them; this keeps missing evidence fail-closed.
-/// Public so callers can distinguish a missing result from a
-/// dependency-failure block.
 pub fn results_missing(set: &str, results: &[SetOutcome]) -> bool {
     !results.iter().any(|result| result.set == set)
 }

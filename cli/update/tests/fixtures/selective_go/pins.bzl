@@ -23,7 +23,6 @@ SELECTIVE_GO_SELECTOR_LABEL = "go:<module-path>"
 # Fail-closed hint (selective never widens to full silently).
 SELECTIVE_GO_HINT = "widen explicitly via `dx bump gomod:<module> <version>`"
 
-# Bump follow-up chains automatically resolver-owned (issue #638).
 BUMP_FOLLOWUP_GO = "dx update go"
 
 # Rejected routes (never pinned as supported here).
