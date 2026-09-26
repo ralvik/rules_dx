@@ -1,3 +1,5 @@
+"""Update mutation-event wont-fix pins."""
+
 UPDATE_CHANGE_EVENTS = "wont-fix"
 UPDATE_MUTATION_EVENTS = "wont-fix"
 

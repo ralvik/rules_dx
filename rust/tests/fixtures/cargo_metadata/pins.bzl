@@ -1,3 +1,5 @@
+"""Cargo metadata pins."""
+
 FEATURES_SHAPE = "nonempty required-features stays opt-in with kept testonly"
 FEATURES_KEPT_ROUTE = "keep a handwritten testonly target selecting them"
 FEATURES_NO_UNCONDITIONAL = "does not enable features or emit the target unconditionally"

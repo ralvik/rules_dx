@@ -1,3 +1,5 @@
+"""Concrete toolchain-subjects use case."""
+
 def admitted_platforms():
     return ["linux_x86_64", "macos_arm64"]
 

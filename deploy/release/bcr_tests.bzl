@@ -1,3 +1,4 @@
+"""Unit tests for BCR submission tooling."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":bcr.bzl", "bcr_source_error", "bcr_submit_error")

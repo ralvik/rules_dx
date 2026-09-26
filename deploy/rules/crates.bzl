@@ -1,3 +1,5 @@
+"""Local-first crates.io publisher for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -9,12 +11,15 @@ _VALID_NAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-+"
 
 def crates_name_charset():
+    """Returns the launcher-safe crate-name charset via registry query."""
     return _VALID_NAME_CHARS
 
 def crates_version_charset():
+    """Returns the launcher-safe crate-version charset via registry query."""
     return _VALID_VERSION_CHARS
 
 def crates_schema_error():
+    """Validates the versioned crate name/version charset schema."""
     if CRATES_SCHEMA_VERSION != 1:
         return "crates name: unsupported schema v" + str(CRATES_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_NAME_CHARS) != "string" or _VALID_NAME_CHARS == "":
@@ -38,6 +43,7 @@ def crates_schema_error():
     return ""
 
 def crates_name_error(crate_name):
+    """Validates one crate name value."""
     if type(crate_name) != "string" or crate_name == "":
         return ("crates_deploy: invalid crate name '" + str(crate_name) +
                 "': want a non-empty name (for example 'crates_demo')")
@@ -49,6 +55,7 @@ def crates_name_error(crate_name):
     return ""
 
 def crates_version_error(version):
+    """Validates one crate version value."""
     if type(version) != "string" or version == "":
         return ("crates_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -60,6 +67,7 @@ def crates_version_error(version):
     return ""
 
 def crates_file_error(filename):
+    """Validates one crate source filename value."""
     if type(filename) != "string" or filename == "":
         return ("crates_deploy: invalid crate file '" + str(filename) +
                 "': want a non-empty filename")
@@ -71,6 +79,7 @@ def crates_file_error(filename):
     return ""
 
 def crates_allow_dirty_error(allow_dirty):
+    """Validates the clean-tree gate."""
     if allow_dirty != False:
         return ("crates_deploy: allow_dirty=True requires explicit owner " +
                 "approval; keep a clean tree and publish from committed " +
@@ -78,6 +87,7 @@ def crates_allow_dirty_error(allow_dirty):
     return ""
 
 def _crates_launcher_impl(ctx):
+    """Expands the py_binary launcher for one crates.io deployment."""
     crate_files = ctx.attr.crate[DefaultInfo].files.to_list()
     if len(crate_files) == 0:
         fail("crates_deploy " + str(ctx.label) + ": crate " +
@@ -106,8 +116,7 @@ def _crates_launcher_impl(ctx):
 _crates_launcher = rule(
     implementation = _crates_launcher_impl,
     attrs = {
-        "allow_dirty": attr.bool(
-        ),
+        "allow_dirty": attr.bool(),
         "crate": attr.label(
             allow_files = True,
             mandatory = True,
@@ -126,6 +135,7 @@ _crates_launcher = rule(
 )
 
 def crates_deploy(name, crate, version = "0.0.0", allow_dirty = False, profile = "release"):
+    """Publishes staged crate sources as a local-first crates.io deployment."""
     name_error = crates_name_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

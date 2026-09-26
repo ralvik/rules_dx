@@ -1,3 +1,5 @@
+"""Focused Scala environment-plan tests."""
+
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //scala/env:hello_lib_plan

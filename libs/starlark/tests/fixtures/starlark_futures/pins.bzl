@@ -1,3 +1,5 @@
+"""Starlark testing futures pins."""
+
 PER_CHECK_FILTERING = "wont-fix"
 RICHER_MATCHERS = "supported"
 ASPECT_SUBJECTS = "supported"

@@ -1,3 +1,5 @@
+"""Wrapper-contract tests for the JavaScript wrappers (item 2)."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":defs.bzl", "javascript_binary_upstream_data", "javascript_test_env", "javascript_test_rejection")
 

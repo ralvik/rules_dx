@@ -95,9 +95,6 @@ pub fn validate_snapshot(snapshot: &AdvisorySnapshot) -> Result<(), SnapshotProb
             value: snapshot.sha256.clone(),
         });
     }
-    if crate::exception::check_expiry("2099-01-01", &snapshot.retrieved_at).is_err()
-        && snapshot.retrieved_at != "2099-01-01"
-    {}
     if !is_audit_date(&snapshot.retrieved_at) {
         return Err(SnapshotProblem::BadDate {
             value: snapshot.retrieved_at.clone(),

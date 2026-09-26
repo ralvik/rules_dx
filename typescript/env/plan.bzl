@@ -1,9 +1,12 @@
+"""Focused TypeScript environment plan."""
+
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo")
 load("//env:focused.bzl", "focused_direct_sources", "focused_js_closure", "focused_npm_store_projection", "focused_tsconfig_projection", "focused_typescript_plan", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 TypeScriptEnvPlanInfo = provider(
+    doc = "Provider-derived focused TypeScript target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct TypeScript sources.",
         "has_npm": "Whether the transitive npm closure is non-empty.",

@@ -1,3 +1,5 @@
+"""FSharpLint console vs library-API binding decision."""
+
 FSHARPLINT_VERSION = "0.27.0"
 
 FSHARPLINT_ARTIFACT = "exact official tool package over the managed .NET cohort (targets .NET 8.0)"

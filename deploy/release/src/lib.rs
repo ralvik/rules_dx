@@ -425,8 +425,7 @@ pub fn release_run(
     }
     if approve != "1" {
         return Err(
-            "release: real release needs RELEASE_APPROVE=1 plus explicit owner approval"
-                .to_owned(),
+            "release: real release needs RELEASE_APPROVE=1 plus explicit owner approval".to_owned(),
         );
     }
     if tag == "v0.0.0-dryrun" {

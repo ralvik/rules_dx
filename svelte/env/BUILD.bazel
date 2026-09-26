@@ -1,4 +1,3 @@
-
 load("//quality:fixtures.bzl", "real_source_target")
 load("//svelte/env:plan.bzl", "svelte_env_plan")
 load("//svelte/env:plan_tests.bzl", "env_plan_tests")

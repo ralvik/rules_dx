@@ -1,3 +1,5 @@
+"""Experimental minimal Python wrappers."""
+
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo", _PyWheelsInfo = "PyWheelsInfo", _py_binary = "py_binary", _py_library = "py_library", _py_pytest_test = "py_pytest_test")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
@@ -57,9 +59,11 @@ def _python_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _py_binary, _python_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def python_library(name, srcs, visibility = None, **kwargs):
+    """Experimental minimal wrapper over py_library."""
     _python_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
+    """Experimental minimal wrapper over py_binary."""
     effective_srcs = srcs if srcs != None else []
     if main != None:
         _python_wrap_binary(name, effective_srcs, visibility = visibility, main = main, **kwargs)
@@ -67,6 +71,7 @@ def python_binary(name, srcs = None, main = None, visibility = None, **kwargs):
         _python_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def python_test_rejection(kwargs):
+    """Returns the contract rejection for forbidden python_test kwargs, or None."""
     if "main" in kwargs:
         return ("python_test always runs pytest and provides its own " +
                 "entrypoint; `main` is not supported (generic mains and " +
@@ -76,6 +81,7 @@ def python_test_rejection(kwargs):
     return None
 
 def python_test(name, srcs, visibility = None, **kwargs):
+    """Experimental minimal wrapper over py_pytest_test."""
     rejection = python_test_rejection(kwargs)
     if rejection != None:
         fail(rejection)

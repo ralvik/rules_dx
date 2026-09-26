@@ -1,3 +1,4 @@
+"""Unit tests for typed native-config validation."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(

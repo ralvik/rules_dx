@@ -1,3 +1,4 @@
+"""Conformance subject for the minimal Rust wrappers."""
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
@@ -90,10 +91,8 @@ def _wrapper_subject_impl(ctx):
 dx_wrapper_subject = rule(
     implementation = _wrapper_subject_impl,
     attrs = {
-        "clippy_test": attr.label(
-        ),
-        "fmt_test": attr.label(
-        ),
+        "clippy_test": attr.label(),
+        "fmt_test": attr.label(),
         "upstream": attr.label(
             mandatory = True,
         ),
@@ -161,10 +160,8 @@ def _wrapper_cc_subject_impl(ctx):
 dx_wrapper_cc_subject = rule(
     implementation = _wrapper_cc_subject_impl,
     attrs = {
-        "clippy_test": attr.label(
-        ),
-        "fmt_test": attr.label(
-        ),
+        "clippy_test": attr.label(),
+        "fmt_test": attr.label(),
         "upstream": attr.label(
             mandatory = True,
             providers = [[_rust_common.test_crate_info]],

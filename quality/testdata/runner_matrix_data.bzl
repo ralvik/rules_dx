@@ -1,3 +1,4 @@
+"""Matrix data cases (split from runner_matrix_cases.bzl)."""
 
 DATA_CASES = [
     {
@@ -81,4 +82,3 @@ DATA_CASES = [
         "expected": """producer //quality/testdata:matrix_toml_format_fail""",
     },
 ]
-

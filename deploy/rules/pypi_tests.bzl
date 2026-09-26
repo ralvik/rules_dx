@@ -1,3 +1,5 @@
+"""Unit and analysis tests for the PyPI publisher."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":pypi.bzl", "PYPI_DEFAULT_REPOSITORY_URL", "pypi_name_error", "pypi_repository_error", "pypi_schema_error", "pypi_wheel_error")
 

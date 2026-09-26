@@ -1,9 +1,12 @@
+"""Focused Go environment plan."""
+
 load("@rules_go//go:def.bzl", _GoArchive = "GoArchive")
 load("//env:focused.bzl", "focused_closure_plan", "focused_direct_sources", "focused_go_transitive", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 GoEnvPlanInfo = provider(
+    doc = "Provider-derived focused Go target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct Go sources.",
         "has_sources": "Whether the wrapper owns any direct Go sources.",

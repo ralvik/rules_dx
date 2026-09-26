@@ -1,3 +1,5 @@
+"""Hermetic npm pack feed publisher for dx deploy."""
+
 load("@bazel_skylib//lib:shell.bzl", "shell")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
@@ -6,6 +8,7 @@ _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234567
 _VALID_PACKAGE_CHARS = _VALID_TAG_CHARS + "@/"
 
 def npm_tag_error(tag):
+    """Validates one npm dist-tag value."""
     if type(tag) != "string" or tag == "":
         return ("npm_deploy: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'latest')")
@@ -17,6 +20,7 @@ def npm_tag_error(tag):
     return ""
 
 def npm_package_error(package):
+    """Validates one npm package name value."""
     if type(package) != "string" or package == "":
         return ("npm_deploy: invalid package '" + str(package) +
                 "': want a non-empty package name (for example 'npm-demo')")
@@ -28,6 +32,7 @@ def npm_package_error(package):
     return ""
 
 def npm_registry_error(registry):
+    """Validates one npm registry URL value."""
     if type(registry) != "string" or not registry.startswith("https://"):
         return ("npm_deploy: invalid registry '" + str(registry) +
                 "': want an https:// URL " +
@@ -40,9 +45,11 @@ def npm_registry_error(registry):
     return ""
 
 def npm_filenames(name):
+    """Returns the deterministic (tarball, feed) output names."""
     return (name + ".tgz", name + ".feed.json")
 
 def npm_deploy(name, package, tag = "latest", srcs = [], registry = "https://registry.npmjs.org", profile = "release"):
+    """Publishes packed files to a local npm folder feed."""
     pkg_error = npm_package_error(package)
     if pkg_error != "":
         fail(pkg_error + " (in " + native.package_name() + ":" + name + ")")

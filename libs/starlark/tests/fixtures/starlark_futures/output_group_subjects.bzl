@@ -1,3 +1,5 @@
+"""Concrete output-group-subjects use case."""
+
 def admitted_output_groups():
     return ["docs", "artifacts"]
 

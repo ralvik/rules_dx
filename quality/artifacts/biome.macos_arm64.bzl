@@ -1,3 +1,4 @@
+"""biome standalone artifact metadata (macos_arm64) -- GENERATED, do not edit."""
 
 # buildifier: disable=attr-licenses
 ARTIFACT = {

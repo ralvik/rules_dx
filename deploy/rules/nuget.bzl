@@ -1,3 +1,5 @@
+"""Local-first NuGet publisher for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -11,12 +13,15 @@ _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 NUGET_DEFAULT_SOURCE = "https://api.nuget.org/v3/index.json"
 
 def nuget_id_charset():
+    """Returns the launcher-safe package-id charset via registry query."""
     return _VALID_ID_CHARS
 
 def nuget_version_charset():
+    """Returns the launcher-safe package-version charset via registry query."""
     return _VALID_VERSION_CHARS
 
 def nuget_schema_error():
+    """Validates the versioned package id/version charset schema."""
     if NUGET_SCHEMA_VERSION != 1:
         return "nuget id: unsupported schema v" + str(NUGET_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ID_CHARS) != "string" or _VALID_ID_CHARS == "":
@@ -40,6 +45,7 @@ def nuget_schema_error():
     return ""
 
 def nuget_id_error(package_id):
+    """Validates one package id value."""
     if type(package_id) != "string" or package_id == "":
         return ("nuget_deploy: invalid package id '" + str(package_id) +
                 "': want a non-empty id (for example 'nuget_demo')")
@@ -51,6 +57,7 @@ def nuget_id_error(package_id):
     return ""
 
 def nuget_version_error(version):
+    """Validates one package version value."""
     if type(version) != "string" or version == "":
         return ("nuget_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -62,6 +69,7 @@ def nuget_version_error(version):
     return ""
 
 def nuget_nupkg_error(filename):
+    """Validates one nupkg filename value."""
     if type(filename) != "string" or filename == "":
         return ("nuget_deploy: invalid nupkg '" + str(filename) +
                 "': want a non-empty .nupkg filename")
@@ -76,6 +84,7 @@ def nuget_nupkg_error(filename):
     return ""
 
 def nuget_source_error(source):
+    """Validates one NuGet source URL value."""
     if type(source) != "string" or source == "":
         return ("nuget_deploy: invalid source '" + str(source) +
                 "': want a non-empty https URL (for example '" +
@@ -91,6 +100,7 @@ def nuget_source_error(source):
     return ""
 
 def _nuget_launcher_impl(ctx):
+    """Expands the py_binary launcher for one NuGet deployment."""
     nupkg_files = ctx.attr.nupkg[DefaultInfo].files.to_list()
     if len(nupkg_files) != 1:
         fail("nuget_deploy " + str(ctx.label) + ": nupkg " +
@@ -140,6 +150,7 @@ _nuget_launcher = rule(
 )
 
 def nuget_deploy(name, nupkg, version = "0.0.0", source = NUGET_DEFAULT_SOURCE, profile = "release"):
+    """Publishes one nupkg as a local-first NuGet deployment."""
     name_error = nuget_id_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

@@ -1,24 +1,30 @@
+"""Project-owned Starlark testing facade."""
+
 load("//libs/starlark:canonical.bzl", "strip_canonical")
 
 DxSubjectInfo = provider(
+    doc = "Analysis observations a subject rule exposes to starlark_test.",
     fields = {
         "fields": "Observations about the subject.",
     },
 )
 
 DxAspectInfo = provider(
+    doc = "Aspect observations derived without subject cooperation.",
     fields = {
         "fields": "Observations the aspect saw.",
     },
 )
 
 DxConfigInfo = provider(
+    doc = "Configuration observations a subject rule exposes to starlark_test.",
     fields = {
         "fields": "Configuration observations.",
     },
 )
 
 def _dx_aspect_note_impl(target, ctx):
+    """Derives one aspect note without subject cooperation."""
     fields = {
         "aspect_seen": "True",
         "subject_label": _display_label(target.label),
@@ -46,6 +52,7 @@ dx_aspect_note = aspect(
 )
 
 def expect_equal(name, actual, expected):
+    """Builds one equality-check record as a JSON string."""
     return json.encode({
         "actual": actual,
         "expected": expected,
@@ -54,6 +61,7 @@ def expect_equal(name, actual, expected):
     })
 
 def expect_true(name, actual):
+    """Builds one boolean-true record."""
     return json.encode({
         "actual": actual,
         "kind": "true",
@@ -62,6 +70,7 @@ def expect_true(name, actual):
     })
 
 def expect_false(name, actual):
+    """Builds one boolean-false record."""
     return json.encode({
         "actual": actual,
         "kind": "false",
@@ -70,6 +79,7 @@ def expect_false(name, actual):
     })
 
 def expect_contains(name, haystack, needle):
+    """Builds one membership record (string substring, list/tuple element, dict key)."""
     haystack_type = type(haystack)
     if haystack_type == "string":
         if type(needle) != "string":
@@ -90,6 +100,7 @@ def expect_contains(name, haystack, needle):
     })
 
 def expect_match(name, value, want):
+    """Builds one stringified-substring record."""
     if type(want) != "string":
         fail("expect_match: want must be string, got " + type(want))
     return json.encode({
@@ -101,15 +112,19 @@ def expect_match(name, value, want):
     })
 
 def _display_label(label):
+    """Renders a label for observations and diagnostics."""
     return strip_canonical(str(label))
 
 def display_label(label):
+    """Renders a label with the canonical-repository marker stripped."""
     return _display_label(label)
 
 def _shell_quote(s):
+    """Single-quote a string for embedding in the generated runner script."""
     return "'" + s.replace("'", "'\\''") + "'"
 
 def _parse_check(raw):
+    """Parses one JSON check record into a struct."""
     record = json.decode(raw)
     kind = record["kind"] if "kind" in record else "equal"
     if kind == "equal":
@@ -158,6 +173,7 @@ def _parse_check(raw):
         fail("starlark_test: unknown check kind '" + kind + "': " + raw)
 
 def _check_lines(checks):
+    """Renders one shell assertion per check record, in declaration order."""
     lines = []
     for raw in checks:
         check = _parse_check(raw)
@@ -191,6 +207,7 @@ def _check_lines(checks):
     return lines
 
 def _file_check_lines(file_checks):
+    """Renders one grep assertion per required substring."""
     lines = []
     for target in sorted(file_checks.keys(), key = lambda t: str(t.label)):
         want = file_checks[target]
@@ -309,6 +326,7 @@ _RUNNER_EPILOGUE = [
 ]
 
 def _write_runner(ctx, body_lines, runfiles_files):
+    """Writes the executable runner and stages its runfiles closure."""
     runner = ctx.actions.declare_file(ctx.label.name + ".sh")
     ctx.actions.write(
         runner,
@@ -327,11 +345,13 @@ def _write_runner(ctx, body_lines, runfiles_files):
     )]
 
 def _validate_common(mode, checks, subjects, file_checks):
+    """Fails analysis when a test declares no evidence in any channel."""
     if len(checks) == 0 and len(subjects) == 0 and len(file_checks) == 0:
         fail("starlark_test (" + mode + " mode): no evidence: " +
              "provide checks, subjects, or file_checks")
 
 def _file_check_files(file_checks):
+    """Collects the staged files behind the file_checks mapping."""
     files = []
     for target in file_checks.keys():
         target_files = target.files.to_list()
@@ -367,6 +387,7 @@ def _unit_test_impl(ctx):
     return _write_runner(ctx, body, files)
 
 def _observe_subjects(subjects):
+    """Renders one observation block per subject target."""
     lines = []
     for target in sorted(subjects, key = lambda t: str(t.label)):
         lines.append("subject " + _display_label(target.label))
@@ -388,6 +409,7 @@ def _observe_subjects(subjects):
     return lines
 
 def _observe_output_groups(subjects):
+    """Renders dx_results output-group plus instrumented-files lines."""
     lines = []
     for target in sorted(subjects, key = lambda t: str(t.label)):
         if OutputGroupInfo in target:
@@ -440,8 +462,7 @@ def _execution_test_impl(ctx):
     return _write_runner(ctx, body, files)
 
 _common_attrs = {
-    "checks": attr.string_list(
-    ),
+    "checks": attr.string_list(),
     "expected_observations": attr.string(
         default = "",
     ),
@@ -488,6 +509,7 @@ _MODES = {
 }
 
 def starlark_test(name, mode, checks = [], subjects = [], expected_observations = "", file_checks = {}, observe_output_groups = False, **kwargs):
+    """Instantiates one test target in the given mode."""
     if mode not in _MODES:
         fail("starlark_test: unknown mode '" + mode + "': want one of " +
              ", ".join(sorted(_MODES.keys())))

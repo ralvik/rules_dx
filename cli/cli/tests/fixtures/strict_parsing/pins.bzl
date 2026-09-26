@@ -1,3 +1,5 @@
+"""Strict clap parsing fixture for the dx CLI surface."""
+
 STRICT_UNKNOWN_REJECTED = [
     "--jobs=4",
     "-q",

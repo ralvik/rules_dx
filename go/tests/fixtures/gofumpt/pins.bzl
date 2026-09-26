@@ -1,3 +1,5 @@
+"""Gofumpt check plus fix wiring."""
+
 GOFUMPT_VERSION = "v0.11.0"
 
 GOFUMPT_ARTIFACT = "standalone checksummed release artifact; strict superset of gofmt"

@@ -1,3 +1,5 @@
+"""Audit curator declared-Bazel-inputs pins."""
+
 CURATOR_LABEL = "//:audit_curator"
 
 CURATOR_REL = "licenses.toml"

@@ -1,3 +1,5 @@
+"""Correlation plus committed-change manifest pins."""
+
 SCHEMA_MAJOR = 1
 SCHEMA_MINOR = 1
 

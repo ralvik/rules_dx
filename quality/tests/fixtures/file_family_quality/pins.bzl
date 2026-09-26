@@ -1,3 +1,5 @@
+"""File-family quality defaults pins (modfmt plus gherkin/xml resolved under)."""
+
 CUE_VERSION = "v0.17.1"
 JSONNETFMT_VERSION = "v0.22.0"
 PKL_VERSION = "0.32.1"

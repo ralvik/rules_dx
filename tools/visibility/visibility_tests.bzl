@@ -1,3 +1,4 @@
+"""Unit tests for the visibility contract (single source)."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_false", "expect_true", "starlark_test")
 load(":visibility.bzl", "DX_FACADE_PACKAGE", "EXPLICIT_PUBLIC_EXPORTS", "EXPLICIT_PUBLIC_TARGETS", "LAYER_FORBIDDEN_DEPS", "PRIVATE_ENV_PACKAGES", "PRIVATE_GAZELLE_PACKAGES", "PUBLIC_PACKAGES", "SCOPED_TARGET_GRANTS", "VIS_CLI", "VIS_INTERNAL", "VIS_PRIVATE", "VIS_PUBLIC", "VIS_QUALITY", "is_private_package", "is_public_package", "scoped_constant")

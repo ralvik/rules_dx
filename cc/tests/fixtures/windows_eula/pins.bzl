@@ -1,3 +1,5 @@
+"""Windows EULA acknowledgement UX pins."""
+
 TOOLCHAINS_MSVC_COMMIT = "8e2aa4624bbb5a53a94f135e90995f307875d1ad"
 TOOLCHAINS_MSVC_MODULE = "0.0.0"
 TOOLCHAINS_MSVC_EXTENSION = "extensions.bzl"

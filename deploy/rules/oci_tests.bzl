@@ -1,3 +1,5 @@
+"""Unit and analysis tests for the OCI publisher."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":oci.bzl", "OCI_DEFAULT_REGISTRY", "oci_registry_error", "oci_repository_error", "oci_schema_error", "oci_tag_error", "oci_tar_error")
 

@@ -1,9 +1,11 @@
+"""BCR submission tooling for rules_dx."""
 
 load("//deploy/rules:defs.bzl", "dx_deployment")
 load("//deploy/rules:launcher.bzl", "rlocation_path")
 load("//rust/rules:defs.bzl", "rust_binary")
 
 def bcr_source_error(module_name, version):
+    """Validates the BCR module name + version pair."""
     if module_name != "rules_dx":
         return ("bcr: invalid module '" + str(module_name) +
                 "': want 'rules_dx'")
@@ -21,6 +23,7 @@ def bcr_source_error(module_name, version):
     return ""
 
 def bcr_submit_error(version, approve):
+    """Validates whether a BCR submission may proceed."""
     if version == "0.0.0":
         return ("bcr: version 0.0.0 is unpublishable (shape check only); " +
                 "a real submission needs an owner-approved SemVer release version")
@@ -30,6 +33,7 @@ def bcr_submit_error(version, approve):
     return ""
 
 def _bcr_launcher_impl(ctx):
+    """Writes the owner-gated BCR deploy launcher Rust source."""
     rlocs = []
     for target in ctx.attr.inputs:
         info = target[DefaultInfo]
@@ -56,7 +60,47 @@ def _bcr_launcher_impl(ctx):
         output = launcher,
         content = """// Deploy launcher for `bcr_check`. Generated. Do not edit.
 fn run() -> i32 {
-    const MODULE: &str = \"""" + ctx.attr.module_name + """\";"""" + ctx.attr.version + """\";""" + rloc_list + """];""",
+    const MODULE: &str = \"""" + ctx.attr.module_name + """\";
+    const VERSION: &str = \"""" + ctx.attr.version + """\";
+    const INPUT_RLOCS: &[&str] = &[""" + rloc_list + """];
+    if std::env::args_os().len() > 1 {
+        eprintln!("bcr: this deploy target takes no extra args; the submission is exactly the pinned inputs");
+        return 1;
+    }
+    let dry = std::env::var("BCR_DRY_RUN").unwrap_or_default() == "1";
+    let approved = std::env::var("BCR_APPROVE").unwrap_or_default() == "1";
+    let runfiles = match runfiles::Runfiles::create() {
+        Ok(runfiles) => runfiles,
+        Err(error) => {
+            eprintln!("bcr: cannot load runfiles: {error}");
+            return 1;
+        }
+    };
+    let mut inputs = Vec::with_capacity(INPUT_RLOCS.len());
+    for rloc in INPUT_RLOCS {
+        match runfiles.rlocation(rloc) {
+            Some(path) => inputs.push(path.to_string_lossy().into_owned()),
+            None => {
+                eprintln!("bcr: runfile not found for '{rloc}'");
+                return 1;
+            }
+        }
+    }
+    match dx_release_tools::bcr_run(MODULE, VERSION, &inputs, dry, approved) {
+        Ok(text) => {
+            print!("{text}");
+            0
+        }
+        Err(diagnostic) => {
+            eprintln!("{diagnostic}");
+            1
+        }
+    }
+}
+fn main() {
+    std::process::exit(run());
+}
+""",
     )
     return [DefaultInfo(files = depset([launcher]))]
 
@@ -70,6 +114,7 @@ _bcr_launcher = rule(
 )
 
 def bcr_check(name, module_name = "rules_dx", version = "0.0.0", inputs = [], profile = "release"):
+    """Creates an owner-gated BCR shape-check deploy target."""
     src_err = bcr_source_error(module_name, version)
     if src_err != "":
         fail(src_err + " (in " + native.package_name() + ":" + name + ")")

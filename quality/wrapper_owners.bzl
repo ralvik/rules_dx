@@ -1,3 +1,4 @@
+"""Wrapper ownership for every quality taxonomy family."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_CLASS_TO_FAMILY")
@@ -53,14 +54,17 @@ def _taxonomy_families():
     return sorted(seen.keys())
 
 def wrapper_owner(family):
+    """Returns the wrapper owner label for one family, or "other" when explicitly uncovered."""
     if family in WRAPPER_OWNERS:
         return WRAPPER_OWNERS[family]
     return ""
 
 def wrapper_owned_families():
+    """Returns the sorted wrapper-owned families via registry query."""
     return sorted([f for f in WRAPPER_OWNERS if WRAPPER_OWNERS[f] != "other"])
 
 def uncovered_families():
+    """Returns the sorted explicitly uncovered families via registry query."""
     return sorted([f for f in WRAPPER_OWNERS if WRAPPER_OWNERS[f] == "other"])
 
 def _is_canonical_token(text):
@@ -75,6 +79,7 @@ def _is_owner_label(owner):
     return owner.startswith("//") and owner.endswith("/rules:defs.bzl")
 
 def wrapper_schema_error():
+    """Validates the versioned wrapper-ownership schema."""
     if WRAPPER_SCHEMA_VERSION != 1:
         return "wrapper owners: unsupported schema v" + str(WRAPPER_SCHEMA_VERSION) + " (want v1)"
     for family in WRAPPER_OWNERS:

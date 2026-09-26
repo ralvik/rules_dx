@@ -1,6 +1,9 @@
+"""Shared wrapper-forwarder plumbing for language rules."""
+
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
 
 def dx_forwarded_runtime_providers(upstream, what):
+    """Forwards the upstream runtime providers every wrapper preserves."""
     out = []
     if InstrumentedFilesInfo not in upstream:
         fail(what + ": upstream target has no InstrumentedFilesInfo: " + str(upstream.label))
@@ -12,9 +15,11 @@ def dx_forwarded_runtime_providers(upstream, what):
     return out
 
 def dx_missing_optional_names(requested_names, present_names):
+    """Returns the requested names absent from the present names. See."""
     return [n for n in requested_names if n not in present_names]
 
 def dx_optional_forward_warning(what, upstream_label, requested_names, missing_names):
+    """Returns the skip warning for an optional forward, or None when nothing was skipped. See."""
     if len(missing_names) == 0:
         return None
     forwarded = len(requested_names) - len(missing_names)
@@ -22,6 +27,7 @@ def dx_optional_forward_warning(what, upstream_label, requested_names, missing_n
     return what + ": upstream " + upstream_label + " omits optional provider(s) " + ", ".join(missing_names) + " (forwarded " + str(forwarded) + " of " + str(len(requested_names)) + ")" + suffix
 
 def dx_forwarded_optional(upstream, providers, what = "dx wrapper"):
+    """Forwards the upstream providers that are present, warning on each skip."""
     missing = [p for p in providers if p not in upstream]
     if len(missing) > 0:
         warning = dx_optional_forward_warning(
@@ -35,6 +41,7 @@ def dx_forwarded_optional(upstream, providers, what = "dx wrapper"):
     return [upstream[p] for p in providers if p in upstream]
 
 def dx_preserved_providers(upstream, required, what):
+    """Returns the required upstream provider instances, failing when absent."""
     out = []
     for item in required:
         provider = item[0]
@@ -45,11 +52,13 @@ def dx_preserved_providers(upstream, required, what):
     return out
 
 def dx_effective_visibility(visibility):
+    """Returns the explicit forwarder visibility for a public export."""
     if visibility == None:
         return ["//visibility:private"]
     return visibility
 
 def dx_forwarded_test_kwargs(kwargs):
+    """Extracts the standard test attributes a test forwarder preserves."""
     out = {}
     if "tags" in kwargs and kwargs["tags"] != None:
         kept = [t for t in kwargs["tags"] if t != "manual"]
@@ -61,6 +70,7 @@ def dx_forwarded_test_kwargs(kwargs):
     return out
 
 def dx_quality_sources(files, specs, label):
+    """Builds QualitySourcesInfo for direct wrapper sources."""
     buckets = {}
     order = []
     for spec in specs:
@@ -90,11 +100,13 @@ def _has_excluded_suffix(basename, excludes):
     return False
 
 def dx_symlink_executable_name(name, is_windows):
+    """Maps one forwarder output name to its host-native filename."""
     if is_windows:
         return name + ".exe"
     return name
 
 def dx_symlink_windows_attr():
+    """Returns the _windows_os attribute detecting Windows target platforms."""
     return {
         "_windows_os": attr.label(
             default = "@platforms//os:windows",
@@ -102,11 +114,13 @@ def dx_symlink_windows_attr():
     }
 
 def dx_symlink_is_windows(ctx):
+    """Returns whether the forwarder builds for a Windows target platform."""
     return ctx.target_platform_has_constraint(
         ctx.attr._windows_os[platform_common.ConstraintValueInfo],
     )
 
 def dx_symlink_executable(ctx, target_file):
+    """Symlinks one upstream executable with platform-aware naming and attrs."""
     link = ctx.actions.declare_file(
         dx_symlink_executable_name(ctx.label.name, dx_symlink_is_windows(ctx)),
     )
@@ -114,6 +128,7 @@ def dx_symlink_executable(ctx, target_file):
     return link
 
 def dx_symlink_default_info(ctx, what):
+    """Builds the executable DefaultInfo symlinking the upstream binary."""
     upstream = ctx.attr.upstream[DefaultInfo]
     exe = upstream.files_to_run.executable
     if exe == None:
@@ -126,6 +141,7 @@ def dx_symlink_default_info(ctx, what):
     )
 
 def dx_lcov_merger_attr():
+    """Returns the coverage _lcov_merger attribute for test forwarders."""
     return {
         "_lcov_merger": attr.label(
             default = configuration_field(fragment = "coverage", name = "output_generator"),
@@ -135,6 +151,7 @@ def dx_lcov_merger_attr():
     }
 
 def dx_forward_attrs(allow_files, upstream_providers, extra_attrs = None):
+    """Builds the common srcs/upstream attribute dict for forwarders."""
     upstream_attr_kwargs = {
         "mandatory": True,
     }
@@ -179,6 +196,7 @@ def _dx_runtime_providers(ctx, upstream, what, runtime, extra_quality_attrs = No
         fail("dx wrapper: unknown runtime '" + runtime + "': want \"mandatory\" or \"besteffort\"")
 
 def dx_library_forward_rule(provides, required_providers, quality_specs, what, allow_files, upstream_providers, extra_attrs = None, runtime = "mandatory", extra_quality_attrs = None):
+    """Creates the public forwarding rule for one library wrapper."""
 
     def _impl(ctx):
         upstream = ctx.attr.upstream
@@ -200,6 +218,7 @@ def dx_library_forward_rule(provides, required_providers, quality_specs, what, a
     )
 
 def dx_executable_forward_rule(kind, provides, required_providers, quality_specs, what, allow_files, upstream_providers, extra_attrs = None, optional_providers = [], runtime = "mandatory", extra_quality_attrs = None):
+    """Creates the executable or test forwarding rule for one wrapper."""
 
     def _impl(ctx):
         upstream = ctx.attr.upstream
@@ -235,6 +254,7 @@ def dx_executable_forward_rule(kind, provides, required_providers, quality_specs
         fail("dx_executable_forward_rule: unknown kind '" + kind + "': want \"executable\" or \"test\"")
 
 def dx_binary_forward_kwargs(kwargs):
+    """Returns the forwarder kwargs for one binary shape."""
     out = {}
     if kwargs.get("tags", None) != None:
         out["tags"] = kwargs["tags"]
@@ -245,6 +265,7 @@ def dx_binary_forward_kwargs(kwargs):
     return out
 
 def dx_test_upstream_kwargs(kwargs, srcs = None):
+    """Returns the private upstream kwargs for one test shape."""
     out = dict(kwargs)
     if "tags" in out:
         kept = [t for t in out["tags"] if t != "manual"]
@@ -258,6 +279,7 @@ def dx_test_upstream_kwargs(kwargs, srcs = None):
     return out
 
 def dx_test_forward_kwargs(kwargs):
+    """Returns the forwarder kwargs for one test shape."""
     out = dx_forwarded_test_kwargs(kwargs)
     if kwargs.get("aspect_hints", None) != None:
         out["aspect_hints"] = kwargs["aspect_hints"]
@@ -266,6 +288,7 @@ def dx_test_forward_kwargs(kwargs):
     return out
 
 def dx_wrap_binary(name, upstream_rule, forward_rule, srcs, visibility = None, upstream_kwargs = None, **kwargs):
+    """Instantiates one private upstream binary plus its public forwarder."""
     effective = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
     if len(srcs) > 0:
         effective["srcs"] = srcs
@@ -285,6 +308,7 @@ def dx_wrap_binary(name, upstream_rule, forward_rule, srcs, visibility = None, u
     )
 
 def dx_wrap_test(name, upstream_rule, forward_rule, srcs, visibility = None, upstream_kwargs = None, extra_forward_kwargs = None, **kwargs):
+    """Instantiates one private upstream test plus its public forwarder."""
     base = dict(upstream_kwargs) if upstream_kwargs != None else dict(kwargs)
     effective = dx_test_upstream_kwargs(base, srcs = srcs)
     forward_srcs = srcs if srcs != None else []
@@ -305,6 +329,7 @@ def dx_wrap_test(name, upstream_rule, forward_rule, srcs, visibility = None, ups
     )
 
 def dx_wrap(name, upstream_rule, forward_rule, srcs, visibility = None, **kwargs):
+    """Instantiates one private upstream target plus its public forwarder."""
     hints = kwargs.get("aspect_hints", None)
     hdrs = kwargs.get("hdrs", None)
     tags = kwargs.pop("tags", None)

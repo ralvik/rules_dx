@@ -1,3 +1,5 @@
+"""Cross routes pins."""
+
 LINUX_X86_64_EXEC = "Linux x86_64"
 LINUX_ARM64_EXEC = "Linux arm64"
 FIRST_COHORT_TARGETS = [

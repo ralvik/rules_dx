@@ -1,3 +1,5 @@
+"""Layer-2 adapter-less plus composition plus depcheck opens pins."""
+
 FRAMEWORK_VUE = "vue"
 FRAMEWORK_SVELTE = "svelte"
 FRAMEWORK_ASTRO = "astro"

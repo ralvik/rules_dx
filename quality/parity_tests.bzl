@@ -1,3 +1,5 @@
+"""Fail-closed v1 parity gate."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY")
 
@@ -23,9 +25,11 @@ def _adapter_backed_classes():
     return backed
 
 def adapter_backed_classes():
+    """Returns the sorted adapter-backed classes via registry query."""
     return sorted(_adapter_backed_classes().keys())
 
 def deferred_classes():
+    """Returns the sorted explicitly deferred classes via registry query."""
     return sorted(PARITY_DEFERRED.keys())
 
 def _is_canonical_token(text):
@@ -37,6 +41,7 @@ def _is_canonical_token(text):
     return True
 
 def parity_schema_error():
+    """Validates the versioned parity-gate schema."""
     if PARITY_SCHEMA_VERSION != 1:
         return "parity gate: unsupported schema v" + str(PARITY_SCHEMA_VERSION) + " (want v1)"
     for class_id in PARITY_DEFERRED:
@@ -75,6 +80,7 @@ def _malformed_deferrals():
     return bad
 
 def deferred_pipeline_error(target_classes, capability):
+    """Returns a fail-closed error for deferred classes with sources."""
     deferred = sorted([c for c in target_classes if c in PARITY_DEFERRED])
     if len(deferred) == 0:
         return ""

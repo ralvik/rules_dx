@@ -1,4 +1,3 @@
-
 load("//java/env:plan.bzl", "java_env_plan")
 load("//java/env:plan_tests.bzl", "env_plan_tests")
 load("//quality:fixtures.bzl", "real_source_target")

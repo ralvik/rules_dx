@@ -1,3 +1,5 @@
+"""Local-first Maven Central publisher for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -13,15 +15,19 @@ _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 MAVEN_DEFAULT_REPOSITORY_URL = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
 
 def maven_group_charset():
+    """Returns the launcher-safe group charset via registry query."""
     return _VALID_GROUP_CHARS
 
 def maven_artifact_charset():
+    """Returns the launcher-safe artifact charset via registry query."""
     return _VALID_ARTIFACT_CHARS
 
 def maven_version_charset():
+    """Returns the launcher-safe version charset via registry query."""
     return _VALID_VERSION_CHARS
 
 def maven_schema_error():
+    """Validates the versioned coordinate charset schema."""
     if MAVEN_SCHEMA_VERSION != 1:
         return "maven coordinates: unsupported schema v" + str(MAVEN_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_GROUP_CHARS) != "string" or _VALID_GROUP_CHARS == "":
@@ -54,6 +60,7 @@ def maven_schema_error():
     return ""
 
 def maven_group_error(group):
+    """Validates one Maven groupId value."""
     if type(group) != "string" or group == "":
         return ("maven_deploy: invalid group '" + str(group) +
                 "': want a non-empty groupId (for example 'com.example')")
@@ -65,6 +72,7 @@ def maven_group_error(group):
     return ""
 
 def maven_artifact_error(artifact):
+    """Validates one Maven artifactId value."""
     if type(artifact) != "string" or artifact == "":
         return ("maven_deploy: invalid artifact '" + str(artifact) +
                 "': want a non-empty artifactId (for example 'maven_demo')")
@@ -76,6 +84,7 @@ def maven_artifact_error(artifact):
     return ""
 
 def maven_version_error(version):
+    """Validates one Maven version value."""
     if type(version) != "string" or version == "":
         return ("maven_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -87,6 +96,7 @@ def maven_version_error(version):
     return ""
 
 def maven_repository_error(repository_url):
+    """Validates one Maven repository URL value."""
     if type(repository_url) != "string" or repository_url == "":
         return ("maven_deploy: invalid repository_url '" + str(repository_url) +
                 "': want a non-empty https URL (for example '" +
@@ -102,6 +112,7 @@ def maven_repository_error(repository_url):
     return ""
 
 def maven_jar_error(filename):
+    """Validates one jar filename value."""
     if type(filename) != "string" or filename == "":
         return ("maven_deploy: invalid jar '" + str(filename) +
                 "': want a non-empty .jar filename")
@@ -116,6 +127,7 @@ def maven_jar_error(filename):
     return ""
 
 def maven_pom_error(filename):
+    """Validates one pom filename value."""
     if type(filename) != "string" or filename == "":
         return ("maven_deploy: invalid pom '" + str(filename) +
                 "': want a non-empty .pom filename")
@@ -130,6 +142,7 @@ def maven_pom_error(filename):
     return ""
 
 def _maven_launcher_impl(ctx):
+    """Expands the py_binary launcher for one Maven deployment."""
     jar_files = ctx.attr.jar[DefaultInfo].files.to_list()
     if len(jar_files) != 1:
         fail("maven_deploy " + str(ctx.label) + ": jar " +
@@ -199,6 +212,7 @@ _maven_launcher = rule(
 )
 
 def maven_deploy(name, jar, pom, group, artifact, version = "0.0.0", repository_url = MAVEN_DEFAULT_REPOSITORY_URL, profile = "release"):
+    """Publishes one jar plus its pom as a local-first Maven deployment."""
     group_error = maven_group_error(group)
     if group_error != "":
         fail(group_error + " (in " + native.package_name() + ":" + name + ")")

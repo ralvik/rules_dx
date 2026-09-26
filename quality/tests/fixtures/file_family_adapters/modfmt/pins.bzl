@@ -1,3 +1,5 @@
+"""modfmt check plus fix wiring."""
+
 MODFMT_VERSION = "v0.4.0"
 MODFMT_ARTIFACT = "standalone checksummed release artifact from github.com/joshdk/modfmt v0.4.0"
 MODFMT_CHECK = "modfmt -d"

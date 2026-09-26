@@ -1,3 +1,5 @@
+"""Concrete richer-matchers use case."""
+
 def greet_report(name):
     return "Hello, " + name + "!"
 

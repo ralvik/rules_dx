@@ -1,3 +1,5 @@
+"""Concrete action-subjects use case."""
+
 def admitted_actions():
     return ["StarlarkAction", "FileWrite"]
 

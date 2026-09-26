@@ -1,3 +1,4 @@
+"""JVM tool acquisition inventory."""
 
 JVM_TOOL_REPOS = [
     "jvm_checkstyle",

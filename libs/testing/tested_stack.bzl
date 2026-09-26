@@ -1,3 +1,4 @@
+"""Tested-stack manifest generator."""
 
 _TESTED_DEPS = {
     "rules_rust": "0.74.0",
@@ -63,8 +64,7 @@ tested_stack = rule(
         "go_sdk_version": attr.string(
             default = "1.26.6",
         ),
-        "platforms": attr.string_list(
-        ),
+        "platforms": attr.string_list(),
         "pnpm_version": attr.string(
             default = "10.34.5",
         ),

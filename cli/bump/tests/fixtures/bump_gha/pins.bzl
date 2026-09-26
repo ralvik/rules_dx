@@ -1,3 +1,5 @@
+"""Bump GHA tag-to-SHA auto resolution pins."""
+
 BUMP_GHA = "auto"
 
 BUMP_GHA_CLIENT = "GitHub releases"

@@ -547,12 +547,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
                 option: "--pin".to_owned(),
             });
         }
-        if !bazel_options.is_empty() {
-            return Err(ArgsError::UnsupportedOption {
-                command: command.name(),
-                option: "--".to_owned(),
-            });
-        }
         if port.is_some() && !serve {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),

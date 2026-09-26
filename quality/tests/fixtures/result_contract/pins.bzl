@@ -1,3 +1,5 @@
+"""Quality core plus result contract pins."""
+
 SEVERITY_INFO = "proto INFO maps to NDJSON info"
 SEVERITY_WARNING = "proto WARNING maps to NDJSON warning"
 SEVERITY_ERROR = "proto ERROR maps to NDJSON error"

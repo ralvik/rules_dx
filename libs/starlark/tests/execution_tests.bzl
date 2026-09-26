@@ -1,3 +1,5 @@
+"""Execution tests over runfiles fixtures."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 
 def fixture_execution_tests(name):

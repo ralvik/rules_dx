@@ -1,3 +1,5 @@
+"""Unit and load tests for the arithmetic subject."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":arithmetic.bzl", "add", "greet", "mul")
 

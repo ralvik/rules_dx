@@ -1,3 +1,4 @@
+"""Interpreted/file-family cohort matrix cells."""
 
 DJLINT_LINT = """matrix/djlint_dirty.html:3:1: H006 img tags require alt text"""
 

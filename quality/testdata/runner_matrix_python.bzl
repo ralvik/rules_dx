@@ -1,3 +1,4 @@
+"""Matrix Python cases (split from runner_matrix_cases.bzl)."""
 
 PYTHON_CASES = [
     {
@@ -182,4 +183,3 @@ PYTHON_CASES = [
         "expected": """producer //quality/testdata:matrix_python_pylint_fail""",
     },
 ]
-

@@ -1,3 +1,4 @@
+"""Scala plus .NET cohort matrix cells."""
 
 SCALAFIX_LINT = """{"path": "matrix/scalafix_dirty.scala", "line": 4, "column": 3, "rule": "DisableSyntax.var", "message": "mutable state should be avoided", "severity": "error"}"""
 

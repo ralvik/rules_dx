@@ -1,3 +1,5 @@
+"""Selective dx update per-set pins."""
+
 SELECTIVE_NPM = "supported"
 SELECTIVE_CARGO = "wont-fix"
 SELECTIVE_MAVEN = "wont-fix"

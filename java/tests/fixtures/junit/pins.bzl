@@ -1,3 +1,5 @@
+"""JUnit 6.1.3 plus 5.14.x fallback version pins."""
+
 JUNIT6_VERSION = "6.1.3"
 
 JUNIT5_JUPITER_VERSION = "5.14.4"

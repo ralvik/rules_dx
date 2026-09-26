@@ -1,3 +1,4 @@
+"""Matrix TS cases (split from runner_matrix_cases.bzl)."""
 
 TS_CASES = [
     {
@@ -117,4 +118,3 @@ TS_CASES = [
         "expected": """producer //quality/testdata:matrix_tsx_format_fail""",
     },
 ]
-

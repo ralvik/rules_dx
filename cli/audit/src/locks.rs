@@ -235,13 +235,11 @@ fn package_lock_name(path: &str) -> Option<String> {
         return None;
     }
     if last.contains('/') && !last.starts_with('@') {
-        if !last.starts_with('@') {
-            let segment = last.rsplit('/').next()?.trim();
-            if segment.is_empty() {
-                return None;
-            }
-            return Some(segment.to_owned());
+        let segment = last.rsplit('/').next()?.trim();
+        if segment.is_empty() {
+            return None;
         }
+        return Some(segment.to_owned());
     }
     if last.contains('/') {
         let parts: Vec<&str> = last.split('/').collect();
@@ -732,10 +730,10 @@ fn split_paket_line_fallback(trimmed: &str) -> Option<(String, String)> {
     }
     let name = trimmed[..open].trim().to_owned();
     let version = trimmed[open + 1..close].trim().to_owned();
-    if name.is_empty() || version.is_empty() || name.contains(' ') && name.contains(':') {
-        if name.contains("remote") {
-            return None;
-        }
+    if (name.is_empty() || version.is_empty() || name.contains(' ') && name.contains(':'))
+        && name.contains("remote")
+    {
+        return None;
     }
     if name.is_empty() || version.is_empty() {
         return None;

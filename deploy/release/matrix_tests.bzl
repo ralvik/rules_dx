@@ -1,3 +1,4 @@
+"""Unit tests for the release matrix."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":matrix.bzl", "release_matrix_error", "release_matrix_names", "release_matrix_status", "release_matrix_unqualified")

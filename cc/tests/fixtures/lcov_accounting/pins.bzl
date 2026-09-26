@@ -1,3 +1,5 @@
+"""LCOV accounting pins."""
+
 RUST_ONLY_SHAPE = "Rust-only LCOV via pinned rules_rust llvm-cov"
 RUST_ONLY_FIXTURE = "//rust/tests/fixtures/hello:hello_test"
 CC_ONLY_SHAPE = "C/C++-only LCOV via pinned Bazel LLVM source coverage"

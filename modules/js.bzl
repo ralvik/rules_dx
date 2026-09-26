@@ -1,3 +1,5 @@
+"""JavaScript/TypeScript foundation pins plus npm hubs."""
+
 ASPECT_RULES_JS_VERSION = "3.4.1"
 ASPECT_RULES_TS_VERSION = "3.10.0"
 ASPECT_RULES_JEST_VERSION = "0.26.0"

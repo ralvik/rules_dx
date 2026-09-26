@@ -1,3 +1,5 @@
+"""Native quality defaults pins."""
+
 CLANG_TOOLCHAIN_VERSION = "hermetic-llvm v0.8.19"
 LLVM_VERSION = "23.1.0"
 CPPCHECK_VERSION = "2.21.0"

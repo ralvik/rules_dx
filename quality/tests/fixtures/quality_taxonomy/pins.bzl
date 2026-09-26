@@ -1,3 +1,5 @@
+"""Quality family taxonomy execution pins."""
+
 TAXONOMY_CLASSES = "47 classes each with exactly one owning family"
 TAXONOMY_FAMILIES = "39 owning families"
 TAXONOMY_SINGLE_SOURCED = "single-sourced in quality/adapters.bzl REAL_CLASS_TO_FAMILY"

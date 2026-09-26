@@ -1,3 +1,5 @@
+"""JVM foundation pins (Java, Kotlin, Scala managed route)."""
+
 RULES_JAVA_VERSION = "9.7.0"
 RULES_KOTLIN_VERSION = "2.4.10"
 RULES_SCALA_VERSION = "7.3.0"

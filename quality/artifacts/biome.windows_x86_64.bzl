@@ -1,3 +1,4 @@
+"""biome standalone artifact metadata (windows_x86_64) -- GENERATED, do not edit."""
 
 # buildifier: disable=attr-licenses
 ARTIFACT = {

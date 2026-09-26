@@ -1,4 +1,3 @@
-
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//deploy/rules:archive.bzl", "archive_deploy")
 load("//deploy/rules:github.bzl", "github_deploy")

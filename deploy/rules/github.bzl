@@ -1,3 +1,5 @@
+"""Draft-only GitHub Release publisher for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -7,9 +9,11 @@ TAG_SCHEMA_VERSION = 1
 _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
 def tag_charset():
+    """Returns the launcher-safe tag charset via registry query."""
     return _VALID_TAG_CHARS
 
 def tag_schema_error():
+    """Validates the versioned tag-charset schema."""
     if TAG_SCHEMA_VERSION != 1:
         return "github tag: unsupported schema v" + str(TAG_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
@@ -24,6 +28,7 @@ def tag_schema_error():
     return ""
 
 def github_tag_error(tag):
+    """Validates one release tag value."""
     if type(tag) != "string" or tag == "":
         return ("github_deploy: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'v0.0.0-dryrun')")
@@ -35,6 +40,7 @@ def github_tag_error(tag):
     return ""
 
 def github_draft_error(draft):
+    """Validates the draft gate."""
     if draft != True:
         return ("github_deploy: draft=False requires explicit owner " +
                 "approval; keep the draft gate and publish " +
@@ -42,6 +48,7 @@ def github_draft_error(draft):
     return ""
 
 def _github_launcher_impl(ctx):
+    """Expands the py_binary launcher for one draft release."""
     asset_rlocs = []
     for target in ctx.attr.artifacts:
         info = target[DefaultInfo]
@@ -89,6 +96,7 @@ _github_launcher = rule(
 )
 
 def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
+    """Publishes pinned files as a draft-only GitHub Release."""
     tag_error = github_tag_error(tag)
     if tag_error != "":
         fail(tag_error + " (in " + native.package_name() + ":" + name + ")")
@@ -123,6 +131,7 @@ def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile 
     )
 
 def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
+    """Compat alias for github_deploy."""
     github_deploy(
         name = name,
         artifacts = artifacts,

@@ -1,3 +1,4 @@
+"""Unit tests for the single-sourced versioned registry."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":registry.bzl", "REGISTRY_SCHEMA_VERSION", "is_curated_family", "is_registry_class", "is_registry_tool", "registry_classes", "registry_curated_families", "registry_deferred_classes", "registry_families", "registry_schema_error", "registry_tools")

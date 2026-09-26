@@ -5,6 +5,7 @@ use dx_output::{
     command_finished, command_started, error_event, operation_event, write_event, FinishedCounts,
     OutputMode,
 };
+use dx_process::{build_workflow_argv, ProtectedFlag};
 
 const DOCS_CHECK_TARGET: &str = "//docs/site:demo_aggregate";
 const DOCS_BUILD_TARGET: &str = "//docs/site:demo_site";
@@ -69,6 +70,20 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
     } else {
         format!("Running docs build for {scope_text} (extract+aggregate+render)")
     };
+    let argv = match build_workflow_argv(
+        "build",
+        &invocation.bazel_options,
+        &[crate::plan::workspace_flag()],
+        &[ProtectedFlag {
+            name: "@rules_dx//config:workspace".to_owned(),
+            required: None,
+            allowed: Vec::new(),
+        }],
+        &labels,
+    ) {
+        Ok(argv) => argv,
+        Err(error) => return pre_exec(err, &format!("{error}")),
+    };
     if json {
         if let Ok(event) = command_started(invocation.command.name(), invocation.dry_run, mode) {
             let _ = write_event(out, &event);
@@ -102,14 +117,6 @@ pub(crate) fn execute_docs(invocation: &Invocation, env: Env<'_>) -> i32 {
     {
         let _ = writeln!(out, "{summary}");
     }
-    let mut argv = vec![
-        "bazel".to_owned(),
-        "--nohome_rc".to_owned(),
-        "--nosystem_rc".to_owned(),
-        "build".to_owned(),
-        crate::plan::workspace_flag(),
-    ];
-    argv.extend(labels.clone());
     let status = match runner.run(&argv, workspace, &[]) {
         Ok(status) => status,
         Err(error) => {
@@ -300,6 +307,53 @@ mod tests {
         assert_eq!(code, 0, "{out}");
         assert!(out.contains("Running docs build"), "{out}");
         assert!(out.contains("render"), "{out}");
+    }
+
+    #[test]
+    fn docs_forwards_command_options_to_inner_bazel() {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        let harness = Harness::new("docs-forward");
+        let seen = Rc::new(RefCell::new(Vec::new()));
+        let probe = ArgvProbe {
+            code: Some(0),
+            seen: Rc::clone(&seen),
+        };
+        let inv = invocation(&["docs", "--", "--config=ci", "--jobs=4"]);
+        let mut out = Vec::new();
+        let mut err = Vec::new();
+        let code = super::execute_docs(
+            &inv,
+            super::super::common::Env {
+                workspace: &harness.workspace,
+                runner: &probe,
+                query_runner: &harness.query,
+                temp_dir: &harness.temp,
+                pid: std::process::id(),
+                nonce: 0,
+                out: &mut out,
+                err: &mut err,
+                ci: false,
+            },
+        );
+        assert_eq!(code, 0);
+        let seen = seen.borrow();
+        assert_eq!(seen.len(), 1, "{seen:?}");
+        assert!(seen[0].contains(&"--config=ci".to_owned()), "{:?}", seen[0]);
+        assert!(seen[0].contains(&"--jobs=4".to_owned()), "{:?}", seen[0]);
+    }
+
+    #[test]
+    fn docs_conflicting_and_startup_options_are_pre_exec() {
+        for words in [
+            vec!["docs", "--", "--@rules_dx//config:workspace=//other:config"],
+            vec!["docs", "--", "--home_rc"],
+            vec!["docs", "--", "--test_arg=foo"],
+        ] {
+            let harness = Harness::new("docs-reject");
+            let (code, _, err) = harness.run(&words);
+            assert_eq!(code, 2, "{words:?}: {err}");
+        }
     }
 
     #[test]

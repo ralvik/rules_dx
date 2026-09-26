@@ -1,3 +1,5 @@
+"""Unit and analysis tests for the GitHub Release publisher."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":github.bzl", "github_draft_error", "github_tag_error")
 

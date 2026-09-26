@@ -1,5 +1,7 @@
+"""Quality source-ownership boundary (freeze for ADR 0013)."""
 
 QualitySourcesInfo = provider(
+    doc = "Directly owned repository sources keyed by semantic file class.",
     fields = {
         "direct_sources": (
             "Dict[str, depset[File]]: semantic file-class ID to directly " +
@@ -63,6 +65,7 @@ KNOWN_SEMANTIC_FILE_CLASSES = [
 RUST = "rust"
 
 def is_known_semantic_class(class_id):
+    """Reports whether a class ID is in the versioned registry."""
     return class_id in KNOWN_SEMANTIC_FILE_CLASSES
 
 def _is_canonical_id(text):
@@ -74,6 +77,7 @@ def _is_canonical_id(text):
     return True
 
 def sources_schema_error(classes = None):
+    """Validates the versioned class-registry schema."""
     ids = KNOWN_SEMANTIC_FILE_CLASSES if classes == None else classes
     if type(ids) != "list" or len(ids) == 0:
         return "sources registry: want a non-empty class list (schema v1)"
@@ -87,6 +91,7 @@ def sources_schema_error(classes = None):
     return ""
 
 def check_direct_sources(direct_sources, what):
+    """Validates provider-construction shape and known IDs."""
     if type(direct_sources) != "dict":
         fail("QualitySourcesInfo (" + what + "): direct_sources must be a " +
              "dict of class ID to depset, got " + type(direct_sources))

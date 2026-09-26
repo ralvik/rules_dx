@@ -1,3 +1,5 @@
+"""Structured quality defaults pins."""
+
 BUF_VERSION = "1.72.0"
 QMLFORMAT_QT_OBSERVED = "Qt 6.11.2"
 QMLLINT_QT_OBSERVED = "Qt 6.11.1"

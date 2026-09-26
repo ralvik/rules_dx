@@ -1,3 +1,5 @@
+"""Bounded remediation pins."""
+
 BOUNDED_DEFINITION = "Reproduce defects, estimate each upstream fix, name actual owners, record patch plus upstream issue plus upgrade tracking and complete-workflow evidence"
 BOUNDED_EVIDENCE = "complete-workflow evidence"
 BOUNDED_SCOPE = "Scope only"

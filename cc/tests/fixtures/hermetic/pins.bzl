@@ -1,3 +1,5 @@
+"""C/C++ sha256-integrity plus no-system-package pins."""
+
 CC_HASH_ATTR = "sha256"
 CC_HASH_ALT = "integrity"
 

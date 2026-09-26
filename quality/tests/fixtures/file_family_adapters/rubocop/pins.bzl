@@ -1,3 +1,5 @@
+"""rubocop check plus fix wiring."""
+
 RUBOCOP_VERSION = "1.91.0"
 RUBOCOP_ARTIFACT = "release-assembled Ruby closure member"
 RUBOCOP_CHECK = "rubocop --format json"

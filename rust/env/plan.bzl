@@ -1,8 +1,11 @@
+"""Focused Rust environment plan."""
+
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
 load("//env:focused.bzl", "focused_direct_sources", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 RustEnvPlanInfo = provider(
+    doc = "Provider-derived focused Rust target environment plan.",
     fields = {
         "crate_name": "Crate name from authoritative CrateInfo.",
         "crate_type": "Crate type from authoritative CrateInfo.",

@@ -1,8 +1,11 @@
+"""Credential-free release archives for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
 def _archive_stage_impl(ctx):
+    """Stages one executable as a single file preserving its basename."""
     exe = ctx.attr.app[DefaultInfo].files_to_run.executable
     if exe == None:
         fail("archive_deploy " + str(ctx.label) + ": app " +
@@ -21,6 +24,7 @@ _archive_stage = rule(
 )
 
 def _archive_launcher_impl(ctx):
+    """Expands the py_binary launcher for one release."""
     app_files = ctx.attr.app[DefaultInfo].files.to_list()
     if len(app_files) != 1:
         fail("archive_deploy " + str(ctx.label) + ": stage must provide exactly one file")
@@ -65,9 +69,11 @@ _archive_launcher = rule(
 )
 
 def archive_filenames(name):
+    """Returns the deterministic (tarball, checksum) output names."""
     return (name + ".tar.gz", name + ".tar.gz.sha256")
 
 def archive_deploy(name, app, profile = "release"):
+    """Packages one executable as a tarball + sha256 deployable target."""
     (tarball, checksum) = archive_filenames(name)
     archive_target = name + "_archive"
     checksum_target = name + "_checksum"
@@ -123,6 +129,7 @@ def archive_deploy(name, app, profile = "release"):
     )
 
 def archive_release(name, app, profile = "release"):
+    """Compat alias for archive_deploy."""
     archive_deploy(
         name = name,
         app = app,

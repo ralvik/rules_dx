@@ -1,3 +1,5 @@
+"""Bump then update chaining pins."""
+
 BUMP_CHAIN = "automatic"
 
 BUMP_CHAIN_CARGO = "dx update cargo"

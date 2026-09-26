@@ -1,3 +1,5 @@
+"""Atomic dx update rollback-plan pins."""
+
 ATOMICITY_BOUNDARY = "per-set commit"
 REPO_WIDE_ATOMIC = False
 AUTOMATIC_ROLLBACK = False

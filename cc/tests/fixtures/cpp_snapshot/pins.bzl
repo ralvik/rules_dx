@@ -1,3 +1,5 @@
+"""C++ exact-target snapshot pins."""
+
 HEDRON_EXTRACTOR_VERSION = "abb61a688167623088f8768cc9264798df6a9d10"
 HEDRON_EXTRACTOR_COMMIT = "abb61a688167623088f8768cc9264798df6a9d10"
 HEDRON_EXTRACTOR_NOTE = "uses actual action commands"

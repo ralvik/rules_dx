@@ -1,3 +1,5 @@
+"""Strict generation pins."""
+
 GAZELLE_CC_VERSION = "v0.6.0"
 GAZELLE_CC_COMMIT = "50dbcbcfd9199c19a50522695c568b9380caabe5"
 GAZELLE_CC_NOTE = "Strict resolution and ownership conformance remain incomplete by configuration alone"

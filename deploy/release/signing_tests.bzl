@@ -1,3 +1,4 @@
+"""Unit tests for signing selection (live successor to closed /)."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":signing.bzl", "SIGNING_BUNDLE_MEDIA_TYPE", "SIGNING_COSIGN_SHA256_LINUX_AMD64", "SIGNING_COSIGN_VERSION", "SIGNING_ISSUER", "SIGNING_TRUST_ROOT", "signing_bundle_media_error", "signing_bundle_names", "signing_cosign_error", "signing_cosign_sha_error", "signing_identity_error")

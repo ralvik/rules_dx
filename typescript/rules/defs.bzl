@@ -1,3 +1,5 @@
+"""Experimental minimal TypeScript wrappers."""
+
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo", _ts_project = "ts_project")
@@ -35,12 +37,14 @@ _typescript_project_forward = dx_library_forward_rule(
 _DX_TS_DECLARATION_SUFFIXES = [".d.ts", ".d.mts", ".d.cts"]
 
 def _is_declaration(src):
+    """Returns whether a source path is an inert declaration file."""
     for suffix in _DX_TS_DECLARATION_SUFFIXES:
         if src.endswith(suffix):
             return True
     return False
 
 def typescript_srcs_rejection(srcs):
+    """Returns the contract rejection for forbidden typescript_project srcs, or None."""
     bad = [src for src in srcs or [] if _is_declaration(src)]
     if bad:
         return ("typescript_project takes real sources only; declaration " +
@@ -57,6 +61,7 @@ def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 
 def typescript_project(name, srcs, visibility = None, **kwargs):
+    """Experimental minimal wrapper over ts_project."""
     _typescript_wrap_project(name, srcs, visibility = visibility, **kwargs)
 
 def _typescript_test_forward_impl(ctx):
@@ -81,13 +86,13 @@ _typescript_test = rule(
         allow_files = _DX_TS_SOURCE_EXTS,
         upstream_providers = [[DefaultInfo]],
         extra_attrs = {
-            "env_inherit": attr.string_list(
-            ),
+            "env_inherit": attr.string_list(),
         } | dx_lcov_merger_attr() | dx_symlink_windows_attr(),
     ),
 )
 
 def typescript_test_rejection(kwargs):
+    """Returns the contract rejection for forbidden typescript_test kwargs, or None."""
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("typescript_test always uses jest with the standard " +
                 "auto-configured reporters (Bazel test logs); " +
@@ -97,13 +102,14 @@ def typescript_test_rejection(kwargs):
     return None
 
 def typescript_test_env(env_inherit):
+    """Computes the effective test-runtime inherited environment."""
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
     return env
 
 def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig = None, transpiler = None, declaration = None, visibility = None, tags = None, env_inherit = None, **kwargs):
-
+    """Experimental minimal wrapper over jest_test for TypeScript sources."""
     rejection = typescript_srcs_rejection(srcs)
     if rejection != None:
         fail(rejection)

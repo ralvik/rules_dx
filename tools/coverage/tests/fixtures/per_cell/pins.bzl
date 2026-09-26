@@ -1,3 +1,5 @@
+"""Per-cell coverage plus Codecov plus remote pins."""
+
 PER_CELL_REGISTRY = "tools/coverage/cells.txt"
 PER_CELL_COUNT = 4
 PER_CELL_SEED = "qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt"

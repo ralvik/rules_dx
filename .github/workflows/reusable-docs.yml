@@ -95,7 +95,7 @@ jobs:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
         run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check ${{ inputs.docs_scope }} -- $BAZEL_CONFIG $BB_ARGS
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- docs --check
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- docs --check -- $BAZEL_CONFIG $BB_ARGS
   docs-publish:
     name: docs-publish (GitHub Pages)
     needs: [docs-check]
@@ -122,7 +122,7 @@ jobs:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
         run: test -f MODULE.bazel && grep -F -q "version = \"$RULES_DX_PIN\"" MODULE.bazel
       - name: Build rendered site
-        run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- docs
+        run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- docs -- $BAZEL_CONFIG $BB_ARGS
       - name: Stage rendered site in a temp dir
         # The artifact is the Bazel-owned rendered bundle
         # (`bazel-bin/docs/site`), never committed sources. Stage a copy

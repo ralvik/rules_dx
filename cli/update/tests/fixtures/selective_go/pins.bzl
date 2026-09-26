@@ -1,3 +1,5 @@
+"""Selective Go dx update per-module pins."""
+
 SELECTIVE_GO = "wont-fix"
 GO_FULL = "noop"
 

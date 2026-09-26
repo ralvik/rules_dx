@@ -1,3 +1,5 @@
+"""Per-host strict-laziness plus symlink-privilege plus backend-adoption pins."""
+
 BZLMOND_BOUNDARY = [
     "version-resolution cost",
     "MODULE.bazel.lock size is version-resolution metadata",

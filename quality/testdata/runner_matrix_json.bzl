@@ -1,3 +1,4 @@
+"""Matrix JSON cases (split from runner_matrix_cases.bzl)."""
 
 JSON_CASES = [
     {
@@ -39,4 +40,3 @@ JSON_CASES = [
         "expected": """producer //quality/testdata:matrix_json_format_fail""",
     },
 ]
-

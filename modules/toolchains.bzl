@@ -1,3 +1,5 @@
+"""Shared toolchain pins plus registration order."""
+
 RULES_CC_VERSION = "0.2.22"
 GOOGLETEST_VERSION = "1.18.0"
 RULES_GO_VERSION = "0.63.0"

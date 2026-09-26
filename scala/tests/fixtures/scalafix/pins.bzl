@@ -1,3 +1,5 @@
+"""Scalafix console + semanticdb-classpath wiring decision."""
+
 SCALAFIX_VERSION = "0.14.7"
 
 SCALAFIX_ARTIFACT = "semantic-rule artifacts over the shared managed JDK"

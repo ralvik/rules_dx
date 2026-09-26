@@ -1,3 +1,5 @@
+"""Normalized environment plan records."""
+
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load(
@@ -13,6 +15,7 @@ load(
 )
 
 DxEnvPlanInfo = provider(
+    doc = "Normalized environment plan records: direct plus transitive collection.",
     fields = {
         "direct": "List of environment record structs contributed by this target.",
         "transitive": "Depset of environment record structs from the closure.",
@@ -20,6 +23,7 @@ DxEnvPlanInfo = provider(
 )
 
 DxEnvPlanCollectedInfo = provider(
+    doc = "Aspect-merged environment plan records from the traversed closure.",
     fields = {
         "records": "Depset of merged environment record structs.",
     },
@@ -34,6 +38,7 @@ DX_ENV_ADMITTED_INTEGRATIONS = (
 )
 
 def env_plan_key_error(key):
+    """Validates one identity-dimension key."""
     if key == "":
         return "invalid env plan key '': must be a non-empty single token"
     if "/" in key or "\\" in key:
@@ -43,6 +48,7 @@ def env_plan_key_error(key):
     return ""
 
 def env_plan_value_error(value):
+    """Validates one identity-input value."""
     if value == "":
         return "invalid env plan value '': must be a non-empty identity input"
     if "|" in value:
@@ -50,6 +56,7 @@ def env_plan_value_error(value):
     return ""
 
 def env_plan_exec_error(path):
+    """Validates one BEP-matching exec-path suffix."""
     if path == "":
         return ""
     if path.endswith(DX_ENV_SHARD_SUFFIX):
@@ -64,6 +71,7 @@ def env_plan_exec_error(path):
     return ""
 
 def env_plan_entry(key, value, exec_path = ""):
+    """Builds one normalized environment identity entry struct."""
     return struct(
         exec_path = exec_path,
         key = key,
@@ -71,6 +79,7 @@ def env_plan_entry(key, value, exec_path = ""):
     )
 
 def env_plan_record(producer, integration, entries):
+    """Builds one normalized contributor record struct."""
     return struct(
         entries = tuple(entries),
         integration = integration,
@@ -93,6 +102,7 @@ def _env_plan_claim_key(entry):
     return entry.key
 
 def env_plan_record_error(record):
+    """Validates one contributor record."""
     second_error = ""
     if record.integration == "":
         second_error = "integration must be a non-empty language class"
@@ -110,6 +120,7 @@ def _env_plan_entry_key(entry):
     return (entry.key, entry.value, entry.exec_path)
 
 def env_plan_conflict_error(records):
+    """Detects incompatible identity-key claims across records."""
     return plan_shard_conflict_error(
         records,
         _env_plan_owner_of,
@@ -134,6 +145,7 @@ def _env_plan_encode_record(record):
     }
 
 def env_plan_merge_records(records):
+    """Merges records into deterministic normalized order."""
     return plan_shard_merge_records(
         records,
         _env_plan_owner_of,
@@ -142,9 +154,11 @@ def env_plan_merge_records(records):
     )
 
 def env_plan_fingerprint(records):
+    """Renders the normalized complete-plan hash input."""
     return plan_shard_fingerprint(records, env_plan_merge_records, _env_plan_encode_record)
 
 def env_plan_integration_error(integration):
+    """Validates one language integration against the admitted set."""
     if integration in DX_ENV_ADMITTED_INTEGRATIONS:
         return ""
     return (
@@ -153,6 +167,7 @@ def env_plan_integration_error(integration):
     )
 
 def _parse_entry_spec(spec, label_text):
+    """Parses one KEY|VALUE[|EXEC] entry spec."""
     parts = spec.split("|")
     if len(parts) == 2:
         return env_plan_entry(parts[0], parts[1])
@@ -165,6 +180,7 @@ def _parse_entry_spec(spec, label_text):
     )
 
 def _emit_shard(ctx, producer, integration, entry_structs):
+    """Validates one record and emits its binary shard via the writer."""
     record = env_plan_record(producer, integration, entry_structs)
     record_error = env_plan_record_error(record)
     if record_error != "":
@@ -195,6 +211,7 @@ def _emit_shard(ctx, producer, integration, entry_structs):
     return out, record
 
 def _exec_matches(file_path, exec_path):
+    """Reports whether a Bazel file path satisfies an exec-path suffix."""
     return plan_shard_exec_matches(file_path, exec_path)
 
 def _dx_env_shard_impl(ctx):

@@ -1,3 +1,5 @@
+"""Local-first PyPI publisher for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -9,9 +11,11 @@ _VALID_NAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 PYPI_DEFAULT_REPOSITORY_URL = "https://upload.pypi.org/legacy/"
 
 def pypi_name_charset():
+    """Returns the launcher-safe distribution-name charset via registry query."""
     return _VALID_NAME_CHARS
 
 def pypi_schema_error():
+    """Validates the versioned distribution-name charset schema."""
     if PYPI_SCHEMA_VERSION != 1:
         return "pypi name: unsupported schema v" + str(PYPI_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_NAME_CHARS) != "string" or _VALID_NAME_CHARS == "":
@@ -26,6 +30,7 @@ def pypi_schema_error():
     return ""
 
 def pypi_name_error(dist_name):
+    """Validates one distribution name value."""
     if type(dist_name) != "string" or dist_name == "":
         return ("pypi_deploy: invalid distribution name '" + str(dist_name) +
                 "': want a non-empty name (for example 'pypi_demo')")
@@ -37,6 +42,7 @@ def pypi_name_error(dist_name):
     return ""
 
 def pypi_repository_error(repository_url):
+    """Validates one PyPI repository URL value."""
     if type(repository_url) != "string" or repository_url == "":
         return ("pypi_deploy: invalid repository_url '" + str(repository_url) +
                 "': want a non-empty https URL (for example '" +
@@ -52,6 +58,7 @@ def pypi_repository_error(repository_url):
     return ""
 
 def pypi_wheel_error(filename):
+    """Validates one wheel filename value."""
     if type(filename) != "string" or filename == "":
         return ("pypi_deploy: invalid wheel '" + str(filename) +
                 "': want a non-empty .whl filename")
@@ -66,6 +73,7 @@ def pypi_wheel_error(filename):
     return ""
 
 def _pypi_launcher_impl(ctx):
+    """Expands the py_binary launcher for one PyPI deployment."""
     wheel_files = ctx.attr.wheel[DefaultInfo].files.to_list()
     if len(wheel_files) != 1:
         fail("pypi_deploy " + str(ctx.label) + ": wheel " +
@@ -128,6 +136,7 @@ _pypi_launcher = rule(
 )
 
 def pypi_deploy(name, wheel, sdist = None, repository_url = PYPI_DEFAULT_REPOSITORY_URL, profile = "release"):
+    """Publishes one wheel plus an optional sdist as a local-first PyPI deployment."""
     name_error = pypi_name_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

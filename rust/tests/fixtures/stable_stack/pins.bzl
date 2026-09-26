@@ -1,3 +1,5 @@
+"""Stable-stack compose pins."""
+
 BAZEL_VERSION = "9.2.0"
 RULES_RUST_VERSION = "0.74.0"
 RULES_CC_VERSION = "0.2.22"

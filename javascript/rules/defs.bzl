@@ -1,3 +1,5 @@
+"""Experimental minimal JavaScript wrappers."""
+
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:defs.bzl", _js_binary = "js_binary", _js_library = "js_library")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
@@ -50,6 +52,7 @@ def _javascript_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _javascript_library_forward, srcs, visibility = visibility, **kwargs)
 
 def javascript_binary_upstream_data(srcs, data):
+    """Computes the upstream data inputs for one javascript_binary."""
     return list(srcs or []) + list(data or [])
 
 def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
@@ -71,9 +74,11 @@ def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def javascript_library(name, srcs, visibility = None, **kwargs):
+    """Experimental minimal wrapper over js_library."""
     _javascript_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def javascript_binary(name, srcs = None, visibility = None, **kwargs):
+    """Experimental minimal wrapper over js_binary."""
     effective_srcs = srcs if srcs != None else []
     _javascript_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
@@ -97,13 +102,13 @@ _javascript_test = rule(
         allow_files = _JS_EXTS,
         upstream_providers = [[DefaultInfo]],
         extra_attrs = {
-            "env_inherit": attr.string_list(
-            ),
+            "env_inherit": attr.string_list(),
         } | dx_lcov_merger_attr() | dx_symlink_windows_attr(),
     ),
 )
 
 def javascript_test_rejection(kwargs):
+    """Returns the contract rejection for forbidden javascript_test kwargs, or None."""
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("javascript_test always uses jest with the standard " +
                 "auto-configured reporters (Bazel test logs); " +
@@ -113,12 +118,14 @@ def javascript_test_rejection(kwargs):
     return None
 
 def javascript_test_env(env_inherit):
+    """Computes the effective test-runtime inherited environment."""
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
     return env
 
 def javascript_test(name, srcs, node_modules, data = None, visibility = None, tags = None, env_inherit = None, **kwargs):
+    """Experimental minimal wrapper over jest_test."""
     upstream_data = list(srcs) + (list(data) if data != None else [])
     effective_env = javascript_test_env(env_inherit)
     rejection = javascript_test_rejection(kwargs)

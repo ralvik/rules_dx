@@ -1,7 +1,10 @@
+"""Deploy boundary for dx deploy."""
+
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//libs/starlark:wrapper.bzl", "dx_symlink_executable", "dx_symlink_windows_attr")
 
 DxDeployInfo = provider(
+    doc = "Deploy entrypoint identity and default profile for dx deploy dispatch.",
     fields = {
         "app": "Label or None: the deployed app target when distinct from the deploy target.",
         "profile": "String or None: default profile ('debug', 'dev', 'release'); None means the command default applies.",
@@ -11,6 +14,7 @@ DxDeployInfo = provider(
 VALID_DEPLOY_PROFILES = ["debug", "dev", "release"]
 
 def deploy_profile_error(profile):
+    """Validates one deploy profile value."""
     if profile == None:
         return ""
     if type(profile) != "string" or profile not in VALID_DEPLOY_PROFILES:

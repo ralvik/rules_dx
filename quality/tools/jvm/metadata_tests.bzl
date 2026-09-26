@@ -1,3 +1,4 @@
+"""JVM tool acquisition inventory pins."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_true", "starlark_test")
 load("//modules:java-scala-kotlin.bzl", "JVM_TOOL_VERSIONS")
@@ -46,6 +47,7 @@ def _jvm_checks():
     return checks
 
 def jvm_metadata_tests(name):
+    """Declare the JVM acquisition inventory pin test."""
     starlark_test(
         name = name,
         mode = "load",

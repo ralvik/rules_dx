@@ -1,3 +1,4 @@
+"""Analysis subject exposing an aggregate workspace policy."""
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 load(":policy.bzl", "CAPABILITIES", "QualityPolicyInfo")

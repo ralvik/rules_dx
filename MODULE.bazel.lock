@@ -406,7 +406,7 @@
   "moduleExtensions": {
     "//quality/artifacts:extension.bzl%dx_tools": {
       "general": {
-        "bzlTransitiveDigest": "ugE6Ei+w6ZyZuAb+6tx5dwvj2WJKKrVwlqFMfSrRiss=",
+        "bzlTransitiveDigest": "5khM7a1sh8K/+q8vDeg5KrYpYiuIbOENmUf5MgeK1Jg=",
         "usagesDigest": "gFQzqitdJKL+sOU8Lib2o7Lz3uaDcnGnSUnqrb+uZys=",
         "recordedInputs": [
           "REPO_MAPPING:,platforms platforms"
@@ -779,7 +779,7 @@
     },
     "//quality/tools/jvm:extension.bzl%jvm_tools": {
       "general": {
-        "bzlTransitiveDigest": "ub0qc24VbIWheVhluOj/aT8BVGbNCDRXB5Af1Nh/TQ8=",
+        "bzlTransitiveDigest": "MO61j1K/HfALO3ZKTl7HCH43bI/4XNLdy46bbP0ns9o=",
         "usagesDigest": "TdQ+MCt/ktY7u4UHGWmyCKzaW0XduslfKJ+GgNfzaCI=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"

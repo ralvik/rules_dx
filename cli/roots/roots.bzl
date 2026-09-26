@@ -1,3 +1,4 @@
+"""Repository-root candidates for dx codegen, dx env, and dx setup."""
 
 REPOSITORY_PATTERN = "//..."
 
@@ -9,6 +10,7 @@ REPOSITORY_ROOT_STRATEGIES = [
 ]
 
 def repository_roots(strategy, monolith = None, shards = [], pattern_file = None):
+    """Returns repository-root target patterns for one root strategy."""
     if strategy == "recursive-pattern":
         return [REPOSITORY_PATTERN]
     if strategy == "query-pattern-file":
@@ -42,4 +44,5 @@ repository_roots_file = rule(
 )
 
 def roots_aggregate(name, deps, **kwargs):
+    """One aggregate root: a plain filegroup over deps."""
     native.filegroup(name = name, srcs = deps, **kwargs)

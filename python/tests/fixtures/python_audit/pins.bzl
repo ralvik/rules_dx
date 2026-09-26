@@ -1,3 +1,5 @@
+"""Python source-audit selection pins."""
+
 PYTHON_AUDIT_TOOL = "ruff audit over python plus python_stub via S ruleset"
 PYTHON_AUDIT_EMPTY = "curated audit stays empty with explicit disablement"
 PYTHON_AUDIT_FAMILY_EMPTY = "python family audit stays empty with explicit disablement"

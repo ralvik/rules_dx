@@ -1,3 +1,4 @@
+"""Source fixtures for aspects (synthetic, real)."""
 
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
 

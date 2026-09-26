@@ -1,3 +1,5 @@
+"""Octopus Deploy publisher for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -15,18 +17,23 @@ _VALID_ENVIRONMENT_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 OCTOPUS_DEFAULT_URL = "https://octopus.example.invalid"
 
 def octopus_project_charset():
+    """Returns the launcher-safe project charset via registry query."""
     return _VALID_PROJECT_CHARS
 
 def octopus_channel_charset():
+    """Returns the launcher-safe channel charset via registry query."""
     return _VALID_CHANNEL_CHARS
 
 def octopus_version_charset():
+    """Returns the launcher-safe release-version charset via registry query."""
     return _VALID_VERSION_CHARS
 
 def octopus_environment_charset():
+    """Returns the launcher-safe environment charset via registry query."""
     return _VALID_ENVIRONMENT_CHARS
 
 def octopus_schema_error():
+    """Validates the versioned project/channel charset schema."""
     if OCTOPUS_SCHEMA_VERSION != 1:
         return "octopus project: unsupported schema v" + str(OCTOPUS_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_PROJECT_CHARS) != "string" or _VALID_PROJECT_CHARS == "":
@@ -68,6 +75,7 @@ def octopus_schema_error():
     return ""
 
 def octopus_project_error(project):
+    """Validates one Octopus project name value."""
     if type(project) != "string" or project == "":
         return ("octopus_deploy: invalid project '" + str(project) +
                 "': want a non-empty project (for example 'octopus_demo')")
@@ -79,6 +87,7 @@ def octopus_project_error(project):
     return ""
 
 def octopus_channel_error(channel):
+    """Validates one Octopus channel name value."""
     if type(channel) != "string" or channel == "":
         return ("octopus_deploy: invalid channel '" + str(channel) +
                 "': want a non-empty channel (for example 'Default')")
@@ -90,6 +99,7 @@ def octopus_channel_error(channel):
     return ""
 
 def octopus_version_error(version):
+    """Validates one Octopus release version value."""
     if type(version) != "string" or version == "":
         return ("octopus_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -101,6 +111,7 @@ def octopus_version_error(version):
     return ""
 
 def octopus_environment_error(environment):
+    """Validates one Octopus environment (--deploy-to) value."""
     if type(environment) != "string" or environment == "":
         return ("octopus_deploy: invalid environment '" + str(environment) +
                 "': want a non-empty environment (for example 'Production')")
@@ -112,6 +123,7 @@ def octopus_environment_error(environment):
     return ""
 
 def octopus_space_error(space):
+    """Validates one Octopus space name value (empty means the default space)."""
     if space == "":
         return ""
     if type(space) != "string":
@@ -125,6 +137,7 @@ def octopus_space_error(space):
     return ""
 
 def octopus_url_error(octopus_url):
+    """Validates one Octopus server URL value."""
     if type(octopus_url) != "string" or octopus_url == "":
         return ("octopus_deploy: invalid octopus_url '" + str(octopus_url) +
                 "': want a non-empty https URL (for example '" +
@@ -140,6 +153,7 @@ def octopus_url_error(octopus_url):
     return ""
 
 def octopus_package_error(filename):
+    """Validates one Octopus package filename value."""
     if type(filename) != "string" or filename == "":
         return ("octopus_deploy: invalid package '" + str(filename) +
                 "': want a non-empty .tar.gz filename from archive_deploy")
@@ -154,6 +168,7 @@ def octopus_package_error(filename):
     return ""
 
 def _octopus_launcher_impl(ctx):
+    """Expands the py_binary launcher for one Octopus deployment."""
     package_files = ctx.attr.package[DefaultInfo].files.to_list()
     if len(package_files) != 1:
         fail("octopus_deploy " + str(ctx.label) + ": package " +
@@ -190,8 +205,7 @@ _octopus_launcher = rule(
         "channel": attr.string(
             mandatory = True,
         ),
-        "deploy_to": attr.string_list(
-        ),
+        "deploy_to": attr.string_list(),
         "drop_name": attr.string(
             mandatory = True,
         ),
@@ -219,6 +233,7 @@ _octopus_launcher = rule(
 )
 
 def octopus_deploy(name, package, project, channel = "Default", version = "0.0.0", deploy_to = [], space = "", octopus_url = OCTOPUS_DEFAULT_URL, profile = "release"):
+    """Publishes one archive package as a local-first Octopus deployment."""
     project_error = octopus_project_error(project)
     if project_error != "":
         fail(project_error + " (in " + native.package_name() + ":" + name + ")")

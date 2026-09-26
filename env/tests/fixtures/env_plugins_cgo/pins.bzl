@@ -1,3 +1,5 @@
+"""Third-party env plugin model plus Go cgo scope pins."""
+
 PLUGIN_DISPOSITION = "out of scope"
 PLUGIN_SCOPE_NOTE = "third-party language-integration plugins are out of scope"
 PLUGIN_OWNER = "//env plus //cli/env"

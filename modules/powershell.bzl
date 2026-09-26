@@ -1,3 +1,5 @@
+"""Pinned PowerShell foundation."""
+
 RULES_POWERSHELL_VERSION = "0.2.0"
 PWSH_VERSION = "7.5.4"
 

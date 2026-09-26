@@ -1,3 +1,4 @@
+"""gitleaks standalone artifact metadata (linux_x86_64) -- GENERATED, do not edit."""
 
 # buildifier: disable=attr-licenses
 ARTIFACT = {

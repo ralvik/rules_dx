@@ -1,3 +1,5 @@
+"""Behavioral-matrix mapping validation."""
+
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 _MATRIX = "//libs/starlark:behavioral_matrix.md"

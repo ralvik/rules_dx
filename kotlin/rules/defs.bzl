@@ -1,3 +1,5 @@
+"""Experimental minimal Kotlin wrappers."""
+
 load("@rules_java//java:defs.bzl", "JavaInfo")
 load("@rules_kotlin//kotlin:jvm.bzl", _kt_jvm_binary = "kt_jvm_binary", _kt_jvm_library = "kt_jvm_library", _kt_jvm_test = "kt_jvm_test")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
@@ -52,6 +54,7 @@ _kotlin_forward_test = dx_executable_forward_rule(
 )
 
 def kotlin_kotlinc_opts_with_werror(kwargs):
+    """Returns kwargs defaulting kotlinc_opts to warnings_as_errors."""
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("kotlinc_opts", "//kotlin/rules:warnings_as_errors")
     return upstream_kwargs
@@ -66,9 +69,11 @@ def _kotlin_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap_binary(name, _kt_jvm_binary, _kotlin_binary_forward, srcs, visibility = visibility, upstream_kwargs = _kotlin_with_werror(kwargs), **kwargs)
 
 def kotlin_library(name, srcs, visibility = None, **kwargs):
+    """Experimental minimal wrapper over kt_jvm_library."""
     _kotlin_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def kotlin_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
+    """Experimental minimal wrapper over kt_jvm_binary."""
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:
@@ -76,4 +81,5 @@ def kotlin_binary(name, srcs = None, main_class = None, visibility = None, **kwa
     _kotlin_wrap_binary(name, effective_srcs, visibility = visibility, **upstream_kwargs)
 
 def kotlin_test(name, srcs, visibility = None, **kwargs):
+    """Experimental minimal wrapper over kt_jvm_test."""
     dx_wrap_test(name, _kt_jvm_test, _kotlin_forward_test, srcs, visibility = visibility, upstream_kwargs = _kotlin_with_werror(kwargs), **kwargs)

@@ -1,3 +1,4 @@
+"""Target-scoped real capability aspects over real adapters."""
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
@@ -41,6 +42,7 @@ _REAL_TOOL_TABLE = {
 }
 
 def _shard_tools(shard, capability):
+    """Lists wired tools for one shard/capability from the per-tool table."""
     return sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == shard and capability in _REAL_TOOL_TABLE[tool]["capabilities"]])
 
 _CORE_LINT_TOOLS = _shard_tools("core", "lint")
@@ -346,6 +348,7 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     return [OutputGroupInfo(dx_results = depset([out]))]
 
 def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain):
+    """Makes one shard impl over the shared real pipeline action."""
 
     def _impl(target, ctx):
         return _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain)
@@ -353,6 +356,7 @@ def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain
     return _impl
 
 def real_allowed_tools_error():
+    """Validates aspect shards stay registry subsets."""
     allowed = (
         _CORE_LINT_TOOLS + _CORE_FORMAT_TOOLS + _CORE_TYPECHECK_TOOLS +
         _JS_LINT_TOOLS + _JS_FORMAT_TOOLS + _PY_LINT_TOOLS +
@@ -477,6 +481,7 @@ _REAL_TOOL_ATTR_DEFS = {
 }
 
 def _real_attrs_for(tools):
+    """Builds one shard attr set from the per-tool attr table."""
     return _REAL_BASE_ATTRS | {"_" + tool: _REAL_TOOL_ATTR_DEFS[tool] for tool in tools}
 
 _REAL_CORE_ATTRS = _real_attrs_for(sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == "core"]))
@@ -502,6 +507,7 @@ _REAL_SHARDS = {
 }
 
 def _make_real_aspect(shard_name):
+    """Builds one shard aspect from the shard table."""
     shard = _REAL_SHARDS[shard_name]
     if shard["has_rust"] and shard_name == "real_rust_lint":
         return aspect(

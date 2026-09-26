@@ -1,3 +1,5 @@
+"""stylelint check plus fix wiring."""
+
 STYLELINT_VERSION = "17.14.1"
 STYLELINT_ARTIFACT = "private pure-JavaScript graph member"
 STYLELINT_CHECK = "stylelint --formatter json"

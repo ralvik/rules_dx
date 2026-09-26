@@ -1,3 +1,5 @@
+"""Experimental minimal Astro wrappers."""
+
 load("@aspect_rules_js//js:defs.bzl", _js_library = "js_library")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("//libs/starlark:wrapper.bzl", "dx_library_forward_rule", "dx_wrap")
@@ -25,7 +27,7 @@ def _astro_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _astro_library_forward, srcs, visibility = visibility, **kwargs)
 
 def astro_library(name, srcs, visibility = None, **kwargs):
-
+    """Experimental minimal wrapper over js_library for Astro components."""
     tags = list(kwargs.pop("tags", []))
     for tag in ["no-format", "no-lint", "no-typecheck"]:
         if tag not in tags:

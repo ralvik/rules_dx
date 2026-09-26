@@ -1,3 +1,4 @@
+"""Target-scoped capability aspects over synthetic adapters."""
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(
@@ -76,6 +77,7 @@ def _quality_pipeline_action(target, ctx, capability):
     return [OutputGroupInfo(dx_results = depset([out, marker]))]
 
 def _make_synthetic_impl(capability):
+    """Makes one capability impl over the shared pipeline action."""
 
     def _impl(target, ctx):
         return _quality_pipeline_action(target, ctx, capability)
@@ -83,13 +85,6 @@ def _make_synthetic_impl(capability):
     return _impl
 
 _SYNTHETIC_CAPABILITIES = ["lint", "format", "typecheck", "audit"]
-
-_SYNTHETIC_DOCS = {
-    "audit": "Registers independent audit actions in dx_results.",
-    "format": "Registers the exact-input format pipeline action in dx_results.",
-    "lint": "Registers the exact-input lint pipeline action in dx_results.",
-    "typecheck": "Registers the exact-input typecheck pipeline action in dx_results.",
-}
 
 _COMMON_ATTRS = {
     "_evaluator": attr.label(

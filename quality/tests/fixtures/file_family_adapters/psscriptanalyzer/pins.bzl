@@ -1,3 +1,5 @@
+"""psscriptanalyzer check plus fix wiring."""
+
 PSSCRIPTANALYZER_VERSION = "1.25.0"
 PSSCRIPTANALYZER_ARTIFACT = "exact module plus portable pwsh runtime"
 PSSCRIPTANALYZER_CHECK = "Invoke-ScriptAnalyzer text"

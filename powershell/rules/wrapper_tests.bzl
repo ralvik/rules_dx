@@ -1,3 +1,5 @@
+"""Wrapper conformance tests for PowerShell."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load("//libs/starlark:wrapper.bzl", "dx_effective_visibility", "dx_forwarded_test_kwargs")
 load("//quality:sources.bzl", "KNOWN_SEMANTIC_FILE_CLASSES")

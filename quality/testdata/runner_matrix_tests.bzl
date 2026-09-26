@@ -1,3 +1,4 @@
+"""Layer-2 full-matrix runner tests (snapshot workflow)."""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
 load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
@@ -5,12 +6,15 @@ load("//libs/starlark:canonical.bzl", "is_canonical", "strip_canonical")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _file_ref(ctx, f):
+    """Returns a double-quoted $(rlocation...) ref for one file."""
     return '"$(rlocation ' + shell.quote(rlocation_path(ctx, f)) + ')"'
 
 def _var_ref(var):
+    """Returns a double-quoted shell variable ref (for example $OUT)."""
     return '"' + var + '"'
 
 def _prefixed_file_ref(ctx, prefix, f):
+    """Returns one prefix + rlocation word (for example ws_path=...)."""
     return shell.quote(prefix) + _file_ref(ctx, f)
 
 def _single_file(target):
@@ -29,7 +33,7 @@ def _runner_matrix_test_impl(ctx):
     runner = ctx.executable._runner
     printer = ctx.executable._printer
 
-    staged = {} # workspace path -> File staged as its bytes
+    staged = {}  # workspace path -> File staged as its bytes
     for f in ctx.files.srcs:
         staged[f.short_path] = f
     for ws_path in ctx.attr.generated:
@@ -41,7 +45,7 @@ def _runner_matrix_test_impl(ctx):
     for f in ctx.files.siblings:
         sibling_staged[f.short_path] = f
 
-    tools = {} # tool name -> binary File
+    tools = {}  # tool name -> binary File
     for i, name in enumerate(ctx.attr.tool_names):
         tools[name] = _tool_executable(ctx.attr.tool_binaries[i])
     if ctx.attr.rustfmt_from_toolchain:
@@ -50,18 +54,18 @@ def _runner_matrix_test_impl(ctx):
         _clippy_driver, rustfmt = rust_toolchain_tools(ctx)
         tools["rustfmt"] = rustfmt
 
-    tool_files = [] # (tool, rel, File)
+    tool_files = []  # (tool, rel, File)
     for i, tool in enumerate(ctx.attr.toolfile_tools):
         f = _single_file(ctx.attr.toolfile_srcs[i])
         tool_files.append((tool, f.short_path, f))
-    configs = [] # (tool, rel)
+    configs = []  # (tool, rel)
     for i, tool in enumerate(ctx.attr.config_tools):
         configs.append((tool, _single_file(ctx.attr.config_files[i]).short_path))
-    editions = [] # (tool, edition)
+    editions = []  # (tool, edition)
     for i, tool in enumerate(ctx.attr.edition_tools):
         editions.append((tool, ctx.attr.edition_values[i]))
 
-    upstream = [] # (tool, File)
+    upstream = []  # (tool, File)
     upstream_src_targets = ctx.attr.upstream_srcs
     for i, tool in enumerate(ctx.attr.upstream_tools):
         if i < len(upstream_src_targets):
@@ -245,8 +249,7 @@ _runner_matrix_test = rule(
         "srcs": attr.label_list(
             allow_files = True,
         ),
-        "generated": attr.string_dict(
-        ),
+        "generated": attr.string_dict(),
         "siblings": attr.label_list(
             allow_files = True,
         ),
@@ -257,33 +260,24 @@ _runner_matrix_test = rule(
         "stages": attr.string_list(
             mandatory = True,
         ),
-        "tool_names": attr.string_list(
-        ),
-        "tool_binaries": attr.label_list(
-        ),
-        "toolfile_tools": attr.string_list(
-        ),
+        "tool_names": attr.string_list(),
+        "tool_binaries": attr.label_list(),
+        "toolfile_tools": attr.string_list(),
         "toolfile_srcs": attr.label_list(
             allow_files = True,
         ),
-        "config_tools": attr.string_list(
-        ),
+        "config_tools": attr.string_list(),
         "config_files": attr.label_list(
             allow_files = True,
         ),
-        "edition_tools": attr.string_list(
-        ),
-        "edition_values": attr.string_list(
-        ),
-        "tool_env": attr.string_list(
-        ),
-        "upstream_tools": attr.string_list(
-        ),
+        "edition_tools": attr.string_list(),
+        "edition_values": attr.string_list(),
+        "tool_env": attr.string_list(),
+        "upstream_tools": attr.string_list(),
         "upstream_srcs": attr.label_list(
             allow_files = True,
         ),
-        "upstream_generated": attr.string_dict(
-        ),
+        "upstream_generated": attr.string_dict(),
         "expected": attr.string(
             mandatory = True,
         ),
@@ -307,6 +301,7 @@ _runner_matrix_test = rule(
 )
 
 def runner_matrix_suite(name, cases):
+    """Instantiates one _runner_matrix_test per matrix case plus a suite."""
     tests = []
     for case in cases:
         _runner_matrix_test(

@@ -1,7 +1,9 @@
+"""Wheel-closure aspect for focused Python environment plans."""
 
 load("@aspect_rules_py//py:defs.bzl", _PyWheelsInfo = "PyWheelsInfo")
 
 PythonEnvWheelsInfo = provider(
+    doc = "Merged wheel records in the focused target's closure.",
     fields = {
         "wheels": "Postorder depset of wheel record structs, merged like upstream py_library aggregation.",
     },

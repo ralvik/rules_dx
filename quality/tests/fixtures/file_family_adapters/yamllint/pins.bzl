@@ -1,3 +1,5 @@
+"""yamllint check plus fix wiring."""
+
 YAMLLINT_VERSION = "1.38.0"
 YAMLLINT_ARTIFACT = "private wheel-only Python graph member"
 YAMLLINT_CHECK = "yamllint text"

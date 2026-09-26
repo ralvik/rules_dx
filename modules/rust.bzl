@@ -1,3 +1,5 @@
+"""Rust foundation pins plus crate-manifest groups."""
+
 RULES_RUST_VERSION = "0.74.0"
 RULES_RUST_PROST_VERSION = "0.74.0"
 RUST_VERSION = "1.98.0"

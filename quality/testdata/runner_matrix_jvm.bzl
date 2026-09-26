@@ -1,3 +1,4 @@
+"""Matrix JVM cases (split from runner_matrix_cases.bzl)."""
 
 JVM_CASES = [
     {

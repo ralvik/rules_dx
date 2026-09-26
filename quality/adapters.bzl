@@ -1,3 +1,4 @@
+"""Deterministic synthetic adapter registry."""
 
 ADAPTER_REGISTRY_SCHEMA_VERSION = 1
 
@@ -13,6 +14,7 @@ SYNTHETIC_CLASS_TO_FAMILY = {
 }
 
 def adapter_supported_classes(tool_id, capability):
+    """Returns the sorted supported classes for one synthetic tool/capability."""
     if tool_id not in SYNTHETIC_ADAPTERS:
         fail("adapters: unknown tool '" + tool_id +
              "': not in the synthetic adapter registry")
@@ -131,15 +133,18 @@ REAL_CLASS_TO_FAMILY = {
 }
 
 def real_supported_classes(tool_id, capability):
+    """Returns the sorted supported classes for one real tool/capability."""
     if tool_id not in REAL_ADAPTERS:
         fail("adapters: unknown tool '" + tool_id +
              "': not in the real adapter registry")
     return sorted(REAL_ADAPTERS[tool_id].get(capability, []))
 
 def is_known_adapter_tool(tool_id):
+    """Reports whether a tool ID is in the versioned adapter registry."""
     return tool_id in REAL_ADAPTERS
 
 def is_classified(class_id):
+    """Reports whether a class is in the versioned class-to-family map."""
     return class_id in REAL_CLASS_TO_FAMILY
 
 def _is_canonical_token(text):
@@ -151,6 +156,7 @@ def _is_canonical_token(text):
     return True
 
 def adapter_registry_schema_error():
+    """Validates the versioned adapter-registry schema."""
     if ADAPTER_REGISTRY_SCHEMA_VERSION != 1:
         return "adapter registry: unsupported schema v" + str(ADAPTER_REGISTRY_SCHEMA_VERSION) + " (want v1)"
     for class_id in REAL_CLASS_TO_FAMILY:

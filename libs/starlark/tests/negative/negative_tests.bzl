@@ -1,3 +1,5 @@
+"""Negative demonstrations as green hermetic proofs."""
+
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//libs/starlark:failure_test.bzl", "failure_test")
 
@@ -46,8 +48,7 @@ def _wrong_phase_subject_impl(ctx):
 _wrong_phase_subject = rule(
     implementation = _wrong_phase_subject_impl,
     attrs = {
-        "subjects": attr.label_list(
-        ),
+        "subjects": attr.label_list(),
     },
 )
 

@@ -1,3 +1,4 @@
+"""Package-boundary visibility contract (single source)."""
 
 VIS_PUBLIC = ["//visibility:public"]
 
@@ -212,10 +213,13 @@ LAYER_FORBIDDEN_DEPS = [
 ]
 
 def is_public_package(pkg):
+    """Reports whether a package directory carries the public default."""
     return pkg in PUBLIC_PACKAGES
 
 def is_private_package(pkg):
+    """Reports whether a package directory carries the private default."""
     return pkg in PRIVATE_ENV_PACKAGES or pkg in PRIVATE_GAZELLE_PACKAGES or pkg == DX_FACADE_PACKAGE
 
 def scoped_constant(pkg):
+    """Returns the scope constant a scoped package must load ("" when none)."""
     return SCOPED_PACKAGES.get(pkg, "")

@@ -1,3 +1,4 @@
+"""Standalone quality-tool acquisition."""
 
 load("//quality/artifacts:biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
@@ -72,6 +73,7 @@ def _repo_name(artifact):
     return "dx_%s_%s_%s" % (artifact["tool"], artifact["os"], artifact["cpu"])
 
 def _sha256_of(ctx, path):
+    """Returns the sha256 hex of one repo-relative file, or "" when unavailable."""
     for argv in (
         ["sha256sum", path],
         ["shasum", "-a", "256", path],
@@ -83,6 +85,7 @@ def _sha256_of(ctx, path):
     return ""
 
 def _verify_executable_sha256(ctx, executable, want):
+    """Fails closed unless the extracted executable matches its inner digest."""
     if want == None or want == "":
         fail("standalone tool repo: missing executable_sha256 for '" + executable +
              "' (regenerate metadata with //quality/artifacts:update)")

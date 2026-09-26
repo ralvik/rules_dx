@@ -1,3 +1,5 @@
+"""Strict preset decision pins."""
+
 DEFAULT_POLICY = "default stays loose: curated defaults plus pinned upstream built-in defaults, no hidden presets"
 STRICT_OPT_IN = "strict is opt-in via checked-in native configs, no workspace strict flag, no selectable preset ID"
 REJECTED_FORCING_STRICT = "forcing strict by default rejected: upgrade break, requires a major release"

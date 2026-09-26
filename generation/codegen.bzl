@@ -1,3 +1,4 @@
+"""Normalized codegen plan records."""
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load(
@@ -13,6 +14,7 @@ load(
 )
 
 DxCodegenPlanInfo = provider(
+    doc = "Normalized codegen plan records: direct plus transitive collection.",
     fields = {
         "direct": "List of codegen record structs contributed by this target.",
         "transitive": "Depset of codegen record structs from the closure.",
@@ -20,6 +22,7 @@ DxCodegenPlanInfo = provider(
 )
 
 DxCodegenPlanCollectedInfo = provider(
+    doc = "Aspect-merged codegen plan records from the traversed closure.",
     fields = {
         "records": "Depset of merged codegen record structs.",
     },
@@ -36,6 +39,7 @@ DX_CODEGEN_ADMITTED_PAIRS = (
 )
 
 def codegen_path_error(path):
+    """Validates one workspace-relative projection path."""
     if path == "":
         return "invalid codegen path '': must be a non-empty workspace-relative path"
     if path.startswith("/"):
@@ -48,6 +52,7 @@ def codegen_path_error(path):
     return ""
 
 def codegen_entry(logical_path, import_root, namespace = "", exec_path = "", replaces = ""):
+    """Builds one normalized projection entry struct."""
     return struct(
         exec_path = exec_path,
         import_root = import_root,
@@ -58,6 +63,7 @@ def codegen_entry(logical_path, import_root, namespace = "", exec_path = "", rep
     )
 
 def codegen_record(producer, language, entries):
+    """Builds one normalized contributor record struct."""
     return struct(
         entries = tuple(entries),
         language = language,
@@ -83,6 +89,7 @@ def _codegen_claim_key(entry):
     return entry.logical_path
 
 def codegen_record_error(record):
+    """Validates one contributor record."""
     second_error = ""
     if record.language == "":
         second_error = "language must be a non-empty file class"
@@ -97,6 +104,7 @@ def codegen_record_error(record):
     )
 
 def codegen_exec_error(path):
+    """Validates one BEP-matching exec-path suffix."""
     if path == "":
         return ""
     if path.endswith(DX_CODEGEN_SHARD_SUFFIX):
@@ -107,6 +115,7 @@ def codegen_exec_error(path):
     return ""
 
 def codegen_replaces_error(logical_path, exec_path, replaces):
+    """Validates one replacement contract declaration."""
     if replaces == "":
         return ""
     error = codegen_path_error(replaces)
@@ -122,6 +131,7 @@ def _codegen_entry_key(entry):
     return (entry.logical_path, entry.import_root, entry.namespace, entry.exec_path, entry.replaces)
 
 def codegen_conflict_error(records):
+    """Detects incompatible logical-path claims across records."""
     return plan_shard_conflict_error(
         records,
         _codegen_owner_of,
@@ -149,6 +159,7 @@ def _codegen_encode_record(record):
     }
 
 def codegen_merge_records(records):
+    """Merges records into deterministic normalized order."""
     return plan_shard_merge_records(
         records,
         _codegen_owner_of,
@@ -157,6 +168,7 @@ def codegen_merge_records(records):
     )
 
 def codegen_merge_schema_error(records, merged):
+    """Validates merged is the normalized form of records."""
     if type(merged) != "list":
         return "codegen merge: want a list, got " + type(merged)
     owners = []
@@ -201,9 +213,11 @@ def codegen_merge_schema_error(records, merged):
     return ""
 
 def codegen_plan_fingerprint(records):
+    """Renders the normalized complete-plan hash input."""
     return plan_shard_fingerprint(records, codegen_merge_records, _codegen_encode_record)
 
 def codegen_fingerprint_schema_error(fingerprint):
+    """Validates a plan fingerprint JSON shape."""
     decoded = json.decode(fingerprint)
     if type(decoded) != "list" or len(decoded) == 0:
         return "codegen fingerprint: want a non-empty list"
@@ -255,9 +269,11 @@ def codegen_fingerprint_schema_error(fingerprint):
     return ""
 
 def codegen_admitted_pairs():
+    """Returns the admitted generator/language pairs via registry query."""
     return DX_CODEGEN_ADMITTED_PAIRS
 
 def codegen_schema_error():
+    """Validates the versioned codegen-pair schema."""
     if CODEGEN_SCHEMA_VERSION != 1:
         return "codegen: unsupported schema v" + str(CODEGEN_SCHEMA_VERSION) + " (want v1)"
     if type(DX_CODEGEN_ADMITTED_PAIRS) != "tuple" or len(DX_CODEGEN_ADMITTED_PAIRS) == 0:
@@ -275,6 +291,7 @@ def codegen_schema_error():
     return ""
 
 def codegen_pair_error(schema_kind, language):
+    """Validates one generator/language pair against the frozen."""
     if (schema_kind, language) in DX_CODEGEN_ADMITTED_PAIRS:
         return ""
     return (
@@ -283,6 +300,7 @@ def codegen_pair_error(schema_kind, language):
     )
 
 def _parse_entry_spec(spec, label_text):
+    """Parses one LOGICAL|ROOT|NAMESPACE[|EXEC[|REPLACES]] entry spec."""
     parts = spec.split("|")
     if len(parts) == 3:
         return codegen_entry(parts[0], parts[1], parts[2])
@@ -297,6 +315,7 @@ def _parse_entry_spec(spec, label_text):
     )
 
 def _emit_shard(ctx, producer, language, entry_structs):
+    """Validates one record and emits its binary shard via the writer."""
     record = codegen_record(producer, language, entry_structs)
     record_error = codegen_record_error(record)
     if record_error != "":
@@ -332,6 +351,7 @@ def _emit_shard(ctx, producer, language, entry_structs):
     return out, record
 
 def _exec_matches(file_path, exec_path):
+    """Reports whether a Bazel file path satisfies an exec-path suffix."""
     return plan_shard_exec_matches(file_path, exec_path)
 
 def _dx_codegen_shard_impl(ctx):

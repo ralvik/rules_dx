@@ -1,3 +1,5 @@
+"""CLI execution/reporting gaps fixture."""
+
 WATCHABLE_COMMANDS = [
     "build",
     "test",

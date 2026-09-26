@@ -1,3 +1,5 @@
+"""Errcheck check-only wiring, complementary to govet."""
+
 ERRCHECK_VERSION = "v1.20.0"
 
 ERRCHECK_ARTIFACT = "standalone checksummed release artifact; complementary for unhandled errors"

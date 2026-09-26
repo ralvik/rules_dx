@@ -1,3 +1,5 @@
+"""Docs adapter pins plus mappings."""
+
 RUST_RUSTDOC = "nightly-2026-09-01 with rustdoc JSON format_version 30 via -Z unstable-options --output-format json"
 PYTHON_GRIFFE = "griffe==2.2.0 with griffe dump --full plus JSON schema"
 TYPESCRIPT_TYPEDOC = "typedoc@0.28.20 with --json --emit none plus schemaVersion"

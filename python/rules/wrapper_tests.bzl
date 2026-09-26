@@ -1,3 +1,5 @@
+"""Wrapper-contract tests for the Python wrappers (item 2)."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":defs.bzl", "python_test_rejection")
 

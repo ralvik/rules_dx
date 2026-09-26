@@ -41,7 +41,7 @@ fn command_option_ownership_rejects_every_unsupported_surface() {
             words.push(option);
             assert!(parse(&args(&words)).is_err(), "{words:?}");
         }
-        if !matches!(command, "generate") {
+        if !matches!(command, "generate" | "docs") {
             let mut words = base.clone();
             words.extend(["--", "--keep_going"]);
             assert!(parse(&args(&words)).is_err(), "{words:?}");
@@ -622,7 +622,6 @@ fn docs_check_serve_port_parse() {
         vec!["docs", "--report=sarif=out.sarif"],
         vec!["docs", "--pin=0.1.0"],
         vec!["docs", "--output=diff"],
-        vec!["docs", "--", "--jobs=4"],
     ] {
         assert!(
             matches!(
@@ -634,6 +633,11 @@ fn docs_check_serve_port_parse() {
             "words: {words:?}"
         );
     }
+    let got = parse(&args(&["docs", "--", "--jobs=4"])).expect("docs forwards command options");
+    assert_eq!(got.bazel_options, args(&["--jobs=4"]));
+    let got = parse(&args(&["docs", "--check", "--", "--config=ci"])).expect("docs check forwards");
+    assert!(got.check);
+    assert_eq!(got.bazel_options, args(&["--config=ci"]));
 }
 
 #[test]

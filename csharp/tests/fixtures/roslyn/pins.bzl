@@ -1,3 +1,5 @@
+"""Roslyn per-TFM-RID SARIF aggregation decision."""
+
 ROSLYN_COUPLING = "SDK-built-in CA analyzers following the qualified .NET SDK, no separate acquisition"
 
 ROSLYN_SARIF_VERSION = "2.1.0"

@@ -1,3 +1,5 @@
+"""Unit tests proving the output-group-subjects use case."""
+
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_equal", "expect_false", "expect_match", "expect_true", "starlark_test")
 load("//libs/starlark/tests/fixtures/starlark_futures:output_group_subjects.bzl", "admitted_output_files", "admitted_output_groups", "is_supported_output_group", "output_group_fingerprint_like", "output_group_report", "output_group_subject_fields", "resolve_output_group")
 

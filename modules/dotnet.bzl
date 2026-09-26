@@ -1,3 +1,5 @@
+"""Pinned .NET foundation (C#, F#)."""
+
 RULES_DOTNET_VERSION = "0.22.1"
 BAZEL_LIB_VERSION = "3.7.0"
 DOTNET_VERSION = "10.0.201"

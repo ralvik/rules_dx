@@ -1,3 +1,5 @@
+"""Selective Maven dx update wont-fix fixture."""
+
 SELECTIVE_MAVEN = "wont-fix"
 
 SELECTIVE_MAVEN_FULL = "REPIN=1 bazel run @maven//:pin"

@@ -1,3 +1,5 @@
+"""Exact-target discovery pins."""
+
 RULES_RS_VERSION = "v0.0.109"
 RULES_RS_COMMIT = "b55b132af0c9951807c926768e40222330348632"
 RUST_PROJECT_RS = "tools/rust_analyzer/rust_project.rs"

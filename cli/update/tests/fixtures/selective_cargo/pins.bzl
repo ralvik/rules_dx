@@ -1,3 +1,5 @@
+"""Selective Cargo dx update per-crate pins."""
+
 SELECTIVE_CARGO = "wont-fix"
 
 SELECTIVE_CARGO_FULL = "CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello"

@@ -1,3 +1,4 @@
+"""Native cohort matrix cells."""
 
 CLANG_TIDY_LINT = """matrix/clang_tidy_dirty.c:4:3: warning: do not use 'else' after 'return' [readability-else-after-return]"""
 

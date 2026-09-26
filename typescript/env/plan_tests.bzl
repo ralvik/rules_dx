@@ -1,3 +1,5 @@
+"""Focused TypeScript environment-plan tests."""
+
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //typescript/env:hello_lib_plan

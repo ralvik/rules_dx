@@ -1,3 +1,5 @@
+"""Bump discovery outdated enumeration pins."""
+
 BUMP_DISCOVERY = "enumerate"
 
 BUMP_DISCOVERY_BAZEL = "BCR"

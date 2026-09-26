@@ -1,3 +1,5 @@
+"""Layer-4 loss restore-or-wont-fix fixture."""
+
 LOSS_DAEMON_EXIT3 = "wont-fix"
 LOSS_BUILDIFIER_REWRITE = "wont-fix"
 LOSS_FULL_WIRING = "wont-fix"

@@ -1,23 +1,29 @@
+"""Vendored offline/airgap bundle manifests."""
 
 def offline_manifest_name(name):
+    """Returns the deterministic manifest output name."""
     return name + ".SHA256SUMS"
 
 def offline_set_error(set):
+    """Validates one vendored advisory set name."""
     if set in ["cargo", "npm", "maven", "nuget", "go"]:
         return ""
     return ("offline_bundle: invalid advisory set '" + str(set) +
             "': want one of cargo, npm, maven, nuget, go")
 
 def offline_srcs_error(srcs):
+    """Validates one manifest input list."""
     if len(srcs) == 0:
         return "offline_bundle: need at least one bundle file"
     return ""
 
 def _basename(label):
+    """Returns the file basename for one label string."""
     parts = str(label).split("/")
     return parts[len(parts) - 1]
 
 def offline_bundle(name, advisory, launchers):
+    """Assembles one vendored offline bundle manifest pair."""
     for set in advisory:
         set_err = offline_set_error(set)
         if set_err != "":

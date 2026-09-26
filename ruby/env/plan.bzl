@@ -1,8 +1,11 @@
+"""Focused Ruby environment plan."""
+
 load("//env:focused.bzl", "focused_direct_sources", "focused_simple_plan", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 RubyEnvPlanInfo = provider(
+    doc = "Provider-derived focused Ruby target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct Ruby sources.",
         "has_sources": "Whether the wrapper owns any direct Ruby sources.",

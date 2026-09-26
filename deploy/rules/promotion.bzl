@@ -1,3 +1,5 @@
+"""Staging-to-production promotion publisher for dx deploy."""
+
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -11,12 +13,15 @@ _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 _VALID_ARTIFACT_SUFFIXES = [".tar.gz", ".tar", ".tgz", ".whl", ".jar", ".nupkg", ".zip"]
 
 def promotion_environment_charset():
+    """Returns the launcher-safe environment charset via registry query."""
     return _VALID_ENVIRONMENT_CHARS
 
 def promotion_version_charset():
+    """Returns the launcher-safe version charset via registry query."""
     return _VALID_VERSION_CHARS
 
 def promotion_schema_error():
+    """Validates the versioned environment charset schema."""
     if PROMOTION_SCHEMA_VERSION != 1:
         return "promotion: unsupported schema v" + str(PROMOTION_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ENVIRONMENT_CHARS) != "string" or _VALID_ENVIRONMENT_CHARS == "":
@@ -42,6 +47,7 @@ def promotion_schema_error():
     return ""
 
 def promotion_environment_error(environment):
+    """Validates one promotion environment name value."""
     if type(environment) != "string" or environment == "":
         return ("promotion_deploy: invalid environment '" + str(environment) +
                 "': want a non-empty environment (for example 'staging')")
@@ -53,6 +59,7 @@ def promotion_environment_error(environment):
     return ""
 
 def promotion_version_error(version):
+    """Validates one promotion version value."""
     if type(version) != "string" or version == "":
         return ("promotion_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '1.2.3')")
@@ -64,6 +71,7 @@ def promotion_version_error(version):
     return ""
 
 def promotion_artifact_error(filename):
+    """Validates one promotion artifact filename value."""
     if type(filename) != "string" or filename == "":
         return ("promotion_deploy: invalid artifact '" + str(filename) +
                 "': want a non-empty deploy artifact filename")
@@ -82,12 +90,14 @@ def promotion_artifact_error(filename):
     return ""
 
 def promotion_edge_error(from_environment, to_environment):
+    """Validates one staging-to-production promotion edge."""
     if from_environment == to_environment:
         return ("promotion_deploy: invalid edge '" + from_environment + " -> " +
                 to_environment + "': source and target environments must differ")
     return ""
 
 def _promotion_launcher_impl(ctx):
+    """Expands the py_binary launcher for one promotion deployment."""
     artifact_files = ctx.attr.artifact[DefaultInfo].files.to_list()
     if len(artifact_files) != 1:
         fail("promotion_deploy " + str(ctx.label) + ": artifact " +
@@ -141,6 +151,7 @@ _promotion_launcher = rule(
 )
 
 def promotion_deploy(name, artifact, from_environment = "staging", to_environment = "production", version = "0.0.0", profile = "release"):
+    """Promotes one pinned artifact across environments with gated health and rollback."""
     from_error = promotion_environment_error(from_environment)
     if from_error != "":
         fail(from_error + " (in " + native.package_name() + ":" + name + ")")

@@ -1,3 +1,5 @@
+"""Selective NuGet dx update per-package pins."""
+
 SELECTIVE_NUGET = "wont-fix"
 
 SELECTIVE_NUGET_FULL = "bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file third_party/dotnet/paket.dependencies --output-folder third_party/dotnet/deps"

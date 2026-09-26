@@ -1,3 +1,5 @@
+"""Experimental minimal Go wrappers."""
+
 load("@rules_go//go:def.bzl", _GoArchive = "GoArchive", _GoInfo = "GoInfo", _go_binary = "go_binary", _go_library = "go_library", _go_test = "go_test")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo")
@@ -52,6 +54,7 @@ _go_forward_test = dx_executable_forward_rule(
 )
 
 def go_effective_srcs(srcs):
+    """Returns the effective direct sources for a go binary or test shape."""
     return srcs if srcs != None else []
 
 def _go_wrap_library(name, srcs, visibility = None, **kwargs):
@@ -61,9 +64,11 @@ def _go_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap_binary(name, _go_binary, _go_binary_forward, srcs, visibility = visibility, **kwargs)
 
 def go_library(name, srcs, importpath, visibility = None, **kwargs):
+    """Experimental minimal wrapper over go_library."""
     _go_wrap_library(name, srcs, visibility = visibility, importpath = importpath, **kwargs)
 
 def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs):
+    """Experimental minimal wrapper over go_binary."""
     effective_srcs = go_effective_srcs(srcs)
     if importpath != None:
         _go_wrap_binary(name, effective_srcs, visibility = visibility, importpath = importpath, **kwargs)
@@ -71,4 +76,5 @@ def go_binary(name, srcs = None, importpath = None, visibility = None, **kwargs)
         _go_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def go_test(name, srcs, visibility = None, **kwargs):
+    """Experimental minimal wrapper over go_test."""
     dx_wrap_test(name, _go_test, _go_forward_test, srcs, visibility = visibility, **kwargs)

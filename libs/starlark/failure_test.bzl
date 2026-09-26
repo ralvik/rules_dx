@@ -1,3 +1,5 @@
+"""Hermetic expected-failure proofs."""
+
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
 
 def _starlark_failure_impl(ctx):
@@ -16,6 +18,7 @@ _starlark_failure_test = analysistest.make(
 )
 
 def failure_test(name, target, expected_failure_substring, **kwargs):
+    """Asserts one analysis-time fail() fires with the expected diagnostic."""
     kwargs.setdefault("size", "small")
     _starlark_failure_test(
         name = name,

@@ -1,8 +1,11 @@
+"""Focused Astro environment plan."""
+
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("//env:focused.bzl", "focused_direct_sources", "focused_js_closure", "focused_js_plan", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 AstroEnvPlanInfo = provider(
+    doc = "Provider-derived focused Astro target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct Astro sources.",
         "has_npm": "Whether the transitive npm closure is non-empty.",

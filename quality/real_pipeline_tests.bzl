@@ -1,3 +1,4 @@
+"""Unit tests for real-adapter pipeline construction."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "real_supported_classes")

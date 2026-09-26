@@ -1,3 +1,4 @@
+"""Unit tests for SBOM + provenance generation."""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":sbom.bzl", "SBOM_BUILDER_DRY_RUN", "SBOM_BUILDER_RELEASE", "sbom_builder_error", "sbom_filenames", "sbom_predicate_error", "sbom_spdx_error")

@@ -1,3 +1,5 @@
+"""Env plus codegen pins."""
+
 PROTOCOL_BOUNDARY = "PATH-tools-only"
 PROTOCOL_PROVIDER_NOTE = "EnvironmentInfo stays PATH-tool-only"
 PROTOCOL_SCOPE_NOTE = "third-party language-integration plugins are out of scope"

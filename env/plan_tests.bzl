@@ -1,3 +1,5 @@
+"""Unit tests for the normalized environment plans."""
+
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(
     ":plan.bzl",

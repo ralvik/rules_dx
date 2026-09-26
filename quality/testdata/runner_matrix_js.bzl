@@ -1,3 +1,4 @@
+"""Matrix JS cases (split from runner_matrix_cases.bzl)."""
 
 JS_CASES = [
     {
@@ -76,4 +77,3 @@ JS_CASES = [
         "expected": """producer //quality/testdata:matrix_javascript_eslint_fail""",
     },
 ]
-

@@ -1,3 +1,4 @@
+"""Layer-2 matrix cases (snapshot workflow): every supported language x capability cell."""
 
 load(":runner_matrix_data.bzl", "DATA_CASES")
 load(":runner_matrix_file_family.bzl", "FILE_FAMILY_CASES")

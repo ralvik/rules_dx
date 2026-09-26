@@ -1,3 +1,5 @@
+"""Windows transport plus ABI pins."""
+
 TOOLCHAINS_MSVC_COMMIT = "8e2aa4624bbb5a53a94f135e90995f307875d1ad"
 TOOLCHAINS_MSVC_REGISTRATION = "private/msvc_toolchains_repo.bzl"
 TOOLCHAINS_MSVC_TEMPLATE = "overlays/toolchain/clang-cl/BUILD.toolchain.tpl"

@@ -1,9 +1,10 @@
+"""Experimental minimal Rust wrappers."""
+
 load("@crates//:crates.bzl", _aliases = "aliases", _crate_deps = "crate_deps")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_clippy_test = "rust_clippy_test", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test", _rustfmt_test = "rustfmt_test")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_test")
 load("//quality:sources.bzl", "QualitySourcesInfo", "RUST")
-
 load(":edition.bzl", "RUST_EDITION")
 
 _DX_FORWARD_PROVIDES = [
@@ -82,6 +83,7 @@ def rust_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
+    """Experimental minimal wrapper over rust_library."""
     dx_wrap(
         name,
         _rust_library,
@@ -100,6 +102,7 @@ def rust_binary(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
+    """Experimental minimal wrapper over rust_binary."""
     dx_wrap(
         name,
         _rust_binary,
@@ -118,6 +121,7 @@ def rust_test(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
+    """Experimental minimal wrapper over rust_test."""
     upstream_kwargs = dict(kwargs)
     upstream_kwargs["crate"] = crate
     upstream_kwargs["edition"] = edition
@@ -131,6 +135,7 @@ def rust_proc_macro(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
+    """Experimental minimal wrapper over rust_proc_macro."""
     dx_wrap(
         name,
         _rust_proc_macro,
@@ -149,6 +154,7 @@ def rust_shared_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
+    """Experimental minimal wrapper over rust_shared_library."""
     dx_wrap(
         name,
         _rust_shared_library,
@@ -167,6 +173,7 @@ def rust_static_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
+    """Experimental minimal wrapper over rust_static_library."""
     dx_wrap(
         name,
         _rust_static_library,
@@ -179,6 +186,7 @@ def rust_static_library(
     )
 
 def rustfmt_test(name, targets, size = "small", **kwargs):
+    """Thin wrapper over upstream rustfmt_test."""
     _rustfmt_test(
         name = name,
         targets = targets,
@@ -187,6 +195,7 @@ def rustfmt_test(name, targets, size = "small", **kwargs):
     )
 
 def rust_clippy_test(name, targets, size = "small", **kwargs):
+    """Thin wrapper over upstream rust_clippy_test."""
     _rust_clippy_test(
         name = name,
         targets = targets,
@@ -205,6 +214,7 @@ def dx_rust_crate(
         srcs = None,
         size = "small",
         visibility = None):
+    """Single-crate boilerplate: lib + test + lint tests + manifest."""
     crate = name if crate_name == None else crate_name
     lib_srcs = srcs or ["src/lib.rs"]
     lib_deps = _crate_deps(

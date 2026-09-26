@@ -1,3 +1,5 @@
+"""Apple plus Microsoft acquisition rights pins."""
+
 APPLE_SDK_IDENTITY = "MacOSX26.5"
 APPLE_SDK_SOURCE = "hermetic-llvm v0.8.19 pinned extraction"
 APPLE_SDK_HERMETIC_LLVM_VERSION = "v0.8.19"

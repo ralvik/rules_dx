@@ -1,4 +1,3 @@
-
 load("//javascript/env:plan.bzl", "javascript_env_plan")
 load("//javascript/env:plan_tests.bzl", "env_plan_tests")
 load("//quality:fixtures.bzl", "real_source_target")

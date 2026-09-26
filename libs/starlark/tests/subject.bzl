@@ -1,3 +1,5 @@
+"""Analysis subject rule exposing DxSubjectInfo and one output file."""
+
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 
 def _example_subject_impl(ctx):
