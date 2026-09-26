@@ -21,7 +21,7 @@ EULA_MECHANISM = "repository-env"
 EULA_README_MISMATCH = True
 
 ACK_HOW = "export BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1 plus --repo_env=BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1"
-ACK_NEVER_AUTOMATIC = "never automatic via.bazelrc or wrapper defaults"
+ACK_NEVER_AUTOMATIC = "never automatic via .bazelrc or wrapper defaults"
 ACK_NEVER_BYPASS = "never bypassing upstream controls"
 
 FAIL_BEFORE_FETCH = "missing acknowledgement fails before restricted MSVC payload download"

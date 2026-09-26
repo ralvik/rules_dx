@@ -46,7 +46,7 @@ def _tested_stack_impl(ctx):
         "typescript_version": ctx.attr.typescript_version,
     }
     out = ctx.actions.declare_file(ctx.label.name + ".json")
-    ctx.actions.write(out, json.encode_indent(manifest, indent = " ") + "\n")
+    ctx.actions.write(out, json.encode_indent(manifest, indent = "  ") + "\n")
     return [DefaultInfo(files = depset([out]))]
 
 tested_stack = rule(

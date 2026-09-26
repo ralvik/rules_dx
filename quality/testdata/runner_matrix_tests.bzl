@@ -178,11 +178,11 @@ def _runner_matrix_test_impl(ctx):
         "import sys\n" +
         "lines = open(sys.argv[1]).read().splitlines()\n" +
         "def header_count(prefix):\n" +
-        " for l in lines:\n" +
-        " parts = l.split()\n" +
-        " if len(parts) == 2 and parts[0] == prefix:\n" +
-        " return int(parts[1])\n" +
-        " raise AssertionError(\"missing header \" + prefix)\n" +
+        "    for l in lines:\n" +
+        "        parts = l.split()\n" +
+        "        if len(parts) == 2 and parts[0] == prefix:\n" +
+        "            return int(parts[1])\n" +
+        "    raise AssertionError(\"missing header \" + prefix)\n" +
         "initial = header_count(\"initial\")\n" +
         "terminal = header_count(\"terminal\")\n" +
         "replacements = header_count(\"replacements\")\n" +
@@ -194,16 +194,16 @@ def _runner_matrix_test_impl(ctx):
     )
     lines.append(
         "if [[ \"${UPDATE_EXPECT:-0}\" == \"1\" ]]; then\n" +
-        " out_dir=\"${TEST_UNDECLARED_OUTPUTS_DIR:-${TMPDIR:-/tmp}}\"\n" +
-        " mkdir -p \"$out_dir\"\n" +
-        " cp " + _var_ref("$ACTUAL") + " \"$out_dir/" + ctx.label.name + ".expected.update\"\n" +
-        " echo \"snapshot UPDATE_EXPECT: staged fresh actual at $out_dir/" + ctx.label.name + ".expected.update\"\n" +
-        " echo \"paste the block below into runner_matrix_cases.bzl expected for " + ctx.label.name + ":\"\n" +
-        " echo '\"\"\"'\n" +
-        " cat " + _var_ref("$ACTUAL") + "\n" +
-        " echo '\"\"\"'\n" +
-        " echo " + shell.quote("matrix PASS (updated): " + ctx.label.name) + "\n" +
-        " exit 0\n" +
+        "  out_dir=\"${TEST_UNDECLARED_OUTPUTS_DIR:-${TMPDIR:-/tmp}}\"\n" +
+        "  mkdir -p \"$out_dir\"\n" +
+        "  cp " + _var_ref("$ACTUAL") + " \"$out_dir/" + ctx.label.name + ".expected.update\"\n" +
+        "  echo \"snapshot UPDATE_EXPECT: staged fresh actual at $out_dir/" + ctx.label.name + ".expected.update\"\n" +
+        "  echo \"paste the block below into runner_matrix_cases.bzl expected for " + ctx.label.name + ":\"\n" +
+        "  echo '\"\"\"'\n" +
+        "  cat " + _var_ref("$ACTUAL") + "\n" +
+        "  echo '\"\"\"'\n" +
+        "  echo " + shell.quote("matrix PASS (updated): " + ctx.label.name) + "\n" +
+        "  exit 0\n" +
         "fi",
     )
     lines.append(
