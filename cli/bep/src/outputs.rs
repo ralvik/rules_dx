@@ -875,6 +875,32 @@ mod tests {
     }
 
     #[test]
+    fn bytestream_without_name_or_workspace_fails_closed() {
+        let file = r#"{"uri": "bytestream://remote.buildbuddy.io/blobs/abc/12", "pathPrefix": ["bazel-out"]}"#;
+        let stream = [
+            format!(
+                r#"{{"id": {{"namedSetOfFiles": {{"id": "1"}}}}, "namedSetOfFiles": {{"files": [{file}]}}}}"#
+            ),
+            completed("//q:a", true, &group_ref("dx_results", &["1"])),
+        ]
+        .join("\n");
+        let artifacts = FakeArtifacts {
+            files: HashMap::new(),
+        };
+        let dir = tempfile::TempDir::new().expect("scratch");
+        let err = collect_with_workspace(
+            Cursor::new(stream.clone()),
+            &config(),
+            &artifacts,
+            Some(dir.path()),
+        )
+        .expect_err("nameless bytestream must fail");
+        assert!(matches!(err, BepError::UnsupportedUri { .. }));
+        let err = collect(Cursor::new(stream), &config(), &artifacts).expect_err("no workspace");
+        assert!(matches!(err, BepError::UnsupportedUri { .. }));
+    }
+
+    #[test]
     fn unreadable_reported_files_fail() {
         let stream = [
             named_set("1", &["file:///out/missing.pb"]),

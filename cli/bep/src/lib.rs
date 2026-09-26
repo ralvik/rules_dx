@@ -261,5 +261,11 @@ mod tests {
             PathBuf::from("/ws/bazel-testlogs/preset_parity_test/test.xml")
         );
         assert!(testlog_path_for_label(ws, "@ext//pkg:t", "test.xml").is_none());
+        assert_eq!(
+            testlog_path_for_label(ws, "//cli/bep", "test.xml").expect("implicit"),
+            PathBuf::from("/ws/bazel-testlogs/cli/bep/bep/test.xml")
+        );
+        assert!(testlog_path_for_label(ws, "//pkg:", "test.xml").is_none());
+        assert!(testlog_path_for_label(ws, "pkg/t", "test.xml").is_none());
     }
 }

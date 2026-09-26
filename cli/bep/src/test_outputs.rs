@@ -453,5 +453,13 @@ mod tests {
         .join("\n");
         let err = collect_test_outputs(Cursor::new(stream)).expect_err("no workspace must fail");
         assert!(matches!(err, BepError::UnsupportedUri { .. }));
+        let stream = [test_result(
+            "@ext//pkg:t",
+            &[("test.xml", "bytestream://remote.buildbuddy.io/blobs/abc/10")],
+        )]
+        .join("\n");
+        let err = collect_test_outputs_with_workspace(Cursor::new(stream), Some(ws))
+            .expect_err("external label must fail");
+        assert!(matches!(err, BepError::UnsupportedUri { .. }));
     }
 }
