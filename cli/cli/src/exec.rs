@@ -1,24 +1,3 @@
-//! Command execution dispatch root (kept,): this file holds
-//! only `execute` plus the dispatch-table test. The `exec.rs` plus
-//! `exec/` pairing is the idiomatic parent module with child modules,
-//! not duplication. Each family lives in its own module under `exec/`:
-//! quality plus quality_apply (mutation and status projection) plus
-//! quality_patch (diff-patch rendering) plus quality_emit
-//! (finding/change/mutation emission) plus quality_reports
-//! (standard-report writing), workflow (dispatch) plus run/deploy
-//! (workflow sub-families) plus test_reports (test/coverage
-//! collection), bazel, generate, clean, managed (dispatch) plus
-//! managed_codegen/managed_env (generation sides) plus
-//! managed_staging (shared staging primitives) plus managed_prepare
-//! (side preparation and commit-error mapping), audit, update, bump,
-//! migrate, docs, and the check/fix umbrella. Shared plumbing (error codes,
-//! environment, source verification, mutation helpers) lives in
-//! [`common`]; BEP results collection and proto mapping live in
-//! [`results`]; unit-test fakes live in `test_support`.
-//!
-//! Contract: `docs/cli/commands/quality.md`,
-//! `docs/cli/output-protocol.md`, and `docs/cli/standard-reports.md`.
-
 mod audit;
 mod bazel;
 mod bump;
@@ -51,11 +30,6 @@ use crate::args::{Command, Invocation};
 
 pub use common::Env;
 
-/// Runs the quality command to completion and returns the process exit
-/// code. All dx-owned bytes go to `out` except operational diagnostics
-/// (always `err`); diff mode never emits dx-owned prose or diagnostics
-/// on stdout, and a stdout report owns stdout while human text moves
-/// to stderr.
 pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     // `--here` must be consumed into explicit targets before dispatch
     // (`main.rs` plus test `Harness` via `apply_here`); fail closed
@@ -102,7 +76,7 @@ pub fn execute(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.command.is_managed() {
         return managed::execute_managed(invocation, env);
     }
-    if invocation.command == Command::Audit {
+    if invocation.command == Command::Security || invocation.command == Command::License {
         return audit::execute_audit(invocation, env);
     }
     if invocation.command == Command::Update {
@@ -125,10 +99,6 @@ mod tests {
     use super::test_support::Harness;
     use crate::args::Command;
 
-    /// Dispatch-table pin: every `Command` variant must map
-    /// to exactly one execution family in the same order as `execute`
-    /// above. Adding a variant without wiring it here fails loudly
-    /// instead of silently falling to the quality pipeline.
     fn family(command: Command) -> &'static str {
         if command.is_adoption() {
             "adoption"
@@ -144,7 +114,7 @@ mod tests {
             "clean"
         } else if command.is_managed() {
             "managed"
-        } else if command == Command::Audit {
+        } else if command == Command::Security || command == Command::License {
             "audit"
         } else if command == Command::Update {
             "update"
@@ -162,7 +132,8 @@ mod tests {
     #[test]
     fn dispatch_table_covers_every_command() {
         let cases = [
-            (Command::Audit, "audit"),
+            (Command::Security, "audit"),
+            (Command::License, "audit"),
             (Command::Lint, "quality"),
             (Command::Typecheck, "quality"),
             (Command::Format, "quality"),
@@ -195,7 +166,7 @@ mod tests {
             (Command::Docs, "docs"),
             (Command::Bazel, "bazel"),
         ];
-        assert_eq!(cases.len(), 32, "every Command variant pinned");
+        assert_eq!(cases.len(), 33, "every Command variant pinned");
         for (command, want) in cases {
             assert_eq!(family(command), want, "family for {}", command.name());
         }
@@ -205,7 +176,8 @@ mod tests {
     fn dry_run_families_launch_nothing() {
         for argv in [
             vec!["--dry-run", "bazel", "version"],
-            vec!["audit", "--dry-run"],
+            vec!["security", "--dry-run"],
+            vec!["license", "--dry-run"],
             vec!["update", "--dry-run"],
             vec!["bump", "cargo:anyhow", "1.2.3", "--dry-run"],
             vec!["migrate", "--from=1.2.3", "--to=2.0.0", "--dry-run"],
@@ -228,7 +200,7 @@ mod tests {
         // executes resolver backends live (see exec/update.rs). Both fail
         // closed with their stable operational codes when workspaces lack
         // lockfiles.
-        for argv in [vec!["audit"]] {
+        for argv in [vec!["security"]] {
             let name = format!("exec-deferred-{}", argv[0]);
             let harness = Harness::new(&name);
             let (code, _out, err) = harness.run(&argv);

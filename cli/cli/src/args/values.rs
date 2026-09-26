@@ -1,18 +1,5 @@
-//! Small value helpers for invocation parsing: scope-shape
-//! errors plus `--report` and `--min-coverage` value parsing.
-//!
-//! Extracted from [`super::parser`] without behavior change: the
-//! parsing root still owns the full `parse` validation (scope shapes,
-//! per-command option ownership, output-contract gates, profile
-//! flags); this module owns only the pure value mappings it calls.
-
 use super::{ArgsError, ReportRequest};
 
-/// Maps one scope positional onto its shape-specific parse failure:
-/// empty scopes name the repository-wide default, package-relative
-/// labels name the `//` qualification, and anything else keeps the
-/// generic label/path guidance (typo paths and `@` scopes fail later
-/// in resolution with `PathNotFound`/`ExternalScope` context).
 pub(crate) fn scope_error(scope: &str) -> ArgsError {
     if scope.is_empty() {
         ArgsError::EmptyScope
@@ -27,7 +14,6 @@ pub(crate) fn scope_error(scope: &str) -> ArgsError {
     }
 }
 
-/// Parses one `--report` value into its `format=destination` shape.
 pub(crate) fn parse_report(value: &str) -> Result<ReportRequest, ArgsError> {
     match value.split_once('=') {
         Some((format, destination)) if !format.is_empty() && !destination.is_empty() => {
@@ -42,7 +28,6 @@ pub(crate) fn parse_report(value: &str) -> Result<ReportRequest, ArgsError> {
     }
 }
 
-/// Parses a `--min-coverage` value into an integer percent 0-100.
 pub(crate) fn parse_min_coverage(value: &str) -> Result<u32, ArgsError> {
     match value.parse::<u32>() {
         Ok(percent) if percent <= 100 => Ok(percent),

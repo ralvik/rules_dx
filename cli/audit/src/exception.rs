@@ -1,84 +1,36 @@
-//! Risk-acceptance exception lifecycle (WP1 slice 2).
-//!
-//! Pure validation over injected exception records and findings, per the
-//! audit contract: every exception identifies its advisory and affected
-//! dependency, carries a version scope with upstream semantics, states a
-//! reason, and expires on a fixed UTC date. Missing, invalid, or expired
-//! dates fail validation; an exception with no applicable finding is
-//! obsolete (reported for explicit removal, never auto-deleted).
-//!
-//! Deferred to the resolver-owned slices: version-range narrowing
-//! against finding versions uses upstream ecosystem semantics through
-//! [`version_in_scope`], not a private solver, so the check here stays
-//! the structural identity match and narrowing lands with the ecosystem
-//! integrations. Accepted findings stay visible; acceptance only
-//! excludes them from the failure decision.
-
 use chrono::{Datelike, NaiveDate};
 
-/// Versioned risk-exception schema.
-///
-/// Exceptions are data validated via `validate_exception` / `check_expiry` /
-/// `check_applies` plus `version_in_scope`, never a hardcoded allowlist:
-/// adding an advisory, package, or version scope edits the policy file data
-/// only. This version marks the validated struct shape; bumps are explicit,
-/// never silent drift.
 pub const EXCEPTION_SCHEMA_VERSION: u32 = 1;
 
-/// One risk-acceptance exception: narrow, explained, version-scoped,
-/// and expiring. Field shapes mirror the committed policy file so the
-/// future TOML loader cannot reinterpret them.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RiskException {
-    /// Upstream advisory identity (alias matching is qualification).
     pub advisory: String,
-    /// Affected dependency name in its owning set.
     pub package: String,
-    /// Owning dependency set (lockfile/workspace scope).
     pub set: String,
-    /// Accepted versions or bounded range, upstream version semantics.
-    /// Cargo-flavor scopes evaluate with [`version_in_scope`];
-    /// non-semver ecosystem scopes stay opaque for the resolver-owned
-    /// ecosystem integration.
     pub versions: String,
-    /// Explanatory reason. Empty reasons fail validation.
     pub reason: String,
-    /// Expiration date, ISO-8601 UTC `YYYY-MM-DD`, evaluated at audit time.
     pub expires: String,
 }
 
 /// One assessed finding an exception may apply to. Visibility is never
-/// waived: an accepted finding is reported as accepted with its reason.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct FindingRef {
-    /// Upstream advisory identity.
     pub advisory: String,
-    /// Affected dependency name.
     pub package: String,
 }
 
-/// Validation failures. Every variant fails the audit; none auto-repair.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ExceptionProblem {
-    /// Empty advisory, package, set, versions, or reason.
     #[error("risk exception missing {field}")]
     MissingField { field: &'static str },
-    /// Expiration is not a calendar `YYYY-MM-DD` date.
     #[error("risk exception has invalid expiration {value:?}; want YYYY-MM-DD")]
     InvalidDate { value: String },
-    /// Expiration reached as of the injected audit date.
     #[error("risk exception expired {expires} (audit date {today}); renewal needs review")]
     Expired { expires: String, today: String },
-    /// No applicable finding: remove explicitly, never automatically.
     #[error("risk exception for {advisory} on {package} matches no finding; remove it explicitly")]
     Obsolete { advisory: String, package: String },
 }
 
-/// Validate one exception against the injected audit date (`YYYY-MM-DD`
-/// UTC). Checks field presence, calendar-date shape, and expiry. An
-/// earlier cached acceptance never passes a later audit after expiry
-/// because the date is always an explicit input, never ambient clock
-/// state.
 pub fn validate_exception(exception: &RiskException, today: &str) -> Result<(), ExceptionProblem> {
     for (field, value) in [
         ("advisory", exception.advisory.as_str()),
@@ -94,12 +46,6 @@ pub fn validate_exception(exception: &RiskException, today: &str) -> Result<(), 
     check_expiry(&exception.expires, today)
 }
 
-/// Check one expiration date against the injected audit date
-/// (`YYYY-MM-DD` UTC). Shared by the vulnerability risk-acceptance
-/// lifecycle above and the license-family exceptions: an earlier cached
-/// acceptance never passes a later audit after expiry because the date
-/// is always an explicit input, never ambient clock state. The boundary
-/// is inclusive: an exception expiring today is expired.
 pub fn check_expiry(expires: &str, today: &str) -> Result<(), ExceptionProblem> {
     let expires_date = parse_audit_date(expires)?;
     let today_date = parse_audit_date(today)?;
@@ -112,31 +58,6 @@ pub fn check_expiry(expires: &str, today: &str) -> Result<(), ExceptionProblem> 
     Ok(())
 }
 
-/// True when a finding version falls inside an exception's accepted
-/// version scope, using upstream Cargo-flavor semver semantics via the
-/// `semver` crate (ranges like `>=1.2.0, <2.0.0`, carets, tildes,
-/// wildcards). This is the Cargo matcher; npm scopes evaluate with
-/// [`npm_in_scope`], Go scopes with `crate::vuln::go_in_scope`.
-/// Unparseable scopes or versions fail closed to `false`: an exception
-/// never covers a version the matcher cannot attribute. Pre-releases
-/// match only the narrow upstream rule (a requirement with a pre-release
-/// on the same version); a bare range never covers a pre-release.
-///
-/// Go normalization rule (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #679): `go.mod` versions carry a leading
-/// `v` (`v1.2.3`), pseudo-versions (`v0.0.0-20240101-abcdef`,
-/// `v1.2.4-0.20240101-abcdef`), and `+incompatible` suffixes
-/// (`v2.0.0+incompatible`). `crate::vuln::go_in_scope` strips one leading
-/// `v` per version token, then applies Cargo-flavor ordering without the
-/// prerelease gate so pseudo-versions match bare ranges they fall inside
-/// (`>=v1.0.0, <v2.0.0` covers `v1.2.4-0.20240101-abcdef`); `+incompatible`
-/// rides build metadata ignored for precedence. No Go-aware crate:
-/// `semver` ordering already matches Go precedence, so preprocessing plus
-/// the gate bypass suffices (no new dep per ADR 0008).
-///
-/// Shared by the vulnerability risk-acceptance lifecycle above and the
-/// license-family exceptions. The identity gates ([`is_obsolete`]) stay
-/// the conservative applicability check here; resolver-owned ecosystem
-/// integrations call this to narrow coverage by version.
 pub fn version_in_scope(scope: &str, version: &str) -> bool {
     let requirements = match semver::VersionReq::parse(scope) {
         Ok(requirements) => requirements,
@@ -149,22 +70,6 @@ pub fn version_in_scope(scope: &str, version: &str) -> bool {
     requirements.matches(&version)
 }
 
-/// True when a locked npm version falls inside an npm range scope using
-/// the audited node-semver subset: `||` unions, hyphen ranges
-/// (`1.2.3 - 2.3.4`, partial ends narrow per upstream), comma- or
-/// space-separated comparator sets, `v` prefixes, `x`/`X`/`*`
-/// wildcards and partials, carets, tildes, and bare versions (full
-/// bare versions are exact, partial bares are bounded ranges). Each
-/// branch normalizes to Cargo-compatible comparators evaluated with
-/// the `semver` crate, so ordering and prerelease gating keep the
-/// crate's narrow upstream rule (a prerelease matches only beside a
-/// same-tuple prerelease comparator). Unparseable scopes or versions,
-/// empty inputs, and overlong inputs fail closed to `false`.
-///
-/// Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
-/// the `node-semver` crate would add a second semver engine for the same
-/// fail-closed partial/hyphen/`||` bounds plus length caps already owned
-/// here, so the `semver`-normalized hand parser stays (no new dep per ADR 0008).
 pub fn npm_in_scope(scope: &str, version: &str) -> bool {
     let scope_trimmed = scope.trim();
     let version_trimmed = version.trim();
@@ -190,9 +95,6 @@ pub fn npm_in_scope(scope: &str, version: &str) -> bool {
     false
 }
 
-/// One locked npm version: leading `v`/`=` markers stripped, then
-/// strict `semver` parsing. Partial locked versions never parse (fail
-/// closed); build metadata parses and never affects matching.
 fn parse_npm_locked(version: &str) -> Option<semver::Version> {
     let mut text = version.trim();
     loop {
@@ -212,9 +114,6 @@ fn parse_npm_locked(version: &str) -> Option<semver::Version> {
     semver::Version::parse(text).ok()
 }
 
-/// One npm partial version: up to three core parts (numeric, or
-/// wildcard as `None`), optional prerelease on full numeric cores
-/// only. Build metadata is stripped and ignored.
 struct NpmPartial {
     major: String,
     minor: Option<String>,
@@ -222,12 +121,6 @@ struct NpmPartial {
     prerelease: Option<String>,
 }
 
-/// Parse one npm partial per the audited subset: optional `v` prefix,
-/// one to three dot-separated numeric parts with trailing parts as
-/// wildcards (`x`/`X`/`*`) or absent, optional `-prerelease` on full
-/// numeric cores, optional `+metadata` ignored. Numeric parts keep
-/// strict shape (no leading zeros); a wildcard pins the tail
-/// (`1.x.3` stays invalid). Returns `None` for malformed input.
 fn parse_npm_partial(text: &str) -> Option<NpmPartial> {
     let text = text.trim();
     let text = text
@@ -304,7 +197,6 @@ fn parse_npm_partial(text: &str) -> Option<NpmPartial> {
     })
 }
 
-/// Strict numeric shape (no leading zeros unless `"0"`).
 fn is_npm_numeric(part: &str) -> bool {
     if part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()) {
         return false;
@@ -312,7 +204,6 @@ fn is_npm_numeric(part: &str) -> bool {
     part.len() == 1 || !part.starts_with('0')
 }
 
-/// Increment one validated numeric part without overflow.
 fn increment_npm_numeric(part: &str) -> Option<String> {
     if !is_npm_numeric(part) {
         return None;
@@ -339,8 +230,6 @@ fn increment_npm_numeric(part: &str) -> Option<String> {
     Some(out)
 }
 
-/// Lower bound for one hyphen/partial start: full versions keep
-/// `>=` (with prerelease), partials fill missing parts with zero.
 fn npm_partial_lower(partial: &NpmPartial) -> Option<String> {
     let mut bound = format!(
         ">={}.{}.{}",
@@ -355,9 +244,6 @@ fn npm_partial_lower(partial: &NpmPartial) -> Option<String> {
     Some(bound)
 }
 
-/// Exclusive upper bound for one partial end (`1.2` narrows below
-/// `1.3.0`, `1` below `2.0.0`); full versions use inclusive `<=`.
-/// Returns the bound plus whether it is inclusive.
 fn npm_partial_upper(partial: &NpmPartial) -> Option<(String, bool)> {
     if let Some(patch) = &partial.patch {
         let mut bound = format!(
@@ -380,10 +266,6 @@ fn npm_partial_upper(partial: &NpmPartial) -> Option<(String, bool)> {
     Some((format!("<{bumped}.0.0"), false))
 }
 
-/// Match one `||` branch: an optional hyphen range (`A - B` as three
-/// whitespace-separated tokens with a lone `-`), otherwise a
-/// comma- and/or space-separated comparator set. A lone operator
-/// token (`>=`, `<`, `=`) joins its successor (`>= 1.2.3`).
 fn npm_branch_matches(branch: &str, locked: &semver::Version) -> bool {
     if branch.is_empty() || branch.len() > 4096 {
         return false;
@@ -426,11 +308,6 @@ fn npm_branch_matches(branch: &str, locked: &semver::Version) -> bool {
     }
 }
 
-/// Match one hyphen range `A - B`: partial starts fill with zero
-/// (`1.2` starts at `1.2.0`), full ends are inclusive, partial ends
-/// narrow below the next line (`- 2.3` stops below `2.4.0`). A bare
-/// `*` end leaves that side unbounded; both sides unbounded fails
-/// closed.
 fn npm_hyphen_matches(left: &str, right: &str, locked: &semver::Version) -> bool {
     let left_trimmed = left.trim();
     let right_trimmed = right.trim();
@@ -474,7 +351,6 @@ fn npm_hyphen_matches(left: &str, right: &str, locked: &semver::Version) -> bool
     }
 }
 
-/// Bare `*`/`x` ends (after `v`-strip) leave a hyphen side unbounded.
 fn is_npm_wildcard(text: &str) -> bool {
     let text = text.trim();
     let text = text
@@ -484,14 +360,6 @@ fn is_npm_wildcard(text: &str) -> bool {
     text.trim() == "*" || text.trim() == "x" || text.trim() == "X"
 }
 
-/// Normalize one whitespace-free npm comparator into Cargo-compatible
-/// comparator strings (bare partials expand to a bounded pair).
-/// Full bare versions are exact (`1.2.3` means `=1.2.3`); partial
-/// bares are bounded ranges (`1.2` means `>=1.2.0, <1.3.0`); operators
-/// on partials desugar per upstream (`>1.2` means `>=1.3.0`,
-/// `<=1.2` means `<1.3.0`); carets and tildes on partials expand
-/// explicitly (`~1` bounds below `2.0.0`, `^0` below `1.0.0`).
-/// Returns `None` for malformed comparators (fail closed).
 fn normalize_npm_comparator(token: &str) -> Option<Vec<String>> {
     if token.is_empty() || token.len() > 256 {
         return None;
@@ -586,7 +454,6 @@ fn normalize_npm_comparator(token: &str) -> Option<Vec<String>> {
     }
 }
 
-/// Full `major.minor.patch[-prerelease]` text for operator passthrough.
 fn npm_full_text(partial: &NpmPartial) -> String {
     let mut out = format!(
         "{}.{}.{}",
@@ -601,7 +468,6 @@ fn npm_full_text(partial: &NpmPartial) -> String {
     out
 }
 
-/// Partial with missing parts filled by zero (`1.2` reads `1.2.0`).
 fn npm_fill_zero(partial: &NpmPartial) -> String {
     format!(
         "{}.{}.{}",
@@ -611,8 +477,6 @@ fn npm_fill_zero(partial: &NpmPartial) -> String {
     )
 }
 
-/// Bounded pair for one bare partial (`1.2` reads
-/// `>=1.2.0, <1.3.0`; `1` reads `>=1.0.0, <2.0.0`).
 fn npm_partial_range(partial: &NpmPartial) -> Option<Vec<String>> {
     Some(vec![
         format!(">={}", npm_fill_zero(partial)),
@@ -620,7 +484,6 @@ fn npm_partial_range(partial: &NpmPartial) -> Option<Vec<String>> {
     ])
 }
 
-/// Exclusive upper bound below the next partially-specified line.
 fn npm_exclusive_upper(partial: &NpmPartial) -> Option<String> {
     if let Some(minor) = &partial.minor {
         Some(format!(
@@ -633,8 +496,6 @@ fn npm_exclusive_upper(partial: &NpmPartial) -> Option<String> {
     }
 }
 
-/// Inclusive lower bound at the next partially-specified line
-/// (`>1.2` reads `>=1.3.0`; `>1` reads `>=2.0.0`).
 fn npm_inclusive_next(partial: &NpmPartial) -> Option<String> {
     if let Some(minor) = &partial.minor {
         Some(format!(
@@ -647,9 +508,6 @@ fn npm_inclusive_next(partial: &NpmPartial) -> Option<String> {
     }
 }
 
-/// Caret expansion per upstream: `^1.2.3` bounds below `2.0.0`,
-/// `^0.2.3` below `0.3.0`, `^0.0.3` below `0.0.4`; partials pin the
-/// missing parts first (`^1.2` reads `^1.2.0`, `^0` below `1.0.0`).
 fn npm_caret_range(partial: &NpmPartial) -> Option<Vec<String>> {
     let minor = partial.minor.as_deref().unwrap_or("0");
     let patch = partial.patch.as_deref().unwrap_or("0");
@@ -677,8 +535,6 @@ fn npm_caret_range(partial: &NpmPartial) -> Option<Vec<String>> {
     Some(vec![lower, upper])
 }
 
-/// Tilde expansion per upstream: `~1.2.3` bounds below `1.3.0`,
-/// `~1.2` below `1.3.0`, `~1` below `2.0.0`.
 fn npm_tilde_range(partial: &NpmPartial) -> Option<Vec<String>> {
     let minor = partial.minor.as_deref().unwrap_or("0");
     let patch = partial.patch.as_deref().unwrap_or("0");
@@ -700,19 +556,12 @@ fn npm_tilde_range(partial: &NpmPartial) -> Option<Vec<String>> {
     Some(vec![lower, upper])
 }
 
-/// True when no finding shares the exception's advisory and package
-/// identity. Version-range narrowing calls [`version_in_scope`] in the
-/// resolver-owned ecosystem integrations; until then identity match is
-/// the conservative applicability gate (never infers obsolescence from
-/// failed analysis).
 pub fn is_obsolete(exception: &RiskException, findings: &[FindingRef]) -> bool {
     !findings.iter().any(|finding| {
         finding.advisory == exception.advisory && finding.package == exception.package
     })
 }
 
-/// Check an exception for obsolescence after validation: returns the
-/// [`ExceptionProblem::Obsolete`] failure when no finding applies.
 pub fn check_applies(
     exception: &RiskException,
     findings: &[FindingRef],
@@ -726,32 +575,6 @@ pub fn check_applies(
     Ok(())
 }
 
-/// Parse one audit date (`YYYY-MM-DD` UTC) into a calendar date. The
-/// fixed-width shape gate runs first so only zero-padded text reaches
-/// the parser: non-padded spellings (`2027-3-1`) fail here even where
-/// the parser would accept them, and lexicographic order keeps matching
-/// chronological order for validated dates. The calendar itself —
-/// month lengths, leap-year February — is the upstream `chrono`
-/// parser's, not a private table. Year zero is rejected to preserve the
-/// previous validation (it would otherwise parse and always compare as
-/// expired, changing the failure variant).
-///
-/// Dependency evaluation (adopted): calendar validation uses the
-/// upstream `chrono` crate (`NaiveDate::parse_from_str`, `Datelike`); the
-/// fixed-width `YYYY-MM-DD` shape gate stays hand-rolled so only zero-padded
-/// text reaches the parser and no `time`-family second date engine is added.
-///
-/// Dependency evaluation (keep): `jiff 0.2` spike rejected —
-/// trivial `NaiveDate` parse plus `Datelike::year` needs no `tzdb`/civil-time
-/// arithmetic, `jiff` default pulls the `tzdb` bundle plus `portable-atomic`
-/// tree (~23 locks vs `chrono alloc-only` 4) for mechanical churn
-/// (`Date::strptime` arg-order swap, `year()` `i16`, year-zero parses where
-/// this gate maps it to `InvalidDate`), pre-`1.0` single-owner churn; MSRV
-/// fits on both sides (`chrono 1.62`, `jiff 1.70` vs pinned `1.98`),
-/// `chrono 0.4.45` still releasing with no `unmaintained` banner, the
-/// `chronotope` wind-down stays an open discretionary proposal and
-/// `arrow-rs` is explicitly not urgent (wait for `jiff 1.0`, slipped
-/// with a 1-year grace); re-evaluate on `jiff 1.0`.
 fn parse_audit_date(value: &str) -> Result<NaiveDate, ExceptionProblem> {
     if !is_date_shape(value) {
         return Err(ExceptionProblem::InvalidDate {
@@ -766,9 +589,6 @@ fn parse_audit_date(value: &str) -> Result<NaiveDate, ExceptionProblem> {
     }
 }
 
-/// Fixed `YYYY-MM-DD` shape gate: length, dash positions, and digits.
-/// See [`parse_audit_date`] for why the shape stays strict while the
-/// calendar comes from upstream.
 fn is_date_shape(text: &str) -> bool {
     let bytes = text.as_bytes();
     if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {

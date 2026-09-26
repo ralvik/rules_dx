@@ -1,14 +1,3 @@
-//! NuGet version comparison (split from `vuln.rs`). No behavior change.
-//!
-//! Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
-//! no stable Rust crate matches `NuGetVersion` four-part ordering plus
-//! case-insensitive prerelease plus fail-closed bracket intervals for the
-//! audited subset, so the hand-rolled comparator stays; `semver` covers
-//! Cargo/Go only.
-
-/// Numeric comparison without overflow: stripped (no leading zeros
-/// unless `"0"`), longer digit runs are greater, ties break
-/// lexicographically.
 fn compare_nuget_numeric(left: &str, right: &str) -> std::cmp::Ordering {
     if left.len() != right.len() {
         return left.len().cmp(&right.len());
@@ -16,30 +5,18 @@ fn compare_nuget_numeric(left: &str, right: &str) -> std::cmp::Ordering {
     left.cmp(right)
 }
 
-/// One NuGet prerelease label: numeric labels compare numerically and
-/// sort before alphanumeric labels; alphanumeric labels compare
-/// case-insensitively.
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum NugetPrereleaseLabel {
     Numeric(String),
     Alpha(String),
 }
 
-/// Parsed NuGet version: four numeric parts (missing trailing parts as
-/// `"0"`, leading zeros stripped) plus dot-separated prerelease labels.
-/// Build metadata (`+...`) is stripped and never affects ordering.
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct NugetVersion {
     parts: [String; 4],
     prerelease: Option<Vec<NugetPrereleaseLabel>>,
 }
 
-/// Parse one NuGet version per the `NuGetVersion` subset audited here:
-/// one to four numeric core parts, optional `-prerelease` with
-/// dot-separated labels, optional `+metadata` ignored. Leading zeros
-/// strip, missing parts equal zero, prerelease labels compare
-/// case-insensitively, and floating `*` never parses (fail closed).
-/// Returns `None` for empty, overlong, or malformed inputs.
 fn parse_nuget_version(version: &str) -> Option<NugetVersion> {
     let trimmed = version.trim();
     if trimmed.is_empty() || trimmed.len() > 256 {
@@ -138,12 +115,6 @@ fn parse_nuget_version(version: &str) -> Option<NugetVersion> {
     Some(NugetVersion { parts, prerelease })
 }
 
-/// NuGet-native version comparison following `NuGetVersion`/
-/// `VersionComparer` for the audited subset: four numeric parts
-/// numerically, then release greater than any prerelease, then
-/// dot-separated prerelease labels (numeric numerically with numeric
-/// before alphanumeric, alphanumeric case-insensitively lexically,
-/// shorter prefix before longer).
 pub fn nuget_compare(left: &str, right: &str) -> std::cmp::Ordering {
     let left_parsed = parse_nuget_version(left);
     let right_parsed = parse_nuget_version(right);
@@ -196,10 +167,6 @@ pub fn nuget_compare(left: &str, right: &str) -> std::cmp::Ordering {
     }
 }
 
-/// NuGet equality (normalized comparison): `1.0` equals `1.0.0` equals
-/// `1.0.0.0`, leading zeros strip, build metadata ignores, and
-/// prerelease compares case-insensitively. Empty or overlong inputs
-/// never equal.
 pub fn nuget_version_eq(left: &str, right: &str) -> bool {
     let left_trimmed = left.trim();
     let right_trimmed = right.trim();
@@ -215,15 +182,6 @@ pub fn nuget_version_eq(left: &str, right: &str) -> bool {
     nuget_compare(left_trimmed, right_trimmed) == std::cmp::Ordering::Equal
 }
 
-/// NuGet-native affected-scope matching (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #624): bare versions use
-/// NuGet equality (so `1.0` matches `1.0.0` but not `1.5.0`; the
-/// dependency-requirement `>=` reading of bare versions does not apply
-/// to advisory scopes, where `[1.0,)` spells the minimum), bracketed
-/// intervals use NuGet ordering with inclusive `[`/`]` versus exclusive
-/// `(`/`)` bounds (`[1.0,2.0)`, `(,1.0]`, `[1.5,)`, `[1.0]` exact).
-/// Floating `*`, unions, and `(1.0)` single-exclusive stay invalid and
-/// fail closed to `false` (never a false positive). Malformed scopes,
-/// empty inputs, and overlong inputs fail closed the same way.
 pub fn nuget_in_scope(scope: &str, version: &str) -> bool {
     let scope_trimmed = scope.trim();
     let version_trimmed = version.trim();
@@ -303,8 +261,6 @@ pub fn nuget_in_scope(scope: &str, version: &str) -> bool {
     )
 }
 
-/// One NuGet interval against a locked version: empty bounds are
-/// unbounded, otherwise NuGet ordering with inclusive/exclusive edges.
 fn nuget_interval_matches(
     lower: &str,
     upper: &str,

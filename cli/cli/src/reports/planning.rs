@@ -1,13 +1,3 @@
-//! Standard-report planning.
-//!
-//! Split from `super` (`reports.rs`): owns `StandardFormat`,
-//! `Destination`, `PlannedReport`, and `plan_reports` plus the
-//! format/destination validation helpers. The shared [`ReportError`]
-//! stays in the facade (it is also used by the SARIF/JUnit/LCOV
-//! rendering domains). Re-exported through `super` so the public path
-//! stays `crate::reports::{StandardFormat, Destination, PlannedReport,
-//! plan_reports}`.
-
 use std::collections::BTreeSet;
 
 use super::ReportError;
@@ -15,7 +5,6 @@ use crate::args::{Command, ReportRequest};
 use crate::plan::spec;
 use dx_output::{check_output_conflict, OutputError, OutputMode};
 
-/// Standard-report format supported by quality and workflow commands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum StandardFormat {
     Sarif,
@@ -25,7 +14,6 @@ pub enum StandardFormat {
 }
 
 impl StandardFormat {
-    /// Stable format name used in requests, events, and documents.
     pub fn name(self) -> &'static str {
         match self {
             StandardFormat::Sarif => "sarif",
@@ -46,9 +34,6 @@ impl StandardFormat {
     }
 }
 
-/// Report destination: `-` streams the exclusive stdout document,
-/// anything else is a workspace-relative or absolute file path whose
-/// parent directory must already exist at emission time.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Destination {
     Stdout,
@@ -56,8 +41,6 @@ pub enum Destination {
 }
 
 impl Destination {
-    /// Normalized destination identity: `-` for stdout, else the path.
-    /// File report events order bytewise by this identity.
     pub fn display(&self) -> &str {
         match self {
             Destination::Stdout => "-",
@@ -66,7 +49,6 @@ impl Destination {
     }
 }
 
-/// One validated report request ready for emission after collection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlannedReport {
     pub format: StandardFormat,
@@ -85,11 +67,6 @@ fn stdout_conflict(error: OutputError) -> ReportError {
     }
 }
 
-/// Validates report requests against the command registry and the live
-/// output mode. Fails before Bazel execution on dry-run conflicts,
-/// unsupported formats, duplicate pairs, and stdout ownership
-/// conflicts. Returns plans ordered bytewise by format and normalized
-/// destination, independent of option order.
 pub fn plan_reports(
     command: Command,
     requests: &[ReportRequest],
@@ -458,8 +435,10 @@ mod tests {
             (Command::Fix, "sarif"),
             (Command::Test, "junit"),
             (Command::Coverage, "lcov"),
-            (Command::Audit, "sarif"),
-            (Command::Audit, "spdx"),
+            (Command::Security, "sarif"),
+            (Command::Security, "spdx"),
+            (Command::License, "sarif"),
+            (Command::License, "spdx"),
         ] {
             plan_reports(
                 command,

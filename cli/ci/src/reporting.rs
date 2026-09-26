@@ -1,75 +1,26 @@
-//! Reporting and review-thread planning for consumer CI (WP1 slice 5).
-//!
-//! Split from `super` (`lib.rs`): owns [`Finding`], [`OwnedThread`],
-//! [`ThreadPlan`], [`plan_threads`] (failure-contributing findings win new
-//! threads in deterministic ID order; existing threads are never deleted
-//! or resolved to rotate others into view; full reports retain every
-//! finding), [`Summary`], [`plan_summary`], and [`reporting_gate`]
-//! (required publication failure fails CI separately; intentionally
-//! inapplicable outputs are not failures). Re-exported through `super`
-//! so the public paths stay `dx_ci::{Finding, OwnedThread, ThreadPlan,
-//! plan_threads, Summary, plan_summary, reporting_gate}`. Distinct from
-//! the revision, selection, scheduling, supersession, fork/aggregate,
-//! rerun, caller, pin, audit, artifact, metadata, and preset modules.
-
-/// One diff-mappable finding with a stable identity.
-///
-/// `location` is `Some` only for findings with a valid PR-diff location;
-/// locationless findings stay in full reports and summary counts and never
-/// receive invented review locations or inline annotations.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Finding {
-    /// Stable finding identity across reruns (check + rule + path digest).
     pub id: String,
-    /// Whether this finding contributes to its check's failure.
     pub contributes_to_failure: bool,
-    /// Valid PR-diff location, if mappable.
     pub location: Option<String>,
 }
 
-/// One integration-owned review thread.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OwnedThread {
-    /// Finding this thread reports.
     pub finding: String,
-    /// Whether a human has replied (replies pin resolve-over-delete).
     pub has_human_replies: bool,
 }
 
-/// Planned thread updates for one PR assessment.
-///
-/// Presentation is fixed: review threads for diff-mapped findings plus one
-/// integration-owned summary; there is no review-comment opt-out or
-/// annotation-only mode, and findings already shown in threads never gain
-/// duplicate inline annotations.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ThreadPlan {
-    /// Threads to keep as-is (finding still present, no repost).
     pub keep: Vec<String>,
-    /// Finding IDs to open new threads for (deterministic priority order).
     pub create: Vec<String>,
-    /// Bot-only threads without replies whose finding is confirmed gone.
     pub delete: Vec<String>,
-    /// Threads with human replies whose finding is confirmed gone.
     pub resolve: Vec<String>,
-    /// Diff-mapped findings omitted only by the fixed per-PR limit.
     pub omitted_due_to_limit: Vec<String>,
-    /// Findings without a valid diff location (reports/counts only).
     pub unmappable: Vec<String>,
 }
 
-/// Plan review-thread updates.
-///
-/// `findings` are the current complete assessment's findings;
-/// `existing` are the integration-owned threads; `confirmed_gone` are
-/// finding IDs a later complete assessment of the relevant check and scope
-/// confirmed absent (skipped, disabled, cancelled, or incomplete checks,
-/// missing reports, and locations moving outside the diff never confirm
-/// absence — callers must not list them here). `limit` is the fixed
-/// per-PR thread cap (numeric value frozen elsewhere): failure-contributing
-/// findings win new threads in deterministic ID order, existing threads are
-/// never deleted or resolved to rotate others into view, and full reports
-/// retain every finding. Intentional truncation is not a failure.
 pub fn plan_threads(
     findings: &[Finding],
     existing: &[OwnedThread],
@@ -143,30 +94,14 @@ pub fn plan_threads(
     }
 }
 
-/// Compact per-PR summary (one integration-owned updated comment).
-///
-/// Carries every selected check's status, truthful finding counts, the
-/// analyzed revision/run identity, and completeness — never the exhaustive
-/// finding list. Disabled, blocked, skipped, cancelled, or incomplete
-/// results are never shown as passed. Retries and concurrent completions
-/// must neither duplicate the summary nor let older results replace newer
-/// ones (see [`super::may_publish`]).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Summary {
-    /// Analyzed snapshot identity.
     pub validated: String,
-    /// Total findings retained in full reports.
     pub finding_count: usize,
-    /// Findings omitted only by the fixed per-PR thread limit.
     pub limit_omitted: usize,
-    /// Findings without a valid diff location.
     pub unmappable: usize,
 }
 
-/// Build the compact summary counts.
-///
-/// `full_findings` is every finding in the detailed reports; limit-omitted
-/// and unmappable counts come from [`plan_threads`].
 pub fn plan_summary(validated: &str, full_findings: usize, plan: &ThreadPlan) -> Summary {
     Summary {
         validated: validated.to_owned(),
@@ -176,13 +111,6 @@ pub fn plan_summary(validated: &str, full_findings: usize, plan: &ThreadPlan) ->
     }
 }
 
-/// Reporting gate: required publication failure fails CI separately.
-///
-/// Passing analysis with failed required check, review-comment, or summary
-/// publication is not success; command outcomes are preserved alongside the
-/// reporting failure. Intentionally inapplicable outputs (for example PR
-/// comments for queue runs) are not failures — callers pass
-/// `reporting_required: false` there.
 pub fn reporting_gate(
     analysis_passed: bool,
     reporting_required: bool,

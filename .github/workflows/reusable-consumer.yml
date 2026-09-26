@@ -4,14 +4,15 @@
 # Reviewed pin bumps only; no silent upgrades. Consumers never copy
 # per-check execution, parsing, review, or comment-management logic.
 #
-# Contract: docs/github-ci.md. Nine checks: six Linux-once (lint,
-# typecheck, format, generate, security-audit, license-audit) plus three
-# per-platform (test, build, coverage). Starter enables all nine;
-# callers disable individual checks by ID. Per-platform checks require
-# an explicit nonempty platform list; there is no implicit default.
-# Parallel is default; sequential changes overlap only. Aggregate `dx-ci`
-# is the single stable required check. Reporting is first-party dx code;
-# no reviewdog. SARIF Code Scanning publication is opt-in, off by default.
+# Contract: docs/github-ci.md. Nine checks, all per-platform (lint,
+# typecheck, format, generate, security-audit, license-audit, test,
+# build, coverage): every enabled check runs on every selected platform.
+# Starter enables all nine; callers disable individual checks by ID.
+# Every check requires an explicit nonempty platform list; there is no
+# implicit default. Parallel is default; sequential changes overlap
+# only. Aggregate `dx-ci` is the single stable required check.
+# Reporting is first-party dx code; no reviewdog. SARIF Code Scanning
+# publication is opt-in, off by default.
 #
 # Hygiene (issue #80, deduped under #915): job bootstraps are an inline
 # no-secrets `actions/checkout` (must be step 1) plus the pinned
@@ -41,7 +42,7 @@ on:
         default: ""
         type: string
       platforms:
-        description: 'JSON array of platform labels for test/build/coverage (e.g. ["linux_x86_64"]). Required when any per-platform check is enabled; no implicit default.'
+        description: 'JSON array of platform labels for every check (e.g. ["linux_x86_64"]). Required; no implicit default.'
         required: false
         default: ""
         type: string
@@ -126,7 +127,7 @@ jobs:
           padded = f",{disabled},"
           per_platform = [
               check
-              for check in ("test", "build", "coverage")
+              for check in ("lint", "typecheck", "format", "generate", "security-audit", "license-audit", "test", "build", "coverage")
               if f",{check}," not in padded
           ]
           if not per_platform:
@@ -147,7 +148,7 @@ jobs:
           if not isinstance(platforms, list) or not platforms:
               print(f"dx-ci: platforms must be a nonempty JSON array, got: {raw!r}")
               sys.exit(1)
-          supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64"}
+          supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64", "windows_arm64"}
           bad = [p for p in platforms if p not in supported]
           if bad:
               print(
@@ -160,8 +161,16 @@ jobs:
 
   lint:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',lint,') }}
+    needs: [platforms-gate]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -174,6 +183,9 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: 'echo "dx-ci: lint requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - name: Verify rules_dx pin
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
@@ -181,8 +193,16 @@ jobs:
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check //... -- $BAZEL_CONFIG $BB_ARGS
   typecheck:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',typecheck,') }}
+    needs: [platforms-gate]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -195,11 +215,22 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: 'echo "dx-ci: typecheck requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- typecheck --check //... -- $BAZEL_CONFIG $BB_ARGS
   format:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',format,') }}
+    needs: [platforms-gate]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -212,11 +243,22 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: 'echo "dx-ci: format requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- format --check //... -- $BAZEL_CONFIG $BB_ARGS
   generate:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',generate,') }}
+    needs: [platforms-gate]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -229,11 +271,22 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: 'echo "dx-ci: generate requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- generate --check //... -- $BAZEL_CONFIG $BB_ARGS
   security-audit:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',security-audit,') }}
+    needs: [platforms-gate]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -246,6 +299,9 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: 'echo "dx-ci: security-audit requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - name: Resolve hermetic Gitleaks
         run: |
           rel="$(bazel cquery --output=files @dx_tools//:gitleaks $BAZEL_CONFIG $BB_ARGS 2>/dev/null | tail -1)"
@@ -302,11 +358,21 @@ jobs:
           populate maven "https://osv-vulnerabilities.storage.googleapis.com/Maven/all.zip"
           populate nuget "https://osv-vulnerabilities.storage.googleapis.com/NuGet/all.zip"
           populate go "https://osv-vulnerabilities.storage.googleapis.com/Go/all.zip"
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- audit security //... -- $BAZEL_CONFIG $BB_ARGS
+      # Audit backends run no Bazel (live Gitleaks plus lockfile/advisory
+      # analysis over the checkout), so this call takes no `--` forwards.
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- security //...
   license-audit:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',license-audit,') }}
+    needs: [platforms-gate]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -319,7 +385,12 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- audit license //... -- $BAZEL_CONFIG $BB_ARGS
+      - name: Require explicit platforms
+        if: ${{ inputs.platforms == '' }}
+        run: 'echo "dx-ci: license-audit requires explicit nonempty platforms; no implicit default" >&2; exit 1'
+      # Audit backends run no Bazel (live Gitleaks plus lockfile/advisory
+      # analysis over the checkout), so this call takes no `--` forwards.
+      - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- license //...
   test:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',test,') }}
     needs: [platforms-gate]
@@ -331,7 +402,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
-    runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || (matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm' || (matrix.platform == 'macos_arm64' && 'macos-14' || 'windows-latest')) }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -359,7 +430,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
-    runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || (matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm' || (matrix.platform == 'macos_arm64' && 'macos-14' || 'windows-latest')) }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write
@@ -387,7 +458,7 @@ jobs:
       fail-fast: false
       matrix:
         platform: ${{ fromJSON(inputs.platforms != '' && inputs.platforms || '["linux_x86_64"]') }}
-    runs-on: ${{ matrix.platform == 'linux_x86_64' && 'ubuntu-latest' || (matrix.platform == 'linux_arm64' && 'ubuntu-24.04-arm' || (matrix.platform == 'macos_arm64' && 'macos-14' || 'windows-latest')) }}
+    runs-on: ${{ fromJSON('{"linux_x86_64":"ubuntu-latest","linux_arm64":"ubuntu-24.04-arm","macos_arm64":"macos-14","windows_x86_64":"windows-latest","windows_arm64":"windows-11-arm"}')[matrix.platform] }}
     permissions:
       contents: read
       checks: write

@@ -1,13 +1,3 @@
-//! Strict parsing plus generated-help fixtures for the `dx` CLI.
-//!
-//! Qualified seed-only under #810 (See: `docs/cli/cli-contract.md`):
-//! exact `--long` names only, help via `--help`/`-h` plus the `dx help`
-//! verb redirect (See: `docs/cli/cli-contract.md#invocation-shape`),
-//! unknown/missing/bad shapes fail fast with no silent ignore,
-//! attached `=value` echoes the whole token, hyphen-values never
-//! consumed as option values, `dx bazel` tails forward verbatim,
-//! and `--help`/`-h` render from the same grammar that parses.
-
 use super::super::{ArgsError, Command};
 use super::parse;
 
@@ -235,7 +225,6 @@ fn strict_bazel_tail_forwards_verbatim() {
 #[test]
 fn strict_help_verb_redirects_to_generated_help() {
     // `dx help [command]` verb redirects to the same generated help as
-    // `--help`/`-h` (See: `docs/cli/cli-contract.md#invocation-shape`).
     // Only exact lowercase `help` is the verb; `Help`/`HELP` stay unknown
     // like any other casing typo.
     for words in [vec!["Help"], vec!["HELP"]] {
@@ -418,7 +407,7 @@ fn strict_every_command_help_pins_usage_scopes_exits_output() {
             command.name()
         );
     }
-    assert_eq!(Command::value_variants().len(), 32);
+    assert_eq!(Command::value_variants().len(), 33);
 }
 
 #[cfg(unix)]
@@ -426,7 +415,6 @@ fn strict_every_command_help_pins_usage_scopes_exits_output() {
 fn strict_non_utf8_argv_fails_as_invalid_scope() {
     // Non-UTF8 `argv` must not panic in `args()`: `args_os` plus `OsString`
     // workspace/targets decode here, failing as `InvalidScope` with a lossy
-    // rendering (exit 2 per `docs/cli/cli-contract.md#exit-status`).
     use std::ffi::OsString;
     use std::os::unix::ffi::OsStringExt;
     let raw = OsString::from_vec(vec![0xff]);

@@ -35,15 +35,14 @@ Preserve canonical workspace configuration and module-matched CLI bootstrap. Doc
 prerequisite consumer Bazel setup, permissions, and required repository settings separately
 from the caller file: a template cannot configure those settings by itself. This
 repository's own review routing is owned via `CODEOWNERS` (sole maintainer
-owns every row per the [support matrix](product/support-matrix.md) until delegation, issue
+owns every row per the support matrix until delegation, issue
 #424). The integration does not manage consumer repository governance or
 prescribe consumer CODEOWNERS/reviewer policies.
 This repository's [first-party coverage selection](testing/strategy-details.md#github-coverage-reporting) does not
 require consumers to use Codecov. Codecov stays opt-in only and is never
 required; consumers get the same first-party per-cell summary through the
 reusable coverage path. Codecov opt-in-only is qualified with fixture
-evidence pinned in `tools/coverage/tests/fixtures/per_cell/pins.bzl`
-via `bazel run //tools/ci:coverage_qualification` (issue #507).
+evidence via `bazel run //tools/ci:coverage_qualification`.
 
 ## Docs CI
 
@@ -64,17 +63,17 @@ checks without disabling unrelated checks or presenting disabled checks as passe
 
 | CI check | Existing command | Execution platforms |
 | --- | --- | --- |
-| Lint | `dx lint --check` | Linux once |
-| Typecheck | `dx typecheck --check` | Linux once |
-| Formatting consistency | `dx format --check` | Linux once |
-| Generated BUILD consistency | `dx generate --check` | Linux once |
-| Security audit | `dx audit security` | Linux once |
-| License audit | `dx audit license` | Linux once |
+| Lint | `dx lint --check` | Every consumer-selected platform |
+| Typecheck | `dx typecheck --check` | Every consumer-selected platform |
+| Formatting consistency | `dx format --check` | Every consumer-selected platform |
+| Generated BUILD consistency | `dx generate --check` | Every consumer-selected platform |
+| Security audit | `dx security` | Every consumer-selected platform |
+| License audit | `dx license` | Every consumer-selected platform |
 | Tests | `dx test` | Every consumer-selected platform |
 | Build | `dx build` | Every consumer-selected platform |
 | Coverage | `dx coverage` | Every consumer-selected platform |
 
-Accepted addition (issue #332): run a preset stale cell alongside the
+Accepted addition : run a preset stale cell alongside the
 nine above — `dx update --check` on Linux once. It fails when the
 vendored `tools/bazelrc/preset.bazelrc` fragment drifts from the reviewed
 inventory, and `dx update` regenerates it. The cell stays
@@ -82,33 +81,33 @@ review-required with no auto-merge (regen-and-review loop stays manual).
 See the [preset update loop](contributing/local-workflows.md#preset-update-loop)
 and [`dx update --check`](cli/commands/audit-update-bazel.md#dx-update).
 
-When tests, build, or coverage are selected, require an explicit nonempty supported platform
+When every check is selected, require an explicit nonempty supported platform
 selection. There is no implicit Linux, current-runner, or all-platforms default, including
 a silently active example value in the template. Missing, empty, or unsupported selections
 produce actionable configuration failures, not skipped validation or platform substitution.
-Linux execution for shared quality checks does not add Linux to the validation matrix.
 
-Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native,
-issue #410), `macos_arm64` (native, issue #412) and `windows_x86_64` (native
-MSVC-compatible, issue #414). The reusable workflow routes
+Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native), `macos_arm64` (native), `windows_x86_64` (native
+MSVC-compatible), and `windows_arm64` (native, `windows-11-arm`).
+The reusable workflow routes
 `linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
-`macos_arm64` to `macos-14`, and
-`windows_x86_64` to `windows-latest`; every other spelling fails closed in
+`macos_arm64` to `macos-14`,
+`windows_x86_64` to `windows-latest`, and `windows_arm64` to `windows-11-arm`;
+every other spelling fails closed in
 `platforms-gate` before any per-platform job queues a runner. macOS arm64
-native (issue #412) runs on `macos-14` through the pinned upstream
+native runs on `macos-14` through the pinned upstream
 toolchains with the hermetic-llvm Apple-SDK backend provisional (immutable
 lazy fetch, no host-installed SDK fallback, no secrets, no interactive
 acceptance). macOS x86_64 is Not planned per #976 with no runner.
 provisional backend plus no fallback plus no secrets plus no interactive
 acceptance (`macos-13` retired December 2025; macOS x86_64 Not planned per #976;
 2027; best-effort gaps never block required-host release). Windows x86_64
-MSVC-compatible native (issue #414) runs on `windows-latest` (shell `bash`,
+MSVC-compatible native runs on `windows-latest` (shell `bash`,
 per-host `bazel-windows-x86_64-` cache scope) through the pinned upstream
 toolchains with the toolchains_msvc clang-cl/Microsoft-STL backend
 provisional (immutable lazy fetch, explicit EULA acceptance never automatic,
 no installed fallback, no secrets). The repository host matrix across these
-four platforms is pinned by `bazel run
-//tools/ci:ci_matrix_qualification` (issue #415).
+five platforms is pinned by `bazel run
+//tools/ci:ci_matrix_qualification`.
 
 Selection does not change language activation, analyzer applicability, configured no-op
 behavior, or dormant-foundation laziness. Run selected checks at their normal repository
@@ -122,7 +121,7 @@ Coverage evidence must remain complete for every required selected platform/conf
 combining reports must not hide a missing platform or coverage gap. Exact measurement and
 aggregation mechanics remain qualification work, not a new reporting-layer coverage engine.
 Consumer platform selection does not reduce this project's own
-[coverage and release evidence obligations](testing/README.md#coverage).
+coverage and release evidence obligations.
 
 ## Execution
 
@@ -294,10 +293,10 @@ for its tested snapshot but cannot satisfy the configured gate for an untested c
 ## Runner Plus SDK Rotation
 
 Floating runners age out and SDK/floor pins go stale with no review owner.
-This section owns the review cadence plus retirement handling (issue #642).
+This section owns the review cadence plus retirement handling.
 
 Qualified runners are `ubuntu-latest` plus `ubuntu-24.04-arm` plus `macos-14`
-plus `windows-latest` with per-profile cache scopes.
+plus `windows-latest` plus `windows-11-arm` with per-profile cache scopes.
 macos-13 retired December 2025, macos x86_64 Not planned per #976 with no
 runner; `ubuntu-latest` plus `windows-latest` float and age out. SDK plus floor scope
 is glibc `2.28` plus MacOSX26.5 via hermetic-llvm `v0.8.19`
@@ -309,13 +308,11 @@ Review is quarterly review plus on retirement notice plus on hermetic-llvm relea
 the sole maintainer owns every row until delegation (see `CODEOWNERS`).
 Retirement handling updates `ci.yml` plus docs plus pins in one reviewed PR.
 Qualify locally/on-demand with customer flows only: `bazel build //...` plus
-`bazel test //...` plus `dx coverage --min-coverage 97 //...` (seed gate plus
+`bazel test //...` plus `dx coverage --min-coverage 100 //...` (seed gate plus
 on-demand per-host, no new non-customer CI jobs).
 
 Permanent rotation job in CI rejected; keep CI customer-only. Fixture evidence
-is pinned in `tools/ci/tests/fixtures/runner_rotation/pins.bzl` plus
-`runner_rotation.expected` via `bazel run //tools/ci:runner_rotation_qualification`
-(issue #642; infra only, no Supported claim).
+is `runner_rotation.expected` via `bazel run //tools/ci:runner_rotation_qualification`.
 
 ## Qualification
 
@@ -324,20 +321,20 @@ reopen the accepted policies above. Resolve them before affected implementation:
 
 - Freeze workflow inputs, caller/pin representation, compatibility, and release/update mechanics.
 - Map supported platform identifiers, runner/OS/architecture identities, shared Linux quality
-  scope, scheduling isolation, cache/resource use, sequential ordering, and coverage/test reuse.
+ scope, scheduling isolation, cache/resource use, sequential ordering, and coverage/test reuse.
 - Qualify event/ref delivery, merge snapshots and diff mapping, conflicting-PR blocked reporting,
-  queue lifecycle, base advancement, cancellation races, and aggregate required-check bindings.
+ queue lifecycle, base advancement, cancellation races, and aggregate required-check bindings.
 - Freeze finding/thread identity, deterministic ordering, safe
-  deletion/resolution with concurrent human replies, outdated locations, and GitHub API limits
-  (numeric limit plus thread-accounting frozen at 50 open threads under issue #592; remainder
-  stays open).
+ deletion/resolution with concurrent human replies, outdated locations, and GitHub API limits
+ (numeric limit plus thread-accounting frozen at 50 open threads under issue #592; remainder
+ stays open).
 - Qualify fork roles/settings, untrusted artifact and metadata validation, privileged reporting,
-  sensitive-content handling, bounded transport retries, and opt-in Code Scanning publication.
+ sensitive-content handling, bounded transport retries, and opt-in Code Scanning publication.
 
 Consumer-CI qualification, release qualification, and publication of qualified
 identities are delivered tracks. Track resolved work in
 GitHub issues and delivered work under closed #509 and prove the contract
-through the [consumer CI test matrix](testing/github-ci.md). The qualification
+through the consumer CI test matrix. The qualification
 track stays owned under closed #509. Review-thread limit plus accounting frozen at 50 open
 threads under closed #592 (`tools/ci/tests/fixtures/review_threads/pins.bzl` plus
 `review_threads.expected` via `bazel run //tools/ci:review_threads_qualification`). Reusable-workflow contract plus caller

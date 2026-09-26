@@ -1,20 +1,3 @@
-//! Argument tokenizer and `clap`-error mapping (frozen legacy contract).
-//!
-//! Split from [`super::parser`]: owns the Bazel-verbatim tokenizer
-//! (`split_bazel_verbatim`, `tokenize`, `parse_tokens`) and the
-//! `clap`-failure mapping (`map_clap_error` plus its `invalid_token`,
-//! `invalid_value`, `recover_token`, `leading_flag`,
-//! `is_command_positional` helpers). The full `parse` validation
-//! (scope shapes, per-command option ownership, output-contract gates,
-//! profile flags) stays in [`super::parser`].
-//! Strict dx CLI surface (See: `docs/cli/cli-contract.md`): exact long
-//! names only, help via `--help`/`-h` plus the `dx help [command]` verb
-//! redirect (clap keeps `disable_help_subcommand`, the verb lives in
-//! [`super::help`]),
-//! `dx bazel` tails forward verbatim while every other shape parses whole;
-//! attached `=value` echoes the whole token and missing values name the
-//! bare flag, pinned by strict fixtures plus help goldens.
-
 use std::ffi::{OsStr, OsString};
 
 use clap::Parser;
@@ -23,30 +6,10 @@ use super::command::Command;
 use super::grammar::{Cli, VALUE_OPTIONS};
 use super::{help, suggest, ArgsError};
 
-/// Decodes one `argv` element as UTF-8 when possible; non-UTF8 bytes
-/// stay opaque (`None`) so they never classify as flags, values, or the
-/// `bazel`/`help` verbs and instead flow to the `InvalidScope` lossy path.
 fn arg_text(arg: &OsStr) -> Option<&str> {
     arg.to_str()
 }
 
-/// Finds the `bazel` command word when it owns the tail: the first
-/// positional token, skipping value-option payloads exactly like the
-/// legacy hand-rolled tokenizer did, so `dx bazel ...` forwards verbatim
-/// while `dx --output bazel build` still binds `bazel` as the output
-/// value. Returns `None` once a bare `--` is seen (everything after it
-/// is Bazel-owned regardless of command) or when a value option is
-/// missing its payload (the full parse then reports the missing value).
-///
-/// Stays hand-rolled (fallback): it routes `argv` *before* the
-/// grammar runs, deciding which prefix clap parses and which tail forwards
-/// verbatim. A `value_parser` runs inside parsing on one value and cannot
-/// own the tail, and the Bazel tail is foreign syntax by contract.
-///
-/// Non-UTF8 elements never classify as flags, values, or the `bazel`
-/// verb: they stay opaque positionals so the later `OsString` conversion
-/// reports them as `InvalidScope` with a lossy rendering instead of
-/// panicking in `std::env::args`.
 fn split_bazel_verbatim<S: AsRef<OsStr>>(args: &[S]) -> Option<usize> {
     let mut index = 0;
     while index < args.len() {
@@ -85,10 +48,6 @@ fn split_bazel_verbatim<S: AsRef<OsStr>>(args: &[S]) -> Option<usize> {
     None
 }
 
-/// Reads the clap invalid-argument context (`--flag <VALUE>` render or
-/// bare token) as a string.
-/// Shared plumbing; the suggestion/command mapping below stays local.
-/// See: `cli/output/src/clap_errors.rs`.
 fn invalid_token(error: &clap::Error) -> Option<String> {
     let token = dx_output::invalid_token(error);
     if token.is_empty() {
@@ -98,17 +57,10 @@ fn invalid_token(error: &clap::Error) -> Option<String> {
     }
 }
 
-/// Reads the clap invalid-value context (empty when an option value is
-/// missing, the offending value otherwise).
-/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn invalid_value(error: &clap::Error) -> Option<String> {
     dx_output::rejected_value(error)
 }
 
-/// Recovers the exact offending `argv` token for an unknown option:
-/// clap reports the bare flag name for `--flag=value` spellings, while
-/// the contract pins the whole token.
-/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn recover_token<S: AsRef<OsStr>>(args: &[S], token: Option<String>) -> String {
     let token = token.unwrap_or_default();
     // Compare lossy so non-UTF8 elements still recover deterministically;
@@ -128,29 +80,16 @@ fn recover_token<S: AsRef<OsStr>>(args: &[S], token: Option<String>) -> String {
     token
 }
 
-/// Extracts the leading `--flag` from a clap missing-value render such
-/// as `--output <OUTPUT>`.
-/// Shared plumbing. See: `cli/output/src/clap_errors.rs`.
 fn leading_flag(token: &str) -> String {
     dx_output::leading_flag(token).to_owned()
 }
 
-/// True when a clap invalid-argument render names the command
-/// positional (`<COMMAND>`): the only `InvalidValue` source that is a
-/// command word rather than an option value.
 fn is_command_positional(token: &str) -> bool {
     token
         .trim_matches(|cut| cut == '<' || cut == '>' || cut == '[' || cut == ']')
         .eq_ignore_ascii_case("command")
 }
 
-/// Maps a clap parse failure back onto [`ArgsError`] so the contract
-/// surface never changes: unknown commands (including `ValueEnum`
-/// rejections of the command positional) stay unknown commands with
-/// typo hints, unknown flags (including `=value` on booleans) stay
-/// unknown options, and missing option values stay missing values.
-/// `--help`/`-h` and `--version`/`-V` render from the same grammar
-///  as [`ArgsError::Help`], never as usage errors.
 fn map_clap_error<S: AsRef<OsStr>>(args: &[S], error: &clap::Error) -> ArgsError {
     use clap::error::ErrorKind;
     match error.kind() {
@@ -194,8 +133,6 @@ fn map_clap_error<S: AsRef<OsStr>>(args: &[S], error: &clap::Error) -> ArgsError
                 } else {
                     let command = recover_token(args, Some(value.clone()));
                     // Excluded `doctor`/`configure` always redirect to
-                    // `status` (See:
-                    // `docs/cli/commands/status-version.md#failure-explainer`),
                     // never a clap jaro guess like `docs`.
                     let suggestion = if command.eq_ignore_ascii_case("doctor")
                         || command.eq_ignore_ascii_case("configure")
@@ -231,7 +168,6 @@ fn map_clap_error<S: AsRef<OsStr>>(args: &[S], error: &clap::Error) -> ArgsError
     }
 }
 
-/// Runs the clap tokenizer over `args` (without the executable name).
 fn parse_tokens<S: AsRef<OsStr>>(args: &[S]) -> Result<Cli, ArgsError> {
     Cli::try_parse_from(
         std::iter::once(OsString::from("dx"))
@@ -240,9 +176,6 @@ fn parse_tokens<S: AsRef<OsStr>>(args: &[S]) -> Result<Cli, ArgsError> {
     .map_err(|error| map_clap_error(args, &error))
 }
 
-/// Tokenizes `args` into the clap-classified [`Cli`] plus the verbatim
-/// Bazel tail. `dx bazel` owns every token after the command word, so
-/// its tail never reaches clap; every other shape parses whole.
 pub(crate) fn tokenize<S: AsRef<OsStr>>(args: &[S]) -> Result<(Cli, Vec<String>), ArgsError> {
     if let Some(at) = split_bazel_verbatim(args) {
         // The prefix holds flags only (the scan stops at the first

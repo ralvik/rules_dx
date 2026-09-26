@@ -1,6 +1,3 @@
-//! Split from `vuln.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::*;
 
 #[test]
@@ -303,7 +300,6 @@ fn go_scopes_normalize_v_prefix() {
         "v0.0.0-20250930140053-2eb4fccefb52"
     ));
     assert!(go_in_scope(">=v1.0.0, <v3.0.0", "v2.0.0+incompatible"));
-    // Issue #679: pseudo-versions match bare ranges by ordering (no
     // Cargo prerelease gate). Cargo still excludes the same prerelease
     // from a bare range; Go covers it as a regular release.
     assert!(!version_in_scope(
@@ -476,7 +472,6 @@ fn npm_exceptions_narrow_with_npm_semantics() {
 #[test]
 fn go_exceptions_narrow_with_go_semantics() {
     // Both audit matching and exception scoping share `go_in_scope`
-    // (issue #679): pseudo-versions stay in scope for covering ranges.
     let packages = vec![LockedPackage {
         name: "example.com/mod".to_owned(),
         version: "v1.2.4-0.20240101120000-abcdef123456".to_owned(),
@@ -811,7 +806,6 @@ fn nuget_prerelease_labels_compare_numeric_then_alpha_upstream() {
 
 #[test]
 fn nuget_range_advisories_report_findings() {
-    // Range advisories fire instead of looking clean (issue #624).
     let packages = vec![LockedPackage {
         name: "Newtonsoft.Json".to_owned(),
         version: "13.0.1".to_owned(),
@@ -1005,7 +999,6 @@ fn snapshot_parses_osv_array_and_rejects_malformed() {
 
 #[test]
 fn osv_typed_cargo_projects_interval_and_matches() {
-    // Typed OSV via `osv` crate (issue #676): ranges become semver scopes,
     // fixed preserves, severity from database_specific, no matcher change.
     let text = r#"[{
         "id": "GHSA-cargo-osv-0001",

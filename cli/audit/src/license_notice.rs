@@ -1,81 +1,27 @@
-//! License notice-text inputs and SPDX report shape (WP3 slice 3).
-//!
-//! Pure planning for the license-evidence tail of the license contract
-//! (`docs/cli/commands/audit-update-bazel.md#license-family-dx-audit-license`):
-//! lock metadata says *which* license a package claims, while the
-//! words (copyright notice plus text) come from each package archive's
-//! `LICENSE*`/`NOTICE*` files, delivered as declared Bazel inputs per
-//! package so future NOTICE aggregation stays hermetic and cached. A
-//! package whose license requires reproduction but ships no text
-//! reports `missing-notice-text`, which fails in `distributed` unless
-//! excepted and is inventoried in `internal`.
-//!
-//! The report is one SPDX 2.3 JSON document per invocation, with
-//! package IDs as package URLs, `DESCRIBES` relations from each audited
-//! root, and `CONTAINS` relations where the lock graph is known.
-//! Aggregated NOTICE assembly for distributed-tier releases rides the
-//! packaging pipeline in `deploy/release/notice.bzl` (hermetic
-//! `notice_gen` over these same per-package inputs, verified by
-//! `notice_verify_files` plus `dx_verify --notice`); collecting the
-//! texts here keeps that pipeline fed with already-validated inputs.
-//!
-//! This module plans over injected notice records only. The shared
-//! `--report` format identifier and event mapping for SPDX remain
-//! pending under per the output protocol; no identifier string or
-//! event schema is invented here. Per-ecosystem license identities ride
-//! the committed `[[inventory]]` table (see
-//! [`crate::license_policy::LicenseInventory`]) plus Cargo
-//! `cargo-bazel-lock.json` and npm `package-lock.json` readers in
-//! [`crate::locks`]; proof evidence stays gated.
-
 use crate::license_expr::{Tier, TierOutcome};
 
-/// SPDX document version pinned by the license contract.
 pub const SPDX_VERSION: &str = "2.3";
 
-/// Package identifier scheme: package URLs.
 pub const PACKAGE_ID_SCHEME: &str = "package-url";
 
-/// Relationship from each audited root to the document it describes.
 pub const DESCRIBES_RELATIONSHIP: &str = "DESCRIBES";
 
-/// Relationship recording lock-graph containment where the graph is
-/// known. Unknown graphs omit it rather than guessing containment.
 pub const CONTAINS_RELATIONSHIP: &str = "CONTAINS";
 
-/// Report granularity: exactly one SPDX document per audit invocation,
-/// never one per package, set, or root.
 pub fn documents_per_invocation() -> usize {
     1
 }
 
-/// Aggregated NOTICE assembly rides the packaging pipeline in
-/// `deploy/release/notice.bzl`, which bundles these per-package inputs
-/// into releases with byte-identical rebuilds plus verification.
 pub fn aggregates_notice_artifact() -> bool {
     true
 }
 
-/// SPDX identities the contract names as legally requiring notice-text
-/// reproduction (copyright notice plus text). This covers exactly the
-/// contract-named MIT/BSD/Apache-2.0 families and nothing else.
 pub const NOTICE_REQUIRED_IDS: &[&str] = &["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause"];
 
-/// Whether the named SPDX identity requires reproduction of the
-/// license words. Unknown identities are handled by the expression
-/// lattice (denied in `distributed`); notice evaluation only asks
-/// whether *known listed* identities need their words collected.
 pub fn requires_notice_text(identity: &str) -> bool {
     NOTICE_REQUIRED_IDS.contains(&identity)
 }
 
-/// Whether one parsed SPDX expression requires notice-text
-/// reproduction: true when any contained identity needs its words
-/// (fail closed for dual `OR`/`AND` expressions — the distributor has
-/// not yet chosen, so missing words for any requiring member fail).
-/// `WITH` checks its base; [`crate::license_expr::LicenseExpr::Unknown`]
-/// never requires here (the expression lattice already denies it in
-/// `distributed`).
 pub fn expression_requires_notice(expr: &crate::license_expr::LicenseExpr) -> bool {
     use crate::license_expr::LicenseExpr;
     match expr {
@@ -88,35 +34,17 @@ pub fn expression_requires_notice(expr: &crate::license_expr::LicenseExpr) -> bo
     }
 }
 
-/// Whether one license text (single identity or compound SPDX
-/// expression) requires notice-text reproduction. Parses via
-/// [`crate::license_expr::parse_license`] so `MIT OR Apache-2.0` and
-/// similar compounds containing a requiring member need their words;
-/// unparseable text is handled by the expression lattice, never here.
 pub fn license_requires_notice_text(license: &str) -> bool {
     expression_requires_notice(&crate::license_expr::parse_license(license))
 }
 
-/// One package's declared notice-text input: the words delivered as a
-/// declared Bazel input per package, present or not.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct NoticeInput {
-    /// Affected package name.
     pub package: String,
-    /// Claimed SPDX identity.
     pub license: String,
-    /// Whether the package archive delivered `LICENSE*`/`NOTICE*`
-    /// words as a declared input.
     pub text_present: bool,
 }
 
-/// Evaluate one notice input under a tier: `missing-notice-text` fails
-/// in `distributed` unless a matching exception approves it, and is
-/// inventoried in `internal`. `approved` names licenses covered by a
-/// matching, reasoned, version-scoped, unexpired exception, mirroring
-/// the expression-lattice approval hook. Compound expressions (e.g.
-/// `MIT OR Apache-2.0`) require words when any member does, so the
-/// check fires for dual-licensed packages, not just bare identities.
 pub fn evaluate_notice(
     input: &NoticeInput,
     tier: Tier,
@@ -134,10 +62,6 @@ pub fn evaluate_notice(
     }
 }
 
-/// Whether a notice outcome fails the audit in a tier. Missing text
-/// that survives evaluation is a deny, so it fails everywhere it can
-/// appear; internal inventory already folds to allow in
-/// [`evaluate_notice`].
 pub fn notice_fails(outcome: TierOutcome, tier: Tier) -> bool {
     crate::license_expr::fails_in_tier(outcome, tier)
 }

@@ -1,142 +1,43 @@
-//! Advisory snapshot acquisition for `dx audit`.
-//!
-//! Pure planning over injected snapshot records, per the audit contract
-//! (`docs/cli/commands/audit-update-bazel.md#dx-audit`): dependency audits
-//! automatically refresh applicable vulnerability advisory data through
-//! supported upstream tooling when invoked; a separate manual refresh is
-//! not the default workflow. An identified advisory snapshot is supplied
-//! as an input to Bazel-owned analysis, so results and cache identity
-//! reflect the data actually analyzed rather than an untracked live
-//! database inside the audit action. Acquisition/cache updates never
-//! change application dependency versions, manifests, lockfiles, or
-//! selected environment/codegen projections. Auditors remain pinned
-//! tools; advisory freshness never authorizes automatic tool-version
-//! upgrades.
-//!
-//! If required advisory refresh fails, the audit fails and reports that
-//! current data could not be obtained. It never falls back to a stale
-//! snapshot for the affected dependency audit, and never reports that
-//! dependency set as clean. This module plans over injected snapshot
-//! identities and dates only, so freshness, identity, and
-//! refresh-failure mapping stay deterministic and unit-testable without
-//! network access, a Bazel server, or any auditor binary.
-//!
-//! Offline local matching (no lockfile/inventory upload) is enforced by
-//! construction: matching in [`crate::vuln`] runs against the identified
-//! snapshot bytes supplied here. Package-specific advisory requests that
-//! disclose the inventory are never an alternative to local matching,
-//! and a query-only upstream service never satisfies this contract.
-//! Database-download and offline-matching routes are qualified here;
-//! the snapshot bytes themselves arrive as Bazel inputs in aspect
-//! execution and as cache files in CLI execution, both pinned by
-//! fixtures.
-//!
-//! Supported upstream database-download sources (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #628, no
-//! inventory upload): per-set OSV GCS bucket zips fetched by HTTPS GET
-//! with no query parameters, request body, or telemetry carrying package
-//! names or versions. The OSV API query route (`https://api.osv.dev/v1/query`
-//! with package/version in the body) discloses the inventory and never
-//! satisfies this contract. V1 snapshots (typed OSV records projected
-//! via the `osv` crate `schema` feature, offline; See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #676, plus legacy
-//! [`crate::vuln::Advisory`] minimal still accepted) are derived from these
-//! databases via upstream tooling (such as `osv-scanner --offline` with a
-//! local DB, which sends no project information); the derived bytes plus
-//! their identity (`url`, `sha256`, `retrieved_at`) are the audited inputs.
-//! A missing, invalid, or stale snapshot fails with
-//! [`CODE_ADVISORY_REFRESH_FAILED`], never clean and never a stale fallback.
-//!
-//! Vendored local mirrors (See: `docs/deploy/offline-bootstrap.md`):
-//! an airgapped workspace populates `.dx/advisory/` by copying the
-//! vendored bundle bytes plus identity instead of fetching. Mirror
-//! identities carry a `file://` URL naming the vendored source; upstream
-//! identities keep their `https://` database-download URL. Both shapes
-//! enforce the same `sha256` byte binding plus same-day freshness plus
-//! fail-closed mapping, so the mirror never weakens the audit gate.
-
 use serde::{Deserialize, Serialize};
 
-/// Advisory snapshot identity: where the bytes came from, what they
-/// are, and when they were retrieved. Field shapes mirror the cache
-/// record the CLI writes, so Bazel-owned analysis and CLI execution
-/// agree on one identity without a second mechanism.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct AdvisorySnapshot {
-    /// Owning dependency set (selector spelling, verbatim).
     pub set: String,
-    /// Immutable upstream source URL for the snapshot bytes.
     pub url: String,
-    /// Lowercase hex SHA-256 of the exact snapshot bytes.
     pub sha256: String,
-    /// Retrieval date, ISO-8601 UTC `YYYY-MM-DD`, evaluated at audit time.
-    /// Day granularity keeps the 24h cache check deterministic without
-    /// ambient clock state in unit tests.
     pub retrieved_at: String,
-    /// Workspace-relative or absolute path to the snapshot bytes supplied
-    /// as analysis input.
     pub path: String,
 }
 
-/// Snapshot identity failures. Every variant fails the audit for the
-/// affected dependency set; none falls back to a stale snapshot or
-/// reports the set as clean.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum SnapshotProblem {
-    /// Empty set, URL, digest, date, or path.
     #[error("advisory snapshot missing {field}")]
     MissingField { field: &'static str },
-    /// URL is not an accepted provenance (upstream `https://` or
-    /// vendored `file://` mirror).
     #[error("advisory snapshot has non-https URL {url:?}")]
     BadUrl { url: String },
-    /// Digest is not 64 lowercase hex characters.
     #[error("advisory snapshot has invalid sha256 {value:?}; want 64 lowercase hex")]
     BadDigest { value: String },
-    /// Retrieval date is not a calendar `YYYY-MM-DD` date.
     #[error("advisory snapshot has invalid retrieved_at {value:?}; want YYYY-MM-DD")]
     BadDate { value: String },
 }
 
-/// Advisory freshness verdict for one dependency set at audit time.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Freshness {
-    /// Snapshot is current (retrieved today): analyze offline against it.
     Fresh,
-    /// Snapshot is older than the 24h cache window: refresh before analysis.
     Stale,
 }
 
-/// Refresh outcome for one dependency set. A failed refresh fails the
-/// audit for that set with `advisory_refresh_failed`; it never falls
-/// back to the stale snapshot and never reports the set as clean.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RefreshOutcome {
-    /// Snapshot was fresh: proceed with offline matching.
     Fresh,
-    /// Stale snapshot was refreshed: proceed against the new identity.
     Refreshed { snapshot: AdvisorySnapshot },
-    /// Refresh failed: fail the audit, report stale data could not be
-    /// replaced, retain validated findings from other sets.
     Failed { detail: String },
 }
 
-/// Stable operational code for advisory refresh failures. The CLI maps
-/// this to `audit_failed` with an `advisory_refresh_failed` diagnostic,
-/// never to a clean result.
 pub const CODE_ADVISORY_REFRESH_FAILED: &str = "advisory_refresh_failed";
 
-/// Cache window in days: a snapshot retrieved today is fresh; any older
-/// date is stale and must refresh before analysis. Day granularity is
-/// the conservative 24h gate (a snapshot retrieved yesterday at any
-/// hour is stale today), so an earlier cached snapshot never lets a
-/// later audit pass on stale data.
 pub const CACHE_DAYS: u32 = 0;
 
-/// Supported upstream database-download source per dependency set
-/// (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #628): OSV GCS bucket zips fetched by HTTPS GET with no
-/// inventory in the request. The URL carries no package names, versions,
-/// query parameters, or body; matching runs offline after download, so
-/// no lockfile or inventory ever leaves the workspace. The OSV query API
-/// (package/version in the request) never satisfies this contract.
 pub fn advisory_source(set: &str) -> Option<&'static str> {
     match set {
         "cargo" => Some("https://osv-vulnerabilities.storage.googleapis.com/crates.io/all.zip"),
@@ -148,63 +49,30 @@ pub fn advisory_source(set: &str) -> Option<&'static str> {
     }
 }
 
-/// Whether one identity URL is a vendored local mirror: a `file://`
-/// URL naming the vendored bundle source the snapshot bytes were copied
-/// from. Mirror snapshots analyze only when their `sha256` binds the
-/// exact copied bytes and `retrieved_at` is today, exactly like
-/// upstream `https://` snapshots.
-/// See: `docs/deploy/offline-bootstrap.md`.
 pub fn is_local_mirror(snapshot: &AdvisorySnapshot) -> bool {
     snapshot.url.starts_with("file://")
 }
 
-/// Whether one identity URL is an accepted advisory provenance: the
-/// upstream `https://` database-download source or a vendored `file://`
-/// local mirror. Anything else (including plaintext `http://`) fails
-/// closed, never analyzed.
 pub fn is_accepted_url(url: &str) -> bool {
     (url.starts_with("https://") || url.starts_with("file://")) && url::Url::parse(url).is_ok()
 }
 
-/// Workspace-relative snapshot bytes for one set: the identified advisory
-/// snapshot supplied as analysis input (Bazel input in aspect execution,
-/// cache file in CLI execution). A missing file means current data could
-/// not be obtained and fails with [`CODE_ADVISORY_REFRESH_FAILED`],
-/// never clean.
 pub fn snapshot_rel(set: &str) -> String {
     format!(".dx/advisory/{set}.json")
 }
 
-/// Workspace-relative snapshot identity for one set: the
-/// [`AdvisorySnapshot`] record (`url`, `sha256`, `retrieved_at`) for the
-/// bytes at [`snapshot_rel`]. A missing or invalid identity fails like a
-/// missing snapshot; a `retrieved_at` older than today is stale and fails
-/// without analyzing the stale bytes.
 pub fn identity_rel(set: &str) -> String {
     format!(".dx/advisory/{set}.meta.json")
 }
 
-/// Parse one snapshot identity document (JSON [`AdvisorySnapshot`]).
-/// Malformed JSON fails closed with the document error, never a default
-/// identity that could pass as fresh.
 pub fn parse_identity(text: &str) -> Result<AdvisorySnapshot, String> {
     serde_json::from_str(text).map_err(|error| format!("invalid advisory identity: {error}"))
 }
 
-/// Whether one identity matches its snapshot bytes: the recorded
-/// `sha256` equals the lowercase hex SHA-256 of the exact bytes.
-/// Mismatches fail closed (stale or tampered snapshot, never analyzed).
 pub fn identity_matches_bytes(snapshot: &AdvisorySnapshot, bytes: &[u8]) -> bool {
     dx_digest::sha256_hex(bytes) == snapshot.sha256.trim()
 }
 
-/// Validate one snapshot identity without fetching anything: set, URL,
-/// digest, date, and path must be present; the URL must be an accepted
-/// provenance (upstream `https://` database download or vendored
-/// `file://` local mirror, See: `docs/deploy/offline-bootstrap.md`);
-/// the digest must be 64 lowercase hex; the date must be calendar
-/// `YYYY-MM-DD`. Byte identity against upstream is proven by the
-/// acquisition command that wrote the snapshot, not here.
 pub fn validate_snapshot(snapshot: &AdvisorySnapshot) -> Result<(), SnapshotProblem> {
     for (field, value) in [
         ("set", snapshot.set.as_str()),
@@ -244,10 +112,6 @@ pub fn validate_snapshot(snapshot: &AdvisorySnapshot) -> Result<(), SnapshotProb
     Ok(())
 }
 
-/// Check freshness of one validated snapshot against the injected audit
-/// date (`YYYY-MM-DD` UTC). Fresh means retrieved today; any older date
-/// is stale. Unparseable dates fail closed to stale (refresh, never
-/// analyze against an undated snapshot).
 pub fn freshness(snapshot: &AdvisorySnapshot, today: &str) -> Freshness {
     if snapshot.retrieved_at.trim() == today.trim() && is_audit_date(today) {
         Freshness::Fresh
@@ -256,10 +120,6 @@ pub fn freshness(snapshot: &AdvisorySnapshot, today: &str) -> Freshness {
     }
 }
 
-/// Map one refresh attempt to its audit outcome: fresh snapshots
-/// proceed; stale snapshots proceed only when the refresh supplies a
-/// new validated identity; a failed refresh fails the audit for that
-/// set without falling back to stale data.
 pub fn map_refresh(
     snapshot: &AdvisorySnapshot,
     today: &str,
@@ -285,8 +145,6 @@ pub fn map_refresh(
 }
 
 /// Whether offline matching may proceed for one set: only fresh or
-/// successfully refreshed snapshots analyze; failed refreshes never
-/// analyze against stale data.
 pub fn may_analyze(outcome: &RefreshOutcome) -> bool {
     matches!(
         outcome,
@@ -294,14 +152,6 @@ pub fn may_analyze(outcome: &RefreshOutcome) -> bool {
     )
 }
 
-/// Strict `YYYY-MM-DD` calendar gate, mirroring the exception lifecycle
-/// shape plus upstream calendar validation. Kept local so advisory
-/// validation never depends on exception error variants.
-///
-/// Dependency evaluation (keep): stays on `chrono`
-/// (`NaiveDate::parse_from_str`) per the exception-gate `jiff` rejection —
-/// day-granularity retrieval dates need no `tzdb`, same mechanical-churn
-/// cost; re-evaluate on `jiff 1.0`.
 fn is_audit_date(value: &str) -> bool {
     let bytes = value.as_bytes();
     if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
@@ -363,7 +213,6 @@ mod tests {
 
     #[test]
     fn vendored_file_mirror_validates_like_upstream() {
-        // Vendored local mirrors (See: `docs/deploy/offline-bootstrap.md`)
         // carry a `file://` provenance URL but enforce the same sha256
         // byte binding plus same-day freshness plus fail-closed mapping.
         let mut mirror = snapshot();

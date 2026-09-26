@@ -1,6 +1,3 @@
-//! Split from `locks.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::*;
 
 #[test]

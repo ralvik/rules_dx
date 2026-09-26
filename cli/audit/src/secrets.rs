@@ -1,95 +1,24 @@
-//! Secrets-audit invocation planning plus V1 depth disposition.
-//!
-//! Pure qualification planning for the V1 secrets integration
-//! (Gitleaks-only, issue #629; See: `docs/cli/commands/audit-update-bazel.md#dx-audit`) per the audit contract: a checksummed
-//! standalone artifact with SARIF output and secret-value redaction.
-//! This module plans over injected pin records and argument strings
-//! only, so artifact identity, report wiring, and exit classification
-//! stay deterministic and unit-testable without network access, an
-//! auditor binary, or any Bazel integration.
-//!
-//! V1 depth is Gitleaks-only: Trufflehog stays wont-fix (see
-//! [`TRUFFLEHOG_V1`]). A silent tool swap is rejected: tool identity
-//! is pinned here and in [`crate::backend`], never substituted.
-//!
-//! Redaction is proven by construction plus fixtures (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #629):
-//! planned argv always carries `--redact`, and [`triage_sarif`]
-//! surfaces only rule IDs plus artifact paths, never SARIF
-//! `message.text`, fingerprints, snippets, or properties, so even an
-//! unredacted report cannot leak secret values through findings or
-//! summaries.
-//!
-//! Research observations from the contract (unproven mappings, not
-//! pins): upstream `v8.30.1` with per-OS/arch archives, `--report-format
-//! json|csv|junit|sarif|template`, `--report-path`, `--redact` for
-//! logs/stdout, TOML discovery (`--config`, `GITLEAKS_CONFIG`,
-//! `GITLEAKS_CONFIG_TOML`, `.gitleaks.toml`, else built-in defaults),
-//! and a conflated exit `1` for leaks or errors with an `--exit-code`
-//! override. Findings-versus-operational-error distinction and
-//! silent-`0` cases are fixture-pinned in [`triage_sarif`] plus
-//! [`classify_exit`]; report-file redaction is proven by triage
-//! ignoring secret-carrying SARIF fields rather than by assuming
-//! upstream `--redact` covers the report file.
-//!
-//! Out of scope here (qualification): actual byte acquisition and
-//! digest verification against upstream, adapter/registry wiring, and
-//! the `secrets` policy-family registry amendment. Those arrive in
-//! later slices; this crate only records which artifact identity and
-//! flag shape a future adapter must satisfy.
-
-/// Tool identifier the adapter resolves as a checksummed standalone
-/// artifact, never an ambient PATH lookup.
 pub const GITLEAKS_TOOL: &str = "gitleaks";
 
-/// Trufflehog V1 disposition (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #629, wont-fix, auditor-owned):
-/// Gitleaks-only V1. A second detector would need its own pin,
-/// adapter, and offline/no-upload qualification with no evidenced
-/// coverage gap; the silent tool swap is rejected, so V1 keeps one
-/// pinned secrets tool. Reconsideration after V1 requires a new
-/// scope decision with fixture evidence.
 pub const TRUFFLEHOG_V1: &str = "wont-fix";
 
-/// Observed upstream version from contract research. Not a pin: recheck
-/// the latest stable and re-pin exact bytes at implementation.
 pub const OBSERVED_VERSION: &str = "8.30.1";
 
-/// Pinned upstream version for the hermetic per-host artifacts below.
-/// Latest stable at implementation (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
 pub const GITLEAKS_VERSION: &str = "8.30.1";
 
-/// Environment variable carrying the hermetic auditor binary path.
-/// Production resolves this to the pinned `@dx_tools//:gitleaks`
-/// artifact; absent or relative values fail closed, never falling back
-/// to ambient `PATH` (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
 pub const TOOL_ENV_VAR: &str = "DX_GITLEAKS_BIN";
 
-/// Bazel label of the hermetic per-host auditor hub.
-/// Registration fetches nothing; each platform repository downloads only
-/// when its action needs the artifact (See: `docs/tools/tool-acquisition.md#consumer-contract`).
 pub const TOOL_LABEL: &str = "@dx_tools//:gitleaks";
 
-/// One pinned per-host standalone artifact. Field shapes mirror the
-/// checked-in quality-artifact metadata (`quality/artifacts/*.bzl`) so
-/// pins cannot drift from the acquisition contract; digests are the
-/// upstream published checksums verified by the generator.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct HostArtifact {
-    /// Execution platform (`os_cpu`, one of the four required hosts).
     pub platform: &'static str,
-    /// Immutable download URL for the exact artifact.
     pub url: &'static str,
-    /// Lowercase hex SHA-256 of the exact artifact bytes.
     pub sha256: &'static str,
-    /// Artifact size in bytes.
     pub size: u64,
-    /// Archive member executed as the auditor.
     pub executable: &'static str,
 }
 
-/// Hermetic per-host pins for the four required hosts. Linux binaries
-/// are static Go executables (no interpreter, no shared libraries);
-/// macOS/Windows record the dynamic delivery-class bound with no host
-/// SDK dependency (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
 pub const HOST_ARTIFACTS: &[HostArtifact] = &[
     HostArtifact {
         platform: "linux_x86_64",
@@ -121,54 +50,22 @@ pub const HOST_ARTIFACTS: &[HostArtifact] = &[
     },
 ];
 
-/// Builds the sanitized child environment for the secrets invocation:
-/// exactly one `TMPDIR` (the per-run temp directory owning Go runtime
-/// temp files). `PATH` is never set so the absolute tool path cannot
-/// fall back to ambient lookup; `GITLEAKS_CONFIG`/`GITLEAKS_CONFIG_TOML`
-/// plus every other parent variable are never inherited, so ambient
-/// configuration cannot inject rules and proxy/secret-carrying vars
-/// cannot influence the offline scan (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
-/// Configuration reaches Gitleaks only through the explicit `--config`
-/// flag, the committed `.gitleaks.toml`, or built-in defaults, in that
-/// precedence order. Callers spawn with a cleared environment; extras
-/// are rejected here so the allowlist stays auditable.
 pub fn hermetic_env(temp_dir: &std::path::Path) -> Vec<(String, String)> {
     vec![("TMPDIR".to_owned(), temp_dir.to_string_lossy().into_owned())]
 }
 
-/// Frozen report format for the secrets family: SARIF 2.1.0 via the
-/// shared `--report` contract.
 pub const SARIF_FORMAT: &str = "sarif";
 
-/// Flag requesting secret-value redaction. Always present in a planned
-/// invocation. Upstream documents it for logs/stdout; report-file
-/// coverage is not assumed: [`triage_sarif`] proves redaction by
-/// ignoring every secret-carrying SARIF field, so findings stay
-/// redacted even against an unredacted report.
 pub const REDACT_FLAG: &str = "--redact";
 
-/// Flag selecting the report format.
 pub const REPORT_FORMAT_FLAG: &str = "--report-format";
 
-/// Flag selecting the report destination.
 pub const REPORT_PATH_FLAG: &str = "--report-path";
 
-/// Flag overriding the conflated leaks-or-errors exit code.
 pub const EXIT_CODE_FLAG: &str = "--exit-code";
 
-/// Flag pinning the Gitleaks TOML configuration explicitly.
 pub const CONFIG_FLAG: &str = "--config";
 
-/// Upstream config discovery order (highest precedence first), recorded
-/// here so the future adapter cannot invent a second mechanism. The
-/// explicit flag wins; built-in defaults apply only when every earlier
-/// source is absent.
-///
-/// Trust boundary: any selected config can disable rules, so ambient
-/// sources are untrusted input. The hermetic child inherits no
-/// `GITLEAKS_CONFIG`/`GITLEAKS_CONFIG_TOML` (see [`hermetic_env`]); the
-/// only honored file is the workspace-committed `.gitleaks.toml`, used
-/// with an explicit scan-time warning because it carries no hash pin.
 pub const CONFIG_DISCOVERY_ORDER: &[&str] = &[
     "--config flag",
     "GITLEAKS_CONFIG",
@@ -178,50 +75,30 @@ pub const CONFIG_DISCOVERY_ORDER: &[&str] = &[
 ];
 
 /// Checksummed standalone artifact identity a future adapter must
-/// satisfy. Field shapes mirror the checked-in quality-artifact metadata
-/// schema (`quality/artifacts/*.bzl`) so the future pin cannot drift
-/// from the acquisition contract; no bytes are fetched here.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ArtifactPin {
-    /// Tool identifier (must be [`GITLEAKS_TOOL`]).
     pub tool: String,
-    /// Upstream version the bytes were recorded from.
     pub upstream_version: String,
-    /// Immutable download URL for the exact artifact.
     pub url: String,
-    /// Lowercase hex SHA-256 of the exact artifact bytes.
     pub sha256: String,
-    /// Artifact size in bytes (must be nonzero).
     pub size: u64,
 }
 
-/// Artifact identity failures. Every variant fails qualification; none
-/// falls back to an ambient tool or an unpinned download.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum PinProblem {
-    /// Wrong tool: only Gitleaks qualifies through this module.
     #[error("gitleaks pin names wrong tool {tool:?}")]
     WrongTool { tool: String },
-    /// Empty version, URL, or digest.
     #[error("gitleaks pin missing {field}")]
     MissingField { field: &'static str },
-    /// URL is not an immutable `https://` reference.
     #[error("gitleaks pin has non-https URL {url:?}")]
     BadUrl { url: String },
-    /// Digest is not 64 lowercase hex characters.
     #[error("gitleaks pin has invalid sha256 {value:?}; want 64 lowercase hex")]
     BadDigest { value: String },
-    /// Size is zero: no empty artifact is a valid pin.
     #[error("gitleaks pin has invalid size {size}; want nonzero")]
     BadSize { size: u64 },
 }
 
 /// Validate a checksummed standalone pin without fetching anything: the
-/// tool must be Gitleaks, version/URL/digest must be present, the URL
-/// must be `https://`, the digest must be 64 lowercase hex characters,
-/// and the size must be nonzero. Byte identity against upstream is
-/// proven at implementation by the artifact regeneration/verification
-/// command, not here.
 pub fn validate_pin(pin: &ArtifactPin) -> Result<(), PinProblem> {
     if pin.tool != GITLEAKS_TOOL {
         return Err(PinProblem::WrongTool {
@@ -262,36 +139,21 @@ pub fn validate_pin(pin: &ArtifactPin) -> Result<(), PinProblem> {
     Ok(())
 }
 
-/// Planned secrets-audit report wiring: SARIF destination plus the
-/// redaction and exit-code overrides the future adapter must pass.
-/// Only the contract-observed flags are modeled; no subcommand or
-/// extra flag is invented here.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SecretsReport {
-    /// SARIF report destination (the `--report-path` value).
     pub report_path: String,
-    /// Explicit `--config` value, if the invocation pins configuration
-    /// instead of relying on discovery order.
     pub config: Option<String>,
-    /// `--exit-code` override disambiguating the conflated leaks/errors
-    /// exit, if the qualified adapter selects one.
     pub exit_code: Option<u8>,
 }
 
 /// Report wiring failures: SARIF is mandatory and destinations must be
-/// explicit file paths, never empty.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ReportProblem {
-    /// Empty report destination.
     #[error("secrets report needs an explicit --report-path destination")]
     MissingPath,
 }
 
 impl SecretsReport {
-    /// Deterministic report flag fragment for the future adapter
-    /// invocation: SARIF format, explicit path, always redacted, plus
-    /// any pinned config and exit-code override. Flag order is fixed so
-    /// action keys stay deterministic.
     pub fn argv(&self) -> Result<Vec<String>, ReportProblem> {
         if self.report_path.trim().is_empty() {
             return Err(ReportProblem::MissingPath);
@@ -315,25 +177,14 @@ impl SecretsReport {
     }
 }
 
-/// Planned classification of a Gitleaks process exit. Exit `1` is
-/// conflated upstream (leaks or errors), so it never classifies itself:
-/// the future adapter must consult the SARIF report and operational
-/// evidence (fixtures pending) before reporting leaks or failure.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SecretsOutcome {
-    /// Exit `0`: no findings reported. Silent-`0` semantics still need
-    /// fixtures before an adapter claims complete coverage.
     Clean,
-    /// Exit `1`: leaks or errors; consult the SARIF report before
-    /// claiming either. Never auto-pass, never auto-claim leaks.
     NeedsFindingErrorTriage,
-    /// Any other exit: operational failure, not a finding.
     Failed,
 }
 
 /// Classify one process exit code without executing anything. The
-/// SARIF report is the disambiguating evidence for exit `1`; its
-/// parsing and redaction proofs arrive with the adapter fixtures.
 pub fn classify_exit(code: i32) -> SecretsOutcome {
     match code {
         0 => SecretsOutcome::Clean,
@@ -342,39 +193,13 @@ pub fn classify_exit(code: i32) -> SecretsOutcome {
     }
 }
 
-/// One triaged secrets finding from a Gitleaks SARIF report.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SecretFinding {
-    /// SARIF rule ID (`gitleaks/<rule>` or the raw rule ID).
     pub rule: String,
-    /// Human message derived from the rule ID plus the artifact path
-    /// only, never from SARIF `message.text` or any secret-carrying
-    /// field: even an unredacted report cannot leak secret values
-    /// through findings or summaries.
     pub message: String,
-    /// Workspace-relative artifact URI when the report names one.
     pub path: Option<String>,
 }
 
-/// Triage one Gitleaks SARIF report (JSON text) into secret findings.
-///
-/// Counts typed `Sarif::runs[].results[]` via [`serde_sarif::sarif`]
-/// instead of hand-walked `Value`; each result becomes one finding
-/// with tool `gitleaks` downstream. Malformed JSON or a missing
-/// `runs` array fails closed with the document error (callers map this to
-/// incomplete, never clean). An empty results list is clean, not a
-/// coverage failure; silent-`0` semantics (exit `0` with no results)
-/// still mean clean here because the SARIF report is the disambiguating
-/// evidence the exit classification requires.
-///
-/// Redaction is proven by construction plus fixtures (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #629):
-/// the planned argv always carries `--redact` (see
-/// `backend::plan_secrets`), and triage surfaces only the rule ID
-/// plus the artifact URI. SARIF `message.text`, `fingerprints`,
-/// `partialFingerprints`, region/context snippets, fixes, properties,
-/// and any `secret:` field are ignored, so findings and summaries
-/// render only rule IDs, paths, and counts. Live execution never
-/// logs secret values.
 pub fn triage_sarif(text: &str) -> Result<Vec<SecretFinding>, String> {
     let document: serde_sarif::sarif::Sarif =
         serde_json::from_str(text).map_err(|error| format!("invalid gitleaks SARIF: {error}"))?;
@@ -448,7 +273,6 @@ mod tests {
 
     #[test]
     fn trufflehog_v1_stays_wont_fix() {
-        // Issue #629 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): V1 is Gitleaks-only. The pin gate above rejects
         // a `trufflehog` tool identity, and this disposition pins the
         // docs-level decision so a silent tool swap cannot qualify.
         assert_eq!(TRUFFLEHOG_V1, "wont-fix");
@@ -591,7 +415,6 @@ mod tests {
 
     #[test]
     fn sarif_triage_redaction_ignores_every_secret_field() {
-        // Issue #629 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): even an unredacted report cannot leak through
         // triage. Every plausible secret-carrying SARIF field carries
         // a distinct sentinel; triaged output must contain none of
         // them while still counting the finding with its rule and path.

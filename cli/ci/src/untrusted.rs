@@ -1,44 +1,15 @@
-//! Untrusted-artifact/metadata validation and thread-accounting deltas for
-//! consumer CI (WP4 slice 11).
-//!
-//! Split from `super` (`lib.rs`): owns [`ArtifactError`],
-//! [`validate_artifact_snapshot`], [`MetadataError`],
-//! [`validate_pr_metadata`], [`untrusted_inputs_execute_fork_code`],
-//! [`untrusted_inputs_grant_secrets`], [`thread_slots_used`],
-//! [`resolved_discussions_count_against_limit`], and
-//! [`concurrent_runs_share_limit`]. Re-exported through `super` so the
-//! public paths stay `dx_ci::{ArtifactError, validate_artifact_snapshot,
-//! ...}`. Distinct from the selection, revision, scheduling, supersession,
-//! reporting, fork/aggregate, rerun, trigger, caller/pin, audit, and preset
-//! modules.
-
 use super::{PlannedRevision, ThreadPlan};
 
-/// Malformed untrusted artifact: artifacts and PR metadata are untrusted
-/// inputs (`docs/github-ci.md#fork-security`) and privileged reporting must
-/// validate them before use, never trusting by presence.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum ArtifactError {
-    /// Artifact snapshot identity missing or empty.
     #[error("artifact snapshot identity is required")]
     MissingArtifact,
-    /// Artifact digest identity missing or empty.
     #[error("artifact digest identity is required")]
     MissingDigest,
-    /// Artifact snapshot does not bind to the required validated snapshot.
     #[error("artifact does not bind to the required validated snapshot")]
     SnapshotMismatch,
 }
 
-/// Validate one untrusted artifact against the required validated snapshot.
-///
-/// `artifact_validated` is the snapshot the artifact claims; `required` is
-/// the [`PlannedRevision::validated`] snapshot every selected check used;
-/// `digest` is the opaque artifact identity. Empty identities fail closed and
-/// a non-matching snapshot fails with [`ArtifactError::SnapshotMismatch`]:
-/// stale or foreign artifacts never satisfy the current run, and presence
-/// alone never establishes trust. Digest algorithms and transport stay
-/// deferred; this plans only the exact-binding rule.
 pub fn validate_artifact_snapshot(
     artifact_validated: &str,
     required: &str,
@@ -57,27 +28,14 @@ pub fn validate_artifact_snapshot(
 }
 
 /// Malformed untrusted PR metadata: privileged reporting must validate
-/// metadata against the planned revision before creating, updating, or
-/// cleaning up review threads or the summary.
 #[derive(Clone, Debug, Eq, PartialEq, thiserror::Error)]
 pub enum MetadataError {
-    /// A metadata identity is missing or empty.
     #[error("PR metadata identities are required")]
     MissingField,
-    /// Metadata does not match the planned revision (stale or foreign run).
     #[error("PR metadata does not match the planned revision snapshot")]
     StaleSnapshot,
 }
 
-/// Validate untrusted PR metadata against the planned revision.
-///
-/// `head`/`base`/`validated` are the opaque identities carried by the
-/// metadata event; `planned` is the [`PlannedRevision`] the run validated.
-/// Empty identities fail with [`MetadataError::MissingField`]; any mismatch
-/// with the planned `(validated, head, base)` fails with
-/// [`MetadataError::StaleSnapshot`] so stale reporting can neither create nor
-/// modify current threads (see [`super::may_publish`]). Non-PR runs carry no
-/// PR metadata: callers must not invent head/base there.
 pub fn validate_pr_metadata(
     head: &str,
     base: &str,
@@ -96,7 +54,6 @@ pub fn validate_pr_metadata(
 }
 
 /// Untrusted inputs never authorize fork-code execution in privileged
-/// reporting.
 pub fn untrusted_inputs_execute_fork_code() -> bool {
     false
 }
@@ -106,15 +63,6 @@ pub fn untrusted_inputs_grant_secrets() -> bool {
     false
 }
 
-/// Slots occupied against the fixed per-PR review-thread limit.
-///
-/// Only still-present findings with retained threads ([`ThreadPlan::keep`])
-/// occupy slots. Bot-only threads queued for deletion and replied threads
-/// queued for resolution are confirmed gone, so they free their slots for new
-/// findings; retained resolved discussions do not block new threads. Limit
-/// accounting is per PR across checks and platforms with no fresh allowance
-/// per job, rerun, retry, or concurrent completion (see
-/// [`super::may_publish`]: only the current run publishes).
 pub fn thread_slots_used(plan: &ThreadPlan) -> usize {
     plan.keep.len()
 }

@@ -1,12 +1,3 @@
-//! Invocation error vocabulary.
-//!
-//! Split from `super` (`args.rs`): owns [`ArgsError`] and the additive
-//! typo-hint renderer. The parser ([`super::parser`]) constructs these;
-//! `super` re-exports them so `crate::args::ArgsError` paths are
-//! unchanged.
-
-/// Renders the additive typo hint for unknown commands/options:
-/// empty without a suggestion, `. did you mean "lint"?` with one.
 fn suggestion_hint(suggestion: &Option<String>) -> String {
     match suggestion {
         Some(name) => format!(". did you mean {name:?}?"),
@@ -14,21 +5,16 @@ fn suggestion_hint(suggestion: &Option<String>) -> String {
     }
 }
 
-/// Invocation parsing failure or help request. Usage errors are
-/// CLI-detected pre-execution failures (exit code 2); [`ArgsError::Help`]
-/// is the `--help`/`-h` early exit (exit code 0, human text on stdout,
-/// deliberately outside machine-output guarantees).
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ArgsError {
-    /// Rendered help text (`dx --help` or `dx <cmd> --help`).
     #[error("{text}")]
     Help { text: String },
     #[error(
-        "missing command: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel"
+        "missing command: want security|license|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel"
     )]
     MissingCommand,
     #[error(
-        "unknown command {command:?}: want audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel{suggestion_hint}",
+        "unknown command {command:?}: want security|license|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel{suggestion_hint}",
         suggestion_hint = suggestion_hint(suggestion)
     )]
     UnknownCommand {
@@ -59,7 +45,6 @@ pub enum ArgsError {
     BadMinCoverage { value: String },
     #[error("malformed --report {value:?}: want <format>=<destination>")]
     BadReport { value: String },
-    /// Unknown `dx completion` shell (contract: `bash|zsh|fish|powershell`).
     #[error("unknown-shell: {shell}")]
     UnknownShell { shell: String },
     #[error("options --debug and --release are mutually exclusive")]

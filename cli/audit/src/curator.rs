@@ -1,47 +1,9 @@
-//! Audit curator data as declared Bazel inputs.
-//!
-//! Pure planning for the declared-inputs delivery of the audit contract
-//! (`docs/cli/commands/audit-update-bazel.md#dx-audit`): the committed
-//! `licenses.toml` policy plus per-package `[[inventory]]` shape stays
-//! identical, while Bazel-owned analysis declares the same bytes as
-//! inputs so results and cache identity reflect the data actually
-//! analyzed rather than an untracked workspace read. Advisory snapshots
-//! ride the same contract via [`crate::advisory::snapshot_rel`] plus
-//! [`crate::advisory::identity_rel`]; they are acquired, not committed,
-//! so no filegroup lists them here.
-//!
-//! This module pins the label plus relative-path mapping only, so the
-//! CLI's workspace reads and Bazel-owned analysis agree on one identity
-//! without a second mechanism. Per-package inventory shape
-//! (`package`, `set`, `license`, `versions`, `text_present`) is owned by
-//! [`crate::license_policy::LicenseInventory`]; NOTICE aggregation over
-//! these same inputs stays hermetic and cached in
-//! `deploy/release/notice.bzl`.
-//!
-//! See: `docs/cli/commands/audit-update-bazel.md#dx-audit`.
-
-/// Bazel label exposing the committed curator file as a declared input.
-/// The target lives in the root package (`//:audit_curator` over
-/// `licenses.toml`); the CLI keeps reading the same workspace-relative
-/// bytes via [`LICENSES_TOML_REL`], so both paths analyze identical data.
 pub const LICENSES_TOML_LABEL: &str = "//:audit_curator";
 
-/// Workspace-relative path of the committed curator file. The CLI reads
-/// this path; Bazel-owned analysis declares [`LICENSES_TOML_LABEL`] as
-/// an input carrying the same bytes.
 pub const LICENSES_TOML_REL: &str = "licenses.toml";
 
-/// Dependency sets owning identified advisory snapshots as declared
-/// analysis inputs. Spelling matches [`crate::advisory::advisory_source`]
-/// plus [`crate::backend::vuln_locks`], so audit and update agree on
-/// owning sets without a second registry.
 pub const CURATOR_ADVISORY_SETS: &[&str] = &["cargo", "npm", "maven", "nuget", "go"];
 
-/// Declared-input relative paths for one advisory set: the snapshot bytes
-/// plus the identity document (`url`, `sha256`, `retrieved_at`). Both
-/// ride Bazel-owned analysis as inputs; a missing, invalid, or stale
-/// snapshot fails with [`crate::advisory::CODE_ADVISORY_REFRESH_FAILED`],
-/// never clean and never a stale fallback.
 pub fn advisory_inputs(set: &str) -> [String; 2] {
     [
         crate::advisory::snapshot_rel(set),
@@ -49,10 +11,6 @@ pub fn advisory_inputs(set: &str) -> [String; 2] {
     ]
 }
 
-/// All declared curator input rels: the committed policy file plus every
-/// set's snapshot bytes plus identity. Order is deterministic
-/// (`licenses.toml` first, then per-set snapshot plus identity in
-/// [`CURATOR_ADVISORY_SETS`] order) so action keys stay stable.
 pub fn curator_input_rels() -> Vec<String> {
     let mut out = vec![LICENSES_TOML_REL.to_owned()];
     for set in CURATOR_ADVISORY_SETS {

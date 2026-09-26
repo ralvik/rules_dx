@@ -1,6 +1,3 @@
-//! Invocation-parser tests (part 2/2) — split from `args/parser.rs` with no behavior change.
-//! Originally the inline `mod tests` of `parser.rs`.
-
 use super::super::{ArgsError, Command};
 use super::parse;
 use dx_output::OutputMode;
@@ -12,8 +9,8 @@ fn args(words: &[&str]) -> Vec<String> {
 #[test]
 fn command_option_ownership_rejects_every_unsupported_surface() {
     for command in [
-        "audit", "update", "bump", "migrate", "upgrade", "docs", "status", "version", "owners",
-        "deps", "hooks", "init", "new",
+        "security", "license", "update", "bump", "migrate", "upgrade", "docs", "status",
+        "version", "owners", "deps", "hooks", "init", "new",
     ] {
         let base = match command {
             "bump" => vec![command, "cargo:demo", "1.0.0"],
@@ -32,8 +29,8 @@ fn command_option_ownership_rejects_every_unsupported_surface() {
         ] {
             let supported = match option {
                 "--pin=1.0.0" => command == "version",
-                "--fail-on=error" => command == "audit",
-                "--report=junit=report.xml" => command == "audit",
+                "--fail-on=error" => command == "security" || command == "license",
+                "--report=junit=report.xml" => command == "security" || command == "license",
                 "--check" => matches!(command, "generate" | "update" | "docs" | "version"),
                 _ => false,
             };
@@ -64,7 +61,7 @@ fn command_option_ownership_rejects_every_unsupported_surface() {
         vec!["docs", ":relative"],
         vec!["docs", ""],
         vec!["generate", ":relative"],
-        vec!["audit", ""],
+        vec!["security", ""],
         vec!["update", ""],
         vec!["migrate", "--from=1.0.0", "--to=2.0.0", ":relative"],
         vec!["--bazel", "bazel", "version"],
@@ -261,7 +258,6 @@ fn migrate_needs_from_and_to_versions() {
         })
     );
     // `--from`/`--to` belong to migrate plus upgrade only.
-    // See: `docs/cli/commands/new-upgrade.md`.
     let upgrade_ok =
         parse(&args(&["upgrade", "--from=1.2.3", "--to=2.0.0"])).expect("upgrade parses");
     assert_eq!(upgrade_ok.command, Command::Upgrade);
@@ -285,7 +281,6 @@ fn migrate_needs_from_and_to_versions() {
 
 #[test]
 fn new_takes_language_plus_optional_name() {
-    // See: `docs/cli/commands/new-upgrade.md`.
     let got = parse(&args(&["new", "rust", "demo"])).expect("parse new");
     assert_eq!(got.command, Command::New);
     assert!(got.command.is_adoption());
@@ -317,7 +312,6 @@ fn new_takes_language_plus_optional_name() {
 
 #[test]
 fn upgrade_needs_from_and_to_with_no_scopes() {
-    // See: `docs/cli/commands/new-upgrade.md`.
     let got = parse(&args(&["upgrade", "--from=1.2.3", "--to=2.0.0"])).expect("parse upgrade");
     assert_eq!(got.command, Command::Upgrade);
     assert!(got.command.is_adoption());
@@ -392,7 +386,7 @@ fn output_contract_has_no_silent_ignore() {
     // the flag, print text anyway) is never allowed.
     //
     // JSON-capable: quality, generate, workflow build/test/coverage/run,
-    // umbrellas, audit, update, managed, clean, status, version,
+    // umbrellas, security/license, update, managed, clean, status, version,
     // owners/deps/why, docs.
     for command in [
         "lint",
@@ -405,7 +399,8 @@ fn output_contract_has_no_silent_ignore() {
         "run",
         "check",
         "fix",
-        "audit",
+        "security",
+        "license",
         "update",
         "clean",
         "codegen",
@@ -502,7 +497,8 @@ fn output_contract_has_no_silent_ignore() {
         vec!["test", "//a:one", "--output=diff"],
         vec!["coverage", "--output=diff"],
         vec!["run", "//a:one", "--output=diff"],
-        vec!["audit", "--output=diff"],
+        vec!["security", "--output=diff"],
+        vec!["license", "--output=diff"],
         vec!["update", "--output=diff"],
         vec!["status", "--output=diff"],
         vec!["version", "--output=diff"],
@@ -614,7 +610,6 @@ fn version_rollback_check_and_configured_parse() {
 
 #[test]
 fn docs_check_serve_port_parse() {
-    // See: `docs/cli/commands/docs.md`.
     let got = parse(&args(&["docs"])).expect("bare docs parses");
     assert_eq!(got.command, Command::Docs);
     assert!(!got.check);
@@ -794,7 +789,6 @@ fn why_requires_file_and_label() {
 
 #[test]
 fn init_and_hooks_have_no_force_flag() {
-    // Issue #700: absent-only writes plus unmanaged refusal ship with no
     // overwrite flag, so `--force` must fail as an unknown option rather
     // than read as a no-op.
     for words in [
@@ -815,11 +809,11 @@ fn init_and_hooks_have_no_force_flag() {
 
 #[test]
 fn here_selects_cwd_scope_only_via_explicit_flag() {
-    // Issue #699: `--here` (`--cwd` alias) selects the current directory
     // tree on cwd-scope commands only, never implicitly, and never with
     // explicit scopes. The no-flag default stays `//...`.
     for command in [
-        "audit",
+        "security",
+        "license",
         "lint",
         "typecheck",
         "format",
@@ -845,20 +839,13 @@ fn here_selects_cwd_scope_only_via_explicit_flag() {
         assert!(!bare.here, "command: {command}");
         assert!(bare.targets.is_empty(), "command: {command}");
     }
-    // Audit allows one family selector plus `--here`.
-    let family = parse(&args(&["audit", "security", "--here"])).expect("family plus here");
-    assert!(family.here);
-    assert_eq!(family.targets, vec!["security".to_owned()]);
-    let family_alias = parse(&args(&["audit", "--cwd", "license"])).expect("family plus cwd");
-    assert!(family_alias.here);
     // Explicit scopes never combine with `--here`.
     for words in [
         vec!["build", "--here", "//a:one"],
         vec!["lint", "src/a.py", "--here"],
         vec!["test", "--cwd", "//..."],
-        vec!["audit", "--here", "//a:one"],
-        vec!["audit", "security", "//a:one", "--here"],
-        vec!["audit", "bogus", "--here"],
+        vec!["security", "--here", "//a:one"],
+        vec!["license", "cli/cli", "--here"],
     ] {
         assert_eq!(
             parse(&args(&words)),
@@ -907,7 +894,6 @@ fn here_selects_cwd_scope_only_via_explicit_flag() {
 
 #[test]
 fn completion_check_verifies_without_writing() {
-    // See: `docs/cli/commands/completion.md`.
     let one = parse(&args(&["completion", "bash", "--check"])).expect("one shell check");
     assert_eq!(one.command, Command::Completion);
     assert!(one.check);
@@ -940,9 +926,8 @@ fn completion_check_verifies_without_writing() {
 
 #[test]
 fn offline_forces_cache_only_on_audit_update_bump() {
-    // See: `docs/deploy/offline-bootstrap.md`. `--offline` (`--frozen`
-    // alias) forces cache-only without fetches on audit/update/bump only.
-    for command in ["audit", "update"] {
+    // alias) forces cache-only without fetches on security/license/update/bump only.
+    for command in ["security", "license", "update"] {
         let got = parse(&args(&[command, "--offline"])).expect("offline parses");
         assert!(got.offline, "command: {command}");
         assert!(got.command.supports_offline(), "command: {command}");
@@ -996,7 +981,7 @@ fn offline_forces_cache_only_on_audit_update_bump() {
     );
     // Boolean shape: `=value` stays unknown, never a silent value.
     assert_eq!(
-        parse(&args(&["audit", "--offline=yes"])),
+        parse(&args(&["security", "--offline=yes"])),
         Err(ArgsError::UnknownOption {
             option: "--offline=yes".to_owned(),
             suggestion: None,

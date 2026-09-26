@@ -1,6 +1,3 @@
-//! Invocation-defaults tests: flag over env over file.
-//! See: `docs/cli/cli-contract.md#invocation-defaults`.
-
 use super::super::{Command, FileDefaults};
 use super::parse_with;
 use dx_output::{ColorMode, OutputMode, Threshold};

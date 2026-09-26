@@ -66,7 +66,7 @@ execution: exactly one main-workspace label (`//pkg:target`); patterns
 (`//...`), multiple labels, and file/path scopes are usage failures
 (exit 2). Deployability is checked with one `bazel cquery` before any
 build: the target must return `DxDeployInfo` (see
-[Deploy authoring](../../deploy/authoring.md)) or be executable
+Deploy authoring) or be executable
 (`*_binary`/executable; aliases included, Bazel owns executability),
 else `not_deployable` fails pre-exec (exit 2). The flow is resolve,
 cquery, `bazel build --config=...`, then `bazel run --config=...` with
@@ -96,12 +96,12 @@ sources that fail to load and non-Rust/Go records count raw. Without the flag,
 coverage collects and reports with no threshold verdict. The threshold is a
 configurable requirement for users per-cell: each required
 configuration/platform cell gates its own report against its own
-`--min-coverage` value (this repository pins `97` for the `//...` rate
+`--min-coverage` value (this repository pins `100` for the `//...` rate
 gate with a zero-uncovered exact gate over the versioned inventory
 scope). Per-cell plus Codecov opt-in plus remote evidence is qualified
 with fixture evidence pinned in
 `tools/coverage/tests/fixtures/per_cell/pins.bzl` via
-`bazel run //tools/ci:coverage_qualification` (issue #507).
+`bazel run //tools/ci:coverage_qualification`.
 
 Coverage tools resolve per-host via the registered C++ toolchain. The
 vendored preset pins `GENERATE_LLVM_LCOV=1` (LLVM LCOV where the
@@ -119,7 +119,7 @@ toolchain provides them.
 ## Build Profiles
 
 Three shared Bazel configs select `compilation_mode` behind stable
-`dx_*` names (see [ADR 0021](../../decisions/0021-build-profiles.md)):
+`dx_*` names :
 
 | Config | `compilation_mode` | Intended default |
 | --- | --- | --- |
@@ -141,7 +141,7 @@ There is no `--dev` flag: bare already means the middle
 mode. `dx coverage` takes no profile flags; its argv is unchanged.
 Precedence is explicit flag over deploy target `profile` attribute over
 command default. The deploy target `profile` attribute comes from
-`DxDeployInfo` (see [Deploy authoring](../../deploy/authoring.md));
+`DxDeployInfo` (see Deploy authoring);
 `DX_PROFILE=debug|dev|release` is forwarded to the deploy program.
 Flags plus forwarding are pinned by
 `cli/cli/tests/fixtures/build_profiles/` (`pins.bzl` plus

@@ -1,62 +1,21 @@
-//! `dx generate` Bazel planning (resolve/plan/run/deploy unscramble).
-//!
-//! Split from `super` (`plan.rs`): owns the canonical Gazelle runner
-//! targets, the private-protocol environment names, [`GenerateScopeElement`]
-//! plus the scope-projection helpers, and [`plan_generate`]. Re-exported
-//! through `super` so the public paths stay
-//! `crate::plan::{GENERATE_TARGET, plan_generate, generate_scope_json,
-//! ...}`. Shares [`super::BuildPlan`], [`super::workspace_flag`], and
-//! [`super::workflow_scope_labels`] with the quality/workflow planning in
-//! `super`.
-
 use dx_process::{build_workflow_argv, describe_scope, ForwardError, ProtectedFlag};
 
 use super::{workflow_scope_labels, workspace_flag, BuildPlan};
 use crate::resolve::ResolvedScope;
 
-/// Canonical Gazelle runners behind `dx generate`: the repo-wide
-/// `update` entrypoint from WP1, plus the non-mutating check
-/// entrypoint (dispatch). The check target encodes upstream
-/// `-mode diff` in canonical-target wiring: Gazelle computes the same
-/// rewrite, witnesses the same intended manifest through
-/// `AfterResolvingDeps`, writes no workspace file, and exits nonzero
-/// when changes exist. Scoped runs keep the mode target and narrow the
-/// traversal through positional arguments plus the resolved scope
-/// manifest (`DX_GENERATE_SCOPE`) from WP1.
 pub const GENERATE_TARGET: &str = "//dx:generate";
-/// Non-mutating Gazelle entrypoint for `dx generate --check`: identical
-/// language wiring with upstream `-mode diff`.
 pub const GENERATE_CHECK_TARGET: &str = "//dx:generate_check";
 
-/// Private protocol environment the execution wrapper sets on the
-/// Gazelle run (WP1, dispatch). Names mirror the extension
-/// side (`gazelle/dispatch/manifest.go`); the CLI never reads them back.
 pub const GENERATE_ENV_INTENDED: &str = "DX_GENERATE_INTENDED";
-/// JSON list of `{"element","dirs"}` scope elements, see
-/// [`generate_scope_json`].
 pub const GENERATE_ENV_SCOPE: &str = "DX_GENERATE_SCOPE";
-/// `"check"` for `--check`, `"default"` otherwise.
 pub const GENERATE_ENV_MODE: &str = "DX_GENERATE_MODE";
 
-/// One resolved scope element for the versioned intended-manifest
-/// contract (`DX_GENERATE_SCOPE`, WP1): the owning Bazel target plus
-/// the workspace-relative directories the runner must traverse for it.
-/// `""` is the workspace root, selected by the repository scope
-/// (`//...`); every other directory is relative without a leading `./`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GenerateScopeElement {
-    /// Owning resolved target, in `resolved.targets` order.
     pub element: String,
-    /// Traversal directories for `element`; exactly one today because
-    /// every resolved target owns a single package directory.
     pub dirs: Vec<String>,
 }
 
-/// Maps one resolved target to its workspace-relative traversal
-/// directory: recursive patterns traverse their own directory, labels
-/// traverse their package directory, and the repository scope (`//...`)
-/// traverses the root (`""`). Root-package labels (`//:foo`) traverse
-/// the root as well.
 fn generate_traversal_dir(target: &str) -> String {
     if target == "//..." {
         return String::new();
@@ -76,10 +35,6 @@ fn generate_traversal_dir(target: &str) -> String {
     }
 }
 
-/// Projects a resolved scope onto manifest scope elements in
-/// `resolved.targets` order. Empty targets fall back to the repository
-/// scope through [`workflow_scope_labels`], shared with the other
-/// planners.
 pub fn generate_scope_elements(resolved: &ResolvedScope) -> Vec<GenerateScopeElement> {
     let (_, labels) = workflow_scope_labels(resolved);
     labels
@@ -91,9 +46,6 @@ pub fn generate_scope_elements(resolved: &ResolvedScope) -> Vec<GenerateScopeEle
         .collect()
 }
 
-/// Renders the manifest scope value (`DX_GENERATE_SCOPE`, WP1): a
-/// JSON array of `{"element","dirs"}` objects in
-/// [`generate_scope_elements`] order.
 pub fn generate_scope_json(resolved: &ResolvedScope) -> String {
     let items: Vec<serde_json::Value> = generate_scope_elements(resolved)
         .iter()
@@ -104,9 +56,6 @@ pub fn generate_scope_json(resolved: &ResolvedScope) -> String {
     serde_json::Value::Array(items).to_string()
 }
 
-/// Collects the sorted, deduplicated traversal directories for a
-/// resolved scope. The repository root (`""`) only appears alone: any
-/// narrower directory implies a scoped run.
 pub fn generate_traversal_dirs(resolved: &ResolvedScope) -> Vec<String> {
     let mut dirs: Vec<String> = generate_scope_elements(resolved)
         .into_iter()
@@ -117,17 +66,6 @@ pub fn generate_traversal_dirs(resolved: &ResolvedScope) -> Vec<String> {
     dirs
 }
 
-/// Builds the exact `bazel run //dx:generate` argv for a resolved
-/// scope, or `bazel run //dx:generate_check` when `check` holds. Only
-/// the canonical workspace policy is required; user options after `--`
-/// forward as `run` command options before the target. The resolved
-/// traversal directories from [`generate_traversal_dirs`] forward after
-/// a second `--` separator as Gazelle positional arguments; the
-/// repository root needs no traversal arguments because Gazelle
-/// already walks the whole workspace. Fails before execution when user
-/// options conflict with required policy. There is no BEP stream:
-/// Gazelle owns its output and exit status, and the versioned intended
-/// manifest carries per-command results.
 pub fn plan_generate(
     resolved: &ResolvedScope,
     bazel_options: &[String],
@@ -137,6 +75,7 @@ pub fn plan_generate(
     let protected = vec![ProtectedFlag {
         name: "@rules_dx//config:workspace".to_owned(),
         required: None,
+        allowed: Vec::new(),
     }];
     let target = if check {
         GENERATE_CHECK_TARGET

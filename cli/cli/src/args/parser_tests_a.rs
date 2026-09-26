@@ -1,6 +1,3 @@
-//! Invocation-parser tests (part 1/2) — split from `args/parser.rs` with no behavior change.
-//! Originally the inline `mod tests` of `parser.rs`.
-
 use super::super::{ArgsError, Command, ReportRequest};
 use super::parse;
 use dx_output::{OutputMode, Threshold};
@@ -509,16 +506,17 @@ fn clean_rejects_scopes_and_quality_options() {
 
 #[test]
 fn audit_update_parse_and_reject_unsupported_options() {
-    let audit = parse(&args(&["audit"])).expect("parse audit");
-    assert_eq!(audit.command, Command::Audit);
-    assert_eq!(audit.command.name(), "audit");
-    assert!(audit.command.is_audit_update());
-    assert!(!audit.command.is_workflow());
-    assert!(!audit.command.is_adoption());
-    assert!(!audit.command.is_managed());
-    assert!(audit.targets.is_empty());
-    let families = parse(&args(&["audit", "security"])).expect("parse audit family");
-    assert_eq!(families.targets, vec!["security".to_owned()]);
+    let security = parse(&args(&["security"])).expect("parse security");
+    assert_eq!(security.command, Command::Security);
+    assert_eq!(security.command.name(), "security");
+    assert!(security.command.is_audit_update());
+    assert!(!security.command.is_workflow());
+    assert!(!security.command.is_adoption());
+    assert!(!security.command.is_managed());
+    assert!(security.targets.is_empty());
+    let license = parse(&args(&["license", "//a:one"])).expect("parse license scope");
+    assert_eq!(license.command, Command::License);
+    assert_eq!(license.targets, vec!["//a:one".to_owned()]);
     let update = parse(&args(&["update"])).expect("parse update");
     assert_eq!(update.command, Command::Update);
     assert_eq!(update.command.name(), "update");
@@ -526,9 +524,9 @@ fn audit_update_parse_and_reject_unsupported_options() {
     let selected = parse(&args(&["update", "crates"])).expect("parse update selector");
     assert_eq!(selected.targets, vec!["crates".to_owned()]);
     assert_eq!(
-        parse(&args(&["audit", "--check"])),
+        parse(&args(&["security", "--check"])),
         Err(ArgsError::UnsupportedOption {
-            command: "audit",
+            command: "security",
             option: "--check".to_owned(),
         })
     );
@@ -572,14 +570,14 @@ fn audit_update_parse_and_reject_unsupported_options() {
         })
     );
     assert_eq!(
-        parse(&args(&["audit", "--", "--jobs=4"])),
+        parse(&args(&["license", "--", "--jobs=4"])),
         Err(ArgsError::UnsupportedOption {
-            command: "audit",
+            command: "license",
             option: "--".to_owned(),
         })
     );
     assert_eq!(
-        parse(&args(&["audit", ":target"])),
+        parse(&args(&["security", ":target"])),
         Err(ArgsError::RelativeLabel {
             scope: ":target".to_owned(),
         })

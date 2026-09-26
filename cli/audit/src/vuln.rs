@@ -1,166 +1,53 @@
-//! Dependency-vulnerability matching for `dx audit`.
-//!
-//! Pure local matching over injected lockfile packages and OSV-format
-//! advisory records, per the audit contract
-//! (`docs/cli/commands/audit-update-bazel.md#dx-audit`): download
-//! applicable advisory databases and match packages against the
-//! identified snapshots within Bazel-owned analysis; never upload
-//! lockfiles or send dependency package names and versions through
-//! query parameters, request bodies, or auditor telemetry.
-//! Package-specific advisory requests that disclose the inventory are
-//! never an alternative to local matching, and a query-only upstream
-//! service never satisfies this contract.
-//!
-//! Report known vulnerabilities whether or not a fixed version is
-//! available, with the same severity threshold and failure policy in
-//! both cases. Lack of a fix never suppresses a finding, downgrades
-//! its severity, or exempts it from failure. Upstream remediation
-//! information is preserved when available, without treating a
-//! dependency-version upgrade as an automatic source fix or mutating
-//! dependencies during audit.
-//!
-//! Known applicable vulnerabilities with no severity rating fail audit
-//! by default. The upstream advisory severity is reported as unknown
-//! text rather than an invented rating; the normalized diagnostic
-//! level stays in the closed `info|warning|error` set owned by the
-//! output protocol. A valid explicit risk-acceptance exception may
-//! exempt the finding from failure while retaining visibility.
-//!
-//! If a selected dependency cannot be assessed by the qualified
-//! auditor, the audit fails as incomplete and identifies the
-//! dependency plus the assessment limitation. Unsupported Git
-//! revisions and unidentified private packages are incomplete, never
-//! clean (both wont-fix, auditor-owned by this module
-//! plus [`crate::locks`]; Git SHAs carry no OSV version identity and
-//! SHA-to-version mapping needs a network resolver forbidden by the
-//! offline contract, while private packages have no upstream identity
-//! by definition). A recognized assessable package with no matching
-//! advisories is clean, not a coverage failure. Advisory-specific
-//! risk acceptance never waives missing assessment, and an empty
-//! findings list alone is never evidence that every selected
-//! dependency was assessed.
-//!
-//! This module matches over injected records only, so severity,
-//! fix-preservation, unknown handling, and incomplete mapping stay
-//! deterministic and unit-testable without network access or any
-//! auditor binary. Version-range narrowing uses upstream semantics:
-//! Cargo-flavor semver through [`crate::exception::version_in_scope`]
-//! for Cargo, Go via [`go_in_scope`] which normalizes `go.mod` `v`
-//! prefixes, pseudo-versions, and `+incompatible` suffixes with
-//! Cargo-flavor ordering but no prerelease gate, npm-native ranges
-//! through [`crate::exception::npm_in_scope`] for npm, Maven-native
-//! ordering plus interval matching for Maven, and NuGet-native ordering
-//! plus interval matching for NuGet, exactly like the exception lifecycle
-//! deferral in [`crate::exception`].
-
 use serde::{Deserialize, Serialize};
 
 use crate::exception::{
     check_expiry, npm_in_scope, version_in_scope, ExceptionProblem, FindingRef, RiskException,
 };
 
-/// One locked package extracted from a standard lockfile or equivalent
-/// resolved dependency file. Complete-lock coverage audits every entry,
-/// including dependencies not used by the particular scoped targets.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LockedPackage {
-    /// Package name in its owning set.
     pub name: String,
-    /// Locked version string.
     pub version: String,
-    /// Owning dependency set (selector spelling, verbatim).
     pub set: String,
-    /// True for Git-revision dependencies the V1 matcher cannot assess
-    /// (unsupported revisions fail as incomplete, never clean).
     pub is_git: bool,
-    /// True for private/unidentified packages with no upstream advisory
-    /// identity (unassessed, fail as incomplete).
     pub is_private: bool,
 }
 
-/// One OSV-format advisory record from the identified snapshot. This is
-/// the matching shape projected from typed OSV via the upstream `osv`
-/// crate (`schema` feature only, offline; See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #676): upstream advisory
-/// identity, affected package and version scope, severity text, and
-/// remediation. Legacy V1 minimal snapshots still parse; unknown fields
-/// ignore so snapshot evolution never breaks matching.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Advisory {
-    /// Upstream advisory identity (e.g. `GHSA-aaaa-bbbb-cccc`, `RUSTSEC-...`).
     pub id: String,
-    /// Affected package name.
     pub package: String,
-    /// Affected version scope, upstream version semantics
-    /// (`>=1.2.0, <2.0.0` for Cargo semver sets, Go same plus `v`-prefix
-    /// normalization with pseudo-versions matching bare ranges and
-    /// `+incompatible` as build metadata; npm ranges such as `>=1.2.7 <1.3.0`,
-    /// `1.2.7 || >=1.2.9 <2.0.0`, or `1.2.3 - 2.3.4`; Maven intervals
-    /// such as `[1.0,2.0)` or exact versions; NuGet intervals such as
-    /// `[1.0,2.0)` or exact versions).
     pub versions: String,
-    /// Upstream severity text (`critical|high|medium|low`), or empty for
-    /// unrated advisories (reported as unknown, fail by default).
     pub severity: String,
-    /// Fixed versions, when upstream publishes remediation. Empty means
-    /// no fix available (still reported, still fails without exception).
     pub fixed: Vec<String>,
-    /// Owning dependency set the advisory applies to.
     pub set: String,
 }
 
-/// One matched vulnerability finding. Accepted findings stay visible;
-/// acceptance only excludes them from the failure decision.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VulnFinding {
-    /// Upstream advisory identity.
     pub advisory: String,
-    /// Affected package name.
     pub package: String,
-    /// Locked version found vulnerable.
     pub version: String,
-    /// Owning dependency set.
     pub set: String,
-    /// Upstream severity text, or `unknown` when unrated.
     pub severity: String,
-    /// Normalized diagnostic level in the closed `info|warning|error` set.
     pub level: &'static str,
-    /// Fixed versions from upstream, possibly empty (no fix still fails).
     pub fixed: Vec<String>,
 }
 
-/// Assessment limitation for Git-revision dependencies
-/// wont-fix, auditor-owned): the SHA carries no OSV version identity.
 pub const REASON_GIT: &str = "unsupported git revision";
-/// Assessment limitation for private packages with no upstream advisory
-/// identity (wont-fix, auditor-owned): callers mark via
-/// [`LockedPackage::is_private`]; lock readers never infer it.
 pub const REASON_PRIVATE: &str = "unidentified private package";
 
-/// Unassessable dependency: the audit fails as incomplete and
-/// identifies the dependency plus the limitation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Unassessed {
-    /// Affected package name.
     pub package: String,
-    /// Owning dependency set.
     pub set: String,
-    /// Assessment limitation (`unsupported git revision`,
-    /// `unidentified private package`).
     pub reason: &'static str,
 }
 
-/// Upstream severity text for unrated advisories. Reported verbatim as
-/// unknown text; never an invented rating.
 pub const UNKNOWN_SEVERITY: &str = "unknown";
 
-/// Stable rule prefix for vulnerability findings in SARIF and events.
 pub const VULN_RULE_PREFIX: &str = "vuln";
 
-/// Normalize one upstream severity to the closed diagnostic level:
-/// `critical|high` to `error`, `medium|low` to `warning`, and missing
-/// or unrecognized text to `error` (unknown fails by default, fail
-/// closed). The upstream text itself is preserved in the finding for
-/// visibility; only the level normalizes.
 pub fn normalize_level(severity: &str) -> &'static str {
     match severity.trim().to_ascii_lowercase().as_str() {
         "critical" | "high" | "error" => "error",
@@ -170,8 +57,6 @@ pub fn normalize_level(severity: &str) -> &'static str {
     }
 }
 
-/// Canonical upstream severity text: trimmed text, or `unknown` when
-/// empty. Never invents a rating for unrated advisories.
 pub fn canonical_severity(severity: &str) -> String {
     let trimmed = severity.trim();
     if trimmed.is_empty() {
@@ -181,16 +66,6 @@ pub fn canonical_severity(severity: &str) -> String {
     }
 }
 
-/// Whether one locked package version falls in one advisory's affected
-/// scope. Cargo uses upstream Cargo-flavor semver via
-/// [`version_in_scope`]; Go uses Cargo-flavor ordering via [`go_in_scope`]
-/// (`v`-prefix normalization plus pseudo-versions matching bare ranges,
-/// `+incompatible` as build metadata); npm uses npm-native ranges via
-/// [`npm_in_scope`]; Maven uses Maven-native ordering plus interval
-/// matching via [`maven_in_scope`]; NuGet uses NuGet-native ordering plus
-/// interval matching via [`nuget_in_scope`]. Unparseable scopes or
-/// versions fail closed to `false` for semver, npm, Maven, and NuGet
-/// sets, and to exact-match only for other sets.
 pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
     match set {
         "cargo" => version_in_scope(scope, version),
@@ -202,12 +77,6 @@ pub fn version_affected(set: &str, scope: &str, version: &str) -> bool {
     }
 }
 
-/// Strip one Go `v` prefix where a version token starts: at the text
-/// start or after a comparator, separator, or opening boundary, and only
-/// before a digit, so words containing `v` never mangle. Both advisory
-/// scopes (`>=v1.0.0, <v2.0.0`) and locked versions (`v0.6.0`,
-/// pseudo-versions, `+incompatible` suffixes) normalize to bare semver
-/// for the Go matcher below.
 fn strip_go_v(text: &str) -> String {
     let chars: Vec<char> = text.chars().collect();
     let mut out = String::with_capacity(text.len());
@@ -230,21 +99,6 @@ fn strip_go_v(text: &str) -> String {
     out
 }
 
-/// Go affected-scope matching: [`strip_go_v`] normalization on both the
-/// advisory scope and the locked version, then Cargo-flavor ordering
-/// without the Cargo prerelease gate (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #679).
-///
-/// Spike result: `v`-strip preprocessing suffices, no Go-aware crate.
-/// `semver` ordering already matches Go precedence (pseudo-versions sort
-/// as prereleases below their release, above the prior tag; `+incompatible`
-/// rides build metadata ignored for precedence), so only the match gate
-/// differs. Cargo's `VersionReq::matches` excludes prereleases from bare
-/// ranges (a same-tuple prerelease comparator is required), which would
-/// hide every pseudo-version behind a false negative. Go evaluates each
-/// comparator by ordering alone ([`go_matches_impl`]), so
-/// `>=v1.0.0, <v2.0.0` covers `v1.2.4-0.20240101120000-abcdef123456`
-/// while `>=v1.2.4` still excludes it and `=v1.2.4` stays exact.
-/// Unparseable inputs fail closed to `false`, never a false positive.
 pub fn go_in_scope(scope: &str, version: &str) -> bool {
     let scope_norm = strip_go_v(scope);
     let version_norm = strip_go_v(version);
@@ -264,12 +118,6 @@ pub fn go_in_scope(scope: &str, version: &str) -> bool {
         .all(|comparator| go_matches_impl(comparator, &version))
 }
 
-/// One Go comparator by ordering alone, mirroring upstream `semver`
-/// `matches_impl` without the `pre_is_compatible` gate. Exact and
-/// wildcard keep prerelease equality (so `=1.2.3` never covers
-/// `1.2.3-0.20240101-abcdef`); ranges, carets, and tildes compare by
-/// precedence, so pseudo-versions match bare ranges they fall inside.
-/// Future unknown operators fail closed.
 fn go_matches_impl(comparator: &semver::Comparator, version: &semver::Version) -> bool {
     match comparator.op {
         semver::Op::Exact | semver::Op::Wildcard => go_matches_exact(comparator, version),
@@ -287,7 +135,6 @@ fn go_matches_impl(comparator: &semver::Comparator, version: &semver::Version) -
     }
 }
 
-/// Exact core match with prerelease equality (mirrors upstream).
 fn go_matches_exact(comparator: &semver::Comparator, version: &semver::Version) -> bool {
     if version.major != comparator.major {
         return false;
@@ -305,7 +152,6 @@ fn go_matches_exact(comparator: &semver::Comparator, version: &semver::Version) 
     version.pre == comparator.pre
 }
 
-/// Greater ordering (mirrors upstream).
 fn go_matches_greater(comparator: &semver::Comparator, version: &semver::Version) -> bool {
     if version.major != comparator.major {
         return version.major > comparator.major;
@@ -325,7 +171,6 @@ fn go_matches_greater(comparator: &semver::Comparator, version: &semver::Version
     version.pre > comparator.pre
 }
 
-/// Less ordering (mirrors upstream).
 fn go_matches_less(comparator: &semver::Comparator, version: &semver::Version) -> bool {
     if version.major != comparator.major {
         return version.major < comparator.major;
@@ -345,7 +190,6 @@ fn go_matches_less(comparator: &semver::Comparator, version: &semver::Version) -
     version.pre < comparator.pre
 }
 
-/// Tilde ordering (mirrors upstream).
 fn go_matches_tilde(comparator: &semver::Comparator, version: &semver::Version) -> bool {
     if version.major != comparator.major {
         return false;
@@ -363,7 +207,6 @@ fn go_matches_tilde(comparator: &semver::Comparator, version: &semver::Version) 
     version.pre >= comparator.pre
 }
 
-/// Caret ordering (mirrors upstream).
 fn go_matches_caret(comparator: &semver::Comparator, version: &semver::Version) -> bool {
     if version.major != comparator.major {
         return false;
@@ -397,20 +240,12 @@ fn go_matches_caret(comparator: &semver::Comparator, version: &semver::Version) 
     version.pre >= comparator.pre
 }
 
-/// Maven version token after normalization: numeric tokens compare
-/// numerically (length then lexicographic, no overflow), qualifier
-/// tokens compare via Maven ordering (case-insensitive, `ga`/`final`/
-/// `release` as release, `cr` as `rc`, single-letter `a`/`b`/`m`
-/// followed by a digit as `alpha`/`beta`/`milestone`).
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum MavenToken {
     Numeric(String),
     Qualifier(String),
 }
 
-/// True for trailing-null tokens trimmed per hyphen segment: numeric
-/// zero plus release qualifiers (`""`, already covering `ga`/`final`/
-/// `release` via aliasing).
 fn is_maven_null_token(token: &MavenToken) -> bool {
     match token {
         MavenToken::Numeric(value) => value == "0",
@@ -418,9 +253,6 @@ fn is_maven_null_token(token: &MavenToken) -> bool {
     }
 }
 
-/// Numeric comparison without overflow: stripped (no leading zeros
-/// unless `"0"`), longer digit runs are greater, ties break
-/// lexicographically.
 fn compare_maven_numeric(left: &str, right: &str) -> std::cmp::Ordering {
     if left.len() != right.len() {
         return left.len().cmp(&right.len());
@@ -428,11 +260,6 @@ fn compare_maven_numeric(left: &str, right: &str) -> std::cmp::Ordering {
     left.cmp(right)
 }
 
-/// Maven qualifier ordering: `alpha < beta < milestone < rc < snapshot
-/// < "" < sp`, with unknown qualifiers after all known ones in lexical
-/// order (case-insensitive, inputs already lowercased). This matches
-/// `ComparableVersion` (`unknown after known`, `ga`/`final`/`release`
-/// as release).
 fn compare_maven_qualifier(left: &str, right: &str) -> std::cmp::Ordering {
     const KNOWN: [&str; 7] = ["alpha", "beta", "milestone", "rc", "snapshot", "", "sp"];
     let mut left_index: Option<usize> = None;
@@ -453,10 +280,6 @@ fn compare_maven_qualifier(left: &str, right: &str) -> std::cmp::Ordering {
     }
 }
 
-/// One remaining token against null (exhausted peer): numeric zero and
-/// release qualifiers equal null, smaller qualifiers (e.g. `snapshot`)
-/// are less, larger ones (`sp`, unknowns) and non-zero numbers are
-/// greater.
 fn maven_token_vs_null(token: &MavenToken) -> std::cmp::Ordering {
     match token {
         MavenToken::Numeric(value) => {
@@ -470,10 +293,6 @@ fn maven_token_vs_null(token: &MavenToken) -> std::cmp::Ordering {
     }
 }
 
-/// Raw Maven tokenization: split between `.`/`-`/`_` plus digit to
-/// non-digit transitions (transitions and `_` normalize to `-`).
-/// Empty tokens become numeric `"0"`. No aliasing here; that lands in
-/// normalization with next-token lookahead.
 fn tokenize_maven_raw(version: &str) -> Vec<(char, String, bool)> {
     let mut out: Vec<(char, String, bool)> = Vec::new();
     let mut current = String::new();
@@ -527,10 +346,6 @@ fn tokenize_maven_raw(version: &str) -> Vec<(char, String, bool)> {
     out
 }
 
-/// Normalized Maven token list: lowercased qualifiers with aliases,
-/// numerics stripped, trailing nulls trimmed per hyphen segment with
-/// trailing empty segments dropped. Flat list keeps `-` for segment
-/// starts and `.` within segments (`_` already normalized).
 fn parse_maven_version(version: &str) -> Vec<(char, MavenToken)> {
     let trimmed = version.trim();
     if trimmed.is_empty() {
@@ -611,16 +426,6 @@ fn parse_maven_version(version: &str) -> Vec<(char, MavenToken)> {
     out
 }
 
-/// Maven-native version comparison following `ComparableVersion` for
-/// the audited subset: numeric numerically, qualifiers by Maven order
-/// (unknown after known, lexical), qualifier before numeric, and
-/// hyphen-number before dot-number regardless of value. Trailing
-/// nulls already trimmed, so exhaustion compares remainders against
-/// null.
-///
-/// Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
-/// no stable Rust crate matches this ordering plus fail-closed bracket
-/// intervals for the audited subset, so the hand-rolled parser stays.
 pub fn maven_compare(left: &str, right: &str) -> std::cmp::Ordering {
     let left_tokens = parse_maven_version(left);
     let right_tokens = parse_maven_version(right);
@@ -690,9 +495,6 @@ pub fn maven_compare(left: &str, right: &str) -> std::cmp::Ordering {
     std::cmp::Ordering::Equal
 }
 
-/// Maven equality (normalized comparison): `1.0` equals `1.0.0`,
-/// `1.ga` equals `1`, `1-a1` equals `1-alpha-1`. Empty or overlong
-/// inputs never equal.
 pub fn maven_version_eq(left: &str, right: &str) -> bool {
     let left_trimmed = left.trim();
     let right_trimmed = right.trim();
@@ -705,14 +507,6 @@ pub fn maven_version_eq(left: &str, right: &str) -> bool {
     maven_compare(left_trimmed, right_trimmed) == std::cmp::Ordering::Equal
 }
 
-/// Maven-native affected-scope matching: bare versions use
-/// Maven equality, bracketed intervals use Maven ordering with
-/// inclusive `[`/`]` versus exclusive `(`/`)` bounds, unions via
-/// comma-separated intervals such as `(,1.0],[1.2,)`, and empty bounds
-/// as unbounded. Malformed scopes, empty inputs, and overlong inputs
-/// fail closed to `false` (never a false positive). Note Maven
-/// includes pre-releases under exclusive upper bounds (e.g.
-/// `[1.0,2.0)` matches `2.0-rc1`), matching upstream ordering.
 pub fn maven_in_scope(scope: &str, version: &str) -> bool {
     let scope_trimmed = scope.trim();
     let version_trimmed = version.trim();
@@ -801,8 +595,6 @@ pub fn maven_in_scope(scope: &str, version: &str) -> bool {
     matched
 }
 
-/// One Maven interval against a locked version: empty bounds are
-/// unbounded, otherwise Maven ordering with inclusive/exclusive edges.
 fn interval_matches(
     lower: &str,
     upper: &str,
@@ -835,12 +627,6 @@ fn interval_matches(
     true
 }
 
-/// Set-aware exception version narrowing: Cargo uses
-/// [`version_in_scope`], Go uses [`go_in_scope`] (`v`-prefix
-/// normalization, pseudo-versions match bare ranges, `+incompatible` as
-/// build metadata), npm uses [`npm_in_scope`], Maven uses
-/// [`maven_in_scope`], NuGet uses [`nuget_in_scope`], and remaining
-/// sets stay exact-match.
 fn exception_version_in_scope(set: &str, scope: &str, version: &str) -> bool {
     match set {
         "cargo" => version_in_scope(scope, version),
@@ -852,12 +638,6 @@ fn exception_version_in_scope(set: &str, scope: &str, version: &str) -> bool {
     }
 }
 
-/// Match locked packages against advisories: every assessable package
-/// with an applicable advisory reports a finding (with or without a
-/// fix); unassessable packages (Git revisions, private identities)
-/// report separately as incomplete, never clean. Matching never
-/// filters to a target's resolved closure: callers supply the complete
-/// owning-set lock contents.
 pub fn match_packages(
     packages: &[LockedPackage],
     advisories: &[Advisory],
@@ -909,11 +689,6 @@ pub fn match_packages(
     (findings, unassessed)
 }
 
-/// Apply version-scoped, reasoned, expiring risk exceptions to findings:
-/// validated exceptions with matching advisory/package/version exclude
-/// their finding from failure while retaining visibility. Returns the
-/// unexempted findings plus validation/obsolete problems (every problem
-/// fails the audit; none auto-repairs).
 pub fn apply_exceptions(
     findings: &[VulnFinding],
     exceptions: &[RiskException],
@@ -962,20 +737,6 @@ pub fn apply_exceptions(
     (unexempted, problems)
 }
 
-/// Parse one OSV-format advisory snapshot document (JSON array) into
-/// records. Typed OSV parsing via the upstream `osv` crate (`schema`
-/// feature only, offline local matching, no inventory upload; issue
-/// #676) projects `osv::schema::Vulnerability` onto [`Advisory`] with no
-/// matching-semantics change: withdrawn entries skip, unsupported
-/// ecosystems skip, `affected[].ranges[].events`
-/// (`introduced`/`fixed`/`last_affected`/`limit`) become per-interval
-/// `versions` scopes in the set's upstream syntax so [`version_affected`]
-/// applies unchanged, explicit `versions` lists become one scope per
-/// version, `fixed` events preserve, severity keeps known
-/// `critical|high|medium|low` words else empty (unknown, fails by
-/// default). Unknown fields ignore. Legacy V1 minimal `Vec<Advisory>`
-/// snapshots still parse (no format break); malformed JSON fails closed
-/// with the document error.
 pub fn parse_snapshot(text: &str) -> Result<Vec<Advisory>, String> {
     if let Ok(vulns) = serde_json::from_str::<Vec<osv::schema::Vulnerability>>(text) {
         return Ok(project_osv_snapshot(&vulns));
@@ -983,9 +744,6 @@ pub fn parse_snapshot(text: &str) -> Result<Vec<Advisory>, String> {
     serde_json::from_str(text).map_err(|error| format!("invalid advisory snapshot: {error}"))
 }
 
-/// Map one OSV ecosystem to the owning V1 dependency set. Only the five
-/// audited sets project; other ecosystems skip (never match, never clean
-/// by themselves).
 fn ecosystem_to_set(ecosystem: &osv::schema::Ecosystem) -> Option<&'static str> {
     match ecosystem {
         osv::schema::Ecosystem::CratesIO => Some("cargo"),
@@ -997,9 +755,6 @@ fn ecosystem_to_set(ecosystem: &osv::schema::Ecosystem) -> Option<&'static str> 
     }
 }
 
-/// One known severity word, else `None` (caller maps to empty/unknown).
-/// Only `critical|high|medium|low|moderate` project; CVSS vectors and
-/// other texts stay unknown and fail by default via [`normalize_level`].
 fn known_severity_word(text: &str) -> Option<String> {
     let trimmed = text.trim();
     if trimmed.is_empty() {
@@ -1011,10 +766,6 @@ fn known_severity_word(text: &str) -> Option<String> {
     }
 }
 
-/// Severity text for one OSV `affected` entry: first known word in
-/// affected `severity`, then top-level `severity`, then `severity` string
-/// fields in affected/top `database_specific`/`ecosystem_specific`
-/// objects (e.g. GHSA `{"severity":"high"}`); else empty (unknown).
 fn osv_severity_text(
     vuln: &osv::schema::Vulnerability,
     affected: &osv::schema::Affected,
@@ -1049,12 +800,6 @@ fn osv_severity_text(
     String::new()
 }
 
-/// One OSV range timeline to affected intervals: `(lower, upper,
-/// upper_inclusive)` where `None` is unbounded. `Introduced("0")` means
-/// unbounded lower. A `fixed`/`last_affected`/`limit` without a preceding
-/// `introduced` means unbounded lower. A trailing open `introduced`
-/// means unbounded upper. Malformed timelines emit the conservative
-/// intervals (extra findings, never missed vulns).
 fn range_events_to_intervals(
     events: &[osv::schema::Event],
 ) -> Vec<(Option<String>, Option<String>, bool)> {
@@ -1106,12 +851,6 @@ fn range_events_to_intervals(
     out
 }
 
-/// One affected interval to the set's upstream `versions` scope syntax so
-/// [`version_affected`] applies unchanged: semver comparators for
-/// cargo/npm/go (`*`, `<x`, `<=x`, `>=x`, `>=a, <b`, `>=a, <=b`), bracketed
-/// intervals for maven/nuget (`[0,)`, `(,x)`, `(,x]`, `[x,)`,
-/// `[a,b)`, `[a,b]`). Empty bounds are unbounded. Returns `None` for
-/// unknown sets or empty scopes (caller skips).
 fn interval_to_scope(
     set: &str,
     lower: &Option<String>,
@@ -1167,11 +906,6 @@ fn interval_to_scope(
     }
 }
 
-/// Project one OSV vulnerability's affected entries onto [`Advisory`]:
-/// one advisory per explicit version plus one per range interval, with
-/// shared id/package/set/severity/fixed. Withdrawn, empty ids, missing
-/// packages, empty names, unsupported ecosystems, and empty scopes skip
-/// (never match, never fail the snapshot).
 fn project_osv_affected(
     vuln: &osv::schema::Vulnerability,
     affected: &osv::schema::Affected,
@@ -1257,9 +991,6 @@ fn project_osv_affected(
         .collect()
 }
 
-/// Project a typed OSV snapshot onto [`Advisory`]. Withdrawn
-/// vulnerabilities skip entirely; vulnerabilities without affected
-/// entries yield zero advisories (never an error).
 fn project_osv_snapshot(vulns: &[osv::schema::Vulnerability]) -> Vec<Advisory> {
     let mut out = Vec::new();
     for vuln in vulns {

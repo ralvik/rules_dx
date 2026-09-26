@@ -1,10 +1,3 @@
-//! Adoption completion execution (`completion`).
-//!
-//! Split from `super` (`adopt.rs`): owns [`execute_completion`], the
-//! runtime rendering from the single `Cli` grammar.
-//! Re-exported through `super` so the dispatch path stays
-//! `crate::adopt::execute_adoption`.
-
 use std::io::Write;
 
 use crate::args::Invocation;
@@ -12,11 +5,6 @@ use crate::exec::common::check_stdout_write;
 
 use super::{operational, pre_exec, summaries_suppressed};
 
-/// Runs `dx completion`: renders the shell script from the `Cli`
-/// grammar so parsing, `--help`, and completions cannot drift from the
-/// command reference. `--dry-run` plans without rendering. `--check`
-/// verifies without writing (one shell checks that shell, no shell
-/// checks all; See: `docs/cli/commands/completion.md`).
 pub(crate) fn execute_completion(
     invocation: &Invocation,
     out: &mut dyn Write,
@@ -53,14 +41,6 @@ pub(crate) fn execute_completion(
     }
 }
 
-/// Verifies completion scripts without writing: renders each selected
-/// shell and checks the dynamic callback marker plus non-empty output,
-/// so manual placement has a verification step (See:
-/// `docs/cli/commands/completion.md`). Prints `completion ok ...` on
-/// success (always, even under `--quiet`; dry-run plans are summaries
-/// and respect `--quiet`). Unknown shells fail pre-exec (exit 2) like
-/// rendering; template-drift render failures fail the same way, while
-/// a rendered script missing its callback fails operational (exit 1).
 fn execute_completion_check(
     invocation: &Invocation,
     out: &mut dyn Write,
@@ -158,8 +138,6 @@ mod tests {
     fn completion_renders_from_single_source() {
         use clap::ValueEnum;
         // Every supported shell renders every command and every grammar
-        // flag from the single Cli grammar (See:
-        // docs/cli/commands/completion.md).
         const FLAGS: &[&str] = &[
             "workspace",
             "dry-run",
@@ -220,8 +198,6 @@ mod tests {
                     );
                 }
             }
-            // Fish appends functional `complete -c dx -a <cmd>` lines (See:
-            // docs/cli/commands/completion.md).
             if shell == "fish" {
                 for cmd in crate::args::Command::value_variants() {
                     assert!(
@@ -233,8 +209,6 @@ mod tests {
             }
             // Powershell anchor stability: the `'dx'` case plus functional
             // `CompletionResult` entries must survive template upgrades and
-            // never degrade to `# dx <cmd>` comments (See:
-            // docs/cli/commands/completion.md).
             if shell == "powershell" {
                 assert!(
                     text.contains("'dx' {"),
@@ -271,8 +245,6 @@ mod tests {
         // dynamic label/task candidates cannot drift from the command
         // table. Fish task payloads stay pinned verbatim here; the
         // `args::complete` unit fixtures pin the tables themselves to
-        // their single sources (See:
-        // docs/cli/commands/completion.md).
         for &shell in crate::args::COMPLETION_SHELLS {
             let text = crate::args::render_completion(shell).expect("render");
             assert!(
@@ -309,7 +281,6 @@ mod tests {
             "__fish_seen_subcommand_from hooks; and not __fish_seen_subcommand_from install uninstall status run' -a 'install run status uninstall'",
             "__fish_seen_subcommand_from hooks; and __fish_seen_subcommand_from run' -a 'pre-commit pre-push'",
             "__fish_seen_subcommand_from new' -a 'c cc cpp csharp fsharp go java javascript kotlin python rust scala typescript'",
-            "__fish_seen_subcommand_from audit; and not __fish_seen_subcommand_from license security' -a 'license security'",
             "__fish_seen_subcommand_from completion' -a 'bash fish powershell zsh'",
             "__fish_seen_subcommand_from update bump' -a 'cargo go maven npm nuget'",
             "(commandline -opc)",
@@ -389,7 +360,6 @@ mod tests {
 
     #[test]
     fn completion_check_verifies_without_writing() {
-        // See: `docs/cli/commands/completion.md`.
         for words in [
             vec!["completion", "bash", "--check"],
             vec!["completion", "--check"],

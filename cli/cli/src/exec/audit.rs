@@ -1,5 +1,3 @@
-//! Audit command execution: live auditor backends with per-family reporting.
-
 use super::common::*;
 use crate::args::{Command, Invocation};
 use crate::reports::{plan_reports, Destination};
@@ -11,46 +9,28 @@ use dx_output::{
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-/// Day-granularity audit clock (keep): stays on
-/// `chrono::Utc::now` because the gates compare fixed-width `YYYY-MM-DD` UTC
-/// days with no `tzdb`/zone arithmetic, so the `jiff` `Timestamp::now` plus
-/// `tz::TimeZone::UTC` rewrite pays bundle plus churn for no gate gain;
-/// re-evaluate on `jiff 1.0`.
 fn today_utc() -> String {
     chrono::Utc::now().format("%Y-%m-%d").to_string()
 }
 
-/// Audit input failure.
-///
-/// Typed audit-input failure with source chaining for the I/O legs:
-/// `Display` keeps the historical operational details byte-identical
-/// while callers gain matchable structure instead of `String` plumbing.
-/// Advisory prefixes stay pinned to
-/// `dx_audit::advisory::CODE_ADVISORY_REFRESH_FAILED`.
-/// See: `docs/cli/commands/audit-update-bazel.md#dx-audit`.
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum AuditError {
-    /// No owning dependency set for the scope.
     #[error(
         "no owning dependency set for {scope:?} (python and non-dependency paths are out of V1 audit scope)"
     )]
     NoOwningSet { scope: String },
-    /// A workspace file could not be read.
     #[error("could not read {rel}: {error}")]
     Read {
         rel: String,
         #[source]
         error: std::io::Error,
     },
-    /// A workspace file is not valid UTF-8.
     #[error("could not read {rel}: not valid UTF-8")]
     NotUtf8 { rel: String },
-    /// Advisory source has no supported set.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: unsupported set"
     )]
     AdvisoryUnsupported { set: String },
-    /// Advisory snapshot is missing.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: missing {rel} (refresh via {upstream}, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
     )]
@@ -59,7 +39,6 @@ pub(crate) enum AuditError {
         rel: String,
         upstream: String,
     },
-    /// Advisory snapshot could not be read.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: could not read {rel}: {error}"
     )]
@@ -69,32 +48,26 @@ pub(crate) enum AuditError {
         #[source]
         error: std::io::Error,
     },
-    /// Advisory snapshot is not valid UTF-8.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: {rel} is not valid UTF-8"
     )]
     AdvisoryUtf8 { set: String, rel: String },
-    /// Advisory snapshot is empty.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: empty {rel}"
     )]
     AdvisoryEmpty { set: String, rel: String },
-    /// Advisory identity sidecar is missing.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: missing {meta_rel}"
     )]
     AdvisoryMissingMeta { set: String, meta_rel: String },
-    /// Advisory identity sidecar could not be read.
     #[error("advisory_refresh_failed: could not obtain current advisory data for {set}: {source}")]
     AdvisoryMeta {
         set: String,
         #[source]
         source: Box<AuditError>,
     },
-    /// Advisory identity does not parse.
     #[error("advisory_refresh_failed: could not obtain current advisory data for {set}: {detail}")]
     AdvisoryIdentity { set: String, detail: String },
-    /// Advisory identity is invalid.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: invalid advisory identity: {error}"
     )]
@@ -103,12 +76,10 @@ pub(crate) enum AuditError {
         #[source]
         error: dx_audit::advisory::SnapshotProblem,
     },
-    /// Advisory identity names the wrong set.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: identity set {actual:?} does not match"
     )]
     AdvisorySetMismatch { set: String, actual: String },
-    /// Advisory snapshot is stale.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: stale snapshot {retrieved_at} (want {today}; refresh via {upstream}, or re-copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)"
     )]
@@ -118,29 +89,21 @@ pub(crate) enum AuditError {
         today: String,
         upstream: String,
     },
-    /// Advisory identity digest does not match the snapshot bytes.
     #[error(
         "advisory_refresh_failed: could not obtain current advisory data for {set}: identity sha256 does not match {rel}"
     )]
     AdvisoryShaMismatch { set: String, rel: String },
-    /// Advisory snapshot does not parse.
     #[error("advisory_refresh_failed: could not obtain current advisory data for {set}: {detail}")]
     AdvisoryParse { set: String, detail: String },
-    /// A required lockfile is missing.
     #[error("could not read {rel}: no such file")]
     LockMissing { rel: String },
-    /// A lockfile does not parse.
     #[error("could not parse {rel}: {detail}")]
     LockParse { rel: String, detail: String },
-    /// The committed license policy does not parse.
     #[error("invalid licenses.toml: {error}")]
     LicenseInvalid {
         #[source]
         error: dx_audit::license_policy::PolicyProblem,
     },
-    /// Cache-only `--offline`/`--frozen` run cannot refresh advisory data
-    /// without network.
-    /// See: `docs/deploy/offline-bootstrap.md#vendored-advisory-mirror`.
     #[error("offline_required: cannot obtain current advisory data for {set} without network: {detail} (re-run without --offline/--frozen once connected, or copy the vendored advisory mirror per docs/deploy/offline-bootstrap.md#vendored-advisory-mirror)")]
     OfflineRequired { set: String, detail: String },
 }
@@ -195,14 +158,12 @@ fn load_advisories(
     set: dx_update::sets::SetId,
     today: &str,
 ) -> Result<Vec<dx_audit::vuln::Advisory>, AuditError> {
-    // Issue #628 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): never empty clean. A missing, empty, invalid, or stale
     // snapshot fails with `advisory_refresh_failed`, never a clean result
     // and never a stale fallback. Snapshots refresh automatically via
     // supported upstream database-download tooling (per-set OSV GCS zips
     // fetched by HTTPS GET with no inventory in the request); the derived
     // bytes plus identity are the audited inputs. Airgapped workspaces
     // populate the same inputs by copying the vendored advisory mirror
-    // (See: `docs/deploy/offline-bootstrap.md#vendored-advisory-mirror`);
     // mirror snapshots keep the same sha256 plus same-day freshness gates.
     // Live CLI performs no network fetch and no lockfile upload.
     let set_name = set.name().to_owned();
@@ -490,7 +451,6 @@ fn run_secrets(
     } else {
         None
     };
-    // Committed-config trust boundary (see `docs/cli/commands/audit-update-bazel.md#dx-audit`):
     // the workspace file is honored without a hash pin, so a tampered
     // config can disable rules. Surface a warning whenever the scan runs
     // under it; env-provided configs are never inherited (see
@@ -713,7 +673,6 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
                 // becomes `offline_required` instead of
                 // `advisory_refresh_failed`. Local lock/parse failures stay
                 // as-is (no fetch would fix them).
-                // See: `docs/deploy/offline-bootstrap.md`.
                 let wrapped = if offline {
                     AuditError::OfflineRequired {
                         set: set.name().to_owned(),
@@ -815,20 +774,12 @@ fn run_security(inputs: SecurityInputs<'_>) -> SecurityResult {
     }
 }
 
-/// Runs `dx audit` live: family selection and scope defaults
-/// through `dx_audit`, dependency-set resolution through the approved
-/// `dx_update` registry, then qualified auditors per family over resolved
-/// scopes with per-family reporting. `--dry-run` prints the planned
-/// families and scopes and exits `0` without launching. `--offline`
-/// (`--frozen` alias) forces cache-only: advisory snapshots must already
-/// be fresh locally (vendored mirror or prior fetch), and any advisory
-/// failure becomes `offline_required` instead of
-/// `advisory_refresh_failed`. Audit is
-/// non-mutating: advisory refresh changes analysis inputs, never
-/// manifests, lockfiles, or projections.
 pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     debug_assert!(
-        invocation.command == Command::Audit,
+        matches!(
+            invocation.command,
+            Command::Security | Command::License
+        ),
         "audit dispatch guards commands"
     );
     let Env {
@@ -841,9 +792,14 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
         err,
         ..
     } = env;
-    let request = match dx_audit::plan_audit(&invocation.targets) {
-        Ok(request) => request,
-        Err(error) => return pre_exec(err, &error.to_string()),
+    let family = match invocation.command {
+        Command::Security => dx_audit::AuditFamily::Security,
+        Command::License => dx_audit::AuditFamily::License,
+        _ => return pre_exec(err, "audit dispatch guards commands"),
+    };
+    let request = dx_audit::AuditRequest {
+        families: vec![family],
+        scopes: invocation.targets.clone(),
     };
     let planned_reports = match plan_reports(
         invocation.command,
@@ -866,7 +822,6 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     if invocation.offline {
         summary.push_str(" (offline, cache-only)");
     }
-    // A standard report owns stdout exclusively. See: docs/cli/output-protocol.md.
     let stdout_report = planned_reports
         .iter()
         .any(|report| report.destination == Destination::Stdout);
@@ -948,7 +903,6 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
     let report = dx_audit::outcome::AuditReport::aggregate(outcomes);
     let exit = dx_audit::outcome::exit_code(&report);
     let sarif_complete = !any_incomplete && report.incomplete().is_empty();
-    // Single atomic write path (See: `cli/atomic_fs/src/lib.rs`): file
     // reports stage via an OS-random sibling plus rename so a crash never
     // leaves a partial SARIF/SPDX behind. A missing parent still fails
     // closed with `report_failed` instead of creating directories.
@@ -1098,7 +1052,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
             );
             let _ = write_event(out, &finished);
         } else if verbose {
-            let _ = writeln!(out, "dx audit: report write failed");
+            let _ = writeln!(out, "dx security/license: report write failed");
         }
         return 1;
     }
@@ -1115,7 +1069,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                         level: "info".to_owned(),
                         code: format!("audit_{family_name}_clean"),
                         message,
-                        related_command: Some("audit".to_owned()),
+                        related_command: Some(invocation.command.name().to_owned()),
                         scope: Some(effective.clone()),
                         path: None,
                         language: None,
@@ -1128,8 +1082,6 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
                 | dx_audit::outcome::FamilyStatus::Incomplete => {
                     // Cache-only runs surface `offline_required` (not
                     // `audit_failed`) when the advisory snapshot would need
-                    // a network refresh. See:
-                    // `docs/deploy/offline-bootstrap.md`.
                     let code = if message.contains(CODE_OFFLINE_REQUIRED) {
                         CODE_OFFLINE_REQUIRED
                     } else {
@@ -1188,7 +1140,7 @@ pub(crate) fn execute_audit(invocation: &Invocation, env: Env<'_>) -> i32 {
             .filter(|outcome| outcome.status == dx_audit::outcome::FamilyStatus::Clean)
             .count();
         let failed = report.outcomes.len().saturating_sub(clean);
-        let _ = writeln!(out, "dx audit: {clean} clean, {failed} failed");
+        let _ = writeln!(out, "dx security/license: {clean} clean, {failed} failed");
     }
     exit
 }

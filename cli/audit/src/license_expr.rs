@@ -1,53 +1,9 @@
-//! SPDX license-expression evaluation (WP3 slice 1).
-//!
-//! Pure boolean-math evaluation over the allow/review/deny lattice from
-//! the license contract
-//! (`docs/cli/commands/audit-update-bazel.md#license-family-dx-audit-license`):
-//!
-//! * `A OR B` passes if any disjunct is allowed (the distributor chooses
-//!   the license); otherwise review if any disjunct needs review;
-//!   otherwise denied. `MIT OR AGPL-3.0-only` therefore passes by
-//!   choosing MIT.
-//! * `A AND B` is denied if any conjunct is denied (all terms must be
-//!   satisfied); otherwise review if any conjunct needs review;
-//!   otherwise allowed.
-//! * `WITH <exception>` expressions require approval of the complete
-//!   expression verbatim wherever license-policy approval is required.
-//!   Allowing the base license alone does not approve the expression.
-//! * `UNKNOWN` or unparseable license text is denied in `distributed`
-//!   and inventoried in `internal`.
-//! * `blocked` acts as deny in both tiers; only a matching, reasoned,
-//!   version-scoped, unexpired exception (see [`crate::exception`])
-//!   approves a finding, without hiding it.
-//!
-//! This module evaluates over injected expression trees and injected
-//! identity/approval predicates only, so the lattice stays deterministic
-//! and unit-testable without any lockfile, advisory snapshot, or TOML
-//! policy file. [`parse_license`] builds the expression shape from SPDX
-//! text via the upstream `spdx` parser; per-ecosystem license-identity
-//! mappings, policy-table loading, tier attribution for shared locks,
-//! and proof evidence stay gated for later slices.
-//!
-//! Dependency evaluation (adopted): SPDX text parses via the
-//! upstream `spdx` crate in strict mode (fail-closed to [`LicenseExpr::Unknown`]);
-//! the allow/review/deny lattice plus `WITH` verbatim approval stays hand-rolled
-//! because it is the repo's license-policy contract, not an upstream type
-//! (`license-exprs` would duplicate the lattice at dependency cost).
-
-/// Distribution tier under evaluation. `distributed` release roots
-/// leave the company and face the strict table; `internal` roots are
-/// inventoried in the SBOM and never fail on the allow/review/deny
-/// table (except `blocked`, which fails in both tiers).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Tier {
     Distributed,
     Internal,
 }
 
-/// Policy-table classification of one SPDX identity: exactly one list
-/// (`allow`, `review`, `deny`, `blocked`) or none (`Unlisted`).
-/// Membership in more than one list fails validation in a later slice;
-/// evaluation assumes the validated single listing.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum IdClass {
     Allow,
@@ -57,9 +13,6 @@ pub enum IdClass {
     Unlisted,
 }
 
-/// Lattice outcome of one evaluated expression. Ordered Allow < Review
-/// < Deny by strictness: `OR` takes the most permissive disjunct, `AND`
-/// takes the strictest conjunct.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum TierOutcome {
     Allow,
@@ -67,50 +20,19 @@ pub enum TierOutcome {
     Deny,
 }
 
-/// Injected SPDX expression tree. [`parse_license`] produces this shape
-/// from lock metadata via the upstream `spdx` parser; per-ecosystem
-/// text-to-identity mappings are qualification, so text the parser
-/// rejects arrives as [`LicenseExpr::Unknown`].
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum LicenseExpr {
-    /// One SPDX identity (or `UNKNOWN` spelled as unknown text).
     Ident(String),
-    /// `A OR B` over two or more disjuncts.
     Or(Vec<LicenseExpr>),
-    /// `A AND B` over two or more conjuncts.
     And(Vec<LicenseExpr>),
-    /// `base WITH exception`: `text` is the canonical `{base} WITH
-    /// {exception}` rendering, the only string verbatim approval may
-    /// name (the upstream parser's requirement span covers the base
-    /// license only, so the full requirement cannot be sliced back out
-    /// of the operator input).
     With {
         base: Box<LicenseExpr>,
         exception: String,
         text: String,
     },
-    /// Unparseable license text. Never silently allowed.
     Unknown,
 }
 
-/// Parse SPDX license-expression text into the [`LicenseExpr`] shape.
-///
-/// Uses the upstream `spdx` parser in strict mode: syntactically or
-/// semantically invalid text — including unknown SPDX identities — maps
-/// to [`LicenseExpr::Unknown`], denied in `distributed` and inventoried
-/// in `internal` by [`evaluate`]. Unknown-to-SPDX text therefore no
-/// longer reaches per-identity approval as an [`LicenseExpr::Ident`];
-/// failing closed is deliberate (an unrecognized license must never be
-/// silently allowed, and a bare-identity approval must not bless text
-/// the parser cannot attribute).
-///
-/// Valid `WITH` requirements render `text` canonically as `{base}
-/// WITH {exception}`, so verbatim approval matches canonically spelled
-/// policy input; the base identity and exception strings are the
-/// parser's canonical spellings for stable policy-table lookup. Same-operator nesting
-/// flattens (`A OR (B OR C)` parses like `A OR B OR C`), so parsed trees
-/// compare equal to hand-built flat combinations. The allow/review/deny
-/// lattice itself stays custom in [`evaluate`].
 pub fn parse_license(text: &str) -> LicenseExpr {
     let expr = match spdx::Expression::parse(text) {
         Ok(expr) => expr,
@@ -143,11 +65,6 @@ pub fn parse_license(text: &str) -> LicenseExpr {
     }
 }
 
-/// Map one parsed license requirement to a [`LicenseExpr`] leaf.
-///
-/// `WITH` requirements become [`LicenseExpr::With`] with the canonical
-/// `{base} WITH {exception}` rendering as `text`; anything else becomes
-/// a canonical-spelling [`LicenseExpr::Ident`].
 fn leaf_expr(req: &spdx::expression::ExpressionReq) -> LicenseExpr {
     match &req.req.addition {
         Some(addition) => {
@@ -163,8 +80,6 @@ fn leaf_expr(req: &spdx::expression::ExpressionReq) -> LicenseExpr {
     }
 }
 
-/// Combine two disjuncts, flattening nested `OR` so parsed trees match
-/// hand-built flat combinations.
 fn merge_or(lhs: LicenseExpr, rhs: LicenseExpr) -> LicenseExpr {
     let mut disjuncts = match lhs {
         LicenseExpr::Or(items) => items,
@@ -177,8 +92,6 @@ fn merge_or(lhs: LicenseExpr, rhs: LicenseExpr) -> LicenseExpr {
     LicenseExpr::Or(disjuncts)
 }
 
-/// Combine two conjuncts, flattening nested `AND` so parsed trees match
-/// hand-built flat combinations.
 fn merge_and(lhs: LicenseExpr, rhs: LicenseExpr) -> LicenseExpr {
     let mut conjuncts = match lhs {
         LicenseExpr::And(items) => items,
@@ -191,21 +104,6 @@ fn merge_and(lhs: LicenseExpr, rhs: LicenseExpr) -> LicenseExpr {
     LicenseExpr::And(conjuncts)
 }
 
-/// Evaluate one expression under a tier.
-///
-/// * `lookup` classifies each SPDX identity against the (validated)
-///   policy table; unlisted identities and [`LicenseExpr::Unknown`]
-///   are denied in `distributed` and inventoried (`Allow`) in
-///   `internal`.
-/// * `approved` reports whether its argument names a finding covered by
-///   a matching, reasoned, version-scoped, unexpired exception: a bare
-///   identity for [`LicenseExpr::Ident`], or the complete expression
-///   verbatim for [`LicenseExpr::With`]. Approval passes the finding
-///   without hiding it; a `review` listing or an allowed base license
-///   alone is never approval.
-///
-/// `blocked` (via [`IdClass::Blocked`] or a denied `WITH` base) acts as
-/// deny in both tiers unless `approved` names it.
 pub fn evaluate(
     expr: &LicenseExpr,
     tier: Tier,
@@ -256,9 +154,6 @@ pub fn evaluate(
     }
 }
 
-/// Whether a lattice outcome fails the audit in a tier. `Review` fails
-/// in `distributed` unless explicitly approved (approval already folds
-/// into [`evaluate`]); `internal` inventories everything except deny.
 pub fn fails_in_tier(outcome: TierOutcome, tier: Tier) -> bool {
     match (outcome, tier) {
         (TierOutcome::Deny, _) => true,
@@ -267,7 +162,6 @@ pub fn fails_in_tier(outcome: TierOutcome, tier: Tier) -> bool {
     }
 }
 
-/// Classify one bare identity under a tier, before boolean combination.
 fn evaluate_ident(
     id: &str,
     tier: Tier,

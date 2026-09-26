@@ -1,14 +1,6 @@
-//! Go module parsing (split from `locks.rs`). No behavior change.
-//!
-//! Dependency evaluation (keep, See: `docs/cli/commands/audit-update-bazel.md#dx-audit`, issue #750):
-//! `require` plus `replace` with first-party skipping has no stable Rust
-//! crate; the line parser stays and `go.sum` (hashes only) is never parsed.
-
 use super::*;
 
 /// Strip one `go.mod` line comment: `//` starts a comment only at the
-/// line start or after whitespace, so `https://` inside a directive (or
-/// a `//`-free module path) never truncates the requirement itself.
 pub fn strip_go_comment(line: &str) -> &str {
     let bytes = line.as_bytes();
     let mut index = 0usize;
@@ -27,10 +19,6 @@ pub fn strip_go_comment(line: &str) -> &str {
     line
 }
 
-/// Parse one `replace` right-hand side (`new-path [new-version]`) into
-/// its path plus optional version. A missing version means a filesystem
-/// target (first-party, skipped); a present version means a versioned
-/// replacement (assessed at the replacement identity).
 pub fn split_go_replace_rhs(rhs: &str) -> Option<(String, Option<String>)> {
     let mut tokens = rhs.split_whitespace();
     let path = tokens.next()?.trim().to_owned();
@@ -41,16 +29,6 @@ pub fn split_go_replace_rhs(rhs: &str) -> Option<(String, Option<String>)> {
     Some((path, version.map(str::to_owned)))
 }
 
-/// Parse one `go.mod` into assessable packages for the `go` set.
-/// `require` entries (single-line `require mod vX` plus `require (`
-/// blocks, `// indirect` and other comments stripped) become assessable
-/// with verbatim `v`-prefixed versions (matching normalizes the prefix
-/// in [`crate::vuln`]); the main `module` directive is first-party and
-/// skipped. `replace` targets with no replacement version are
-/// first-party filesystem paths and skipped; versioned replacements
-/// assess at the replacement path plus version. `exclude`, `retract`,
-/// `toolchain`, and `go` directives never count. A missing `module`
-/// directive fails closed (never an empty clean set from garbage).
 pub fn parse_go_mod(text: &str) -> Result<Vec<LockedPackage>, String> {
     let mut has_module = false;
     let mut in_require = false;

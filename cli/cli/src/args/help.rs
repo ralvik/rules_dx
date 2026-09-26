@@ -1,20 +1,9 @@
-//! Help rendering for the `dx` CLI.
-//!
-//! Split from `super` (`args.rs`): owns [`help_command_in`],
-//! [`render_top_help`], [`per_command_flags`], and
-//! [`render_command_help`]. Internal only (`pub(crate)`); the public
-//! `crate::args` surface is unchanged.
-
 use std::ffi::OsStr;
 
 use super::command::Command;
 use super::grammar::{Cli, VALUE_OPTIONS};
 use super::{suggest, ArgsError};
 
-/// Skips one value-option payload exactly like the verbatim splitter:
-/// a known `--flag` without `=` consumes the next token unless that next
-/// token is a `--` flag. Non-UTF8 next tokens count as payloads so
-/// `--workspace <non-UTF8>` still consumes them for command routing.
 fn skip_value_payload<S: AsRef<OsStr>>(args: &[S], index: usize) -> usize {
     match args.get(index + 1) {
         Some(next) => {
@@ -31,16 +20,6 @@ fn skip_value_payload<S: AsRef<OsStr>>(args: &[S], index: usize) -> usize {
     }
 }
 
-/// Finds the command word for `--help` routing: the first positional
-/// token that parses as [`Command`], skipping flag payloads exactly
-/// like [`super::split_bazel_verbatim`]. Stops at `--` (everything after is
-/// Bazel-owned). Returns `None` for top-level help when no command
-/// word is present or the first positional is not a command.
-///
-/// Stays hand-rolled with [`super::split_bazel_verbatim`] (fallback):
-/// help routing inspects `argv` before the grammar runs, so it cannot
-/// itself be a `value_parser`. Non-UTF8 elements stay opaque and never
-/// parse as a command, so they fall through to the `InvalidScope` path.
 pub(crate) fn help_command_in<S: AsRef<OsStr>>(args: &[S]) -> Option<Command> {
     let mut index = 0;
     while index < args.len() {
@@ -63,22 +42,6 @@ pub(crate) fn help_command_in<S: AsRef<OsStr>>(args: &[S]) -> Option<Command> {
     None
 }
 
-/// Detects the `dx help [command]` verb redirect (See:
-/// `docs/cli/cli-contract.md#invocation-shape`).
-///
-/// The verb is the first positional token exactly `help` (case-sensitive,
-/// like [`Command::parse`]), skipping flag payloads exactly like
-/// [`help_command_in`] and stopping at `--`. When present, returns the
-/// help or unknown-command error so `dx help`, `dx help <cmd>`, and
-/// `dx help doctor` behave like their `--help` counterparts without
-/// entering the grammar: no positional renders top help, a known command
-/// renders its per-command help (extra positionals ignored, like
-/// `--help`), `help help` renders top help, and an unknown word fails as
-/// [`ArgsError::UnknownCommand`] with grammar-owned suggestions
-/// (excluded `doctor`/`configure` redirect to `status` via
-/// [`suggest::suggest_command`]). Returns `None` when the first
-/// positional is not `help` (normal parse path). Non-UTF8 elements stay
-/// opaque and never match the verb, so they fall through to parsing.
 pub(crate) fn help_verb_error_in<S: AsRef<OsStr>>(args: &[S]) -> Option<ArgsError> {
     let mut index = 0;
     let mut help_at: Option<usize> = None;
@@ -153,11 +116,6 @@ pub(crate) fn help_verb_error_in<S: AsRef<OsStr>>(args: &[S]) -> Option<ArgsErro
     }
 }
 
-/// Renders top-level `--help` from the [`Cli`] grammar definition (one
-/// source for parsing/help/completions; no hand-maintained flag list).
-/// The command list is derived from [`Command`] (the same source as
-/// parsing), because commands are a validated positional rather than
-/// clap subcommands.
 pub(crate) fn render_top_help() -> String {
     use clap::{CommandFactory, ValueEnum};
     let mut out = String::new();
@@ -181,8 +139,6 @@ pub(crate) fn render_top_help() -> String {
     out
 }
 
-/// Renders the environment-variable section for top-level and per-command
-/// help (See: `docs/cli/output-protocol.md`).
 fn render_env_help() -> String {
     let mut out = String::new();
     out.push_str("\nEnvironment:\n");
@@ -196,17 +152,6 @@ fn render_env_help() -> String {
     out
 }
 
-/// Renders per-command `--help`: one-line summary from
-/// [`Command::describe`], usage/scopes/exit/output lines consistent
-/// with `docs/cli/cli-contract.md`, then the full grammar help so the
-/// flag list can never drift.
-///
-/// reconciliation: `--bazel` (clean only, forwards
-/// `bazel clean`) and `--configured` (owners/deps/why only, selects
-/// `cquery`) keep their names because they mean different things, and
-/// both stay distinct from the `dx bazel` passthrough command. The
-/// per-command usage + flags lines below name that distinction so the
-/// collision is documented, not hidden.
 pub(crate) fn per_command_flags(command: Command) -> &'static str {
     match command {
         Command::Check => {
@@ -239,8 +184,8 @@ pub(crate) fn per_command_flags(command: Command) -> &'static str {
         Command::Upgrade => {
             "Per-command flags: --from <version> --to <version> (upgrade only; pin+migrate+setup composition with recovery pointer)."
         }
-        Command::Audit => {
-            "Per-command flags: --offline/--frozen (cache-only, no network fetches), --fail-on info|warning|error, --report sarif|spdx (audit only; --check and `-- --bazel-options` do not apply; --output diff has no patch)."
+        Command::Security | Command::License => {
+            "Per-command flags: --offline/--frozen (cache-only, no network fetches), --fail-on info|warning|error, --report sarif|spdx (security/license only; --check and `-- --bazel-options` do not apply; --output diff has no patch)."
         }
         Command::Update => {
             "Per-command flags: --offline/--frozen (cache-only, no network fetches), --check (preset stale gate; selectors ignored) (update only; --fail-on/--report and `-- --bazel-options` do not apply; --output diff has no patch)."
@@ -298,7 +243,12 @@ pub(crate) fn render_command_help(command: Command) -> String {
         }
         Command::Update => "Usage: dx [global-options] update [--offline|--frozen] [selector ...]",
         Command::Bump => "Usage: dx [global-options] bump [--offline|--frozen] <set:package> <version>",
-        Command::Audit => "Usage: dx [global-options] audit [--offline|--frozen] [--here] [security|license] [scope ...]",
+        Command::Security => {
+            "Usage: dx [global-options] security [--offline|--frozen] [--here] [scope ...]"
+        }
+        Command::License => {
+            "Usage: dx [global-options] license [--offline|--frozen] [--here] [scope ...]"
+        }
         Command::Migrate => {
             "Usage: dx [global-options] migrate --from <version> --to <version> [scope ...]"
         }
@@ -337,7 +287,8 @@ pub(crate) fn render_command_help(command: Command) -> String {
         Command::Run => "Scopes: explicit Bazel labels/patterns (//..., //pkg:target, @repo//...), or workspace-relative files/dirs resolved via Bazel query. Requires a scope (empty scope is a usage error); file/dir scopes need exactly one runnable.",
         Command::Update => "Scopes: dependency-set/package/target selectors (cargo|npm|maven|nuget|go, set:package, labels/paths); bare run updates all sets.",
         Command::Bump => "Scopes: exactly one `set:package` plus one new version (bazel|cargo|github-actions|go|maven|npm|nuget); never batch.",
-        Command::Audit => "Scopes: optional `security|license` family plus dependency-set/package/target selectors; bare run audits //... (both families, security first). Pass --here (--cwd alias) for the current directory tree instead (optionally after the family); --here cannot be combined with explicit scopes and never changes the no-flag default.",
+        Command::Security => "Scopes: dependency-set/package/target selectors; bare run audits //... (secrets plus vulnerabilities). Pass --here (--cwd alias) for the current directory tree instead; --here cannot be combined with explicit scopes and never changes the no-flag default.",
+        Command::License => "Scopes: dependency-set/package/target selectors; bare run audits //... (license policy plus SPDX inventory). Pass --here (--cwd alias) for the current directory tree instead; --here cannot be combined with explicit scopes and never changes the no-flag default.",
         Command::Migrate => "Scopes: explicit Bazel labels/patterns or workspace-relative files/dirs reusing generation scope resolution; external scopes rejected. No scope selects //....",
         Command::Lint
         | Command::Typecheck
@@ -549,7 +500,6 @@ mod tests {
 
     #[test]
     fn help_verb_redirects_to_generated_help() {
-        // See: `docs/cli/cli-contract.md#invocation-shape`.
         let top = match parse(&args(&["help"])) {
             Err(ArgsError::Help { text }) => text,
             other => panic!("help: want Help, got {other:?}"),

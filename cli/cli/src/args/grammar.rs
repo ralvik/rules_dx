@@ -1,15 +1,3 @@
-//! `clap` grammar for the `dx` CLI.
-//!
-//! Split from [`super::parser`]: owns the `clap` grammar (`Cli`),
-//! the value-option table (`VALUE_OPTIONS`), and the grammar accessor
-//! (`cli_command`). Re-exported through `super` and through `parser`
-//! so the public paths stay `crate::args::cli_command` and
-//! `crate::args::parser::{Cli, cli_command}` (`VALUE_OPTIONS` stays in
-//! `grammar` and is imported directly by its users).
-//!
-//! Named `grammar` (not `parse`) so the `parse` function keeps its name;
-//! the domain is the grammar half of the `args→command/parse/...` split.
-
 use std::ffi::OsString;
 
 use clap::Parser;
@@ -154,17 +142,11 @@ pub(crate) struct Cli {
     pub(crate) bazel_options: Vec<String>,
 }
 
-/// Grammar accessor for build steps: the `dx_man` binary
-/// renders `man/dx.1` from this command so the manual page tracks the
-/// same grammar as parsing, `--help`, and completions.
 pub fn cli_command() -> clap::Command {
     use clap::CommandFactory;
     Cli::command()
 }
 
-/// Value options whose next token the tokenizer consumes as their value:
-/// any token not starting with `--`, including single-dash spellings and
-/// the empty string.
 pub(crate) const VALUE_OPTIONS: &[&str] = &[
     "--workspace",
     "--output",

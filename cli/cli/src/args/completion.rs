@@ -1,31 +1,18 @@
-//! Shell-completion rendering for the `dx` CLI.
-//!
-//! Split from `super` (`args.rs`): owns [`COMPLETION_SHELLS`] and
-//! [`render_completion`]. Re-exported through `super` so the public path
-//! stays `crate::args::{COMPLETION_SHELLS, render_completion}`.
-
 use super::command::Command;
 use super::complete::{
-    completes_labels, AUDIT_FAMILIES, COMPLETE_SUBCOMMAND, DYNAMIC_MARKER, HOOK_TRIGGERS,
-    HOOK_VERBS,
+    completes_labels, COMPLETE_SUBCOMMAND, DYNAMIC_MARKER, HOOK_TRIGGERS, HOOK_VERBS,
 };
 use super::grammar::Cli;
 use super::ArgsError;
 
-/// Shells covered by `dx completion` (contract freeze).
 pub const COMPLETION_SHELLS: &[&str] = &["bash", "zsh", "fish", "powershell"];
 
-/// Sorted space-joined rendering of one fixed candidate table for the
-/// fish task lines below.
 fn sorted_join(names: &[&str]) -> String {
     let mut sorted: Vec<&str> = names.to_vec();
     sorted.sort_unstable();
     sorted.join(" ")
 }
 
-/// Dependency-set hints shared by the fish `update`/`bump` task line,
-/// drawn from the same [`dx_update::sets::SetId`] table as the
-/// [`super::complete`] dispatch so new sets cannot drift.
 fn update_set_names() -> Vec<&'static str> {
     dx_update::sets::SetId::ALL
         .iter()
@@ -33,11 +20,6 @@ fn update_set_names() -> Vec<&'static str> {
         .collect()
 }
 
-/// Appends the bash dynamic section: the static `*)` fallback (empty
-/// completions for scope positions) becomes a completion-time callback
-/// into the binary, following the generator-subcommand convention
-/// (See: `docs/cli/commands/completion.md`). Fails closed when the
-/// generator template drifts beyond recognition.
 fn bash_dynamic(text: &mut String) -> Result<(), ArgsError> {
     let anchor = "                *)\n                    COMPREPLY=()\n                    ;;";
     let dynamic = format!(
@@ -53,10 +35,6 @@ fn bash_dynamic(text: &mut String) -> Result<(), ArgsError> {
     }
 }
 
-/// Appends the zsh dynamic section: scope positions call the
-/// `_dx_dynamic_targets` helper (completion-time callback into the
-/// binary) instead of plain file completion (See:
-/// `docs/cli/commands/completion.md`). Fails closed on template drift.
 fn zsh_dynamic(text: &mut String) -> Result<(), ArgsError> {
     let anchor = "*::targets -- Later positionals\\: explicit scopes/targets:_default";
     let replacement =
@@ -73,12 +51,6 @@ fn zsh_dynamic(text: &mut String) -> Result<(), ArgsError> {
     Ok(())
 }
 
-/// Appends the fish dynamic section: fixed task lines per
-/// task-taking command (derived from the same tables as the
-/// [`super::complete`] dispatch, never copied) plus one label line
-/// whose condition derives from [`completes_labels`] and whose values
-/// call back into the binary at completion time (See:
-/// `docs/cli/commands/completion.md`).
 fn fish_dynamic(text: &mut String) {
     use clap::ValueEnum;
     text.push_str(&format!(
@@ -111,11 +83,6 @@ fn fish_dynamic(text: &mut String) {
         "project language",
     );
     line(
-        "__fish_seen_subcommand_from audit; and not __fish_seen_subcommand_from license security",
-        AUDIT_FAMILIES,
-        "audit family",
-    );
-    line(
         "__fish_seen_subcommand_from completion",
         COMPLETION_SHELLS,
         "completion shell",
@@ -137,10 +104,6 @@ fn fish_dynamic(text: &mut String) {
     ));
 }
 
-/// Appends the powershell dynamic section: past the `'dx'` case the
-/// script calls back into the binary for scope/task positions (See:
-/// `docs/cli/commands/completion.md`). Inserted before the final
-/// prefix filter so binary candidates filter identically.
 fn powershell_dynamic(text: &mut String) {
     let block = format!(
         "    if ($command -ne 'dx') {{\n        #{DYNAMIC_MARKER}: completion-time callback into the binary (See: docs/cli/commands/completion.md).\n        try {{\n            $dxWords = @()\n            for ($i = 1; $i -lt $commandElements.Count; $i++) {{\n                $element = $commandElements[$i]\n                if ($element -is [StringConstantExpressionAst] -and $element.Value -ne $wordToComplete) {{\n                    $dxWords += $element.Value\n                }}\n            }}\n            $dxDynamic = @(dx {COMPLETE_SUBCOMMAND} @dxWords \"$wordToComplete\" 2>$null)\n            foreach ($candidate in $dxDynamic) {{\n                if ($candidate -ne '') {{\n                    $completions += [CompletionResult]::new($candidate, $candidate, [CompletionResultType]::ParameterValue, $candidate)\n                }}\n            }}\n        }} catch {{}}\n    }}\n"
@@ -153,15 +116,6 @@ fn powershell_dynamic(text: &mut String) {
     }
 }
 
-/// Renders one completion script from the [`Cli`] grammar definition
-///: commands, flags, and fixed value sets come from the
-/// same source that feeds parsing and `--help`, so generated scripts
-/// cannot drift from the command reference. Scope and task positions
-/// additionally carry a completion-time callback into the binary
-/// (`dx __complete`); repository labels and per-command tasks resolve at
-/// completion time from the same tables as parsing. Generation is an
-/// explicit `dx completion` cost only, never per-invocation. Unknown
-/// shells fail with the contract's `unknown-shell` text.
 pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
     use clap::CommandFactory;
     if !COMPLETION_SHELLS.contains(&shell) {
@@ -212,7 +166,6 @@ pub fn render_completion(shell: &str) -> Result<String, ArgsError> {
                     desc
                 ));
             }
-            // Anchor-stability (See: `docs/cli/commands/completion.md`):
             // only the exact generator anchor inserts functional entries.
             // A `clap_complete` upgrade that shifts the template fails
             // closed here instead of emitting silently-drifted scripts via

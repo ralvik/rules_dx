@@ -1,27 +1,8 @@
-//! Managed and raw-launcher Bazel planning.
-//!
-//! Split from `super` (`plan.rs`): owns [`plan_managed`] (the
-//! `codegen`/`env`/`setup` collection requests) and [`plan_bazel`]
-//! (the verbatim `dx bazel` escape hatch). Re-exported through `super`
-//! so the public paths stay `crate::plan::{plan_managed, plan_bazel}`.
-//! Shares [`super::BuildPlan`], [`super::workspace_flag`], and
-//! [`super::BEP_FLAG_NAME`] with the quality/workflow planning in
-//! [`super::quality`]; scope validation for managed commands lives in
-//! `dx_setup`.
-
 use dx_process::{build_workflow_argv, ForwardError, ProtectedFlag};
 
 use super::{workspace_flag, BuildPlan, BEP_FLAG_NAME};
 use crate::args::Command;
 
-/// Builds the exact raw launcher argv for `dx bazel`: the launcher
-/// followed by the verbatim forwarded arguments, per
-/// `docs/cli/commands/audit-update-bazel.md` ("arguments unchanged").
-/// No startup options, no workspace policy, no protected flags, no
-/// scope resolution, no reports: unlike the quality and workflow
-/// paths, the escape hatch applies no rc suppression, so the user's
-/// home and system rc files behave exactly as they do under a direct
-/// `bazel` invocation from the same workspace.
 pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
     let mut argv = Vec::with_capacity(1 + forwarded.len());
     argv.push(dx_process::launcher_argv0().to_owned());
@@ -34,25 +15,6 @@ pub fn plan_bazel(forwarded: &[String]) -> BuildPlan {
     BuildPlan { argv, summary }
 }
 
-/// Builds the exact `bazel build` argv for a managed
-/// environment/codegen/setup selection over a validated setup
-/// scope: the command's collection roots with its collecting aspects and
-/// private output groups, plus the canonical workspace policy and the
-/// BEP stream path the CLI collects with `dx_bep`. Root computation
-/// delegates to each command's own planning library so the WP4
-/// frozen //... root selection (ADR 0022 fiat) flows through unchanged; user options after `--`
-/// forward after the required policy. Fails before execution when user
-/// options conflict with required collection policy. The caller owns
-/// scope validation ([`dx_setup::resolve_scope`]); `command` must be
-/// managed (`codegen`, `env`, `setup`) and any other command fails with
-/// [`ForwardError::UnsupportedCommand`] instead of panicking.
-///
-/// Exact `codegen`/`setup` scopes with a bare schema expand through the
-/// reverse-dependent query before planning (see
-/// [`crate::resolve::expand_codegen_roots`]); that path plans through
-/// [`plan_managed_with_roots`] with the expanded roots so the summary
-/// lists every analyzed root. This entry keeps the single-label plan for
-/// repository scopes, `env`, and unexpanded callers.
 pub fn plan_managed(
     command: Command,
     scope: &dx_setup::SetupScope,
@@ -94,17 +56,6 @@ pub fn plan_managed(
     Ok(BuildPlan { argv, summary })
 }
 
-/// Builds the exact `bazel build` argv for a managed selection over
-/// explicit Bazel roots: the same collecting aspects, output groups,
-/// workspace policy, and BEP stream as [`plan_managed`], but with the
-/// caller-supplied `roots` (the bare-schema expansion output for exact
-/// `codegen`/`setup`). `roots` must be non-empty and deterministically
-/// ordered (see [`dx_codegen::expand_roots`]); the summary joins every
-/// root so dry-run shows the full analyzed set. Fails with
-/// [`ForwardError::UnsupportedCommand`] for non-managed commands and
-/// with conflicting-option/startup errors for bad user options, exactly
-/// like [`plan_managed`].
-/// See: `docs/environments/codegen.md` (bare-schema expansion).
 pub fn plan_managed_with_roots(
     command: Command,
     roots: &[String],
@@ -116,11 +67,6 @@ pub fn plan_managed_with_roots(
     Ok(BuildPlan { argv, summary })
 }
 
-/// Shared argv assembly behind [`plan_managed`] and
-/// [`plan_managed_with_roots`]: `build` plus the caller-supplied roots,
-/// the command's collecting aspects and output groups, the canonical
-/// workspace policy, and the BEP stream path. User options forward after
-/// the required policy with the same protected-flag checks.
 fn managed_argv(
     command: Command,
     roots: &[String],
@@ -167,18 +113,22 @@ fn managed_argv(
         ProtectedFlag {
             name: "aspects".to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "output_groups".to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "@rules_dx//config:workspace".to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: BEP_FLAG_NAME.to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
     ];
     build_workflow_argv("build", bazel_options, &required, &protected, roots)
@@ -279,7 +229,6 @@ mod tests {
         // Bare-schema expansion output plans through the expanded roots
         // so one Bazel build analyzes the schema plus every registered
         // projection; the summary lists the full analyzed set.
-        // See: `docs/environments/codegen.md` (bare-schema expansion).
         let roots = options(&[
             "//generation:codegen_prost_fixture",
             "//generation:result_proto",

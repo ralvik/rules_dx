@@ -1,41 +1,9 @@
-//! Rerun, scope, retry, and code-scanning planning for consumer CI (issue
-//!, WP1 slice 7).
-//!
-//! Split from `super` (`lib.rs`): owns [`plan_rerun`] (GitHub native rerun
-//! preserves selection, revision identity, and reporting semantics),
-//! [`scope_runs_all_selected`], [`uses_path_filters`] (never),
-//! [`ReportRetry`], [`plan_report_retry`] (bounded transient retries reuse
-//! the same identified results; exhaustion retains the reporting failure
-//! for [`super::reporting_gate`]), [`CODE_SCANNING_DEFAULT`],
-//! [`CodeScanningPlan`], [`plan_code_scanning`], and
-//! [`plan_coverage_aggregate`] (every selected platform must report; no
-//! gap hiding). Re-exported through `super` so the public paths stay
-//! `dx_ci::{plan_rerun, scope_runs_all_selected, uses_path_filters,
-//! ReportRetry, plan_report_retry, CODE_SCANNING_DEFAULT, CodeScanningPlan,
-//! plan_code_scanning, plan_coverage_aggregate}`. Distinct from the
-//! revision, selection, scheduling, supersession, reporting,
-//! fork/aggregate, trigger, platform, caller, pin, audit, artifact,
-//! metadata, and preset modules.
-
 use super::PlannedRevision;
 
-/// Planned rerun: GitHub's native rerun controls preserve selection,
-/// revision identity, and reporting semantics.
-///
-/// A rerun reuses the original planned revision (same validated snapshot
-/// plus head/base identities) and the original reporting mode. Reruns never
-/// substitute a different revision, never retry analyzer failures until
-/// green, and never accept bot comment commands.
 pub fn plan_rerun(original: &PlannedRevision) -> PlannedRevision {
     original.clone()
 }
 
-/// Whether a change kind still executes every selected check.
-///
-/// Documentation-only and mixed changes invoke all selected checks at their
-/// normal repository scope: no workflow path filters and no second
-/// affected-target calculation. Diff-based review placement never narrows
-/// analysis scope.
 pub fn scope_runs_all_selected(docs_only: bool) -> bool {
     let _ = docs_only;
     true
@@ -46,25 +14,14 @@ pub fn uses_path_filters() -> bool {
     false
 }
 
-/// Planned outcome of bounded transient reporting-transport retries.
-///
-/// Retries reuse the same identified results and never duplicate comments,
-/// change analyzer outcomes, or hide the final reporting failure. Only
-/// `transient_failures <= bound` are retried; exhaustion retains the
-/// reporting failure for the gate in [`super::reporting_gate`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ReportRetry {
-    /// Whether the transport was retried with the same identified results.
     pub retried_same_results: bool,
-    /// Whether the final reporting failure is retained (exhaustion).
     pub failure_retained: bool,
-    /// Retries never duplicate integration comments.
     pub duplicates_comments: bool,
-    /// Retries never change analyzer outcomes.
     pub changes_analysis: bool,
 }
 
-/// Plan bounded transient reporting retries.
 pub fn plan_report_retry(transient_failures: u32, bound: u32) -> ReportRetry {
     if transient_failures == 0 {
         ReportRetry {
@@ -90,27 +47,15 @@ pub fn plan_report_retry(transient_failures: u32, bound: u32) -> ReportRetry {
     }
 }
 
-/// Code Scanning SARIF publication is off in the starter.
 pub const CODE_SCANNING_DEFAULT: bool = false;
 
-/// Code-scanning publication planning for an explicit opt-in.
-///
-/// Default reporting works without Code Scanning permissions or paid
-/// security features, and disabled publication is never a reporting
-/// failure. After opt-in on an eligible repository, complete scans remain
-/// eligible for authoritative upload even when findings fail the command;
-/// incomplete scans must not replace the authoritative scan.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CodeScanningPlan {
-    /// Publication disabled: not a failure.
     Disabled,
-    /// Complete scan may upload authoritatively.
     Upload,
-    /// Incomplete scan must not replace the authoritative scan.
     MustNotUpload,
 }
 
-/// Plan Code Scanning publication.
 pub fn plan_code_scanning(opt_in: bool, complete_scan: bool) -> CodeScanningPlan {
     if !opt_in {
         return CodeScanningPlan::Disabled;
@@ -123,9 +68,6 @@ pub fn plan_code_scanning(opt_in: bool, complete_scan: bool) -> CodeScanningPlan
 }
 
 /// Coverage aggregation never hides a missing platform or gap.
-///
-/// Every selected platform must report its coverage cell; combining reports
-/// with any platform missing or failing is not success.
 pub fn plan_coverage_aggregate(per_platform_ok: &[bool]) -> bool {
     !per_platform_ok.is_empty() && per_platform_ok.iter().all(|ok| *ok)
 }

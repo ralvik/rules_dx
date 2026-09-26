@@ -1,134 +1,66 @@
-//! SPDX 2.3 JSON reporting for `dx audit license`.
-//!
-//! Pure rendering of the license-family report shape pinned in
-//! [`crate::license_notice`]: one SPDX 2.3 JSON document per
-//! invocation, package IDs as package URLs, `DESCRIBES` relations from
-//! each audited root, and `CONTAINS` relations where the lock graph is
-//! known. Per-root attribution rides the relationships; per-ecosystem
-//! license identities ride the package license fields parsed via
-//! [`crate::license_expr::parse_license`].
-//!
-//! This module renders over injected package and relationship records
-//! only, so the document shape stays deterministic and unit-testable
-//! without any lockfile, advisory snapshot, or TOML policy file.
-//! Policy-table loading lives in [`crate::license_policy`],
-//! expression evaluation in [`crate::license_expr`], and notice-text
-//! inputs in [`crate::license_notice`]; this module projects their
-//! assessed outputs into the shared `--report` document.
-//!
-//! Shape pinned under issue #632 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): exactly one document per invocation
-//! (`SPDX-2.3`, `CC0-1.0`, `SPDXRef-DOCUMENT`, name `dx-audit-license`),
-//! packages sorted by ID with `licenseConcluded`/`licenseDeclared`,
-//! `NOASSERTION` copyright, single purl `externalRefs`, plus
-//! `DESCRIBES` from each audited root first (sorted) then `CONTAINS`
-//! (V1 emits none: no lock-graph edges projected yet). Live emission
-//! goldens live in `dx_cli::exec::audit`; partial documents stay
-//! non-authoritative (gated on `results_complete`, never uploaded as a
-//! replacement scan).
-
 use packageurl::PackageUrl;
 use serde::{Deserialize, Serialize};
 
-/// SPDX document version pinned by the license contract.
 pub const SPDX_VERSION: &str = "2.3";
 
-/// SPDX data license for generated documents.
 pub const DATA_LICENSE: &str = "CC0-1.0";
 
-/// Document describes relationship: each audited root describes the document.
 pub const DESCRIBES: &str = "DESCRIBES";
 
-/// Containment relationship: lock-graph containment where known.
 pub const CONTAINS: &str = "CONTAINS";
 
-/// One SPDX package entry: an audited dependency with its claimed
-/// license and package-URL identity.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SpdxPackage {
-    /// SPDX package ID (package-URL form, e.g. `pkg:cargo/serde@1.0.100`).
     #[serde(rename = "SPDXID")]
     pub id: String,
-    /// Package name.
     pub name: String,
-    /// Locked version.
     #[serde(rename = "versionInfo")]
     pub version: String,
-    /// Claimed license expression text (SPDX or `NOASSERTION`).
     #[serde(rename = "licenseConcluded")]
     pub license: String,
-    /// Declared license text (same as concluded for V1 local matching).
     #[serde(rename = "licenseDeclared")]
     pub declared: String,
-    /// Copyright text when collected, else `NOASSERTION`.
     #[serde(rename = "copyrightText")]
     pub copyright: String,
-    /// Package-URL external reference.
     #[serde(rename = "externalRefs")]
     pub external: Vec<SpdxExternalRef>,
 }
 
-/// One SPDX external reference (package-URL identity).
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SpdxExternalRef {
-    /// Reference category (`PACKAGE-MANAGER`).
     #[serde(rename = "referenceCategory")]
     pub category: String,
-    /// Reference type (`purl`).
     #[serde(rename = "referenceType")]
     pub ref_type: String,
-    /// Package URL string.
     #[serde(rename = "referenceLocator")]
     pub locator: String,
 }
 
-/// One SPDX relationship: audited roots describe the document;
-/// containment records the lock graph where known.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SpdxRelationship {
-    /// Source element ID.
     #[serde(rename = "spdxElementId")]
     pub from: String,
-    /// Relationship type (`DESCRIBES` or `CONTAINS`).
     #[serde(rename = "relationshipType")]
     pub rel_type: String,
-    /// Target element ID.
     #[serde(rename = "relatedSpdxElement")]
     pub to: String,
 }
 
-/// One SPDX 2.3 JSON document per audit invocation.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SpdxDocument {
-    /// SPDX version (`2.3`).
     #[serde(rename = "spdxVersion")]
     pub version: String,
-    /// Data license (`CC0-1.0`).
     #[serde(rename = "dataLicense")]
     pub data_license: String,
-    /// Document ID (`SPDXRef-DOCUMENT`).
     #[serde(rename = "SPDXID")]
     pub id: String,
-    /// Document name.
     pub name: String,
-    /// Document namespace (invocation-unique URI).
     #[serde(rename = "documentNamespace")]
     pub namespace: String,
-    /// Audited packages.
     pub packages: Vec<SpdxPackage>,
-    /// Root attribution and containment.
     pub relationships: Vec<SpdxRelationship>,
 }
 
-/// Build one package-URL locator for a locked package via
-/// [`PackageUrl`]: V1 shapes are `pkg:<ecosystem>/<name>@<version>`
-/// with ecosystem `cargo`, `npm`, `maven`, `nuget`, or `golang`.
-/// Names with scopes keep their spelling; Maven `group:artifact`
-/// maps to `pkg:maven/<group>/<artifact>`. Encoding and
-/// canonicalization follow the purl spec (e.g. npm `@scope` encodes
-/// as `%40scope`, names/versions percent-encode); simple
-/// `cargo/npm/maven/nuget/go/generic` vectors stay byte-stable.
-/// Falls back to the legacy `format!` shape when the builder rejects
-/// an edge input so rendering stays infallible.
 pub fn package_url(set: &str, name: &str, version: &str) -> String {
     // Split `a/b/c` into namespace `a/b` + name `c` so slashes stay
     // separators instead of `%2F` (go paths, npm scopes, generic).
@@ -195,11 +127,6 @@ pub fn package_url(set: &str, name: &str, version: &str) -> String {
     }
 }
 
-/// Render one SPDX 2.3 JSON document: packages sorted by ID for
-/// determinism, relationships with `DESCRIBES` from each audited root
-/// first (sorted), then `CONTAINS` where the lock graph is known
-/// (sorted). Exactly one document per invocation, never one per
-/// package, set, or root.
 pub fn render_spdx(
     roots: &[String],
     packages: &[SpdxPackage],
@@ -239,10 +166,6 @@ pub fn render_spdx(
     serde_json::to_string_pretty(&document).unwrap_or_else(|_| "{}".to_owned())
 }
 
-/// Build one SPDX package entry from a locked package plus its claimed
-/// license text. Copyright defaults to `NOASSERTION` in V1 (notice
-/// texts are collected as inputs per [`crate::license_notice`], not
-/// aggregated into releases yet).
 pub fn spdx_package(
     set: &str,
     name: &str,
@@ -270,10 +193,6 @@ pub fn spdx_package(
 mod tests {
     use super::*;
 
-    /// Test-only SPDX document namespace (See: `docs/testing/README.md`, issue #914): `invalid.test`
-    /// (RFC 2606) can never resolve, so it cannot be copied into a real
-    /// SLSA builder ID, unlike `example.com`. Go `example.com/hello`
-    /// purl fixtures below stay: they are package names, not namespaces.
     const TEST_NAMESPACE: &str = "https://invalid.test/dx-audit-1";
 
     #[test]
@@ -483,7 +402,6 @@ mod tests {
 
     #[test]
     fn spdx_golden_pins_full_document_shape() {
-        // Issue #632 (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`): one document per invocation with the frozen
         // envelope, per-package purl identities, and ordered
         // DESCRIBES-then-CONTAINS relations. V1 live emission carries
         // no CONTAINS edges (no lock-graph projection yet); the golden

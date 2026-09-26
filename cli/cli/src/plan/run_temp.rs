@@ -1,64 +1,20 @@
-//! Per-run temporary-directory and nonce helpers.
-//!
-//! Split from `super` (`plan.rs`): owns [`bep_path`], [`intended_path`],
-//! [`run_nonce`], and [`create_run_temp_dir`]. Re-exported through
-//! `super` so the public paths stay `crate::plan::{bep_path, ...}`.
-//! These are leaf utilities with no planner dependencies.
-
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-/// BEP stream destination under `temp_dir`, unique per process
-/// invocation. `nonce` distinguishes repeated runs inside one process
-/// (tests, retries); production callers pass a per-run counter.
 pub fn bep_path(temp_dir: &Path, pid: u32, nonce: u64) -> PathBuf {
     temp_dir.join(format!("dx-bep-{pid}-{nonce}.json"))
 }
 
-/// Intended-manifest destination under `temp_dir`, unique per process
-/// invocation like [`bep_path`]. The wrapper passes it as
-/// [`super::GENERATE_ENV_INTENDED`] so the Gazelle extension witnesses
-/// its exact BUILD changes there for the finalizer.
 pub fn intended_path(temp_dir: &Path, pid: u32, nonce: u64) -> PathBuf {
     temp_dir.join(format!("dx-generate-{pid}-{nonce}.json"))
 }
 
-/// Per-process run counter feeding [`run_nonce`]. `Relaxed` suffices:
-/// no happens-before edge is needed, only atomicity — every fetch
-/// yields a distinct value even under concurrent callers.
-///
-/// Cross-process uniqueness comes from the [`tempfile`] directory itself
-/// (exclusive create with a random suffix); the nonce only needs to be
-/// unique within this process because BEP/intended files live inside the
-/// unique directory.
 static RUN_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-/// Fresh nonce for one launcher run.
-///
-/// A process-local monotonic counter: every call in this process yields a
-/// distinct value. Cross-process collisions are harmless — each run owns a
-/// unique [`tempfile::TempDir`], so identical nonces in different processes
-/// name files in different directories.
 pub fn run_nonce() -> u64 {
     RUN_COUNTER.fetch_add(1, Ordering::Relaxed)
 }
 
-/// Creates a fresh unique run directory and returns it with the nonce
-/// the caller must forward as [`crate::exec::Env::nonce`] so BEP and
-/// intended-manifest paths share the run's uniqueness.
-///
-/// Single prod run-temp policy for `#651` (distinct from the hermetic
-/// `quality_adapter::exec::Scratch` mirror and the test-only
-/// `dx_test_scratch::scratch`): uses [`tempfile::Builder`] with prefix
-/// `dx-run-`: exclusive create plus
-/// internal retry closes the PID-recycle collision window that hand-rolled
-/// `create_dir` loops used to cover. The returned [`tempfile::TempDir`]
-/// auto-cleans on drop; callers that need a removal warning should call
-/// [`tempfile::TempDir::close`] explicitly.
-///
-/// Scratch discipline (See: `docs/testing/README.md`, issue #750): the
-/// explicit `base` parent (Bazel `TEST_TMPDIR`/runner `TMPDIR`) keeps this
-/// separate from `dx_test_scratch`, which is test-only.
 pub fn create_run_temp_dir(base: &Path) -> std::io::Result<(tempfile::TempDir, u64)> {
     let dir = tempfile::Builder::new()
         .prefix("dx-run-")

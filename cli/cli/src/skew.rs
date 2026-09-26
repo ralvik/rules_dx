@@ -1,42 +1,12 @@
-//! Startup version-skew gate for the `dx` CLI.
-//!
-//! Skew detection used to be opt-in only (`dx version --check`): a drifted
-//! tree (checked-in `.dx/version` pin disagreeing with the module version)
-//! proceeded into execution and failed cryptically downstream. This gate
-//! surfaces the skew at startup on every workspace command, before any
-//! Bazel work starts: one small pin-file read, no subprocesses, zero cost
-//! on conforming trees.
-//!
-//! Fail-vs-warn follows command class, recorded in
-//! `docs/cli/commands/status-version.md#startup-skew-gate`: the
-//! diagnose/repair path (`version`, `status`) and the version-free shell
-//! helper (`completion`) are exempt; read-only commands (`check`, `audit`,
-//! `owners`, `deps`, `why`) warn and proceed; every mutating or generating
-//! command refuses. `--dry-run` downgrades refusal to a warning because a
-//! preview never mutates. A missing or empty pin is a never-pinned tree,
-//! not skew, so fresh checkouts proceed through the gate to `init`;
-//! `version` and `status` themselves fail closed on the missing pin.
-//! See: `docs/cli/commands/status-version.md#startup-skew-gate`.
-
 use crate::args::Command;
 
-/// Startup disposition for one invocation under the observed pin.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SkewDisposition {
-    /// No skew, or an exempt command: proceed silently.
     Proceed,
-    /// Skew on a read-only (or dry-run preview) invocation: warn on
-    /// stderr and proceed.
     Warn,
-    /// Skew on a mutating or generating invocation: refuse before any
-    /// Bazel work starts.
     Refuse,
 }
 
-/// Classifies one invocation against the observed pin (`None` when the
-/// pin file is missing or empty: a never-pinned tree, never skew).
-/// `skewed` must already be resolved against the module version; this
-/// function only maps command class (plus `--dry-run`) to disposition.
 pub fn disposition(command: Command, dry_run: bool, skewed: bool) -> SkewDisposition {
     if !skewed {
         return SkewDisposition::Proceed;
@@ -46,11 +16,14 @@ pub fn disposition(command: Command, dry_run: bool, skewed: bool) -> SkewDisposi
         // usable on a drifted tree; gating them would block the fix.
         Command::Version | Command::Status | Command::Completion => SkewDisposition::Proceed,
         // Read-only commands proceed with a warning: the check umbrella
-        // runs check-only phases, audit is non-mutating, and the inspect
-        // wrappers only forward Bazel queries.
-        Command::Check | Command::Audit | Command::Owners | Command::Deps | Command::Why => {
-            SkewDisposition::Warn
-        }
+        // runs check-only phases, security/license are non-mutating, and
+        // the inspect wrappers only forward Bazel queries.
+        Command::Check
+        | Command::Security
+        | Command::License
+        | Command::Owners
+        | Command::Deps
+        | Command::Why => SkewDisposition::Warn,
         // Mutating or generating commands refuse; a dry-run preview
         // never mutates, so it warns instead.
         _ => {
@@ -63,8 +36,6 @@ pub fn disposition(command: Command, dry_run: bool, skewed: bool) -> SkewDisposi
     }
 }
 
-/// Human diagnostic naming the three versions (binary, pin, module) and
-/// the repair. `pin` is the observed non-empty drifted pin.
 pub fn diagnostic(pin: &str) -> String {
     format!(
         "version skew: binary {} pin {pin} module {}; fix with `dx version --pin {}` or `dx version --rollback`",
@@ -74,15 +45,10 @@ pub fn diagnostic(pin: &str) -> String {
     )
 }
 
-/// Reads the workspace `.dx/version` pin (`""` when missing,
-/// unreadable, or empty). One small file read, no subprocesses.
 pub fn read_pin(workspace: &std::path::Path) -> String {
     dx_adopt::read_version_pin(workspace).unwrap_or_default()
 }
 
-/// Whether an observed pin is skewed: present, non-empty, and disagreeing
-/// with the module version. A missing or empty pin is a never-pinned
-/// tree, not skew.
 pub fn is_skewed(pin: &str) -> bool {
     let pin = pin.trim();
     !pin.is_empty() && !dx_adopt::version_pin_matches_module(pin, dx_adopt::MODULE_VERSION)
@@ -103,7 +69,8 @@ mod tests {
             Command::Update,
             Command::Bump,
             Command::Check,
-            Command::Audit,
+            Command::Security,
+            Command::License,
             Command::Owners,
             Command::Version,
             Command::Status,
@@ -133,7 +100,8 @@ mod tests {
     fn read_only_commands_warn_on_skew() {
         for command in [
             Command::Check,
-            Command::Audit,
+            Command::Security,
+            Command::License,
             Command::Owners,
             Command::Deps,
             Command::Why,

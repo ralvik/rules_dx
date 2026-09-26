@@ -1,18 +1,5 @@
-//! Build profile vocabulary.
-//!
-//! Split from `super` (`args.rs`): owns [`Profile`], [`DX_PROFILE_ENV`],
-//! and [`resolve_profile`] (ADR 0021). The parser
-//! ([`super::parser`]) and invocation ([`super::Invocation`]) build on
-//! these; `super` re-exports them so `crate::args::{...}` paths are
-//! unchanged.
-
 use super::Command;
 
-/// Build profile vocabulary (ADR 0021): `--debug` selects
-/// `dx_debug` (`dbg`), the bare invocation selects `dx_dev`
-/// (`fastbuild`), and `--release` selects `dx_release` (`opt`). There
-/// is no `--dev` flag: the bare invocation already means the middle
-/// mode and keeps `dx build` short.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Profile {
     Debug,
@@ -21,7 +8,6 @@ pub enum Profile {
 }
 
 impl Profile {
-    /// Stable profile name forwarded as `DX_PROFILE` to deploy programs.
     pub fn name(self) -> &'static str {
         match self {
             Profile::Debug => "debug",
@@ -30,7 +16,6 @@ impl Profile {
         }
     }
 
-    /// Shared Bazel config backing the profile (ADR 0021).
     pub fn config(self) -> &'static str {
         match self {
             Profile::Debug => "dx_debug",
@@ -39,13 +24,10 @@ impl Profile {
         }
     }
 
-    /// Required `--config=` flag pinning the profile on a workflow argv.
     pub fn config_flag(self) -> String {
         format!("--config={}", self.config())
     }
 
-    /// Command default: `deploy` defaults to release, every other
-    /// command defaults to dev.
     pub fn default_for(command: Command) -> Self {
         match command {
             Command::Deploy => Profile::Release,
@@ -53,9 +35,6 @@ impl Profile {
         }
     }
 
-    /// Parses a deploy-target `profile` attribute value (`debug`, `dev`,
-    /// `release`): `None` for anything else so analysis diagnostics own
-    /// the spelling error.
     pub fn parse_attr(value: &str) -> Option<Self> {
         match value {
             "debug" => Some(Profile::Debug),
@@ -66,16 +45,8 @@ impl Profile {
     }
 }
 
-/// Environment variable forwarding the resolved profile to the deploy
-/// program (item 3).
 pub const DX_PROFILE_ENV: &str = "DX_PROFILE";
 
-/// Precedence for the effective profile (item 2): the
-/// explicit `--debug`/`--release` flag wins over the deploy target
-/// `profile` attribute, which wins over the command default. Build,
-/// run, and test have no target attribute, so they resolve flag over
-/// default; deploy resolves flag over target attribute over the
-/// release default.
 pub fn resolve_profile(flag: Option<Profile>, attr: Option<Profile>, default: Profile) -> Profile {
     flag.or(attr).unwrap_or(default)
 }
@@ -152,7 +123,6 @@ mod tests {
             assert_eq!(release.profile(), Profile::Release);
         }
         // Deploy shares the flags with a release default (flag over default).
-        // See: `docs/cli/commands/build-test-coverage.md#build-profiles`.
         let bare = parse(&args(&["deploy"])).expect("bare deploy parse");
         assert_eq!(bare.profile_flag(), None);
         assert_eq!(bare.profile(), Profile::Release);

@@ -1,27 +1,9 @@
-//! Build/test/coverage workflow Bazel planning.
-//!
-//! Split from [`super::quality`]: owns the `build`/`test`/`coverage`/`run`
-//! workflow planning ([`WorkflowVerb`], [`workflow_options`],
-//! [`workflow_protected`], [`plan_workflow`],
-//! [`COVERAGE_COMBINED_REPORT_FLAG`]). Re-exported through `super` so the
-//! public paths stay `crate::plan::{plan_workflow, WorkflowVerb, ...}`.
-//! Shares [`super::BuildPlan`], [`super::workspace_flag`],
-//! [`super::BEP_FLAG_NAME`], and [`super::workflow_scope_labels`] with the
-//! quality planning in [`super::quality`]; scope resolution for these
-//! plans lives in `crate::resolve`.
-
 use dx_process::{build_workflow_argv, describe_scope, ForwardError, ProtectedFlag};
 
-use super::{workflow_scope_labels, workspace_flag, BuildPlan, BEP_FLAG_NAME};
+use super::{workflow_scope_labels, workspace_flag, BuildPlan, BEP_FLAG_NAME, DOWNLOAD_ALL_FLAG};
 use crate::args::Command;
 use crate::resolve::ResolvedScope;
 
-/// Bazel verb behind a workflow command (`build`, `test`, `coverage`, `run`).
-/// The verb selects the Bazel command line; required workflow policy is
-/// identical across verbs except for the BEP stream, which only
-/// `test` and `coverage` collect report artifacts from. `deploy` plans
-/// its own build+run argv pair ([`super::run_deploy::plan_deploy_build`]/[`super::run_deploy::plan_deploy_run`])
-/// and never maps to a single verb.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WorkflowVerb {
     Build,
@@ -31,9 +13,6 @@ pub enum WorkflowVerb {
 }
 
 impl WorkflowVerb {
-    /// Maps a workflow command to its verb. Returns `None` for quality
-    /// commands, which plan through [`super::quality::plan_build`] instead, and for
-    /// `deploy`, which plans a build+run pair instead of one verb.
     pub fn of(command: Command) -> Option<Self> {
         match command {
             Command::Build => Some(WorkflowVerb::Build),
@@ -46,10 +25,15 @@ impl WorkflowVerb {
             // Managed selections plan their own collection argv
             // ([`super::managed::plan_managed`]), never a fixed workflow verb.
             Command::Codegen | Command::Env | Command::Setup => None,
-            // Audit/update/bump plan through `dx_audit`/`dx_update`/`dx_bump`,
-            // never a fixed workflow verb. Migrate plans through
+            // Security/license/update/bump plan through
+            // `dx_audit`/`dx_update`/`dx_bump`, never a fixed workflow
+            // verb. Migrate plans through
             // `dx_adopt::plan_migrate`, never a workflow verb.
-            Command::Audit | Command::Update | Command::Bump | Command::Migrate => None,
+            Command::Security
+            | Command::License
+            | Command::Update
+            | Command::Bump
+            | Command::Migrate => None,
             // Raw launcher passthrough plans its own argv (launcher
             // plus forwarded arguments), never a fixed workflow verb.
             Command::Bazel => None,
@@ -68,7 +52,6 @@ impl WorkflowVerb {
         }
     }
 
-    /// Stable Bazel command name.
     pub fn name(self) -> &'static str {
         match self {
             WorkflowVerb::Build => "build",
@@ -78,27 +61,14 @@ impl WorkflowVerb {
         }
     }
 
-    /// True when the verb collects report artifacts from a BEP stream.
-    /// `build` and `run` have no standard report, so they plan no BEP flag.
     pub fn collects_reports(self) -> bool {
         matches!(self, WorkflowVerb::Test | WorkflowVerb::Coverage)
     }
 }
 
-/// Required workflow options in argv order: canonical workspace policy,
-/// the build-profile config, full-target collection, and — for
-/// report-collecting verbs — the BEP stream path. Coverage additionally
-/// requires `--combined_report=lcov` so Bazel emits LCOV tracefiles.
-/// Aspects, output groups, and validation stay off this path: Bazel owns
-/// the workflow status. Fail-fast is the default: no `--keep_going` is
-/// forced; an explicit user `--keep_going` (or `--nocancel`
-/// equivalents) forwards via `bazel_options`.
-///
-/// `profile` is `Some` for `build`/`test` (always an explicit
-/// `--config=dx_*`, including the `dx_dev` default) and `None` for
-/// `coverage`, which has no profile flags in scope: its argv
-/// is unchanged and bare Bazel behavior already equals `fastbuild`.
 pub const COVERAGE_COMBINED_REPORT_FLAG: &str = "--combined_report=lcov";
+
+pub const BLESSED_EXTRA_CONFIGS: [&str; 2] = ["--config=ci", "--config=ci-pr"];
 
 pub fn workflow_options(
     verb: WorkflowVerb,
@@ -112,18 +82,15 @@ pub fn workflow_options(
     if verb == WorkflowVerb::Coverage {
         required.push(COVERAGE_COMBINED_REPORT_FLAG.to_owned());
     }
+    if verb.collects_reports() {
+        required.push(DOWNLOAD_ALL_FLAG.to_owned());
+    }
     if let Some(path) = bep_path {
         required.push(format!("--{BEP_FLAG_NAME}={path}"));
     }
     required
 }
 
-/// Protected workflow flags: workspace and BEP reject every user
-/// override; coverage `combined_report` accepts repetition of the
-/// required value only. The build-profile `--config=dx_*`
-/// accepts repetition of the required value only, so an explicit user
-/// `--config` that conflicts with the resolved profile fails before
-/// execution instead of silently overriding it.
 pub fn workflow_protected(
     verb: WorkflowVerb,
     profile: Option<crate::args::Profile>,
@@ -131,35 +98,40 @@ pub fn workflow_protected(
     let mut protected = vec![ProtectedFlag {
         name: "@rules_dx//config:workspace".to_owned(),
         required: None,
+        allowed: Vec::new(),
     }];
     if let Some(profile) = profile {
         protected.push(ProtectedFlag {
             name: "config".to_owned(),
             required: Some(profile.config_flag()),
+            allowed: BLESSED_EXTRA_CONFIGS
+                .iter()
+                .map(ToString::to_string)
+                .collect(),
         });
     }
     if verb == WorkflowVerb::Coverage {
         protected.push(ProtectedFlag {
             name: "combined_report".to_owned(),
             required: Some(COVERAGE_COMBINED_REPORT_FLAG.to_owned()),
+            allowed: Vec::new(),
+        });
+    }
+    if verb.collects_reports() {
+        protected.push(ProtectedFlag {
+            name: "remote_download_outputs".to_owned(),
+            required: Some(DOWNLOAD_ALL_FLAG.to_owned()),
+            allowed: Vec::new(),
         });
     }
     protected.push(ProtectedFlag {
         name: BEP_FLAG_NAME.to_owned(),
         required: None,
+        allowed: Vec::new(),
     });
     protected
 }
 
-/// Builds the exact workflow argv for a `build`, `test`, `coverage`, or
-/// `run` command over a resolved scope. `resolved.targets` supplies the exact
-/// Bazel targets (empty selects the repository scope `//...`) and
-/// `resolved.scope` renders the operation summary. `bep_path` carries
-/// the build-event JSON stream for report-collecting verbs and must be
-/// `None` for `build` and `run`. `profile` carries the `--config=dx_*`
-/// pin for `build`/`test` (always `Some`, including the default) and
-/// must be `None` for `coverage` (no profile flags). Fails before
-/// execution when user options conflict with required workflow policy.
 pub fn plan_workflow(
     verb: WorkflowVerb,
     resolved: &ResolvedScope,
@@ -231,7 +203,7 @@ mod tests {
                 "--config=dx_dev",
             ]
         );
-        assert_eq!(argv[6..], ["//..."]);
+        assert_eq!(argv[6..], ["--remote_download_outputs=all", "//..."]);
     }
 
     #[test]
@@ -245,6 +217,32 @@ mod tests {
         )
         .expect("plan");
         assert!(plan.argv.iter().any(|arg| arg == "--keep_going"));
+    }
+
+    #[test]
+    fn workflow_plan_accepts_blessed_ci_configs_beside_profile() {
+        for verb in [WorkflowVerb::Build, WorkflowVerb::Test] {
+            let plan = plan_workflow(
+                verb,
+                &resolved(&[]),
+                &options(&["--config=ci", "--config=ci-pr"]),
+                None,
+                Some(Profile::Dev),
+            )
+            .expect("blessed configs pass");
+            assert!(plan.argv.iter().any(|arg| arg == "--config=dx_dev"));
+            assert!(plan.argv.iter().any(|arg| arg == "--config=ci"));
+            assert!(plan.argv.iter().any(|arg| arg == "--config=ci-pr"));
+        }
+        let err = plan_workflow(
+            WorkflowVerb::Test,
+            &resolved(&[]),
+            &options(&["--config=dx_release"]),
+            None,
+            Some(Profile::Dev),
+        )
+        .expect_err("profile override still conflicts");
+        assert!(matches!(err, ForwardError::ConflictingOption { .. }));
     }
 
     #[test]

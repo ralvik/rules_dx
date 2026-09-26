@@ -1,94 +1,47 @@
-//! Shared invocation types.
-//!
-//! Split from `super` (`args.rs`): owns [`ReportRequest`] and
-//! [`Invocation`] plus the profile/mode helpers. The parser
-//! ([`super::parser`]) constructs these; `super` re-exports them so
-//! `crate::args::{Invocation, ReportRequest}` paths are unchanged.
-
 use dx_output::{ColorMode, LogLevel, OutputMode, Threshold};
 
 use super::profile::{resolve_profile, Profile};
 use super::Command;
 
-/// One `--report <format>=<destination>` request. Format support is
-/// validated against the command registry during planning; parsing only
-/// checks the `format=destination` shape.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReportRequest {
     pub format: String,
     pub destination: String,
 }
 
-/// Parsed `dx` invocation: command mode, global options, explicit scope,
-/// and Bazel command options after `--`. An empty `targets` selects the
-/// repository scope (`//...`), unless `here` selects the current directory
-/// tree instead (`//path/...`; `//...` at the root). `bazel_clean` is set only by
-/// `dx clean --bazel` (additionally forward `bazel clean` after pruning).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Invocation {
     pub command: Command,
     pub check: bool,
-    /// `--debug` (build/run/test/deploy only).
     pub debug: bool,
-    /// `--release` (build/run/test/deploy only).
     pub release: bool,
     pub workspace: Option<String>,
     pub dry_run: bool,
     pub quiet: bool,
-    /// `--verbose`: structured `tracing` diagnostics on
-    /// stderr; orthogonal to `--quiet` (which suppresses human summaries).
-    /// Default stays byte-identical (warn+error only).
     pub verbose: bool,
-    /// `--log-level error|warn|info|debug|trace`: explicit diagnostic
-    /// level on stderr; conflicts with `--verbose` (`-v` is `info`).
-    /// `RUST_LOG` overrides both when set.
     pub log_level: Option<LogLevel>,
-    /// `--color auto|always|never`: color for logs and human status.
-    /// `auto` stays byte-identical plain unless a TTY without `NO_COLOR`.
     pub color: ColorMode,
     pub output: OutputMode,
     pub reports: Vec<ReportRequest>,
     pub fail_on: Threshold,
-    /// `dx coverage --min-coverage <percent>`: required line-coverage
-    /// percent over the collected LCOV (Coverage only; `None` collects
-    /// without enforcing a threshold).
     pub min_coverage: Option<u32>,
     pub targets: Vec<String>,
     pub bazel_options: Vec<String>,
     pub bazel_clean: bool,
-    /// `dx version --pin <version>`: re-pin target (Version only).
     pub pin: Option<String>,
-    /// `dx version --rollback`: re-pin the recorded previous release
-    /// (Version only; rejected together with `--pin`).
     pub rollback: bool,
-    /// Inspect wrappers use `cquery` instead of `query` (Owners, Deps,
-    /// Why only).
     pub configured: bool,
-    /// `dx migrate/upgrade --from <version>`: source version (Migrate
-    /// plus Upgrade only).
     pub from: Option<String>,
-    /// `dx migrate/upgrade --to <version>`: target version
-    /// (Migrate plus Upgrade only).
     pub to: Option<String>,
-    /// `dx <command> --here` (`--cwd` alias): select the current directory
-    /// tree instead of `//...` (cwd-scope commands only; never implicit).
     pub here: bool,
-    /// `dx docs --serve`: preview the last build outputs locally.
     pub serve: bool,
-    /// `dx docs --serve --port <port>`: preview port (docs only).
     pub port: Option<u16>,
-    /// `dx docs --serve --host <host>`: preview bind host (docs only).
     pub host: Option<String>,
-    /// `dx docs --serve --open`: open the preview URL in a browser.
     pub open: bool,
-    /// `dx audit/update/bump --offline` (`--frozen` alias): force cache-only
-    /// operation without network fetches (audit/update/bump only).
-    /// See: `docs/deploy/offline-bootstrap.md`.
     pub offline: bool,
 }
 
 impl Invocation {
-    /// `command_started` mode: `check` for `--check`, else `default`.
     pub fn mode(self) -> &'static str {
         if self.check {
             "check"
@@ -97,9 +50,6 @@ impl Invocation {
         }
     }
 
-    /// Explicit `--debug`/`--release` flag as a [`Profile`]: `None` for
-    /// the bare invocation (which resolves to the command default).
-    /// Parsing rejects both flags together, so the arms are exclusive.
     pub fn profile_flag(&self) -> Option<Profile> {
         if self.debug {
             Some(Profile::Debug)
@@ -110,12 +60,6 @@ impl Invocation {
         }
     }
 
-    /// Effective profile precedence: explicit flag over
-    /// the command default. Deploy resolves flag over the target
-    /// `profile` attribute over the release default; the
-    /// target attribute is read during execution via cquery, so this
-    /// returns flag over command default and execution refines it.
-    /// Build/run/test have no target attribute.
     pub fn profile(&self) -> Profile {
         resolve_profile(
             self.profile_flag(),
@@ -125,16 +69,6 @@ impl Invocation {
     }
 }
 
-/// Workspace-relative scope spelling for `--here` (`--cwd` alias,
-/// See: `docs/cli/target-resolution.md`, issue #699): the current directory tree as a directory scope for the
-/// existing resolution (`//path/...` via `classify`; `//...` at the root
-/// directly so both the `classify` directory path and the audit
-/// `owning_sets` label path resolve repository-wide). Never implicit:
-/// only called when `here` is set. Bare invocations in a subdir stay
-/// `//...`; only `--here`/`--cwd` selects the directory tree.
-/// Fails when `cwd` is outside `workspace` or not UTF-8.
-/// Canonicalizes through `Component::Normal` so `./`, trailing slashes,
-/// and doubled separators never reach `classify`.
 pub fn here_scope(workspace: &std::path::Path, cwd: &std::path::Path) -> Result<String, String> {
     use std::path::Component;
     let rel = cwd.strip_prefix(workspace).map_err(|_| {
@@ -181,12 +115,6 @@ pub fn here_scope(workspace: &std::path::Path, cwd: &std::path::Path) -> Result<
     Ok(parts.join("/"))
 }
 
-/// Consumes `--here` into explicit targets: replaces an empty scope (or
-/// one audit family selector) with the [`here_scope`] directory spelling
-/// and clears `here`, so downstream resolution reuses the existing
-/// directory-scope path verbatim. Parsing already rejects `--here` with
-/// explicit scopes (audit allows one family); this rechecks and fails
-/// closed on misuse.
 pub fn apply_here(
     invocation: &Invocation,
     workspace: &std::path::Path,
@@ -203,27 +131,12 @@ pub fn apply_here(
     }
     let scope = here_scope(workspace, cwd)?;
     let mut next = invocation.clone();
-    if invocation.command == super::command::Command::Audit {
-        if next.targets.is_empty() {
-            next.targets = vec![scope];
-        } else if next.targets.len() == 1
-            && (next.targets[0] == "security" || next.targets[0] == "license")
-        {
-            let family = next.targets[0].clone();
-            next.targets = vec![family, scope];
-        } else {
-            return Err(
-                "option \"--here/--cwd\" cannot be combined with explicit scopes".to_owned(),
-            );
-        }
-    } else {
-        if !next.targets.is_empty() {
-            return Err(
-                "option \"--here/--cwd\" cannot be combined with explicit scopes".to_owned(),
-            );
-        }
-        next.targets = vec![scope];
+    if !next.targets.is_empty() {
+        return Err(
+            "option \"--here/--cwd\" cannot be combined with explicit scopes".to_owned(),
+        );
     }
+    next.targets = vec![scope];
     next.here = false;
     Ok(next)
 }
@@ -295,24 +208,18 @@ mod tests {
         assert!(!resolved.here);
         assert_eq!(resolved.targets, vec!["cli/cli".to_owned()]);
 
-        // Workspace root becomes `//...` so audit `owning_sets` stays ALL.
+        // Workspace root becomes `//...` so `owning_sets` stays ALL.
         let resolved =
             apply_here(&invocation_for(Command::Lint, &[]), workspace, root).expect("resolves");
         assert_eq!(resolved.targets, vec!["//...".to_owned()]);
 
-        // Audit keeps one family selector plus the directory scope.
-        let resolved = apply_here(
-            &invocation_for(Command::Audit, &["security"]),
-            workspace,
-            subdir,
-        )
-        .expect("resolves");
-        assert_eq!(
-            resolved.targets,
-            vec!["security".to_owned(), "cli/cli".to_owned()]
-        );
+        // Security/license resolve like every other graph-scope command.
         let resolved =
-            apply_here(&invocation_for(Command::Audit, &[]), workspace, root).expect("resolves");
+            apply_here(&invocation_for(Command::Security, &[]), workspace, subdir)
+                .expect("resolves");
+        assert_eq!(resolved.targets, vec!["cli/cli".to_owned()]);
+        let resolved =
+            apply_here(&invocation_for(Command::License, &[]), workspace, root).expect("resolves");
         assert_eq!(resolved.targets, vec!["//...".to_owned()]);
 
         // Explicit scopes never combine; unsupported commands fail closed.
@@ -323,7 +230,7 @@ mod tests {
         )
         .is_err());
         assert!(apply_here(
-            &invocation_for(Command::Audit, &["security", "//a:one"]),
+            &invocation_for(Command::Security, &["//a:one"]),
             workspace,
             subdir
         )
@@ -346,7 +253,6 @@ mod tests {
 
     #[test]
     fn here_scope_canonicalizes_and_bare_stays_repo_wide() {
-        // See: `docs/cli/target-resolution.md`.
         let workspace = std::path::Path::new("/ws");
         assert_eq!(
             here_scope(workspace, std::path::Path::new("/ws")),

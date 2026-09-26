@@ -1,29 +1,6 @@
-//! Quality command registry.
-//!
-//! Split from [`super::quality`]: owns the static command registry
-//! ([`CommandSpec`]/[`spec`]). Option/build planning
-//! ([`super::quality::required_options`],
-//! [`super::quality::protected_flags`],
-//! [`super::quality::plan_build`]) stays in the quality domain
-//! submodule. Re-exported through `super` so the public paths stay
-//! `crate::plan::{spec, CommandSpec}`.
-
 use super::{CLIPPY_DIAGNOSTICS_FLAG, RUSTC_DIAGNOSTICS_FLAG};
 use crate::args::Command;
 
-/// Static command registry entry: capability, Bazel aspects, and supported
-/// standard-report formats.
-///
-/// `settings` carries upstream build-setting flags the command's aspects
-/// require as workflow mechanism (never user policy): `dx` always sets
-/// them and rejects every user override, mirroring the workspace and
-/// validate flags.
-/// `typecheck` selects the real typecheck aspect (WP3 wires the rustc
-/// stage over the rust class); families without a typecheck selection
-/// resolve to no stages, so the command stays a silent no-op there per
-/// `docs/cli/commands/quality.md`. Lint and typecheck export normalized
-/// findings as SARIF 2.1.0; format has no initial standard report per
-/// `docs/cli/standard-reports.md`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CommandSpec {
     pub command: Command,
@@ -33,15 +10,6 @@ pub struct CommandSpec {
     pub settings: &'static [&'static str],
 }
 
-/// Returns the registry entry for `command`. Quality commands select
-/// capability aspects and SARIF reports; workflow commands run Bazel
-/// verbs directly with Bazel-owned status, so they select no aspects.
-/// `test` normalizes `test.xml` artifacts into one JUnit document and
-/// `coverage` normalizes `coverage.dat` artifacts into one LCOV document;
-/// `build` and `run` have no standard report. `generate` runs the
-/// canonical `//dx:generate` Gazelle runner with no aspects and no
-/// standard report: per-command result transport is pending so
-/// machine-readable changes and mutations stay absent.
 pub fn spec(command: Command) -> CommandSpec {
     match command {
         Command::Lint => CommandSpec {
@@ -165,7 +133,6 @@ pub fn spec(command: Command) -> CommandSpec {
         // thin query forwarding, never the quality aspect pipeline.
         // `new` scaffolds a minimal qualified project per language;
         // `upgrade` composes pin plus migrate plus setup with a recovery
-        // pointer (see `docs/cli/commands/new-upgrade.md`).
         Command::Init
         | Command::New
         | Command::Upgrade
@@ -183,14 +150,15 @@ pub fn spec(command: Command) -> CommandSpec {
             reports: &[],
             settings: &[],
         },
-        // Audit/update surfaces: family selection and dependency-set
-        // selectors plan through the `dx_audit`/`dx_update` libraries,
-        // never the quality aspect pipeline. Audit exports SARIF (security
-        // findings) and SPDX 2.3 JSON (license inventory) through the
-        // shared report contract; update reports per-set
+        // Security/license surfaces: dependency-set selectors plan
+        // through the `dx_audit` library, never the quality aspect
+        // pipeline. Security exports SARIF findings and license exports
+        // SPDX 2.3 JSON through the shared report contract; both formats
+        // stay accepted on either command and the executor selects the
+        // family payload. Update reports per-set
         // through live output (text plus `notice`/`error` in JSON, issue
         // with no `--report` standard report.
-        Command::Audit => CommandSpec {
+        Command::Security | Command::License => CommandSpec {
             command,
             capability: "audit",
             aspects: &[],
@@ -228,7 +196,6 @@ pub fn spec(command: Command) -> CommandSpec {
         // Docs site build over the Bazel-cached extract to aggregate to
         // render chain: no aspects, no standard reports; planned at
         // execution as `bazel build` over the resolved docs targets.
-        // See: `docs/cli/commands/docs.md`.
         Command::Docs => CommandSpec {
             command,
             capability: "docs",
@@ -333,12 +300,14 @@ mod tests {
             assert_eq!(WorkflowVerb::of(command), None);
             assert!(command.is_managed());
         }
-        let audit = spec(Command::Audit);
-        assert_eq!(audit.capability, "audit");
-        assert!(audit.aspects.is_empty());
-        assert_eq!(audit.reports, &["sarif", "spdx"]);
-        assert_eq!(WorkflowVerb::of(Command::Audit), None);
-        assert!(Command::Audit.is_audit_update());
+        for command in [Command::Security, Command::License] {
+            let entry = spec(command);
+            assert_eq!(entry.capability, "audit");
+            assert!(entry.aspects.is_empty());
+            assert_eq!(entry.reports, &["sarif", "spdx"]);
+            assert_eq!(WorkflowVerb::of(command), None);
+            assert!(command.is_audit_update());
+        }
         let update = spec(Command::Update);
         assert_eq!(update.capability, "update");
         assert!(update.aspects.is_empty());

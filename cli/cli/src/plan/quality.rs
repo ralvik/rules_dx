@@ -1,39 +1,20 @@
-//! Quality Bazel planning.
-//!
-//! Split from `super` (`plan.rs`): owns the quality required/protected
-//! option helpers, [`plan_build`], and the shared scope-label helper
-//! ([`workflow_scope_labels`]). The static command registry
-//! ([`super::registry::CommandSpec`], [`super::registry::spec`]) lives
-//! in the [`super::registry`] domain submodule; the `build`/`test`/
-//! `coverage` workflow planning ([`super::workflow::WorkflowVerb`],
-//! [`super::workflow::plan_workflow`]) lives in the [`super::workflow`]
-//! domain submodule. Re-exported through `super` so the
-//! public paths stay `crate::plan::{spec, plan_build, ...}`. Shares the
-//! policy leaves
-//! ([`super::workspace_flag`], [`super::BuildPlan`], flag constants)
-//! with the generate/run-deploy/managed/workflow planning; scope resolution for
-//! these plans lives in `crate::resolve`.
-
 use dx_process::{
     build_workflow_argv, describe_scope, operation_summary, ForwardError, ProtectedFlag, Scope,
 };
 
 use super::{
     registry::{spec, CommandSpec},
-    workspace_flag, BuildPlan, BEP_FLAG_NAME, KEEP_GOING_FLAG, OUTPUT_GROUP, VALIDATE_FLAG,
+    workspace_flag, BuildPlan, BEP_FLAG_NAME, DOWNLOAD_ALL_FLAG, KEEP_GOING_FLAG, OUTPUT_GROUP,
+    VALIDATE_FLAG,
 };
 use crate::args::Command;
 use crate::resolve::ResolvedScope;
 
-/// Required workflow options in argv order, placed after `build` and
-/// before user options by [`build_workflow_argv`]. Command settings
-/// (upstream build-setting flags the aspects require) travel last.
-/// [`protected_flags`] locates `keep_going` by value, so this order is
-/// a display choice, not a positional contract.
 pub fn required_options(entry: &CommandSpec, bep_path: &str) -> Vec<String> {
     let mut options = vec![
         format!("--aspects={}", entry.aspects.join(",")),
         format!("--output_groups={OUTPUT_GROUP}"),
+        DOWNLOAD_ALL_FLAG.to_owned(),
         workspace_flag(),
         VALIDATE_FLAG.to_owned(),
         KEEP_GOING_FLAG.to_owned(),
@@ -43,12 +24,6 @@ pub fn required_options(entry: &CommandSpec, bep_path: &str) -> Vec<String> {
     options
 }
 
-/// Bare setting name for a required `--name=value` option: strips the
-/// leading dashes and any `=value`, so
-/// `--@rules_rust//rust/settings:clippy_output_diagnostics=true`
-/// protects `@rules_rust//rust/settings:clippy_output_diagnostics`.
-/// Fails when `option` is not a `--name[=value]` workflow option
-/// instead of silently protecting a wrong name.
 fn setting_name(option: &str) -> Result<String, ForwardError> {
     let bare = option
         .strip_prefix("--")
@@ -64,16 +39,6 @@ fn setting_name(option: &str) -> Result<String, ForwardError> {
     Ok(name.to_owned())
 }
 
-/// Protected workflow flags derived from [`required_options`]. Aspect,
-/// output-group, workspace, and validate options reject every user
-/// override; `keep_going` accepts repetition of the required value only
-/// (located by value in `required`, never by position),
-/// and `nokeep_going` is always rejected; command settings reject every
-/// user override like the other mechanism flags. The BEP stream has no required
-/// value because the CLI chooses a fresh path per run; the user spelling
-/// is rejected so collection always observes the actual build.
-/// Fails when the required `keep_going` entry or a command setting is
-/// malformed instead of panicking or hiding the miswiring.
 pub fn protected_flags(
     required: &[String],
     settings: &[&str],
@@ -89,44 +54,54 @@ pub fn protected_flags(
         ProtectedFlag {
             name: "aspects".to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "output_groups".to_owned(),
             required: None,
+            allowed: Vec::new(),
+        },
+        ProtectedFlag {
+            name: "remote_download_outputs".to_owned(),
+            required: Some(DOWNLOAD_ALL_FLAG.to_owned()),
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "@rules_dx//config:workspace".to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "@rules_dx//config:validate".to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "keep_going".to_owned(),
             required: Some(keep_going),
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "nokeep_going".to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
         ProtectedFlag {
             name: BEP_FLAG_NAME.to_owned(),
             required: None,
+            allowed: Vec::new(),
         },
     ];
     for setting in settings {
         flags.push(ProtectedFlag {
             name: setting_name(setting)?,
             required: None,
+            allowed: Vec::new(),
         });
     }
     Ok(flags)
 }
 
-/// Resolved scope with its exact Bazel labels. Empty targets select
-/// the repository scope (`//...`); every planner shares this fallback
-/// so scope handling cannot drift between commands.
 pub(crate) fn workflow_scope_labels(resolved: &ResolvedScope) -> (Scope, Vec<String>) {
     if resolved.targets.is_empty() {
         (Scope::Repository, vec![describe_scope(&Scope::Repository)])
@@ -135,12 +110,6 @@ pub(crate) fn workflow_scope_labels(resolved: &ResolvedScope) -> (Scope, Vec<Str
     }
 }
 
-/// Builds the exact workflow argv for `command` over a resolved scope.
-/// `resolved.targets` supplies the exact Bazel targets (empty selects
-/// the repository scope `//...`) and `resolved.scope` renders the
-/// operation summary. `bep_path` receives the build-event JSON stream
-/// the CLI collects with `dx_bep`. Fails before execution when user
-/// options conflict with required workflow policy.
 pub fn plan_build(
     command: Command,
     resolved: &ResolvedScope,
@@ -224,7 +193,7 @@ mod tests {
         .expect("plan");
         let argv: Vec<&str> = plan.argv.iter().map(String::as_str).collect();
         assert_eq!(
-            argv[..7],
+            argv[..8],
             [
                 "bazel",
                 "--nohome_rc",
@@ -232,11 +201,12 @@ mod tests {
                 "build",
                 "--aspects=//quality:real_aspects.bzl%real_lint_aspect,//quality:real_aspects.bzl%real_js_lint_aspect,//quality:real_aspects.bzl%real_python_lint_aspect,//quality:real_aspects.bzl%real_jvm_lint_aspect,//quality:real_aspects.bzl%real_rust_lint_aspect",
                 "--output_groups=dx_results",
+                "--remote_download_outputs=all",
                 "--@rules_dx//config:workspace=//dx:config",
             ]
         );
         assert_eq!(
-            argv[7..],
+            argv[8..],
             [
                 "--@rules_dx//config:validate=false",
                 "--keep_going",
@@ -308,7 +278,6 @@ mod tests {
         assert_eq!(plan.summary, "Running lint analysis for //a:a //b:b");
     }
 
-    /// Scripted query runner replaying canned owner listings in call order.
     struct FakeQuery {
         outputs: RefCell<Vec<QueryResult>>,
     }

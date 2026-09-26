@@ -1,113 +1,50 @@
-//! Schedule planning for consumer CI (WP1 slice 3).
-//!
-//! Split from `super` (`lib.rs`): owns [`SchedulingMode`],
-//! [`ExecutionCell`], [`CellIsolation`], [`PlannedCell`],
-//! [`PlannedSchedule`] (with [`PlannedSchedule::is_independent`]),
-//! [`CellOutcome`], [`aggregate_outcome`], and [`plan_schedule`]
-//! (expands a [`CiSelection`](super::CiSelection) into cells in
-//! canonical order — Linux-once checks once, per-platform checks fanned
-//! out in caller platform order — each with deterministic isolated
-//! context identities; parallel and sequential modes plan identical
-//! cells and differ in overlap only; aggregation fails the run on any
-//! cell failure while preserving completed results). Re-exported
-//! through `super` so the public paths stay
-//! `dx_ci::{SchedulingMode, ExecutionCell, CellIsolation, PlannedCell,
-//! PlannedSchedule, CellOutcome, aggregate_outcome, plan_schedule}`.
-//! Distinct from the revision, selection, supersession, reporting,
-//! fork/aggregate, rerun, caller, pin, audit, artifact, metadata, and
-//! preset modules.
-
 use super::{CiSelection, ExecutionScope};
 
-/// How independent check cells overlap.
-///
-/// Parallel is the default; sequential changes overlap only. Cell set,
-/// isolation identities, failure preservation, and aggregate semantics are
-/// identical in both modes.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum SchedulingMode {
-    /// Independent cells may overlap, subject to runner availability.
     #[default]
     Parallel,
-    /// Cells execute without overlap.
     Sequential,
 }
 
-/// One executable unit: a check on its execution scope.
-///
-/// Linux-once checks carry `platform: None`; per-platform checks carry the
-/// verbatim caller-supplied platform spelling.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExecutionCell {
-    /// Frozen check identifier.
     pub check: &'static str,
-    /// Verbatim platform spelling, or `None` for Linux-once checks.
     pub platform: Option<String>,
-    /// Whether this cell runs once on Linux or per selected platform.
     pub scope: ExecutionScope,
 }
 
-/// Isolated execution context identities for one cell.
-///
-/// Every cell owns distinct checkout, report-destination, and Bazel
-/// output-base identities so parallel cells never mutate shared state or
-/// serialize on one shared output-base lock. Identities derive
-/// deterministically from the cell's check and platform; platform
-/// spellings pass through verbatim (runner mapping and filesystem
-/// sanitization arrive with the workflow slice).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CellIsolation {
-    /// Isolated checkout/setup identity.
     pub workdir: String,
-    /// Isolated report-destination identity.
     pub report_path: String,
-    /// Isolated Bazel output-base identity (never shared between cells).
     pub output_base: String,
 }
 
-/// One planned cell with its isolated context.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PlannedCell {
-    /// The executable unit.
     pub cell: ExecutionCell,
-    /// Its isolated execution context.
     pub isolation: CellIsolation,
 }
 
-/// Planned schedule: the fixed cell set plus its overlap mode.
-///
-/// The plan is fixed before execution: a cell failure never removes or
-/// cancels independent cells, and completed results are always preserved.
-/// Starter cells are independent (no prerequisites), so a failure blocks
-/// no sibling.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PlannedSchedule {
-    /// Every cell to execute, in canonical check/platform order.
     pub cells: Vec<PlannedCell>,
-    /// Overlap mode (scheduling only).
     pub mode: SchedulingMode,
 }
 
 impl PlannedSchedule {
-    /// Starter cells carry no prerequisites: every cell is runnable
-    /// regardless of sibling outcomes.
     pub fn is_independent(&self) -> bool {
         true
     }
 }
 
-/// Per-cell outcome for aggregate planning.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CellOutcome {
     Success,
     Failure,
 }
 
-/// Overall run outcome: success requires every cell to succeed.
-///
-/// Failures preserve completed results and fail the run without cancelling
-/// independent cells. An empty cell set succeeds vacuously (every selected
-/// check — none — completed).
 pub fn aggregate_outcome(outcomes: &[CellOutcome]) -> bool {
     outcomes
         .iter()
@@ -123,12 +60,6 @@ fn isolation_for(check: &str, platform: Option<&str>) -> CellIsolation {
     }
 }
 
-/// Plan the schedule for one selection.
-///
-/// Expands the selection into cells in canonical order (starter check
-/// order; per-platform checks fan out in caller platform order) and
-/// assigns each cell isolated context identities. Parallel and sequential
-/// modes plan the same cells and isolation; only the overlap mode differs.
 pub fn plan_schedule(selection: &CiSelection, mode: SchedulingMode) -> PlannedSchedule {
     let mut cells = Vec::new();
     for check in &selection.enabled {
@@ -177,25 +108,25 @@ mod tests {
     }
 
     #[test]
-    fn starter_expands_to_six_linux_once_plus_per_platform_fanout() {
+    fn starter_expands_to_per_platform_fanout() {
         let selection =
             plan_selection(&[], &strings(&["linux_x86_64", "macos_arm64"])).expect("plans");
         let schedule = plan_schedule(&selection, SchedulingMode::Parallel);
-        // 6 Linux-once + 3 checks x 2 platforms = 12 cells.
-        assert_eq!(schedule.cells.len(), 12);
-        let linux_once: Vec<_> = schedule
-            .cells
-            .iter()
-            .filter(|cell| cell.cell.scope == ExecutionScope::LinuxOnce)
-            .collect();
-        assert_eq!(linux_once.len(), 6);
-        assert!(linux_once.iter().all(|cell| cell.cell.platform.is_none()));
+        // 9 checks x 2 platforms = 18 cells, all per-platform.
+        assert_eq!(schedule.cells.len(), 18);
+        assert!(
+            schedule
+                .cells
+                .iter()
+                .all(|cell| cell.cell.scope == ExecutionScope::PerPlatform)
+        );
+        assert!(schedule.cells.iter().all(|cell| cell.cell.platform.is_some()));
         let per_platform: Vec<_> = schedule
             .cells
             .iter()
             .filter(|cell| cell.cell.scope == ExecutionScope::PerPlatform)
             .collect();
-        assert_eq!(per_platform.len(), 6);
+        assert_eq!(per_platform.len(), 18);
         for cell in &per_platform {
             assert!(cell.cell.platform.is_some());
         }

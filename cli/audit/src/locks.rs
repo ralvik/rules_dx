@@ -1,86 +1,9 @@
-//! Lockfile readers for `dx audit` live execution.
-//!
-//! Pure parsing over injected lockfile text, per the audit contract
-//! (`docs/cli/commands/audit-update-bazel.md#dx-audit`): target-scoped
-//! dependency audits select the targets' owning dependency sets and audit
-//! their complete standard locks, including dependencies not used by those
-//! particular targets. Shared sets are audited once; unrelated sets are
-//! never included merely because they share a repository.
-//!
-//! V1 coverage mirrors `dx_update::sets` (Cargo, npm, Maven, NuGet, Go):
-//! - Cargo (`rust/tests/fixtures/hello/Cargo.lock`, TOML): registry packages are
-//!   assessable; `git+` sources are unsupported revisions (incomplete,
-//!   never clean); path-only workspace members (no `source`, version
-//!   `0.0.0`) are first-party and skipped, not assessed.
-//! - npm (`pnpm-lock.yaml` YAML, `package-lock.json` JSON,
-//!   `yarn.lock` v1 text): registry entries are assessable;
-//!   `link:`/`file:` workspace members are first-party and skipped, not
-//!   assessed; git-hosted entries (`git+`, `git://`, `git@`,
-//!   `github:`/`gitlab:`/`bitbucket:`/`gist:` shortcuts, `.git` URLs,
-//!   host-archive tarballs, or pnpm `resolution: {type: git}` with
-//!   `repo`/`commit`) are unsupported revisions (`is_git` incomplete,
-//!   never dropped and never clean).
-//! - Maven (`third_party/jvm/maven_install.json`, JSON): `artifacts`
-//!   carry `group:artifact` plus `version`.
-//! - NuGet (`third_party/dotnet/paket.lock`, text): `Name (version)`
-//!   lines under the `NUGET` remote section are assessable; `Name
-//!   (version)` lines under the `GIT` section are unsupported revisions
-//!
-//!   identity), reported as `is_git` incomplete, never dropped and never
-//!   clean; `HTTP`/`GITHUB` sections and group headers are skipped.
-//! - Go (`third_party/go/go.mod`, text): `require` entries (single-line
-//!   plus parenthesized blocks, comments stripped) are assessable with
-//!   their verbatim `v`-prefixed versions; the main `module` directive is
-//!   first-party and skipped, not assessed. `replace` targets resolving
-//!   to a filesystem path (no replacement version) are first-party
-//!   workspace members and skipped; versioned replacements assess at the
-//!   replacement path plus version. `go.sum` carries hashes only and is
-//!   never parsed.
-//!
-//! Private packages have no lockfile auto-detection in V1
-//! wont-fix, auditor-owned): a private registry entry is
-//! indistinguishable from a public one in lock bytes, so callers mark
-//! `is_private` explicitly and matching fails those as incomplete,
-//! never clean.
-//!
-//! License identities per ecosystem: Cargo reads
-//! `cargo-bazel-lock.json` (`license` per crate, fallback `UNKNOWN`);
-//! npm reads `package-lock.json` `license` fields where present (both
-//! `packages:` and legacy `dependencies:` shapes, fallback `UNKNOWN` for
-//! pnpm/yarn-only workspaces whose locks carry no license); Maven,
-//! NuGet, and Go resolve via the committed `[[inventory]]` table in
-//! `licenses.toml` (see [`crate::license_policy::LicenseInventory`]),
-//! fallback `UNKNOWN` when uninventoried (denied in `distributed`,
-//! inventoried in `internal` per the expression lattice). Notice texts
-//! ride per-package `text_present` from the same inventory (absent means
-//! no words, fail closed); `missing-notice-text` evaluation lives in
-//! [`crate::license_notice`] and is wired into live audit.
-//!
-//! Dependency evaluation (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`):
-//! standard crates own each machine format (`cargo-lock` for Cargo.lock,
-//! `serde_json` for `package-lock.json`/`maven_install.json`, `yaml_serde`
-//! for `pnpm-lock.yaml`, `toml` for Cargo manifests, `semver` for Cargo/Go
-//! ordering, `regex` for declarative pnpm/paket splits); yarn v1,
-//! paket, and `go.mod` text shapes have no stable crate and stay line
-//! parsers with fail-closed git/first-party gates. Live advisory matching
-//! only: fixture truth (minimal hermetic compatibility, no registry) lives
-//! in `tools/depcheck`, never duplicated here.
-//! See: `tools/depcheck/src/lib.rs` (fixture checker).
-
 use std::sync::OnceLock;
 
 use regex::Regex;
 
 use crate::vuln::LockedPackage;
 
-/// Parse one `Cargo.lock` (TOML) into assessable locked packages for the
-/// `cargo` set via the upstream `cargo-lock` crate (RustSec, V1/V2/V3/V4).
-/// Registry packages (including sparse registries) become assessable
-/// entries; `git` sources become `is_git` incomplete markers via
-/// `SourceId::is_git`; path-only workspace members (`None` source) and
-/// explicit `path` sources are skipped as first-party. Missing or
-/// malformed fields fail closed through the crate's structured errors,
-/// never silent skips.
 pub fn parse_cargo_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     let lockfile: cargo_lock::Lockfile = text
         .parse()
@@ -127,15 +50,6 @@ pub fn parse_cargo_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     Ok(out)
 }
 
-/// True for npm git-hosted references across all three npm lock
-/// shapes (wont-fix, auditor-owned): explicit git markers only, never
-/// bare registry versions. Covers `git+` transports, `git://` and
-/// `git@` forms, `github:`/`gitlab:`/`bitbucket:`/`gist:` shortcuts,
-/// `.git`-suffixed URLs, and host-archive tarballs
-/// (`codeload.github.com`, `api.github.com/.../tarball`). A bare `#`
-/// fragment alone never counts (registry tarballs carry
-/// `#sha512-...` fragments too); git identity comes from the scheme,
-/// host, or `repo`/`commit` fields, not the fragment.
 pub fn is_npm_git_reference(text: &str) -> bool {
     let trimmed = text.trim();
     if trimmed.is_empty() {
@@ -169,11 +83,6 @@ pub fn is_npm_git_reference(text: &str) -> bool {
     false
 }
 
-/// True for one pnpm `resolution:` value carrying git identity:
-/// `type: git`, a `commit` pin, a git-shaped `repo`, or a git-shaped
-/// `tarball` (host-archive). Registry `integrity`-only entries stay
-/// assessable; `directory:`/`link:` workspace values never reach here
-/// (their keys are skipped first-party before this check).
 fn pnpm_resolution_is_git(resolution: &yaml_serde::Value) -> bool {
     let mapping = match resolution.as_mapping() {
         Some(mapping) => mapping,
@@ -214,8 +123,6 @@ fn pnpm_resolution_is_git(resolution: &yaml_serde::Value) -> bool {
     false
 }
 
-/// Parse one `pnpm-lock.yaml` document value's `packages:` mapping into
-/// `npm` lock entries. Shared by single- and multi-document lockfiles.
 fn pnpm_packages_from_value(value: &yaml_serde::Value, out: &mut Vec<LockedPackage>) {
     let packages = match value.get("packages") {
         None | Some(yaml_serde::Value::Null) => return,
@@ -259,12 +166,6 @@ fn pnpm_packages_from_value(value: &yaml_serde::Value, out: &mut Vec<LockedPacka
     }
 }
 
-/// Split one `pnpm-lock.yaml` text into YAML documents on `---`
-/// boundaries: pnpm writes a leading `---` env document when config or
-/// package-manager dependencies apply, then the project document. A
-/// single-document reader silently returns the env graph (plausible
-/// packages, no vulnerabilities), so every document is an inventory of
-/// its own and all are merged here.
 fn split_pnpm_documents(text: &str) -> Vec<String> {
     if !text
         .lines()
@@ -293,16 +194,6 @@ fn split_pnpm_documents(text: &str) -> Vec<String> {
     documents
 }
 
-/// Parse one `pnpm-lock.yaml` into assessable packages for the `npm` set
-/// via `yaml_serde`. External entries under `packages:` shaped
-/// `name@version` or `@scope/name@version` become assessable; `link:`/
-/// `file:` entries (workspace members) are skipped. Git-hosted entries
-/// (git-shaped keys/versions, host-archive tarballs, or
-/// `resolution: {type: git}` with `repo`/`commit`) become `is_git`
-/// incomplete markers, never dropped and never clean. Versions with
-/// peer suffixes (`1.0.0(peer@2.0.0)`) strip the suffix. Multi-document
-/// lockfiles (env plus project documents) merge every document's
-/// `packages:` map so scanners never report the env graph alone.
 pub fn parse_pnpm_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     if text.trim().is_empty() {
         return Ok(Vec::new());
@@ -346,11 +237,6 @@ pub fn parse_pnpm_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     Ok(out)
 }
 
-/// Strip one `node_modules/`-rooted package-lock path to its package
-/// name: the segment after the last `node_modules/` (`node_modules/a`
-/// to `a`, `node_modules/@scope/name` to `@scope/name`,
-/// `node_modules/a/node_modules/b` to `b`). Returns `None` for the
-/// root `""` entry and non-`node_modules` keys.
 fn package_lock_name(path: &str) -> Option<String> {
     let trimmed = path.trim();
     if trimmed.is_empty() {
@@ -390,13 +276,6 @@ fn package_lock_name(path: &str) -> Option<String> {
     Some(last.to_owned())
 }
 
-/// Parse one `package-lock.json` (npm v1/v2/v3) into assessable
-/// packages for the `npm` set. Registry entries under `packages:`
-/// (`node_modules/<name>` with `version`) or legacy `dependencies:`
-/// (`<name>` with `version`) become assessable; `link: true` and
-/// `file:` entries are first-party workspace members and skipped.
-/// Git-hosted entries (git-shaped `version`/`resolved`/`from`) become
-/// `is_git` incomplete markers, never dropped and never clean.
 pub fn parse_package_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     let value: serde_json::Value = serde_json::from_str(text)
         .map_err(|error| format!("invalid package-lock.json: {error}"))?;
@@ -533,10 +412,6 @@ pub fn parse_package_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     Ok(out)
 }
 
-/// Split one yarn v1 stanza header selector (`name@range` or
-/// `@scope/name@range`, optionally quoted) into its package name.
-/// The range is the requested selector, not the locked version; the
-/// locked `version "..."` field carries the assessed identity.
 fn split_yarn_selector(selector: &str) -> Option<String> {
     let trimmed = selector.trim().trim_matches('"').trim();
     if trimmed.is_empty() || trimmed.starts_with("__metadata:") {
@@ -562,9 +437,6 @@ fn split_yarn_selector(selector: &str) -> Option<String> {
     None
 }
 
-/// Read one `  version "..."` / `  resolved "..."` field from a yarn
-/// stanza body line: quoted or bare values both parse; trailing
-/// comments after the value are ignored.
 fn yarn_field(line: &str, key: &str) -> Option<String> {
     let trimmed = line.trim();
     if !trimmed.starts_with(key) {
@@ -589,13 +461,6 @@ fn yarn_field(line: &str, key: &str) -> Option<String> {
     Some(token.to_owned())
 }
 
-/// Parse one `yarn.lock` (v1 classic text) into assessable packages for
-/// the `npm` set. Stanza headers name the selector, the indented
-/// `version` field carries the locked version, and `resolved` carries
-/// the fetch URL. Registry entries become assessable; `file:`/`link:`/
-/// `portal:` entries are first-party and skipped. Git-hosted entries
-/// (git-shaped headers, versions, or `resolved` URLs) become `is_git`
-/// incomplete markers, never dropped and never clean.
 pub fn parse_yarn_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     let mut out = Vec::new();
     let mut header: Option<String> = None;
@@ -693,11 +558,6 @@ pub fn parse_yarn_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     Ok(out)
 }
 
-/// Split one pnpm package key (`name@version` or `@scope/name@version`)
-/// into name and version, stripping peer suffixes (`1.0.0(peer)`).
-/// Declarative `regex` splits replace the `find`/`rfind`
-/// `@` heuristics; peer-suffix stripping stays a textual `split_once`
-/// because it is a single delimiter, not a character class.
 fn scoped_pnpm_re() -> Option<&'static Regex> {
     static RE: OnceLock<Regex> = OnceLock::new();
     if let Some(compiled) = RE.get() {
@@ -798,9 +658,6 @@ fn split_pnpm_unscoped_fallback(base: &str) -> Option<(String, String)> {
     Some((name, version))
 }
 
-/// Parse one `maven_install.json` into assessable packages for the
-/// `maven` set. `artifacts` keys are `group:artifact` with `version`
-/// inside; both are required.
 pub fn parse_maven_install(text: &str) -> Result<Vec<LockedPackage>, String> {
     let value: serde_json::Value = serde_json::from_str(text)
         .map_err(|error| format!("invalid maven_install.json: {error}"))?;
@@ -832,12 +689,6 @@ pub fn parse_maven_install(text: &str) -> Result<Vec<LockedPackage>, String> {
     Ok(out)
 }
 
-/// Parse one `paket.lock` into assessable packages for the `nuget` set.
-/// Only `Name (version)` lines under the `NUGET` remote section count as
-/// assessable; `Name (version)` lines under the `GIT` section count as
-/// unsupported git revisions (`is_git` incomplete, never clean, issue
-/// wont-fix); `HTTP`/`GITHUB` sections and group headers are
-/// skipped.
 pub fn parse_paket_lock(text: &str) -> Result<Vec<LockedPackage>, String> {
     let mut out = Vec::new();
     let mut in_nuget = false;

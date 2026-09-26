@@ -1,12 +1,3 @@
-//! WP1 process boundary for the `dx` CLI.
-//!
-//! Contract: `docs/cli/cli-contract.md`. This crate owns workspace
-//! discovery, launcher selection, safe operation summaries, exact `dx
-//! bazel` forwarding with protected-flag enforcement, exit-code mapping,
-//! dry-run gating, Unix signal forwarding, and the process-runner seam.
-//! It never renders subprocess argument vectors, option values,
-//! environment values, or reconstructed shell commands.
-
 // Infallible paths must not `expect`/`unwrap` outside tests
 // (`cfg_attr(not(test))` keeps `rust_test` bodies ergonomic).
 #![cfg_attr(
@@ -26,20 +17,14 @@ use std::process::Command;
 
 /// Filesystem seam so unit tests use a fake instead of the real tree.
 pub trait Fs {
-    /// Reports whether `path` is a regular file.
     fn is_file(&self, path: &Path) -> bool;
-    /// Reads `path` as UTF-8 text.
     fn read_text(&self, path: &Path) -> io::Result<String>;
-    /// I/O hint when `dir/MODULE.bazel` exists but is not a usable file
-    /// (broken symlink, directory, permission). `None` when healthy or
-    /// absent. See: `docs/cli/cli-contract.md`.
     fn broken_marker_hint(&self, dir: &Path) -> Option<String> {
         let _ = dir;
         None
     }
 }
 
-/// Real filesystem implementation used by the CLI binary.
 pub struct RealFs;
 
 impl Fs for RealFs {
@@ -66,50 +51,34 @@ impl Fs for RealFs {
     }
 }
 
-/// Workspace discovery failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DiscoverError {
-    /// No `MODULE.bazel` found walking up from the start directory.
     #[error(
         "workspace_not_found: no MODULE.bazel in {searched_len} directorie(s); pass --workspace <path>",
         searched_len = searched.len()
     )]
     NotFound {
-        /// Every ancestor directory considered, nearest first.
         searched: Vec<PathBuf>,
     },
-    /// A legacy marker without `MODULE.bazel` was found instead.
     #[error(
         "unsupported_workspace: {dir} has WORKSPACE without MODULE.bazel; migrate to Bzlmod",
         dir = dir.display()
     )]
     UnsupportedLegacy {
-        /// Directory holding the legacy marker.
         dir: PathBuf,
     },
-    /// An explicit `--workspace` override holds no module marker.
     #[error("workspace_not_found: --workspace {path} has no MODULE.bazel", path = path.display())]
     InvalidOverride {
-        /// The rejected override directory.
         path: PathBuf,
     },
-    /// An explicit `--workspace` marker exists but is unreadable
-    /// (broken symlink, directory, permission). Distinct from
-    /// `InvalidOverride` so dangling links carry an I/O hint.
     #[error("workspace_unreadable: --workspace {path} MODULE.bazel is unreadable ({reason}); check the symlink target or permissions", path = path.display())]
     UnreadableOverride {
-        /// The rejected override directory (display path, not canonicalized).
         path: PathBuf,
-        /// OS-reported reason.
         reason: String,
     },
-    /// An ancestor `MODULE.bazel` exists but is unreadable. Distinct
-    /// from `NotFound` so dangling links do not walk past silently.
     #[error("workspace_unreadable: {path}/MODULE.bazel is unreadable ({reason}); check the symlink target or permissions", path = path.display())]
     UnreadableMarker {
-        /// Directory holding the unreadable marker.
         path: PathBuf,
-        /// OS-reported reason.
         reason: String,
     },
 }
@@ -123,8 +92,6 @@ fn legacy_marker(fs: &dyn Fs, dir: &Path) -> bool {
 }
 
 /// Expands a leading `~` or `~/` via `HOME` (`USERPROFILE` fallback).
-/// `~user` stays literal; non-UTF8 stays literal.
-/// See: `docs/cli/cli-contract.md`.
 pub fn expand_tilde(path: &Path) -> PathBuf {
     let Some(text) = path.to_str() else {
         return path.to_path_buf();
@@ -143,17 +110,10 @@ pub fn expand_tilde(path: &Path) -> PathBuf {
     PathBuf::from(home).join(&text[2..])
 }
 
-/// Canonicalizes when the path exists; otherwise keeps the input so
-/// callers preserve the display path for messages.
-/// See: `docs/cli/cli-contract.md`.
 pub fn canonicalize_or_keep(path: &Path) -> PathBuf {
     std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
-/// Display path for a `--workspace` override: tilde-expanded and absolute
-/// via `base` when relative. The effective path is
-/// `canonicalize_or_keep` of this display path.
-/// See: `docs/cli/cli-contract.md`.
 pub fn resolve_override_display(raw: &Path, base: &Path) -> PathBuf {
     let expanded = expand_tilde(raw);
     if expanded.is_absolute() {
@@ -163,20 +123,12 @@ pub fn resolve_override_display(raw: &Path, base: &Path) -> PathBuf {
     }
 }
 
-/// Effective plus display paths for a `--workspace` override.
-/// See: `docs/cli/cli-contract.md`.
 pub fn resolve_override_effective(raw: &Path, base: &Path) -> (PathBuf, PathBuf) {
     let display = resolve_override_display(raw, base);
     let effective = canonicalize_or_keep(&display);
     (effective, display)
 }
 
-/// Discovers the Bazel workspace root.
-///
-/// With `override_dir`, only that directory is considered. Otherwise
-/// walks ancestors from `start` looking for `MODULE.bazel`. A legacy
-/// `WORKSPACE` marker without `MODULE.bazel` is an actionable error,
-/// never a second setup path.
 pub fn discover(
     start: &Path,
     override_dir: Option<&Path>,
@@ -224,11 +176,6 @@ pub fn discover(
     Err(DiscoverError::NotFound { searched })
 }
 
-/// Discovers the workspace using the real filesystem.
-///
-/// Tilde-expands the override, resolves relative overrides via `start`,
-/// and canonicalizes (`./`, `../`, trailing slash, symlinks) while keeping
-/// the display path for errors. See: `docs/cli/cli-contract.md`.
 pub fn discover_real(start: &Path, override_dir: Option<&Path>) -> Result<PathBuf, DiscoverError> {
     let effective_start = canonicalize_or_keep(start);
     if let Some(raw) = override_dir {
@@ -257,16 +204,6 @@ pub fn discover_real(start: &Path, override_dir: Option<&Path>) -> Result<PathBu
     }
 }
 
-/// Workspace start directory for `bazel run`.
-///
-/// `bazel run` executes with the working directory inside the runfiles tree
-/// under `bazel-out`, whose symlinks resolve into the execution root (nested
-/// Bazel refuses there). `BUILD_WORKSPACE_DIRECTORY` points back at the
-/// source workspace root, so discovery starts there when available and
-/// absolute. Otherwise falls back to `cwd`. An explicit `--workspace`
-/// override still wins inside `discover`/`discover_real`.
-/// Single-sources the `BUILD_WORKSPACE_DIRECTORY || cwd` probe repeated in
-/// the `dx` and `env` binaries; shell drivers use `tools/sh/lib.sh`.
 pub fn workspace_start(cwd: &Path) -> PathBuf {
     let dir = std::env::var_os("BUILD_WORKSPACE_DIRECTORY")
         .map(PathBuf::from)
@@ -276,53 +213,41 @@ pub fn workspace_start(cwd: &Path) -> PathBuf {
 }
 
 /// Reports whether a `CI` value counts as CI for the local-only gate.
-/// Single owner for the `CI=true` refusal shared by `dx run` and `dx watch`.
-/// See: `docs/cli/commands/watch.md`.
 pub fn is_ci_value(value: Option<&str>) -> bool {
     value.is_some_and(|value| value == "true")
 }
 
 /// Reads the launch `CI` environment once for the local-only gate.
-/// See: `docs/cli/commands/watch.md`.
 pub fn is_ci() -> bool {
     is_ci_value(std::env::var("CI").ok().as_deref())
 }
 
-/// Launcher selection failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum LauncherError {
-    /// No `.bazelversion` pin in the workspace root.
     #[error(
         "bazel_unavailable: {workspace} has no .bazelversion pin",
         workspace = workspace.display()
     )]
     MissingPin {
-        /// Workspace root that was inspected.
         workspace: PathBuf,
     },
-    /// The `.bazelversion` pin is blank.
     #[error(
         "bazel_unavailable: {workspace} has an empty .bazelversion pin",
         workspace = workspace.display()
     )]
     EmptyPin {
-        /// Workspace root that was inspected.
         workspace: PathBuf,
     },
-    /// The `.bazelversion` pin could not be read.
     #[error(
         "bazel_unavailable: cannot read {workspace}/.bazelversion: {reason}",
         workspace = workspace.display()
     )]
     UnreadablePin {
-        /// Workspace root that was inspected.
         workspace: PathBuf,
-        /// OS-reported reason.
         reason: String,
     },
 }
 
-/// Reads the pinned Bazel version from `<workspace>/.bazelversion`.
 pub fn pinned_bazel_version(workspace: &Path, fs: &dyn Fs) -> Result<String, LauncherError> {
     let pin = workspace.join(".bazelversion");
     match fs.read_text(&pin) {
@@ -345,34 +270,23 @@ pub fn pinned_bazel_version(workspace: &Path, fs: &dyn Fs) -> Result<String, Lau
     }
 }
 
-/// Reads the pinned Bazel version from the real filesystem.
 pub fn pinned_bazel_version_real(workspace: &Path) -> Result<String, LauncherError> {
     pinned_bazel_version(workspace, &RealFs)
 }
 
 /// The only supported launcher executable: a Bazelisk-compatible
-/// `bazel` on `PATH`. There is no fallback executable.
 pub fn launcher_argv0() -> &'static str {
     "bazel"
 }
 
-/// Startup options every workflow command places before the Bazel
-/// command: system and home rc files stay off while the discovered
-/// workspace's committed `.bazelrc` remains in effect.
 pub const WORKFLOW_STARTUP_OPTS: &[&str] = &["--nohome_rc", "--nosystem_rc"];
 
-/// Compact effective Bazel scope for operation summaries.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Scope {
-    /// Repository-wide scope (`//...`).
     Repository,
-    /// Canonical recursive pattern such as `//src/auth/...`.
     Pattern(String),
-    /// User-supplied canonical labels or patterns, in order.
     Labels(Vec<String>),
-    /// Graph-resolved owner labels, deterministically sorted by the caller.
     ResolvedOwners(Vec<String>),
-    /// Resolved target count when labels are not listed.
     Count(usize),
 }
 
@@ -394,64 +308,41 @@ pub fn describe_scope(scope: &Scope) -> String {
 }
 
 /// Renders a safe operation summary. The summary never contains
-/// executable argv, option values, environment values, or a
-/// reconstructed shell command.
 pub fn operation_summary(command: &str, phase: &str, scope: &Scope) -> String {
     format!("Running {command} {phase} for {}", describe_scope(scope))
 }
 
-/// One workflow-protected Bazel flag.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProtectedFlag {
-    /// Bare flag name without leading dashes, e.g. `keep_going`.
     pub name: String,
-    /// Required invocation when repetition is accepted, e.g.
-    /// `--keep_going`. `None` rejects every use.
     pub required: Option<String>,
+    pub allowed: Vec<String>,
 }
 
-/// Forwarding failure. Messages carry the flag name and policy only,
-/// never the supplied or generated option value.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ForwardError {
-    /// A user option conflicts with required workflow policy.
     #[error("conflicting_option: --{flag} conflicts with required workflow policy")]
     ConflictingOption {
-        /// Bare flag name.
         flag: String,
     },
-    /// A Bazel startup option was passed as a command option.
     #[error("invalid_usage: --{flag} is a startup option; use dx bazel")]
     StartupOption {
-        /// Bare flag name.
         flag: String,
     },
-    /// Test-binary argument syntax was passed to a workflow command.
     #[error("invalid_usage: --{flag} targets the test binary; use dx bazel")]
     TestBinaryArgs {
-        /// Bare flag name.
         flag: String,
     },
-    /// A required workflow option is missing from the planned required
-    /// set. This signals an internal wiring error, never user input.
     #[error("internal_error: required workflow option --{flag} is missing")]
     InvalidRequiredOption {
-        /// Bare flag name.
         flag: String,
     },
-    /// A required command setting is malformed. Settings must be
-    /// `--name=value` workflow options; anything else is rejected
-    /// instead of silently protecting the wrong flag name.
     #[error("internal_error: malformed required setting {option}; expected --name=value")]
     InvalidSetting {
-        /// The malformed setting option.
         option: String,
     },
-    /// A command does not support the requested plan. This signals an
-    /// internal dispatch error, never user input.
     #[error("internal_error: {command} does not support this plan")]
     UnsupportedCommand {
-        /// Command name.
         command: String,
     },
 }
@@ -467,8 +358,6 @@ fn flag_name(arg: &str) -> Option<String> {
     Some(bare.split('=').next().unwrap_or("").to_owned()).filter(|name| !name.is_empty())
 }
 
-/// Reports whether `arg` is a Bazel startup option, which workflow
-/// commands reject as a command option.
 pub fn is_startup_option(arg: &str) -> bool {
     const STARTUP: &[&str] = &[
         "bazelrc",
@@ -487,7 +376,6 @@ pub fn is_startup_option(arg: &str) -> bool {
     }
 }
 
-/// Reports whether `arg` addresses the test binary rather than Bazel.
 pub fn is_test_binary_arg(arg: &str) -> bool {
     match flag_name(arg) {
         Some(name) => name == "test_arg",
@@ -495,12 +383,6 @@ pub fn is_test_binary_arg(arg: &str) -> bool {
     }
 }
 
-/// Checks user options against protected workflow flags.
-///
-/// Repeating the exact required value is accepted and canonicalized;
-/// any other use of a protected name fails. Unrelated options keep
-/// their order. Neither the supplied nor the generated value is
-/// echoed in errors.
 pub fn check_protected(
     user_args: &[String],
     protected: &[ProtectedFlag],
@@ -515,6 +397,9 @@ pub fn check_protected(
         match (guard, name) {
             (Some(guard), _) => match &guard.required {
                 Some(required) if arg == required => kept.push(required.clone()),
+                _ if guard.allowed.iter().any(|allowed| allowed == arg) => {
+                    kept.push(arg.clone())
+                }
                 Some(_) | None => {
                     return Err(ForwardError::ConflictingOption {
                         flag: guard.name.clone(),
@@ -527,13 +412,6 @@ pub fn check_protected(
     Ok(kept)
 }
 
-/// Builds the exact workflow subprocess argv.
-///
-/// Layout: `bazel <startup> <command> <required> <user> <labels>`.
-/// User options are validated as Bazel command options: startup
-/// options and test-binary argument syntax are rejected with guidance
-/// to use `dx bazel`, protected conflicts fail, and exact repetitions
-/// of required values are canonicalized.
 pub fn build_workflow_argv(
     bazel_command: &str,
     user_options: &[String],
@@ -565,8 +443,6 @@ pub fn build_workflow_argv(
     Ok(argv)
 }
 
-/// Forwards `dx bazel` arguments unchanged: no protected flags exist
-/// on the transparent escape hatch.
 pub fn build_bazel_passthrough(launcher: &str, args: &[String]) -> Vec<String> {
     let mut argv = Vec::with_capacity(1 + args.len());
     argv.push(launcher.to_owned());
@@ -574,39 +450,27 @@ pub fn build_bazel_passthrough(launcher: &str, args: &[String]) -> Vec<String> {
     argv
 }
 
-/// Success exit code.
 pub const EXIT_SUCCESS: i32 = 0;
-/// CLI-originated operational failure exit code.
 pub const EXIT_OPERATIONAL: i32 = 1;
-/// Pre-execution usage, workspace, scope, or owner failure exit code.
 pub const EXIT_PRE_EXEC: i32 = 2;
-/// Truncated-stdout exit code: shell `128+SIGPIPE(13)` convention.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub const EXIT_BROKEN_PIPE: i32 = 128 + 13;
 
-/// Exit code for CLI-detected pre-execution failures.
 pub fn pre_exec_code() -> i32 {
     EXIT_PRE_EXEC
 }
 
-/// Exit code for quality-policy and operational failures.
 pub fn operational_code() -> i32 {
     EXIT_OPERATIONAL
 }
 
-/// Exit code for truncated stdout (`EPIPE`): shell `128+13`.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub fn broken_pipe_code() -> i32 {
     EXIT_BROKEN_PIPE
 }
 
-/// True when a stdout `io::Error` is `EPIPE`.
 pub fn is_broken_pipe_io(error: &io::Error) -> bool {
     error.kind() == io::ErrorKind::BrokenPipe
 }
 
-/// Maps a stdout write/flush failure to `141` on `EPIPE`, else operational.
-/// See: `docs/cli/output-protocol.md#exit-codes`.
 pub fn stdout_io_code(error: &io::Error) -> i32 {
     if is_broken_pipe_io(error) {
         EXIT_BROKEN_PIPE
@@ -615,34 +479,25 @@ pub fn stdout_io_code(error: &io::Error) -> i32 {
     }
 }
 
-/// Preserves a required Bazel subprocess exit code.
 pub fn subprocess_code(code: i32) -> i32 {
     code
 }
 
-/// Whether the workflow forces Bazel `--keep_going`. Quality
-/// workflows always collect across actions; build, test, and coverage
-/// preserve the fail-fast default unless the user forwards the flag.
 pub fn quality_keeps_going(is_quality: bool) -> bool {
     is_quality
 }
 
-/// Dry-run gating failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum DryRunError {
-    /// The requested work would execute a final workflow or action.
     #[error("dry-run: workflow execution is disabled")]
     WouldExecuteAction,
 }
 
 /// Decides whether dry-run may proceed. Read-only resolution queries
-/// may run; final workflows never run, and resolution that would
-/// require an action fails instead of executing.
 pub fn dry_run_allows(is_final_workflow: bool, resolution_requires_action: bool) -> bool {
     !is_final_workflow && !resolution_requires_action
 }
 
-/// Guards dry-run execution, failing when any action would run.
 pub fn dry_run_guard(
     is_final_workflow: bool,
     resolution_requires_action: bool,
@@ -654,16 +509,12 @@ pub fn dry_run_guard(
     }
 }
 
-/// Unix signals the CLI forwards to the active Bazel process.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnixSignal {
-    /// Interrupt (`SIGINT`).
     Interrupt,
-    /// Terminate (`SIGTERM`).
     Terminate,
 }
 
-/// Maps a CLI signal to its OS number.
 #[cfg(unix)]
 pub fn signal_number(signal: UnixSignal) -> libc::c_int {
     match signal {
@@ -672,10 +523,6 @@ pub fn signal_number(signal: UnixSignal) -> libc::c_int {
     }
 }
 
-/// Forwards `signo` to `pid`. The CLI binary calls this with
-/// [`signal_number`] output after mapping its received signal.
-/// Unix-only: Windows has no `libc::kill`; the binary installs no
-/// Unix signal handler there (See: `docs/cli/cli-contract.md`).
 #[cfg(unix)]
 pub fn forward_signal_number(pid: u32, signo: libc::c_int) -> io::Result<()> {
     let rc = unsafe { libc::kill(pid as libc::pid_t, signo) };
@@ -686,15 +533,11 @@ pub fn forward_signal_number(pid: u32, signo: libc::c_int) -> io::Result<()> {
     }
 }
 
-/// Forwards a CLI signal to a child process id.
 #[cfg(unix)]
 pub fn forward_signal(pid: u32, signal: UnixSignal) -> io::Result<()> {
     forward_signal_number(pid, signal_number(signal))
 }
 
-/// Re-raises `signo` in this process. The CLI binary calls this with
-/// [`signal_number`] output after safe cleanup so shell signal
-/// semantics are preserved. Signal zero performs no delivery.
 #[cfg(unix)]
 pub fn reraise_number(signo: libc::c_int) -> io::Result<()> {
     let rc = unsafe { libc::raise(signo) };
@@ -705,28 +548,14 @@ pub fn reraise_number(signo: libc::c_int) -> io::Result<()> {
     }
 }
 
-/// Captured child outcome. `code` is `None` when a signal ended the
-/// child; callers treat that as an execution failure.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ChildStatus {
-    /// Process exit code when the child exited normally.
     pub code: Option<i32>,
 }
 
-/// Process-runner seam. Unit tests substitute a fake; the CLI binary
-/// uses [`SystemRunner`].
 pub trait Runner {
-    /// Spawns `argv[0]` with the remaining entries as arguments in `cwd`.
-    /// `env` carries extra variables (for example per-command dispatch
-    /// into the child); the parent environment is always inherited.
     fn run(&self, argv: &[String], cwd: &Path, env: &[(&str, &str)]) -> io::Result<ChildStatus>;
 
-    /// Spawns `argv[0]` with a cleared environment: only `env` is set,
-    /// the parent environment is never inherited and `PATH` is never
-    /// set. Secrets auditing uses this so ambient `GITLEAKS_CONFIG`
-    /// values cannot inject configuration (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
-    /// The default forwards to [`Runner::run`] so existing fakes keep
-    /// working; production runners clear.
     fn run_hermetic(
         &self,
         argv: &[String],
@@ -736,30 +565,15 @@ pub trait Runner {
         self.run(argv, cwd, env)
     }
 
-    /// Hermetic secrets-auditor binary path, when the runner environment
-    /// supplies one. Production resolves `DX_GITLEAKS_BIN` to the pinned
-    /// `@dx_tools//:gitleaks` artifact; the default is absent so callers
-    /// fail closed instead of searching ambient `PATH` (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
-    /// Test fakes return an absolute hermetic placeholder.
     fn gitleaks_tool(&self) -> Option<PathBuf> {
         None
     }
 
-    /// Hermetic Git binary path, when the runner environment supplies one.
-    /// Production resolves `DX_GIT_BIN` to the pinned managed Git artifact;
-    /// the default is absent so hook Git fails closed instead of searching
-    /// ambient `PATH` (See: `docs/cli/commands/hooks.md#dx-hooks`).
-    /// Test fakes return an absolute hermetic placeholder.
     fn git_tool(&self) -> Option<PathBuf> {
         None
     }
 }
 
-/// Single captured-spawn owner: runs `argv[0]` with the rest as args in
-/// `cwd`, capturing stdio. `env` carries extra variables; `clear_env`
-/// clears the parent environment first so only `env` reaches the child
-/// and `PATH` is never set.
-/// See: `docs/cli/cli-contract.md` (process boundary).
 pub fn spawn_output(
     argv: &[String],
     cwd: &Path,
@@ -778,13 +592,6 @@ pub fn spawn_output(
     command.output()
 }
 
-/// Single spawn-success owner: runs `argv` with inherited stdio context
-/// and reports success (`Ok` plus exit success). `Err` and non-zero exits
-/// both report `false` so verifiers (`cosign verify-blob`, `gh attestation
-/// verify`, `have --help` probes) stay thin argv configs instead of
-/// repeating `Command::new(...).output().is_ok_and(...)` triplication.
-/// See: `deploy/install/src/lib.rs` (`SystemVerifier`),
-/// `deploy/release/src/lib.rs` (`signing_live`).
 pub fn spawn_success(argv: &[String]) -> bool {
     let (binary, args) = match argv.split_first() {
         Some(pair) => pair,
@@ -796,10 +603,6 @@ pub fn spawn_success(argv: &[String]) -> bool {
         .is_ok_and(|out| out.status.success())
 }
 
-/// Single executable-availability owner: reports whether `bin` resolves
-/// (`--help` succeeds, is a file, or is on `PATH` with optional `.exe`
-/// suffix). Verifiers delegate here so the `PATH` search cannot drift.
-/// See: `deploy/install/src/lib.rs` (`SystemVerifier::have`).
 pub fn exe_available(bin: &str) -> bool {
     spawn_success(&[bin.to_owned(), "--help".to_owned()])
         || Path::new(bin).is_file()
@@ -809,8 +612,6 @@ pub fn exe_available(bin: &str) -> bool {
         })
 }
 
-/// Real runner that spawns the process directly. Argument vectors are
-/// passed through and never rendered.
 pub struct SystemRunner;
 
 impl Runner for SystemRunner {

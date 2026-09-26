@@ -1,23 +1,3 @@
-//! Invocation parsing for the `dx` CLI.
-//!
-//! Split from `super` (`args.rs`): owns the full `parse` validation
-//! (scope shapes, per-command option ownership, output-contract gates,
-//! profile flags). The small value helpers (`scope_error`,
-//! `parse_report`, `parse_min_coverage`) live in the [`super::values`]
-//! sibling. The Bazel-verbatim tokenizer
-//! and `clap`-error mapping live in the [`super::tokenizer`] sibling.
-//! The `clap` grammar (`Cli`, `cli_command`) lives in
-//! the [`super::grammar`] sibling; this module re-exports it so the
-//! `crate::args::parser::{Cli, cli_command}` paths stay
-//! stable (`VALUE_OPTIONS` stays in `grammar` and is imported directly
-//! by its users).
-//! Re-exported through `super` so the public paths stay
-//! `crate::args::parse` and `crate::args::cli_command`.
-//!
-//! Named `parser` (not `parse`) so the module and the `parse` function
-//! can coexist without a namespace collision; the domain is the `parse`
-//! half of the `args→command/parse/suggest/help/completion` split.
-
 use std::ffi::OsStr;
 
 use dx_output::{OutputMode, Threshold};
@@ -30,9 +10,6 @@ use super::{ArgsError, Invocation};
 pub use super::grammar::cli_command;
 pub(crate) use super::grammar::Cli;
 
-/// Decodes one `OsString` scope path as UTF-8; non-UTF8 bytes fail as
-/// `InvalidScope` with a lossy rendering so `args_os` inputs never panic
-/// and still exit `2` per the CLI contract. See: `docs/cli/cli-contract.md`.
 fn decode_scope(value: &OsStr) -> Result<String, ArgsError> {
     match value.to_str() {
         Some(text) => Ok(text.to_owned()),
@@ -43,32 +20,10 @@ fn decode_scope(value: &OsStr) -> Result<String, ArgsError> {
 }
 
 /// Parses a full `dx` command line without the executable name.
-///
-/// Global options may appear before or after the command; the first
-/// positional argument selects the command. Later positionals are
-/// explicit Bazel labels, patterns, or workspace-relative file and
-/// directory paths resolved through Bazel during execution; only
-/// package-relative labels and empty scopes fail here. Arguments after
-/// the first bare `--` forward to Bazel as command options verbatim.
-///
-/// Takes `AsRef<OsStr>` elements so the binary can pass `args_os`
-/// directly: `workspace` plus `targets` travel as `OsString` in the
-/// grammar and decode here, with non-UTF8 bytes failing as
-/// `InvalidScope` (lossy) instead of panicking in `std::env::args`.
-///
-/// Flag-only entry point: env and file defaults are empty, so existing
-/// callers and tests stay hermetic. The binary uses [`parse_with`] with
-/// the real environment plus `.dx/config.toml` file defaults.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn parse<S: AsRef<OsStr>>(args: &[S]) -> Result<Invocation, ArgsError> {
     parse_with(args, &|_| None, &super::FileDefaults::default())
 }
 
-/// Loads file-layer defaults for an invocation starting at `start`.
-/// Missing files yield empty defaults; unreadable or invalid files fail
-/// with the display message for the binary usage error (exit 2).
-/// Values are never logged.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn load_file_defaults(start: &std::path::Path) -> Result<super::FileDefaults, String> {
     match dx_adopt::defaults::load_defaults(start) {
         Ok((defaults, _)) => Ok(defaults),
@@ -76,23 +31,11 @@ pub fn load_file_defaults(start: &std::path::Path) -> Result<super::FileDefaults
     }
 }
 
-/// Parses with invocation defaults applied.
-///
-/// Precedence is flag over env over file over built-in defaults for the
-/// global options `workspace`, `output`, `verbose`, `quiet`, `dry-run`,
-/// and `fail-on` (env: `DX_WORKSPACE`, `DX_OUTPUT`, `DX_VERBOSE`,
-/// `DX_QUIET`, `DX_DRY_RUN`, `DX_FAIL_ON`; file: `.dx/config.toml` or
-/// `.dx/config` `[dx]` table). Bool flags are opt-in: an explicit flag
-/// wins, otherwise env wins over file. Values are never logged; only the
-/// resolved mode affects execution.
-/// See: `docs/cli/cli-contract.md#invocation-defaults`.
 pub fn parse_with<S: AsRef<OsStr>>(
     args: &[S],
     env_get: &dyn Fn(&str) -> Option<String>,
     file: &super::FileDefaults,
 ) -> Result<Invocation, ArgsError> {
-    // `dx help [command]` verb redirect (See:
-    // `docs/cli/cli-contract.md#invocation-shape`): handled before the
     // grammar so `help` never reaches the `ValueEnum` positional.
     if let Some(error) = super::help::help_verb_error_in(args) {
         return Err(error);
@@ -145,7 +88,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
     }
     // Invocation defaults: flag over env over file over built-in.
     // Resolved values are never logged; only the parsed mode flows on.
-    // See: `docs/cli/cli-contract.md#invocation-defaults`.
     use dx_adopt::defaults as invocation_defaults;
     let workspace = invocation_defaults::resolve_workspace(
         flag_workspace,
@@ -250,30 +192,19 @@ pub fn parse_with<S: AsRef<OsStr>>(
         host = Some(value.clone());
     }
     let command = command_name.ok_or(ArgsError::MissingCommand)?;
-    // `--here` (`--cwd` alias, See: `docs/cli/target-resolution.md`, issue #699): explicit cwd scope only.
     // Supported graph-scope commands select `//path/...` (`//...` at the
     // root) via directory-scope resolution; every other command rejects
-    // it, and it never combines with explicit scopes (audit allows one
-    // family selector plus `--here`). The no-flag default stays `//...`.
+    // it, and it never combines with explicit scopes. The no-flag default
+    // stays `//...`.
     if here && !command.supports_here() {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
             option: "--here".to_owned(),
         });
     }
-    if here {
-        if command == Command::Audit {
-            let family_only = targets.is_empty()
-                || (targets.len() == 1 && (targets[0] == "security" || targets[0] == "license"));
-            if !family_only {
-                return Err(ArgsError::ConflictingHere);
-            }
-        } else if !targets.is_empty() {
-            return Err(ArgsError::ConflictingHere);
-        }
+    if here && !targets.is_empty() {
+        return Err(ArgsError::ConflictingHere);
     }
-    // `--offline` (`--frozen` alias, See:
-    // `docs/deploy/offline-bootstrap.md`): force cache-only operation
     // without network fetches on audit/update/bump only. Every other
     // command rejects it pre-exec instead of silently ignoring it.
     if offline && !command.supports_offline() {
@@ -405,16 +336,15 @@ pub fn parse_with<S: AsRef<OsStr>>(
             });
         }
     }
-    if command == Command::Audit {
-        // Audit plans through `dx_audit`: family selection
-        // plus scope spellings, non-mutating, with live Gitleaks plus
+    if command == Command::Security || command == Command::License {
+        // Security/license plan through `dx_audit`: single-family scope
+        // spellings, non-mutating, with live Gitleaks plus
         // advisory/vuln/SPDX backends, SARIF/SPDX reports and
-        // `--fail-on` thresholds. `--check` is meaningless (audit never
+        // `--fail-on` thresholds. `--check` is meaningless (neither
         // mutates), Bazel forwards do not apply (no Bazel collection
         // build; live auditors run directly), and version/clean-only
-        // flags do not apply.
-        // Family parsing itself stays in `dx_audit::plan_audit`; args
-        // only preserve positionals verbatim (family or scopes).
+        // flags do not apply. No family positional exists: every
+        // positional is a scope.
         if check {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -433,10 +363,8 @@ pub fn parse_with<S: AsRef<OsStr>>(
                 option: "--".to_owned(),
             });
         }
-        // Scopes use the shared label/path shape; the first positional
-        // may also be a family (`security`/`license`) preserved verbatim
-        // for `dx_audit::plan_audit`. Only package-relative labels and
-        // empty scopes fail here.
+        // Scopes use the shared label/path shape. Only package-relative
+        // labels and empty scopes fail here.
         for scope in &targets {
             if scope.is_empty() || scope.starts_with(':') {
                 return Err(scope_error(scope));
@@ -617,7 +545,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
     }
     // `--from`/`--to` belong to `migrate` plus `upgrade` only: every
     // other command fails fast instead of silently ignoring the versions.
-    // See: `docs/cli/commands/new-upgrade.md`.
     if command != Command::Migrate
         && command != Command::Upgrade
         && (from.is_some() || to.is_some())
@@ -690,7 +617,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         // extraction/aggregation graph: `--check` selects extraction plus
         // shared validation without rendering, the default build validates
         // and renders, `--serve` previews the last build locally.
-        // See: `docs/cli/commands/docs.md`.
         if fail_on_name != "warning" {
             return Err(ArgsError::UnsupportedOption {
                 command: command.name(),
@@ -748,7 +674,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
     // `--serve`/`--port`/`--host`/`--open` belong to `docs` only: every
     // other command fails fast instead of silently ignoring the preview
     // request.
-    // See: `docs/cli/commands/docs.md`.
     if command != Command::Docs && serve {
         return Err(ArgsError::UnsupportedOption {
             command: command.name(),
@@ -810,8 +735,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
         // Adoption/inspect surfaces run local helpers or thin query
         // forwarding: quality-only thresholds/reports and Bazel forwards
         // do not apply. `--check` belongs to `version` (pin drift) plus
-        // `completion` (verify scripts without writing; See:
-        // `docs/cli/commands/completion.md`); `--pin` belongs to `version`
         // only. `--rollback`
         // and `--configured` ownership is enforced by the catch-all
         // below.
@@ -869,8 +792,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             Command::Completion => {
                 // Without `--check` exactly one shell renders; with
                 // `--check` zero shells verifies all shells and one
-                // verifies that shell (See:
-                // `docs/cli/commands/completion.md`).
                 if check {
                     if targets.len() > 1 {
                         return Err(ArgsError::UnsupportedOption {
@@ -911,7 +832,6 @@ pub fn parse_with<S: AsRef<OsStr>>(
             // `dx new` takes `<language> [name]` (name defaults to
             // `my_project` when absent); unknown languages fail at
             // execution with the supported list, extra positionals fail
-            // here. See: `docs/cli/commands/new-upgrade.md`.
             Command::New if targets.is_empty() || targets.len() > 2 => {
                 return Err(ArgsError::MissingValue {
                     option: "<language> [name]".to_owned(),

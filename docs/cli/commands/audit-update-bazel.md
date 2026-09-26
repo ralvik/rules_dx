@@ -10,37 +10,37 @@ Invokes the repository's Bazelisk-compatible `bazel` launcher with arguments
 unchanged. The launcher reads the committed `.bazelversion`. `dx bazel` does not
 perform scope resolution. This is the advanced-user escape hatch. Everything
 after the `bazel` word forwards verbatim to the launcher, even tokens that look
-like dx options, so dx globals must precede it (`dx --dry-run bazel ...`);
+like dx options, so dx globals must precede it (`dx --dry-run bazel...`);
 a dx-owned option before the command word is rejected rather than forwarded.
 
-## `dx audit`
+## `dx security` and `dx license`
 
 ```text
-dx audit [--offline|--frozen] [--here] [security|license] [scope ...] [--report <format>=<destination> ...]
+dx security [--offline|--frozen] [--here] [scope...] [--report <format>=<destination> ...]
+dx license [--offline|--frozen] [--here] [scope...] [--report <format>=<destination> ...]
 ```
 
 Implementation status: the audit/update policy below is accepted. Command dispatch
 and request planning are implemented (the `dx_audit`/`dx_update` planning gates
-plus `dx audit`/`dx update` dispatch — `--dry-run` plans the request and exits `0`).
-Live `dx audit` executes qualified auditors per family over resolved scopes with
-per-family reporting and SARIF plus SPDX 2.3 JSON through the shared `--report`
-contract, pinned by fixtures in `dx_audit` and `dx_cli`. Live `dx update` executes
-resolver-owned backends per dependency set with independent-set continuation
-and per-set reporting as specified in `dx update` below.
+plus `dx security`/`dx license`/`dx update` dispatch — `--dry-run` plans the request and exits `0`).
+Live `dx security` runs secrets plus dependency-vulnerability analysis over
+resolved scopes; live `dx license` runs license-policy analysis over resolved
+scopes, each with per-family reporting and SARIF plus SPDX 2.3 JSON through the
+shared `--report` contract, pinned by fixtures in `dx_audit` and `dx_cli`.
+Live `dx update` executes resolver-owned backends per dependency set with
+independent-set continuation and per-set reporting as specified in `dx update`
+below. There is no combined audit command: run each family explicitly.
 
-Bare `dx audit` runs both families. `dx audit security` runs secrets plus
-dependency-vulnerability analysis only; `dx audit license` runs license-policy
-analysis only. Family selection composes with the normal scope resolution below;
-it does not change scope defaults. Pass `--here` (`--cwd` alias, optionally
-after the family) for the current directory tree instead of `//...`.
+`dx security` runs secrets plus dependency-vulnerability analysis only;
+`dx license` runs license-policy analysis only. Scope resolution below is
+identical for both; neither changes scope defaults. Pass `--here` (`--cwd`
+alias) for the current directory tree instead of `//...`.
 
-`dx audit` applies the non-mutating audit aspect and any approved ecosystem dependency-
-audit integrations to the selected Bazel scope. It has two families, `security`
-(secrets plus dependency-vulnerability analysis) and `license` (dependency
-license-policy analysis); it is not an umbrella
-for lint, formatting, tests, or builds. Gitleaks is the V1 secrets integration
-(Trufflehog wont-fix, issue #629: one pinned tool, silent swap rejected),
-run as `<hermetic-gitleaks> detect --no-git --source . --report-format sarif --report-path <temp>`
+`dx security` plus `dx license` apply the non-mutating audit aspect and any
+approved ecosystem dependency-audit integrations to the selected Bazel scope.
+They are not an umbrella for lint, formatting, tests, or builds. Gitleaks is the V1 secrets integration
+(Trufflehog wont-fix: one pinned tool, silent swap rejected),
+run as `<hermetic-gitleaks> detect --no-git --source. --report-format sarif --report-path <temp>`
 with `--redact` and `--exit-code 2`, using built-in defaults unless
 `.gitleaks.toml` is committed (explicit `--config` then pins it). The binary
 is the pinned `@dx_tools//:gitleaks` standalone artifact (v8.30.1 on all five
@@ -70,11 +70,8 @@ is incomplete, and any other exit or launch failure is incomplete. Summaries
 render only rule IDs and counts, never secret values: triage rebuilds each
 finding message from the rule ID plus the artifact path only and ignores
 SARIF `message.text`, fingerprints, snippets, fixes, and properties, so even
-an unredacted report cannot leak values (issue #629, pinned in
-`dx_audit::secrets` plus `dx_cli::exec::audit`). The
-`secrets` policy-family mapping is its own semantic class with SARIF and secret-value redaction,
-reconciled with source-class applicability in
-[Quality Sources](../../quality/quality-sources.md).
+an unredacted report cannot leak values. The
+`secrets` policy-family mapping is its own semantic class with SARIF and secret-value redaction.
 Dependency-vulnerability matching runs locally per set (Cargo, npm, Maven,
 NuGet, Go) with no lockfile or inventory upload. Npm audits every
 present lock shape (`pnpm-lock.yaml`, `package-lock.json`, `yarn.lock`);
@@ -82,7 +79,7 @@ absent shapes are skipped, so a pnpm-only workspace never fails for a
 missing sibling lock. Go reads the
 `go_deps.from_file` module lock (`third_party/go/go.mod`); `go.sum`
 carries hashes only and is never an audit input.
-With no scope, audit selects `//...`, while each audit adapter remains responsible
+With no scope, each command selects `//...`, while each audit adapter remains responsible
 for its declared applicability. Source-audit adapters use the same provider-class,
 adapter-class, derived workspace-policy, and capability intersection as convergence stages,
 followed by explicit native-config exclusions. Dependency-audit integrations instead use their
@@ -92,7 +89,7 @@ For target-scoped dependency audits, select the targets' owning dependency sets 
 complete standard locks or equivalent resolved dependency files, including dependencies not used
 by those particular targets. Do not filter findings to a target's resolved package closure.
 Shared owning sets are audited once per distinct audit context; unrelated dependency sets are not
-included merely because they are in the same repository. Bare `dx audit` remains repository-wide.
+included merely because they are in the same repository. A bare command remains repository-wide.
 This dependency-set scope does not broaden source-audit selection. Target-to-owner mappings
 use the approved `dx_update` set registry, so audit and update agree on owning sets.
 
@@ -109,7 +106,7 @@ dependency audit or report that dependency set as clean. V1 reads identified sna
 `retrieved_at`), derived via supported upstream database-download tooling (per-set OSV GCS
 `all.zip` fetched by HTTPS GET with no inventory in the request, such as `osv-scanner --offline`
 with a local DB; the OSV query API discloses the inventory and never satisfies this contract),
-with 24h same-day freshness and refresh-failure mapping pinned in `dx_audit::advisory`; a missing,
+with 24h same-day freshness and refresh-failure mapping; a missing,
 invalid, or stale snapshot fails with `advisory_refresh_failed`, never clean and never a stale
 fallback; live CLI performs no network fetch.
 
@@ -132,7 +129,7 @@ vulnerability services and does not change separately configured Bazel remote ex
 boundaries for declared analysis inputs.
 
 Audit supports SARIF 2.1.0 reports through the shared `--report` contract (plus SPDX 2.3 JSON
-for license, see below). SARIF run shape is pinned under issue #632: one deterministically
+for license, see below). SARIF run shape is one deterministically
 ordered run per executed tool (`gitleaks`, `vuln` for security; `license` for license) with
 stable driver/rule IDs and workspace-relative artifact URIs, severity mapped to
 `note`/`warning`/`error`, locations path-only (no byte ranges, hence no regions), empty runs
@@ -150,13 +147,12 @@ A recognized, assessable package with no matching advisories is a different resu
 itself a coverage failure. Advisory-specific risk acceptance does not waive missing assessment.
 An empty findings list alone is not evidence that every selected dependency was assessed.
 Per-ecosystem dispositions are wont-fix, pinned by fixtures in `dx_audit::vuln` plus
-`dx_audit::locks` (issue #584): Git revisions stay incomplete (auditor-owned; SHAs carry no
+`dx_audit::locks` : Git revisions stay incomplete (auditor-owned; SHAs carry no
 OSV version identity and SHA-to-version mapping needs a network resolver forbidden by the
 offline contract; `paket.lock` `GIT` entries report incomplete rather than dropping),
 unidentified private packages stay incomplete (auditor-owned; no upstream identity by
 definition, callers mark `is_private` explicitly). Npm lock shapes plus
-git plus private handling is implemented (issue #627, pinned in
-`dx_audit::locks` plus `dx_audit::vuln` plus `dx_cli::exec::audit`):
+git plus private handling is implemented :
 `pnpm-lock.yaml` (multi-document env plus project graphs merged,
 `link:`/`file:` workspace members skipped, git `resolution: {type:
 git}` with `repo`/`commit`, host-archive tarballs, and git-shaped
@@ -168,25 +164,23 @@ headers/versions/`resolved` flagged incomplete); private entries are
 byte-identical to public ones in every npm lock shape, so callers mark
 `is_private` explicitly and matching fails those as incomplete, never
 clean. Maven range narrowing is
-implemented (issue #623, pinned in `dx_audit::vuln`), as is NuGet range narrowing
-(issue #624, pinned in `dx_audit::vuln`), as is Go `go.mod` wiring plus
-`v`-prefix range narrowing (issue #626, pinned in `dx_audit::locks` plus
-`dx_audit::vuln`), as is Go pseudo-version plus `+incompatible` flavor
-(issue #679, pinned in `dx_audit::vuln`), as are Cargo/npm semver edges
-(issue #625, pinned in `dx_audit::exception` plus `dx_audit::vuln`), as is
-license exception narrowing (issue #631, pinned in `dx_audit::license_policy`
-plus `dx_audit::vuln` plus `dx_cli::exec::audit`).
+implemented , as is NuGet range narrowing
+, as is Go `go.mod` wiring plus
+`v`-prefix range narrowing , as is Go pseudo-version plus `+incompatible` flavor
+, as are Cargo/npm semver edges
+, as is
+license exception narrowing.
 
 Report known vulnerabilities whether or not a fixed version is available, and apply the same
 severity threshold and failure policy in both cases. Lack of a fix must not suppress a finding,
 downgrade its severity, or exempt it from failure. Preserve upstream remediation information when
 available, without treating a dependency-version upgrade as an automatic source fix or mutating
 dependencies during audit. Advisory scope uses upstream Cargo-flavor semver for Cargo,
-npm-native ranges for npm (issue #625), Go via `v`-prefix normalization plus
-pseudo-version ordering (issue #626 plus issue #679), Maven-native ordering
+npm-native ranges for npm , Go via `v`-prefix normalization plus
+pseudo-version ordering , Maven-native ordering
 plus intervals
-for Maven (issue #623), and NuGet-native ordering plus
-intervals for NuGet (issue #624), pinned in `dx_audit::vuln`. Cargo scopes accept
+for Maven , and NuGet-native ordering plus
+intervals for NuGet. Cargo scopes accept
 ranges (`>=1.2.0, <2.0.0`), carets, tildes, and `*`; bare versions are caret
 shorthand (so `1.2.0` matches `1.2.1`) and `||` plus hyphen stay invalid,
 failing closed to no-match. Npm scopes accept `||` unions, hyphen ranges
@@ -197,7 +191,7 @@ bares are bounded); prereleases match only beside a same-tuple prerelease
 comparator and malformed scopes fail closed to no-match. Go scopes normalize
 one leading `v` on version tokens in both the advisory scope and the locked version
 (`>=v1.0.0, <v2.0.0` matches `v1.5.0`), then Cargo-flavor ordering without the
-Cargo prerelease gate (issue #679): pseudo-versions
+Cargo prerelease gate : pseudo-versions
 (`v0.0.0-20250930140053-2eb4fccefb52`,
 `v1.2.4-0.20240101120000-abcdef123456`) match bare ranges they fall inside
 (`>=v1.0.0, <v2.0.0` covers `v1.2.4-0.20240101-abcdef`; `*` covers pseudos;
@@ -214,14 +208,14 @@ and bracketed intervals (`[1.0,2.0)`, `(,1.0]`, `[1.5,)`, `[1.0]`), with inclusi
 versus exclusive `(`/`)` bounds; floating `*`, unions, and `(1.0)` single-exclusive stay
 invalid and malformed scopes fail closed to no-match. Crate reuse beyond
 `cargo-lock`, `osv`, `semver`, `serde_json`, `yaml_serde`, `toml`, `url`,
-`hex`, and `procfs` stays as evaluated under issue #750: Maven/NuGet
+`hex`, and `procfs` stay: Maven/NuGet
 ordering plus intervals, npm partial/hyphen/`||` narrowing, Go
 `v`-prefix plus pseudo-version ordering, and yarn/pnpm/`package-lock`/
 paket/`go.mod` text shapes keep their hand-rolled parsers with per-site
 reason comments in `dx_audit` (no stable upstream crate for those exact
 fail-closed semantics). Vulnerability exceptions use
 the same per-set narrowing. License exceptions narrow the same way
-(issue #631, pinned in `dx_audit::license_policy`): package plus owning
+: package plus owning
 set plus license identity with the finding version inside the exception
 scope under that set's upstream semantics; out-of-range versions do not
 inherit acceptance.
@@ -272,14 +266,14 @@ keep matching local to declared advisory snapshots, preserve truthful visible fi
 only narrow, explained, version-scoped, expiring risk acceptance. Prefer the simplest conforming
 upstream integration.
 
-Aggregate exit status is pinned in `dx_audit::outcome`: a fully assessed run with no unexempted
+Aggregate exit status is: a fully assessed run with no unexempted
 findings exits `0`; unexempted findings or incomplete assessment exit `1`, with the
-findings-versus-error split recorded in the report rather than the code. Family results arrive
-in canonical security-first order. Usage errors stay exit `2` at the CLI layer per the common
+findings-versus-error split recorded in the report rather than the code.
+Usage errors stay exit `2` at the CLI layer per the common
 contract. Per-family reporting rides text plus JSON `notice`/`error` events with
 `command_finished`, and aggregate exit-code selection rides `dx_audit::outcome`.
 
-### License family (`dx audit license`)
+### `dx license` (license family)
 
 Use per-root (per-dependency) attribution over
 conservative whole-lock strictness, without silently narrowing complete-lock audit coverage.
@@ -299,7 +293,7 @@ audit time, obsolete only when no applicable finding remains, always visible). A
 within an exception's bounded version range retains acceptance while the exception still
 matches the finding and remains otherwise valid; upgrading alone does not invalidate it.
 Its report format is SPDX 2.3
-JSON via the shared `--report` contract, pinned under issue #632: one
+JSON via the shared `--report` contract, one
 document per invocation (never per package, set, or root) with `SPDX-2.3`,
 `CC0-1.0`, `SPDXRef-DOCUMENT`, name `dx-audit-license`, and an
 invocation-unique namespace; packages sorted by ID with `licenseConcluded`/
@@ -314,12 +308,12 @@ SARIF above, gated on `results_complete`.
 Two distribution tiers only:
 
 - `distributed`: release roots that leave the company (binaries, images,
-  packages, SaaS offerings). Strict table: allow MIT/Apache-2.0/BSD/ISC,
-  review LGPL/MPL/EPL, deny GPL/unknown plus everything in `[policy.blocked]`.
+ packages, SaaS offerings). Strict table: allow MIT/Apache-2.0/BSD/ISC,
+ review LGPL/MPL/EPL, deny GPL/unknown plus everything in `[policy.blocked]`.
 - `internal`: everything else, including dev tools and internal-only binaries.
-  Inventoried in the SBOM and never fails on the allow/review/deny table —
-  except `[policy.blocked]`, which fails in both tiers. A blocked license still
-  needs a versioned exception with reason and expiry to pass anywhere.
+ Inventoried in the SBOM and never fails on the allow/review/deny table —
+ except `[policy.blocked]`, which fails in both tiers. A blocked license still
+ needs a versioned exception with reason and expiry to pass anywhere.
 
 The committed root file is TOML (dedicated `licenses.toml`, matching the
 dedicated-config rule). There are no per-directory policy files and no local
@@ -330,8 +324,7 @@ distribution is the legal trigger, while `ship` is slang. Promoting an
 internal root to distributed re-qualifies it under the strict table on the
 next audit.
 
-As-built in this repository ([`licenses.toml`](../../../licenses.toml),
-issue #643): `//cli/cli:dx` is the one marked distributed root (the release
+As-built in this repository ([`licenses.toml`](../../../licenses.toml)): `//cli/cli:dx` is the one marked distributed root (the release
 binary); the `//...` dogfood scope stays internal-only because no release is
 cut. Exercise the strict gate on the existing customer flow with
 `bazel run //cli/cli:dx -- audit license //cli/cli:dx`.
@@ -351,7 +344,7 @@ blocked = ["AGPL-3.0-only", "AGPL-3.0-or-later", "SSPL-1.0"]
 [policy.distributed]
 allow = ["MIT", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "ISC", "Unlicense"]
 review = ["LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later",
-          "MPL-2.0", "EPL-2.0", "CDDL-1.0"]
+ "MPL-2.0", "EPL-2.0", "CDDL-1.0"]
 deny = ["GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "GPL-3.0-or-later"]
 
 # Per-set adjustments merge additively; conflicts with the global table fail validation.
@@ -408,22 +401,22 @@ SPDX expression evaluation follows boolean math over the allow/review/deny
 lattice, with `blocked` acting as deny in both tiers:
 
 - `A OR B` passes if any disjunct is allowed (the distributor chooses the
-  license); otherwise review if any disjunct needs review; otherwise denied.
-  `MIT OR AGPL-3.0-only` therefore passes by choosing MIT.
+ license); otherwise review if any disjunct needs review; otherwise denied.
+ `MIT OR AGPL-3.0-only` therefore passes by choosing MIT.
 - `A AND B` is denied if any conjunct is denied (all terms must be satisfied);
-  otherwise review if any conjunct needs review; otherwise allowed.
+ otherwise review if any conjunct needs review; otherwise allowed.
 - `WITH <exception>` expressions require approval of the complete expression verbatim
-  wherever license-policy approval is required. Allowing the base license alone does not
-  approve the expression. A `review` or deny listing is not approval; the normal tier,
-  blocked-policy, and explicit-exception rules still apply.
+ wherever license-policy approval is required. Allowing the base license alone does not
+ approve the expression. A `review` or deny listing is not approval; the normal tier,
+ blocked-policy, and explicit-exception rules still apply.
 - `UNKNOWN` or unparseable license text is denied in `distributed`,
-  inventoried in `internal`.
+ inventoried in `internal`.
 
 Why license texts are separate inputs: lock metadata says *which* license a
 package claims; MIT/BSD/Apache-2.0 legally require reproducing *the words*
 (copyright notice plus text, including compounds like `MIT OR Apache-2.0` where any
 member requires). Those words ride per-package `text_present` in `[[inventory]]`
-(committed curator data; the declared-Bazel-inputs delivery (closed #812) keeps the same
+(committed curator data; the declared-Bazel-inputs delivery keeps the same
 per-package shape so NOTICE aggregation stays hermetic and cached). A package whose
 license requires reproduction but ships no text reports `missing-notice-text`, which
 fails in `distributed` unless excepted and is inventoried in `internal`. The
@@ -433,20 +426,20 @@ already-validated inputs is `notice_bundle` in `deploy/release/notice.bzl`
 the action; verified by `notice_verify_files` plus `dx_verify --notice`
 before install, and signed alongside the SBOM bundle via
 `//deploy/release:signing_demo`); see the
-[release runbook](../../deploy/release-runbook.md#steps) for the release evidence.
+release runbook for the release evidence.
 
 Validation (all fail the audit, none auto-repair):
 
 - Unknown label under `[distribution]` fails as `unknown_distribution_root`.
 - A license ID in more than one policy list fails.
 - An exception with no applicable finding fails as obsolete, like vuln
-  exceptions (identity over package plus owning set plus license);
-  missing, invalid, or expired dates fail; out-of-range versions
-  do not inherit acceptance (per-set upstream narrowing, issue #631).
+ exceptions (identity over package plus owning set plus license);
+ missing, invalid, or expired dates fail; out-of-range versions
+ do not inherit acceptance (per-set upstream narrowing).
 - An inventory entry with an empty package, set, license, or versions fails;
-  unknown inventory keys fail as invalid TOML. Out-of-range versions never
-  inherit the entry (missing entries stay `UNKNOWN`, fail closed in
-  `distributed`).
+ unknown inventory keys fail as invalid TOML. Out-of-range versions never
+ inherit the entry (missing entries stay `UNKNOWN`, fail closed in
+ `distributed`).
 
 ## `dx update`
 
@@ -464,9 +457,7 @@ ecosystem package-identity mappings are implemented in `dx_update::selector` and
 unit tests: `cargo`/`npm`/`maven`/`nuget`/`go` select sets, `set:package` selects packages
 (`maven:group:artifact` for Maven), and Bazel labels/patterns/files/dirs resolve to owning
 sets via the approved prefix table (bare `//...` and `MODULE.bazel` select all sets).
-
-Per-set selective support is decided in [ADR 0024](../../decisions/0024-selective-update.md)
-with fixtures in `cli/update/tests/fixtures/selective_update/`:
+Per-set support, with fixtures in `cli/update/tests/fixtures/selective_update/`:
 
 | Set | Selective (`set:package`) | Full (`set`) |
 | --- | --- | --- |
@@ -479,14 +470,14 @@ with fixtures in `cli/update/tests/fixtures/selective_update/`:
 When a set is both fully and package selected, the full update wins.
 
 Cargo per-crate (`cargo:<crate>`, e.g. `cargo:anyhow`) is wont-fix
-(issue #633, fixtures in `cli/update/tests/fixtures/selective_cargo/`):
+:
 the approved `crate_universe` repin has no per-crate flag, so the
 selector parses the crate name then fails closed as `unsupported` with
 the `dx update cargo` hint and never silently substitutes a full
 update; private `cargo update -p` stays rejected as a private resolver.
 
 NuGet per-package (`nuget:<id>`, e.g. `nuget:FSharp.Core`) is wont-fix
-(issue #635, fixtures in `cli/update/tests/fixtures/selective_nuget/`):
+:
 the approved `paket2bazel` regen has no per-id flag, so the selector
 parses the id then fails closed as `unsupported` with the
 `dx update nuget` hint and never silently substitutes a full update;
@@ -494,13 +485,12 @@ private `paket.lock` surgery stays rejected as a private resolver.
 
 Maven per-artifact (`maven:group:artifact`, e.g. `maven:junit:junit` and
 `maven:org.junit.jupiter:junit-jupiter-api`) parses but fails closed as wont-fix
-(issue #634, fixtures in `cli/update/tests/fixtures/selective_maven/`):
+:
 `rules_jvm_external` offers no per-artifact pin target, so the whole-lock
 `REPIN=1 bazel run @maven//:pin` stays the only approved updater.
 
 Go per-module (`go:<module-path>`, e.g. `go:github.com/google/go-cmp/cmp`)
-is wont-fix (issue #636, fixtures in
-`cli/update/tests/fixtures/selective_go/`): the main workspace has no
+is wont-fix : the main workspace has no
 `go.mod` by design and the pinned `go_deps.from_file` module lock
 (`third_party/go/go.mod` plus `go.sum`) tracks Gazelle, so full stays an
 intentional no-op success with no launch and selective parses then fails
@@ -539,7 +529,7 @@ upstream integration: sets sharing a lockfile or resolver workspace cannot be tr
 merely because they have different Bazel labels.
 This is the explicit update exception to [common fail-fast handling](../cli-contract.md#exit-status),
 not permission to run dependents of failed operations or introduce a private scheduler.
-Aggregate exit-code selection is pinned in `dx_update::report`: a run with no failed selected set
+Aggregate exit-code selection is: a run with no failed selected set
 exits `0`; any failed set fails the invocation overall with exit `1`, following the report's
 `overall_failure` verdict (blocked without failure is not a failure). Per-set detail rides the
 per-set report, never a per-set code. Backend operation boundaries are pinned in
@@ -547,13 +537,10 @@ per-set report, never a per-set code. Backend operation boundaries are pinned in
 `bazel run @pnpm//:pnpm -- update`, Maven `REPIN=1 bazel run @maven//:pin`, NuGet
 `paket2bazel` regeneration, Go pinned no-op) and per-set success/failure/blocked reporting rides
 text plus JSON `notice`/`error` events with `command_finished`. Continued updates do not imply
-parallel execution. The v1.0 absence of file events was wont-fix (issue #586,
-resolver-owned by `dx_update::backend`, pinned by fixtures in
-`cli/update/tests/fixtures/update_events/` plus `cli/cli/src/exec/update.rs`); minor 1.1
+parallel execution. The v1.0 absence of file events was wont-fix ; minor 1.1
 adds the backend committed-change manifest (`dx_update::manifest`, validated against
 `dx_update::sets::SetId::locks`, pinned by fixtures in
-`cli/update/tests/fixtures/correlation_manifest/` plus `cli/cli/src/exec/update.rs`,
-issue #811): validated file changes project to paired `change` plus `applied` `mutation`
+`cli/update/tests/fixtures/correlation_manifest/` plus `cli/cli/src/exec/update.rs`): validated file changes project to paired `change` plus `applied` `mutation`
 events grouped under `update:<set>` before that set's terminal report, empty or absent
 manifests emit no file events preserving the v1.0 contract, and Git scan/BUILD parse/rerun
 inference stays rejected, so per-set
@@ -578,11 +565,11 @@ underlying updater. Ordinary builds and editor activity do not initiate dependen
 Supported ecosystem mappings are the five sets in `dx_update::sets` (Cargo, npm, Maven, NuGet, Go
 with manifests/locks pinned there); selective-update syntax is `set:package` in
 `dx_update::selector` (supported for npm, reported `unsupported` for Cargo/Maven/NuGet/Go rather than
-silently widened, decided in [ADR 0024](../../decisions/0024-selective-update.md) with fixtures in
+silently widened, fixtures in
 `cli/update/tests/fixtures/selective_update/` plus per-set evidence in
-`cli/update/tests/fixtures/selective_cargo/` under issue #633 plus
-`cli/update/tests/fixtures/selective_nuget/` under issue #635 plus
-`cli/update/tests/fixtures/selective_maven/` under issue #634); non-registry handling is upstream-owned (Git branches may advance, tags/commit
+`cli/update/tests/fixtures/selective_cargo/` plus
+`cli/update/tests/fixtures/selective_nuget/` plus
+`cli/update/tests/fixtures/selective_maven/`); non-registry handling is upstream-owned (Git branches may advance, tags/commit
 pins stay, path dependencies are upstream no-ops); upstream operation/report mappings are pinned
 in `dx_update::backend` and unit-tested.
 
@@ -613,7 +600,7 @@ for the regen-and-review workflow.
 dx bump [--offline|--frozen] <set:package> <version>
 ```
 
-Explicit widen-one-requirement operation (issue #260), separate from `dx update`.
+Explicit widen-one-requirement operation , separate from `dx update`.
 It rewrites exactly one declared requirement in the working copy, never a whole
 set and never a batch. `dx update` keeps its never-rewrites contract
 (`dx_update::semantics::may_be_rewritten` stays false for both requirement
@@ -625,7 +612,7 @@ bounded ranges, and Git tag/commit shapes per the ecosystem mapping in
 
 All ecosystems in v1, no phasing, covering the native seven-set scope:
 Bazel modules plus `.bazelversion`, Cargo, npm/pnpm (both lock
-graphs), Go (`gomod`), GitHub Actions, Maven, NuGet (issue #637).
+graphs), Go (`gomod`), GitHub Actions, Maven, NuGet.
 Selector syntax is `set:package`
 (`bazel:rules_rust`, `bazel:.bazelversion`, `cargo:anyhow`, `npm:react`,
 `go:example.com/mod`, `github-actions:actions/checkout`,
@@ -634,7 +621,7 @@ Selector syntax is `set:package`
 aliases canonicalized); bare sets, labels, paths, and empty versions fail
 closed as usage errors (exit `2`), never as partial widens.
 
-Library-first (ADR 0008): registry discovery, version comparison, and manifest
+registry discovery, version comparison, and manifest
 parsing use upstream libraries (BCR / crates.io / npm / Go proxy / Maven
 Central / NuGet / GitHub releases clients plus `semver`, `serde_json`,
 `toml`, `toml_edit`), never
@@ -642,11 +629,11 @@ custom HTTP/version/resolver code. Cargo edits preserve comments,
 whitespace, and order through `toml_edit::DocumentMut`; `package.json`
 stays on `serde_json::Value`. Custom code is limited to the thin
 widen-one-requirement edit in `dx_bump::request`, loop orchestration, and PR
-handling. All deps pin exactly per ADR 0008 (latest stable). Version shapes
+handling. All deps pin exactly (latest stable). Version shapes
 validate through upstream `semver` (`dx_bump::version`): exact semver for
 Bazel/Cargo/npm/Go/Maven/NuGet, tag or 40/64-char SHA for GitHub Actions (tags auto-resolve
 to SHA via the upstream GitHub releases client before the file edit, implemented in
-`dx_bump::gha` (closed #640), fixtures in `cli/bump/tests/fixtures/bump_gha/`; manual SHA
+`dx_bump::gha` , fixtures in `cli/bump/tests/fixtures/bump_gha/`; manual SHA
 only rejected, unknown tags fail closed with never an invented SHA).
 Discovery proposes stable versions only; prerelease eligibility follows the
 upstream resolver and project configuration
@@ -660,21 +647,18 @@ Manifests widened atomically (one file per invocation): `.bazelversion` or
 (GitHub Actions, SHA-plus-tag pins), `MODULE.bazel` `maven.install`
 artifacts (Maven, e.g. `"junit:junit:4.13.2"`),
 `third_party/dotnet/paket.dependencies` (NuGet, e.g. `nuget FSharp.Core 10.1.201`).
-Lock refresh chains automatically and resolver-owned (issue #638, fixtures in
-`cli/bump/tests/fixtures/bump_chain/`) for Cargo/npm/Go/Maven/NuGet
+Lock refresh chains automatically and resolver-owned for Cargo/npm/Go/Maven/NuGet
 (`dx_bump::BumpRequest::refresh_selector`): `dx update cargo` (full; Cargo
 selective is wont-fix), `dx update npm:<pkg>` (selective for the widened
 package), `dx update go` (noop; pinned module lock tracks Gazelle, no
 launch), `dx update maven` (whole-lock `REPIN=1` pin),
 `dx update nuget` (whole-folder `paket2bazel` regen); Bazel and GitHub Actions
 verify file-only through `preset.update --verify-only` flag-diff review plus
-`bazel build //...`. Per-set selective support is decided in
-[ADR 0024](../../decisions/0024-selective-update.md). Missing, ambiguous, or unsupported manifest shapes fail
+`bazel build //...`. Missing, ambiguous, or unsupported manifest shapes fail
 closed with nothing widened (exit `1`, `bump_failed`). Refresh failures keep
 the widen with no rollback and exit `1` with `update_failed`.
 
-Major bumps hint migrate (issue #931, fixtures in
-`cli/bump/tests/fixtures/bump_chain/`): semver widen plans print
+Major bumps hint migrate : semver widen plans print
 `if major bump, run dx migrate --from <old> --to <new>` with the
 missing-manifest mapping (`migrate_failed` exit `1` live without a manifest;
 missing `--from`/`--to` exit `2` `missing-versions`). See
@@ -684,10 +668,10 @@ Loop (one dep per PR, never batch): discover outdated (stable only,
 prerelease follows upstream, transitives stay resolver-governed) via the
 upstream registry clients (BCR / crates.io / npm registry / Go proxy /
 Maven Central / NuGet / GitHub releases, never custom HTTP; implemented in
-`dx_bump::discovery` (closed #639), fixtures in
+`dx_bump::discovery` , fixtures in
 `cli/bump/tests/fixtures/bump_discovery/`) → auto-resolve GitHub Actions tags
 to SHA via the upstream GitHub releases client (`gh api`, never custom HTTP;
-implemented in `dx_bump::gha` (closed #640), fixtures in
+implemented in `dx_bump::gha` , fixtures in
 `cli/bump/tests/fixtures/bump_gha/`) → widen
 one requirement via `dx bump` (which chains its refresh automatically) →
 run the bump-PR verification (regen evidence,
@@ -701,9 +685,9 @@ No grouping, schedule, or dashboard knobs. Runner is the scheduled
 `bump.yml` workflow with `GITHUB_TOKEN`, concurrency control so N open PRs do
 not stampede CI (`concurrency: group: bump-widen-one-${{ github.ref }}`,
 `cancel-in-progress: false`: runs queue, never cancel); scheduled runs without inputs enumerate outdated via the
-upstream clients above (manual selector only rejected, issue #639);
+upstream clients above (manual selector only rejected);
 failures never retry-until-green; fork-safety and the human
-merge path from the [automation policy](../../contributing/automation.md)
+merge path from the automation policy
 preserved (fork PRs plan only, never push or open PRs with write
 credentials; bot PRs are reviewed and merged by hand, never pushed to
 `main`).
@@ -735,7 +719,7 @@ atomically then chains the refresh. JSON supports the shared
 
 ## Offline mode (`--offline`/`--frozen`)
 
-`dx audit`, `dx update`, and `dx bump` accept `--offline` (`--frozen` alias)
+`dx security`, `dx license`, `dx update`, and `dx bump` accept `--offline` (`--frozen` alias)
 to force cache-only operation without network fetches (see
 [Offline Bootstrap](../../deploy/offline-bootstrap.md#offline-flag)).
 `--dry-run` plans without launching and never fails for offline; live runs

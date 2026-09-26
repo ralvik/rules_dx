@@ -1,19 +1,7 @@
-//! Command vocabulary for the `dx` CLI.
-//!
-//! Split from `super` (`args.rs`): owns [`Command`] and its
-//! classification helpers (`name`, `parse`, `is_*`, `supports_*`,
-//! `describe`). Re-exported through `super` so the public path stays
-//! `crate::args::Command`.
-
-/// Quality, generation, workflow, run, clean, managed
-/// environment/codegen/setup, adoption, and inspect command selected by
-/// the first positional argument. The variant spellings double as the
-/// `clap::ValueEnum` source of truth for the command word.
-/// Single-word lowercase variants map to identical clap values, so
-/// [`Command::parse`] delegates to the derive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum Command {
-    Audit,
+    Security,
+    License,
     Lint,
     Typecheck,
     Format,
@@ -48,12 +36,6 @@ pub enum Command {
 }
 
 impl Command {
-    /// Pipe-joined command list for fallback usage lines.
-    ///
-    /// Single source for the hand-rendered fallbacks in
-    /// `cli/cli/src/main.rs::usage_error` and `exec/common.rs::pre_exec`
-    /// so `--help`/grammar drift fails tests, not users.
-    /// See: `docs/cli/commands/README.md`.
     pub fn pipe_list() -> String {
         use clap::ValueEnum;
         Self::value_variants()
@@ -63,19 +45,10 @@ impl Command {
             .join("|")
     }
 
-    /// Scope policy for the scope-defaults matrix.
-    ///
-    /// Single source for `docs/cli/commands/README.md#scope-defaults`:
-    /// `default-//...` selects `//...` when no scope is supplied;
-    /// `default-repo` runs repository-wide; `default-repo|exact-label`
-    /// runs repository-wide or one exact label; `require*` fails without
-    /// the named positionals; `selector-default-all` takes dependency-set
-    /// selectors (default all); `reject` fails on any scope; `optional-name`
-    /// takes an optional single name; `passthrough` forwards verbatim.
-    /// See: `docs/cli/commands/README.md`.
     pub fn scope_policy(self) -> &'static str {
         match self {
-            Command::Audit
+            Command::Security
+            | Command::License
             | Command::Lint
             | Command::Typecheck
             | Command::Format
@@ -104,10 +77,10 @@ impl Command {
         }
     }
 
-    /// Stable command name used in summaries and `command_started`.
     pub fn name(self) -> &'static str {
         match self {
-            Command::Audit => "audit",
+            Command::Security => "security",
+            Command::License => "license",
             Command::Lint => "lint",
             Command::Typecheck => "typecheck",
             Command::Format => "format",
@@ -147,9 +120,6 @@ impl Command {
         Self::from_str(text, false).ok()
     }
 
-    /// True for the Bazel-passthrough workflow commands (`build`, `test`,
-    /// `coverage`, `run`, `deploy`): they run Bazel verbs directly instead of the quality
-    /// aspect pipeline, so quality-only options do not apply to them.
     pub fn is_workflow(self) -> bool {
         matches!(
             self,
@@ -157,45 +127,21 @@ impl Command {
         )
     }
 
-    /// True for the sequential `check`/`fix` umbrellas over
-    /// format, lint, typecheck, and generate (WP4): phases
-    /// run in order with stop-on-first-failure under one NDJSON frame.
     pub fn is_umbrella(self) -> bool {
         matches!(self, Command::Check | Command::Fix)
     }
 
-    /// True for the delivered audit/update/bump surfaces (`audit`, `update`,
-    /// `bump`): they plan through the `dx_audit`/`dx_update`/`dx_bump`
-    /// libraries over family selectors and dependency-set selectors, never
-    /// the quality aspect pipeline. Audit is non-mutating with live backends
-    /// (Gitleaks secrets, 24h advisory, local vuln matching, SPDX 2.3);
-    /// update and bump are mutating without confirmation with live resolver
-    /// backends, and bump widens exactly one requirement explicitly.
-    /// `migrate` is not audit/update: it plans upgrade rewrites
-    /// through `dx_adopt::plan_migrate` over `--from`/`--to` versions
-    /// with its own fail-closed execution.
     pub fn is_audit_update(self) -> bool {
-        matches!(self, Command::Audit | Command::Update | Command::Bump)
+        matches!(
+            self,
+            Command::Security | Command::License | Command::Update | Command::Bump
+        )
     }
 
-    /// True for the managed environment/codegen/setup surfaces
-    /// (`codegen`, `env`, `setup`): they run the Bazel collection request
-    /// behind one canonical selection plus generation commit, never the
-    /// quality aspect pipeline. Live selection commits through the
-    /// managed-state commit layer; quality-only options do not apply.
     pub fn is_managed(self) -> bool {
         matches!(self, Command::Codegen | Command::Env | Command::Setup)
     }
 
-    /// True for the delivered adoption/inspect surfaces (`init`, `new`,
-    /// `upgrade`, `hooks`, `status`, `version`, `watch`, `owners`, `deps`,
-    /// `why`, `completion`): they run local adoption helpers or thin
-    /// Bazel-query forwarding instead of the quality aspect pipeline.
-    /// `bazel` is not adoption: it forwards raw arguments to the Bazel
-    /// launcher. Managed commands (`codegen`, `env`, `setup`) are not
-    /// adoption either: they plan a Bazel collection request of their own.
-    /// `docs` is not adoption either: it builds the Bazel-cached docs site.
-    /// See: `docs/cli/commands/new-upgrade.md`.
     pub fn is_adoption(self) -> bool {
         matches!(
             self,
@@ -213,42 +159,11 @@ impl Command {
         )
     }
 
-    /// True when `--output=json` (NDJSON) is supported.
-    /// JSON-capable commands stream one object per line via `write_event`
-    /// (never buffer-then-dump). Text-only commands reject `--output=json`
-    /// pre-exec with `UnsupportedOption` instead of silently ignoring it:
-    /// `bazel`/`deploy` own the terminal for passthrough applications,
-    /// and remaining adoption helpers print local-helper prose or shell
-    /// scripts.
-    /// `update` supports JSON: dry-run planning emits
-    /// `command_started`/`command_finished`, while live execution adds
-    /// per-set `notice`/`error` events with the same frame.
-    /// `bump` supports JSON the same way: dry-run planning emits the
-    /// widen summary, live execution adds the widen `notice`/`error`
-    ///. `migrate` supports JSON the same way: dry-run
-    /// planning emits the manifest plan, live execution fails closed
-    /// with `migrate_failed` (no manifests yet). `upgrade` supports JSON
-    /// the same way: dry-run planning emits the composition plan, live
-    /// execution fails closed with `upgrade_failed` plus the recovery
-    /// pointer (see `docs/cli/commands/new-upgrade.md`). Managed
-    /// (`codegen`/`env`/`setup`) support JSON with `command_started`,
-    /// one `operation` (`collect`, explicit scope included), `selection`,
-    /// and `command_finished`; `clean` supports JSON with
-    /// `command_started`, one `operation` (`collect`), per-entry
-    /// `notice` events, and `command_finished`; `run` supports JSON with
-    /// `command_started`, one `operation` per target (`execute` with
-    /// single-label scope), and `command_finished`; `docs` supports JSON
-    /// with `command_started`, one `operation` (`extract`/`aggregate` in
-    /// check mode, plus `render` in build mode), and `command_finished`;
-    /// `version` plus `owners`/`deps`/`why` support JSON by reusing the
-    /// `status` envelope (`command_started`, one `status` event per
-    /// version or label, optional `error`, `command_finished` with only
-    /// `exit_code`)
-    /// (see `docs/cli/output-protocol.md`).
     pub fn supports_json(self) -> bool {
         matches!(
             self,
-            Command::Audit
+            Command::Security
+                | Command::License
                 | Command::Lint
                 | Command::Typecheck
                 | Command::Format
@@ -276,12 +191,6 @@ impl Command {
         )
     }
 
-    /// True when `--output=diff` emits a unified patch.
-    /// Only patch-producing commands accept it (lint, typecheck, format,
-    /// generate, check, fix per the output protocol). Every other command
-    /// rejects `--output=diff` pre-exec: workflow/audit/update/bump/status
-    /// have no patch to emit (empty stdout would mislead), and text-only
-    /// commands have no machine patch surface at all.
     pub fn supports_diff(self) -> bool {
         matches!(
             self,
@@ -294,17 +203,11 @@ impl Command {
         )
     }
 
-    /// True when `--here` (`--cwd` alias) selects the current directory
-    /// tree instead of `//...` (See: `docs/cli/target-resolution.md`, issue #699): the graph-scope commands whose
-    /// empty scope means repository-wide `//...` via directory-scope
-    /// resolution (`//path/...`; `//...` at the root). Every other command
-    /// rejects `--here` pre-exec instead of silently ignoring it; `--here`
-    /// never changes the no-flag default and never combines with explicit
-    /// scopes.
     pub fn supports_here(self) -> bool {
         matches!(
             self,
-            Command::Audit
+            Command::Security
+                | Command::License
                 | Command::Lint
                 | Command::Typecheck
                 | Command::Format
@@ -318,27 +221,13 @@ impl Command {
         )
     }
 
-    /// True when `--offline` (`--frozen` alias) forces cache-only operation
-    /// without network fetches (See: `docs/deploy/offline-bootstrap.md`):
-    /// the audit/update/bump surfaces whose backends would otherwise fetch
-    /// (advisory refresh, resolver updates, bump refresh). Every other
-    /// command rejects `--offline` pre-exec instead of silently ignoring it.
     pub fn supports_offline(self) -> bool {
-        matches!(self, Command::Audit | Command::Update | Command::Bump)
+        matches!(
+            self,
+            Command::Security | Command::License | Command::Update | Command::Bump
+        )
     }
 
-    /// True for commands that mutate by default (extended by
-    /// for `migrate` plus `new` plus `upgrade`).
-    ///
-    /// Mirrors `docs/testing/cli.md#command-registry-and-behavior` plus
-    /// `docs/decisions/0005-mutating-operations.md`: lint,
-    /// typecheck, format, update, bump, migrate, new, upgrade, generate,
-    /// codegen, env, setup, init, fix, and hooks apply workspace or
-    /// managed-state writes unless a non-mutating mode (`--check`,
-    /// `--dry-run`) is selected. `check` stays non-mutating, `clean`
-    /// mutates managed state only under its own contract, and
-    /// workflow/audit/inspect/version surfaces never mutate workspace
-    /// sources by default.
     pub fn is_mutating_by_default(self) -> bool {
         matches!(
             self,
@@ -360,14 +249,10 @@ impl Command {
         )
     }
 
-    /// One-line summary for `--help` (single source with [`Command::name`];
-    /// longer behavior lives in docs/cli/commands/, not duplicated here).
-    /// Mutating commands name their default so `--help` plus
-    /// [`Command::is_mutating_by_default`] satisfy the
-    /// `docs/testing/cli.md` mutating-identification fixture.
     pub fn describe(self) -> &'static str {
         match self {
-            Command::Audit => "run security/license audit over resolved scopes (non-mutating; live Gitleaks plus advisory/vuln/SPDX backends)",
+            Command::Security => "run security audit over resolved scopes (non-mutating; live Gitleaks plus advisory/vuln backends)",
+            Command::License => "run license audit over resolved scopes (non-mutating; live license-policy plus SPDX backend)",
             Command::Lint => "run lint analysis over resolved scopes (mutating by default; --check is non-mutating)",
             Command::Typecheck => "run typecheck analysis over resolved scopes (mutating by default; --check is non-mutating)",
             Command::Format => "check or rewrite formatting over resolved scopes (mutating by default; --check is non-mutating)",
@@ -409,7 +294,8 @@ mod tests {
 
     #[test]
     fn command_names_are_stable() {
-        assert_eq!(Command::Audit.name(), "audit");
+        assert_eq!(Command::Security.name(), "security");
+        assert_eq!(Command::License.name(), "license");
         assert_eq!(Command::Update.name(), "update");
         assert_eq!(Command::Bump.name(), "bump");
         assert_eq!(Command::Migrate.name(), "migrate");
@@ -478,7 +364,8 @@ mod tests {
         use clap::ValueEnum;
         // Every stable name round-trips through the derive, case-sensitively.
         let commands = [
-            Command::Audit,
+            Command::Security,
+            Command::License,
             Command::Lint,
             Command::Typecheck,
             Command::Format,
@@ -527,11 +414,9 @@ mod tests {
     #[test]
     fn final_registry_is_exact_and_rejects_excluded_commands() {
         // The final CLI registry holds
-        // exactly the 32 implemented commands (including `deploy` plus
+        // exactly the 33 implemented commands (including `deploy` plus
         // `bump` plus `migrate` plus `new` plus `upgrade` plus `docs`).
         // `doctor` and `configure` stay rejected as unknown.
-        // See: `docs/cli/commands/new-upgrade.md` plus
-        // `docs/cli/commands/docs.md`.
         use clap::ValueEnum;
         let mut got: Vec<&str> = Command::value_variants()
             .iter()
@@ -539,7 +424,6 @@ mod tests {
             .collect();
         got.sort_unstable();
         let mut want = vec![
-            "audit",
             "bazel",
             "build",
             "bump",
@@ -557,11 +441,13 @@ mod tests {
             "generate",
             "hooks",
             "init",
+            "license",
             "lint",
             "migrate",
             "new",
             "owners",
             "run",
+            "security",
             "setup",
             "status",
             "test",
@@ -573,8 +459,8 @@ mod tests {
             "why",
         ];
         want.sort_unstable();
-        assert_eq!(got, want, "Command registry drifted from the final 32");
-        assert_eq!(Command::value_variants().len(), 32);
+        assert_eq!(got, want, "Command registry drifted from the final 33");
+        assert_eq!(Command::value_variants().len(), 33);
         for excluded in ["doctor", "configure", "bogus"] {
             assert_eq!(
                 Command::parse(excluded),
@@ -586,7 +472,6 @@ mod tests {
 
     #[test]
     fn mutating_by_default_matches_contract_and_help() {
-        // `docs/testing/cli.md` mutating
         // identification plus ADR 0005 plus ADR 0018. `check` stays
         // non-mutating; `clean` mutates managed state only under its own
         // contract.
@@ -618,7 +503,8 @@ mod tests {
             );
         }
         for command in [
-            Command::Audit,
+            Command::Security,
+            Command::License,
             Command::Build,
             Command::Test,
             Command::Coverage,
@@ -646,7 +532,6 @@ mod tests {
             "check help must name its non-mutating mode"
         );
         // Diff-capable patch producers stay exactly the six check/fix
-        // umbrella members per `docs/testing/cli.md`.
         for command in [
             Command::Lint,
             Command::Typecheck,
@@ -667,9 +552,13 @@ mod tests {
 
     #[test]
     fn offline_is_audit_update_bump_only() {
-        // See: `docs/deploy/offline-bootstrap.md`. Cache-only `--offline`
-        // (`--frozen` alias) forces no fetches on audit/update/bump only.
-        for command in [Command::Audit, Command::Update, Command::Bump] {
+        // (`--frozen` alias) forces no fetches on security/license/update/bump only.
+        for command in [
+            Command::Security,
+            Command::License,
+            Command::Update,
+            Command::Bump,
+        ] {
             assert!(
                 command.supports_offline(),
                 "{command:?} must support --offline"
@@ -694,12 +583,11 @@ mod tests {
 
     #[test]
     fn fallback_usage_registry_is_single_sourced() {
-        // See: `docs/cli/commands/README.md`.
         use clap::ValueEnum;
         let list = Command::pipe_list();
         assert_eq!(
             Command::value_variants().len(),
-            32,
+            33,
             "registry width changed; update scope matrix plus fallbacks"
         );
         let missing_text = super::super::error::ArgsError::MissingCommand.to_string();
@@ -718,16 +606,15 @@ mod tests {
         );
         assert_eq!(
             list,
-            "audit|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel",
+            "security|license|lint|typecheck|format|generate|build|test|coverage|run|deploy|check|fix|clean|update|bump|migrate|codegen|env|setup|init|new|upgrade|hooks|status|version|watch|owners|deps|why|completion|docs|bazel",
             "pipe_list order must match declaration order"
         );
     }
 
     #[test]
     fn scope_defaults_partition_covers_all_commands() {
-        // See: `docs/cli/commands/README.md#scope-defaults`.
         use clap::ValueEnum;
-        assert_eq!(Command::value_variants().len(), 32);
+        assert_eq!(Command::value_variants().len(), 33);
         for command in Command::value_variants() {
             let policy = command.scope_policy();
             assert!(
@@ -783,7 +670,6 @@ mod tests {
     #[test]
     fn value_sets_and_man_parity_are_pinned() {
         use clap::ValueEnum;
-        // See: `docs/cli/commands/completion.md`.        // Value sets stay parse-time validated (not shell-completed, since
         // the grammar uses `String`): the error texts name the sets, and
         // the shell list stays exact. `man/dx.1` renders from the same
         // `cli_command` grammar as `--help`, so parity holds by

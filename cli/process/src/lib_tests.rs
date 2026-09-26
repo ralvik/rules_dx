@@ -1,6 +1,3 @@
-//! Process boundary tests (split from `lib.rs`).
-//! Originally the inline `mod tests` of `lib.rs`.
-
 use super::*;
 
 use std::collections::{HashMap, HashSet};
@@ -254,6 +251,7 @@ fn protected_check_accepts_repeated_required_value() {
     let protected = vec![ProtectedFlag {
         name: "keep_going".to_owned(),
         required: Some("--keep_going".to_owned()),
+        allowed: Vec::new(),
     }];
     let kept = check_protected(&["--keep_going".to_owned()], &protected).expect("repeat");
     assert_eq!(kept, vec!["--keep_going".to_owned()]);
@@ -264,6 +262,7 @@ fn protected_check_rejects_conflict_without_echoing_values() {
     let protected = vec![ProtectedFlag {
         name: "keep_going".to_owned(),
         required: Some("--keep_going".to_owned()),
+        allowed: Vec::new(),
     }];
     let err =
         check_protected(&["--keep_going=false".to_owned()], &protected).expect_err("conflict");
@@ -282,6 +281,7 @@ fn protected_check_rejects_bare_name_against_valued_requirement() {
     let protected = vec![ProtectedFlag {
         name: "config".to_owned(),
         required: Some("--config=dx".to_owned()),
+        allowed: Vec::new(),
     }];
     let err = check_protected(&["--config=other".to_owned()], &protected).expect_err("conflict");
     assert_eq!(
@@ -296,10 +296,33 @@ fn protected_check_rejects_bare_name_against_valued_requirement() {
 }
 
 #[test]
+fn protected_check_accepts_allowed_extras_beside_required() {
+    let protected = vec![ProtectedFlag {
+        name: "config".to_owned(),
+        required: Some("--config=dx".to_owned()),
+        allowed: vec!["--config=ci".to_owned()],
+    }];
+    let kept = check_protected(
+        &["--config=ci".to_owned(), "--config=dx".to_owned()],
+        &protected,
+    )
+    .expect("blessed extra passes");
+    assert_eq!(kept, vec!["--config=ci".to_owned(), "--config=dx".to_owned()]);
+    let err = check_protected(&["--config=other".to_owned()], &protected).expect_err("conflict");
+    assert_eq!(
+        err,
+        ForwardError::ConflictingOption {
+            flag: "config".to_owned(),
+        }
+    );
+}
+
+#[test]
 fn protected_check_rejects_unconditional_flag() {
     let protected = vec![ProtectedFlag {
         name: "build_event_json_file".to_owned(),
         required: None,
+        allowed: Vec::new(),
     }];
     let err = check_protected(
         &["--build_event_json_file=/tmp/bep.json".to_owned()],
@@ -320,6 +343,7 @@ fn protected_check_preserves_unrelated_order() {
     let protected = vec![ProtectedFlag {
         name: "keep_going".to_owned(),
         required: Some("--keep_going".to_owned()),
+        allowed: Vec::new(),
     }];
     let kept = check_protected(
         &[
@@ -376,6 +400,7 @@ fn workflow_argv_orders_startup_command_required_user_labels() {
     let protected = vec![ProtectedFlag {
         name: "keep_going".to_owned(),
         required: Some("--keep_going".to_owned()),
+        allowed: Vec::new(),
     }];
     let argv = build_workflow_argv(
         "build",
@@ -521,10 +546,12 @@ fn quality_workflows_reject_nokeep_going() {
         ProtectedFlag {
             name: "keep_going".to_owned(),
             required: Some("--keep_going".to_owned()),
+        allowed: Vec::new(),
         },
         ProtectedFlag {
             name: "nokeep_going".to_owned(),
             required: None,
+        allowed: Vec::new(),
         },
     ];
     let err = build_workflow_argv(
@@ -548,6 +575,7 @@ fn workflow_argv_rejects_protected_conflicts() {
     let protected = vec![ProtectedFlag {
         name: "build_event_json_file".to_owned(),
         required: None,
+        allowed: Vec::new(),
     }];
     let err = build_workflow_argv(
         "build",
@@ -595,7 +623,6 @@ fn exit_mapping_preserves_subprocess_codes() {
 fn ci_gate_matrix_is_single_sourced() {
     // Local-only `dx run`/`dx watch` refusal shares one owner
     // (`is_ci` over `is_ci_value`): only `CI=true` refuses, every
-    // other shape proceeds. Issue #1046.
     assert!(is_ci_value(Some("true")));
     for allowed in [
         None,
@@ -739,7 +766,6 @@ fn system_runner_rejects_bad_invocations() {
 fn hermetic_runner_clears_parent_environment() {
     // Secrets auditing never inherits ambient configuration: only the
     // explicit env reaches the child, so `GITLEAKS_CONFIG` cannot inject
-    // rules (See: `docs/cli/commands/audit-update-bazel.md#dx-audit`).
     let runner = SystemRunner;
     std::env::set_var("DX_HERMETIC_PROBE_PARENT", "parent");
     let cleared = runner
@@ -805,7 +831,6 @@ fn exe_available_covers_help_file_and_path() {
 
 #[test]
 fn stdout_broken_pipe_maps_to_141() {
-    // See: `docs/cli/output-protocol.md#exit-codes`.
     assert_eq!(broken_pipe_code(), 128 + 13);
     assert_eq!(EXIT_BROKEN_PIPE, 128 + 13);
     let broken = io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe");

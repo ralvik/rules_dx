@@ -1,6 +1,3 @@
-//! Split from `license_policy.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::*;
 use crate::license_expr::{evaluate, IdClass, LicenseExpr, TierOutcome};
 

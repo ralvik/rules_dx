@@ -1,52 +1,16 @@
-//! Audit rendering planning for consumer CI (WP4 slice 10).
-//!
-//! Split from `super` (`lib.rs`): owns [`AuditFinding`],
-//! [`AuditPlacement`], [`audit_uses_counts_only_mode`],
-//! [`audit_has_disclosure_toggle`], [`audit_assumes_private`],
-//! [`audit_claims_generic_redaction`], [`plan_audit_placement`], and
-//! [`audit_body_publishable`]. Re-exported through `super` so the public
-//! paths stay `dx_ci::{AuditFinding, AuditPlacement, ...}`. Distinct from
-//! the selection, revision, scheduling, supersession, reporting,
-//! fork/aggregate, rerun, trigger, caller/pin, artifact, metadata,
-//! thread-delta, and preset modules.
-
-/// One audit finding with preserved presentation inputs.
-///
-/// `severity` and `acceptance` are opaque verbatim strings: this crate
-/// preserves them into reporting without interpreting scales or acceptance
-/// vocabularies (those freeze with analyzer qualification, not here).
-/// `location` is `Some` only for findings with a valid PR-diff location.
-/// `contains_restricted_content` marks bodies that must not be published
-/// verbatim (credential values, secret values, or privately reported
-/// vulnerability material, as classified by the caller-supplied input —
-/// this crate claims no generic redaction).
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AuditFinding {
-    /// Stable finding identity.
     pub id: String,
-    /// Opaque severity spelling, preserved verbatim.
     pub severity: String,
-    /// Opaque risk-acceptance spelling, preserved verbatim.
     pub acceptance: String,
-    /// Whether this finding contributes to its check's failure.
     pub contributes_to_failure: bool,
-    /// Valid PR-diff location, if mappable.
     pub location: Option<String>,
-    /// Whether the finding body must not be published verbatim.
     pub contains_restricted_content: bool,
 }
 
-/// Where one audit finding is presented.
-///
-/// Audit uses the same presentation as every other check: diff-mapped
-/// findings receive review details; all other findings stay in full reports
-/// and summary counts. There is no security-only counts mode and no
-/// disclosure toggle.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AuditPlacement {
-    /// Diff-mapped finding: review details plus report/count retention.
     ReviewThread,
-    /// Finding without a valid diff location: reports and counts only.
     ReportOnly,
 }
 
@@ -55,29 +19,19 @@ pub fn audit_uses_counts_only_mode() -> bool {
     false
 }
 
-/// Audit has no disclosure toggle.
 pub fn audit_has_disclosure_toggle() -> bool {
     false
 }
 
 /// Safe rendering never assumes all security findings are private: public
-/// repository reporting is not a confidential channel.
 pub fn audit_assumes_private() -> bool {
     false
 }
 
-/// This crate claims no unqualified generic redaction guarantee.
 pub fn audit_claims_generic_redaction() -> bool {
     false
 }
 
-/// Plan where one audit finding is presented.
-///
-/// A valid diff location plans [`AuditPlacement::ReviewThread`]; anything
-/// else plans [`AuditPlacement::ReportOnly`] with no invented location.
-/// Restricted bodies keep their placement and counts — only the verbatim
-/// body is withheld (see [`audit_body_publishable`]) — so completeness and
-/// command outcomes are preserved.
 pub fn plan_audit_placement(finding: &AuditFinding) -> AuditPlacement {
     if finding.location.is_some() {
         AuditPlacement::ReviewThread
@@ -86,14 +40,6 @@ pub fn plan_audit_placement(finding: &AuditFinding) -> AuditPlacement {
     }
 }
 
-/// Whether the finding body may be published verbatim into review details,
-/// reports, or summaries.
-///
-/// Findings flagged with `contains_restricted_content` must not expose
-/// credential values, secret values, or privately reported vulnerability
-/// material: callers withhold the verbatim body while retaining the finding
-/// in counts, completeness, and command outcomes. Unflagged findings are
-/// publishable as-is; public reporting is otherwise not confidential.
 pub fn audit_body_publishable(finding: &AuditFinding) -> bool {
     !finding.contains_restricted_content
 }

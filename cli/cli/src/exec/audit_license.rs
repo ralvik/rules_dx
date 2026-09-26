@@ -1,5 +1,3 @@
-//! Audit license family (split from `audit.rs`). No behavior change.
-
 use super::*;
 
 pub(super) fn run_license(

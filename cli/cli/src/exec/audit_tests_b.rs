@@ -1,6 +1,3 @@
-//! Split from `audit.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::super::test_support::*;
 use super::audit_tests_a::*;
 
@@ -71,14 +68,14 @@ fn license_exceptions_only_approve_matching_current_findings() {
         ("GPL-3.0-only", "[[exception]]\npackage = \"other\"\nset = \"npm\"\nlicense = \"GPL-3.0-only\"\nversions = \"1.0.0\"\nreason = \"reviewed\"\nexpires = \"2999-01-01\"\n", 1),
         ("GPL-3.0-only", "[[exception]]\npackage = \"demo\"\nset = \"npm\"\nlicense = \"GPL-3.0-only\"\nversions = \"1.0.0\"\nreason = \"reviewed\"\nexpires = \"2000-01-01\"\n", 1),
     ] {
-        let (code, out, err) = run_with(&["audit", "license", "//javascript:demo", "--output=json"], &AuditRunner::clean(), &|h| {
+        let (code, out, err) = run_with(&["license", "//javascript:demo", "--output=json"], &AuditRunner::clean(), &|h| {
             h.write_source("package-lock.json", &serde_json::json!({"packages":{"node_modules/demo":{"version":"1.0.0","license":license}}}).to_string());
             h.write_source("licenses.toml", &format!("[policy]\nblocked = [\"AGPL-3.0-only\"]\n[policy.distributed]\ndeny = [\"GPL-3.0-only\"]\nreview = [\"MPL-2.0\"]\n{exception}\n[[inventory]]\npackage = \"demo\"\nset = \"npm\"\nlicense = \"{license}\"\nversions = \"1.0.0\"\ntext_present = true\n"));
         });
         assert_eq!(code, expected, "{license}: {out}{err}");
     }
     let (code, out, err) = run_with(
-        &["audit", "license", "//javascript:demo"],
+        &["license", "//javascript:demo"],
         &AuditRunner::clean(),
         &|h| {
             h.write_source("package-lock.json", "{");
@@ -108,7 +105,7 @@ fn secrets_process_status_and_report_content_are_both_authoritative() {
             sarif: sarif.map(str::to_owned),
             ..AuditRunner::clean()
         };
-        let (code, out, err) = run_with(&["audit", "security", "--output=json"], &runner, &|h| {
+        let (code, out, err) = run_with(&["security", "--output=json"], &runner, &|h| {
             clean_workspace(h);
             write_all_empty_advisories(h);
         });
@@ -129,7 +126,7 @@ fn secrets_process_status_and_report_content_are_both_authoritative() {
 fn audit_stdout_reports_are_single_machine_documents() {
     for (family, format) in [("security", "sarif"), ("license", "spdx")] {
         let report = format!("--report={format}=-");
-        let (code, out, err) = run_with(&["audit", family, &report], &AuditRunner::clean(), &|h| {
+        let (code, out, err) = run_with(&[family, &report], &AuditRunner::clean(), &|h| {
             clean_workspace(h);
             write_all_empty_advisories(h);
         });
@@ -151,7 +148,7 @@ fn committed_gitleaks_config_produces_a_trust_warning() {
             r#"{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"gitleaks"}},"results":[]}]}"#,
         );
         let (code, out, err) =
-            run_with(&["audit", "security", "--report=sarif=-"], &runner, &|h| {
+            run_with(&["security", "--report=sarif=-"], &runner, &|h| {
                 clean_workspace(h);
                 write_all_empty_advisories(h);
                 h.write_source(config, "title = \"local rules\"\n");
@@ -269,7 +266,7 @@ fn lock_loading_requires_readable_inputs_and_deduplicates_npm_siblings() {
 #[test]
 fn audit_live_unowned_scope_fails_usage() {
     let harness = Harness::new("audit-unowned");
-    let (code, _out, err) = harness.run(&["audit", "python/tests/fixtures/hello/hello.py"]);
+    let (code, _out, err) = harness.run(&["security", "python/tests/fixtures/hello/hello.py"]);
     assert_eq!(code, 2, "{err}");
 }
 
@@ -277,7 +274,7 @@ fn audit_live_unowned_scope_fails_usage() {
 fn audit_live_json_emits_per_family_lifecycle() {
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "security", "--output=json"],
+        &["security", "--output=json"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -317,7 +314,7 @@ fn audit_live_json_emits_per_family_lifecycle() {
 fn audit_live_json_failure_emits_error_and_finished_one() {
     let sarif = r#"{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "gitleaks"}}, "results": [{"ruleId": "gitleaks/aws-key", "message": {"text": "AWS key"}}]}]}"#;
     let runner = AuditRunner::with_sarif(Some(1), sarif);
-    let (code, out, err) = run_with(&["audit", "--output=json"], &runner, &|harness| {
+    let (code, out, err) = run_with(&["security", "--output=json"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
@@ -362,7 +359,7 @@ fn audit_live_json_failure_emits_error_and_finished_one() {
 #[test]
 fn audit_dry_run_json_emits_lifecycle() {
     let harness = Harness::new("audit-dryrun-json");
-    let (code, out, err) = harness.run(&["audit", "--dry-run", "--output=json"]);
+    let (code, out, err) = harness.run(&["security", "--dry-run", "--output=json"]);
     assert_eq!(code, 0, "{out}{err}");
     let events: Vec<serde_json::Value> = out
         .lines()
@@ -387,7 +384,8 @@ fn audit_dry_run_json_emits_lifecycle() {
 #[test]
 fn audit_update_dry_run_quiet_prints_nothing() {
     for argv in [
-        vec!["audit", "--dry-run", "--quiet"],
+        vec!["security", "--dry-run", "--quiet"],
+        vec!["license", "--dry-run", "--quiet"],
         vec!["update", "--dry-run", "--quiet"],
     ] {
         let name = format!("dryrun-quiet-{}", argv[0]);
@@ -423,7 +421,6 @@ fn audit_reports_sarif_and_spdx_to_files() {
         "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
     );
     let invocation = parse(&[
-        "audit".to_owned(),
         "license".to_owned(),
         "//rust/tests/fixtures/hello:hello".to_owned(),
         "--report=sarif=out.sarif".to_owned(),
@@ -451,7 +448,6 @@ fn audit_reports_sarif_and_spdx_to_files() {
     let out_text = String::from_utf8(out).expect("stdout");
     let err_text = String::from_utf8(err).expect("stderr");
     assert_eq!(code, 0, "{out_text}{err_text}");
-    // Issue #632: SARIF run shape golden for a clean license-only
     // run: SARIF 2.1.0, one deterministically ordered `license` run,
     // empty results kept, no partial-invocation marker when complete.
     let sarif = std::fs::read_to_string(harness.workspace.join("out.sarif")).expect("sarif");
@@ -477,7 +473,6 @@ fn audit_reports_sarif_and_spdx_to_files() {
     let typed: serde_sarif::sarif::Sarif = serde_json::from_str(&sarif).expect("typed SARIF");
     assert_eq!(typed.runs.len(), 1);
     assert_eq!(typed.runs[0].tool.driver.name, "license");
-    // Issue #632: live SPDX golden for the same clean run: exactly
     // one document per invocation with the frozen envelope, purl
     // package identity, DESCRIBES from the audited root, and no
     // CONTAINS edges in V1 (no lock-graph projection yet).
@@ -549,7 +544,6 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
         "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
     );
     let invocation = parse(&[
-        "audit".to_owned(),
         "license".to_owned(),
         "//rust/tests/fixtures/hello:hello".to_owned(),
         "--report=sarif=out.sarif".to_owned(),
@@ -604,7 +598,6 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
     write_go_mod(&harness);
     write_all_empty_advisories(&harness);
     let invocation = parse(&[
-        "audit".to_owned(),
         "security".to_owned(),
         "--report=sarif=out.sarif".to_owned(),
     ])
@@ -650,7 +643,7 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
     // path-only locations (no byte ranges, hence no regions).
     let sarif_text = r#"{"version": "2.1.0", "runs": [{"tool": {"driver": {"name": "gitleaks"}}, "results": [{"ruleId": "gitleaks/aws-key", "message": {"text": "AWS key"}}]}]}"#;
     let runner = AuditRunner::with_sarif(Some(1), sarif_text);
-    let (code, _out, _err) = run_with(&["audit", "security"], &runner, &|harness| {
+    let (code, _out, _err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
@@ -671,7 +664,6 @@ fn audit_sarif_run_shape_pins_family_tools_and_ordering() {
 fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
     use crate::args::parse;
     use crate::exec::{execute, Env};
-    // Issue #632: partial collection marks every run unsuccessful
     // while retaining validated findings. Secrets finding (gitleaks)
     // plus a missing advisory snapshot (vuln incomplete) yields one
     // retained result and `executionSuccessful=false` in both runs.
@@ -696,7 +688,6 @@ fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
     // SARIF document is partial even though the secrets finding is
     // validated.
     let invocation = parse(&[
-        "audit".to_owned(),
         "security".to_owned(),
         "--report=sarif=out.sarif".to_owned(),
     ])
@@ -766,7 +757,6 @@ fn audit_sarif_partial_marks_unsuccessful_while_retaining_findings() {
 fn audit_spdx_live_golden_is_single_deterministic_document() {
     use crate::args::parse;
     use crate::exec::{execute, Env};
-    // Issue #632: live SPDX emission is one deterministic document
     // per invocation, never one per package/set/root. Two runs over
     // the same inputs with different temp nonces agree on packages
     // plus relationships; only the invocation namespace differs.
@@ -789,7 +779,6 @@ fn audit_spdx_live_golden_is_single_deterministic_document() {
             "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
         );
         let invocation = parse(&[
-            "audit".to_owned(),
             "license".to_owned(),
             "//rust/tests/fixtures/hello:hello".to_owned(),
             "--report=spdx=out.spdx.json".to_owned(),
@@ -847,7 +836,6 @@ fn audit_spdx_live_golden_is_single_deterministic_document() {
 
 #[test]
 fn audit_partial_reports_are_not_authoritative() {
-    // Issue #632 alternative rejected: a partial SARIF/SPDX report
     // (marked `executionSuccessful=false` / `results_complete=false`)
     // must not be uploaded as an authoritative replacement scan.
     // Live JSON report events plus `command_finished` gate
@@ -855,7 +843,6 @@ fn audit_partial_reports_are_not_authoritative() {
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &[
-            "audit",
             "security",
             "--output=json",
             "--report=sarif=out.sarif",
@@ -889,7 +876,6 @@ fn audit_partial_reports_are_not_authoritative() {
 
 #[test]
 fn audit_errors_stay_typed_with_stable_display() {
-    // Issue #1005: the six audit-input helpers return `AuditError`
     // instead of `String` plumbing. Displays stay byte-identical so
     // `audit_failed` diagnostics never drift, while I/O legs keep
     // their source for `Error::source`.
@@ -1056,7 +1042,6 @@ fn audit_errors_stay_typed_with_stable_display() {
 
 #[test]
 fn audit_sarif_spdx_write_failures_are_fail_closed() {
-    // Issue #1005: SARIF/SPDX file writes go through the atomic path
     // and fail closed with `report_failed` (exit 1) instead of
     // silently losing the report. A missing parent never creates
     // directories.
@@ -1081,7 +1066,6 @@ fn audit_sarif_spdx_write_failures_are_fail_closed() {
             "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
         );
         let invocation = parse(&[
-            "audit".to_owned(),
             "license".to_owned(),
             "//rust/tests/fixtures/hello:hello".to_owned(),
             format!("--report={format}={path}"),
@@ -1135,7 +1119,6 @@ fn audit_report_write_failure_json_reports_error_event() {
         "[policy.distributed]\nallow = [\"MIT\"]\nreview = []\ndeny = []\n\n[[inventory]]\npackage = \"serde\"\nset = \"cargo\"\nlicense = \"MIT\"\nversions = \"1.0.100\"\ntext_present = true\n",
     );
     let invocation = parse(&[
-        "audit".to_owned(),
         "license".to_owned(),
         "//rust/tests/fixtures/hello:hello".to_owned(),
         "--report=sarif=missing-dir/out.sarif".to_owned(),
@@ -1168,13 +1151,12 @@ fn audit_report_write_failure_json_reports_error_event() {
 
 #[test]
 fn offline_dry_run_plans_cache_only_without_launching() {
-    // See: `docs/deploy/offline-bootstrap.md`. Dry-run never launches, so
     // offline dry-run plans cache-only and exits 0.
     let harness = Harness::new("audit-offline-dryrun");
-    let (code, out, err) = harness.run(&["audit", "--offline", "--dry-run"]);
+    let (code, out, err) = harness.run(&["security", "--offline", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
     assert!(
-        out.contains("Running audit security+license for //..."),
+        out.contains("Running audit security for //..."),
         "{out}"
     );
     assert!(out.contains("offline, cache-only"), "{out}");
@@ -1184,18 +1166,17 @@ fn offline_dry_run_plans_cache_only_without_launching() {
         "offline dry-run launches nothing"
     );
     let alias = Harness::new("audit-frozen-dryrun");
-    let (code, out, err) = alias.run(&["audit", "--frozen", "--dry-run"]);
+    let (code, out, err) = alias.run(&["license", "--frozen", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
     assert!(out.contains("offline, cache-only"), "{out}");
 }
 
 #[test]
 fn offline_live_missing_advisory_fails_with_offline_required() {
-    // See: `docs/deploy/offline-bootstrap.md`. Cache-only runs cannot
     // refresh advisory data over the network, so a missing snapshot fails
     // with `offline_required` (wrapping the advisory detail as the cause).
     let runner = AuditRunner::clean();
-    let (code, out, err) = run_with(&["audit", "security", "--offline"], &runner, &|harness| {
+    let (code, out, err) = run_with(&["security", "--offline"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
@@ -1206,7 +1187,7 @@ fn offline_live_missing_advisory_fails_with_offline_required() {
     assert!(err.contains("cannot obtain current advisory data"), "{err}");
     assert!(err.contains("dx: offline_required:"), "{err}");
     let (code, out, err) = run_with(
-        &["audit", "security", "--offline", "--output=json"],
+        &["security", "--offline", "--output=json"],
         &AuditRunner::clean(),
         &|harness| {
             harness.write_source(

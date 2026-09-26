@@ -1,25 +1,13 @@
-//! License inventory (split from `locks.rs`). No behavior change.
-
 use super::*;
 
-/// One package license identity for the license family.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct LicensedPackage {
-    /// Package name in its owning set.
     pub name: String,
-    /// Locked version.
     pub version: String,
-    /// Owning set.
     pub set: String,
-    /// SPDX expression text or `UNKNOWN` when unidentified.
     pub license: String,
 }
 
-/// Extract Cargo license identities from one `cargo-bazel-lock.json`
-/// document (JSON with per-crate `license`). Only crates present in
-/// `packages` (the assessable lock contents) are returned; workspace
-/// members without upstream identity fall back to `UNKNOWN` only when
-/// explicitly listed (they are otherwise skipped as first-party).
 pub fn cargo_licenses(cargo_bazel_text: &str, packages: &[LockedPackage]) -> Vec<LicensedPackage> {
     let value: serde_json::Value = match serde_json::from_str(cargo_bazel_text) {
         Ok(value) => value,
@@ -76,12 +64,6 @@ pub fn cargo_licenses(cargo_bazel_text: &str, packages: &[LockedPackage]) -> Vec
         .collect()
 }
 
-/// License identities for non-Cargo sets without a qualified source:
-/// `UNKNOWN` (denied in `distributed`, inventoried in `internal`).
-/// Prefer [`npm_licenses`] for npm (reads `package-lock.json` where
-/// present) and [`inventory_licenses`] for Maven/NuGet/Go plus npm
-/// fallback (reads the committed `[[inventory]]` table); this stays as
-/// the fail-closed fallback when neither source identifies a package.
 pub fn unknown_licenses(packages: &[LockedPackage], set: &str) -> Vec<LicensedPackage> {
     packages
         .iter()
@@ -95,16 +77,6 @@ pub fn unknown_licenses(packages: &[LockedPackage], set: &str) -> Vec<LicensedPa
         .collect()
 }
 
-/// Extract npm license identities from one `package-lock.json` document
-/// (JSON with per-package `license`). Both the `packages:`
-/// (`node_modules/<name>` with `version` plus `license`) and the legacy
-/// `dependencies:` (`<name>` with `version` plus `license`) shapes are
-/// read; entries without a non-empty string `license` fall back to
-/// `UNKNOWN`. Only packages present in `packages` (the assessable lock
-/// contents) are returned. `pnpm-lock.yaml` and `yarn.lock` carry no
-/// license field, so pnpm/yarn-only workspaces without a sibling
-/// `package-lock.json` stay `UNKNOWN` (fail closed) unless the
-/// `[[inventory]]` table identifies them via [`inventory_licenses`].
 pub fn npm_licenses(package_lock_text: &str, packages: &[LockedPackage]) -> Vec<LicensedPackage> {
     let mut by_name_version = std::collections::BTreeMap::new();
     if let Ok(value) = serde_json::from_str::<serde_json::Value>(package_lock_text) {
@@ -195,14 +167,6 @@ pub fn npm_licenses(package_lock_text: &str, packages: &[LockedPackage]) -> Vec<
         .collect()
 }
 
-/// Resolve license identities via the committed `[[inventory]]` table
-/// (see [`crate::license_policy::LicenseInventory`]): the first entry
-/// matching package plus set whose `versions` scope contains the locked
-/// version (via [`crate::vuln::version_affected`], upstream semantics per
-/// set) supplies the license; unmatched packages fall back to `UNKNOWN`
-/// (fail closed). Out-of-range versions never inherit an entry. Callers
-/// pass the full inventory and the owning set; only that set's entries
-/// are considered.
 pub fn inventory_licenses(
     packages: &[LockedPackage],
     inventory: &[crate::license_policy::LicenseInventory],
@@ -232,11 +196,6 @@ pub fn inventory_licenses(
         .collect()
 }
 
-/// Whether the committed inventory records `LICENSE*`/`NOTICE*` words
-/// for one locked package: true only when an entry matches package plus
-/// set with an in-scope version and `text_present`. Absent or
-/// out-of-range entries mean no words (fail closed in `distributed` when
-/// the license requires reproduction).
 pub fn inventory_text_present(
     package: &LockedPackage,
     inventory: &[crate::license_policy::LicenseInventory],

@@ -1,6 +1,3 @@
-//! Split from `audit.rs`. No behavior change.
-//! Originally the inline `mod tests`.
-
 use super::super::test_support::*;
 use dx_process::{ChildStatus, Runner};
 use std::cell::RefCell;
@@ -139,9 +136,6 @@ pub(super) fn clean_workspace(harness: &Harness) {
     );
 }
 
-/// Minimal `go_deps.from_file` module lock for live-audit harnesses:
-/// the Go set is always assessed (never an empty clean), so every
-/// repository-wide audit fixture must carry it.
 pub(super) fn write_go_mod(harness: &Harness) {
     harness.write_source(
         "third_party/go/go.mod",
@@ -149,11 +143,6 @@ pub(super) fn write_go_mod(harness: &Harness) {
     );
 }
 
-/// Fresh identified advisory snapshot for one set (issue #628): the
-/// derived bytes plus identity (`url`, `sha256`, `retrieved_at`) are
-/// the audited inputs. Snapshots refresh via supported upstream
-/// database-download tooling (per-set OSV GCS zips, no inventory
-/// upload); live CLI performs no network fetch.
 pub(super) fn write_advisory(harness: &Harness, set: &str, json: &str) {
     let today = super::today_utc();
     let url = dx_audit::advisory::advisory_source(set)
@@ -180,10 +169,10 @@ pub(super) fn write_all_empty_advisories(harness: &Harness) {
 #[test]
 pub(super) fn audit_dry_run_plans_families_without_launching() {
     let harness = Harness::new("audit-dryrun");
-    let (code, out, err) = harness.run(&["audit", "--dry-run"]);
+    let (code, out, err) = harness.run(&["security", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
     assert!(
-        out.contains("Running audit security+license for //..."),
+        out.contains("Running audit security for //..."),
         "{out}"
     );
     assert_eq!(err, "", "{err}");
@@ -193,9 +182,9 @@ pub(super) fn audit_dry_run_plans_families_without_launching() {
     );
 
     let harness = Harness::new("audit-dryrun-family");
-    let (code, out, err) = harness.run(&["audit", "security", "--dry-run"]);
+    let (code, out, err) = harness.run(&["license", "--dry-run"]);
     assert_eq!(code, 0, "{out}{err}");
-    assert!(out.contains("Running audit security for //..."), "{out}");
+    assert!(out.contains("Running audit license for //..."), "{out}");
     assert_eq!(err, "", "{err}");
     assert!(
         harness.seen_env.borrow().is_empty(),
@@ -206,7 +195,7 @@ pub(super) fn audit_dry_run_plans_families_without_launching() {
 #[test]
 pub(super) fn audit_live_clean_runs_gitleaks_and_exits_zero() {
     let runner = AuditRunner::clean();
-    let (code, out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+    let (code, out, err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
@@ -240,7 +229,6 @@ pub(super) fn audit_live_clean_runs_gitleaks_and_exits_zero() {
 
 #[test]
 pub(super) fn audit_live_secrets_findings_fail_with_redacted_summary() {
-    // Issue #629: an unredacted SARIF (secrets in message.text,
     // fingerprints, snippets, and properties) still yields a
     // redacted summary: rule IDs and counts only, never values.
     // Sentinels are assembled at runtime so the file never stores
@@ -251,7 +239,7 @@ pub(super) fn audit_live_secrets_findings_fail_with_redacted_summary() {
         "{{\"version\": \"2.1.0\", \"runs\": [{{\"tool\": {{\"driver\": {{\"name\": \"gitleaks\"}}}}, \"results\": [{{\"ruleId\": \"gitleaks/aws-key\", \"message\": {{\"text\": \"leaked AKIAIOSFODNN7EXAMPLE in src/app.py\"}}, \"fingerprints\": {{\"secret\": \"AKIAIOSFODNN7EXAMPLE\"}}, \"partialFingerprints\": {{\"secret/v1\": \"{github}\"}}, \"properties\": {{\"secret\": \"{generic}\"}}, \"locations\": [{{\"physicalLocation\": {{\"artifactLocation\": {{\"uri\": \"src/app.py\"}}, \"region\": {{\"snippet\": {{\"text\": \"key = 'AKIAIOSFODNN7EXAMPLE'\"}}}}}}}}]}}]}}]}}"
     );
     let runner = AuditRunner::with_sarif(Some(1), &sarif);
-    let (code, out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+    let (code, out, err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
@@ -302,7 +290,7 @@ pub(super) fn audit_live_without_hermetic_tool_fails_closed() {
     let (code, _out, err) = {
         use crate::args::parse;
         use crate::exec::{execute, Env};
-        let words: Vec<String> = ["audit", "security"]
+        let words: Vec<String> = ["security"]
             .iter()
             .map(ToString::to_string)
             .collect();
@@ -351,7 +339,7 @@ pub(super) fn audit_live_without_hermetic_tool_fails_closed() {
 #[test]
 pub(super) fn audit_live_vuln_findings_fail_and_git_is_incomplete() {
     let runner = AuditRunner::clean();
-    let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+    let (code, _out, err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"git-dep\"\nversion = \"0.1.0\"\nsource = \"git+https://github.com/example/git-dep#abc123\"\n",
@@ -375,7 +363,7 @@ pub(super) fn audit_live_npm_git_and_sibling_locks_are_incomplete() {
     // `package-lock.json` git entries fail as incomplete while
     // absent `yarn.lock` siblings are skipped, never required.
     let runner = AuditRunner::clean();
-    let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+    let (code, _out, err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
@@ -404,7 +392,7 @@ pub(super) fn audit_live_npm_pnpm_git_resolution_is_incomplete() {
     // Pnpm `resolution: {type: git}` entries fail as incomplete,
     // never dropped and never clean.
     let runner = AuditRunner::clean();
-    let (code, _out, err) = run_with(&["audit", "security"], &runner, &|harness| {
+    let (code, _out, err) = run_with(&["security"], &runner, &|harness| {
         harness.write_source(
             "rust/tests/fixtures/hello/Cargo.lock",
             "[[package]]\nname = \"serde\"\nversion = \"1.0.100\"\nsource = \"registry+https://github.com/rust-lang/crates.io-index\"\n",
@@ -429,13 +417,12 @@ pub(super) fn audit_live_npm_pnpm_git_resolution_is_incomplete() {
 
 #[test]
 pub(super) fn audit_live_vendored_mirror_analyzes_offline_like_upstream() {
-    // Vendored advisory mirrors (See: `docs/deploy/offline-bootstrap.md`):
     // a `file://` identity copied from the offline bundle analyzes
     // offline under the same sha256 plus same-day freshness gates, so a
     // mirrored finding still fails instead of passing clean.
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
-        &["audit", "security", "//go/tests/fixtures/hello:hello"],
+        &["security", "//go/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             write_go_mod(harness);
@@ -462,7 +449,7 @@ pub(super) fn audit_live_vendored_mirror_analyzes_offline_like_upstream() {
 pub(super) fn audit_live_go_advisory_findings_fail_instead_of_empty_clean() {
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
-        &["audit", "security", "//go/tests/fixtures/hello:hello"],
+        &["security", "//go/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             write_go_mod(harness);
@@ -480,11 +467,10 @@ pub(super) fn audit_live_go_advisory_findings_fail_instead_of_empty_clean() {
 
 #[test]
 pub(super) fn audit_live_missing_advisory_fails_never_empty_clean() {
-    // Issue #628: a missing snapshot means current data could not be
     // obtained, never clean and never a lockfile upload.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+        &["security", "//rust/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -508,7 +494,7 @@ pub(super) fn audit_live_stale_advisory_fails_without_stale_fallback() {
     // analyzing the stale bytes.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+        &["security", "//rust/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -547,7 +533,7 @@ pub(super) fn audit_live_tampered_advisory_fails_on_sha_mismatch() {
     // mismatch fails closed, never analyzed.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "security", "//rust/tests/fixtures/hello:hello"],
+        &["security", "//rust/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -581,12 +567,12 @@ pub(super) fn audit_live_tampered_advisory_fails_on_sha_mismatch() {
 #[test]
 pub(super) fn audit_live_license_clean_and_denied() {
     let runner = AuditRunner::clean();
-    let (code, out, err) = run_with(&["audit", "license"], &runner, &|_harness| {
+    let (code, out, err) = run_with(&["license"], &runner, &|_harness| {
         // Placeholder replaced below by clean_workspace setup.
     });
     let _ = (code, out, err);
     let runner = AuditRunner::clean();
-    let (code, out, err) = run_with(&["audit", "license"], &runner, &clean_workspace);
+    let (code, out, err) = run_with(&["license"], &runner, &clean_workspace);
     assert_eq!(
         code, 1,
         "{out}{err} clean cargo license but missing notice plus UNKNOWN npm must fail distributed"
@@ -595,7 +581,7 @@ pub(super) fn audit_live_license_clean_and_denied() {
 
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "license", "//rust/tests/fixtures/hello:hello"],
+        &["license", "//rust/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -624,7 +610,6 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
         &[
-            "audit",
             "license",
             "//javascript/tests/fixtures/hello:hello",
         ],
@@ -648,7 +633,6 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
         &[
-            "audit",
             "license",
             "//javascript/tests/fixtures/hello:hello",
         ],
@@ -670,7 +654,7 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     // Maven via inventory: clean with words, denied UNKNOWN without.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "license", "//third_party/jvm:maven_install"],
+        &["license", "//third_party/jvm:maven_install"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -691,7 +675,7 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     // NuGet via inventory with words: clean.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "license", "//csharp/tests/fixtures/hello:hello"],
+        &["license", "//csharp/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -711,7 +695,7 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     // notice fails distributed, inventoried internal stays clean.
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "license", "//go/tests/fixtures/hello:hello"],
+        &["license", "//go/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -731,7 +715,7 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
     // the failure is the notice check firing).
     let runner = AuditRunner::clean();
     let (code, _out, err) = run_with(
-        &["audit", "license", "//go/tests/fixtures/hello:hello"],
+        &["license", "//go/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             harness.write_source(
@@ -752,7 +736,7 @@ pub(super) fn audit_live_license_per_ecosystem_ids_and_notice_texts() {
 pub(super) fn audit_live_target_scopes_to_owning_set_only() {
     let runner = AuditRunner::clean();
     let (code, out, err) = run_with(
-        &["audit", "license", "//go/tests/fixtures/hello:hello"],
+        &["license", "//go/tests/fixtures/hello:hello"],
         &runner,
         &|harness| {
             write_go_mod(harness);
