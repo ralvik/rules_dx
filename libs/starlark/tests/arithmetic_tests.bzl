@@ -1,6 +1,3 @@
-"""Unit and load tests for the arithmetic subject (WP1, WP2).
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":arithmetic.bzl", "add", "greet", "mul")
 

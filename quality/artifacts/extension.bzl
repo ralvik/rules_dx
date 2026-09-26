@@ -1,7 +1,3 @@
-"""Standalone quality-tool acquisition (WP1).
-
-Outer plus inner digests fail closed at fetch time; URL is availability only.
-"""
 
 load("//quality/artifacts:biome.linux_arm64.bzl", _biome_linux_arm64 = "ARTIFACT")
 load("//quality/artifacts:biome.linux_x86_64.bzl", _biome_linux_x86_64 = "ARTIFACT")
@@ -76,12 +72,6 @@ def _repo_name(artifact):
     return "dx_%s_%s_%s" % (artifact["tool"], artifact["os"], artifact["cpu"])
 
 def _sha256_of(ctx, path):
-    """Returns the sha256 hex of one repo-relative file, or "" when unavailable.
-
-    Tries the host hashers in portability order (sha256sum, shasum,
-    python3), mirroring `docs/contributing/local-workflows.md`; the caller
-    fails closed on "" so an unhashable fetch never ships silently.
-    """
     for argv in (
         ["sha256sum", path],
         ["shasum", "-a", "256", path],
@@ -93,7 +83,6 @@ def _sha256_of(ctx, path):
     return ""
 
 def _verify_executable_sha256(ctx, executable, want):
-    """Fails closed unless the extracted executable matches its inner digest."""
     if want == None or want == "":
         fail("standalone tool repo: missing executable_sha256 for '" + executable +
              "' (regenerate metadata with //quality/artifacts:update)")
@@ -210,7 +199,7 @@ _HUB_ALIAS = """alias(
         no_match_error = (
             "rules_dx: no {tool} artifact for this execution platform; " +
             "want one of linux_x86_64, linux_arm64, macos_arm64, " +
-            "windows_x86_64 (see //quality/artifacts)."
+            "windows_x86_64."
         ),
     ),
     visibility = ["//visibility:public"],

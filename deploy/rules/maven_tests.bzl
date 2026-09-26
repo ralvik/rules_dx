@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the Maven Central publisher.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":maven.bzl", "MAVEN_DEFAULT_REPOSITORY_URL", "maven_artifact_error", "maven_group_error", "maven_jar_error", "maven_pom_error", "maven_repository_error", "maven_schema_error", "maven_version_error")
 

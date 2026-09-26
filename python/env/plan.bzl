@@ -1,14 +1,9 @@
-"""Focused Python environment plan (WP3).
-
-"""
-
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")
 load("//env:focused.bzl", "focused_direct_sources", "focused_python_plan", "focused_python_transitive", "focused_venv_projection", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//python/env:aspect.bzl", "PythonEnvWheelsInfo", "dx_python_env_wheels_aspect")
 
 PythonEnvPlanInfo = provider(
-    doc = "Provider-derived focused Python target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct Python sources.",
         "has_venv": "Whether RunEnvironmentInfo projects a materialized .venv.",
@@ -59,8 +54,6 @@ python_env_plan = rule(
         "target": attr.label(
             mandatory = True,
             aspects = [dx_python_env_wheels_aspect],
-            doc = "One python_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Python environment plan for one wrapper target (WP3).",
 )

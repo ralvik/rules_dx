@@ -1,5 +1,3 @@
-"""Update mutation-event wont-fix pins."""
-
 UPDATE_CHANGE_EVENTS = "wont-fix"
 UPDATE_MUTATION_EVENTS = "wont-fix"
 
@@ -21,4 +19,4 @@ INTERRUPTED_NO_ROLLBACK = True
 INTERRUPTED_UNATTEMPTED_EMITS_NOTHING = True
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #586"
+SEED_ONLY = "qualified seed-only"

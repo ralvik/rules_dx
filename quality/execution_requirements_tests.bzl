@@ -1,6 +1,3 @@
-"""Unit tests for the execution-requirements helper.
-
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "expect_false", "expect_true", "starlark_test")
 load(":execution_requirements.bzl", "DX_FORBIDDEN_NO_REMOTE", "DX_NO_REMOTE_EXEC", "DX_REMOTE_QUALIFIED", "dx_execution_requirements", "dx_has_forbidden_marker", "dx_is_local_only")

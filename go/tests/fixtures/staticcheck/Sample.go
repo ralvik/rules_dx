@@ -1,4 +1,3 @@
-// Seed Go lint fixture.
 package staticcheck
 
 func Greet(name string) string {

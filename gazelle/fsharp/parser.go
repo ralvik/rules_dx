@@ -1,23 +1,3 @@
-// Parser extracts the narrow recognized source facts the F# Gazelle
-// extension needs for package-level ownership and strict dependency
-// resolution.
-//
-// An `.fs`/`.fsi` source contributes dependency references only through
-// `open` directives (`open Foo.Bar`). The `namespace`/`module` declaration
-// contributes the source's own namespace identity, never an edge. Comments,
-// string literals, and character literals are inert: text that looks like an
-// `open` or entry point inside them never produces a fact.
-//
-// Recognition is by a narrow comment/string-stripping scanner plus an
-// open-statement matcher, never by a full F# grammar. Generation never
-// type-checks a file.
-//
-// Identity normalization: every non-stdlib `open` contributes its simple
-// name (final dot segment; `Foo.Bar.Baz` -> `Baz`), which matches the owning
-// library's indexed simple names. `System.*`/`Microsoft.*` opens are
-// included and filtered by callers via IsStdLib. Two libraries owning the
-// same simple name are ambiguous and fail resolution; owners add an exact
-// `# gazelle:resolve` mapping or rename.
 package fsharp
 
 import (
@@ -28,21 +8,11 @@ import (
 )
 
 var (
-	// openRe matches one stripped `open` directive and captures the dotted
-	// path.
-	openRe = regexp.MustCompile(`(?m)^\s*open\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\s*$`)
-	// namespaceRe matches one stripped `namespace` or `module` declaration
-	// and captures the dotted path.
+	openRe      = regexp.MustCompile(`(?m)^\s*open\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\s*$`)
 	namespaceRe = regexp.MustCompile(`(?m)^\s*(?:namespace|module)\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\s*(?:=\s*)?$`)
-	// mainRe matches the `[<EntryPoint>]` attribute outside comments and
-	// literals. Any non-test source carrying it keeps the directory
-	// handwritten (thin `fsharp_binary` entries are never inferred).
-	mainRe = regexp.MustCompile(`\[<\s*EntryPoint\s*>\]`)
+	mainRe      = regexp.MustCompile(`\[<\s*EntryPoint\s*>\]`)
 )
 
-// stripNonCode returns content with line comments, block comments, string
-// literals, and character literals replaced by spaces (newlines preserved
-// so line structure survives).
 func stripNonCode(content []byte) []byte {
 	s := string(content)
 	out := make([]byte, len(s))
@@ -139,10 +109,6 @@ func stripNonCode(content []byte) []byte {
 	return out
 }
 
-// ParseImports returns the sorted unique normalized import identities for
-// one F# source file. System/Microsoft identities are included; callers
-// filter them via IsStdLib. Comment- or literal-embedded text that looks
-// like an `open` never produces an edge.
 func ParseImports(content []byte) []string {
 	stripped := stripNonCode(content)
 	set := make(map[string]struct{})
@@ -160,9 +126,6 @@ func ParseImports(content []byte) []string {
 	return out
 }
 
-// ParsePackage returns the namespace/module identity for one F# source
-// file, or "" when the file carries no declaration (global namespace).
-// A file with two declarations fails closed.
 func ParsePackage(content []byte) (string, error) {
 	stripped := stripNonCode(content)
 	matches := namespaceRe.FindAllSubmatch(stripped, -1)
@@ -183,9 +146,6 @@ func (e *duplicatePackageError) Error() string {
 
 func errDuplicatePackage(first string) error { return &duplicatePackageError{first: first} }
 
-// normalizeImport maps one dotted `open` path to its resolution identity:
-// the final dot segment. System/Microsoft paths are returned unchanged for
-// caller-side filtering.
 func normalizeImport(dotted string) string {
 	dotted = strings.TrimSpace(dotted)
 	if dotted == "" {
@@ -200,10 +160,6 @@ func normalizeImport(dotted string) string {
 	return dotted
 }
 
-// DefinesMain reports whether an F# source carries the `[<EntryPoint>]`
-// attribute outside comments and literals. Test-owned sources are never
-// asked; callers fail generation for an entry-point library source rather
-// than inferring a thin binary.
 func DefinesMain(content []byte) bool {
 	return mainRe.Match(stripNonCode(content))
 }

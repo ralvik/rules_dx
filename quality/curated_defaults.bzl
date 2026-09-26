@@ -1,6 +1,3 @@
-"""Frozen v1 curated quality defaults.
-
-"""
 
 CURATED_SCHEMA_VERSION = 1
 
@@ -81,11 +78,9 @@ FORMAT_FROZEN = {
 }
 
 def curated_families():
-    """Returns the sorted curated families in the versioned manifest."""
     return sorted(CURATED_DEFAULTS.keys())
 
 def curated_tools():
-    """Returns the sorted unique curated tool IDs across families."""
     seen = {}
     for family in CURATED_DEFAULTS:
         for capability in CURATED_DEFAULTS[family]:
@@ -102,14 +97,6 @@ def _is_canonical_token(text):
     return True
 
 def curated_schema_error():
-    """Validates the versioned curated-defaults schema (,.
-
-    Checks data shape without pinning exact contents, so adding a curated
-    family edits the manifest data only: version is v1, every family and
-    tool spelling is canonical, every family carries exactly the
-    audit/format/lint/typecheck capabilities, and the frozen formatter
-    set matches the curated format selection.
-    """
     if CURATED_SCHEMA_VERSION != 1:
         return "curated defaults: unsupported schema v" + str(CURATED_SCHEMA_VERSION) + " (want v1)"
     for family in CURATED_DEFAULTS:

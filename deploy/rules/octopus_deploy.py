@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Local package-drop builder plus gated Octopus uploader for `octopus_deploy`.
-
-Hermetic default copies the pinned `archive_deploy` `.tar.gz` into a local
-package-drop directory (an Octopus feed is just files) plus a
-`would-run.txt` release manifest (`create-release --project --channel`)
-and verifies bytes via sha256; the live `push` plus `create-release` path
-runs only with explicit env plus owner approval and never by default.
-Used as an `expand_template` template per deploy instance (placeholders
-below) and as a `py_library` for `py_test`.
-"""
+"""Local package drop builder."""
 
 import hashlib
 import os
@@ -16,9 +7,6 @@ import shutil
 import subprocess
 import sys
 
-# Per-instance pins expanded by the `octopus_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_drop` directly without touching these constants.
 PACKAGE_RLOC = "@@PACKAGE_RLOC@@"
 DEPLOY_NAME = "@@DEPLOY_NAME@@"
 PROJECT = "@@PROJECT@@"
@@ -84,13 +72,6 @@ def build_drop(
     space,
     server,
 ):
-    """Copies one archive package into a local drop dir and writes the manifest.
-
-    Creates `<outdir>/<deploy-name>-drop/` holding the `.tar.gz` plus
-    `would-run.txt` with the `push` and `create-release --project
-    --channel` lines and the package sha256. Verifies bytes via sha256
-    and returns the drop directory.
-    """
     if not package_src or not package_src.endswith(".tar.gz"):
         raise ValueError(
             "octopus drop: want exactly one .tar.gz source (archive_deploy output), got '"
@@ -143,7 +124,6 @@ def build_drop(
 
 
 def live_push(package_src, server, api_key, space):
-    """Pushes one package to the Octopus built-in feed without prompts."""
     cmd = ["octo", "push", package_src, "--server", server, "--apiKey", api_key]
     if space:
         cmd += ["--space", space]
@@ -153,7 +133,6 @@ def live_push(package_src, server, api_key, space):
 def live_release(
     project, channel, version, package_src, deploy_to, server, api_key, space
 ):
-    """Creates one Octopus release without interactive prompts."""
     cmd = [
         "octo",
         "create-release",

@@ -58,23 +58,14 @@ type ignoreEntry struct {
 	used  bool
 }
 
-// targetImports is the deduplicated union of normalized import roots for
-// one generated library's non-test sources. Standard-library roots are
-// dropped at collection; every other root resolves strictly or fails
-// generation.
 type targetImports struct {
 	imports []string
 }
 
-// testTargetImports is the deduplicated union of normalized import roots for
-// one generated package-level test's `*_test.go` sources. It resolves
-// strictly like library imports; the owning library reaches the test via
-// `embed`, never via an import edge.
 type testTargetImports struct {
 	imports []string
 }
 
-// NewLanguage returns the private first-party Go Gazelle extension.
 func NewLanguage() language.Language { return &goLang{} }
 
 func (l *goLang) Before(context.Context) { l.errors = nil; l.ignores = nil }
@@ -153,10 +144,6 @@ func goLoads(rulesRepo string) []rule.LoadInfo {
 	}
 }
 
-// Imports indexes one reusable import identity per Go source owned by a
-// library rule: the exact module stem of each non-test source. Test-owned
-// sources never contribute an identity, and test rules provide no identities
-// (tests are never dependencies).
 func (*goLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != LibraryKind {
 		return nil
@@ -204,8 +191,6 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 	if len(sources) == 0 && len(testSources) == 0 {
 		return mergeStale(args.File, language.GenerateResult{})
 	}
-	// Test-only directories have no library to embed: fail closed instead
-	// of generating a dangling test or guessing an owner.
 	if len(sources) == 0 {
 		l.fail("go: %s: test sources %s without non-test sources; add the package sources to this directory or split the tests before adopting generation", args.Rel, strings.Join(testSources, ", "))
 		return language.GenerateResult{}
@@ -268,20 +253,11 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 		l.fail("go: %s: mixed packages %s in one directory; split the directory before adopting generation", args.Rel, strings.Join(names, ", "))
 		return language.GenerateResult{}
 	}
-	// Every library package contributes exactly one entry here, so libPkg
-	// is set when sources are non-empty and packages are uniform.
 	for pkg := range packages {
 		libPkg = pkg
 	}
 	sort.Strings(imports)
 
-	// Package-level test collection: every `*_test.go` in the directory
-	// belongs to one `go_test` via `embed`. Internal (`package <lib>`)
-	// and external (`package <lib>_test`) forms coexist; any other test
-	// package fails closed. Build constraints are preserved by including
-	// every test source and letting the toolchain select per platform.
-	// Test-only imports resolve onto the test target; the library reaches
-	// the test via `embed`, never via an import edge.
 	testSeen := make(map[string]bool)
 	var testImports []string
 	for _, src := range testSources {
@@ -333,9 +309,6 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 	result := language.GenerateResult{}
 	r := rule.NewRule(LibraryKind, name)
 	r.SetAttr("srcs", sources)
-	// Pure-Go scope: generated rules carry srcs plus importpath only, never
-	// cgo/race scope attrs (cgo, pure, race, msan, gotags, cdeps); those stay
-	// handwritten on wrappers that need them.
 	if importpath, ok := goImportPath(args.Config.RepoRoot, args.Dir); ok {
 		r.SetAttr("importpath", importpath)
 	}
@@ -356,10 +329,6 @@ func (l *goLang) generateRules(args language.GenerateArgs) language.GenerateResu
 	return mergeStale(args.File, result)
 }
 
-// checkClaims fails closed on same-package normalized-name collisions: a
-// generated rule sharing its name with a handwritten rule of another
-// kind fails. A same-kind handwritten owner is ordinary Gazelle merge.
-// Handwritten-only duplicates are not ours to judge.
 func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) error {
 	existing := make(map[string]string)
 	if file != nil {
@@ -378,12 +347,9 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 	return nil
 }
 
-// isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path: any path containing tests, fixtures, or
-// testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
-    padded := "/" + rel + "/"
-    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
+	padded := "/" + rel + "/"
+	return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {
@@ -403,13 +369,6 @@ func mergeStale(file *rule.File, result language.GenerateResult) language.Genera
 	return result
 }
 
-// goImportPath derives the rules_go importpath for one generated library
-// from the nearest enclosing go.mod: module path plus the slash-separated
-// subpath from the module root to dir. It walks up from dir to repoRoot
-// (inclusive); when no go.mod is found it reports false and the caller
-// omits importpath (source-only fixtures without a module keep their
-// current generation-only shape). A found but unparseable go.mod is a
-// generation failure at the call site, never a guessed path.
 func goImportPath(repoRoot, dir string) (string, bool) {
 	cleanDir := filepath.Clean(dir)
 	cleanRoot := filepath.Clean(repoRoot)
@@ -433,17 +392,12 @@ func goImportPath(repoRoot, dir string) (string, bool) {
 		if cur == cleanRoot || cur == filepath.Dir(cur) {
 			return "", false
 		}
-		// Do not walk above the repo root: foreign trees carry their own
-		// go.mod; absence means source-only generation without a module.
 		if len(cur) < len(cleanRoot) || !strings.HasPrefix(cur, cleanRoot) {
 			return "", false
 		}
 	}
 }
 
-// parseGoModule extracts the module path from go.mod content: the first
-// `module <path>` line. It reports false when no such line exists so the
-// caller can fail closed instead of inventing a path.
 func parseGoModule(content string) (string, bool) {
 	for _, line := range strings.Split(content, "\n") {
 		trimmed := strings.TrimSpace(line)
@@ -492,9 +446,6 @@ func (l *goLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remote
 				l.fail("go: %s: import %q has both an exact resolve mapping and ignore", from, name)
 				continue
 			}
-			// The owning library reaches the package-level test via
-			// `embed`, never via an import edge: drop same-package
-			// overrides on tests to avoid duplicating the embed.
 			if isTest && override.Pkg == from.Pkg {
 				continue
 			}
@@ -507,7 +458,6 @@ func (l *goLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remote
 			if matches[0].Label == from {
 				continue
 			}
-			// Same-package library matches reach the test via `embed`.
 			if isTest && matches[0].Label.Pkg == from.Pkg {
 				continue
 			}
@@ -568,8 +518,6 @@ func formatMatches(matches []resolve.FindResult) string {
 	return fmt.Sprintf("[%s]", strings.Join(labels, ", "))
 }
 
-// CollectUsedIgnores reports used dx_ignore_import entries visible in c
-// as (path, value) pairs for the composed `//dx:generate` witness.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

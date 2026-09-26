@@ -215,7 +215,7 @@ pub fn bcr_run(
     }
     if !approved {
         return Err(
-            "bcr: submission needs explicit owner approval per issue #5 (BCR_APPROVE=1); run with BCR_DRY_RUN=1 to print the would-submit PR"
+            "bcr: submission needs explicit owner approval (BCR_APPROVE=1); run with BCR_DRY_RUN=1 to print the would-submit PR"
                 .to_owned(),
         );
     }
@@ -425,7 +425,7 @@ pub fn release_run(
     }
     if approve != "1" {
         return Err(
-            "release: real release needs RELEASE_APPROVE=1 plus explicit owner approval per issue #5"
+            "release: real release needs RELEASE_APPROVE=1 plus explicit owner approval"
                 .to_owned(),
         );
     }

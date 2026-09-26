@@ -1,5 +1,3 @@
-"""Bump discovery outdated enumeration pins."""
-
 BUMP_DISCOVERY = "enumerate"
 
 BUMP_DISCOVERY_BAZEL = "BCR"
@@ -32,4 +30,4 @@ REJECTED_CUSTOM_HTTP = "custom HTTP rejected"
 REJECTED_PRIVATE_RESOLVER = "private resolver rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #639"
+SEED_ONLY = "qualified seed-only"

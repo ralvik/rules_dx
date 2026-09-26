@@ -1,7 +1,3 @@
-"""Stable-stack compose pins.
-
-"""
-
 BAZEL_VERSION = "9.2.0"
 RULES_RUST_VERSION = "0.74.0"
 RULES_CC_VERSION = "0.2.22"
@@ -28,7 +24,7 @@ SOURCE_ACQUISITION = "extensions/llvm.bzl"
 FREEZE_NOTE = "Freeze compiler archives, runtime sources, upstream patches, SDK manifests and package hashes separately from ruleset source hashes"
 
 BAZEL_BASELINE_NOTE = "Bazel 9 is a provisional initial coverage baseline because the inspected hermetic-llvm coverage fixture requires it, not a release pin"
-RELEASE_DEFAULT_NOTE = "the release default follows ADR 0008 and the exact seed pin is tracked here"
+RELEASE_DEFAULT_NOTE = "the release default follows and the exact seed pin is tracked here"
 NO_SILENT_INHERIT = "Do not silently inherit rules_rs's older compiler default or turn a research version into a release pin"
 NO_SECOND_GRAPH = "do not compose a second independent Rust rules graph"
 

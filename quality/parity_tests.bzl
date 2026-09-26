@@ -1,21 +1,17 @@
-"""Fail-closed v1 parity gate (WP1/WP3, ADR 0019).
-
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY")
 
 PARITY_SCHEMA_VERSION = 1
 
 PARITY_DEFERRED = {
-    "astro": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "graphql": ["ADR 0019", "private Node graph (Prettier GraphQL parser)"],
-    "html": ["ADR 0019", "private Node graph (Prettier HTML parser)"],
-    "json5": ["ADR 0019", "private Node graph (Prettier JSON5 parser); Biome adapter claim pending"],
-    "jsonc": ["ADR 0019", "private Node graph (Prettier JSONC parser); Biome adapter claim pending"],
-    "mdx": ["ADR 0019", "framework adapter region; prose-is-not-dependency boundary per composition"],
-    "svelte": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
-    "vue": ["ADR 0019", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "astro": ["ADR", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "graphql": ["ADR", "private Node graph (Prettier GraphQL parser)"],
+    "html": ["ADR", "private Node graph (Prettier HTML parser)"],
+    "json5": ["ADR", "private Node graph (Prettier JSON5 parser); Biome adapter claim pending"],
+    "jsonc": ["ADR", "private Node graph (Prettier JSONC parser); Biome adapter claim pending"],
+    "mdx": ["ADR", "framework adapter region; prose-is-not-dependency boundary per composition"],
+    "svelte": ["ADR", "framework adapter region; Prettier/ESLint plugin closure pending"],
+    "vue": ["ADR", "framework adapter region; Prettier/ESLint plugin closure pending"],
 }
 
 def _adapter_backed_classes():
@@ -27,19 +23,9 @@ def _adapter_backed_classes():
     return backed
 
 def adapter_backed_classes():
-    """Returns the sorted adapter-backed classes via registry query.
-
-    Derived from `REAL_ADAPTERS` capabilities, never duplicated, so adding
- an adapter claim edits the adapter registry data only.
-    """
     return sorted(_adapter_backed_classes().keys())
 
 def deferred_classes():
-    """Returns the sorted explicitly deferred classes via registry query.
-
-    Derived from `PARITY_DEFERRED` keys, never duplicated, so adding a
- deferral edits this one data map only.
-    """
     return sorted(PARITY_DEFERRED.keys())
 
 def _is_canonical_token(text):
@@ -51,14 +37,6 @@ def _is_canonical_token(text):
     return True
 
 def parity_schema_error():
-    """Validates the versioned parity-gate schema.
-
-    Checks data shape without pinning exact contents, so adding a deferred
-    class edits the deferral data only: version is v1, every deferred ID
-    is canonical, and every entry carries an owning decision plus a frozen
-    route. Disposition coverage (unclassified/undispositioned/double-claim)
-    stays checked by the registry queries below, not by an allowlist.
-    """
     if PARITY_SCHEMA_VERSION != 1:
         return "parity gate: unsupported schema v" + str(PARITY_SCHEMA_VERSION) + " (want v1)"
     for class_id in PARITY_DEFERRED:
@@ -97,15 +75,6 @@ def _malformed_deferrals():
     return bad
 
 def deferred_pipeline_error(target_classes, capability):
-    """Returns a fail-closed error for deferred classes with sources.
-
-    When a target carries direct sources of a deferred class (no adapter
-    claims it) and the pipeline resolves empty, returning no action would
-    stay green and hide the gap. Callers fail with this message instead,
-    naming the owning decision plus frozen route per deferral, so `dx status`
-    surfaces the honest red via the failed action. Empty means no deferred
-    class present: genuinely no work, stay green.
-    """
     deferred = sorted([c for c in target_classes if c in PARITY_DEFERRED])
     if len(deferred) == 0:
         return ""

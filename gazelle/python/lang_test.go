@@ -347,7 +347,6 @@ func TestResolveBranches(t *testing.T) {
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "unresolved import") {
 		t.Errorf("unresolved errors = %v", l.errors)
 	}
-	// Invalid opaque values are ignored by the resolver contract.
 	l.Resolve(cfg, index, nil, r, nil, label.New("", "app", "app"))
 }
 

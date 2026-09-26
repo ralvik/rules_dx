@@ -1,7 +1,3 @@
-"""terraform check plus fix wiring.
-
-"""
-
 TERRAFORM_VERSION = "v1.16.1"
 TERRAFORM_ARTIFACT = "standalone checksummed release artifact; terraform fmt"
 TERRAFORM_CHECK = "terraform fmt -check -diff"

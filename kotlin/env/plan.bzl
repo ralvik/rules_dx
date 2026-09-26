@@ -1,14 +1,9 @@
-"""Focused Kotlin environment plan (WP2).
-
-"""
-
 load("@rules_java//java:defs.bzl", "JavaInfo")
 load("//env:focused.bzl", "focused_closure_plan", "focused_direct_sources", "focused_transitive_basenames", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 KotlinEnvPlanInfo = provider(
-    doc = "Provider-derived focused Kotlin target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct Kotlin/Java sources.",
         "has_sources": "Whether the wrapper owns any direct sources.",
@@ -54,8 +49,6 @@ kotlin_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One kotlin_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Kotlin environment plan for one wrapper target (WP2).",
 )

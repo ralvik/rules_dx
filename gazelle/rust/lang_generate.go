@@ -1,5 +1,3 @@
-// Generation and rendering for the dx Rust Gazelle extension.
-
 package rust
 
 import (
@@ -72,10 +70,6 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 			r.SetAttr("visibility", []string{"//visibility:public"})
 		}
 		imports := importsFor(tree)
-		// Examples and benches link development dependencies: their
-		// production imports may come from [dev-dependencies]. The
-		// build script sees only [build-dependencies]; it is emitted
-		// separately below.
 		if target.kind == exampleKind || target.kind == benchKind {
 			if err := validateExampleImports(args.Config, manifest, imports); err != nil {
 				l.fail("rust: %s: target %s: %v", manifestPath, target.name, err)
@@ -93,11 +87,6 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 		} else {
 			resultImports = localCargoImports(args.Config, manifest, imports, includeDev)
 		}
-		// Tests link the sibling library like binaries do: Cargo binds
-		// the package lib into integration tests without an import.
-		// (Examples and benches already arrive here as binaryKind via
-		// dxKindFor.) Unit-test wrappers below keep narrow test-only
-		// imports instead: their `crate` edge carries the package.
 		if dxKindFor(target) == binaryKind || target.kind == testKind {
 			resultImports.siblingLib = siblingLibName(manifest, target)
 		}
@@ -107,13 +96,6 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 		result.Gen = append(result.Gen, r)
 		result.Imports = append(result.Imports, resultImports)
 		if wantsUnitTest(target, tree) {
-			// The unit-test wrapper is named after the Rust crate, not the
-			// Bazel target: `crate` keeps pointing at the (possibly
-			// disambiguated) library target while the test name stays
-			// stable across lib renames. A binary with its own unit tests
-			// takes the `_bin` variant so lib and bin wrappers never share
-			// a name in one package; an example with `test = true` takes
-			// the `<example>_test` wrapper. Benches never gain wrappers.
 			var testName string
 			switch target.kind {
 			case exampleKind:
@@ -128,10 +110,6 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 			setCargoAttrs(t, args.Rel, manifest, targetImports{test: imports.test}, true)
 			result.Gen = append(result.Gen, t)
 			wrapperImports := localCargoImports(args.Config, manifest, targetImports{test: imports.test}, true)
-			// The wrapper tests its own crate through the `crate`
-			// edge: mirroring the package's declared path deps here
-			// would only duplicate what the crate target already
-			// links, so the wrapper stays narrow.
 			wrapperImports.mirrorPaths = nil
 			result.Imports = append(result.Imports, wrapperImports)
 		}
@@ -145,9 +123,6 @@ func (l *rustLang) generateCargo(args language.GenerateArgs, files []string, pla
 	return l.attachNative(args, result, plan)
 }
 
-// dxKindFor maps a manifest target to its emitted rule kind: examples and
-// benches are ordinary binaries under affixed names; libraries resolve
-// their flavor to the matching wrapper.
 func dxKindFor(target cargoTarget) string {
 	switch target.kind {
 	case exampleKind, benchKind:
@@ -165,10 +140,6 @@ func dxKindFor(target cargoTarget) string {
 	return target.kind
 }
 
-// wantsUnitTest reports whether a target gains a libtest wrapper: every
-// crate kind except integration tests (which already are tests) and
-// benches (which never run under libtest); examples only with
-// `test = true`.
 func wantsUnitTest(target cargoTarget, tree map[string]*FileFacts) bool {
 	if target.kind == testKind || target.kind == benchKind {
 		return false
@@ -179,17 +150,6 @@ func wantsUnitTest(target cargoTarget, tree map[string]*FileFacts) bool {
 	return hasUnitTests(tree)
 }
 
-// emitBuildScript generates the cargo_build_script rule for an active
-// [package] build script and links every crate rule already in result to
-// it: the upstream consumer pattern is a plain deps edge carrying
-// BuildScriptInfo outputs (cfgs, env, generated files) into each crate's
-// compilation. The script rule itself stays unlinked. Generated script
-// attributes mirror crate_universe's script shape (srcs, crate_root,
-// edition, version, pkg_name, crate_features) with hermetic defaults
-// forced (use_cc_toolchain on, default shell env off) and diagnostics
-// forwarded (emit_warnings on, overridable by the global build setting).
-// tools, data, env, and links stay user-owned via keep: a script needing
-// them fails in the sandbox rather than building silently wrong.
 func (l *rustLang) emitBuildScript(args language.GenerateArgs, manifestPath string, manifest *cargoManifest, existsSet map[string]bool, read func(string) ([]byte, error), owners map[string]string, result *language.GenerateResult) {
 	scriptName, err := BuildScriptName(manifest.packageName)
 	if err != nil {
@@ -262,12 +222,6 @@ func checkExistingClaims(file *rule.File, other, generated []*rule.Rule) error {
 	}
 	for _, proposed := range generated {
 		if kind, ok := claims[proposed.Name()]; ok && kind != proposed.Kind() {
-			// A hand-maintained dx_rust_crate macro owns the ordinary
-			// rust_library it expands to: the macro stays
-			// the single owner and generation filters the covered lib
-			// before this check, so an unfiltered residue must not fail
-			// the run. Flavored libraries (proc-macro/cdylib/staticlib)
-			// never match: the macro only emits ordinary rlibs.
 			if kind == dxCrateKind && proposed.Kind() == libraryKind {
 				continue
 			}
@@ -301,14 +255,6 @@ func (c crateDepsCall) Merge(other bzl.Expr) bzl.Expr {
 	return c.BzlExpr()
 }
 
-// depsConcatExpr renders `base + [...]`: first-party labels Resolve appends
-// to generated crate_deps(...) calls. Both sides are label lists, so the
-// concatenation stays a valid deps list. Merge takes the freshly resolved
-// value but carries forward hand-maintained labels from the previous
-// expression (e.g. `@rules_rust//tools/runfiles:runfiles`, which no import
-// or directive resolves): dropping them would silently break the build on
-// every generate. Hand labels are therefore never removed by generate;
-// delete them manually when they go stale.
 type depsConcatExpr struct {
 	base  bzl.Expr
 	extra []string
@@ -333,10 +279,6 @@ func (c depsConcatExpr) Merge(other bzl.Expr) bzl.Expr {
 	return depsConcatExpr{base: c.base, extra: unionStrings(c.extra, unmanagedDepsLabels(other, managed))}.BzlExpr()
 }
 
-// cargoCallNames collects the crate names referenced by a crate_deps call
-// expression so Merge can tell managed names apart from hand labels. The
-// base is always a rendered *bzl.CallExpr (rule attrs store BzlExpr()
-// output, never the wrapper struct).
 func cargoCallNames(base bzl.Expr) []string {
 	call, ok := base.(*bzl.CallExpr)
 	if !ok {
@@ -361,10 +303,6 @@ func cargoCallNames(base bzl.Expr) []string {
 	return names
 }
 
-// unmanagedDepsLabels returns the plain-list string labels in a previous
-// deps expression that are not in the managed set. Only ListExpr nodes
-// (including `+` tails) contribute: strings inside call arguments such as
-// crate_deps' package_name are metadata, not labels, and are skipped.
 func unmanagedDepsLabels(other bzl.Expr, managed map[string]bool) []string {
 	var out []string
 	var walk func(e bzl.Expr)
@@ -407,9 +345,6 @@ func cargoBuildCall(packageName string) cargoCallExpr {
 
 func (c cargoCallExpr) BzlExpr() bzl.Expr {
 	var args []bzl.Expr
-	// Build scope selects exactly the build maps, mirroring
-	// crate_universe's aliases(build = True); every other call keeps the
-	// historical normal-first shape.
 	if !c.includeBuild {
 		args = append(args, &bzl.AssignExpr{LHS: &bzl.Ident{Name: "normal"}, Op: "=", RHS: &bzl.Ident{Name: "True"}})
 	}
@@ -445,11 +380,9 @@ func sourceFiles(dir, rel string) ([]string, error) {
 			}
 			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".rs") {
 				local, relErr := filepath.Rel(dir, name)
-				// LCOV_EXCL_START - reason: defensive branch, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 				if relErr != nil {
 					return relErr
 				}
-				// LCOV_EXCL_STOP - reason: end defensive branch, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 				files = append(files, path.Join(rel, filepath.ToSlash(local)))
 			}
 			return nil
@@ -497,9 +430,6 @@ func importsFor(tree map[string]*FileFacts) targetImports {
 			addImport(sets, localModules, use.Path, use.CfgTest)
 		}
 		for _, ext := range facts.Externs {
-			// An `as` alias renames the crate for every later path in the
-			// crate, so the alias is the name validation and resolution see;
-			// an exact mapping then pins the alias to the real target.
 			name := ext.Name
 			if ext.As != "" {
 				name = ext.As
@@ -531,9 +461,6 @@ func addImport(sets [2]map[string]bool, localModules map[string]bool, raw string
 	sets[index][root] = true
 }
 
-// isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path: any path containing tests, fixtures, or
-// testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
 	padded := "/" + rel + "/"
 	return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
@@ -555,9 +482,6 @@ func staleRules(file *rule.File, desired map[string]bool) language.GenerateResul
 		return result
 	}
 	for _, existing := range file.Rules {
-		// Managed config targets never sweep here: a hand-authored
-		// target of a config kind is always preserved, and only the
-		// native plan stages exact removals of generated rules.
 		if isNativeConfigKind(existing.Kind()) {
 			continue
 		}
@@ -570,12 +494,6 @@ func staleRules(file *rule.File, desired map[string]bool) language.GenerateResul
 	return result
 }
 
-// siblingLibName returns the Bazel name of the same-manifest library a
-// binary target links automatically, or "" when the package has no library.
-// An ordinary library wins; otherwise the first flavored library binds
-// (proc-macro, cdylib, staticlib): Cargo links examples, benches, and bins
-// against the package library whatever its shape, and a link failure
-// upstream then means Cargo would fail too.
 func siblingLibName(manifest *cargoManifest, bin cargoTarget) string {
 	for _, target := range manifest.targets {
 		if target.kind == libraryKind && target.flavor == "" {

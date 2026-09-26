@@ -1,7 +1,3 @@
-"""Normalized environment plan records.
-
-"""
-
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load(
@@ -17,7 +13,6 @@ load(
 )
 
 DxEnvPlanInfo = provider(
-    doc = "Normalized environment plan records: direct plus transitive collection.",
     fields = {
         "direct": "List of environment record structs contributed by this target.",
         "transitive": "Depset of environment record structs from the closure.",
@@ -25,7 +20,6 @@ DxEnvPlanInfo = provider(
 )
 
 DxEnvPlanCollectedInfo = provider(
-    doc = "Aspect-merged environment plan records from the traversed closure.",
     fields = {
         "records": "Depset of merged environment record structs.",
     },
@@ -40,7 +34,6 @@ DX_ENV_ADMITTED_INTEGRATIONS = (
 )
 
 def env_plan_key_error(key):
-    """Validates one identity-dimension key."""
     if key == "":
         return "invalid env plan key '': must be a non-empty single token"
     if "/" in key or "\\" in key:
@@ -50,7 +43,6 @@ def env_plan_key_error(key):
     return ""
 
 def env_plan_value_error(value):
-    """Validates one identity-input value."""
     if value == "":
         return "invalid env plan value '': must be a non-empty identity input"
     if "|" in value:
@@ -58,12 +50,6 @@ def env_plan_value_error(value):
     return ""
 
 def env_plan_exec_error(path):
-    """Validates one BEP-matching exec-path suffix.
-
-    Empty means a logical-only identity input requiring no artifact.
-    Non-empty must be a workspace-relative path and never uses the
-    reserved shard suffix (a shard never backs another shard).
-    """
     if path == "":
         return ""
     if path.endswith(DX_ENV_SHARD_SUFFIX):
@@ -78,7 +64,6 @@ def env_plan_exec_error(path):
     return ""
 
 def env_plan_entry(key, value, exec_path = ""):
-    """Builds one normalized environment identity entry struct."""
     return struct(
         exec_path = exec_path,
         key = key,
@@ -86,7 +71,6 @@ def env_plan_entry(key, value, exec_path = ""):
     )
 
 def env_plan_record(producer, integration, entries):
-    """Builds one normalized contributor record struct."""
     return struct(
         entries = tuple(entries),
         integration = integration,
@@ -109,7 +93,6 @@ def _env_plan_claim_key(entry):
     return entry.key
 
 def env_plan_record_error(record):
-    """Validates one contributor record."""
     second_error = ""
     if record.integration == "":
         second_error = "integration must be a non-empty language class"
@@ -127,11 +110,6 @@ def _env_plan_entry_key(entry):
     return (entry.key, entry.value, entry.exec_path)
 
 def env_plan_conflict_error(records):
-    """Detects incompatible identity-key claims across records.
-
-    Byte-identical duplicates (same producer, integration, key, value,
-    and exec path) merge silently. Any other second claim on one key
-    fails, listing every claimant: no traversal-order winner is accepted."""
     return plan_shard_conflict_error(
         records,
         _env_plan_owner_of,
@@ -156,12 +134,6 @@ def _env_plan_encode_record(record):
     }
 
 def env_plan_merge_records(records):
-    """Merges records into deterministic normalized order.
-
-    Byte-identical duplicate entries collapse; surviving records sort
-    by (producer, integration) with entries sorted by (key, value, exec
-    path). The rendering is the normalized complete-plan form the CLI
-    hashes."""
     return plan_shard_merge_records(
         records,
         _env_plan_owner_of,
@@ -170,11 +142,9 @@ def env_plan_merge_records(records):
     )
 
 def env_plan_fingerprint(records):
-    """Renders the normalized complete-plan hash input."""
     return plan_shard_fingerprint(records, env_plan_merge_records, _env_plan_encode_record)
 
 def env_plan_integration_error(integration):
-    """Validates one language integration against the admitted set."""
     if integration in DX_ENV_ADMITTED_INTEGRATIONS:
         return ""
     return (
@@ -183,11 +153,6 @@ def env_plan_integration_error(integration):
     )
 
 def _parse_entry_spec(spec, label_text):
-    """Parses one KEY|VALUE[|EXEC] entry spec.
-
-    The two-part form declares a logical-only identity input (empty exec
-    path, requiring no materialized artifact). The three-part form
-    declares the BEP-matching exec-path suffix for the backing artifact."""
     parts = spec.split("|")
     if len(parts) == 2:
         return env_plan_entry(parts[0], parts[1])
@@ -200,7 +165,6 @@ def _parse_entry_spec(spec, label_text):
     )
 
 def _emit_shard(ctx, producer, integration, entry_structs):
-    """Validates one record and emits its binary shard via the writer."""
     record = env_plan_record(producer, integration, entry_structs)
     record_error = env_plan_record_error(record)
     if record_error != "":
@@ -231,11 +195,6 @@ def _emit_shard(ctx, producer, integration, entry_structs):
     return out, record
 
 def _exec_matches(file_path, exec_path):
-    """Reports whether a Bazel file path satisfies an exec-path suffix.
-
-    Suffix matching (on "/" boundaries, plus exact equality) lets one
-    identity input resolve under different output bases without scanning
-    `bazel-out`."""
     return plan_shard_exec_matches(file_path, exec_path)
 
 def _dx_env_shard_impl(ctx):
@@ -256,24 +215,19 @@ dx_env_shard = rule(
     attrs = {
         "deps": attr.label_list(
             default = [],
-            doc = "Graph edges the collecting aspect traverses; contributes no records itself.",
         ),
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Non-empty identity entries, each KEY|VALUE[|EXEC_PATH].",
         ),
         "integration": attr.string(
             default = "rust",
-            doc = "Language integration class, e.g. 'rust'. Only admitted integrations are accepted.",
         ),
         "_writer": attr.label(
             default = "//env/env_shard:env_shard_writer",
             executable = True,
             cfg = "exec",
-            doc = "Shard writer emitting the validated binary DxEnvShard protobuf.",
         ),
     },
-    doc = "Emits one contributor's normalized binary environment plan shard (issue #506 WP2).",
 )
 
 _ENV_PLAN_ASPECT_ATTRS = ["deps", "target"]
@@ -298,7 +252,6 @@ def _dx_env_plan_aspect_impl(target, ctx):
 dx_env_plan_aspect = aspect(
     implementation = _dx_env_plan_aspect_impl,
     attr_aspects = _ENV_PLAN_ASPECT_ATTRS,
-    doc = "Collects normalized environment plan records and shard files along narrow env edges.",
 )
 
 def _rust_env_shard_impl(ctx):
@@ -361,24 +314,19 @@ rust_env_shard = rule(
     attrs = {
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Explicit identity entries, each KEY|VALUE[|EXEC_PATH]. Exec-bound entries bind one upstream crate source; logical-only entries carry no backing artifact.",
         ),
         "integration": attr.string(
             default = "rust",
-            doc = "Language integration class. Only 'rust' is admitted.",
         ),
         "target": attr.label(
             mandatory = True,
-            doc = "One rust_* wrapper target proving the Rust edge via its CrateInfo/TestCrateInfo and crate sources.",
         ),
         "_writer": attr.label(
             default = "//env/env_shard:env_shard_writer",
             executable = True,
             cfg = "exec",
-            doc = "Shard writer emitting the validated binary DxEnvShard protobuf.",
         ),
     },
-    doc = "Narrow Rust adapter: verifies the rust_* wrapper edge and emits one normalized shard (issue #506 WP2).",
 )
 
 def _env_plan_subject_impl(ctx):
@@ -403,8 +351,6 @@ env_plan_subject = rule(
         "target": attr.label(
             aspects = [dx_env_plan_aspect],
             mandatory = True,
-            doc = "Fixture target observed with the env plan aspect applied.",
         ),
     },
-    doc = "Exposes the merged env plan fingerprint and shard basenames for aspect evidence.",
 )

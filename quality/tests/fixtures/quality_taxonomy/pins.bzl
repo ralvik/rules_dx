@@ -1,7 +1,3 @@
-"""Quality family taxonomy execution pins.
-
-"""
-
 TAXONOMY_CLASSES = "47 classes each with exactly one owning family"
 TAXONOMY_FAMILIES = "39 owning families"
 TAXONOMY_SINGLE_SOURCED = "single-sourced in quality/adapters.bzl REAL_CLASS_TO_FAMILY"
@@ -29,12 +25,12 @@ BACKED_CLASSES = "39 adapter-backed classes: c plus cpp plus cuda plus csharp pl
 BACKED_TOOLS = "53 real adapters: biome plus buf plus buildifier plus checkstyle plus clang_format plus clang_tidy plus clippy plus cppcheck plus csharpier plus cue plus djlint plus errcheck plus eslint plus fantomas plus flake8 plus fsharplint plus gofumpt plus google_java_format plus govet plus jsonnetfmt plus keep_sorted plus ktfmt plus ktlint plus markdown_check plus modfmt plus pkl plus pmd plus prettier plus psscriptanalyzer plus pydoclint plus pylint plus qmlformat plus qmllint plus roslyn plus rubocop plus ruff plus rustc plus rustfmt plus scalafix plus scalafmt plus shellcheck plus shfmt plus spotbugs plus standardrb plus staticcheck plus stylelint plus taplo plus terraform plus tsc plus ty plus vale plus yamlfmt plus yamllint"
 
 DEFERRED_COUNT = "8 deferred classes with owner plus frozen route"
-DEFERRED_OWNER = "every deferral names ADR 0019 plus frozen delivery route"
+DEFERRED_OWNER = "every deferral names frozen delivery route"
 DEFERRED_NO_DOUBLE_CLAIM = "no class is both adapter-backed and deferred"
 DEFERRED_NO_UNDISPOSITIONED = "no classified class lacks a disposition"
 
 AUDIT_EMPTY = "curated audit stays empty with explicit disablement"
-AUDIT_BANDIT_EXCLUDED = "Bandit excluded from v1 by ADR 0019"
+AUDIT_BANDIT_EXCLUDED = "Bandit excluded from v1"
 AUDIT_SECRETS_SEPARATE = "secrets family rides Gitleaks detect with redact plus SARIF"
 
 APPLICABILITY_INTERSECTION = "effective classes intersect provider plus adapter plus policy"
@@ -66,7 +62,7 @@ REJECTED_ALTERNATIVES = [
     "unexecuted taxonomy",
 ]
 
-OWNED_DEFERRED = "deferred adapters delivered under 796 plus 797 plus 798 plus 799 plus 800 with remaining owned under ADR 0019 plus 307"
+OWNED_DEFERRED = "deferred adapters delivered under 796 plus 797 plus 798 plus 799 plus 800 with remaining owned under 307"
 OWNED_DIGESTS = "digests plus rule-sets stay owned by their cohort qualifications"
 OWNED_DIGEST_POLICY = "digest policy with JVM digests pinned in quality/tools/jvm/repos.bzl plus standalone per-host digests in quality/artifacts plus rule-sets qualified under 485 through 489"
 OWNED_PLATFORM = "platform evidence with per-host artifacts plus coverage cells plus CI matrix plus unsupported_platform refusal"

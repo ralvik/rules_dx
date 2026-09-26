@@ -1,4 +1,3 @@
-// Go from_file fixture test; consumer of go_test with an external dep.
 package godeps
 
 import (
@@ -25,7 +24,6 @@ func TestEqual(t *testing.T) {
 	if Equal("a", "b") {
 		t.Fatal("Equal(a,b) = true, want false")
 	}
-	// Direct cmp usage proves the external import resolves in tests too.
 	if diff := cmp.Diff([]int{1, 2}, []int{1, 3}); diff == "" {
 		t.Fatal("cmp.Diff = empty, want non-empty")
 	}

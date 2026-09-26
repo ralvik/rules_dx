@@ -1,7 +1,3 @@
-"""standardrb check plus fix wiring.
-
-"""
-
 STANDARDRB_VERSION = "1.56.0"
 STANDARDRB_ARTIFACT = "release-assembled Ruby closure member"
 STANDARDRB_CHECK = "standardrb --check"

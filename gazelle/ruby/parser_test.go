@@ -7,8 +7,6 @@ import (
 
 func TestParseImportsSingleRequire(t *testing.T) {
 	got := ParseImports([]byte("require \"acme/widget\"\nrequire \"json\"\n"))
-	// json is included (callers filter stdlib); the local require keeps
-	// its full path.
 	want := []string{"acme/widget", "json"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseImports = %v, want %v", got, want)

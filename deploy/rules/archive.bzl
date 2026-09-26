@@ -1,20 +1,8 @@
-"""Credential-free release archives for `dx deploy`.
-
-"""
-
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
 
 def _archive_stage_impl(ctx):
-    """Stages one executable as a single file preserving its basename.
-
-    `sh_binary` (and other executable wrappers) expose more than one file
-    via `DefaultInfo.files`, so `$(location :app)` fails with "expands to
-    more than one file". The stage resolves `files_to_run.executable`
-    once and symlinks it to `<stage>/<basename>`: the basename stays the
-    original executable name (the tar member), while the parent directory
-    keeps each `archive_deploy` instance distinct."""
     exe = ctx.attr.app[DefaultInfo].files_to_run.executable
     if exe == None:
         fail("archive_deploy " + str(ctx.label) + ": app " +
@@ -27,25 +15,12 @@ _archive_stage = rule(
     implementation = _archive_stage_impl,
     attrs = {
         "app": attr.label(
-            doc = "Executable to stage.",
             mandatory = True,
         ),
     },
-    doc = "Stages one executable for archive_deploy (single file, basename preserved).",
 )
 
 def _archive_launcher_impl(ctx):
-    """Expands the `py_binary` launcher for one release.
-
-    The rule computes the runfiles rlocations for the staged app,
-    tarball, and checksum via `rlocation_path`, then expands the shared
-    `archive_deploy.py` template with those pins. The wrapping
-    `py_binary` (see `archive_deploy`) carries the pinned inputs in
-    `data` plus the Python runfiles library, so the launcher works under
-    `bazel run`, `dx deploy` (which symlinks the `py_binary` entrypoint
-    and merges its runfiles), and direct `bazel-bin` execution. Extra
-    user args after `--` select the output directory (default:
-    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd)."""
     app_files = ctx.attr.app[DefaultInfo].files.to_list()
     if len(app_files) != 1:
         fail("archive_deploy " + str(ctx.label) + ": stage must provide exactly one file")
@@ -67,7 +42,7 @@ def _archive_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
+        # buildifier: disable=canonical-repository
         substitutions = {
             "@@APP_RLOC@@": app_rloc,
             "@@CHECKSUM_RLOC@@": checksum_rloc,
@@ -87,31 +62,12 @@ _archive_launcher = rule(
             default = "//deploy/rules:archive_deploy.py",
         ),
     },
-    doc = "Launcher template expansion for archive_deploy (wrapped as py_binary).",
 )
 
 def archive_filenames(name):
-    """Returns the deterministic (tarball, checksum) output names."""
     return (name + ".tar.gz", name + ".tar.gz.sha256")
 
 def archive_deploy(name, app, profile = "release"):
-    """Packages one executable as a tarball + sha256 deployable target.
-
-    Creates `<name>_stage` (single-file executable stage),
-    `<name>_archive` (deterministic tarball via the hermetic
-    `//deploy/rules:archiver` tool), `<name>_checksum` (sha256 via the
-    hermetic `//deploy/rules:hasher` tool), `<name>_program_launcher`
-    (expanded Python launcher resolving inputs via the Python runfiles
-    library), `<name>_program` (`py_binary` on the managed Python 3.12
-    toolchain wrapping the launcher with pinned `data` plus the runfiles
-    library), and `<name>` (the `dx_deployment` returning
-    `DxDeployInfo` with `app` and `profile`). Run with
-    `bazel run :<name>` or `dx deploy :<name>`; pass an output directory
-    after `--` to choose where the artifacts land (default:
-    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd). Deploy runtime is
-    hermetic Python only (hashlib plus file copies): no bash, no host
-    `tar`/`sha256sum`, no `sh_binary`.
-    """
     (tarball, checksum) = archive_filenames(name)
     archive_target = name + "_archive"
     checksum_target = name + "_checksum"
@@ -167,10 +123,6 @@ def archive_deploy(name, app, profile = "release"):
     )
 
 def archive_release(name, app, profile = "release"):
-    """Compat alias for `archive_deploy`.
-
-    Kept for one release cycle, then removed.
-    """
     archive_deploy(
         name = name,
         app = app,

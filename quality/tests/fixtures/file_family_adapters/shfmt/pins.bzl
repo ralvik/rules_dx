@@ -1,7 +1,3 @@
-"""shfmt check plus fix wiring.
-
-"""
-
 SHFMT_VERSION = "v3.12.0"
 SHFMT_ARTIFACT = "standalone checksummed release artifact"
 SHFMT_CHECK = "shfmt -d"

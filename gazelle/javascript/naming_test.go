@@ -134,9 +134,6 @@ func TestIsEntryFile(t *testing.T) {
 		{"helper.js", false},
 		{"main.ts", false},
 		{"main", false},
-		// Other layouts are an explicit wont-fix: only the
-		// exact `main` basename is an entry. Manifest-declared names
-		// (`package.json` `main`/`bin`) are never inferred.
 		{"index.js", false},
 		{"app.jsx", false},
 		{"cli.mjs", false},

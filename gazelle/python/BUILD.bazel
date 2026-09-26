@@ -1,4 +1,3 @@
-"""First-party Python Gazelle extension (ADR 0010)."""
 
 load("@gazelle//:def.bzl", "gazelle_binary", "gazelle_generation_test")
 load("@rules_go//go:def.bzl", "go_library", "go_test")

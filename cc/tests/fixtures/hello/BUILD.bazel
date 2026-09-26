@@ -1,4 +1,3 @@
-"""Seed C/C++ binary and library; consumer of cc_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//cc/rules:defs.bzl", "cc_binary", "cc_library", "cc_test")

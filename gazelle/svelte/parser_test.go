@@ -6,14 +6,10 @@ import (
 	"testing"
 )
 
-// wrap places one script body inside a minimal Svelte component with
-// inert markup and style regions.
 func wrap(script string) string {
 	return "<script>\n" + script + "</script>\n\n<div class=\"hello\">hello</div>\n\n<style>\n.hello {\n  color: black;\n}\n</style>\n"
 }
 
-// wrapModule places one module script plus one instance script inside a
-// minimal Svelte component; both blocks execute as modules.
 func wrapModule(module, instance string) string {
 	return "<script context=\"module\">\n" + module + "</script>\n\n<script>\n" + instance + "</script>\n\n<div class=\"hello\">hello</div>\n"
 }
@@ -144,10 +140,9 @@ func TestParseImports(t *testing.T) {
 
 func TestExtractScripts(t *testing.T) {
 	cases := []struct {
-		name string
-		source string
-		want []string
-		// wantNil reports no script content when true (want is ignored).
+		name    string
+		source  string
+		want    []string
 		wantNil bool
 	}{
 		{"basic", "<script>\nconst x = 1;\n</script>", []string{"const x = 1;"}, false},

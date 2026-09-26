@@ -1,6 +1,3 @@
-"""Single-sourced versioned registry queries.
-
-"""
 
 load(":adapters.bzl", "ADAPTER_REGISTRY_SCHEMA_VERSION", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "adapter_registry_schema_error")
 load(":curated_defaults.bzl", "CURATED_DEFAULTS", "CURATED_SCHEMA_VERSION", "FORMAT_FROZEN", "curated_schema_error")
@@ -11,50 +8,33 @@ load(":wrapper_owners.bzl", "WRAPPER_OWNERS", "WRAPPER_SCHEMA_VERSION", "wrapper
 REGISTRY_SCHEMA_VERSION = 1
 
 def registry_classes():
-    """Returns the sorted registry classes via query (never duplicated)."""
     return sorted(REAL_CLASS_TO_FAMILY.keys())
 
 def registry_families():
-    """Returns the sorted unique owning families via query."""
     seen = {}
     for class_id in REAL_CLASS_TO_FAMILY:
         seen[REAL_CLASS_TO_FAMILY[class_id]] = True
     return sorted(seen.keys())
 
 def registry_tools():
-    """Returns the sorted known real adapter tools via query."""
     return sorted(REAL_ADAPTERS.keys())
 
 def registry_curated_families():
-    """Returns the sorted curated families via query."""
     return sorted(CURATED_DEFAULTS.keys())
 
 def registry_deferred_classes():
-    """Returns the sorted deferred classes via query."""
     return sorted(PARITY_DEFERRED.keys())
 
 def is_registry_class(class_id):
-    """Reports whether a class is in the single-sourced registry."""
     return class_id in REAL_CLASS_TO_FAMILY
 
 def is_registry_tool(tool_id):
-    """Reports whether a tool is in the single-sourced registry."""
     return tool_id in REAL_ADAPTERS
 
 def is_curated_family(family):
-    """Reports whether a family carries curated defaults."""
     return family in CURATED_DEFAULTS
 
 def registry_schema_error():
-    """Validates the aggregated versioned registry schemas.
-
-    Combines the per-registry schema checks without pinning exact contents:
-    versions are v1, class spellings are canonical, adapter-backed classes
-    are classified, curated families/tools stay within the taxonomy,
-    deferrals carry owner/route, and every taxonomy family carries a
-    wrapper owner or an explicit uncovered verdict. Additions edit
-    registry data only.
-    """
     if REGISTRY_SCHEMA_VERSION != 1:
         return "registry: unsupported schema v" + str(REGISTRY_SCHEMA_VERSION) + " (want v1)"
     if SOURCES_REGISTRY_SCHEMA_VERSION != 1:

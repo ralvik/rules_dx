@@ -1,7 +1,3 @@
-"""keep_sorted check plus fix wiring.
-
-"""
-
 KEEP_SORTED_VERSION = "v0.10.0"
 KEEP_SORTED_ARTIFACT = "standalone checksummed release artifact; check-only"
 KEEP_SORTED_CHECK = "keep-sorted text"

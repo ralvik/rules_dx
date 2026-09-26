@@ -1,6 +1,3 @@
-"""Target-scoped capability aspects over synthetic adapters (WP2c+WP3).
-
-"""
 
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load(
@@ -79,7 +76,6 @@ def _quality_pipeline_action(target, ctx, capability):
     return [OutputGroupInfo(dx_results = depset([out, marker]))]
 
 def _make_synthetic_impl(capability):
-    """Makes one capability impl over the shared pipeline action ("""
 
     def _impl(target, ctx):
         return _quality_pipeline_action(target, ctx, capability)
@@ -101,29 +97,24 @@ _COMMON_ATTRS = {
         executable = True,
         cfg = "exec",
         allow_files = True,
-        doc = "Per-result threshold evaluator emitting validation markers.",
     ),
     "_fail_on": attr.label(
         default = "//config:fail_on",
         providers = [BuildSettingInfo],
-        doc = "Lowest failing severity for evaluator actions.",
     ),
     "_policy": attr.label(
         default = "//quality:fixture_policy",
         providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
     ),
     "_runner": attr.label(
         default = "//quality/runner:quality_runner",
         executable = True,
         cfg = "exec",
         allow_files = True,
-        doc = "Deterministic pipeline runner producing QualityResult protobufs.",
     ),
     "_validate": attr.label(
         default = "//config:validate",
         providers = [BuildSettingInfo],
-        doc = "When true, register one evaluator action per pipeline result.",
     ),
 }
 
@@ -132,7 +123,6 @@ _SYNTHETIC_ASPECTS = {
         implementation = _make_synthetic_impl(capability),
         attr_aspects = [],
         attrs = _COMMON_ATTRS,
-        doc = _SYNTHETIC_DOCS[capability],
     )
     for capability in _SYNTHETIC_CAPABILITIES
 }

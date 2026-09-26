@@ -1,7 +1,3 @@
-"""Staticcheck check-only wiring.
-
-"""
-
 STATICCHECK_VERSION = "2026.2"
 
 STATICCHECK_ARTIFACT = "standalone checksummed release artifact"

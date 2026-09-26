@@ -19,14 +19,11 @@ func TestResolveMirrorPaths(t *testing.T) {
 	index := resolverIndex(l, struct{ pkg, name string }{"lib/b", "b"})
 	cfg := resolverConfig(t, nil)
 	cfg.Exts[languageName] = &rustConfig{}
-	// Unique index match becomes an edge without detection evidence.
 	mirrored := rule.NewRule(binaryKind, "app")
 	l.Resolve(cfg, index, nil, mirrored, targetImports{mirrorPaths: []string{"b"}}, label.New("", "app", "app"))
 	if got := strings.Join(mirrored.AttrStrings("deps"), ","); got != "//lib/b" {
 		t.Errorf("mirrored deps = %q, want //lib/b", got)
 	}
-	// Misses and self-matches stay silent: a declared-but-unused dep
-	// is legal and rustc reports a genuinely used one precisely.
 	silent := rule.NewRule(binaryKind, "quiet")
 	l.Resolve(cfg, index, nil, silent, targetImports{mirrorPaths: []string{"missing"}}, label.New("", "app", "quiet"))
 	if silent.Attr("deps") != nil {
@@ -37,7 +34,6 @@ func TestResolveMirrorPaths(t *testing.T) {
 	if own.Attr("deps") != nil {
 		t.Errorf("self mirror emitted deps: %v", own.AttrStrings("deps"))
 	}
-	// Ignored names are consumed without an edge.
 	ignored := &ignoreEntry{value: "b"}
 	cfg.Exts[languageName] = &rustConfig{ignores: []*ignoreEntry{ignored}}
 	skipped := rule.NewRule(binaryKind, "skipped")
@@ -72,8 +68,6 @@ func TestGenerateCargoLibraryVisibility(t *testing.T) {
 			}
 		}
 	}
-	// A file that already declares a default visibility keeps it: no
-	// per-rule attr is emitted.
 	f := rule.EmptyFile("BUILD.bazel", "")
 	pkg := rule.NewRule("package", "")
 	pkg.SetAttr("default_visibility", []string{"//visibility:public"})
@@ -263,7 +257,6 @@ func TestCargoImportResolveOverrides(t *testing.T) {
 	if strings.Join(local.production, ",") != "mapped" {
 		t.Errorf("mapped local imports = %+v, want [mapped]", local)
 	}
-	// An ignore on the same name conflicts with the exact mapping.
 	c.Exts[languageName] = &rustConfig{ignores: []*ignoreEntry{{value: "mapped"}}}
 	if err := validateCargoImports(c, manifest, libraryKind, mapped); err == nil || !strings.Contains(err.Error(), "both") {
 		t.Errorf("mapping/ignore conflict not reported: %v", err)
@@ -276,20 +269,17 @@ func TestResolvePreservesCrateDeps(t *testing.T) {
 		l.Resolve(resolverConfig(t, nil), resolverIndex(l), nil, r,
 			targetImports{siblingLib: "core"}, label.New("", "pkg", "tool"))
 	}
-	// No generated deps: plain label list.
 	fresh := rule.NewRule(binaryKind, "tool")
 	resolveSibling(fresh)
 	if got := strings.Join(fresh.AttrStrings("deps"), ","); got != ":core" {
 		t.Errorf("fresh deps = %q, want :core", got)
 	}
-	// Plain label list: union, sorted.
 	listed := rule.NewRule(binaryKind, "tool")
 	listed.SetAttr("deps", []string{":other"})
 	resolveSibling(listed)
 	if got := strings.Join(listed.AttrStrings("deps"), ","); got != ":core,:other" {
 		t.Errorf("listed deps = %q, want :core,:other", got)
 	}
-	// Generated crate_deps call: concatenated, never replaced.
 	called := rule.NewRule(binaryKind, "tool")
 	called.SetAttr("deps", crateDepsCall{names: []string{"serde_json"}, packageName: "pkg"})
 	resolveSibling(called)
@@ -318,9 +308,6 @@ func TestResolvePreservesCrateDeps(t *testing.T) {
 }
 
 func TestResolveDedupesSiblingLibDuplicate(t *testing.T) {
-	// Regression: a bin that both links its sibling lib automatically and
-	// imports the sibling crate used to emit :lib and //pkg:lib for the
-	// same target, which Bazel rejects as a duplicated deps entry.
 	l := &rustLang{}
 	cfg := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "rust quality_result //quality/result:quality_result"}})
 	r := rule.NewRule(binaryKind, "print_result")
@@ -330,7 +317,6 @@ func TestResolveDedupesSiblingLibDuplicate(t *testing.T) {
 	if got := strings.Join(r.AttrStrings("deps"), ","); got != ":quality_result" {
 		t.Errorf("deps = %q, want :quality_result", got)
 	}
-	// Unrelated absolute labels and other-repo same-name targets survive.
 	from := label.New("", "quality/result", "print_result")
 	deps := map[string]bool{
 		"//other/pkg:quality_result":      true,
@@ -429,7 +415,6 @@ func TestDepsMergePreservesHandLabels(t *testing.T) {
 	if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
 		t.Errorf("merged tail = %q, want %q", got, want)
 	}
-	// Idempotency: merging the fresh value into its own output is stable.
 	again := rule.NewRule("rust_binary", "env")
 	again.SetAttr("deps", dst.Attr("deps"))
 	rule.MergeRules(src, again, map[string]bool{"deps": true}, "BUILD.bazel")
@@ -458,7 +443,6 @@ func TestCrateDepsCallMerge(t *testing.T) {
 	if got := tailStrings(t, merged); strings.Join(got, "\x00") != "//env:marker_proto_rs\x00:hand" {
 		t.Errorf("merged tail = %q, want hand labels preserved", got)
 	}
-	// Crate names and package_name metadata must never leak into the tail.
 	merged = call.Merge(crateDepsFileExpr([]string{"serde_json"}, "dx/dx_a"))
 	if _, ok := merged.(*bzl.CallExpr); !ok {
 		t.Errorf("fully managed merge is %T, want bare *bzl.CallExpr", merged)
@@ -471,8 +455,6 @@ func isBareCall(e bzl.Expr) bool {
 }
 
 func TestLangCoverageClosure(t *testing.T) {
-	// A test-scoped import of a local (non-external) normal dependency is
-	// retained when dev imports are included.
 	manifest := &cargoManifest{
 		packageName: "app",
 		normalDeps:  map[string]cargoDependency{"shared": {}},
@@ -482,19 +464,16 @@ func TestLangCoverageClosure(t *testing.T) {
 	if strings.Join(local.test, ",") != "shared" {
 		t.Errorf("local test imports = %+v, want [shared]", local)
 	}
-	// Extern-crate declarations feed the import sets like use paths.
 	tree := map[string]*FileFacts{"src/lib.rs": {Externs: []ExternCrate{{Name: "serde"}}}}
 	imports := importsFor(tree)
 	if strings.Join(imports.production, ",") != "serde" {
 		t.Errorf("extern imports = %+v, want [serde]", imports)
 	}
-	// An `as` alias is the name later paths use, so it is the import seen.
 	aliased := map[string]*FileFacts{"src/lib.rs": {Externs: []ExternCrate{{Name: "result_proto", As: "proto"}}}}
 	aliasedImports := importsFor(aliased)
 	if strings.Join(aliasedImports.production, ",") != "proto" {
 		t.Errorf("aliased extern imports = %+v, want [proto]", aliasedImports)
 	}
-	// Test-kind rules resolve both production and test imports.
 	l := &rustLang{}
 	index := resolverIndex(l,
 		struct{ pkg, name string }{"lib/prod", "prod"},
@@ -597,6 +576,5 @@ func TestResolveBranches(t *testing.T) {
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "unresolved import") {
 		t.Errorf("unresolved errors = %v", l.errors)
 	}
-	// Invalid opaque values are ignored by the legacy resolver contract.
 	l.Resolve(cfg, index, nil, r, nil, label.New("", "app", "app"))
 }

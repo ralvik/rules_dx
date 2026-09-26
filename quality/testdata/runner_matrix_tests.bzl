@@ -1,6 +1,3 @@
-"""Layer-2 full-matrix runner tests (snapshot workflow).
-
-"""
 
 load("@bazel_skylib//lib:shell.bzl", "shell")
 load("//deploy/rules:launcher.bzl", "RUNFILES_BASH_INIT", "rlocation_path")
@@ -8,26 +5,12 @@ load("//libs/starlark:canonical.bzl", "is_canonical", "strip_canonical")
 load("//rust/toolchains:bindings.bzl", "rust_toolchain_toolchains", "rust_toolchain_tools")
 
 def _file_ref(ctx, f):
-    """Returns a double-quoted `$(rlocation...)` ref for one file.
-
-    Uses the standard `runfiles.bash` `rlocation` with the rlocation
-    single-quoted via `shell.quote`, wrapped in double quotes so paths
-    with spaces survive. Replaces manual `$TEST_SRCDIR`-style refs plus
-    double-quote escaping.
-    """
     return '"$(rlocation ' + shell.quote(rlocation_path(ctx, f)) + ')"'
 
 def _var_ref(var):
-    """Returns a double-quoted shell variable ref (for example `$OUT`)."""
     return '"' + var + '"'
 
 def _prefixed_file_ref(ctx, prefix, f):
-    """Returns one `prefix + rlocation` word (for example `ws_path=...`).
-
-    Single-quotes the literal prefix via `shell.quote` and concatenates
-    the double-quoted `$(rlocation ...)` file ref with no space, so the
-    shell sees one word with the literal plus the resolved path.
-    """
     return shell.quote(prefix) + _file_ref(ctx, f)
 
 def _single_file(target):
@@ -46,7 +29,7 @@ def _runner_matrix_test_impl(ctx):
     runner = ctx.executable._runner
     printer = ctx.executable._printer
 
-    staged = {}  # workspace path -> File staged as its bytes
+    staged = {} # workspace path -> File staged as its bytes
     for f in ctx.files.srcs:
         staged[f.short_path] = f
     for ws_path in ctx.attr.generated:
@@ -58,7 +41,7 @@ def _runner_matrix_test_impl(ctx):
     for f in ctx.files.siblings:
         sibling_staged[f.short_path] = f
 
-    tools = {}  # tool name -> binary File
+    tools = {} # tool name -> binary File
     for i, name in enumerate(ctx.attr.tool_names):
         tools[name] = _tool_executable(ctx.attr.tool_binaries[i])
     if ctx.attr.rustfmt_from_toolchain:
@@ -67,18 +50,18 @@ def _runner_matrix_test_impl(ctx):
         _clippy_driver, rustfmt = rust_toolchain_tools(ctx)
         tools["rustfmt"] = rustfmt
 
-    tool_files = []  # (tool, rel, File)
+    tool_files = [] # (tool, rel, File)
     for i, tool in enumerate(ctx.attr.toolfile_tools):
         f = _single_file(ctx.attr.toolfile_srcs[i])
         tool_files.append((tool, f.short_path, f))
-    configs = []  # (tool, rel)
+    configs = [] # (tool, rel)
     for i, tool in enumerate(ctx.attr.config_tools):
         configs.append((tool, _single_file(ctx.attr.config_files[i]).short_path))
-    editions = []  # (tool, edition)
+    editions = [] # (tool, edition)
     for i, tool in enumerate(ctx.attr.edition_tools):
         editions.append((tool, ctx.attr.edition_values[i]))
 
-    upstream = []  # (tool, File)
+    upstream = [] # (tool, File)
     upstream_src_targets = ctx.attr.upstream_srcs
     for i, tool in enumerate(ctx.attr.upstream_tools):
         if i < len(upstream_src_targets):
@@ -191,11 +174,11 @@ def _runner_matrix_test_impl(ctx):
         "import sys\n" +
         "lines = open(sys.argv[1]).read().splitlines()\n" +
         "def header_count(prefix):\n" +
-        "    for l in lines:\n" +
-        "        parts = l.split()\n" +
-        "        if len(parts) == 2 and parts[0] == prefix:\n" +
-        "            return int(parts[1])\n" +
-        "    raise AssertionError(\"missing header \" + prefix)\n" +
+        " for l in lines:\n" +
+        " parts = l.split()\n" +
+        " if len(parts) == 2 and parts[0] == prefix:\n" +
+        " return int(parts[1])\n" +
+        " raise AssertionError(\"missing header \" + prefix)\n" +
         "initial = header_count(\"initial\")\n" +
         "terminal = header_count(\"terminal\")\n" +
         "replacements = header_count(\"replacements\")\n" +
@@ -207,16 +190,16 @@ def _runner_matrix_test_impl(ctx):
     )
     lines.append(
         "if [[ \"${UPDATE_EXPECT:-0}\" == \"1\" ]]; then\n" +
-        "  out_dir=\"${TEST_UNDECLARED_OUTPUTS_DIR:-${TMPDIR:-/tmp}}\"\n" +
-        "  mkdir -p \"$out_dir\"\n" +
-        "  cp " + _var_ref("$ACTUAL") + " \"$out_dir/" + ctx.label.name + ".expected.update\"\n" +
-        "  echo \"snapshot UPDATE_EXPECT: staged fresh actual at $out_dir/" + ctx.label.name + ".expected.update\"\n" +
-        "  echo \"paste the block below into runner_matrix_cases.bzl expected for " + ctx.label.name + ":\"\n" +
-        "  echo '\"\"\"'\n" +
-        "  cat " + _var_ref("$ACTUAL") + "\n" +
-        "  echo '\"\"\"'\n" +
-        "  echo " + shell.quote("matrix PASS (updated): " + ctx.label.name) + "\n" +
-        "  exit 0\n" +
+        " out_dir=\"${TEST_UNDECLARED_OUTPUTS_DIR:-${TMPDIR:-/tmp}}\"\n" +
+        " mkdir -p \"$out_dir\"\n" +
+        " cp " + _var_ref("$ACTUAL") + " \"$out_dir/" + ctx.label.name + ".expected.update\"\n" +
+        " echo \"snapshot UPDATE_EXPECT: staged fresh actual at $out_dir/" + ctx.label.name + ".expected.update\"\n" +
+        " echo \"paste the block below into runner_matrix_cases.bzl expected for " + ctx.label.name + ":\"\n" +
+        " echo '\"\"\"'\n" +
+        " cat " + _var_ref("$ACTUAL") + "\n" +
+        " echo '\"\"\"'\n" +
+        " echo " + shell.quote("matrix PASS (updated): " + ctx.label.name) + "\n" +
+        " exit 0\n" +
         "fi",
     )
     lines.append(
@@ -261,14 +244,11 @@ _runner_matrix_test = rule(
     attrs = {
         "srcs": attr.label_list(
             allow_files = True,
-            doc = "Provider-less source files; workspace path is each file's short_path.",
         ),
         "generated": attr.string_dict(
-            doc = "Workspace path to bytes written at analysis time (dirty inputs, recorded upstream diagnostics).",
         ),
         "siblings": attr.label_list(
             allow_files = True,
-            doc = "Markdown link-resolution siblings; workspace path is each file's short_path.",
         ),
         "capability": attr.string(
             mandatory = True,
@@ -276,54 +256,39 @@ _runner_matrix_test = rule(
         ),
         "stages": attr.string_list(
             mandatory = True,
-            doc = "Runner --stage specs TOOL;classes;paths.",
         ),
         "tool_names": attr.string_list(
-            doc = "Parallel to tool_binaries: tool identity per binary.",
         ),
         "tool_binaries": attr.label_list(
-            doc = "Parallel to tool_names: spawned tool binaries (executables keep their runfiles).",
         ),
         "toolfile_tools": attr.string_list(
-            doc = "Parallel to toolfile_srcs: owning tool per config-closure file.",
         ),
         "toolfile_srcs": attr.label_list(
             allow_files = True,
-            doc = "Parallel to toolfile_tools: native-config closure bytes; mirror rel is short_path.",
         ),
         "config_tools": attr.string_list(
-            doc = "Parallel to config_files: tools with a primary native config.",
         ),
         "config_files": attr.label_list(
             allow_files = True,
-            doc = "Parallel to config_tools: primary config files; rel is short_path.",
         ),
         "edition_tools": attr.string_list(
-            doc = "Parallel to edition_values: tools with a crate edition (rustfmt only).",
         ),
         "edition_values": attr.string_list(
-            doc = "Parallel to edition_tools: crate edition per tool, passed via --tool-edition.",
         ),
         "tool_env": attr.string_list(
-            doc = "Runner --tool-env entries TOOL=K=V (hermetic launcher env).",
         ),
         "upstream_tools": attr.string_list(
-            doc = "Parallel to upstream_srcs: delegated tools fed recorded diagnostics.",
         ),
         "upstream_srcs": attr.label_list(
             allow_files = True,
-            doc = "Parallel to upstream_tools: recorded upstream diagnostics bytes.",
         ),
         "upstream_generated": attr.string_dict(
-            doc = "Tool to recorded upstream diagnostics bytes written at analysis time.",
         ),
         "expected": attr.string(
             mandatory = True,
-            doc = "Golden print_result text the decoded result must equal byte-for-byte.",
         ),
         "rustfmt_from_toolchain": attr.bool(
             default = False,
-            doc = "Resolve the rustfmt tool binary from the pinned toolchain (never ambient).",
         ),
         "_runner": attr.label(
             default = "//quality/runner:quality_runner",
@@ -337,17 +302,11 @@ _runner_matrix_test = rule(
         ),
         "_runfiles_lib": attr.label(
             default = "@rules_shell//shell/runfiles",
-            doc = "Standard runfiles library for `rlocation` (issue #317).",
         ),
     },
 )
 
 def runner_matrix_suite(name, cases):
-    """Instantiates one `_runner_matrix_test` per matrix case plus a suite.
-
-    Each case is a struct of the rule attrs above plus `name`. All case
-    data lives here in `.bzl`; BUILD files only pass the suite name.
-    """
     tests = []
     for case in cases:
         _runner_matrix_test(

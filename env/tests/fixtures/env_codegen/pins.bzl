@@ -1,5 +1,3 @@
-"""Env plus codegen pins."""
-
 PROTOCOL_BOUNDARY = "PATH-tools-only"
 PROTOCOL_PROVIDER_NOTE = "EnvironmentInfo stays PATH-tool-only"
 PROTOCOL_SCOPE_NOTE = "third-party language-integration plugins are out of scope"
@@ -84,7 +82,7 @@ ROOTS_DECLARED_ONLY = "declared-BUILD-only"
 
 COLD_WARM_SCORE = "cold_ms + WARM_WEIGHT"
 COLD_WARM_WEIGHT = "WARM_WEIGHT"
-COLD_WARM_NO_TIMING_CLAIM = "no timing claims are made per [ADR 0022]"
+COLD_WARM_NO_TIMING_CLAIM = "no timing claims are made per policy"
 COLD_WARM_BASELINE_WINS = "baseline wins ties"
 
 WP1_ADMITTED_PAIRS = ("protobuf", "rust")
@@ -146,11 +144,11 @@ RELEASE_VERIFY = "//deploy/install:dx_verify"
 RELEASE_CHECKLIST = "docs/product/promotion-checklist.md"
 RELEASE_TAG_HYGIENE = 'version = "0.0.0"'
 RELEASE_NO_TAGS = "no v* tags"
-RELEASE_PER_HOST_OPEN = "release evidence open (#803-#807, process #808)"
+RELEASE_PER_HOST_OPEN = "release evidence open (pinned, process #808)"
 
-OUT_OF_SCOPE_BARE_SCHEMA = "bare-schema expansion stays open under #751"
-OUT_OF_SCOPE_COLLISION = "collision replacement contract stays open under #752"
-OUT_OF_SCOPE_CONCURRENCY = "concurrency plus NFS plus relock stays open under #753"
+OUT_OF_SCOPE_BARE_SCHEMA = "bare-schema expansion stays open under pinned"
+OUT_OF_SCOPE_COLLISION = "collision replacement contract stays open under pinned"
+OUT_OF_SCOPE_CONCURRENCY = "concurrency plus NFS plus relock stays open under pinned"
 
 ONBOARDING_DOC = "docs/environments/codegen.md#admitted-pairs-evolution-and-new-generator-onboarding"
 ONBOARDING_CHECKLIST = "admitted-pairs evolution checklist"

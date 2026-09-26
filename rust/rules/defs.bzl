@@ -1,7 +1,3 @@
-"""Experimental minimal Rust wrappers (ADR 0013).
-
-"""
-
 load("@crates//:crates.bzl", _aliases = "aliases", _crate_deps = "crate_deps")
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_binary = "rust_binary", _rust_clippy_test = "rust_clippy_test", _rust_common = "rust_common", _rust_library = "rust_library", _rust_proc_macro = "rust_proc_macro", _rust_shared_library = "rust_shared_library", _rust_static_library = "rust_static_library", _rust_test = "rust_test", _rustfmt_test = "rustfmt_test")
@@ -32,9 +28,6 @@ _rust_forward = dx_library_forward_rule(
         [_rust_common.crate_info],
         [_rust_common.test_crate_info],
     ],
-    doc = "Forwards upstream Rust providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream rust_* target whose providers are preserved.",
 )
 
 _DX_CC_FORWARD_PROVIDES = [
@@ -53,9 +46,6 @@ _rust_forward_cc = dx_library_forward_rule(
     what = "rust_*",
     allow_files = _DX_RUST_SOURCE_EXTS,
     upstream_providers = [[_rust_common.test_crate_info]],
-    doc = "Forwards the upstream Cc-linking providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream rust_shared_library/rust_static_library target whose providers are preserved.",
 )
 
 _rust_forward_binary = dx_executable_forward_rule(
@@ -69,9 +59,6 @@ _rust_forward_binary = dx_executable_forward_rule(
         [_rust_common.crate_info],
         [_rust_common.test_crate_info],
     ],
-    doc = "Executable forwarder for rust_binary: symlinks the upstream binary.",
-    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream rust_binary target whose providers are preserved.",
 )
 
 _rust_forward_test = dx_executable_forward_rule(
@@ -85,9 +72,6 @@ _rust_forward_test = dx_executable_forward_rule(
         [_rust_common.crate_info],
         [_rust_common.test_crate_info],
     ],
-    doc = "Test forwarder for rust_test: symlinks the upstream test executable.",
-    srcs_doc = "Direct Rust sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream rust_test target whose providers are preserved.",
     extra_attrs = dx_lcov_merger_attr(),
 )
 
@@ -98,7 +82,6 @@ def rust_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_library`."""
     dx_wrap(
         name,
         _rust_library,
@@ -117,7 +100,6 @@ def rust_binary(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_binary`."""
     dx_wrap(
         name,
         _rust_binary,
@@ -136,12 +118,6 @@ def rust_test(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_test`.
-
-    With `crate`, the referenced wrapper stays the single source owner and
-    this target reports no direct sources. With `srcs`, those sources are
-    this test's direct sources.
-    """
     upstream_kwargs = dict(kwargs)
     upstream_kwargs["crate"] = crate
     upstream_kwargs["edition"] = edition
@@ -155,11 +131,6 @@ def rust_proc_macro(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_proc_macro`.
-
-    Same forwarding shape as `rust_library`: the private upstream keeps
-    the crate providers and the public target adds QualitySourcesInfo.
-    """
     dx_wrap(
         name,
         _rust_proc_macro,
@@ -178,14 +149,6 @@ def rust_shared_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_shared_library`.
-
-    Cc-linking forwarding shape: the private upstream keeps the `CcInfo`
-    linking context (plus the `TestCrateInfo`-wrapped crate for `rust_test`)
-    and the public target adds QualitySourcesInfo. Upstream provides no
-    `CrateInfo` for this shape, so unlike `rust_library` there is none
-    to preserve.
-    """
     dx_wrap(
         name,
         _rust_shared_library,
@@ -204,10 +167,6 @@ def rust_static_library(
         edition = RUST_EDITION,
         visibility = None,
         **kwargs):
-    """Experimental minimal wrapper over `rust_static_library`.
-
-    Cc-linking forwarding shape, mirroring `rust_shared_library`.
-    """
     dx_wrap(
         name,
         _rust_static_library,
@@ -220,13 +179,6 @@ def rust_static_library(
     )
 
 def rustfmt_test(name, targets, size = "small", **kwargs):
-    """Thin wrapper over upstream `rustfmt_test`.
-
-    Forwards unchanged to the pinned toolchain test. Consumers load this
-    symbol from `//rust/rules:defs.bzl` so lint entry points stay
-    single-sourced with the `rust_*` build wrappers; lint precision comes
-    from the forwarder `provides` above, not from logic here.
-    """
     _rustfmt_test(
         name = name,
         targets = targets,
@@ -235,11 +187,6 @@ def rustfmt_test(name, targets, size = "small", **kwargs):
     )
 
 def rust_clippy_test(name, targets, size = "small", **kwargs):
-    """Thin wrapper over upstream `rust_clippy_test`.
-
-    Same single-source rationale as `rustfmt_test`: consumers load lints
-    from this module, never from `@rules_rust` directly.
-    """
     _rust_clippy_test(
         name = name,
         targets = targets,
@@ -258,26 +205,6 @@ def dx_rust_crate(
         srcs = None,
         size = "small",
         visibility = None):
-    """Single-crate boilerplate: lib + test + lint tests + manifest.
-
-    Emits the leaf-crate pattern with names identical to the
-    hand-written stanzas it replaces, so migration is a pure BUILD-text
-    change: `<name>` (`rust_library` over `srcs`), `<name>_test`
-    (`rust_test` via `crate`), `<name>_fmt_test` / `<name>_clippy_test`
-    over the library, and `exports_files(["Cargo.toml"])` (always public:
-    crate_universe reads the manifest from the `@crates` repo). Corpus
-    splits (`corpus_starlark` owning `BUILD.bazel` plus any `*.bzl` like
-    `roots.bzl`, `corpus_toml` owning `Cargo.toml`) are owned by `dx
- generate`, never by this macro, so dogfood stays
-    generator-stable. Dependency labels resolve through
-    crate_universe exactly like the hand-written calls: `deps` /
-    `dev_deps` are crate names, `extra_deps` / `extra_test_deps` are
-    literal labels appended after the resolved ones.
-
-    Crates with binaries keep hand-written `rust_binary` stanzas (and
-    lint `targets` covering them): see e.g. `quality/evaluator`, whose
-    `quality_evaluator` binary shares the crate name with the lib.
-    """
     crate = name if crate_name == None else crate_name
     lib_srcs = srcs or ["src/lib.rs"]
     lib_deps = _crate_deps(

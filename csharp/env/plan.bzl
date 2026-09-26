@@ -1,14 +1,9 @@
-"""Focused C# environment plan (WP2).
-
-"""
-
 load("@rules_dotnet//dotnet/private:providers.bzl", "DotnetAssemblyCompileInfo", "DotnetAssemblyRuntimeInfo")
 load("//env:focused.bzl", "focused_closure_plan", "focused_direct_sources", "focused_dotnet_transitive", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 CSharpEnvPlanInfo = provider(
-    doc = "Provider-derived focused C# target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct C# sources.",
         "has_sources": "Whether the wrapper owns any direct sources.",
@@ -57,8 +52,6 @@ csharp_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One csharp_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused C# environment plan for one wrapper target (WP2).",
 )

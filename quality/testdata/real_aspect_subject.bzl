@@ -1,6 +1,3 @@
-"""Analysis subject observing real-aspect dx_results (WP2).
-
-"""
 
 load("//libs/starlark:canonical.bzl", "strip_canonical")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
@@ -59,8 +56,6 @@ real_aspect_subject = rule(
                 real_rust_format_aspect,
             ],
             mandatory = True,
-            doc = "Real fixture target observed with real capability aspects applied.",
         ),
     },
-    doc = "Exposes merged real dx_results basenames for aspect evidence.",
 )

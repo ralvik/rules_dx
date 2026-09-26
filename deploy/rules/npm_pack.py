@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic npm pack + feed generator for `npm_deploy`.
-
-Hermetic replacement for `npm pack`: reads source files, writes a
-single deterministic gzip tarball with members under `package/` plus
-a JSON feed file recording the sha256. Via the managed Python 3.12
-toolchain. No host `tar`, no timestamps, no network.
-
-Usage: npm_pack.py <package> <tag> <registry> <tgz_out> <feed_out> <src...>
-"""
+"""Deterministic npm pack generator."""
 
 import gzip
 import hashlib

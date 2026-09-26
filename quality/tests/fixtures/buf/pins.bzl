@@ -1,7 +1,3 @@
-"""Buf check plus fix wiring (protobuf format plus lint).
-
-"""
-
 BUF_VERSION = "1.72.0"
 
 BUF_ARTIFACT = "self-contained per-platform binaries with published checksums"

@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Local vendor builder plus gated crates.io uploader for `crates_deploy`.
-
- Hermetic default builds a local vendor directory (`vendor/` plus a file
- registry) and verifies bytes via sha256; the live `cargo publish` path
- runs only with explicit env plus owner approval and never by default.
- The live child inherits a minimal environment (PATH/HOME plus the
- registry token only), never the full parent env. Single-string registry
- tokens are the only supported credential: prefer short-lived tokens and
- rotate them per release; OIDC-based publish stays an owned gap until
- tooled. Used as an `expand_template` template per deploy instance
- (placeholders below) and as a `py_library` for `py_test`.
- """
+"""Local vendor builder."""
 
 import hashlib
 import json
@@ -20,9 +9,6 @@ import subprocess
 import sys
 import tempfile
 
-# Per-instance pins expanded by the `crates_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_vendor` directly without touching these constants.
 CRATE_RLOCS_STR = "@@CRATE_RLOCS@@"
 CRATE_NAME = "@@CRATE_NAME@@"
 CRATE_VERSION = "@@CRATE_VERSION@@"
@@ -38,15 +24,6 @@ def sha256_file(path):
 
 
 def build_vendor(crate_files, outdir, crate_name, version):
-    """Copies crate sources into a local vendor plus file registry and verifies bytes.
-
-    Creates `<outdir>/<crate>-vendor/` holding `vendor/<crate>/` (each
-    source by basename plus `.cargo-checksum.json`) and
-    `registry/<crate>/<version>/` (each source by basename plus
-    `index.json` with name, version, and sha256 per file). Basenames must
-    stay unique so the flattened vendor layout is deterministic. Returns
-    the vendor house directory.
-    """
     if not crate_files:
         raise ValueError("crates vendor: need at least one crate source file")
     seen = set()
@@ -132,13 +109,6 @@ def build_vendor(crate_files, outdir, crate_name, version):
 
 
 def minimal_publish_env(extra):
-    """Builds the minimal child environment for a registry publisher.
-
-    Carries locale/PATH/HOME/TMP plus exactly the credential entries in
-    `extra`; every other parent variable (ambient secrets, proxies,
-    configuration overrides) is dropped. Mirrors
-    `pypi_deploy.minimal_upload_env` so the two uploaders stay in sync.
-    """
     keep = (
         "HOME",
         "LANG",
@@ -159,7 +129,6 @@ def minimal_publish_env(extra):
 
 
 def live_publish(crate_files, token):
-    """Publishes staged crate sources via cargo publish without dirty trees."""
     if os.environ.get("CRATES_ALLOW_DIRTY") == "1":
         raise RuntimeError(
             "crates publish: --allow-dirty rejected by default; publish from a clean tree"

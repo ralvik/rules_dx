@@ -1,16 +1,3 @@
-"""Generated paket2bazel hub (ADR 0019).
-
-Generated from `//third_party/dotnet:paket.dependencies` plus
-`//third_party/dotnet:paket.lock` via:
-
-    bazel run @rules_dotnet//tools/paket2bazel -- \
-        --dependencies-file $PWD/third_party/dotnet/paket.dependencies \
-        --output-folder $PWD/third_party/dotnet/deps
-
-Never edited by hand; regenerate through the generator above. Loaded from
-MODULE.bazel (`paket.main` hub); consumers depend on
-`@paket.main//<package>` labels.
-"""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

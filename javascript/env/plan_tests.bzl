@@ -1,5 +1,3 @@
-"""Focused JavaScript environment-plan tests (WP3)."""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //javascript/env:hello_lib_plan

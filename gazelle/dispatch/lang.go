@@ -32,10 +32,6 @@ import (
 
 const languageName = "dx_dispatch"
 
-// composedLanguages instantiates every first-party extension once so the
-// witness replays the exact union loads the framework uses for the
-// composed run. The instances carry no per-run state: ApparentLoads only
-// reads the module mapping.
 func composedLanguages() []language.Language {
 	return []language.Language{
 		astro.NewLanguage(),
@@ -57,9 +53,6 @@ func composedLanguages() []language.Language {
 	}
 }
 
-// unionApparentLoads returns the union loads over every first-party
-// extension with the run's own module mapping, mirroring the framework's
-// load collection for the composed binary.
 func unionApparentLoads(moduleToApparentName func(string) string) []rule.LoadInfo {
 	var loads []rule.LoadInfo
 	for _, lang := range composedLanguages() {
@@ -79,14 +72,8 @@ type dispatchLang struct {
 	configs  []*config.Config
 }
 
-// NewLanguage returns the composed-run witness extension. It must run
-// last in the composed binary's language order so GenerateRules observes
-// every sibling extension's rules as OtherGen.
 func NewLanguage() language.Language { return &dispatchLang{} }
 
-// exitProcess ends the Gazelle run when the witness cannot be recorded.
-// It is a variable so unit tests can observe the fail-closed decision
-// without exiting the test process.
 var exitProcess = os.Exit
 
 func (l *dispatchLang) Before(context.Context) {
@@ -117,11 +104,6 @@ func (l *dispatchLang) fail(format string, args ...interface{}) {
 	l.errors = append(l.errors, fmt.Sprintf(format, args...))
 }
 
-// collectUsedIgnores gathers the used dx_ignore_import entries visible in
-// every visited directory config across all first-party extensions. Each
-// extension owns its entries; this witness only unions them for the
-// manifest notices. Stale entries stay owned by their extension, which
-// fails the run in its own AfterResolvingDeps before this witness emits.
 func (l *dispatchLang) collectUsedIgnores() []collectedIgnore {
 	var out []collectedIgnore
 	seen := map[collectedIgnore]bool{}
@@ -174,10 +156,6 @@ func (l *dispatchLang) AfterResolvingDeps(context.Context) {
 			l.fail("%v", err)
 		}
 	}
-	// The framework's Language interface offers no error return here, so a
-	// fatal exit — not a panic and its stack trace — is the only way to
-	// fail the run before BUILD emission. A zero-length error list returns
-	// normally.
 	if len(l.errors) > 0 {
 		sort.Strings(l.errors)
 		fmt.Fprintln(os.Stderr, "Dispatch generation failed before BUILD emission:\n"+strings.Join(l.errors, "\n"))

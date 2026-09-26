@@ -44,11 +44,11 @@ func generateFixture(t *testing.T, files map[string]string, regular []string) la
 func TestGenerateSourceOnlyPackage(t *testing.T) {
 	regular := []string{"demo.js", "helper.jsx", "helper_test.mjs", "notes.txt", "widget.d.ts"}
 	result := generateFixture(t, map[string]string{
-		"pkg/demo/demo.js":        "import helper from \"./helper.jsx\";\nimport fs from \"fs\";\n",
-		"pkg/demo/helper.jsx":     "export const suffix = (t) => t;\n",
+		"pkg/demo/demo.js":         "import helper from \"./helper.jsx\";\nimport fs from \"fs\";\n",
+		"pkg/demo/helper.jsx":      "export const suffix = (t) => t;\n",
 		"pkg/demo/helper_test.mjs": "import helper from \"./helper.jsx\";\n",
-		"pkg/demo/notes.txt":      "not a source\n",
-		"pkg/demo/widget.d.ts":    "export declare const x: number;\n",
+		"pkg/demo/notes.txt":       "not a source\n",
+		"pkg/demo/widget.d.ts":     "export declare const x: number;\n",
 	}, regular)
 	if len(result.Gen) != 3 || len(result.Imports) != 3 {
 		t.Fatalf("generated %d rules and %d import sets, want 3 each", len(result.Gen), len(result.Imports))
@@ -92,9 +92,6 @@ func TestGenerateSourceOnlyPackage(t *testing.T) {
 }
 
 func TestGenerateRelativeStdlibCollision(t *testing.T) {
-	// `./util.js` normalizes to the `util` root, which collides with the
-	// Node builtin of the same name. The relative edge must survive
-	// generation and resolve locally; the bare builtin still drops.
 	result := generateFixture(t, map[string]string{
 		"pkg/demo/util.js": "export function fmt(name) { return `hello ${name}`; }\n",
 		"pkg/demo/app.js":  "import { fmt } from \"./util.js\";\nimport fs from \"fs\";\nexport const greeting = fmt(\"ada\");\n",
@@ -111,7 +108,10 @@ func TestGenerateRelativeStdlibCollision(t *testing.T) {
 	}
 	l := &javascriptLang{}
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"pkg/demo", "util", ".js"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"pkg/demo", "util", ".js"},
 	)
 	cfg := resolverConfig(t, nil)
 	r := rule.NewRule(libraryKind, "app")
@@ -163,7 +163,7 @@ func TestGenerateFailures(t *testing.T) {
 		{"readError", map[string]string{}, []string{"missing.js"}, "read missing.js"},
 		{"emptyName", map[string]string{"pkg/demo/---.js": "export const x = 1;\n"}, []string{"---.js"}, "empty target name"},
 		{"collision", map[string]string{
-			"pkg/demo/a-b.js": "export const x = 1;\n",
+			"pkg/demo/a-b.js":  "export const x = 1;\n",
 			"pkg/demo/a_b.jsx": "export const y = 2;\n",
 		}, []string{"a-b.js", "a_b.jsx"}, "claimed by a-b.js, a_b.jsx"},
 	}
@@ -347,8 +347,14 @@ func resolverIndex(lang *javascriptLang, entries ...struct {
 func TestResolveBranches(t *testing.T) {
 	l := &javascriptLang{}
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"lib/b", "b", ".js"},
-		struct{ pkg, name string; ext string }{"lib/a", "a", ".jsx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/b", "b", ".js"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/a", "a", ".jsx"},
 	)
 	cfg := resolverConfig(t, nil)
 	r := rule.NewRule(libraryKind, "app")
@@ -385,7 +391,10 @@ func TestResolveBranches(t *testing.T) {
 
 func TestResolveTestData(t *testing.T) {
 	l := &javascriptLang{}
-	index := resolverIndex(l, struct{ pkg, name string; ext string }{"lib/a", "a", ".js"})
+	index := resolverIndex(l, struct {
+		pkg, name string
+		ext       string
+	}{"lib/a", "a", ".js"})
 	cfg := resolverConfig(t, nil)
 	r := rule.NewRule(testKind, "app_test")
 	r.SetAttr("srcs", []string{"app_test.js"})
@@ -413,8 +422,14 @@ func TestResolveAmbiguous(t *testing.T) {
 	l := &javascriptLang{}
 	cfg := resolverConfig(t, nil)
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"one", "same", ".js"},
-		struct{ pkg, name string; ext string }{"two", "same", ".jsx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"one", "same", ".js"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"two", "same", ".jsx"},
 	)
 	l.Resolve(cfg, index, nil, rule.NewRule(libraryKind, "app"), targetImports{imports: []string{"same"}}, label.New("", "app", "app"))
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "ambiguous") || !strings.Contains(l.errors[0], "//one:same") || !strings.Contains(l.errors[0], "//two:same") {

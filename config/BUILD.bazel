@@ -1,10 +1,3 @@
-"""Canonical quality configuration settings.
-
-External aspects select the workspace policy through `@rules_dx//config:workspace`
-instead of hardcoding a consumer-repository label, per ADR 0011. Quality commands
-pass `validate=false` so per-result Bazel evaluators do not stop collection;
-check modes use `validate=true` with a `fail_on` threshold. Contract:
-"""
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
 load("//quality:fixtures.bzl", "real_source_target")

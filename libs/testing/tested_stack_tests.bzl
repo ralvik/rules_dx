@@ -1,5 +1,3 @@
-"""Tested-stack manifest contract tests (WP7).
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 

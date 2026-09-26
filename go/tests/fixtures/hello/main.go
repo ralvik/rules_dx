@@ -1,4 +1,3 @@
-// Seed Go binary; consumer of go_binary.
 package main
 
 import (

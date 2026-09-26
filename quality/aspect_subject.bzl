@@ -1,6 +1,3 @@
-"""Analysis subject observing aspect-produced dx_results (WP2c).
-
-"""
 
 load("//libs/starlark:canonical.bzl", "strip_canonical")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
@@ -38,8 +35,6 @@ aspect_subject = rule(
         "target": attr.label(
             aspects = [lint_aspect, format_aspect, typecheck_aspect, audit_aspect],
             mandatory = True,
-            doc = "Fixture target observed with all capability aspects applied.",
         ),
     },
-    doc = "Exposes merged dx_results basenames for aspect evidence.",
 )

@@ -1,5 +1,3 @@
-"""Focused C/C++ environment-plan tests (WP2)."""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //cc/env:hello_c_lib_plan

@@ -1,4 +1,3 @@
-"""F# compile-order fixture; multi-file library with dependency-first srcs."""
 
 load("//fsharp/rules:defs.bzl", "fsharp_library", "fsharp_test")
 load("//quality:fixtures.bzl", "real_source_target")

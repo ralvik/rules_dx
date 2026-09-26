@@ -1,11 +1,7 @@
-"""Shared focused environment-plan helpers.
-
-"""
 
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 def focused_direct_sources(target):
-    """Returns sorted basenames of direct sources from QualitySourcesInfo."""
     if QualitySourcesInfo not in target:
         return []
     info = target[QualitySourcesInfo]
@@ -16,7 +12,6 @@ def focused_direct_sources(target):
     return sorted(out)
 
 def focused_simple_plan(direct, label):
-    """Builds the simple-language plan dict plus typed source fields."""
     source_count = len(direct)
     has_sources = source_count > 0
     plan = {
@@ -32,7 +27,6 @@ def focused_simple_plan(direct, label):
     )
 
 def focused_js_closure(transitive_sources, npm_sources):
-    """Collects sorted transitive basenames plus npm closure counts."""
     seen = {}
     for f in transitive_sources:
         seen[f.basename] = True
@@ -43,7 +37,6 @@ def focused_js_closure(transitive_sources, npm_sources):
     )
 
 def focused_js_plan(direct, closure, label):
-    """Builds the JS-family plan dict from direct sources plus closure."""
     return {
         "direct_sources": ",".join(direct),
         "has_npm": str(closure.has_npm),
@@ -53,18 +46,11 @@ def focused_js_plan(direct, closure, label):
     }
 
 def focused_typescript_plan(direct, closure, has_tsconfig, label):
-    """Builds the TypeScript plan dict extending the JS-family plan."""
     plan = focused_js_plan(direct, closure, label)
     plan["has_tsconfig"] = str(has_tsconfig)
     return plan
 
 def focused_python_transitive(transitive_sources):
-    """Returns sorted basenames of first-party `.py` transitive sources.
-
-    Wheel payloads are covered by `wheel_count` plus site-packages import
-    roots; raw venv markers carry no import identity and would collapse
-    lossily under basename projection.
-    """
     seen = {}
     for f in transitive_sources:
         if f.basename.endswith(".py"):
@@ -72,7 +58,6 @@ def focused_python_transitive(transitive_sources):
     return sorted(seen.keys())
 
 def focused_python_plan(direct, transitive, imports, wheel_count, label):
-    """Builds the Python plan dict plus the typed wheel flag."""
     has_wheels = wheel_count > 0
     plan = {
         "direct_sources": ",".join(direct),
@@ -88,11 +73,6 @@ def focused_python_plan(direct, transitive, imports, wheel_count, label):
     )
 
 def focused_venv_projection(target):
-    """Returns the materialized `.venv` projection from RunEnvironmentInfo.
-
-    Binaries and tests carry `VIRTUAL_ENV` naming the upstream `py_venv`
-    directory; libraries carry no RunEnvironmentInfo and project no venv.
-    """
     if RunEnvironmentInfo not in target:
         return struct(has_venv = False, venv = "")
     env = target[RunEnvironmentInfo].environment
@@ -101,11 +81,6 @@ def focused_venv_projection(target):
     return struct(has_venv = True, venv = env["VIRTUAL_ENV"])
 
 def focused_npm_store_projection(store_infos):
-    """Returns the materialized pnpm store projection counts.
-
-    `store_infos` is the `JsInfo.npm_package_store_infos` list; empty means
-    the closure carries no linked npm packages and the managed
-    `node_modules` facade stays empty without a second resolution."""
     store_count = len(store_infos)
     return struct(
         has_store = store_count > 0,
@@ -113,7 +88,6 @@ def focused_npm_store_projection(store_infos):
     )
 
 def focused_tsconfig_projection(tsconfig_files):
-    """Returns the materialized `TsConfigInfo` projection names plus count."""
     names = sorted([f.basename for f in tsconfig_files])
     return struct(
         tsconfig = ",".join(names),
@@ -121,20 +95,17 @@ def focused_tsconfig_projection(tsconfig_files):
     )
 
 def _focused_as_list(value):
-    """Returns the file list for a list or depset value."""
     if type(value) == "depset":
         return value.to_list()
     return value
 
 def focused_transitive_basenames(files):
-    """Returns sorted basenames for a list or depset of files."""
     seen = {}
     for f in _focused_as_list(files):
         seen[f.basename] = True
     return sorted(seen.keys())
 
 def focused_go_transitive(transitive):
-    """Returns sorted basenames of `.go` sources in a GoArchive transitive closure."""
     seen = {}
     for archive in _focused_as_list(transitive):
         for f in archive.srcs:
@@ -142,7 +113,6 @@ def focused_go_transitive(transitive):
     return sorted(seen.keys())
 
 def focused_dotnet_transitive(refs, transitive_refs):
-    """Returns sorted basenames for own refs plus the transitive ref closure."""
     seen = {}
     for f in _focused_as_list(refs):
         seen[f.basename] = True
@@ -151,11 +121,6 @@ def focused_dotnet_transitive(refs, transitive_refs):
     return sorted(seen.keys())
 
 def focused_test_sources(basenames):
-    """Returns sorted test basenames from combined direct plus transitive lists.
-
-    Test shape is `Test` (JVM/Dotnet CamelCase) or `_test` (Go/CC snake_case
-    plus Bazel-derived jar/DLL names); `latest` plus `scalatest` stay source-side.
-    """
     seen = {}
     for name in basenames:
         if "Test" in name or "_test" in name:
@@ -163,7 +128,6 @@ def focused_test_sources(basenames):
     return sorted(seen.keys())
 
 def focused_closure_plan(direct, transitive, label):
-    """Builds the closure plan dict plus typed source/test fields."""
     tests = focused_test_sources(direct + transitive)
     source_count = len(direct)
     transitive_source_count = len(transitive)
@@ -193,7 +157,6 @@ def focused_closure_plan(direct, transitive, label):
     )
 
 def focused_write_plan(ctx, plan):
-    """Declares and writes the focused plan JSON output."""
     out = ctx.actions.declare_file(ctx.label.name + ".json")
     ctx.actions.write(out, json.encode(plan) + "\n")
     return out

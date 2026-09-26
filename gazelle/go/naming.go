@@ -1,28 +1,3 @@
-// Naming implements the deterministic Go target-name normalizer owned by
-// the first-party Go Gazelle extension.
-//
-// The durable constraint comes from the common generation contract:
-// basename-derived names preserve ASCII letters, ASCII digits, and internal
-// underscores; every run of any other character becomes one underscore;
-// leading and trailing underscores are trimmed; an empty result fails
-// generation. Same-package normalized-name collisions fail with every
-// claimant; the extension never invents a language affix or another suffix.
-//
-// Go is package-level (support-matrix Go exception): one directory holds one
-// Go package (plus its external `*_test` package). The adapter generates at
-// most one reusable `go_library` per directory named after the directory
-// basename, with `srcs` as the sorted non-test `.go` files, plus at most one
-// package-level `go_test` named `<library>_test` owning the sorted
-// `*_test.go` files via `embed` (native package-level test semantics per the
-// generation contract Go exception: shared helpers, `TestMain`,
-// internal/external test packages, and test-only dependencies without
-// per-file targets or inferred `testdata`). Thin `go_binary` entries are
-// never inferred, and directories mixing a library package with a
-// `package main` file stay handwritten: generation includes every non-test
-// `.go` and the owner must split the directory before adopting generated
-// rules. Build constraints (`//go:build` tags) are preserved by including
-// every source and letting the pinned `rules_go` toolchain select per
-// platform; generation never emits `select()` for them.
 package golang
 
 import (
@@ -31,20 +6,12 @@ import (
 	"strings"
 )
 
-// SupportedExts are the Go source extensions discovered by the extension.
-// Only `.go` is listed; `*_test.go` files are discovered then owned by the
-// package-level test, never the library.
 var SupportedExts = []string{".go"}
 
-// LibraryKind is the generated library rule kind. TestKind is the generated
-// package-level test rule kind.
 const LibraryKind = "go_library"
 
-// TestKind is the generated package-level test rule kind.
 const TestKind = "go_test"
 
-// Normalize maps one name stem to its deterministic Bazel target-name stem.
-// It reports an error instead of an empty name so callers fail closed.
 func Normalize(base string) (string, error) {
 	var b strings.Builder
 	b.Grow(len(base))
@@ -71,50 +38,32 @@ func Normalize(base string) (string, error) {
 	return out, nil
 }
 
-// IsTestSource reports whether a `.go` basename is test-owned
-// (`*_test.go`, including the external test package form).
 func IsTestSource(name string) bool {
 	base := path.Base(name)
 	return strings.HasSuffix(base, "_test.go")
 }
 
-// DirTargetName derives the package-level library name for one directory:
-// the directory basename, normalized.
 func DirTargetName(dir string) (string, error) {
 	return Normalize(path.Base(dir))
 }
 
-// TargetName derives the Bazel target name for one Go source path: the
-// basename without its final extension, normalized. It is used for
-// collision diagnostics and single-file fallback naming.
 func TargetName(name string) (string, error) {
 	base := path.Base(name)
 	stem := strings.TrimSuffix(base, ".go")
 	return Normalize(stem)
 }
 
-// ModuleName returns the import identity for one Go source path: the
-// basename without its final extension, exact and unnormalized.
 func ModuleName(name string) string {
 	base := path.Base(name)
 	return strings.TrimSuffix(base, ".go")
 }
 
-// Claimant records one generated or handwritten target competing for a
-// normalized name in a single Bazel package.
 type Claimant struct {
-	// Name is the normalized target name under contention.
-	Name string
-	// Source identifies the claimant for diagnostics: a source path for
-	// generated targets, "handwritten:<label>" for existing BUILD rules.
+	Name   string
 	Source string
-	// Kind is the generated rule kind claiming the name.
-	Kind string
+	Kind   string
 }
 
-// CollisionError reports a same-package normalized-name collision with
-// every claimant. Generation fails rather than overwriting, dropping a
-// target, or inventing a suffix.
 type CollisionError struct {
 	Name      string
 	Claimants []string
@@ -125,8 +74,6 @@ func (e *CollisionError) Error() string {
 		e.Name, strings.Join(e.Claimants, ", "))
 }
 
-// CheckCollisions fails closed when two or more claimants share one
-// normalized name. Claimants are grouped by Name; groups of one pass.
 func CheckCollisions(claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))

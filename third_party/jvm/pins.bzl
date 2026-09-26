@@ -1,7 +1,3 @@
-"""Maven lock wiring pins.
-
-"""
-
 RULES_JVM_EXTERNAL_VERSION = "7.1"
 
 MAVEN_LOCK_FILE = "//third_party/jvm:maven_install.json"

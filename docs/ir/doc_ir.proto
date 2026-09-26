@@ -1,10 +1,4 @@
 // Documentation IR schema.
-//
-// Binary contract between per-language doc extractors, aggregation, and the
-// site renderer. Field and enum numbers are the v1 compatibility surface:
-// minor versions are additive-only, unknown majors are rejected. Extension
-// payloads are repeated key/value pairs in strictly increasing key order so
-// same-producer rebuilds stay byte-identical; readers never drop them.
 
 syntax = "proto3";
 

@@ -1,6 +1,3 @@
-"""Unit tests for real-adapter pipeline construction (WP2, WP3).
-
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":adapters.bzl", "REAL_ADAPTERS", "REAL_CLASS_TO_FAMILY", "real_supported_classes")

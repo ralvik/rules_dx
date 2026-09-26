@@ -1,6 +1,3 @@
-"""Analysis tests proving aspect subjects.
-"""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ASPECT_OBSERVATIONS = """subject //libs/starlark/tests:aspect_group_under_test

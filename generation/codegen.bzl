@@ -1,6 +1,3 @@
-"""Normalized codegen plan records.
-
-"""
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load(
@@ -16,7 +13,6 @@ load(
 )
 
 DxCodegenPlanInfo = provider(
-    doc = "Normalized codegen plan records: direct plus transitive collection.",
     fields = {
         "direct": "List of codegen record structs contributed by this target.",
         "transitive": "Depset of codegen record structs from the closure.",
@@ -24,7 +20,6 @@ DxCodegenPlanInfo = provider(
 )
 
 DxCodegenPlanCollectedInfo = provider(
-    doc = "Aspect-merged codegen plan records from the traversed closure.",
     fields = {
         "records": "Depset of merged codegen record structs.",
     },
@@ -41,7 +36,6 @@ DX_CODEGEN_ADMITTED_PAIRS = (
 )
 
 def codegen_path_error(path):
-    """Validates one workspace-relative projection path."""
     if path == "":
         return "invalid codegen path '': must be a non-empty workspace-relative path"
     if path.startswith("/"):
@@ -54,7 +48,6 @@ def codegen_path_error(path):
     return ""
 
 def codegen_entry(logical_path, import_root, namespace = "", exec_path = "", replaces = ""):
-    """Builds one normalized projection entry struct."""
     return struct(
         exec_path = exec_path,
         import_root = import_root,
@@ -65,7 +58,6 @@ def codegen_entry(logical_path, import_root, namespace = "", exec_path = "", rep
     )
 
 def codegen_record(producer, language, entries):
-    """Builds one normalized contributor record struct."""
     return struct(
         entries = tuple(entries),
         language = language,
@@ -91,7 +83,6 @@ def _codegen_claim_key(entry):
     return entry.logical_path
 
 def codegen_record_error(record):
-    """Validates one contributor record."""
     second_error = ""
     if record.language == "":
         second_error = "language must be a non-empty file class"
@@ -106,13 +97,6 @@ def codegen_record_error(record):
     )
 
 def codegen_exec_error(path):
-    """Validates one BEP-matching exec-path suffix.
-
-    Empty means a logical-only entry requiring no artifact. Non-empty
-    follows the same workspace-relative shape rules as logical paths
-    and never uses the reserved shard suffix (a shard never backs
-    another shard).
-    """
     if path == "":
         return ""
     if path.endswith(DX_CODEGEN_SHARD_SUFFIX):
@@ -123,15 +107,6 @@ def codegen_exec_error(path):
     return ""
 
 def codegen_replaces_error(logical_path, exec_path, replaces):
-    """Validates one replacement contract declaration.
-
-    Empty means no replacement: colliding workspace sources fail
-    closed. Non-empty must be a workspace-relative path equal to the
-    entry logical path (explicit self-replacement acknowledgment) and
-    requires a non-empty exec path binding the replacing generated
-    artifact, so the contract identifies both the replaced source and
-    the generated artifact identity.
-    """
     if replaces == "":
         return ""
     error = codegen_path_error(replaces)
@@ -147,12 +122,6 @@ def _codegen_entry_key(entry):
     return (entry.logical_path, entry.import_root, entry.namespace, entry.exec_path, entry.replaces)
 
 def codegen_conflict_error(records):
-    """Detects incompatible logical-path claims across records.
-
-    Byte-identical duplicates (same producer, language, path, root,
-    namespace, exec path, and replaces) merge silently. Any other
-    second claim on one logical path fails, listing every claimant:
-    no traversal-order winner is accepted."""
     return plan_shard_conflict_error(
         records,
         _codegen_owner_of,
@@ -180,14 +149,6 @@ def _codegen_encode_record(record):
     }
 
 def codegen_merge_records(records):
-    """Merges records into deterministic normalized order.
-
-    Byte-identical duplicate entries collapse; surviving records sort
-    by (producer, language) with entries sorted by (logical path,
-    import root, namespace, exec path, replaces). The rendering is the
-    normalized complete-plan form the CLI hashes; repository roots emit
-    no second closure manifest, so shared closures serialize once per
-    record, not once per selected root."""
     return plan_shard_merge_records(
         records,
         _codegen_owner_of,
@@ -196,14 +157,6 @@ def codegen_merge_records(records):
     )
 
 def codegen_merge_schema_error(records, merged):
-    """Validates merged is the normalized form of records.
-
-    Checks shape without pinning exact contents, so adding owners or entries
-    edits test data only: owners sorted and unique, entries sorted and unique
-    per owner, every input entry present deduped, every merged entry sourced,
-    and each merged record valid. Exact owner/entry values stay in snapshot
-    assertions; this proves normalization.
-    """
     if type(merged) != "list":
         return "codegen merge: want a list, got " + type(merged)
     owners = []
@@ -248,19 +201,9 @@ def codegen_merge_schema_error(records, merged):
     return ""
 
 def codegen_plan_fingerprint(records):
-    """Renders the normalized complete-plan hash input."""
     return plan_shard_fingerprint(records, codegen_merge_records, _codegen_encode_record)
 
 def codegen_fingerprint_schema_error(fingerprint):
-    """Validates a plan fingerprint JSON shape.
-
-    Checks structure without pinning exact bytes, so entry additions edit
-    test data only: a list of {producer, language, entries} sorted by
-    (producer, language) with entries sorted by the full key, each entry
-    carrying validated paths plus read-only truth plus the replacement
-    contract. Exact fingerprint bytes stay in snapshot assertions; this
-    proves the hash-input contract.
-    """
     decoded = json.decode(fingerprint)
     if type(decoded) != "list" or len(decoded) == 0:
         return "codegen fingerprint: want a non-empty list"
@@ -312,20 +255,9 @@ def codegen_fingerprint_schema_error(fingerprint):
     return ""
 
 def codegen_admitted_pairs():
-    """Returns the admitted generator/language pairs via registry query.
-
-    Derived from `DX_CODEGEN_ADMITTED_PAIRS`, never duplicated, so adding
- a pair edits the registry data only.
-    """
     return DX_CODEGEN_ADMITTED_PAIRS
 
 def codegen_schema_error():
-    """Validates the versioned codegen-pair schema.
-
-    Checks data shape without pinning exact contents, so adding a pair
-    edits the admitted data only: version is v1, the list is non-empty
-    with unique canonical (schema_kind, language) tuples.
-    """
     if CODEGEN_SCHEMA_VERSION != 1:
         return "codegen: unsupported schema v" + str(CODEGEN_SCHEMA_VERSION) + " (want v1)"
     if type(DX_CODEGEN_ADMITTED_PAIRS) != "tuple" or len(DX_CODEGEN_ADMITTED_PAIRS) == 0:
@@ -343,7 +275,6 @@ def codegen_schema_error():
     return ""
 
 def codegen_pair_error(schema_kind, language):
-    """Validates one generator/language pair against the frozen."""
     if (schema_kind, language) in DX_CODEGEN_ADMITTED_PAIRS:
         return ""
     return (
@@ -352,14 +283,6 @@ def codegen_pair_error(schema_kind, language):
     )
 
 def _parse_entry_spec(spec, label_text):
-    """Parses one LOGICAL|ROOT|NAMESPACE[|EXEC[|REPLACES]] entry spec.
-
-    The three-part form declares a logical-only entry (empty exec path,
-    requiring no materialized artifact). The four-part form declares the
-    BEP-matching exec-path suffix for the backing artifact. The five-part
-    form additionally declares the replacement contract: REPLACES must
-    equal LOGICAL and EXEC must be non-empty, identifying the replaced
-    checked-in source and the replacing generated artifact."""
     parts = spec.split("|")
     if len(parts) == 3:
         return codegen_entry(parts[0], parts[1], parts[2])
@@ -374,7 +297,6 @@ def _parse_entry_spec(spec, label_text):
     )
 
 def _emit_shard(ctx, producer, language, entry_structs):
-    """Validates one record and emits its binary shard via the writer."""
     record = codegen_record(producer, language, entry_structs)
     record_error = codegen_record_error(record)
     if record_error != "":
@@ -410,11 +332,6 @@ def _emit_shard(ctx, producer, language, entry_structs):
     return out, record
 
 def _exec_matches(file_path, exec_path):
-    """Reports whether a Bazel file path satisfies an exec-path suffix.
-
-    Suffix matching (on "/" boundaries, plus exact equality) lets one
-    logical entry resolve under different output bases without scanning
-    `bazel-out`."""
     return plan_shard_exec_matches(file_path, exec_path)
 
 def _dx_codegen_shard_impl(ctx):
@@ -435,28 +352,22 @@ dx_codegen_shard = rule(
     attrs = {
         "deps": attr.label_list(
             default = [],
-            doc = "Graph edges the collecting aspect traverses; contributes no records itself.",
         ),
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Non-empty projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE[|EXEC_PATH[|REPLACES]]. The five-part form declares the replacement contract: REPLACES must equal LOGICAL_PATH with non-empty EXEC_PATH.",
         ),
         "language": attr.string(
             mandatory = True,
-            doc = "Generated file class, e.g. 'rust'. Must pair with schema_kind under issue #506.",
         ),
         "schema_kind": attr.string(
             default = "protobuf",
-            doc = "Generator schema kind, e.g. 'protobuf'. Only the issue #506 first pair is admitted.",
         ),
         "_writer": attr.label(
             default = "//generation/codegen_shard:codegen_shard_writer",
             executable = True,
             cfg = "exec",
-            doc = "Shard writer emitting the validated binary DxCodegenShard protobuf.",
         ),
     },
-    doc = "Emits one contributor's normalized binary codegen plan shard (issue #506 WP1).",
 )
 
 _CODEGEN_ASPECT_ATTRS = ["deps", "proto", "proto_rs"]
@@ -481,7 +392,6 @@ def _dx_codegen_plan_aspect_impl(target, ctx):
 dx_codegen_plan_aspect = aspect(
     implementation = _dx_codegen_plan_aspect_impl,
     attr_aspects = _CODEGEN_ASPECT_ATTRS,
-    doc = "Collects normalized codegen plan records and shard files along narrow codegen edges.",
 )
 
 def _prost_codegen_shard_impl(ctx):
@@ -556,28 +466,22 @@ prost_codegen_shard = rule(
     attrs = {
         "entries": attr.string_list(
             mandatory = True,
-            doc = "Explicit logical projection entries, each LOGICAL_PATH|IMPORT_ROOT|NAMESPACE|EXEC_PATH[|REPLACES]. Paths are never inferred from the upstream action; every entry binds one rust_generated_srcs artifact and every generated artifact needs one claimant. The optional REPLACES must equal LOGICAL_PATH with non-empty EXEC_PATH, declaring the replacement contract for a colliding workspace source.",
         ),
         "language": attr.string(
             default = "rust",
-            doc = "Generated file class. Only 'rust' is admitted with schema_kind 'protobuf' under issue #506.",
         ),
         "proto_rs": attr.label(
             mandatory = True,
-            doc = "One rust_prost_library target proving the protobuf->Rust edge via its rust_generated_srcs output group.",
         ),
         "schema_kind": attr.string(
             default = "protobuf",
-            doc = "Generator schema kind. Only 'protobuf' is admitted under issue #506.",
         ),
         "_writer": attr.label(
             default = "//generation/codegen_shard:codegen_shard_writer",
             executable = True,
             cfg = "exec",
-            doc = "Shard writer emitting the validated binary DxCodegenShard protobuf.",
         ),
     },
-    doc = "Narrow protobuf->Rust adapter: verifies the rust_prost_library edge and emits one normalized shard (issue #506 WP1, issue #506).",
 )
 
 def _codegen_plan_subject_impl(ctx):
@@ -602,8 +506,6 @@ codegen_plan_subject = rule(
         "target": attr.label(
             aspects = [dx_codegen_plan_aspect],
             mandatory = True,
-            doc = "Fixture target observed with the codegen plan aspect applied.",
         ),
     },
-    doc = "Exposes the merged codegen plan fingerprint and shard basenames for aspect evidence.",
 )

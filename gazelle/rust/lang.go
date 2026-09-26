@@ -18,27 +18,15 @@ import (
 )
 
 const (
-	languageName = "rust"
-	libraryKind  = "rust_library"
-	binaryKind   = "rust_binary"
-	testKind     = "rust_test"
-	// procMacroKind, sharedKind, and staticKind are the dx wrappers for
-	// Cargo [lib] targets with proc-macro = true, crate-type =
-	// ["cdylib"], and crate-type = ["staticlib"].
+	languageName  = "rust"
+	libraryKind   = "rust_library"
+	binaryKind    = "rust_binary"
+	testKind      = "rust_test"
 	procMacroKind = "rust_proc_macro"
 	sharedKind    = "rust_shared_library"
 	staticKind    = "rust_static_library"
-	// scriptKind is the upstream cargo_build_script wrapper macro (loaded
-	// from @rules_rust//cargo), not a dx wrapper: the macro already owns
-	// the script-binary/runfiles split and stays self-describing.
-	scriptKind = "cargo_build_script"
-	// dxCrateKind is the leaf-crate boilerplate macro: it
-	// expands to `<name>` rust_library + `<name>_test` rust_test + lint
-	// tests + manifest export. Corpus splits are owned by generation
-	// , never by this macro. BUILD files hand-maintain it;
-	// generation must recognize it as covering the lib + unit-test it
-	// emits instead of proposing duplicate rust_library/rust_test rules.
-	dxCrateKind = "dx_rust_crate"
+	scriptKind    = "cargo_build_script"
+	dxCrateKind   = "dx_rust_crate"
 )
 
 var rustKinds = map[string]rule.KindInfo{
@@ -51,8 +39,6 @@ var rustKinds = map[string]rule.KindInfo{
 	scriptKind:    kindInfo(),
 }
 
-// isLibraryKind reports whether a rule kind is a linkable library flavor:
-// only libraries are ever valid cross-package dependencies in rules_rust.
 func isLibraryKind(kind string) bool {
 	switch kind {
 	case libraryKind, procMacroKind, sharedKind, staticKind:
@@ -61,14 +47,6 @@ func isLibraryKind(kind string) bool {
 	return false
 }
 
-// shouldSetVisibility reports whether generated library rules need an
-// explicit public visibility: a Cargo workspace links every crate from
-// every other crate, while Bazel defaults to private. Files that already
-// declare a default visibility keep it (their owner opted out
-// explicitly). Bins, tests, and scripts never gain visibility: they are
-// never valid cross-package dependencies, and same-package references
-// (sibling lib, unit-test crate edge, build script) work under the
-// private default.
 func shouldSetVisibility(args language.GenerateArgs) bool {
 	if args.File != nil && args.File.HasDefaultVisibility() {
 		return false
@@ -82,11 +60,6 @@ func shouldSetVisibility(args language.GenerateArgs) bool {
 }
 
 func init() {
-	// Managed native-config targets merge through the same file the
-	// Rust rules live in, so their kinds register alongside. Corpus
-	// splits (`real_source_target` per content type,) merge
-	// through the same file as well: every corpus block is written and
-	// maintained by this workflow (`dx generate`).
 	for kind, info := range nativeConfigKinds() {
 		rustKinds[kind] = info
 	}
@@ -124,10 +97,7 @@ type rustLang struct {
 
 type rustConfig struct {
 	ignores []*ignoreEntry
-	// tools is the managed native-config tool set for the directory,
-	// from the nearest dx_native_tools directive or inherited. Nil
-	// means unconstrained: every managed tool.
-	tools []string
+	tools   []string
 }
 
 type ignoreEntry struct {
@@ -137,37 +107,15 @@ type ignoreEntry struct {
 }
 
 type targetImports struct {
-	production []string
-	test       []string
-	// mirrorPaths links every declared first-party path dependency from
-	// the target's visible scopes whether or not any use item names it:
-	// Cargo links all declared dependencies into a target, while import
-	// detection only sees use items (an expression path like
-	// `api::digest(words)` never surfaces). Resolution looks these names
-	// up in the rule index but stays silent on misses and ambiguities:
-	// a declared-but-unused dep is legal, and a used-but-undetected one
-	// that the index cannot place unambiguously is reported by rustc,
-	// not by fail-closed generation. Validation ignores this set.
+	production  []string
+	test        []string
 	mirrorPaths []string
-	// siblingLib is the Bazel name of the same-package library a binary,
-	// test, example, or bench target links automatically (Cargo binds
-	// the sibling lib without an import). Empty for libraries and
-	// scripts. It flows straight to deps: validation and manifest
-	// indexing ignore it.
-	siblingLib string
-	// scriptDep is the Bazel name of the package's generated build-script
-	// rule. Every crate rule in a package with an active script links it
-	// (the upstream consumer pattern is a plain deps edge), except the
-	// script rule itself. It flows straight to deps like siblingLib.
-	scriptDep string
+	siblingLib  string
+	scriptDep   string
 }
 
-// NewLanguage returns the private first-party Rust Gazelle extension.
 func NewLanguage() language.Language { return &rustLang{} }
 
-// exitProcess ends the Gazelle run when generation errors are recorded.
-// It is a variable so unit tests can observe the fail-closed decision
-// without exiting the test process.
 var exitProcess = os.Exit
 
 func (l *rustLang) Before(context.Context) {
@@ -213,8 +161,6 @@ func (l *rustLang) Configure(c *config.Config, rel string, file *rule.File) {
 					l.fail("%v", err)
 					continue
 				}
-				// The nearest directive wins: a deeper BUILD file
-				// replaces the inherited set instead of unioning it.
 				tools = selected
 			case "dx_ignore_import":
 				fields := strings.Fields(directive.Value)
@@ -250,10 +196,6 @@ func (l *rustLang) AfterResolvingDeps(context.Context) {
 			l.fail("%v", err)
 		}
 	}
-	// The framework's Language interface offers no error return here, so a
-	// fatal exit — not a panic and its stack trace — is the only way to
-	// fail the run before BUILD emission. A zero-length error list returns
-	// normally.
 	if len(l.errors) > 0 {
 		sort.Strings(l.errors)
 		fmt.Fprintln(os.Stderr, "Rust generation failed before BUILD emission:\n"+strings.Join(l.errors, "\n"))
@@ -296,13 +238,6 @@ func rustLoads(rulesRepo, cratesRepo, rulesRustRepo string) []rule.LoadInfo {
 }
 
 func (*rustLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
-	// Libraries and procedural-macro libraries both export linkable
-	// crates: first-party path dependencies resolve to either. Shared and
-	// static libraries cannot be depended on, and binaries (including
-	// emitted examples and benches) are never cross-package providers.
-	// The dx_rust_crate macro expands to an ordinary rust_library, so it
-	// provides the same import as the library it emits (crate_name attr
-	// or the macro name when omitted).
 	if r.Kind() == dxCrateKind {
 		crateName := r.AttrString("crate_name")
 		if crateName == "" {
@@ -421,17 +356,6 @@ func (l *rustLang) generateRules(args language.GenerateArgs) language.GenerateRe
 	return l.attachNative(args, result, plan)
 }
 
-// attachNative folds the native-config plan and the corpus split plan
-// into a generation result: planned config rules join the
-// generated set before claim validation, Rust rules bind their
-// aspect_hints, corpus splits join as fully owned targets, and planned
-// removals join the generic stale sweep. Claim collisions stay
-// fail-closed with no partial result. Rules already covered by a
-// hand-maintained dx_rust_crate macro (leaf-crate lib + unit-test) are
-// filtered before validation so the macro stays the single owner and no
-// duplicate target is proposed. Corpus splits are never filtered: the
-// macro no longer emits `corpus` (Gazelle owns every corpus block), so a
-// macro package still gains its `corpus_*` targets from generation.
 func (l *rustLang) attachNative(args language.GenerateArgs, result language.GenerateResult, plan *nativePlan) language.GenerateResult {
 	result = filterDxCrateCovered(args.File, result)
 	for _, r := range result.Gen {
@@ -442,13 +366,9 @@ func (l *rustLang) attachNative(args language.GenerateArgs, result language.Gene
 	hasOtherGen := len(result.Gen) > 0 || args.File != nil
 	corpus := planCorpus(args, hasOtherGen)
 	result.Gen = append(result.Gen, corpus.gen...)
-	// Corpus imports parallel Gen with empty targetImports so Resolve
-	// stays aligned; corpus rules never resolve deps.
 	for range corpus.gen {
 		result.Imports = append(result.Imports, targetImports{})
 	}
-	// Auto-testonly for fixture paths: generated rules under
-	// tests/fixtures/testdata carry testonly.
 	if isFixturePath(args.Rel) {
 		for _, r := range result.Gen {
 			r.SetAttr("testonly", true)
@@ -464,8 +384,6 @@ func (l *rustLang) attachNative(args language.GenerateArgs, result language.Gene
 	return merged
 }
 
-// dxCrateNames collects the macro names of hand-maintained dx_rust_crate
-// rules in a BUILD file. Nil files yield no names.
 func dxCrateNames(file *rule.File) map[string]bool {
 	names := make(map[string]bool)
 	if file == nil {
@@ -479,14 +397,6 @@ func dxCrateNames(file *rule.File) map[string]bool {
 	return names
 }
 
-// filterDxCrateCovered drops generated rules already provided by a
-// hand-maintained dx_rust_crate macro in the same package: the ordinary
-// rust_library with the macro name and the unit-test wrapper
-// `<name>_test` via `crate = ":<name>"`. Integration tests (no crate
-// edge), binaries, build scripts, and flavored libraries (proc-macro,
-// cdylib, staticlib) are never covered: the macro only emits the
-// lib-only leaf pattern, so those stay generated and any true conflict
-// still fails closed in checkExistingClaims.
 func filterDxCrateCovered(file *rule.File, result language.GenerateResult) language.GenerateResult {
 	covered := dxCrateNames(file)
 	if len(covered) == 0 || len(result.Gen) == 0 {
@@ -510,19 +420,13 @@ func filterDxCrateCovered(file *rule.File, result language.GenerateResult) langu
 			keptImports = append(keptImports, result.Imports[i])
 		}
 	}
-	// When Gen is empty but Imports held only plan-independent entries,
-	// keep the slices consistent for the caller.
 	result.Gen = keptGen
 	if len(result.Gen) == 0 {
-		// Preserve any trailing imports only when they still align;
-		// filtered lib/test imports drop with their rules.
 		if len(keptImports) > len(keptGen) {
 			keptImports = keptImports[:len(keptGen)]
 		}
 		result.Imports = keptImports
 	} else {
-		// Imports parallel Gen for crate rules; truncation above already
-		// keeps alignment when every Gen entry had an import.
 		if len(result.Imports) != len(keptImports) {
 			result.Imports = keptImports
 		}
@@ -530,8 +434,6 @@ func filterDxCrateCovered(file *rule.File, result language.GenerateResult) langu
 	return result
 }
 
-// CollectUsedIgnores reports used dx_ignore_import entries visible in c
-// as (path, value) pairs for the composed `//dx:generate` witness.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

@@ -1,18 +1,3 @@
-// Naming implements the deterministic Svelte target-name normalizer owned
-// by the first-party Svelte Gazelle extension.
-//
-// The durable constraint comes from the common generation contract:
-// basename-derived names preserve ASCII letters, ASCII digits, and internal
-// underscores; every run of any other character becomes one underscore;
-// leading and trailing underscores are trimmed; an empty result fails
-// generation. Same-package normalized-name collisions fail with every
-// claimant; the extension never invents a language affix or another suffix.
-//
-// Every supported `.svelte` component receives one ordinary
-// reusable one-source `svelte_library`. Svelte tests and entries stay
-// JavaScript-owned (parsed or compiled outputs exercised through the
-// `javascript_test`/`javascript_binary` wrappers); `.svelte` sources are never tests
-// or thin binaries, so no test/entry inference exists here.
 package svelte
 
 import (
@@ -21,14 +6,8 @@ import (
 	"strings"
 )
 
-// SupportedExts are the Svelte source extensions discovered by the
-// extension. Core JS/TS sources and other framework containers are
-// inert and never listed here.
 var SupportedExts = []string{".svelte"}
 
-// Normalize maps one source basename (without its final language extension)
-// to its deterministic Bazel target-name stem. It reports an error instead
-// of an empty name so callers fail closed.
 func Normalize(base string) (string, error) {
 	var b strings.Builder
 	b.Grow(len(base))
@@ -55,8 +34,6 @@ func Normalize(base string) (string, error) {
 	return out, nil
 }
 
-// stripSvelteExt reports the basename without its final Svelte extension.
-// It returns ok=false when the name carries no supported extension.
 func stripSvelteExt(base string) (string, bool) {
 	for _, ext := range SupportedExts {
 		if strings.HasSuffix(base, ext) {
@@ -66,8 +43,6 @@ func stripSvelteExt(base string) (string, bool) {
 	return "", false
 }
 
-// TargetName derives the Bazel target name for one Svelte source path:
-// the basename without its final extension, normalized.
 func TargetName(name string) (string, error) {
 	base := path.Base(name)
 	stem, ok := stripSvelteExt(base)
@@ -77,10 +52,6 @@ func TargetName(name string) (string, error) {
 	return Normalize(stem)
 }
 
-// ModuleName returns the import identity for one Svelte source path:
-// the basename without its final extension, exact and unnormalized.
-// Relative references resolve by this stem; bare specifiers resolve through
-// authoritative pnpm scope or exact mappings.
 func ModuleName(name string) string {
 	base := path.Base(name)
 	if stem, ok := stripSvelteExt(base); ok {
@@ -89,21 +60,12 @@ func ModuleName(name string) string {
 	return base
 }
 
-// Claimant records one generated or handwritten target competing for a
-// normalized name in a single Bazel package.
 type Claimant struct {
-	// Name is the normalized target name under contention.
-	Name string
-	// Source identifies the claimant for diagnostics: a source path for
-	// generated targets, "handwritten:<label>" for existing BUILD rules.
+	Name   string
 	Source string
-	// Kind is the generated rule kind claiming the name.
-	Kind string
+	Kind   string
 }
 
-// CollisionError reports a same-package normalized-name collision with
-// every claimant. Generation fails rather than overwriting, dropping a
-// target, or inventing a suffix.
 type CollisionError struct {
 	Name      string
 	Claimants []string
@@ -114,8 +76,6 @@ func (e *CollisionError) Error() string {
 		e.Name, strings.Join(e.Claimants, ", "))
 }
 
-// CheckCollisions fails closed when two or more claimants share one
-// normalized name. Claimants are grouped by Name; groups of one pass.
 func CheckCollisions(claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))

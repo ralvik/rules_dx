@@ -1,6 +1,3 @@
-"""Analysis subject exposing an aggregate workspace policy (WP1).
-
-"""
 
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 load(":policy.bzl", "CAPABILITIES", "QualityPolicyInfo")
@@ -23,8 +20,6 @@ policy_subject = rule(
     attrs = {
         "policy": attr.label(
             providers = [QualityPolicyInfo],
-            doc = "Aggregate workspace policy whose families render as subject fields.",
         ),
     },
-    doc = "Analysis subject exposing an aggregate workspace policy (WP1).",
 )

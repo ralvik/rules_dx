@@ -1,5 +1,3 @@
-"""Quality core plus result contract pins."""
-
 SEVERITY_INFO = "proto INFO maps to NDJSON info"
 SEVERITY_WARNING = "proto WARNING maps to NDJSON warning"
 SEVERITY_ERROR = "proto ERROR maps to NDJSON error"
@@ -91,9 +89,9 @@ REJECTED_ALTERNATIVES = [
     "unmapped NDJSON",
 ]
 
-OWNED_SPDP_PARSE = "SPDX parsing plus policy-table loading stays owned under issue #511"
-OWNED_SPDP_EMISSION = "live SPDX emission stays owned under issue #511"
-OWNED_UPDATE_AGGREGATE = "update aggregate exit codes stay owned under issue #511"
+OWNED_SPDP_PARSE = "SPDX parsing plus policy-table loading stays owned"
+OWNED_SPDP_EMISSION = "live SPDX emission stays owned"
+OWNED_UPDATE_AGGREGATE = "update aggregate exit codes stay owned"
 OWNED_GAPS_NOTE = "platform plus consumer plus release evidence stays owned gap"
 NO_SUPPORTED_CLAIM = "no Supported claim"
 

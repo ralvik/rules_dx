@@ -1,25 +1,3 @@
-// Parser extracts the narrow recognized source facts the C# Gazelle
-// extension needs for package-level ownership and strict dependency
-// resolution.
-//
-// A `.cs` source contributes dependency references only through `using`
-// directives (`using Foo.Bar;`, `using static Foo.Bar;`,
-// `using Alias = Foo.Bar;`). The `namespace` declaration contributes the
-// source's own namespace identity, never an edge. Comments, string literals
-// (including verbatim and interpolated strings), and character literals are
-// inert: text that looks like a `using` or `Main` inside them never produces
-// a fact.
-//
-// Recognition is by a narrow comment/string-stripping scanner plus a
-// using-statement matcher, never by a full C# grammar. Generation never
-// type-checks a file.
-//
-// Identity normalization: every non-stdlib `using` contributes its simple
-// name (final dot segment; `Foo.Bar.Baz` -> `Baz`), which matches the owning
-// library's indexed simple names. `System.*`/`Microsoft.*` imports are
-// included and filtered by callers via IsStdLib. Two libraries owning the
-// same simple name are ambiguous and fail resolution; owners add an exact
-// `# gazelle:resolve` mapping or rename.
 package csharp
 
 import (
@@ -30,22 +8,11 @@ import (
 )
 
 var (
-	// usingRe matches one stripped `using` directive and captures the dotted
-	// path. `using static` and `using Alias =` prefixes are accepted; the
-	// trailing semicolon is required by the language and required here.
-	usingRe = regexp.MustCompile(`(?m)^\s*using\s+(?:static\s+)?(?:[A-Za-z_][\w]*\s*=\s*)?([A-Za-z_][\w]*(?:\.[\w]+)*)\s*;\s*$`)
-	// namespaceRe matches one stripped `namespace` declaration (block or
-	// file-scoped) and captures the dotted path.
+	usingRe     = regexp.MustCompile(`(?m)^\s*using\s+(?:static\s+)?(?:[A-Za-z_][\w]*\s*=\s*)?([A-Za-z_][\w]*(?:\.[\w]+)*)\s*;\s*$`)
 	namespaceRe = regexp.MustCompile(`(?m)^\s*namespace\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\b`)
-	// mainRe matches `static ... Main(` outside comments and literals. Any
-	// non-test source defining `Main` keeps the directory handwritten (thin
-	// `csharp_binary` entries are never inferred).
-	mainRe = regexp.MustCompile(`static\s+[\w<>\[\],\s]*\bMain\s*\(`)
+	mainRe      = regexp.MustCompile(`static\s+[\w<>\[\],\s]*\bMain\s*\(`)
 )
 
-// stripNonCode returns content with line comments, block comments, string
-// literals, verbatim strings, and character literals replaced by spaces
-// (newlines preserved so line structure survives).
 func stripNonCode(content []byte) []byte {
 	s := string(content)
 	out := make([]byte, len(s))
@@ -142,10 +109,6 @@ func stripNonCode(content []byte) []byte {
 	return out
 }
 
-// ParseImports returns the sorted unique normalized import identities for
-// one C# source file. System/Microsoft identities are included; callers
-// filter them via IsStdLib. Comment- or literal-embedded text that looks
-// like a `using` never produces an edge.
 func ParseImports(content []byte) []string {
 	stripped := stripNonCode(content)
 	set := make(map[string]struct{})
@@ -163,9 +126,6 @@ func ParseImports(content []byte) []string {
 	return out
 }
 
-// ParsePackage returns the namespace identity for one C# source file, or ""
-// when the file carries no namespace declaration (global namespace).
-// A file with two namespace declarations fails closed.
 func ParsePackage(content []byte) (string, error) {
 	stripped := stripNonCode(content)
 	matches := namespaceRe.FindAllSubmatch(stripped, -1)
@@ -186,9 +146,6 @@ func (e *duplicatePackageError) Error() string {
 
 func errDuplicatePackage(first string) error { return &duplicatePackageError{first: first} }
 
-// normalizeImport maps one dotted `using` path to its resolution identity:
-// the final dot segment. System/Microsoft paths are returned unchanged for
-// caller-side filtering.
 func normalizeImport(dotted string) string {
 	dotted = strings.TrimSpace(dotted)
 	if dotted == "" {
@@ -203,10 +160,6 @@ func normalizeImport(dotted string) string {
 	return dotted
 }
 
-// DefinesMain reports whether a C# source defines a `Main` entry point
-// outside comments and literals. Test-owned sources are never asked;
-// callers fail generation for a `Main`-defining library source rather than
-// inferring a thin binary.
 func DefinesMain(content []byte) bool {
 	return mainRe.Match(stripNonCode(content))
 }

@@ -1,4 +1,3 @@
-"""dx_tools use_repo inventory."""
 
 DX_TOOL_REPOS = [
     "dx_biome_linux_arm64",

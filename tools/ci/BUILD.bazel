@@ -1,11 +1,3 @@
-"""CI package stub.
-
-The shell qualification harness (`*_qualification.sh`, `prove.sh`,
-`dogfood_freshness.sh`, target shards) was removed: CI runs the `dx`
-dogfood matrix directly, so nothing here declares targets. The package
-itself stays so existing `//tools/ci:__pkg__` visibility grants keep
-resolving.
-"""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 

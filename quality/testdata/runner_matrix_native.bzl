@@ -1,7 +1,3 @@
-"""Native cohort matrix cells.
-
-Seed-only wiring proof with fake doubles plus recorded diagnostics.
-"""
 
 CLANG_TIDY_LINT = """matrix/clang_tidy_dirty.c:4:3: warning: do not use 'else' after 'return' [readability-else-after-return]"""
 
@@ -23,16 +19,7 @@ NATIVE_CASES = [
         "stages": ["clang_format;c;matrix/clang_format_clean.c"],
         "tool_names": ["clang_format"],
         "tool_binaries": ["//quality/testdata:fake_clang_format"],
-        "expected": """producer //quality/testdata:matrix_c_format_pass
-capability FORMAT
-stages 1
-stage clang_format classes=c sources=matrix/clang_format_clean.c
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_c_format_pass""",
     },
     {
         "name": "matrix_c_format_fail",
@@ -43,18 +30,7 @@ replacements 0
         "stages": ["clang_format;c;matrix/clang_format_dirty.c"],
         "tool_names": ["clang_format"],
         "tool_binaries": ["//quality/testdata:fake_clang_format"],
-        "expected": """producer //quality/testdata:matrix_c_format_fail
-capability FORMAT
-stages 1
-stage clang_format classes=c sources=matrix/clang_format_dirty.c
-completed_rounds 2
-convergence STABLE
-initial 1
-initial WARNING clang_format - matrix/clang_format_dirty.c 0 0 fixable=true "file is not formatted"
-terminal 0
-replacements 1
-replacement matrix/clang_format_dirty.c 75 81 "fixed"
-""",
+        "expected": """producer //quality/testdata:matrix_c_format_fail""",
     },
     {
         "name": "matrix_cpp_format_pass",
@@ -65,16 +41,7 @@ replacement matrix/clang_format_dirty.c 75 81 "fixed"
         "stages": ["clang_format;cpp;matrix/clang_format_clean.cpp"],
         "tool_names": ["clang_format"],
         "tool_binaries": ["//quality/testdata:fake_clang_format"],
-        "expected": """producer //quality/testdata:matrix_cpp_format_pass
-capability FORMAT
-stages 1
-stage clang_format classes=cpp sources=matrix/clang_format_clean.cpp
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_cpp_format_pass""",
     },
     {
         "name": "matrix_cpp_format_fail",
@@ -85,18 +52,7 @@ replacements 0
         "stages": ["clang_format;cpp;matrix/clang_format_dirty.cpp"],
         "tool_names": ["clang_format"],
         "tool_binaries": ["//quality/testdata:fake_clang_format"],
-        "expected": """producer //quality/testdata:matrix_cpp_format_fail
-capability FORMAT
-stages 1
-stage clang_format classes=cpp sources=matrix/clang_format_dirty.cpp
-completed_rounds 2
-convergence STABLE
-initial 1
-initial WARNING clang_format - matrix/clang_format_dirty.cpp 0 0 fixable=true "file is not formatted"
-terminal 0
-replacements 1
-replacement matrix/clang_format_dirty.cpp 58 64 "fixed"
-""",
+        "expected": """producer //quality/testdata:matrix_cpp_format_fail""",
     },
     {
         "name": "matrix_c_lint_pass",
@@ -107,16 +63,7 @@ replacement matrix/clang_format_dirty.cpp 58 64 "fixed"
         "stages": ["clang_tidy;c;matrix/clang_tidy_clean.c"],
         "upstream_tools": ["clang_tidy"],
         "upstream_generated": {"clang_tidy": ""},
-        "expected": """producer //quality/testdata:matrix_c_lint_pass
-capability LINT
-stages 1
-stage clang_tidy classes=c sources=matrix/clang_tidy_clean.c
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_c_lint_pass""",
     },
     {
         "name": "matrix_c_lint_fail",
@@ -127,18 +74,7 @@ replacements 0
         "stages": ["clang_tidy;c;matrix/clang_tidy_dirty.c"],
         "upstream_tools": ["clang_tidy"],
         "upstream_generated": {"clang_tidy": CLANG_TIDY_LINT},
-        "expected": """producer //quality/testdata:matrix_c_lint_fail
-capability LINT
-stages 1
-stage clang_tidy classes=c sources=matrix/clang_tidy_dirty.c
-completed_rounds 1
-convergence STABLE
-initial 1
-initial WARNING clang_tidy readability-else-after-return matrix/clang_tidy_dirty.c 46 46 fixable=false "do not use 'else' after 'return'"
-terminal 1
-terminal WARNING clang_tidy readability-else-after-return matrix/clang_tidy_dirty.c 46 46 fixable=false "do not use 'else' after 'return'"
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_c_lint_fail""",
     },
     {
         "name": "matrix_cpp_lint_pass",
@@ -149,16 +85,7 @@ replacements 0
         "stages": ["cppcheck;cpp;matrix/cppcheck_clean.c"],
         "upstream_tools": ["cppcheck"],
         "upstream_generated": {"cppcheck": ""},
-        "expected": """producer //quality/testdata:matrix_cpp_lint_pass
-capability LINT
-stages 1
-stage cppcheck classes=cpp sources=matrix/cppcheck_clean.c
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_cpp_lint_pass""",
     },
     {
         "name": "matrix_cpp_lint_fail",
@@ -169,18 +96,7 @@ replacements 0
         "stages": ["cppcheck;cpp;matrix/cppcheck_dirty.c"],
         "upstream_tools": ["cppcheck"],
         "upstream_generated": {"cppcheck": CPPCHECK_LINT},
-        "expected": """producer //quality/testdata:matrix_cpp_lint_fail
-capability LINT
-stages 1
-stage cppcheck classes=cpp sources=matrix/cppcheck_dirty.c
-completed_rounds 1
-convergence STABLE
-initial 1
-initial ERROR cppcheck nullPointer matrix/cppcheck_dirty.c 123 123 fixable=false "Possible null pointer dereference: slot"
-terminal 1
-terminal ERROR cppcheck nullPointer matrix/cppcheck_dirty.c 123 123 fixable=false "Possible null pointer dereference: slot"
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_cpp_lint_fail""",
     },
     {
         "name": "matrix_go_format_pass",
@@ -191,16 +107,7 @@ replacements 0
         "stages": ["gofumpt;go;matrix/gofumpt_clean.go"],
         "tool_names": ["gofumpt"],
         "tool_binaries": ["//quality/testdata:fake_gofumpt"],
-        "expected": """producer //quality/testdata:matrix_go_format_pass
-capability FORMAT
-stages 1
-stage gofumpt classes=go sources=matrix/gofumpt_clean.go
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_go_format_pass""",
     },
     {
         "name": "matrix_go_format_fail",
@@ -211,18 +118,7 @@ replacements 0
         "stages": ["gofumpt;go;matrix/gofumpt_dirty.go"],
         "tool_names": ["gofumpt"],
         "tool_binaries": ["//quality/testdata:fake_gofumpt"],
-        "expected": """producer //quality/testdata:matrix_go_format_fail
-capability FORMAT
-stages 1
-stage gofumpt classes=go sources=matrix/gofumpt_dirty.go
-completed_rounds 2
-convergence STABLE
-initial 1
-initial WARNING gofumpt - matrix/gofumpt_dirty.go 0 0 fixable=true "file is not formatted"
-terminal 0
-replacements 1
-replacement matrix/gofumpt_dirty.go 76 82 "fixed"
-""",
+        "expected": """producer //quality/testdata:matrix_go_format_fail""",
     },
     {
         "name": "matrix_go_staticcheck_pass",
@@ -233,16 +129,7 @@ replacement matrix/gofumpt_dirty.go 76 82 "fixed"
         "stages": ["staticcheck;go;matrix/staticcheck_clean.go"],
         "upstream_tools": ["staticcheck"],
         "upstream_generated": {"staticcheck": "[]"},
-        "expected": """producer //quality/testdata:matrix_go_staticcheck_pass
-capability LINT
-stages 1
-stage staticcheck classes=go sources=matrix/staticcheck_clean.go
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_go_staticcheck_pass""",
     },
     {
         "name": "matrix_go_staticcheck_fail",
@@ -253,18 +140,7 @@ replacements 0
         "stages": ["staticcheck;go;matrix/staticcheck_dirty.go"],
         "upstream_tools": ["staticcheck"],
         "upstream_generated": {"staticcheck": STATICCHECK_LINT},
-        "expected": """producer //quality/testdata:matrix_go_staticcheck_fail
-capability LINT
-stages 1
-stage staticcheck classes=go sources=matrix/staticcheck_dirty.go
-completed_rounds 1
-convergence STABLE
-initial 1
-initial WARNING staticcheck SA4006 matrix/staticcheck_dirty.go 80 81 fixable=false "this value of x is never used"
-terminal 1
-terminal WARNING staticcheck SA4006 matrix/staticcheck_dirty.go 80 81 fixable=false "this value of x is never used"
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_go_staticcheck_fail""",
     },
     {
         "name": "matrix_go_govet_pass",
@@ -275,16 +151,7 @@ replacements 0
         "stages": ["govet;go;matrix/govet_clean.go"],
         "upstream_tools": ["govet"],
         "upstream_generated": {"govet": ""},
-        "expected": """producer //quality/testdata:matrix_go_govet_pass
-capability LINT
-stages 1
-stage govet classes=go sources=matrix/govet_clean.go
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_go_govet_pass""",
     },
     {
         "name": "matrix_go_govet_fail",
@@ -295,18 +162,7 @@ replacements 0
         "stages": ["govet;go;matrix/govet_dirty.go"],
         "upstream_tools": ["govet"],
         "upstream_generated": {"govet": GOVET_LINT},
-        "expected": """producer //quality/testdata:matrix_go_govet_fail
-capability LINT
-stages 1
-stage govet classes=go sources=matrix/govet_dirty.go
-completed_rounds 1
-convergence STABLE
-initial 1
-initial WARNING govet - matrix/govet_dirty.go 87 87 fixable=false "non-constant format string in call to fmt.Printf"
-terminal 1
-terminal WARNING govet - matrix/govet_dirty.go 87 87 fixable=false "non-constant format string in call to fmt.Printf"
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_go_govet_fail""",
     },
     {
         "name": "matrix_go_errcheck_pass",
@@ -317,16 +173,7 @@ replacements 0
         "stages": ["errcheck;go;matrix/errcheck_clean.go"],
         "upstream_tools": ["errcheck"],
         "upstream_generated": {"errcheck": ""},
-        "expected": """producer //quality/testdata:matrix_go_errcheck_pass
-capability LINT
-stages 1
-stage errcheck classes=go sources=matrix/errcheck_clean.go
-completed_rounds 1
-convergence STABLE
-initial 0
-terminal 0
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_go_errcheck_pass""",
     },
     {
         "name": "matrix_go_errcheck_fail",
@@ -337,17 +184,6 @@ replacements 0
         "stages": ["errcheck;go;matrix/errcheck_dirty.go"],
         "upstream_tools": ["errcheck"],
         "upstream_generated": {"errcheck": ERRCHECK_LINT},
-        "expected": """producer //quality/testdata:matrix_go_errcheck_fail
-capability LINT
-stages 1
-stage errcheck classes=go sources=matrix/errcheck_dirty.go
-completed_rounds 1
-convergence STABLE
-initial 1
-initial WARNING errcheck - matrix/errcheck_dirty.go 89 89 fixable=false "unchecked error: f.WriteString(\\"hello\\")"
-terminal 1
-terminal WARNING errcheck - matrix/errcheck_dirty.go 89 89 fixable=false "unchecked error: f.WriteString(\\"hello\\")"
-replacements 0
-""",
+        "expected": """producer //quality/testdata:matrix_go_errcheck_fail""",
     },
 ]

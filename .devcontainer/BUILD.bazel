@@ -1,4 +1,3 @@
-"""Dogfooded `dx init` devcontainer definition (issue #183, snapshot workflow issue #322)."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
@@ -7,9 +6,6 @@ package(default_visibility = ["//:__subpackages__"])
 
 exports_files(["Dockerfile.prebuilt"])
 
-# Parity fixture: `dx init` scaffold output is a snapshot of the
-# checked-in definition, so the definition we ship is the one we
-# boot (snapshot + schema, UPDATE_EXPECT refreshes the golden).
 sh_test(
     name = "devcontainer_parity_test",
     size = "small",
@@ -27,7 +23,6 @@ sh_test(
         "//tools/sh:snapshot",
     ],
     tags = ["no-coverage"],
-    # Bash-only harness is Linux-only (issue #299 shell contract).
     target_compatible_with = ["@platforms//os:linux"],
 )
 

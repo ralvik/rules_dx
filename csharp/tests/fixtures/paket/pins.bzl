@@ -1,7 +1,3 @@
-"""Paket lock wiring pins.
-
-"""
-
 RULES_DOTNET_VERSION = "0.22.1"
 
 DOTNET_SDK_VERSION = "10.0.201"

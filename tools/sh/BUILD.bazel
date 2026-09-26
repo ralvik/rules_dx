@@ -1,19 +1,3 @@
-"""Shared shell helpers (bootstrap plus snapshot workflow plus guard tables).
-
-Single-sources the shell bootstrap (`bootstrap.sh`: runfiles-first
-`dx_bootstrap` with no per-file depth adjustment, issue #654) plus the
-workspace-root probe plus runfiles `rlocation` usage
-repeated across every shell driver, plus the snapshot-testing workflow
-(`snapshot.sh`: byte-identical and canonical-JSON asserts with
-UPDATE_EXPECT refresh) plus the table-driven guard rows (`guards.sh`:
-`{file, must-contain|must-not-contain, reason/issue}` pins) plus the
-hermetic grep helper (`hermetic_grep.py`: pure-stdlib python3 replacing
-host BSD/GNU `grep`/`sed` variance, issue #1006). Drivers
-source `bootstrap.sh` once via a runfiles-first loader then call
-`dx_bootstrap` for `lib.sh` / `snapshot.sh` / `guards.sh`, and depend on
-`:bootstrap` plus `:lib` / `:snapshot` / `:guards` so the files
-ride their runfiles forest under `bazel test` / `bazel run`.
-"""
 
 load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("@rules_shell//shell:sh_library.bzl", "sh_library")

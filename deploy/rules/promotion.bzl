@@ -1,7 +1,3 @@
-"""Staging-to-production promotion publisher for `dx deploy`.
-
-"""
-
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -15,27 +11,12 @@ _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 _VALID_ARTIFACT_SUFFIXES = [".tar.gz", ".tar", ".tgz", ".whl", ".jar", ".nupkg", ".zip"]
 
 def promotion_environment_charset():
-    """Returns the launcher-safe environment charset via registry query.
-
-    Derived from `_VALID_ENVIRONMENT_CHARS`, never duplicated.
-    """
     return _VALID_ENVIRONMENT_CHARS
 
 def promotion_version_charset():
-    """Returns the launcher-safe version charset via registry query.
-
-    Derived from `_VALID_VERSION_CHARS`, never duplicated.
-    """
     return _VALID_VERSION_CHARS
 
 def promotion_schema_error():
-    """Validates the versioned environment charset schema.
-
-    Checks data shape without pinning exact contents: version is v1,
-    each charset is non-empty with unique launcher-safe characters and
-    never admits quotes, backslash, space, or newline so names embed
-    safely in the deploy launcher.
-    """
     if PROMOTION_SCHEMA_VERSION != 1:
         return "promotion: unsupported schema v" + str(PROMOTION_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ENVIRONMENT_CHARS) != "string" or _VALID_ENVIRONMENT_CHARS == "":
@@ -61,7 +42,6 @@ def promotion_schema_error():
     return ""
 
 def promotion_environment_error(environment):
-    """Validates one promotion environment name value."""
     if type(environment) != "string" or environment == "":
         return ("promotion_deploy: invalid environment '" + str(environment) +
                 "': want a non-empty environment (for example 'staging')")
@@ -73,7 +53,6 @@ def promotion_environment_error(environment):
     return ""
 
 def promotion_version_error(version):
-    """Validates one promotion version value."""
     if type(version) != "string" or version == "":
         return ("promotion_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '1.2.3')")
@@ -85,7 +64,6 @@ def promotion_version_error(version):
     return ""
 
 def promotion_artifact_error(filename):
-    """Validates one promotion artifact filename value."""
     if type(filename) != "string" or filename == "":
         return ("promotion_deploy: invalid artifact '" + str(filename) +
                 "': want a non-empty deploy artifact filename")
@@ -104,27 +82,12 @@ def promotion_artifact_error(filename):
     return ""
 
 def promotion_edge_error(from_environment, to_environment):
-    """Validates one staging-to-production promotion edge."""
     if from_environment == to_environment:
         return ("promotion_deploy: invalid edge '" + from_environment + " -> " +
                 to_environment + "': source and target environments must differ")
     return ""
 
 def _promotion_launcher_impl(ctx):
-    """Expands the `py_binary` launcher for one promotion deployment.
-
-    The artifact resolves to a single deploy output file. The rule
-    computes the runfiles rlocation for the artifact via
-    `rlocation_path`, then expands the shared `promotion_deploy.py`
-    template with that pin plus deploy name, source and target
-    environments, and version. The wrapping `py_binary` (see
-    `promotion_deploy`) carries the pinned input in `data` plus the
-    Python runfiles library, so the program works under `bazel run`,
-    `dx deploy` (which symlinks the entrypoint and merges its runfiles),
-    and direct `bazel-bin` execution. Extra user args after `--` select
-    the output directory (default: `$BUILD_WORKSPACE_DIRECTORY`, else
-    the cwd). Registry credentials and app secrets stay env-only at
-    runtime and are never baked into the launcher."""
     artifact_files = ctx.attr.artifact[DefaultInfo].files.to_list()
     if len(artifact_files) != 1:
         fail("promotion_deploy " + str(ctx.label) + ": artifact " +
@@ -140,7 +103,7 @@ def _promotion_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
+        # buildifier: disable=canonical-repository
         substitutions = {
             "@@ARTIFACT_RLOC@@": artifact_rloc,
             "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
@@ -156,23 +119,18 @@ _promotion_launcher = rule(
     attrs = {
         "artifact": attr.label(
             allow_single_file = True,
-            doc = "Deploy artifact file pinned in the promotion directory.",
             mandatory = True,
         ),
         "deploy_name": attr.string(
-            doc = "Deploy target name baked into the promotion directory.",
             mandatory = True,
         ),
         "from_environment": attr.string(
-            doc = "Source environment baked into the promotion record.",
             mandatory = True,
         ),
         "to_environment": attr.string(
-            doc = "Target environment baked into the promotion record.",
             mandatory = True,
         ),
         "version": attr.string(
-            doc = "Promoted version baked into the promotion record.",
             mandatory = True,
         ),
         "_template": attr.label(
@@ -180,28 +138,9 @@ _promotion_launcher = rule(
             default = "//deploy/rules:promotion_deploy.py",
         ),
     },
-    doc = "Launcher template expansion for promotion_deploy (wrapped as py_binary).",
 )
 
 def promotion_deploy(name, artifact, from_environment = "staging", to_environment = "production", version = "0.0.0", profile = "release"):
-    """Promotes one pinned artifact across environments with gated health and rollback.
-
-    Creates `<name>_program_launcher` (expanded Python launcher resolving
-    inputs via the Python runfiles library), `<name>_program` (`py_binary`
-    on the managed Python 3.12 toolchain wrapping the launcher with pinned
-    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
-    returning `DxDeployInfo` with no app and `profile`). Run with
-    `bazel run :<name>` or `dx deploy :<name>`; the default builds a local
-    promotion directory (`<name>-promotion/` holding the pinned artifact
-    plus `promotion.json` and `would-run.txt` with the promote, health,
-    and rollback lines) and verifies bytes, publishing nothing and running
-    no health checks. Live promotion runs only with `PROMOTION_LIVE=1`
-    and `PROMOTION_APPROVED=1` after explicit owner approval, refuses the
-    `0.0.0` placeholder, gates on `PROMOTION_REQUIRE_HEALTH=1` plus
-    `PROMOTION_HEALTH_CMD`, records rollbacks via `PROMOTION_ROLLBACK=1`
-    plus `PROMOTION_ROLLBACK_TO`, and reads registry credentials plus app
-    secrets from env only, never from BUILD.
-    """
     from_error = promotion_environment_error(from_environment)
     if from_error != "":
         fail(from_error + " (in " + native.package_name() + ":" + name + ")")

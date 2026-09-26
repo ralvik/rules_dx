@@ -1,5 +1,3 @@
-"""Correlation plus committed-change manifest pins."""
-
 SCHEMA_MAJOR = 1
 SCHEMA_MINOR = 1
 
@@ -43,4 +41,4 @@ REJECTED_BUILD_PARSE = "BUILD parse rejected"
 REJECTED_RERUN = "rerun rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #811"
+SEED_ONLY = "qualified seed-only"

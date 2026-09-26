@@ -1,11 +1,5 @@
-// Stdlib lists the Go standard-library import paths treated as standard
-// library by the Go Gazelle extension (ADR 0019). Generation treats these
-// imports as standard library without an edge, a manifest, or a lockfile.
-// The list is the exact `go list std` output of the pinned Go SDK
-// (rules_go 0.63.0, Go SDK 1.26.6); it is regenerated when the pin moves.
 package golang
 
-// stdlibPackages is the exact standard-library identity set.
 var stdlibPackages = map[string]struct{}{
 	"archive/tar": {}, "archive/zip": {}, "bufio": {}, "bytes": {},
 	"cmp": {}, "compress/bzip2": {}, "compress/flate": {}, "compress/gzip": {},
@@ -100,8 +94,6 @@ var stdlibPackages = map[string]struct{}{
 	"vendor/golang.org/x/text/unicode/norm": {}, "weak": {},
 }
 
-// IsStdLib reports whether a parsed import path is Go standard library.
-// Matches are exact; subpaths never match by prefix.
 func IsStdLib(path string) bool {
 	if path == "" {
 		return false

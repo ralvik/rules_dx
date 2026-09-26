@@ -1,13 +1,8 @@
-"""Focused Rust environment plan (WP3).
-
-"""
-
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
 load("//env:focused.bzl", "focused_direct_sources", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 RustEnvPlanInfo = provider(
-    doc = "Provider-derived focused Rust target environment plan.",
     fields = {
         "crate_name": "Crate name from authoritative CrateInfo.",
         "crate_type": "Crate type from authoritative CrateInfo.",
@@ -61,8 +56,6 @@ rust_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One rust_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Rust environment plan for one wrapper target (WP3).",
 )

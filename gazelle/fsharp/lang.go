@@ -48,14 +48,10 @@ type ignoreEntry struct {
 	used  bool
 }
 
-// targetImports is the deduplicated union of normalized class identities
-// for one generated library's non-test sources. JDK roots are dropped at
-// collection; every other identity resolves strictly or fails generation.
 type targetImports struct {
 	imports []string
 }
 
-// NewLanguage returns the private first-party FSharp Gazelle extension.
 func NewLanguage() language.Language { return &fsharpLang{} }
 
 func (l *fsharpLang) Before(context.Context) { l.errors = nil; l.ignores = nil }
@@ -134,9 +130,6 @@ func fsharpLoads(rulesRepo string) []rule.LoadInfo {
 	}
 }
 
-// Imports indexes one reusable import identity per FSharp source owned by a
-// library rule: the simple class name of each non-test source. Test-owned
-// sources never contribute an identity.
 func (*fsharpLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != LibraryKind {
 		return nil
@@ -240,10 +233,6 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 
 	result := language.GenerateResult{}
 	r := rule.NewRule(LibraryKind, name)
-	// F# compile order is significant: keep dependency order instead of the
-	// default alphabetical srcs sorting (deps stay sorted). UnsortedStrings
-	// skips Gazelle merge/write sorting and the do-not-sort comment skips
-	// buildtools Rewrite sorting on Format.
 	r.SetSortedAttrs([]string{"deps"})
 	r.SetAttr("srcs", rule.UnsortedStrings(ordered))
 	if comments := r.AttrComments("srcs"); comments != nil {
@@ -259,12 +248,6 @@ func (l *fsharpLang) generateRules(args language.GenerateArgs) language.Generate
 	return mergeStale(args.File, result)
 }
 
-// orderSourcesByDependency returns sources in F# compile order:
-// dependencies first, alphabetical tie-break. An intra-package edge exists
-// when one source's non-stdlib `open` normalizes to a sibling's simple
-// identity (basename without extension). Same-namespace uses without an
-// `open` have no edge and keep alphabetical order, so owners still list
-// those dependencies first by hand. Cycles fail closed.
 func orderSourcesByDependency(sources []string, contents map[string][]byte) ([]string, error) {
 	identityToSrc := make(map[string]string, len(sources))
 	for _, src := range sources {
@@ -326,10 +309,6 @@ func orderSourcesByDependency(sources []string, contents map[string][]byte) ([]s
 	return ordered, nil
 }
 
-// checkClaims fails closed on same-package normalized-name collisions: a
-// generated library sharing its name with a handwritten rule of another
-// kind fails. A same-kind handwritten owner is ordinary Gazelle merge.
-// Handwritten-only duplicates are not ours to judge.
 func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) error {
 	existing := make(map[string]string)
 	if file != nil {
@@ -348,12 +327,9 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 	return nil
 }
 
-// isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path: any path containing tests, fixtures, or
-// testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
-    padded := "/" + rel + "/"
-    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
+	padded := "/" + rel + "/"
+	return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {
@@ -458,8 +434,6 @@ func formatMatches(matches []resolve.FindResult) string {
 	return fmt.Sprintf("[%s]", strings.Join(labels, ", "))
 }
 
-// CollectUsedIgnores reports used dx_ignore_import entries visible in c
-// as (path, value) pairs for the composed `//dx:generate` witness.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

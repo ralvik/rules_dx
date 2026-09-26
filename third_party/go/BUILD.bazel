@@ -1,20 +1,3 @@
-"""Go module lockfile package (ADR 0019).
-
-The authoritative Go dependency lock for the admitted Go foundation:
-`go.mod` plus `go.sum` via `go_deps.from_file` (`go_mod`, never hand
-`module` tags; `go.work` only for multi-module layouts). The lock is
-maintainer-owned and committed; stale locks fail closed via go.sum
-verification. Consumers never load this package directly; they depend on
-`@com_github_*` labels (e.g. `@com_github_google_go_cmp//cmp:cmp`).
-Members are buildtools (Gazelle Rust extension `//build`), difflib
-(Gazelle Rust extension `//difflib`), plus go-cmp (godeps fixture
-`//cmp:cmp`). Versions match gazelle 0.52.2 `go.mod` so the shared
-`go_deps` extension sees no version conflict. Regenerate with the pinned
-Go SDK (MODULE.bazel `go_sdk.download 1.26.6`):
-  <bazel-sdk-go> mod tidy -C third_party/go
-Generation consumes the lock and never writes it; no `go.work` lands
-here (single-module layout).
-"""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

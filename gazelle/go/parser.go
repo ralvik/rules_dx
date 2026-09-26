@@ -1,27 +1,3 @@
-// Parser extracts the narrow recognized source facts the Go Gazelle
-// extension needs for package-level ownership and strict dependency
-// resolution.
-//
-// A `.go` source file carries one package clause and zero or more import
-// specs. Only the import specs contribute dependency references: comments,
-// string literals, and all other code never do, and the pinned rules_go
-// toolchain stays authoritative at execution time.
-//
-// Recognition is by the standard `go/parser` with `ImportsOnly` (plus a
-// `PackageClauseOnly` pass for the package identity), never by regular
-// expression: comment-embedded or string-embedded text that looks like an
-// import never produces an edge, and unparseable files fail generation
-// loudly instead of contributing a guessed edge set. Generation never
-// type-checks a file.
-//
-// Specifier normalization: third-party module imports (a dot in the first
-// path segment, e.g. `github.com/x/y`) keep their full literal path and
-// resolve only through an exact `# gazelle:resolve` mapping; standard
-// library paths are included and filtered by callers via IsStdLib; every
-// other import is local and contributes its final path segment
-// (`rules_dx/go/tests/fixtures/hello` -> `hello`), which matches the owning library's
-// indexed module stem. Two local packages sharing one final segment are
-// ambiguous and fail resolution; owners add an exact mapping or rename.
 package golang
 
 import (
@@ -33,10 +9,6 @@ import (
 	"strings"
 )
 
-// ParseImports returns the sorted unique normalized import roots for one Go
-// source file. Standard-library identities are included; callers filter
-// them via IsStdLib. Unparseable files fail with an error; callers fail
-// generation rather than guessing.
 func ParseImports(content []byte) ([]string, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "source.go", content, parser.ImportsOnly)
@@ -61,9 +33,6 @@ func ParseImports(content []byte) ([]string, error) {
 	return out, nil
 }
 
-// ParsePackage returns the package clause identity for one Go source file.
-// Unparseable files fail with an error; callers fail generation rather
-// than guessing.
 func ParsePackage(content []byte) (string, error) {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "source.go", content, parser.PackageClauseOnly)
@@ -73,11 +42,6 @@ func ParsePackage(content []byte) (string, error) {
 	return f.Name.Name, nil
 }
 
-// normalizeImport maps one literal import path to its resolution root:
-// full literal for third-party module paths, final segment for local
-// paths, unchanged for standard library (filtered by callers).
-// The cgo pseudo-import "C" is never normalized to an edge: callers
-// detect it via IsCgoImport and fail generation closed.
 func normalizeImport(spec string) string {
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
@@ -99,10 +63,6 @@ func normalizeImport(spec string) string {
 	return path.Base(spec)
 }
 
-// IsCgoImport reports whether a literal import path is the cgo
-// pseudo-import "C". Exact match only; subpaths never match. Cgo
-// sources stay handwritten: generation fails closed instead of
-// emitting a dependency edge or a cgo scope attribute.
 func IsCgoImport(path string) bool {
 	return strings.TrimSpace(path) == "C"
 }

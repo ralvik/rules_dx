@@ -1,5 +1,3 @@
-"""Unit tests for signing selection (live successor to closed /).
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":signing.bzl", "SIGNING_BUNDLE_MEDIA_TYPE", "SIGNING_COSIGN_SHA256_LINUX_AMD64", "SIGNING_COSIGN_VERSION", "SIGNING_ISSUER", "SIGNING_TRUST_ROOT", "signing_bundle_media_error", "signing_bundle_names", "signing_cosign_error", "signing_cosign_sha_error", "signing_identity_error")
@@ -42,7 +40,7 @@ def signing_unit_tests(name):
             expect_equal(
                 "signing cosign pin rejects a floating version",
                 signing_cosign_error("v2.4.0"),
-                "signing: invalid cosign version 'v2.4.0': want 'v2.4.1' (pinned per issue #459)",
+                "signing: invalid cosign version 'v2.4.0': want 'v2.4.1' (pinned)",
             ),
             expect_equal(
                 "signing cosign sha accepts the pinned linux-amd64 sha",
@@ -52,7 +50,7 @@ def signing_unit_tests(name):
             expect_equal(
                 "signing cosign sha rejects a floating sha",
                 signing_cosign_sha_error("0" * 64),
-                "signing: invalid cosign sha '0000000000000000000000000000000000000000000000000000000000000000': want '8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b' (pinned per issue #459)",
+                "signing: invalid cosign sha '0000000000000000000000000000000000000000000000000000000000000000': want '8b24b946dd5809c6bd93de08033bcf6bc0ed7d336b7785787c080f574b89249b' (pinned)",
             ),
             expect_equal(
                 "signing bundle media accepts v0.3",

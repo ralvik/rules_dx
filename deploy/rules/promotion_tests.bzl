@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the promotion publisher.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":promotion.bzl", "promotion_artifact_error", "promotion_edge_error", "promotion_environment_error", "promotion_schema_error", "promotion_version_error")
 

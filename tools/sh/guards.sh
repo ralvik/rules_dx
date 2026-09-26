@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Shellcheck/shfmt clean (`shfmt -i 2 -ci`, `.shellcheckrc` bash + all
 set -euo pipefail
 
 dx_guard_file() {

@@ -1,7 +1,3 @@
-"""Cppcheck check-only wiring.
-
-"""
-
 CPPCHECK_VERSION = "2.21.0"
 
 CPPCHECK_ARTIFACT = "standalone checksummed release artifact"

@@ -1,26 +1,3 @@
-// Parser extracts the narrow recognized source facts the Java Gazelle
-// extension needs for package-level ownership and strict dependency
-// resolution.
-//
-// A `.java` source contributes dependency references only through import
-// declarations (`import com.example.Foo;`, `import static ...;`, and
-// on-demand `import com.example.*;`). The package clause contributes the
-// source's own package identity, never an edge. Comments, string literals,
-// character literals, and text blocks are inert: text that looks like an
-// import or a `main` definition inside them never produces a fact.
-//
-// Recognition is by a narrow comment/string-stripping scanner plus an
-// import-statement matcher, never by a full Java grammar. Generation never
-// type-checks a file.
-//
-// Identity normalization: every non-stdlib import contributes its simple
-// class name (final dot segment; `com.example.Foo` -> `Foo`, on-demand
-// `com.example.*` -> `example`), which matches the owning library's
-// indexed simple names. JDK imports (`java.*`, `javax.*`, `javafx.*`,
-// `jdk.*`, `org.w3c.*`, `org.xml.*`) are included and filtered by callers
-// via IsStdLib. Two libraries owning the same simple name are ambiguous
-// and fail resolution; owners add an exact `# gazelle:resolve` mapping or
-// rename.
 package java
 
 import (
@@ -31,23 +8,11 @@ import (
 )
 
 var (
-	// importRe matches one stripped `import [static] path[. *] ;` statement
-	// and captures the dotted path plus an optional `.*` marker. It runs
-	// over comment/string-stripped content, so embedded text never matches.
-	importRe = regexp.MustCompile(`(?m)^\s*import\s+(?:static\s+)?([A-Za-z_][\w]*(?:\.[\w]+)*)(\.\*)?\s*;`)
-	// packageRe matches one stripped `package path;` clause and captures
-	// the dotted path.
+	importRe  = regexp.MustCompile(`(?m)^\s*import\s+(?:static\s+)?([A-Za-z_][\w]*(?:\.[\w]+)*)(\.\*)?\s*;`)
 	packageRe = regexp.MustCompile(`(?m)^\s*package\s+([A-Za-z_][\w]*(?:\.[\w]+)*)\s*;`)
-	// mainRe matches the `static void main(` token sequence outside
-	// comments and literals. It is deliberately narrow: any non-test
-	// source defining `main` keeps the directory handwritten (thin
-	// `java_binary` entries are never inferred).
-	mainRe = regexp.MustCompile(`static\s+void\s+main\s*\(`)
+	mainRe    = regexp.MustCompile(`static\s+void\s+main\s*\(`)
 )
 
-// stripNonCode returns content with line comments, block comments, string
-// literals, character literals, and text blocks replaced by spaces
-// (newlines preserved so line structure survives).
 func stripNonCode(content []byte) []byte {
 	s := string(content)
 	out := make([]byte, len(s))
@@ -83,7 +48,6 @@ func stripNonCode(content []byte) []byte {
 			mask(i, j)
 			i = j
 		case c == '"' && i+2 < len(out) && out[i+1] == '"' && out[i+2] == '"':
-			// Text block: mask through the closing delimiter.
 			rest := strings.Index(string(out[i+3:]), `"""`)
 			if rest < 0 {
 				mask(i, len(out))
@@ -129,10 +93,6 @@ func stripNonCode(content []byte) []byte {
 	return out
 }
 
-// ParseImports returns the sorted unique normalized import identities for
-// one Java source file. JDK identities are included; callers filter them
-// via IsStdLib. Comment- or literal-embedded text that looks like an
-// import never produces an edge.
 func ParseImports(content []byte) []string {
 	stripped := stripNonCode(content)
 	set := make(map[string]struct{})
@@ -151,9 +111,6 @@ func ParseImports(content []byte) []string {
 	return out
 }
 
-// ParsePackage returns the package-clause identity for one Java source
-// file, or "" when the file carries no package clause (default package).
-// A file with two package clauses fails closed.
 func ParsePackage(content []byte) (string, error) {
 	stripped := stripNonCode(content)
 	matches := packageRe.FindAllSubmatch(stripped, -1)
@@ -174,10 +131,6 @@ func (e *duplicatePackageError) Error() string {
 
 func errDuplicatePackage(first string) error { return &duplicatePackageError{first: first} }
 
-// normalizeImport maps one dotted import path to its resolution identity:
-// the final dot segment for single-type imports, the final package segment
-// for on-demand imports. JDK paths are returned unchanged for caller-side
-// filtering.
 func normalizeImport(dotted string, onDemand bool) string {
 	dotted = strings.TrimSpace(dotted)
 	if dotted == "" {
@@ -195,10 +148,6 @@ func normalizeImport(dotted string, onDemand bool) string {
 	return dotted
 }
 
-// DefinesMain reports whether a Java source defines a `main` entry point
-// outside comments and literals. Test-owned sources are never asked;
-// callers fail generation for a `main`-defining library source rather than
-// inferring a thin binary.
 func DefinesMain(content []byte) bool {
 	return mainRe.Match(stripNonCode(content))
 }

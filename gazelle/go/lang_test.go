@@ -94,9 +94,6 @@ func TestGeneratePackageLevelLibrary(t *testing.T) {
 	if strings.Join(got.imports, ",") != "thing" {
 		t.Errorf("library imports = %+v, want [thing]", got.imports)
 	}
-	// Package-level test: one go_test owning every *_test.go via embed,
-	// never per-file targets. The external demo_test package coexists with
-	// the demo library package; stdlib-only test imports stay empty.
 	testRule := result.Gen[1]
 	if testRule.Kind() != TestKind || testRule.Name() != "demo_test" {
 		t.Fatalf("test = %s(%s), want go_test(demo_test)", testRule.Kind(), testRule.Name())
@@ -127,7 +124,6 @@ func TestGenerateTestSourcesExcluded(t *testing.T) {
 	if got := result.Imports[0].(targetImports); len(got.imports) != 0 {
 		t.Errorf("library imports = %+v, want empty (test-only import stays off the library)", got.imports)
 	}
-	// Test-only imports resolve onto the test target, never the library.
 	if got := strings.Join(result.Gen[1].AttrStrings("srcs"), ","); got != "demo_test.go" {
 		t.Errorf("test srcs = %q, want demo_test.go", got)
 	}
@@ -212,7 +208,6 @@ func TestGenerateInternalAndExternalTestsCoexist(t *testing.T) {
 	if testRule.Kind() != TestKind || testRule.Name() != "demo_test" {
 		t.Fatalf("test = %s(%s), want go_test(demo_test)", testRule.Kind(), testRule.Name())
 	}
-	// One test target owns every *_test.go, sorted; no per-file targets.
 	if got := strings.Join(testRule.AttrStrings("srcs"), ","); got != "external_test.go,helper_test.go,internal_test.go" {
 		t.Errorf("test srcs = %q, want sorted package-level set", got)
 	}
@@ -234,8 +229,6 @@ func TestGenerateTestMainAndSharedImport(t *testing.T) {
 	if got := result.Imports[0].(targetImports); strings.Join(got.imports, ",") != "shared" {
 		t.Errorf("library imports = %+v, want [shared]", got.imports)
 	}
-	// Shared imports stay on the library (reachable via embed); only
-	// test-only imports land on the test.
 	if got := result.Imports[1].(testTargetImports); strings.Join(got.imports, ",") != "only_by_test" {
 		t.Errorf("test imports = %+v, want [only_by_test]", got.imports)
 	}
@@ -362,7 +355,6 @@ func TestGenerateImportPathModuleRoot(t *testing.T) {
 	} {
 		writeFixture(t, root, name, content)
 	}
-	// Package at the module root: importpath is the bare module path.
 	result := NewLanguage().GenerateRules(language.GenerateArgs{
 		Config:       &config.Config{RepoRoot: root},
 		Dir:          filepath.Join(root, "pkg", "demo"),
@@ -565,21 +557,18 @@ func TestResolveTestBranches(t *testing.T) {
 	)
 	cfg := resolverConfig(t, nil)
 
-	// Sibling imports land on the test deps.
 	sib := rule.NewRule(TestKind, "demo_test")
 	l.Resolve(cfg, index, nil, sib, testTargetImports{imports: []string{"sib"}}, label.New("", "pkg/demo", "demo_test"))
 	if got := strings.Join(sib.AttrStrings("deps"), ","); got != "//lib/sib" {
 		t.Errorf("test sibling deps = %q, want //lib/sib", got)
 	}
 
-	// Same-package library matches stay off the test: embed covers local.
 	self := rule.NewRule(TestKind, "demo_test")
 	l.Resolve(cfg, index, nil, self, testTargetImports{imports: []string{"demo"}}, label.New("", "pkg/demo", "demo_test"))
 	if self.Attr("deps") != nil {
 		t.Errorf("same-package test dep was emitted: %v", self.AttrStrings("deps"))
 	}
 
-	// Library import sets never resolve onto tests and vice versa.
 	cross := rule.NewRule(TestKind, "demo_test")
 	l.Resolve(cfg, index, nil, cross, targetImports{imports: []string{"sib"}}, label.New("", "pkg/demo", "demo_test"))
 	if cross.Attr("deps") != nil {
@@ -591,7 +580,6 @@ func TestResolveTestBranches(t *testing.T) {
 		t.Errorf("test import type resolved onto library: %v", libCross.AttrStrings("deps"))
 	}
 
-	// Stdlib stays off tests; unresolved test imports fail like libraries.
 	std := rule.NewRule(TestKind, "uses_std_test")
 	l.Resolve(cfg, index, nil, std, testTargetImports{imports: []string{"fmt"}}, label.New("", "pkg/demo", "uses_std_test"))
 	if std.Attr("deps") != nil || len(l.errors) != 0 {

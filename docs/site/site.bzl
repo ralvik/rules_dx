@@ -1,15 +1,9 @@
-"""Bazel-cached docs site execution (extract to render).
-
-"""
-
 MDBOOK_VERSION = "0.4.43"
 
 def site_symbol_id(language, package, qualified):
-    """Returns the stable symbol ID `language:package:qualified`."""
     return language + ":" + package + ":" + qualified
 
 def site_symbol_id_error(language, package, qualified):
-    """Validates one symbol identity, returning "" when valid."""
     if language == "":
         return "docs_site: language is required"
     if package == "":
@@ -19,55 +13,35 @@ def site_symbol_id_error(language, package, qualified):
     return ""
 
 def site_api_path(symbol_id):
-    """Returns the workspace-relative API page for one symbol ID.
-
-    `python:mylib:AccountService.create` maps to
-    `api/python/mylib/AccountService.create.md` so URLs mirror IDs
-    deterministically with no absolute paths.
-    """
     return "api/" + symbol_id.replace(":", "/") + ".md"
 
 def site_url_for_symbol(symbol_id):
-    """Returns the rendered URL for one symbol ID."""
     return "api/" + symbol_id.replace(":", "/") + ".html"
 
 def site_shard_name(name):
-    """Returns the generated IR shard output name (Bazel output only)."""
     return name + ".ir.textproto"
 
 def site_summary_name(name):
-    """Returns the mdBook SUMMARY output name for one aggregate."""
     return name + "_SUMMARY.md"
 
 def site_api_name(name):
-    """Returns the generated API pages output name for one aggregate."""
     return name + "_api.md"
 
 def site_records_name(name):
-    """Returns the search-records output name for one aggregate."""
     return name + "_search_records.json"
 
 def site_html_name(name):
-    """Returns the rendered site entry output name for one render."""
     return name + "_index.html"
 
 def site_index_name(name):
-    """Returns the single search-index output name for one render."""
     return name + "_searchindex.json"
 
 def site_prose_error(path):
-    """Validates one prose input is mdBook-compatible Markdown."""
     if path.endswith(".md"):
         return ""
     return "docs_site: prose inputs must be Markdown, got '" + path + "'"
 
 def site_is_external_link(target):
-    """Returns True when a Markdown link target is remote and never fetched.
-
-    Remote targets contain `://` or use `mailto:`; they are recorded but
-    never fetched. All other targets are internal and must resolve to
-    prose or generated API pages with no dangling targets.
-    """
     if "://" in target:
         return True
     if target.startswith("mailto:"):
@@ -75,17 +49,6 @@ def site_is_external_link(target):
     return False
 
 def site_link_target_error(target, known_pages, known_api_paths):
-    """Validates one internal link target, returning "" when valid.
-
-    `known_pages` lists the render-input basenames valid at the pre-render
-    boundary (`api.md`, `prose.md`, `SUMMARY.md` plus declared prose
-    basenames). `known_api_paths` lists per-symbol `api/...` pages derived
-    from shard IDs via `site_api_path`. Remote targets are skipped (never
-    fetched). Anchor-only targets need a non-empty fragment. Other targets
-    strip any `#fragment` and require the base in `known_pages` or
-    `known_api_paths`. Empty or unknown bases fail closed with no silent
-    dangling pass.
-    """
     if target == "":
         return "docs_site: empty link target"
     if site_is_external_link(target):
@@ -109,29 +72,12 @@ def site_link_target_error(target, known_pages, known_api_paths):
     return "docs_site: unknown link target '" + target + "'"
 
 def site_search_record(url, title, body):
-    """Returns one search-index record with sorted keys.
-
-    Keys stay alphabetical (body, title, url) so records serialize
-    deterministically; the index is built from prose plus IR only.
-    """
     return "{\"body\": \"" + body + "\", \"title\": \"" + title + "\", \"url\": \"" + url + "\"}"
 
 def site_is_known_guide(name):
-    """Returns True for the three frozen release-blocking guides.
-
-    Only `quickstart`, `tutorial`, and `migration` are known; no extra
-    guide is claimed and no implicit default is substituted.
-    """
     return name in ["quickstart", "tutorial", "migration"]
 
 def site_guide_step_error(step):
-    """Validates one guide-step line, returning "" when executable.
-
-    Blank lines and `#` comments are skipped (not steps). Lines carrying
-    `TODO`, `FIXME`, `UNEXECUTED`, `TBD`, or `SKIP` markers fail closed:
-    guide steps are never allowed to go unexecuted. Every other line is
-    an executable shell step run by CI.
-    """
     if step == "" or step.startswith("#"):
         return ""
     if "TODO" in step or "FIXME" in step or "UNEXECUTED" in step or "TBD" in step or "SKIP" in step:
@@ -139,13 +85,6 @@ def site_guide_step_error(step):
     return ""
 
 def docs_extract(name, language, package, srcs):
-    """Runs one DocsExtract action emitting one cached IR shard.
-
-    Reads `srcs` (`qualified|doc` lines, one symbol per line), sorts with
-    `LC_ALL=C sort`, and emits deterministic textproto with no timestamps,
-    no absolute paths, and workspace-relative IDs only. The shard is a
-    generated Bazel output, never a committed file. No network access.
-    """
     unit_err = site_symbol_id_error(language, package, "unit")
     if unit_err != "":
         fail(unit_err + " (in " + native.package_name() + ":" + name + ")")
@@ -164,20 +103,6 @@ def docs_extract(name, language, package, srcs):
     )
 
 def docs_aggregate(name, shards, prose, book_toml):
-    """Runs one DocsAggregate action emitting render inputs.
-
-    Consumes IR shards plus prose plus theme/config with shared validation
-    and emits a mdBook-compatible Markdown tree (`SUMMARY.md` plus generated
-    API pages) plus search-index records. The search records are built
-    directly from prose plus IR; they never parse rendered HTML. All
-    outputs are deterministic: sorted symbol order, sorted JSON keys,
-    LF bytes, no timestamps, workspace-relative paths only. Shared
-    validation includes link/reference completeness at the pre-render
-    boundary (#782): prose inline plus reference-definition targets must
-    resolve to prose or generated API pages with no dangling targets with
-    dangling targets fail the aggregate action; remote targets are skipped,
-    never fetched with no partial outputs.
-    """
     if len(shards) == 0:
         fail("docs_aggregate " + native.package_name() + ":" + name + ": need at least one shard")
     if len(prose) == 0:
@@ -216,14 +141,6 @@ def docs_aggregate(name, shards, prose, book_toml):
     )
 
 def docs_render(name, summary, api, records, book_toml):
-    """Runs one DocsRender action emitting the complete static site.
-
-    Consumes the aggregate render inputs plus the pinned mdBook config and
-    emits the static site entry plus the single search index. The render
-    stamps the pinned mdBook version with no timestamps and no absolute
-    paths; the search index is copied from aggregate records, never parsed
-    from rendered HTML.
-    """
     html = site_html_name(name)
     index = site_index_name(name)
     native.genrule(
@@ -243,12 +160,6 @@ def docs_render(name, summary, api, records, book_toml):
     )
 
 def docs_site(name, language, package, srcs, prose, book_toml):
-    """Chains extract, aggregate, and render for one (language, package) demo.
-
-    One `docs_extract` per unit, one shared-validation `docs_aggregate`,
-    one pinned-renderer `docs_render`. Check mode selects extract plus
-    aggregate without render; see `plan_mode_actions` in `cli/docgen`.
-    """
     docs_extract(
         name = name + "_extract",
         language = language,

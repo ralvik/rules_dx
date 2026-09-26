@@ -1,9 +1,5 @@
-"""vale standalone artifact metadata (linux_x86_64) -- GENERATED, do not edit.
 
-Regenerate with: bazel run //quality/artifacts:update
-"""
-
-# buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr
+# buildifier: disable=attr-licenses
 ARTIFACT = {
     "abi_floor": {
         "kernel": "3.2.0",

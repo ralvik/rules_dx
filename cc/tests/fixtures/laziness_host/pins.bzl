@@ -1,5 +1,3 @@
-"""Per-host strict-laziness plus symlink-privilege plus backend-adoption pins."""
-
 BZLMOND_BOUNDARY = [
     "version-resolution cost",
     "MODULE.bazel.lock size is version-resolution metadata",
@@ -61,7 +59,7 @@ PROVISIONAL_BACKENDS = [
 ]
 BACKEND_QUALIFIER = "provisional-backend exception"
 BACKEND_NO_SUPPORTED = "no Supported claim"
-BACKEND_OWNED_GAPS = "issues #494-#505 plus release evidence #803-#807"
+BACKEND_OWNED_GAPS = "issues pinned plus release evidence pinned"
 
 LAZINESS_HOST_FIXTURE_CORPUS = "//cc/tests/fixtures/laziness_host:corpus_starlark"
 LAZINESS_HOST_LIVE_HELLO = "//cc/tests/fixtures/hello:hello"

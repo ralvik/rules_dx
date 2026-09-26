@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Local file-repo builder plus gated Maven staging uploader for `maven_deploy`.
-
- Hermetic default builds a local file repo (`group/artifact/version/*.jar`
- plus the `.pom` with sha256 sidecars) and verifies bytes via sha256; the
- live `mvn deploy:deploy-file` staging path with GPG signing runs only with
- explicit env plus owner approval and never by default. The GPG passphrase
- never appears on the command line: it rides in the 0600 `settings.xml`
- profile properties, and the settings file is unlinked after the run.
- Unsigned staging is refused unless explicitly recorded with
- `MAVEN_ALLOW_UNSIGNED=1` plus owner approval. Used as an
- `expand_template` template per deploy instance (placeholders below) and as
- a `py_library` for `py_test`.
- """
+"""Local file repo builder."""
 
 import hashlib
 import os
@@ -20,9 +8,6 @@ import subprocess
 import sys
 import tempfile
 
-# Per-instance pins expanded by the `maven_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_file_repo` directly without touching these constants.
 JAR_RLOC = "@@JAR_RLOC@@"
 POM_RLOC = "@@POM_RLOC@@"
 GROUP = "@@GROUP@@"
@@ -40,20 +25,10 @@ def sha256_file(path):
 
 
 def group_path(group):
-    """Converts a dotted groupId to its repository path."""
     return group.replace(".", "/")
 
 
 def build_file_repo(jar_src, pom_src, outdir, group, artifact, version):
-    """Copies jar plus pom into a local file repo and verifies bytes.
-
-    Creates `<outdir>/<artifact>-repo/` holding
-    `<group-path>/<artifact>/<version>/` (the canonical
-    `<artifact>-<version>.jar` plus `<artifact>-<version>.pom`, each with
-    a `.sha256` sidecar) and
-    `<group-path>/<artifact>/maven-metadata.xml` pinning the single
-    shipped version. Returns the repo house directory.
-    """
     if not group:
         raise ValueError("maven file repo: need a non-empty groupId")
     if not artifact:
@@ -116,7 +91,6 @@ def build_file_repo(jar_src, pom_src, outdir, group, artifact, version):
 
 
 def _xml_escape(text):
-    """Escapes one value for embedding in the generated settings.xml."""
     return (
         text.replace("&", "&amp;")
         .replace("<", "&lt;")
@@ -127,14 +101,6 @@ def _xml_escape(text):
 
 
 def settings_xml(username, password, passphrase):
-    """Renders the staging settings.xml with the secret values escaped.
-
-    The GPG passphrase rides in the `dx-gpg-passphrase` profile
-    properties (read by the `gpg-sign` profile's gpg plugin as
-    `gpg.passphrase`), never on the Maven command line where `ps`
-    could observe it. The profile block is omitted when no passphrase
-    is given.
-    """
     body = (
         "<settings>\n"
         "  <servers>\n"
@@ -166,7 +132,6 @@ def settings_xml(username, password, passphrase):
 
 
 def write_secure_file(directory, name, content):
-    """Writes one 0600 file holding secret material, returning its path."""
     path = os.path.join(directory, name)
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     try:
@@ -183,7 +148,6 @@ def write_secure_file(directory, name, content):
 
 
 def _remove_tree(path):
-    """Removes one secret-material directory, best effort."""
     for root, dirs, files in os.walk(path, topdown=False):
         for name in files:
             try:
@@ -204,15 +168,6 @@ def _remove_tree(path):
 def live_deploy(
     jar_src, pom_src, group, artifact, version, repository_url, username, password
 ):
-    """Stages jar plus pom to a remote repository without interactive prompts.
-
-    GPG-signed by default via the passphrase in `MAVEN_GPG_PASSPHRASE`
-    (kept out of `ps` in the 0600 settings file, unlinked afterwards).
-    Without a passphrase the run is refused unless unsigned staging is
-    explicitly recorded with `MAVEN_ALLOW_UNSIGNED=1` (owner approval
-    is still required by the caller); the unsigned run passes
-    `-Dgpg.skip=true` and records itself as unsigned.
-    """
     passphrase = os.environ.get("MAVEN_GPG_PASSPHRASE", "")
     workdir = tempfile.mkdtemp(prefix="maven-deploy-")
     settings_file = write_secure_file(

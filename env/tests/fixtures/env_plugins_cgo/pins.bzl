@@ -1,5 +1,3 @@
-"""Third-party env plugin model plus Go cgo scope pins."""
-
 PLUGIN_DISPOSITION = "out of scope"
 PLUGIN_SCOPE_NOTE = "third-party language-integration plugins are out of scope"
 PLUGIN_OWNER = "//env plus //cli/env"
@@ -53,7 +51,7 @@ CGO_FIXTURE_TEST = "//go/tests/fixtures/cgo:cgo_test"
 CGO_FIXTURE_ATTR = "cgo = True"
 RACE_SCOPE_ATTRS = "race = on plus pure = off"
 RACE_REQUIRES_CGO = "race requires cgo"
-CGO_SCOPE_SEED_ONLY = "qualified seed-only under issue #789"
+CGO_SCOPE_SEED_ONLY = "qualified seed-only"
 
 REJECTED_PLUGIN_CLAIM = "third-party plugin claim"
 REJECTED_PRIVATE_PATH = "private first-party contribution path"
@@ -64,5 +62,5 @@ REJECTED_GENERIC_PARITY = "generic IDE parity"
 REJECTED_CGO_COMPLETION_CLAIM = "cgo completion claim"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #587"
+SEED_ONLY = "qualified seed-only"
 OWNED_GAPS_NOTE = "platform plus consumer plus release evidence stays owned gap"

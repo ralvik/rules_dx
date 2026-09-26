@@ -1,7 +1,3 @@
-"""Local-first NuGet publisher for `dx deploy`.
-
-"""
-
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -15,27 +11,12 @@ _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 NUGET_DEFAULT_SOURCE = "https://api.nuget.org/v3/index.json"
 
 def nuget_id_charset():
-    """Returns the launcher-safe package-id charset via registry query.
-
-    Derived from `_VALID_ID_CHARS`, never duplicated.
-    """
     return _VALID_ID_CHARS
 
 def nuget_version_charset():
-    """Returns the launcher-safe package-version charset via registry query.
-
-    Derived from `_VALID_VERSION_CHARS`, never duplicated.
-    """
     return _VALID_VERSION_CHARS
 
 def nuget_schema_error():
-    """Validates the versioned package id/version charset schema.
-
-    Checks data shape without pinning exact contents: version is v1, each
-    charset is non-empty with unique launcher-safe characters and never
-    admits quotes, backslash, space, or newline so ids and versions
-    embed safely in the deploy launcher.
-    """
     if NUGET_SCHEMA_VERSION != 1:
         return "nuget id: unsupported schema v" + str(NUGET_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_ID_CHARS) != "string" or _VALID_ID_CHARS == "":
@@ -59,7 +40,6 @@ def nuget_schema_error():
     return ""
 
 def nuget_id_error(package_id):
-    """Validates one package id value."""
     if type(package_id) != "string" or package_id == "":
         return ("nuget_deploy: invalid package id '" + str(package_id) +
                 "': want a non-empty id (for example 'nuget_demo')")
@@ -71,7 +51,6 @@ def nuget_id_error(package_id):
     return ""
 
 def nuget_version_error(version):
-    """Validates one package version value."""
     if type(version) != "string" or version == "":
         return ("nuget_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -83,7 +62,6 @@ def nuget_version_error(version):
     return ""
 
 def nuget_nupkg_error(filename):
-    """Validates one nupkg filename value."""
     if type(filename) != "string" or filename == "":
         return ("nuget_deploy: invalid nupkg '" + str(filename) +
                 "': want a non-empty .nupkg filename")
@@ -98,7 +76,6 @@ def nuget_nupkg_error(filename):
     return ""
 
 def nuget_source_error(source):
-    """Validates one NuGet source URL value."""
     if type(source) != "string" or source == "":
         return ("nuget_deploy: invalid source '" + str(source) +
                 "': want a non-empty https URL (for example '" +
@@ -114,17 +91,6 @@ def nuget_source_error(source):
     return ""
 
 def _nuget_launcher_impl(ctx):
-    """Expands the `py_binary` launcher for one NuGet deployment.
-
-    The package file resolves to a single file. The rule computes the
-    runfiles rlocation for the nupkg via `rlocation_path`, then expands
-    the shared `nuget_deploy.py` template with that pin plus the package
-    id, version, and source. The wrapping `py_binary` (see `nuget_deploy`)
-    carries the pinned input in `data` plus the Python runfiles library,
-    so the program works under `bazel run`, `dx deploy` (which symlinks
-    the entrypoint and merges its runfiles), and direct `bazel-bin`
-    execution. Extra user args after `--` select the output directory
-    (default: `$BUILD_WORKSPACE_DIRECTORY`, else the cwd)."""
     nupkg_files = ctx.attr.nupkg[DefaultInfo].files.to_list()
     if len(nupkg_files) != 1:
         fail("nuget_deploy " + str(ctx.label) + ": nupkg " +
@@ -140,7 +106,7 @@ def _nuget_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
+        # buildifier: disable=canonical-repository
         substitutions = {
             "@@NUPKG_RLOC@@": nupkg_rloc,
             "@@PACKAGE_ID@@": ctx.attr.package_id,
@@ -155,19 +121,15 @@ _nuget_launcher = rule(
     attrs = {
         "nupkg": attr.label(
             allow_single_file = True,
-            doc = "Package file pinned in the folder feed.",
             mandatory = True,
         ),
         "package_id": attr.string(
-            doc = "Package id baked into the folder feed directory.",
             mandatory = True,
         ),
         "source": attr.string(
-            doc = "Live-push source URL, used only with explicit env.",
             mandatory = True,
         ),
         "version": attr.string(
-            doc = "Package version baked into the launcher.",
             mandatory = True,
         ),
         "_template": attr.label(
@@ -175,24 +137,9 @@ _nuget_launcher = rule(
             default = "//deploy/rules:nuget_deploy.py",
         ),
     },
-    doc = "Launcher template expansion for nuget_deploy (wrapped as py_binary).",
 )
 
 def nuget_deploy(name, nupkg, version = "0.0.0", source = NUGET_DEFAULT_SOURCE, profile = "release"):
-    """Publishes one nupkg as a local-first NuGet deployment.
-
-    Creates `<name>_program_launcher` (expanded Python launcher resolving
-    inputs via the Python runfiles library), `<name>_program` (`py_binary`
-    on the managed Python 3.12 toolchain wrapping the launcher with pinned
-    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
-    returning `DxDeployInfo` with no app and `profile`). Run with
-    `bazel run :<name>` or `dx deploy :<name>`; the default builds a local
-    folder feed directory (`<id>-feed/` holding the pinned `.nupkg`,
-    usable as a `dotnet` source) and verifies bytes, publishing nothing.
-    Live `dotnet nuget push --source --api-key --skip-duplicate` runs only
-    with `NUGET_PUBLISH_LIVE=1`, `NUGET_API_KEY`, and
-    `NUGET_PUBLISH_APPROVED=1` after explicit owner approval.
-    """
     name_error = nuget_id_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

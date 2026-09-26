@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the GitHub Release publisher.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":github.bzl", "github_draft_error", "github_tag_error")
 
@@ -40,7 +37,7 @@ def github_unit_tests(name):
                 "github_draft_error rejects publishing without approval",
                 github_draft_error(False),
                 "github_deploy: draft=False requires explicit owner " +
-                "approval per issue #5; keep the draft gate and publish " +
+                "approval; keep the draft gate and publish " +
                 "the release on GitHub after approval",
             ),
         ],

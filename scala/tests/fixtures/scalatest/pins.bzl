@@ -1,7 +1,3 @@
-"""ScalaTest 3.2.20 version pins.
-
-"""
-
 RULES_SCALA_VERSION = "7.3.0"
 
 SCALA_VERSION = "2.13.18"

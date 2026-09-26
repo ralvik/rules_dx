@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local OCI layout output test for `oci_deploy` (no network, no sockets)."""
+"""Local output test."""
 
 import hashlib
 import json

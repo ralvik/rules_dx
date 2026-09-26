@@ -1,4 +1,3 @@
-"""Adopted foreign polyglot tree: corpus ownership for arrival files."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

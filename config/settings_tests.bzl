@@ -1,5 +1,3 @@
-"""Analysis tests pinning the frozen quality settings defaults (WP1)."""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 _CANONICAL_PREFIX = "@@"  # buildifier: disable=canonical-repository

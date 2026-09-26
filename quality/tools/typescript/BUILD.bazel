@@ -1,20 +1,3 @@
-"""Authoritative `tsc` mapping (no separate tool graph).
-
-`tsc` 5.9.3 resolves from the pinned `aspect_rules_ts` toolchain
-(`typescript.deps` -> `@npm_typescript`, MODULE.bazel) on the shared
-managed Node 22 toolchain: no ambient Node, no consumer package manifest,
-no install/lifecycle script. Quality diagnostics must consume the
-`typescript_project` context -- `TsConfigInfo` + `OutputGroupInfo`
-(`typecheck`/`transitive_typecheck`) + the upstream
-`<name>_upstream_typecheck_test` -- never a bare `tsc` file
-invocation, which would lose tsconfig/declaration context.
-
-Provenance (seed host, Linux x86_64, local execution only):
-`bazel run @npm_typescript//:tsc -- --version` reports `Version 5.9.3`;
-`bazel build //typescript/tests/fixtures/hello:hello_lib` emits `hello.js`;
-`bazel test //typescript/tests/fixtures/hello:hello_lib_upstream_typecheck_test`
-passes; `which node` finds no ambient Node.
-"""
 
 load("//quality:fixtures.bzl", "real_source_target")
 

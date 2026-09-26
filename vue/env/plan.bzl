@@ -1,13 +1,8 @@
-"""Focused Vue environment plan (WP2).
-
-"""
-
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("//env:focused.bzl", "focused_direct_sources", "focused_js_closure", "focused_js_plan", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 VueEnvPlanInfo = provider(
-    doc = "Provider-derived focused Vue target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct Vue sources.",
         "has_npm": "Whether the transitive npm closure is non-empty.",
@@ -43,8 +38,6 @@ vue_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One vue_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Vue environment plan for one wrapper target (WP2).",
 )

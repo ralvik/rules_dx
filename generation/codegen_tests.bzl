@@ -1,5 +1,3 @@
-"""Unit and analysis tests for the normalized codegen plans (WP1, snapshot workflow).
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(

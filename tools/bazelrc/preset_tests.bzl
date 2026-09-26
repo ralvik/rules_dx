@@ -1,9 +1,7 @@
-"""Preset freshness tests."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 def preset_update_tests(name):
-    """Declare the vendored-preset freshness test."""
     starlark_test(
         name = name,
         mode = "execution",

@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Shellcheck/shfmt clean (`shfmt -i 2 -ci`, `.shellcheckrc` bash + all
-# checks). SC1090/SC1091 are single-sourced in `.shellcheckrc` (runfiles
 set -euo pipefail
 
 _dx_git_toplevel() {

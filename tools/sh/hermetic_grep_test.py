@@ -1,10 +1,4 @@
-"""Hermetic grep helper tests (issue #1006).
-
-Cross-platform by design (no Linux-only constraint): proves the helper
-behaves identically on Linux/macOS/Windows runners, covering the host
-BSD/GNU divergences it replaces (`--include`/`--exclude-dir`, `-A`
-windows, `-o` extraction, `sed` field extraction).
-"""
+"""Hermetic grep helper tests."""
 
 import os
 import subprocess
@@ -79,7 +73,6 @@ class HermeticGrepTest(unittest.TestCase):
         self.assertNotEqual(run("absent", missing, "--fixed", "--", "x").returncode, 0)
 
     def test_tree_contains_include(self):
-        # BSD grep lacks --include: the helper must filter by glob itself.
         self.write("keep.yml", "runs-on: windows-latest\n")
         self.write("skip.md", "runs-on: windows-latest\n")
         proc = run(
@@ -108,7 +101,6 @@ class HermeticGrepTest(unittest.TestCase):
     def test_tree_absent_with_exclude_and_allow(self):
         self.write("self.sh", "Installed Build Tools\n")
         self.write("other.sh", "Installed Build Tools never approved\n")
-        # Self-exclusion plus allow-string excuses every hit.
         proc = run(
             "tree-absent",
             "--fixed",
@@ -122,7 +114,6 @@ class HermeticGrepTest(unittest.TestCase):
             "Installed Build Tools",
         )
         self.assertEqual(proc.returncode, 0)
-        # Without the allow, the remaining hit fails the absent check.
         proc = run(
             "tree-absent",
             "--fixed",

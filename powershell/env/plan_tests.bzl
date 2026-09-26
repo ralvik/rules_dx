@@ -1,5 +1,3 @@
-"""Focused PowerShell environment-plan tests (ADR 0032)."""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //powershell/env:hello_lib_plan

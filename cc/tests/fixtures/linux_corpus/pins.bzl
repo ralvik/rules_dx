@@ -1,5 +1,3 @@
-"""Linux corpus pins."""
-
 LINUX_GLIBC_PROFILE = "linux_x86_64/arm64 glibc"
 LINUX_NATIVE_ONLY = "Native only"
 

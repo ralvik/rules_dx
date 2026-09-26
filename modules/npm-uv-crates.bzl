@@ -1,5 +1,3 @@
-"""Registry and hub inventory for the lock dialects."""
-
 NPM_REGISTRY_HUBS = {
     "npm": "//:pnpm-lock.yaml",
     "npm_tools": "//quality/tools/javascript:pnpm-lock.yaml",

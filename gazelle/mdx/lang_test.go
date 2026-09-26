@@ -41,9 +41,6 @@ func generateFixture(t *testing.T, files map[string]string, regular []string) la
 	})
 }
 
-// mdxDoc builds a minimal MDX document with ESM imports at the top,
-// a markdown heading boundary, and prose. Only the top ESM block
-// contributes edges; prose and fenced code never do.
 func mdxDoc(esm string) string {
 	if esm != "" && !strings.HasSuffix(esm, "\n") {
 		esm += "\n"
@@ -140,7 +137,6 @@ func TestGenerateMultiImportAndExport(t *testing.T) {
 	if len(result.Gen) != 3 || len(result.Imports) != 3 {
 		t.Fatalf("generated %d rules and %d import sets, want 3 each", len(result.Gen), len(result.Imports))
 	}
-	// Rules sort by name: client, demo, server.
 	if result.Gen[1].Name() != "demo" {
 		t.Fatalf("middle rule = %s, want demo", result.Gen[1].Name())
 	}
@@ -382,8 +378,14 @@ func resolverIndex(lang *mdxLang, entries ...struct {
 func TestResolveBranches(t *testing.T) {
 	l := &mdxLang{}
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"lib/b", "b", ".mdx"},
-		struct{ pkg, name string; ext string }{"lib/a", "a", ".mdx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/b", "b", ".mdx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/a", "a", ".mdx"},
 	)
 	cfg := resolverConfig(t, nil)
 	r := rule.NewRule(libraryKind, "app")
@@ -438,8 +440,14 @@ func TestResolveAmbiguous(t *testing.T) {
 	l := &mdxLang{}
 	cfg := resolverConfig(t, nil)
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"one", "same", ".mdx"},
-		struct{ pkg, name string; ext string }{"two", "same", ".mdx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"one", "same", ".mdx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"two", "same", ".mdx"},
 	)
 	l.Resolve(cfg, index, nil, rule.NewRule(libraryKind, "app"), targetImports{imports: []string{"same"}}, label.New("", "app", "app"))
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "ambiguous") || !strings.Contains(l.errors[0], "//one:same") || !strings.Contains(l.errors[0], "//two:same") {

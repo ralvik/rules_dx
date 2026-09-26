@@ -1,4 +1,3 @@
-// Handwritten cgo scope test: embeds the cgo library, exercises race scope.
 package cgo
 
 import "testing"

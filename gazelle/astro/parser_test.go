@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// wrap places one client script body inside a minimal Astro component
-// with import-free frontmatter and inert markup and style regions.
 func wrap(script string) string {
 	return "---\nconst title = \"hello\";\n---\n\n<script>\n" + script + "</script>\n\n<div class=\"hello\">hello</div>\n\n<style>\n.hello {\n  color: black;\n}\n</style>\n"
 }
@@ -131,8 +129,6 @@ func TestParseImports(t *testing.T) {
 		{"regexClass", "const re = /[a/b]/;\nimport y from './real.astro';\n", []string{"real"}},
 		{"regexEOF", "const re = /abc", nil},
 	}
-	// Raw sources exercise component-level regions directly; every other
-	// case is one script body wrapped in a component.
 	raw := map[string]bool{
 		"empty": true, "noRegions": true, "emptyScript": true,
 		"selfClosingScript": true, "markupOnlyImport": true,
@@ -192,10 +188,9 @@ func TestSplitFence(t *testing.T) {
 
 func TestExtractScripts(t *testing.T) {
 	cases := []struct {
-		name string
-		source string
-		want []string
-		// wantNil reports no script content when true (want is ignored).
+		name    string
+		source  string
+		want    []string
 		wantNil bool
 	}{
 		{"basic", "<script>\nconst x = 1;\n</script>", []string{"const x = 1;"}, false},

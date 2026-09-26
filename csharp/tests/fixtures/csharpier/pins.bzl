@@ -1,7 +1,3 @@
-"""CSharpier check plus fix wiring.
-
-"""
-
 CSHARPIER_VERSION = "1.3.0"
 
 CSHARPIER_ARTIFACT = "exact official tool package as declared DLLs (targets .NET 8.0)"

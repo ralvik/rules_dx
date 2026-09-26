@@ -1,4 +1,3 @@
-// Seed Go errcheck fixture.
 package errcheck
 
 import "os"

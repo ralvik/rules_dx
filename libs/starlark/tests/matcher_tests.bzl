@@ -1,6 +1,3 @@
-"""Unit tests proving richer matchers over the futures fixture.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_contains", "expect_false", "expect_match", "expect_true", "starlark_test")
 load("//libs/starlark/tests/fixtures/starlark_futures:matchers.bzl", "admitted_pairs", "fingerprint_like", "greet_report", "is_even", "pair_error", "subject_fields")
 

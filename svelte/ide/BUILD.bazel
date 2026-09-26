@@ -1,8 +1,3 @@
-"""Upstream Svelte IDE tool acquisition.
-
-The Svelte environment contract reuses the pinned Node toolchain shared with
-JavaScript; this package pins its acquisition.
-"""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")

@@ -36,8 +36,6 @@ func TestDiscoverCrateRoots(t *testing.T) {
 	if strings.Join(roots.TestRoots, ",") != strings.Join(want, ",") {
 		t.Errorf("TestRoots = %v, want %v", roots.TestRoots, want)
 	}
-	// Nested helpers, src/bin, examples, benches, and build scripts are
-	// never source-only roots.
 	for _, r := range roots.TestRoots {
 		if strings.Contains(r, "common/mod") || strings.Contains(r, "src/bin") {
 			t.Errorf("non-root classified as root: %s", r)
@@ -90,7 +88,6 @@ func TestShapeIntegrationTests(t *testing.T) {
 		LibRoot:   "crates/app/src/lib.rs",
 		TestRoots: []string{"crates/app/tests/login.rs", "crates/app/tests/login_test.rs"},
 	}
-	// Both direct roots normalize to login_test: fail with claimants.
 	_, err := ShapeCrate(roots, false, false)
 	if err == nil {
 		t.Error("expected collision between login.rs and login_test.rs")
@@ -100,8 +97,6 @@ func TestShapeIntegrationTests(t *testing.T) {
 }
 
 func TestShapeUnitTestCollisionFails(t *testing.T) {
-	// Library `app` with #[test] wants app_test, but tests/app.rs also
-	// wants app_test: every claimant fails without another suffix.
 	roots := CrateRoots{
 		Dir:       "crates/app",
 		LibRoot:   "crates/app/src/lib.rs",
@@ -227,14 +222,10 @@ func TestLoadCrateAmbiguousFails(t *testing.T) {
 }
 
 func TestLoadCrateCycleFails(t *testing.T) {
-	// a.rs re-includes the crate root via #[path]: duplicate inclusion
-	// of an owned file fails instead of recursing forever.
 	files := map[string]string{
 		"a/src/lib.rs": "mod a;\n",
 		"a/src/a.rs":   "#[path = \"lib.rs\"] mod again;\n",
 	}
-	// a/src/a.rs #[path = "lib.rs"] resolves to a/src/lib.rs, which is
-	// already owned: duplicate inclusion.
 	read, exists := memFS(files)
 	if _, err := LoadCrate("a/src/lib.rs", read, exists); err == nil {
 		t.Error("module cycle must fail")

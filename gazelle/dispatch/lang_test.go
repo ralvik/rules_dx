@@ -41,7 +41,6 @@ func TestNameIsDispatch(t *testing.T) {
 func TestGenerateRulesRecordsOtherGenUnion(t *testing.T) {
 	l := &dispatchLang{}
 	l.Before(context.Background())
-	// Recording disabled without the witness env: visits are dropped.
 	cfg := testConfig()
 	other := rule.NewRule("python_library", "handlers")
 	res := l.GenerateRules(language.GenerateArgs{
@@ -60,7 +59,6 @@ func TestGenerateRulesRecordsOtherGenUnion(t *testing.T) {
 		t.Fatalf("configs = %d, want 1", len(l.configs))
 	}
 
-	// With the witness env, OtherGen is retained as the union for new files.
 	out := filepath.Join(t.TempDir(), "intended.json")
 	t.Setenv(envIntendedManifest, out)
 	t.Setenv(envGenerateMode, "default")
@@ -85,7 +83,6 @@ func TestGenerateRulesRecordsOtherGenUnion(t *testing.T) {
 
 func TestUnionLoadsCoverAllExtensions(t *testing.T) {
 	loads := unionApparentLoads(func(string) string { return "" })
-	// Every first-party extension contributes at least one load file.
 	if len(loads) < 15 {
 		t.Fatalf("union loads = %d entries, want >= 15 for 15 extensions", len(loads))
 	}
@@ -154,7 +151,6 @@ func TestAfterResolvingDepsFailsClosedOnBadScope(t *testing.T) {
 	cfg := testConfig()
 	gen := rule.NewRule("python_library", "handlers")
 	gen.SetAttr("srcs", []string{"handlers.py"})
-	// Visit outside the declared scope: emit must fail.
 	l.GenerateRules(language.GenerateArgs{
 		Config:   cfg,
 		Dir:      t.TempDir(),

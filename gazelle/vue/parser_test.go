@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// wrap places one script body inside a minimal single-file component with
-// inert template and style regions.
 func wrap(script string) string {
 	return "<template>\n  <div>hello</div>\n</template>\n\n<script>\n" + script + "</script>\n\n<style>\n.demo {\n  color: black;\n}\n</style>\n"
 }
@@ -131,10 +129,9 @@ func TestParseImports(t *testing.T) {
 
 func TestExtractScript(t *testing.T) {
 	cases := []struct {
-		name string
-		source string
-		want string
-		// wantNil reports no script content when true (want is ignored).
+		name    string
+		source  string
+		want    string
 		wantNil bool
 	}{
 		{"basic", "<script>\nconst x = 1;\n</script>", "const x = 1;", false},

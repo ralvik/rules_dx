@@ -1,7 +1,3 @@
-"""Local-first PyPI publisher for `dx deploy`.
-
-"""
-
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -13,20 +9,9 @@ _VALID_NAME_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 PYPI_DEFAULT_REPOSITORY_URL = "https://upload.pypi.org/legacy/"
 
 def pypi_name_charset():
-    """Returns the launcher-safe distribution-name charset via registry query.
-
-    Derived from `_VALID_NAME_CHARS`, never duplicated.
-    """
     return _VALID_NAME_CHARS
 
 def pypi_schema_error():
-    """Validates the versioned distribution-name charset schema.
-
-    Checks data shape without pinning exact contents: version is v1, the
-    charset is non-empty with unique launcher-safe characters and never
-    admits quotes, backslash, space, or newline so names embed safely in
-    the generated Python launcher.
-    """
     if PYPI_SCHEMA_VERSION != 1:
         return "pypi name: unsupported schema v" + str(PYPI_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_NAME_CHARS) != "string" or _VALID_NAME_CHARS == "":
@@ -41,7 +26,6 @@ def pypi_schema_error():
     return ""
 
 def pypi_name_error(dist_name):
-    """Validates one distribution name value."""
     if type(dist_name) != "string" or dist_name == "":
         return ("pypi_deploy: invalid distribution name '" + str(dist_name) +
                 "': want a non-empty name (for example 'pypi_demo')")
@@ -53,7 +37,6 @@ def pypi_name_error(dist_name):
     return ""
 
 def pypi_repository_error(repository_url):
-    """Validates one PyPI repository URL value."""
     if type(repository_url) != "string" or repository_url == "":
         return ("pypi_deploy: invalid repository_url '" + str(repository_url) +
                 "': want a non-empty https URL (for example '" +
@@ -69,7 +52,6 @@ def pypi_repository_error(repository_url):
     return ""
 
 def pypi_wheel_error(filename):
-    """Validates one wheel filename value."""
     if type(filename) != "string" or filename == "":
         return ("pypi_deploy: invalid wheel '" + str(filename) +
                 "': want a non-empty .whl filename")
@@ -84,18 +66,6 @@ def pypi_wheel_error(filename):
     return ""
 
 def _pypi_launcher_impl(ctx):
-    """Expands the `py_binary` launcher for one PyPI deployment.
-
-    Each distribution file resolves to a single file. The rule computes
-    the runfiles rlocations for the wheel plus the optional sdist via
-    `rlocation_path`, then expands the shared `pypi_deploy.py` template
-    with those pins plus the distribution name and repository URL. The
-    wrapping `py_binary` (see `pypi_deploy`) carries the pinned inputs
-    in `data` plus the Python runfiles library, so the program works
-    under `bazel run`, `dx deploy` (which symlinks the entrypoint and
-    merges its runfiles), and direct `bazel-bin` execution. Extra user
-    args after `--` select the output directory (default:
-    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd)."""
     wheel_files = ctx.attr.wheel[DefaultInfo].files.to_list()
     if len(wheel_files) != 1:
         fail("pypi_deploy " + str(ctx.label) + ": wheel " +
@@ -124,7 +94,7 @@ def _pypi_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
+        # buildifier: disable=canonical-repository
         substitutions = {
             "@@DIST_NAME@@": ctx.attr.dist_name,
             "@@REPOSITORY_URL@@": ctx.attr.repository_url,
@@ -138,20 +108,16 @@ _pypi_launcher = rule(
     implementation = _pypi_launcher_impl,
     attrs = {
         "dist_name": attr.string(
-            doc = "Distribution name baked into the wheelhouse directory.",
             mandatory = True,
         ),
         "repository_url": attr.string(
-            doc = "Live-upload repository URL, used only with explicit env.",
             mandatory = True,
         ),
         "sdist": attr.label(
             allow_single_file = True,
-            doc = "Optional sdist file pinned in the wheelhouse.",
         ),
         "wheel": attr.label(
             allow_single_file = True,
-            doc = "Wheel file pinned in the wheelhouse.",
             mandatory = True,
         ),
         "_template": attr.label(
@@ -159,24 +125,9 @@ _pypi_launcher = rule(
             default = "//deploy/rules:pypi_deploy.py",
         ),
     },
-    doc = "Launcher template expansion for pypi_deploy (wrapped as py_binary).",
 )
 
 def pypi_deploy(name, wheel, sdist = None, repository_url = PYPI_DEFAULT_REPOSITORY_URL, profile = "release"):
-    """Publishes one wheel plus an optional sdist as a local-first PyPI deployment.
-
-    Creates `<name>_program_launcher` (expanded Python launcher resolving
-    inputs via the Python runfiles library), `<name>_program` (`py_binary`
-    on the managed Python 3.12 toolchain wrapping the launcher with pinned
-    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
-    returning `DxDeployInfo` with no app and `profile`). Run with
-    `bazel run :<name>` or `dx deploy :<name>`; the default builds a local
-    wheelhouse directory (`<dist>-wheelhouse/` with `simple-index/` plus
-    the `.whl`) and verifies bytes, publishing nothing. Live
-    `twine upload --non-interactive --repository-url` runs only with
-    `PYPI_PUBLISH_LIVE=1`, `PYPI_API_TOKEN`, and `PYPI_PUBLISH_APPROVED=1`
-    after explicit owner approval.
-    """
     name_error = pypi_name_error(name)
     if name_error != "":
         fail(name_error + " (in " + native.package_name() + ":" + name + ")")

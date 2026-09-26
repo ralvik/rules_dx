@@ -1,25 +1,3 @@
-// Parser extracts the narrow recognized source facts the Rust Gazelle
-// extension needs for crate ownership and strict dependency resolution.
-//
-// Recognized syntax (narrow scope; additional forms require parser
-// fixtures before they become recognized):
-//
-//   - `mod name;` and `pub mod name;` file modules, including explicit
-//     `#[path = "..."]` modules. Inline `mod name { ... }` nests inside
-//     the same crate owner.
-//   - `use` declarations with literal paths, including `{a, b}` groups,
-//     `as` aliases, and `self`/`super`/`crate` segments. Glob `*` imports
-//     are recorded without expansion.
-//   - `extern crate name;` with optional `as` alias.
-//   - `#[test]` functions and `#[cfg(test)]` regions, which mark the
-//     crate unit-test target and test-only dependency scope.
-//
-// Comments, string and character literals, and unexpanded `macro_rules!`
-// bodies are inert: tokens that look like markers inside them never
-// trigger a unit-test target or an edge. A `#[cfg]` predicate that
-// mentions `test` without being exactly `test` (including `cfg_attr`
-// forms) is an ambiguous parser context and fails closed instead of
-// widening production scope or dropping an edge.
 package rust
 
 import (
@@ -27,55 +5,34 @@ import (
 	"strings"
 )
 
-// ModuleDecl is one recognized `mod` item.
 type ModuleDecl struct {
-	// Name is the declared module name.
-	Name string
-	// Path is the explicit `#[path]` override, empty when absent.
-	Path string
-	// Inline is true for `mod name { ... }`, which nests in the same
-	// crate owner instead of loading a file module.
-	Inline bool
-	// CfgTest is true when the module is test-only.
+	Name    string
+	Path    string
+	Inline  bool
 	CfgTest bool
 }
 
-// UseDecl is one expanded literal `use` identity.
 type UseDecl struct {
-	// Path is the fully expanded literal path (`a::b::Trait`).
-	Path string
-	// Glob is true for `prefix::*` imports, recorded without expansion.
-	Glob bool
-	// CfgTest is true when the import is test-only.
+	Path    string
+	Glob    bool
 	CfgTest bool
 }
 
-// ExternCrate is one recognized `extern crate` item.
 type ExternCrate struct {
-	// Name is the declared crate name.
-	Name string
-	// As is the `as` alias, empty when absent.
-	As string
-	// CfgTest is true when the item is test-only.
+	Name    string
+	As      string
 	CfgTest bool
 }
 
-// FileFacts are the recognized facts for one parsed Rust source file.
 type FileFacts struct {
-	Modules []ModuleDecl
-	Uses    []UseDecl
-	Externs []ExternCrate
-	// HasTestAttr is true when a top-level `#[test]` function was parsed.
-	HasTestAttr bool
-	// HasCfgTest is true when a top-level `#[cfg(test)]` region was parsed.
-	HasCfgTest bool
-	// InnerCfgTest is true for a leading `#![cfg(test)]` file attribute.
+	Modules      []ModuleDecl
+	Uses         []UseDecl
+	Externs      []ExternCrate
+	HasTestAttr  bool
+	HasCfgTest   bool
 	InnerCfgTest bool
 }
 
-// AmbiguousError reports a parser context that mentions `test` without
-// being exactly `#[cfg(test)]`. Generation fails instead of guessing
-// which target owns the item or its edges.
 type AmbiguousError struct {
 	What string
 	Attr string
@@ -85,8 +42,6 @@ func (e *AmbiguousError) Error() string {
 	return fmt.Sprintf("rust: ambiguous test context on %s: %s is not exactly #[cfg(test)]; disambiguate with #[cfg(test)] or move the item", e.What, e.Attr)
 }
 
-// ParseFacts parses one Rust source file. The path is used for diagnostics
-// only; content is the file bytes.
 func ParseFacts(path string, content []byte) (*FileFacts, error) {
 	p := &parser{path: path, src: cleanSource(string(content))}
 	if err := p.parseItems(0, false, &p.facts); err != nil {
@@ -102,9 +57,6 @@ type parser struct {
 	facts FileFacts
 }
 
-// cleanSource blanks comments, string and character literals, and
-// `macro_rules!`/`macro` bodies with spaces (newlines preserved) so the
-// item scanner only sees real code.
 func cleanSource(s string) string {
 	out := []byte(s)
 	n := len(out)
@@ -134,8 +86,6 @@ func cleanSource(s string) string {
 			attrDepth--
 			i++
 		case attrDepth > 0:
-			// Attribute contents are consumed by scanAttr and may contain
-			// semantic string values such as #[path = "..."] .
 			i++
 		case c == '/' && i+1 < n && out[i+1] == '/':
 			j := i + 2
@@ -182,8 +132,6 @@ func cleanSource(s string) string {
 				for k < n && (out[k] == ' ' || out[k] == '\t' || out[k] == '\n' || out[k] == '\r' || out[k] == '!') {
 					k++
 				}
-				// macro_rules! name { ... } or macro name { ... }: skip
-				// the name when present, then the balanced body.
 				if k < n && isIdentStart(out[k]) {
 					for k < n && isIdentChar(out[k]) {
 						k++
@@ -210,7 +158,6 @@ func cleanSource(s string) string {
 	return string(out)
 }
 
-// scanString returns the end offset of the string literal at i.
 func scanString(out []byte, i int) int {
 	n := len(out)
 	j := i
@@ -244,7 +191,6 @@ func scanString(out []byte, i int) int {
 		}
 		return i + 1
 	}
-	// Ordinary or byte string.
 	if j < n && (out[j] == '"' || out[j] == '\'') {
 		q := out[j]
 		j++
@@ -266,9 +212,6 @@ func scanString(out []byte, i int) int {
 	return i + 1
 }
 
-// scanChar matches a character literal at i and reports its end offset.
-// A `'` that does not form `'x'` or `'\..'` is a lifetime tick, not a
-// literal.
 func scanChar(out []byte, i int) (int, bool) {
 	n := len(out)
 	j := i + 1
@@ -297,19 +240,14 @@ func scanChar(out []byte, i int) (int, bool) {
 	} else if out[j] == '\'' || out[j] == '\n' {
 		return 0, false
 	} else {
-		// Multibyte chars occupy several bytes; find the closing tick on
-		// the same line within a short window.
 		k := j
 		for k < n && k-j < 8 && out[k] != '\'' && out[k] != '\n' {
 			k++
 		}
 		if k < n && out[k] == '\'' && k-j >= 1 {
-			// Reject lifetimes: 'a followed by an identifier character
-			// is a tick, not a literal, unless it closed immediately.
 			if k == j+1 || (k == j+2 && out[j] == '\\') {
 				return k + 1, true
 			}
-			// 'ab' cannot be a char literal; treat as lifetimes.
 			return 0, false
 		}
 		return 0, false
@@ -320,8 +258,6 @@ func scanChar(out []byte, i int) (int, bool) {
 	return 0, false
 }
 
-// matchBalanced returns the offset just past the bracket group opening at
-// i, which must be one of `{[(`.
 func matchBalanced(out []byte, i int) (int, bool) {
 	pairs := map[byte]byte{'{': '}', '[': ']', '(': ')'}
 	open := out[i]
@@ -353,9 +289,6 @@ func isSpace(c byte) bool {
 	return c == ' ' || c == '\t' || c == '\n' || c == '\r'
 }
 
-// parseItems scans items until end of input or a closing `}` at the
-// current nesting level. testScope is true inside a `#[cfg(test)]`
-// inline module.
 func (p *parser) parseItems(depth int, testScope bool, facts *FileFacts) error {
 	attrs := make([]string, 0, 2)
 	for {
@@ -410,9 +343,6 @@ func (p *parser) parseItems(depth int, testScope bool, facts *FileFacts) error {
 				return err
 			}
 		case "pub", "unsafe", "const", "static", "struct", "enum", "trait", "impl", "type", "where":
-			// Qualifiers and unrelated items: keep pending attributes
-			// only across `pub` (and `pub(...)`); anything else ends
-			// the attribute run.
 			if word != "pub" {
 				attrs = attrs[:0]
 			} else {
@@ -427,7 +357,6 @@ func (p *parser) parseItems(depth int, testScope bool, facts *FileFacts) error {
 	}
 }
 
-// parseMod parses after the `mod` keyword: `name;` or `name { ... }`.
 func (p *parser) parseMod(attrs []string, testScope bool, depth int, facts *FileFacts) error {
 	p.skipSpace()
 	name, ok := p.scanWord()
@@ -490,8 +419,6 @@ func (p *parser) parseMod(attrs []string, testScope bool, depth int, facts *File
 	}
 }
 
-// parseUse parses after the `use` keyword up to the terminating `;` and
-// expands `{a, b}` groups into individual literal identities.
 func (p *parser) parseUse(attrs []string, testScope bool, facts *FileFacts) error {
 	cfgTest := testScope
 	for _, a := range attrs {
@@ -526,7 +453,6 @@ func (p *parser) parseUse(attrs []string, testScope bool, facts *FileFacts) erro
 	return nil
 }
 
-// parseExtern parses after the `extern` keyword: `crate name [as alias];`.
 func (p *parser) parseExtern(attrs []string, testScope bool, facts *FileFacts) error {
 	cfgTest := testScope
 	for _, a := range attrs {
@@ -541,8 +467,6 @@ func (p *parser) parseExtern(attrs []string, testScope bool, facts *FileFacts) e
 	p.skipSpace()
 	word, ok := p.scanWord()
 	if !ok || word != "crate" {
-		// `extern "C" { ... }` blocks and other extern forms carry no
-		// dependency identity; skip to the next item boundary.
 		for p.pos < len(p.src) && p.src[p.pos] != ';' && p.src[p.pos] != '{' && p.src[p.pos] != '}' {
 			p.pos++
 		}
@@ -572,8 +496,6 @@ func (p *parser) parseExtern(attrs []string, testScope bool, facts *FileFacts) e
 	return nil
 }
 
-// parseFn records `#[test]` markers on functions. Bodies are skipped by
-// brace matching so nested items never leak into crate scope.
 func (p *parser) parseFn(attrs []string, testScope bool, facts *FileFacts) error {
 	isTest := testScope
 	for _, a := range attrs {
@@ -585,7 +507,6 @@ func (p *parser) parseFn(attrs []string, testScope bool, facts *FileFacts) error
 			isTest = true
 		}
 	}
-	// Skip the signature up to the body or `;`.
 	for p.pos < len(p.src) && p.src[p.pos] != '{' && p.src[p.pos] != ';' {
 		p.pos++
 	}
@@ -611,9 +532,6 @@ const (
 	attrTest
 )
 
-// classifyTestAttr maps one `#[...]` body to its test scope. Exactly
-// `test` and `cfg(test)` are recognized; any other predicate mentioning
-// `test` (including `cfg_attr`) fails closed as ambiguous.
 func classifyTestAttr(what, attr string) (attrKind, error) {
 	body := strings.TrimSpace(attr)
 	if body == "test" {
@@ -633,8 +551,6 @@ func isTestAttr(attr string) bool {
 	return err == nil && kind == attrTest
 }
 
-// isCfgTest reports whether the attribute body is exactly `cfg(test)`
-// modulo whitespace.
 func isCfgTest(body string) bool {
 	rest := strings.TrimSpace(body)
 	if !strings.HasPrefix(rest, "cfg") {
@@ -647,8 +563,6 @@ func isCfgTest(body string) bool {
 	return strings.TrimSpace(rest[1:len(rest)-1]) == "test"
 }
 
-// mentionsTest reports whether the attribute body contains a `test`
-// token outside string literals.
 func mentionsTest(body string) bool {
 	for i := 0; i < len(body); {
 		if body[i] == '"' {
@@ -680,8 +594,6 @@ func mentionsTest(body string) bool {
 	return false
 }
 
-// parsePathAttr extracts the value of `path = "..."` from an attribute
-// body, used for explicit `#[path]` module overrides.
 func parsePathAttr(attr string) (string, bool) {
 	i := 0
 	for i < len(attr) {
@@ -727,10 +639,6 @@ func parsePathAttr(attr string) (string, bool) {
 	return "", false
 }
 
-// expandUse expands one `use` tree into literal path identities:
-// `a::{b, c}` becomes `a::b` and `a::c`. `self` inside a group resolves
-// to the prefix; leading `::`, `crate`, `self`, and `super` segments are
-// preserved verbatim for the resolver.
 func expandUse(raw string) []string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -763,21 +671,16 @@ func expandUse(raw string) []string {
 				}
 			}
 		}
-		// A trailing `as` alias applies to the whole tree only for a
-		// single path; groups with aliases are left verbatim per part.
 		rest := strings.TrimSpace(raw[end+1:])
 		_ = rest
 		return out
 	}
-	// Strip a trailing `as alias`: the alias is a local binding, not an
-	// identity the resolver needs.
 	if alias := stripAlias(raw); alias != "" {
 		return []string{alias}
 	}
 	return []string{raw}
 }
 
-// stripAlias removes a top-level ` as alias` suffix and reports the path.
 func stripAlias(raw string) string {
 	if i := strings.LastIndex(raw, " as "); i >= 0 {
 		return strings.TrimSpace(raw[:i])
@@ -785,7 +688,6 @@ func stripAlias(raw string) string {
 	return ""
 }
 
-// splitTopLevel splits s on sep at brace depth zero.
 func splitTopLevel(s string, sep byte) []string {
 	var parts []string
 	depth := 0
@@ -806,9 +708,6 @@ func splitTopLevel(s string, sep byte) []string {
 	return append(parts, s[start:])
 }
 
-// scanAttr scans an attribute at the current position. It reports the
-// attribute body, whether it is an inner `#![...]` attribute, and whether
-// a well-formed attribute was found.
 func (p *parser) scanAttr() (body string, inner bool, ok bool) {
 	if p.pos >= len(p.src) || p.src[p.pos] != '#' {
 		return "", false, false
@@ -840,7 +739,6 @@ func (p *parser) scanAttr() (body string, inner bool, ok bool) {
 	return "", false, false
 }
 
-// scanWord scans one identifier at the current position.
 func (p *parser) scanWord() (string, bool) {
 	p.skipSpace()
 	if p.pos >= len(p.src) || !isIdentStart(p.src[p.pos]) {
@@ -855,19 +753,16 @@ func (p *parser) scanWord() (string, bool) {
 	return w, true
 }
 
-// rewindWord moves the cursor back over a just-scanned word.
 func (p *parser) rewindWord(w string) {
 	p.pos -= len(w)
 }
 
-// skipSpace advances past whitespace.
 func (p *parser) skipSpace() {
 	for p.pos < len(p.src) && isSpace(p.src[p.pos]) {
 		p.pos++
 	}
 }
 
-// skipPubRestrict skips a `(...)` restriction after `pub`.
 func (p *parser) skipPubRestrict() {
 	p.skipSpace()
 	if p.pos < len(p.src) && p.src[p.pos] == '(' {

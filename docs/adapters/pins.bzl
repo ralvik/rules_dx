@@ -1,9 +1,3 @@
-"""Docs adapter pins plus mappings.
-
-Thin per-language runs over pinned native inputs normalizing into the
-versioned IR; seed-only, no working-site claim.
-"""
-
 RUST_RUSTDOC = "nightly-2026-09-01 with rustdoc JSON format_version 30 via -Z unstable-options --output-format json"
 PYTHON_GRIFFE = "griffe==2.2.0 with griffe dump --full plus JSON schema"
 TYPESCRIPT_TYPEDOC = "typedoc@0.28.20 with --json --emit none plus schemaVersion"
@@ -17,11 +11,3 @@ VUE_DOCGEN = "vue-docgen-api@4.79.2 with parseMulti plus arrays-only props/event
 SVELTE_SVELD = "sveld@0.37.3 with compiler plus svelte2tsx comparison"
 SCALA_TASTY = "Scala 3.3.6 with TASTy Inspector spike plus Scaladoc bridge comparison"
 ASTROMDX_PROSE = "None; prose-only with no API surface"
-
-REJECTED_STABLE_RUSTDOC = "stable rustdoc without -Z unstable-options JSON is rejected"
-REJECTED_HTML_SCRAPE = "Dokka HTML scraping is rejected; custom plugin owned JSON only"
-REJECTED_CONSOLE_PARSE = "console-parse for extractor outputs is rejected"
-
-NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #779"
-OWNED_GAP = "no owned gaps remain; renderer plus site plus rebuild plus link plus guide plus timing plus drift delivered under #780-#785"

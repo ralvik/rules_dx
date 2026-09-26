@@ -1,5 +1,3 @@
-"""Selective Cargo `dx update` per-crate pins."""
-
 SELECTIVE_CARGO = "wont-fix"
 
 SELECTIVE_CARGO_FULL = "CARGO_BAZEL_REPIN=1 bazel build //rust/tests/fixtures/hello:hello"
@@ -15,4 +13,4 @@ REJECTED_SILENT_FULL_SUBSTITUTION = "silent full-update substitution rejected"
 REJECTED_PRIVATE_CARGO_UPDATE_P = "private cargo update -p rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #633"
+SEED_ONLY = "qualified seed-only"

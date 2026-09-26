@@ -47,14 +47,10 @@ type ignoreEntry struct {
 	used  bool
 }
 
-// targetImports is the deduplicated union of normalized class identities
-// for one generated library's non-test sources. JDK roots are dropped at
-// collection; every other identity resolves strictly or fails generation.
 type targetImports struct {
 	imports []string
 }
 
-// NewLanguage returns the private first-party CSharp Gazelle extension.
 func NewLanguage() language.Language { return &csharpLang{} }
 
 func (l *csharpLang) Before(context.Context) { l.errors = nil; l.ignores = nil }
@@ -133,9 +129,6 @@ func csharpLoads(rulesRepo string) []rule.LoadInfo {
 	}
 }
 
-// Imports indexes one reusable import identity per CSharp source owned by a
-// library rule: the simple class name of each non-test source. Test-owned
-// sources never contribute an identity.
 func (*csharpLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != LibraryKind {
 		return nil
@@ -242,10 +235,6 @@ func (l *csharpLang) generateRules(args language.GenerateArgs) language.Generate
 	return mergeStale(args.File, result)
 }
 
-// checkClaims fails closed on same-package normalized-name collisions: a
-// generated library sharing its name with a handwritten rule of another
-// kind fails. A same-kind handwritten owner is ordinary Gazelle merge.
-// Handwritten-only duplicates are not ours to judge.
 func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) error {
 	existing := make(map[string]string)
 	if file != nil {
@@ -264,12 +253,9 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 	return nil
 }
 
-// isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path: any path containing tests, fixtures, or
-// testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
-    padded := "/" + rel + "/"
-    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
+	padded := "/" + rel + "/"
+	return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {
@@ -374,8 +360,6 @@ func formatMatches(matches []resolve.FindResult) string {
 	return fmt.Sprintf("[%s]", strings.Join(labels, ", "))
 }
 
-// CollectUsedIgnores reports used dx_ignore_import entries visible in c
-// as (path, value) pairs for the composed `//dx:generate` witness.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

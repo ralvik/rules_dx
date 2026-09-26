@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# Shellcheck/shfmt clean (`shfmt -i 2 -ci`, `.shellcheckrc` bash + all
 set -euo pipefail
 
 if ! declare -F rlocation >/dev/null 2>&1; then
   _dx_runfiles_bash="bazel_tools/tools/bash/runfiles/runfiles.bash"
-  # SC1090 single-sourced in `.shellcheckrc` (runfiles layouts exist
   source "${RUNFILES_DIR:-/dev/null}/$_dx_runfiles_bash" 2>/dev/null ||
     source "$(grep -sm1 "^$_dx_runfiles_bash " "${RUNFILES_MANIFEST_FILE:-/dev/null}" 2>/dev/null | cut -f2- -d' ')" 2>/dev/null ||
     source "$0.runfiles/$_dx_runfiles_bash" 2>/dev/null ||
@@ -486,7 +484,7 @@ dx_extract_re() {
 
 dx_bash_pin() {
   local major="${BASH_VERSINFO[0]:-0}" minor="${BASH_VERSINFO[1]:-0}"
-  echo "bash ${BASH_VERSION:-unknown} (floor 3.2+, issue #1006)"
+  echo "bash ${BASH_VERSION:-unknown} (floor 3.2+)"
   if [[ "$major" -gt 3 ]] || [[ "$major" == "3" && "$minor" -ge 2 ]]; then
     return 0
   fi

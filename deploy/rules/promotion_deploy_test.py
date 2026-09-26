@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local promotion staging test for `promotion_deploy` (no network, no sockets)."""
+"""Local output test."""
 
 import hashlib
 import json
@@ -138,7 +138,6 @@ class PromotionTest(unittest.TestCase):
                 text = f.read()
             self.assertIn("rollback promotion_demo to 1.2.3", text)
             self.assertIn("abc123", text)
-            # The staged forward artifact stays untouched.
             self.assertTrue(
                 os.path.isfile(os.path.join(promotion, "release_demo.tar.gz"))
             )

@@ -22,11 +22,7 @@ const (
 	libraryKind  = "python_library"
 	testKind     = "python_test"
 	binaryKind   = "python_binary"
-	// importsAttr is the conventional source-only import root. Every
-	// generated rule sets imports = ["."] so the owning package directory
-	// resolves first-party siblings exactly like the handwritten seed
-	// fixtures; it is mergeable so handwritten widening survives.
-	importsAttr = "."
+	importsAttr  = "."
 )
 
 var pythonKinds = map[string]rule.KindInfo{
@@ -48,9 +44,6 @@ func kindInfo() rule.KindInfo {
 	}
 }
 
-// binaryKindInfo matches thin binaries by main: a binary owns no srcs, so
-// srcs must stay out of MatchAttrs/NonEmptyAttrs or Gazelle would delete
-// generated binaries as empty on every merge.
 func binaryKindInfo() rule.KindInfo {
 	return rule.KindInfo{
 		MatchAttrs: []string{"main"},
@@ -78,14 +71,10 @@ type ignoreEntry struct {
 	used  bool
 }
 
-// targetImports is the deduplicated union of literal import roots for one
-// generated rule's sources. Standard-library roots are dropped at
-// collection; every other root resolves strictly or fails generation.
 type targetImports struct {
 	imports []string
 }
 
-// NewLanguage returns the private first-party Python Gazelle extension.
 func NewLanguage() language.Language { return &pythonLang{} }
 
 func (l *pythonLang) Before(context.Context) { l.errors = nil; l.ignores = nil }
@@ -164,9 +153,6 @@ func pythonLoads(rulesRepo string) []rule.LoadInfo {
 	}
 }
 
-// Imports indexes one reusable import identity per `.py` source owned by a
-// library rule: the exact module stem. Test rules are leaves and provide
-// nothing; paired `.pyi` stubs never provide an identity.
 func (*pythonLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != libraryKind {
 		return nil
@@ -291,9 +277,6 @@ func (l *pythonLang) generateRules(args language.GenerateArgs) language.Generate
 	return mergeStale(args.File, result)
 }
 
-// claimKind returns the generated rule kind for one claimant: the explicit
-// Kind when set (thin-binary claims), otherwise inferred from the source
-// (test when IsTestFile, else library).
 func claimKind(c Claimant) string {
 	if c.Kind != "" {
 		return c.Kind
@@ -304,11 +287,6 @@ func claimKind(c Claimant) string {
 	return libraryKind
 }
 
-// checkClaims fails closed on same-package normalized-name collisions:
-// two generated sources claiming one name fail with every claimant,
-// including any handwritten owner. A single generated claimant sharing a
-// name with a handwritten rule of the same kind is ordinary Gazelle merge;
-// a kind mismatch fails. Handwritten-only duplicates are not ours to judge.
 func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))
@@ -350,12 +328,9 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 	return nil
 }
 
-// isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path: any path containing tests, fixtures, or
-// testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
-    padded := "/" + rel + "/"
-    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
+	padded := "/" + rel + "/"
+	return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {
@@ -461,8 +436,6 @@ func formatMatches(matches []resolve.FindResult) string {
 	return fmt.Sprintf("[%s]", strings.Join(labels, ", "))
 }
 
-// CollectUsedIgnores reports used dx_ignore_import entries visible in c
-// as (path, value) pairs for the composed `//dx:generate` witness.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

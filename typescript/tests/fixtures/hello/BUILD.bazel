@@ -1,4 +1,3 @@
-"""Seed TypeScript project; consumer of typescript_* wrappers."""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//javascript/rules:defs.bzl", "javascript_binary")

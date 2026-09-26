@@ -1,4 +1,3 @@
-"""Seed Rust binary, library, and tests; consumer of rust_* wrappers."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

@@ -1,5 +1,3 @@
-"""Concrete aspect-subjects use case."""
-
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 
 def _aspect_leaf_impl(ctx):

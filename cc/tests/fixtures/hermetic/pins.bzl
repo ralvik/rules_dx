@@ -1,8 +1,3 @@
-"""C/C++ sha256-integrity plus no-system-package pins.
-
-No ecosystem lockfile; every http_archive carries sha256/integrity, system pkgs rejected.
-"""
-
 CC_HASH_ATTR = "sha256"
 CC_HASH_ALT = "integrity"
 

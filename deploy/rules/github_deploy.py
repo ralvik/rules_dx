@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Draft-only GitHub Release stager plus gated publisher for `github_deploy`.
-
-Hermetic local default stages the pinned assets into a local release
-directory plus a `would-run.txt` manifest (`gh release create <tag>
-<assets...> --draft --verify-tag`) and verifies bytes via sha256; the
-live `gh release create --draft --verify-tag` path runs only with
-explicit env plus owner approval and never by default. Used as an `expand_template` template
-per deploy instance (placeholders below) and as a `py_library` for
-`py_test`.
-"""
+"""Local release stager."""
 
 import hashlib
 import os
@@ -16,9 +7,6 @@ import shutil
 import subprocess
 import sys
 
-# Per-instance pins expanded by the `github_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_staging` directly without touching these constants.
 ASSET_RLOCS_STR = "@@ASSET_RLOCS@@"
 DEPLOY_TAG = "@@TAG@@"
 DEPLOY_NAME = "@@DEPLOY_NAME@@"
@@ -44,13 +32,6 @@ def release_command(tag, asset_bases):
 
 
 def build_staging(asset_srcs, outdir, deploy_name, tag):
-    """Copies pinned assets into a local release dir and writes the manifest.
-
-    Creates `<outdir>/<deploy-name>-release/` holding each asset by
-    basename plus `would-run.txt` with the `gh release create <tag>
-    <assets...> --draft --verify-tag` line and per-asset sha256 lines.
-    Verifies bytes via sha256 and returns the staging directory.
-    """
     if not asset_srcs:
         raise ValueError("github release: need at least one asset")
     if not deploy_name:
@@ -93,7 +74,6 @@ def build_staging(asset_srcs, outdir, deploy_name, tag):
 
 
 def live_publish(tag, asset_srcs):
-    """Creates one draft release via gh without creating or pushing tags."""
     cmd = ["gh", "release", "create", tag] + list(asset_srcs) + ["--draft", "--verify-tag"]
     subprocess.run(cmd, check=True)
 

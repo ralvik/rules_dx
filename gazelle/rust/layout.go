@@ -1,14 +1,3 @@
-// Layout discovers conventional source-only Rust crate shapes and loads
-// crate module trees with single-owner semantics.
-//
-// A source-only crate uses recognized roots only: `<dir>/src/lib.rs`,
-// `<dir>/src/main.rs`, and direct `<dir>/tests/*.rs` integration-test
-// roots. Ownership is per crate, not per file: an authoritative root owns
-// its root and every recursively loaded module, including explicit
-// `#[path]` modules. A module is never rewritten as an independent crate.
-// Ownership that cannot preserve Rust module semantics (orphan modules,
-// `foo.rs` versus `foo/mod.rs` ambiguity, duplicate inclusion) fails
-// generation instead of guessing.
 package rust
 
 import (
@@ -18,23 +7,13 @@ import (
 	"strings"
 )
 
-// CrateRoots are the recognized source-only roots of one crate directory.
-// Paths are workspace-relative with `/` separators.
 type CrateRoots struct {
-	// Dir is the crate directory (`""` for the workspace root).
-	Dir string
-	// LibRoot is `<dir>/src/lib.rs` when present, else "".
-	LibRoot string
-	// BinRoot is `<dir>/src/main.rs` when present, else "".
-	BinRoot string
-	// TestRoots are direct `<dir>/tests/*.rs` files, bytewise sorted.
+	Dir       string
+	LibRoot   string
+	BinRoot   string
 	TestRoots []string
 }
 
-// DiscoverCrateRoots finds the recognized source-only roots under dir.
-// files lists workspace-relative candidate paths; only exact conventional
-// roots match. No other standalone root, custom path, `src/bin` tree,
-// example, benchmark, or build script is inferred without Cargo metadata.
 func DiscoverCrateRoots(dir string, files []string) CrateRoots {
 	roots := CrateRoots{Dir: dir}
 	join := func(elem ...string) string {
@@ -63,44 +42,25 @@ func DiscoverCrateRoots(dir string, files []string) CrateRoots {
 	return roots
 }
 
-// HasRoots reports whether the directory holds any recognized root.
 func (r CrateRoots) HasRoots() bool {
 	return r.LibRoot != "" || r.BinRoot != "" || len(r.TestRoots) > 0
 }
 
-// TestTarget is one generated integration-test target.
 type TestTarget struct {
-	// Name is the `<stem>_test` target name.
 	Name string
-	// Root is the workspace-relative integration-test root.
 	Root string
 }
 
-// CrateShape is the generated target shape for one source-only crate
-// directory: at most one library, at most one thin binary, and one target
-// per direct integration-test root.
 type CrateShape struct {
-	// Dir is the crate directory.
-	Dir string
-	// Name is the fallback crate name (normalized directory basename).
-	Name string
-	// LibTarget is the library target name, empty without `src/lib.rs`.
-	LibTarget string
-	// BinTarget is the binary target name, empty without `src/main.rs`.
-	BinTarget string
-	// Tests holds one entry per direct integration-test root.
-	Tests []TestTarget
-	// LibUnitTest and BinUnitTest mark the one crate unit-test wrapper
-	// (`<crate-target>_test`) for the library and binary respectively.
+	Dir         string
+	Name        string
+	LibTarget   string
+	BinTarget   string
+	Tests       []TestTarget
 	LibUnitTest bool
 	BinUnitTest bool
 }
 
-// ShapeCrate maps discovered roots to generated target names. libUnitTest
-// and binUnitTest report whether the library and binary module trees
-// contain recognized `#[test]` or `#[cfg(test)]` syntax; each true value
-// yields exactly one crate unit-test wrapper. Same-shape normalized-name
-// collisions fail with every claimant and no invented affix.
 func ShapeCrate(roots CrateRoots, libUnitTest, binUnitTest bool) (*CrateShape, error) {
 	if !roots.HasRoots() {
 		return &CrateShape{Dir: roots.Dir}, nil
@@ -155,12 +115,6 @@ func ShapeCrate(roots CrateRoots, libUnitTest, binUnitTest bool) (*CrateShape, e
 	return shape, nil
 }
 
-// LoadCrate loads the complete module tree of one crate or
-// integration-test root. It returns every owned file (the root plus each
-// recursively loaded module) mapped to its parsed facts. read supplies
-// file bytes; exists reports checked-in presence for candidate module
-// paths. Both candidates existing, no candidate existing, duplicate
-// inclusion, and inclusion cycles fail instead of guessing an owner.
 func LoadCrate(root string, read func(string) ([]byte, error), exists func(string) bool) (map[string]*FileFacts, error) {
 	owned := make(map[string]*FileFacts)
 	var visit func(file, moduleDir string, inheritedTest bool, stack []string) error
@@ -238,9 +192,6 @@ func LoadCrate(root string, read func(string) ([]byte, error), exists func(strin
 	return owned, nil
 }
 
-// joinRel joins a module path relative to its declaring file's directory.
-// A `#[path]` starting with `/` is workspace-relative; anything else is
-// relative to the declaring file.
 func joinRel(fileDir, rel string) string {
 	if strings.HasPrefix(rel, "/") {
 		return strings.TrimPrefix(path.Clean(rel), "/")

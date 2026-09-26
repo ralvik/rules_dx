@@ -1,4 +1,3 @@
-// Package-level test for the solo package (internal form).
 package solo
 
 import "testing"

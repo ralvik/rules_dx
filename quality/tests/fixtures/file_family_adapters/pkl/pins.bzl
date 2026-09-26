@@ -1,7 +1,3 @@
-"""pkl check plus fix wiring.
-
-"""
-
 PKL_VERSION = "0.32.1"
 PKL_ARTIFACT = "standalone checksummed release artifact"
 PKL_CHECK = "pkl --check"

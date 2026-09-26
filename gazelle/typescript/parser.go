@@ -1,34 +1,3 @@
-// Parser extracts the narrow recognized source facts the TypeScript Gazelle
-// extension needs for one-source ownership and strict dependency resolution.
-//
-// Recognized syntax (narrow source-only scope; additional forms require
-// parser fixtures before they become recognized):
-//
-//   - `import "name"`, `import x from "name"`, `import {a} from "name"`,
-//     `import * as ns from "name"`, `import type ...` (dependency on the
-//     normalized spec root).
-//   - `export {a} from "name"`, `export * from "name"`,
-//     `export * as ns from "name"`, `export type ... from "name"`
-//     (dependency on the normalized spec root).
-//   - `import("name")` with a literal single- or double-quoted identity.
-//   - `require("name")` with a literal single- or double-quoted identity.
-//
-// Type-only declarations (`interface`, `type` aliases, `declare`) without a
-// `from` specifier produce no edge. Declaration files (`.d.ts` and friends)
-// are inert and never parsed for ownership.
-//
-// Comments (`//`, `/* */`) are inert: tokens that look like imports inside
-// them never produce an edge. String, template, and regex literals are inert
-// except for the single specifier string in a recognized position.
-// Template-literal specifiers (`` import(`name`) ``) are computed and remain
-// the manual kept-dependency boundary. Computed `import(x)` / `require(x)`
-// produce no edge and no notice.
-//
-// Specifier normalization: relative (`./`, `../`, `/`) references contribute
-// their basename without the final extension (`./hello.ts` -> `hello`);
-// bare specifiers contribute the full literal (`react`, `@scope/pkg`,
-// `pkg/subpath`); `node:`-prefixed and builtin identities are included and
-// filtered by callers via IsStdLib.
 package typescript
 
 import (
@@ -37,12 +6,6 @@ import (
 	"strings"
 )
 
-// ParseImports returns the sorted unique normalized import roots for one
-// JavaScript source file. Standard-library identities are included; callers
-// filter them via IsStdLib. Relative references are included by root; use
-// ParseImportRefs when the relative/bare distinction matters (a relative
-// reference must never be dropped as standard library even when its root
-// collides with a builtin name such as `./util.js`).
 func ParseImports(content []byte) []string {
 	set := make(map[string]struct{})
 	add := func(spec string) {
@@ -61,24 +24,16 @@ func ParseImports(content []byte) []string {
 	return out
 }
 
-// ImportRef is one normalized import root plus whether any contributing
-// literal specifier was relative (`./`, `../`, `/`). Relative references
-// resolve locally and must never be filtered via IsStdLib.
 type ImportRef struct {
 	Root     string
 	Relative bool
 }
 
-// IsRelativeSpec reports whether a literal specifier is relative (starts
-// with `.` or `/` after trimming space).
 func IsRelativeSpec(spec string) bool {
 	spec = strings.TrimSpace(spec)
 	return strings.HasPrefix(spec, ".") || strings.HasPrefix(spec, "/")
 }
 
-// ParseImportRefs returns the sorted unique normalized import roots with
-// per-root relative marking: Relative is true when at least one
-// contributing literal specifier was relative.
 func ParseImportRefs(content []byte) []ImportRef {
 	rel := make(map[string]bool)
 	add := func(spec string) {
@@ -101,16 +56,12 @@ func ParseImportRefs(content []byte) []ImportRef {
 	return out
 }
 
-// normalizeSpec maps one literal specifier to its resolution root.
 func normalizeSpec(spec string) string {
 	spec = strings.TrimSpace(spec)
 	if spec == "" {
 		return ""
 	}
 	if strings.HasPrefix(spec, ".") || strings.HasPrefix(spec, "/") {
-		// Relative or absolute path: basename without the final extension.
-		// `./dir/` (trailing slash) resolves to the directory name; an
-		// empty basename contributes nothing.
 		trimmed := strings.TrimSuffix(spec, "/")
 		base := path.Base(trimmed)
 		if base == "" || base == "." || base == "/" {
@@ -124,14 +75,11 @@ func normalizeSpec(spec string) string {
 	return spec
 }
 
-// scan walks the source in one pass, skipping comments and inert literals,
-// and reports each recognized literal specifier via add.
 func scan(src []byte, add func(string)) {
 	n := len(src)
 	i := 0
 	for i < n {
 		c := src[i]
-		// Line comment.
 		if c == '/' && i+1 < n && src[i+1] == '/' {
 			j := i + 2
 			for j < n && src[j] != '\n' {
@@ -140,7 +88,6 @@ func scan(src []byte, add func(string)) {
 			i = j
 			continue
 		}
-		// Block comment.
 		if c == '/' && i+1 < n && src[i+1] == '*' {
 			j := i + 2
 			for j+1 < n && !(src[j] == '*' && src[j+1] == '/') {
@@ -153,21 +100,14 @@ func scan(src []byte, add func(string)) {
 			}
 			continue
 		}
-		// Single/double-quoted string outside a recognized position: inert.
 		if c == '\'' || c == '"' {
 			i = skipQuoted(src, i)
 			continue
 		}
-		// Template literal: inert (computed boundary).
 		if c == '`' {
 			i = skipTemplate(src, i)
 			continue
 		}
-		// Regex literal heuristic: a `/` that cannot start a comment and is
-		// not division. Narrow: when a `/` appears where an expression is
-		// expected, skip to the closing unescaped `/`. This only avoids
-		// false `import` matches inside regexes; misses fall closed by
-		// failing to parse, never by inventing an edge.
 		if c == '/' && isRegexStart(src, i) {
 			i = skipRegex(src, i)
 			continue
@@ -186,7 +126,6 @@ func scan(src []byte, add func(string)) {
 				i = parseExport(src, j, add)
 				continue
 			case "require":
-				// A `.require(` method call is not a module load.
 				if isPrecededByDot(src, i) {
 					i = j
 					continue
@@ -201,19 +140,14 @@ func scan(src []byte, add func(string)) {
 	}
 }
 
-// parseImport parses at an `import` keyword (ident ends at pos). It handles
-// side-effect imports, static `from` imports, `import.meta` (no edge), and
-// literal dynamic `import("name")`. It returns the offset to resume from.
 func parseImport(src []byte, kwStart, pos int, add func(string)) int {
 	n := len(src)
 	_ = kwStart
 	p := skipTrivia(src, pos)
 	if p < n && src[p] == '.' {
-		// import.meta: no edge.
 		return p + 1
 	}
 	if p < n && src[p] == '(' {
-		// Dynamic import: literal string only.
 		p++
 		p = skipTrivia(src, p)
 		if p < n && (src[p] == '\'' || src[p] == '"') {
@@ -229,11 +163,9 @@ func parseImport(src []byte, kwStart, pos int, add func(string)) int {
 		}
 		return p
 	}
-	// Optional `type` modifier (`import type ...` in TS-flavored JS).
 	if hasWordAt(src, p, "type") {
 		p = skipTrivia(src, p+4)
 	}
-	// Side-effect import: string literal directly.
 	if p < n && (src[p] == '\'' || src[p] == '"') {
 		if spec, next, ok := parseQuoted(src, p); ok {
 			add(spec)
@@ -241,12 +173,8 @@ func parseImport(src []byte, kwStart, pos int, add func(string)) int {
 		}
 		return p + 1
 	}
-	// Static form: scan tokens until `from` + string, `;`, or newline
-	// boundary. Braces and `*`/`as`/identifiers are skipped; a string
-	// before `from` is inert (it can only be a malformed tail).
 	for p < n {
 		if src[p] == '\'' || src[p] == '"' {
-			// A string here is not preceded by `from`; skip it inertly.
 			p = skipQuoted(src, p)
 			continue
 		}
@@ -258,10 +186,6 @@ func parseImport(src []byte, kwStart, pos int, add func(string)) int {
 			return p + 1
 		}
 		if src[p] == '\n' {
-			// Static imports may span lines inside braces, but a bare
-			// newline outside braces without `from` ends the statement.
-			// Narrow: continue scanning; termination comes from `;`,
-			// `from`-string, or end. Newlines alone never emit.
 			p++
 			continue
 		}
@@ -289,17 +213,12 @@ func parseImport(src []byte, kwStart, pos int, add func(string)) int {
 	return p
 }
 
-// parseExport parses after an `export` keyword. Only `... from "name"`
-// re-exports produce an edge.
 func parseExport(src []byte, pos int, add func(string)) int {
 	n := len(src)
 	p := skipTrivia(src, pos)
 	if hasWordAt(src, p, "type") {
 		p = skipTrivia(src, p+4)
 	}
-	// `export *`, `export * as ns`, `export { ... }`: scan to `from`.
-	// Any other form (`export const`, `export default`, `export function`,
-	// `export class`, `export =`) produces no edge.
 	depth := 0
 	for p < n {
 		if src[p] == '\'' || src[p] == '"' {
@@ -323,10 +242,6 @@ func parseExport(src []byte, pos int, add func(string)) int {
 			continue
 		}
 		if src[p] == ';' || src[p] == '\n' {
-			// A semicolon before `from` ends a non-re-export. Newlines
-			// inside braces never terminate; newlines outside braces end
-			// the declaration unless the next token is `from` (covers
-			// `} from "..."` split across lines).
 			if src[p] == ';' {
 				return p + 1
 			}
@@ -365,8 +280,6 @@ func parseExport(src []byte, pos int, add func(string)) int {
 	return p
 }
 
-// parseRequire parses after a `require` identifier. Only a single literal
-// string argument produces an edge.
 func parseRequire(src []byte, pos int, add func(string)) int {
 	n := len(src)
 	p := skipTrivia(src, pos)
@@ -389,7 +302,6 @@ func parseRequire(src []byte, pos int, add func(string)) int {
 	return p
 }
 
-// skipTrivia advances past whitespace and comments.
 func skipTrivia(src []byte, pos int) int {
 	n := len(src)
 	p := pos
@@ -423,11 +335,6 @@ func skipTrivia(src []byte, pos int) int {
 	return p
 }
 
-// parseQuoted parses a single- or double-quoted literal at pos (which must
-// be the opening quote). It reports the body and the offset just past the
-// closing quote. Backslash escapes are honored. An unterminated literal
-// (newline or EOF before the close) returns not-ok and consumes nothing
-// beyond the opener.
 func parseQuoted(src []byte, pos int) (string, int, bool) {
 	n := len(src)
 	quote := src[pos]
@@ -437,8 +344,6 @@ func parseQuoted(src []byte, pos int) (string, int, bool) {
 		c := src[k]
 		if c == '\\' {
 			if k+1 < n {
-				// Preserve the escaped byte literally; specifiers never
-				// need escape expansion for resolution roots.
 				b.WriteByte(src[k+1])
 				k += 2
 				continue
@@ -457,12 +362,10 @@ func parseQuoted(src []byte, pos int) (string, int, bool) {
 	return "", pos + 1, false
 }
 
-// skipQuoted skips a single- or double-quoted literal starting at pos.
 func skipQuoted(src []byte, pos int) int {
 	if _, next, ok := parseQuoted(src, pos); ok {
 		return next
 	}
-	// Unterminated: run to the newline or end so trailing text stays inert.
 	n := len(src)
 	k := pos + 1
 	for k < n && src[k] != '\n' {
@@ -471,8 +374,6 @@ func skipQuoted(src []byte, pos int) int {
 	return k
 }
 
-// skipTemplate skips a template literal starting at the opening backtick,
-// honoring escapes and `${ ... }` interpolation nesting.
 func skipTemplate(src []byte, pos int) int {
 	n := len(src)
 	k := pos + 1
@@ -501,11 +402,6 @@ func skipTemplate(src []byte, pos int) int {
 	return n
 }
 
-// isRegexStart heuristically reports whether a `/` at pos opens a regex
-// literal rather than a comment or division. Narrow: true when the previous
-// significant byte cannot end an expression (start, operators, punctuation,
-// keywords like `return`). Misses only risk skipping an edge search inside
-// the regex, never inventing one.
 func isRegexStart(src []byte, pos int) bool {
 	j := pos - 1
 	for j >= 0 && (src[j] == ' ' || src[j] == '\t' || src[j] == '\r' || src[j] == '\n') {
@@ -519,15 +415,9 @@ func isRegexStart(src []byte, pos int) bool {
 	case '(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '%', '<', '>', '^', '~':
 		return true
 	}
-	// After `return`, `typeof`, etc. a regex may follow; approximate by
-	// treating identifier-ends as division (no skip). This keeps the
-	// heuristic conservative: regexes after keywords are scanned as code,
-	// and `import`-looking text inside them could over-match. The parser
-	// tests pin the accepted behavior; widen only with fixtures.
 	return false
 }
 
-// skipRegex skips a regex literal starting at the opening `/`.
 func skipRegex(src []byte, pos int) int {
 	n := len(src)
 	k := pos + 1
@@ -563,8 +453,6 @@ func skipRegex(src []byte, pos int) int {
 	return n
 }
 
-// hasWordAt reports whether word starts at pos with a non-identifier
-// boundary after it. The caller guarantees the leading boundary.
 func hasWordAt(src []byte, pos int, word string) bool {
 	if pos+len(word) > len(src) {
 		return false
@@ -576,8 +464,6 @@ func hasWordAt(src []byte, pos int, word string) bool {
 	return after >= len(src) || !isIdentChar(src[after])
 }
 
-// isPrecededByDot reports whether the identifier at pos is immediately
-// preceded by a dot (allowing no trivia): a method call, not a load.
 func isPrecededByDot(src []byte, pos int) bool {
 	j := pos - 1
 	for j >= 0 && (src[j] == ' ' || src[j] == '\t' || src[j] == '\r' || src[j] == '\n') {

@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""Local folder-feed builder plus gated NuGet uploader for `nuget_deploy`.
-
-Hermetic default builds a local folder feed directory (the pinned `.nupkg`,
-which `dotnet` accepts as a source) and verifies bytes via sha256; the
-live `dotnet nuget push` path runs only with explicit env plus owner
-approval and never by default. Used as an `expand_template` template per
-deploy instance (placeholders below) and as a `py_library` for `py_test`.
-"""
+"""Local folder feed builder."""
 
 import hashlib
 import os
@@ -14,9 +7,6 @@ import shutil
 import subprocess
 import sys
 
-# Per-instance pins expanded by the `nuget_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_feed` directly without touching these constants.
 NUPKG_RLOC = "@@NUPKG_RLOC@@"
 PACKAGE_ID = "@@PACKAGE_ID@@"
 PACKAGE_VERSION = "@@PACKAGE_VERSION@@"
@@ -32,12 +22,6 @@ def sha256_file(path):
 
 
 def build_feed(nupkg_src, outdir, package_id):
-    """Copies one nupkg into a local folder feed and verifies bytes.
-
-    Creates `<outdir>/<id>-feed/` holding the `.nupkg`. The flat
-    directory is a folder feed `dotnet` accepts as a source. Returns the
-    feed directory.
-    """
     if not nupkg_src or not nupkg_src.endswith(".nupkg"):
         raise ValueError(
             "nuget feed: want exactly one .nupkg source, got '" + str(nupkg_src) + "'"
@@ -63,7 +47,6 @@ def build_feed(nupkg_src, outdir, package_id):
 
 
 def live_push(nupkg_src, source, api_key):
-    """Pushes one nupkg via dotnet without interactive prompts."""
     cmd = [
         "dotnet",
         "nuget",

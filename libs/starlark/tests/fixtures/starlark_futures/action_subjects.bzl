@@ -1,8 +1,3 @@
-"""Concrete action-subjects use case.
-Action observation stays deferred: analysis observes `DxSubjectInfo` fields plus
-`DefaultInfo` output basenames only, not registered actions; the mnemonic-to-outputs
-mapping stays a Starlark-level use case; consumers expose state via `DxSubjectInfo`."""
-
 def admitted_actions():
     return ["StarlarkAction", "FileWrite"]
 

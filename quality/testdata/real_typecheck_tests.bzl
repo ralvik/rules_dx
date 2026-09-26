@@ -1,6 +1,3 @@
-"""Real typecheck aspect evidence tests (WP3).
-
-"""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 

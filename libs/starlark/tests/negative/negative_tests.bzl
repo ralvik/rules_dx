@@ -1,6 +1,3 @@
-"""Negative demonstrations (WP4, WP5) as green hermetic proofs.
-"""
-
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//libs/starlark:failure_test.bzl", "failure_test")
 
@@ -50,10 +47,8 @@ _wrong_phase_subject = rule(
     implementation = _wrong_phase_subject_impl,
     attrs = {
         "subjects": attr.label_list(
-            doc = "Must be empty in load mode; non-empty fails analysis.",
         ),
     },
-    doc = "Non-test subject reproducing the load-mode subjects rejection for failure_test.",
 )
 
 def wrong_phase_demo(name):

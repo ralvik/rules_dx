@@ -50,8 +50,8 @@ func TestGenerateSourceOnlyPackage(t *testing.T) {
 	result := generateFixture(t, map[string]string{
 		"pkg/demo/demo.astro":   component("import helper from \"./helper.astro\";\nimport fs from \"fs\";\n"),
 		"pkg/demo/helper.astro": component("export const label = \"\";\n"),
-		"pkg/demo/notes.txt":     "not a source\n",
-		"pkg/demo/helper.js":     "export const x = 1;\n",
+		"pkg/demo/notes.txt":    "not a source\n",
+		"pkg/demo/helper.js":    "export const x = 1;\n",
 	}, regular)
 	if len(result.Gen) != 2 || len(result.Imports) != 2 {
 		t.Fatalf("generated %d rules and %d import sets, want 2 each", len(result.Gen), len(result.Imports))
@@ -120,7 +120,6 @@ func TestGenerateMixedRegions(t *testing.T) {
 	if len(result.Gen) != 3 || len(result.Imports) != 3 {
 		t.Fatalf("generated %d rules and %d import sets, want 3 each", len(result.Gen), len(result.Imports))
 	}
-	// Rules sort by name: client, demo, server.
 	if result.Gen[1].Name() != "demo" {
 		t.Fatalf("middle rule = %s, want demo", result.Gen[1].Name())
 	}
@@ -362,8 +361,14 @@ func resolverIndex(lang *astroLang, entries ...struct {
 func TestResolveBranches(t *testing.T) {
 	l := &astroLang{}
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"lib/b", "b", ".astro"},
-		struct{ pkg, name string; ext string }{"lib/a", "a", ".astro"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/b", "b", ".astro"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/a", "a", ".astro"},
 	)
 	cfg := resolverConfig(t, nil)
 	r := rule.NewRule(libraryKind, "app")
@@ -418,8 +423,14 @@ func TestResolveAmbiguous(t *testing.T) {
 	l := &astroLang{}
 	cfg := resolverConfig(t, nil)
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"one", "same", ".astro"},
-		struct{ pkg, name string; ext string }{"two", "same", ".astro"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"one", "same", ".astro"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"two", "same", ".astro"},
 	)
 	l.Resolve(cfg, index, nil, rule.NewRule(libraryKind, "app"), targetImports{imports: []string{"same"}}, label.New("", "app", "app"))
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "ambiguous") || !strings.Contains(l.errors[0], "//one:same") || !strings.Contains(l.errors[0], "//two:same") {

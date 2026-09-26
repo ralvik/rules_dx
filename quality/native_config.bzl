@@ -1,9 +1,5 @@
-"""Typed native-configuration targets for adapters plus Ruff, Biome/ESLint, Checkstyle, Scala/.NET, Native, Structured, and file-family cohort.
-
-"""
 
 DxNativeConfigInfo = provider(
-    doc = "One tool-owned native config file plus its closure.",
     fields = {
         "closure": "depset[File]: config plus every data file the tool reaches.",
         "config": "File: the tool-owned config file passed to the adapter.",
@@ -37,14 +33,12 @@ _NATIVE_CONFIG_EXTENSIONS = {
 }
 
 def native_config_extension(tool_id):
-    """Returns the required config extension for a real tool ID."""
     if tool_id not in _NATIVE_CONFIG_EXTENSIONS:
         fail("native_config: unknown tool '" + tool_id +
              "': want one of " + ", ".join(sorted(_NATIVE_CONFIG_EXTENSIONS.keys())))
     return _NATIVE_CONFIG_EXTENSIONS[tool_id]
 
 def native_config_error(tool_id, config_path, config_is_source, data):
-    """Returns the validation error for a native config, or "" when valid."""
     if tool_id not in _NATIVE_CONFIG_EXTENSIONS:
         return ("native_config: unknown tool '" + tool_id + "': want one of " +
                 ", ".join(sorted(_NATIVE_CONFIG_EXTENSIONS.keys())))
@@ -64,7 +58,6 @@ def native_config_error(tool_id, config_path, config_is_source, data):
     return ""
 
 def collect_native_configs(hints, stage_tools, what):
-    """Resolves aspect hints to the configs for a pipeline's stage tools."""
     by_tool = {}
     for hint in hints:
         if hint.tool_id in by_tool:
@@ -99,19 +92,15 @@ def _make_native_config_rule(tool_id, doc):
             "data": attr.label_list(
                 allow_files = True,
                 default = [],
-                doc = "Checked-in data files the config reaches.",
             ),
             "src": attr.label(
                 allow_single_file = True,
-                doc = "Checked-in tool-owned config file.",
                 mandatory = True,
             ),
             "_tool_id": attr.string(
                 default = tool_id,
-                doc = "Stable built-in tool identifier selecting the required config extension.",
             ),
         },
-        doc = doc,
     )
 
 buildifier_config = _make_native_config_rule(

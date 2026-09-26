@@ -1,7 +1,3 @@
-"""Experimental minimal TypeScript wrappers (ADR 0013).
-
-"""
-
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo", _ts_project = "ts_project")
@@ -34,30 +30,17 @@ _typescript_project_forward = dx_library_forward_rule(
     what = "typescript_*",
     allow_files = _DX_TS_SOURCE_EXTS,
     upstream_providers = [[_JsInfo]],
-    doc = "Forwards upstream TypeScript project providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct TypeScript sources owned by this wrapper for QualitySourcesInfo. Declaration files (.d.ts/.d.mts/.d.cts) are inert and must not be listed.",
-    upstream_doc = "The private upstream ts_project target whose providers are preserved.",
 )
 
 _DX_TS_DECLARATION_SUFFIXES = [".d.ts", ".d.mts", ".d.cts"]
 
 def _is_declaration(src):
-    """Returns whether a source path is an inert declaration file."""
     for suffix in _DX_TS_DECLARATION_SUFFIXES:
         if src.endswith(suffix):
             return True
     return False
 
 def typescript_srcs_rejection(srcs):
-    """Returns the contract rejection for forbidden `typescript_project` srcs, or `None`.
-
-    Declaration files (`.d.ts`, `.d.mts`, `.d.cts`) are inert per the
-    generation contract and must not be passed as `srcs`: `tsc` inputs
-    and configuration come from `typescript_project` over real sources,
-    and no wrapper independently enumerates sources or invokes a second
-    compiler. Silently dropping them from `QualitySourcesInfo` would mask
-    the authoring error, so they fail here instead.
-    """
     bad = [src for src in srcs or [] if _is_declaration(src)]
     if bad:
         return ("typescript_project takes real sources only; declaration " +
@@ -74,7 +57,6 @@ def _typescript_wrap_project(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _ts_project, _typescript_project_forward, srcs, visibility = visibility, **kwargs)
 
 def typescript_project(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `ts_project`."""
     _typescript_wrap_project(name, srcs, visibility = visibility, **kwargs)
 
 def _typescript_test_forward_impl(ctx):
@@ -97,24 +79,15 @@ _typescript_test = rule(
     provides = _DX_TS_TEST_PROVIDES,
     attrs = dx_forward_attrs(
         allow_files = _DX_TS_SOURCE_EXTS,
-        srcs_doc = "Direct TypeScript test sources owned by this wrapper for QualitySourcesInfo.",
         upstream_providers = [[DefaultInfo]],
-        upstream_doc = "The private upstream jest_test target whose providers are preserved.",
         extra_attrs = {
             "env_inherit": attr.string_list(
-                doc = "Environment variables to inherit at test runtime, " +
-                      "mirrored from the upstream jest_test (TESTBRIDGE_TEST_ONLY " +
-                      "is always added for sharding/--test_filter).",
             ),
         } | dx_lcov_merger_attr() | dx_symlink_windows_attr(),
     ),
-    doc = "Test forwarder for typescript_test: symlinks the upstream jest launcher.",
 )
 
 def typescript_test_rejection(kwargs):
-    """Returns the contract rejection for forbidden `typescript_test` kwargs, or `None`.
-
-    """
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("typescript_test always uses jest with the standard " +
                 "auto-configured reporters (Bazel test logs); " +
@@ -124,32 +97,12 @@ def typescript_test_rejection(kwargs):
     return None
 
 def typescript_test_env(env_inherit):
-    """Computes the effective test-runtime inherited environment.
-
-    """
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
     return env
 
 def typescript_test(name, srcs, node_modules, data = None, deps = None, tsconfig = None, transpiler = None, declaration = None, visibility = None, tags = None, env_inherit = None, **kwargs):
-    """Experimental minimal wrapper over `jest_test` for TypeScript sources.
-
-    The private `<name>_ts` target compiles the TypeScript test `srcs`
-    with `ts_project` (using `deps` plus `tsconfig`/`transpiler`/
-    `declaration`); the private `<name>_upstream` target runs the full
-    jest graph over the compiled test plus caller `deps`/`data`, with
-    `jest-cli`/`jest-junit` linked from `node_modules` by the upstream
-    macro. The public `<name>` test target symlinks the upstream launcher
-    and preserves `testing.TestEnvironment` (reporter/test-filter wiring)
-    plus the runtime providers, adding `QualitySourcesInfo` normalized
-    from the wrapper's direct TypeScript `srcs`.
-
-    Additional `tsc` options belong in the `tsconfig` file, not wrapper
-    attrs. Execution of TypeScript entries reuses `javascript_binary`
-    over the compiled output; there is no `typescript_binary`.
-
-    """
 
     rejection = typescript_srcs_rejection(srcs)
     if rejection != None:

@@ -50,14 +50,10 @@ type ignoreEntry struct {
 	used  bool
 }
 
-// targetImports is the deduplicated union of literal specifier roots for one
-// generated rule's script blocks. Standard-library roots are dropped at
-// collection; every other root resolves strictly or fails generation.
 type targetImports struct {
 	imports []string
 }
 
-// NewLanguage returns the private first-party Astro Gazelle extension.
 func NewLanguage() language.Language { return &astroLang{} }
 
 func (l *astroLang) Before(context.Context) { l.errors = nil; l.ignores = nil }
@@ -136,8 +132,6 @@ func astroLoads(rulesRepo string) []rule.LoadInfo {
 	}
 }
 
-// Imports indexes one reusable import identity per Astro source owned
-// by a library rule: the exact module stem.
 func (*astroLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != libraryKind {
 		return nil
@@ -236,11 +230,6 @@ func (l *astroLang) generateRules(args language.GenerateArgs) language.GenerateR
 	return mergeStale(args.File, result)
 }
 
-// checkClaims fails closed on same-package normalized-name collisions:
-// two generated sources claiming one name fail with every claimant,
-// including any handwritten owner. A single generated claimant sharing a
-// name with a handwritten rule of the same kind is ordinary Gazelle merge;
-// a kind mismatch fails. Handwritten-only duplicates are not ours to judge.
 func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))
@@ -275,12 +264,9 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 	return nil
 }
 
-// isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path: any path containing tests, fixtures, or
-// testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
-    padded := "/" + rel + "/"
-    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
+	padded := "/" + rel + "/"
+	return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {
@@ -385,8 +371,6 @@ func formatMatches(matches []resolve.FindResult) string {
 	return fmt.Sprintf("[%s]", strings.Join(labels, ", "))
 }
 
-// CollectUsedIgnores reports used dx_ignore_import entries visible in c
-// as (path, value) pairs for the composed `//dx:generate` witness.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

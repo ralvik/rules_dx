@@ -1,8 +1,3 @@
-"""JVM tool acquisition via a lazy module extension.
-
-One lazy repo per tool; registration fetches nothing (no per-platform matrix: JVM tools
-run over the shared JDK).
-"""
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", _http_archive = "http_archive", _http_file = "http_file")
 load("//quality/tools/jvm:repos.bzl", "JVM_TOOLS")

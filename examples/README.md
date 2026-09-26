@@ -1,7 +1,6 @@
 # Examples
 
-Start a new consumer or adopt an existing tree. Each workspace below records exact
-commands and expected evidence in its own `README.md`.
+Start a new consumer or adopt an existing tree.
 
 ## Start From CI Templates
 
@@ -21,7 +20,5 @@ commands and expected evidence in its own `README.md`.
 - [adopt-csharp](adopt-csharp/) foreign SDK-style tree adopted by the C# Gazelle extension.
 - [adopt-fsharp](adopt-fsharp/) foreign SDK-style tree adopted by the F# Gazelle extension.
 - [adopt-ruby](adopt-ruby/) foreign Bundler-layout tree adopted by the Ruby Gazelle extension.
-- [adopt-powershell](adopt-powershell/) foreign PowerShell tree adopted by handwritten wrappers with the explicitly scoped no-Gazelle alternative.
+- [adopt-powershell](adopt-powershell/) foreign PowerShell tree adopted by handwritten wrappers.
 - [adopt-polyglot](adopt-polyglot/) foreign Python+Rust+JS/TS tree adopted package by package.
-
-Per-foundation external-consumer workspaces plus acquisition/laziness proof are delivered (seed host; platform and remote dimensions are tracked in GitHub issues). Each `adopt-*` workspace records one pinned module dep with its manifest plus lock authority and the generate plus build plus test evidence in its own `README.md`.

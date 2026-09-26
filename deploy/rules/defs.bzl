@@ -1,12 +1,7 @@
-"""Deploy boundary for `dx deploy`.
-
-"""
-
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//libs/starlark:wrapper.bzl", "dx_symlink_executable", "dx_symlink_windows_attr")
 
 DxDeployInfo = provider(
-    doc = "Deploy entrypoint identity and default profile for `dx deploy` dispatch.",
     fields = {
         "app": "Label or None: the deployed app target when distinct from the deploy target.",
         "profile": "String or None: default profile ('debug', 'dev', 'release'); None means the command default applies.",
@@ -16,7 +11,6 @@ DxDeployInfo = provider(
 VALID_DEPLOY_PROFILES = ["debug", "dev", "release"]
 
 def deploy_profile_error(profile):
-    """Validates one deploy profile value."""
     if profile == None:
         return ""
     if type(profile) != "string" or profile not in VALID_DEPLOY_PROFILES:
@@ -59,22 +53,18 @@ dx_deployment = rule(
     attrs = {
         "app": attr.label(
             cfg = "target",
-            doc = "Deployed app target when distinct from the deploy program; None deploys the program itself.",
             executable = True,
             mandatory = False,
             providers = [DefaultInfo],
         ),
         "deploy": attr.label(
             cfg = "target",
-            doc = "Executable deploy program this deployment runs.",
             executable = True,
             mandatory = True,
         ),
         "profile": attr.string(
             default = "release",
-            doc = "Default profile for this deployment (debug, dev, or release). An explicit CLI flag always wins.",
             values = VALID_DEPLOY_PROFILES,
         ),
     } | dx_symlink_windows_attr(),
-    doc = "Wraps one executable deploy program with DxDeployInfo (issue #178).",
 )

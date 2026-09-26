@@ -1,11 +1,6 @@
 # Adopt polyglot example
 
-Foreign mixed-language tree adopted without upstream changes: a Python
-`pytools` package, a Rust `native` crate, a JavaScript `widgets` package,
-and a TypeScript `frontend` package side by side under one root carrying
-all three manifests (`Cargo.toml`, `package.json`, `pyproject.toml`). The
-tree arrived with no `MODULE.bazel` and no `BUILD` files; the
-`*/BUILD.bazel` files are generator-owned (`dx generate` output).
+Mixed tree with a Python package, a Rust crate, a JavaScript package, and a TypeScript package.
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-polyglot/...
@@ -14,25 +9,4 @@ bazel build //examples/adopt-polyglot/...
 bazel test //examples/adopt-polyglot/...
 ```
 
-Evidence: `dx init` writes nothing inside the tree (absent-only). Each
-extension claims only its own sources: the Python, JS, and TS BUILD files
-hold one rule per own-language source (tests as `*_test` wrappers) with
-same-package local edges, and
-the single scoped `dx generate` run emits all four packages in one
-composed traversal. `dx generate --check` passes scoped,
-per-package `bazel build` selects only that package closure, and
-regeneration is a no-op in every language (user-owned runtime edges
-survive: pytest `# keep` deps, tsc `transpiler`/`tsconfig`/`declaration`,
-Jest `config` plus ESM `node_options`). The foreign arrival locks
-`pnpm-lock.yaml` (`pnpm install --lockfile-only`) plus `uv.lock` (`uv lock`)
-plus `Cargo.lock` prove foreign consistency plus fail-closed repin (the
-Bazel graph keeps using the shared root pnpm plus hello uv hubs). Build
-covers 45 targets; all 4 runnable tests pass (`shapes_test`, `widgets_test`,
-`totals_test`, `native_test`).
-
-Scope notes: TypeScript tests run via `typescript_test` over the
-tsc-compiled output (execution reuses the Jest wiring). Module stems must stay
-unique per language across the repo: reusing `adopt-js-ts` stems first
-failed closed with an actionable ambiguous-import diagnostic, and the tree
-uses distinct `sums`/`totals` stems instead. Regeneration is the single
-composed `dx generate` run.
+Build covers 45 targets. All 4 tests pass (`shapes_test`, `widgets_test`, `totals_test`, `native_test`).

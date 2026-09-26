@@ -1,5 +1,3 @@
-"""Identity tests pinning the authoritative toolchain binding (WP1, WP3).
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":bindings.bzl", "RUSTFMT_TOOLCHAIN_TYPE", "RUST_TOOLCHAIN_TYPE")
@@ -17,7 +15,7 @@ aspect_field aspect_seen=True
 aspect_field field_count=6
 aspect_field has_subject=True
 aspect_field subject_label=//rust/toolchains:identity_under_test
-aspect_field transitive_count=0"""
+aspect_field transitive_count=0""" + _AT + """@rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools//:rust_toolchain""" + _AT + """@rules_rust++rust+rust_linux_x86_64__x86_64-unknown-linux-gnu__stable_tools//:rust_toolchain""" + _AT + """@rules_rust++rust+rustfmt_1.98.0__x86_64-unknown-linux-gnu_tools//:bin/rustfmt"""
 
 _LINUX_X86_64 = ["@platforms//os:linux", "@platforms//cpu:x86_64"]
 

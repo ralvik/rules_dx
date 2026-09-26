@@ -1,5 +1,3 @@
-"""Selective Go `dx update` per-module pins."""
-
 SELECTIVE_GO = "wont-fix"
 GO_FULL = "noop"
 
@@ -20,4 +18,4 @@ REJECTED_PRIVATE_GO_GET = "private go get rejected"
 REJECTED_PRIVATE_GO_MOD_TIDY = "private go mod tidy rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #636"
+SEED_ONLY = "qualified seed-only"

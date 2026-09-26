@@ -1,6 +1,3 @@
-"""Unit tests for typed native-config validation (WP2).
-
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(

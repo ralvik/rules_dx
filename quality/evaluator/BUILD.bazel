@@ -1,4 +1,3 @@
-"""WP3 direct-Bazel per-result threshold evaluator."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local folder-feed output test for `nuget_deploy` (no network, no sockets)."""
+"""Local output test."""
 
 import hashlib
 import os

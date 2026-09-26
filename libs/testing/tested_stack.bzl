@@ -1,6 +1,3 @@
-"""Tested-stack manifest generator (ADR 0014).
-
-"""
 
 _TESTED_DEPS = {
     "rules_rust": "0.74.0",
@@ -48,7 +45,7 @@ def _tested_stack_impl(ctx):
         "typescript_version": ctx.attr.typescript_version,
     }
     out = ctx.actions.declare_file(ctx.label.name + ".json")
-    ctx.actions.write(out, json.encode_indent(manifest, indent = "  ") + "\n")
+    ctx.actions.write(out, json.encode_indent(manifest, indent = " ") + "\n")
     return [DefaultInfo(files = depset([out]))]
 
 tested_stack = rule(
@@ -56,50 +53,38 @@ tested_stack = rule(
     attrs = {
         "bazel_version": attr.string(
             default = "9.2.0",
-            doc = "Must match .bazelversion.",
         ),
         "deps": attr.string_dict(
             default = {},
-            doc = "Module dep overrides; defaults cover every direct MODULE.bazel bazel_dep.",
         ),
         "dotnet_version": attr.string(
             default = "10.0.201",
-            doc = "Must match the dotnet.toolchain dotnet_version in MODULE.bazel.",
         ),
         "go_sdk_version": attr.string(
             default = "1.26.6",
-            doc = "Must match the go_sdk.download version in MODULE.bazel.",
         ),
         "platforms": attr.string_list(
-            doc = "Tested platform identifiers covered by this manifest.",
         ),
         "pnpm_version": attr.string(
             default = "10.34.5",
-            doc = "Must match the root package.json packageManager pin.",
         ),
         "python_version": attr.string(
             default = "3.12",
-            doc = "Must match the python.toolchain python_version in MODULE.bazel.",
         ),
         "rules_cc_version": attr.string(
             default = "0.2.22",
-            doc = "Must match the rules_cc bazel_dep in MODULE.bazel.",
         ),
         "rules_rust_version": attr.string(
             default = "0.74.0",
-            doc = "Must match the rules_rust bazel_dep in MODULE.bazel.",
         ),
         "rust_version": attr.string(
             default = "1.98.0",
-            doc = "Must match the rust.toolchain versions in MODULE.bazel.",
         ),
         "scala_version": attr.string(
             default = "2.13.18",
-            doc = "Must match the scala_config.settings scala_version in MODULE.bazel.",
         ),
         "typescript_version": attr.string(
             default = "5.9.3",
-            doc = "Must match the typescript.deps version in MODULE.bazel.",
         ),
     },
 )

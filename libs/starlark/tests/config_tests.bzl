@@ -1,6 +1,3 @@
-"""Analysis tests proving configuration subjects.
-"""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_CONFIG_OBSERVATIONS = """subject //libs/starlark/tests:config_group_under_test

@@ -1,7 +1,3 @@
-"""shellcheck check plus fix wiring.
-
-"""
-
 SHELLCHECK_VERSION = "v0.11.0"
 SHELLCHECK_ARTIFACT = "standalone checksummed release artifact"
 SHELLCHECK_CHECK = "shellcheck --format=gcc"

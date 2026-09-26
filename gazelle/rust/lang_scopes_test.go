@@ -60,7 +60,6 @@ func TestResolveScriptDepEdge(t *testing.T) {
 	if len(l.errors) != 0 {
 		t.Errorf("script-dep errors = %v", l.errors)
 	}
-	// The edge never points at its own rule.
 	self := rule.NewRule(scriptKind, "scripted_build_script")
 	l.Resolve(cfg, resolverIndex(l), nil, self, targetImports{scriptDep: "scripted_build_script"}, label.New("", "scripted", "scripted_build_script"))
 	if self.Attr("deps") != nil {
@@ -79,7 +78,6 @@ func TestValidateTestImportMapping(t *testing.T) {
 	if err := validateCargoImports(c, manifest, testKind, mapped); err != nil {
 		t.Errorf("override-only test import rejected: %v", err)
 	}
-	// An ignore on the same name conflicts with the exact mapping.
 	c.Exts[languageName] = &rustConfig{ignores: []*ignoreEntry{{value: "tmapped"}}}
 	if err := validateCargoImports(c, manifest, testKind, mapped); err == nil || !strings.Contains(err.Error(), "both") {
 		t.Errorf("test mapping/ignore conflict not reported: %v", err)
@@ -152,21 +150,18 @@ func TestExampleBuildImportScopes(t *testing.T) {
 		buildDeps:   map[string]cargoDependency{"cc": {external: true}},
 	}
 	c := resolverConfig(t, nil)
-	// Examples link dev dependencies in production position.
 	if err := validateExampleImports(c, manifest, targetImports{production: []string{"serde_json", "tempfile"}}); err != nil {
 		t.Errorf("dev import in example rejected: %v", err)
 	}
 	if err := validateExampleImports(c, manifest, targetImports{production: []string{"missing"}}); err == nil {
 		t.Error("undeclared example import accepted")
 	}
-	// Example test-scoped imports resolve through either dependency map.
 	if err := validateExampleImports(c, manifest, targetImports{test: []string{"tempfile"}}); err != nil {
 		t.Errorf("dev test import in example rejected: %v", err)
 	}
 	if err := validateExampleImports(c, manifest, targetImports{test: []string{"missing"}}); err == nil || !strings.Contains(err.Error(), "unresolved test import") {
 		t.Errorf("undeclared example test import err = %v", err)
 	}
-	// Build scripts see only build dependencies.
 	if err := validateBuildImports(c, manifest, targetImports{production: []string{"cc"}}); err != nil {
 		t.Errorf("build-dep import rejected: %v", err)
 	}
@@ -179,7 +174,6 @@ func TestExampleBuildImportScopes(t *testing.T) {
 	if err := validateBuildImports(c, manifest, targetImports{test: []string{"tempfile"}}); err == nil {
 		t.Error("dev test import in build script accepted")
 	}
-	// First-party path edges resolve per scope.
 	scoped := &cargoManifest{
 		packageName: "demo",
 		normalDeps:  map[string]cargoDependency{"local": {}},
@@ -205,7 +199,6 @@ func TestImportOverrideScopes(t *testing.T) {
 		buildDeps:   map[string]cargoDependency{},
 	}
 	mapped := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "rust xmapped //pkg:target"}})
-	// An exact mapping satisfies every validation scope.
 	if err := validateCargoImports(mapped, manifest, libraryKind, targetImports{production: []string{"xmapped"}}); err != nil {
 		t.Errorf("mapped production import rejected: %v", err)
 	}
@@ -215,14 +208,12 @@ func TestImportOverrideScopes(t *testing.T) {
 	if err := validateBuildImports(mapped, manifest, targetImports{production: []string{"xmapped"}, test: []string{"xmapped"}}); err != nil {
 		t.Errorf("mapped build import rejected: %v", err)
 	}
-	// Mapped names resolve as first-party labels in every scope.
 	if got := localCargoExampleImports(mapped, manifest, targetImports{production: []string{"xmapped"}}); strings.Join(got.production, ",") != "xmapped" {
 		t.Errorf("mapped example local = %+v", got.production)
 	}
 	if got := localCargoBuildImports(mapped, manifest, targetImports{production: []string{"xmapped"}, test: []string{"xmapped"}}); strings.Join(got.production, ",") != "xmapped" || strings.Join(got.test, ",") != "xmapped" {
 		t.Errorf("mapped build locals = %+v", got)
 	}
-	// A mapping/ignore conflict fails in every validation scope.
 	conflict := resolverConfig(t, []rule.Directive{{Key: "resolve", Value: "rust xmapped //pkg:target"}})
 	conflict.Exts[languageName] = &rustConfig{ignores: []*ignoreEntry{{value: "xmapped"}}}
 	if err := validateCargoImports(conflict, manifest, libraryKind, targetImports{production: []string{"xmapped"}}); err == nil || !strings.Contains(err.Error(), "both") {
@@ -307,7 +298,6 @@ func TestGenerateCargoBuildScript(t *testing.T) {
 	if !script.AttrBool("emit_warnings") {
 		t.Errorf("script emit_warnings = %v, want True", script.Attr("emit_warnings"))
 	}
-	// Consumers carry the script edge for Resolve to merge.
 	for _, imports := range result.Imports {
 		if raw, ok := imports.(targetImports); ok && len(raw.production) > 0 {
 			if raw.scriptDep != ":scripted_build_script" {
@@ -316,7 +306,6 @@ func TestGenerateCargoBuildScript(t *testing.T) {
 		}
 	}
 
-	// A build script importing outside [build-dependencies] fails closed.
 	badRoot := t.TempDir()
 	writeFixture(t, badRoot, "Cargo.toml", "[package]\nname = \"bad\"\nbuild = \"build.rs\"\n[dependencies]\nserde_json = \"1\"\n")
 	writeFixture(t, badRoot, "build.rs", "use serde_json::Value;\nfn main() {\n    let _ = Value::Null;\n}\n")
@@ -328,16 +317,11 @@ func TestGenerateCargoBuildScript(t *testing.T) {
 }
 
 func TestBuildScriptUserAttrsPreserved(t *testing.T) {
-	// User-owned script attrs (docs/generation/rust.md#build-scripts) must
-	// stay explicit with # keep: generation never infers them, so they must
-	// also stay out of MergeableAttrs or Gazelle would overwrite them.
 	for _, attr := range []string{"data", "tools", "build_script_env", "build_script_env_files", "toolchains"} {
 		if kindInfo().MergeableAttrs[attr] {
 			t.Errorf("MergeableAttrs[%q] = true, want false (user-owned with # keep)", attr)
 		}
 	}
-	// emitBuildScript must not set user-owned attrs: a fresh rule without
-	// them merges cleanly against a kept handwritten value.
 	root := t.TempDir()
 	writeFixture(t, root, "Cargo.toml", "[package]\nname = \"scripted\"\nversion = \"0.5.0\"\nedition = \"2021\"\nbuild = \"build/script.rs\"\n[build-dependencies]\ncc = \"1\"\n[lib]\nname = \"scripted_lib\"\npath = \"source/lib.rs\"\n")
 	writeFixture(t, root, "source/lib.rs", "pub fn value() {}\n")
@@ -364,9 +348,6 @@ func TestBuildScriptUserAttrsPreserved(t *testing.T) {
 }
 
 func TestEmitBuildScriptInvalidPackageName(t *testing.T) {
-	// parseCargoManifest pre-validates names, so this reaches
-	// emitBuildScript only defensively; the failure must still fail
-	// closed with an actionable message and emit nothing.
 	l := &rustLang{}
 	result := &language.GenerateResult{}
 	l.emitBuildScript(
@@ -449,19 +430,15 @@ func TestGenerateCargoSliceFailures(t *testing.T) {
 
 func TestDxCrateImports(t *testing.T) {
 	lang := NewLanguage()
-	// Explicit crate_name wins: the macro expands to a rust_library with
-	// that crate name, so dependents resolve through it identically.
 	named := rule.NewRule(dxCrateKind, "dx_digest")
 	named.SetAttr("crate_name", "digest_crate")
 	if got := lang.Imports(&config.Config{}, named, nil); len(got) != 1 || got[0].Imp != "digest_crate" {
 		t.Errorf("named macro imports = %+v, want [digest_crate]", got)
 	}
-	// Without crate_name the macro name is the crate name.
 	bare := rule.NewRule(dxCrateKind, "dx_atomic_fs")
 	if got := lang.Imports(&config.Config{}, bare, nil); len(got) != 1 || got[0].Imp != "dx_atomic_fs" {
 		t.Errorf("bare macro imports = %+v, want [dx_atomic_fs]", got)
 	}
-	// Non-provider kinds still resolve nothing through the macro path.
 	if got := lang.Imports(&config.Config{}, rule.NewRule(binaryKind, "tool"), nil); got != nil {
 		t.Errorf("binary imports = %+v, want nil", got)
 	}
@@ -511,14 +488,12 @@ func TestFilterDxCrateCovered(t *testing.T) {
 	if strings.Join(names, ",") != want {
 		t.Errorf("filtered = %q, want %q", strings.Join(names, ","), want)
 	}
-	// Imports stay parallel with the kept rules.
 	if len(result.Imports) != len(result.Gen) {
 		t.Fatalf("imports = %d, want %d", len(result.Imports), len(result.Gen))
 	}
 	if result.Imports[0] != "integration" || result.Imports[3] != "otherLib" {
 		t.Errorf("imports = %+v, want kept entries only", result.Imports)
 	}
-	// Nil files and empty results pass through untouched.
 	plain := language.GenerateResult{Gen: []*rule.Rule{rule.NewRule(libraryKind, "x")}}
 	if out := filterDxCrateCovered(nil, plain); len(out.Gen) != 1 {
 		t.Errorf("nil file filtered %d rules, want 1", len(out.Gen))
@@ -531,16 +506,13 @@ func TestFilterDxCrateCovered(t *testing.T) {
 func TestCheckExistingClaimsDxCrate(t *testing.T) {
 	file := rule.EmptyFile("BUILD.bazel", "pkg")
 	file.Rules = append(file.Rules, rule.NewRule(dxCrateKind, "dx_a"))
-	// The macro owns the ordinary rust_library it expands to: no error.
 	if err := checkExistingClaims(file, nil, []*rule.Rule{rule.NewRule(libraryKind, "dx_a")}); err != nil {
 		t.Errorf("macro-owned library rejected: %v", err)
 	}
-	// Flavored libraries never match the macro shape: still fail closed.
 	flavored := rule.NewRule(procMacroKind, "dx_a")
 	if err := checkExistingClaims(file, nil, []*rule.Rule{flavored}); err == nil {
 		t.Error("macro/flavored collision accepted")
 	}
-	// Unrelated collisions still fail closed.
 	if err := checkExistingClaims(file, nil, []*rule.Rule{rule.NewRule(libraryKind, "other")}); err != nil {
 		t.Errorf("unique generated target rejected: %v", err)
 	}
@@ -594,7 +566,6 @@ func TestGenerateCargoExampleScopes(t *testing.T) {
 	if wrapper == nil || wrapper.AttrString("crate") != ":demo_example" {
 		t.Errorf("demo example wrapper = %+v", wrapper)
 	}
-	// The first-party dev edge resolves through example scope.
 	found := false
 	for _, raw := range result.Imports {
 		if imports, ok := raw.(targetImports); ok {

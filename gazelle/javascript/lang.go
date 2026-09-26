@@ -18,15 +18,10 @@ import (
 )
 
 const (
-	languageName = "javascript"
-	libraryKind  = "javascript_library"
-	testKind     = "javascript_test"
-	binaryKind   = "javascript_binary"
-	// rootNodeModules is the default importer facade for generated tests.
-	// Source-only tests still need a Jest runtime; the root importer proves
-	// the provider-derived layout first. Per-importer facades arrive with
-	// pnpm importer-scope resolution; the attribute stays mergeable so
-	// handwritten narrowing survives.
+	languageName    = "javascript"
+	libraryKind     = "javascript_library"
+	testKind        = "javascript_test"
+	binaryKind      = "javascript_binary"
 	rootNodeModules = "//:node_modules"
 )
 
@@ -61,9 +56,6 @@ func testKindInfo() rule.KindInfo {
 	}
 }
 
-// binaryKindInfo matches thin binaries by entry_point: a binary owns no
-// srcs, so srcs must stay out of MatchAttrs/NonEmptyAttrs or Gazelle would
-// delete generated binaries as empty on every merge.
 func binaryKindInfo() rule.KindInfo {
 	return rule.KindInfo{
 		MatchAttrs: []string{"entry_point"},
@@ -91,19 +83,11 @@ type ignoreEntry struct {
 	used  bool
 }
 
-// targetImports is the deduplicated union of literal specifier roots for one
-// generated rule's sources. Bare standard-library roots are dropped at
-// collection; relative roots are always kept (a relative reference resolves
-// locally even when its root collides with a builtin name such as
-// `./util.js`). Every other root resolves strictly or fails generation.
 type targetImports struct {
 	imports []string
-	// local marks roots contributed by at least one relative specifier;
-	// those roots skip the standard-library filter at resolve time.
-	local map[string]bool
+	local   map[string]bool
 }
 
-// NewLanguage returns the private first-party JavaScript Gazelle extension.
 func NewLanguage() language.Language { return &javascriptLang{} }
 
 func (l *javascriptLang) Before(context.Context) { l.errors = nil; l.ignores = nil }
@@ -182,9 +166,6 @@ func javascriptLoads(rulesRepo string) []rule.LoadInfo {
 	}
 }
 
-// Imports indexes one reusable import identity per JavaScript source owned
-// by a library rule: the exact module stem. Test rules are leaves and
-// provide nothing.
 func (*javascriptLang) Imports(_ *config.Config, r *rule.Rule, _ *rule.File) []resolve.ImportSpec {
 	if r.Kind() != libraryKind {
 		return nil
@@ -257,8 +238,6 @@ func (l *javascriptLang) generateRules(args language.GenerateArgs) language.Gene
 				}
 				continue
 			}
-			// Bare standard-library roots resolve without an edge;
-			// relative roots always resolve locally.
 			if !ref.Relative && IsStdLib(ref.Root) {
 				continue
 			}
@@ -321,9 +300,6 @@ func (l *javascriptLang) generateRules(args language.GenerateArgs) language.Gene
 	return mergeStale(args.File, result)
 }
 
-// claimKind returns the generated rule kind for one claimant: the explicit
-// Kind when set (thin-binary claims), otherwise inferred from the source
-// (test when IsTestFile, else library).
 func claimKind(c Claimant) string {
 	if c.Kind != "" {
 		return c.Kind
@@ -334,11 +310,6 @@ func claimKind(c Claimant) string {
 	return libraryKind
 }
 
-// checkClaims fails closed on same-package normalized-name collisions:
-// two generated sources claiming one name fail with every claimant,
-// including any handwritten owner. A single generated claimant sharing a
-// name with a handwritten rule of the same kind is ordinary Gazelle merge;
-// a kind mismatch fails. Handwritten-only duplicates are not ours to judge.
 func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))
@@ -380,12 +351,9 @@ func checkClaims(file *rule.File, other []*rule.Rule, claimants []Claimant) erro
 	return nil
 }
 
-// isFixturePath reports whether a Gazelle relative directory is a test-only
-// fixture path: any path containing tests, fixtures, or
-// testdata as a segment generates testonly targets.
 func isFixturePath(rel string) bool {
-    padded := "/" + rel + "/"
-    return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
+	padded := "/" + rel + "/"
+	return strings.Contains(padded, "/tests/") || strings.Contains(padded, "/fixtures/") || strings.Contains(padded, "/testdata/")
 }
 
 func mergeStale(file *rule.File, result language.GenerateResult) language.GenerateResult {
@@ -410,7 +378,6 @@ func (l *javascriptLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *rep
 	if !ok {
 		return
 	}
-	// Thin binaries carry only entry metadata; their library owns the graph.
 	if r.Kind() == binaryKind {
 		return
 	}
@@ -420,8 +387,6 @@ func (l *javascriptLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *rep
 	}
 	deps := make(map[string]bool)
 	for _, name := range imports.imports {
-		// Bare standard-library roots resolve without an edge; relative
-		// roots always resolve locally even on builtin-name collision.
 		if !imports.local[name] && IsStdLib(name) {
 			continue
 		}
@@ -460,8 +425,6 @@ func (l *javascriptLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *rep
 	}
 	sort.Strings(labels)
 	if r.Attr(resolveAttr) == nil {
-		// Tests already carry user data; libraries start empty. Union with
-		// any existing value so handwritten resources survive.
 		r.SetAttr(resolveAttr, unionStrings(r.AttrStrings(resolveAttr), labels))
 		return
 	}
@@ -503,8 +466,6 @@ func formatMatches(matches []resolve.FindResult) string {
 	return fmt.Sprintf("[%s]", strings.Join(labels, ", "))
 }
 
-// CollectUsedIgnores reports used dx_ignore_import entries visible in c
-// as (path, value) pairs for the composed `//dx:generate` witness.
 func CollectUsedIgnores(c *config.Config) [][2]string {
 	raw, ok := c.Exts[languageName]
 	if !ok || raw == nil {

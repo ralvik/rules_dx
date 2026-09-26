@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the crates.io publisher.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":crates.bzl", "crates_allow_dirty_error", "crates_file_error", "crates_name_error", "crates_schema_error", "crates_version_error")
 

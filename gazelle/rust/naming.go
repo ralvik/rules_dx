@@ -1,13 +1,3 @@
-// Naming implements the deterministic Rust target-name normalizer owned
-// by the first-party Rust Gazelle extension.
-//
-// The durable constraint comes from ADR 0004 and the common generation
-// contract: basename-derived names preserve ASCII letters, ASCII digits,
-// and internal underscores; every run of any other character (including
-// non-ASCII characters) becomes one underscore; leading and trailing
-// underscores are trimmed; an empty result fails generation. Same-package
-// normalized-name collisions fail with every claimant; the extension never
-// invents a language affix or another suffix.
 package rust
 
 import (
@@ -15,9 +5,6 @@ import (
 	"strings"
 )
 
-// Normalize maps one source basename (without its final language
-// extension) to its deterministic Bazel target-name stem. It reports an
-// error instead of an empty name so callers fail closed.
 func Normalize(base string) (string, error) {
 	var b strings.Builder
 	b.Grow(len(base))
@@ -44,19 +31,11 @@ func Normalize(base string) (string, error) {
 	return out, nil
 }
 
-// Claimant records one generated or handwritten target competing for a
-// normalized name in a single Bazel package.
 type Claimant struct {
-	// Name is the normalized target name under contention.
-	Name string
-	// Source identifies the claimant for diagnostics: a source path for
-	// generated targets, "handwritten:<label>" for existing BUILD rules.
+	Name   string
 	Source string
 }
 
-// CollisionError reports a same-package normalized-name collision with
-// every claimant. Generation fails rather than overwriting, dropping a
-// target, or inventing a suffix.
 type CollisionError struct {
 	Name      string
 	Claimants []string
@@ -67,8 +46,6 @@ func (e *CollisionError) Error() string {
 		e.Name, strings.Join(e.Claimants, ", "))
 }
 
-// CheckCollisions fails closed when two or more claimants share one
-// normalized name. Claimants are grouped by Name; groups of one pass.
 func CheckCollisions(claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))
@@ -86,10 +63,6 @@ func CheckCollisions(claimants []Claimant) error {
 	return nil
 }
 
-// IntegrationTestName derives the `<stem>_test` target name for one
-// direct `<crate-directory>/tests/*.rs` root. A stem that already ends in
-// `_test` keeps its single suffix; an explicit authoritative Cargo
-// `[[test]]` name wins before this function is consulted.
 func IntegrationTestName(stem string) string {
 	if strings.HasSuffix(stem, "_test") {
 		return stem
@@ -97,23 +70,14 @@ func IntegrationTestName(stem string) string {
 	return stem + "_test"
 }
 
-// UnitTestName derives the `<crate-target>_test` wrapper name for the one
-// crate unit-test target of a library or executable crate.
 func UnitTestName(crateTarget string) string {
 	return crateTarget + "_test"
 }
 
-// BinaryName derives the `<crate-name>_bin` thin-binary name used when a
-// source-only crate directory holds both `src/lib.rs` and `src/main.rs`
-// and the library owns the fallback crate name.
 func BinaryName(crateName string) string {
 	return crateName + "_bin"
 }
 
-// ExampleName derives the `<name>_example` target name for an explicitly
-// declared ordinary-binary Cargo `[[example]]` target. An unnormalizable
-// name is a returned error, never a panic, so callers fail closed with an
-// actionable message.
 func ExampleName(cargoName string) (string, error) {
 	stem, err := Normalize(cargoName)
 	if err != nil {
@@ -122,16 +86,10 @@ func ExampleName(cargoName string) (string, error) {
 	return stem + "_example", nil
 }
 
-// ExampleTestName derives the `<example-target>_test` crate-test wrapper
-// name for an example declared with `test = true`.
 func ExampleTestName(exampleTarget string) string {
 	return exampleTarget + "_test"
 }
 
-// BenchName derives the `<name>_bench` target name for an explicitly
-// declared ordinary-binary Cargo `[[bench]]` target with `harness = false`.
-// An unnormalizable name is a returned error, never a panic, so callers
-// fail closed with an actionable message.
 func BenchName(cargoName string) (string, error) {
 	stem, err := Normalize(cargoName)
 	if err != nil {
@@ -140,10 +98,6 @@ func BenchName(cargoName string) (string, error) {
 	return stem + "_bench", nil
 }
 
-// BuildScriptName derives the `<package-name>_build_script` rule name for
-// an active Cargo build script. An unnormalizable package name is a
-// returned error, never a panic, so callers fail closed with an actionable
-// message.
 func BuildScriptName(packageName string) (string, error) {
 	stem, err := Normalize(packageName)
 	if err != nil {

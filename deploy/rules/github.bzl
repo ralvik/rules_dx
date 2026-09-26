@@ -1,7 +1,3 @@
-"""Draft-only GitHub Release publisher for `dx deploy`.
-
-"""
-
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -11,20 +7,9 @@ TAG_SCHEMA_VERSION = 1
 _VALID_TAG_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
 
 def tag_charset():
-    """Returns the launcher-safe tag charset via registry query.
-
- Derived from `_VALID_TAG_CHARS`, never duplicated.
-    """
     return _VALID_TAG_CHARS
 
 def tag_schema_error():
-    """Validates the versioned tag-charset schema.
-
-    Checks data shape without pinning exact contents: version is v1, the
-    charset is non-empty with unique shell-safe characters and never
-    admits double-quote, backslash, single-quote, space, or newline so
-    tags embed safely in the deploy launcher.
-    """
     if TAG_SCHEMA_VERSION != 1:
         return "github tag: unsupported schema v" + str(TAG_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_TAG_CHARS) != "string" or _VALID_TAG_CHARS == "":
@@ -39,7 +24,6 @@ def tag_schema_error():
     return ""
 
 def github_tag_error(tag):
-    """Validates one release tag value."""
     if type(tag) != "string" or tag == "":
         return ("github_deploy: invalid tag '" + str(tag) +
                 "': want a non-empty tag (for example 'v0.0.0-dryrun')")
@@ -51,30 +35,13 @@ def github_tag_error(tag):
     return ""
 
 def github_draft_error(draft):
-    """Validates the draft gate."""
     if draft != True:
         return ("github_deploy: draft=False requires explicit owner " +
-                "approval per issue #5; keep the draft gate and publish " +
+                "approval; keep the draft gate and publish " +
                 "the release on GitHub after approval")
     return ""
 
 def _github_launcher_impl(ctx):
-    """Expands the `py_binary` launcher for one draft release.
-
-    Each artifact resolves to a single file: executables (for example
-    `rust_binary`, `py_binary`) resolve to `files_to_run.executable`,
-    plain files (for example `archive_deploy` tarballs) must be the
-    sole member of `DefaultInfo.files`. The rule computes the runfiles
-    rlocations for every pinned asset via `rlocation_path`, then expands
-    the shared `github_deploy.py` template with those pins plus the tag
-    and deploy name. The wrapping `py_binary` (see `github_deploy`)
-    carries the pinned inputs in `data` plus the Python runfiles
-    library, so the program works under `bazel run`, `dx deploy` (which
-    symlinks the entrypoint and merges its runfiles), and direct
-    `bazel-bin` execution. Extra user args after `--` select the output
-    directory for the local staging dir (default:
-    `$BUILD_WORKSPACE_DIRECTORY`, else the cwd); the default stages
-    locally and publishes nothing."""
     asset_rlocs = []
     for target in ctx.attr.artifacts:
         info = target[DefaultInfo]
@@ -93,7 +60,7 @@ def _github_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
+        # buildifier: disable=canonical-repository
         substitutions = {
             "@@ASSET_RLOCS@@": ";".join(asset_rlocs),
             "@@DEPLOY_NAME@@": ctx.attr.deploy_name,
@@ -106,15 +73,12 @@ _github_launcher = rule(
     implementation = _github_launcher_impl,
     attrs = {
         "artifacts": attr.label_list(
-            doc = "Release asset files (executables resolve to their binary).",
             mandatory = True,
         ),
         "deploy_name": attr.string(
-            doc = "Deploy target name baked into the local staging directory.",
             mandatory = True,
         ),
         "tag": attr.string(
-            doc = "Release tag; must already exist in the remote (--verify-tag).",
             mandatory = True,
         ),
         "_template": attr.label(
@@ -122,27 +86,9 @@ _github_launcher = rule(
             default = "//deploy/rules:github_deploy.py",
         ),
     },
-    doc = "Launcher template expansion for github_deploy (wrapped as py_binary).",
 )
 
 def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
-    """Publishes pinned files as a draft-only GitHub Release.
-
-    Creates `<name>_program_launcher` (expanded Python launcher resolving
-    inputs via the Python runfiles library), `<name>_program`
-    (`py_binary` on the managed Python 3.12 toolchain wrapping the
-    launcher with pinned `data` plus the runfiles library), and `<name>`
-    (the `dx_deployment` returning `DxDeployInfo` with no app and
-    `profile`). Run with `bazel run :<name>` or `dx deploy :<name>`; the
-    default builds a local staging directory (`<name>-release/` holding
-    the pinned assets plus `would-run.txt` with the `gh release create
-    <tag> <assets...> --draft --verify-tag` manifest) and verifies bytes,
-    publishing nothing. `GH_RELEASE_DRY_RUN=1` prints the dry-run header
-    and publishes nothing (this is what CI exercises). Live `gh release
-    create --draft --verify-tag` runs only with `GH_RELEASE_LIVE=1` and
-    `GH_RELEASE_APPROVED=1` after explicit owner approval, never by
-    default, and refuses the `v0.0.0-dryrun` placeholder.
-    """
     tag_error = github_tag_error(tag)
     if tag_error != "":
         fail(tag_error + " (in " + native.package_name() + ":" + name + ")")
@@ -177,10 +123,6 @@ def github_deploy(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile 
     )
 
 def github_release(name, artifacts, tag = "v0.0.0-dryrun", draft = True, profile = "release"):
-    """Compat alias for `github_deploy`.
-
-    Kept for one release cycle, then removed.
-    """
     github_deploy(
         name = name,
         artifacts = artifacts,

@@ -1,7 +1,3 @@
-"""Selective Maven `dx update` wont-fix fixture.
-
-"""
-
 SELECTIVE_MAVEN = "wont-fix"
 
 SELECTIVE_MAVEN_FULL = "REPIN=1 bazel run @maven//:pin"
@@ -21,4 +17,4 @@ REJECTED_SILENT_FULL_SUBSTITUTION = "silent full-update substitution rejected"
 REJECTED_PRIVATE_EMULATION = "private per-artifact emulation rejected"
 REJECTED_HAND_EDITED_LOCK = "hand-edited maven_install.json rejected"
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #634"
+SEED_ONLY = "qualified seed-only"

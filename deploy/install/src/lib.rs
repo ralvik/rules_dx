@@ -95,7 +95,7 @@ pub fn parse_args(argv: &[String]) -> Result<VerifyArgs, ArgsError> {
             }
             "--sha256" | "--checksum" | "--sha256-file" | "--checksum-file" => {
                 return Err(ArgsError(
-                    "dx_verify: checksum-only verification is not publisher-identity proof; pass --bundle plus --identity/--issuer (issue #26)".to_owned(),
+                    "dx_verify: checksum-only verification is not publisher-identity proof; pass --bundle plus --identity/--issuer".to_owned(),
                 ));
             }
             "-h" | "--help" => {
@@ -116,7 +116,7 @@ pub fn parse_args(argv: &[String]) -> Result<VerifyArgs, ArgsError> {
     }
     if args.bundle.is_empty() {
         return Err(ArgsError(
-            "dx_verify: missing --bundle PATH; checksum-only verification is not publisher-identity proof (issue #26)".to_owned(),
+            "dx_verify: missing --bundle PATH; checksum-only verification is not publisher-identity proof".to_owned(),
         ));
     }
     if args.identity.is_empty() {

@@ -1,11 +1,6 @@
 # Adopt Python example
 
-Foreign Python tree adopted without upstream changes: an `app` package with a
-same-package local edge (`envelopes` -> `handlers`), a manifest-free `solo`
-directory (stdlib-only), and a conventional `tests/` directory proving the
-`_test`-suffix / `test_`-prefix classification negatives (`test_login.py` and
-`test_helpers.py` stay libraries). The tree arrived with no `MODULE.bazel` and
-no `BUILD` files; the `*/BUILD.bazel` files are generator-owned (`dx generate` output).
+Python tree with an `app` package, a stdlib-only `solo` directory, and a `tests/` directory.
 
 ```sh
 bazel run //cli/cli:dx -- init //examples/adopt-python/...
@@ -14,18 +9,4 @@ bazel build //examples/adopt-python/...
 bazel test //examples/adopt-python/...
 ```
 
-Evidence: `dx init` writes nothing inside the tree (absent-only). Generation
-emits one `python_library` per `.py`, links same-package basename imports
-(`:envelopes` -> `:handlers`, tests -> siblings), drops stdlib imports
-(`json`, `dataclasses`, `math`, `hashlib`) with no edges, and classifies only
-`*_test.py` as `python_test`. The three tests carry user-owned runtime edges
-(`dep_group = "hello"` plus `# keep` `@pypi//pytest` / `@pypi//coverage`)
-because the wrapper runs pytest; those lines survive regeneration. The
-foreign arrival lock `uv.lock` (`uv lock` from this tree's `pyproject.toml`;
-the Bazel graph keeps using the shared hello uv hub) proves foreign
-consistency plus fail-closed repin. Build covers 15 targets; all 3 tests
-pass (`handlers_test`, `pure_test`, `login_test`).
-
-Scope notes: the root `pyproject.toml` pins the manifest shape (extras and
-dependency groups, `httpx==0.28.1` plus `pytest==8.3.4`) with the foreign
-arrival lock `uv.lock`. Regeneration is the composed `dx generate` run.
+Build covers 15 targets. All 3 tests pass (`handlers_test`, `pure_test`, `login_test`).

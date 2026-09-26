@@ -22,7 +22,6 @@ func TestNormalize(t *testing.T) {
 		{"--both--", "both"},
 		{"a/b", "a_b"},
 		{"a.b.c", "a_b_c"},
-		// Non-ASCII bytes join the pending run: one underscore total.
 		{"caf\xc3\xa9", "caf"},
 		{"\xc3\xa9", ""}, // error case below
 		{"a\xc3\xa9b", "a_b"},
@@ -96,7 +95,6 @@ func TestDerivedNames(t *testing.T) {
 	if got := IntegrationTestName("login"); got != "login_test" {
 		t.Errorf("IntegrationTestName(login) = %q", got)
 	}
-	// No duplicated suffix when the basename already ends in _test.
 	if got := IntegrationTestName("login_test"); got != "login_test" {
 		t.Errorf("IntegrationTestName(login_test) = %q", got)
 	}

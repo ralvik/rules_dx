@@ -1,10 +1,7 @@
-"""Concrete configuration-subjects use case."""
-
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//libs/starlark:defs.bzl", "DxConfigInfo", "DxSubjectInfo")
 
 def _config_flip_transition_impl(_settings, _attr):
-    """Flips the futures config_value setting for deps."""
     return {"//libs/starlark/tests/fixtures/starlark_futures:config_value": "flipped"}
 
 config_flip_transition = transition(
@@ -14,7 +11,6 @@ config_flip_transition = transition(
 )
 
 def _config_leaf_impl(ctx):
-    """Exposes configurable attribute plus fragment plus setting values."""
     config_value = ctx.attr._config_value[BuildSettingInfo].value
     has_platform = hasattr(ctx.fragments, "platform")
     out = ctx.actions.declare_file(ctx.label.name + ".txt")
@@ -45,7 +41,6 @@ config_leaf = rule(
 )
 
 def _config_group_impl(ctx):
-    """Exposes its own config plus the transitioned dep value."""
     config_value = ctx.attr._config_value[BuildSettingInfo].value
     dep_value = ""
     dep_note = ""

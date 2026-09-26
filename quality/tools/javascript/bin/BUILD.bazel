@@ -1,10 +1,3 @@
-"""Stable private entry points over the tool facade.
-
-Lives in ./bin (not the facade package) so js_binary outputs never share
-a path prefix with the linked //quality/tools/javascript:node_modules
-tree. Consumers never touch hub labels; these wrappers are the public
-tool identity and share the managed Node 22 toolchain (no ambient Node).
-"""
 
 load("@npm_tools//quality/tools/javascript:eslint/package_json.bzl", eslint_bin = "bin")
 load("@npm_tools//quality/tools/javascript:prettier/package_json.bzl", prettier_bin = "bin")

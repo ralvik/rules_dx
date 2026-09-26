@@ -1,4 +1,3 @@
-"""Race-free atomic filesystem writes shared by every apply/commit path."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "dx_rust_crate")

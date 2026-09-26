@@ -1,8 +1,3 @@
-"""Experimental minimal Scala wrappers (ADR 0019).
-
-Upstream: rules_scala 7.3.0 plus Scala 2.13.18 plus ScalaTest 3.2.20 (MODULE.bazel).
-"""
-
 load("@rules_java//java:defs.bzl", "JavaInfo")
 load("@rules_scala//scala:scala.bzl", _scala_binary = "scala_binary", _scala_library = "scala_library", _scala_test = "scala_test")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
@@ -30,9 +25,6 @@ _scala_library_forward = dx_library_forward_rule(
     what = "scala_*",
     allow_files = _DX_SCALA_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
-    doc = "Forwards upstream Scala library providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct Scala sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream scala_library target whose providers are preserved.",
 )
 
 _scala_binary_forward = dx_executable_forward_rule(
@@ -43,9 +35,6 @@ _scala_binary_forward = dx_executable_forward_rule(
     what = "scala_*",
     allow_files = _DX_SCALA_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
-    doc = "Executable forwarder for scala_binary: symlinks the upstream binary.",
-    srcs_doc = "Direct Scala sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream scala_binary target whose executable is symlinked.",
     optional_providers = [JavaInfo],
     runtime = "besteffort",
 )
@@ -58,18 +47,11 @@ _scala_forward_test = dx_executable_forward_rule(
     what = "scala_*",
     allow_files = _DX_SCALA_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
-    doc = "Test forwarder for scala_test: symlinks the upstream test executable.",
-    srcs_doc = "Direct Scala test sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream scala_test target whose executable is symlinked.",
     extra_attrs = dx_lcov_merger_attr(),
     optional_providers = [JavaInfo],
 )
 
 def scala_scalacopts_with_werror(kwargs):
-    """Returns kwargs with -Xfatal-warnings enforced on scalacopts.
-
-    Existing flags are kept; a missing flag is appended.
-    """
     upstream_kwargs = dict(kwargs)
     scalacopts = list(upstream_kwargs.get("scalacopts", []))
     if "-Xfatal-warnings" not in scalacopts:
@@ -87,18 +69,9 @@ def _scala_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap_binary(name, _scala_binary, _scala_binary_forward, srcs, visibility = visibility, upstream_kwargs = _scala_with_werror(kwargs), **kwargs)
 
 def scala_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `scala_library`."""
     _scala_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def scala_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `scala_binary`.
-
-    An ordinary binary owns its `srcs` plus `deps` on a wrapper library and
-    names its `main_class` explicitly (no inference); a thin entry binary
-    carries only `runtime_deps` with no `srcs` and reports no direct
-    sources. Both shapes preserve the upstream providers and execution
-    semantics.
-    """
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:
@@ -106,14 +79,4 @@ def scala_binary(name, srcs = None, main_class = None, visibility = None, **kwar
     _scala_wrap_binary(name, effective_srcs, visibility = visibility, **upstream_kwargs)
 
 def scala_test(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `scala_test`.
-
-    With `srcs`, those test sources are this test's direct sources for
-    QualitySourcesInfo. The library under test stays its ordinary owner via
-    `deps`; test sources are never the library's sources. Uses Bazel's
-    standard test and coverage protocols over the ScalaTest 3.2.20 toolchain
-    (Coursier `scala_deps.scalatest()` runner classpath) with the hello
-    closure's ScalaTest deps declared via the shared Maven lock
-    (`@maven//:org_scalatest_scalatest_2_13` plus companions in
-    `//third_party/jvm:maven_install.json`, fail-closed)."""
     dx_wrap_test(name, _scala_test, _scala_forward_test, srcs, visibility = visibility, upstream_kwargs = _scala_with_werror(kwargs), **kwargs)

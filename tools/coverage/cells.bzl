@@ -1,4 +1,3 @@
-"""Coverage cell registry (single source)."""
 
 COVERAGE_CELLS = {
     "seed-linux_x86_64": "tools/coverage/seed-inventory.txt",
@@ -18,7 +17,6 @@ INVENTORY_FILES = [
 ]
 
 def coverage_cells(name):
-    """Declare the per-cell inventory filegroup from the registry."""
     native.filegroup(
         name = name,
         srcs = INVENTORY_FILES,

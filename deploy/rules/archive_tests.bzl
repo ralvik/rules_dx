@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the archive releaser.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":archive.bzl", "archive_filenames")
 

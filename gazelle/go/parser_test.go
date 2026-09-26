@@ -10,8 +10,6 @@ func TestParseImportsLocalNormalizedToBase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// fmt is included (callers filter stdlib); the local import
-	// contributes its final path segment.
 	want := []string{"fmt", "hello"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseImports = %v, want %v", got, want)

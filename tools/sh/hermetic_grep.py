@@ -1,7 +1,5 @@
 """Hermetic grep/sed-extract replacement for qualification harnesses.
 
-Owning contract: `docs/testing/tools.md` (hermetic grep/bash under issue #1006).
-
 Pure-stdlib python3 with identical behavior on Linux/macOS/Windows: no host
 `grep`/`sed` variance (BSD `--include`/`--exclude-dir` gaps, `-A` group
 separators, `-o` quirks, BRE/ERE drift). Qualification drivers call it via
@@ -245,7 +243,7 @@ def cmd_extract_re(args):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        prog="hermetic_grep", description="Hermetic grep replacement (issue #1006)."
+        prog="hermetic_grep", description="Hermetic grep replacement."
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 

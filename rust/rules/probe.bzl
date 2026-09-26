@@ -1,5 +1,3 @@
-"""Conformance subject for the minimal Rust wrappers.
-"""
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 load("@rules_rust//rust:defs.bzl", _rust_common = "rust_common")
@@ -93,22 +91,17 @@ dx_wrapper_subject = rule(
     implementation = _wrapper_subject_impl,
     attrs = {
         "clippy_test": attr.label(
-            doc = "The rust_clippy_test target over the wrappers, for marker evidence.",
         ),
         "fmt_test": attr.label(
-            doc = "The rustfmt_test target over the wrappers, for marker evidence.",
         ),
         "upstream": attr.label(
             mandatory = True,
-            doc = "The private <name>_upstream target the wrapper forwards.",
         ),
         "wrapper": attr.label(
             mandatory = True,
-            doc = "The public rust_* forwarding target under test.",
         ),
     },
     toolchains = ["@rules_rust//rust:toolchain_type"],
-    doc = "Exposes wrapper-vs-upstream provider comparison as DxSubjectInfo.",
 )
 
 def _wrapper_cc_subject_impl(ctx):
@@ -169,22 +162,17 @@ dx_wrapper_cc_subject = rule(
     implementation = _wrapper_cc_subject_impl,
     attrs = {
         "clippy_test": attr.label(
-            doc = "The rust_clippy_test target over the wrappers, for marker evidence.",
         ),
         "fmt_test": attr.label(
-            doc = "The rustfmt_test target over the wrappers, for marker evidence.",
         ),
         "upstream": attr.label(
             mandatory = True,
             providers = [[_rust_common.test_crate_info]],
-            doc = "The private <name>_upstream Cc-linking target the wrapper forwards.",
         ),
         "wrapper": attr.label(
             mandatory = True,
             providers = [[_rust_common.test_crate_info]],
-            doc = "The public rust_shared_library/rust_static_library target under test.",
         ),
     },
     toolchains = ["@rules_rust//rust:toolchain_type"],
-    doc = "Exposes Cc-wrapper-vs-upstream provider comparison as DxSubjectInfo.",
 )

@@ -1,19 +1,3 @@
-// Naming implements the deterministic TypeScript target-name normalizer owned
-// by the first-party TypeScript Gazelle extension.
-//
-// The durable constraint comes from the common generation contract:
-// basename-derived names preserve ASCII letters, ASCII digits, and internal
-// underscores; every run of any other character becomes one underscore;
-// leading and trailing underscores are trimmed; an empty result fails
-// generation. Same-package normalized-name collisions fail with every
-// claimant; the extension never invents a language affix or another suffix.
-//
-// A `.ts`/`.tsx`/`.mts`/`.cts` source is a test only when its basename ends
-// in `_test` immediately before its language extension. A `test_` prefix,
-// a `.test.` infix, test-directory placement, runner configuration, and
-// test functions do not create automatic test ownership. Declaration files
-// (`.d.ts`, `.d.mts`, `.d.cts`), source maps, and framework containers never
-// create TypeScript ownership.
 package typescript
 
 import (
@@ -22,22 +6,13 @@ import (
 	"strings"
 )
 
-// SupportedExts are the core TypeScript source extensions discovered by the
-// extension. Declaration files, source maps, and framework containers are
-// inert and never listed here.
 var SupportedExts = []string{".ts", ".tsx", ".mts", ".cts"}
 
-// IsDeclaration reports whether a source path is an inert TypeScript
-// declaration file (`.d.ts`, `.d.mts`, `.d.cts`). Declarations never create
-// ownership, test identity, or entry identity.
 func IsDeclaration(name string) bool {
 	base := path.Base(name)
 	return strings.HasSuffix(base, ".d.ts") || strings.HasSuffix(base, ".d.mts") || strings.HasSuffix(base, ".d.cts")
 }
 
-// Normalize maps one source basename (without its final language extension)
-// to its deterministic Bazel target-name stem. It reports an error instead
-// of an empty name so callers fail closed.
 func Normalize(base string) (string, error) {
 	var b strings.Builder
 	b.Grow(len(base))
@@ -64,10 +39,6 @@ func Normalize(base string) (string, error) {
 	return out, nil
 }
 
-// stripTSExt reports the basename without its final TypeScript extension.
-// It returns ok=false when the name carries no supported extension. Callers
-// filter declarations first; a declaration stem (e.g. `foo.d`) is never a
-// valid ownership input.
 func stripTSExt(base string) (string, bool) {
 	for _, ext := range SupportedExts {
 		if strings.HasSuffix(base, ext) {
@@ -77,11 +48,6 @@ func stripTSExt(base string) (string, bool) {
 	return "", false
 }
 
-// IsTestFile reports whether a directory-relative source path is a
-// recognized TypeScript test source: a supported non-declaration file whose
-// basename ends in `_test` immediately before its language extension. A
-// `test_` prefix, a `.test.` infix, directory placement, and runner
-// configuration never create test ownership.
 func IsTestFile(name string) bool {
 	if IsDeclaration(name) {
 		return false
@@ -93,9 +59,6 @@ func IsTestFile(name string) bool {
 	return strings.HasSuffix(stem, "_test")
 }
 
-// TargetName derives the Bazel target name for one TypeScript source path:
-// the basename without its final extension, normalized. Test sources retain
-// their `_test` suffix; the extension never appends another affix.
 func TargetName(name string) (string, error) {
 	base := path.Base(name)
 	stem, ok := stripTSExt(base)
@@ -105,10 +68,6 @@ func TargetName(name string) (string, error) {
 	return Normalize(stem)
 }
 
-// ModuleName returns the import identity for one TypeScript source path:
-// the basename without its final extension, exact and unnormalized.
-// Relative references resolve by this stem; bare specifiers resolve through
-// authoritative pnpm scope or exact mappings.
 func ModuleName(name string) string {
 	base := path.Base(name)
 	if stem, ok := stripTSExt(base); ok {
@@ -117,18 +76,6 @@ func ModuleName(name string) string {
 	return base
 }
 
-// IsEntryFile reports whether a directory-relative source path is a
-// recognized executable entry in the narrow slice: exactly `main.ts`,
-// `main.tsx`, `main.mts`, or `main.cts` (non-test, non-declaration).
-// Only the exact `main` basename is recognized, in any directory; other
-// layouts (`index.*`, `app.*`, `cli.*`, `bin/` scripts, `package.json`
-// `main`/`bin` fields, nested conventions) are an explicit wont-fix per
-// generation never infers manifest-declared names, guesses a
-// default entry, or drops one. Manifest-declared names win only for exact
-// mappings; other layouts remain out of scope. A recognized entry owns one
-// reusable project library plus one thin `javascript_binary` (execution
-// reuses the JavaScript wrappers over compiled outputs; there is no
-// `typescript_binary`).
 func IsEntryFile(name string) bool {
 	if IsTestFile(name) || IsDeclaration(name) {
 		return false
@@ -142,19 +89,10 @@ func IsEntryFile(name string) bool {
 	return false
 }
 
-// EntryBinaryName derives the thin-binary target name for one library
-// owner: `<library>_bin`. Collisions with another library, test, or
-// binary claim fail closed with every claimant; no further affix is
-// invented.
 func EntryBinaryName(lib string) string {
 	return lib + "_bin"
 }
 
-// EntryPointName derives the compiled entry point for one TypeScript entry
-// source: the basename with its TypeScript extension replaced by the
-// emitted JavaScript extension (`.ts`/`.tsx` to `.js`, `.mts` to `.mjs`,
-// `.cts` to `.cjs`). The thin `javascript_binary` executes the compiled
-// output through the library's `JsInfo`; the library alone owns the source.
 func EntryPointName(src string) string {
 	base := path.Base(src)
 	if strings.HasSuffix(base, ".mts") {
@@ -171,23 +109,12 @@ func EntryPointName(src string) string {
 	return base
 }
 
-// Claimant records one generated or handwritten target competing for a
-// normalized name in a single Bazel package.
 type Claimant struct {
-	// Name is the normalized target name under contention.
-	Name string
-	// Source identifies the claimant for diagnostics: a source path for
-	// generated targets, "handwritten:<label>" for existing BUILD rules.
+	Name   string
 	Source string
-	// Kind is the generated rule kind claiming the name. Empty means
-	// infer project ownership; set explicitly when callers distinguish
-	// roles sharing one kind.
-	Kind string
+	Kind   string
 }
 
-// CollisionError reports a same-package normalized-name collision with
-// every claimant. Generation fails rather than overwriting, dropping a
-// target, or inventing a suffix.
 type CollisionError struct {
 	Name      string
 	Claimants []string
@@ -198,8 +125,6 @@ func (e *CollisionError) Error() string {
 		e.Name, strings.Join(e.Claimants, ", "))
 }
 
-// CheckCollisions fails closed when two or more claimants share one
-// normalized name. Claimants are grouped by Name; groups of one pass.
 func CheckCollisions(claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))

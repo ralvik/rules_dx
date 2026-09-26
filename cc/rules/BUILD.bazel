@@ -1,4 +1,3 @@
-"""Experimental minimal C/C++ wrappers (ADR 0019)."""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load(":wrapper_tests.bzl", "cc_wrapper_contract_tests")

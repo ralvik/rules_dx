@@ -1,5 +1,3 @@
-"""Go cgo scope fixture pins."""
-
 CGO_LIB = "//go/tests/fixtures/cgo:cgo"
 CGO_TEST = "//go/tests/fixtures/cgo:cgo_test"
 CGO_ATTR = "cgo = True"

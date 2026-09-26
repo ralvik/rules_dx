@@ -1,5 +1,3 @@
-"""Unit tests for vendored offline bundle manifests.
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":offline.bzl", "offline_manifest_name", "offline_set_error", "offline_srcs_error")

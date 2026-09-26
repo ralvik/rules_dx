@@ -1,10 +1,3 @@
-"""Upstream C/C++ IDE tool acquisition.
-
-The environment contract reuses the pinned C++ toolchain compiler for
-action-derived compile commands plus managed clangd; this package pins the
-compiler acquisition. Host-native clangd resolution stays open under the
-native plan.
-"""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//cc/rules:defs.bzl", "cc_binary")

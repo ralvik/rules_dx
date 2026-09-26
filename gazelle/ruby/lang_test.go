@@ -143,8 +143,6 @@ func TestGenerateMainFails(t *testing.T) {
 }
 
 func TestGenerateMixedPackagesFail(t *testing.T) {
-	// Ruby has no namespace declaration: every file belongs to its
-	// directory package, so mixed-package failures do not apply.
 	regular := []string{"a.rb", "b.rb"}
 	result := generateFixture(t, map[string]string{
 		"pkg/demo/a.rb": "require \"alpha\"\n\nmodule A\n",

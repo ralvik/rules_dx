@@ -1,20 +1,11 @@
 #!/usr/bin/env python3
-"""Credential-free release stager plus verifier for `archive_deploy`.
-
-Hermetic default verifies the checksum and copies the tarball plus
-checksum to the output directory, publishing nothing. Used as an
-`expand_template` template per deploy instance (placeholders below)
-and as a `py_library` for `py_test`.
-"""
+"""Local release stager."""
 
 import hashlib
 import os
 import shutil
 import sys
 
-# Per-instance pins expanded by the `archive_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `stage_release` directly without touching these constants.
 APP_RLOC = "@@APP_RLOC@@"
 TARBALL_RLOC = "@@TARBALL_RLOC@@"
 CHECKSUM_RLOC = "@@CHECKSUM_RLOC@@"
@@ -29,13 +20,6 @@ def sha256_file(path):
 
 
 def stage_release(app_src, tarball_src, checksum_src, outdir):
-    """Verifies one checksum and stages the tarball plus checksum out.
-
-    Reads the expected digest (first token) from the sha256sum-compatible
-    checksum file, compares it to the tarball digest, copies both files
-    to `outdir` by basename, and returns the staged app basename plus
-    both destinations. Byte mismatches raise `RuntimeError`.
-    """
     app_name = os.path.basename(app_src)
     with open(checksum_src, encoding="utf-8") as f:
         expected = f.read().split()[0]

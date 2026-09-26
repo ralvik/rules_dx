@@ -1,4 +1,3 @@
-"""Coverage cell registry tests."""
 
 load("//libs/starlark:defs.bzl", "starlark_test")
 
@@ -17,7 +16,6 @@ _CELL_ENTRIES = [
 ]
 
 def coverage_cells_tests(name):
-    """Pin the registry snapshot: cells.txt rows must equal COVERAGE_CELLS."""
     starlark_test(
         name = name,
         mode = "execution",

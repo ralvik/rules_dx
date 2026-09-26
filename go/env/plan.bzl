@@ -1,14 +1,9 @@
-"""Focused Go environment plan (WP2).
-
-"""
-
 load("@rules_go//go:def.bzl", _GoArchive = "GoArchive")
 load("//env:focused.bzl", "focused_closure_plan", "focused_direct_sources", "focused_go_transitive", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 load("//quality:sources.bzl", "QualitySourcesInfo")
 
 GoEnvPlanInfo = provider(
-    doc = "Provider-derived focused Go target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct Go sources.",
         "has_sources": "Whether the wrapper owns any direct Go sources.",
@@ -54,8 +49,6 @@ go_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One go_* wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused Go environment plan for one wrapper target (WP2).",
 )

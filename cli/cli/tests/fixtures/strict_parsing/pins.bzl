@@ -1,8 +1,3 @@
-"""Strict clap parsing fixture for the `dx` CLI surface.
-
-Unit fixtures: `cli/cli/src/args/strict_tests.rs` (`dx_cli_test` strict filter).
-"""
-
 STRICT_UNKNOWN_REJECTED = [
     "--jobs=4",
     "-q",
@@ -63,4 +58,4 @@ REJECTED_PREFIX_INFERENCE = "prefix inference rejected"
 REJECTED_HYPHEN_CONSUMPTION = "hyphen-value consumption rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #810"
+SEED_ONLY = "qualified seed-only"

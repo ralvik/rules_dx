@@ -1,8 +1,3 @@
-"""Concrete output-group-subjects use case.
-Output-group observation stays deferred: analysis observes `DxSubjectInfo` fields plus
-`DefaultInfo` output basenames only, not `OutputGroupInfo`, so the group-to-files mapping
-stays a Starlark-level use case; consumers expose resolved state via `DxSubjectInfo`."""
-
 def admitted_output_groups():
     return ["docs", "artifacts"]
 

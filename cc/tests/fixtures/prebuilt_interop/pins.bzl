@@ -1,5 +1,3 @@
-"""Prebuilt interop pins."""
-
 WINDOWS_CRT_START = "/MD"
 WINDOWS_STL = "Microsoft STL"
 WINDOWS_RUNTIME_LIBS = ["UCRT", "VCRuntime"]

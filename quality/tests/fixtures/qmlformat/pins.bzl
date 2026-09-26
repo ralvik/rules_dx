@@ -1,7 +1,3 @@
-"""qmlformat check plus fix wiring (QML format).
-
-"""
-
 QMLFORMAT_QT_OBSERVED = "Qt 6.11.2"
 
 QMLFORMAT_ARTIFACT = "qualified Qt distribution tool targets"

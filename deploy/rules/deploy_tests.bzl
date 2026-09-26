@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the deploy boundary.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":defs.bzl", "VALID_DEPLOY_PROFILES", "deploy_profile_error")
 

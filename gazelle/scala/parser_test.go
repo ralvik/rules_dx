@@ -7,8 +7,6 @@ import (
 
 func TestParseImportsSingleType(t *testing.T) {
 	got := ParseImports([]byte("package demo\n\nimport com.example.Widget\nimport java.util.List\n"))
-	// java.util.List is included (callers filter stdlib); the local import
-	// contributes its simple class name.
 	want := []string{"Widget", "java.util.List"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseImports = %v, want %v", got, want)

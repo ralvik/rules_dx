@@ -1,42 +1,3 @@
-// Intended-manifest recorder (WP1, dispatch).
-//
-// The canonical generation run witnesses its own exact BUILD changes and
-// hands them to the manifest finalizer as JSON. This file owns the
-// generation side of that private protocol; the CLI never inspects the
-// workspace itself (see docs/cli/commands/generate.md#cli-boundary).
-//
-// Protocol (environment, set by the canonical execution wrapper):
-//
-//	DX_GENERATE_INTENDED  absolute path of the intended-manifest JSON file.
-//	                      Absent disables recording entirely, leaving plain
-//	                      Gazelle behavior (direct binary invocations and the
-//	                      existing test harness are unaffected).
-//	DX_GENERATE_SCOPE     JSON list of {"element","dirs"} scope elements in
-//	                      CLI-resolved order. Dirs are repo-relative slash
-//	                      paths ("" is the root). Absent defaults to one
-//	                      repo-wide "//..." element.
-//	DX_GENERATE_MODE      "check" or "default". Absent defaults to "default".
-//
-// Recording points mirror the upstream framework (bazel-gazelle update):
-//   - GenerateRules retains the *rule.File pointer the framework later
-//     merges in place, plus the returned gen rules and pre-replacement
-//     kinds, so AfterResolvingDeps observes the exact post-merge state.
-//   - AfterResolvingDeps runs after the PostResolve merge and before the
-//     emit loop, while on-disk bytes are still the originals. It replays
-//     the framework's own load fixing (merger.FixLoads, idempotent) with
-//     the identical loads the framework will use, then formats. The
-//     resulting bytes equal what the emit loop will write, because both
-//     sides call the same functions with the same inputs.
-//   - Write outcomes and BLAKE3 digests are deliberately NOT recorded
-//     here: outcomes are only knowable after the emit loop, and hashing
-//     stays with the finalizer. The finalizer cross-checks intended
-//     bytes against disk and fails closed on any contradiction.
-//
-// Scope narrowing falls out of traversal: the wrapper passes only the
-// resolved scope dirs to the Gazelle binary, so unvisited packages are
-// byte-identical by construction and out-of-scope staleness is never
-// observed.
-
 package rust
 
 import (
@@ -65,23 +26,17 @@ const (
 	envGenerateMode     = "DX_GENERATE_MODE"
 )
 
-// scopeElement is one CLI-resolved scope element with the repo-relative
-// slash package dirs it covers ("" is the repository root).
 type scopeElement struct {
 	Element string   `json:"element"`
 	Dirs    []string `json:"dirs"`
 }
 
-// intendedEdit is one half-open byte edit against the original content.
-// Line-granular diffing keeps every boundary on a '\n', which is always a
-// UTF-8 boundary, so edits are boundary-valid by construction.
 type intendedEdit struct {
 	Start       uint64 `json:"start_byte"`
 	End         uint64 `json:"end_byte"`
 	Replacement []byte `json:"replacement"`
 }
 
-// intendedFile is one changed BUILD file in deterministic visit order.
 type intendedFile struct {
 	Path            string         `json:"path"`
 	ScopeIndex      int            `json:"scope_index"`
@@ -90,7 +45,6 @@ type intendedFile struct {
 	Edits           []intendedEdit `json:"edits,omitempty"`
 }
 
-// intendedIgnoredImport is one accepted dx_ignore_import directive use.
 type intendedIgnoredImport struct {
 	Path       string `json:"path"`
 	Language   string `json:"language"`
@@ -98,15 +52,11 @@ type intendedIgnoredImport struct {
 	ScopeIndex int    `json:"scope_index"`
 }
 
-// intendedScope mirrors the manifest Scope: every visited scope element
-// completes in a run that reaches emission.
 type intendedScope struct {
 	Value           string `json:"value"`
 	ResultsComplete bool   `json:"results_complete"`
 }
 
-// intendedManifest is the private generation-side witness. The finalizer
-// fills digests and write outcomes and encodes the versioned artifact.
 type intendedManifest struct {
 	SchemaMajor    int                     `json:"schema_major"`
 	SchemaMinor    int                     `json:"schema_minor"`
@@ -116,7 +66,6 @@ type intendedManifest struct {
 	IgnoredImports []intendedIgnoredImport `json:"ignored_imports"`
 }
 
-// packageRecord captures one GenerateRules visit for later witnessing.
 type packageRecord struct {
 	rel      string
 	dir      string
@@ -127,23 +76,14 @@ type packageRecord struct {
 	cfg      *config.Config
 }
 
-// manifestRecorder accumulates package visits for one run. Nil disables
-// recording.
 type manifestRecorder struct {
-	outPath string
-	mode    string
-	scopes  []scopeElement
-	// apparentLoads replays the framework's load collection: it is the
-	// language's ApparentLoads, called with the run's own module mapping.
+	outPath       string
+	mode          string
+	scopes        []scopeElement
 	apparentLoads func(func(string) string) []rule.LoadInfo
 	visited       []packageRecord
 }
 
-// loadManifestRecorder reads the private protocol environment. It returns
-// nil, nil when recording is disabled, so direct Gazelle invocations
-// behave exactly as before. Misconfiguration is a returned error, never a
-// panic: the caller records it through the language error accumulator and
-// the run fails closed before BUILD emission.
 func loadManifestRecorder() (*manifestRecorder, error) {
 	outPath := os.Getenv(envIntendedManifest)
 	if outPath == "" {
@@ -168,9 +108,6 @@ func loadManifestRecorder() (*manifestRecorder, error) {
 	return &manifestRecorder{outPath: outPath, mode: mode, scopes: scopes}, nil
 }
 
-// record retains one GenerateRules visit. Kinds are captured before the
-// framework applies map_kind replacements, which is the input the load
-// computation needs.
 func (r *manifestRecorder) record(args language.GenerateArgs, res language.GenerateResult) {
 	rec := packageRecord{
 		rel:  args.Rel,
@@ -190,8 +127,6 @@ func (r *manifestRecorder) record(args language.GenerateArgs, res language.Gener
 	r.visited = append(r.visited, rec)
 }
 
-// scopeIndex attributes a package rel to its owning scope element: the
-// longest matching dir wins, ties keep listed order.
 func (r *manifestRecorder) scopeIndex(rel string) int {
 	best := -1
 	bestLen := -1
@@ -215,19 +150,11 @@ func (r *manifestRecorder) scopeIndex(rel string) int {
 	return best
 }
 
-// emit witnesses every visited package and writes the intended manifest.
-// It must run after the PostResolve merge and before the emit loop, which
-// is exactly when the framework calls AfterResolvingDeps. Scope and
-// transport failures are returned for the language error accumulator,
-// never panics: a typo in the wrapper environment must fail the run with
-// an actionable message, not a Go stack trace.
 func (r *manifestRecorder) emit(ignores []*ignoreEntry) error {
 	manifest := intendedManifest{
-		SchemaMajor: intendedManifestSchemaMajor,
-		SchemaMinor: intendedManifestSchemaMinor,
-		Mode:        r.mode,
-		// The Rust finalizer expects sequences, but Go marshals nil slices
-		// as null. Initialize empty so clean runs emit [] not null.
+		SchemaMajor:    intendedManifestSchemaMajor,
+		SchemaMinor:    intendedManifestSchemaMinor,
+		Mode:           r.mode,
 		Scopes:         []intendedScope{},
 		Files:          []intendedFile{},
 		IgnoredImports: []intendedIgnoredImport{},
@@ -268,19 +195,14 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) error {
 			ScopeIndex: index,
 		})
 	}
-	// The transport crate requires ignored imports sorted by
-	// (path, language, import); the ignore list arrives in directive-visit
-	// order, so sort before encoding.
 	sort.SliceStable(manifest.IgnoredImports, func(i, j int) bool {
 		a, b := manifest.IgnoredImports[i], manifest.IgnoredImports[j]
 		if a.Path != b.Path {
 			return a.Path < b.Path
 		}
-		// LCOV_EXCL_START - reason: unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		if a.Language != b.Language {
 			return a.Language < b.Language
 		}
-		// LCOV_EXCL_STOP - reason: end unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		return a.Import < b.Import
 	})
 	data, err := json.Marshal(manifest)
@@ -293,15 +215,10 @@ func (r *manifestRecorder) emit(ignores []*ignoreEntry) error {
 	return nil
 }
 
-// witness replays the framework's own load fixing and formatting for one
-// visited package and diffs against the original bytes. It reports whether
-// the package changed.
 func (r *manifestRecorder) witness(rec packageRecord) (intendedFile, bool, error) {
 	var file intendedFile
 	if rec.file == nil {
 		if len(rec.gen) == 0 {
-			// Mirrors the framework: no file is created when nothing was
-			// generated for a directory without a BUILD file.
 			return file, false, nil
 		}
 		built := rule.EmptyFile(filepath.Join(rec.dir, rec.cfg.DefaultBuildFileName()), rec.rel)
@@ -336,18 +253,10 @@ func (r *manifestRecorder) witness(rec packageRecord) (intendedFile, bool, error
 	return file, true, nil
 }
 
-// knownLoads replays the framework's load collection for the recorder's
-// language: ApparentLoads with the run's own module mapping, plus the
-// kind-mapping adjustment for the package's pre-replacement kinds. With no
-// map_kind matches this is exactly the framework's load list, and
-// merger.FixLoads converges, so the replayed bytes equal the emitted ones.
-// A cyclic kind mapping is a configuration error, returned for the language
-// error accumulator instead of panicking.
 func (r *manifestRecorder) knownLoads(rec packageRecord) ([]rule.LoadInfo, error) {
 	return applyKindMappings(rec, r.apparentLoads(rec.cfg.ModuleToApparentName))
 }
 
-// manifestPath renders the repo-relative slash path of a BUILD file.
 func manifestPath(rel, base string) string {
 	if rel == "" {
 		return base
@@ -355,10 +264,6 @@ func manifestPath(rel, base string) string {
 	return path.Join(rel, base)
 }
 
-// applyKindMappings mirrors the framework's load adjustment: kinds
-// recorded before replacement replay the same transitive map_kind
-// resolution over the run's KindMap. A cyclic mapping is a configuration
-// error, returned instead of panicking.
 func applyKindMappings(rec packageRecord, loads []rule.LoadInfo) ([]rule.LoadInfo, error) {
 	var mapped []config.MappedKind
 	for _, kind := range append(append([]string{}, rec.genKinds...), rec.oldKinds...) {
@@ -381,8 +286,6 @@ func applyKindMappings(rec packageRecord, loads []rule.LoadInfo) ([]rule.LoadInf
 	return merged, nil
 }
 
-// appendOrMergeKindMapping mirrors the framework's load-list adjustment
-// for one mapped kind.
 func appendOrMergeKindMapping(loads []rule.LoadInfo, repl config.MappedKind) []rule.LoadInfo {
 	for i, load := range loads {
 		if load.Name == repl.KindLoad {
@@ -396,10 +299,6 @@ func appendOrMergeKindMapping(loads []rule.LoadInfo, repl config.MappedKind) []r
 	})
 }
 
-// replacementKind mirrors the framework's transitive map_kind resolution.
-// A cyclic mapping is a configuration error: the recorder detects it here
-// and returns an error so the run fails closed with an actionable message
-// instead of a Go stack trace.
 func replacementKind(kindMap map[string]config.MappedKind, kind string) (*config.MappedKind, error) {
 	var mapped *config.MappedKind
 	seen := make(map[string]struct{})
@@ -421,7 +320,6 @@ func replacementKind(kindMap map[string]config.MappedKind, kind string) (*config
 	}
 }
 
-// nonNilBytes normalizes nil to empty so JSON marshals "" not null.
 func nonNilBytes(b []byte) []byte {
 	if b == nil {
 		return []byte{}
@@ -429,8 +327,6 @@ func nonNilBytes(b []byte) []byte {
 	return b
 }
 
-// splitLines splits bytes after each '\n' without adding or dropping any,
-// so concatenating the result reproduces the input exactly.
 func splitLines(data []byte) [][]byte {
 	if len(data) == 0 {
 		return nil
@@ -448,9 +344,6 @@ func splitLines(data []byte) [][]byte {
 	return lines
 }
 
-// diffLines converts the line diff between original and intended into the
-// validated edit form: ordered, non-overlapping, boundary-aligned, with
-// no-op replacements dropped.
 func diffLines(original, intended []byte) []intendedEdit {
 	oldLines := splitLines(original)
 	newLines := splitLines(intended)
@@ -461,25 +354,18 @@ func diffLines(original, intended []byte) []intendedEdit {
 			continue
 		}
 		edit := intendedEdit{
-			Start: oldOffsets[code.I1],
-			End:   oldOffsets[code.I2],
-			// bytes.Join returns nil for pure deletions; Go marshals nil
-			// []byte as null, but the Rust finalizer expects a base64
-			// string. Normalize to empty so deletions emit "".
+			Start:       oldOffsets[code.I1],
+			End:         oldOffsets[code.I2],
 			Replacement: nonNilBytes(bytes.Join(newLines[code.J1:code.J2], nil)),
 		}
-		// LCOV_EXCL_START - reason: unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		if bytes.Equal(original[edit.Start:edit.End], edit.Replacement) {
 			continue
 		}
-		// LCOV_EXCL_STOP - reason: end unreachable encode, issue: 1055, policy: docs/cli/commands/build-test-coverage.md
 		edits = append(edits, edit)
 	}
 	return edits
 }
 
-// lineOffsets returns the byte offset of each line start plus a sentinel
-// end offset, so opcode ranges map back to exact byte ranges.
 func lineOffsets(lines [][]byte) []uint64 {
 	offsets := make([]uint64, len(lines)+1)
 	for i, line := range lines {
@@ -488,7 +374,6 @@ func lineOffsets(lines [][]byte) []uint64 {
 	return offsets
 }
 
-// toStrings adapts split lines to the difflib matcher input.
 func toStrings(lines [][]byte) []string {
 	out := make([]string, len(lines))
 	for i, line := range lines {

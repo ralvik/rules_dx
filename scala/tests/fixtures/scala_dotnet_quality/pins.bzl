@@ -1,7 +1,3 @@
-"""Scala +.NET quality defaults pins.
-
-"""
-
 SCALAFMT_VERSION = "3.11.4"
 SCALAFIX_VERSION = "0.14.7"
 CSHARPIER_VERSION = "1.3.0"

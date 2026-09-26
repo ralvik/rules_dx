@@ -1,11 +1,3 @@
-"""Mixed-framework package; one physical owner per container.
-
-Each framework container keeps its own wrapper (dx_vue/svelte/astro/mdx_library)
-plus the shared core `helper_lib` (javascript_library). No container is owned twice,
-no region becomes a core JS/TS target, and no generic fallback exists. Mixed
-cross-framework imports resolve only through explicit Bazel deps to the shared
-helper; framework-to-framework file imports are absent by construction.
-"""
 
 load("//astro/rules:defs.bzl", "astro_library")
 load("//javascript/rules:defs.bzl", "javascript_library", "javascript_test")

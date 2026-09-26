@@ -1,11 +1,7 @@
-"""Workspace quality-policy providers (freeze).
-
-"""
 
 CAPABILITIES = ["lint", "typecheck", "format", "audit"]
 
 FamilyPolicyInfo = provider(
-    doc = "Tool-ID selection per capability for one quality policy family.",
     fields = {
         "audit": "List[str]: selected audit tool IDs, in policy order; [] disables.",
         "family_id": "Str: policy-family ID owning this selection.",
@@ -16,7 +12,6 @@ FamilyPolicyInfo = provider(
 )
 
 QualityPolicyInfo = provider(
-    doc = "Canonical aggregate workspace policy: family ID to section.",
     fields = {
         "families": "Dict[str, FamilyPolicyInfo]: family ID to its section.",
     },
@@ -52,22 +47,17 @@ quality_family = rule(
     attrs = {
         "audit": attr.string_list(
             default = [],
-            doc = "Selected audit tool IDs; [] explicitly disables audit.",
         ),
         "family_id": attr.string(
-            doc = "Policy-family ID owning this selection.",
         ),
         "format": attr.string_list(
             default = [],
-            doc = "Selected formatter IDs; [] explicitly disables format.",
         ),
         "lint": attr.string_list(
             default = [],
-            doc = "Selected lint tool IDs; [] explicitly disables lint.",
         ),
         "typecheck": attr.string_list(
             default = [],
-            doc = "Selected typecheck tool IDs; [] explicitly disables typecheck.",
         ),
     },
 )
@@ -88,7 +78,6 @@ workspace_policy = rule(
         "families": attr.label_list(
             providers = [FamilyPolicyInfo],
             default = [],
-            doc = "Family sections; each family_id must appear at most once.",
         ),
     },
 )

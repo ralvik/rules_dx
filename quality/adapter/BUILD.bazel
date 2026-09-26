@@ -1,4 +1,3 @@
-"""Check/fix execution and output parsing."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("//quality:fixtures.bzl", "real_source_target")

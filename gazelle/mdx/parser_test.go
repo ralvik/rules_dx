@@ -6,8 +6,6 @@ import (
 	"testing"
 )
 
-// mdxWrap places one ESM body at the top of a minimal MDX document with
-// a trailing heading boundary and inert prose.
 func mdxWrap(esm string) string {
 	return esm + "\n# Demo\n\nContent.\n"
 }
@@ -54,9 +52,6 @@ func TestParseImports(t *testing.T) {
 		{"exportStar", "export * from \"./demo.mdx\";\n", []string{"demo"}},
 		{"exportStarAs", "export * as ns from '../lib.mdx';\n", []string{"lib"}},
 		{"exportLocal", "export const x = 1;\n", nil},
-		// In MDX only column-zero `import`/`export` openers start a chunk;
-		// `const ... import()`/`require()` lines are prose and stay inert.
-		// Bare `import("...")` as a statement is an opener and contributes.
 		{"dynamicConstInert", "const m = await import(\"./lazy.mdx\");\n", nil},
 		{"dynamicSingle", "import('./other.mjs');\n", []string{"other"}},
 		{"dynamicBare", "import(\"react\");\n", []string{"react"}},
@@ -71,8 +66,6 @@ func TestParseImports(t *testing.T) {
 		{"lineComment", "// import foo from \"bar\";\n", nil},
 		{"blockComment", "/* import \"./hidden.mdx\"; */\nconst x = 1;\n", nil},
 		{"trailingComment", "import a from \"./real.mdx\"; // import \"./fake.mdx\";\n", []string{"real"}},
-		// A prose line absorbs a following opener (lazy continuation), so
-		// string/template/regex/division leaders keep the next import inert.
 		{"doubleStringProse", "\"import './fake.mdx'\";\nimport y from './real.mdx';\n", nil},
 		{"singleString", "'require(\"./fake.mdx\")';\n", nil},
 		{"templateInert", "`import './fake.mdx'`;\n", nil},
@@ -80,8 +73,6 @@ func TestParseImports(t *testing.T) {
 		{"unterminatedProse", "\"abc\nimport y from './real.mdx';\n", nil},
 		{"relativeNoExt", "import x from './helper';\n", []string{"helper"}},
 		{"relativeDir", "import x from './dir/';\n", []string{"dir"}},
-		// Multi-line brace bodies are outside the narrow single-line subset:
-		// only the opener line is collected, yielding no edge (fail-closed).
 		{"multilineNarrow", "import {\n a,\n b\n} from './multi.mdx';\n", nil},
 		{"exportMultilineNarrow", "export {\na\n} from \"./shared.mdx\";\n", nil},
 		{"duplicate", "import a from './same.mdx';\nimport b from './same.mdx';\n", []string{"same"}},
@@ -143,8 +134,6 @@ func TestParseImports(t *testing.T) {
 		{"fenceShortCloser", "````\nimport fake from \"./fake.mdx\";\n```\nimport helper from \"./helper.mdx\";\n", nil},
 		{"fenceTrailingText", "```js\nimport fake from \"./fake.mdx\";\n``` extra\nimport helper from \"./helper.mdx\";\n", nil},
 	}
-	// Markdown-structure cases exercise full documents directly; JS-edge
-	// cases are single ESM bodies wrapped in a minimal MDX document.
 	raw := map[string]bool{
 		"empty": true, "proseOnly": true, "proseParagraph": true,
 		"importAtStart": true, "importAfterBlank": true,
@@ -154,11 +143,11 @@ func TestParseImports(t *testing.T) {
 		"tildeFenceInert": true, "indentedImportInert": true,
 		"blockquoteInert": true, "listInert": true,
 		"singleLineHtmlInert": true, "htmlCommentInlineInert": true,
-		"htmlCommentBlockInert": true,
+		"htmlCommentBlockInert":                true,
 		"unterminatedHtmlCommentWholeDocInert": true,
-		"jsxInert": true,
-		"bareHeadingBoundary": true,
-		"fenceIndentedCloser": true, "fenceSpacedCloser": true,
+		"jsxInert":                             true,
+		"bareHeadingBoundary":                  true,
+		"fenceIndentedCloser":                  true, "fenceSpacedCloser": true,
 		"fenceShortCloser": true, "fenceTrailingText": true,
 	}
 	for _, tc := range cases {
@@ -176,9 +165,9 @@ func TestParseImports(t *testing.T) {
 
 func TestExtractESMRegions(t *testing.T) {
 	cases := []struct {
-		name string
+		name   string
 		source string
-		want []string
+		want   []string
 	}{
 		{"empty", "", nil},
 		{"proseOnly", "Hello\n", nil},
@@ -197,7 +186,6 @@ func TestExtractESMRegions(t *testing.T) {
 		{"continuationTwoLine", "import {\n} from \"./a.mdx\";\n", []string{"import {\n} from \"./a.mdx\";\n"}},
 		{"badImportOpener", "importx from \"./a.mdx\";\n", nil},
 		{"badExportOpener", "exportx from \"./a.mdx\";\n", nil},
-		// Narrow subset: only the opener line is kept when braces span lines.
 		{"multilineBracesNarrow", "import {\n a\n} from \"./a.mdx\";\n", []string{"import {\n"}},
 		{"commentWholeDocInert", "import a from \"./a.mdx\";\n<!-- oops\nimport b from \"./b.mdx\";\n", nil},
 	}

@@ -1,5 +1,3 @@
-"""Bump GHA tag-to-SHA auto resolution pins."""
-
 BUMP_GHA = "auto"
 
 BUMP_GHA_CLIENT = "GitHub releases"
@@ -24,4 +22,4 @@ REJECTED_INVENTED_SHA = "invented SHA rejected"
 REJECTED_PRIVATE_RESOLVER = "private resolver rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #640"
+SEED_ONLY = "qualified seed-only"

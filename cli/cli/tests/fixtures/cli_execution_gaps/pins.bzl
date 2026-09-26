@@ -1,5 +1,3 @@
-"""CLI execution/reporting gaps fixture."""
-
 WATCHABLE_COMMANDS = [
     "build",
     "test",
@@ -109,4 +107,4 @@ REJECTED_INFERRED_FORWARDS = "inferred option-class forwarding rejected"
 REJECTED_INVENTED_REPORTS = "invented standard reports rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #590"
+SEED_ONLY = "qualified seed-only"

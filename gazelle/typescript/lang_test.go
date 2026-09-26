@@ -44,12 +44,12 @@ func generateFixture(t *testing.T, files map[string]string, regular []string) la
 func TestGenerateSourceOnlyPackage(t *testing.T) {
 	regular := []string{"demo.ts", "helper.tsx", "helper_test.mts", "notes.txt", "widget.d.ts", "orphan.d.mts"}
 	result := generateFixture(t, map[string]string{
-		"pkg/demo/demo.ts":        "import helper from \"./helper.tsx\";\nimport fs from \"fs\";\n",
-		"pkg/demo/helper.tsx":     "export const suffix = (t: string) => t;\n",
+		"pkg/demo/demo.ts":         "import helper from \"./helper.tsx\";\nimport fs from \"fs\";\n",
+		"pkg/demo/helper.tsx":      "export const suffix = (t: string) => t;\n",
 		"pkg/demo/helper_test.mts": "import helper from \"./helper.tsx\";\n",
-		"pkg/demo/notes.txt":      "not a source\n",
-		"pkg/demo/widget.d.ts":    "export declare const x: number;\n",
-		"pkg/demo/orphan.d.mts":   "export declare const y: number;\n",
+		"pkg/demo/notes.txt":       "not a source\n",
+		"pkg/demo/widget.d.ts":     "export declare const x: number;\n",
+		"pkg/demo/orphan.d.mts":    "export declare const y: number;\n",
 	}, regular)
 	if len(result.Gen) != 3 || len(result.Imports) != 3 {
 		t.Fatalf("generated %d rules and %d import sets, want 3 each", len(result.Gen), len(result.Imports))
@@ -90,9 +90,6 @@ func TestGenerateSourceOnlyPackage(t *testing.T) {
 }
 
 func TestGenerateRelativeStdlibCollision(t *testing.T) {
-	// `./util.js` normalizes to the `util` root, which collides with the
-	// Node builtin of the same name. The relative edge must survive
-	// generation and resolve locally; the bare builtin still drops.
 	result := generateFixture(t, map[string]string{
 		"pkg/demo/util.ts": "export const add = (a: number, b: number) => a + b;\n",
 		"pkg/demo/app.ts":  "import { add } from \"./util.js\";\nimport fs from \"fs\";\nexport const total = add(1, 2);\n",
@@ -109,7 +106,10 @@ func TestGenerateRelativeStdlibCollision(t *testing.T) {
 	}
 	l := &typescriptLang{}
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"pkg/demo", "util", ".ts"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"pkg/demo", "util", ".ts"},
 	)
 	cfg := resolverConfig(t, nil)
 	r := rule.NewRule(projectKind, "app")
@@ -161,7 +161,7 @@ func TestGenerateFailures(t *testing.T) {
 		{"readError", map[string]string{}, []string{"missing.ts"}, "read missing.ts"},
 		{"emptyName", map[string]string{"pkg/demo/---.ts": "export const x = 1;\n"}, []string{"---.ts"}, "empty target name"},
 		{"collision", map[string]string{
-			"pkg/demo/a-b.ts": "export const x = 1;\n",
+			"pkg/demo/a-b.ts":  "export const x = 1;\n",
 			"pkg/demo/a_b.tsx": "export const y = 2;\n",
 		}, []string{"a-b.ts", "a_b.tsx"}, "claimed by a-b.ts, a_b.tsx"},
 	}
@@ -411,7 +411,6 @@ func resolverIndex(lang *typescriptLang, entries ...struct {
 		}
 		r := rule.NewRule(projectKind, entry.name)
 		r.SetAttr("srcs", []string{entry.name + ext})
-		// Test rules are leaves: only index non-test sources.
 		if IsTestFile(entry.name + ext) {
 			continue
 		}
@@ -424,8 +423,14 @@ func resolverIndex(lang *typescriptLang, entries ...struct {
 func TestResolveBranches(t *testing.T) {
 	l := &typescriptLang{}
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"lib/b", "b", ".ts"},
-		struct{ pkg, name string; ext string }{"lib/a", "a", ".tsx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/b", "b", ".ts"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"lib/a", "a", ".tsx"},
 	)
 	cfg := resolverConfig(t, nil)
 	r := rule.NewRule(projectKind, "app")
@@ -473,8 +478,14 @@ func TestResolveAmbiguous(t *testing.T) {
 	l := &typescriptLang{}
 	cfg := resolverConfig(t, nil)
 	index := resolverIndex(l,
-		struct{ pkg, name string; ext string }{"one", "same", ".ts"},
-		struct{ pkg, name string; ext string }{"two", "same", ".tsx"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"one", "same", ".ts"},
+		struct {
+			pkg, name string
+			ext       string
+		}{"two", "same", ".tsx"},
 	)
 	l.Resolve(cfg, index, nil, rule.NewRule(projectKind, "app"), targetImports{imports: []string{"same"}}, label.New("", "app", "app"))
 	if len(l.errors) != 1 || !strings.Contains(l.errors[0], "ambiguous") {

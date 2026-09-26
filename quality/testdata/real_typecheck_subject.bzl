@@ -1,6 +1,3 @@
-"""Analysis subject observing the real typecheck dx_results (WP3).
-
-"""
 
 load("//libs/starlark:canonical.bzl", "strip_canonical")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
@@ -38,8 +35,6 @@ real_typecheck_subject = rule(
         "target": attr.label(
             aspects = [real_typecheck_aspect, real_rust_typecheck_aspect],
             mandatory = True,
-            doc = "Real fixture target observed with the real typecheck aspect applied.",
         ),
     },
-    doc = "Exposes merged real typecheck dx_results basenames for aspect evidence.",
 )

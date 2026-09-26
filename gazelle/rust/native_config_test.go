@@ -77,9 +77,6 @@ func TestCorpusSkipsToolTreesAndKeepsSiblingOnlyTargets(t *testing.T) {
 	t.Fatal("missing sibling-only target")
 }
 
-// runNativeGenerate mimics the Gazelle walk for one directory: parent
-// configuration first so directives inherit, then GenerateRules with the
-// direct-child regular files and the parsed BUILD file.
 func runNativeGenerate(t *testing.T, rel string, files map[string]string, build string) (*rustLang, language.GenerateResult) {
 	t.Helper()
 	root := t.TempDir()
@@ -169,9 +166,6 @@ func TestNativeConfigRecognition(t *testing.T) {
 		"taplo_config":      "taplo.toml",
 		"buildifier_config": ".buildifier.json",
 	}
-	// Lib plus configs plus corpus splits owning BUILD.bazel and the TOML
-	// sources (rustfmt/clippy/taplo/custom,). Dotfiles
-	// (.vale.ini, .buildifier.json) never enter the corpus.
 	if len(result.Gen) != len(want)+3 {
 		names := []string{}
 		for _, r := range result.Gen {
@@ -200,8 +194,6 @@ func TestNativeConfigRecognition(t *testing.T) {
 			t.Errorf("%s visibility = %q, want package-scoped", name, got)
 		}
 	}
-	// Clippy is unmanaged since: its config file is ignored and no
-	// clippy_config target appears, alongside the other unrecognized files.
 	if findGenerated(result, "clippy_config", "clippy_config") != nil {
 		t.Error("unmanaged clippy.toml produced a config target")
 	}
@@ -300,8 +292,6 @@ rust_library(
 	if lib == nil {
 		t.Fatal("missing rust_library(site)")
 	}
-	// :rustfmt_config is stale (file gone) and drops; the hand entry and
-	// the canonical-form cross-package entry survive in place.
 	if got := strings.Join(lib.AttrStrings("aspect_hints"), ","); got != ":hand_cfg,//site:other_cfg" {
 		t.Errorf("merged aspect_hints = %q", got)
 	}
@@ -393,8 +383,6 @@ rust_library(
     aspect_hints = [":rustfmt_config"],
 )
 `
-	// The config file is gone: the generated-shaped rule stubs out and
-	// the stale hint disappears with it, leaving no residue.
 	_, result := runNativeGenerate(t, "site", map[string]string{
 		"site/src/lib.rs": "pub fn current() {}\n",
 	}, build)
@@ -424,8 +412,6 @@ rust_library(
     aspect_hints = [":rustfmt_config"],
 )
 `
-	// Same default name but a hand-owned src: never stubbed even though
-	// the recognized file is absent, and the hint keeps resolving.
 	_, result := runNativeGenerate(t, "site", map[string]string{
 		"site/src/lib.rs":  "pub fn current() {}\n",
 		"site/custom.toml": "[custom]\n",
@@ -453,8 +439,6 @@ taplo_config(
     src = "custom.toml",
 )
 `
-	// A skipped tool omits its generated target (stubbed here because the
-	// rule is generator-shaped) but preserves the hand-maintained one.
 	_, result := runNativeGenerate(t, "site", map[string]string{
 		"site/rustfmt.toml": "edition = \"2021\"\n",
 		"site/custom.toml":  "[custom]\n",
@@ -498,8 +482,6 @@ func TestNativeConfigOnlyDir(t *testing.T) {
 	_, result := runNativeGenerate(t, "site", map[string]string{
 		"site/taplo.toml": "[formatting]\n",
 	}, "")
-	// Config-only dirs gain the taplo_config plus corpus splits owning
-	// BUILD.bazel and taplo.toml.
 	if len(result.Gen) != 3 {
 		t.Fatalf("generated %d rules, want taplo_config plus corpus splits", len(result.Gen))
 	}
@@ -529,7 +511,6 @@ func TestNativeRootVisibility(t *testing.T) {
 }
 
 func TestNativeValeStylesVariants(t *testing.T) {
-	// Custom StylesPath closes over its own directory.
 	_, custom := runNativeGenerate(t, "site", map[string]string{
 		"site/.vale.ini":             "StylesPath = config/styles\n",
 		"site/config/styles/a.yml":   "extends: existence\n",
@@ -539,7 +520,6 @@ func TestNativeValeStylesVariants(t *testing.T) {
 	if got := strings.Join(vale.AttrStrings("data"), ","); got != "site/config/styles/a.yml,site/config/styles/b/c.yml" {
 		t.Errorf("custom styles data = %q", got)
 	}
-	// No styles directory means a self-contained config with no data.
 	_, bare := runNativeGenerate(t, "site", map[string]string{
 		"site/.vale.ini": "MinAlertLevel = suggestion\n",
 	}, "")

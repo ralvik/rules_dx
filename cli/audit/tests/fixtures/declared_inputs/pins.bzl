@@ -1,5 +1,3 @@
-"""Audit curator declared-Bazel-inputs pins."""
-
 CURATOR_LABEL = "//:audit_curator"
 
 CURATOR_REL = "licenses.toml"
@@ -29,5 +27,5 @@ REJECTED_STALE_FALLBACK = "stale snapshot fallback rejected"
 REJECTED_UNTRACKED_DB = "untracked live database rejected"
 REJECTED_SHAPE_DRIFT = "per-package shape drift rejected"
 
-SEED_ONLY = "qualified seed-only under issue #812"
+SEED_ONLY = "qualified seed-only"
 NO_SUPPORTED = "no Supported claim"

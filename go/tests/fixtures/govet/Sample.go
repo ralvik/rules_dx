@@ -1,4 +1,3 @@
-// Seed Go vet fixture.
 package govet
 
 import "fmt"

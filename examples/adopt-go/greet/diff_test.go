@@ -1,4 +1,3 @@
-// Test for the go-cmp-backed diff helpers (lockeddep proof).
 package greet
 
 import "testing"

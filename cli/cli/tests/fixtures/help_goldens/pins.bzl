@@ -1,5 +1,3 @@
-"""Help-output goldens fixture."""
-
 HELP_TOP_GOLDEN = "top_help.golden"
 HELP_REPRESENTATIVE_GOLDENS = [
     "lint_help.golden",

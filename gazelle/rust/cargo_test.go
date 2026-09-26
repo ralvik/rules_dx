@@ -52,9 +52,6 @@ func TestParseCargoDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// A [lib]-less manifest carries no targets on its own: the implicit
-	// library exists only when src/lib.rs does, which only
-	// withImplicitTargets can see.
 	if len(manifest.targets) != 0 || manifest.edition != "2021" {
 		t.Fatalf("defaults = %+v", manifest)
 	}
@@ -174,8 +171,6 @@ func TestCargoImplicitTargetFailures(t *testing.T) {
 }
 
 func TestCargoLibBinDisambiguation(t *testing.T) {
-	// Explicit same-name library and binary: the library takes the `_lib`
-	// Bazel name while keeping the Rust crate name for dependents.
 	manifest, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n[lib]\nname = \"demo\"\npath = \"src/lib.rs\"\n[[bin]]\nname = \"demo\"\npath = \"src/main.rs\"\n"))
 	if err != nil {
 		t.Fatal(err)
@@ -183,7 +178,6 @@ func TestCargoLibBinDisambiguation(t *testing.T) {
 	if len(manifest.targets) != 2 || manifest.targets[0].name != "demo_lib" || manifest.targets[0].crate() != "demo" || manifest.targets[1].name != "demo" {
 		t.Errorf("explicit lib/bin targets = %+v", manifest.targets)
 	}
-	// Implicit same-name pair disambiguates the same way.
 	implicit := &cargoManifest{packageName: "app"}
 	files := map[string]bool{"pkg/src/lib.rs": true, "pkg/src/main.rs": true}
 	if err := implicit.withImplicitTargets(files, "pkg"); err != nil {
@@ -192,7 +186,6 @@ func TestCargoLibBinDisambiguation(t *testing.T) {
 	if len(implicit.targets) != 2 || implicit.targets[0].name != "app_lib" || implicit.targets[0].crate() != "app" || implicit.targets[1].name != "app" {
 		t.Errorf("implicit lib/bin targets = %+v", implicit.targets)
 	}
-	// A lone library keeps its bare name and crate.
 	solo, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"solo\"\n[lib]\nname = \"solo\"\npath = \"src/lib.rs\"\n"))
 	if err != nil {
 		t.Fatal(err)
@@ -203,10 +196,6 @@ func TestCargoLibBinDisambiguation(t *testing.T) {
 }
 
 func TestCargoBinOnlyHasNoPhantomLib(t *testing.T) {
-	// A bin-only crate (no [lib], no src/lib.rs) must not gain a phantom
-	// library: the emitter skips unbacked default roots while
-	// siblingLibName still linked the phantom, leaving a dangling
-	// :<name>_lib dep on every binary.
 	manifest, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"worker\"\n[[bin]]\nname = \"worker\"\npath = \"src/main.rs\"\n[dependencies]\napi = { path = \"../api\" }\n"))
 	if err != nil {
 		t.Fatal(err)
@@ -237,7 +226,6 @@ func TestSiblingLibName(t *testing.T) {
 }
 
 func TestCargoCallNamesDefensive(t *testing.T) {
-	// Non-call bases and foreign calls yield no names instead of panicking.
 	if got := cargoCallNames(&bzl.StringExpr{Value: "deps"}); got != nil {
 		t.Errorf("cargoCallNames(string) = %v, want nil", got)
 	}
@@ -401,8 +389,6 @@ func TestParseCargoBuildScript(t *testing.T) {
 	if err := undeclared.withImplicitTargets(map[string]bool{"build.rs": true}, ""); err == nil || !strings.Contains(err.Error(), "build.rs") {
 		t.Errorf("undeclared build.rs err = %v", err)
 	}
-	// Build dependencies land in their own scope, and inline tables keep
-	// the original spelling for crate_universe lookup.
 	scoped, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n[build-dependencies]\ncc = \"1\"\nlocal = { path = \"../local\", version = \"0.2\" }\n"))
 	if err != nil {
 		t.Fatal(err)
@@ -528,8 +514,6 @@ func TestParseCargoExamplePathDerived(t *testing.T) {
 	if example.kind != exampleKind || example.name != "foo_example" || example.logical != "foo" || example.path != "examples/foo.rs" {
 		t.Errorf("path-derived example = %+v", example)
 	}
-	// A truncated inline table keeps its parsed fields; the dangling key
-	// contributes nothing instead of failing the manifest.
 	truncated, err := parseCargoManifest("Cargo.toml", []byte("[package]\nname = \"demo\"\n[dependencies]\nfoo = { version = \"1\", path\n"))
 	if err != nil {
 		t.Fatal(err)

@@ -1,5 +1,3 @@
-// Dependency resolution, import validation, and rule attributes for the dx Rust Gazelle extension.
-
 package rust
 
 import (
@@ -16,11 +14,6 @@ import (
 	bzl "github.com/bazelbuild/buildtools/build"
 )
 
-// resolveExtName is upstream Gazelle's private resolve configuration key,
-// pinned through MODULE.bazel (gazelle 0.52.2). It is referenced literally
-// only to probe for user overrides so validation stays silent-safe when the
-// resolve configurer never ran (unit tests with bare configs); the real
-// interpretation of mappings always goes through FindRuleWithOverride.
 const resolveExtName = "_resolve"
 
 func lookupOverride(c *config.Config, name string) (label.Label, bool) {
@@ -34,8 +27,6 @@ func lookupOverride(c *config.Config, name string) (label.Label, bool) {
 	return resolve.FindRuleWithOverride(c, resolve.ImportSpec{Lang: languageName, Imp: name}, languageName)
 }
 
-// resolveImportOverride reports whether an import has an exact resolve
-// mapping, failing when the mapping collides with an ignore directive.
 func resolveImportOverride(c *config.Config, name string) (bool, error) {
 	if _, ok := lookupOverride(c, name); ok {
 		if ignore := matchingIgnore(c, name); ignore != nil {
@@ -78,10 +69,6 @@ func validateCargoImports(c *config.Config, manifest *cargoManifest, kind string
 	return nil
 }
 
-// validateExampleImports checks example and bench imports: production
-// imports may come from [dependencies] or [dev-dependencies] (Cargo links
-// dev-dependencies into examples, benches, and tests), test-scoped imports
-// from either as well.
 func validateExampleImports(c *config.Config, manifest *cargoManifest, imports targetImports) error {
 	for _, name := range imports.production {
 		mapped, err := resolveImportOverride(c, name)
@@ -114,9 +101,6 @@ func validateExampleImports(c *config.Config, manifest *cargoManifest, imports t
 	return nil
 }
 
-// validateBuildImports checks build-script imports: the script sees only
-// [build-dependencies], never normal or dev dependencies and never its
-// own crate (a script depending on its crate would cycle).
 func validateBuildImports(c *config.Config, manifest *cargoManifest, imports targetImports) error {
 	check := func(names []string, scope string) error {
 		for _, name := range names {
@@ -145,10 +129,6 @@ func localCargoImports(c *config.Config, manifest *cargoManifest, imports target
 		if dep, ok := manifest.normalDeps[name]; ok && !dep.external {
 			result.production = append(result.production, name)
 		} else if includeDev {
-			// Tests, examples, and benches link [dev-dependencies] in
-			// every code position, including non-test ones: detection
-			// records where the use item sits, not which scope Cargo
-			// links it from.
 			if dep, ok := manifest.devDeps[name]; ok && !dep.external {
 				result.production = append(result.production, name)
 			} else if _, ok := lookupOverride(c, name); ok {
@@ -176,9 +156,6 @@ func localCargoImports(c *config.Config, manifest *cargoManifest, imports target
 	return result
 }
 
-// appendMirrorPaths links every declared first-party path dependency from
-// the given scopes whether or not any use item names it. The set is
-// deduplicated and sorted so resolution stays deterministic.
 func appendMirrorPaths(result *targetImports, scopes ...map[string]cargoDependency) {
 	seen := make(map[string]bool, len(result.mirrorPaths))
 	for _, name := range result.mirrorPaths {
@@ -195,10 +172,6 @@ func appendMirrorPaths(result *targetImports, scopes ...map[string]cargoDependen
 	sort.Strings(result.mirrorPaths)
 }
 
-// localCargoExampleImports collects the first-party labels an example or
-// bench rule resolves: path dependencies from [dependencies] and
-// [dev-dependencies] alike (examples and benches link both). External
-// dependencies resolve through the generated crate_deps call, never here.
 func localCargoExampleImports(c *config.Config, manifest *cargoManifest, imports targetImports) targetImports {
 	var result targetImports
 	for _, name := range imports.production {
@@ -214,8 +187,6 @@ func localCargoExampleImports(c *config.Config, manifest *cargoManifest, imports
 	return result
 }
 
-// localCargoBuildImports collects the first-party labels a build-script
-// rule resolves: path dependencies from [build-dependencies] only.
 func localCargoBuildImports(c *config.Config, manifest *cargoManifest, imports targetImports) targetImports {
 	var result targetImports
 	for _, name := range imports.production {
@@ -237,15 +208,7 @@ func localCargoBuildImports(c *config.Config, manifest *cargoManifest, imports t
 }
 
 func setCargoAttrs(r *rule.Rule, packagePath string, manifest *cargoManifest, imports targetImports, includeDev bool) {
-	// crate_universe keys its maps by parent dir + Cargo package name
-	// (e.g. cli/dx_output for //cli/output), not by Bazel package path.
 	packageName := crateUniversePackage(packagePath, manifest)
-	// Cargo links every declared dependency into every target of the package,
-	// including path-only uses (`anyhow::Result`, `libc::c_int`) the use-path
-	// parser never sees. Mirror that: deps carry all declared externals
-	// (original dashed spelling for crate_universe lookup) plus detected
-	// externals resolve to their declared label. First-party labels still
-	// come from detected imports via Resolve.
 	seen := make(map[string]bool)
 	var external []string
 	add := func(key string, dep cargoDependency) {
@@ -292,12 +255,6 @@ func setCargoAttrs(r *rule.Rule, packagePath string, manifest *cargoManifest, im
 	r.SetAttr("aliases", cargoCall("aliases", packageName, includeDev))
 }
 
-// setScriptAttrs sets the dependency attributes of a generated
-// cargo_build_script rule: deps carry all declared external build
-// dependencies (original dashed spelling for crate_universe lookup, which
-// flattens the build maps into crate_deps) and aliases selects the build
-// maps, so the script sees exactly [build-dependencies]. First-party
-// labels still come from detected imports via Resolve.
 func setScriptAttrs(r *rule.Rule, packagePath string, manifest *cargoManifest) {
 	packageName := crateUniversePackage(packagePath, manifest)
 	seen := make(map[string]bool)
@@ -322,10 +279,6 @@ func setScriptAttrs(r *rule.Rule, packagePath string, manifest *cargoManifest) {
 	r.SetAttr("aliases", cargoBuildCall(packageName))
 }
 
-// crateUniversePackage returns the crate_universe map key for a manifest:
-// the parent Bazel directory joined with the Cargo package name. A nil or
-// nameless manifest falls back to the Bazel path; a root-level package has
-// no parent, so the Cargo name alone is the best guess.
 func crateUniversePackage(packagePath string, manifest *cargoManifest) string {
 	if manifest == nil || manifest.packageName == "" {
 		return packagePath
@@ -373,12 +326,6 @@ func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remo
 			l.fail("rust: %s: ambiguous import %q resolves to %s", from, name, formatMatches(matches))
 		}
 	}
-	// Declared-but-undetected path dependencies mirror Cargo's linking
-	// without detection evidence: overrides and unique index matches
-	// become edges, while misses, ambiguities, and ignored names stay
-	// silent. A genuinely used dep that detection missed still fails at
-	// rustc with a precise error; failing closed here would instead
-	// break legal trees whose declared deps this target never touches.
 	for _, name := range imports.mirrorPaths {
 		if ignore := matchingIgnore(c, name); ignore != nil {
 			ignore.used = true
@@ -407,9 +354,6 @@ func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remo
 	if len(labels) == 0 {
 		return
 	}
-	// ResolveAttrs merge takes this output as final, so first-party labels
-	// combine with (never replace) the generated crate_deps call; plain
-	// label lists union in place.
 	switch existing := r.Attr("deps"); existing.(type) {
 	case nil:
 		r.SetAttr("deps", labels)
@@ -420,12 +364,6 @@ func (l *rustLang) Resolve(c *config.Config, ix *resolve.RuleIndex, _ *repo.Remo
 	}
 }
 
-// addLocalDep records a same-package edge (sibling library, build script)
-// in relative :name form. Import resolution can separately resolve the
-// same target and render it absolute (//pkg:name) when the provider match
-// carries a different repo appearance than the importing rule; both
-// strings denote one target and Bazel rejects the duplicate, so drop the
-// absolute form in favor of the relative one.
 func addLocalDep(deps map[string]bool, from label.Label, name string) {
 	for dep := range deps {
 		if pkg, target, ok := splitDepLabel(dep, from); ok && pkg == from.Pkg && target == name {
@@ -435,9 +373,6 @@ func addLocalDep(deps map[string]bool, from label.Label, name string) {
 	deps[":"+name] = true
 }
 
-// splitDepLabel resolves a rendered dep string to its package and target
-// names in from's repo context. It reports false for forms it cannot
-// cheaply classify (which callers keep untouched).
 func splitDepLabel(dep string, from label.Label) (string, string, bool) {
 	rest := dep
 	if strings.HasPrefix(rest, "@") {

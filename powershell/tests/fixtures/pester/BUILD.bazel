@@ -1,4 +1,3 @@
-"""Pester fixture over the provisional pwsh_test runner mapping."""
 
 load("//powershell/rules:defs.bzl", "pwsh_library", "pwsh_test")
 load("//quality:fixtures.bzl", "real_source_target")

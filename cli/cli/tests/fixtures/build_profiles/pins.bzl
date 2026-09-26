@@ -1,7 +1,3 @@
-"""Build-profile flags plus DX_PROFILE forwarding fixture.
-
-"""
-
 PROFILE_COMMANDS = [
     "build",
     "run",
@@ -39,4 +35,4 @@ REJECTED_DEV_FLAG = "--dev flag rejected"
 REJECTED_COVERAGE_PROFILE = "coverage profile rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #814"
+SEED_ONLY = "qualified seed-only"

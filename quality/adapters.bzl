@@ -1,6 +1,3 @@
-"""Deterministic synthetic adapter registry (WP2 fixtures).
-
-"""
 
 ADAPTER_REGISTRY_SCHEMA_VERSION = 1
 
@@ -16,12 +13,6 @@ SYNTHETIC_CLASS_TO_FAMILY = {
 }
 
 def adapter_supported_classes(tool_id, capability):
-    """Returns the sorted supported classes for one synthetic tool/capability.
-
-    Fails on an unknown tool ID (matches `applicability.selected_adapters`
-    failing "during configuration or analysis"). An unsupported capability
-    returns [], so the stage is omitted and no empty action is created.
-    """
     if tool_id not in SYNTHETIC_ADAPTERS:
         fail("adapters: unknown tool '" + tool_id +
              "': not in the synthetic adapter registry")
@@ -140,23 +131,15 @@ REAL_CLASS_TO_FAMILY = {
 }
 
 def real_supported_classes(tool_id, capability):
-    """Returns the sorted supported classes for one real tool/capability.
-
-    Fails on an unknown tool ID during configuration or analysis, matching
-    the tool-integrations contract. An unsupported capability returns [],
-    so the stage is omitted and no empty action is created.
-    """
     if tool_id not in REAL_ADAPTERS:
         fail("adapters: unknown tool '" + tool_id +
              "': not in the real adapter registry")
     return sorted(REAL_ADAPTERS[tool_id].get(capability, []))
 
 def is_known_adapter_tool(tool_id):
-    """Reports whether a tool ID is in the versioned adapter registry."""
     return tool_id in REAL_ADAPTERS
 
 def is_classified(class_id):
-    """Reports whether a class is in the versioned class-to-family map."""
     return class_id in REAL_CLASS_TO_FAMILY
 
 def _is_canonical_token(text):
@@ -168,14 +151,6 @@ def _is_canonical_token(text):
     return True
 
 def adapter_registry_schema_error():
-    """Validates the versioned adapter-registry schema.
-
-    Checks data shape without pinning exact contents, so adding a
-    language/tool edits the registry data only: version is v1, every
-    class and family spelling is canonical, every adapter capability
-    names a known capability with canonical classes, and every
-    adapter-backed class is classified.
-    """
     if ADAPTER_REGISTRY_SCHEMA_VERSION != 1:
         return "adapter registry: unsupported schema v" + str(ADAPTER_REGISTRY_SCHEMA_VERSION) + " (want v1)"
     for class_id in REAL_CLASS_TO_FAMILY:

@@ -1,5 +1,3 @@
-"""Windows EULA acknowledgement UX pins."""
-
 TOOLCHAINS_MSVC_COMMIT = "8e2aa4624bbb5a53a94f135e90995f307875d1ad"
 TOOLCHAINS_MSVC_MODULE = "0.0.0"
 TOOLCHAINS_MSVC_EXTENSION = "extensions.bzl"
@@ -21,7 +19,7 @@ EULA_MECHANISM = "repository-env"
 EULA_README_MISMATCH = True
 
 ACK_HOW = "export BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1 plus --repo_env=BAZEL_TOOLCHAINS_MSVC_ACCEPT_MICROSOFT_VISUAL_STUDIO_BUILDTOOLS_EULA=1"
-ACK_NEVER_AUTOMATIC = "never automatic via .bazelrc or wrapper defaults"
+ACK_NEVER_AUTOMATIC = "never automatic via.bazelrc or wrapper defaults"
 ACK_NEVER_BYPASS = "never bypassing upstream controls"
 
 FAIL_BEFORE_FETCH = "missing acknowledgement fails before restricted MSVC payload download"
@@ -48,12 +46,12 @@ REJECTED_ALTERNATIVES = [
 ]
 
 NOT_IN_SCOPE = [
-    "rights review itself under issue #496",
+    "rights review itself",
     "redistribution permission",
-    "hermetic-llvm SDK EULA variable under issue #496",
+    "hermetic-llvm SDK EULA variable",
 ]
 
-RELEASE_EVIDENCE = "windows_x86_64 sbom-provenance delivered under issue #807"
+RELEASE_EVIDENCE = "windows_x86_64 sbom-provenance delivered"
 
 WINDOWS_EULA_FIXTURE_CORPUS = "//cc/tests/fixtures/windows_eula:corpus_starlark"
 WINDOWS_EULA_LIVE_HELLO = "//cc/tests/fixtures/hello:hello"

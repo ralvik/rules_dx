@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Local promotion stager plus gated staging-to-production promoter.
-
-Hermetic default copies the pinned artifact into a local promotion
-directory plus a `promotion.json` record and a `would-run.txt` manifest
-(promote plus health plus rollback lines with the artifact sha256) and
-verifies bytes via sha256, publishing nothing and running no health
- checks. The live promote path runs only with explicit env plus owner
- approval and never by default. Registry credentials stay env-only
- (never from BUILD): prefer short-lived tokens rotated per promotion;
- OIDC-based promotion auth stays an owned gap until tooled. Used as an
- `expand_template` template per deploy instance (placeholders below) and as a `py_library` for `py_test`.
- """
+"""Local promotion stager."""
 
 import hashlib
 import json
@@ -20,10 +9,6 @@ import shutil
 import subprocess
 import sys
 
-# Per-instance pins expanded by the `promotion_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_promotion` and `record_rollback` directly without
-# touching these constants.
 ARTIFACT_RLOC = "@@ARTIFACT_RLOC@@"
 DEPLOY_NAME = "@@DEPLOY_NAME@@"
 FROM_ENV = "@@FROM_ENV@@"
@@ -79,15 +64,6 @@ def build_promotion(
     version,
     secret_refs,
 ):
-    """Stages one pinned artifact as a local promotion and writes the record.
-
-    Creates `<outdir>/<deploy-name>-promotion/` holding the artifact bytes
-    plus `promotion.json` (from/to environments, version, artifact sha256,
-    secret reference names only, health skipped-local) and `would-run.txt`
-    with the promote, health-gate, and rollback lines. Verifies bytes via
-    sha256 and returns the promotion directory. Secret values are never
-    read, copied, or hashed here; only reference names are recorded.
-    """
     if not artifact_src or not os.path.isfile(artifact_src):
         raise ValueError(
             "promotion: want exactly one existing artifact source, got '"
@@ -175,12 +151,6 @@ def build_promotion(
 
 
 def record_rollback(promotion_dir, deploy_name, rollback_to, rollback_sha=""):
-    """Records a rollback pointer inside a staged promotion directory.
-
-    Writes `rollback.txt` naming the version to restore plus its expected
-    sha256 when given. Refuses an empty rollback target. Never deletes or
-    rewrites staged artifacts; history stays in the promotion directory.
-    """
     if not promotion_dir or not os.path.isdir(promotion_dir):
         raise ValueError(
             "promotion rollback: want an existing promotion directory, got '"
@@ -203,7 +173,6 @@ def record_rollback(promotion_dir, deploy_name, rollback_to, rollback_sha=""):
 
 
 def run_health_cmd(health_cmd):
-    """Runs one owner-provided health command without a shell and returns its exit code."""
     argv = shlex.split(health_cmd)
     if not argv:
         raise ValueError("promotion health: need a non-empty PROMOTION_HEALTH_CMD")
@@ -216,15 +185,6 @@ def run_health_cmd(health_cmd):
 
 
 def _check_secret_refs(secret_refs):
-    """Verifies secret references resolve without reading secret values.
-
-    A `file:<path>` ref must exist on disk (existence only, bytes are
-    never read or copied). A `cmd:<tool>` ref names an external secret
-    tool (vault/SOPS/cloud CLI) that must already be installed; this path
-    never downloads or installs tools. A bare `ENV_NAME` ref must be set
-    in the environment; its value is never printed. Returns the normalized
-    ref list.
-    """
     normalized = []
     for ref in secret_refs:
         if ref.startswith("file:"):

@@ -1,5 +1,3 @@
-"""Unit tests for BCR submission tooling.
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":bcr.bzl", "bcr_source_error", "bcr_submit_error")
@@ -37,7 +35,7 @@ def bcr_unit_tests(name):
             expect_equal(
                 "bcr submit rejects unapproved SemVer",
                 bcr_submit_error("1.2.3", False),
-                "bcr: submission needs explicit owner approval per issue #5; run with BCR_DRY_RUN=1 to print the would-submit PR",
+                "bcr: submission needs explicit owner approval; run with BCR_DRY_RUN=1 to print the would-submit PR",
             ),
             expect_equal(
                 "bcr submit accepts approved SemVer",

@@ -1,7 +1,3 @@
-"""Govet check-only wiring with errcheck complementary.
-
-"""
-
 GOVET_TOOLCHAIN_VERSION = "1.26.6"
 
 GOVET_COUPLING = "ships with the qualified Go toolchain (rules_go 0.63.0 plus Go SDK 1.26.6), no separate acquisition"

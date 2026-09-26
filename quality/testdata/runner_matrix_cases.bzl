@@ -1,7 +1,3 @@
-"""Layer-2 matrix cases (snapshot workflow): every supported language x capability cell.
-
-Split into per-language files with no behavior change.
-"""
 
 load(":runner_matrix_data.bzl", "DATA_CASES")
 load(":runner_matrix_file_family.bzl", "FILE_FAMILY_CASES")

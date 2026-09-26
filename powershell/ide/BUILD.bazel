@@ -1,8 +1,3 @@
-"""Upstream PowerShell IDE tool acquisition.
-
-The environment contract reuses the pinned portable pwsh toolchain; this
-package pins its acquisition via a wrapper-built version entry point.
-"""
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//powershell/rules:defs.bzl", "pwsh_binary")

@@ -1,5 +1,3 @@
-"""Layer-4 loss restore-or-wont-fix fixture."""
-
 LOSS_DAEMON_EXIT3 = "wont-fix"
 LOSS_BUILDIFIER_REWRITE = "wont-fix"
 LOSS_FULL_WIRING = "wont-fix"
@@ -25,4 +23,4 @@ REJECTED_NON_CUSTOMER_HARNESS = "non-customer harness in CI rejected"
 REJECTED_SECOND_BAZEL = "no second-Bazel download"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #645"
+SEED_ONLY = "qualified seed-only"

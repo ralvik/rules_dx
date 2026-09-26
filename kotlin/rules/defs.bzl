@@ -1,7 +1,3 @@
-"""Experimental minimal Kotlin wrappers (ADR 0019).
-
-"""
-
 load("@rules_java//java:defs.bzl", "JavaInfo")
 load("@rules_kotlin//kotlin:jvm.bzl", _kt_jvm_binary = "kt_jvm_binary", _kt_jvm_library = "kt_jvm_library", _kt_jvm_test = "kt_jvm_test")
 load("//libs/starlark:wrapper.bzl", "dx_executable_forward_rule", "dx_lcov_merger_attr", "dx_library_forward_rule", "dx_wrap", "dx_wrap_binary", "dx_wrap_test")
@@ -29,9 +25,6 @@ _kotlin_library_forward = dx_library_forward_rule(
     what = "kotlin_*",
     allow_files = _DX_KOTLIN_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
-    doc = "Forwards upstream Kotlin library providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct Kotlin sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream kt_jvm_library target whose providers are preserved.",
 )
 
 _kotlin_binary_forward = dx_executable_forward_rule(
@@ -42,9 +35,6 @@ _kotlin_binary_forward = dx_executable_forward_rule(
     what = "kotlin_*",
     allow_files = _DX_KOTLIN_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
-    doc = "Executable forwarder for kotlin_binary: symlinks the upstream binary.",
-    srcs_doc = "Direct Kotlin sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream kt_jvm_binary target whose executable is symlinked.",
     optional_providers = [JavaInfo],
     runtime = "besteffort",
 )
@@ -57,18 +47,11 @@ _kotlin_forward_test = dx_executable_forward_rule(
     what = "kotlin_*",
     allow_files = _DX_KOTLIN_SOURCE_EXTS,
     upstream_providers = [[JavaInfo]],
-    doc = "Test forwarder for kotlin_test: symlinks the upstream test executable.",
-    srcs_doc = "Direct Kotlin test sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream kt_jvm_test target whose executable is symlinked.",
     extra_attrs = dx_lcov_merger_attr(),
     optional_providers = [JavaInfo],
 )
 
 def kotlin_kotlinc_opts_with_werror(kwargs):
-    """Returns kwargs defaulting kotlinc_opts to warnings_as_errors.
-
-    Caller-provided opts win.
-    """
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.setdefault("kotlinc_opts", "//kotlin/rules:warnings_as_errors")
     return upstream_kwargs
@@ -83,18 +66,9 @@ def _kotlin_wrap_binary(name, srcs, visibility = None, **kwargs):
     dx_wrap_binary(name, _kt_jvm_binary, _kotlin_binary_forward, srcs, visibility = visibility, upstream_kwargs = _kotlin_with_werror(kwargs), **kwargs)
 
 def kotlin_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `kt_jvm_library`."""
     _kotlin_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def kotlin_binary(name, srcs = None, main_class = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `kt_jvm_binary`.
-
-    An ordinary binary owns its `srcs` plus `deps` on a wrapper library and
-    names its `main_class` explicitly (no inference); a thin entry binary
-    carries only `runtime_deps` with no `srcs` and reports no direct
-    sources. Both shapes preserve the upstream providers and execution
-    semantics.
-    """
     effective_srcs = srcs if srcs != None else []
     upstream_kwargs = dict(kwargs)
     if main_class != None:
@@ -102,10 +76,4 @@ def kotlin_binary(name, srcs = None, main_class = None, visibility = None, **kwa
     _kotlin_wrap_binary(name, effective_srcs, visibility = visibility, **upstream_kwargs)
 
 def kotlin_test(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `kt_jvm_test`.
-
-    With `srcs`, those test sources are this test's direct sources for
-    QualitySourcesInfo. The library under test stays its ordinary owner via
-    `deps`; test sources are never the library's sources. Uses Bazel's
-    standard test and coverage protocols."""
     dx_wrap_test(name, _kt_jvm_test, _kotlin_forward_test, srcs, visibility = visibility, upstream_kwargs = _kotlin_with_werror(kwargs), **kwargs)

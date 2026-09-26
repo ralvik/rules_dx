@@ -1,7 +1,3 @@
-"""Go from_file lock wiring pins.
-
-"""
-
 RULES_GO_VERSION = "0.63.0"
 
 GO_SDK_VERSION = "1.26.6"

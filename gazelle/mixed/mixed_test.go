@@ -91,8 +91,3 @@ func TestOwnerSingle(t *testing.T) {
 		}
 	}
 }
-
-// Per-adapter shared-edge agreement (each concrete parser extracts the
-// mixed helper edge while fenced/markup regions stay inert) is covered by
-// the existing per-adapter parser suites plus the //mixed/hello:hello_test
-// runtime edge; this package owns only the disjoint partition.

@@ -7,8 +7,6 @@ import (
 
 func TestParseImportsSingleType(t *testing.T) {
 	got := ParseImports([]byte("namespace Demo\n\nopen Acme.Widget\nopen System.Collections.Generic\n"))
-	// System.Collections.Generic is included (callers filter stdlib); the
-	// local import contributes its simple name.
 	want := []string{"System.Collections.Generic", "Widget"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseImports = %v, want %v", got, want)
@@ -17,8 +15,6 @@ func TestParseImportsSingleType(t *testing.T) {
 
 func TestParseImportsCommentsAndStringsInert(t *testing.T) {
 	got := ParseImports([]byte("namespace Demo\n\n// open Acme.Commented\n(* open Acme.Blocked *)\nopen System.Text\n\nlet s = \"open Acme.Literal\"\n"))
-	// Note: (* *) is not an F# comment; only // and /* */ are stripped.
-	// The test keeps // and string inertness; /* */ masking also applies.
 	want := []string{"System.Text"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseImports = %v, want %v", got, want)

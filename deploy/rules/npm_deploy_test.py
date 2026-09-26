@@ -1,4 +1,4 @@
-"""Pack plus feed output test for `npm_deploy`."""
+"""Local output test."""
 
 import hashlib
 import json

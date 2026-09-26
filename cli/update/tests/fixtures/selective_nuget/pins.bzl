@@ -1,5 +1,3 @@
-"""Selective NuGet `dx update` per-package pins."""
-
 SELECTIVE_NUGET = "wont-fix"
 
 SELECTIVE_NUGET_FULL = "bazel run @rules_dotnet//tools/paket2bazel -- --dependencies-file third_party/dotnet/paket.dependencies --output-folder third_party/dotnet/deps"
@@ -15,4 +13,4 @@ REJECTED_SILENT_FULL_SUBSTITUTION = "silent full-update substitution rejected"
 REJECTED_PRIVATE_PAKET_LOCK_SURGERY = "private paket.lock surgery rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #635"
+SEED_ONLY = "qualified seed-only"

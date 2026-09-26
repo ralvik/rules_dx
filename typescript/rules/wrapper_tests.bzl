@@ -1,6 +1,3 @@
-"""Wrapper-contract tests for the TypeScript wrappers (item 2).
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":defs.bzl", "typescript_srcs_rejection", "typescript_test_env", "typescript_test_rejection")
 

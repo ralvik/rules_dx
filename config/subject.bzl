@@ -1,6 +1,3 @@
-"""Analysis subject exposing the canonical quality settings (WP1).
-"""
-
 load("@bazel_skylib//rules:common_settings.bzl", "BuildSettingInfo")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo")
 

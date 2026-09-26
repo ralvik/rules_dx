@@ -1,5 +1,3 @@
-"""Per-cell coverage plus Codecov plus remote pins."""
-
 PER_CELL_REGISTRY = "tools/coverage/cells.txt"
 PER_CELL_COUNT = 4
 PER_CELL_SEED = "qualified seed-linux_x86_64 tools/coverage/seed-inventory.txt"
@@ -53,7 +51,7 @@ REMOTE_NO_CACHE = "--remote_cache"
 REMOTE_NO_EXECUTOR = "--remote_executor"
 REMOTE_NO_BES = "--bes_backend"
 REMOTE_LOCAL_ONLY = "local execution, no remote"
-REMOTE_PLATFORM_OWNER = "issue #298"
+REMOTE_PLATFORM_OWNER = ""
 REMOTE_ELSE_BRANCH = "locally sandbox-tested but remote behavior remains unverified"
 REMOTE_HERMETICITY = "hermeticity is"
 REMOTE_AQUERY = "cache hit"

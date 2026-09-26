@@ -1,17 +1,5 @@
 #!/usr/bin/env python3
-"""Local wheelhouse builder plus gated PyPI uploader for `pypi_deploy`.
-
- Hermetic default builds a local wheelhouse directory (`simple-index/` plus
- the pinned `.whl` and optional sdist) and verifies bytes via sha256; the
- live `twine upload` path runs only with explicit env plus owner approval
- and never by default. The live child inherits a minimal environment
- (PATH/HOME plus the Twine credentials only), never the full parent env,
- so ambient secrets cannot leak into the uploader. Single-string API
- tokens are the only supported credential: prefer short-lived tokens and
- rotate them per release; trusted-publisher (OIDC) upload stays an owned
- gap until tooled. Used as an `expand_template` template per deploy
- instance (placeholders below) and as a `py_library` for `py_test`.
- """
+"""Local wheelhouse builder."""
 
 import hashlib
 import os
@@ -19,9 +7,6 @@ import shutil
 import subprocess
 import sys
 
-# Per-instance pins expanded by the `pypi_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_wheelhouse` directly without touching these constants.
 WHEEL_RLOC = "@@WHEEL_RLOC@@"
 SDIST_RLOC = "@@SDIST_RLOC@@"
 DIST_NAME = "@@DIST_NAME@@"
@@ -37,12 +22,6 @@ def sha256_file(path):
 
 
 def build_wheelhouse(wheel_src, sdist_src, outdir, dist_name):
-    """Copies wheel plus optional sdist into a local wheelhouse and verifies bytes.
-
-    Creates `<outdir>/<dist>-wheelhouse/` holding the `.whl` (plus `.tar.gz`
-    when given) and `simple-index/<dist>/index.html` listing each file with
-    its sha256 fragment. Returns the wheelhouse directory.
-    """
     house = os.path.join(outdir, dist_name + "-wheelhouse")
     os.makedirs(house, exist_ok=True)
     entries = []
@@ -82,13 +61,6 @@ def build_wheelhouse(wheel_src, sdist_src, outdir, dist_name):
 
 
 def minimal_upload_env(extra):
-    """Builds the minimal child environment for a registry uploader.
-
-    Carries locale/PATH/HOME/TMP plus exactly the credential entries in
-    `extra`; every other parent variable (ambient secrets, proxies,
-    configuration overrides) is dropped. Documented once here so the
-    PyPI/crates uploaders cannot drift into `dict(os.environ)` copies.
-    """
     keep = (
         "HOME",
         "LANG",
@@ -107,7 +79,6 @@ def minimal_upload_env(extra):
 
 
 def live_upload(wheel_src, sdist_src, repository_url, token):
-    """Uploads wheel plus optional sdist via twine without interactive prompts."""
     files = [wheel_src] + ([sdist_src] if sdist_src else [])
     env = minimal_upload_env(
         {"TWINE_USERNAME": "__token__", "TWINE_PASSWORD": token}

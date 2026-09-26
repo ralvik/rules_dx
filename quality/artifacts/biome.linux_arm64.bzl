@@ -1,9 +1,5 @@
-"""biome standalone artifact metadata (linux_arm64) -- GENERATED, do not edit.
 
-Regenerate with: bazel run //quality/artifacts:update
-"""
-
-# buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr
+# buildifier: disable=attr-licenses
 ARTIFACT = {
     "abi_floor": {
         "kernel": "3.7.0",

@@ -1,5 +1,3 @@
-"""Atomic `dx update` rollback-plan pins."""
-
 ATOMICITY_BOUNDARY = "per-set commit"
 REPO_WIDE_ATOMIC = False
 AUTOMATIC_ROLLBACK = False
@@ -24,4 +22,4 @@ REJECTED_GIT_SCAN = "git scan rejected"
 REJECTED_PRIVATE_ROLLBACK = "private lockfile surgery rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #772"
+SEED_ONLY = "qualified seed-only"

@@ -1,5 +1,3 @@
-"""Cross routes pins."""
-
 LINUX_X86_64_EXEC = "Linux x86_64"
 LINUX_ARM64_EXEC = "Linux arm64"
 FIRST_COHORT_TARGETS = [
@@ -10,10 +8,10 @@ FIRST_COHORT_NOTE = "First Linux cross-build cohort"
 ALL_CROSS_NOTE = "not a mandate to build every target from every host"
 
 NATIVE_ROWS = [
-    "Native x86_64 glibc qualified under issue #410 on ubuntu-latest seed",
-    "Native arm64 glibc qualified under issue #410 on ubuntu-24.04-arm",
-    "Native macOS arm64 qualified under issue #412 on macos-14",
-    "Native Windows x86_64 qualified under issue #414 on windows-latest",
+    "Native x86_64 glibc qualified on ubuntu-latest seed",
+    "Native arm64 glibc qualified on ubuntu-24.04-arm",
+    "Native macOS arm64 qualified on macos-14",
+    "Native Windows x86_64 qualified on windows-latest",
 ]
 NATIVE_BACKEND_NOTE = "pinned upstream toolchains with provisional backends"
 

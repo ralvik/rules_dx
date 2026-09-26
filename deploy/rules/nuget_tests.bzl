@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the NuGet publisher.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":nuget.bzl", "NUGET_DEFAULT_SOURCE", "nuget_id_error", "nuget_nupkg_error", "nuget_schema_error", "nuget_source_error", "nuget_version_error")
 

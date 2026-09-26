@@ -1,5 +1,3 @@
-"""Analysis tests for the example subject rule (WP1)."""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_OBSERVATIONS = """subject //libs/starlark/tests:subject_under_test

@@ -1,4 +1,3 @@
-""" WP5 slice 1: explicit `dx clean` pruning of unselected managed generations."""
 
 load("@rules_dx//quality:fixtures.bzl", "real_source_target")
 

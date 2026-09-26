@@ -1,6 +1,3 @@
-"""Composed multi-language Gazelle witness (canonical `//dx:generate`).
-
-"""
 
 load("@gazelle//:def.bzl", "gazelle_binary")
 load("@rules_go//go:def.bzl", "go_library", "go_test")

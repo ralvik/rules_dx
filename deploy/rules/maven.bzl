@@ -1,7 +1,3 @@
-"""Local-first Maven Central publisher for `dx deploy`.
-
-"""
-
 load("@rules_python//python:defs.bzl", "py_binary")
 load(":defs.bzl", "dx_deployment")
 load(":launcher.bzl", "rlocation_path")
@@ -17,34 +13,15 @@ _VALID_VERSION_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123
 MAVEN_DEFAULT_REPOSITORY_URL = "https://oss.sonatype.org/service/local/staging/deploy/maven2/"
 
 def maven_group_charset():
-    """Returns the launcher-safe group charset via registry query.
-
-    Derived from `_VALID_GROUP_CHARS`, never duplicated.
-    """
     return _VALID_GROUP_CHARS
 
 def maven_artifact_charset():
-    """Returns the launcher-safe artifact charset via registry query.
-
-    Derived from `_VALID_ARTIFACT_CHARS`, never duplicated.
-    """
     return _VALID_ARTIFACT_CHARS
 
 def maven_version_charset():
-    """Returns the launcher-safe version charset via registry query.
-
-    Derived from `_VALID_VERSION_CHARS`, never duplicated.
-    """
     return _VALID_VERSION_CHARS
 
 def maven_schema_error():
-    """Validates the versioned coordinate charset schema.
-
-    Checks data shape without pinning exact contents: version is v1,
-    each charset is non-empty with unique launcher-safe characters and
-    never admits quotes, backslash, space, or newline so coordinates
-    embed safely in the deploy launcher.
-    """
     if MAVEN_SCHEMA_VERSION != 1:
         return "maven coordinates: unsupported schema v" + str(MAVEN_SCHEMA_VERSION) + " (want v1)"
     if type(_VALID_GROUP_CHARS) != "string" or _VALID_GROUP_CHARS == "":
@@ -77,7 +54,6 @@ def maven_schema_error():
     return ""
 
 def maven_group_error(group):
-    """Validates one Maven groupId value."""
     if type(group) != "string" or group == "":
         return ("maven_deploy: invalid group '" + str(group) +
                 "': want a non-empty groupId (for example 'com.example')")
@@ -89,7 +65,6 @@ def maven_group_error(group):
     return ""
 
 def maven_artifact_error(artifact):
-    """Validates one Maven artifactId value."""
     if type(artifact) != "string" or artifact == "":
         return ("maven_deploy: invalid artifact '" + str(artifact) +
                 "': want a non-empty artifactId (for example 'maven_demo')")
@@ -101,7 +76,6 @@ def maven_artifact_error(artifact):
     return ""
 
 def maven_version_error(version):
-    """Validates one Maven version value."""
     if type(version) != "string" or version == "":
         return ("maven_deploy: invalid version '" + str(version) +
                 "': want a non-empty version (for example '0.0.0')")
@@ -113,7 +87,6 @@ def maven_version_error(version):
     return ""
 
 def maven_repository_error(repository_url):
-    """Validates one Maven repository URL value."""
     if type(repository_url) != "string" or repository_url == "":
         return ("maven_deploy: invalid repository_url '" + str(repository_url) +
                 "': want a non-empty https URL (for example '" +
@@ -129,7 +102,6 @@ def maven_repository_error(repository_url):
     return ""
 
 def maven_jar_error(filename):
-    """Validates one jar filename value."""
     if type(filename) != "string" or filename == "":
         return ("maven_deploy: invalid jar '" + str(filename) +
                 "': want a non-empty .jar filename")
@@ -144,7 +116,6 @@ def maven_jar_error(filename):
     return ""
 
 def maven_pom_error(filename):
-    """Validates one pom filename value."""
     if type(filename) != "string" or filename == "":
         return ("maven_deploy: invalid pom '" + str(filename) +
                 "': want a non-empty .pom filename")
@@ -159,18 +130,6 @@ def maven_pom_error(filename):
     return ""
 
 def _maven_launcher_impl(ctx):
-    """Expands the `py_binary` launcher for one Maven deployment.
-
-    Each of the jar and pom resolves to a single file. The rule computes
-    the runfiles rlocations for both via `rlocation_path`, then expands
-    the shared `maven_deploy.py` template with those pins plus group,
-    artifact, version, and repository URL. The wrapping `py_binary` (see
-    `maven_deploy`) carries the pinned inputs in `data` plus the Python
-    runfiles library, so the program works under `bazel run`, `dx
-    deploy` (which symlinks the entrypoint and merges its runfiles), and
-    direct `bazel-bin` execution. Extra user args after `--` select the
-    output directory (default: `$BUILD_WORKSPACE_DIRECTORY`, else the
-    cwd)."""
     jar_files = ctx.attr.jar[DefaultInfo].files.to_list()
     if len(jar_files) != 1:
         fail("maven_deploy " + str(ctx.label) + ": jar " +
@@ -197,7 +156,7 @@ def _maven_launcher_impl(ctx):
     ctx.actions.expand_template(
         template = ctx.file._template,
         output = launcher,
-        # buildifier: disable=canonical-repository  # @@KEY@@ are template placeholders, not repo names
+        # buildifier: disable=canonical-repository
         substitutions = {
             "@@ARTIFACT@@": ctx.attr.artifact,
             "@@GROUP@@": ctx.attr.group,
@@ -213,29 +172,23 @@ _maven_launcher = rule(
     implementation = _maven_launcher_impl,
     attrs = {
         "artifact": attr.string(
-            doc = "Maven artifactId baked into the file-repo layout.",
             mandatory = True,
         ),
         "group": attr.string(
-            doc = "Maven groupId baked into the file-repo layout.",
             mandatory = True,
         ),
         "jar": attr.label(
             allow_single_file = True,
-            doc = "Jar file pinned in the file repo.",
             mandatory = True,
         ),
         "pom": attr.label(
             allow_single_file = True,
-            doc = "Pom file pinned in the file repo.",
             mandatory = True,
         ),
         "repository_url": attr.string(
-            doc = "Live-staging repository URL, used only with explicit env.",
             mandatory = True,
         ),
         "version": attr.string(
-            doc = "Maven version baked into the file-repo layout.",
             mandatory = True,
         ),
         "_template": attr.label(
@@ -243,24 +196,9 @@ _maven_launcher = rule(
             default = "//deploy/rules:maven_deploy.py",
         ),
     },
-    doc = "Launcher template expansion for maven_deploy (wrapped as py_binary).",
 )
 
 def maven_deploy(name, jar, pom, group, artifact, version = "0.0.0", repository_url = MAVEN_DEFAULT_REPOSITORY_URL, profile = "release"):
-    """Publishes one jar plus its pom as a local-first Maven deployment.
-
-    Creates `<name>_program_launcher` (expanded Python launcher resolving
-    inputs via the Python runfiles library), `<name>_program` (`py_binary`
-    on the managed Python 3.12 toolchain wrapping the launcher with pinned
-    `data` plus the runfiles library), and `<name>` (the `dx_deployment`
-    returning `DxDeployInfo` with no app and `profile`). Run with
-    `bazel run :<name>` or `dx deploy :<name>`; the default builds a local
-    file repo (`<artifact>-repo/` with `group/artifact/version/*.jar`
-    plus the `.pom`) and verifies bytes, publishing nothing. Live staging
-    via `mvn deploy:deploy-file` with GPG signing runs only with
-    `MAVEN_PUBLISH_LIVE=1`, `MAVEN_USERNAME`, `MAVEN_PASSWORD`, and
-    `MAVEN_PUBLISH_APPROVED=1` after explicit owner approval.
-    """
     group_error = maven_group_error(group)
     if group_error != "":
         fail(group_error + " (in " + native.package_name() + ":" + name + ")")

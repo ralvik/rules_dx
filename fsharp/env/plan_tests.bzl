@@ -1,5 +1,3 @@
-"""Focused F# environment-plan tests (WP2)."""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //fsharp/env:hello_lib_plan

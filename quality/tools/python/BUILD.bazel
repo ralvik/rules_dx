@@ -1,13 +1,3 @@
-"""Private wheel-only Python tool graph (pydoclint + flake8 + pylint).
-
-Ruleset-owned ecosystem graph per tool-acquisition: rules_dx owns the
-pyproject/uv.lock, exposes stable entry-point targets through authoritative
-Python rules, and hides hub layout from consumers. All tools share the
-managed 3.12 interpreter toolchain (no ambient Python).
-
-Tools use explicit `py_binary` entry points to preserve exit codes and
-avoid console-script discovery through a build-time Bash launcher on Windows.
-"""
 
 load("@aspect_rules_py//py:defs.bzl", "py_binary")
 load("//quality:fixtures.bzl", "real_source_target")

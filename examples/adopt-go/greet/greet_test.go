@@ -1,6 +1,3 @@
-// Internal package-level test with TestMain and a shared helper.
-// Package greet tests reach the library directly (same package); the
-// generated go_test owns every *_test.go via embed, never per-file targets.
 package greet
 
 import (

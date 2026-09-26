@@ -1,10 +1,3 @@
-"""Focused Ruby environment plans.
-
-Each `ruby_env_plan` reads the analyzed authoritative providers of one
-`ruby_*` wrapper: `QualitySourcesInfo` for direct sources plus the
-preserved `RubyFilesInfo` toolchain closure by reference.
-Focused-target only; repository/root/exact-target orchestration remains.
-"""
 
 load("//quality:fixtures.bzl", "real_source_target")
 load("//ruby/env:plan.bzl", "ruby_env_plan")

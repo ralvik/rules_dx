@@ -1,14 +1,9 @@
-"""Focused TypeScript environment plan (WP3).
-
-"""
-
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
 load("@aspect_rules_ts//ts:defs.bzl", _TsConfigInfo = "TsConfigInfo")
 load("//env:focused.bzl", "focused_direct_sources", "focused_js_closure", "focused_npm_store_projection", "focused_tsconfig_projection", "focused_typescript_plan", "focused_write_plan")
 load("//libs/starlark:defs.bzl", "DxSubjectInfo", "display_label")
 
 TypeScriptEnvPlanInfo = provider(
-    doc = "Provider-derived focused TypeScript target environment plan.",
     fields = {
         "direct_sources": "Sorted basenames of direct TypeScript sources.",
         "has_npm": "Whether the transitive npm closure is non-empty.",
@@ -64,8 +59,6 @@ typescript_env_plan = rule(
     attrs = {
         "target": attr.label(
             mandatory = True,
-            doc = "One typescript_project wrapper target to plan (focused target only).",
         ),
     },
-    doc = "Emits the provider-derived focused TypeScript environment plan for one wrapper target (WP3).",
 )

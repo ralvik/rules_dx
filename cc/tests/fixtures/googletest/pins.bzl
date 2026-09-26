@@ -1,7 +1,3 @@
-"""GoogleTest v1.18.0 plus C++17 floor version pins.
-
-"""
-
 GTEST_VERSION = "1.18.0"
 
 GTEST_CXX_FLOOR = "17"

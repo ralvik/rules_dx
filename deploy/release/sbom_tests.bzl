@@ -1,5 +1,3 @@
-"""Unit tests for SBOM + provenance generation.
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":sbom.bzl", "SBOM_BUILDER_DRY_RUN", "SBOM_BUILDER_RELEASE", "sbom_builder_error", "sbom_filenames", "sbom_predicate_error", "sbom_spdx_error")
@@ -27,7 +25,7 @@ def sbom_unit_tests(name):
             expect_equal(
                 "sbom_spdx_error rejects SPDX-3",
                 sbom_spdx_error("SPDX-3.0"),
-                "sbom_release: invalid spdx_version 'SPDX-3.0': want 'SPDX-2.3' (selected wire profile per issue #311)",
+                "sbom_release: invalid spdx_version 'SPDX-3.0': want 'SPDX-2.3' (selected wire profile)",
             ),
             expect_equal(
                 "sbom_predicate_error accepts SLSA v1",
@@ -37,7 +35,7 @@ def sbom_unit_tests(name):
             expect_equal(
                 "sbom_predicate_error rejects bare SLSA",
                 sbom_predicate_error("https://slsa.dev/provenance"),
-                "sbom_release: invalid predicate 'https://slsa.dev/provenance': want 'https://slsa.dev/provenance/v1' (selected wire profile per issue #311)",
+                "sbom_release: invalid predicate 'https://slsa.dev/provenance': want 'https://slsa.dev/provenance/v1' (selected wire profile)",
             ),
             expect_equal(
                 "sbom_builder_error accepts the dry-run builder",

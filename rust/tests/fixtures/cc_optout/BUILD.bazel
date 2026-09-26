@@ -1,4 +1,3 @@
-"""CC opt-out linker fixture: pure-Rust script with kept opt-out."""
 
 load("@crates//:crates.bzl", "aliases")
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")

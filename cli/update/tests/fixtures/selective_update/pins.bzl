@@ -1,5 +1,3 @@
-"""Selective `dx update` per-set pins."""
-
 SELECTIVE_NPM = "supported"
 SELECTIVE_CARGO = "wont-fix"
 SELECTIVE_MAVEN = "wont-fix"
@@ -24,4 +22,4 @@ BUMP_FOLLOWUP_GO = "dx update go"
 REJECTED_SILENT_FULL_SUBSTITUTION = "silent full-update substitution rejected"
 REJECTED_PRIVATE_EMULATION = "private per-package emulation rejected"
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #583"
+SEED_ONLY = "qualified seed-only"

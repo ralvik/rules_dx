@@ -1,7 +1,3 @@
-"""Scalafmt check plus fix wiring.
-
-"""
-
 SCALAFMT_VERSION = "3.11.4"
 
 SCALAFMT_ARTIFACT = "compatible JVM artifact over the shared managed JDK"

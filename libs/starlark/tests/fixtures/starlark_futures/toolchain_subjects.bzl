@@ -1,8 +1,3 @@
-"""Concrete toolchain-subjects use case.
-Toolchain resolution needs platform plus toolchain context beyond provider-field
-observation, so the platform-to-toolchain mapping stays a Starlark-level use case
-that stays deferred; consumers expose resolved toolchain state via `DxSubjectInfo`."""
-
 def admitted_platforms():
     return ["linux_x86_64", "macos_arm64"]
 

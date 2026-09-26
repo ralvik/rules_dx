@@ -1,6 +1,3 @@
-"""Unit tests for the versioned curated defaults.
-
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":curated_defaults.bzl", "CURATED_DEFAULTS", "CURATED_SCHEMA_VERSION", "FORMAT_FROZEN", "curated_families", "curated_schema_error")

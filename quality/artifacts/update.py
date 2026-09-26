@@ -1,32 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate checked-in standalone quality-tool artifact metadata.
-
-One generated file per tool/platform under
-this directory records the exact immutable URL, digest, size, archive member,
-upstream version, execution platform, ABI floor, runtime files, and licenses.
-
-Usage (maintainer only; requires network plus file/readelf/objdump/tar):
-    bazel run //quality/artifacts:update
-    bazel run //quality/artifacts:update -- --verify-only   # reject changed bytes
-
- Byte-identity policy: a versioned release URL does not guarantee immutable
- bytes. Vale publishes a checksums file, which this generator verifies. Buildifier,
- Taplo, and Biome publish no asset digests, so their checked-in digests are
- the maintainer-established byte identity: regeneration fails when upstream
- bytes change instead of silently recording new content. Published
- checksums files arrive over the same channel as the asset, so they are a
- cross-check only: the trust anchor is the checked-in digest plus
- `--verify-only`, never first-seen bytes. Fetches are https-only with
- retries plus backoff (see FETCH_RETRIES).
-
-Platform bounds: Linux artifacts record observed ELF linkage,
-interpreter, shared libraries, and GNU ABI floors via readelf/objdump.
-macOS/Windows artifacts record bounds only -- linkage is the observed
-delivery-class bound (buildifier static, all others dynamic), interpreter is
-None, shared libraries are empty, and ABI floors are None. The macOS
-deployment floor and Windows CRT identities stay owned gaps
-and are not pinned here.
-"""
+"""Regenerate checked-in artifact metadata."""
 
 import gzip
 import hashlib
@@ -43,19 +16,10 @@ import zipfile
 
 SCHEMA_VERSION = 1
 
-# Fetch robustness (issue #924): every upstream fetch is https-only with
-# retries plus backoff. Published checksums files arrive over the same
-# channel, so they are a cross-check only: the trust anchor is the
-# checked-in digest (regeneration fails on upstream byte change, and
-# `--verify-only` rejects drift), never the first-seen bytes.
 FETCH_RETRIES = 3
 FETCH_TIMEOUT = 300
 FETCH_BACKOFF_SECONDS = 2
 
-# Canonical tool versions (issue #912): TOOLS[biome] upstream_version owns
-# the `$schema` pin in both `biome.json` files (root plus
-# `quality/testdata/biome_cfg/biome.json`); see
-# `//tools/ci:config_consistency_test`.
 TOOLS = {
     "buildifier": {
         "upstream_version": "8.5.1",
@@ -402,7 +366,7 @@ def _download(url, path):
                 for chunk in iter(lambda: response.read(65536), b""):
                     out.write(chunk)
             return
-        except Exception as error:  # noqa: BLE001 - retry-then-fail with the last error
+        except Exception as error:  # noqa: BLE001
             last_error = error
             if attempt < FETCH_RETRIES:
                 time.sleep(FETCH_BACKOFF_SECONDS * attempt)
@@ -419,7 +383,6 @@ def _sha256(path):
 
 
 def _elf_linkage(path):
-    """Return (linkage, interpreter, needed) from actual binary bytes."""
     readelf = _require_tool("readelf")
     headers = _run([readelf, "-h", "-l", "-d", path])
     linkage = "static"
@@ -436,7 +399,6 @@ def _elf_linkage(path):
 
 
 def _abi_floor(path):
-    """Return observed GNU symbol floors via objdump, or Nones for static."""
     floor = {"kernel": None, "libc": None, "libstdcxx": None}
     linkage, _, _ = _elf_linkage(path)
     if linkage == "static":
@@ -465,15 +427,6 @@ def _abi_floor(path):
 
 
 def _native_bounds(tool, spec):
-    """Return bounded (linkage, interpreter, needed, abi_floor) for macOS/Windows.
-
-    Mach-O/PE binaries carry no ELF interpreter or GNU symbol floors, and the
-    seed host has no otool/llvm-otool qualification. Record the delivery-class
-    bound instead: buildifier stays static (Go static intent, matching its
-    Linux static record); all other tools are dynamic system-linked bounds.
-    macOS deployment floor plus Windows CRT identities stay owned gaps under
-, never pinned here.
-    """
     if tool == "buildifier":
         linkage = "static"
     else:
@@ -506,12 +459,6 @@ def _starlark(value, indent=4):
 
 
 def _source_dir():
-    """Directory holding the checked-in metadata files.
-
-    Under `bazel run` the script lives in runfiles, so the workspace root
-    comes from BUILD_WORKSPACE_DIRECTORY; a direct `python3` invocation
-    uses the script's own directory.
-    """
     workspace = os.environ.get("BUILD_WORKSPACE_DIRECTORY")
     if workspace:
         return os.path.join(workspace, "quality", "artifacts")
@@ -532,7 +479,6 @@ def _collect(tool, platform_key, spec, workdir):
             for line in handle.read().splitlines():
                 parts = line.split()
                 if len(parts) == 2:
-                    # Ty's sha256.sum prefixes binary-mode names with `*`.
                     published[parts[1].lstrip("*")] = parts[0]
         expected = published.get(spec["asset"])
         if expected != digest:
@@ -626,18 +572,13 @@ def _collect(tool, platform_key, spec, workdir):
 def _emit(artifact, tool, platform_key):
     filename = "%s.%s.bzl" % (tool, platform_key)
     path = os.path.join(_source_dir(), filename)
-    # Single-sourced buildifier suppression (issue #914): ARTIFACT holds an
-    # SPDX `licenses` data key, not a rule attr, so buildifier's
-    # `attr-licenses` lint is a false positive on every generated file. The
-    # disable lives here once in the generator, never hand-edited per file;
-    # `--verify-only` rejects drift.
     content = (
         '"""%s standalone artifact metadata (%s) -- GENERATED, do not edit.\n'
         "\n"
         "Regenerate with: bazel run //quality/artifacts:update\n"
         '"""\n'
         "\n"
-        "# buildifier: disable=attr-licenses  # ARTIFACT licenses key is SPDX data, not a rule attr\n"
+        "# buildifier: disable=attr-licenses\n"
         "ARTIFACT = %s\n"
         % (tool, platform_key,
            _starlark(artifact)))

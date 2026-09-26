@@ -46,7 +46,6 @@ func assertErrorContains(t *testing.T, message string, err error, want string) {
 	}
 }
 
-// applyEdits replays validated edits against the original bytes.
 func applyEdits(t *testing.T, original []byte, edits []intendedEdit) []byte {
 	t.Helper()
 	var out []byte
@@ -62,8 +61,6 @@ func applyEdits(t *testing.T, original []byte, edits []intendedEdit) []byte {
 	return append(out, original[cursor:]...)
 }
 
-// checkEditsValid enforces the validated edit form: ordered,
-// non-overlapping, within bounds, boundary-aligned, no no-ops.
 func checkEditsValid(t *testing.T, original []byte, edits []intendedEdit) {
 	t.Helper()
 	previous := uint64(0)
@@ -83,10 +80,6 @@ func checkEditsValid(t *testing.T, original []byte, edits []intendedEdit) {
 	}
 }
 
-// stableContent witnesses a seed until the bytes stop changing and returns
-// the fixed point. FixLoads converges and Format is idempotent, so one pass
-// normally suffices; the loop keeps tests independent of the exact
-// canonical load rendering.
 func stableContent(t *testing.T, path, pkg, seed string) string {
 	t.Helper()
 	rec := &manifestRecorder{apparentLoads: testApparentLoads()}
@@ -419,8 +412,6 @@ func TestKnownLoadsWithKindMap(t *testing.T) {
 }
 
 func TestWitnessKindMapLoopError(t *testing.T) {
-	// A cyclic map_kind mapping must surface as a witness error, not a
-	// panic, so the run fails closed with an actionable message.
 	cfg := testConfig()
 	cfg.KindMap = map[string]config.MappedKind{
 		"a": {FromKind: "a", KindName: "b", KindLoad: "@x//:defs.bzl"},
@@ -437,8 +428,6 @@ func TestWitnessKindMapLoopError(t *testing.T) {
 }
 
 func TestEmitKindMapLoopError(t *testing.T) {
-	// A cyclic map_kind mapping must surface as an emit error, not a
-	// panic, so the run fails closed with an actionable message.
 	cfg := testConfig()
 	cfg.KindMap = map[string]config.MappedKind{
 		"a": {FromKind: "a", KindName: "b", KindLoad: "@x//:defs.bzl"},

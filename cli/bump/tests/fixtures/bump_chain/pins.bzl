@@ -1,5 +1,3 @@
-"""Bump then update chaining pins."""
-
 BUMP_CHAIN = "automatic"
 
 BUMP_CHAIN_CARGO = "dx update cargo"
@@ -38,4 +36,4 @@ REJECTED_MANUAL_SECOND_STEP = "manual second step rejected"
 REJECTED_PRIVATE_RESOLVER = "private resolver rejected"
 
 NO_SUPPORTED = "no Supported claim"
-SEED_ONLY = "qualified seed-only under issue #638"
+SEED_ONLY = "qualified seed-only"

@@ -1,7 +1,3 @@
-"""qmllint check wiring (QML lint).
-
-"""
-
 QMLLINT_QT_OBSERVED = "Qt 6.11.1"
 
 QMLLINT_ARTIFACT = "qualified Qt distribution tool targets"

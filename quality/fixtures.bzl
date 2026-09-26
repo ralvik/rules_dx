@@ -1,6 +1,3 @@
-"""Source fixtures for aspects (synthetic, real).
-
-"""
 
 load("//quality:sources.bzl", "QualitySourcesInfo", "check_direct_sources")
 
@@ -23,15 +20,12 @@ quality_source_target = rule(
         "python_srcs": attr.label_list(
             allow_files = [".py"],
             default = [],
-            doc = "Directly owned Python sources for this fixture target.",
         ),
         "rust_srcs": attr.label_list(
             allow_files = [".rs"],
             default = [],
-            doc = "Directly owned Rust sources for this fixture target.",
         ),
     },
-    doc = "Minimal QualitySourcesInfo fixture for aspect evidence.",
 )
 
 def _real_source_target_impl(ctx):
@@ -75,73 +69,58 @@ real_source_target = rule(
         "java_srcs": attr.label_list(
             allow_files = [".java"],
             default = [],
-            doc = "Directly owned Java sources for this fixture target.",
         ),
         "javascript_srcs": attr.label_list(
             allow_files = [".js", ".mjs", ".cjs"],
             default = [],
-            doc = "Directly owned JavaScript sources for this fixture target.",
         ),
         "kotlin_srcs": attr.label_list(
             allow_files = [".kt", ".kts"],
             default = [],
-            doc = "Directly owned Kotlin sources for this fixture target.",
         ),
         "json_srcs": attr.label_list(
             allow_files = [".json"],
             default = [],
-            doc = "Directly owned JSON sources for this fixture target.",
         ),
         "jsx_srcs": attr.label_list(
             allow_files = [".jsx"],
             default = [],
-            doc = "Directly owned JSX sources for this fixture target.",
         ),
         "markdown_siblings": attr.label_list(
             allow_files = True,
             default = [],
-            doc = "Unclassified Markdown link-resolution siblings.",
         ),
         "markdown_srcs": attr.label_list(
             allow_files = [".md"],
             default = [],
-            doc = "Directly owned Markdown sources for this fixture target.",
         ),
         "python_srcs": attr.label_list(
             allow_files = [".py"],
             default = [],
-            doc = "Directly owned Python sources for this fixture target.",
         ),
         "python_stub_srcs": attr.label_list(
             allow_files = [".pyi"],
             default = [],
-            doc = "Directly owned Python stub sources for this fixture target.",
         ),
         "rust_srcs": attr.label_list(
             allow_files = [".rs"],
             default = [],
-            doc = "Directly owned Rust sources for this fixture target.",
         ),
         "starlark_srcs": attr.label_list(
             allow_files = [".bzl", ".bazel"],
             default = [],
-            doc = "Directly owned Starlark sources for this fixture target (BUILD.bazel plus .bzl).",
         ),
         "toml_srcs": attr.label_list(
             allow_files = [".toml"],
             default = [],
-            doc = "Directly owned TOML sources for this fixture target.",
         ),
         "tsx_srcs": attr.label_list(
             allow_files = [".tsx"],
             default = [],
-            doc = "Directly owned TSX sources for this fixture target.",
         ),
         "typescript_srcs": attr.label_list(
             allow_files = [".ts", ".mts", ".cts"],
             default = [],
-            doc = "Directly owned TypeScript sources for this fixture target (declaration files are inert and rejected by the wrapper).",
         ),
     },
-    doc = "Minimal QualitySourcesInfo fixture with native-config hints for real aspect evidence.",
 )

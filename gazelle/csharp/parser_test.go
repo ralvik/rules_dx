@@ -7,8 +7,6 @@ import (
 
 func TestParseImportsSingleType(t *testing.T) {
 	got := ParseImports([]byte("namespace Demo;\n\nusing Acme.Widget;\nusing System.Collections.Generic;\n"))
-	// System.Collections.Generic is included (callers filter stdlib); the
-	// local import contributes its simple class name.
 	want := []string{"System.Collections.Generic", "Widget"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("ParseImports = %v, want %v", got, want)

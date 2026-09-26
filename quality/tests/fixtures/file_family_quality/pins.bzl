@@ -1,7 +1,3 @@
-"""File-family quality defaults pins (modfmt plus gherkin/xml resolved under).
-
-"""
-
 CUE_VERSION = "v0.17.1"
 JSONNETFMT_VERSION = "v0.22.0"
 PKL_VERSION = "0.32.1"
@@ -32,8 +28,8 @@ YAMLLINT_ARTIFACT = "private wheel-only Python graph member over the shared mana
 KEEP_SORTED_ARTIFACT = "standalone checksummed release artifact; check-only with sandbox-apply-and-diff"
 
 REJECTED_JSONNET_CPP = "C++ jsonnet v0.21.0 observed, not pinned; go-jsonnet v0.22.0 is the pinned line; living at head rejected"
-REJECTED_MODFMT_PENDING = "modfmt upstream identity resolved seed-only under issue #582 to github.com/joshdk/modfmt v0.4.0; digests stay owned under issue #420, living at head rejected"
-REJECTED_GHERKIN_XML_VERSION = "prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2 pinned seed-only under issue #582; they ride Prettier 3.9.6 in the private graph, rechecked latest stable at implementation under #582"
+REJECTED_MODFMT_PENDING = "modfmt upstream identity resolved seed-only to github.com/joshdk/modfmt v0.4.0; digests stay owned, living at head rejected"
+REJECTED_GHERKIN_XML_VERSION = "prettier-plugin-gherkin 4.0.0 plus @prettier/plugin-xml 3.4.2 pinned seed-only; they ride Prettier 3.9.6 in the private graph, rechecked latest stable at implementation under pinned"
 REJECTED_HEAD = "living at head rejected; unpinned versions rejected"
 
 NATIVE_CONFIG_POLICY = "native-configuration sole policy: no hidden presets"
@@ -45,14 +41,14 @@ TERRAFORM_POLICY = "terraform fmt is whole-file rewrite with check/diff mode; up
 DJLINT_POLICY = "djlint uses upstream built-in defaults without config, native interpretation with config; --lint versus --reformat are upstream modes, no auto-supplied preset"
 STYLELINT_POLICY = "stylelint uses upstream built-in defaults without config, native interpretation with config; no auto-supplied config preset; --formatter json is transport"
 PRETTIER_PLUGIN_POLICY = "prettier-plugin closures (prettier-plugin-gherkin 4.0.0 plus prettier-plugin-sql 0.15.1 plus @prettier/plugin-xml 3.4.2) are whole-file rewrite with check/diff mode over Prettier 3.9.6; no auto-supplied plugin preset"
-MODFMT_POLICY = "modfmt v0.4.0 from github.com/joshdk/modfmt is whole-file rewrite with check/diff mode; upstream built-in defaults, no hidden preset here; digests plus adapters stay owned under issue #420"
+MODFMT_POLICY = "modfmt v0.4.0 from github.com/joshdk/modfmt is whole-file rewrite with check/diff mode; upstream built-in defaults, no hidden preset here; digests plus adapters stay owned"
 YAMLFMT_POLICY = "yamlfmt -lint is the upstream built-in check mode; config discovery is native interpretation, no auto-supplied preset"
 YAMLLINT_POLICY = "default ruleset is the upstream built-in default ruleset, not a rules_dx preset"
 KEEP_SORTED_POLICY = "keep-sorted is check-only with sandbox-apply-and-diff; no rule-set selection"
 SUFFIX_POLICY = "suffix inference rejected: registry owns applicability, never inferred from a file suffix"
 BEYOND_DEFAULT_REJECTED = "beyond-default switches rejected: auto presets, --enable=all-style opt-in maxima, all-rules maxima"
 
-STRUCTURED_CROSSLINK = "protobuf plus qml stay owned by issue #488 plus issue #419, cross-linked here never double-claimed"
+STRUCTURED_CROSSLINK = "protobuf plus qml stay owned by plus cross-linked here never double-claimed"
 
 FILE_FAMILY_PROOF = "bazel build //quality/tests/fixtures/file_family_quality:corpus_starlark"
 

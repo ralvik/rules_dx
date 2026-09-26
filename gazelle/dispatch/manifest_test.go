@@ -153,8 +153,6 @@ func TestWitnessExistingFileSeesMergedState(t *testing.T) {
 	seed := "load(\"@rules_dx//python/rules:defs.bzl\", \"python_library\")\n\npython_library(\n    name = \"handlers\",\n    srcs = [\"handlers.py\"],\n)\n"
 	f := mustLoad(t, "BUILD.bazel", "a", seed)
 	cfg := testConfig()
-	// Simulate the framework's PostResolve merge: a sibling extension's
-	// rule already merged into the shared file pointer.
 	extra := rule.NewRule("rust_library", "native")
 	extra.SetAttr("srcs", []string{"lib.rs"})
 	extra.Insert(f)
@@ -176,8 +174,6 @@ func TestWitnessExistingFileSeesMergedState(t *testing.T) {
 
 func TestWitnessCleanFileIsUnchanged(t *testing.T) {
 	seed := "load(\"@rules_dx//python/rules:defs.bzl\", \"python_library\")\n\npython_library(\n    name = \"handlers\",\n    srcs = [\"handlers.py\"],\n)\n"
-	// Stabilize: witness until the bytes stop changing, then assert the
-	// fixed point reads clean.
 	content := seed
 	for i := 0; i < 3; i++ {
 		f := mustLoad(t, "BUILD.bazel", "a", content)

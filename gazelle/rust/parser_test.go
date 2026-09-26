@@ -56,10 +56,7 @@ extern crate serde;
 
 func TestParseInertRegions(t *testing.T) {
 	facts := mustParse(t, "src/lib.rs", `
-/// #[test] in a doc comment is inert.
 pub mod real;
-// #[test]
-// fn commented() {}
 const S: &str = "#[test] fn fake() {}";
 const C: char = '\'';
 fn live<'a>(x: &'a str) -> &'a str { x }
@@ -85,7 +82,6 @@ macro_rules! gen {
 
 func TestParseBlockCommentNested(t *testing.T) {
 	facts := mustParse(t, "src/lib.rs", `
-/* outer /* nested */ use hidden::x; */
 pub mod visible;
 `)
 	if len(facts.Modules) != 1 || facts.Modules[0].Name != "visible" {
@@ -240,8 +236,6 @@ func TestParseAmbiguousCfgFails(t *testing.T) {
 }
 
 func TestParseNonTestCfgIsUnconditional(t *testing.T) {
-	// Source conditions never create select(): the literal identity is an
-	// ordinary production edge.
 	facts := mustParse(t, "src/lib.rs", `
 #[cfg(feature = "fast")]
 use accel::Turbo;
@@ -284,8 +278,6 @@ pub(in crate::parent) mod scoped;
 }
 
 func TestNormalizeIntegration(t *testing.T) {
-	// Parser facts feed the ADR 0004 normalizer without an intermediate
-	// model: module names normalize to stems.
 	facts := mustParse(t, "src/lib.rs", "mod user_profile;\n")
 	stem, err := Normalize(facts.Modules[0].Name)
 	if err != nil {
@@ -448,8 +440,6 @@ func TestUseAndAttributeNestedEdges(t *testing.T) {
 }
 
 func TestParserCoverageClosure(t *testing.T) {
-	// Nested brackets inside an attribute exercise the attr-depth branch
-	// of cleanSource; the module declaration must survive.
 	cleaned := cleanSource("#[foo([bar])]\nmod m;\n")
 	if !strings.Contains(cleaned, "mod m") {
 		t.Errorf("nested attr bracket blanked module: %q", cleaned)
@@ -458,31 +448,23 @@ func TestParserCoverageClosure(t *testing.T) {
 	if len(facts.Modules) != 1 || facts.Modules[0].Name != "m" {
 		t.Errorf("modules = %+v", facts.Modules)
 	}
-	// A lone `#` is not an attribute; parseItems skips it and keeps the
-	// following item.
 	facts = mustParse(t, "closure.rs", "# lone\nmod m;\n")
 	if len(facts.Modules) != 1 || facts.Modules[0].Name != "m" {
 		t.Errorf("lone hash modules = %+v", facts.Modules)
 	}
-	// A non-crate extern form with trailing tokens exercises the skip to
-	// the next item boundary; it records no dependency identity.
 	facts = mustParse(t, "closure.rs", "extern C foo;\n")
 	if len(facts.Externs) != 0 {
 		t.Errorf("externs = %+v, want none", facts.Externs)
 	}
-	// Single-byte character literals close immediately.
 	if end, ok := scanChar([]byte("'x'"), 0); !ok || end != 3 {
 		t.Errorf("scanChar('x') = %d %v", end, ok)
 	}
-	// An escape without a closing tick is not a literal.
 	if _, ok := scanChar([]byte("'\\x"), 0); ok {
 		t.Error("unterminated escape accepted as char literal")
 	}
-	// A `b` prefix without a string body falls back to one byte.
 	if end := scanString([]byte("bx"), 0); end != 1 {
 		t.Errorf("scanString(bx) = %d, want 1", end)
 	}
-	// Escaped backslashes inside attribute strings are skipped.
 	if !mentionsTest("doc = \"a\\\\b\" test") {
 		t.Error("escaped string hid the test token")
 	}

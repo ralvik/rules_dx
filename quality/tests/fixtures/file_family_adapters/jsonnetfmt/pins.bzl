@@ -1,7 +1,3 @@
-"""jsonnetfmt check plus fix wiring.
-
-"""
-
 JSONNETFMT_VERSION = "v0.22.0"
 JSONNETFMT_ARTIFACT = "standalone checksummed release artifact; go-jsonnet rewrite"
 JSONNETFMT_CHECK = "jsonnetfmt --test"

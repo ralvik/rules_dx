@@ -1,17 +1,3 @@
-// Native-config generation owned by the first-party Rust Gazelle extension.
-//
-// The extension recognizes tool-owned config files by exact basename,
-// manages one typed native-config target per recognized file, and binds
-// Rust rules to their configs through direct aspect_hints entries. The
-// recognized filenames are frozen: renaming a tool file is a contract
-// change documented in docs/quality/native-configuration.md, never a
-// silent behavior drift.
-//
-// Hand-authored config targets always win: an existing target of the same
-// config kind suppresses generation (its name feeds hint resolution) and
-// is never stubbed. Only rules the generator emitted (default name plus
-// the recognized src) are ever removed, and only once their file or
-// selection is gone.
 package rust
 
 import (
@@ -27,21 +13,8 @@ import (
 	"github.com/bazelbuild/bazel-gazelle/rule"
 )
 
-// nativeToolsDirective selects the managed native-config tool set per
-// directory: `# gazelle:dx_native_tools <tool...>` with tool ids from the
-// frozen table below. The nearest directive wins and inherits otherwise;
-// absent means every tool. Unknown ids and bare directives fail before
-// BUILD emission.
 const nativeToolsDirective = "dx_native_tools"
 
-// nativeTool describes one managed native-config tool: the exact config
-// filename it owns, the config rule kind the generator manages, and
-// whether owned Rust rules bind to it through aspect_hints. Only tools
-// whose configs a Rust rule can consume (rustfmt) bind; the rest
-// are recognized and targeted uniformly for future language owners.
-// Clippy is intentionally absent: Rust lint is upstream-delegated
-// and takes no dx-side config, so a clippy.toml is unmanaged and
-// `clippy` is not a valid dx_native_tools id.
 type nativeTool struct {
 	id   string
 	file string
@@ -56,7 +29,6 @@ var nativeTools = []nativeTool{
 	{id: "rustfmt", file: "rustfmt.toml", kind: "rustfmt_config", rust: true},
 }
 
-// nativeToolByID resolves a tool id to its table row.
 func nativeToolByID(id string) (nativeTool, bool) {
 	for _, tool := range nativeTools {
 		if tool.id == id {
@@ -66,7 +38,6 @@ func nativeToolByID(id string) (nativeTool, bool) {
 	return nativeTool{}, false
 }
 
-// nativeToolByKind resolves a config rule kind to its table row.
 func nativeToolByKind(kind string) (nativeTool, bool) {
 	for _, tool := range nativeTools {
 		if tool.kind == kind {
@@ -76,12 +47,10 @@ func nativeToolByKind(kind string) (nativeTool, bool) {
 	return nativeTool{}, false
 }
 
-// nativeConfigName is the deterministic generated target name for a tool.
 func nativeConfigName(tool nativeTool) string {
 	return tool.id + "_config"
 }
 
-// defaultNativeTools selects every managed tool in table order.
 func defaultNativeTools() []string {
 	ids := make([]string, 0, len(nativeTools))
 	for _, tool := range nativeTools {
@@ -90,13 +59,10 @@ func defaultNativeTools() []string {
 	return ids
 }
 
-// nativeToolIDs renders the valid directive values for diagnostics.
 func nativeToolIDs() string {
 	return strings.Join(defaultNativeTools(), " ")
 }
 
-// parseNativeToolsDirective validates one dx_native_tools value into the
-// enabled tool set, preserving directive order.
 func parseNativeToolsDirective(value string) ([]string, error) {
 	fields := strings.Fields(value)
 	if len(fields) == 0 {
@@ -117,9 +83,6 @@ func parseNativeToolsDirective(value string) ([]string, error) {
 	return tools, nil
 }
 
-// selectedNativeTools reports the managed tool set for a directory,
-// defaulting to every tool when configuration never ran (unit tests with
-// bare configs) or no directive constrained it.
 func selectedNativeTools(c *config.Config) []string {
 	if c != nil {
 		if raw, ok := c.Exts[languageName]; ok {
@@ -131,11 +94,6 @@ func selectedNativeTools(c *config.Config) []string {
 	return defaultNativeTools()
 }
 
-// nativeConfigKinds declares the managed config rule kinds: matched by
-// src identity, src required for buildability. src and data are mergeable
-// so removal stubs clear them and the emptied rule deletes: the planner
-// only ever emits a config rule when no same-tool target exists, so a
-// mergeable src can never clobber a hand-authored one.
 func nativeConfigKinds() map[string]rule.KindInfo {
 	kinds := make(map[string]rule.KindInfo, len(nativeTools))
 	for _, tool := range nativeTools {
@@ -151,14 +109,11 @@ func nativeConfigKinds() map[string]rule.KindInfo {
 	return kinds
 }
 
-// isNativeConfigKind reports whether a kind is a managed config target.
 func isNativeConfigKind(kind string) bool {
 	_, ok := nativeToolByKind(kind)
 	return ok
 }
 
-// nativeConfigLoads exposes the typed config constructors for generated
-// targets. Gazelle materializes only the symbols generation uses.
 func nativeConfigLoads(rulesRepo string) rule.LoadInfo {
 	symbols := make([]string, 0, len(nativeTools))
 	for _, tool := range nativeTools {
@@ -170,9 +125,6 @@ func nativeConfigLoads(rulesRepo string) rule.LoadInfo {
 	}
 }
 
-// nativePlan is the config-target computation for one directory: rules to
-// generate, owned rules to delete, and the resolution map hint binding
-// consumes.
 type nativePlan struct {
 	gen       []*rule.Rule
 	imports   []any
@@ -183,10 +135,6 @@ type nativePlan struct {
 	existing  map[string]*rule.Rule
 }
 
-// planNativeConfig recognizes selected tool files, resolves each tool to
-// its single config target, and stages generation and removal. More than
-// one same-tool config target fails closed: hint binding must stay
-// unambiguous.
 func planNativeConfig(c *config.Config, args language.GenerateArgs) (*nativePlan, error) {
 	plan := &nativePlan{
 		resolved:  make(map[string]string, len(nativeTools)),
@@ -221,8 +169,6 @@ func planNativeConfig(c *config.Config, args language.GenerateArgs) (*nativePlan
 		}
 		name := nativeConfigName(tool)
 		if len(owned) == 1 {
-			// A hand-authored target (any name, any src) always wins:
-			// never regenerated, never stubbed, always resolvable.
 			plan.resolved[tool.id] = owned[0]
 			continue
 		}
@@ -246,9 +192,6 @@ func planNativeConfig(c *config.Config, args language.GenerateArgs) (*nativePlan
 		if !ok || existing.Kind() != tool.kind || plan.generated[name] {
 			continue
 		}
-		// Only a rule the generator could have emitted (default name
-		// plus the recognized src) is ever stubbed: hand-customized
-		// targets survive file removal and deselection untouched.
 		if existing.AttrString("src") != tool.file {
 			continue
 		}
@@ -257,8 +200,6 @@ func planNativeConfig(c *config.Config, args language.GenerateArgs) (*nativePlan
 		}
 		plan.empty = append(plan.empty, rule.NewRule(tool.kind, name))
 		plan.stubbed[name] = true
-		// A stubbed target no longer exists after the merge, so it
-		// must not resolve for hint binding either.
 		if plan.resolved[tool.id] == name {
 			delete(plan.resolved, tool.id)
 		}
@@ -266,8 +207,6 @@ func planNativeConfig(c *config.Config, args language.GenerateArgs) (*nativePlan
 	return plan, nil
 }
 
-// nativeVisibility scopes a generated config target to its owning package
-// tree: consumers resolve hints package-locally, never repo-wide.
 func nativeVisibility(rel string) string {
 	if rel == "" {
 		return "//:__subpackages__"
@@ -275,14 +214,6 @@ func nativeVisibility(rel string) string {
 	return "//" + rel + ":__subpackages__"
 }
 
-// applyNativeHints binds one generated Rust rule to every selected tool
-// whose config target exists in its package. The emitted list is the full
-// merged outcome: surviving entries keep their relative position, stale
-// managed entries drop, and resolved additions append in canonical-label
-// order. An empty outcome stays absent so the merger deletes a fully
-// stale attribute instead of rendering an empty list. Corpus splits
-// never bind Rust hints: they already carry exactly their own
-// tool's native config (markdown binds Vale, others run pinned defaults).
 func applyNativeHints(rel string, r *rule.Rule, plan *nativePlan) {
 	if _, owned := rustKinds[r.Kind()]; !owned || isNativeConfigKind(r.Kind()) || r.Kind() == corpusKind {
 		return
@@ -324,8 +255,6 @@ func applyNativeHints(rel string, r *rule.Rule, plan *nativePlan) {
 	r.SetAttr("aspect_hints", merged)
 }
 
-// targetPresent reports whether a hint label still resolves inside the
-// package: generated this run, or existing and not scheduled for removal.
 func (plan *nativePlan) targetPresent(name string) bool {
 	if plan.generated[name] {
 		return true
@@ -336,8 +265,6 @@ func (plan *nativePlan) targetPresent(name string) bool {
 	return true
 }
 
-// managedHintName resolves an aspect_hints entry to its package-local
-// target name when the entry uses a managed default label form.
 func managedHintName(rel, entry string) (string, bool) {
 	for _, tool := range nativeTools {
 		if !tool.rust {
@@ -358,9 +285,6 @@ func managedHintName(rel, entry string) (string, bool) {
 	return "", false
 }
 
-// hintCanonicalName normalizes an aspect_hints entry to its package-local
-// target name for deduplication; foreign labels pass through unchanged so
-// they never collide with local additions.
 func hintCanonicalName(rel, entry string) string {
 	if name, managed := managedHintName(rel, entry); managed {
 		return name
@@ -368,11 +292,6 @@ func hintCanonicalName(rel, entry string) string {
 	return entry
 }
 
-// valeStylesData closes over a Vale styles directory: the StylesPath entry
-// of the recognized INI (default styles) walks recursively into sorted
-// package-relative data labels. Absent files, absent directories, and
-// escaping paths all yield no data instead of failing: a self-contained
-// INI without styles is an ordinary config.
 func valeStylesData(repoRoot, dir, rel string, tool nativeTool) []string {
 	if tool.id != "vale" {
 		return nil

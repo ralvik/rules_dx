@@ -1,26 +1,13 @@
-"""Quality applicability helpers (freeze).
-
-"""
 
 load(":policy.bzl", "CAPABILITIES")
 
 def capability_selection(tools_by_capability, capability):
-    """Returns the policy-ordered tool-ID selection for one capability.
-
-    `tools_by_capability` maps capability name to tool-ID list. Fails on an
-    unknown capability; a missing key means that capability is unselected.
-    """
     if capability not in CAPABILITIES:
         fail("applicability: unknown capability '" + capability +
              "': want one of " + ", ".join(CAPABILITIES))
     return tools_by_capability.get(capability, [])
 
 def selected_adapters(selection, adapters):
-    """Resolves a policy-ordered tool-ID selection against adapter metadata.
-
-    `adapters` maps known tool ID to its support record. Returns the
-    selection in policy order, deduplicated. Fails on an unknown tool ID.
-    """
     ordered = []
     seen = {}
     for tool_id in selection:
@@ -33,7 +20,6 @@ def selected_adapters(selection, adapters):
     return ordered
 
 def effective_classes(target_classes, adapter_classes, policy_classes):
-    """Returns the sorted three-way class intersection for one tool stage."""
     adapter_set = {c: True for c in adapter_classes}
     policy_set = {c: True for c in policy_classes}
     effective = {}

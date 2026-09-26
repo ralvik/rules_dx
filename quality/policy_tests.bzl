@@ -1,6 +1,3 @@
-"""Unit and analysis tests for workspace policy and applicability (WP1).
-
-"""
 
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":applicability.bzl", "capability_selection", "effective_classes", "selected_adapters")

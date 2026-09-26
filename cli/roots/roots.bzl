@@ -1,6 +1,3 @@
-"""Repository-root candidates for `dx codegen`, `dx env`, and `dx setup`.
-
-"""
 
 REPOSITORY_PATTERN = "//..."
 
@@ -12,7 +9,6 @@ REPOSITORY_ROOT_STRATEGIES = [
 ]
 
 def repository_roots(strategy, monolith = None, shards = [], pattern_file = None):
-    """Returns repository-root target patterns for one root strategy."""
     if strategy == "recursive-pattern":
         return [REPOSITORY_PATTERN]
     if strategy == "query-pattern-file":
@@ -38,21 +34,12 @@ repository_roots_file = rule(
     attrs = {
         "roots": attr.string_list(
             mandatory = True,
-            doc = "Target patterns written one per line for `--target_pattern_file`.",
         ),
         "out": attr.output(
             mandatory = True,
-            doc = "Label file Bazel reads through `--target_pattern_file`.",
         ),
     },
-    doc = "Writes a query-produced repository-root label file.",
 )
 
 def roots_aggregate(name, deps, **kwargs):
-    """One aggregate root: a plain filegroup over `deps`.
-
-    The consuming `bazel build` must still request the plan-collection
-    aspects and output groups; this wrapper only reserves the aggregate
-    identity so selection can attribute discovery cost.
-    """
     native.filegroup(name = name, srcs = deps, **kwargs)

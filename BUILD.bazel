@@ -1,4 +1,3 @@
-"""Root package for the rules_dx seed."""
 
 load("@rules_dx//quality:native_config.bzl", "biome_config", "buildifier_config", "ruff_config", "rustfmt_config", "vale_config")
 

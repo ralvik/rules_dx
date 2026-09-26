@@ -1,5 +1,3 @@
-"""Focused Python environment-plan tests (WP3)."""
-
 load("//libs/starlark:defs.bzl", "starlark_test")
 
 EXPECTED_ENV_PLAN_OBSERVATIONS = """subject //python/env:hello_lib_plan

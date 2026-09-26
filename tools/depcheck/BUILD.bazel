@@ -1,6 +1,3 @@
-"""Cross-language dependency checks.
-
-"""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

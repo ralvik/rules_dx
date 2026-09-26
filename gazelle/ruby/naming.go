@@ -1,21 +1,3 @@
-// Naming implements the deterministic Ruby target-name normalizer owned by
-// the first-party Ruby Gazelle extension.
-//
-// The durable constraint comes from the common generation contract:
-// basename-derived names preserve ASCII letters, ASCII digits, and internal
-// underscores; every run of any other character becomes one underscore;
-// leading and trailing underscores are trimmed; an empty result fails
-// generation. Same-package normalized-name collisions fail with every
-// claimant; the extension never invents a language affix or another suffix.
-//
-// Ruby is package-level (Go-style, not Python one-source): one directory
-// holds one reusable `ruby_library` named after the directory basename,
-// with `srcs` as the sorted non-test `.rb` files. `*_spec.rb` and
-// `*_test.rb` files are never library sources (handwritten `ruby_test`
-// owns them), thin `ruby_binary` entries are never inferred, and
-// directories mixing a library with a `main`-defining source stay
-// handwritten: generation fails and the owner must split the directory
-// before adopting generated rules.
 package ruby
 
 import (
@@ -24,16 +6,10 @@ import (
 	"strings"
 )
 
-// SupportedExts are the Ruby source extensions discovered by the extension.
-// Only `.rb` is listed; `*_spec.rb` and `*_test.rb` files are discovered
-// then excluded from library sources (test-owned, never library-owned).
 var SupportedExts = []string{".rb"}
 
-// LibraryKind is the single generated rule kind.
 const LibraryKind = "ruby_library"
 
-// Normalize maps one name stem to its deterministic Bazel target-name stem.
-// It reports an error instead of an empty name so callers fail closed.
 func Normalize(base string) (string, error) {
 	var b strings.Builder
 	b.Grow(len(base))
@@ -60,35 +36,22 @@ func Normalize(base string) (string, error) {
 	return out, nil
 }
 
-// IsTestSource reports whether a `.rb` basename is test-owned: the stem
-// (basename without its final extension) ends in `_spec` or `_test`.
-// A `spec`/`test` prefix, test-directory placement, and RSpec describes do
-// not create automatic test ownership by themselves.
 func IsTestSource(name string) bool {
 	base := path.Base(name)
 	stem := strings.TrimSuffix(base, ".rb")
 	return strings.HasSuffix(stem, "_spec") || strings.HasSuffix(stem, "_test")
 }
 
-// DirTargetName derives the package-level library name for one directory:
-// the directory basename, normalized.
 func DirTargetName(dir string) (string, error) {
 	return Normalize(path.Base(dir))
 }
 
-// TargetName derives the Bazel target name for one Ruby source path: the
-// basename without its final extension, normalized. It is used for
-// collision diagnostics and single-file fallback naming.
 func TargetName(name string) (string, error) {
 	base := path.Base(name)
 	stem := strings.TrimSuffix(base, ".rb")
 	return Normalize(stem)
 }
 
-// ClassIdentity returns the import identity for one Ruby import or owned
-// source: the simple file stem (final path segment without extension),
-// exact and unnormalized. Two libraries owning the same stem are ambiguous
-// and fail resolution; owners add an exact mapping or rename.
 func ClassIdentity(name string) string {
 	base := path.Base(name)
 	stem := strings.TrimSuffix(base, ".rb")
@@ -98,21 +61,12 @@ func ClassIdentity(name string) string {
 	return stem
 }
 
-// Claimant records one generated or handwritten target competing for a
-// normalized name in a single Bazel package.
 type Claimant struct {
-	// Name is the normalized target name under contention.
-	Name string
-	// Source identifies the claimant for diagnostics: a source path for
-	// generated targets, "handwritten:<label>" for existing BUILD rules.
+	Name   string
 	Source string
-	// Kind is the generated rule kind claiming the name.
-	Kind string
+	Kind   string
 }
 
-// CollisionError reports a same-package normalized-name collision with
-// every claimant. Generation fails rather than overwriting, dropping a
-// target, or inventing a suffix.
 type CollisionError struct {
 	Name      string
 	Claimants []string
@@ -123,8 +77,6 @@ func (e *CollisionError) Error() string {
 		e.Name, strings.Join(e.Claimants, ", "))
 }
 
-// CheckCollisions fails closed when two or more claimants share one
-// normalized name. Claimants are grouped by Name; groups of one pass.
 func CheckCollisions(claimants []Claimant) error {
 	byName := make(map[string][]string, len(claimants))
 	order := make([]string, 0, len(claimants))

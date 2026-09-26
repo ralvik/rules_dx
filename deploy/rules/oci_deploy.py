@@ -1,16 +1,5 @@
 #!/usr/bin/env python3
-"""Local OCI layout builder plus gated registry uploader for `oci_deploy`.
-
-Hermetic default builds a local OCI image-layout directory
-(`oci-layout`, `index.json`, `blobs/sha256/`) from the pinned image tar
- and verifies bytes via sha256 with no daemon; the live push path runs
- only with explicit env plus owner approval and never by default. Registry
- credentials are single-string user/token pairs from the environment:
- prefer short-lived tokens rotated per release and revoke them after the
- push; OIDC-based registry login stays an owned gap until tooled. Used as
- an `expand_template` template per deploy instance (placeholders below)
- and as a `py_library` for `py_test`.
- """
+"""Local OCI layout builder."""
 
 import hashlib
 import json
@@ -19,9 +8,6 @@ import shutil
 import subprocess
 import sys
 
-# Per-instance pins expanded by the `oci_deploy` launcher rule. The
-# checked-in placeholders keep this file importable for `py_test`, which
-# exercises `build_layout` directly without touching these constants.
 IMAGE_RLOC = "@@IMAGE_RLOC@@"
 OCI_REGISTRY = "@@OCI_REGISTRY@@"
 OCI_REPOSITORY = "@@OCI_REPOSITORY@@"
@@ -48,14 +34,6 @@ def _blob_path(layout, digest):
 
 
 def build_layout(image_tar_src, outdir, registry, repository, tag):
-    """Converts one image tar into a local OCI image layout and verifies bytes.
-
-    Creates `<outdir>/<repo-basename>-oci-layout/` holding `oci-layout`,
-    `index.json`, and `blobs/sha256/` (layer plus generated config and
-    manifest). The layer blob is the pinned tar bytes; config and
-    manifest are deterministic JSON (sorted keys, fixed timestamps).
-    Returns the layout directory.
-    """
     if not image_tar_src or not (
         image_tar_src.endswith(".tar") or image_tar_src.endswith(".tar.gz")
     ):
@@ -143,7 +121,6 @@ def build_layout(image_tar_src, outdir, registry, repository, tag):
 
 
 def live_push(image_tar_src, layout, registry, repository, tag):
-    """Pushes one pinned image tar via docker without interactive prompts."""
     ref = registry + "/" + repository + ":" + tag
     user = os.environ.get("OCI_REGISTRY_USER", "")
     token = os.environ.get("OCI_REGISTRY_TOKEN", "")

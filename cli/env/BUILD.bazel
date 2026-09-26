@@ -1,4 +1,3 @@
-"""WP2 managed `.dx/bin` bootstrap installer crate."""
 
 load("@crates//:crates.bzl", "aliases", "crate_deps")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")

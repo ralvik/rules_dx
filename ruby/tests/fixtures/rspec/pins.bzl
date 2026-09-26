@@ -1,7 +1,3 @@
-"""RSpec 3.13.0 version pins.
-
-"""
-
 RULES_RUBY_VERSION = "0.28.0"
 
 RUBY_VERSION = "3.4.9"

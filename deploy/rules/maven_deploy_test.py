@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local file-repo output test for `maven_deploy` (no network, no sockets)."""
+"""Local output test."""
 
 import hashlib
 import os

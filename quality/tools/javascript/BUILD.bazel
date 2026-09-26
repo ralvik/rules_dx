@@ -1,11 +1,3 @@
-"""Private pure-JavaScript tool graph (ESLint + Prettier).
-
-Ruleset-owned ecosystem graph per tool-acquisition: rules_dx owns the
-package.json/pnpm-lock.yaml, exposes stable js_binary entry points through
-authoritative rules_js, and hides hub layout from consumers. Both tools
-share the managed Node 22 toolchain (no ambient Node, no consumer
-lock/installer, no lifecycle scripts via allowBuilds: {}).
-"""
 
 load("@npm_tools//:defs.bzl", "npm_link_all_packages")
 load("//quality:fixtures.bzl", "real_source_target")

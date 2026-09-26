@@ -9,47 +9,24 @@ import (
 )
 
 const (
-	// exampleKind and benchKind are manifest-internal target kinds for
-	// explicitly declared [[example]] and [[bench]] targets; emission
-	// maps both to ordinary rust_binary rules with affixed names.
 	exampleKind = "example"
 	benchKind   = "bench"
 )
 
 type cargoTarget struct {
-	kind string // name is the Bazel target name, disambiguated when a library shares
-	// its crate name with a binary (see disambiguateLibBin).
-	name string
-	// logical is the authoritative Cargo target name. It equals name
-	// except for examples and benches, which gain the `_example` and
-	// `_bench` affixes in name while logical keeps the Cargo name for
-	// example-test wrappers and diagnostics.
-	logical string
-	// crateName is the Rust crate name; empty means name.
-	crateName string
-	path      string
-	// harness selects the libtest harness for [[test]] targets: true
-	// (default) generates a libtest wrapper, false marks a custom-harness
-	// executable. exampleTest mirrors the flag for [[example]] targets
-	// declared with `test = true`: an example stays an ordinary binary
-	// but additionally gains a libtest wrapper. Benches never gain
-	// wrappers.
-	harness     bool
-	exampleTest bool
-	// requiredFeatures records a `required-features` list verbatim; the
-	// manifest rejects it after parsing with the target name for context.
+	kind             string // name is the Bazel target name, disambiguated when a library shares
+	name             string
+	logical          string
+	crateName        string
+	path             string
+	harness          bool
+	exampleTest      bool
 	requiredFeatures []string
-	// crateTypes records a [lib] `crate-type` list; procMacro records
-	// `[lib] proc-macro = true`. resolveLibFlavor folds both into flavor.
-	crateTypes []string
-	procMacro  bool
-	// flavor is the resolved library shape for libraryKind targets: ""
-	// (ordinary rlib), "proc-macro", "cdylib", or "staticlib".
-	flavor string
+	crateTypes       []string
+	procMacro        bool
+	flavor           string
 }
 
-// crate reports the Rust crate name, which only differs from the Bazel
-// target name after lib/bin disambiguation.
 func (t cargoTarget) crate() string {
 	if t.crateName != "" {
 		return t.crateName
@@ -60,27 +37,15 @@ func (t cargoTarget) crate() string {
 type cargoManifest struct {
 	packageName string
 	edition     string
-	// version is the [package] version; empty when undeclared. It feeds
-	// the generated build-script rule and single-version checks on
-	// first-party path dependencies.
-	version    string
-	targets    []cargoTarget
-	normalDeps map[string]cargoDependency
-	devDeps    map[string]cargoDependency
-	// buildDeps holds [build-dependencies]: only the build script sees
-	// them, never lib/bin/test/example/bench targets.
-	buildDeps map[string]cargoDependency
-	// virtual marks a workspace-only manifest (`[workspace]` without
-	// `[package]`): it declares members, never a package, so generation
-	// emits no rules for its own directory instead of failing closed.
-	virtual bool
-	// build is nil when [package] declares no build key: build scripts
-	// stay explicit and an undeclared build.rs fails closed.
-	build *cargoBuild
+	version     string
+	targets     []cargoTarget
+	normalDeps  map[string]cargoDependency
+	devDeps     map[string]cargoDependency
+	buildDeps   map[string]cargoDependency
+	virtual     bool
+	build       *cargoBuild
 }
 
-// cargoBuild describes one active Cargo build script: the manifest-relative
-// cleaned script path, or disabled when `build = false`.
 type cargoBuild struct {
 	path     string
 	disabled bool
@@ -121,10 +86,6 @@ func (m *cargoManifest) withImplicitTargets(files map[string]bool, packagePath s
 		}
 		m.targets = append(m.targets, cargoTarget{kind: testKind, name: IntegrationTestName(name), logical: IntegrationTestName(name), path: targetPath, harness: true})
 	}
-	// Build scripts stay explicit: an undeclared build.rs fails closed
-	// instead of silently diverging from Cargo, which would run it.
-	// Declare `build = "build.rs"` to generate the script rule or
-	// `build = false` to keep the file inert.
 	if m.build == nil && files[path.Join(packagePath, "build.rs")] {
 		return fmt.Errorf("rust: %s/build.rs exists without a [package] build key; declare build = \"build.rs\" or build = false", packagePath)
 	}
@@ -132,13 +93,6 @@ func (m *cargoManifest) withImplicitTargets(files map[string]bool, packagePath s
 	return m.validateTargetClaims()
 }
 
-// disambiguateLibBin renames a library target sharing its name with a binary
-// target to `<name>_lib`, preserving the Rust crate name. This converges
-// generated rules with the hand-written convention (library `X_lib`,
-// binary `X`) so same-kind merge takes over the handwritten target instead
-// of failing on a cross-kind claim. Examples and benches emit binaries, so
-// their affixed names join the binary set. Residual collisions still fail
-// loudly in validateTargetClaims.
 func (m *cargoManifest) disambiguateLibBin() {
 	bins := make(map[string]bool)
 	for _, target := range m.targets {
@@ -181,16 +135,9 @@ func (m *cargoManifest) validateTargetClaims() error {
 
 type cargoDependency struct {
 	external bool
-	// label is the original Cargo.toml spelling (dashes preserved) for
-	// crate_universe lookup; the map key is the normalized Rust ident.
-	label string
-	// version is the declared version requirement when one rides along
-	// the dependency value (e.g. a path dependency with `version`);
-	// empty means unconstrained.
-	version string
-	// depPath is the declared `path` for path dependencies, relative to
-	// the declaring manifest directory; empty for external dependencies.
-	depPath string
+	label    string
+	version  string
+	depPath  string
 }
 
 func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, error) {
@@ -204,10 +151,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 	current := -1
 	hasPackage := false
 	hasWorkspace := false
-	// Taplo formats long inline tables/arrays across lines (e.g. features
-	// = ["parse", "serde"] split over three lines). Join physical lines
-	// while brackets stay open so each assignment parses as one logical
-	// line; section headers always stand alone at depth zero.
 	type logicalLine struct {
 		number int
 		text   string
@@ -328,11 +271,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 				}
 				manifest.version = parsed
 			case "build":
-				// `build = false` disables the script; `build = true`
-				// selects the conventional build.rs; a string names the
-				// script explicitly. Absence means no script: build
-				// scripts stay explicit and an undeclared build.rs fails
-				// closed in withImplicitTargets.
 				switch value {
 				case "false":
 					manifest.build = &cargoBuild{disabled: true}
@@ -368,11 +306,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 				}
 				manifest.targets[current].harness = parsed
 			case "test":
-				// Accepted inert: [[bin]] test=false, [[test]] test=false,
-				// and [lib] test only narrow what `cargo test` runs; the
-				// generated unit-test wrappers are a superset that stays
-				// correct either way. [[example]] test=true is the one
-				// test key with emission meaning (see below).
 				if section == "example" {
 					parsed, err := strconv.ParseBool(value)
 					if err != nil {
@@ -385,9 +318,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 					return nil, fmt.Errorf("rust: %s:%d: test must be true or false", manifestPath, number+1)
 				}
 			case "bench":
-				// Accepted inert: the generated binaries always build, so
-				// they satisfy `bench = true` and `bench = false` alike.
-				// Benches never gain test wrappers regardless of this key.
 				if _, err := strconv.ParseBool(value); err != nil {
 					return nil, fmt.Errorf("rust: %s:%d: bench must be true or false", manifestPath, number+1)
 				}
@@ -410,8 +340,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 				}
 				manifest.targets[current].procMacro = parsed
 			case "required-features":
-				// Recorded, not rejected here: the post-parse check
-				// reports the target name and manifest for context.
 				parsed, err := tomlStringList(value)
 				if err != nil {
 					return nil, fmt.Errorf("rust: %s:%d: required-features: %v", manifestPath, number+1, err)
@@ -439,26 +367,15 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 		}
 	}
 	if manifest.packageName == "" {
-		// A workspace-only manifest declares members, never a package:
-		// mark it virtual so generation emits no rules for its own
-		// directory. Anything else without a package name stays a
-		// fail-closed malformed manifest.
 		if hasWorkspace && !hasPackage {
 			manifest.virtual = true
 			return manifest, nil
 		}
 		return nil, fmt.Errorf("rust: %s: missing [package].name", manifestPath)
 	}
-	// The package name feeds BuildScriptName's normalizer: reject an
-	// un-normalizable name here instead of panicking at emission.
 	if _, err := Normalize(manifest.packageName); err != nil {
 		return nil, fmt.Errorf("rust: %s: [package].name %q: %v", manifestPath, manifest.packageName, err)
 	}
-	// No implicit library here: whether src/lib.rs implies a lib target
-	// depends on the file set, which only withImplicitTargets sees.
-	// Synthesizing file-blind would mint a phantom lib for bin-only
-	// crates that the emitter skips but siblingLibName still links,
-	// leaving a dangling :<name>_lib dep.
 	for i := range manifest.targets {
 		target := &manifest.targets[i]
 		if target.name == "" && target.path == "" && (target.kind == exampleKind || target.kind == benchKind) {
@@ -466,8 +383,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 		}
 		if target.name == "" {
 			if target.path != "" && (target.kind == exampleKind || target.kind == benchKind) {
-				// Cargo derives an example/bench name from the root file
-				// stem when only a path is declared.
 				target.name = strings.TrimSuffix(path.Base(target.path), ".rs")
 			} else {
 				target.name = manifest.packageName
@@ -487,8 +402,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 				target.path = "benches/" + target.name + ".rs"
 			}
 		}
-		// logical keeps the authoritative Cargo name for diagnostics and
-		// example-test wrappers; name becomes the final Bazel name.
 		target.logical = target.name
 		normalized, err := Normalize(target.name)
 		if err != nil {
@@ -496,8 +409,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 		}
 		switch target.kind {
 		case exampleKind, benchKind:
-			// Mirrors ExampleName/BenchName without panicking so the
-			// manifest path stays in the error.
 			target.name = normalized
 			if target.kind == exampleKind {
 				target.name += "_example"
@@ -519,12 +430,6 @@ func parseCargoManifest(manifestPath string, content []byte) (*cargoManifest, er
 	return manifest, nil
 }
 
-// resolveLibFlavors folds each library target's [lib] `crate-type` list
-// and `proc-macro` flag into its flavor: "" (ordinary rlib), "proc-macro",
-// "cdylib", or "staticlib". Anything that cannot map to one Bazel target
-// fails with a handwritten-target pointer: multiple crate types for one
-// source owner, dynamic dylib output, unknown type spellings, and
-// proc-macro/crate-type conflicts.
 func (m *cargoManifest) resolveLibFlavors() error {
 	for i := range m.targets {
 		target := &m.targets[i]
@@ -599,9 +504,6 @@ func tomlString(value string) (string, error) {
 	return parsed, nil
 }
 
-// tomlStringList parses a single-line TOML string list such as
-// `["cdylib", "rlib"]`. Multi-line lists stay unsupported, matching the
-// line-oriented manifest reader.
 func tomlStringList(value string) ([]string, error) {
 	trimmed := strings.TrimSpace(value)
 	if len(trimmed) < 2 || trimmed[0] != '[' || trimmed[len(trimmed)-1] != ']' {
@@ -622,11 +524,6 @@ func tomlStringList(value string) ([]string, error) {
 	return out, nil
 }
 
-// tomlInlineField extracts one quoted string field from a single-line
-// inline table value such as `{ version = "1.2", path = "../foo" }`.
-// It returns "" when the field is absent or malformed. The key must stand
-// alone (start of value, `{`, or `,` before it) so `myversion` never
-// matches `version` and quoted occurrences never match.
 func tomlInlineField(value, field string) string {
 	search := value
 	for len(search) > 0 {
@@ -661,9 +558,6 @@ func tomlInlineField(value, field string) string {
 	return ""
 }
 
-// scanPackageVersion returns the [package] version from manifest content
-// without running the full strict parser, for reading provider versions
-// across first-party path edges.
 func scanPackageVersion(content []byte) string {
 	section := ""
 	for _, raw := range strings.Split(string(content), "\n") {
@@ -689,10 +583,6 @@ func scanPackageVersion(content []byte) string {
 	return ""
 }
 
-// checkPathDepVersions enforces single-version resolution on first-party
-// path edges that declare a version requirement: the provider's [package]
-// version must satisfy the depender's requirement, else generation fails
-// naming both manifests. Unconstrained edges (no version key) pass.
 func checkPathDepVersions(packageDir, manifestPath string, manifest *cargoManifest) error {
 	depMaps := []map[string]cargoDependency{manifest.normalDeps, manifest.devDeps, manifest.buildDeps}
 	for _, depMap := range depMaps {
@@ -717,10 +607,6 @@ func checkPathDepVersions(packageDir, manifestPath string, manifest *cargoManife
 	return nil
 }
 
-// versionReqSatisfied reports whether a provider version satisfies a Cargo
-// version requirement: comma-separated clauses of caret (bare, `^`),
-// tilde (`~`), exact (`=`), and ordered (`>=`, `<=`, `>`, `<`) comparisons
-// over numeric semver triples. "*" and empty requirements always pass.
 func versionReqSatisfied(version, req string) bool {
 	req = strings.TrimSpace(req)
 	if req == "" || req == "*" {
@@ -759,17 +645,12 @@ func evalVersionClause(version, clause string) bool {
 	case "=":
 		return cmp == 0
 	case "~":
-		// ~1.2.3 means >=1.2.3, <1.3.0; ~1.2 and ~1 widen the cap.
 		return cmp >= 0 && compareSemver(current, tildeUpper(want, rest)) < 0
 	default:
-		// Bare and ^ requirements are Cargo caret semantics.
 		return cmp >= 0 && compareSemver(current, caretUpper(want, rest)) < 0
 	}
 }
 
-// parseSemver reduces a version to its numeric triple, dropping any
-// pre-release or build suffix. Missing components default to zero;
-// unparseable components fail the comparison they feed.
 func parseSemver(version string) [3]int {
 	var out [3]int
 	core := version
@@ -801,9 +682,6 @@ func compareSemver(a, b [3]int) int {
 	return 0
 }
 
-// caretUpper returns the exclusive upper bound of a caret requirement,
-// honoring the precision the requirement was written with: ^1.2.3 caps at
-// 2.0.0, ^0.2.3 at 0.3.0, ^0.0.3 at 0.0.4, ^0.2 at 0.3.0, ^0 at 1.0.0.
 func caretUpper(want [3]int, rest string) [3]int {
 	parts := strings.Split(rest, ".")
 	switch {
@@ -818,8 +696,6 @@ func caretUpper(want [3]int, rest string) [3]int {
 	}
 }
 
-// tildeUpper returns the exclusive upper bound of a tilde requirement:
-// ~1.2.3 and ~1.2 cap at 1.3.0, ~1 at 2.0.0.
 func tildeUpper(want [3]int, rest string) [3]int {
 	if len(strings.Split(rest, ".")) <= 1 {
 		return [3]int{want[0] + 1, 0, 0}

@@ -1,6 +1,3 @@
-"""Unit and analysis tests for the npm pack feed publisher.
-"""
-
 load("//libs/starlark:defs.bzl", "expect_equal", "starlark_test")
 load(":npm.bzl", "npm_filenames", "npm_package_error", "npm_registry_error", "npm_tag_error")
 

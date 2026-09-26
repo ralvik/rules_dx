@@ -47,9 +47,6 @@ func TestGenerateSourceOnlyCrate(t *testing.T) {
 		"crates/demo/tests/common.rs":     "use demo::Thing;\n",
 		"crates/demo/tests/helper/mod.rs": "use ignored_nested_root::Nope;\n",
 	})
-	// Three Rust rules plus the corpus_starlark split owning BUILD.bazel
-	// ; the synthetic fixture has no BUILD file yet, but the
-	// generated BUILD will exist so the split stays for idempotency.
 	if len(result.Gen) != 4 || len(result.Imports) != 4 {
 		t.Fatalf("generated %d rules and %d import sets, want 4 each", len(result.Gen), len(result.Imports))
 	}
@@ -85,7 +82,6 @@ func TestGenerateSourceOnlyBinaryUnitTest(t *testing.T) {
 	result := generateFixture(t, map[string]string{
 		"crates/demo/src/main.rs": "#[test]\nfn works() {}\n",
 	})
-	// Binary plus wrapper plus corpus_starlark.
 	if len(result.Gen) != 3 || result.Gen[0].Kind() != binaryKind || result.Gen[1].AttrString("crate") != ":demo" {
 		t.Errorf("binary unit-test generation = %+v", result.Gen)
 	}
@@ -154,8 +150,6 @@ func TestImportsIndexesOnlyLibraries(t *testing.T) {
 	}
 }
 
-// stubExitProcess observes the fail-closed exit without leaving the test
-// process: it records the exit code and returns control to the caller.
 func stubExitProcess(t *testing.T) *int {
 	t.Helper()
 	old := exitProcess
@@ -330,8 +324,6 @@ func TestGenerateCargoAPIAndFailures(t *testing.T) {
 		Rel:          "crates/app",
 		RegularFiles: []string{"Cargo.toml"},
 	})
-	// Cargo packages gain corpus splits owning BUILD.bazel and Cargo.toml
-	// alongside the lib and its unit-test wrapper.
 	if len(l.errors) != 0 || len(result.Gen) != 4 {
 		t.Fatalf("cargo generation errors=%v result=%+v", l.errors, result)
 	}
@@ -434,8 +426,6 @@ func TestGenerateCargoCustomHarness(t *testing.T) {
 	writeFixture(t, root, "tests/custom.rs", "fn main() {}\n")
 	l := &rustLang{}
 	result := l.GenerateRules(language.GenerateArgs{Config: &config.Config{RepoRoot: root}, Dir: root, RegularFiles: []string{"Cargo.toml"}})
-	// Custom-harness test plus corpus splits (BUILD.bazel self plus
-	// Cargo.toml,).
 	if len(l.errors) != 0 || len(result.Gen) != 3 || result.Gen[0].Attr("use_libtest_harness") == nil {
 		t.Errorf("custom harness generation errors=%v result=%+v", l.errors, result.Gen)
 	}
@@ -468,7 +458,6 @@ func TestGenerateCargoLibBinTakeover(t *testing.T) {
 	if got := result.Gen[3].AttrString("crate"); got != ":demo" {
 		t.Errorf("bin test crate = %q, want :demo", got)
 	}
-	// The binary carries its sibling lib through imports for Resolve.
 	binImports, ok := result.Imports[2].(targetImports)
 	if len(result.Imports) != 6 || !ok || binImports.siblingLib != "demo_lib" {
 		t.Fatalf("bin imports = %+v, want sibling demo_lib", result.Imports)
@@ -508,15 +497,11 @@ func TestGenerateCargoTestLinksSiblingAndMirror(t *testing.T) {
 			t.Fatalf("test imports = %T, want targetImports", result.Imports[i])
 		}
 		if r.AttrString("crate") != "" {
-			// Unit-test wrapper: narrow test-only imports, no
-			// mirror and no sibling (the `crate` edge covers it).
 			if len(imports.mirrorPaths) != 0 || imports.siblingLib != "" {
 				t.Errorf("wrapper imports = %+v, want no mirror or sibling", imports)
 			}
 			continue
 		}
-		// Integration test: links the sibling lib like a binary and
-		// mirrors the declared path dep without any use item.
 		if imports.siblingLib != libName {
 			t.Errorf("integration sibling = %q, want %q", imports.siblingLib, libName)
 		}

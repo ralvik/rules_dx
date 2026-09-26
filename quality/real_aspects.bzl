@@ -1,6 +1,3 @@
-"""Target-scoped real capability aspects over real adapters.
-
-"""
 
 load("@aspect_rules_py//py:defs.bzl", _PyInfo = "PyInfo")
 load("@rules_java//java/common:java_info.bzl", "JavaInfo")
@@ -44,7 +41,6 @@ _REAL_TOOL_TABLE = {
 }
 
 def _shard_tools(shard, capability):
-    """Lists wired tools for one shard/capability from the per-tool table ("""
     return sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == shard and capability in _REAL_TOOL_TABLE[tool]["capabilities"]])
 
 _CORE_LINT_TOOLS = _shard_tools("core", "lint")
@@ -350,7 +346,6 @@ def _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix,
     return [OutputGroupInfo(dx_results = depset([out]))]
 
 def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain):
-    """Makes one shard impl over the shared real pipeline action ("""
 
     def _impl(target, ctx):
         return _real_pipeline_action(target, ctx, capability, allowed_tools, output_suffix, has_rust_toolchain)
@@ -358,7 +353,6 @@ def _make_real_impl(capability, allowed_tools, output_suffix, has_rust_toolchain
     return _impl
 
 def real_allowed_tools_error():
-    """Validates aspect shards stay registry subsets ("""
     allowed = (
         _CORE_LINT_TOOLS + _CORE_FORMAT_TOOLS + _CORE_TYPECHECK_TOOLS +
         _JS_LINT_TOOLS + _JS_FORMAT_TOOLS + _PY_LINT_TOOLS +
@@ -380,14 +374,12 @@ _REAL_BASE_ATTRS = {
     "_policy": attr.label(
         default = "//quality:real_fixture_policy",
         providers = [QualityPolicyInfo],
-        doc = "Aggregate workspace policy expanding tool IDs to classes.",
     ),
     "_runner": attr.label(
         default = "//quality/runner:quality_runner",
         executable = True,
         cfg = "exec",
         allow_files = True,
-        doc = "Deterministic pipeline runner with --real backend.",
     ),
 }
 
@@ -396,114 +388,95 @@ _REAL_TOOL_ATTR_DEFS = {
         default = "@dx_tools//:biome",
         allow_single_file = True,
         cfg = "exec",
-        doc = "Pinned Biome standalone artifact for JavaScript/TypeScript/JSON pipelines.",
     ),
     "buildifier": attr.label(
         default = "@dx_tools//:buildifier",
         allow_single_file = True,
         cfg = "exec",
-        doc = "Pinned Buildifier artifact for Starlark pipelines.",
     ),
     "checkstyle": attr.label(
         default = "//quality/tools/jvm:checkstyle",
         cfg = "exec",
         executable = True,
-        doc = "Pinned Checkstyle java_binary wrapper for Java lint.",
     ),
     "eslint": attr.label(
         default = "//quality/tools/javascript/bin:eslint",
         cfg = "exec",
         executable = True,
-        doc = "Private ESLint js_binary wrapper for JavaScript lint opt-ins.",
     ),
     "flake8": attr.label(
         default = "//quality/tools/python:flake8",
         cfg = "exec",
         executable = True,
-        doc = "Pinned flake8 launcher (stub plus runfiles closure) for Python lint opt-ins.",
     ),
     "google_java_format": attr.label(
         default = "//quality/tools/jvm:google_java_format",
         cfg = "exec",
         executable = True,
-        doc = "Pinned google-java-format java_binary wrapper for Java format.",
     ),
     "ktfmt": attr.label(
         default = "//quality/tools/jvm:ktfmt",
         cfg = "exec",
         executable = True,
-        doc = "Pinned ktfmt java_binary wrapper for Kotlin format.",
     ),
     "ktlint": attr.label(
         default = "//quality/tools/jvm:ktlint",
         cfg = "exec",
         executable = True,
-        doc = "Pinned ktlint java_binary wrapper for Kotlin lint (fixes via --format).",
     ),
     "markdown_check": attr.label(
         default = "//quality/markdown:quality_markdown",
         allow_single_file = True,
         cfg = "exec",
-        doc = "Repo-owned Markdown link/structure checker for Markdown pipelines.",
     ),
     "pmd": attr.label(
         default = "//quality/tools/jvm:pmd",
         cfg = "exec",
         executable = True,
-        doc = "Pinned PMD java_binary wrapper for Java lint.",
     ),
     "prettier": attr.label(
         default = "//quality/tools/javascript/bin:prettier",
         cfg = "exec",
         executable = True,
-        doc = "Private Prettier js_binary wrapper for JavaScript/JSON format.",
     ),
     "pydoclint": attr.label(
         default = "//quality/tools/python:pydoclint",
         cfg = "exec",
         executable = True,
-        doc = "Pinned pydoclint launcher (stub plus runfiles closure) for Python pipelines.",
     ),
     "pylint": attr.label(
         default = "//quality/tools/python:pylint",
         cfg = "exec",
         executable = True,
-        doc = "Pinned pylint launcher (stub plus runfiles closure) for Python lint opt-ins.",
     ),
     "ruff": attr.label(
         default = "@dx_tools//:ruff",
         allow_single_file = True,
         cfg = "exec",
-        doc = "Pinned Ruff artifact for Python pipelines.",
     ),
     "spotbugs": attr.label(
         default = "//quality/tools/jvm:spotbugs",
         cfg = "exec",
         executable = True,
-        doc = "Pinned SpotBugs java_binary wrapper for Java lint (target-coupled via JavaInfo).",
     ),
     "taplo": attr.label(
         default = "@dx_tools//:taplo",
         allow_single_file = True,
         cfg = "exec",
-        doc = "Pinned Taplo artifact for TOML pipelines.",
     ),
     "ty": attr.label(
         default = "@dx_tools//:ty",
         allow_single_file = True,
         cfg = "exec",
-        doc = "Pinned Ty artifact for Python pipelines.",
     ),
     "vale": attr.label(
         default = "@dx_tools//:vale",
         allow_single_file = True,
         cfg = "exec",
-        doc = "Pinned Vale artifact for Markdown pipelines.",
     ),
 }
 
 def _real_attrs_for(tools):
-    """Builds one shard attr set from the per-tool attr table ("""
     return _REAL_BASE_ATTRS | {"_" + tool: _REAL_TOOL_ATTR_DEFS[tool] for tool in tools}
 
 _REAL_CORE_ATTRS = _real_attrs_for(sorted([tool for tool in _REAL_TOOL_TABLE if _REAL_TOOL_TABLE[tool]["shard"] == "core"]))
@@ -529,7 +502,6 @@ _REAL_SHARDS = {
 }
 
 def _make_real_aspect(shard_name):
-    """Builds one shard aspect from the shard table ("""
     shard = _REAL_SHARDS[shard_name]
     if shard["has_rust"] and shard_name == "real_rust_lint":
         return aspect(
@@ -538,7 +510,6 @@ def _make_real_aspect(shard_name):
             attrs = shard["attrs"],
             toolchains = rust_toolchain_toolchains(),
             requires = [rust_clippy_aspect],
-            doc = shard["doc"],
         )
     if shard["has_rust"]:
         return aspect(
@@ -546,13 +517,11 @@ def _make_real_aspect(shard_name):
             attr_aspects = ["aspect_hints"],
             attrs = shard["attrs"],
             toolchains = rust_toolchain_toolchains(),
-            doc = shard["doc"],
         )
     return aspect(
         implementation = _make_real_impl(shard["capability"], shard["tools"], shard["suffix"], shard["has_rust"]),
         attr_aspects = ["aspect_hints"],
         attrs = shard["attrs"],
-        doc = shard["doc"],
     )
 
 real_lint_aspect = _make_real_aspect("real_lint")

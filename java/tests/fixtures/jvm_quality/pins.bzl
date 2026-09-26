@@ -1,7 +1,3 @@
-"""JVM quality defaults pins.
-
-"""
-
 GOOGLE_JAVA_FORMAT_VERSION = "1.35.0"
 CHECKSTYLE_VERSION = "14.1.0"
 PMD_VERSION = "7.27.0"

@@ -1,7 +1,3 @@
-"""Experimental minimal JavaScript wrappers (ADR 0013).
-
-"""
-
 load("@aspect_rules_jest//jest:defs.bzl", _jest_test = "jest_test")
 load("@aspect_rules_js//js:defs.bzl", _js_binary = "js_binary", _js_library = "js_library")
 load("@aspect_rules_js//js:providers.bzl", _JsInfo = "JsInfo")
@@ -36,9 +32,6 @@ _javascript_library_forward = dx_library_forward_rule(
     what = "javascript_*",
     allow_files = _JS_EXTS,
     upstream_providers = [[_JsInfo]],
-    doc = "Forwards upstream JavaScript library providers unchanged and adds QualitySourcesInfo.",
-    srcs_doc = "Direct JavaScript sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream js_library target whose providers are preserved.",
 )
 
 _javascript_binary_forward = dx_executable_forward_rule(
@@ -49,9 +42,6 @@ _javascript_binary_forward = dx_executable_forward_rule(
     what = "javascript_*",
     allow_files = _JS_EXTS,
     upstream_providers = [[DefaultInfo]],
-    doc = "Executable forwarder for javascript_binary: symlinks the upstream binary.",
-    srcs_doc = "Direct JavaScript sources owned by this wrapper for QualitySourcesInfo.",
-    upstream_doc = "The private upstream js_binary target whose providers are preserved.",
     optional_providers = [_JsInfo],
     runtime = "besteffort",
 )
@@ -60,11 +50,6 @@ def _javascript_wrap_library(name, srcs, visibility = None, **kwargs):
     dx_wrap(name, _js_library, _javascript_library_forward, srcs, visibility = visibility, **kwargs)
 
 def javascript_binary_upstream_data(srcs, data):
-    """Computes the upstream `data` inputs for one `javascript_binary`.
-
-    Upstream `js_binary` has no `srcs` attribute; wrapper `srcs` ride
-    upstream as `data` so the `QualitySourcesInfo` owner matches the
-    upstream inputs.
     return list(srcs or []) + list(data or [])
 
 def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
@@ -86,25 +71,14 @@ def _javascript_wrap_binary(name, srcs, visibility = None, **kwargs):
     )
 
 def javascript_library(name, srcs, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_library`."""
     _javascript_wrap_library(name, srcs, visibility = visibility, **kwargs)
 
 def javascript_binary(name, srcs = None, visibility = None, **kwargs):
-    """Experimental minimal wrapper over `js_binary`.
-
-    Two shapes: an ordinary binary owns its `srcs`, while a thin entry
-    binary generated for a recognized entry source carries only
-    `entry_point` plus `data = [":<library>"]` with no `srcs`. The
-    library alone owns the source; the thin binary reports no direct
-    sources. Wrapper `srcs` ride upstream as `data` (upstream has no
-    `srcs`). Both shapes preserve the upstream providers and execution
-    semantics.
     effective_srcs = srcs if srcs != None else []
     _javascript_wrap_binary(name, effective_srcs, visibility = visibility, **kwargs)
 
 def _javascript_test_forward_impl(ctx):
     upstream = ctx.attr.upstream
-
     env_inherit = list(ctx.attr.env_inherit) if ctx.attr.env_inherit else []
     if "TESTBRIDGE_TEST_ONLY" not in env_inherit:
         env_inherit.append("TESTBRIDGE_TEST_ONLY")
@@ -113,7 +87,6 @@ def _javascript_test_forward_impl(ctx):
         testing.TestEnvironment({}, env_inherit),
         dx_quality_sources(ctx.files.srcs, _DX_JS_SOURCE_SPECS, str(ctx.label)),
     ]
-
     return out + dx_forwarded_optional(upstream, [InstrumentedFilesInfo, OutputGroupInfo], "javascript_*")
 
 _javascript_test = rule(
@@ -122,27 +95,15 @@ _javascript_test = rule(
     provides = _DX_JS_TEST_PROVIDES,
     attrs = dx_forward_attrs(
         allow_files = _JS_EXTS,
-        srcs_doc = "Direct JavaScript test sources owned by this wrapper for QualitySourcesInfo.",
         upstream_providers = [[DefaultInfo]],
-        upstream_doc = "The private upstream jest_test target whose providers are preserved.",
         extra_attrs = {
             "env_inherit": attr.string_list(
-                doc = "Environment variables to inherit at test runtime, " +
-                      "mirrored from the upstream jest_test (TESTBRIDGE_TEST_ONLY " +
-                      "is always added for sharding/--test_filter).",
             ),
         } | dx_lcov_merger_attr() | dx_symlink_windows_attr(),
     ),
-    doc = "Test forwarder for javascript_test: symlinks the upstream jest launcher.",
 )
 
 def javascript_test_rejection(kwargs):
-    """Returns the contract rejection for forbidden `javascript_test` kwargs, or `None`.
-
-    `javascript_test` always routes through `jest_test` with the standard
-    auto-configured reporters (Bazel test logs) and coverage wiring.
-    Disabling the standard reporters would substitute a project-specific
-    result protocol, which the JavaScript generation contract forbids."""
     if kwargs.get("auto_configure_reporters", True) == False:
         return ("javascript_test always uses jest with the standard " +
                 "auto-configured reporters (Bazel test logs); " +
@@ -152,47 +113,17 @@ def javascript_test_rejection(kwargs):
     return None
 
 def javascript_test_env(env_inherit):
-    """Computes the effective test-runtime inherited environment.
-
-    Mirrors the caller's list and always adds `TESTBRIDGE_TEST_ONLY`, which
-    is the Bazel test-filtering (`--test_filter`/sharding) channel the
-    upstream launcher only receives through `TestEnvironment`. The
-    forwarder rebuilds that provider from this exact list, so filtering
-    support is structural, never caller-dependent.
-    """
     env = list(env_inherit) if env_inherit != None else []
     if "TESTBRIDGE_TEST_ONLY" not in env:
         env.append("TESTBRIDGE_TEST_ONLY")
     return env
 
 def javascript_test(name, srcs, node_modules, data = None, visibility = None, tags = None, env_inherit = None, **kwargs):
-    """Experimental minimal wrapper over `jest_test`.
-
-    The private `<name>_upstream` target runs the full jest graph
-    (`srcs` plus caller `data`, with `jest-cli`/`jest-junit` linked from
-    `node_modules` by the upstream macro). The public `<name>` test
-    target symlinks the upstream launcher and preserves
-    `testing.TestEnvironment` (reporter/test-filter wiring) plus the
-    runtime providers, adding `QualitySourcesInfo` normalized from the
-    wrapper's direct `srcs`.
-
-    Jest executes tests as CommonJS by default: first-party `.js` is ESM
-    (the root package.json sets `"type": "module"`), so tests covering
-    ESM sources need
-    `node_options = ["--experimental-vm-modules"]` (see
-    `//javascript/tests/fixtures/hello:hello_test`) until the transform slice wires
-    static ESM/TS support. The macro always adds `//:package_json` to
-    the upstream data: jest detects ESM by walking up the runfiles tree
-    from each test file, so the scope file must be a runtime input of
-    every test. Upstream-owned runfiles are unaffected (npm packages
-    carry their own package.json, generated helpers are `.cjs`/`.mjs`).
-    """
     upstream_data = list(srcs) + (list(data) if data != None else [])
     effective_env = javascript_test_env(env_inherit)
     rejection = javascript_test_rejection(kwargs)
     if rejection != None:
         fail(rejection)
-
     upstream_kwargs = dict(kwargs)
     upstream_kwargs.pop("aspect_hints", None)
     if tags != None:
@@ -203,7 +134,6 @@ def javascript_test(name, srcs, node_modules, data = None, visibility = None, ta
             upstream_kwargs.pop("tags")
     elif "tags" in upstream_kwargs:
         upstream_kwargs.pop("tags")
-
     if "//:package_json" not in upstream_data:
         upstream_data.append("//:package_json")
     _jest_test(
