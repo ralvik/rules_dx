@@ -4,6 +4,93 @@ load("@rules_dx//quality:native_config.bzl", "biome_config", "buildifier_config"
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 load("//quality:fixtures.bzl", "real_source_target")
 
+# gazelle:resolve rust dx_adopt //cli/adopt:dx_adopt
+# gazelle:resolve rust dx_apply //cli/apply:dx_apply
+# gazelle:resolve rust dx_atomic_fs //cli/atomic_fs:dx_atomic_fs
+# gazelle:resolve rust dx_audit //cli/audit:dx_audit
+# gazelle:resolve rust dx_bep //cli/bep:dx_bep
+# gazelle:resolve rust dx_bump //cli/bump:dx_bump
+# gazelle:resolve rust dx_clean //cli/clean:dx_clean
+# gazelle:resolve rust dx_codegen //cli/codegen:dx_codegen
+# gazelle:resolve rust dx_diff //cli/diff:dx_diff
+# gazelle:resolve rust dx_digest //cli/digest:dx_digest
+# gazelle:resolve rust dx_env_plan //cli/env_plan:dx_env_plan
+# gazelle:resolve rust dx_fingerprint //cli/fingerprint:dx_fingerprint
+# gazelle:resolve rust dx_lcov //cli/lcov:dx_lcov
+# gazelle:resolve rust dx_output //cli/output:dx_output
+# gazelle:resolve rust dx_path //cli/path:dx_path
+# gazelle:resolve rust dx_process //cli/process:dx_process
+# gazelle:resolve rust dx_proto_validate //cli/proto_validate:dx_proto_validate
+# gazelle:resolve rust dx_roots //cli/roots:dx_roots
+# gazelle:resolve rust dx_schema //cli/schema:dx_schema
+# gazelle:resolve rust dx_setup //cli/setup:dx_setup
+# gazelle:resolve rust dx_test_scratch //cli/test_scratch:dx_test_scratch
+# gazelle:resolve rust dx_update //cli/update:dx_update
+# gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
+# gazelle:resolve rust documentation_ir //docs/ir/ir:documentation_ir
+# gazelle:resolve rust generation_result //generation/result:generation_result
+# gazelle:resolve rust marker_proto //env:marker_proto_rs
+# gazelle:resolve rust proto //quality:result_proto_rs
+# gazelle:resolve rust result_proto //quality:result_proto_rs
+# gazelle:resolve rust prost @rules_rust_prost//private/3rdparty/crates:prost
+# gazelle:resolve rust quality_adapter //quality/adapter:quality_adapter
+# gazelle:resolve rust quality_result //quality/result:quality_result
+# gazelle:exclude gazelle/rust/testdata
+# gazelle:exclude quality/testdata
+# gazelle:exclude tools/coverage
+# gazelle:exclude tools/depcheck/testdata
+# gazelle:exclude go/tests/fixtures/cgo
+# gazelle:exclude cc/tests/fixtures/hello
+# gazelle:exclude cc/ide
+# gazelle/cc/testdata holds the cc generation-test corpus with
+# gazelle:exclude gazelle/cc/testdata
+# gazelle:exclude rust/tests/fixtures/cxx_identity
+# gazelle:exclude csharp/tests/fixtures/hello
+# gazelle:exclude csharp/tests/fixtures/xunit
+# gazelle:exclude csharp/tests/fixtures/roslyn
+# gazelle:exclude fsharp/tests/fixtures/hello
+# gazelle:exclude fsharp/tests/fixtures/xunit
+# gazelle:exclude fsharp/tests/fixtures/order
+# gazelle holds the extension implementations themselves: handwritten
+# gazelle:exclude gazelle
+# gazelle:exclude astro/tests/fixtures/hello
+# gazelle:exclude examples/mixed/hello
+# gazelle:exclude go/tests/fixtures/hello
+# gazelle:exclude java/tests/fixtures/hello
+# gazelle:exclude kotlin/tests/fixtures/hello
+# gazelle:exclude scala/tests/fixtures/hello
+# gazelle:exclude python/tests/fixtures/hello
+# gazelle:exclude javascript/tests/fixtures/hello
+# gazelle:exclude typescript/tests/fixtures/hello
+# gazelle:exclude javascript/tests/fixtures/entries
+# gazelle:exclude python/tests/fixtures/entries
+# gazelle:exclude mdx/tests/fixtures/hello
+# gazelle:exclude svelte/tests/fixtures/hello
+# gazelle:exclude vue/tests/fixtures/hello
+# gazelle:exclude deploy/rules
+# gazelle:exclude quality/artifacts
+# gazelle:exclude quality/tools/python
+# gazelle:exclude tools/depcheck
+# gazelle:exclude go/tests/fixtures/errcheck
+# gazelle:exclude go/tests/fixtures/gofumpt
+# gazelle:exclude go/tests/fixtures/govet
+# gazelle:exclude go/tests/fixtures/staticcheck
+# gazelle:exclude go/tests/fixtures/godeps
+# gazelle:exclude rust/tests/fixtures/hello
+# gazelle:exclude ruby/tests/fixtures/hello
+# gazelle:exclude ruby/tests/fixtures/rspec
+# gazelle:exclude rust/tests/fixtures/bindgen
+# gazelle:exclude cc/tests/fixtures/googletest
+# gazelle:exclude cc/tests/fixtures/lcov_accounting
+# gazelle:exclude cc/tests/fixtures/linux_corpus
+# gazelle:exclude cc/tests/fixtures/prebuilt_interop
+# gazelle:exclude cc/tests/fixtures/strict_generation
+# gazelle:exclude cc/tests/fixtures/cppcheck
+# gazelle:exclude scala/tests/fixtures/scalafix
+# gazelle:exclude rust/tests/fixtures/cargo_metadata
+# gazelle:exclude quality/tests/fixtures/strict_preset
+# gazelle:exclude tools/sh
+
 package(default_visibility = ["//:__subpackages__"])
 
 js_library(

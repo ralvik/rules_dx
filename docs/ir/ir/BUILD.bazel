@@ -2,6 +2,9 @@ load("@crates//:crates.bzl", "aliases")
 load("//quality:fixtures.bzl", "real_source_target")
 load("//rust/rules:defs.bzl", "rust_clippy_test", "rust_library", "rust_test", "rustfmt_test")
 
+# gazelle:resolve rust proto //docs/ir:doc_ir_proto_rs
+# gazelle:resolve rust doc_ir_proto //docs/ir:doc_ir_proto_rs
+
 package(default_visibility = ["//:__subpackages__"])
 
 rust_library(

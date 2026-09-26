@@ -64,6 +64,7 @@ rust_clippy_test(
     ],
 )
 
+# keep
 rust_proc_macro(
     name = "hello_derive",
     srcs = ["src/derive.rs"],
@@ -71,6 +72,7 @@ rust_proc_macro(
     crate_root = "src/derive.rs",
 )
 
+# keep
 rust_shared_library(
     name = "hello_cdylib",
     srcs = ["src/cdylib.rs"],
@@ -78,6 +80,7 @@ rust_shared_library(
     crate_root = "src/cdylib.rs",
 )
 
+# keep
 rust_static_library(
     name = "hello_staticlib",
     srcs = ["src/staticlib.rs"],
