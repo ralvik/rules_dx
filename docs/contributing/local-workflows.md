@@ -124,8 +124,7 @@ real lint/format aspects; every produced result must pass the per-result
 evaluator at `--fail_on warning`. The same invocations run in CI
 (`.github/workflows/ci.yml`, `dogfood` self-call with all nine checks
 plus dx test plus dx coverage over
-verbatim `//...` per issue #408, plus `dogfood-freshness` for generate
-freshness and audits), which installs no
+verbatim `//...`), which installs no
 quality tools: all tools execute as Bazel-resolved pinned actions.
 
 Select the corpus targets, then build their `dx_results`:

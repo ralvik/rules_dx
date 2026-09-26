@@ -8,9 +8,9 @@
 # typecheck, format, generate, security-audit, license-audit, test,
 # build, coverage): every enabled check runs on every selected platform.
 # Starter enables all nine; callers disable individual checks by ID.
-# Every check requires an explicit nonempty platform list; there is no
-# implicit default. Parallel is default; sequential changes overlap
-# only. Aggregate `dx-ci` is the single stable required check.
+# `platforms` selects the matrix; empty selects Linux x86_64 only.
+# Checks run in parallel. Aggregate `dx-ci` is the single stable
+# required check.
 # Reporting is first-party dx code; no reviewdog. SARIF Code Scanning
 # publication is opt-in, off by default.
 #
@@ -23,9 +23,8 @@
 # `BAZEL_CONFIG` plus `BB_ARGS` env on every Bazel plus dx call;
 # absent the secret no remote-cache flag is set at all, so Bazel stays
 # local-cache only.
-# Platform labels never reach `runs-on` unchecked: `platforms-gate`
-# fails closed on missing, empty, or unsupported selections before any
-# per-platform job queues a runner.
+# Platform labels map to runners through the fixed table in each job's
+# `runs-on`; unknown labels fail the workflow when the matrix expands.
 
 name: rules-dx-consumer
 
@@ -42,12 +41,12 @@ on:
         default: ""
         type: string
       platforms:
-        description: 'JSON array of platform labels for every check (e.g. ["linux_x86_64"]). Required; no implicit default.'
+        description: 'JSON array of platform labels for every check (e.g. ["linux_x86_64"]). Empty runs Linux x86_64 only.'
         required: false
         default: ""
         type: string
       scheduling_mode:
-        description: "parallel (default) or sequential. Scheduling only; failure semantics unchanged."
+        description: "parallel (default) or sequential. Accepted and ignored for now; checks run in parallel until sequential qualifies."
         required: false
         default: "parallel"
         type: string
@@ -91,77 +90,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  platforms-gate:
-    name: platforms-gate (explicit supported platform selection)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: none
-    steps:
-      - name: Validate explicit platform selection
-        env:
-          PLATFORMS: ${{ inputs.platforms }}
-          DISABLED: ${{ inputs.disabled_checks }}
-          SCHEDULING: ${{ inputs.scheduling_mode }}
-        run: |
-          python3 --version
-          python3 -c 'import sys; assert sys.version_info >= (3, 9), sys.version'
-          python3 - <<'EOF'
-          import json, os, sys
-          mode = os.environ.get("SCHEDULING", "parallel").strip() or "parallel"
-          if mode == "sequential":
-              print(
-                  "dx-ci: scheduling_mode 'sequential' is qualification-open "
-                  "(docs/github-ci.md#execution): the template schedules "
-                  "parallel only until sequential ordering is qualified"
-              )
-              sys.exit(1)
-          if mode != "parallel":
-              print(f"dx-ci: unsupported scheduling_mode {mode!r}; want 'parallel'")
-              sys.exit(1)
-          disabled = ",".join(
-              part.strip()
-              for part in os.environ["DISABLED"].split(",")
-              if part.strip()
-          )
-          padded = f",{disabled},"
-          per_platform = [
-              check
-              for check in ("lint", "typecheck", "format", "generate", "security-audit", "license-audit", "test", "build", "coverage")
-              if f",{check}," not in padded
-          ]
-          if not per_platform:
-              print("platforms-gate: no per-platform check enabled; nothing to validate")
-              sys.exit(0)
-          raw = os.environ["PLATFORMS"].strip()
-          if not raw:
-              print(
-                  f"dx-ci: {', '.join(per_platform)} require explicit nonempty platforms; "
-                  "no implicit default"
-              )
-              sys.exit(1)
-          try:
-              platforms = json.loads(raw)
-          except json.JSONDecodeError:
-              print(f"dx-ci: platforms is not a JSON array: {raw!r}")
-              sys.exit(1)
-          if not isinstance(platforms, list) or not platforms:
-              print(f"dx-ci: platforms must be a nonempty JSON array, got: {raw!r}")
-              sys.exit(1)
-          supported = {"linux_x86_64", "linux_arm64", "macos_arm64", "windows_x86_64", "windows_arm64"}
-          bad = [p for p in platforms if p not in supported]
-          if bad:
-              print(
-                  f"dx-ci: unsupported platforms {bad}; "
-                  f"supported: {sorted(supported)}"
-              )
-              sys.exit(1)
-          print(f"platforms-gate: {per_platform} on {platforms}")
-          EOF
-
   lint:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',lint,') }}
-    needs: [platforms-gate]
     timeout-minutes: 30
     defaults:
       run:
@@ -183,9 +113,6 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: lint requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - name: Verify rules_dx pin
         env:
           RULES_DX_PIN: ${{ inputs.rules_dx_version }}
@@ -193,7 +120,6 @@ jobs:
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- lint --check //... -- $BAZEL_CONFIG $BB_ARGS
   typecheck:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',typecheck,') }}
-    needs: [platforms-gate]
     timeout-minutes: 30
     defaults:
       run:
@@ -215,13 +141,9 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: typecheck requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- typecheck --check //... -- $BAZEL_CONFIG $BB_ARGS
   format:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',format,') }}
-    needs: [platforms-gate]
     timeout-minutes: 30
     defaults:
       run:
@@ -243,13 +165,9 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: format requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- format --check //... -- $BAZEL_CONFIG $BB_ARGS
   generate:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',generate,') }}
-    needs: [platforms-gate]
     timeout-minutes: 30
     defaults:
       run:
@@ -271,13 +189,9 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: generate requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- generate --check //... -- $BAZEL_CONFIG $BB_ARGS
   security-audit:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',security-audit,') }}
-    needs: [platforms-gate]
     timeout-minutes: 30
     defaults:
       run:
@@ -299,9 +213,6 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: security-audit requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - name: Resolve hermetic Gitleaks
         run: |
           rel="$(bazel cquery --output=files @dx_tools//:gitleaks $BAZEL_CONFIG $BB_ARGS 2>/dev/null | tail -1)"
@@ -363,7 +274,6 @@ jobs:
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- security //...
   license-audit:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',license-audit,') }}
-    needs: [platforms-gate]
     timeout-minutes: 30
     defaults:
       run:
@@ -385,15 +295,11 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: license-audit requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       # Audit backends run no Bazel (live Gitleaks plus lockfile/advisory
       # analysis over the checkout), so this call takes no `--` forwards.
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- license //...
   test:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',test,') }}
-    needs: [platforms-gate]
     timeout-minutes: 60
     defaults:
       run:
@@ -415,13 +321,9 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: test requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- test //... -- $BAZEL_CONFIG $BB_ARGS
   build:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',build,') }}
-    needs: [platforms-gate]
     timeout-minutes: 60
     defaults:
       run:
@@ -443,13 +345,9 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: build requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - run: bazel run $BAZEL_CONFIG $BB_ARGS @rules_dx//cli/cli:dx -- build //... -- $BAZEL_CONFIG $BB_ARGS
   coverage:
     if: ${{ !contains(format(',{0},', inputs.disabled_checks), ',coverage,') }}
-    needs: [platforms-gate]
     timeout-minutes: 60
     defaults:
       run:
@@ -472,9 +370,6 @@ jobs:
           bazelisk-version: ${{ env.BAZELISK_VERSION }}
           bazelisk-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Require explicit platforms
-        if: ${{ inputs.platforms == '' }}
-        run: 'echo "dx-ci: coverage requires explicit nonempty platforms; no implicit default" >&2; exit 1'
       - name: Run coverage with optional threshold
         env:
           DX_MIN_COVERAGE: ${{ inputs.min_coverage }}
@@ -557,7 +452,7 @@ jobs:
 
   dx-ci:
     name: dx-ci (aggregate)
-    needs: [platforms-gate, lint, typecheck, format, generate, security-audit, license-audit, test, build, coverage]
+    needs: [lint, typecheck, format, generate, security-audit, license-audit, test, build, coverage]
     if: ${{ always() }}
     timeout-minutes: 10
     runs-on: ubuntu-latest

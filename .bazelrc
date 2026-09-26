@@ -87,7 +87,7 @@ build --@rules_rust//cargo/settings:use_default_shell_env=False
 # Opt in locally with `--config=ci` plus your own key in the gitignored
 # `user.bazelrc` (keep `--noremote_upload_local_results` for read-only
 # use); dx spawns Bazel with `--nohome_rc`, so only workspace-level rc
-# files channel flags (see docs/testing/workflow-notes.md).
+# files channel flags.
 # `dx` collects results through BEP and only reads local `file://`
 # artifacts (it never downloads `bytestream://` itself), so CI forces
 # Bazel to materialize remote outputs locally; speed still comes from

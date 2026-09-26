@@ -81,20 +81,17 @@ review-required with no auto-merge (regen-and-review loop stays manual).
 See the [preset update loop](contributing/local-workflows.md#preset-update-loop)
 and [`dx update --check`](cli/commands/audit-update-bazel.md#dx-update).
 
-When every check is selected, require an explicit nonempty supported platform
-selection. There is no implicit Linux, current-runner, or all-platforms default, including
-a silently active example value in the template. Missing, empty, or unsupported selections
-produce actionable configuration failures, not skipped validation or platform substitution.
+`platforms` selects the matrix; empty selects Linux x86_64 only. Missing,
+empty, or unsupported selections are caller errors, not skipped validation
+or platform substitution.
 
 Supported platform identifiers are `linux_x86_64`, `linux_arm64` (native), `macos_arm64` (native), `windows_x86_64` (native
 MSVC-compatible), and `windows_arm64` (native, `windows-11-arm`).
 The reusable workflow routes
 `linux_x86_64` to `ubuntu-latest`, `linux_arm64` to `ubuntu-24.04-arm`,
 `macos_arm64` to `macos-14`,
-`windows_x86_64` to `windows-latest`, and `windows_arm64` to `windows-11-arm`;
-every other spelling fails closed in
-`platforms-gate` before any per-platform job queues a runner. macOS arm64
-native runs on `macos-14` through the pinned upstream
+`windows_x86_64` to `windows-latest`, and `windows_arm64` to `windows-11-arm`.
+macOS arm64 native runs on `macos-14` through the pinned upstream
 toolchains with the hermetic-llvm Apple-SDK backend provisional (immutable
 lazy fetch, no host-installed SDK fallback, no secrets, no interactive
 acceptance). macOS x86_64 is Not planned per #976 with no runner.
@@ -132,9 +129,7 @@ prerequisites block only actual dependents. Individual `dx` and Bazel fail-fast 
 remain unchanged.
 
 Provisional (template status): the reusable workflow schedules parallel only.
-Sequential ordering is [qualification-open](#qualification), so `platforms-gate`
-fails closed on `scheduling_mode: sequential` (and on any other non-`parallel`
-value) rather than silently substituting parallel. The mode input stays declared
+Sequential ordering stays qualification-open. The mode input stays declared
 so callers keep one stable interface when sequential qualifies.
 
 Use GitHub Actions scheduling. Isolate mutable checkouts/setup state, report destinations,

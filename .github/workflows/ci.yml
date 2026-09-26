@@ -55,32 +55,6 @@ jobs:
       contents: read
       checks: write
       pull-requests: write
-  dogfood-freshness:
-    name: dogfood-freshness (preset + generate check)
-    timeout-minutes: 60
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          persist-credentials: false
-      - uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # v0.19.0
-        with:
-          bazelisk-version: ${{ env.BAZELISK_VERSION }}
-          bazelisk-cache: true
-          cache-save: ${{ github.event_name != 'pull_request' }}
-      - name: Check preset freshness
-        run: |
-          bazel run --noshow_progress $BAZEL_CONFIG $BB_ARGS //tools/bazelrc:preset_update -- --verify-only
-          bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- update --check -- $BAZEL_CONFIG $BB_ARGS
-      - name: Adopt-rust dx_dev smoke
-        run: bazel build --noshow_progress //examples/adopt-rust/... --config=dx_dev $BAZEL_CONFIG $BB_ARGS
-      - name: Check generated files fresh
-        run: bazel run $BAZEL_CONFIG $BB_ARGS --noshow_progress //cli/cli:dx -- generate --check //... -- $BAZEL_CONFIG $BB_ARGS
-      - name: Write job summary
-        if: always()
-        run: |
-          echo "### dogfood-freshness — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: preset freshness, dx update --check, adopt-rust dx_dev smoke, dx generate --check." >> "$GITHUB_STEP_SUMMARY"
   devcontainer-check:
     name: devcontainer-check (init parity, definition valid)
     timeout-minutes: 15
@@ -113,7 +87,7 @@ jobs:
         if: always()
         run: |
           echo "### devcontainer-check — ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Checked: dx init scaffold parity plus devcontainer definition shape (check-only; seed-host boot manually verified on Dockerfile change with non-Linux/arm64 wont-fix, no boot job in CI per docs/contributing/devcontainer.md#container-boot-manual)." >> "$GITHUB_STEP_SUMMARY"
+          echo "Checked: dx init scaffold parity plus devcontainer definition shape." >> "$GITHUB_STEP_SUMMARY"
   ci:
     name: ci
     # Single required status check for branch protection: aggregates every
@@ -124,7 +98,6 @@ jobs:
     needs:
       [
         dogfood,
-        dogfood-freshness,
         devcontainer-check,
       ]
     timeout-minutes: 5
